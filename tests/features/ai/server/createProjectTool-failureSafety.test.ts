@@ -10,7 +10,7 @@
  * a folder under the real home directory.
  */
 
-import { isCreationRunning, onCreationsChanged } from '@/core/state/creationsRunning';
+import { onWorkChanged, runningWork } from '@/core/state/projectWorkRunning';
 import { creationPath } from '@/features/project-creation/handlers/executorPreflight';
 import {
     EDS,
@@ -115,7 +115,7 @@ describe('create_project — the projects list sees the creation from its start 
     it('lists an Edge Delivery creation as running while its storefront is set up, before any project file', async () => {
         let duringStorefront = false;
         storefrontSetup.mockImplementationOnce(async (ctx) => {
-            duringStorefront = isCreationRunning(pathOf(EDS.projectName));
+            duringStorefront = runningWork(pathOf(EDS.projectName)) === 'creating';
             await ctx.sendMessage('storefront-setup-complete', { githubRepo: 'https://github.com/o/r' });
             return { success: true };
         });
@@ -123,7 +123,7 @@ describe('create_project — the projects list sees the creation from its start 
         await toolServer().call(EDS);
 
         expect(duringStorefront).toBe(true);
-        expect(isCreationRunning(pathOf(EDS.projectName))).toBe(false);
+        expect(runningWork(pathOf(EDS.projectName)) === 'creating').toBe(false);
     });
 
     it('unlists a creation that fails', async () => {
@@ -131,12 +131,12 @@ describe('create_project — the projects list sees the creation from its start 
 
         await toolServer().call(HEADLESS);
 
-        expect(isCreationRunning(pathOf(HEADLESS.projectName))).toBe(false);
+        expect(runningWork(pathOf(HEADLESS.projectName)) === 'creating').toBe(false);
     });
 
     it('never lists a name it refused', async () => {
         const heard = jest.fn();
-        const subscription = onCreationsChanged(heard);
+        const subscription = onWorkChanged(heard);
 
         await toolServer().call({ ...HEADLESS, projectName: '../outside' });
 

@@ -17,6 +17,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { whileRunning } from '@/core/state/projectWorkRunning';
 import { numberedSteps } from '@/core/utils/numberedSteps';
 import { resetOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
@@ -251,21 +252,26 @@ export interface ProjectResetOutcome {
     meshRedeployed?: boolean;
 }
 
-/** Mark the project resetting for the length of `run`; put the old status back if it never landed. */
+/**
+ * Mark the project resetting for the length of `run`; put the old status back if it
+ * never landed. Listed as resetting too, which is what the projects list reads.
+ */
 async function whileResetting<T>(deps: ProjectResetDeps, run: () => Promise<T>): Promise<T> {
     const { project, context } = deps;
-    const originalStatus = project.status;
-    project.status = 'resetting';
-    await context.stateManager.saveProject(project);
-    try {
-        return await run();
-    } finally {
-        // Restore status if still 'resetting' (error path)
-        if (project.status === 'resetting') {
-            project.status = originalStatus;
-            await context.stateManager.saveProject(project);
+    return whileRunning(project.path, 'resetting', async () => {
+        const originalStatus = project.status;
+        project.status = 'resetting';
+        await context.stateManager.saveProject(project);
+        try {
+            return await run();
+        } finally {
+            // Restore status if still 'resetting' (error path)
+            if (project.status === 'resetting') {
+                project.status = originalStatus;
+                await context.stateManager.saveProject(project);
+            }
         }
-    }
+    });
 }
 
 /** Steps 2–5: remove the components, download and install them again, write the settings back. */

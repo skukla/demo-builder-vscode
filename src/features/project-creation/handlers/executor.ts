@@ -44,7 +44,7 @@ import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { whileCreating } from '@/core/state/creationsRunning';
+import { whileRunning } from '@/core/state/projectWorkRunning';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
@@ -178,7 +178,7 @@ export async function executeProjectCreation(
     context: HandlerContext,
     config: ProjectCreationConfig,
 ): Promise<void> {
-    await whileCreating(creationPath(config), () => createOrRebuild(context, config));
+    await whileRunning(creationPath(config), 'creating', () => createOrRebuild(context, config));
     await renameAfterEdit(context, config); // a name changed in Edit, applied after it
 }
 

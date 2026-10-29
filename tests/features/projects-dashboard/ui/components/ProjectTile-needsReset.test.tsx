@@ -102,4 +102,20 @@ describe.each(TILES)('the project %s', (name, Tile) => {
         renderTile(Tile, storefront(new Date('2026-01-01T00:00:00Z'), undefined, 'creating'));
         expect(screen.queryByText('Needs reset')).not.toBeInTheDocument();
     });
+
+    // Found 2026-10-28: three projects reset from their menus at once all still said
+    // "Needs reset" for the whole run. The reset is what was asked for; say so instead.
+    it('says "Resetting", and nothing about a reset being due, while one runs', () => {
+        renderTile(Tile, storefront(new Date('2026-01-01T00:00:00Z'), undefined, 'resetting'));
+
+        expect(screen.getByText('Resetting')).toBeInTheDocument();
+        expect(screen.queryByText('Needs reset')).not.toBeInTheDocument();
+    });
+
+    it('says "Republishing" while a republish runs', () => {
+        renderTile(Tile, storefront(new Date('2026-01-01T00:00:00Z'), undefined, 'republishing'));
+
+        expect(screen.getByText('Republishing')).toBeInTheDocument();
+        expect(screen.queryByText('Needs reset')).not.toBeInTheDocument();
+    });
 });

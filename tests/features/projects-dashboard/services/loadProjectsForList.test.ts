@@ -6,7 +6,7 @@
  * this window. The fake loader below answers `stopped`, as the real one does.
  */
 
-import { whileCreating } from '@/core/state/creationsRunning';
+import { whileRunning } from '@/core/state/projectWorkRunning';
 import { loadProjectsForList } from '@/features/projects-dashboard/services/loadProjectsForList';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -39,9 +39,27 @@ describe('loadProjectsForList', () => {
     it('shows a project whose creation is running as creating', async () => {
         const stateManager = stateWith(['/p/new']);
 
-        const projects = await whileCreating('/p/new', () => loadProjectsForList(stateManager));
+        const projects = await whileRunning('/p/new', 'creating', () => loadProjectsForList(stateManager));
 
         expect(projects.map((p: Project) => p.status)).toEqual(['creating']);
+    });
+
+    it('shows a project whose reset is running as resetting', async () => {
+        // Found 2026-10-28: three cards resetting at once all still said "Needs reset".
+        const stateManager = stateWith(['/p/bodea']);
+
+        const projects = await whileRunning('/p/bodea', 'resetting', () => loadProjectsForList(stateManager));
+
+        expect(projects.map((p: Project) => p.status)).toEqual(['resetting']);
+    });
+
+    it('never gives a reset a tile of its own', async () => {
+        // Only a creation can run before its project file exists.
+        const stateManager = stateWith(['/p/other']);
+
+        const projects = await whileRunning('/p/gone', 'resetting', () => loadProjectsForList(stateManager));
+
+        expect(projects.map((p: Project) => p.path)).toEqual(['/p/other']);
     });
 
     it('leaves a project alone once its creation is over', async () => {
@@ -56,7 +74,7 @@ describe('loadProjectsForList', () => {
         // An Edge Delivery project has no file until its storefront is set up.
         const stateManager = stateWith(['/p/other']);
 
-        const projects = await whileCreating('/projects/canary', () => loadProjectsForList(stateManager));
+        const projects = await whileRunning('/projects/canary', 'creating', () => loadProjectsForList(stateManager));
 
         expect(projects).toHaveLength(2);
         expect(projects[1]).toMatchObject({ name: 'canary', path: '/projects/canary', status: 'creating' });
@@ -65,7 +83,7 @@ describe('loadProjectsForList', () => {
     it('never lists a running creation twice once its file exists', async () => {
         const stateManager = stateWith(['/p/new']);
 
-        const projects = await whileCreating('/p/new', () => loadProjectsForList(stateManager));
+        const projects = await whileRunning('/p/new', 'creating', () => loadProjectsForList(stateManager));
 
         expect(projects).toHaveLength(1);
     });

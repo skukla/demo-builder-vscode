@@ -48,7 +48,7 @@ import {
 import { ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { isMeshComponentId } from '@/core/constants';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
-import { whileCreating } from '@/core/state/creationsRunning';
+import { whileRunning } from '@/core/state/projectWorkRunning';
 import { createWorkingProjectStateManager } from '@/core/state/workingProjectStateManager';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import {
@@ -666,7 +666,7 @@ export async function runProjectCreation(ctx: HandlerContext, request: CreationR
     };
     // Listed as running for the whole run, storefront included, so the projects list
     // shows the tile from the start rather than once the project file appears (PL-82).
-    const result = await whileCreating(target, () => resolveAndCreate(building, request));
+    const result = await whileRunning(target, 'creating', () => resolveAndCreate(building, request));
     // The agent goes on working on what it made: its next tools act on the new project.
     if (ctx.agentWorkingProject && (await projectExistsAt(ctx, target))) ctx.agentWorkingProject.path = target;
     return result;

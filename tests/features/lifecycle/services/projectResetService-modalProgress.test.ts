@@ -19,6 +19,7 @@ import {
     showErrorMessage,
     withProgress,
 } from './projectResetService-resetWithUI.testUtils';
+import { runningWork } from '@/core/state/projectWorkRunning';
 import { startModalRun } from '@/core/vscode/operationProgress';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
@@ -65,5 +66,22 @@ describe('resetProjectWithUI — started from a screen (progress: modal)', () =>
             error: 'Stack "gone" not found in stacks.json. Cannot reset.',
         });
         expect(showErrorMessage).not.toHaveBeenCalled();
+    });
+
+    // The projects list reads what is running from the registry, never this copy of
+    // the project (found 2026-10-28: three resets all still said "Needs reset").
+    it('lists the project as resetting while the reset runs, and not after', async () => {
+        const project = createResetProject();
+        const stackOf = mockGetStackById.getMockImplementation();
+        let during: string | undefined;
+        mockGetStackById.mockImplementation((...args: unknown[]) => {
+            during = runningWork(project.path);
+            return stackOf?.(...args);
+        });
+
+        await runInModal('screen-reset-3', project).done;
+
+        expect(during).toBe('resetting');
+        expect(runningWork(project.path)).toBeUndefined();
     });
 });

@@ -133,10 +133,11 @@ export function getStorefrontStatusVariant(project: Project): StatusDotVariant {
 
 /**
  * Whether the project's storefront is behind how Demo Builder builds storefronts now
- * (`storefrontChanges.ts`). Never while the project is still being created.
+ * (`storefrontChanges.ts`). Never while work is in flight: a project being created
+ * or reset says so instead.
  */
 export function showsNeedsReset(project: Project): boolean {
-    return project.status !== 'creating' && storefrontNeedsReset(project);
+    return !UNSETTLED_TEXT[project.status] && storefrontNeedsReset(project);
 }
 
 /**
@@ -321,6 +322,16 @@ export function getProjectStatusDisplay(project: Project): {
 } {
     const isEds = isEdsProject(project);
     const port = getFrontendPort(project);
+    // Work in flight is said first, on the row as on the card: an EDS row showed its
+    // storefront's last state for the whole of a reset.
+    if (UNSETTLED_TEXT[project.status]) {
+        return {
+            isEds,
+            port,
+            statusText: getStatusText(project.status, port, isEds),
+            statusVariant: getStatusVariant(project.status, isEds),
+        };
+    }
     const variant = isEds ? getStorefrontStatusVariant(project) : getStatusVariant(project.status, false);
     // A reset due outranks a status that says all is well, as on the card; anything
     // worse keeps its own words.

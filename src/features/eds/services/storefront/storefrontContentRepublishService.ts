@@ -39,6 +39,7 @@ import { republishStorefrontConfig } from './storefrontRepublishService';
 import { hasCatalogPagesPending } from './storeScopeChange';
 import { replaceStoreScopePages, type StoreScopeReport } from './storeScopePages';
 import { createStoreScopePagesDeps } from './storeScopePagesDeps';
+import { whileRunning } from '@/core/state/projectWorkRunning';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -233,10 +234,17 @@ async function replaceStorePages(
  * `republish` tool call this, so the pipeline never diverges. Callers are
  * responsible for ensuring DA.live + GitHub auth before invoking (the UI pops a
  * sign-in modal; the MCP tool returns a `needsAuth` handoff).
+ *
+ * Listed as republishing for the whole run, which is what the projects list reads
+ * (found 2026-10-28: a republish left the card's status untouched).
  */
-export async function republishStorefrontContent(
+export function republishStorefrontContent(
     params: RepublishContentParams,
 ): Promise<RepublishContentResult> {
+    return whileRunning(params.project.path, 'republishing', () => runRepublish(params));
+}
+
+async function runRepublish(params: RepublishContentParams): Promise<RepublishContentResult> {
     const {
         project,
         repoOwner,

@@ -42,6 +42,7 @@ jest.mock('@/core/vscode/withOperationProgress', () => ({
     ),
 }));
 
+import { runningWork } from '@/core/state/projectWorkRunning';
 import { resetOperationId } from '@/core/utils/operationIds';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
@@ -269,6 +270,43 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
         expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
             'Failed to reset EDS project: pipeline died'
         );
+    });
+});
+
+// The projects list reads what is running from the registry, never the reset's own
+// copy of the project (found 2026-10-28: three resets all still said "Needs reset").
+describe('resetEdsProjectWithUI — listed as resetting', () => {
+    it('lists the project as resetting while the reset runs, and not after', async () => {
+        let during: string | undefined;
+        mockedReset.mockImplementation(async () => {
+            during = runningWork('/test/project');
+            return { success: true };
+        });
+
+        await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project: createProject(),
+            context: createContext(),
+        });
+
+        expect(during).toBe('resetting');
+        expect(runningWork('/test/project')).toBeUndefined();
+    });
+
+    it('stops listing it when the reset fails', async () => {
+        mockedReset.mockRejectedValue(new Error('pipeline died'));
+
+        await expect(
+            resetEdsProjectWithUI({
+                githubAppService: fakeGitHubAppService,
+                meshDeps,
+                project: createProject(),
+                context: createContext(),
+            }),
+        ).rejects.toThrow('pipeline died');
+
+        expect(runningWork('/test/project')).toBeUndefined();
     });
 });
 

@@ -53,6 +53,7 @@ jest.mock('@/features/eds/services/storefront/storeScopePagesDeps', () => ({
     createStoreScopePagesDeps: (...a: unknown[]) => mockCreateStoreScopePagesDeps(...a),
 }));
 
+import { runningWork } from '@/core/state/projectWorkRunning';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
 import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontContentRepublishService';
@@ -118,6 +119,22 @@ beforeEach(() => {
         order.push('store pages replaced');
         return { sentence: SENTENCE, counts: { categoryPages: 11, productPages: 39, oldProductPagesRemoved: 0 } };
     });
+});
+
+// The projects list reads what is running from the registry (found 2026-10-28: a
+// republish left the card's status untouched). Both doors, the dashboard button and
+// the agent's tool, come through this function.
+it('lists the project as republishing while it runs, and not after', async () => {
+    let during: string | undefined;
+    helixCalls.publishAllSiteContent.mockImplementation(async () => {
+        during = runningWork('/p/shop');
+        return undefined;
+    });
+
+    await run(storefront(false));
+
+    expect(during).toBe('republishing');
+    expect(runningWork('/p/shop')).toBeUndefined();
 });
 
 it('replaces the pages for the new store after the content is published, when the store changed', async () => {

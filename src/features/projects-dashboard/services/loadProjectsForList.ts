@@ -9,7 +9,7 @@
  */
 
 import * as path from 'path';
-import { isCreationRunning, runningCreations } from '@/core/state/creationsRunning';
+import { runningCreations, runningWork } from '@/core/state/projectWorkRunning';
 import type { Project } from '@/types/base';
 import type { StateManager } from '@/types/state';
 
@@ -27,7 +27,8 @@ function beingCreated(projectPath: string): Project {
 
 /**
  * Load every project, read-only (nothing is written back), dropping any that will
- * not load, and show each creation running in this window as `creating` (PL-82).
+ * not load, and show each creation, reset or republish running in this window as
+ * `creating`, `resetting` or `republishing` (PL-82).
  *
  * The status is decided here, not read from the file: a project's status is never
  * written to it. An Edge Delivery creation has no file at all until its storefront
@@ -46,7 +47,8 @@ export async function loadProjectsForList(
             persistAfterLoad: false,
         });
         if (!project) continue;
-        if (isCreationRunning(project.path)) project.status = 'creating';
+        const work = runningWork(project.path);
+        if (work) project.status = work;
         projects.push(project);
     }
     const listed = new Set(projects.map((p) => p.path));

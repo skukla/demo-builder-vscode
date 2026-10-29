@@ -23,7 +23,7 @@ jest.mock('@/core/handlers/dispatchHandler', () => ({
 import * as vscode from 'vscode';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
-import { whileCreating } from '@/core/state/creationsRunning';
+import { whileRunning } from '@/core/state/projectWorkRunning';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
@@ -354,7 +354,7 @@ describe('ShowProjectsListCommand — reloading when a project file changes', ()
         // An Edge Delivery project has no file until its storefront is set up (PL-82).
         const { refresh } = wireWithWatcher();
 
-        await whileCreating('/p/canary', async () => {
+        await whileRunning('/p/canary', 'creating', async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.PROJECT_LIST_SETTLE);
             expect(refresh).toHaveBeenCalledTimes(1);
         });
