@@ -1,37 +1,16 @@
 /**
- * The export screen's pack-type choice, and an ACO pack's store views and kinds
- * (datapack-engine step 14 item 19). Drawn by `ServiceExportModal` around the Commerce
- * export's data types; its state is
- * `useAcoExportChoice`. The pickers are the screen's own: a radio group as "Load from file" has
- * one, and the same checkbox grid the data types use.
+ * An ACO pack's store views and kinds on the export screen (datapack-engine step 14 item 19).
+ * Drawn by `ServiceExportModal` in place of the Commerce export's data types; its state is
+ * `useAcoExportChoice`. The pickers are the same checkbox grid the data types use. The pack-type
+ * radio that stood above them moved to "Create datapack" (`CreateDatapackModal`, 2026-10-30).
  *
  * @module features/data-installer/ui/components/AcoExportChoices
  */
 
-import { Checkbox, Radio, RadioGroup } from '@adobe/react-spectrum';
+import { Checkbox } from '@adobe/react-spectrum';
 import React from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { AcoExportChoice } from '../hooks/useAcoExportChoice';
-
-/** "Commerce datapack" or "ACO datapack"; ACO alone when the Commerce export cannot run. */
-function PackTypeChoice({ choice }: { choice: AcoExportChoice }): React.JSX.Element {
-    return (
-        <RadioGroup
-            label="Pack type"
-            value={choice.isAco ? 'aco' : 'commerce'}
-            onChange={(value) => choice.choose(value === 'aco')}
-        >
-            <Radio value="commerce" isDisabled={!choice.commerceAllowed}>
-                {choice.commerceAllowed
-                    ? 'Commerce datapack: into the shared catalog'
-                    : 'Commerce datapack: needs the Data Installer service engine'}
-            </Radio>
-            <Radio value="aco">
-                ACO datapack: an Adobe Commerce Optimizer catalog, into your datapack library
-            </Radio>
-        </RadioGroup>
-    );
-}
 
 /** The store views list, or why there is none. */
 function storeViewChoices(choice: AcoExportChoice): React.JSX.Element {
@@ -85,8 +64,8 @@ function AcoPackChoices({ choice }: { choice: AcoExportChoice }): React.JSX.Elem
 }
 
 /**
- * The pack-type choice, then an ACO pack's store views and kinds, or else the Commerce
- * export's own choices, handed in as children.
+ * An ACO pack's store views and kinds, or else the Commerce export's own choices, handed in as
+ * children. The pack type is chosen before this screen, in "Create datapack".
  */
 export function AcoExportChoices({
     choice,
@@ -96,9 +75,6 @@ export function AcoExportChoices({
     children: React.ReactNode;
 }): React.JSX.Element {
     return (
-        <>
-            <PackTypeChoice choice={choice} />
-            {choice.isAco ? <AcoPackChoices choice={choice} /> : children}
-        </>
+        <>{choice.isAco ? <AcoPackChoices choice={choice} /> : children}</>
     );
 }

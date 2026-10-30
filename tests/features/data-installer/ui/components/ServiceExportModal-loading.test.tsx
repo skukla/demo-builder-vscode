@@ -1,5 +1,5 @@
 /**
- * ExportDatapackModal — the state before anything has come back.
+ * ServiceExportModal — the state before anything has come back.
  *
  * FRAME 1 IS A REAL STATE AND IT SHIPPED WRONG ONCE: `loading` starts false and
  * the fetch runs from a useEffect, so the first render has neither a request in
@@ -25,7 +25,7 @@ jest.mock('@/features/data-installer/ui/hooks/useDataInstallerRequest', () => ({
     useDataInstallerRequest: (type: string) => mockRequestState(type),
 }));
 
-import { ExportDatapackModal } from '@/features/data-installer/ui/components/ExportDatapackModal';
+import { ServiceExportModal } from '@/features/data-installer/ui/components/ServiceExportModal';
 
 /** An idle request: nothing sent, nothing back. */
 function idle<T>(over: Partial<DataInstallerRequest<T>> = {}): DataInstallerRequest<T> {
@@ -43,14 +43,14 @@ function renderWithTypes(types: Partial<DataInstallerRequest<unknown>>) {
     mockRequestState.mockImplementation((type: string) =>
         type === 'list-datapack-data-types' ? idle(types) : idle()
     );
-    return render(<ExportDatapackModal onClose={jest.fn()} />);
+    return render(<ServiceExportModal onClose={jest.fn()} packType="commerce" />);
 }
 
 beforeEach(() => {
     mockRequestState.mockReset();
 });
 
-describe('ExportDatapackModal — before the type list arrives', () => {
+describe('ServiceExportModal — before the type list arrives', () => {
     // Neither in flight nor answered. Loading alone would say "no", and the grid
     // would render over an empty list.
     it('says it is finding out when nothing has been sent yet', () => {

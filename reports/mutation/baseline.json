@@ -5266,24 +5266,6 @@
             "openGaps": 0,
             "recorded": "2026-10-10T01:29:48.516Z"
         },
-        "src/features/data-installer/ui/components/ExportDatapackModal.tsx": {
-            "score": 86.96,
-            "killed": 120,
-            "survived": 18,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 8,
-                "branch": 3,
-                "other": 4,
-                "optionalChain": 3
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 3,
-            "equivalent": 10,
-            "openGaps": 0,
-            "recorded": "2026-10-10T00:41:41.926Z"
-        },
         "src/features/data-installer/ui/components/ImportDatapackModal.tsx": {
             "score": 92.05,
             "killed": 139,

@@ -1,5 +1,5 @@
 /**
- * Shared harness for the `ExportDatapackModal` suite family.
+ * Shared harness for the `ServiceExportModal` suite family.
  *
  * THIS FILE OWNS THE MOCK WALL AND THE SUT IMPORT — `jest.mock` hoists above the
  * imports of the module it appears in, not across modules, so a spec that
@@ -17,9 +17,9 @@ import { change, press, settle } from '../../../../helpers/reactSettle';
 
 // Below the wall on purpose — see webview-test-authoring §3.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { ExportDatapackModal } from '@/features/data-installer/ui/components/ExportDatapackModal';
+import { ServiceExportModal } from '@/features/data-installer/ui/components/ServiceExportModal';
 
-export { ExportDatapackModal };
+export { ServiceExportModal };
 export const mockRequest = webviewClient.request as jest.Mock;
 
 /**
@@ -57,8 +57,9 @@ export function withService(over: Record<string, unknown> = {}) {
     });
 }
 
-export async function renderModal() {
-    const result = render(<ExportDatapackModal onClose={jest.fn()} />);
+/** The export screen for a pack type, as "Create datapack" opens it (Commerce unless told). */
+export async function renderModal(packType: 'commerce' | 'aco' = 'commerce') {
+    const result = render(<ServiceExportModal onClose={jest.fn()} packType={packType} />);
     // Mount effects fire requests; settle so their responses commit inside act()
     // rather than in the next query's wait loop (tests/helpers/reactSettle.ts).
     await settle();

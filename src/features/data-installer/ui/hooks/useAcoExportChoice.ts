@@ -1,6 +1,7 @@
 /**
- * The export screen's ACO choice (datapack-engine step 14 item 19): whether the pack made is an
- * Adobe Commerce Optimizer pack, and if so for which store views and of which ACO kinds.
+ * The export screen's ACO choices (datapack-engine step 14 item 19): for an Adobe Commerce
+ * Optimizer pack, which store views and which ACO kinds. Whether the pack is one is asked once,
+ * before this screen, by "Create datapack" (`CreateDatapackModal`).
  *
  * The store views come from the same discovery the import's target picker reads
  * (`list-datapack-import-scopes`), asked only once the ACO choice is made. Every store view and
@@ -33,9 +34,6 @@ export interface AcoExportFields {
 export interface AcoExportChoice {
     /** The pack made is an ACO pack. */
     isAco: boolean;
-    /** The Commerce export can run too (the Data Installer service engine is chosen). */
-    commerceAllowed: boolean;
-    choose: (aco: boolean) => void;
     storeViews: AcoStoreViewChoice[];
     loadingViews: boolean;
     pickedViews: string[];
@@ -55,11 +53,10 @@ const toggled = (list: string[], item: string, on: boolean) =>
     on ? [...new Set([...list, item])] : list.filter((x) => x !== item);
 
 /**
- * @param commerceAllowed - false when only an ACO pack can be made here; the choice then starts,
- *   and stays, on ACO
+ * @param isAco - the pack made is an ACO pack, as the SC chose in "Create datapack"
+ *   (`CreateDatapackModal`); the store views are read only then
  */
-export function useAcoExportChoice(commerceAllowed: boolean): AcoExportChoice {
-    const [isAco, setIsAco] = useState(!commerceAllowed);
+export function useAcoExportChoice(isAco: boolean): AcoExportChoice {
     const [pickedViews, setPickedViews] = useState<string[]>([]);
     const [pickedKinds, setPickedKinds] = useState<string[]>([...ACO_EXPORT_KINDS]);
     const scopes = useDataInstallerRequest<{ websites: TargetWebsite[] }>(
@@ -89,10 +86,6 @@ export function useAcoExportChoice(commerceAllowed: boolean): AcoExportChoice {
         setPickedViews(storeViews.map((view) => view.code));
     }, [storeViews]);
 
-    const choose = useCallback(
-        (aco: boolean): void => setIsAco(aco || !commerceAllowed),
-        [commerceAllowed],
-    );
     const toggleView = useCallback(
         (code: string, on: boolean): void => setPickedViews((list) => toggled(list, code, on)),
         [],
@@ -121,8 +114,6 @@ export function useAcoExportChoice(commerceAllowed: boolean): AcoExportChoice {
 
     return {
         isAco,
-        commerceAllowed,
-        choose,
         storeViews,
         loadingViews: scopes.loading,
         pickedViews,

@@ -1,8 +1,9 @@
 /**
  * Capture a datapack FROM the Commerce instance: the service's Commerce export (Stage 3), or an
- * ACO pack. Opened by `ExportDatapackModal` from the catalog header's "Export from this
- * instance" (Demo Builder's engine also has `SaveFromStoreModal`, the pick screen). The inverse
- * of {@link ImportDatapackModal}, and the differences are the design:
+ * ACO pack. Opened by `CreateDatapackModal`, the catalog header's "Create datapack", once the
+ * pack type is chosen there (a Commerce pack with Demo Builder's engine goes to the pick screen,
+ * `SaveFromStoreModal`, instead). The inverse of {@link ImportDatapackModal}, and the differences
+ * are the design:
  *
  * **The user NAMES the target.** An import writes into a Commerce instance the
  * project already identifies; an export writes into a catalog that 23 curated
@@ -25,7 +26,8 @@
  *
  * **Or an ACO pack** (datapack-engine step 14 item 19, `AcoExportChoices`): made by Demo
  * Builder into the SC's library, so offered with any engine; the Commerce pack only with the
- * service's. The result view is `ExportDatapackResult`.
+ * service's. Which one is `packType`, asked once by `CreateDatapackModal`, never again here.
+ * The result view is `ExportDatapackResult`.
  *
  * @module features/data-installer/ui/components/ServiceExportModal
  */
@@ -68,11 +70,11 @@ interface TypeChoices {
 
 export interface ServiceExportModalProps {
     onClose: () => void;
-    /** The service's Commerce export can run (its engine is chosen); without it, ACO only. */
-    commerceExport?: boolean;
+    /** The pack this makes: the service's Commerce export, or an ACO pack (`CreateDatapackModal` asks). */
+    packType: 'commerce' | 'aco';
 }
 
-export function ServiceExportModal({ onClose, commerceExport = true }: ServiceExportModalProps): React.JSX.Element {
+export function ServiceExportModal({ onClose, packType }: ServiceExportModalProps): React.JSX.Element {
     const [name, setName] = useState('');
     const [version, setVersion] = useState('');
     const [selected, setSelected] = useState<string[]>([]);
@@ -86,7 +88,7 @@ export function ServiceExportModal({ onClose, commerceExport = true }: ServiceEx
     const types = useDataInstallerRequest<{ dataTypes?: string[] }>('list-datapack-data-types');
     const target = useDataInstallerRequest<ProjectTarget>('get-datapack-import-target');
     const run = useDataInstallerRequest<ExportOutcome>('start-datapack-export');
-    const aco = useAcoExportChoice(commerceExport);
+    const aco = useAcoExportChoice(packType === 'aco');
 
     const loadTypes = types.load;
     useEffect(() => {

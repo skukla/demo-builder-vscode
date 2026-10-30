@@ -1,8 +1,9 @@
 /**
  * Save from this store into the demo's own pack, picking what goes in (datapack-engine step 14,
- * items 10 and 11). The export screen with Demo Builder's engine: `ExportDatapackModal` opens this
- * instead of the service's export form, and "Save store changes to this pack" opens it too, with
- * the pack, so the SC can add what they made by hand in the Admin.
+ * items 10 and 11). The Commerce pack with Demo Builder's engine: "Create datapack"
+ * (`CreateDatapackModal`) opens this instead of the service's export form, and "Save store
+ * changes to this pack" opens it too, with the pack, so the SC can add what they made by hand in
+ * the Admin.
  *
  * One kind at a time, chosen from a `Picker` (as the import form chooses a website), its items
  * listed by `list-datapack-export-items` less what the pack holds already. Picks are kept across

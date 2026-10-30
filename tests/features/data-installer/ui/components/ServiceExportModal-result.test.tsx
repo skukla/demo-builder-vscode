@@ -1,12 +1,12 @@
 /**
- * ExportDatapackModal — the result view.
+ * ServiceExportModal — the result view.
  *
  * The service reports a failed export as an all-zero summary with no
  * explanation unless `verbose` is asked for. The client asks, so the
  * explanation exists and this view is where it lands — a bare "export failed"
  * is the silence that cost a day to diagnose.
  *
- * Mocks and helpers live in `ExportDatapackModal.testUtils.tsx`.
+ * Mocks and helpers live in `ServiceExportModal.testUtils.tsx`.
  */
 
 import { screen } from '@testing-library/react';
@@ -18,7 +18,7 @@ import {
     mockRequest,
     renderModal,
     withService,
-} from './ExportDatapackModal.testUtils';
+} from './ServiceExportModal.testUtils';
 
 const CAPTURED = { dataType: 'attribute_sets', success: true, exported: 8, excluded: 0 };
 const REFUSED = {
@@ -41,7 +41,7 @@ beforeEach(() => {
     withService();
 });
 
-describe('ExportDatapackModal — the headline count', () => {
+describe('ServiceExportModal — the headline count', () => {
     // "3 of 3" and "1 of 3" have to be able to differ, or the headline is
     // decoration. Only the rows that SUCCEEDED are counted.
     it('counts the types that captured, not the types that were tried', async () => {
@@ -71,7 +71,7 @@ describe('ExportDatapackModal — the headline count', () => {
     });
 });
 
-describe('ExportDatapackModal — the per-type lines', () => {
+describe('ServiceExportModal — the per-type lines', () => {
     it('names what the service excluded, when it excluded anything', async () => {
         await runExport(exportResult([{ ...CAPTURED, exported: 8, excluded: 3 }]));
 

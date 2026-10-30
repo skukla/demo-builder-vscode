@@ -331,7 +331,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                                 >
                                     Include community datapacks
                                 </Switch>
-                                {/* Export (or Save from this store), and Load from file. */}
+                                {/* Create datapack, Load from file, then Clear demo data set apart. */}
                                 <CatalogHeaderActions
                                     onCatalogChanged={refresh}
                                     engine={value?.engine}

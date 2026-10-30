@@ -182,29 +182,29 @@ describe('the two doors out of the catalog', () => {
         expect(mockPostMessage).toHaveBeenCalledWith('open-data-installer-settings');
     });
 
-    // 2026-10-29: the Commerce export is the Data Installer service's own, so it is offered only
-    // with that engine chosen. Since step 14 item 19 the link shows with every engine: an ACO
-    // pack is made with either (the modal offers ACO only without the service's).
-    it.each([
-        ['demo-builder', true],
-        [undefined, true],
-        ['service', true],
-    ] as const)('with the %s engine, shows the export link: %s', async (engine, shown) => {
-        mockRequest.mockResolvedValue({
-            success: true,
-            data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, ...(engine ? { engine } : {}) },
-        });
-        render(<DatapackCatalogView />);
-        await settle();
-        await screen.findAllByTestId('datapack-card');
+    // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save
+    // from this store", quiet buttons rather than links, with every engine; Clear demo data last.
+    it.each([['demo-builder'], [undefined], ['service']] as const)(
+        'with the %s engine, offers Create datapack, Load from file and, last, Clear demo data',
+        async (engine) => {
+            mockRequest.mockResolvedValue({
+                success: true,
+                data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, ...(engine ? { engine } : {}) },
+            });
+            render(<DatapackCatalogView />);
+            await settle();
+            await screen.findAllByTestId('datapack-card');
 
-        expect(screen.queryByText('Export from this instance') !== null).toBe(shown);
-        // Step 14: Demo Builder's engine saves from the store into the demo's own pack instead.
-        expect(screen.queryByText('Save from this store') !== null).toBe(engine === 'demo-builder');
-        expect(screen.getByText('Load from file')).toBeInTheDocument();
-    });
+            const labels = ['Create datapack', 'Load from file', 'Clear demo data'];
+            const buttons = labels.map((name) => screen.getByRole('button', { name }));
+            expect(buttons.every((button, i) => i === 0 || buttons[i - 1].compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+            expect(screen.queryByText('Export from this instance')).not.toBeInTheDocument();
+            expect(screen.queryByText('Save from this store')).not.toBeInTheDocument();
+            expect(screen.queryByRole('link')).not.toBeInTheDocument();
+        },
+    );
 
-    it("opens the pick screen from the header with Demo Builder's engine, with no pack", async () => {
+    it("opens the pick screen from Create datapack's Commerce choice with Demo Builder's engine, with no pack", async () => {
         mockRequest.mockImplementation(async (type: string) =>
             type === 'list-datapack-export-items'
                 ? { success: true, data: { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 } }
@@ -214,13 +214,15 @@ describe('the two doors out of the catalog', () => {
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        await press(screen.getByText('Save from this store'));
+        await press(screen.getByRole('button', { name: 'Create datapack' }));
+        await press(screen.getByRole('button', { name: 'Continue' }));
 
         expect(await screen.findByText(/^Saves what you pick from this store/u)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.queryByText('Create a datapack')).not.toBeInTheDocument();
     });
 
-    it('opens the export modal from the header link, and closes it again', async () => {
+    it("opens the service's export from Create datapack with the service engine, and closes it again", async () => {
         mockRequest.mockResolvedValue({
             success: true,
             data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine: 'service' },
@@ -229,7 +231,8 @@ describe('the two doors out of the catalog', () => {
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        await press(screen.getByText('Export from this instance'));
+        await press(screen.getByRole('button', { name: 'Create datapack' }));
+        await press(screen.getByRole('button', { name: 'Continue' }));
         expect(await screen.findByText('Export a datapack')).toBeInTheDocument();
 
         await press(screen.getByRole('button', { name: /^close$/i }));

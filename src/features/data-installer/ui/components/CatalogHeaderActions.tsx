@@ -1,88 +1,85 @@
 /**
- * The catalog header's two ways to add a pack: capture one from this project's
- * instance, or load one from a datapack file; and
- * "Clear demo data", which clears the stores the SC ticks of what Demo Builder did not
- * install (datapack-engine step 10), in the screen's progress window.
+ * The catalog header's actions (owner, 2026-10-30): Create datapack, Load from file, and, set
+ * apart at the end because it deletes, Clear demo data.
  *
- * Each link owns the modal it opens, so the catalog view carries no modal's
- * state — it was past its size guideline before either existed beside the other.
+ * Quiet buttons with icons (`ActionButton isQuiet`, the header's own refresh and view toggles;
+ * glyphs from `renderMenuIcon`, so "delete" is one glyph everywhere). They were blue text links,
+ * which read as navigation when every one is an action.
  *
- * Capturing depends on the engine. "Export from this instance" always shows, since an ACO pack
- * is made with either engine (datapack-engine step 14 item 19); its screen offers the Commerce
- * export into the shared catalog only with the service's engine chosen (2026-10-29: the service
- * has not saved what it reads since August). With Demo Builder's, the default, "Save from this
- * store" opens the pick screen, which saves into this demo's own library pack (step 14); the
- * view hosts that screen with the save's progress window (`useSaveStoreChanges`).
+ * Create datapack replaced "Export from this instance" and "Save from this store", which
+ * overlapped, and named a store where they read an instance. Its dialog asks the pack type and
+ * routes (`CreateDatapackModal`): a Commerce pack with Demo Builder's engine goes to the pick
+ * screen, which the view hosts with the save's progress window (`useHeldPack`), so it is raised
+ * as `onSaveFromStore`. Clear demo data clears the stores the SC ticks of what Demo Builder did
+ * not install (datapack-engine step 10), after its own confirmation, in the screen's progress
+ * window.
+ *
+ * Each action owns the dialog it opens, so the catalog view carries no dialog's state.
  *
  * @module features/data-installer/ui/components/CatalogHeaderActions
  */
 
-import { Link } from '@adobe/react-spectrum';
+import { ActionButton, Divider, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
 import { useClearDemoData } from '../hooks/useClearDemoData';
 import { ClearDemoDataModal } from './ClearDemoDataModal';
-import { ExportDatapackModal } from './ExportDatapackModal';
+import { CreateDatapackModal } from './CreateDatapackModal';
 import { LoadDatapackFileModal } from './LoadDatapackFileModal';
+import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import type { WipeStoreChoice } from '@/types/demoDataWipe';
 
 export interface CatalogHeaderActionsProps {
     /** A file was loaded (or the load modal closed): the catalog may have changed. Stable. */
     onCatalogChanged: () => void;
-    /**
-     * The engine chosen, which decides how a pack is captured from the store: the service's
-     * Commerce export runs only with `service`; an ACO pack always can.
-     */
+    /** The engine chosen, which decides where a Commerce pack is made (`CreateDatapackModal`). */
     engine?: 'service' | 'demo-builder';
-    /** Demo Builder's engine: open the pick screen with no pack. Stable. */
+    /** Demo Builder's engine, a Commerce pack: open the pick screen with no pack. Stable. */
     onSaveFromStore: () => void;
 }
+
+/** Which dialog the header has open. */
+type Open = 'create' | 'load' | 'clear' | null;
 
 export function CatalogHeaderActions({
     onCatalogChanged,
     engine,
     onSaveFromStore,
 }: CatalogHeaderActionsProps): React.JSX.Element {
-    const [exporting, setExporting] = useState(false);
-    const [loadingFile, setLoadingFile] = useState(false);
-    const [clearing, setClearing] = useState(false);
+    const [open, setOpen] = useState<Open>(null);
     const { clear, progressWindow } = useClearDemoData(onCatalogChanged);
 
-    const closeExport = useCallback((): void => setExporting(false), []);
-    const closeClear = useCallback((): void => setClearing(false), []);
+    const close = useCallback((): void => setOpen(null), []);
     const startClear = useCallback(
         (stores: WipeStoreChoice[], token: string): void => {
-            setClearing(false);
+            setOpen(null);
             clear(stores, token);
         },
         [clear],
     );
     // Stable, because the load modal's effect depends on it.
     const closeLoad = useCallback((): void => {
-        setLoadingFile(false);
+        setOpen(null);
         onCatalogChanged();
     }, [onCatalogChanged]);
 
     return (
         <>
-            <Link isQuiet onPress={() => setExporting(true)}>
-                Export from this instance
-            </Link>
-            {engine === 'demo-builder' ? (
-                <Link isQuiet onPress={onSaveFromStore}>
-                    Save from this store
-                </Link>
-            ) : null}
-            <Link isQuiet onPress={() => setLoadingFile(true)}>
-                Load from file
-            </Link>
-            <Link isQuiet onPress={() => setClearing(true)}>
-                Clear demo data
-            </Link>
-            {exporting ? (
-                <ExportDatapackModal onClose={closeExport} commerceExport={engine === 'service'} />
-            ) : null}
-            {loadingFile ? <LoadDatapackFileModal onClose={closeLoad} /> : null}
-            {clearing ? <ClearDemoDataModal onClose={closeClear} onClear={startClear} /> : null}
+            <ActionButton isQuiet onPress={() => setOpen('create')}>
+                {renderMenuIcon('add')}
+                <Text>Create datapack</Text>
+            </ActionButton>
+            <ActionButton isQuiet onPress={() => setOpen('load')}>
+                {renderMenuIcon('openFile')}
+                <Text>Load from file</Text>
+            </ActionButton>
+            <Divider orientation="vertical" size="S" />
+            <ActionButton isQuiet onPress={() => setOpen('clear')}>
+                {renderMenuIcon('delete')}
+                <Text>Clear demo data</Text>
+            </ActionButton>
+            {open === 'create' ? <CreateDatapackModal engine={engine} onClose={close} onSaveFromStore={onSaveFromStore} /> : null}
+            {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} /> : null}
+            {open === 'clear' ? <ClearDemoDataModal onClose={close} onClear={startClear} /> : null}
             {progressWindow}
         </>
     );

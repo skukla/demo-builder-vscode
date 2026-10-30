@@ -1,5 +1,5 @@
 /**
- * ExportDatapackModal — what the form lets you send, and what it sends.
+ * ServiceExportModal — what the form lets you send, and what it sends.
  *
  * Nothing here is guessed: the export writes into a catalog other teams share,
  * so a name, a version and at least one data type are all required, all typed,
@@ -7,7 +7,7 @@
  * only ever sees the fields filled in one fixed order cannot tell "all three"
  * from "any of the three".
  *
- * Mocks and helpers live in `ExportDatapackModal.testUtils.tsx`.
+ * Mocks and helpers live in `ServiceExportModal.testUtils.tsx`.
  */
 
 import React from 'react';
@@ -16,13 +16,13 @@ import '@testing-library/jest-dom';
 
 import { change, press, settle } from '../../../../helpers/reactSettle';
 import {
-    ExportDatapackModal,
+    ServiceExportModal,
     exportCall,
     expectExportDisabled,
     mockRequest,
     renderModal,
     withService,
-} from './ExportDatapackModal.testUtils';
+} from './ServiceExportModal.testUtils';
 
 /** Fill the two text fields without pressing anything. */
 async function fillIdentity(name: string, version: string): Promise<void> {
@@ -39,7 +39,7 @@ beforeEach(() => {
     withService();
 });
 
-describe('ExportDatapackModal — what the Export button waits for', () => {
+describe('ServiceExportModal — what the Export button waits for', () => {
     it('is not enough to have chosen a type', async () => {
         await renderModal();
 
@@ -87,7 +87,7 @@ describe('ExportDatapackModal — what the Export button waits for', () => {
     });
 });
 
-describe('ExportDatapackModal — the payload', () => {
+describe('ServiceExportModal — the payload', () => {
     it('trims the identity it sends', async () => {
         await renderModal();
 
@@ -132,7 +132,7 @@ describe('ExportDatapackModal — the payload', () => {
     });
 });
 
-describe('ExportDatapackModal — choosing types', () => {
+describe('ServiceExportModal — choosing types', () => {
     it('drops a type again when it is unchecked', async () => {
         await renderModal();
 
@@ -181,7 +181,7 @@ describe('ExportDatapackModal — choosing types', () => {
      * `!settled` too. Deliberately NOT `renderModal()`: that settles.
      */
     it('says it is still finding out, before anything has come back', async () => {
-        render(<ExportDatapackModal onClose={jest.fn()} />);
+        render(<ServiceExportModal onClose={jest.fn()} packType="commerce" />);
 
         expect(screen.getByText(/loading what can be exported/i)).toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();

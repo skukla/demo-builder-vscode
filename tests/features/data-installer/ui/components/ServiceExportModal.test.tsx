@@ -1,5 +1,5 @@
 /**
- * ExportDatapackModal — capture a pack FROM the connected instance.
+ * ServiceExportModal — capture a pack FROM the connected instance.
  *
  * The inverse of the import modal, and the differences are the whole design:
  *
@@ -16,7 +16,7 @@
  *
  * Strict TDD: written BEFORE the component exists.
  *
- * Mocks, fixtures and helpers live in `ExportDatapackModal.testUtils.tsx`; the
+ * Mocks, fixtures and helpers live in `ServiceExportModal.testUtils.tsx`; the
  * form gating and the result view have their own suites.
  */
 
@@ -26,7 +26,7 @@ import '@testing-library/jest-dom';
 
 import { settle } from '../../../../helpers/reactSettle';
 import {
-    ExportDatapackModal,
+    ServiceExportModal,
     exportAs,
     exportCall,
     exportResult,
@@ -34,14 +34,14 @@ import {
     mockRequest,
     renderModal,
     withService,
-} from './ExportDatapackModal.testUtils';
+} from './ServiceExportModal.testUtils';
 
 beforeEach(() => {
     mockRequest.mockReset();
     withService();
 });
 
-describe('ExportDatapackModal', () => {
+describe('ServiceExportModal', () => {
     it('offers the EXPORT type list, which is not the import one', async () => {
         await renderModal();
 
@@ -230,7 +230,7 @@ describe('ExportDatapackModal', () => {
             // the types — which is the exact state this test exists to rule out.
             // Bare render, assert the in-flight view, then settle at the end so
             // the response still commits inside act().
-            render(<ExportDatapackModal onClose={jest.fn()} />);
+            render(<ServiceExportModal onClose={jest.fn()} packType="commerce" />);
 
             expect(screen.queryByRole('button', { name: /select all/i })).not.toBeInTheDocument();
 
@@ -248,7 +248,7 @@ describe('ExportDatapackModal', () => {
                 ? { success: false, error: 'An operation mode is required.' }
                 : { success: true, data: null }
         );
-        render(<ExportDatapackModal onClose={jest.fn()} />);
+        render(<ServiceExportModal onClose={jest.fn()} packType="commerce" />);
 
         expect(await screen.findByText(/could not be loaded/i)).toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();

@@ -1,7 +1,7 @@
 /**
- * "Save store changes to this pack", and "Save from this store", from the catalog (datapack-engine
- * step 05, step 14): the pick screen that opens first (`ExportDatapackModal` with Demo Builder's
- * engine), the request that starts the save, and the house progress window that follows it
+ * "Save store changes to this pack", and "Create datapack" for a Commerce pack with Demo Builder's
+ * engine, from the catalog (datapack-engine step 05, step 14): the pick screen that opens first
+ * (`SaveFromStoreModal`), the request that starts the save, and the house progress window that follows it
  * (`OperationProgressModal`, through `useOperationRunner`, as the projects list and the dashboard
  * host theirs).
  *
@@ -15,8 +15,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { type StorePicks, pickCount, selectionsOf } from '../../pickableKinds';
-import { ExportDatapackModal } from '../components/ExportDatapackModal';
-import type { PackBeingSaved } from '../components/SaveFromStoreModal';
+import { type PackBeingSaved, SaveFromStoreModal } from '../components/SaveFromStoreModal';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { DATAPACK_SAVE_OPERATION_ID } from '@/core/utils/operationIds';
@@ -79,7 +78,7 @@ export function useSaveStoreChanges(onClosed: () => void): SaveStoreChanges {
 
     const windows = (
         <>
-            {offered ? <ExportDatapackModal engine="demo-builder" pack={pack} onSave={save} onClose={closeOffer} /> : null}
+            {offered ? <SaveFromStoreModal pack={pack} onSave={save} onClose={closeOffer} /> : null}
             <OperationProgressModal operation={open} onRetry={retry} onClose={closeWindow} />
         </>
     );
