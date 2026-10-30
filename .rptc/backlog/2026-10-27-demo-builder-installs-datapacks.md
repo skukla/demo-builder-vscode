@@ -71,3 +71,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-29  feat(data-installer): customers and B2B companies in packs (datapack step 08) (`6f07738f6`)
 - 2026-10-29  feat(data-installer): store settings as a pack kind (datapack step 09) (`72b611705`)
 - 2026-10-29  fix(data-installer): a shared catalog and its customer group are kept or removed together (`0cb9a06ab`)
+- 2026-10-29  fix(data-installer): a removal keeps a company's admin and its catalog links, deciding before any write (`bbd3ab715`)
