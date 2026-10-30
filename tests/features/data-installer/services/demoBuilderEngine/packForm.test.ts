@@ -20,7 +20,7 @@ import {
     productPackForm,
 } from '@/features/data-installer/services/demoBuilderEngine/packForm';
 import { productLookups } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
-import type { CommerceProduct, CommerceProductAttribute } from '@/types/commerceWire';
+import type { CommerceBundleOption, CommerceCustomOption, CommerceProduct, CommerceProductAttribute } from '@/types/commerceWire';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const CAPTURED = JSON.parse(
@@ -106,6 +106,28 @@ describe('productPackForm', () => {
         const { product } = await productPackForm(lk, { ...WATCH, attribute_set_id: 99 });
 
         expect(product.attribute_set_id).toBe(99);
+    });
+
+    // Step 14, item 14: the id is still kept, and the save is told which, to name it in its outcome.
+    it('tells the save each id it kept because it could not name it', async () => {
+        const told: string[] = [];
+        const lk = { ...productLookups(await fakeContext(STORE)), unnamed: (what: string, id: string) => void told.push(`${what} ${id}`) };
+
+        await productPackForm(lk, { ...WATCH, attribute_set_id: 99, extension_attributes: { category_links: [{ category_id: '57', position: 0 }] } });
+
+        expect(told).toEqual(['attribute set 99', 'category 57']);
+    });
+
+    // Step 14, item 12: the service's export strips these (`data_processors_export.json` L175-181).
+    it("drops this store's custom option, option value and bundle option and link ids", async () => {
+        const lk = productLookups(await fakeContext(STORE));
+        const options: CommerceCustomOption[] = [{ option_id: 7, product_sku: 'Engraved', title: 'Engraving', type: 'drop_down', values: [{ option_type_id: 31, title: 'Gold' }] }];
+        const bundle: CommerceBundleOption[] = [{ option_id: 4, title: 'Strap', product_links: [{ id: '12', option_id: 4, sku: 'Strap-Sport', qty: 1 }] }];
+
+        const { product } = await productPackForm(lk, { ...WATCH, options, extension_attributes: { bundle_product_options: bundle } });
+
+        expect(product.options).toEqual([{ product_sku: 'Engraved', title: 'Engraving', type: 'drop_down', values: [{ title: 'Gold' }] }]);
+        expect(product.extension_attributes?.bundle_product_options).toEqual([{ title: 'Strap', product_links: [{ sku: 'Strap-Sport', qty: 1 }] }]);
     });
 });
 

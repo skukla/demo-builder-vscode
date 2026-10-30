@@ -23,6 +23,7 @@
  * @module features/data-installer/services/demoBuilderEngine/ruleConditions
  */
 
+import { nameOrId } from './packForm';
 import { type ProductLookups, isNumeric } from './productLookups';
 import type { CommerceRuleCondition } from '@/types/commerceSalesRule';
 
@@ -39,25 +40,16 @@ type Direction = 'install' | 'capture';
 
 const splitList = (value: unknown): string[] => String(value ?? '').split(',').map((v) => v.trim()).filter(Boolean);
 
-/** The value, or the id it came from when the lookup has no name for it (capture keeps ids it cannot name). */
-async function nameOr(id: string, lookup: () => Promise<string | undefined>): Promise<string> {
-    try {
-        return (await lookup()) ?? id;
-    } catch {
-        return id;
-    }
-}
-
 async function categories(lk: ProductLookups, value: unknown, way: Direction): Promise<string> {
     const each = splitList(value);
     if (way === 'install') return (await Promise.all(each.map((key) => (isNumeric(key) ? key : lk.categoryId(key))))).join(',');
-    return (await Promise.all(each.map((id) => nameOr(id, () => lk.categoryUrlKey(id))))).join(',');
+    return (await Promise.all(each.map((id) => nameOrId(lk, 'category', id, () => lk.categoryUrlKey(id))))).join(',');
 }
 
 async function attributeSet(lk: ProductLookups, value: unknown, way: Direction): Promise<string> {
     const text = String(value ?? '');
     if (way === 'install') return isNumeric(text) ? text : String(await lk.setId(text));
-    return nameOr(text, () => lk.setName(text));
+    return nameOrId(lk, 'attribute set', text, () => lk.setName(text));
 }
 
 /** An option attribute's value, labels to ids or back; anything else as it is. */
@@ -74,7 +66,7 @@ async function optionValue(lk: ProductLookups, code: string, value: unknown, way
     if (!OPTION_INPUTS.has(input ?? '') || (way === 'capture' && !userDefined)) return value;
     const each = splitList(value);
     if (way === 'install') return (await Promise.all(each.map((label) => (isNumeric(label) ? label : lk.optionId(code, label))))).join(',');
-    return (await Promise.all(each.map((id) => nameOr(id, () => lk.optionLabel(code, id))))).join(',');
+    return (await Promise.all(each.map((id) => nameOrId(lk, `${code} option`, id, () => lk.optionLabel(code, id))))).join(',');
 }
 
 async function nodeValue(lk: ProductLookups, node: CommerceRuleCondition, way: Direction): Promise<CommerceRuleCondition['value']> {

@@ -56,6 +56,8 @@ const TYPE_ORDER = ['simple', 'virtual', 'downloadable', 'configurable', 'bundle
 export interface CaptureResult {
     items: Record<string, unknown>;
     counts: Record<string, number>;
+    /** Each id kept because the store could not name it, as "category 57", once each (step 14). */
+    unnamed: string[];
 }
 
 const idsOf = (created: readonly CreatedObject[], kind: string): string[] => created.filter((o) => o.kind === kind).map((o) => o.id);
@@ -244,7 +246,8 @@ async function namedSetIds(lk: ProductLookups, names: string[]): Promise<string[
  * @param installed - the installed version's own rows, by kind
  */
 export async function capturePack(ctx: KindContext, created: readonly CreatedObject[], installed: Record<string, unknown> = {}): Promise<CaptureResult> {
-    const lk = productLookups(ctx);
+    const unnamed = new Set<string>();
+    const lk: ProductLookups = { ...productLookups(ctx), unnamed: (what, id) => void unnamed.add(`${what} ${id}`) };
     const names = installedNames(installed);
     const giftCards = new Set([...idsOf(created, GIFT_CARD_KIND), ...names.giftCards].map((sku) => sku.toLowerCase()));
     const skus = [...new Set([...idsOf(created, 'products'), ...names.skus, ...idsOf(created, GIFT_CARD_KIND), ...names.giftCards])];
@@ -286,6 +289,6 @@ export async function capturePack(ctx: KindContext, created: readonly CreatedObj
         ...(await captureSettings(ctx.get, created, installed, ctx.session.websiteCode)),
     };
     const counts = Object.fromEntries(Object.entries(items).map(([kind, records]) => [kind, kind === 'categories' ? categories.count : countOf(records)]));
-    return { items, counts };
+    return { items, counts, unnamed: [...unnamed] };
 }
 

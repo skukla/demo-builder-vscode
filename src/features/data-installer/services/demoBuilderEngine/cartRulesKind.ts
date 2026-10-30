@@ -31,6 +31,7 @@ import { z } from 'zod';
 import { filterBy } from './b2bReads';
 import type { CreatedObject } from './installRecord';
 import { deleteIfPresent, eachCopy, type KindContext, ownedId, parseRows, readOrNull, segment } from './kindContext';
+import { nameOrId } from './packForm';
 import { type ProductLookups, productLookups } from './productLookups';
 import { conditionsForPack, conditionsForStore, namesSegment } from './ruleConditions';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
@@ -136,7 +137,7 @@ export function removeCartRule(send: CommerceSend, id: string): Promise<void> {
 
 /** A group id as a pack names it: its code, or the id when the store cannot name it. */
 async function groupName(lk: ProductLookups, id: number): Promise<string | number> {
-    return (await lk.groupCode(id).catch(() => undefined)) ?? id;
+    return nameOrId(lk, 'customer group', id, () => lk.groupCode(id));
 }
 
 /** A rule as a pack holds it: groups by code, conditions by name, no store's ids or counter. */

@@ -33,6 +33,7 @@ import { z } from 'zod';
 import { CUSTOMER_GROUP_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
 import { customerByEmail, groupByCode } from './b2bReads';
 import { deleteIfPresent, type KindContext, parseRows, ownedId, readOrNull, segment } from './kindContext';
+import { nameOrId } from './packForm';
 import { type ProductLookups, productLookups } from './productLookups';
 import type { CommerceCustomer, CommerceCustomerAddress, CommerceCustomerGroup, CommerceSend } from '@/types/commerceWire';
 
@@ -163,8 +164,7 @@ export async function updateCustomer(ctx: KindContext, id: string, row: unknown)
  */
 export async function namedGroup(lk: ProductLookups, field: string, group: number | undefined): Promise<Record<string, string | number>> {
     if (group === undefined) return {};
-    const code = await lk.groupCode(group).catch(() => undefined);
-    return { [field]: code ?? group };
+    return { [field]: await nameOrId(lk, 'customer group', group, () => lk.groupCode(group)) };
 }
 
 /** A customer as a pack holds it: its group by code, no store's ids, never a password. */
