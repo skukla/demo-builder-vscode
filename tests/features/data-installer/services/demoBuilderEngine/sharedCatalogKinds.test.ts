@@ -5,6 +5,7 @@
  * categories as numbers, products as SKUs.
  */
 
+import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
 import { ownedKey } from '@/features/data-installer/services/demoBuilderEngine/kindContext';
 import {
@@ -77,6 +78,49 @@ describe('installCatalogs', () => {
         await installCatalogs(ctx, parseCatalogRows([BODEA_CATALOG_ROWS[0]]));
 
         expect(ctx.sent).toStrictEqual([]);
+    });
+
+    // The service reads Commerce's refusal as "already there" (SharedCatalogImportProcessor.js
+    // L9-32). The list item carries the group (CATALOG_14, captured), so this looks first.
+    describe('when the customer group already has a catalog', () => {
+        const WHOLESALE = { ...CATALOG_14, id: 14, name: 'Wholesale', customer_group_id: 32 };
+        const PLATINUM_GROUP = { [lookupGroup('Platinum Buyer')]: { items: [{ id: 32, code: 'Platinum Buyer' }] } };
+
+        it("uses the group's catalog, makes and records nothing, and assigns the pack's members to it", async () => {
+            const ctx = await fakeContext({ [CATALOGS]: { items: [PUBLIC, WHOLESALE] }, ...PLATINUM_GROUP, ...held(14) });
+
+            await installCatalogs(ctx, parseCatalogRows([BODEA_CATALOG_ROWS[1]]));
+            await installAssignments(ctx, CATALOG_PRODUCTS_KIND, { catalogs: [{ name: 'Platinum Buyer', products: [{ sku: 'vrrack' }] }] });
+
+            expect(ctx.sent).toEqual([{ method: 'POST', path: 'sharedCatalog/14/assignProducts', body: { products: [{ sku: 'vrrack' }] } }]);
+            // The catalog is the store's, so removal never takes it; the pair it added is the pack's.
+            expect(ctx.recorder.created).toEqual([{ kind: CATALOG_PRODUCTS_KIND, id: '14/vrrack', key: 'Platinum Buyer/vrrack' }]);
+            expect(ctx.logged).toContain('used shared catalog Wholesale for Platinum Buyer: its customer group already has that catalog');
+        });
+
+        // The refusal's words are the service's test's (`SharedCatalogImportProcessor.test.js`
+        // L175), not a captured Commerce answer.
+        it("reads Commerce's refusal as already there, and records nothing", async () => {
+            let listed = [PUBLIC];
+            const ctx = await fakeContext({ [CATALOGS]: () => ({ items: listed }), ...PLATINUM_GROUP }, () => {
+                listed = [PUBLIC, WHOLESALE];
+                throw new CommerceReadError('Commerce answered 400 for sharedCatalog: {"message":"A catalog already exists with customer group Platinum Buyer."}', 400);
+            });
+
+            await installCatalogs(ctx, parseCatalogRows([BODEA_CATALOG_ROWS[1]]));
+
+            expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['POST sharedCatalog']);
+            expect(ctx.recorder.created).toStrictEqual([]);
+            expect(ctx.session.catalogStandIns?.get('Platinum Buyer')).toBe(14);
+        });
+
+        it('still stops on any other refusal', async () => {
+            const ctx = await fakeContext({ [CATALOGS]: { items: [PUBLIC] }, ...PLATINUM_GROUP }, () => {
+                throw new CommerceReadError('Commerce answered 400 for sharedCatalog: {"message":"Invalid tax class."}', 400);
+            });
+
+            await expect(installCatalogs(ctx, parseCatalogRows([BODEA_CATALOG_ROWS[1]]))).rejects.toThrow(/Invalid tax class/);
+        });
     });
 
     it('is taken back by its id', async () => {

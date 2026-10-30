@@ -67,6 +67,12 @@ export interface CatalogSession {
      * settings fix's words, its lines for settings kept, and the keys of the ones kept.
      */
     settings?: SettingsDone;
+    /**
+     * A pack's shared catalog the store already covers, by the pack's name → the store's catalog
+     * for the same customer group, which Commerce allows only one of (step 14). The assignment
+     * kinds assign to that catalog; it is the store's, so nothing records or removes it.
+     */
+    catalogStandIns?: Map<string, number>;
 }
 
 /** What the store settings kind did (step 09, `storeConfigKind.ts`), for an install's or removal's one line. */
