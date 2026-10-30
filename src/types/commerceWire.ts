@@ -56,10 +56,32 @@ export interface CommerceProduct {
         stock_item?: Record<string, unknown>;
         configurable_product_options?: Array<{ attribute_id: string | number; values?: Array<{ value_index: string | number }>; [key: string]: unknown }>;
         configurable_product_links?: Array<string | number>;
+        /** A bundle's options and the products linked to each, with this store's ids (Magento's `BundleOptionInterface`). */
+        bundle_product_options?: CommerceBundleOption[];
         [key: string]: unknown;
     };
+    /** Custom options, with this store's ids (Magento's `ProductCustomOptionInterface`). */
+    options?: CommerceCustomOption[];
     tier_prices?: Array<{ customer_group_id: string | number; [key: string]: unknown }>;
     media_gallery_entries?: unknown[];
+    [key: string]: unknown;
+}
+
+/** One custom option of a product: `option_id` and each value's `option_type_id` are this store's. */
+export interface CommerceCustomOption {
+    option_id?: number;
+    product_sku?: string;
+    title?: string;
+    type?: string;
+    values?: Array<{ option_type_id?: number; title?: string; [key: string]: unknown }>;
+    [key: string]: unknown;
+}
+
+/** One bundle option: its `option_id`, and each link's `id` and `option_id`, are this store's. */
+export interface CommerceBundleOption {
+    option_id?: number;
+    title?: string;
+    product_links?: Array<{ id?: string | number; option_id?: number; sku?: string; [key: string]: unknown }>;
     [key: string]: unknown;
 }
 

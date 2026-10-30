@@ -7,7 +7,7 @@
  * ids back into names, so a captured pack installs anywhere. The two directions of a field sit
  * together and share one read of the store. A name the store cannot answer stops an install; an
  * id capture cannot name answers `undefined`, and capture keeps the id, as the service's export
- * does (export spec §2).
+ * does (export spec §2), and tells `unnamed` (step 14), so the save says which.
  *
  * Each answer is cached for one install or capture, as the service caches its own.
  *
@@ -85,6 +85,12 @@ export interface ProductLookups {
     groupCode(id: number | string): Promise<string | undefined>;
     productId(sku: string): Promise<number>;
     productSku(id: number | string): Promise<string | undefined>;
+    /**
+     * Told of each id capture could not turn into a name and kept as it is (`nameOrId`,
+     * `packForm.ts`), so a save can name them in its outcome rather than keep them silently
+     * (step 14, item 14). Absent outside a save.
+     */
+    unnamed?: (what: string, id: string) => void;
 }
 
 function cached<T>(read: (key: string) => Promise<T>): (key: number | string) => Promise<T> {

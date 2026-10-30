@@ -114,6 +114,11 @@ describe('start_datapack_export name echo', () => {
             preflight()({ datapackName: 'shared-pack', confirmName: 'shared-pack' }),
         ).toBeUndefined();
     });
+
+    // Step 14: with Demo Builder's engine the call names no pack and writes none to the shared catalog.
+    it('needs no echo from a call naming no pack, which writes into the demo\'s own pack', () => {
+        expect(preflight()({ selections: { products: { sku: ['VR-Rack'] } } })).toBeUndefined();
+    });
 });
 
 describe('list_datapack_export_items paging', () => {
@@ -146,6 +151,12 @@ describe('list_datapack_export_items paging', () => {
 
     it('keeps excludedCount — "8 of 9, one excluded" is the useful part', () => {
         expect(JSON.parse(shape()(page(5), {})).excludedCount).toBe(3);
+    });
+
+    it("keeps inPackCount, Demo Builder's count of what the pack being saved holds already", () => {
+        const res: HandlerResponse = { success: true, data: { items: [], totalCount: 4, excludedCount: 0, inPackCount: 4 } };
+
+        expect(JSON.parse(shape()(res, {})).inPackCount).toBe(4);
     });
 
     it('honours an explicit limit', () => {
@@ -245,14 +256,23 @@ describe('what each row accepts', () => {
 
     it('gives the export item list a single data type to enumerate, and a limit', () => {
         expect(keys('list_datapack_export_items')).toEqual(
-            ['commerceInstance', 'dataType', 'dataTypes', 'datapackName', 'limit', 'version'].sort(),
+            ['commerceInstance', 'dataType', 'dataTypes', 'datapackName', 'limit', 'source', 'version'].sort(),
         );
     });
 
-    it('gives the export the name echo that guards the shared catalog', () => {
+    it('gives the export the name echo that guards the shared catalog, and the picks', () => {
         expect(keys('start_datapack_export')).toEqual(
-            ['commerceInstance', 'confirmName', 'dataTypes', 'datapackName', 'version'].sort(),
+            ['commerceInstance', 'confirmName', 'dataTypes', 'datapackName', 'selections', 'version'].sort(),
         );
+    });
+
+    // Step 14: what the SC added by hand goes in when picked; no pack named saves the project's own, or picks alone.
+    it('gives the save the picks, and lets it name no pack', () => {
+        expect(keys('save_store_changes_to_pack')).toEqual(['datapackName', 'selections', 'source', 'version'].sort());
+        const schema = row('save_store_changes_to_pack')!.inputSchema!;
+        expect(() => schema.datapackName.parse(undefined)).not.toThrow();
+        expect(() => schema.selections.parse({ products: { sku: ['VR-Rack'] }, cart_rules: { rule_id: [7] } })).not.toThrow();
+        expect(() => schema.selections.parse({ products: ['VR-Rack'] })).toThrow();
     });
 
     it('asks the three project-derived reads for nothing at all', () => {

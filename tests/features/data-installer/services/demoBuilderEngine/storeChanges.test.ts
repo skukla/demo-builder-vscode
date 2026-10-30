@@ -9,55 +9,15 @@
  */
 
 import type { PackWriteOutcome } from '@/features/data-installer/services/datapackTransfer';
-import type { DatapackFile } from '@/features/data-installer/services/datapackZip';
 import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
 import { installRecordPath, openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { type StoreChangesDeps, previewChanges, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
-import { packedFingerprint } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
+import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
+import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
 import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
 import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
 import { COUPON10, NO_COUPONS_PAGE, NO_RULES_PAGE, TEN_PERCENT_COUPON, WIPER_FLUID } from '../../../../helpers/commerceSalesRuleFixtures';
-import { NOW, PACK, PROJECT, fakeContext, memoryFiles, noneUnder, page } from './demoBuilderEngine.testUtils';
-
-/** The demo's own pack a save writes into (step 07). */
-const SAVE_AS = { id: { name: 'acme-demo-1a2b3c', version: '20261029-183000' }, displayName: 'Acme Demo' };
-
-const STORE = {
-    'store/websites': [{ id: 1, code: 'base', name: 'Main Website', default_group_id: 1 }],
-    'store/storeGroups': [{ id: 1, root_category_id: 2 }],
-    'store/storeViews': [{ id: 1, code: 'default', website_id: 1, store_group_id: 1 }],
-    'categories/2': { id: 2, name: 'Default Category', path: '1/2' },
-    'categories/41': { id: 41, name: 'Server Racks', path: '1/2/41', is_active: true },
-    [page('products/attribute-sets/sets/list')]: { items: [], total_count: 0 },
-    ...noneUnder(2, { Racks: 'racks', Cables: 'cables' }),
-};
-const RACKS = { category: { name: 'Racks', path: 'Default Category', is_active: true } };
-const ITEMS = { categories: { categories: [RACKS, { category: { name: 'Cables', path: 'Default Category' } }] } };
-
-async function deps(record = true, reads: Record<string, unknown> = {}, items: Record<string, unknown> = ITEMS) {
-    const ctx = await fakeContext({ ...STORE, ...reads });
-    const files = memoryFiles();
-    if (record) {
-        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
-        await recorder.record({ kind: 'categories', id: '41', key: 'Racks', fingerprint: fingerprintRow(RACKS), wrote: packedFingerprint('categories', RACKS) });
-    }
-    const written: DatapackFile[] = [];
-    const d: StoreChangesDeps = {
-        commerce: async () => ({ get: ctx.get, send: ctx.send }),
-        readPack: jest.fn(async () => items),
-        describe: async () => ({ displayName: 'Bodea', description: 'Bodea main' }),
-        projectPath: PROJECT,
-        target: { websiteCode: 'base', storeCode: 'default' },
-        files,
-        log: () => undefined,
-        now: () => new Date('2026-10-29T18:30:00Z'),
-    };
-    const write = async (file: DatapackFile): Promise<PackWriteOutcome> => {
-        written.push(file);
-        return { pack: 'created', stored: file.items.map((i) => i.dataType), failed: [] };
-    };
-    return { d, ctx, files, written, write };
-}
+import { NOW, PACK, PROJECT, page } from './demoBuilderEngine.testUtils';
+import { ITEMS, SAVE_AS, deps } from './storeChanges.testUtils';
 
 describe('previewChanges', () => {
     it("counts a pack's store settings by what installing would do to each, writing nothing (step 09)", async () => {
@@ -245,7 +205,8 @@ const skuIn = (skus: string) =>
 /** A pack row for a product the store already had before the pack was installed. */
 const THEIRS = { product: { sku: 'OldRack', name: 'Old Rack', attribute_set_id: 'Default', type_id: 'simple' } };
 /** The store's copy of it, as `GET products` answers (the captured Bodea shape, trimmed). */
-const THEIRS_IN_STORE = { id: 9, sku: 'OldRack', name: 'Old Rack (renamed)', type_id: 'simple' };
+// Every real product answers its set (products-page.json); the save's shape check needs one.
+const THEIRS_IN_STORE = { id: 9, sku: 'OldRack', name: 'Old Rack (renamed)', type_id: 'simple', attribute_set_id: 4 };
 
 describe('previewChanges, counted the way a save counts', () => {
     it('counts a pack row the store already has as already in the store, not as new', async () => {

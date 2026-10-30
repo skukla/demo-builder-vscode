@@ -4,7 +4,8 @@
  * make, and says beforehand where the categories go or which Admin step installing asks for.
  */
 
-import { type StoreChangesDeps, previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
+import type { StoreChangesDeps } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
+import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
 import { FRESCOPA, OWN_TARGET, SHARED_TARGET, categoryStore } from './categoryStore.testUtils';
 import { PACK, PROJECT, memoryFiles } from './demoBuilderEngine.testUtils';
 

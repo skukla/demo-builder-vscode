@@ -41,7 +41,7 @@ import { groupedAssignments, splitPair } from './sharedCatalogKinds';
 import type { CommerceCompany, CommerceCustomer, CommerceCustomerGroup, CommerceSharedCatalog } from '@/types/commerceWire';
 
 /** Commerce's own groups, which every store has and a pack never carries (export exclusions). */
-const COMMERCE_GROUPS = new Set(['NOT LOGGED IN', 'General', 'Default (General)', 'Wholesale', 'Retailer']);
+export const COMMERCE_GROUPS: ReadonlySet<string> = new Set(['NOT LOGGED IN', 'General', 'Default (General)', 'Wholesale', 'Retailer']);
 
 /** What the catalog capture found, which the assignments are limited to. */
 export interface CapturedCatalog {

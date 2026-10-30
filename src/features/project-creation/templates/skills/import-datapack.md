@@ -116,12 +116,34 @@ Like an import it returns a handle and is polled, and **the service supplies its
 dependency ordering for the delete** — a different order from import, over the same data
 types. You do not have to reason about what to remove first.
 
-## Exporting
+## Saving the store into a pack (Demo Builder's engine, the default)
 
-`start_datapack_export` captures data from an instance INTO a datapack. It writes to a
-catalog **other teams depend on**, so it needs `confirm: true` and `confirmName` equal to
-the datapack name — the same bar as deleting a repo, for the same reason: the risk is not
-to your own work.
+`save_store_changes_to_pack` saves the project's store into a NEW version of this demo's own
+pack in the datapack library: the pack Demo Builder installed here, plus anything you pick in
+`selections`. With no pack named it uses the project's own when Demo Builder installed it, else
+it saves only what is picked, which is how a store built by hand in the Admin becomes a pack.
+`start_datapack_export` is the same save with this engine: send only `selections` and `confirm`.
+
+- **Pick with `list_datapack_export_items`** (`dataType`: products, giftcards, categories,
+  cart_rules, customers, b2b_companies, customer_groups, b2b_shared_catalogs,
+  product_attributes, attribute_sets). It leaves off what the pack being saved already holds
+  (`inPackCount`), so what is left is what someone added by hand. Each item's `id` goes into
+  `selections` as `{kind: {field: [ids]}}`: products and gift cards by `sku`, cart rules by
+  `rule_id`, attributes by `attribute_code`, attribute sets by `attribute_set_id`, the rest by `id`.
+- **A pick brings what it needs**: a product its categories, set, attributes and quantities; a
+  cart rule its typed-in coupons; a company its admin. You do not pick those separately.
+- **Read the answer's message to the user.** It says what the store has that the version left
+  out (`leftOut`) and any id kept because the store could not name it (`unnamed`). A version
+  the install would refuse is not saved, and the message says which kind and why.
+- Undo is `delete_library_datapack` on the new version. Nothing in Commerce changes, and a
+  picked thing is never removed when the pack is.
+
+## Exporting (the service's engine)
+
+With `demoBuilder.dataInstaller.engine` set to `service`, `start_datapack_export` captures data
+from an instance INTO a datapack. It writes to a catalog **other teams depend on**, so it needs
+`confirm: true` and `confirmName` equal to the datapack name — the same bar as deleting a repo,
+for the same reason: the risk is not to your own work.
 
 Use `list_datapack_export_items` first to see what would be captured. It is paged;
 `totalCount` tells you how many exist beyond the page.

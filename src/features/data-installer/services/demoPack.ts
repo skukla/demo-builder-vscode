@@ -52,7 +52,8 @@ export function savedVersion(at: Date): string {
  * The pack the saved one is made from: what the project records it came from, else the
  * pack installed, unless that is the demo's own pack already.
  */
-function originFor(project: Project, installed: DatapackLocation, ownName: string): DatapackLocation | undefined {
+function originFor(project: Project, installed: DatapackLocation | undefined, ownName: string): DatapackLocation | undefined {
+    if (!installed) return undefined;
     const recorded = project.datapack;
     const isRecorded = recorded?.name === installed.name && recorded.version === installed.version;
     if (isRecorded && recorded?.origin) return recorded.origin;
@@ -63,10 +64,11 @@ function originFor(project: Project, installed: DatapackLocation, ownName: strin
  * What a save of the store's copy of `installed` writes, for this project.
  *
  * @param project - the project saving
- * @param installed - the pack installed in its store, and the store that holds it
+ * @param installed - the pack installed in its store, and the store that holds it; none for a
+ *   save of picks from a store Demo Builder did not fill (step 14), made from nothing
  * @param at - when
  */
-export function demoPackSaveFor(project: Project, installed: DatapackLocation, at: Date): DemoPackSave {
+export function demoPackSaveFor(project: Project, installed: DatapackLocation | undefined, at: Date): DemoPackSave {
     const name = ownPackName(project);
     const own = project.ownDatapack;
     const kept = own?.renamed === true ? own.displayName : undefined;
@@ -81,6 +83,15 @@ export function demoPackSaveFor(project: Project, installed: DatapackLocation, a
 /** Record a save on the project: the new version is its pack, and the demo's own. */
 export function recordDemoPackSave(project: Project, save: DemoPackSave): void {
     project.datapack = { ...save.id, store: 'library', ...(save.origin ? { origin: save.origin } : {}) };
+    recordOwnPackName(project, save);
+}
+
+/**
+ * Record only the demo's own pack (step 14): a save of picks from a store Demo Builder did not
+ * fill makes a version of it, but the store is not that version (nothing of it is on an install
+ * record), so the pack the project installs from stays as it was.
+ */
+export function recordOwnPackName(project: Project, save: DemoPackSave): void {
     project.ownDatapack = {
         name: save.id.name,
         displayName: save.displayName,

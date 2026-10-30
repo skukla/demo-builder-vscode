@@ -215,6 +215,17 @@ export async function updateCompany(ctx: KindContext, id: string, row: unknown):
     await ctx.send('PUT', `company/${segment(id)}`, { company });
 }
 
+/**
+ * The company's region as a pack names it: by id when the store keeps one (a country with a region
+ * list), else by the text the store keeps, as the service's export falls back (step 14, item 15),
+ * else nothing.
+ */
+function packRegion(raw: CommerceCompany): { region_id: number } | { region: string } | Record<string, never> {
+    const id = Number(raw.region_id);
+    if (Number.isInteger(id) && id > 0) return { region_id: id };
+    return raw.region ? { region: raw.region } : {};
+}
+
 /** A company as a pack holds it: the service's create call, its admin by name and email, its status beside the call, no ids. */
 export async function companyPackForm(get: CommerceGet, raw: CommerceCompany): Promise<Record<string, unknown>> {
     const admin = raw.super_user_id === undefined ? null : await readOrNull<CommerceCustomer>(get, `customers/${segment(raw.super_user_id)}`);
@@ -233,7 +244,7 @@ export async function companyPackForm(get: CommerceGet, raw: CommerceCompany): P
                     country_id: raw.country_id,
                     postcode: raw.postcode,
                     telephone: raw.telephone,
-                    region: { region_id: Number(raw.region_id) },
+                    region: packRegion(raw),
                 },
                 ...(admin ? { company_admin: { email: admin.email, firstname: admin.firstname, lastname: admin.lastname } } : {}),
             },

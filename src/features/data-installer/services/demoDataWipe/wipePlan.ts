@@ -27,7 +27,7 @@
  */
 
 import type { InstallRecord } from '../demoBuilderEngine/installRecord';
-import { named } from '../demoBuilderEngine/storeChanges';
+import { named } from '../demoBuilderEngine/saveOutcome';
 import { type CartRuleDecision, decideCartRules } from './wipeCartRules';
 import { type CustomerDecision, decideCustomers } from './wipeCustomers';
 import { type WipeErp, type WipeErpPlan, type WipeErpRoute, erpCloseIds, erpPartOf, erpPlanOf, splitByErp, websiteCodesOf } from './wipeErp';

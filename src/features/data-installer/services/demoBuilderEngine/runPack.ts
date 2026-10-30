@@ -119,23 +119,35 @@ export function unsupportedKinds(items: PackItems): string[] {
     return Object.keys(items).filter((kind) => !INSTALLABLE_KINDS.includes(kind));
 }
 
+/** One kind of a pack the install would refuse, from its rows alone, and the install's reason. */
+export interface KindRefusal {
+    kind: string;
+    reason: string;
+}
+
 /**
- * Why each of the pack's kinds cannot be installed, from its rows alone: every kind's parser, run
- * before anything is written, by the install and by the dry run alike. None when every row reads.
+ * Each of the pack's kinds whose rows the install would refuse: every kind's parser, run before
+ * anything is written, by the install, the dry run and a save before it stores a version (step 14
+ * items 2 and 13). None when every row reads. A kind this engine does not install is not checked.
  *
  * @param websiteCode - the install target's website, which a pack's website settings are written for
  */
-export function packRowProblems(items: PackItems, websiteCode?: string): string[] {
-    const problems: string[] = [];
+export function packRowRefusals(items: PackItems, websiteCode?: string): KindRefusal[] {
+    const refused: KindRefusal[] = [];
     for (const { kind, check } of STEPS) {
         if (!(kind in items)) continue;
         try {
             check(items[kind], websiteCode);
         } catch (error) {
-            problems.push(error instanceof Error ? error.message : String(error));
+            refused.push({ kind, reason: error instanceof Error ? error.message : String(error) });
         }
     }
-    return problems;
+    return refused;
+}
+
+/** The install's reasons alone, for the install and the dry run (`packRowRefusals`). */
+export function packRowProblems(items: PackItems, websiteCode?: string): string[] {
+    return packRowRefusals(items, websiteCode).map((refusal) => refusal.reason);
 }
 
 const sentence = (text: string): string => (/[.!?]$/u.test(text) ? text : `${text}.`);

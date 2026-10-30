@@ -12,6 +12,9 @@ jest.mock('@/features/authentication/services/projectOrgGuard', () => ({ orgGuar
 jest.mock('@/features/data-installer/services/demoBuilderEngine/storeChanges', () => ({
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/storeChanges'),
     previewChanges: jest.fn(),
+}));
+jest.mock('@/features/data-installer/services/demoBuilderEngine/saveStore', () => ({
+    ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/saveStore'),
     saveStoreChanges: jest.fn(),
 }));
 jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
@@ -34,7 +37,9 @@ import { DataInstallerClient } from '@/features/data-installer/services/dataInst
 import { DatapackStoreWriter } from '@/features/data-installer/services/datapackStoreWriter';
 import { writePackToStore } from '@/features/data-installer/services/datapackTransfer';
 import type { DatapackFile } from '@/features/data-installer/services/datapackZip';
-import { StoreChangesError, previewChanges, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
+import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
+import { StoreChangesError } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
+import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -120,6 +125,8 @@ describe('save-store-changes-to-pack', () => {
         counts: { products: 2 },
         readFrom: 'installer' as const,
         sentence: 'Saved to the acme pack. Bodea is unchanged.',
+        unnamed: [],
+        leftOut: [],
     };
 
     it('needs confirm, and asks nothing of the store without it', async () => {
@@ -142,6 +149,7 @@ describe('save-store-changes-to-pack', () => {
         expect(target).toEqual({
             pack: { name: 'bodea', version: 'main' },
             saveAs: { id: { name: expect.stringMatching(OWN_NAME), version: expect.stringMatching(VERSION) }, displayName: 'acme' },
+            picks: {},
         });
         const file: DatapackFile = { id: SAVED.saved, displayName: 'Bodea', items: [] };
         await write(file);
@@ -183,6 +191,8 @@ describe('save-store-changes-to-pack', () => {
                 previous: { name: 'bodea', version: 'main' },
                 counts: { products: 2 },
                 message: SAVED.sentence,
+                unnamed: [],
+                leftOut: [],
             },
         });
     });

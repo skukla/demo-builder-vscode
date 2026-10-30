@@ -124,7 +124,8 @@ judgement in this feature:
 - **Changing or deleting a pack.** The catalog is shared infrastructure with 23
   entries other teams depend on, `delete-datapack` cascades, there is no undo and no
   ownership guard. One agent typo removes a colleague's demo. Creating a NEW pack is
-  offered in two ways, both of which only add: `start_datapack_export` and
+  offered in two ways, both of which only add: `start_datapack_export` (with the service
+  engine; with Demo Builder's it saves into the demo's own library pack instead) and
   `load_datapack_zip`. Each needs the pack's name typed back, and loading a file
   never updates an existing pack in this catalog. The datapack library does have an
   ownership check, so updating your own pack is offered there.
@@ -133,9 +134,34 @@ judgement in this feature:
 - **`async-process-status`** — reports `in_progress` for jobs that finished hours
   earlier, so an agent polling it would wait forever.
 
-## Stage 3 (export)
+## Saving a store into a pack, with Demo Builder's engine (datapack-engine step 14)
 
-Implemented (`handlers/exportHandlers.ts`, `services/dataInstallerExportClient.ts`). A
+The export door is Demo Builder's own with its engine chosen (the default). "Save from this
+store" in the catalog's header, and "Save store changes to this pack" in the flyout of the pack the
+project holds, open one pick screen (`SaveFromStoreModal`): one kind at a time (products, gift
+cards, categories, cart rules, customers, companies, customer groups, shared catalogs, attributes,
+attribute sets), listed from the project's store with its own credential
+(`list-datapack-export-items`, `storeItems.ts`), scoped to its website where Commerce scopes the
+thing, Commerce's own left out. In the flyout the list leaves off what the pack holds already, so
+what is left is what the SC made by hand. Save writes a new version of this demo's own library pack
+(`saveStore.ts`): the pack Demo Builder installed here when there is one, plus what was picked; with
+none, a store Demo Builder did not fill, what was picked alone. A pick brings what it needs (a
+product its categories, set, attributes and quantities; a rule its coupons; a company its admin),
+and never joins the install record, so removing the pack leaves it.
+
+Before the version is stored it is checked by the install's own parsers (`packRowRefusals` in `runPack.ts`, the same check the install and the dry run run); one the
+install would refuse is not saved, and the save says which kind and why. The save's sentence also
+says what it left out ("Left out, because nothing picked them: 3 products (...)") and any id it
+could not turn into a name and kept as it is. Custom option and bundle option and link ids are
+left out of a saved product, as the service's export leaves them out; a company with no region id
+is saved with its region's name. Nothing reaches the Data Installer or its shared catalog. A round
+trip (install a pack into an empty store, save it back, compare) is pinned by
+`tests/features/data-installer/services/demoBuilderEngine/roundTrip.test.ts`.
+
+## Stage 3 (export, the service's engine)
+
+Implemented (`handlers/exportHandlers.ts`, `services/dataInstallerExportClient.ts`). With the
+service engine chosen, "Export from this instance" opens `ServiceExportModal`. A
 probe on 2026-08-14 found it authenticating and connecting but storing nothing
 ("MongoDB connection URI required"). That investigation is in
 [`.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md`](../../.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md),

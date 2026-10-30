@@ -734,6 +734,19 @@ the store's copy of the pack as a new version of this demo's OWN pack in the dat
 version's own products, attributes and sets, read from the store), leaves the pack installed as it
 was, moves the project onto the new version (recording the store and the pack it was made from),
 and changes nothing in Commerce; it is undone by `delete_library_datapack` on the new version.
+Step 14 (2026-10-30): it takes `selections` too (`{kind: {field: [ids]}}`, the service's export
+shape; kinds and fields in `src/features/data-installer/pickableKinds.ts`), so what the SC added by
+hand in the Admin goes in when picked, and it never joins the install record, so removing the pack
+leaves it. With no pack named it saves the project's own when Demo Builder installed it, else the
+picks alone: a pack from a store Demo Builder did not fill, recorded only as the demo's own pack.
+It answers `unnamed` (ids kept because the store could not name them) and `leftOut` (what the store
+has, of products, gift cards, categories, cart rules, customers and companies, that the version
+does not hold), both also in its message, and a version the install's own parsers would refuse is
+not saved. With Demo Builder's engine (the default), `list_datapack_export_items` lists one kind of
+the project's store to pick from (website-scoped where Commerce scopes it, less what the pack being
+saved holds, counted in `inPackCount`), and `start_datapack_export` is the same save, sent only
+`selections` and `confirm`: the service's fields (`datapackName`, `version`, `commerceInstance`,
+`dataTypes`) are refused there, and the name echo applies only to a call naming a pack.
 A project's datapack records the store that holds it (`installer` or `library`): creation, a copy
 and a project file install from that store, `configure_project` takes it as `datapack.store`, and
 `create_project_from_file` answers `datapackNote` when the pack named can't be read (the pack it

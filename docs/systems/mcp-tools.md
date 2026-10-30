@@ -217,7 +217,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `save_datapack_zip` |  | Save a datapack from the Data Installer or the datapack library as a zip file in the |
 | `save_store_changes_to_pack` | **confirm** | Save the store\ |
 | `share_datapack` | **confirm** | Share one of your own datapack library packs with your team, or stop sharing it: every version. |
-| `start_datapack_export` | **confirm** | Capture data from a Commerce instance into a datapack. **Writes into the SHARED |
+| `start_datapack_export` | **confirm** | Capture data from a Commerce instance into a datapack. With the demo-builder engine (the |
 | `start_datapack_import` | **confirm** | Import a datapack into a live Commerce instance. Returns an activationId as soon as |
 | `validate_datapack_import` | read | Dry-run an import: same guard, same credentials, same request body as the real thing, |
 

@@ -8,9 +8,13 @@
  * - `save-store-changes-to-pack`: "Save store changes to this pack". The store's copy of the
  *   pack is written into the datapack LIBRARY as a new version of the demo's OWN pack (step 07,
  *   `demoPack.ts`, made at the first save), the pack installed is left as it is, and the project
- *   records the new version. Confirm-gated; its progress goes to the screen's progress window
- *   when started from one. Undone by deleting the new version from the library
- *   (`delete-library-datapack`).
+ *   records the new version. Things the SC made by hand go in too when picked (`selections`,
+ *   step 14). With no pack named, the pack is the project's own when Demo Builder installed it,
+ *   else there is none and the version holds only the picks (a store Demo Builder did not fill).
+ *   Confirm-gated; its progress goes to the screen's progress window when started from one.
+ *   Undone by deleting the new version from the library (`delete-library-datapack`).
+ * - `listPickable` (for `list-datapack-export-items` with Demo Builder's engine): one kind of the
+ *   store's items to pick from, less what the pack being saved holds already.
  *
  * - `get-datapack-setup-step` / `check-datapack-setup-step` (step 12): the one Admin step a pack
  *   can leave (its root category is a root of its own, and only the SC can point the store at
@@ -25,14 +29,17 @@
  * @module features/data-installer/handlers/storeChangesHandlers
  */
 
+import { PICKABLE_KINDS, type Selections, type StorePicks, isPickableKind, picksOf } from '../pickableKinds';
 import { projectCommerce, readPackItems } from '../services/buildDatapackEngine';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { writePackToStore } from '../services/datapackTransfer';
-import { nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
+import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { checkRecordedRootStep, recordedRootStep, rootStepItem } from '../services/demoBuilderEngine/packRootCheck';
 import type { PackRootStep } from '../services/demoBuilderEngine/packRootStep';
-import { type StoreChangesDeps, StoreChangesError, previewChanges, saveStoreChanges } from '../services/demoBuilderEngine/storeChanges';
-import { type DemoPackSave, demoPackSaveFor, recordDemoPackSave } from '../services/demoPack';
+import { listPickable, saveStoreChanges } from '../services/demoBuilderEngine/saveStore';
+import { type StoreChangesDeps, StoreChangesError } from '../services/demoBuilderEngine/storeAccess';
+import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
+import { type DemoPackSave, demoPackSaveFor, recordDemoPackSave, recordOwnPackName } from '../services/demoPack';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { DatapackSetupStep } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
@@ -65,9 +72,13 @@ export interface StoreChangesPayload extends Partial<Omit<SaveStoreChangesReques
     confirm?: boolean;
 }
 
-interface OpenedStore {
+/** The project's store, opened for reading with the project's own credential. */
+export interface ProjectStore {
     project: Project;
     deps: StoreChangesDeps;
+}
+
+interface OpenedStore extends ProjectStore {
     pack: DatapackId;
     /** The store the caller named, if it named one. */
     source?: DatapackStoreName;
@@ -101,10 +112,11 @@ function describer(context: HandlerContext, fromInstaller: (id: DatapackId) => P
     };
 }
 
-/** The access both actions share, or the response to answer instead. */
-async function openStoreChanges(context: HandlerContext, payload: StoreChangesPayload | undefined): Promise<OpenedStore | { response: HandlerResponse }> {
-    const input = readPayload(payload);
-    if ('error' in input) return { response: { success: false, error: input.error } };
+/**
+ * The project's store, opened as every datapack write opens it, with the sign-in checked against
+ * the org that owns it; or the response to answer instead.
+ */
+export async function openProjectStore(context: HandlerContext): Promise<ProjectStore | { response: HandlerResponse }> {
     const gate = await resolveDatapackWriteAccess(context, 'import');
     if ('response' in gate) return gate;
     if (context.authManager) {
@@ -120,7 +132,44 @@ async function openStoreChanges(context: HandlerContext, payload: StoreChangesPa
         target: resolveInstallTarget(gate.project) ?? undefined,
         log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
     };
-    return { project: gate.project, deps, ...input };
+    return { project: gate.project, deps };
+}
+
+/** The access the pack's actions share, or the response to answer instead. */
+async function openStoreChanges(context: HandlerContext, payload: StoreChangesPayload | undefined): Promise<OpenedStore | { response: HandlerResponse }> {
+    const input = readPayload(payload);
+    if ('error' in input) return { response: { success: false, error: input.error } };
+    const store = await openProjectStore(context);
+    return 'response' in store ? store : { ...store, ...input };
+}
+
+/**
+ * The pack a save or a pick list is of: the one named, else the project's own when Demo Builder
+ * installed it (its record is on disk), else none: a store Demo Builder did not fill.
+ */
+export async function packToSave(project: Project, payload: StoreChangesPayload | undefined): Promise<{ pack?: DatapackId; source?: DatapackStoreName } | { error: string }> {
+    if (payload?.datapackName || payload?.version) return readPayload(payload);
+    const held = project.datapack;
+    if (!held) return {};
+    const pack = { name: held.name, version: held.version };
+    return (await readInstallRecord(nodeRecordFiles, project.path, pack)) ? { pack, ...(held.store ? { source: held.store } : {}) } : {};
+}
+
+/** A save's store, its pack if it has one, and its picks; or the response to answer instead. */
+async function openSave(context: HandlerContext, payload: StoreChangesPayload): Promise<SaveOpened | { response: HandlerResponse }> {
+    const read = picksOf(payload.selections);
+    if ('error' in read) return { response: { success: false, error: read.error } };
+    const store = await openProjectStore(context);
+    if ('response' in store) return store;
+    const target = await packToSave(store.project, payload);
+    if ('error' in target) return { response: { success: false, error: target.error } };
+    return { ...store, ...target, picks: read.picks };
+}
+
+interface SaveOpened extends ProjectStore {
+    pack?: DatapackId;
+    source?: DatapackStoreName;
+    picks: StorePicks;
 }
 
 function failure(context: HandlerContext, error: unknown, fallback: string): HandlerResponse {
@@ -129,16 +178,21 @@ function failure(context: HandlerContext, error: unknown, fallback: string): Han
     return { success: false, error: `${fallback} Details are in Debug Logs.`, code: ErrorCode.UNKNOWN };
 }
 
-/** Record on the project that its store now matches the new version of its own pack. */
-async function recordOnProject(context: HandlerContext, save: DemoPackSave): Promise<void> {
+/**
+ * Record on the project that its store now matches the new version of its own pack; for a save
+ * of picks alone, only the own pack's name, so the next save is a version of the same pack and
+ * the pack the project installs from is left as it was.
+ */
+async function recordOnProject(context: HandlerContext, save: DemoPackSave, holdsPack: boolean): Promise<void> {
     const project = await context.stateManager.getCurrentProject();
     if (!project) return;
-    recordDemoPackSave(project, save);
+    if (holdsPack) recordDemoPackSave(project, save);
+    else recordOwnPackName(project, save);
     await context.stateManager.saveProject(project);
 }
 
 /** Capture, write the new version into the library, and record it on the project. */
-async function save(context: HandlerContext, opened: OpenedStore, report: (stage: string) => void): Promise<HandlerResponse & OperationOutcome> {
+async function save(context: HandlerContext, opened: SaveOpened, report: (stage: string) => void): Promise<HandlerResponse & OperationOutcome> {
     const library = await resolveDataInstallerAccess(context, 'library');
     if (!library.ok) return library.response;
     const writer = new DatapackStoreWriter({
@@ -150,20 +204,24 @@ async function save(context: HandlerContext, opened: OpenedStore, report: (stage
     try {
         // No `update`: the version saved is always new, so nothing in the library is written over.
         const at = new Date();
-        const plan = demoPackSaveFor(opened.project, opened.pack, at);
+        const { pack, source, picks } = opened;
+        const plan = demoPackSaveFor(opened.project, pack, at);
         const saveAs = { id: plan.id, displayName: plan.displayName };
-        const target = { pack: opened.pack, saveAs, ...(opened.source ? { source: opened.source } : {}) };
+        const target = { saveAs, picks, ...(pack ? { pack } : {}), ...(source ? { source } : {}) };
         const result = await saveStoreChanges(opened.deps, target, (file) => writePackToStore(writer, file), report);
         // The pack it was made from names the store its rows were actually read from.
-        await recordOnProject(context, demoPackSaveFor(opened.project, { ...opened.pack, store: result.readFrom }, at));
-        context.logger.info(`${LOG_PREFIX} Saved the store's copy of ${opened.pack.name}@${opened.pack.version} as ${result.saved.name}@${result.saved.version} in the datapack library`);
+        await recordOnProject(context, demoPackSaveFor(opened.project, pack ? { ...pack, store: result.readFrom } : undefined, at), pack !== undefined);
+        const from = pack ? `the store's copy of ${pack.name}@${pack.version}` : 'what was picked from the store';
+        context.logger.info(`${LOG_PREFIX} Saved ${from} as ${result.saved.name}@${result.saved.version} in the datapack library`);
         const data: SaveStoreChangesResult = {
             datapackName: result.saved.name,
             version: result.saved.version,
             displayName: plan.displayName,
-            previous: opened.pack,
+            ...(pack ? { previous: pack } : {}),
             counts: result.counts,
             message: result.sentence,
+            unnamed: result.unnamed,
+            leftOut: result.leftOut,
         };
         return { success: true, note: result.sentence, data };
     } catch (error) {
@@ -175,6 +233,58 @@ async function save(context: HandlerContext, opened: OpenedStore, report: (stage
 function setupStepAnswer(pack: DatapackId, step: PackRootStep | undefined): HandlerResponse {
     const data: DatapackSetupStep = { datapackName: pack.name, version: pack.version, step: step ? rootStepItem(step) : null };
     return { success: true, data };
+}
+
+/**
+ * One kind of the project's store to pick from, for a save with Demo Builder's engine (step 14):
+ * the export door's `list-datapack-export-items`. Less what the pack being saved holds (the one
+ * named, else the project's own when Demo Builder installed it). Reads only.
+ */
+export async function listPickableItems(context: HandlerContext, payload: (StoreChangesPayload & { dataType?: string }) | undefined): Promise<HandlerResponse> {
+    const kind = payload?.dataType ?? '';
+    if (!isPickableKind(kind)) return { success: false, error: `Choose what to list: one of ${PICKABLE_KINDS.join(', ')}.` };
+    const store = await openProjectStore(context);
+    if ('response' in store) return store.response;
+    const target = await packToSave(store.project, payload);
+    if ('error' in target) return { success: false, error: target.error };
+    try {
+        return { success: true, data: await listPickable(store.deps, kind, target.pack, target.source) };
+    } catch (error) {
+        return failure(context, error, `The store's ${kind} could not be listed.`);
+    }
+}
+
+/** What the export door is sent: the picks, and the service's own fields, which are refused here. */
+interface StoreSavePayload {
+    selections?: Selections;
+    confirm?: boolean;
+    progress?: 'modal';
+    datapackName?: string;
+    version?: string;
+    commerceInstance?: string;
+    dataTypes?: string[];
+}
+
+/** The service's export fields, which name a pack in the shared catalog that this save never writes. */
+const SERVICE_EXPORT_FIELDS = ['datapackName', 'version', 'commerceInstance', 'dataTypes'] as const;
+
+/**
+ * The export door with Demo Builder's engine (step 14, item 10): what is picked from the project's
+ * store, with the project's own pack when Demo Builder installed it, saved as a new version of
+ * the demo's own pack. The same save as "Save store changes"; never a pack in the shared catalog.
+ */
+export async function saveFromStore(context: HandlerContext, payload: StoreSavePayload | undefined): Promise<HandlerResponse> {
+    const named = SERVICE_EXPORT_FIELDS.filter((field) => payload?.[field] !== undefined);
+    if (named.length > 0) {
+        return {
+            success: false,
+            error: `With Demo Builder's engine a save goes into this demo's own pack, never a named one, so ${named.join(', ')} cannot be sent. Send only selections.`,
+            code: ErrorCode.INVALID_OPERATION,
+        };
+    }
+    const save: StoreChangesPayload = { selections: payload?.selections, confirm: payload?.confirm };
+    if (payload?.progress) save.progress = payload.progress;
+    return storeChangesHandlers['save-store-changes-to-pack'](context, save);
 }
 
 export const storeChangesHandlers = defineHandlers({
@@ -217,11 +327,11 @@ export const storeChangesHandlers = defineHandlers({
             if (payload?.confirm !== true) {
                 return {
                     success: false,
-                    error: 'This saves the store\'s copy of the pack as a new version in the datapack library. Confirm to proceed.',
+                    error: "This saves the store's copy of the pack, and anything picked, as a new version of this demo's own pack in the datapack library. Confirm to proceed.",
                     code: ErrorCode.INVALID_OPERATION,
                 };
             }
-            const opened = await openStoreChanges(context, payload);
+            const opened = await openSave(context, payload);
             if ('response' in opened) return opened.response;
             const options = { id: DATAPACK_SAVE_OPERATION_ID, title: 'Saving store changes', inModal: payload.progress === 'modal' };
             return withOperationProgress(options, (report) => save(context, opened, (stage) => report(stage)));
