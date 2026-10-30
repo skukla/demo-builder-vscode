@@ -11,7 +11,9 @@ import {
     removeAttribute,
     removeAttributeOption,
 } from '@/features/data-installer/services/demoBuilderEngine/attributesKind';
-import { fakeContext } from './demoBuilderEngine.testUtils';
+import { attributePackForm } from '@/features/data-installer/services/demoBuilderEngine/packForm';
+import type { StoreAttribute } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
+import { type SentCall, fakeContext } from './demoBuilderEngine.testUtils';
 
 const FABRIC = {
     attribute: {
@@ -105,12 +107,83 @@ describe('installAttributes', () => {
         expect(ctx.sent).toStrictEqual([]);
     });
 
-    it('refuses a swatch attribute rather than half-installing it', async () => {
-        const ctx = await fakeContext();
-        const row = { attribute: { ...FABRIC.attribute, frontend_input: 'swatch_visual' } };
+});
 
-        await expect(installAttributes(ctx, parseAttributeRows([row]))).rejects.toThrow(/swatch/);
-        expect(ctx.sent).toStrictEqual([]);
+/**
+ * Swatches, in the service's two steps (`ProductAttributeImportProcessor.js` L338-352, L475-525):
+ * the attribute without its options or default, then each option through the options route,
+ * whose `value` is the swatch (a colour or a text), not an option id. The row is the service's own
+ * test row (`ProductAttributeImportProcessor.test.js` L260-306); no kept pack is known to carry one.
+ */
+describe('swatch attributes', () => {
+    const COLOR = {
+        attribute: {
+            attribute_code: 'cs_color',
+            frontend_input: 'swatch_visual',
+            default_frontend_label: 'Color',
+            default_value: '14',
+            options: [
+                { label: 'Black', value: '#1d1d1d', sort_order: 0, is_default: true },
+                { label: 'Blue', value: '#286785', sort_order: 1, is_default: false },
+            ],
+        },
+    };
+
+    it('makes the attribute without its options, records it, then adds each option with its swatch', async () => {
+        const ctx = await fakeContext();
+
+        await installAttributes(ctx, parseAttributeRows([COLOR]));
+
+        expect(ctx.sent).toEqual<SentCall[]>([
+            { method: 'POST', path: 'products/attributes', body: { attribute: { attribute_code: 'cs_color', frontend_input: 'swatch_visual', default_frontend_label: 'Color' } } },
+            { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Black', value: '#1d1d1d', sort_order: 0, is_default: true } } },
+            { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Blue', value: '#286785', sort_order: 1, is_default: false } } },
+        ]);
+        // Its options go with it on removal, so only the attribute is recorded.
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'cs_color' }]);
+    });
+
+    it('adds the options a store\'s own swatch lacks with their swatch, and records each', async () => {
+        let options = [{ label: 'Black', value: '60' }];
+        const ctx = await fakeContext(
+            {
+                'products/attributes/cs_color': { attribute_code: 'cs_color', frontend_input: 'swatch_visual' },
+                'products/attributes/cs_color/options': () => options,
+            },
+            (call) => {
+                if (call.path.endsWith('/options')) options = [...options, { label: 'Blue', value: '61' }];
+                return '61';
+            },
+        );
+
+        await installAttributes(ctx, parseAttributeRows([COLOR]));
+
+        expect(ctx.sent).toEqual<SentCall[]>([
+            { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Blue', value: '#286785', sort_order: 1, is_default: false } } },
+        ]);
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_OPTION_KIND, id: 'cs_color/61' }]);
+    });
+
+    // What Commerce answers as a swatch's `frontend_input` is not captured in this repo, so both
+    // forms our save could write are pinned: a swatch input, or the plain dropdown it is stored as.
+    it('reinstalls a swatch our save wrote, whichever input Commerce answered it with', async () => {
+        const stored: StoreAttribute = {
+            attribute_id: 93,
+            attribute_code: 'cs_color',
+            frontend_input: 'swatch_text',
+            is_user_defined: true,
+            options: [{ label: ' ', value: '' }, { label: 'Black', value: '60' }],
+        };
+        const asSwatch = await fakeContext();
+        const asDropdown = await fakeContext();
+
+        await installAttributes(asSwatch, parseAttributeRows([attributePackForm(stored)]));
+        await installAttributes(asDropdown, parseAttributeRows([attributePackForm({ ...stored, frontend_input: 'select' })]));
+
+        expect(asSwatch.sent.map((c) => c.path)).toEqual(['products/attributes', 'products/attributes/cs_color/options']);
+        expect(asSwatch.sent[1].body).toEqual({ option: { label: 'Black', value: 'Black', sort_order: 0, is_default: false } });
+        expect(asDropdown.sent.map((c) => c.path)).toEqual(['products/attributes']);
+        expect(asDropdown.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'cs_color' }]);
     });
 });
 

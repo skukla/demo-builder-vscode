@@ -135,7 +135,7 @@ const UPDATERS: Record<string, Updater> = {
     },
     product_attributes: async (ctx, object, row) => {
         const [attribute] = parseAttributeRows([row]);
-        await addMissingOptions(ctx, object.id, attribute.attribute.options ?? []);
+        await addMissingOptions(ctx, object.id, attribute.attribute.options ?? [], attribute.attribute.frontend_input);
     },
     // Step 08: a group whole; a customer and a company over the store's own copy.
     customer_groups: (ctx, object, row) => updateCustomerGroup(ctx, object.id, row),
