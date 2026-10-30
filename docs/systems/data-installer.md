@@ -136,9 +136,10 @@ judgement in this feature:
 
 ## Saving a store into a pack, with Demo Builder's engine (datapack-engine step 14)
 
-The export door is Demo Builder's own with its engine chosen (the default). "Save from this
-store" in the catalog's header, and "Save store changes to this pack" in the flyout of the pack the
-project holds, open one pick screen (`SaveFromStoreModal`): one kind at a time (products, gift
+The export door is Demo Builder's own with its engine chosen (the default). "Create datapack" in
+the catalog's header, with its Commerce choice (`CreateDatapackModal`), and "Save store changes to
+this pack" in the flyout's menu for the pack the project holds, open one pick screen
+(`SaveFromStoreModal`): one kind at a time (products, gift
 cards, categories, cart rules, customers, companies, customer groups, shared catalogs, attributes,
 attribute sets), listed from the project's store with its own credential
 (`list-datapack-export-items`, `storeItems.ts`), scoped to its website where Commerce scopes the
@@ -160,9 +161,10 @@ trip (install a pack into an empty store, save it back, compare) is pinned by
 
 ## Stage 3 (export, the service's engine)
 
-Implemented (`handlers/exportHandlers.ts`, `services/dataInstallerExportClient.ts`). With the
-service engine chosen, "Export from this instance" opens `ServiceExportModal` with its Commerce
-export offered; with Demo Builder's, the same link opens it for an ACO pack only (below). A
+Implemented (`handlers/exportHandlers.ts`, `services/dataInstallerExportClient.ts`). "Create
+datapack" in the catalog's header asks the pack type first (`CreateDatapackModal`). With the
+service engine chosen, its Commerce choice opens `ServiceExportModal` for the Commerce export; its
+ACO choice opens the same screen for an ACO pack (below), with either engine. A
 probe on 2026-08-14 found it authenticating and connecting but storing nothing
 ("MongoDB connection URI required"). That investigation is in
 [`.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md`](../../.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md),
@@ -202,7 +204,8 @@ AND name, so a library pack never folds into a Data Installer pack of the same n
 A library card is tagged "Library", or "Yours" when the SC owns it — the library says
 so itself (`mine`), because only it knows the caller's verified email.
 
-A library pack's flyout offers Import, Save as file and, when it is yours, Remove.
+A library pack's flyout offers Import, with Save as file and, when it is yours, Share or Stop
+sharing and Remove from library in its menu (`PackActions`).
 Demo Builder's engine (the default) installs it straight from the library; agents pass
 `source: "library"` to `validate_datapack_import`, `start_datapack_import` and
 `reset_datapack`. With the service engine chosen, which installs only from its own
@@ -261,8 +264,8 @@ A zip whose files sit under one root folder reads the same.
 
 | | Panel | Agent tool |
 |---|---|---|
-| Save a pack from either store | "Save as file" in a pack's flyout, and after an export | `save_datapack_zip` |
-| Remove your own library pack | "Remove it from the library" in its flyout | `delete_library_datapack` |
+| Save a pack from either store | "Save as file" in a pack's flyout menu, and after an export | `save_datapack_zip` |
+| Remove your own library pack | "Remove from library" in its flyout menu | `delete_library_datapack` |
 | Install a library pack | "Import" in its flyout | `start_datapack_import` with `source: "library"` |
 | Put a library pack in the Data Installer's catalog (service engine only) | "Copy to the Data Installer" in its flyout | `copy_library_datapack_to_installer` |
 | See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
@@ -299,7 +302,8 @@ What to know before installing a pack into a store, because the Commerce API can
   categories under it and there is nothing to do. When another store shares it (a test store made
   beside a demo's, say), the install asks you to set the store's Root Category to the pack's root in
   the Admin (Stores > All Stores > your store), with Open the Admin, I've done it and Skip for now.
-  A skipped step stays in the pack's flyout on the Data Installer screen, with its own Check.
+  A skipped step stays in the pack's flyout on the Data Installer screen as one line, "1 step left
+  in the Admin"; Show step opens it as the setup guide shows a step, with Open the Admin and Check.
   Removing the pack while your store still shows its root keeps that root: set the store's Root
   Category back first, then remove it again.
   When the pack's categories go under your store's root, one with a url key the store already uses

@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **One Create datapack on the Data Installer screen.** "Export from this instance" and "Save from this store" are now one button, Create datapack. It asks first whether you are making a Commerce pack or an ACO pack, names the project it reads from, then opens the screen that makes that pack. The header's actions are quiet buttons with icons, and Clear demo data sits apart at the end.
+- **A pack's side panel is quieter.** Import is the one button; Save as file, Save store changes to this pack, Share or Stop sharing, and Remove from library are in its ⋯ menu, with the same confirmations as before. A pack's one step in the Admin is one line, "1 step left in the Admin"; Show step opens it the way the demo setup guide shows a step, with Open the Admin and Check.
+
 ### Fixed
+
+- **Check on a pack's step in the Admin shows what it found.** Pressing Check showed nothing while Demo Builder went on to record the answer, seen only after closing and opening the panel again. It now waits long enough for the store to answer, and says plainly when no answer came back.
 
 - **You are told when your AI finishes a storefront update.** After "Fix with AI", nothing said when the AI was done: the Updates window kept saying it was working on it. Now Demo Builder shows a notification when the AI finishes ("JustRite's Adobe boilerplate update is live.", with an Open storefront button), or when it drops the fix (nothing changed, and the update is still offered). If the Updates window is still showing that run, the row turns to "Updated by your AI", the window's title follows, and "Your local copy" reads up to date when it is. While the AI works, the row no longer always says "nothing goes live until you approve it": with `demoBuilder.ai.requireAgentConsent` on it says your AI asks you first, and with it off it says the fix goes live as soon as your AI finishes. (EDS-56)
 
