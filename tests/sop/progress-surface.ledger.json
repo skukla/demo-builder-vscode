@@ -1,7 +1,7 @@
 {
     "_what": "Which surface a long operation opens. Two populations, both enforced by progress-surface.test.ts. 'directProgress' is every vscode.window.withProgress outside the five modules that own the surfaces \u2014 each entry says why it still opens its own notification instead of going through withOperationProgress, and the list may only shrink. 'blockingDialogs' is every modal:true dialog \u2014 each entry names the decision it gates, because a blocking dialog is for a choice made BEFORE work starts and for nothing else.",
     "directProgress": {
-        "src/commands/commandManager.ts:398": "Adobe sign-in, started from the palette, a dashboard button and a wizard step. It is not an operation with stages \u2014 one title, one spinner, nothing to report \u2014 and the router would have nothing to route.",
+        "src/commands/commandManager.ts:408": "Adobe sign-in, started from the palette, a dashboard button and a wizard step. It is not an operation with stages \u2014 one title, one spinner, nothing to report \u2014 and the router would have nothing to route.",
         "src/commands/migrateStorefrontNames.ts:157": "A one-off maintenance command run from the palette. R2 already says one notification, which is what this opens; nothing else narrates it.",
         "src/commands/repairSiteConfiguration.ts:107": "The republish half of the same palette command. Moving it alone would split one command across two surfaces.",
         "src/commands/repairSiteConfiguration.ts:82": "Palette maintenance command, reads the site's configuration. One notification is the right surface; it predates the router.",
@@ -15,7 +15,7 @@
         "src/features/eds/commands/manageGitHubRepos.ts:185": "Palette command, loading the repository list before anything is chosen.",
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:271": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
         "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts:102": "Runs when a VS Code setting changes, so there is no screen and no agent \u2014 a notification is the only surface available.",
-        "src/commands/commandManager.ts:457": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
+        "src/commands/commandManager.ts:467": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
     },
     "blockingDialogs": {
         "src/features/dashboard/handlers/appBuilderComponentPromote.ts:137": "Gates: create a PUBLIC GitHub repository and push the app to it? Only when no screen modal is asking; from the card the same yes is the modal's Create button.",

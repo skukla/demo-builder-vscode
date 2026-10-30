@@ -61,11 +61,21 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.showProjectsList', async (options?: unknown) => {
-            // Close other webviews when showing Projects List (tab replacement)
-            ProjectDashboardWebviewCommand.disposeActivePanel();
-            ConfigureProjectWebviewCommand.disposeActivePanel();
-            // Check for Updates opens it with the Updates modal (PL-80).
-            await projectsList.execute({ showUpdates: isRecord(options) && options.showUpdates === true });
+            // Close other webviews when showing Projects List (tab replacement), inside a
+            // webview transition, as swapWebviewSurface does. Outside one, the dashboard's
+            // disposal callback (screenAfterClose) opened the list a second time while the
+            // first was still loading; that reload dropped the Updates modal Review had
+            // asked for (owner, 2026-10-30). A caller already in a transition owns it.
+            const ownsTransition = !BaseWebviewCommand.isWebviewTransitionInProgress();
+            if (ownsTransition) await BaseWebviewCommand.startWebviewTransition();
+            try {
+                ProjectDashboardWebviewCommand.disposeActivePanel();
+                ConfigureProjectWebviewCommand.disposeActivePanel();
+                // Check for Updates opens it with the Updates modal (PL-80).
+                await projectsList.execute({ showUpdates: isRecord(options) && options.showUpdates === true });
+            } finally {
+                if (ownsTransition) BaseWebviewCommand.endWebviewTransition();
+            }
         });
 
         // Create Project (Webview version)
