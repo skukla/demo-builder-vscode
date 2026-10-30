@@ -199,3 +199,7 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 - 2026-10-01  docs(backlog): DI-1 records the library undo commit (`c1db9c659`)
 - 2026-10-01  feat(data-installer): copy a library pack into the Data Installer so it can be installed (`bf36b8350`)
 - 2026-10-01  docs(backlog): DI-1 records the library catalog commit (`7b48174cf`)
+- 2026-10-30  Merge parity/g3-pack-from-any-store: a pack from any store (step 14, G3) (`5f9f3ed00`)
+- 2026-10-30  docs(data-installer): saving a store into a pack, and step 14's G3 items as built (`dd352da2c`)
+- 2026-10-30  feat(data-installer): pick what goes into a save from the store, on the catalog screen (`cc69149b2`)
+- 2026-10-30  feat(data-installer): save any store into the demo's own pack, with the items picked (`3c1630c54`)

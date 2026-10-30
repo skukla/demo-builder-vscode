@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: high
-status: planned
+status: active
 ---
 
 # Finish Adobe Commerce Optimizer (ACO) support
@@ -111,3 +111,10 @@ packs by name, which it already does.
 - 2026-10-04  feat(eds,ai): adopt an empty org repository, explain GitHub org refusals, and a skill for building catalog data (`dd6784bb0`)
 - 2026-10-20  DI-4 (has the Data Installer superseded the ACO ingestion tool?) folds in here, owner 2026-10-19: it is this item's data decision (P3). DI-4's findings stand: nothing reaches the ingestion tool, its data source repository is gone, and its own repo is named two ways.
 - 2026-10-30  Datapack-engine step 11 decided the eight ACO packs do not map onto Demo Builder's engine (another backend, no read-back); their kinds, row shapes and endpoints recorded above. Not committed.
+- 2026-10-30  Merge parity/g5-aco-export: an ACO pack from a Commerce store (step 14, G5) (`becfcb2b6`)
+- 2026-10-30  docs(datapack): the ACO pack in the Data Installer doc and step 14 item 19 marked built (`f996b62a2`)
+- 2026-10-30  refactor(data-installer): the ACO export opens the library through the house writer (`6622c51c3`)
+- 2026-10-30  feat(data-installer): the export screen and start_datapack_export can make an ACO pack (`08711b848`)
+- 2026-10-30  feat(data-installer): make an ACO pack from the project's store and save it to the library (`47f47c9c2`)
+- 2026-10-30  feat(data-installer): ACO pack rows made from Commerce answers, as the service makes them (`8a3c43e2f`)
+- 2026-10-30  docs(datapack): port spec for the Data Installer's ACO export (`6bf5fe8ac`)
