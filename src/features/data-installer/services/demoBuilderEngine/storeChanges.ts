@@ -22,6 +22,7 @@ import { loadStoreSets } from './attributeSetsKind';
 import { capturePack } from './capture';
 import {
     type CreatedObject,
+    type InstallRecord,
     type RecordFiles,
     forgetInstallRecord,
     nodeRecordFiles,
@@ -103,15 +104,20 @@ export interface ChangePreview {
 /** The names shown per count: enough to recognise, never the rows. */
 const NAMES_SHOWN = 3;
 
-const named = (names: string[]): Named => ({ count: names.length, names: names.slice(0, NAMES_SHOWN) });
+/** How many, with the first few names: every count an agent or the SC reads is this shape. */
+export const named = (names: string[]): Named => ({ count: names.length, names: names.slice(0, NAMES_SHOWN) });
 const labelPack = (pack: DatapackId) => `${pack.name}@${pack.version}`;
 
-/** The engine's read access to the project's store, pointed at its install target. */
-async function openStore(deps: StoreChangesDeps, pack: DatapackId): Promise<KindContext> {
-    if (!deps.target) throw new StoreChangesError('Choose the website and store view to install into first.');
+/**
+ * The engine's read access to the project's store, pointed where the pack was installed: the
+ * record's target, else (a record made before it was kept, or none) the project's (rule 3).
+ */
+async function openStore(deps: StoreChangesDeps, pack: DatapackId, record: InstallRecord | undefined): Promise<KindContext> {
+    const codes = record?.target ?? deps.target;
+    if (!codes) throw new StoreChangesError('Choose the website and store view to install into first.');
     const commerce = await deps.commerce();
     if ('refusal' in commerce) throw new StoreChangesError(commerce.refusal);
-    const target = await resolveEngineTarget(commerce.get, deps.target);
+    const target = await resolveEngineTarget(commerce.get, codes);
     // Opened to read what it lists; neither action records anything through it.
     const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack, () => (deps.now ?? (() => new Date()))().toISOString());
     return { ...commerce, recorder, session: sessionFor(target), log: deps.log };
@@ -195,7 +201,7 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     const all = await deps.readPack(pack, source);
     const items = dataTypes ? Object.fromEntries(Object.entries(all).filter(([kind]) => dataTypes.includes(kind))) : all;
     const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack);
-    const ctx = await openStore(deps, pack);
+    const ctx = await openStore(deps, pack, record);
     const plans = await planRepeat(ctx, items, record?.created ?? []);
     // The containers an install would keep, decided the way it decides them, read-only.
     const { take, kept: containers } = await decideRemovals(ctx.get, removalsOf(plans));
@@ -266,7 +272,7 @@ export async function saveStoreChanges(
     if (!record) throw new StoreChangesError(`Demo Builder did not install ${labelPack(pack)} in this project, so there are no store changes of it to save.`);
     report(OPERATION_STAGES.readingStoreChanges.label);
     const installed = await readInstalled(deps, target);
-    const ctx = await openStore(deps, pack);
+    const ctx = await openStore(deps, pack, record);
     const captured = await capturePack(ctx, record.created, installed.rows);
     if (Object.keys(captured.items).length === 0) throw new StoreChangesError(`The store no longer holds anything ${labelPack(pack)} made, so there is nothing to save.`);
     const now = (deps.now ?? (() => new Date()))();

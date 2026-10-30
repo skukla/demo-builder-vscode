@@ -131,6 +131,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     validate_datapack_import: 'Checking the sample-data import',
     // "What installing a datapack again would change ... Writes nothing."
     preview_datapack_changes: 'Previewing the datapack changes',
+    // "What a website of this project's store holds that Demo Builder did not install ... Writes nothing."
+    check_demo_data: "Checking this demo's store data",
     verify_ai_setup: 'Checking the AI setup',
 
     // ── Projects ────────────────────────────────────────────────────────
@@ -258,11 +260,15 @@ export const TOOL_NARRATION: Record<string, string> = {
     start_datapack_import: 'Importing the sample data',
     start_datapack_export: 'Capturing the sample data',
     reset_datapack: 'Removing the sample data',
+    // "Clear a website of everything check_demo_data listed".
+    clear_demo_data: "Clearing the demo's store data",
     save_datapack_zip: 'Saving the datapack as a file',
     open_datapack_zip: 'Reading the datapack file',
     load_datapack_zip: 'Loading a datapack file',
     delete_library_datapack: 'Deleting a library datapack',
     rename_datapack: 'Renaming the datapack',
+    // "Share one of your own datapack library packs with your team, or stop sharing it".
+    share_datapack: 'Changing who can use a datapack',
     copy_library_datapack_to_installer: 'Copying a pack to the installer',
     // "Save the store's copy ... as a NEW version of it in the datapack library".
     save_store_changes_to_pack: 'Saving store changes to the pack',
@@ -343,10 +349,12 @@ const NAMED_NARRATION: Readonly<Record<string, NamedForm>> = {
     cleanup_dalive_site: naming(['org', 'site'], (org, site) => `Deleting ${org}/${site} content`),
     delete_page: naming(['path'], (path) => `Deleting ${path}`),
     reset_datapack: naming(['datapackName'], (name) => `Resetting ${name}`),
+    clear_demo_data: naming(['websiteCode'], (website) => `Clearing ${website}`),
     start_datapack_import: naming(['datapackName'], (name) => `Importing ${name}`),
     start_datapack_export: naming(['datapackName'], (name) => `Exporting ${name}`),
     delete_library_datapack: naming(['datapackName'], (name) => `Deleting ${name}`),
     rename_datapack: naming(['datapackName'], (name) => `Renaming the ${name} pack`),
+    share_datapack: naming(['datapackName'], (name) => `Changing who can use the ${name} pack`),
     copy_library_datapack_to_installer: naming(['datapackName'], (name) => `Copying ${name}`),
     remove_block_from_library: naming(['blockId'], (block) => `Removing the ${block} block`),
     set_site_admin: naming(['email'], (email) => `Changing ${email}'s access`),

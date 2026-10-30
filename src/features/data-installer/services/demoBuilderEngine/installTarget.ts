@@ -11,15 +11,13 @@
  * @module features/data-installer/services/demoBuilderEngine/installTarget
  */
 
+import type { TargetCodes } from './installRecord';
 import { type CatalogSession, newCatalogSession } from './kindContext';
 import { storeScopeOf } from '@/features/app-builder/services/erpAssignSelection';
 import type { CommerceGet } from '@/types/commerceWire';
 
-/** The project's chosen website and store view, by code. */
-export interface TargetCodes {
-    websiteCode: string;
-    storeCode: string;
-}
+/** The project's chosen website and store view, by code (the install record keeps the same). */
+export type { TargetCodes };
 
 /** The same, as this store's ids, with the root category the store view shows. */
 export interface EngineTarget extends TargetCodes {

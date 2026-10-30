@@ -31,6 +31,7 @@ import type { ImportJobRecord } from '../types';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
 import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
 import { datapackZipHandlers } from './datapackZipHandlers';
+import { demoDataHandlers } from './demoDataHandlers';
 import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
@@ -80,6 +81,8 @@ export const importHandlers = defineHandlers({
     ...datapackLibraryHandlers,
     // What installing again would change, and saving the store's copy as a new version (step 05).
     ...storeChangesHandlers,
+    // What a website holds that Demo Builder did not install, and clearing it (step 10).
+    ...demoDataHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,

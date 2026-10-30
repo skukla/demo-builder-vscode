@@ -115,8 +115,8 @@ const previousSchema = z.object({
 });
 
 /** What the record says a setting held before, or undefined when it does not say it plainly. */
-function recordedPrevious(object: CreatedObject): CommerceConfigPrevious | undefined {
-    const parsed = previousSchema.safeParse(object.previous);
+function recordedPrevious(object: CreatedObject | undefined): CommerceConfigPrevious | undefined {
+    const parsed = previousSchema.safeParse(object?.previous);
     return parsed.success ? parsed.data : undefined;
 }
 
@@ -128,15 +128,36 @@ function againstRecord(object: CreatedObject, current: string, wanted: string): 
 }
 
 /**
+ * Each item's previous state, a recorded one read at the website its record names (`scopeCode`)
+ * and the rest at `websiteCode`: a pack installed to another website than the caller's is read
+ * where it went (live, scratch-1028, 2026-10-30). One `readPrevious` per website, answers in order.
+ */
+async function readWhereRecorded(
+    get: CommerceGet,
+    items: ReadonlyArray<Pick<SetupConfigFixItem, 'path' | 'scope'> & { scopeCode?: string }>,
+    websiteCode: string | undefined,
+): Promise<CommerceConfigPrevious[]> {
+    const codeOf = (item: (typeof items)[number]) => (item.scope === 'website' ? (item.scopeCode ?? websiteCode) : undefined);
+    const answers = new Array<CommerceConfigPrevious>(items.length);
+    for (const code of new Set(items.map(codeOf))) {
+        const at = items.flatMap((item, i) => (codeOf(item) === code ? [i] : []));
+        const read = await readPrevious(get, at.map((i) => ({ path: items[i].path, scope: items[i].scope })), code);
+        at.forEach((index, n) => (answers[index] = read[n]));
+    }
+    return answers;
+}
+
+/**
  * What installing the pack's settings would do, read-only: the install and the preview both ask.
+ * A setting the record lists is read at the website the record names, not `websiteCode`.
  *
  * @param recorded - what the install record lists; a recorded setting the pack no longer has is `remove`
  */
 export async function planSettings(get: CommerceGet, settings: readonly PackSetting[], recorded: readonly CreatedObject[], websiteCode?: string): Promise<PlannedSetting[]> {
     const objects = recorded.filter((o) => o.kind === STORE_CONFIG_KIND);
     const byKey = new Map(objects.map((o) => [o.key ?? o.id, o]));
-    const items = settings.map((s) => s.item);
-    const now = items.length > 0 ? await readPrevious(get, items, websiteCode) : [];
+    const items = settings.map(({ key, item }) => ({ ...item, scopeCode: recordedPrevious(byKey.get(key))?.scopeCode }));
+    const now = items.length > 0 ? await readWhereRecorded(get, items, websiteCode) : [];
     const atDefault = items.length > 0 ? await readPrevious(get, items.map(({ path }) => ({ path, scope: 'default' as const }))) : [];
     const planned = settings.map(({ key, item }, i): PlannedSetting => {
         const object = byKey.get(key);
@@ -149,6 +170,14 @@ export async function planSettings(get: CommerceGet, settings: readonly PackSett
     const wanted = new Set(settings.map((s) => s.key));
     const dropped = objects.filter((o) => !wanted.has(o.key ?? o.id)).map((object): PlannedSetting => ({ key: object.key ?? object.id, object, outcome: 'remove' }));
     return [...planned, ...dropped];
+}
+
+/**
+ * The website a record's settings were written for, the first website setting's: how a record
+ * made before the install target was kept says where it went.
+ */
+export function settingsWebsite(created: readonly CreatedObject[]): string | undefined {
+    return created.flatMap((o) => (o.kind === STORE_CONFIG_KIND ? [recordedPrevious(o)?.scopeCode] : [])).find((code) => code !== undefined);
 }
 
 const NONE = (): SettingsDone => ({ changes: [], notes: [], kept: [] });
@@ -242,7 +271,8 @@ export function settingsLine(done: SettingsDone | undefined, verb: 'Set' | 'Put 
 
 /**
  * The settings capture reads into a new version (step 05's save): every setting the record lists
- * or the installed version names, at its value in the store now, at its own scope.
+ * or the installed version names, at its value in the store now, at its own scope; a recorded
+ * website setting at the website its record names.
  */
 export async function captureSettings(
     get: CommerceGet,
@@ -250,22 +280,22 @@ export async function captureSettings(
     installed: Record<string, unknown>,
     websiteCode: string | undefined,
 ): Promise<Record<string, unknown>> {
-    const named = new Map<string, Pick<SetupConfigFixItem, 'path' | 'scope'>>();
+    const named = new Map<string, Pick<SetupConfigFixItem, 'path' | 'scope'> & { scopeCode?: string }>();
     for (const object of created) {
         const previous = object.kind === STORE_CONFIG_KIND ? recordedPrevious(object) : undefined;
-        if (previous) named.set(keyOf(previous), { path: previous.path, scope: previous.scope });
+        if (previous) named.set(keyOf(previous), { path: previous.path, scope: previous.scope, ...(previous.scopeCode ? { scopeCode: previous.scopeCode } : {}) });
     }
     if (installed[STORE_CONFIG_KIND] !== undefined) {
-        for (const { item } of packSettings(installed[STORE_CONFIG_KIND], websiteCode)) named.set(keyOf(item), { path: item.path, scope: item.scope });
+        for (const { key, item } of packSettings(installed[STORE_CONFIG_KIND], websiteCode)) if (!named.has(key)) named.set(key, { path: item.path, scope: item.scope });
     }
     const wanted = [...named.values()];
     if (wanted.length === 0) return {};
-    const now = await readPrevious(get, wanted, websiteCode);
+    const now = await readWhereRecorded(get, wanted, websiteCode);
     const rows = wanted.map((item, i) => ({
         path: item.path,
         value: now[i].effective,
         scope: item.scope,
-        ...(item.scope === 'website' ? { scope_code: websiteCode } : {}),
+        ...(item.scope === 'website' ? { scope_code: now[i].scopeCode } : {}),
     }));
     return { [STORE_CONFIG_KIND]: rows };
 }

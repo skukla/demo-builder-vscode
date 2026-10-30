@@ -11,6 +11,10 @@
  * - `rename-library-datapack` — change the display name of every version of one of the
  *   caller's own packs (the name in the library cannot change). When it is this demo's
  *   own pack, the project records that the SC named it (datapack-engine step 07).
+ * - `share-library-datapack` — share every version of one of the caller's own packs with everyone
+ *   the library admits, or stop sharing it (owner, 2026-10-30): the library's owner-only
+ *   `update-datapack-metadata`, its `shared` field. Confirm-gated, since a shared pack is seen and
+ *   installed by the whole team.
  * - `copy-library-datapack-to-installer` — make a library pack installable. Install
  *   runs through the Data Installer, which does not hold library packs, so this
  *   reads the whole pack from the library and writes it into the Data Installer;
@@ -28,6 +32,7 @@ import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { readPackFromStore, writePackToStore } from '../services/datapackTransfer';
 import { myVersions } from '../services/demoPack';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
+import { SHARE_CONSENT } from '../shareWording';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { failure, installerEchoRefusal } from './datapackZipHandlers';
 import { packReadsFor } from './recordedPackHandlers';
@@ -48,6 +53,14 @@ export interface RenameLibraryDatapackPayload {
     datapackName?: string;
     /** The new name the SC sees. */
     displayName?: string;
+    /** Must be true. */
+    confirm?: boolean;
+}
+
+export interface ShareLibraryDatapackPayload {
+    datapackName?: string;
+    /** True to share, false to stop sharing. */
+    shared?: boolean;
     /** Must be true. */
     confirm?: boolean;
 }
@@ -117,6 +130,17 @@ function readRename(payload?: RenameLibraryDatapackPayload): { name: string; dis
         };
     }
     return { name, displayName };
+}
+
+/** Check the payload: a name, whether to share, and confirm. */
+function readShare(payload?: ShareLibraryDatapackPayload): { name: string; shared: boolean } | HandlerResponse {
+    const name = payload?.datapackName;
+    if (!name || typeof payload?.shared !== 'boolean') return { success: false, error: 'Name the library datapack, and whether to share it.' };
+    if (payload.confirm !== true) {
+        const why = payload.shared ? SHARE_CONSENT : 'Stopping sharing takes this pack out of everyone else\'s list.';
+        return { success: false, error: `${why} Send confirm:true to proceed.`, code: ErrorCode.INVALID_OPERATION };
+    }
+    return { name, shared: payload.shared };
 }
 
 function writerFor(
@@ -206,6 +230,28 @@ export const datapackLibraryHandlers = defineHandlers({
             return { success: true, data: { datapackName: input.name, displayName: input.displayName, versions: versions.length } };
         } catch (error) {
             return failure(context, error, 'The library datapack could not be renamed.');
+        }
+    },
+
+    'share-library-datapack': async (
+        context: HandlerContext,
+        payload?: ShareLibraryDatapackPayload,
+    ): Promise<HandlerResponse> => {
+        const input = readShare(payload);
+        if ('success' in input) return input;
+        const access = await resolveDataInstallerAccess(context, 'library');
+        if (!access.ok) return access.response;
+        try {
+            const versions = await myVersions(access.client, input.name);
+            if (versions.length === 0) {
+                return { success: false, error: `The datapack library has no pack of yours named ${input.name}.`, code: ErrorCode.INVALID_OPERATION };
+            }
+            const writer = writerFor(context, access);
+            for (const version of versions) await writer.updateShared(version, input.shared);
+            context.logger.info(`${LOG_PREFIX} ${input.shared ? 'Shared' : 'Stopped sharing'} ${input.name} (${versions.length} versions) in the datapack library`);
+            return { success: true, data: { datapackName: input.name, shared: input.shared, versions: versions.length } };
+        } catch (error) {
+            return failure(context, error, input.shared ? 'The library datapack could not be shared.' : 'The library datapack could not stop being shared.');
         }
     },
 

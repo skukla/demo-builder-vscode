@@ -437,6 +437,14 @@ describe('rows with no output safety net are classified', () => {
         // HANDLER RETURNS DATA (datapack-engine step 07, read in datapackLibraryHandlers.ts):
         // `{datapackName, displayName, versions}`, three fixed fields.
         'rename_datapack',
+        // HANDLER RETURNS DATA (datapack-engine step 10, read in demoDataHandlers.ts): the check
+        // answers the preview, counts and at most three names per kind with fixed sentences; the
+        // clearing answers `{removed, failed, sentence}`, counts and one Commerce message per kind.
+        'check_demo_data',
+        'clear_demo_data',
+        // HANDLER RETURNS DATA (owner, 2026-10-30, read in datapackLibraryHandlers.ts):
+        // `{datapackName, shared, versions}`, three fixed fields.
+        'share_datapack',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {

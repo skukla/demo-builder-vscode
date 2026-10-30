@@ -173,6 +173,46 @@ describe('demoBuilderEngine install', () => {
     });
 });
 
+describe('demoBuilderEngine and the website a pack was installed to', () => {
+    const READS = { [SETS_PAGE]: { items: [], total_count: 0 }, [childSearch(2, 'Sale')]: { items: [] } };
+    const ELSEWHERE = { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' };
+    const MOVED = `${PACK.name}@${PACK.version} is installed on the website justrite_test_website. Remove it first, or install it there.`;
+
+    it('writes the website and store view it installs to on the record', async () => {
+        const { engine, files } = await engineWith(READS, () => ({ id: 40 }));
+
+        await settle(engine, (await engine.startImport(request())).activationId);
+
+        expect((await readInstallRecord(files, PROJECT, PACK))?.target).toEqual({ websiteCode: 'base', storeCode: 'default' });
+    });
+
+    it('refuses, writing nothing, to install again into a website other than the one the record names', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then', ELSEWHERE)).record({ kind: 'categories', id: '40' });
+        const { engine, ctx } = await engineWith(READS, () => ({ id: 41 }), { files });
+
+        const { activationId } = await engine.startImport(request());
+        await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(MOVED);
+        expect(ctx.sent).toStrictEqual([]);
+        expect(await engine.validateImport(request())).toEqual({ valid: false, reason: MOVED });
+    });
+
+    it('refuses the same for a record made before targets were kept, by the website its settings went to', async () => {
+        const files = memoryFiles();
+        const previous = { path: 'catalog/frontend/list_per_page', scope: 'website', scopeCode: 'justrite_test_website', stored: '10', effective: '10', wrote: '15' };
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({ kind: 'store_config', id: 'x@website', key: 'x@website', previous });
+        const { engine, ctx } = await engineWith(READS, () => ({ id: 41 }), { files });
+
+        const { activationId } = await engine.startImport(request());
+        await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(MOVED);
+        expect(ctx.sent).toStrictEqual([]);
+    });
+});
+
 describe('demoBuilderEngine removal', () => {
     it('takes back what the record lists and reports every kind done', async () => {
         const { engine, ctx, files } = await engineWith({}, () => true);

@@ -19,6 +19,7 @@ export function memoryFiles(seed: Record<string, string> = {}): RecordFiles & { 
         read: async (p) => data.get(p),
         write: async (p, content) => void data.set(p, content),
         remove: async (p) => void data.delete(p),
+        list: async (dir) => [...data.keys()].filter((p) => p.startsWith(`${dir}/`) && !p.slice(dir.length + 1).includes('/')).map((p) => p.slice(dir.length + 1)),
     };
 }
 

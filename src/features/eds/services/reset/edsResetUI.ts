@@ -22,6 +22,7 @@ import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { checkDemoSource, type DemoSourceCheck } from './demoSourceCheck';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import { showResetResultNotifications, withModalWarning } from './edsResetNotifications';
+import { beginOtherDataCheck, clearProjectOtherData, confirmClearOtherData } from './edsResetOtherData';
 import {
     extractResetParams,
     type EdsResetParams,
@@ -208,6 +209,8 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     // never be asked is never checked.
     const withinEdit = options.withinEdit;
     const canRemoveSampleData = withinEdit ? undefined : beginSampleDataRemovalCheck(project);
+    // What else the demo's website holds (step 10): read beside it, asked after it.
+    const otherData = withinEdit ? undefined : beginOtherDataCheck(project, context);
 
     if (!withinEdit && !(await confirmReset(vscode, getProjectDisplayName(project)))) {
         context.logger.info(`${logPrefix} resetEds: User cancelled reset`);
@@ -227,6 +230,9 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     // on failure; the older "no network call in front of a modal" phrasing here
     // overstated a rule that was really about not adding failure modes.
     const removeData = !withinEdit && (await confirmSampleDataRemoval(project, vscode, canRemoveSampleData));
+    // Only after "Remove Datapack", or with no datapack: keeping the pack must not clear its data.
+    const otherPlan = removeData || !project.datapack ? await otherData : undefined;
+    const clearOther = otherPlan !== undefined && (await confirmClearOtherData(vscode, otherPlan));
 
     // Listed as resetting for the whole run: the projects list reads that, never
     // this in-memory status (found 2026-10-28, three resets all said "Needs reset").
@@ -327,6 +333,10 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 // the reset still stands.
                 if (removeData) {
                     await removeProjectSampleData(project, context, report);
+                }
+                // After the pack's removal, so what it took is gone from the list, never added to it.
+                if (clearOther && otherPlan) {
+                    await clearProjectOtherData(project, context, report, otherPlan);
                 }
 
                 // The reset's steps are a fixed list, so the count is known up

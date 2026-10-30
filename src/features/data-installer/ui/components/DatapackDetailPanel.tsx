@@ -37,6 +37,7 @@ import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';
+import { ShareLibraryPackButton } from './ShareLibraryPackButton';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
 import type { DatapackId } from '@/types/datapack';
@@ -86,6 +87,8 @@ export interface DatapackDetailPanelProps {
     onRename?: (id: DatapackId, displayName: string) => Promise<string | null>;
     /** The warning a delete carries when this SC shared the pack in a project file. */
     sharedInFile?: string;
+    /** The SC's own pack was shared or stopped being shared (owner, 2026-10-30). Stable. */
+    onSharingChanged?: () => void;
 }
 
 export function DatapackDetailPanel({
@@ -102,6 +105,7 @@ export function DatapackDetailPanel({
     onSaveStoreChanges,
     onRename,
     sharedInFile,
+    onSharingChanged,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selected?.name ?? 'Datapack';
 
@@ -134,6 +138,7 @@ export function DatapackDetailPanel({
                                 installsFromLibrary={installsFromLibrary}
                                 onSaveStoreChanges={onSaveStoreChanges}
                                 sharedInFile={sharedInFile}
+                                onSharingChanged={onSharingChanged}
                             />
                         ) : null}
                     </div>
@@ -176,8 +181,8 @@ function canImport(args: {
  * A Data Installer pack: Import and Save as file. A library pack: Import when Demo Builder's
  * engine is chosen (it reads the library itself), else Copy to the Data Installer (the service
  * installs only from its own catalog; Import is offered once the copy lands); then Save as
- * file, and Remove when it is the SC's own. Either, when it is the pack the open project
- * holds: Save store changes to this pack.
+ * file, and Share or Stop sharing and Remove when it is the SC's own. Either, when it is the pack
+ * the open project holds: Save store changes to this pack.
  */
 function PanelActions({
     detail,
@@ -186,6 +191,7 @@ function PanelActions({
     installsFromLibrary,
     onSaveStoreChanges,
     sharedInFile,
+    onSharingChanged,
 }: {
     detail: DatapackDetail;
     onImport: (id: DatapackId) => void;
@@ -193,6 +199,7 @@ function PanelActions({
     installsFromLibrary: boolean;
     onSaveStoreChanges?: (id: DatapackId) => void;
     sharedInFile?: string;
+    onSharingChanged?: () => void;
 }): React.JSX.Element {
     const saveStoreChanges = onSaveStoreChanges ? (
         <Button variant="secondary" onPress={() => onSaveStoreChanges(detail.id)}>
@@ -221,6 +228,7 @@ function PanelActions({
                 ) : null}
                 <SaveDatapackFileButton id={detail.id} source="library" />
                 {saveStoreChanges}
+                {detail.mine ? <ShareLibraryPackButton id={detail.id} shared={detail.shared} onChanged={onSharingChanged} /> : null}
                 {detail.mine ? (
                     <RemoveFromLibraryButton id={detail.id} onRemoved={onRemoved} warning={sharedInFile} />
                 ) : null}

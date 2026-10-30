@@ -18,6 +18,12 @@
  * - **Its region** is the pack's `region_id`, which every Bodea company carries; Commerce's region
  *   ids are the same on every store. A row naming its region another way is refused.
  * - `extension_attributes.quote_config.company_id` is the source store's id and is never sent.
+ * - **Its status** is Active (`1`) unless the row carries its own `status`, which wins (owner,
+ *   2026-10-30). Commerce makes a company sent without one Pending Approval (`0`, live 2026-10-30,
+ *   `COMPANY_27_DB08`), and Adobe's "Create a company account" (Experience League, the Status
+ *   field) says only an Active company's administrator and members can log in from the storefront
+ *   and make purchases. The row keeps it beside the create call, never in the GraphQL `input`, so a
+ *   pack published to the Data Installer still sends that service a call it takes.
  *
  * What the store already has (by name, or by email) is left alone and not recorded.
  *
@@ -63,9 +69,14 @@ const companyRows = z.array(
                     .passthrough(),
             }),
             extension_attributes: z.record(z.unknown()).optional(),
+            /** The company's status, as Commerce numbers it (0 pending, 1 active, 2 rejected, 3 blocked). */
+            status: z.number().int().min(0).max(3).optional(),
         })
         .passthrough(),
 );
+
+/** Active: a status an SC's demo buyer can sign in and buy under. */
+const ACTIVE = 1;
 
 export type CompanyRows = z.infer<typeof companyRows>;
 type CompanyRow = CompanyRows[number];
@@ -131,6 +142,7 @@ export async function installCompanies(ctx: KindContext, rows: CompanyRows): Pro
         const company: CommerceCompany = {
             ...companyFields(row),
             super_user_id: superUserId,
+            status: row.status ?? ACTIVE,
             ...(publicGroup !== undefined ? { customer_group_id: publicGroup } : {}),
             ...(ext ? { extension_attributes: ext } : {}),
         };
@@ -154,18 +166,20 @@ export async function updateCompany(ctx: KindContext, id: string, row: unknown):
     const company: CommerceCompany = {
         ...current,
         ...companyFields(pack),
+        ...(pack.status !== undefined ? { status: pack.status } : {}),
         id: current.id ?? Number(id),
         ...(ext ? { extension_attributes: { ...current.extension_attributes, ...ext, quote_config: { ...current.extension_attributes?.quote_config, ...ext.quote_config } } } : {}),
     };
     await ctx.send('PUT', `company/${segment(id)}`, { company });
 }
 
-/** A company as a pack holds it: the service's create call, its admin by name and email, no ids. */
+/** A company as a pack holds it: the service's create call, its admin by name and email, its status beside the call, no ids. */
 export async function companyPackForm(get: CommerceGet, raw: CommerceCompany): Promise<Record<string, unknown>> {
     const admin = raw.super_user_id === undefined ? null : await readOrNull<CommerceCustomer>(get, `customers/${segment(raw.super_user_id)}`);
     const ext = portableExt(raw.extension_attributes);
     return {
         query: CREATE_COMPANY_QUERY,
+        ...(raw.status !== undefined ? { status: raw.status } : {}),
         variables: {
             input: {
                 company_name: raw.company_name,

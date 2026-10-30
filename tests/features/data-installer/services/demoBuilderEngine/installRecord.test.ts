@@ -14,6 +14,7 @@ import {
     nodeRecordFiles,
     openInstallRecord,
     readInstallRecord,
+    readProjectRecords,
     removalOrder,
     writeInstallRecord,
 } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
@@ -102,6 +103,40 @@ describe('openInstallRecord', () => {
         await recorder.drop({ kind: 'products', id: 'BD-100' });
 
         expect(stored(files)).toMatchObject({ created: [{ kind: 'categories', id: '41' }] });
+    });
+});
+
+describe('the website and store view the pack was installed to', () => {
+    const TARGET = { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' };
+
+    it('is written on a new record, so every later read opens the store where the pack went', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW, TARGET);
+
+        await recorder.record({ kind: 'categories', id: '41' });
+
+        expect(recorder.target).toEqual(TARGET);
+        expect(stored(files)).toMatchObject({ target: TARGET });
+        expect((await readInstallRecord(files, PROJECT, PACK))?.target).toEqual(TARGET);
+    });
+
+    it('is kept as first written when the record is carried on, whatever target the re-run names', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW, TARGET)).record({ kind: 'categories', id: '41' });
+
+        const again = await openInstallRecord(files, PROJECT, PACK, NOW, { websiteCode: 'base', storeCode: 'default' });
+
+        expect(again.target).toEqual(TARGET);
+    });
+
+    it('is absent on a record written before targets were kept, which still reads', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW)).record({ kind: 'categories', id: '41' });
+
+        const again = await openInstallRecord(files, PROJECT, PACK, NOW, TARGET);
+
+        expect(again.target).toBeUndefined();
+        expect(stored(files)).not.toHaveProperty('target');
     });
 });
 
@@ -206,6 +241,29 @@ describe('readInstallRecord', () => {
     });
 });
 
+describe('readProjectRecords (step 10)', () => {
+    it("reads every pack's record beside the project, so a wipe leaves everything Demo Builder made", async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW)).record({ kind: 'products', id: 'BD-1' });
+        await (await openInstallRecord(files, PROJECT, { name: 'bodea-settings', version: '1' }, NOW)).record({ kind: 'categories', id: '41' });
+
+        const records = await readProjectRecords(files, PROJECT);
+
+        expect(records.map((r) => r.pack.name).sort()).toEqual(['bodea-main', 'bodea-settings']);
+        expect(records.flatMap((r) => r.created.map((o) => o.id)).sort()).toEqual(['41', 'BD-1']);
+    });
+
+    it('answers none when the project has no records', async () => {
+        expect(await readProjectRecords(memoryFiles(), PROJECT)).toStrictEqual([]);
+    });
+
+    it('refuses a record it cannot read, rather than wipe what it lists', async () => {
+        const files = memoryFiles({ [installRecordPath(PROJECT, PACK)]: '{"format":2}' });
+
+        await expect(readProjectRecords(files, PROJECT)).rejects.toThrow(InstallRecordError);
+    });
+});
+
 describe('removalOrder', () => {
     it('takes things away in the reverse of the order they were made', async () => {
         const files = memoryFiles();
@@ -250,6 +308,17 @@ describe('nodeRecordFiles', () => {
 
         await forgetInstallRecord(nodeRecordFiles, dir, PACK);
         await expect(readInstallRecord(nodeRecordFiles, dir, PACK)).resolves.toBeUndefined();
+    });
+
+    it('lists the record files in a folder, and none for a folder that is not there', async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'records-'));
+        try {
+            await nodeRecordFiles.write(path.join(dir, 'a@1.json'), '{}');
+            expect(await nodeRecordFiles.list(dir)).toEqual(['a@1.json']);
+            expect(await nodeRecordFiles.list(path.join(dir, 'missing'))).toStrictEqual([]);
+        } finally {
+            await fs.rm(dir, { recursive: true, force: true });
+        }
     });
 
     it('treats removing a record that is already gone as done', async () => {

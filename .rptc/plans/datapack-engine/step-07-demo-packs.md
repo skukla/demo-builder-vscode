@@ -15,7 +15,7 @@ curator's action.
 | First save (on purpose, or on removal) | The demo's pack is made then, so a demo with no edits never has one. A notice: "Saved to the Acme Demo pack." |
 | Naming | It takes the project's name, and follows a project rename until the SC renames the pack themselves. Renamed from the pack's card |
 | Each later save | A new version of the demo's pack. Reinstalling uses the newest; older ones stay listed in the pack's flyout |
-| Where it is managed | The Data Installer screen's catalog, which already lists Library and Yours packs with a flyout each: the flyout gains Rename and Delete (and Make shared, for curators). The project dashboard shows one line, "This demo's pack: Acme Demo", linking to it |
+| Where it is managed | The Data Installer screen's catalog, which already lists Library and Yours packs with a flyout each: the flyout gains Rename and Delete, and Share / Stop sharing on the SC's own pack (decided 2026-10-30, below). The project dashboard shows one line, "This demo's pack: Acme Demo", linking to it |
 | Copying a project | The copy starts from the original's demo pack, and gets its own on its first save |
 | Deleting a project | Its confirmation offers "Also delete its pack", unticked: keeping is reversible, deleting is not |
 | Agents | The same actions under the same names: save, rename, delete, list my packs |
@@ -62,7 +62,7 @@ Priya sent me" with the pack deleted (expects the fallback, said plainly). Each 
 | Need | Reuse | Where it is |
 |---|---|---|
 | Rename a pack | Rename in place | `InlineRenameField` |
-| Rename, Delete, Make shared | The flyout's existing actions, and the kebab where the card has one | `DatapackDetailPanel`, `RemoveFromLibraryButton`, `CardActionsMenu` + `renderMenuIcon` |
+| Rename, Delete, Share / Stop sharing | The flyout's existing actions, and the kebab where the card has one | `DatapackDetailPanel`, `RemoveFromLibraryButton`, `CardActionsMenu` + `renderMenuIcon` |
 | Yours and Library tags | As the catalog tags them now | `DatapackCard` |
 | "This demo's pack: Acme Demo" on the dashboard | The dashboard's existing Data Installer tile gains the line | `DataInstallerTile` (`BuildZone`) |
 | The line on the Datapacks step | The step's own lead sentence | `SampleDataStep`, `LeadText` |
@@ -152,8 +152,7 @@ Battery prompts `rename-demo-pack` and `create-from-colleagues-file` added, not 
 
 ### Not built
 
-- **"Make shared" for curators**: the library supports it (`update-datapack-metadata` `shared`),
-  but nothing says who a curator is. Owner's decision.
+- **Sharing a pack**: decided by the owner 2026-10-30 and built; see "Sharing a library pack" below.
 - **The library's "unlisted"**: a library-service change (below). Until it lands, a colleague's
   own demo pack is unreadable, so the copy on arrival never triggers and the fallback always does.
 - **Step 05's removal box** ("Save my changes to the Acme Demo pack first", "Always") now has
@@ -174,3 +173,53 @@ version.
 ### Live test (owner's call; project `scratch-1028`, website `justrite_test_website`, never JustRite's own)
 
 See the report of this run; the steps return the library and the store to zero.
+
+## Sharing a library pack (owner, decided 2026-10-30; built 2026-10-30, not yet live)
+
+**Decision.** Any SC shares their OWN pack; no curator role. One action in the pack's flyout reads
+**Share** on a private pack and **Stop sharing** on a shared one. Share asks once, in the house inline
+confirm: "Everyone with access to the datapack library can see and install this pack." [Share]
+[Cancel]; Stop sharing asks the confirm alone. The card shows a small **Shared** label only when the
+SC's own pack is shared. Exporting a project whose recorded pack is the SC's own PRIVATE library pack
+says once: "Your teammates can't use this pack's data. Share it?", with Share; declining exports
+anyway. Never "Public", "Unshare" or "Make shared".
+
+**The library's route** (read only, `accs-discovery-service` on `feature/datapack-store`, `6551560`):
+`PUT update-datapack-metadata` with `{datapack_name, version, shared}`
+(`actions/update-datapack-metadata/index.js:5-7`, `UPDATABLE` at `:25`); `shared` is read as `true`
+or `"true"`, anything else false (`:69`, `actions/lib/datapack.js:99-101`); owner-only, a pack that is
+not the caller's answers the same 404 as one that does not exist (`:84-85`,
+`actions/lib/store.js:127-130`); it answers `{datapack_name, version, message, data: <merged
+document>}` (`:90-95`). Per version, so a share sets every version of the pack.
+
+**What was built.**
+
+| Part | Where |
+|---|---|
+| the write | `DatapackStoreWriter.updateShared` (one PUT per version; shares `updateMetadata` with `updateDisplayName`) |
+| the action | `share-library-datapack` in `datapackLibraryHandlers.ts`: name, `shared` and confirm checked; every version of the SC's own pack (`myVersions`); refuses one not theirs |
+| the words | `shareWording.ts` (`SHARE_CONSENT`), one place for the webview and the extension |
+| the flyout | `ShareLibraryPackButton.tsx`, in `DatapackDetailPanel`'s actions on `detail.mine` only, built as `RemoveFromLibraryButton` is (reuse-first: no house confirm component fits an inline flyout action; `Modal` would put a dialog inside the drawer, which `DatapackDetailPanel`'s docstring rules out); the catalog reads the card and flyout again after |
+| the card | `DatapackCard`: a second `datapack-card-tag`, "Shared", for the SC's own shared pack; no new CSS |
+| every export door | `privatePackPrompt.ts`: the projects list's Export and the dashboard's export ask a person once before the save dialog (`offerToShareBeforeExport`); `export_project_settings` and an agent's `export_demo_bundle` answer `packNote` (`privatePackNote`). A library that cannot be asked asks nothing |
+| agent | `share_datapack` (write, confirm, `AGENT_ALERT_COPY` naming `datapackName` and `shared`, narrated "Changing who can use the <pack> pack"); `export_project_settings`' and `export_demo_bundle`'s descriptions name `packNote`; battery prompt `share-my-demo-pack`, not run; no ceiling measured |
+
+**Tests.** `datapackStoreWriter.test.ts` (2), `datapackLibraryHandlers-share.test.ts` (7),
+`privatePackPrompt.test.ts` (11), `privatePackPrompt-doors.test.ts` (5),
+`ShareLibraryPackButton.test.tsx` (6), `DatapackCard.test.tsx` (3), `DatapackDetailPanel.test.tsx` (3).
+
+**Decisions for the owner.**
+
+1. **The export question's decline button** reads "Export Anyway" (Esc does the same). Recommended: keep.
+2. **Stop sharing a pack a colleague's project file names**: their file then falls back to the pack
+   it was made from, as when it is deleted. Not warned yet. Recommended: reuse the "shared in a
+   file" sentence (`sharedInFiles.ts`) on Stop sharing, as Delete does.
+3. **The library's "unlisted"** (above) is still not made, so a shared pack is the only way a
+   colleague can read one; sharing is now that way.
+
+**Live test** (owner's call; library only, nothing in Commerce): load a throwaway zip pack
+`zz-share-db07` into the library; its card shows Yours and no Shared. Flyout: Share, the sentence,
+Share: the card shows Shared, and `find_datapacks` (signed in as a colleague, or the library's
+`find-datapacks` with `shared=true`) lists it. Stop sharing: the label goes. Export a scratch project
+whose recorded pack is it while private: the question shows once; Export Anyway writes the file;
+`export_project_settings` answers `packNote`. Back to zero: delete `zz-share-db07` from the library.

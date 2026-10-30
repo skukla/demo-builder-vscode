@@ -252,6 +252,40 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         inputSchema: { ...DATAPACK_ID, source: PACK_SOURCE },
     },
 
+    // ── clearing a demo's part of the store (datapack-engine step 10) ────────
+    {
+        tool: 'check_demo_data',
+        needsAuth: ['adobe'],
+        readOnly: true, // reads the website, its products, categories and customers, and the records
+        description:
+            "What a website of this project's store holds that Demo Builder did not install, and what clearing it would do: " +
+            'products, categories and customers it would remove, products another website also sells that would only be taken ' +
+            'off this one, and what it would leave and why (a root category another website shares, a B2B company, a variant). ' +
+            'Also counts what Demo Builder installed (removed by reset_datapack, never by the clearing). Writes nothing. ' +
+            "Answers counts and a few names, and a token clear_demo_data needs. Defaults to the project's website; name another with websiteCode.",
+        map: importHandlers,
+        type: 'check-demo-data',
+        inputSchema: { websiteCode: z.string().optional().describe("The website to look at, by code. Omit for the project's own") },
+    },
+    {
+        tool: 'clear_demo_data',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Clear a website of everything check_demo_data listed: deletes those products, categories and customers and takes the ' +
+            "shared products off the website. Cannot be undone. Show the user check_demo_data's list and ask first. Needs the " +
+            'website named and the token from that check; if the store would now clear anything the list did not hold, nothing ' +
+            "is written and the new list comes back. Never touches what Demo Builder installed, other websites' things, " +
+            'attributes, customer groups, companies, shared catalogs, stocks, orders or settings.',
+        map: importHandlers,
+        type: 'clear-demo-data',
+        confirm: true, // gated twice, as reset_datapack is: the row, then the handler's own check
+        inputSchema: {
+            websiteCode: z.string().describe('The website to clear, by code, exactly as check_demo_data answered it. Never defaulted'),
+            token: z.string().describe("check_demo_data's token for that website"),
+        },
+    },
+
     // ── writes ──────────────────────────────────────────────────────────────
     {
         tool: 'start_datapack_import',
@@ -418,6 +452,23 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         inputSchema: {
             datapackName: z.string().describe('The library pack name from find_datapacks'),
             displayName: z.string().describe('The new name everyone sees for the pack'),
+        },
+    },
+    {
+        tool: 'share_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Share one of your own datapack library packs with your team, or stop sharing it: every version. ' +
+            'Shared, everyone with access to the datapack library can see and install it, and a colleague can ' +
+            'create a project from a file that names it; stopped, only you can. Answers how many versions changed. ' +
+            "Ask the user first. export_project_settings's packNote says when the project's pack is private.",
+        map: importHandlers,
+        type: 'share-library-datapack',
+        confirm: true, // gated twice, as rename_datapack is: the row, then the handler's own check
+        inputSchema: {
+            datapackName: z.string().describe('The library pack name from find_datapacks (one of yours)'),
+            shared: z.boolean().describe('true to share it with everyone with access to the library, false to stop sharing'),
         },
     },
     {

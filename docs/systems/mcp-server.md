@@ -775,6 +775,44 @@ catalog/frontend/grid_per_page as it is: it was changed after Demo Builder set i
 `note` says which. `preview_datapack_changes` counts settings like any kind. Plan:
 `.rptc/plans/datapack-engine/step-09-store-settings.md`.
 
+The install record now keeps the website and store view the pack went to (`target`), and the
+preview and "save store changes" read the store there, not at the project's website: a pack
+installed to `justrite_test_website` on a project whose website is JustRite's was being read at
+JustRite's and called "changed in the Admin" (live, 2026-10-30). A record from before this has no
+`target`; its settings are still read at the website each one names (`scopeCode`). Installing a
+pack again into another website than its record names is refused ("… is installed on the website
+justrite_test_website. Remove it first, or install it there."), by `validate_datapack_import` too.
+
+### Clearing a demo's part of the store (datapack-engine step 10, 2026-10-30)
+
+`check_demo_data` (a read) answers, for one website (the project's unless `websiteCode` names
+another): what this project's install records list, by kind; what clearing would delete
+(products sold only there, categories under a root only this website shows, its customers) and
+take off it (products another website also sells), with at most three names each; what it would
+leave and why (a root another website shares, a customer in a B2B company, a variant that may
+belong to another website's product, a field Commerce did not answer); and a `token`.
+`clear_demo_data` (confirm-gated; the consent names the website) needs the website named, never
+defaulted, and that token. It makes the list again and writes nothing if the store would now clear
+anything the list did not hold, answering the new list instead; otherwise it deletes customers,
+then products, takes shared products off the website, then deletes categories deepest first, and
+its `note` says what it removed and exactly what Commerce refused. It never touches what an
+install record lists (`reset_datapack` removes that), attributes, sets, customer groups,
+companies, shared catalogs, stocks and sources, websites, stores, root categories, orders or
+settings. Cannot be undone. Project reset asks the same question after the datapack one. Plan:
+`.rptc/plans/datapack-engine/step-10-wipe.md`.
+
+### Sharing a library pack (owner, 2026-10-30)
+
+`share_datapack` (confirm-gated; the consent names the pack and whether it is shared) shares every
+version of one of the SC's own library packs with everyone the library admits, or stops sharing it
+(`shared: false`), through the library's owner-only `update-datapack-metadata` (`shared`). It answers
+`{datapackName, shared, versions}`. The flyout of the SC's own pack offers the same action, reading
+Share or Stop sharing, and the pack's card says Shared when it is. A project file names its pack by
+reference, so `export_project_settings` and `export_demo_bundle` (with its setup part) answer
+`packNote` when the project's pack is the SC's own private library pack: "Your teammates can't use
+this pack's data. Share it? …"; a person exporting from the projects list or the dashboard is asked
+the same question once, with Share, and declining exports anyway.
+
 ### Renaming a library pack, and a pack shared in a file (datapack-engine step 07, 2026-10-29)
 
 `rename_datapack` (confirm-gated) gives every version of one of the SC's own library packs a new

@@ -268,6 +268,12 @@ export function DatapackCatalogView(): React.JSX.Element {
         [refresh, retryDetail],
     );
 
+    // Sharing shows on the card (its Shared label) and in the flyout: both are read again.
+    const sharingChanged = useCallback((): void => {
+        refresh();
+        retryDetail();
+    }, [refresh, retryDetail]);
+
     // `!settled`, not `loading`. `loading` starts FALSE and the fetch is kicked
     // off from a useEffect, which React runs AFTER the first paint -- so frame 1
     // renders with nothing loading and nothing loaded, falls straight past this
@@ -363,6 +369,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onSaveStoreChanges={holdsSelected && value?.engine === 'demo-builder' ? offerSave : undefined}
                 onRename={renamePack}
                 sharedInFile={detail.value?.sharedInFile}
+                onSharingChanged={sharingChanged}
             />
             {storeChanges.progressWindow}
 

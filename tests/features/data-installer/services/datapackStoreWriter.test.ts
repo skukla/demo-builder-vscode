@@ -204,6 +204,30 @@ describe('updateDisplayName', () => {
 });
 
 /**
+ * Sharing a pack (owner, 2026-10-30): the same owner-only route, its `shared` field
+ * (accs-discovery-service `actions/update-datapack-metadata/index.js:5-7`, `:69`; a pack that is not
+ * the caller's is its 404, `:84-85`). Shapes read from the action, not captured live.
+ */
+describe('updateShared', () => {
+    it('sends PUT update-datapack-metadata with the identity and shared, as a boolean', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        await expect(writer(fetchImpl).updateShared({ name: 'acme-1a2b3c', version: '20261029-183005' }, true)).resolves.toBe('updated');
+
+        const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe(`${BASE}/update-datapack-metadata`);
+        expect(init.method).toBe('PUT');
+        expect(JSON.parse(String(init.body))).toEqual({ datapack_name: 'acme-1a2b3c', version: '20261029-183005', shared: true });
+    });
+
+    it("answers not-found on the 404 for a pack that is not the caller's", async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(404, { success: false, error: 'not found' }));
+
+        await expect(writer(fetchImpl).updateShared({ name: 'x', version: '1' }, false)).resolves.toBe('not-found');
+    });
+});
+
+/**
  * With Adobe's gateway check on for the store's actions, a request that names no org is refused,
  * so every write names the caller's org as every read already does (DI-5).
  */

@@ -19,7 +19,7 @@ import {
 } from '@/features/data-installer/services/demoBuilderEngine/companiesKind';
 import { CUSTOMER_KIND } from '@/features/data-installer/services/demoBuilderEngine/customerKinds';
 import type { CommerceCompanyHierarchyNode } from '@/types/commerceWire';
-import { BODEA_COMPANY_ROW, CATALOG_14, COMPANY_21, CREATE_COMPANY_QUERY, CUSTOMER_44 } from '../../../../helpers/commerceB2bFixtures';
+import { BODEA_COMPANY_ROW, CATALOG_14, COMPANY_21, COMPANY_27_DB08, CREATE_COMPANY_QUERY, CUSTOMER_44 } from '../../../../helpers/commerceB2bFixtures';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const ADMIN = 'admin.altura@example.com';
@@ -66,6 +66,7 @@ describe('installCompanies', () => {
                         postcode: '12345',
                         telephone: '5550100',
                         super_user_id: 52,
+                        status: 1,
                         customer_group_id: 1,
                         extension_attributes: { quote_config: { is_quote_enabled: true }, is_purchase_order_enabled: true },
                     },
@@ -73,6 +74,24 @@ describe('installCompanies', () => {
             },
         ]);
         expect(ctx.recorder.created).toEqual([{ kind: COMPANY_KIND, id: '30', key: 'Altura', previous: { superUserId: 52 } }]);
+    });
+
+    // Owner, 2026-10-30: Commerce makes a company Pending Approval (0) when no status is sent
+    // (COMPANY_27_DB08), and only an Active company's buyers can sign in and buy.
+    it('makes the company Active when the pack row names no status', async () => {
+        const ctx = await store({ admins: [{ ...CUSTOMER_44, id: 52, email: ADMIN, website_id: 3 }] });
+
+        await installCompanies(ctx, parseCompanyRows([BODEA_COMPANY_ROW]));
+
+        expect((ctx.sent[0].body as { company: { status?: number } }).company.status).toBe(1);
+    });
+
+    it("sends the pack row's own status when it carries one", async () => {
+        const ctx = await store({ admins: [{ ...CUSTOMER_44, id: 52, email: ADMIN, website_id: 3 }] });
+
+        await installCompanies(ctx, parseCompanyRows([{ ...BODEA_COMPANY_ROW, status: 0 }]));
+
+        expect((ctx.sent[0].body as { company: { status?: number } }).company.status).toBe(0);
     });
 
     it('makes the admin first when the store has no customer by that email, and records it as a customer', async () => {
@@ -119,6 +138,7 @@ describe('the store\'s copy', () => {
 
         expect(await companyPackForm(ctx.get, COMPANY_21)).toEqual({
             query: CREATE_COMPANY_QUERY,
+            status: COMPANY_21.status,
             variables: {
                 input: {
                     company_name: 'Example Studios',
@@ -135,6 +155,17 @@ describe('the store\'s copy', () => {
                 quote_config: { is_quote_enabled: true },
             },
         });
+    });
+});
+
+describe("the store's status in the pack's form", () => {
+    it("keeps the store's status beside the create call, never inside the GraphQL input the service sends", async () => {
+        const ctx = await fakeContext({ 'customers/44': CUSTOMER_44 });
+
+        const form = (await companyPackForm(ctx.get, COMPANY_27_DB08)) as { status?: number; variables: { input: Record<string, unknown> } };
+
+        expect(form.status).toBe(0);
+        expect(form.variables.input).not.toHaveProperty('status');
     });
 });
 

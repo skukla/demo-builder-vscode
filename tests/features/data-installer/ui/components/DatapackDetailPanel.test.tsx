@@ -443,3 +443,29 @@ describe('Save store changes to this pack', () => {
         expect(onSaveStoreChanges).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
     });
 });
+
+/** Share or Stop sharing, on the SC's OWN library pack only (owner, 2026-10-30). */
+describe('DatapackDetailPanel — sharing the SC\'s own pack', () => {
+    const own = (overrides: Partial<DatapackDetail>) => makeDetail({ store: 'library', mine: true, shared: false, ...overrides });
+
+    it('offers Share on a private pack of the SC, and Stop sharing on a shared one', () => {
+        const { unmount } = renderPanel({ detail: own({}) });
+        expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
+        unmount();
+
+        renderPanel({ detail: own({ shared: true }) });
+        expect(screen.getByRole('button', { name: 'Stop sharing' })).toBeInTheDocument();
+    });
+
+    const NOT_OWN: Array<[string, Partial<DatapackDetail>]> = [
+        ["a colleague's library pack", { mine: undefined, shared: true }],
+        ['a Data Installer pack', { store: undefined, mine: undefined }],
+    ];
+
+    it.each(NOT_OWN)('offers neither on %s', (_label, overrides) => {
+        renderPanel({ detail: own(overrides) });
+
+        expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Stop sharing' })).not.toBeInTheDocument();
+    });
+});

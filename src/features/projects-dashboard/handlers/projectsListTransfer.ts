@@ -10,6 +10,7 @@
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withModalAsking } from '@/core/vscode/operationPrompt';
+import { offerToShareBeforeExport } from '@/features/data-installer/handlers/privatePackPrompt';
 import { importDemoBundle } from '@/features/eds/handlers/importStorefrontZipHandler';
 import {
     copySettingsFromProject,
@@ -92,5 +93,7 @@ export const handleExportProject: MessageHandler<{ projectPath: string }> = asyn
         };
     }
 
+    // The file names its pack by reference: a private one is offered for sharing first, once.
+    await offerToShareBeforeExport(context, project);
     return exportProjectSettings(context, project);
 };

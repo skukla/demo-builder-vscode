@@ -13,10 +13,14 @@ import {
     STORE_CONFIG_KIND,
     captureSettings,
     installStoreConfig,
+    packSettings,
+    planSettings,
     putBackSettings,
     settingsLine,
+    settingsWebsite,
 } from '@/features/data-installer/services/demoBuilderEngine/storeConfigKind';
-import { GRID, LIST, WEBSITE, configStore, row, storeContext } from './storeConfig.testUtils';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { GRID, LIST, PROJECT_WEBSITE, WEBSITE, configStore, row, storeContext } from './storeConfig.testUtils';
 
 describe('installing a pack’s store settings', () => {
     it('writes a store-wide setting in one PUT that names its scope, and records what it held', async () => {
@@ -158,6 +162,56 @@ describe('putting settings back', () => {
         await expect(putBackSettings(ctx, [recorded(GRID, '12', '24')], async (o) => void dropped.push(o))).rejects.toThrow(`Could not put back ${GRID}: 24 → 12: not allowed.`);
 
         expect(dropped).toStrictEqual([]);
+    });
+});
+
+/**
+ * Live, scratch-1028, 2026-10-30: the pack went to `justrite_test_website`, the project's own
+ * website is JustRite's, and the preview read the setting at JustRite's (10, not the 15 written)
+ * and called it "changed in the Admin". A recorded setting is read where the record says it was
+ * written, whatever website the caller is pointed at.
+ */
+describe('a recorded website setting is read at the website the record names', () => {
+    const recordedList: CreatedObject = {
+        kind: STORE_CONFIG_KIND,
+        id: `${LIST}@website`,
+        key: `${LIST}@website`,
+        previous: { path: LIST, scope: 'website', scopeCode: WEBSITE, stored: '10', effective: '10', wrote: '15' },
+    };
+    const twoWebsites = () => configStore({ default: { [LIST]: '12' }, website: { [LIST]: '15' }, websites: { [PROJECT_WEBSITE]: { [LIST]: '10' } } });
+
+    it('plans it as still as Demo Builder left it, reading the recorded website, not the one asked', async () => {
+        const store = twoWebsites();
+
+        const plan = await planSettings(store.get, packSettings([row(LIST, '15', 'websites', 'base')], PROJECT_WEBSITE), [recordedList], PROJECT_WEBSITE);
+
+        expect(plan.map((p) => [p.key, p.outcome])).toEqual([[`${LIST}@website`, 'unchanged']]);
+        expect(store.reads).toContain(configListPath([LIST], 'website', WEBSITE));
+        expect(store.reads).not.toContain(configListPath([LIST], 'website', PROJECT_WEBSITE));
+    });
+
+    it('still reads a setting the record does not list at the website asked', async () => {
+        const store = twoWebsites();
+
+        const plan = await planSettings(store.get, packSettings([row(LIST, '20', 'websites', 'base')], PROJECT_WEBSITE), [], PROJECT_WEBSITE);
+
+        expect(plan.map((p) => p.outcome)).toEqual(['set']);
+        expect(store.reads).toContain(configListPath([LIST], 'website', PROJECT_WEBSITE));
+        expect(store.reads).not.toContain(configListPath([LIST], 'website', WEBSITE));
+    });
+
+    it('saves it into a new version at its value on the recorded website, naming that website', async () => {
+        const store = twoWebsites();
+
+        const items = await captureSettings(store.get, [recordedList], {}, PROJECT_WEBSITE);
+
+        expect(items).toEqual({ [STORE_CONFIG_KIND]: [{ path: LIST, value: '15', scope: 'website', scope_code: WEBSITE }] });
+        expect(store.reads).not.toContain(configListPath([LIST], 'website', PROJECT_WEBSITE));
+    });
+
+    it('names the website the record installed settings to, for a record made before targets were kept', () => {
+        expect(settingsWebsite([recordedList])).toBe(WEBSITE);
+        expect(settingsWebsite([])).toBeUndefined();
     });
 });
 

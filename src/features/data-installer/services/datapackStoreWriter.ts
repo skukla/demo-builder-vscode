@@ -133,11 +133,23 @@ export class DatapackStoreWriter {
      * @throws DataInstallerApiError for any other refusal
      */
     async updateDisplayName(id: DatapackId, displayName: string): Promise<'updated' | 'not-found'> {
-        const response = await this.post(
-            'update-datapack-metadata',
-            { datapack_name: id.name, version: id.version, display_name: displayName },
-            'PUT',
-        );
+        return this.updateMetadata(id, { display_name: displayName });
+    }
+
+    /**
+     * Share one version with everyone the library admits, or stop sharing it (owner, 2026-10-30):
+     * the same owner-only route, its `shared` field.
+     *
+     * @returns `updated`, or `not-found` when the store holds no pack of the caller's by that id
+     * @throws DataInstallerApiError for any other refusal
+     */
+    async updateShared(id: DatapackId, shared: boolean): Promise<'updated' | 'not-found'> {
+        return this.updateMetadata(id, { shared });
+    }
+
+    /** One `update-datapack-metadata` PUT for one version; the library answers 404 for a pack not the caller's. */
+    private async updateMetadata(id: DatapackId, fields: { display_name?: string; shared?: boolean }): Promise<'updated' | 'not-found'> {
+        const response = await this.post('update-datapack-metadata', { datapack_name: id.name, version: id.version, ...fields }, 'PUT');
         if (response.status === 404) return 'not-found';
         await this.check(response, 'update-datapack-metadata');
         return 'updated';

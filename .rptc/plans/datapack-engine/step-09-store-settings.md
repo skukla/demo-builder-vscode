@@ -160,6 +160,28 @@ No response ceiling re-measured: the note grows by one short line per setting.
    route; Adobe's page lists `GET` and `PUT` only). Recommended: accept, and say it in the SC guide;
    "Use Default Value" in the Admin restores inheritance.
 
+### Fixed after the first live run (2026-10-30, scratch-1028)
+
+scratch-1028's own website is JustRite's (`justrite` / `justrite_us`); the settings pack went to
+`justrite_test_website`. Right after the install, `preview_datapack_changes` answered keep 1
+(`catalog/frontend/list_per_page@website`): it read the setting at JustRite's website (10), not the
+test website's (15). Removal was right, since it reads each setting at its record's `scopeCode`.
+
+- **The install record keeps its target** (`target: {websiteCode, storeCode}`, `installRecord.ts`),
+  written by the engine on a new record. The preview and "save store changes" open the store there
+  (`storeChanges.ts`), so every kind's reads follow it: a customer looked up by email on its website,
+  a category under its root, a setting at its website. A record without `target` (scratch-1028's)
+  reads at the project's, as before (rule 3).
+- **A recorded setting is read at the website its record names** (`previous.scopeCode`), whatever
+  website the caller is pointed at (`planSettings`, `captureSettings`), so scratch-1028's existing
+  record is read right too.
+- **Installing again into another website is refused**, before anything is written, by the install
+  and `validate_datapack_import`: "<pack> is installed on the website justrite_test_website. Remove
+  it first, or install it there." A record without `target` says where by its settings' website.
+- Tests: `storeConfigKind.test.ts` (4), `storeChanges.test.ts` (3), `engine.test.ts` (3),
+  `installRecord.test.ts` (3), each asserting the read addresses. A control that put the old read back
+  turned the live-case tests red.
+
 ### Live test (owner's call; project `scratch-1028`, website `justrite_test_website`, never JustRite's own)
 
 One setting is written **store-wide**: `catalog/frontend/grid_per_page` (Products per Page on Grid

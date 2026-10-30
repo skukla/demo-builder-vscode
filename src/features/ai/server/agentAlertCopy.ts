@@ -255,6 +255,12 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
+    clear_demo_data: {
+        action: "Clear a website's store data",
+        consequence: "Deletes the products, categories and customers on this website that Demo Builder did not install, as listed, and takes products other websites sell off it. This can't be undone.",
+        target: ['websiteCode'],
+        sessionGrant: false,
+    },
     reinstall_integration: {
         action: 'Reinstall an integration in Commerce',
         consequence:
@@ -466,6 +472,12 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         consequence:
             'Changes the name everyone sees for every version of this pack in the datapack library; its data is untouched.',
         target: ['datapackName', 'displayName'],
+        sessionGrant: false,
+    },
+    share_datapack: {
+        action: 'Share or stop sharing a library datapack',
+        consequence: 'Shared, everyone with access to the datapack library can see and install every version of this pack; stopped, only you can.',
+        target: ['datapackName', 'shared'],
         sessionGrant: false,
     },
     load_datapack_zip: {

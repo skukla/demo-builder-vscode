@@ -190,19 +190,25 @@ Still open:
 - Whether Commerce moves a group's customers to General when a setup-guide catalog is deleted with
   its group: measured for the engine's catalog (2026-10-30), assumed the same for the guide's.
 
-### Decision for the owner: companies are made Pending Approval
+### Companies are made Active (owner, decided 2026-10-30; built 2026-10-30)
 
-The engine's `POST company` sends no `status`, and Commerce made the company `status: 0` ("Pending
-approval" in Adobe's "Manage company objects" status list; `COMPANY_27_DB08`, live 2026-10-30), as
-the Data Installer service's companies are. On the Bodea sandbox Altura,
-ServerSavvy Solutions and RackMaster are pending; two companies made by hand are active (1).
-Adobe's "Create a company account" (Experience League, Status field) says only an **Active** company's
-administrator and members "can log in the account from the storefront and make purchases"; a
-company created in the Admin is Active by default, and Pending Approval is for "not ready for the
-account to go live". The page does not say in so many words that a pending company's buyers are
-refused at sign-in; the live test's sign-in (step 2) shows it.
-**Recommended: make companies Active** (`status: 1`), since a demo buyer has to sign in and buy,
-and say so in the pack's install line; keep a pack's own `status` when it carries one. Not changed.
+Commerce makes a company sent with no `status` Pending Approval (`status: 0`, `COMPANY_27_DB08`, live
+2026-10-30), as the Data Installer service's are. Adobe's "Create a company account" (Experience
+League, Status field) says only an **Active** company's administrator and members can log in from the
+storefront and buy. So the engine's `POST company` now sends `status: 1`, unless the pack's row carries
+its own `status`, which wins (`companiesKind.ts`, `installCompanies`). A repeat install's `PUT` sends
+the row's status only when the row has one, else keeps the store's.
+
+Where the row carries it: **beside** the create call (`row.status`, next to `query`, `variables` and
+`extension_attributes`), never inside the GraphQL `variables.input`, so a pack published to the Data
+Installer (step 13) still sends that service a `createCompany` it accepts. Capture writes the store's
+status there (`companyPackForm`), so a saved pack keeps what the store had, and the "edited since"
+fingerprint now covers a status changed in the Admin. Records made before this have no status in
+their company fingerprint, so the first reinstall over them counts each company as changed in the
+Admin and keeps it (only scratch-1028's test pack; no SC has one yet).
+
+Tests: `companiesKind.test.ts` asserts the `status` in the `POST company` body for both cases, and
+that capture keeps the store's status outside the GraphQL input.
 
 ### Live test (owner's call; project `scratch-1028`, website `justrite_test_website`, never JustRite's own)
 

@@ -19,12 +19,12 @@ import * as crypto from 'crypto';
 import type { DataTypeStatus, ImportStart, ValidationResult } from '../../types';
 import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient';
 import type { DatapackEngine } from '../datapackEngine';
-import { type RecordFiles, nodeRecordFiles, openInstallRecord } from './installRecord';
+import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
 import { resolveEngineTarget, sessionFor } from './installTarget';
 import { containersLine } from './removers';
 import { keptLine } from './repeatInstall';
 import { type PackItems, installPack, removePack, unsupportedKinds } from './runPack';
-import { settingsLine } from './storeConfigKind';
+import { settingsLine, settingsWebsite } from './storeConfigKind';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -68,16 +68,34 @@ async function access(deps: DemoBuilderEngineDeps): Promise<{ get: CommerceGet; 
     return commerce;
 }
 
+/**
+ * Why the pack cannot be installed to this target, when the record says it is installed elsewhere:
+ * a repeat install compares what it made where it made it, and one record spans one website. A
+ * record made before the target was kept says it by the website its settings went to.
+ */
+async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, target: TargetCodes): Promise<string | undefined> {
+    const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id);
+    if (!record) return undefined;
+    const website = record.target?.websiteCode ?? settingsWebsite(record.created);
+    const moved = website !== undefined && website !== target.websiteCode;
+    const otherView = record.target !== undefined && record.target.storeCode !== target.storeCode;
+    if (!moved && !otherView) return undefined;
+    const where = moved ? `the website ${website}` : `the store view ${record.target?.storeCode}`;
+    return `${request.id.name}@${request.id.version} is installed on ${where}. Remove it first, or install it there.`;
+}
+
 /** Install: the target, the rows, then each kind in order, its status moving as it runs. */
 async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, job: Job): Promise<void> {
     if (!request.target) throw new Error(NO_TARGET);
+    const conflict = await elsewhere(deps, request, request.target);
+    if (conflict) throw new Error(conflict);
     const items = await deps.readPack(request.id, request.dataTypes, request.source ?? 'installer');
     const missing = request.dataTypes.filter((kind) => !(kind in items));
     if (missing.length > 0) throw new Error(`The pack holds no ${missing.join(', ')}.`);
     const commerce = await access(deps);
     const target = await resolveEngineTarget(commerce.get, request.target);
     const now = deps.now ?? (() => new Date());
-    const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString());
+    const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString(), request.target);
     let current: string | undefined;
     const outcome = await installPack({ ...commerce, recorder, session: sessionFor(target), log: deps.log }, items, (kind) => {
         if (current) job.perType[current] = 'success';
@@ -127,6 +145,8 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 if (!request.target) return { valid: false, reason: NO_TARGET };
                 const unsupported = unsupportedKinds(Object.fromEntries(request.dataTypes.map((kind) => [kind, null])));
                 if (unsupported.length > 0) return { valid: false, reason: `Demo Builder does not install ${unsupported.join(', ')} yet.` };
+                const conflict = await elsewhere(deps, request, request.target);
+                if (conflict) return { valid: false, reason: conflict };
                 await resolveEngineTarget((await access(deps)).get, request.target);
                 return { valid: true };
             } catch (error) {

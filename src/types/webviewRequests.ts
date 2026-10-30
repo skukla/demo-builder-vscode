@@ -326,6 +326,8 @@ export interface ExportDemoBundleResult {
     fileCount?: number;
     bytes?: number;
     parts?: Array<'setup' | 'storefront'>;
+    /** The setup part names the SC's own private library pack, which teammates cannot read (owner, 2026-10-30). */
+    packNote?: string;
 }
 
 export interface RemoveDemoPackageResult {

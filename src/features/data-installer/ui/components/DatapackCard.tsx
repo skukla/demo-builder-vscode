@@ -149,6 +149,9 @@ export function DatapackCard({
                     ) : (
                         renderTag(cardTag(group))
                     )}
+                    {/* The SC's own pack, shared with the team (owner, 2026-10-30): a private
+                        one shows nothing extra, and a colleague's is listed only because it is shared. */}
+                    {group.store === 'library' && group.mine && group.shared ? renderTag('Shared') : null}
                 </div>
                 {/* Containment: the picker's press must not bubble to the card,
                     or choosing a version would also open the flyout — the

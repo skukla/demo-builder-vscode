@@ -1063,7 +1063,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'component configs, Adobe context). The file never carries a credential, so it is ' +
             'safe to hand to someone else; the response returns { path }. The target must be ' +
             'inside the project directory (defaults to ' +
-            '<project>/<name>.project.demo-builder.json).',
+            '<project>/<name>.project.demo-builder.json). When the project\'s pack is your own private ' +
+            'library pack, the answer carries packNote: teammates cannot use its data until it is shared ' +
+            '(share_datapack, after asking the user).',
         map: dashboardHandlers,
         type: 'exportProjectSettings',
         inputSchema: {

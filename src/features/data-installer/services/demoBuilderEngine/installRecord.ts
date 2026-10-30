@@ -45,27 +45,43 @@ export interface CreatedObject {
 /** What an update may change about an object; the kind and id say which one. */
 export type ObjectUpdate = Pick<CreatedObject, 'kind' | 'id'> & Partial<Pick<CreatedObject, 'key' | 'fingerprint' | 'wrote' | 'previous'>>;
 
+/** The website and store view a pack is installed to, by code. */
+export interface TargetCodes {
+    websiteCode: string;
+    storeCode: string;
+}
+
 /** What the file holds. */
 export interface InstallRecord {
     format: 1;
     pack: DatapackId;
     engine: 'demo-builder';
     startedAt: string;
+    /**
+     * Where the pack was installed (live, scratch-1028, 2026-10-30): everything that reads what the
+     * record lists opens the store here, not at the project's website now. Absent on a record
+     * written before it was kept; those read at the project's (rule 3).
+     */
+    target?: TargetCodes;
     created: CreatedObject[];
 }
 
-/** The three file operations the record needs, handed in so tests need no disk. */
+/** The four file operations the record needs, handed in so tests need no disk. */
 export interface RecordFiles {
     /** The file's text, or undefined when there is no file. */
     read(filePath: string): Promise<string | undefined>;
     write(filePath: string, content: string): Promise<void>;
     /** Succeeds when the file is already gone. */
     remove(filePath: string): Promise<void>;
+    /** The file names in a folder; none when there is no folder. */
+    list(dirPath: string): Promise<string[]>;
 }
 
 /** Writes an install's objects down as they are made, and drops them as they are removed. */
 export interface InstallRecorder {
     readonly created: readonly CreatedObject[];
+    /** Where the pack was installed, when the record says. */
+    readonly target?: TargetCodes;
     has(kind: string, id: string): boolean;
     record(object: CreatedObject): Promise<void>;
     /** Change what is kept about an object already recorded; nothing for one that is not. */
@@ -91,6 +107,7 @@ const recordSchema = z.object({
     pack: z.object({ name: z.string(), version: z.string() }),
     engine: z.literal('demo-builder'),
     startedAt: z.string(),
+    target: z.object({ websiteCode: z.string(), storeCode: z.string() }).optional(),
     created: z.array(
         z.object({
             kind: z.string(),
@@ -134,7 +151,7 @@ export async function readInstallRecord(
 ): Promise<InstallRecord | undefined> {
     const text = await files.read(installRecordPath(projectPath, pack));
     if (text === undefined) return undefined;
-    const record = parseRecord(text, pack);
+    const record = parseRecord(text, packLabel(pack));
     if (record.pack.name !== pack.name || record.pack.version !== pack.version) {
         throw new InstallRecordError(
             `The install record for ${packLabel(pack)} was written for ${packLabel(record.pack)}.`,
@@ -143,7 +160,25 @@ export async function readInstallRecord(
     return record;
 }
 
-function parseRecord(text: string, pack: DatapackId): InstallRecord {
+/**
+ * Every record beside the project, one per pack this engine installed there: what a wipe must
+ * leave to the removal that knows it (step 10).
+ *
+ * @throws InstallRecordError when a record cannot be read: a wipe that ignored it could delete what
+ *   it lists
+ */
+export async function readProjectRecords(files: RecordFiles, projectPath: string): Promise<InstallRecord[]> {
+    const dir = path.dirname(installRecordPath(projectPath, { name: 'x', version: 'x' }));
+    const names = (await files.list(dir)).filter((name) => name.endsWith('.json'));
+    const records: InstallRecord[] = [];
+    for (const name of names) {
+        const text = await files.read(path.join(dir, name));
+        if (text !== undefined) records.push(parseRecord(text, name.replace(/\.json$/u, '')));
+    }
+    return records;
+}
+
+function parseRecord(text: string, label: string): InstallRecord {
     let json: unknown;
     try {
         json = JSON.parse(text);
@@ -152,7 +187,7 @@ function parseRecord(text: string, pack: DatapackId): InstallRecord {
     }
     const parsed = recordSchema.safeParse(json);
     if (!parsed.success) {
-        throw new InstallRecordError(`The install record for ${packLabel(pack)} cannot be read.`);
+        throw new InstallRecordError(`The install record for ${label} cannot be read.`);
     }
     return parsed.data;
 }
@@ -161,12 +196,14 @@ function parseRecord(text: string, pack: DatapackId): InstallRecord {
  * Start recording an install, or carry on the record a failed one left.
  *
  * @param now - the time to stamp a new record with
+ * @param target - where a new record's install goes; a record carried on keeps the one it has
  */
 export async function openInstallRecord(
     files: RecordFiles,
     projectPath: string,
     pack: DatapackId,
     now: () => string,
+    target?: TargetCodes,
 ): Promise<InstallRecorder> {
     const filePath = installRecordPath(projectPath, pack);
     const record: InstallRecord = (await readInstallRecord(files, projectPath, pack)) ?? {
@@ -174,6 +211,7 @@ export async function openInstallRecord(
         pack: { name: pack.name, version: pack.version },
         engine: 'demo-builder',
         startedAt: now(),
+        ...(target ? { target: { websiteCode: target.websiteCode, storeCode: target.storeCode } } : {}),
         created: [],
     };
     const save = () => files.write(filePath, `${JSON.stringify(record, null, 2)}\n`);
@@ -184,6 +222,7 @@ export async function openInstallRecord(
         get created() {
             return record.created;
         },
+        target: record.target,
         has: (kind, id) => indexOf(kind, id) >= 0,
         async record(object) {
             if (indexOf(object.kind, object.id) >= 0) return;
@@ -248,5 +287,13 @@ export const nodeRecordFiles: RecordFiles = {
     },
     async remove(filePath) {
         await fsPromises.rm(filePath, { force: true });
+    },
+    async list(dirPath) {
+        try {
+            return await fsPromises.readdir(dirPath);
+        } catch (error) {
+            if (isMissing(error)) return [];
+            throw error;
+        }
     },
 };

@@ -507,3 +507,29 @@ describe('DatapackCard — where the pack lives', () => {
     });
 });
 
+
+/** The SC's own library pack says Shared only when it is shared (owner, 2026-10-30); a private one shows nothing extra. */
+describe('DatapackCard — a pack the SC shared', () => {
+    const own = (shared: boolean) =>
+        makeGroup({ key: 'library:acme', name: 'acme', displayName: 'Acme Demo', store: 'library', shared, mine: true, versions: [makeVersion({ id: { name: 'acme', version: 'main' }, shared, store: 'library', mine: true })] });
+
+    it('shows a small Shared label beside Yours when the pack is shared', () => {
+        renderCard(own(true));
+
+        expect(screen.getByText('Yours')).toBeInTheDocument();
+        expect(screen.getByText('Shared')).toBeInTheDocument();
+    });
+
+    it('shows nothing extra on a private pack', () => {
+        renderCard(own(false));
+
+        expect(screen.queryByText('Shared')).not.toBeInTheDocument();
+    });
+
+    it("adds nothing to a colleague's library pack, which the library lists only because it is shared", () => {
+        renderCard({ ...own(true), mine: false });
+
+        expect(screen.getByText('Library')).toBeInTheDocument();
+        expect(screen.queryByText('Shared')).not.toBeInTheDocument();
+    });
+});

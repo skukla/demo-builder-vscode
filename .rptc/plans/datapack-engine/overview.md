@@ -99,10 +99,10 @@ layer is stored as ordinary pack rows, and when a pack carries settings itself, 
 | 04 | [One rule for "is this still as we left it?"](step-04-still-as-we-left-it.md) | done |
 | 05 | [Capture and repeat installs](step-05-capture-and-repeat-installs.md) | built, not yet live; the removal box and the "Always" setting can now be built (07 is in) |
 | 06 | [The setup guide's undos keep what changed since](step-06-setup-guide-undos.md) (AB-83) | built, not yet live |
-| 07 | [Each demo has its own pack, shared by reference](step-07-demo-packs.md) | built, not yet live; the library's "unlisted" waits on a service deploy |
-| 08 | [Customers and B2B](step-08-customers-b2b.md) | built; first live run 2026-10-30 found a shared catalog and its customer group must go or stay together, fixed, not yet re-run |
-| 09 | [Store settings, as a layer beside a pack](step-09-store-settings.md) | the `store_config` kind built, not yet live; the layer itself waits on how a pack finds it |
-| 10 | [Reset clears a demo's part of the store](step-10-wipe.md) | to do |
+| 07 | [Each demo has its own pack, shared by reference](step-07-demo-packs.md) | built, not yet live; the library's "unlisted" waits on a service deploy. Share / Stop sharing an SC's own pack, and the export question, built 2026-10-30 (owner's decision), not yet live |
+| 08 | [Customers and B2B](step-08-customers-b2b.md) | built; first live run 2026-10-30 found a shared catalog and its customer group must go or stay together, fixed, not yet re-run; companies are made Active (owner, 2026-10-30) |
+| 09 | [Store settings, as a layer beside a pack](step-09-store-settings.md) | the `store_config` kind built, not yet live; the layer itself waits on how a pack finds it. First live run 2026-10-30: the preview read a website setting at the project's website, not the install's; fixed (the record now keeps its target), not yet re-run |
+| 10 | [Reset clears a demo's part of the store](step-10-wipe.md) | built 2026-10-30 (products, categories, customers; B2B left), not yet live; eight decisions open |
 | 11 | [Later, when a pack needs it](step-11-later.md) | not started |
 | 12 | [The storefront shows a pack's own categories](step-12-pack-categories-on-storefront.md), after 03's live run | to do |
 | 13 | [Publish our packs to the Data Installer, settings split off](step-13-publish-to-data-installer.md), after 09 | to do |

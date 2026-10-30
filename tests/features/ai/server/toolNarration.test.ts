@@ -194,6 +194,8 @@ describe('every named form says what it acts on, from the argument that names it
         ['cleanup_dalive_site', { org: 'skukla', site: 'kukla-bodea' }, 'Deleting skukla/kukla-bodea content'],
         ['delete_page', { path: '/drafts/spring-sale' }, 'Deleting /drafts/spring-sale'],
         ['reset_datapack', { datapackName: 'Bodea B2B' }, 'Resetting Bodea B2B'],
+        ['clear_demo_data', { websiteCode: 'justrite_test_website' }, 'Clearing justrite_test_website'],
+        ['share_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing who can use the acme-1a2b3c pack'],
         ['delete_library_datapack', { datapackName: 'Bodea B2B' }, 'Deleting Bodea B2B'],
         ['copy_library_datapack_to_installer', { datapackName: 'Bodea B2B' }, 'Copying Bodea B2B'],
         ['rename_datapack', { datapackName: 'acme-demo-1a2b3c' }, 'Renaming the acme-demo-1a2b3c pack'],

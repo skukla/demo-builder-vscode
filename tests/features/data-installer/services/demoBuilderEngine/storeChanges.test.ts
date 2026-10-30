@@ -176,6 +176,66 @@ describe('saveStoreChanges', () => {
     });
 });
 
+/**
+ * Live, scratch-1028, 2026-10-30: a settings pack installed to `justrite_test_website` while the
+ * project's own website is JustRite's. The preview opened the store at the project's website and
+ * called the untouched setting "changed in the Admin". Both actions now open the store where the
+ * record says the pack went.
+ */
+describe('previewChanges and saveStoreChanges open the store where the pack was installed', () => {
+    const LIST = 'catalog/frontend/list_per_page';
+    const TEST_SITE = { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' };
+    const TWO_SITES = {
+        'store/websites': [{ id: 1, code: 'base', name: 'Main Website', default_group_id: 1 }, { id: 2, code: 'justrite_test_website', name: 'Test', default_group_id: 2 }],
+        'store/storeGroups': [{ id: 1, root_category_id: 2 }, { id: 2, root_category_id: 119 }],
+        'store/storeViews': [{ id: 1, code: 'default', website_id: 1, store_group_id: 1 }, { id: 5, code: 'justrite_test_view', website_id: 2, store_group_id: 2 }],
+        [configListPath([LIST], 'default')]: { items: [{ path: LIST, value: '12', scope: 'default' }] },
+        [configListPath([LIST], 'website', 'justrite_test_website')]: { items: [{ path: LIST, value: '15', scope: 'website' }] },
+        [configListPath([LIST], 'website', 'base')]: { items: [{ path: LIST, value: '10', scope: 'website' }] },
+    };
+    const SETTINGS_PACK = { store_config: [{ path: LIST, value: '15', scope: 'websites', scope_code: 'base' }] };
+    const recordedList = { kind: 'store_config', id: `${LIST}@website`, key: `${LIST}@website`, previous: { path: LIST, scope: 'website', scopeCode: 'justrite_test_website', stored: '10', effective: '10', wrote: '15' } };
+
+    async function installedTo(target: typeof TEST_SITE | undefined, objects: Array<{ kind: string; id: string; key?: string; previous?: unknown }>) {
+        const made = await deps(false, TWO_SITES, SETTINGS_PACK);
+        const recorder = await openInstallRecord(made.files, PROJECT, PACK, NOW, target);
+        for (const object of objects) await recorder.record(object);
+        const reads: string[] = [];
+        made.d.commerce = async () => ({ get: async (path: string) => { reads.push(path); return made.ctx.get(path); }, send: made.ctx.send });
+        return { ...made, reads };
+    }
+
+    it('finds a setting the pack set on the test website still as it was left, whatever the project names (the live case)', async () => {
+        const { d, ctx, reads } = await installedTo(undefined, [recordedList]);
+
+        const preview = await previewChanges(d, PACK, 'library');
+
+        expect(preview.kept).toBeUndefined();
+        expect(preview.kinds.find((k) => k.kind === 'store_config')?.keep).toEqual({ count: 0, names: [] });
+        expect(reads).toContain(configListPath([LIST], 'website', 'justrite_test_website'));
+        expect(reads).not.toContain(configListPath([LIST], 'website', 'base'));
+        expect(ctx.sent).toStrictEqual([]);
+    });
+
+    it("reads every row at the record's website and store view, not the project's", async () => {
+        const grid = { path: 'catalog/frontend/grid_per_page', scope: 'default', stored: '12', effective: '12', wrote: '24' };
+        const { d, reads } = await installedTo(TEST_SITE, [{ kind: 'store_config', id: `${grid.path}@default`, key: `${grid.path}@default`, previous: grid }]);
+
+        const preview = await previewChanges(d, PACK, 'library');
+
+        expect(preview.kinds.find((k) => k.kind === 'store_config')).toMatchObject({ inStore: { count: 1, names: [`${LIST}@website`] }, remove: { count: 1 } });
+        expect(reads).not.toContain(configListPath([LIST], 'website', 'base'));
+    });
+
+    it('keeps the website and store view on the record it moves onto the new version', async () => {
+        const { d, files, write } = await installedTo(TEST_SITE, [recordedList]);
+
+        await saveStoreChanges(d, { pack: PACK, source: 'library', saveAs: SAVE_AS }, write);
+
+        expect((await readInstallRecord(files, PROJECT, SAVE_AS.id))?.target).toEqual(TEST_SITE);
+    });
+});
+
 const skuIn = (skus: string) =>
     page('products', `&searchCriteria[filterGroups][0][filters][0][field]=sku&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(skus)}&searchCriteria[filterGroups][0][filters][0][conditionType]=in`);
 

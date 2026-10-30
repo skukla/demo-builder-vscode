@@ -16,6 +16,7 @@ import {
     narrateOutcomeToModal,
     progressSurfaceOf,
 } from '@/core/vscode/operationProgress';
+import { privatePackNote } from '@/features/data-installer/handlers/privatePackPrompt';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
@@ -209,7 +210,9 @@ export const handleExportProjectSettings: MessageHandler<{
     );
     try {
         const result = await exportProjectSettingsToFile(project, { path: data?.path, globalState: context.context.globalState });
-        return { success: true, data: result };
+        // The file names its pack by reference: a private one is said, for the agent to offer sharing.
+        const packNote = await privatePackNote(context, project);
+        return { success: true, data: { ...result, ...(packNote ? { packNote } : {}) } };
     } catch (error) {
         context.logger.error(
             '[Dashboard] Failed to export project settings',
