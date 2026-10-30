@@ -180,7 +180,27 @@ async function projectPath(
         return assertPathInsideSync(candidate, project.path);
     } catch {
         // The part that exists is inside, so only a missing folder is left (open and load).
-        throw new DatapackTransferError(`There is no datapack file at ${given}.`);
+        throw new DatapackTransferError(noFileAt(project.name, given));
+    }
+}
+
+/**
+ * "There is none", naming the project whose folder was looked in: an agent's relative path is
+ * read inside the CURRENT project, and when that is not the one the agent meant, the project's
+ * name is what says so (live, 2026-10-30: a path meant for scratch-1028 was looked for in JustRite's).
+ */
+function noFileAt(projectName: string, given: string): string {
+    return `The project ${projectName} has no datapack file at ${given}.`;
+}
+
+/** The file's bytes, or the same "there is none" when it is missing from a folder that exists. */
+async function readPackFile(context: HandlerContext, file: string): Promise<Buffer> {
+    try {
+        return await fs.promises.readFile(file);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        const project = await context.stateManager.getCurrentProject();
+        throw new DatapackTransferError(project ? noFileAt(project.name, file) : `There is no datapack file at ${file}.`);
     }
 }
 
@@ -280,7 +300,7 @@ export const datapackZipHandlers = defineHandlers({
         try {
             const file = await openSource(context, payload?.path);
             if (!file) return { success: true, data: { cancelled: true } };
-            const pack = readDatapackZip(await fs.promises.readFile(file));
+            const pack = readDatapackZip(await readPackFile(context, file));
             return {
                 success: true,
                 data: {
@@ -317,7 +337,7 @@ export const datapackZipHandlers = defineHandlers({
         try {
             const file = await openSource(context, payload.path);
             if (!file) return { success: false, error: 'Open a datapack file first.' };
-            const pack = readDatapackZip(await fs.promises.readFile(file));
+            const pack = readDatapackZip(await readPackFile(context, file));
             if (target === 'installer' && payload.confirmName !== pack.id.name) {
                 return {
                     success: false,

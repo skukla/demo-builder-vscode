@@ -25,6 +25,7 @@ import { runWithCallTag } from '@/core/logging/callTagContext';
 import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
 
 const showWarning = vscode.window.showWarningMessage as jest.Mock;
+const showInfo = vscode.window.showInformationMessage as jest.Mock;
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -36,19 +37,43 @@ const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolv
 // Every other question an agent puts to the SC is a modal (its consent dialogs);
 // its sign-in request sat in a corner notification instead (2026-09-21).
 describe('an agent asks, with no modal up', () => {
-    it('asks in a VS Code modal, naming the agent, with one Cancel', async () => {
-        showWarning.mockResolvedValue('Sign In');
+    // Owner, 2026-10-30: the title is the modal's heading and the sentence sits under it.
+    it('asks in a VS Code modal, its title the heading, naming the agent, with one Cancel', async () => {
+        showWarning.mockResolvedValue({ title: 'Sign In' });
 
         const answer = await runWithCallTag(7, () =>
             askDuringOperation({ title: 'Sign in', message: 'Sign in to Adobe to continue.' }, 'Sign In', 'Cancel'),
         );
 
         expect(showWarning).toHaveBeenCalledWith(
-            'Sign in to Adobe to continue.',
-            { modal: true, detail: "Demo Builder's agent asked for this." },
-            'Sign In',
+            'Sign in',
+            { modal: true, detail: "Sign in to Adobe to continue.\n\nDemo Builder's agent asked for this." },
+            { title: 'Sign In' },
         );
         expect(answer).toBe('Sign In');
+    });
+
+    it('a routine step gets an information icon, and its dismiss answer is the close button, so no Cancel is added', async () => {
+        showInfo.mockResolvedValue({ title: 'Skip for now', isCloseAffordance: true });
+
+        const answer = await runWithCallTag(7, () =>
+            askDuringOperation(
+                { title: 'One step in the Admin', message: 'Set it, then Save.', tone: 'info', dismiss: 'Skip for now' },
+                'Open the Admin',
+                "I've done it",
+                'Skip for now',
+            ),
+        );
+
+        expect(showWarning).not.toHaveBeenCalled();
+        expect(showInfo).toHaveBeenCalledWith(
+            'One step in the Admin',
+            { modal: true, detail: "Set it, then Save.\n\nDemo Builder's agent asked for this." },
+            { title: 'Open the Admin' },
+            { title: "I've done it" },
+            { title: 'Skip for now', isCloseAffordance: true },
+        );
+        expect(answer).toBe('Skip for now');
     });
 
     it('answers undefined when the SC dismisses it', async () => {

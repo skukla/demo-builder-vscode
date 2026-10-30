@@ -78,6 +78,14 @@ export interface Question {
     title: string;
     /** Why, and what each answer does. It must stand alone: a notification shows only this. */
     message: string;
+    /** A routine step rather than a problem: an information icon, not a warning one. */
+    tone?: 'info';
+    /**
+     * The answer that closing the dialog means ("Skip for now"). Shown as the dialog's own close
+     * button, so VS Code adds no Cancel beside it: two buttons that both dismiss read as two
+     * different choices (owner, 2026-10-30).
+     */
+    dismiss?: string;
 }
 
 /**
@@ -91,9 +99,10 @@ export interface Question {
  * @returns the chosen action, or undefined if dismissed
  */
 export async function askDuringOperation(
-    { title, message }: Question,
+    question: Question,
     ...actions: string[]
 ): Promise<string | undefined> {
+    const { title, message } = question;
     const id = hosting.getStore();
 
     if (!id) {
@@ -103,24 +112,32 @@ export async function askDuringOperation(
         // An agent call (every tool call carries a tag, reads included) asks the way
         // the agent's other questions do: a modal. A button press keeps the
         // notification.
-        if (currentCallTag() !== undefined) return askAsModal(message, actions);
-        return vscode.window.showWarningMessage(message, ...actions);
+        if (currentCallTag() !== undefined) return askAsModal(question, actions);
+        return question.tone === 'info'
+            ? vscode.window.showInformationMessage(message, ...actions)
+            : vscode.window.showWarningMessage(message, ...actions);
     }
 
     return (await askInModal(id, { title, message, actions })).action;
 }
 
 /**
- * The agent's question as a VS Code modal. VS Code gives every modal its own
- * Cancel, so a "Cancel" action is left out rather than shown twice; dismissing
- * answers `undefined`, as a notification's Cancel did.
+ * The agent's question as a VS Code modal: the title is its heading and the sentence sits under
+ * it, as in Demo Builder's own progress modal (owner, 2026-10-30: a paragraph with the action
+ * buried in it read badly). VS Code gives every modal its own Cancel, so a "Cancel" action is
+ * left out rather than shown twice, and a question with a `dismiss` answer shows that one as the
+ * close button instead; dismissing answers `undefined`, as a notification's Cancel did, or the
+ * `dismiss` answer.
  */
-function askAsModal(message: string, actions: string[]): Thenable<string | undefined> {
-    return vscode.window.showWarningMessage(
-        message,
-        { modal: true, detail: "Demo Builder's agent asked for this." },
-        ...actions.filter((action) => action !== 'Cancel'),
-    );
+async function askAsModal({ title, message, tone, dismiss }: Question, actions: string[]): Promise<string | undefined> {
+    const items: vscode.MessageItem[] = actions
+        .filter((action) => action !== 'Cancel')
+        .map((action) => ({ title: action, ...(action === dismiss ? { isCloseAffordance: true } : {}) }));
+    const options = { modal: true, detail: `${message}\n\nDemo Builder's agent asked for this.` };
+    const chosen = tone === 'info'
+        ? await vscode.window.showInformationMessage(title, options, ...items)
+        : await vscode.window.showWarningMessage(title, options, ...items);
+    return chosen?.title;
 }
 
 /**

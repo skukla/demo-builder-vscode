@@ -55,15 +55,15 @@ export function packRootGuideStep(step: PackRootStep): Omit<SetupStep, 'check'> 
     };
 }
 
-/** "Stores > All Stores > JustRite Test Store, Root Category: Frescopa, then Save Store." */
+/** "In Stores > All Stores > JustRite Test Store, set Root Category to Frescopa, then Save Store." */
 function instruction(step: PackRootStep): string {
-    return `In the Admin, ${packRootGuideStep(step).where}, set Root Category to ${step.rootName} and Save Store.`;
+    return `In ${packRootGuideStep(step).where}, set Root Category to ${step.rootName}, then Save Store.`;
 }
 
-/** The store's root by name, when the category can be read. */
+/** The store's root by name, when the category can be read (no ids: the SC reads this). */
 async function rootLabel(get: CommerceGet, id: number): Promise<string> {
     const category = await readOrNull<{ name?: string }>(get, `categories/${segment(id)}`).catch(() => null);
-    return category?.name ? `${category.name} (id ${id})` : `the category with id ${id}`;
+    return category?.name ?? 'another category';
 }
 
 /**
@@ -81,7 +81,7 @@ export async function checkPackRoot(get: CommerceGet, step: PackRootStep): Promi
     if (!group) return { note: `The store ${step.storeName} is not in Commerce any more.` };
     if (Number(group.root_category_id) === step.rootId) return { done: true, note: `The store ${step.storeName} shows ${step.rootName}'s categories.` };
     const now = await rootLabel(get, Number(group.root_category_id));
-    return { done: false, note: `The store ${step.storeName} still shows the root category ${now}, not ${step.rootName} (id ${step.rootId}).` };
+    return { done: false, note: `The store ${step.storeName} still uses the root category ${now}, not ${step.rootName}.` };
 }
 
 /**
@@ -103,10 +103,19 @@ export async function storeShowingRoot(get: CommerceGet, rootId: string): Promis
     return `the store ${store.name ?? store.id} shows it as its root category. In the Admin, Stores > All Stores > ${store.name ?? store.id}, set Root Category back to the one it had and Save Store, then remove the pack again`;
 }
 
-/** The question, worded for the first time or after a check found it not done. */
+/**
+ * The question: the one thing to do, first (owner, 2026-10-30: the first wording led with why,
+ * named store codes and buried the step). Why the store needs it stays in the setup step's `why`.
+ * After a check found it not done, what the store uses now comes first.
+ */
 function question(step: PackRootStep, found?: string): Question {
-    const lead = found ?? `The store ${step.storeName} shares its root category with ${step.sharedWith}, so ${step.rootName}'s categories went in as a root of their own.`;
-    return { title: `Show ${step.rootName}'s categories`, message: `${lead} ${instruction(step)} No API can change it.` };
+    const ask = `${instruction(step)} Demo Builder can't make this change for you.`;
+    return {
+        title: `One step in the Admin to show ${step.rootName}'s categories`,
+        message: found ? `${found} ${ask}` : ask,
+        tone: 'info',
+        dismiss: SKIP,
+    };
 }
 
 /** Ask until the check passes or the SC skips; the step as it stands at the end. */

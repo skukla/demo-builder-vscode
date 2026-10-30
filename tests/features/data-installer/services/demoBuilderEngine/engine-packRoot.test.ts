@@ -50,7 +50,7 @@ describe('demoBuilderEngine and a pack root', () => {
         const { status, asked } = await install(SHARED_TARGET);
 
         expect(status.perType).toEqual({ categories: 'success' });
-        expect(asked).toEqual(["Show Frescopa's categories"]);
+        expect(asked).toEqual(["One step in the Admin to show Frescopa's categories"]);
         expect(status.note).toBe(
             "One step is left in the Admin: Stores > All Stores > JustRite Test Store, Root Category: Frescopa, then Save Store. Until then the storefront does not show Frescopa's categories.",
         );

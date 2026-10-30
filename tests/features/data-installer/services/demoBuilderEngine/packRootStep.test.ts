@@ -89,7 +89,7 @@ describe('checkPackRoot', () => {
 
         await expect(checkPackRoot(ctx.get, STEP)).resolves.toEqual({
             done: false,
-            note: 'The store JustRite Test Store still shows the root category Justrite (id 119), not Frescopa (id 300).',
+            note: 'The store JustRite Test Store still uses the root category Justrite, not Frescopa.',
         });
     });
 
@@ -114,7 +114,8 @@ describe('settlePackRoot', () => {
         expect((await readInstallRecord(files, PROJECT, PACK))?.rootStep).toEqual(step);
     });
 
-    it('Skip for now leaves the step open on the record, and the question says why and what to do', async () => {
+    // Owner, 2026-10-30: the first wording led with why, named store codes and buried the step.
+    it('Skip for now leaves the step open on the record, and the question leads with the one thing to do', async () => {
         const { ctx, files } = await settling();
         const run = scripted(SKIP);
 
@@ -124,10 +125,10 @@ describe('settlePackRoot', () => {
         expect((await readInstallRecord(files, PROJECT, PACK))?.rootStep?.state).toBe('open');
         expect(run.asked).toEqual([
             {
-                title: "Show Frescopa's categories",
-                message:
-                    "The store JustRite Test Store shares its root category with the store justrite_store (website justrite), so Frescopa's categories went in as a root of their own. " +
-                    'In the Admin, Stores > All Stores > JustRite Test Store, set Root Category to Frescopa and Save Store. No API can change it.',
+                title: "One step in the Admin to show Frescopa's categories",
+                message: "In Stores > All Stores > JustRite Test Store, set Root Category to Frescopa, then Save Store. Demo Builder can't make this change for you.",
+                tone: 'info',
+                dismiss: SKIP,
             },
         ]);
     });
@@ -146,7 +147,8 @@ describe('settlePackRoot', () => {
         const step = await settlePackRoot(ctx, STORE_ROOT, run.asker);
 
         expect(run.asked).toHaveLength(2);
-        expect(run.asked[1].message).toMatch(/^The store JustRite Test Store still shows the root category Justrite \(id 119\), not Frescopa \(id 300\)\. In the Admin/u);
+        expect(run.asked[1].message).toMatch(/^The store JustRite Test Store still uses the root category Justrite, not Frescopa\. In Stores > All Stores/u);
+        expect(run.asked[1].message).not.toMatch(/id \d|justrite_store/u);
         expect(step).toMatchObject({ state: 'done', note: "The store JustRite Test Store shows Frescopa's categories." });
         expect(store.sent).toStrictEqual([]);
     });

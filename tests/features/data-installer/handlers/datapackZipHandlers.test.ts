@@ -284,6 +284,26 @@ describe('open-datapack-zip', () => {
         expect(result).toMatchObject({ success: false, error: 'This file is not a zip archive.' });
     });
 
+    // Live, 2026-10-30: an agent's relative path was looked for in another project's folder, and
+    // the answer did not say which project, so it read like a missing file rather than a wrong project.
+    it('names the project it looked in when a relative path leads nowhere', async () => {
+        const result = await open(contextFor(createMockProject({ name: 'justrite', path: dir }), false), {
+            path: 'live-test/zz-pack.datapack.zip',
+        });
+
+        expect(result).toMatchObject({ success: false, error: 'The project justrite has no datapack file at live-test/zz-pack.datapack.zip.' });
+    });
+
+    it('names the project too when the folder is there and the file is not', async () => {
+        fs.mkdirSync(path.join(dir, 'live-test'));
+
+        const result = await open(contextFor(createMockProject({ name: 'justrite', path: dir }), false), {
+            path: 'live-test/zz-pack.datapack.zip',
+        });
+
+        expect(result).toMatchObject({ success: false, error: `The project justrite has no datapack file at ${path.join(dir, 'live-test', 'zz-pack.datapack.zip')}.` });
+    });
+
     it('needs a path from an agent', async () => {
         expect(await open(contextFor(createMockProject({ path: dir }), false), {})).toMatchObject({
             success: false,
