@@ -338,7 +338,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "that holds things it did not make is kept (a kept company with its admin and its catalog), and " +
             "the outcome's note says which; store settings it set are put back first, unless changed since, " +
             "and the note names each by path. The project stops naming the pack only once a removal " +
-            'finishes having taken everything out.',
+            'finishes having taken everything out. A pack the demo-builder engine has no install record of ' +
+            'is refused and nothing is removed by name; check_demo_data then clear_demo_data clears what an ' +
+            'earlier install left.',
         map: importHandlers,
         type: 'reset-datapack',
         // Gated TWICE, and that is not redundant. The handler has always required

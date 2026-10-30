@@ -97,6 +97,12 @@ It is confirm-gated and **cannot be undone** — the service has no undo — but
 undone" and "unbounded" are different claims, and only the first is true here. Say the
 scope when you ask the user, rather than implying the instance is at risk.
 
+With Demo Builder's own engine (the default), removal takes back only what the project's
+install record lists. A pack this project's engine never installed (the service did, or
+another project did) is refused and nothing is removed by name; to clear what an earlier
+install left, use `check_demo_data` and then `clear_demo_data` (the screen's "Clear demo
+data").
+
 Like an import it returns a handle and is polled, and **the service supplies its own
 dependency ordering for the delete** — a different order from import, over the same data
 types. You do not have to reason about what to remove first.

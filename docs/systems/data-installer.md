@@ -78,6 +78,18 @@ products), with before/after snapshots via the instance's own REST API:
 Corroborated by the service's own records: all 434 historical delete runs carry a
 scenario expressed in terms of the *pack's* items. No type-wide wipe scenario exists.
 
+## Demo Builder's engine: removal, and an install that hits trouble
+
+Demo Builder's own engine (`services/demoBuilderEngine/`, the default) removes a pack
+from its install record, `<project>/.demo-builder/datapacks/<name>@<version>.json`,
+which lists every object the install made. It never removes by name.
+
+- **A pack it has no record of** (one the service installed, or one installed from
+  another project) is refused, and nothing is removed (owner, 2026-10-30, step 14
+  item 20). The refusal points the SC at **Clear demo data** on the Data Installer
+  screen (agents: `check_demo_data`, then `clear_demo_data`), which clears what Demo
+  Builder did not install from the stores the SC picks (`demoDataWipe/wipePlan.ts`).
+
 ## What agents are not given
 
 Six read tools. Three groups are held back deliberately — the most reviewable

@@ -61,7 +61,11 @@ Each group is built on its own branch off `loop/2026-10-05-release-candidate`, t
 
 ### Owner's decision (asked 2026-10-30)
 
-20. Removing a pack the service installed, which our engine has no record of.
+20. Removing a pack the service installed, which our engine has no record of. **Decided (owner,
+    2026-10-30): keep refusing, match nothing by name; the refusal points the SC to "Clear demo
+    data".** Built on G1: the message (`engine.ts` `NO_RECORD`), the `reset_datapack` description
+    (agents: `check_demo_data` then `clear_demo_data`), the `import-datapack` skill template, and
+    `docs/systems/data-installer.md`.
 
 ## Rules for every group
 

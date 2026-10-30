@@ -248,13 +248,20 @@ describe('demoBuilderEngine removal', () => {
         expect('leftInStore' in status).toBe(false);
     });
 
-    it('fails, saying so, when this engine never installed the pack here', async () => {
-        const { engine } = await engineWith({}, () => true);
+    // Step 14 item 20 (owner, 2026-10-30): still refused, nothing matched by name, and the SC is
+    // pointed at the one thing that clears what an earlier install left.
+    it('fails, removing nothing, when this engine never installed the pack here, and points to Clear demo data', async () => {
+        const { engine, ctx } = await engineWith({}, () => true);
 
         const { activationId } = await engine.startDelete(request());
-        await settle(engine, activationId);
+        const status = await settle(engine, activationId);
 
-        expect((await engine.getJobFailureReason(activationId))?.error).toMatch(/did not install this pack in this project/);
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(
+            'Demo Builder did not install this pack in this project, so it has no record of what the pack made and removes ' +
+                'nothing by name. To clear what an earlier install left in the store, use Clear demo data on the Data Installer screen.',
+        );
+        expect(status.perType).toEqual({ attribute_sets: 'error', categories: 'error' });
+        expect(ctx.sent).toStrictEqual([]);
     });
 
     it('keeps on the record what Commerce refused to remove', async () => {

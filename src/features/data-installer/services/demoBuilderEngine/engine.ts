@@ -51,6 +51,15 @@ export interface DemoBuilderEngineDeps {
 
 const NO_TARGET = 'Choose the website and store view to install into first.';
 
+/**
+ * A removal of a pack this engine has no record of (step 14 item 20, owner 2026-10-30): refused,
+ * with nothing matched by name, and the SC pointed at "Clear demo data" (`demoDataWipe/wipePlan.ts`),
+ * which clears what Demo Builder did not install. Agents reach it as `check_demo_data` and `clear_demo_data`.
+ */
+const NO_RECORD =
+    'Demo Builder did not install this pack in this project, so it has no record of what the pack made and removes ' +
+    'nothing by name. To clear what an earlier install left in the store, use Clear demo data on the Data Installer screen.';
+
 interface Job {
     perType: Record<string, DataTypeStatus>;
     reason?: string;
@@ -186,7 +195,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
         startDelete: async (request) =>
             start(deps, jobs, request, async (job) => {
                 const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id });
-                if (result.noRecord) throw new Error('Demo Builder did not install this pack in this project, so there is nothing of its to remove.');
+                if (result.noRecord) throw new Error(NO_RECORD);
                 job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
                 if (result.kept.length > 0) job.leftInStore = true;
                 for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';
