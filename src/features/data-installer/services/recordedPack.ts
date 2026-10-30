@@ -18,6 +18,7 @@
  */
 
 import type { DatapackSummary } from '../types';
+import type { DataInstallerClient } from './dataInstallerClient';
 import { DataInstallerApiError } from './dataInstallerErrors';
 import { groupDatapacks, pickDefaultVersion } from './datapackCatalog';
 import {
@@ -39,6 +40,29 @@ export interface PackReads {
     detail(id: DatapackId, store: DatapackStoreName): Promise<DatapackSummary>;
     /** Every version the store lists under a name. */
     versions(name: string, store: DatapackStoreName): Promise<DatapackSummary[]>;
+}
+
+/** One store's catalog reads, or a refusal (the handlers' access guard answers this shape). */
+export type StoreAccess =
+    | { ok: true; client: Pick<DataInstallerClient, 'getDatapackDetail' | 'findDatapacks'> }
+    | { ok: false };
+
+/**
+ * Both stores' reads over an access guard. A store the guard refuses throws, which every reader
+ * of {@link PackReads} takes as "could not ask".
+ *
+ * @param open - the guard, per store
+ */
+export function packReadsVia(open: (store: DatapackStoreName) => Promise<StoreAccess>): PackReads {
+    const clientOf = async (store: DatapackStoreName) => {
+        const access = await open(store);
+        if (!access.ok) throw new Error(`The ${store === 'library' ? 'datapack library' : 'Data Installer'} is not reachable.`);
+        return access.client;
+    };
+    return {
+        detail: async (id, store) => (await clientOf(store)).getDatapackDetail(id),
+        versions: async (name, store) => (await (await clientOf(store)).findDatapacks({ datapackName: name })).items,
+    };
 }
 
 /** The detail, or `null` when the store says it has none; anything else throws. */

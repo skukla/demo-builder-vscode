@@ -10,6 +10,7 @@ import {
     writePackToStore,
 } from '@/features/data-installer/services/datapackTransfer';
 import type { DatapackFile } from '@/features/data-installer/services/datapackZip';
+import { BODEA_CUSTOMER_ROWS, TEST_PASSWORD } from '../../../helpers/commerceB2bFixtures';
 import type { DataItem, DatapackDetail } from '@/features/data-installer/types';
 
 const ID = { name: 'justrite', version: 'v1' };
@@ -120,6 +121,16 @@ describe('writePackToStore', () => {
             stored: ['categories', 'products', 'customer_groups'],
             failed: [],
         });
+    });
+
+    // Step 08: a save into a store, or a copy between stores, never carries a customer password.
+    it("writes customers without the password a pack's rows carry", async () => {
+        const w = writer();
+
+        await writePackToStore(w, { ...PACK, items: [{ dataType: 'customers', records: BODEA_CUSTOMER_ROWS }] });
+
+        expect(w.addDataItem).toHaveBeenCalledWith(ID, 'customers', BODEA_CUSTOMER_ROWS.map(({ customer }) => ({ customer })));
+        expect(JSON.stringify(w.addDataItem.mock.calls)).not.toContain(TEST_PASSWORD);
     });
 
     it('refuses an existing pack without update, and writes nothing into it', async () => {

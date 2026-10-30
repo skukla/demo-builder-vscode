@@ -12,9 +12,11 @@
  * @module features/data-installer/services/demoBuilderEngine/storeCopies
  */
 
+import { withoutCredentials } from '../packCredentials';
+import { B2B_READERS, b2bRowsOf } from './b2bStoreCopies';
 import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
-import { type KindContext, segment } from './kindContext';
+import { eachCopy, type KindContext, segment } from './kindContext';
 import { attributePackForm, categoryPackForm, keyOf, productPackForm } from './packForm';
 import type { ProductLookups } from './productLookups';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
@@ -61,15 +63,6 @@ export function readProducts(ctx: KindContext, skus: readonly string[]): Promise
 
 type Copies = Map<string, unknown>;
 type Reader = (ctx: KindContext, lk: ProductLookups, objects: readonly CreatedObject[], inventory: () => Promise<Inventory>) => Promise<Copies>;
-
-async function eachCopy(objects: readonly CreatedObject[], read: (o: CreatedObject) => Promise<unknown>): Promise<Copies> {
-    const copies: Copies = new Map();
-    for (const object of objects) {
-        const copy = await read(object);
-        if (copy !== undefined) copies.set(object.id, copy);
-    }
-    return copies;
-}
 
 /** The attribute by code, or undefined when the store no longer has it. */
 async function attributeOrNone(lk: ProductLookups, code: string) {
@@ -149,6 +142,8 @@ const READERS: Record<string, Reader> = {
             return link && stock ? { stockSourceLink: { stock_id: stock.name, source_code: code, priority: link.priority } } : undefined;
         });
     },
+    // Customers, groups, companies, shared catalogs and their assignments (step 08).
+    ...B2B_READERS,
 };
 
 /** The kinds whose recorded objects can be read back. */
@@ -184,6 +179,8 @@ const list = (value: unknown, field?: string): unknown[] => {
 
 /** A pack kind's rows, as a list of single rows. */
 function rowsOf(kind: string, records: unknown): unknown[] {
+    const assignments = b2bRowsOf(kind, records);
+    if (assignments) return assignments;
     switch (kind) {
         case 'categories': {
             const root = (records as Row | null)?.root_category as Row | undefined;
@@ -216,7 +213,7 @@ export function rowsByKey(kind: string, records: unknown): Map<string, unknown> 
 }
 
 /** Kinds a repeat install brings changes to; every other kind is only added or taken away. */
-const UPDATED_WHOLE = new Set(['products', 'categories', 'sources']);
+const UPDATED_WHOLE = new Set(['products', 'categories', 'sources', 'customer_groups', 'customers', 'b2b_companies']);
 
 /**
  * The fingerprint of a pack row, for "has the pack changed since it was installed?": the whole
@@ -224,6 +221,8 @@ const UPDATED_WHOLE = new Set(['products', 'categories', 'sources']);
  * brings to one), and the name alone for a kind that has nothing to update.
  */
 export function packedFingerprint(kind: string, row: unknown): string {
+    // A customer's password is never hashed into the record (step 08).
+    if (kind === 'customers') return fingerprintRow((withoutCredentials(kind, [row]) as unknown[])[0]);
     if (UPDATED_WHOLE.has(kind)) return fingerprintRow(row);
     if (kind === 'product_attributes') {
         const attribute = (row as { attribute?: Row }).attribute ?? {};

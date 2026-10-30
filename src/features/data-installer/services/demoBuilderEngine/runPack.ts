@@ -5,7 +5,9 @@
  * The order is the service's (catalog spec §0): sets before the attributes put in them,
  * categories and stock before the products that name them, products before their quantities.
  * A pack holding a kind this engine cannot install is refused before anything is written, so a
- * half-installed pack is never the answer to "we don't do customers yet".
+ * half-installed pack is never the answer to "we don't do cart rules yet". Customers and B2B
+ * (step 08) come after the catalog, in the service's order: groups before the products whose tier
+ * prices name them, customers before the companies that make them admins.
  *
  * Removal walks the record in reverse, dropping each object from it as it goes, so a removal
  * that stops part way can be run again; the record goes once it is empty.
@@ -15,7 +17,10 @@
 
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
 import { installAttributes, parseAttributeRows } from './attributesKind';
+import { ASSIGNMENT_KINDS, CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
 import { installCategories, parseCategoryPack } from './categoriesKind';
+import { installCompanies, parseCompanyRows } from './companiesKind';
+import { installCustomerGroups, installCustomers, parseCustomerGroupRows, parseCustomerRows } from './customerKinds';
 import {
     type RecordFiles,
     forgetInstallRecord,
@@ -28,6 +33,7 @@ import { installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
 import { type KeptContainer, type RemovalAccess, decideRemovals, takeBack } from './removers';
 import { type KeptThing, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat } from './repeatInstall';
+import { installCatalogs, installAssignments as installCatalogAssignments, parseCatalogRows } from './sharedCatalogKinds';
 import { installSourceItems, parseSourceItems } from './sourceItemsKind';
 import {
     installSources,
@@ -54,11 +60,17 @@ const STEPS: readonly KindStep[] = [
     { kind: 'product_attributes', install: (ctx, r) => installAttributes(ctx, parseAttributeRows(r)) },
     { kind: 'attribute_assign_to_set', install: (ctx, r) => installAssignments(ctx, parseAssignmentRows(r)) },
     { kind: 'categories', install: (ctx, r) => installCategories(ctx, parseCategoryPack(r)) },
+    { kind: CUSTOMER_GROUP_KIND, install: (ctx, r) => installCustomerGroups(ctx, parseCustomerGroupRows(r)) },
     { kind: 'stocks', install: (ctx, r) => installStocks(ctx, parseStocks(r)) },
     { kind: 'sources', install: (ctx, r) => installSources(ctx, parseSources(r)) },
     { kind: 'stock_source_links', install: (ctx, r) => installStockSourceLinks(ctx, parseStockSourceLinks(r)) },
     { kind: 'products', install: (ctx, r) => installProducts(ctx, parseProductRows(r)) },
     { kind: 'source_items', install: (ctx, r) => installSourceItems(ctx, parseSourceItems(r)) },
+    // Step 08: customers, then the catalogs and companies, then what is assigned to the catalogs.
+    { kind: CUSTOMER_KIND, install: (ctx, r) => installCustomers(ctx, parseCustomerRows(r)) },
+    { kind: CATALOG_KIND, install: (ctx, r) => installCatalogs(ctx, parseCatalogRows(r)) },
+    { kind: COMPANY_KIND, install: (ctx, r) => installCompanies(ctx, parseCompanyRows(r)) },
+    ...ASSIGNMENT_KINDS.map((kind): KindStep => ({ kind, install: (ctx, r) => installCatalogAssignments(ctx, kind, r) })),
 ];
 
 /** The kinds this engine can install, in order. */

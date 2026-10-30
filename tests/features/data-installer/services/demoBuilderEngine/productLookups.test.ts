@@ -52,6 +52,22 @@ describe('productLookups, both directions', () => {
         await expect(lk.attributeCode('140')).resolves.toBe('cable_size');
     });
 
+    // Step 08: Bodea's customers name "Default (General)"; a store may call that group "General".
+    // The service aliases the two both ways; so does this.
+    it('finds a group under its other spelling when the store has none under the one the pack gives', async () => {
+        const search = (code: string) => page('customerGroups/search', by('customer_group_code', code));
+        const ctx = await fakeContext({
+            [search('Default (General)')]: { items: [] },
+            [search('General')]: { items: [{ id: 1, code: 'General' }] },
+            [search('Guest')]: { items: [] },
+            [search('NOT LOGGED IN')]: { items: [{ id: 0, code: 'NOT LOGGED IN' }] },
+        });
+
+        await expect(productLookups(ctx).groupId('Default (General)')).resolves.toBe(1);
+        await expect(productLookups(ctx).groupId('General')).resolves.toBe(1);
+        await expect(productLookups(ctx).groupId('NOT LOGGED IN')).resolves.toBe(0);
+    });
+
     it('turns a customer group id back into its code', async () => {
         const ctx = await fakeContext({ 'customerGroups/5': { id: 5, code: 'Platinum Buyer' } });
 

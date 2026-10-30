@@ -29,24 +29,39 @@ describe('installPack', () => {
     it('refuses a pack holding a kind it cannot install, before writing anything', async () => {
         const ctx = await fakeContext();
 
-        await expect(installPack(ctx, { categories: { categories: [] }, customers: [], cart_rules: [] })).rejects.toThrow(
-            new UnsupportedKindsError(['customers', 'cart_rules']),
+        await expect(installPack(ctx, { categories: { categories: [] }, customers_export: {}, cart_rules: [] })).rejects.toThrow(
+            new UnsupportedKindsError(['customers_export', 'cart_rules']),
         );
         expect(ctx.sent).toStrictEqual([]);
     });
 
-    it('names, in order, every catalog kind it installs', () => {
+    // Step 08: groups before the products whose tier prices name them; customers before the
+    // companies that make them admins; catalogs and companies before what is assigned to them.
+    it('names, in order, every kind it installs', () => {
         expect(INSTALLABLE_KINDS).toEqual([
             'attribute_sets',
             'product_attributes',
             'attribute_assign_to_set',
             'categories',
+            'customer_groups',
             'stocks',
             'sources',
             'stock_source_links',
             'products',
             'source_items',
+            'customers',
+            'b2b_shared_catalogs',
+            'b2b_companies',
+            'b2b_shared_catalog_company_assignments',
+            'b2b_shared_catalog_categories',
+            'b2b_shared_catalog_products',
         ]);
+    });
+
+    it("installs every one of Bodea's fourteen kinds", () => {
+        const bodea = ['product_attributes', 'attribute_sets', 'customer_groups', 'customers', 'categories', 'products', 'stock_source_links', 'source_items', 'b2b_companies', 'b2b_shared_catalogs', 'b2b_shared_catalog_company_assignments', 'b2b_shared_catalog_categories', 'b2b_shared_catalog_products', 'attribute_assign_to_set'];
+
+        expect(bodea.filter((kind) => !INSTALLABLE_KINDS.includes(kind))).toStrictEqual([]);
     });
 });
 

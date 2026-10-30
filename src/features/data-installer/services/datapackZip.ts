@@ -17,6 +17,7 @@
  */
 
 import AdmZip from 'adm-zip';
+import { withoutCredentials } from './packCredentials';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 export const DATAPACK_ZIP_FORMAT = 'demo-builder-datapack';
@@ -95,7 +96,8 @@ export function buildDatapackZip(pack: DatapackFile): Buffer {
     const zip = new AdmZip();
     zip.addFile(MANIFEST, json(manifest));
     for (const item of pack.items) {
-        zip.addFile(`${DATA_DIR}${item.dataType}.json`, json(item.records));
+        // A file can go to anyone: no customer password goes in one (step 08).
+        zip.addFile(`${DATA_DIR}${item.dataType}.json`, json(withoutCredentials(item.dataType, item.records)));
     }
     return zip.toBuffer();
 }

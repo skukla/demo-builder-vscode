@@ -13,11 +13,16 @@
 
 import { removeAssignment, removeAttributeSet } from './attributeSetsKind';
 import { removeAttribute, removeAttributeOption } from './attributesKind';
+import { b2bHeldByOthers, isB2bContainer } from './b2bContainers';
+import { CATALOG_CATEGORIES_KIND, CATALOG_COMPANIES_KIND, CATALOG_PRODUCTS_KIND } from './b2bKeys';
 import { removeCategory } from './categoriesKind';
+import { removeCompany } from './companiesKind';
+import { removeCustomer, removeCustomerGroup } from './customerKinds';
 import type { CreatedObject } from './installRecord';
 import { readOrNull, segment } from './kindContext';
 import type { StoreCategory } from './productLookups';
 import { removeProduct } from './productsKind';
+import { removeAssignmentPair, removeCatalog } from './sharedCatalogKinds';
 import { removeSource, removeStock, removeStockSourceLink } from './stockKinds';
 import { CommerceReadError, readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -41,6 +46,14 @@ const REMOVERS: Record<string, Remover> = {
     sources: (c, o) => removeSource(c, o.id),
     stock_source_links: (c, o) => removeStockSourceLink(c.send, o.id),
     products: (c, o) => removeProduct(c.send, o.id),
+    // Step 08.
+    customer_groups: (c, o) => removeCustomerGroup(c.send, o.id),
+    customers: (c, o) => removeCustomer(c.send, o.id),
+    b2b_shared_catalogs: (c, o) => removeCatalog(c.send, o.id),
+    b2b_companies: (c, o) => removeCompany(c.send, o.id),
+    b2b_shared_catalog_company_assignments: (c, o) => removeAssignmentPair(c.send, CATALOG_COMPANIES_KIND, o.id),
+    b2b_shared_catalog_categories: (c, o) => removeAssignmentPair(c.send, CATALOG_CATEGORIES_KIND, o.id),
+    b2b_shared_catalog_products: (c, o) => removeAssignmentPair(c.send, CATALOG_PRODUCTS_KIND, o.id),
 };
 
 /**
@@ -61,11 +74,16 @@ export async function takeBack(commerce: RemovalAccess, object: CreatedObject): 
 /** A container kept because it holds what the engine did not make. */
 export interface KeptContainer {
     object: CreatedObject;
-    kind: 'category' | 'set';
+    kind: 'category' | 'set' | 'company' | 'shared catalog' | 'customer group';
     name: string;
     /** How many things of the SC's it holds. */
     count: number;
-    holds: 'category' | 'product';
+    holds: 'category' | 'product' | 'thing';
+    /**
+     * Why it was kept, in words, when one count of one thing cannot say it (step 08: a catalog
+     * holding products and a company; a company whose members could not be read).
+     */
+    reason?: string;
 }
 
 const keyOfObject = (kind: string, id: string) => `${kind}\u0000${id}`;
@@ -93,6 +111,7 @@ async function heldByOthers(get: CommerceGet, object: CreatedObject, taking: Rea
         if (products.length === 0) return undefined;
         return { object, kind: 'category', name, count: products.length, holds: 'product' };
     }
+    if (isB2bContainer(object.kind)) return b2bHeldByOthers(get, object, (kind, id) => taking.has(keyOfObject(kind, id)));
     if (object.kind === 'attribute_sets') {
         const others = (await productsWhere(get, 'attribute_set_id', object.id)).filter((sku) => !taking.has(keyOfObject('products', sku)));
         if (others.length === 0) return undefined;
@@ -125,17 +144,20 @@ export async function decideRemovals(get: CommerceGet, newestFirst: readonly Cre
 }
 
 /** "1 product", "2 products", "2 categories". */
-function plural(count: number, word: 'category' | 'product'): string {
+function plural(count: number, word: KeptContainer['holds']): string {
     if (count === 1) return `1 ${word}`;
-    return word === 'category' ? `${count} categories` : `${count} products`;
+    return word === 'category' ? `${count} categories` : `${count} ${word}s`;
 }
+
+/** Why one container was kept: its own words, or one count of one thing. */
+const reasonOf = (kept: KeptContainer): string => kept.reason ?? `it holds ${plural(kept.count, kept.holds)} you added`;
 
 /** The one line a removal says about the containers it kept, or nothing when it kept none. */
 export function containersLine(kept: readonly KeptContainer[]): string | undefined {
     if (kept.length === 0) return undefined;
     if (kept.length === 1) {
         const [one] = kept;
-        return `Kept the ${one.kind} ${one.name}: it holds ${plural(one.count, one.holds)} you added.`;
+        return `Kept the ${one.kind} ${one.name}: ${reasonOf(one)}.`;
     }
     const names = kept.map((k) => `the ${k.kind} ${k.name}`);
     return `Kept ${kept.length} things that hold what you added: ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}.`;

@@ -10,7 +10,8 @@
  * @module features/data-installer/services/demoBuilderEngine/kindContext
  */
 
-import type { InstallRecorder } from './installRecord';
+import type { z } from 'zod';
+import type { CreatedObject, InstallRecorder } from './installRecord';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
@@ -133,4 +134,29 @@ export async function deleteIfPresent(send: CommerceSend, path: string): Promise
     } catch (error) {
         if (!isAlreadyGone(error)) throw error;
     }
+}
+
+/**
+ * The store's copy of each recorded object, read one at a time, by recorded id; an object the
+ * store no longer has (the read answers undefined) is left out. Every kind's store copies use it.
+ */
+export async function eachCopy(objects: readonly CreatedObject[], read: (o: CreatedObject) => Promise<unknown>): Promise<Map<string, unknown>> {
+    const copies = new Map<string, unknown>();
+    for (const object of objects) {
+        const copy = await read(object);
+        if (copy !== undefined) copies.set(object.id, copy);
+    }
+    return copies;
+}
+
+/**
+ * A kind's pack rows, checked against its schema before anything reaches Commerce, or why not.
+ * One wording for every kind: "The pack's <what> are not in the shape Commerce takes: …".
+ *
+ * @param what - the kind as a person reads it ("customers", "shared catalogs")
+ */
+export function parseRows<T>(schema: z.ZodType<T>, records: unknown, what: string): T {
+    const parsed = schema.safeParse(records);
+    if (!parsed.success) throw new Error(`The pack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+    return parsed.data;
 }

@@ -135,9 +135,17 @@ describe('the library store', () => {
         MockedClient.prototype.getDatapackDetail = jest
             .fn()
             .mockResolvedValue({ id: { name: 'mine', version: 'v1' }, dataTypes: [] });
+        // The pack it was made from, as the library lists it: the warning names it as the SC sees it.
+        const findDatapacks = jest.fn().mockResolvedValue({
+            items: [{ id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', shared: true }],
+            count: 1,
+        });
+        MockedClient.prototype.findDatapacks = findDatapacks;
         const context = makeHeadlessContext();
         (context.context.globalState.get as jest.Mock).mockImplementation((key: string) =>
-            key === SHARED_IN_FILES_KEY ? { 'mine@v1': { at: '2026-10-27T15:00:00.000Z', originName: 'bodea' } } : undefined,
+            key === SHARED_IN_FILES_KEY
+                ? { 'mine@v1': { at: '2026-10-27T15:00:00.000Z', origin: { name: 'bodea', version: 'main', store: 'library' } } }
+                : undefined,
         );
 
         const shared = await dataInstallerHandlers['get-datapack-detail'](context, { datapackName: 'mine', version: 'v1', store: 'library' });
@@ -145,8 +153,9 @@ describe('the library store', () => {
 
         expect(shared).toMatchObject({
             success: true,
-            data: { sharedInFile: "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get bodea instead." },
+            data: { sharedInFile: "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get Bodea instead." },
         });
+        expect(findDatapacks).toHaveBeenCalledWith({ datapackName: 'bodea' });
         expect((installer.data as Record<string, unknown>).sharedInFile).toBeUndefined();
     });
 

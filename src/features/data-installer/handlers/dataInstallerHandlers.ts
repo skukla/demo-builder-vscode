@@ -24,7 +24,8 @@ import {
 } from '../services/dataInstallerConfig';
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
 import { orgNumberOf } from '../services/dataInstallerSignIn';
-import { sharedInFile, sharedInFileWarning } from '../services/sharedInFiles';
+import { packReadsVia } from '../services/recordedPack';
+import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import type { CatalogPage, DatapackSummary, OperationMode, Page } from '../types';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -417,8 +418,11 @@ export const dataInstallerHandlers = defineHandlers({
                       };
             // A library pack this SC shared in a project file: Remove says what deleting it does
             // to anyone who has not created that project yet (step 07).
-            const shared = store === 'library' ? sharedInFile(context.context.globalState, id) : undefined;
-            return { detail, inventory, ...(shared ? { sharedInFile: sharedInFileWarning(shared) } : {}) };
+            const shared =
+                store === 'library'
+                    ? await sharedInFileWarningFor(context.context.globalState, id, packReadsVia((s) => resolveDataInstallerAccess(context, s)))
+                    : undefined;
+            return { detail, inventory, ...(shared ? { sharedInFile: shared } : {}) };
         }, store);
     },
 

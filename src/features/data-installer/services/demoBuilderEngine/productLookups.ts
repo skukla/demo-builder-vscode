@@ -38,6 +38,9 @@ export interface StoreAttribute {
 /** The names Commerce gives two groups that packs spell another way (the service's aliases). */
 const GROUP_ALIASES: Record<string, string> = { General: 'Default (General)', 'NOT LOGGED IN': 'Guest' };
 
+/** The same two groups the other way round, tried when the pack's own spelling finds nothing (step 08). */
+const OTHER_SPELLING: Record<string, string> = { 'Default (General)': 'General', Guest: 'NOT LOGGED IN' };
+
 export const isNumeric = (value: unknown): boolean => /^\d+$/u.test(String(value));
 
 function equalLabel(a: string | undefined, b: string): boolean {
@@ -169,11 +172,15 @@ function groupLookups(ctx: KindContext): Pick<ProductLookups, 'groupId' | 'group
     return {
         groupId: cached(async (code) => {
             if (isNumeric(code)) return Number(code);
-            const wanted = GROUP_ALIASES[code] ?? code;
-            const found = await readAllPages<{ id: number; code: string }>(ctx.get, 'customerGroups/search', `&${search('customer_group_code', wanted)}`);
-            const pick = found.find((g) => g.code === wanted);
-            if (!pick) throw new Error(`The store has no customer group ${code}.`);
-            return pick.id;
+            // The pack's spelling's alias first, as before, then the other spelling (step 08).
+            const first = GROUP_ALIASES[code] ?? code;
+            for (const wanted of first === code ? [code, OTHER_SPELLING[code]] : [first, code]) {
+                if (wanted === undefined) continue;
+                const found = await readAllPages<{ id: number; code: string }>(ctx.get, 'customerGroups/search', `&${search('customer_group_code', wanted)}`);
+                const pick = found.find((g) => g.code === wanted);
+                if (pick) return pick.id;
+            }
+            throw new Error(`The store has no customer group ${code}.`);
         }),
         groupCode: cached(async (id) => (await readOrNull<{ code?: string }>(ctx.get, `customerGroups/${segment(id)}`))?.code),
     };

@@ -45,7 +45,6 @@
         "set_site_admin",
         "sign_in",
         "start_datapack_export",
-        "start_datapack_import",
         "start_demo",
         "stop_demo",
         "sync_storefront"
@@ -95,7 +94,6 @@
         "set_site_admin": "tier 3: cloud write (deploys/publishes/creates/deletes remote resources); represented by handler tests + descriptor/consent checks; exercised only in owner-present supervised journeys",
         "sign_in": "tier 3: opens UI in the owner’s window (panel/browser/terminal); a sleeping-window battery must never trigger it; registration + handler tests cover it (launches a browser auth flow — fired at a sleeping owner once; never again)",
         "start_datapack_export": "tier 3: requires a live authenticated backend/service the scratch project deliberately lacks",
-        "start_datapack_import": "tier 3: requires a live authenticated backend/service the scratch project deliberately lacks",
         "start_demo": "tier 3: opens UI in the owner’s window (panel/browser/terminal); a sleeping-window battery must never trigger it; registration + handler tests cover it (spawns demo terminals)",
         "stop_demo": "tier 3: opens UI in the owner’s window (panel/browser/terminal); a sleeping-window battery must never trigger it; registration + handler tests cover it (acts on demo terminals)",
         "sync_storefront": "tier 3: cloud write (deploys/publishes/creates/deletes remote resources); represented by handler tests + descriptor/consent checks; exercised only in owner-present supervised journeys"

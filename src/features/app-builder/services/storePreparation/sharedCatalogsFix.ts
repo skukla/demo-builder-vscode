@@ -161,8 +161,11 @@ function skusIn(answer: unknown): string[] {
     return skus;
 }
 
-/** What a catalog holds now. */
-async function readHeld(get: CommerceGet, id: number): Promise<SharedCatalogHeld> {
+/**
+ * What a catalog holds now. Also the datapack engine's read of a catalog (step 08), so the two
+ * read Commerce's three lists one way.
+ */
+export async function readHeld(get: CommerceGet, id: number): Promise<SharedCatalogHeld> {
     return {
         companies: idsIn(await get(`sharedCatalog/${id}/companies`), 'companies'),
         products: skusIn(await get(`sharedCatalog/${id}/products`)),

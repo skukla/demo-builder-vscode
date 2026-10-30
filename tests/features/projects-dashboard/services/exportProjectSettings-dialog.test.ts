@@ -66,7 +66,7 @@ describe('exportProjectSettingsToFile (the agent door)', () => {
             await exportProjectSettingsToFile({ ...PROJECT, path: dir, datapack: LIBRARY_PACK }, { globalState });
 
             expect(globalState.update).toHaveBeenCalledWith(SHARED_IN_FILES_KEY, {
-                'acme-1a2b3c@20261029-183005': { at: expect.any(String), originName: 'bodea' },
+                'acme-1a2b3c@20261029-183005': { at: expect.any(String), origin: { name: 'bodea', version: 'main' } },
             });
         } finally {
             fs.rmSync(dir, { recursive: true, force: true });
@@ -130,7 +130,7 @@ describe('exportProjectSettings (save dialog)', () => {
         await exportProjectSettings(context, { ...PROJECT, datapack: LIBRARY_PACK });
 
         expect(context.context.globalState.update).toHaveBeenCalledWith(SHARED_IN_FILES_KEY, {
-            'acme-1a2b3c@20261029-183005': { at: expect.any(String), originName: 'bodea' },
+            'acme-1a2b3c@20261029-183005': { at: expect.any(String), origin: { name: 'bodea', version: 'main' } },
         });
     });
 

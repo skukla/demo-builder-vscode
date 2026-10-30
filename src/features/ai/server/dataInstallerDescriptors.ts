@@ -388,7 +388,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "load_datapack_zip. Cannot be undone. The library only lets a pack's owner delete " +
             "it; the Data Installer's shared catalog is never touched. When you shared the pack " +
             'in a project file, the answer carries `warning` (without confirm, `sharedInFile`): ' +
-            "anyone who has not created that project yet gets the pack it was made from instead.",
+            "anyone who has not created that project yet gets the pack it was made from instead. " +
+            "Deleting the last version of this demo's own pack also stops the project naming it " +
+            '(`ownPackCleared: true`); its next save makes the pack again.',
         map: importHandlers,
         type: 'delete-library-datapack',
         // Gated twice, as reset_datapack is: the row refuses before dispatch, and the

@@ -12,25 +12,15 @@
 
 import type { ArrivalDeps } from '../services/arrivingPack';
 import { readPackFromStore, writePackToStore } from '../services/datapackTransfer';
-import { type PackReads, checkRecordedPack } from '../services/recordedPack';
+import { type PackReads, checkRecordedPack, packReadsVia } from '../services/recordedPack';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { openLibraryWriter } from './libraryWriter';
-import type { DatapackStoreName, ProjectDatapack } from '@/types/datapack';
+import type { ProjectDatapack } from '@/types/datapack';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-
-/** The catalog reads of one store, or an error the check reads as "could not ask". */
-async function storeClient(context: HandlerContext, store: DatapackStoreName) {
-    const access = await resolveDataInstallerAccess(context, store);
-    if (!access.ok) throw new Error(`The ${store === 'library' ? 'datapack library' : 'Data Installer'} is not reachable.`);
-    return access;
-}
 
 /** Both stores' reads, as the check needs them. */
 export function packReadsFor(context: HandlerContext): PackReads {
-    return {
-        detail: async (id, store) => (await storeClient(context, store)).client.getDatapackDetail(id),
-        versions: async (name, store) => (await (await storeClient(context, store)).client.findDatapacks({ datapackName: name })).items,
-    };
+    return packReadsVia((store) => resolveDataInstallerAccess(context, store));
 }
 
 /** The check and the copy creation's settle step runs. */

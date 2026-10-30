@@ -13,6 +13,7 @@ import type { DataInstallerClient } from './dataInstallerClient';
 import { DataInstallerApiError } from './dataInstallerErrors';
 import type { DatapackStoreWriter } from './datapackStoreWriter';
 import type { DatapackFile } from './datapackZip';
+import { withoutCredentials } from './packCredentials';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** A pack that cannot be saved as it stands, in words an SC can act on. */
@@ -104,7 +105,8 @@ export async function writePackToStore(
     };
     for (const item of pack.items) {
         try {
-            await writer.addDataItem(pack.id, item.dataType, item.records);
+            // Never a customer password into a store, whichever store (step 08).
+            await writer.addDataItem(pack.id, item.dataType, withoutCredentials(item.dataType, item.records));
             outcome.stored.push(item.dataType);
         } catch (error) {
             if (!(error instanceof DataInstallerApiError)) throw error;

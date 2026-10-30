@@ -19,6 +19,7 @@
  * @module features/data-installer/services/demoBuilderEngine/packForm
  */
 
+import { B2B_KEYS } from './b2bKeys';
 import type { ProductLookups, StoreAttribute, StoreCategory } from './productLookups';
 import type { CommerceProduct } from '@/types/commerceWire';
 
@@ -163,6 +164,7 @@ const KEYS: Record<string, (row: unknown) => string> = {
     sources: (row) => field(row, 'source', 'source_code'),
     stocks: (row) => field(row, 'stock', 'name'),
     stock_source_links: (row) => `${field(row, 'stockSourceLink', 'stock_id')}/${field(row, 'stockSourceLink', 'source_code')}`,
+    ...B2B_KEYS,
 };
 
 /** The key of one row of a kind; undefined for a kind that keeps no record. */

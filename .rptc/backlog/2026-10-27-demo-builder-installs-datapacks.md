@@ -67,3 +67,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-29  fix(data-installer): preview counts a stock link already there; a zip save makes its folders (`6031da47c`)
 - 2026-10-29  fix(data-installer): a removal keeps a category that holds the SC's own product (`1290ce451`)
 - 2026-10-29  fix(data-installer): Demo Builder's engine writes store-wide, not through the project's store view (`7b92ddf26`)
+- 2026-10-29  feat(data-installer): each demo has its own pack, and a project knows where its pack lives (datapack step 07) (`3fe1253b7`)

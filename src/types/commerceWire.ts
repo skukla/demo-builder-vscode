@@ -192,7 +192,122 @@ export interface CommerceStockSourceLinkList {
 export interface CommerceCompanyRow {
     id: number;
     company_name?: string;
+    company_email?: string;
     customer_group_id?: number;
+}
+
+/**
+ * Customers, customer groups and companies (datapack-engine step 08). Where each shape comes from:
+ * - `GET customers/{id}`, `GET customerGroups/{id}`, `GET company/{id}`: CAPTURED live on the Bodea
+ *   sandbox 2026-09-27/28 (commerce-erp-integration `test/fixtures/commerce/customer-44.json`,
+ *   `customer-group-19.json`, `company-21.json`; contact details replaced). The same answers sit in
+ *   `tests/helpers/commerceB2bFixtures.ts`, typed to these interfaces.
+ * - A customer's `addresses[]` rows: NOT captured (the one captured customer has none); typed to
+ *   Magento's `Customer/Api/Data/AddressInterface`.
+ * - The searches (`customers/search`, `customerGroups/search`, `company?`), the writes
+ *   (`POST customers`, `POST customerGroups`, `POST company`, their PUTs and DELETEs) and
+ *   `GET hierarchy/{companyId}`: Magento's service contracts and the data installer's processors
+ *   (`.rptc/research/datapack-engine/customers-b2b-spec.md`). NOT recorded live; each is read
+ *   back the first time the live test runs.
+ */
+
+/** One row of a customer's `addresses[]` (Magento's AddressInterface; not captured live). */
+export interface CommerceCustomerAddress {
+    id?: number;
+    customer_id?: number;
+    region?: { region_code?: string; region?: string; region_id?: number };
+    region_id?: number;
+    country_id?: string;
+    street?: string[];
+    telephone?: string;
+    postcode?: string;
+    city?: string;
+    firstname?: string;
+    lastname?: string;
+    default_billing?: boolean;
+    default_shipping?: boolean;
+    [key: string]: unknown;
+}
+
+/** `GET customers/{id}` (captured); the `customer` of `POST customers` and `PUT customers/{id}`. */
+export interface CommerceCustomer {
+    id?: number;
+    group_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    created_in?: string;
+    email: string;
+    firstname: string;
+    lastname: string;
+    middlename?: string;
+    prefix?: string;
+    suffix?: string;
+    dob?: string;
+    gender?: number;
+    taxvat?: string;
+    store_id?: number;
+    website_id?: number;
+    default_billing?: string;
+    default_shipping?: string;
+    confirmation?: string;
+    addresses?: CommerceCustomerAddress[];
+    disable_auto_group_change?: number;
+    extension_attributes?: {
+        company_attributes?: { customer_id?: number; company_id?: number; status?: number; is_default?: boolean };
+        [key: string]: unknown;
+    };
+    custom_attributes?: Array<{ attribute_code: string; value: unknown }>;
+}
+
+/** `GET customers/search?…`. */
+export interface CommerceCustomerList {
+    items?: CommerceCustomer[];
+    total_count?: number;
+}
+
+/** `GET customerGroups/{id}` (captured); `{ group }` of `POST customerGroups` and its PUT. */
+export interface CommerceCustomerGroup {
+    id?: number;
+    code: string;
+    tax_class_id?: number;
+    tax_class_name?: string;
+    extension_attributes?: Record<string, unknown>;
+}
+
+/** `GET company/{id}` (captured); `{ company }` of `POST company` and `PUT company/{id}`. */
+export interface CommerceCompany {
+    id?: number;
+    status?: number;
+    company_name: string;
+    legal_name?: string;
+    company_email: string;
+    street: string[];
+    city: string;
+    country_id: string;
+    /** Answered as a string ("44") in the capture; sent as a number. */
+    region_id?: number | string;
+    region?: string;
+    postcode: string;
+    telephone: string;
+    customer_group_id?: number;
+    sales_representative_id?: number;
+    reject_reason?: string | null;
+    rejected_at?: string | null;
+    super_user_id?: number;
+    extension_attributes?: {
+        is_purchase_order_enabled?: boolean;
+        quote_config?: { company_id?: string; is_quote_enabled?: boolean };
+        [key: string]: unknown;
+    };
+}
+
+/** One node of `GET hierarchy/{companyId}` (Magento's HierarchyInterface; NOT captured live). */
+export interface CommerceCompanyHierarchyNode {
+    structure_id?: number;
+    entity_id?: number;
+    entity_type?: 'customer' | 'team' | string;
+    structure_parent_id?: number;
+    children?: CommerceCompanyHierarchyNode[];
 }
 
 export interface CommerceCompanyList {
@@ -209,6 +324,10 @@ export interface CommerceSharedCatalog {
     customer_group_id?: number;
     store_id?: number;
     tax_class_id?: number;
+    /** On the list item (captured 2026-09-28, `shared-catalogs-group-19.json`). */
+    description?: string;
+    created_at?: string;
+    created_by?: number;
 }
 
 export interface CommerceSharedCatalogList {

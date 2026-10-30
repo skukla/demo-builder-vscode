@@ -20,7 +20,7 @@
 
 import { z } from 'zod';
 import type { CreatedObject } from './installRecord';
-import { SOURCE_CODE, deleteIfPresent, type KindContext, ownedId, readOrNull, segment } from './kindContext';
+import { SOURCE_CODE, deleteIfPresent, type KindContext, parseRows, ownedId, readOrNull, segment } from './kindContext';
 import { readInventory, sellsTo, setSourceEnabled } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { CommerceGet, CommerceInventoryStock, CommerceSend } from '@/types/commerceWire';
 
@@ -49,17 +49,9 @@ interface StockPrevious {
     stockId?: number;
 }
 
-function parse<T>(schema: z.ZodType<T>, records: unknown, what: string): T {
-    const parsed = schema.safeParse(records);
-    if (!parsed.success) {
-        throw new Error(`The pack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
-    }
-    return parsed.data;
-}
-
-export const parseSources = (records: unknown) => parse(sourcesSchema, records, 'sources');
-export const parseStocks = (records: unknown) => parse(stocksSchema, records, 'stocks');
-export const parseStockSourceLinks = (records: unknown) => parse(linksSchema, records, 'stock source links');
+export const parseSources = (records: unknown) => parseRows(sourcesSchema, records, 'sources');
+export const parseStocks = (records: unknown) => parseRows(stocksSchema, records, 'stocks');
+export const parseStockSourceLinks = (records: unknown) => parseRows(linksSchema, records, 'stock source links');
 
 /** Make the sources the store lacks; switch on one it has switched off. */
 export async function installSources(ctx: KindContext, pack: SourcesPack): Promise<void> {

@@ -33,6 +33,7 @@ const ROWS: Record<string, unknown> = {
 const library = {
     getDatapackDetail: jest.fn(),
     getDataItem: jest.fn(),
+    findDatapacks: jest.fn(),
 };
 let fetchMock: jest.Mock;
 
@@ -142,7 +143,15 @@ describe('delete-library-datapack', () => {
     // anyone who has not yet created that project with the pack it was made from.
     describe('a pack shared in a project file', () => {
         const WARNING =
-            "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get bodea instead.";
+            "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get Bodea instead.";
+
+        beforeEach(() => {
+            // The pack it was made from, as the library lists it: named as the SC sees it, never by id.
+            library.findDatapacks.mockResolvedValue({
+                items: [{ id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', shared: true }],
+                count: 1,
+            });
+        });
 
         function sharedContext() {
             const context = contextFor(null, false);
@@ -156,6 +165,7 @@ describe('delete-library-datapack', () => {
             const result = await remove(sharedContext(), { datapackName: 'justrite', version: 'v1' });
 
             expect(result).toMatchObject({ success: false, data: { sharedInFile: WARNING } });
+            expect(library.findDatapacks).toHaveBeenCalledWith({ datapackName: 'bodea' });
             expect(fetchMock).not.toHaveBeenCalled();
         });
 

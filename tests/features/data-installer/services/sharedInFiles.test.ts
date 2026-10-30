@@ -4,13 +4,16 @@
  * created the project yet will get the pack it was made from instead.
  */
 
+import type { PackReads } from '@/features/data-installer/services/recordedPack';
 import {
     SHARED_IN_FILES_KEY,
     type SharedInFilesMemento,
+    originDisplayName,
     recordSharedInFile,
     sharedInFile,
     sharedInFileWarning,
 } from '@/features/data-installer/services/sharedInFiles';
+import type { DatapackSummary } from '@/features/data-installer/types';
 
 function memento(initial?: unknown): SharedInFilesMemento & { store: Map<string, unknown> } {
     const store = new Map<string, unknown>(initial === undefined ? [] : [[SHARED_IN_FILES_KEY, initial]]);
@@ -33,7 +36,7 @@ describe('recordSharedInFile', () => {
         await recordSharedInFile(m, { datapack: LIBRARY_PACK }, AT);
 
         expect(m.store.get(SHARED_IN_FILES_KEY)).toEqual({
-            'acme-demo-1a2b3c@20261029-183005': { at: '2026-10-27T15:00:00.000Z', originName: 'bodea' },
+            'acme-demo-1a2b3c@20261029-183005': { at: '2026-10-27T15:00:00.000Z', origin: { name: 'bodea', version: 'main' } },
         });
     });
 
@@ -58,10 +61,19 @@ describe('recordSharedInFile', () => {
 
 describe('sharedInFile', () => {
     it('answers the entry for that version', () => {
+        const m = memento({ 'acme@1': { at: '2026-10-27T15:00:00.000Z', origin: { name: 'bodea', version: 'main' } } });
+
+        expect(sharedInFile(m, { name: 'acme', version: '1' })).toEqual({
+            at: '2026-10-27T15:00:00.000Z',
+            origin: { name: 'bodea', version: 'main' },
+        });
+        expect(sharedInFile(m, { name: 'acme', version: '2' })).toBeUndefined();
+    });
+
+    it('reads an entry recorded before the origin was (its name only) as an origin with that name', () => {
         const m = memento({ 'acme@1': { at: '2026-10-27T15:00:00.000Z', originName: 'bodea' } });
 
-        expect(sharedInFile(m, { name: 'acme', version: '1' })).toEqual({ at: '2026-10-27T15:00:00.000Z', originName: 'bodea' });
-        expect(sharedInFile(m, { name: 'acme', version: '2' })).toBeUndefined();
+        expect(sharedInFile(m, { name: 'acme', version: '1' })).toEqual({ at: '2026-10-27T15:00:00.000Z', origin: { name: 'bodea' } });
     });
 
     it('reads anything that is not a record of entries as nothing recorded', () => {
@@ -71,9 +83,17 @@ describe('sharedInFile', () => {
 });
 
 describe('sharedInFileWarning', () => {
-    it('names the day and the pack a colleague gets instead', () => {
-        expect(sharedInFileWarning({ at: '2026-10-27T15:00:00.000Z', originName: 'bodea' })).toBe(
-            "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get bodea instead.",
+    const ENTRY = { at: '2026-10-27T15:00:00.000Z', origin: { name: 'frescopa', version: 'main', store: 'library' as const } };
+
+    it('names the day and the pack a colleague gets instead, by the name the SC sees', () => {
+        expect(sharedInFileWarning(ENTRY, 'Frescopa')).toBe(
+            "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get Frescopa instead.",
+        );
+    });
+
+    it('never names the pack by its id: with no name to show, it says what the pack is', () => {
+        expect(sharedInFileWarning(ENTRY)).toBe(
+            "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get the pack it was made from instead.",
         );
     });
 
@@ -81,5 +101,54 @@ describe('sharedInFileWarning', () => {
         expect(sharedInFileWarning({ at: '2026-10-27T15:00:00.000Z' })).toBe(
             "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get no sample data instead.",
         );
+    });
+});
+
+describe('originDisplayName', () => {
+    const row = (name: string, version: string, displayName: string): DatapackSummary =>
+        ({ id: { name, version }, displayName, shared: true, dataTypes: [], art: {} }) as DatapackSummary;
+
+    function reads(byStore: Partial<Record<'installer' | 'library', DatapackSummary[] | Error>>): PackReads & { versions: jest.Mock } {
+        return {
+            detail: jest.fn(),
+            versions: jest.fn(async (_name: string, store: 'installer' | 'library') => {
+                const answer = byStore[store] ?? [];
+                if (answer instanceof Error) throw answer;
+                return answer;
+            }),
+        };
+    }
+
+    it('asks the store the origin is in, by its name, and answers that version\'s display name', async () => {
+        const r = reads({ library: [row('frescopa', 'v2', 'Frescopa 2'), row('frescopa', 'main', 'Frescopa')] });
+
+        const name = await originDisplayName({ at: AT.toISOString(), origin: { name: 'frescopa', version: 'main', store: 'library' } }, r);
+
+        expect(name).toBe('Frescopa');
+        expect(r.versions).toHaveBeenCalledWith('frescopa', 'library');
+        expect(r.versions).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks the library, then the Data Installer, for an origin recorded with no store', async () => {
+        const r = reads({ library: [], installer: [row('bodea', 'main', 'Bodea')] });
+
+        expect(await originDisplayName({ at: AT.toISOString(), origin: { name: 'bodea' } }, r)).toBe('Bodea');
+        expect(r.versions.mock.calls).toEqual([
+            ['bodea', 'library'],
+            ['bodea', 'installer'],
+        ]);
+    });
+
+    it('ignores a row for another pack the store lists under a similar name', async () => {
+        const r = reads({ library: [row('bodea-extra', 'main', 'Bodea Extra')] });
+
+        expect(await originDisplayName({ at: AT.toISOString(), origin: { name: 'bodea', store: 'library' } }, r)).toBeUndefined();
+    });
+
+    it('answers nothing when the store cannot be asked, or there is no origin', async () => {
+        const r = reads({ library: new Error('unreachable') });
+
+        expect(await originDisplayName({ at: AT.toISOString(), origin: { name: 'bodea', store: 'library' } }, r)).toBeUndefined();
+        expect(await originDisplayName({ at: AT.toISOString() }, r)).toBeUndefined();
     });
 });

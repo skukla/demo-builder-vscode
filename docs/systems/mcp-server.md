@@ -743,6 +743,20 @@ outcome's `note` says so ("Kept the set Racks: it holds 2 products you added.").
 credential, behind the same org guard as the import. Plan:
 `.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
 
+### Customers and B2B through Demo Builder's engine (datapack-engine step 08, 2026-10-29)
+
+No new tool. `start_datapack_import` now installs customer groups, customers, shared catalogs,
+companies and the three shared-catalog assignment kinds (all fourteen of Bodea's kinds); its
+answer stays a job id, and the outcome still reports kinds, never rows. `customers_export` (the
+bulk import) is still refused, before anything is written. A company is made over REST with its
+admin (the website's customer by that email, else one made and recorded) and sits in the public
+catalog's group until an assignment moves it. Removal, reinstall and the preview keep a company,
+shared catalog or customer group the pack made while it holds something the pack did not, and the
+`note` says so ("Kept the company Altura: it holds 1 customer you added."). A customer row's
+`password` is sent when the customer is made and nowhere else: never logged, never in the install
+record, and never written into a saved pack, a copy between stores or a zip. Plan:
+`.rptc/plans/datapack-engine/step-08-customers-b2b.md`.
+
 ### Renaming a library pack, and a pack shared in a file (datapack-engine step 07, 2026-10-29)
 
 `rename_datapack` (confirm-gated) gives every version of one of the SC's own library packs a new
@@ -753,7 +767,10 @@ screen's pack flyout offers the same Rename. Exporting a project whose pack is i
 (the save dialog, `export_project_settings`, or a demo bundle with its setup part) remembers that
 it went out in a file, on this machine; `delete_library_datapack` then carries one sentence, as
 `sharedInFile` without confirm and as `warning` with it: "You shared this pack in a project file
-on 27 October. Anyone who hasn't created that project yet will get bodea instead." Plan:
+on 27 October. Anyone who hasn't created that project yet will get Bodea instead." The pack it was
+made from is named as the store lists it, never by its id. Deleting the last version of this demo's
+own pack stops the project naming it (`ownPackCleared: true`), so the dashboard's Datapacks tile
+loses its "This demo's pack" line; the next save makes the pack again. Plan:
 `.rptc/plans/datapack-engine/step-07-demo-packs.md`.
 
 ### Integrations live in Adobe workspaces of their own (AB-23)

@@ -26,6 +26,8 @@
  */
 
 import { addMissingOptions, parseAttributeRows } from './attributesKind';
+import { updateCompany } from './companiesKind';
+import { updateCustomer, updateCustomerGroup } from './customerKinds';
 import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, ownedKey, segment } from './kindContext';
@@ -129,6 +131,10 @@ const UPDATERS: Record<string, Updater> = {
         const [attribute] = parseAttributeRows([row]);
         await addMissingOptions(ctx, object.id, attribute.attribute.options ?? []);
     },
+    // Step 08: a group whole; a customer and a company over the store's own copy.
+    customer_groups: (ctx, object, row) => updateCustomerGroup(ctx, object.id, row),
+    customers: (ctx, object, row) => updateCustomer(ctx, object.id, row),
+    b2b_companies: (ctx, object, row) => updateCompany(ctx, object.id, row),
 };
 
 /**
@@ -149,7 +155,11 @@ export async function applyUpdates(ctx: KindContext, plans: readonly KindPlan[],
 }
 
 /** Install order, so removal can run it backwards. */
-const ORDER = ['attribute_sets', 'product_attributes', 'attribute_options', 'attribute_assign_to_set', 'categories', 'stocks', 'sources', 'stock_source_links', 'products'];
+const ORDER = [
+    'attribute_sets', 'product_attributes', 'attribute_options', 'attribute_assign_to_set', 'categories', 'customer_groups',
+    'stocks', 'sources', 'stock_source_links', 'products', 'customers', 'b2b_shared_catalogs', 'b2b_companies',
+    'b2b_shared_catalog_company_assignments', 'b2b_shared_catalog_categories', 'b2b_shared_catalog_products',
+];
 
 /**
  * What installing again would take out, newest kind first and newest first within a kind, so a

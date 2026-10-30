@@ -12,6 +12,7 @@ import {
     DatapackZipError,
     type DatapackFile,
 } from '@/features/data-installer/services/datapackZip';
+import { BODEA_CUSTOMER_ROWS, TEST_PASSWORD } from '../../../helpers/commerceB2bFixtures';
 
 const PACK: DatapackFile = {
     id: { name: 'justrite', version: 'v1' },
@@ -62,6 +63,14 @@ describe('buildDatapackZip', () => {
             exported_at: '2026-10-01T12:00:00.000Z',
         });
         expect(JSON.parse(files['data/categories.json'])).toEqual(PACK.items[0].records);
+    });
+
+    // Step 08: a file can be sent to anyone, so no customer password ever goes in one.
+    it("writes customers without the password a pack's rows carry", () => {
+        const files = entries(buildDatapackZip({ ...PACK, items: [{ dataType: 'customers', records: BODEA_CUSTOMER_ROWS }] }));
+
+        expect(files['data/customers.json']).not.toContain(TEST_PASSWORD);
+        expect(JSON.parse(files['data/customers.json'])).toEqual(BODEA_CUSTOMER_ROWS.map(({ customer }) => ({ customer })));
     });
 
     it('refuses a data type that is not a plain name, so it cannot steer a path', () => {

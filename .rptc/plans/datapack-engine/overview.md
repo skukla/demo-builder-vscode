@@ -100,7 +100,7 @@ layer is stored as ordinary pack rows, and when a pack carries settings itself, 
 | 05 | [Capture and repeat installs](step-05-capture-and-repeat-installs.md) | built, not yet live; the removal box and the "Always" setting can now be built (07 is in) |
 | 06 | [The setup guide's undos keep what changed since](step-06-setup-guide-undos.md) (AB-83) | built, not yet live |
 | 07 | [Each demo has its own pack, shared by reference](step-07-demo-packs.md) | built, not yet live; the library's "unlisted" waits on a service deploy |
-| 08 | [Customers and B2B](step-08-customers-b2b.md) | to do |
+| 08 | [Customers and B2B](step-08-customers-b2b.md) | built, not yet live; every Bodea kind installs, `customers_export` still refused |
 | 09 | [Store settings, as a layer beside a pack](step-09-store-settings.md) | to do |
 | 10 | [Reset clears a demo's part of the store](step-10-wipe.md) | to do |
 | 11 | [Later, when a pack needs it](step-11-later.md) | not started |

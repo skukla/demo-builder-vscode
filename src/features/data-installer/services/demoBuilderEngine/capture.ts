@@ -18,12 +18,16 @@
  * `root_category`. (The service matches a root by name, and without one exports the store's root
  * as an ordinary category, §2.)
  *
+ * Customers, groups, companies, shared catalogs and their assignments are captured beside these
+ * (`captureB2b.ts`, step 08).
+ *
  * What the store already had and nothing captured names is left out: the store's Default set and
  * default source, Commerce's own attributes, products the pack did not make. Reads only.
  *
  * @module features/data-installer/services/demoBuilderEngine/capture
  */
 
+import { captureB2b } from './captureB2b';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, segment } from './kindContext';
 import { ancestorIds, attributePackForm, categoryPackForm, productPackForm } from './packForm';
@@ -167,6 +171,12 @@ const fieldOf = (row: Row, outer: string, inner: string): string | undefined => 
     return typeof value === 'string' && value !== '' ? value : undefined;
 };
 
+/** The url keys of the categories a capture took. */
+function categoryUrlKeys(records: unknown): Set<string> {
+    const rows = ((records as { categories?: Array<{ category: { custom_attributes?: Array<{ attribute_code: string; value: unknown }> } }> } | undefined)?.categories ?? []);
+    return new Set(rows.map((r) => r.category.custom_attributes?.find((a) => a.attribute_code === 'url_key')?.value).filter((v): v is string => typeof v === 'string'));
+}
+
 /** What the installed version itself names, beside what the record lists. */
 export interface InstalledNames {
     skus: string[];
@@ -230,6 +240,12 @@ export async function capturePack(ctx: KindContext, created: readonly CreatedObj
         ...(categories.records ? { categories: categories.records } : {}),
         ...(productRows.length > 0 ? { products: productRows } : {}),
         ...(await captureInventory(ctx, lk, products.map((p) => p.sku), created)),
+        // Customers, groups, companies, catalogs and what is assigned to them (step 08).
+        ...(await captureB2b(ctx, lk, created, installed, {
+            skus: products.map((p) => p.sku),
+            categoryKeys: categoryUrlKeys(categories.records),
+            tierGroups: products.flatMap((p) => (p.tier_prices ?? []).map((t) => t.customer_group_id)),
+        })),
     };
     const counts = Object.fromEntries(Object.entries(items).map(([kind, records]) => [kind, kind === 'categories' ? categories.count : countOf(records)]));
     return { items, counts };

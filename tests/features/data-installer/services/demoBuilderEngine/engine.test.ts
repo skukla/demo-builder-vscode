@@ -131,14 +131,14 @@ describe('demoBuilderEngine install', () => {
 
     it('fails every kind, writing nothing, for a kind it cannot install yet', async () => {
         const { engine, ctx } = await engineWith({}, () => ({}), {
-            readPack: async () => ({ ...ITEMS, customers: [] }),
+            readPack: async () => ({ ...ITEMS, cart_rules: [] }),
         });
 
-        const { activationId } = await engine.startImport(request({ dataTypes: ['attribute_sets', 'categories', 'customers'] }));
+        const { activationId } = await engine.startImport(request({ dataTypes: ['attribute_sets', 'categories', 'cart_rules'] }));
         await settle(engine, activationId);
 
         expect((await engine.getJobFailureReason(activationId))?.error).toBe(
-            'Demo Builder does not install customers yet, so nothing was installed.',
+            'Demo Builder does not install cart_rules yet, so nothing was installed.',
         );
         expect(ctx.sent).toStrictEqual([]);
     });
