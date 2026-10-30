@@ -43,9 +43,11 @@ edit is kept and counted in the one line, as for products.
 preview decide one way): a company is kept while it holds a customer that is not its own admin and
 is not going with it; a shared catalog while it holds a company, product or category beyond what it
 held when made and is not going with it; a customer group while customers, companies or catalogs
-the pack did not make use it. A read that fails keeps the container and says why. Lines: "Kept the
-company Altura: it holds 1 customer you added.", "Kept the shared catalog Platinum Buyer: it holds 1
-product and 1 company you added."
+the pack did not make use it. A read that fails keeps the container and says why. A kept company
+keeps its admin, its catalog and that catalog's group; an assignment goes only when neither side it
+links is staying (second live run, below). Lines: "Kept the company Altura and its admin
+admin.altura@example.com: it holds 1 customer you added.", "Kept the shared catalog Platinum Buyer:
+it holds 1 product and 1 company you added."
 
 **Capture** (`captureB2b.ts`, called from `capture.ts`): what the record lists and the installed
 version names (group codes, customer emails, catalog and company names), plus each company's admin,
@@ -76,7 +78,7 @@ in `tests/helpers/commerceB2bFixtures.ts`.
 | a group by code | `GET customerGroups/search`, `customer_group_code` eq: `items[].id`, `code` | **no** |
 | a customer by email | `GET customers/search`, `email` eq: `items[].id`, `email`, `website_id` | **no** |
 | a company by name or email | `GET company`, `company_name` / `company_email` eq: `items[].id`, `company_name`, `company_email` | **no** |
-| a company's members | `GET hierarchy/{id}`: nodes' `entity_type`, `entity_id`, `children` | **no**; any other shape keeps the company |
+| a company's members | `GET hierarchy/{id}`: nodes' `entity_type`, `entity_id`, `children` | **yes** (2026-10-30: admin only, `HIERARCHY_27_DB08`; two levels, flat, `HIERARCHY_28_DB08`); any other shape keeps the company |
 | who uses a group | `GET customers/search` (`group_id`), `GET company` (`customer_group_id`) | **no** |
 | every write's answer | `POST customerGroups` (the group), `POST customers` (the customer), `POST company` (the company), `POST sharedCatalog` (its id) | **no** |
 
@@ -101,6 +103,7 @@ in `tests/helpers/commerceB2bFixtures.ts`.
 - A rule for a product's tier prices on a group being removed: a group still named by the SC's own
   products' tier prices is not checked (Commerce would drop those prices with the group).
 - A customer of the pack's that the SC has since made a member of their own company: not kept.
+  (A pack customer that is the admin of a company being kept IS kept, since 2026-10-30.)
 - `ai-coverage-scan` and `security-review` not run this step; no response ceiling re-measured.
 
 ### Fixed after the first live run (2026-10-30, scratch-1028)
@@ -135,6 +138,57 @@ added.", which was false twice: the group was gone, and it no longer had that na
   also renames it back, which Commerce may or may not then undo. Recommended: record the group's
   code as read after the catalog is made, or name the catalog after the group, before such a pack
   ships.
+
+### Fixed after the second live run (2026-10-30, scratch-1028)
+
+Measured: the pack made group 25 (renamed to its catalog's name), customers 63 (buyer) and 64
+(the company's admin), catalog 20 on group 25, company 28 (`super_user_id` 64, `customer_group_id`
+25) and catalog 20's company, category and product assignments. The SC made customer 65 in group 25
+and put it in company 28 (`PUT customers/65/companies/28`, answered `[]`; `GET hierarchy/28` then
+listed 65 under 64). `reset_datapack` then:
+
+1. unassigned the company, the category and the product from catalog 20 before deciding anything
+   else; `GET company/28` then read `customer_group_id: 1` and customer 65 `group_id: 1`, so the
+   SC's customer changed group without a word;
+2. sent `DELETE customers/64` for the kept company's admin; Commerce answered 400 ("Cannot delete
+   the company admin…") and the removal stopped half done;
+3. had cleared `project.datapack` when the reset was accepted (21:31:39), nine seconds before the
+   engine stopped (21:31:48), so the project named no pack while the record listed 8 objects.
+
+Fixed:
+
+- **A kept company keeps its admin, its catalog and that catalog's group** (`b2bContainers.ts`).
+  The admin is `super_user_id` from `GET company/{id}` (the record's `previous.superUserId` only
+  when that read fails); the catalog is the one its recorded company assignment names, read with
+  `GET sharedCatalog/{id}` for its name and group. One line: "Kept the company ZZ Test Company
+  DB08, its admin db08.admin@example.com, its shared catalog ZZ Test Catalog DB08 and that
+  catalog's customer group ZZ Test Catalog DB08: it holds 1 customer you added."
+- **An assignment is taken out only when neither side it links is staying** (`decideRemovals`,
+  `removers.ts`), so nothing assigned to a kept catalog is unassigned, and nothing is unassigned
+  from a kept company or category. Companies are decided first, assignments last, everything
+  before the first write. The preview counts a staying assignment as kept (`storeChanges.ts`).
+- **`project.datapack` is cleared only when a reset finishes having taken everything out**
+  (`importJobWatch.ts`): outcome `success` and no `leftInStore` from the engine, and only for the
+  project the reset was started from. A reset that stops, is still running, or keeps containers
+  leaves it, so project reset still offers the removal and the next one takes what has emptied.
+- **The setup guide's catalog undo** (`sharedCatalogsFix.ts`) keeps the catalog while its customer
+  group (`customer_group_id` from `GET sharedCatalog/{id}`) holds customers outside the company it
+  assigned (`GET customers/search` on `group_id`, read by `company_attributes.company_id`). All
+  reads come first; every line uses the catalog's name now.
+- Captured as typed fixtures: `PUT_CUSTOMER_COMPANY_ANSWER_DB08`, `HIERARCHY_28_DB08` (two levels,
+  flat), `DELETE_COMPANY_ADMIN_REFUSED_DB08`, `COMPANY_28_DB08` (only `super_user_id` and
+  `customer_group_id` were recorded; the rest is company 27's body).
+
+Still open:
+
+- **Not run live yet**: the fixed removal against scratch-1028 (live test step 5, then step 6).
+- `GET sharedCatalog/{id}` (single) and the `customers/search` on `group_id` are still not captured.
+- Whether deleting a company also removes its shared-catalog assignment. A company taken out while
+  its catalog is kept leaves its assignment on the record; a later removal unassigns it, and an
+  "already gone" answer counts as done (`isAlreadyGone`), but the answer Commerce gives was not
+  measured.
+- Whether Commerce moves a group's customers to General when a setup-guide catalog is deleted with
+  its group: measured for the engine's catalog (2026-10-30), assumed the same for the guide's.
 
 ### Decision for the owner: companies are made Pending Approval
 

@@ -193,7 +193,7 @@
         },
         "datapack": {
           "$ref": "#/definitions/ProjectDatapack",
-          "description": "The datapack this demo's store holds, and the store that holds the pack.\n\nChosen on the wizard's Datapacks step and installed by creation itself (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data Installer screen and by \"Save store changes\", and cleared by a reset. `configure_project` records it without installing."
+          "description": "The datapack this demo's store holds, and the store that holds the pack.\n\nChosen on the wizard's Datapacks step and installed by creation itself (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data Installer screen and by \"Save store changes\", and cleared by a reset once it finishes having taken out everything the pack put there (a reset that stops, or keeps containers holding the SC's things, leaves it). `configure_project` records it without installing."
         },
         "ownDatapack": {
           "$ref": "#/definitions/OwnDatapack",

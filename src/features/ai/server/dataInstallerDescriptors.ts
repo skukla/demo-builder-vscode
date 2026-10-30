@@ -276,9 +276,11 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Remove a datapack's data from the Commerce instance so the project can be reused. " +
             'Cannot be undone. Returns an activationId; poll get_datapack_import_status. With the ' +
-            'demo-builder engine, a category or set the pack made that holds things it did not make ' +
-            "is kept, and the outcome's note says which; store settings it set are put back first, " +
-            'unless changed since, and the note names each by path.',
+            'demo-builder engine, a category, set, company, shared catalog or customer group the pack made ' +
+            "that holds things it did not make is kept (a kept company with its admin and its catalog), and " +
+            "the outcome's note says which; store settings it set are put back first, unless changed since, " +
+            "and the note names each by path. The project stops naming the pack only once a removal " +
+            'finishes having taken everything out.',
         map: importHandlers,
         type: 'reset-datapack',
         // Gated TWICE, and that is not redundant. The handler has always required

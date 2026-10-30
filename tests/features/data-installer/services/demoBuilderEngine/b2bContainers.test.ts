@@ -20,8 +20,10 @@ import {
     CATALOG_19_COMPANIES_DB08,
     CATALOG_19_PRODUCTS_DB08,
     COMPANY_27_DB08,
+    COMPANY_28_DB08,
     GROUP_24_AFTER_CATALOG_DB08,
     HIERARCHY_27_DB08,
+    HIERARCHY_28_DB08,
 } from '../../../../helpers/commerceB2bFixtures';
 
 const obj = (kind: string, id: string, extra: Partial<CreatedObject> = {}): CreatedObject => ({ kind, id, ...extra });
@@ -45,10 +47,13 @@ describe('a company the pack made', () => {
             'company/30': { company_name: 'Altura' },
         });
 
-        const { take, kept } = await decideRemovals(ctx.get, [COMPANY, obj('customers', '52')]);
+        const admin = obj('customers', '52', { key: 'admin.altura@example.com' });
 
-        expect(take).toEqual([obj('customers', '52')]);
-        expect(containersLine(kept)).toBe('Kept the company Altura: it holds 1 customer you added.');
+        const { take, kept } = await decideRemovals(ctx.get, [COMPANY, admin]);
+
+        // Its admin stays with it: Commerce refuses to delete a company's admin (live, 2026-10-30).
+        expect(take).toStrictEqual([]);
+        expect(containersLine(kept)).toBe('Kept the company Altura and its admin admin.altura@example.com: it holds 1 customer you added.');
     });
 
     it('is named as the store calls it now, not by the name it was installed under', async () => {
@@ -106,7 +111,8 @@ describe('a shared catalog the pack made', () => {
 
         const { take, kept } = await decideRemovals(ctx.get, [obj('b2b_shared_catalog_products', '41/vrrack'), CATALOG]);
 
-        expect(take).toEqual([obj('b2b_shared_catalog_products', '41/vrrack')]);
+        // The catalog stays, so the pack's product stays assigned to it.
+        expect(take).toStrictEqual([]);
         expect(containersLine(kept)).toBe('Kept the shared catalog Platinum Buyer: it holds 1 product and 1 company you added.');
     });
 });
@@ -202,14 +208,8 @@ describe('a shared catalog and its customer group', () => {
 
         const { take, kept } = await decideRemovals(ctx.get, NEWEST_FIRST);
 
-        expect(take.map((o) => `${o.kind}/${o.id}`)).toEqual([
-            'b2b_shared_catalog_products/19/db08-widget',
-            'b2b_shared_catalog_categories/19/210',
-            'b2b_shared_catalog_company_assignments/19/27',
-            'b2b_companies/27',
-            'customers/62',
-            'customers/61',
-        ]);
+        // The catalog stays, so what is assigned to it stays too: no write touches a kept catalog.
+        expect(take.map((o) => `${o.kind}/${o.id}`)).toEqual(['b2b_companies/27', 'customers/62', 'customers/61']);
         expect(keptObjects(kept)).toEqual([CATALOG, GROUP]);
         expect(containersLine(kept)).toBe(
             'Kept the shared catalog ZZ Test Catalog DB08 and its customer group ZZ Test Catalog DB08: the customer group holds 1 customer you added.',
@@ -230,7 +230,7 @@ describe('a shared catalog and its customer group', () => {
 
         const { take, kept } = await decideRemovals(ctx.get, NEWEST_FIRST);
 
-        expect(take).not.toContainEqual(GROUP);
+        expect(take.map((o) => `${o.kind}/${o.id}`)).toEqual(['b2b_companies/27', 'customers/62', 'customers/61']);
         expect(keptObjects(kept)).toEqual([CATALOG, GROUP]);
         expect(containersLine(kept)).toBe(
             'Kept the shared catalog ZZ Test Catalog DB08 and its customer group ZZ Test Catalog DB08: the shared catalog holds 1 product you added.',
@@ -260,5 +260,111 @@ describe('a shared catalog and its customer group', () => {
         expect(containersLine(kept)).toBe(
             'Kept the shared catalog ZZ Test Catalog DB08: deleting it would delete the customer group Their Buyers too, which is staying.',
         );
+    });
+});
+
+/**
+ * The second live removal (2026-10-30, scratch-1028): the SC put their own customer 65 in the pack's
+ * company 28. Removal unassigned the company, the category and the product from catalog 20 first,
+ * which moved the company and customer 65 to group 1, then tried `DELETE customers/64`, the
+ * company's admin, and Commerce refused (`DELETE_COMPANY_ADMIN_REFUSED_DB08`): half removed.
+ *
+ * A kept company keeps its admin and its assignment to its catalog, and so that catalog and the
+ * catalog's group; an assignment goes only when neither side it links is staying.
+ */
+describe("a company holding the SC's customer, in its own shared catalog", () => {
+    const COMPANY = obj('b2b_companies', '28', { key: 'ZZ Test Company DB08', previous: { superUserId: 64 } });
+    const CATALOG = obj('b2b_shared_catalogs', '20', { key: 'ZZ Test Catalog DB08', previous: { held: { companies: [], products: [], categories: [] } } });
+    const GROUP = obj('customer_groups', '25', { key: 'ZZ Test Buyers DB08' });
+    const ADMIN = obj('customers', '64', { key: 'db08.admin@example.com' });
+    const BUYER = obj('customers', '63', { key: 'db08.buyer1@example.com' });
+    const ASSIGNMENTS = [obj('b2b_shared_catalog_products', '20/db08-widget'), obj('b2b_shared_catalog_categories', '20/210'), obj('b2b_shared_catalog_company_assignments', '20/28')];
+    /** The record's eight objects, newest first, as the removal walked them. */
+    const NEWEST_FIRST = [...ASSIGNMENTS, COMPANY, CATALOG, ADMIN, BUYER, GROUP];
+
+    function store(extra: Record<string, unknown> = {}) {
+        return fakeContext({
+            'company/28': COMPANY_28_DB08,
+            'hierarchy/28': HIERARCHY_28_DB08,
+            'sharedCatalog/20': { id: 20, name: 'ZZ Test Catalog DB08', type: 0, customer_group_id: 25 },
+            'sharedCatalog/20/companies': '["28"]',
+            'sharedCatalog/20/categories': [210],
+            'sharedCatalog/20/products': ['db08-widget'],
+            'customerGroups/25': { id: 25, code: 'ZZ Test Catalog DB08' },
+            [page('customers/search', filterBy('group_id', 25))]: { items: [{ id: 63 }, { id: 64 }, { id: 65 }] },
+            [page('company', filterBy('customer_group_id', 25))]: { items: [{ id: 28 }] },
+            [CATALOGS]: { items: [{ id: 20, name: 'ZZ Test Catalog DB08', customer_group_id: 25 }] },
+            ...extra,
+        });
+    }
+
+    it('takes out only the buyer: the admin, the catalog, its group and every assignment stay', async () => {
+        const ctx = await store();
+
+        const { take, kept } = await decideRemovals(ctx.get, NEWEST_FIRST);
+
+        expect(take).toEqual([BUYER]);
+        expect(keptObjects(kept)).toEqual([COMPANY, ADMIN, CATALOG, GROUP]);
+    });
+
+    it('says so in one line, naming the admin once', async () => {
+        const ctx = await store();
+
+        const { kept } = await decideRemovals(ctx.get, NEWEST_FIRST);
+
+        expect(containersLine(kept)).toBe(
+            'Kept the company ZZ Test Company DB08, its admin db08.admin@example.com, its shared catalog ZZ Test Catalog DB08 and ' +
+                "that catalog's customer group ZZ Test Catalog DB08: it holds 1 customer you added.",
+        );
+    });
+
+    it("reads who the admin is from the store, not the install's record", async () => {
+        const ctx = await store();
+        const unrecorded = obj('b2b_companies', '28', { key: 'ZZ Test Company DB08' });
+
+        const { take, kept } = await decideRemovals(ctx.get, [unrecorded, ADMIN, BUYER]);
+
+        expect(take).toEqual([BUYER]);
+        expect(keptObjects(kept)).toEqual([unrecorded, ADMIN]);
+    });
+
+    it('keeps its assignment to a catalog the pack did not make, and changes nothing there', async () => {
+        const ctx = await store();
+        const toPublic = obj('b2b_shared_catalog_company_assignments', '1/28');
+
+        const { take, kept } = await decideRemovals(ctx.get, [toPublic, COMPANY, ADMIN]);
+
+        expect(take).toStrictEqual([]);
+        expect(containersLine(kept)).toBe('Kept the company ZZ Test Company DB08 and its admin db08.admin@example.com: it holds 1 customer you added.');
+    });
+
+    it('takes everything out once the SC has taken their customer out of the company', async () => {
+        const ctx = await store({
+            'hierarchy/28': HIERARCHY_28_DB08.filter((node) => node.entity_id !== 65),
+            [page('customers/search', filterBy('group_id', 25))]: { items: [{ id: 63 }, { id: 64 }] },
+        });
+
+        const { take, kept } = await decideRemovals(ctx.get, NEWEST_FIRST);
+
+        expect(kept).toStrictEqual([]);
+        expect(take).toEqual(NEWEST_FIRST);
+    });
+});
+
+describe('an assignment', () => {
+    it("stays while the category it puts in a catalog is kept, though the catalog is going", async () => {
+        const ctx = await fakeContext({
+            'sharedCatalog/41': { id: 41, name: 'Platinum Buyer', type: 0 },
+            'sharedCatalog/41/companies': '[]',
+            'sharedCatalog/41/categories': [50],
+            'sharedCatalog/41/products': [],
+            'categories/50': { id: 50, name: 'Racks', path: '1/2/50', children: '77' },
+        });
+        const pair = obj('b2b_shared_catalog_categories', '41/50');
+        const catalog = obj('b2b_shared_catalogs', '41', { previous: { held: { companies: [], products: [], categories: [] } } });
+
+        const { take } = await decideRemovals(ctx.get, [pair, obj('categories', '50'), catalog]);
+
+        expect(take).toEqual([catalog]);
     });
 });

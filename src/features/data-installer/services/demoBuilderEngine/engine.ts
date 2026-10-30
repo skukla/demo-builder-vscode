@@ -48,6 +48,8 @@ interface Job {
     reason?: string;
     /** What installing again kept because the SC had changed it (step 05), in one line. */
     note?: string;
+    /** A removal kept containers holding the SC's things, so part of the pack is still in the store. */
+    leftInStore?: boolean;
     startedAt: number;
     finishedAt?: number;
 }
@@ -137,6 +139,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id });
                 if (result.noRecord) throw new Error('Demo Builder did not install this pack in this project, so there is nothing of its to remove.');
                 job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
+                if (result.kept.length > 0) job.leftInStore = true;
                 for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';
             }),
         async getJobStatus(activationId) {
@@ -146,6 +149,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 perType: { ...(job?.perType ?? {}) },
                 hasRecord: job !== undefined,
                 ...(job?.note ? { note: job.note } : {}),
+                ...(job?.leftInStore ? { leftInStore: true } : {}),
                 ...(job?.finishedAt !== undefined ? { processingTimeMs: job.finishedAt - job.startedAt } : {}),
             };
         },

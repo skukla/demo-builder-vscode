@@ -33,7 +33,7 @@ import { type TargetCodes, resolveEngineTarget, sessionFor } from './installTarg
 import type { KindContext } from './kindContext';
 import { productLookups } from './productLookups';
 import { rebaseRecord } from './recordFingerprints';
-import { type KeptContainer, containersLine, decideRemovals, keptObjects } from './removers';
+import { containersLine, decideRemovals } from './removers';
 import { type KindPlan, type PlannedObject, keptLine, keptOf, planRepeat, removalsOf } from './repeatInstall';
 import { LINK_KIND, SOURCE_KIND, STOCK_KIND } from './stockKinds';
 import { STORE_CONFIG_KIND, type SettingOutcome, packSettings, planSettings } from './storeConfigKind';
@@ -159,8 +159,9 @@ async function alreadyInStore(ctx: KindContext, kind: string, keys: string[], in
 
 const keyOfObject = (object: CreatedObject) => object.key ?? object.id;
 
-async function summarize(ctx: KindContext, plans: readonly KindPlan[], kept: readonly KeptContainer[]): Promise<KindChanges[]> {
-    const keptHere = new Set(keptObjects(kept));
+/** Counted by kind; `taken` is what the removal would take out, so all else it was asked about stays. */
+async function summarize(ctx: KindContext, plans: readonly KindPlan[], taken: readonly CreatedObject[]): Promise<KindChanges[]> {
+    const keptHere = (o: PlannedObject) => o.outcome === 'remove' && !taken.includes(o.object);
     const inventory = onceInventory(ctx);
     return Promise.all(
         plans.map(async ({ kind, objects, added }) => {
@@ -171,8 +172,8 @@ async function summarize(ctx: KindContext, plans: readonly KindPlan[], kept: rea
                 update: named(keyed((o) => o.outcome === 'update')),
                 add: named(added.filter((key) => !there.has(key))),
                 inStore: named(added.filter((key) => there.has(key))),
-                remove: named(keyed((o) => o.outcome === 'remove' && !keptHere.has(o.object))),
-                keep: named(keyed((o) => o.outcome === 'leave-edited' || o.outcome === 'create' || keptHere.has(o.object))),
+                remove: named(keyed((o) => o.outcome === 'remove' && !keptHere(o))),
+                keep: named(keyed((o) => o.outcome === 'leave-edited' || o.outcome === 'create' || keptHere(o))),
             };
         }),
     );
@@ -197,11 +198,11 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     const ctx = await openStore(deps, pack);
     const plans = await planRepeat(ctx, items, record?.created ?? []);
     // The containers an install would keep, decided the way it decides them, read-only.
-    const { kept: containers } = await decideRemovals(ctx.get, removalsOf(plans));
+    const { take, kept: containers } = await decideRemovals(ctx.get, removalsOf(plans));
     const settings = STORE_CONFIG_KIND in items ? await settingsChanges(ctx, items[STORE_CONFIG_KIND], record?.created ?? []) : undefined;
     const keptThings = [...keptOf(plans), ...(settings?.keep.names ?? []).map((key) => ({ kind: STORE_CONFIG_KIND, key }))];
     const kept = [keptLine(keptThings), containersLine(containers)].filter(Boolean).join(' ');
-    const kinds = [...(await summarize(ctx, plans, containers)), ...(settings ? [settings] : [])];
+    const kinds = [...(await summarize(ctx, plans, take)), ...(settings ? [settings] : [])];
     return { installed: record !== undefined, kinds, ...(kept ? { kept } : {}) };
 }
 

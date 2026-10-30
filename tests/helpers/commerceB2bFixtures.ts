@@ -239,3 +239,45 @@ export const POST_CUSTOMER_COMPANY_ANSWER_DB08: CompanyAttributes = { company_id
  * `customer_group_code`, which answers.
  */
 export const GROUP_SEARCH_ON_CODE_REFUSED = { status: 400, message: "Field code can't be used in filter" } as const;
+
+/*
+ * The second live removal, 2026-10-30 (scratch-1028, website `justrite_test_website`). The pack
+ * installed group 25 (renamed by Commerce to its catalog's name), customers 63 (a buyer) and 64
+ * (the company's admin), shared catalog 20 on group 25, company 28 (`super_user_id` 64,
+ * `customer_group_id` 25) and the catalog's company, category and product assignments. The SC then
+ * made customer 65 in group 25 and put it in company 28.
+ */
+
+/** `PUT customers/65/companies/28` (no body), 2026-10-30: answered an empty list. */
+export const PUT_CUSTOMER_COMPANY_ANSWER_DB08: readonly unknown[] = [];
+
+/**
+ * `GET hierarchy/28`, read 2026-10-30 after that PUT: a flat list of two levels, the SC's customer
+ * 65 under the admin 64 (`structure_parent_id` is the admin's `structure_id`), no `children`.
+ */
+export const HIERARCHY_28_DB08: CommerceCompanyHierarchyNode[] = [
+    { structure_id: 34, entity_id: 65, entity_type: 'customer', structure_parent_id: 33 },
+    { structure_id: 33, entity_id: 64, entity_type: 'customer', structure_parent_id: 0 },
+];
+
+/**
+ * `DELETE customers/64`, the admin of company 28, while the company stood, 2026-10-30: HTTP 400. The
+ * removal stopped there, half done.
+ */
+export const DELETE_COMPANY_ADMIN_REFUSED_DB08 = {
+    status: 400,
+    message: 'Cannot delete the company admin. Delete operation has been stopped. Please repeat the action for the other customers.',
+} as const;
+
+/**
+ * `GET company/28`, 2026-10-30: only `super_user_id` 64 and `customer_group_id` 25 were recorded, so
+ * the rest is company 27's captured body, renamed. After the removal unassigned it from catalog 20 it
+ * read `customer_group_id: 1`.
+ */
+export const COMPANY_28_DB08: CommerceCompany = {
+    ...COMPANY_27_DB08,
+    id: 28,
+    customer_group_id: 25,
+    super_user_id: 64,
+    extension_attributes: { ...COMPANY_27_DB08.extension_attributes, quote_config: { company_id: '28', is_quote_enabled: true } },
+};

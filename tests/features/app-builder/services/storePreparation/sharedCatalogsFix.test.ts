@@ -6,6 +6,12 @@
 
 import { CATALOGS, COMPANIES, commerceFake } from '../../../../helpers/commercePreparationFixtures';
 import { companiesNeedingCatalogs, sharedCatalogsFix } from '@/features/app-builder/services/storePreparation/sharedCatalogsFix';
+import type { CommerceCustomer, CommerceSharedCatalog } from '@/types/commerceWire';
+
+const GROUP_6_CUSTOMERS =
+    'customers/search?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100' +
+    '&searchCriteria[filterGroups][0][filters][0][field]=group_id&searchCriteria[filterGroups][0][filters][0][value]=6' +
+    '&searchCriteria[filterGroups][0][filters][0][conditionType]=eq';
 
 const DEPS = { websiteCode: 'acme', erpNames: [] };
 
@@ -20,7 +26,14 @@ interface Lists {
     companies?: unknown;
     products?: unknown;
     categories?: unknown;
+    /** `GET sharedCatalog/9`: its name now, and the group it uses. */
+    catalog?: CommerceSharedCatalog;
+    /** Who is in that group (`GET customers/search`, `group_id` eq). */
+    groupCustomers?: unknown;
 }
+
+/** Harbor's own customer: in group 6 because the fix put Harbor in the catalog. */
+const HARBOR_BUYER: CommerceCustomer = { id: 30, email: 'buyer@example.com', firstname: 'Test', lastname: 'Buyer', group_id: 6, extension_attributes: { company_attributes: { company_id: 3 } } };
 
 function store(nextId = 9, lists: Lists = {}, catalogs = CATALOGS) {
     return commerceFake(
@@ -28,6 +41,8 @@ function store(nextId = 9, lists: Lists = {}, catalogs = CATALOGS) {
             'sharedCatalog/9/companies': lists.companies ?? '["3"]',
             'sharedCatalog/9/products': lists.products ?? [],
             'sharedCatalog/9/categories': lists.categories ?? [],
+            'sharedCatalog/9': lists.catalog ?? { id: 9, name: 'Harbor Catalog', customer_group_id: 6, type: 0 },
+            [GROUP_6_CUSTOMERS]: lists.groupCustomers ?? { items: [HARBOR_BUYER] },
             'company/': COMPANIES,
             'sharedCatalog/': catalogs,
         },
@@ -145,6 +160,50 @@ describe('undo', () => {
         const undone = await sharedCatalogsFix.undo({ commerce, ...DEPS }, { kind: 'shared-catalogs', catalogs: [RECORDED] });
         expect(commerce.send).not.toHaveBeenCalled();
         expect(undone).toEqual({ changes: [], rejected: [] });
+    });
+
+    /*
+     * Live, 2026-10-30 (scratch-1028, the datapack engine's removal): deleting a shared catalog
+     * deletes its customer group too, moving the group's customers to General. A customer the SC
+     * put in the group would change group without a word.
+     */
+    it("keeps a catalog whose customer group holds customers the fix did not put there, still unassigning the company", async () => {
+        const theirs: CommerceCustomer[] = [
+            { id: 31, email: 'one@example.com', firstname: 'A', lastname: 'B', group_id: 6, extension_attributes: { company_attributes: { company_id: 0 } } },
+            { id: 32, email: 'two@example.com', firstname: 'C', lastname: 'D', group_id: 6 },
+        ];
+        const commerce = store(9, { groupCustomers: { items: [HARBOR_BUYER, ...theirs] } }, WITH_HARBOR);
+        const undone = await sharedCatalogsFix.undo({ commerce, ...DEPS }, { kind: 'shared-catalogs', catalogs: [RECORDED] });
+        expect(commerce.writes()).toEqual([['POST', 'sharedCatalog/9/unassignCompanies', { companies: [{ id: 3 }] }]]);
+        expect(undone).toEqual({
+            changes: ['Took Harbor out of the shared catalog Harbor Catalog; Harbor is back on the public catalog'],
+            rejected: [],
+            kept: 'Kept the shared catalog Harbor Catalog: its customer group holds 2 customers Demo Builder did not put there.',
+            remaining: { kind: 'shared-catalogs', catalogs: [RECORDED] },
+        });
+    });
+
+    it('reads the group from the catalog itself, and who is in it, before writing anything', async () => {
+        const commerce = store(9, {}, WITH_HARBOR);
+        await sharedCatalogsFix.undo({ commerce, ...DEPS }, { kind: 'shared-catalogs', catalogs: [RECORDED] });
+        expect(commerce.get).toHaveBeenCalledWith('sharedCatalog/9');
+        expect(commerce.get).toHaveBeenCalledWith(GROUP_6_CUSTOMERS);
+        const lastRead = Math.max(...commerce.get.mock.invocationCallOrder);
+        expect(Math.min(...commerce.send.mock.invocationCallOrder)).toBeGreaterThan(lastRead);
+    });
+
+    it('writes nothing when who is in the group cannot be read', async () => {
+        const commerce = store(9, { groupCustomers: () => Promise.reject(new Error('Commerce answered 503')) }, WITH_HARBOR);
+        const undone = await sharedCatalogsFix.undo({ commerce, ...DEPS }, { kind: 'shared-catalogs', catalogs: [RECORDED] });
+        expect(commerce.send).not.toHaveBeenCalled();
+        expect(undone.rejected).toEqual(['Undo the shared catalog Harbor Catalog: Commerce answered 503']);
+    });
+
+    it('names a kept catalog as the store calls it now', async () => {
+        const renamed: CommerceSharedCatalog = { id: 9, name: 'Harbor Contract Prices', customer_group_id: 6, type: 0 };
+        const commerce = store(9, { products: ['RACK-1'], catalog: renamed }, WITH_HARBOR);
+        const undone = await sharedCatalogsFix.undo({ commerce, ...DEPS }, { kind: 'shared-catalogs', catalogs: [RECORDED] });
+        expect(undone.kept).toBe('Kept the shared catalog Harbor Contract Prices: it holds 1 product Demo Builder did not put there.');
     });
 
     it('deletes nothing, and names why, when a list comes back in a shape it does not read', async () => {

@@ -206,6 +206,26 @@ describe('previewChanges, counted the way a save counts', () => {
         expect(preview.kinds[0]).toMatchObject({ remove: { count: 0, names: [] }, keep: { count: 1, names: ['Racks'] } });
         expect(preview.kept).toBe('Kept the category Racks: it holds 1 category you added.');
     });
+
+    // An assignment to a kept catalog stays (live, 2026-10-30): the preview must not count it as removed.
+    it('counts an assignment to a catalog it keeps as kept, not removed', async () => {
+        const { d, files } = await deps(false, {
+            [page('sharedCatalog')]: { items: [{ id: 9, name: 'Gold', type: 0, tax_class_id: 3 }] },
+            'sharedCatalog/9': { id: 9, name: 'Gold', type: 0 },
+            'sharedCatalog/9/companies': '[]',
+            'sharedCatalog/9/products': ['vrrack', 'my-own'],
+            'sharedCatalog/9/categories': [],
+        }, { b2b_shared_catalogs: [], b2b_shared_catalog_products: { catalogs: [] } });
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        const catalog = { sharedCatalog: { name: 'Gold', type: 0, store_id: 0, tax_class_id: 3 } };
+        await recorder.record({ kind: 'b2b_shared_catalogs', id: '9', key: 'Gold', fingerprint: fingerprintRow(catalog), previous: { held: { companies: [], products: [], categories: [] } } });
+        await recorder.record({ kind: 'b2b_shared_catalog_products', id: '9/vrrack', key: 'Gold/vrrack', fingerprint: fingerprintRow({ catalog: 'Gold', member: 'vrrack' }) });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'b2b_shared_catalog_products')).toMatchObject({ remove: { count: 0 }, keep: { count: 1, names: ['Gold/vrrack'] } });
+        expect(preview.kept).toBe('Kept the shared catalog Gold: it holds 1 product you added.');
+    });
 });
 
 /**

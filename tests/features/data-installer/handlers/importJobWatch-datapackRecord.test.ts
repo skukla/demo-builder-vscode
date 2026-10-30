@@ -17,7 +17,7 @@
 // The family helper owns the module wall AND re-exports the handler. It must be
 // imported BEFORE anything it mocks, and the handler must come from it — a direct
 // import of the SUT loads the real module before these mocks register.
-import { importHandlers } from './importHandlers.testUtils';
+import { importHandlers, mockedWatch } from './importHandlers.testUtils';
 import * as vscode from 'vscode';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import type { Project } from '@/types/base';
@@ -159,13 +159,16 @@ describe('an accepted import records the datapack on the project', () => {
     });
 });
 
-describe('an accepted reset clears it', () => {
+describe('a reset that finishes clears it', () => {
     it('removes the datapack so reset stops offering a removal already done', async () => {
         happyClient();
+        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
         const project = { ...PAAS_PROJECT(), datapack: { name: 'bodea', version: 'main' } };
         const { context, saveProject } = makeImportHarness(project);
 
         await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
+        // Cleared when the watch ends, not when the reset is accepted (live, 2026-10-30).
+        await new Promise((resolve) => setImmediate(resolve));
 
         expect(project.datapack).toBeUndefined();
         expect(saveProject).toHaveBeenCalled();

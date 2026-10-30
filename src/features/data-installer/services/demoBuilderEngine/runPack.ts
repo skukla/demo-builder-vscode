@@ -151,8 +151,10 @@ export interface RemovalResult {
 
 /**
  * Take back everything the record lists, newest first, dropping each from the record as it
- * goes; keep a category or set that holds what the engine did not make (`decideRemovals`); delete
- * the record once it is empty.
+ * goes; keep a container that holds what the engine did not make, and what stays with it
+ * (`decideRemovals`, which decides all of it before the first write); delete the record once it
+ * is empty. What is kept stays on the record, so the project still names the pack
+ * (`leftInStore`, `importJobWatch.ts`).
  *
  * @throws Error naming the object when Commerce refuses one; what was taken back stays off the
  *   record, so running it again carries on from there

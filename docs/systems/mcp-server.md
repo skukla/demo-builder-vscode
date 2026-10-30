@@ -739,7 +739,10 @@ and a project file install from that store, `configure_project` takes it as `dat
 `create_project_from_file` answers `datapackNote` when the pack named can't be read (the pack it
 was made from, or none, is installed instead) or a colleague's own pack is copied into your library first. Every removal path, `reset_datapack`
 included, keeps a category or set the pack made that holds something it did not, and the
-outcome's `note` says so ("Kept the set Racks: it holds 2 products you added."). Both read the store with the project's own
+outcome's `note` says so ("Kept the set Racks: it holds 2 products you added."). A `reset_datapack`
+clears the project's datapack only when the removal finishes having taken everything out: one that
+stops, or keeps a container holding the SC's things, leaves the project naming the pack, so the
+next removal can finish the job (live, 2026-10-30). Both read the store with the project's own
 credential, behind the same org guard as the import. Plan:
 `.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
 
@@ -752,7 +755,10 @@ bulk import) is still refused, before anything is written. A company is made ove
 admin (the website's customer by that email, else one made and recorded) and sits in the public
 catalog's group until an assignment moves it. Removal, reinstall and the preview keep a company,
 shared catalog or customer group the pack made while it holds something the pack did not, and the
-`note` says so ("Kept the company Altura: it holds 1 customer you added."). A customer row's
+`note` says so ("Kept the company Altura: it holds 1 customer you added."). A kept company keeps
+its admin, its shared catalog and that catalog's group with it, in the same line, and nothing
+assigned to a kept catalog is unassigned: decided read-only before any write (live, 2026-10-30,
+when unassigning first moved the SC's customer to group 1 and deleting the admin was refused). A customer row's
 `password` is sent when the customer is made and nowhere else: never logged, never in the install
 record, and never written into a saved pack, a copy between stores or a zip. Plan:
 `.rptc/plans/datapack-engine/step-08-customers-b2b.md`.

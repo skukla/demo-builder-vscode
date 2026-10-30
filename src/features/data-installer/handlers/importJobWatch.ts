@@ -65,6 +65,7 @@ async function watchAndRecord(
     transient: TransientStateManager,
     record: ImportJobRecord,
     engine: DatapackEngine,
+    resetOf: string | undefined,
 ): Promise<void> {
     try {
         // The engine that started the job is the one asked how it is going: only it knows.
@@ -115,6 +116,9 @@ async function watchAndRecord(
                 ? { processingTimeMs: result.processingTimeMs }
                 : {}),
         });
+        if (resetOf !== undefined && result.outcome === 'success' && !result.leftInStore) {
+            await clearDatapackOnProject(context, resetOf);
+        }
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(
@@ -186,9 +190,11 @@ export async function runAndWatch(
         const transient = new TransientStateManager(context.context);
         await transient.set(JOB_KEY, record);
 
-        await recordDatapackOnProject(context, spec.operation, request);
+        // An import is recorded at once; a reset is cleared only when it finishes (see below).
+        const resetOf = spec.operation === 'reset' ? await projectPathNow(context) : undefined;
+        if (spec.operation !== 'reset') await recordDatapackOnProject(context, request);
 
-        void watchAndRecord(context, transient, record, engine);
+        void watchAndRecord(context, transient, record, engine, resetOf);
 
         return { success: true, data: { activationId: started.activationId } };
     } catch (error) {
@@ -200,8 +206,17 @@ export async function runAndWatch(
     }
 }
 
+/** The current project's path, or '' when there is none or it cannot be read: a reset then clears nothing. */
+async function projectPathNow(context: HandlerContext): Promise<string> {
+    try {
+        return (await context.stateManager.getCurrentProject())?.path ?? '';
+    } catch {
+        return '';
+    }
+}
+
 /**
- * Record on the PROJECT which datapack its instance now holds — or no longer does.
+ * Record on the PROJECT which datapack its instance now holds.
  *
  * `project.datapack` was written only by the wizard's Sample Data step, so a pack
  * imported from this modal left no trace on the project. `confirmSampleDataRemoval`
@@ -215,38 +230,53 @@ export async function runAndWatch(
  * worth avoiding. The opposite error (recording a pack whose import then failed
  * entirely) costs one removal that reports nothing to remove.
  *
- * A reset CLEARS it: the manifest is rebuilt from the project on every write
- * (`projectConfigWriter`, "no merging needed"), so `undefined` genuinely removes
- * the field rather than leaving the old value behind.
- *
  * Never fatal. The import has already been accepted by the service by this point,
  * and failing the handler over a bookkeeping write would report a started job as
  * a failed one.
  */
-async function recordDatapackOnProject(
-    context: HandlerContext,
-    operation: ImportJobRecord['operation'],
-    request: ImportRequest,
-): Promise<void> {
+async function recordDatapackOnProject(context: HandlerContext, request: ImportRequest): Promise<void> {
     try {
         const project = await context.stateManager.getCurrentProject();
         if (!project) {
             return;
         }
         // The store travels with the pack, so a copy or an exported file installs from it too.
-        project.datapack =
-            operation === 'reset'
-                ? undefined
-                : { name: request.id.name, version: request.id.version, store: request.source ?? 'installer' };
+        project.datapack = { name: request.id.name, version: request.id.version, store: request.source ?? 'installer' };
         await context.stateManager.saveProject(project);
-        context.debugLogger.debug(
-            `[Data Installer] project datapack ${operation === 'reset' ? 'cleared' : `recorded as ${request.id.name}@${request.id.version}`}`,
-        );
+        context.debugLogger.debug(`[Data Installer] project datapack recorded as ${request.id.name}@${request.id.version}`);
     } catch (error) {
-        context.debugLogger.debug(
-            `[Data Installer] could not record the datapack on the project: ${
-                error instanceof Error ? error.message : String(error)
-            }`,
-        );
+        context.debugLogger.debug(`[Data Installer] could not record the datapack on the project: ${errorText(error)}`);
     }
 }
+
+/**
+ * A reset that FINISHED, taking everything its pack put there, clears the project's pack.
+ *
+ * The rule (live, 2026-10-30): the project stops naming the pack only when the removal ended in
+ * success with nothing left in the store. It was cleared when the reset was ACCEPTED, so a removal
+ * that then stopped half done left a project naming no pack over a store still holding most of it,
+ * and project reset (`confirmSampleDataRemoval`, which gates on this field) no longer offered to
+ * finish the job. A removal that finishes but keeps containers holding the SC's things
+ * (`leftInStore`) leaves it too: those stay on the install record, and the next removal is what
+ * takes them once they are empty.
+ *
+ * Only the project the reset was started from: the SC may have opened another in the meantime.
+ * The manifest is rebuilt from the project on every write (`projectConfigWriter`, "no merging
+ * needed"), so `undefined` genuinely removes the field. Never fatal: the job has ended either way.
+ */
+async function clearDatapackOnProject(context: HandlerContext, projectPath: string): Promise<void> {
+    try {
+        const project = await context.stateManager.getCurrentProject();
+        if (!project || projectPath === '' || project.path !== projectPath) {
+            context.debugLogger.debug('[Data Installer] project datapack left as it was: the reset\'s project is no longer open');
+            return;
+        }
+        project.datapack = undefined;
+        await context.stateManager.saveProject(project);
+        context.debugLogger.debug('[Data Installer] project datapack cleared');
+    } catch (error) {
+        context.debugLogger.debug(`[Data Installer] could not clear the datapack on the project: ${errorText(error)}`);
+    }
+}
+
+const errorText = (error: unknown): string => (error instanceof Error ? error.message : String(error));

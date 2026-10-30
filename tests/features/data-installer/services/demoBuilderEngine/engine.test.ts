@@ -195,6 +195,18 @@ describe('demoBuilderEngine removal', () => {
         expect(ctx.sent).toStrictEqual([]);
         expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
         expect(status.note).toBe('Kept the category Sale: it holds 1 category you added.');
+        // So the project still names the pack: the store holds part of it, and its record says what.
+        expect(status.leftInStore).toBe(true);
+    });
+
+    it('says nothing is left in the store when it took everything out', async () => {
+        const { engine, files } = await engineWith({}, () => true);
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({ kind: 'categories', id: '40' });
+
+        const { activationId } = await engine.startDelete(request());
+        const status = await settle(engine, activationId);
+
+        expect('leftInStore' in status).toBe(false);
     });
 
     it('fails, saying so, when this engine never installed the pack here', async () => {

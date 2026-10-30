@@ -7,11 +7,20 @@
  * (`commerceB2bFixtures.ts`); the searches and the write answers are not captured.
  */
 
+import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
 import { installRecordPath, openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { installPack, removePack } from '@/features/data-installer/services/demoBuilderEngine/runPack';
 import type { CommerceCompany, CommerceCustomer } from '@/types/commerceWire';
-import { BODEA_COMPANY_ROW, BODEA_CUSTOMER_ROWS, COMPANY_21, CUSTOMER_44, TEST_PASSWORD } from '../../../../helpers/commerceB2bFixtures';
+import {
+    BODEA_COMPANY_ROW,
+    BODEA_CUSTOMER_ROWS,
+    COMPANY_21,
+    CUSTOMER_44,
+    DELETE_COMPANY_ADMIN_REFUSED_DB08,
+    PUT_CUSTOMER_COMPANY_ANSWER_DB08,
+    TEST_PASSWORD,
+} from '../../../../helpers/commerceB2bFixtures';
 import { NOW, PACK, PROJECT, type SentCall, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';
 
 const PACK_ITEMS = {
@@ -25,7 +34,7 @@ const ADMIN = 'admin.altura@example.com';
 
 /** A store that holds what was written to it. */
 function liveStore() {
-    const state = { groups: [] as Array<{ id: number; code: string }>, customers: [] as CommerceCustomer[], companies: [] as CommerceCompany[], catalogs: [{ id: 1, name: 'Default (General)', customer_group_id: 1, type: 1 }] as Array<Record<string, unknown>>, assigned: new Map<number, string[]>() };
+    const state = { groups: [] as Array<{ id: number; code: string }>, customers: [] as CommerceCustomer[], companies: [] as CommerceCompany[], catalogs: [{ id: 1, name: 'Default (General)', customer_group_id: 1, type: 1 }] as Array<Record<string, unknown>>, assigned: new Map<number, string[]>(), members: [] as number[] };
     const groupSearch = (field: string, code: string) => page('customerGroups/search', field === 'eq' ? filterBy('customer_group_code', code) : `&searchCriteria[filterGroups][0][filters][0][field]=customer_group_code&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(code)}`);
     const reads: Record<string, unknown> = {
         [groupSearch('eq', 'Platinum Buyer')]: () => ({ items: state.groups }),
@@ -39,10 +48,12 @@ function liveStore() {
         [page('company', filterBy('company_email', 'office.altura@example.com'))]: { items: [] },
         'company/30': () => state.companies[0] ?? null,
         [page('sharedCatalog')]: () => ({ items: state.catalogs }),
+        'sharedCatalog/41': () => state.catalogs.find((c) => c.id === 41) ?? null,
         'sharedCatalog/41/companies': () => JSON.stringify(state.assigned.get(41) ?? []),
         'sharedCatalog/41/categories': [],
         'sharedCatalog/41/products': [],
-        'hierarchy/30': () => [{ entity_id: 52, entity_type: 'customer' }],
+        // Flat, the SC's members under the admin, as `GET hierarchy/28` answered live (`HIERARCHY_28_DB08`).
+        'hierarchy/30': () => [...state.members.map((id) => ({ entity_id: id, entity_type: 'customer', structure_parent_id: 1 })), { entity_id: 52, entity_type: 'customer', structure_id: 1 }],
         [page('customers/search', filterBy('group_id', 31))]: () => ({ items: state.customers.filter((c) => c.group_id === 31) }),
         [page('company', filterBy('customer_group_id', 31))]: () => ({ items: state.companies.filter((c) => c.customer_group_id === 31) }),
     };
@@ -62,6 +73,13 @@ function liveStore() {
         if (call.path === 'sharedCatalog/41/unassignCompanies') state.assigned.set(41, []);
         if (call.method === 'DELETE' && call.path === 'company/30') state.companies = [];
         if (call.method === 'DELETE' && call.path === 'sharedCatalog/41') state.catalogs = state.catalogs.filter((c) => c.id !== 41);
+        if (call.method === 'PUT' && call.path === 'customers/77/companies/30') {
+            state.members.push(77);
+            return PUT_CUSTOMER_COMPANY_ANSWER_DB08;
+        }
+        if (call.method === 'DELETE' && call.path === 'customers/52' && state.companies.length > 0) {
+            throw new CommerceReadError(DELETE_COMPANY_ADMIN_REFUSED_DB08.message, DELETE_COMPANY_ADMIN_REFUSED_DB08.status);
+        }
         if (call.method === 'DELETE' && call.path === 'customers/52') state.customers = [];
         if (call.method === 'DELETE' && call.path === 'customerGroups/31') state.groups = [];
         return true;
@@ -128,6 +146,33 @@ describe('a customer and B2B pack', () => {
         expect(result).toEqual({ removed: 5, noRecord: false, kept: [] });
         expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
         expect(store.state).toMatchObject({ groups: [], customers: [], companies: [], catalogs: [{ id: 1 }] });
+    });
+
+    // Live, 2026-10-30: the removal unassigned the company first (moving it and the SC's customer to
+    // group 1), then Commerce refused to delete its admin, and the removal stopped half done.
+    it("keeps a company holding the SC's customer whole, writing nothing, and takes it all once the customer is out", async () => {
+        const { ctx, files, store } = await installed();
+        await ctx.send('PUT', 'customers/77/companies/30', undefined);
+        ctx.sent.length = 0;
+
+        const kept = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(kept.removed).toBe(0);
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toHaveLength(5);
+
+        store.state.members = [];
+        const emptied = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual([
+            'POST sharedCatalog/41/unassignCompanies',
+            'DELETE company/30',
+            'DELETE sharedCatalog/41',
+            'DELETE customers/52',
+            'DELETE customerGroups/31',
+        ]);
+        expect(emptied.kept).toStrictEqual([]);
+        expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
     });
 
     it('installing again changes nothing the SC left as it was', async () => {

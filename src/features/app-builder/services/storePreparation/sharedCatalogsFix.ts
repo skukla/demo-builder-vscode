@@ -18,14 +18,32 @@
  * live on 2026-10-29: companies come as a JSON-encoded string of ids (`"[\"23\"]"`), products as
  * SKUs, categories as ids. Any other shape refuses the undo of that catalog rather than delete it.
  *
+ * **Its customer group goes with it** (live, 2026-10-30, scratch-1028, the datapack engine's
+ * removal): deleting a shared catalog deletes the customer group it uses and moves that group's
+ * customers to General. So the catalog is also kept while its group holds a customer the fix did
+ * not put there: one not in the company the fix assigned (its `company_attributes.company_id`,
+ * read live 2026-10-30, `COMPANY_ADMIN_ATTRIBUTES_DB08`). The group is the catalog's own
+ * `customer_group_id` from `GET sharedCatalog/{id}` (typed to the list item, which was captured;
+ * this read itself was not), and its customers a `GET customers/search` on `group_id` (not
+ * captured). Every read comes first, so a read that fails writes nothing. Each line names the
+ * catalog as the store calls it now.
+ *
  * @module features/app-builder/services/storePreparation/sharedCatalogsFix
  */
 
 import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
 import { andList } from '@/core/utils/andList';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
+import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
-import type { CommerceCompanyList, CommerceCompanyRow, CommerceSharedCatalog, CommerceSharedCatalogList, CommerceGet } from '@/types/commerceWire';
+import type {
+    CommerceCompanyList,
+    CommerceCompanyRow,
+    CommerceCustomer,
+    CommerceSharedCatalog,
+    CommerceSharedCatalogList,
+    CommerceGet,
+} from '@/types/commerceWire';
 import type { SharedCatalogHeld, SharedCatalogsStepRecord, StorePreparationStepRecord } from '@/types/storePreparation';
 
 const COMPANIES_PATH = 'company/?searchCriteria[pageSize]=200&fields=items[id,company_name,customer_group_id]';
@@ -190,24 +208,49 @@ function heldWords(extra: SharedCatalogHeld): string {
     return andList([...counted(extra.products.length, 'product', 'products'), ...counted(extra.categories.length, 'category', 'categories'), ...counted(extra.companies.length, 'company', 'companies')]);
 }
 
+/** Who is in a customer group, but the company the fix assigned: those it did not put there. */
+async function othersInGroup(get: CommerceGet, groupId: number | undefined, companyId: number): Promise<number[]> {
+    if (!groupId) return [];
+    const criteria =
+        `&searchCriteria[filterGroups][0][filters][0][field]=group_id&searchCriteria[filterGroups][0][filters][0][value]=${groupId}` +
+        '&searchCriteria[filterGroups][0][filters][0][conditionType]=eq';
+    const customers = await readAllPages<CommerceCustomer>(get, 'customers/search', criteria);
+    return customers.filter((c) => c.extension_attributes?.company_attributes?.company_id !== companyId).map((c) => Number(c.id));
+}
+
+/** Why a catalog is kept: "it holds 1 product, and its customer group holds 2 customers". */
+function keptWhy(extra: SharedCatalogHeld, others: number): string {
+    const held = heldWords(extra);
+    const group = others > 0 ? [`its customer group holds ${counted(others, 'customer', 'customers').join('')}`] : [];
+    return [...(held ? [`it holds ${held}`] : []), ...group].join(', and ');
+}
+
 /**
- * Take the company out of the catalog if it is still in it, then delete the catalog unless it
- * holds what the fix did not put there (the shared rule, over what is there beyond it).
+ * Take the company out of the catalog if it is still in it, then delete the catalog unless it, or
+ * its customer group, holds what the fix did not put there (the shared rule, over what is there
+ * beyond it). Every read comes before the first write.
  */
 async function undoCatalog(commerce: FixDeps['commerce'], catalog: RecordedCatalog): Promise<{ change?: string; kept?: string }> {
+    const store = (await commerce.get(`sharedCatalog/${catalog.id}`)) as CommerceSharedCatalog | null;
+    const name = store?.name || catalog.name;
     const now = await readHeld(commerce.get, catalog.id);
+    const others = await othersInGroup(commerce.get, store?.customer_group_id, catalog.companyId);
     const left = catalog.held ?? { ...NOTHING_MORE, companies: [catalog.companyId] };
     const extra = beyond(now, left);
     const unassigned = now.companies.includes(catalog.companyId);
     if (unassigned) await commerce.send('POST', `sharedCatalog/${catalog.id}/unassignCompanies`, { companies: [{ id: catalog.companyId }] });
     const back = unassigned ? `; ${catalog.companyName} is back on the public catalog` : '';
-    const outcome = decideOwnedChange({ recorded: fingerprintRow(NOTHING_MORE), current: fingerprintRow(extra), wanted: undefined });
+    const outcome = decideOwnedChange({
+        recorded: fingerprintRow({ ...NOTHING_MORE, customers: [] }),
+        current: fingerprintRow({ ...extra, customers: others }),
+        wanted: undefined,
+    });
     if (outcome === 'remove') {
         await commerce.send('DELETE', `sharedCatalog/${catalog.id}`, undefined);
-        return { change: `Deleted the shared catalog ${catalog.name}${back}` };
+        return { change: `Deleted the shared catalog ${name}${back}` };
     }
     return {
-        ...(unassigned ? { change: `Took ${catalog.companyName} out of the shared catalog ${catalog.name}${back}` } : {}),
-        kept: `Kept the shared catalog ${catalog.name}: it holds ${heldWords(extra)} Demo Builder did not put there.`,
+        ...(unassigned ? { change: `Took ${catalog.companyName} out of the shared catalog ${name}${back}` } : {}),
+        kept: `Kept the shared catalog ${name}: ${keptWhy(extra, others.length)} Demo Builder did not put there.`,
     };
 }

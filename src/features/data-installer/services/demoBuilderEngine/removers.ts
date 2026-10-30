@@ -8,13 +8,19 @@
  * it and leaves its products in no category, and (by Magento's schema, from memory, not yet checked
  * live) deletes a set's products with it.
  *
+ * Everything is decided before anything is written, so no write touches an object a later decision
+ * keeps (live, 2026-10-30: the assignments went first, unassigning a company a later decision kept,
+ * which moved it and the SC's customer in it to group 1). Companies are decided first, since what a
+ * kept company keeps (`b2bContainers.ts`) the other containers must see as staying; the assignments
+ * last, since one is taken out only when neither side it links is staying.
+ *
  * @module features/data-installer/services/demoBuilderEngine/removers
  */
 
 import { removeAssignment, removeAttributeSet } from './attributeSetsKind';
 import { removeAttribute, removeAttributeOption } from './attributesKind';
 import { type Taking, b2bHeldByOthers, isB2bContainer } from './b2bContainers';
-import { CATALOG_CATEGORIES_KIND, CATALOG_COMPANIES_KIND, CATALOG_PRODUCTS_KIND } from './b2bKeys';
+import { type AssignmentKind, CATALOG_CATEGORIES_KIND, CATALOG_COMPANIES_KIND, CATALOG_KIND, CATALOG_PRODUCTS_KIND, COMPANY_KIND, isAssignmentKind } from './b2bKeys';
 import { removeCategory } from './categoriesKind';
 import { removeCompany } from './companiesKind';
 import { removeCustomer, removeCustomerGroup } from './customerKinds';
@@ -22,8 +28,9 @@ import type { CreatedObject } from './installRecord';
 import { readOrNull, segment } from './kindContext';
 import type { StoreCategory } from './productLookups';
 import { removeProduct } from './productsKind';
-import { removeAssignmentPair, removeCatalog } from './sharedCatalogKinds';
+import { removeAssignmentPair, removeCatalog, splitPair } from './sharedCatalogKinds';
 import { removeSource, removeStock, removeStockSourceLink } from './stockKinds';
+import { andList } from '@/core/utils/andList';
 import { CommerceReadError, readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
@@ -74,7 +81,7 @@ export async function takeBack(commerce: RemovalAccess, object: CreatedObject): 
 /** A container kept because it holds what the engine did not make. */
 export interface KeptContainer {
     object: CreatedObject;
-    kind: 'category' | 'set' | 'company' | 'shared catalog' | 'customer group';
+    kind: 'category' | 'set' | 'company' | 'shared catalog' | 'customer group' | 'customer';
     name: string;
     /** How many things of the SC's it holds. */
     count: number;
@@ -85,15 +92,24 @@ export interface KeptContainer {
      */
     reason?: string;
     /**
-     * Kept with it, as one: a shared catalog's customer group, which Commerce deletes with the
-     * catalog (live, 2026-10-30; `b2bContainers.ts`). Stays on the record too.
+     * Kept with it, as one, and on the record too (live, 2026-10-30; `b2bContainers.ts`): a shared
+     * catalog's customer group, which Commerce deletes with the catalog; a company's admin, which
+     * Commerce will not delete while the company stands, and its catalog with that catalog's group.
      */
-    with?: { object: CreatedObject; kind: KeptContainer['kind']; name: string };
+    with?: KeptPartner[];
+}
+
+/** One thing kept with a container, and how its line names it ("its admin"; "its <kind>" by default). */
+export interface KeptPartner {
+    object: CreatedObject;
+    kind: KeptContainer['kind'];
+    name: string;
+    as?: string;
 }
 
 /** Every object a removal kept: each container, and what was kept with it. */
 export function keptObjects(kept: readonly KeptContainer[]): CreatedObject[] {
-    return kept.flatMap((k) => (k.with ? [k.object, k.with.object] : [k.object]));
+    return kept.flatMap((k) => [k.object, ...(k.with ?? []).map((p) => p.object)]);
 }
 
 const keyOfObject = (kind: string, id: string) => `${kind}\u0000${id}`;
@@ -131,37 +147,54 @@ async function heldByOthers(get: CommerceGet, object: CreatedObject, removal: Ta
     return undefined;
 }
 
+/** The kind an assignment's member is recorded under. */
+const MEMBER_KIND: Record<AssignmentKind, string> = {
+    [CATALOG_COMPANIES_KIND]: COMPANY_KIND,
+    [CATALOG_CATEGORIES_KIND]: 'categories',
+    [CATALOG_PRODUCTS_KIND]: 'products',
+};
+
+/** Companies first, then the other containers newest first; assignments are not containers. */
+function decisionOrder(newestFirst: readonly CreatedObject[]): CreatedObject[] {
+    const others = newestFirst.filter((o) => !isAssignmentKind(o.kind));
+    return [...others.filter((o) => o.kind === COMPANY_KIND), ...others.filter((o) => o.kind !== COMPANY_KIND)];
+}
+
 /**
- * Which of these objects to take out and which containers to keep, read-only and up front.
+ * Which of these objects to take out and which containers to keep, read-only and up front. An
+ * object kept with a container (`KeptContainer.with`) is decided with it; an assignment is taken
+ * out only when neither the catalog nor the member it links is staying. Every object not taken
+ * stays on the record.
  *
  * @param newestFirst - what a removal would take out, newest first, so a child is decided
  *   before the container it sits in; a kept child keeps its container too
+ * @returns `take` in the order given, so writes still run newest first
  */
 export async function decideRemovals(get: CommerceGet, newestFirst: readonly CreatedObject[]): Promise<{ take: CreatedObject[]; kept: KeptContainer[] }> {
-    const taking = new Set(newestFirst.map((o) => keyOfObject(o.kind, o.id)));
+    const listed = new Set(newestFirst.map((o) => keyOfObject(o.kind, o.id)));
+    // Still to be taken: shrinks as decisions keep things.
+    const taking = new Set(listed);
     const byKey = new Map(newestFirst.map((o) => [keyOfObject(o.kind, o.id), o]));
     const removal: Taking = {
         has: (kind, id) => taking.has(keyOfObject(kind, id)),
         find: (kind, id) => (taking.has(keyOfObject(kind, id)) ? byKey.get(keyOfObject(kind, id)) : undefined),
+        of: (kind) => newestFirst.filter((o) => o.kind === kind && taking.has(keyOfObject(o.kind, o.id))),
     };
-    // Decided already, kept with a container that was decided first (a catalog's group).
-    const settled = new Set<string>();
-    const take: CreatedObject[] = [];
     const kept: KeptContainer[] = [];
-    for (const object of newestFirst) {
-        if (settled.has(keyOfObject(object.kind, object.id))) continue;
+    for (const object of decisionOrder(newestFirst)) {
+        // Kept already, with a container decided before it (a company's catalog, a catalog's group).
+        if (!taking.has(keyOfObject(object.kind, object.id))) continue;
         const held = await heldByOthers(get, object, removal, taking);
-        if (!held) {
-            take.push(object);
-            continue;
-        }
-        for (const one of keptObjects([held])) {
-            taking.delete(keyOfObject(one.kind, one.id));
-            settled.add(keyOfObject(one.kind, one.id));
-        }
+        if (!held) continue;
+        for (const one of keptObjects([held])) taking.delete(keyOfObject(one.kind, one.id));
         kept.push(held);
     }
-    return { take, kept };
+    const staying = (kind: string, id: string) => listed.has(keyOfObject(kind, id)) && !taking.has(keyOfObject(kind, id));
+    for (const pair of newestFirst.filter((o) => isAssignmentKind(o.kind))) {
+        const { catalogId, ref } = splitPair(pair.id);
+        if (staying(CATALOG_KIND, catalogId) || staying(MEMBER_KIND[pair.kind as AssignmentKind], ref)) taking.delete(keyOfObject(pair.kind, pair.id));
+    }
+    return { take: newestFirst.filter((o) => taking.has(keyOfObject(o.kind, o.id))), kept };
 }
 
 /** "1 product", "2 products", "2 categories". */
@@ -173,8 +206,9 @@ function plural(count: number, word: KeptContainer['holds']): string {
 /** Why one container was kept: its own words, or one count of one thing. */
 const reasonOf = (kept: KeptContainer): string => kept.reason ?? `it holds ${plural(kept.count, kept.holds)} you added`;
 
-/** "the shared catalog Gold and its customer group Gold". */
-const namedAs = (kept: KeptContainer): string => `the ${kept.kind} ${kept.name}${kept.with ? ` and its ${kept.with.kind} ${kept.with.name}` : ''}`;
+/** "the shared catalog Gold and its customer group Gold"; "the company Acme, its admin …, …". */
+const namedAs = (kept: KeptContainer): string =>
+    andList([`the ${kept.kind} ${kept.name}`, ...(kept.with ?? []).map((p) => `${p.as ?? `its ${p.kind}`} ${p.name}`)]);
 
 /** The one line a removal says about the containers it kept, or nothing when it kept none. */
 export function containersLine(kept: readonly KeptContainer[]): string | undefined {

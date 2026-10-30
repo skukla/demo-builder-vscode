@@ -177,6 +177,12 @@ export interface JobStatusSnapshot {
     hasRecord: boolean;
     /** What the job kept and why, in one line: Demo Builder's engine on a repeat install (step 05). */
     note?: string;
+    /**
+     * A removal that finished but left part of the pack in the store on purpose: Demo Builder's
+     * engine kept containers holding the SC's things, and its install record still lists them.
+     * The project then still names the pack (`importJobWatch.ts`).
+     */
+    leftInStore?: boolean;
 }
 
 /**

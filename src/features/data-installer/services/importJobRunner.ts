@@ -79,6 +79,8 @@ export interface ImportJobResult {
     reason?: string;
     /** What the engine kept and why, in one line (Demo Builder's engine, installing again). */
     note?: string;
+    /** A removal left part of the pack in the store on purpose (`JobStatusSnapshot.leftInStore`). */
+    leftInStore?: boolean;
     processingTimeMs?: number;
 }
 
@@ -196,10 +198,16 @@ export async function watchImportJob(args: {
         outcome,
         perType,
         ...(reason ? { reason } : {}),
-        ...(latest?.note ? { note: latest.note } : {}),
-        ...(latest?.processingTimeMs !== undefined
-            ? { processingTimeMs: latest.processingTimeMs }
-            : {}),
+        ...(latest ? whatTheEngineSaid(latest) : {}),
+    };
+}
+
+/** The finished job's own words, each only when the engine gave it. */
+function whatTheEngineSaid(latest: JobStatusSnapshot): Pick<ImportJobResult, 'note' | 'leftInStore' | 'processingTimeMs'> {
+    return {
+        ...(latest.note ? { note: latest.note } : {}),
+        ...(latest.leftInStore ? { leftInStore: true } : {}),
+        ...(latest.processingTimeMs !== undefined ? { processingTimeMs: latest.processingTimeMs } : {}),
     };
 }
 

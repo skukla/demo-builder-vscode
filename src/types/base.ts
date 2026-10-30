@@ -121,8 +121,9 @@ export interface Project {
      *
      * Chosen on the wizard's Datapacks step and installed by creation itself
      * (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data
-     * Installer screen and by "Save store changes", and cleared by a reset.
-     * `configure_project` records it without installing.
+     * Installer screen and by "Save store changes", and cleared by a reset once it finishes
+     * having taken out everything the pack put there (a reset that stops, or keeps containers
+     * holding the SC's things, leaves it). `configure_project` records it without installing.
      */
     datapack?: ProjectDatapack;
     /** This demo's own library pack, once its first save made one (step 07). */
