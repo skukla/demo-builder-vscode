@@ -33,6 +33,7 @@ import { z } from 'zod';
 import { CUSTOMER_GROUP_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
 import { customerByEmail, groupByCode } from './b2bReads';
 import { deleteIfPresent, type KindContext, parseRows, ownedId, readOrNull, segment } from './kindContext';
+import { createOne } from './pendingCreates';
 import { type ProductLookups, productLookups } from './productLookups';
 import type { CommerceCustomer, CommerceCustomerAddress, CommerceCustomerGroup, CommerceSend } from '@/types/commerceWire';
 
@@ -72,9 +73,11 @@ export async function installCustomerGroups(ctx: KindContext, rows: CustomerGrou
         if (ownedId(ctx.session, CUSTOMER_GROUP_KIND, group.code) !== undefined) continue;
         if (await groupByCode(ctx.get, group.code)) continue;
         const body: { group: CommerceCustomerGroup } = { group: { code: group.code, tax_class_id: group.tax_class_id ?? RETAIL_TAX_CLASS } };
-        const id = Number(((await ctx.send('POST', 'customerGroups', body)) as CommerceCustomerGroup | null)?.id);
-        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer group ${group.code}'s id.`);
-        await ctx.recorder.record({ kind: CUSTOMER_GROUP_KIND, id: String(id), key: group.code });
+        await createOne(ctx, { kind: CUSTOMER_GROUP_KIND, key: group.code }, async () => {
+            const id = Number(((await ctx.send('POST', 'customerGroups', body)) as CommerceCustomerGroup | null)?.id);
+            if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer group ${group.code}'s id.`);
+            return { kind: CUSTOMER_GROUP_KIND, id: String(id), key: group.code };
+        });
         ctx.log(`created customer group ${group.code}`);
     }
 }
@@ -132,10 +135,12 @@ export async function installCustomers(ctx: KindContext, rows: CustomerRows): Pr
             continue;
         }
         const customer = { ...(await customerFields(lk, row)), website_id: websiteId, store_id: ctx.session.storeId } as CommerceCustomer;
-        const answer = (await ctx.send('POST', 'customers', { customer, ...(row.password ? { password: row.password } : {}) })) as CommerceCustomer | null;
-        const id = Number(answer?.id);
-        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer ${key}'s id.`);
-        await ctx.recorder.record({ kind: CUSTOMER_KIND, id: String(id), key });
+        await createOne(ctx, { kind: CUSTOMER_KIND, key, find: { websiteId } }, async () => {
+            const answer = (await ctx.send('POST', 'customers', { customer, ...(row.password ? { password: row.password } : {}) })) as CommerceCustomer | null;
+            const id = Number(answer?.id);
+            if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer ${key}'s id.`);
+            return { kind: CUSTOMER_KIND, id: String(id), key };
+        });
         ctx.log(`created customer ${key}`);
     }
 }

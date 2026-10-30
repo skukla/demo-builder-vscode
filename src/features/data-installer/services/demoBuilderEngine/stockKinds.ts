@@ -21,6 +21,7 @@
 import { z } from 'zod';
 import type { CreatedObject } from './installRecord';
 import { SOURCE_CODE, deleteIfPresent, type KindContext, parseRows, ownedId, readOrNull, segment } from './kindContext';
+import { createOne } from './pendingCreates';
 import { readInventory, sellsTo, setSourceEnabled } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { CommerceGet, CommerceInventoryStock, CommerceSend } from '@/types/commerceWire';
 
@@ -61,12 +62,18 @@ export async function installSources(ctx: KindContext, pack: SourcesPack): Promi
         if (ownedId(ctx.session, SOURCE_KIND, source.source_code) === null) continue;
         const existing = sources.find((s) => s.source_code === source.source_code);
         if (!existing) {
-            await ctx.send('POST', 'inventory/sources', { source });
-            await ctx.recorder.record({ kind: SOURCE_KIND, id: source.source_code });
+            const code = source.source_code;
+            await createOne(ctx, { kind: SOURCE_KIND, key: code, id: code }, async () => {
+                await ctx.send('POST', 'inventory/sources', { source });
+                return { kind: SOURCE_KIND, id: code };
+            });
             ctx.log(`created source ${source.name}`);
         } else if (existing.enabled === false) {
-            await setSourceEnabled(ctx, source.source_code, true);
-            await ctx.recorder.record({ kind: SOURCE_KIND, id: source.source_code, previous: { enabled: false } });
+            const code = source.source_code;
+            await createOne(ctx, { kind: SOURCE_KIND, key: code, id: code, previous: { enabled: false } }, async () => {
+                await setSourceEnabled(ctx, code, true);
+                return { kind: SOURCE_KIND, id: code, previous: { enabled: false } };
+            });
             ctx.log(`switched source ${source.name} back on`);
         }
     }
@@ -84,9 +91,12 @@ export async function installStocks(ctx: KindContext, pack: StocksPack): Promise
         const body: { stock: CommerceInventoryStock } = {
             stock: { ...stock, extension_attributes: { sales_channels: [{ type: 'website', code: websiteCode }] } },
         };
-        const id = Number(await ctx.send('POST', 'inventory/stocks', body));
-        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new stock ${stock.name}'s id.`);
-        await ctx.recorder.record({ kind: STOCK_KIND, id: String(id), previous });
+        const made = await createOne(ctx, { kind: STOCK_KIND, key: stock.name, previous }, async () => {
+            const answer = Number(await ctx.send('POST', 'inventory/stocks', body));
+            if (!Number.isInteger(answer)) throw new Error(`Commerce did not answer the new stock ${stock.name}'s id.`);
+            return { kind: STOCK_KIND, id: String(answer), previous };
+        });
+        const id = Number(made.id);
         stocks.push({ ...body.stock, stock_id: id });
         ctx.log(`created stock ${stock.name}, selling to ${websiteCode}`);
     }
@@ -100,11 +110,14 @@ export async function installStockSourceLinks(ctx: KindContext, pack: LinksPack)
         const stockId = stocks.find((s) => s.name === link.stock_id)?.stock_id;
         if (stockId === undefined) throw new Error(`The store has no stock named ${link.stock_id}.`);
         if (links.some((l) => l.stock_id === stockId && l.source_code === link.source_code)) continue;
-        await ctx.send('POST', 'inventory/stock-source-links', {
-            links: [{ stock_id: stockId, source_code: link.source_code, priority: link.priority ?? 1 }],
+        const id = `${stockId}/${link.source_code}`;
+        await createOne(ctx, { kind: LINK_KIND, key: id, id }, async () => {
+            await ctx.send('POST', 'inventory/stock-source-links', {
+                links: [{ stock_id: stockId, source_code: link.source_code, priority: link.priority ?? 1 }],
+            });
+            return { kind: LINK_KIND, id };
         });
         links.push({ stock_id: stockId, source_code: link.source_code });
-        await ctx.recorder.record({ kind: LINK_KIND, id: `${stockId}/${link.source_code}` });
         ctx.log(`linked ${link.source_code} to ${link.stock_id}`);
     }
 }

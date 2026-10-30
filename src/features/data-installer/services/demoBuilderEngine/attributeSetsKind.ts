@@ -19,6 +19,7 @@
 
 import { z } from 'zod';
 import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, ownedId, segment } from './kindContext';
+import { createOne } from './pendingCreates';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import { pickAttributeGroup, readSetGroups } from '@/features/app-builder/services/erpOwnerAttributeSets';
 import type { CommerceAttributeSetList, CommerceSend, CommerceSetAttribute } from '@/types/commerceWire';
@@ -115,15 +116,17 @@ export async function installAttributeSets(ctx: KindContext, rows: readonly Attr
             if ((await groupInSet(ctx, name, existing)) === undefined && ours) await createOwnGroup(ctx, name, existing);
             continue;
         }
-        const created = (await ctx.send('POST', 'products/attribute-sets', {
-            attributeSet: { entity_type_id: PRODUCT_ENTITY_TYPE, sort_order: 0, ...attributeSet },
-            skeletonId: skeletonId ?? DEFAULT_SKELETON,
-        })) as { attribute_set_id?: number } | null;
-        if (created?.attribute_set_id === undefined) throw new Error(`Commerce made no attribute set ${name}.`);
-        ctx.session.setIds.set(name, created.attribute_set_id);
-        await ctx.recorder.record({ kind: ATTRIBUTE_SET_KIND, id: String(created.attribute_set_id) });
+        const made = await createOne(ctx, { kind: ATTRIBUTE_SET_KIND, key: name }, async () => {
+            const created = (await ctx.send('POST', 'products/attribute-sets', {
+                attributeSet: { entity_type_id: PRODUCT_ENTITY_TYPE, sort_order: 0, ...attributeSet },
+                skeletonId: skeletonId ?? DEFAULT_SKELETON,
+            })) as { attribute_set_id?: number } | null;
+            if (created?.attribute_set_id === undefined) throw new Error(`Commerce made no attribute set ${name}.`);
+            return { kind: ATTRIBUTE_SET_KIND, id: String(created.attribute_set_id) };
+        });
+        ctx.session.setIds.set(name, Number(made.id));
         ctx.log(`created attribute set ${name}`);
-        await createOwnGroup(ctx, name, created.attribute_set_id);
+        await createOwnGroup(ctx, name, Number(made.id));
     }
 }
 
@@ -142,14 +145,17 @@ export async function installAssignments(ctx: KindContext, rows: readonly Assign
         if (inSet.get(setId)?.has(row.attributeCode)) continue;
         const groupId = await groupInSet(ctx, row.attributeSetId, setId);
         if (groupId === undefined) throw new Error(`The attribute set ${row.attributeSetId} has no group to put ${row.attributeCode} in.`);
-        await ctx.send('POST', 'products/attribute-sets/attributes', {
-            attributeSetId: setId,
-            attributeGroupId: groupId,
-            attributeCode: row.attributeCode,
-            sortOrder: row.sortOrder ?? 0,
+        const id = `${setId}/${row.attributeCode}`;
+        await createOne(ctx, { kind: ASSIGNMENT_KIND, key: id, id }, async () => {
+            await ctx.send('POST', 'products/attribute-sets/attributes', {
+                attributeSetId: setId,
+                attributeGroupId: groupId,
+                attributeCode: row.attributeCode,
+                sortOrder: row.sortOrder ?? 0,
+            });
+            return { kind: ASSIGNMENT_KIND, id };
         });
         inSet.get(setId)?.add(row.attributeCode);
-        await ctx.recorder.record({ kind: ASSIGNMENT_KIND, id: `${setId}/${row.attributeCode}` });
         ctx.log(`added ${row.attributeCode} to ${row.attributeSetId}`);
     }
 }

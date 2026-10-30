@@ -29,6 +29,7 @@ import { filterBy } from './b2bReads';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import type { CreatedObject } from './installRecord';
 import { deleteIfPresent, eachCopy, type KindContext, ownedId, parseRows, readOrNull, segment } from './kindContext';
+import { createOne } from './pendingCreates';
 import { isNumeric } from './productLookups';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceCoupon, CommerceSalesRule } from '@/types/commerceSalesRule';
@@ -97,10 +98,12 @@ export async function installCoupons(ctx: KindContext, rows: CouponRows): Promis
             ctx.log(`left coupon ${coupon.code} out: you deleted its cart rule ${String(coupon.rule_id)} since it was installed`);
             continue;
         }
-        const answer = (await ctx.send('POST', 'coupons', { coupon: { ...without(coupon), rule_id: ruleId } })) as CommerceCoupon | null;
-        const id = Number(answer?.coupon_id);
-        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new coupon ${coupon.code}'s id.`);
-        await ctx.recorder.record({ kind: COUPON_KIND, id: String(id), key: coupon.code });
+        await createOne(ctx, { kind: COUPON_KIND, key: coupon.code }, async () => {
+            const answer = (await ctx.send('POST', 'coupons', { coupon: { ...without(coupon), rule_id: ruleId } })) as CommerceCoupon | null;
+            const id = Number(answer?.coupon_id);
+            if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new coupon ${coupon.code}'s id.`);
+            return { kind: COUPON_KIND, id: String(id), key: coupon.code };
+        });
         ctx.log(`created coupon ${coupon.code}`);
     }
 }

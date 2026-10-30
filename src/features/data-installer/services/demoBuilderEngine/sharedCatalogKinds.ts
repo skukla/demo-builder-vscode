@@ -46,6 +46,7 @@ import {
 } from './b2bKeys';
 import { companyByName, readCatalogs, readHeld } from './b2bReads';
 import { deleteIfPresent, isAlreadyGone, type KindContext, parseRows, ownedId, segment } from './kindContext';
+import { createOne, createRecorded } from './pendingCreates';
 import { productLookups } from './productLookups';
 import type { CommerceSend, CommerceSharedCatalog } from '@/types/commerceWire';
 import type { SharedCatalogHeld } from '@/types/storePreparation';
@@ -124,11 +125,13 @@ export async function installCatalogs(ctx: KindContext, rows: CatalogRows): Prom
             tax_class_id: row.tax_class_id ?? RETAIL_TAX_CLASS,
             ...(group !== undefined ? { customer_group_id: group } : {}),
         };
-        const id = Number(await ctx.send('POST', 'sharedCatalog', { sharedCatalog }));
-        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new shared catalog ${row.name}'s id.`);
-        // A failed read-back records no `held`: removal then counts everything in it as not the pack's.
-        const held = await readHeld(ctx.get, id).catch(() => undefined);
-        await ctx.recorder.record({ kind: CATALOG_KIND, id: String(id), key: row.name, ...(held ? { previous: { held } } : {}) });
+        await createOne(ctx, { kind: CATALOG_KIND, key: row.name }, async () => {
+            const id = Number(await ctx.send('POST', 'sharedCatalog', { sharedCatalog }));
+            if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new shared catalog ${row.name}'s id.`);
+            // A failed read-back records no `held`: removal then counts everything in it as not the pack's.
+            const held = await readHeld(ctx.get, id).catch(() => undefined);
+            return { kind: CATALOG_KIND, id: String(id), key: row.name, ...(held ? { previous: { held } } : {}) };
+        });
         ctx.log(`created shared catalog ${row.name}`);
     }
 }
@@ -170,8 +173,12 @@ export async function installAssignments(ctx: KindContext, kind: AssignmentKind,
             if (!held.has(ref) && !adding.some((a) => a.ref === ref)) adding.push({ ref, key });
         }
         if (adding.length === 0) continue;
-        await ctx.send('POST', `sharedCatalog/${segment(catalog.id)}/assign${route.verb}`, route.body(adding.map((a) => a.ref)));
-        for (const { ref, key } of adding) await ctx.recorder.record({ kind, id: `${catalog.id}/${ref}`, key });
+        const catalogId = catalog.id;
+        const made = adding.map(({ ref, key }) => ({ kind, id: `${catalogId}/${ref}`, key }));
+        await createRecorded(ctx, made, async () => {
+            await ctx.send('POST', `sharedCatalog/${segment(catalogId)}/assign${route.verb}`, route.body(adding.map((a) => a.ref)));
+            return made;
+        });
         ctx.log(`assigned ${adding.length} to shared catalog ${name}`);
     }
 }

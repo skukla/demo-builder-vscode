@@ -17,6 +17,7 @@
 
 import { z } from 'zod';
 import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, ownedId, readOrNull, segment } from './kindContext';
+import { createOne } from './pendingCreates';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const ATTRIBUTE_KIND = 'product_attributes';
@@ -80,10 +81,13 @@ async function createAttribute(ctx: KindContext, row: AttributeRow): Promise<voi
     // An id from the store the pack was exported from means nothing here (the service strips it too).
     const { attribute_id: _sourceId, ...attribute } = row.attribute;
     const labels = attribute.frontend_labels?.map((l) => ({ ...l, store_id: ctx.session.storeId }));
-    await ctx.send('POST', 'products/attributes', {
-        attribute: { ...attribute, ...(labels ? { frontend_labels: labels } : {}) },
+    const code = attribute.attribute_code;
+    await createOne(ctx, { kind: ATTRIBUTE_KIND, key: code, id: code }, async () => {
+        await ctx.send('POST', 'products/attributes', {
+            attribute: { ...attribute, ...(labels ? { frontend_labels: labels } : {}) },
+        });
+        return { kind: ATTRIBUTE_KIND, id: code };
     });
-    await ctx.recorder.record({ kind: ATTRIBUTE_KIND, id: attribute.attribute_code });
     ctx.log(`created attribute ${attribute.attribute_code}`);
 }
 
@@ -105,10 +109,12 @@ export async function addMissingOptions(ctx: KindContext, code: string, options:
     const missing = options.filter((o) => !have.some((h) => sameLabel(h.label, o.label)));
     for (const option of missing) {
         const { value: _sourceValue, ...body } = option;
-        await ctx.send('POST', `products/attributes/${segment(code)}/options`, { option: body });
-        const added = (await readOptions(ctx, code)).find((h) => sameLabel(h.label, option.label));
-        if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
-        await ctx.recorder.record({ kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}` });
+        await createOne(ctx, { kind: ATTRIBUTE_OPTION_KIND, key: `${code}/${option.label}` }, async () => {
+            await ctx.send('POST', `products/attributes/${segment(code)}/options`, { option: body });
+            const added = (await readOptions(ctx, code)).find((h) => sameLabel(h.label, option.label));
+            if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
+            return { kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}` };
+        });
         ctx.log(`added option "${option.label}" to ${code}`);
     }
 }

@@ -31,6 +31,7 @@ import { z } from 'zod';
 import { filterBy } from './b2bReads';
 import type { CreatedObject } from './installRecord';
 import { deleteIfPresent, eachCopy, type KindContext, ownedId, parseRows, readOrNull, segment } from './kindContext';
+import { createOne } from './pendingCreates';
 import { type ProductLookups, productLookups } from './productLookups';
 import { conditionsForPack, conditionsForStore, namesSegment } from './ruleConditions';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
@@ -114,10 +115,12 @@ export async function installCartRules(ctx: KindContext, rows: CartRuleRows): Pr
         if (namesSegment(rule.condition) || namesSegment(rule.action_condition)) {
             ctx.log(`cart rule ${rule.name} names a customer segment by another store's id; it is sent as it is, and needs its segment chosen in the Admin`);
         }
-        const answer = (await ctx.send('POST', 'salesRules', { rule: await toCommerceRule(lk, rule, websiteId) })) as CommerceSalesRule | null;
-        const id = Number(answer?.rule_id);
-        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new cart rule ${rule.name}'s id.`);
-        await ctx.recorder.record({ kind: CART_RULE_KIND, id: String(id), key: rule.name });
+        await createOne(ctx, { kind: CART_RULE_KIND, key: rule.name }, async () => {
+            const answer = (await ctx.send('POST', 'salesRules', { rule: await toCommerceRule(lk, rule, websiteId) })) as CommerceSalesRule | null;
+            const id = Number(answer?.rule_id);
+            if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new cart rule ${rule.name}'s id.`);
+            return { kind: CART_RULE_KIND, id: String(id), key: rule.name };
+        });
         ctx.log(`created cart rule ${rule.name}`);
     }
 }

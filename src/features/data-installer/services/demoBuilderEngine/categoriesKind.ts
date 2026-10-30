@@ -25,6 +25,7 @@
 import { z } from 'zod';
 import { deleteIfPresent, type KindContext, ownedId, segment } from './kindContext';
 import { keyOf } from './packForm';
+import { createOne } from './pendingCreates';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 export const CATEGORY_KIND = 'categories';
@@ -96,16 +97,19 @@ async function findOrCreate(
     parentId: number,
     path: string,
 ): Promise<number | undefined> {
-    const owned = ownedId(ctx.session, CATEGORY_KIND, keyOf(CATEGORY_KIND, { category: { ...category, path } }) ?? '');
+    const key = keyOf(CATEGORY_KIND, { category: { ...category, path } }) ?? '';
+    const owned = ownedId(ctx.session, CATEGORY_KIND, key);
     if (owned === null) return undefined;
     if (owned !== undefined) return Number(owned);
     const existing = await findChild(ctx.get, parentId, category.name);
     if (existing !== undefined) return Number(existing);
-    const created = (await ctx.send('POST', 'categories', body(category, parentId))) as FoundCategory | null;
-    if (created?.id === undefined) throw new Error(`Commerce made no category ${category.name}.`);
-    await ctx.recorder.record({ kind: CATEGORY_KIND, id: String(created.id) });
+    const made = await createOne(ctx, { kind: CATEGORY_KIND, key, find: { parentId, name: category.name } }, async () => {
+        const created = (await ctx.send('POST', 'categories', body(category, parentId))) as FoundCategory | null;
+        if (created?.id === undefined) throw new Error(`Commerce made no category ${category.name}.`);
+        return { kind: CATEGORY_KIND, id: String(created.id) };
+    });
     ctx.log(`created category ${category.name}`);
-    return Number(created.id);
+    return Number(made.id);
 }
 
 /** How deep a path is: `"Bodea/Products"` is 2. */

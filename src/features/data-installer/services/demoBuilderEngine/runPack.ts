@@ -36,6 +36,7 @@ import {
 import type { KindContext, SettingsDone } from './kindContext';
 import { type RootPlacement, placeCategories, rootPlacement } from './packRoot';
 import { type PackRootStep, settlePackRoot } from './packRootStep';
+import { settlePending } from './pendingFinders';
 import { GIFT_CARD_KIND, PRODUCT_KINDS, installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
 import { type KeptContainer, type RemovalAccess, decideRemovals, takeBack } from './removers';
@@ -176,6 +177,8 @@ export async function installPack(ctx: KindContext, packItems: PackItems, onKind
     if (unsupported.length > 0) throw new UnsupportedKindsError(unsupported);
     const problems = packRowProblems(packItems, ctx.session.websiteCode);
     if (problems.length > 0) throw new PackRowsError(problems);
+    // Step 14 item 1: what an earlier install sent and never heard back about, found or forgotten.
+    await settlePending(ctx.get, ctx.recorder, ctx.log);
     // Step 12: under the store's own root, the pack's root is left out; the record says which once made.
     const placement = rootPlacement(packItems.categories, ctx.recorder.created, ctx.session.storeRoot);
     const items = placeCategories(packItems, placement);
@@ -244,10 +247,13 @@ export async function removePack(
     const record = await readInstallRecord(files, target.projectPath, target.pack);
     if (!record) return { removed: 0, noRecord: true, kept: [] };
     const recorder = await openInstallRecord(files, target.projectPath, target.pack, () => record.startedAt);
+    // Step 14 item 1: a create that landed unanswered is taken back too; one that never did costs nothing.
+    await settlePending(commerce.get, recorder, () => undefined);
+    const created = recorder.created;
     // Settings first: they went in last. Each leaves the record once put back or kept.
-    const settingObjects = record.created.filter((o) => o.kind === STORE_CONFIG_KIND);
+    const settingObjects = created.filter((o) => o.kind === STORE_CONFIG_KIND);
     const settings = settingObjects.length > 0 ? await putBackSettings(commerce, settingObjects, (o) => recorder.drop(o)) : undefined;
-    const { take, kept } = await decideRemovals(commerce.get, removalOrder(record).filter((o) => o.kind !== STORE_CONFIG_KIND));
+    const { take, kept } = await decideRemovals(commerce.get, removalOrder({ ...record, created: [...created] }).filter((o) => o.kind !== STORE_CONFIG_KIND));
     for (const object of take) {
         await takeBack(commerce, object);
         await recorder.drop(object);
