@@ -39,14 +39,32 @@ Each group is built on its own branch off `loop/2026-10-05-release-candidate`, t
 ### G3: a pack from any store (`capture.ts`, `storeChanges.ts`, `packForm.ts`, the export screen and tool)
 
 10. **Save a store Demo Builder did not fill into a pack**, with the items picked (DI-1's story,
-    on our engine rather than the service's export).
+    on our engine rather than the service's export). *Built (branch `parity/g3-pack-from-any-store`,
+    not yet live):* with Demo Builder's engine the export door is ours. The catalog header's "Save
+    from this store" opens a pick screen (`SaveFromStoreModal`, ten kinds, `pickableKinds.ts`), each
+    kind listed from the project's store (`storeItems.ts`, website-scoped where Commerce scopes it,
+    Commerce's own excluded); Save writes a new version of the demo's own library pack with the picks
+    alone (`saveStore.ts`), recording only `ownDatapack`. Agents: `list_datapack_export_items` and
+    `start_datapack_export` (only `selections` + `confirm`), and `save_store_changes_to_pack` with no
+    pack named.
 11. **"Save store changes" offers what the SC added by hand** (products, cart rules, customers,
-    companies, empty categories), and says what it left out.
-12. Option and link ids are stripped on save (`data_processors_export.json` L175-181).
-13. A saved pack is shape-checked before it is stored.
+    companies, empty categories), and says what it left out. *Built:* the flyout button opens the
+    same pick screen with the pack, listing only what the pack does not hold (`inPackCount` for the
+    rest); picks are captured with the pack and never join the install record. Every save's sentence
+    and answer say what the store has that the version does not (`leftOut`, six kinds).
+12. Option and link ids are stripped on save (`data_processors_export.json` L175-181). *Built*
+    (`packForm.ts` `customOption`, `bundleOption`).
+13. A saved pack is shape-checked before it is stored. *Built* (`packShape.ts`: the install's own
+    parsers; a refused kind stops the save with the install's reason, nothing stored).
 14. An id that cannot be turned into a name is named in the save's outcome, not kept silently.
-15. A company with no region id is saved with its region name.
+    *Built* (`nameOrId` in `packForm.ts`, used by every pack form; `unnamed` in the answer and its
+    sentence).
+15. A company with no region id is saved with its region name. *Built, capture side*
+    (`companiesKind.ts` `packRegion`). Needs G2's install side to take `{ region: <name> }`: until
+    then the shape check (13) refuses such a save, saying why.
 16. A round-trip test: install a pack, save it back, compare (the service's `datapackComparator.js`).
+    *Built* (`roundTrip.test.ts` over `memoryStore.testUtils.ts`: categories, a product with custom
+    options, quantities).
 
 ### G4: what the screen and the client show and survive (`dataInstallerHandlers.ts`, the activity view, `commerceRestClient.ts`)
 
