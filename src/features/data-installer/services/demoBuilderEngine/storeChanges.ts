@@ -34,6 +34,8 @@ import {
 } from './installRecord';
 import { type TargetCodes, resolveEngineTarget, sessionFor } from './installTarget';
 import type { KindContext } from './kindContext';
+import { packRootOf, placeCategories, readStoreRoot, rootPlacement } from './packRoot';
+import { rootPreview } from './packRootStep';
 import { productLookups } from './productLookups';
 import { GIFT_CARD_KIND } from './productsKind';
 import { rebaseRecord } from './recordFingerprints';
@@ -103,6 +105,11 @@ export interface ChangePreview {
     kinds: KindChanges[];
     /** The one line the install would end with, when it would keep something. */
     kept?: string;
+    /**
+     * Where the pack's own root would go, when it has one (step 12): under the store's root, or a
+     * root of its own with the one Admin step it leaves.
+     */
+    root?: string;
 }
 
 /** The names shown per count: enough to recognise, never the rows. */
@@ -116,7 +123,7 @@ const labelPack = (pack: DatapackId) => `${pack.name}@${pack.version}`;
  * The engine's read access to the project's store, pointed where the pack was installed: the
  * record's target, else (a record made before it was kept, or none) the project's (rule 3).
  */
-async function openStore(deps: StoreChangesDeps, pack: DatapackId, record: InstallRecord | undefined): Promise<KindContext> {
+async function openStore(deps: StoreChangesDeps, pack: DatapackId, record: InstallRecord | undefined, categories?: unknown): Promise<KindContext> {
     const codes = record?.target ?? deps.target;
     if (!codes) throw new StoreChangesError('Choose the website and store view to install into first.');
     const commerce = await deps.commerce();
@@ -124,7 +131,10 @@ async function openStore(deps: StoreChangesDeps, pack: DatapackId, record: Insta
     const target = await resolveEngineTarget(commerce.get, codes);
     // Opened to read what it lists; neither action records anything through it.
     const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack, () => (deps.now ?? (() => new Date()))().toISOString());
-    return { ...commerce, recorder, session: sessionFor(target), log: deps.log };
+    const session = sessionFor(target);
+    // Step 12: where a pack's own root goes is decided as the install decides it.
+    if (packRootOf(categories)) session.storeRoot = await readStoreRoot(commerce.get, codes);
+    return { ...commerce, recorder, session, log: deps.log };
 }
 
 /**
@@ -208,9 +218,12 @@ async function settingsChanges(ctx: KindContext, records: unknown, created: read
  */
 export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, source: DatapackStoreName, dataTypes?: string[]): Promise<ChangePreview> {
     const all = await deps.readPack(pack, source);
-    const items = dataTypes ? Object.fromEntries(Object.entries(all).filter(([kind]) => dataTypes.includes(kind))) : all;
+    const asked = dataTypes ? Object.fromEntries(Object.entries(all).filter(([kind]) => dataTypes.includes(kind))) : all;
     const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack);
-    const ctx = await openStore(deps, pack, record);
+    const ctx = await openStore(deps, pack, record, asked.categories);
+    const placement = rootPlacement(asked.categories, record?.created ?? [], ctx.session.storeRoot);
+    const items = placeCategories(asked, placement);
+    const root = rootPreview(placement, asked.categories, ctx.session.storeRoot, record?.rootStep);
     const plans = await planRepeat(ctx, items, record?.created ?? []);
     // The containers an install would keep, decided the way it decides them, read-only.
     const { take, kept: containers } = await decideRemovals(ctx.get, removalsOf(plans));
@@ -218,7 +231,7 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     const keptThings = [...keptOf(plans), ...(settings?.keep.names ?? []).map((key) => ({ kind: STORE_CONFIG_KIND, key }))];
     const kept = [keptLine(keptThings), containersLine(containers)].filter(Boolean).join(' ');
     const kinds = [...(await summarize(ctx, plans, take)), ...(settings ? [settings] : [])];
-    return { installed: record !== undefined, kinds, ...(kept ? { kept } : {}) };
+    return { installed: record !== undefined, kinds, ...(kept ? { kept } : {}), ...(root ? { root } : {}) };
 }
 
 /**

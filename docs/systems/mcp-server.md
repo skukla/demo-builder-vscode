@@ -795,6 +795,24 @@ JustRite's and called "changed in the Admin" (live, 2026-10-30). A record from b
 pack again into another website than its record names is refused ("… is installed on the website
 justrite_test_website. Remove it first, or install it there."), by `validate_datapack_import` too.
 
+### A pack's own root category (datapack-engine step 12, 2026-10-30)
+
+No new tool. A store shows only the categories under its root, and no API can change a store's
+root (`POST/PUT /V1/store/storeGroups` answer 404 on ACCS). So `start_datapack_import`, for a pack
+with a `root_category` of its own: when no other store shows the install target's store root, it
+leaves the pack's root out and puts its categories under the store's root, and the outcome's `note`
+says so. When another store shares that root (`justrite_test_website` shows JustRite's root 119), it
+makes the pack's root and asks the user, mid-install, through `askDuringOperation` (a VS Code modal
+under an agent): Open the Admin, I've done it, Skip for now. "I've done it" re-reads
+`GET store/storeGroups`; "Skip for now" finishes with the step left open on the install record and
+named in the `note` (Stores > All Stores > the store, Root Category: the pack's root). Running
+`start_datapack_import` again re-checks it (a repeat install rewrites nothing unchanged) and marks it
+done once set; the Data Installer's pack flyout shows the step with its own Check.
+`preview_datapack_changes` answers `root`, the same sentence beforehand. Removal keeps the pack's
+root while a store shows it as its root, saying to point that store back first. "Save store changes"
+writes the pack's root back either way, so the saved version still installs as its own root
+elsewhere. Plan: `.rptc/plans/datapack-engine/step-12-pack-categories-on-storefront.md`.
+
 ### Clearing a demo's part of the store (datapack-engine step 10, 2026-10-30)
 
 The unit chosen is the **store** (store group), by website and store code (owner, 2026-10-30):

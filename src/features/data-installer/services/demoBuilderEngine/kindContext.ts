@@ -12,6 +12,8 @@
 
 import type { z } from 'zod';
 import type { CreatedObject, InstallRecorder } from './installRecord';
+import type { StoreRoot } from './packRoot';
+import type { RootStepAsker } from './packRootStep';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
@@ -31,6 +33,14 @@ export interface CatalogSession {
      * found or made it, else the store's (Commerce's default, id 2, as the service assumes).
      */
     rootCategory: { id: number; name: string };
+    /**
+     * The install target's store and the root it shows, read before an install of a pack with a
+     * root of its own (step 12, `packRoot.ts`): whether another store shares it decides where the
+     * pack's root goes.
+     */
+    storeRoot?: StoreRoot;
+    /** The pack's own root, once the categories kind has found or made it as a root of its own (step 12). */
+    packRoot?: { id: number; name: string };
     /**
      * The website the install target sells on, by code: a pack's stocks sell to it whatever
      * website they named in the store they came from (catalog spec §5). Absent, a pack with
@@ -90,6 +100,8 @@ export interface KindContext {
     session: CatalogSession;
     /** One line per object, for Debug Logs. */
     log: (line: string) => void;
+    /** How an install asks the SC for the one Admin step a pack can leave (step 12); absent, it is left open. */
+    asker?: RootStepAsker;
 }
 
 /** Commerce's default root category, the service's default too (catalog spec §0). */

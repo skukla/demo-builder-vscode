@@ -314,7 +314,11 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v46 (2026-10-29, EDS-61): AGENTS.md's storefront routing section says the smart-404 recovery
 // script runs inline in 404.html, not scripts/delayed.js (Adobe's B2B template has none), and
 // covers category pages. Existing projects would keep sending an agent to delayed.js.
-export const AI_CONTEXT_VERSION = 46;
+// v47 (2026-10-30, datapack-engine step 12): import-datapack and diagnose-demo no longer say a
+// pack's root category is always assigned by hand: Demo Builder's engine puts the pack's categories
+// under the store's own root, and only a SHARED root leaves one Admin step, which the install asks
+// for and a reinstall re-checks. Existing projects would keep telling the agent every root is manual.
+export const AI_CONTEXT_VERSION = 47;
 
 /**
  * Component IDs for standardized component instance access

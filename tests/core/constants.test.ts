@@ -144,8 +144,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // v44: the skills name `republish`, which took `sync_content`'s job (EDS-63).
     // v45: header-nav-footer names the "Commerce: All" catalog line, not "Shop the catalog".
     // v46: AGENTS.md says the smart-404 recovery script lives in 404.html, not delayed.js.
-    it('is 46 (AGENTS.md says the smart-404 script lives in 404.html)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(46);
+    // v47: import-datapack and diagnose-demo say a pack's root goes under the store's own root,
+    // and only a shared root leaves the one Admin step (datapack-engine step 12).
+    it("is 47 (the skills say only a shared store root leaves a pack's root by hand)", () => {
+        expect(AI_CONTEXT_VERSION).toBe(47);
     });
 });
 

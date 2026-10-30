@@ -170,6 +170,30 @@ undo — after an update it would also remove what the pack held before. Deletin
 the Data Installer stays unoffered, for the reasons under "What agents are not given".
 A load into the Data Installer therefore still cannot be undone from here.
 
+## Setting up a store for a demo (for SCs)
+
+What to know before installing a pack into a store, because the Commerce API cannot do it for you.
+
+- **Create the website and store first, then aim the import at it.** No API creates or changes a
+  website, a store or a store view (`POST /V1/store/storeGroups` and `POST /V1/store/storeViews`
+  answer 404 on ACCS; measured 2026-10-30), and no data kind creates one. Make them in the Admin
+  (Stores > All Stores), then pick them in the project's Business Structure step. This is the Data
+  Installer author's own rule too.
+- **Stores on one website always share prices and customer accounts.** Neither setting goes finer
+  than a website: Catalog Price Scope (`catalog/price/scope`) is Global or Website, and Share
+  Customer Accounts (`customer/account_share/scope`) is Global or Per Website. Two demos that need
+  their own prices or their own buyers need two websites, not two stores on one.
+- **A pack's own root category.** A store shows only the categories under its root category, and
+  no API can change that root. When your store's root is its own, Demo Builder puts the pack's
+  categories under it and there is nothing to do. When another store shares it (a test store made
+  beside a demo's, say), the install asks you to set the store's Root Category to the pack's root in
+  the Admin (Stores > All Stores > your store), with Open the Admin, I've done it and Skip for now.
+  A skipped step stays in the pack's flyout on the Data Installer screen, with its own Check.
+  Removing the pack while your store still shows its root keeps that root: set the store's Root
+  Category back first, then remove it again.
+- **Commerce Optimizer (ACO)** groups its catalog by product family, not by a store's root, so it
+  probably has no such step (not tested).
+
 ## Conventions that bind this
 
 The rules are in [the handbook](../development/handbook.md). One matters most here: a

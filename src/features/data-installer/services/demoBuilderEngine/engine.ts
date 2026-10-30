@@ -21,6 +21,8 @@ import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient
 import type { DatapackEngine } from '../datapackEngine';
 import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
 import { resolveEngineTarget, sessionFor } from './installTarget';
+import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
+import { type RootStepAsker, rootStepLine } from './packRootStep';
 import { containersLine } from './removers';
 import { keptLine } from './repeatInstall';
 import { type PackItems, installPack, removePack, unsupportedKinds } from './runPack';
@@ -39,6 +41,12 @@ export interface DemoBuilderEngineDeps {
     log: (line: string) => void;
     files?: RecordFiles;
     now?: () => Date;
+    /**
+     * How an install asks the SC for the one Admin step a pack can leave, and opens the Admin
+     * (step 12): `askDuringOperation` and the dashboard's Admin opening, from `buildDatapackEngine`.
+     * Absent, the step is left open on the record without a question.
+     */
+    asker?: RootStepAsker;
 }
 
 const NO_TARGET = 'Choose the website and store view to install into first.';
@@ -94,15 +102,24 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     if (missing.length > 0) throw new Error(`The pack holds no ${missing.join(', ')}.`);
     const commerce = await access(deps);
     const target = await resolveEngineTarget(commerce.get, request.target);
+    const session = sessionFor(target);
+    // Step 12: whether another store shows this store's root decides where a pack's own root goes.
+    if (packRootOf(items.categories)) session.storeRoot = await readStoreRoot(commerce.get, request.target);
     const now = deps.now ?? (() => new Date());
     const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString(), request.target);
     let current: string | undefined;
-    const outcome = await installPack({ ...commerce, recorder, session: sessionFor(target), log: deps.log }, items, (kind) => {
+    const outcome = await installPack({ ...commerce, recorder, session, log: deps.log, asker: deps.asker }, items, (kind) => {
         if (current) job.perType[current] = 'success';
         current = kind;
         job.perType[kind] = 'processing';
     });
-    job.note = [keptLine(outcome.kept), containersLine(outcome.containers), settingsLine(outcome.settings, 'Set')].filter(Boolean).join(' ') || undefined;
+    job.note = [
+        keptLine(outcome.kept),
+        containersLine(outcome.containers),
+        settingsLine(outcome.settings, 'Set'),
+        underStoreRootLine(outcome.rootPlacement, items.categories, session.storeRoot),
+        rootStepLine(outcome.rootStep),
+    ].filter(Boolean).join(' ') || undefined;
     if (current) job.perType[current] = 'success';
 }
 

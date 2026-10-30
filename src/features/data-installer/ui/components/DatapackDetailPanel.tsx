@@ -35,6 +35,7 @@ import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
+import { PackSetupStepNotice } from './PackSetupStepNotice';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';
 import { ShareLibraryPackButton } from './ShareLibraryPackButton';
@@ -75,10 +76,7 @@ export interface DatapackDetailPanelProps {
      */
     installsFromLibrary: boolean;
     /**
-     * "Save store changes to this pack" was pressed (datapack-engine step 05). Handed in only for
-     * the pack the open project holds, installed by Demo Builder's engine; the button shows
-     * exactly when it is. The catalog hosts the progress window, as it hosts the import modal.
-     */
+     * "Save store changes to this pack" (step 05); with it, that pack's Admin step (step 12). Only for the pack the project holds by Demo Builder's engine; the catalog hosts the progress. */
     onSaveStoreChanges?: (id: DatapackId) => void;
     /**
      * Rename the SC's own library pack (datapack-engine step 07), through the house
@@ -130,6 +128,7 @@ export function DatapackDetailPanel({
                     </div>
                     <div className="db-drawer-body">
                         {renderPanelBody({ detail, inventory, loading, failure, onRetry })}
+                        {onSaveStoreChanges && detail && !loading ? <PackSetupStepNotice id={detail.id} /> : null}
                         {canImport({ importable, loading, failure }) && detail ? (
                             <PanelActions
                                 detail={detail}

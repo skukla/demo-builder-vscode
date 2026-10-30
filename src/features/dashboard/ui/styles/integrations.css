@@ -224,42 +224,17 @@
     margin: 0;
 }
 
-/* Where / Enter / Then / Why is `ui/FactList` (core/ui/styles/fact-list.css). */
+/* Where / Enter / Then / Why is `ui/SetupStepFacts` over `ui/FactList` (core/ui/styles/fact-list.css). */
 
-.setup-guide-path {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 8px;
-}
 
-/* A path segment: a quiet pill at body size, so the path reads as the Admin's own menu. */
-.setup-guide-crumb {
-    padding: 2px 10px;
-    border-radius: 10px;
-    background: var(--spectrum-global-color-gray-200);
-    white-space: nowrap;
-}
 
 /* A step label may take two lines; it must never be cut off. */
 .setup-guide-rail-title {
     overflow-wrap: anywhere;
 }
 
-.setup-guide-crumb-sep {
-    color: var(--spectrum-global-color-gray-500);
-}
 
-.setup-guide-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-}
 
-/* The reason reads a step quieter than the instructions above it. */
-.setup-guide-why {
-    color: var(--spectrum-global-color-gray-700);
-}
 
 /* Skip (or Reopen) is the rare action, so it is a quiet link under the step rather than a
    third footer button. */

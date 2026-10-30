@@ -10,7 +10,8 @@
 
 import * as vscode from 'vscode';
 import { hasAdobeWorkspaceContext, hasAdobeProjectContext } from './meshStatusHelpers';
-import { openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
+import { openPrivateBrowser } from '@/core/utils/browserUtils';
+import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
 import { validateURL } from '@/core/validation/URLValidator';
 import {
     validateOrgId,
@@ -117,9 +118,11 @@ export const handleOpenDaLive: MessageHandler = async (context, data) => {
  */
 export const handleOpenAdminPanel: MessageHandler = async (context) => {
     const project = await context.stateManager.getCurrentProject();
-    const url = getAdminPanelUrl(project);
+    // Validated before it opens (a user-supplied URL), in a private window; shared with a
+    // datapack install's "Open the Admin" (`openCommerceAdmin`). No URL in the log.
+    const opening = await openCommerceAdmin(project);
 
-    if (!url) {
+    if (opening.outcome === 'no-url') {
         // Fire-and-forget — the notification must not block the handler response.
         void vscode.window
             .showInformationMessage('No Admin Panel URL is set for this project.', 'Open Configure')
@@ -139,26 +142,12 @@ export const handleOpenAdminPanel: MessageHandler = async (context) => {
         return { success: true };
     }
 
-    // Validate URL before opening (security: prevents malicious URL injection).
-    // http is allowed alongside https — the Configure field accepts both, and the
-    // localhost/private-IP blocks still apply (mirrors configureHandlers).
-    try {
-        validateURL(url, ['https', 'http']);
-    } catch (validationError) {
-        context.logger.error(
-            '[Dashboard] Admin panel URL validation failed',
-            validationError as Error,
-        );
+    if (opening.outcome === 'invalid') {
+        context.logger.error('[Dashboard] Admin panel URL validation failed', opening.error as Error);
         return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
     }
 
-    // No URL in the log — the stored value is user-supplied and may embed credentials.
-    context.logger.debug('[Dashboard] Opening admin panel');
-    // A private window, like the live site: Commerce Admin rejects a request whose
-    // adobe.com cookies have grown too large ("400 Request Header Or Cookie Too
-    // Large"), and a normal profile collects them.
-    await openInIncognito(url);
-
+    context.logger.debug('[Dashboard] Opened admin panel');
     return { success: true };
 };
 

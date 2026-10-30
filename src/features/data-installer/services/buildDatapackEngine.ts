@@ -21,6 +21,8 @@ import { readPackFromStore } from './datapackTransfer';
 import { type DemoBuilderEngineDeps, demoBuilderEngine } from './demoBuilderEngine/engine';
 import { type RecordFiles, nodeRecordFiles, readInstallRecord } from './demoBuilderEngine/installRecord';
 import type { PackItems } from './demoBuilderEngine/runPack';
+import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
+import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { commerceClientForProject } from '@/features/project-creation/services/erpFillForProject';
@@ -67,6 +69,14 @@ export function buildDatapackEngine(id: DatapackEngineId, access: DatapackEngine
         readPack: (pack, _dataTypes, source) => readPackItems(access, pack, source),
         projectPath: access.project.path,
         log,
+        // Step 12: the one Admin step a pack can leave is asked where the SC is looking (PL-59).
+        asker: {
+            ask: (question, ...actions) => askDuringOperation(question, ...actions),
+            openAdmin: async () => {
+                const opening = await openCommerceAdmin(access.project);
+                if (opening.outcome !== 'opened') log(`could not open the Admin: ${opening.outcome === 'no-url' ? 'no Admin URL is set for this project' : 'its URL is not valid'}`);
+            },
+        },
     });
 }
 

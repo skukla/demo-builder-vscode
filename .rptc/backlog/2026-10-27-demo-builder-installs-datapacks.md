@@ -76,3 +76,5 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-30  fix(data-installer): the wipe refuses a website another local project calls its own (`b7092cf70`)
 - 2026-10-30  feat(data-installer): the wipe clears a chosen set of stores and closes their orders by the one reset rule (`8edccf458`)
 - 2026-10-30  feat(data-installer): one wipe clears an ERP-served store's orders through the integration (`bbec49484`)
+- 2026-10-30  feat(data-installer): cart rules, coupons and gift cards in packs (datapack step 11) (`39c7ad5fd`)
+- 2026-10-30  docs(datapack): record the wipe's live run and the ERP branches to merge before beta.153 (`2ff7af512`)

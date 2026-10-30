@@ -143,10 +143,24 @@ waiting for the symptom.
   If the pack has `cart_rules` or `coupons`, say so — nothing will report it
   later.
 
-And one that only bites AFTER a successful import: **a root category is assigned
-by hand.** The service builds the category tree but does not attach it to a
-store, so the storefront reads empty until someone does. `diagnose-demo` carries
-the full symptom, including why `GET /V1/categories` hides it.
+And one that only bites AFTER a successful import: **a pack's own root category.**
+A store shows only the categories under its root, and no API can change a store's
+root (the store routes are read-only). With Demo Builder's engine:
+
+- **The store's root is its own** (no other store shows it): the pack's
+  categories go straight under it, and the install's note says so. Nothing to do.
+- **The root is shared with another store**: the pack keeps its own root, and the
+  install pauses to ask the SC to set it in the Admin (Stores > All Stores > the
+  store > Root Category). "Skip for now" finishes the install with that step left
+  open; the note (`get_datapack_import_status`) names the store and the value, and
+  `preview_datapack_changes` says it beforehand (`root`). Pass the step to the
+  user word for word: you cannot do it. Running `start_datapack_import` again
+  re-checks it (nothing else is rewritten) and marks it done once it is set.
+
+With the service engine, the root is never attached: the storefront reads empty
+until someone sets it by hand. `diagnose-demo` carries the full symptom, including
+why `GET /V1/categories` hides it. On an Edge Delivery storefront, `republish`
+rebuilds the catalog menu once the categories show.
 
 ## If the Data Installer is not there at all
 

@@ -16,7 +16,11 @@
  * of its own and its paths start with that root's name, which install maps onto whatever root
  * the next store has. When it is a root the pack made, it is written as the pack's
  * `root_category`. (The service matches a root by name, and without one exports the store's root
- * as an ordinary category, §2.)
+ * as an ordinary category, §2.) A pack that HAS a root of its own keeps it (step 12): its
+ * categories may have gone under the store's root (`packRoot.ts`), or the SC may have made the
+ * pack's root the store's, and either way the save writes the installed version's root (or the
+ * root this engine made, as it is now) and starts every path with its name, so the new version
+ * still installs as its own root on another store.
  *
  * Customers, groups, companies, shared catalogs and their assignments are captured beside these
  * (`captureB2b.ts`, step 08), and cart rules with their coupons (`capturePromotions.ts`, step 11). A
@@ -33,6 +37,7 @@ import { capturePromotions } from './capturePromotions';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, segment } from './kindContext';
 import { ancestorIds, attributePackForm, categoryPackForm, productPackForm } from './packForm';
+import { packRootOf } from './packRoot';
 import { type ProductLookups, type StoreCategory, productLookups } from './productLookups';
 import { GIFT_CARD_KIND } from './productsKind';
 import { captureSettings } from './storeConfigKind';
@@ -70,7 +75,7 @@ function linkedCategories(product: CommerceProduct): string[] {
 /** The root a category hangs from: the second id in its path. */
 const rootOf = (category: StoreCategory): string | undefined => (category.path ?? '').split('/').filter(Boolean)[1];
 
-async function captureCategories(lk: ProductLookups, recorded: string[], linked: string[], storeRoot: number): Promise<{ records?: unknown; count: number }> {
+async function captureCategories(lk: ProductLookups, recorded: string[], linked: string[], storeRoot: number, packRoot?: Row): Promise<{ records?: unknown; count: number }> {
     const wanted = new Set<string>();
     let root: string | undefined;
     for (const id of [...recorded, ...linked]) {
@@ -81,7 +86,7 @@ async function captureCategories(lk: ProductLookups, recorded: string[], linked:
         for (const each of [...ancestorIds(category), String(category.id)]) wanted.add(each);
     }
     root ??= String(storeRoot);
-    const rows: Array<{ depth: number; row: unknown }> = [];
+    const rows: Array<{ depth: number; row: { category: Row } }> = [];
     for (const id of wanted) {
         const category = await lk.category(id);
         if (!category || String(category.id) === root || rootOf(category) !== root) continue;
@@ -89,9 +94,25 @@ async function captureCategories(lk: ProductLookups, recorded: string[], linked:
     }
     if (rows.length === 0) return { count: 0 };
     const categories = rows.sort((a, b) => a.depth - b.depth).map((r) => r.row);
-    const own = root === String(storeRoot) ? undefined : await lk.category(root);
-    const rootRow = own ? (({ path: _path, ...fields }) => fields)((await categoryPackForm(lk, own)).category) : undefined;
-    return { records: { ...(rootRow ? { root_category: rootRow } : {}), categories }, count: categories.length };
+    const rootRow = await rootRowOf(lk, root, recorded, String(storeRoot), packRoot);
+    return { records: { ...(rootRow ? { root_category: rootRow } : {}), categories: rootRow ? renamedTop(categories, String(rootRow.name)) : categories }, count: categories.length };
+}
+
+/**
+ * The pack's root row: the root this engine made, as it is now; else, when the installed version
+ * has a root of its own, that root (step 12); else none, the paths naming the store's root.
+ */
+async function rootRowOf(lk: ProductLookups, root: string, recorded: string[], storeRoot: string, packRoot: Row | undefined): Promise<Row | undefined> {
+    const own = root !== storeRoot || recorded.includes(root) ? await lk.category(root) : undefined;
+    if (own) return (({ path: _path, ...fields }) => fields)((await categoryPackForm(lk, own)).category);
+    if (!packRoot) return undefined;
+    const { path: _path, ...fields } = packRoot;
+    return fields;
+}
+
+/** Each path started with the pack root's name in place of the store root's it was read under. */
+function renamedTop(rows: Array<{ category: Row }>, rootName: string): Array<{ category: Row }> {
+    return rows.map(({ category }) => ({ category: { ...category, path: [rootName, ...String(category.path ?? '').split('/').slice(1)].join('/') } }));
 }
 
 /** The user-defined attributes named, with their options; Commerce's own are every store's. */
@@ -232,7 +253,7 @@ export async function capturePack(ctx: KindContext, created: readonly CreatedObj
     const isGiftCard = (p: CommerceProduct) => giftCards.has(p.sku.toLowerCase());
     const productRows = await Promise.all(products.filter((p) => !isGiftCard(p)).map((p) => productPackForm(lk, p)));
     const giftCardRows = await Promise.all(products.filter(isGiftCard).map((p) => productPackForm(lk, p)));
-    const categories = await captureCategories(lk, idsOf(created, 'categories'), products.flatMap(linkedCategories), ctx.session.rootCategory.id);
+    const categories = await captureCategories(lk, idsOf(created, 'categories'), products.flatMap(linkedCategories), ctx.session.rootCategory.id, packRootOf(installed.categories));
     const codes = await attributeCodes(lk, products, created);
     for (const code of names.attributeCodes) codes.add(code);
     const attributes = await captureAttributes(lk, codes);

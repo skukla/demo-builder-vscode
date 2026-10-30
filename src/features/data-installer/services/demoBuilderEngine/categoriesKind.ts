@@ -14,8 +14,10 @@
  *
  * Endpoints (spec §4): `GET categories/list`, `POST categories`, `DELETE categories/{id}`.
  *
- * Open (not decided here): a new root category shows on a storefront only once the store uses
- * it as its root. The service does not set that, and neither does this.
+ * A new root category shows on a storefront only once the store uses it as its root, and no API
+ * can set that. So when the store's root is its own, the install leaves the pack's root out and
+ * its categories go under the store's (`packRoot.ts`); when it is shared, the root is made and the
+ * SC is asked for the one Admin step (`packRootStep.ts`, step 12).
  *
  * @module features/data-installer/services/demoBuilderEngine/categoriesKind
  */
@@ -115,6 +117,7 @@ export async function installCategories(ctx: KindContext, pack: CategoryPack): P
             return;
         }
         ctx.session.rootCategory = { id, name: pack.root_category.name };
+        ctx.session.packRoot = { id, name: pack.root_category.name };
     }
     const rows = [...pack.categories].sort((a, b) => depth(a.category.path) - depth(b.category.path));
     // A pack with no root of its own names the root of the store it came from first in every

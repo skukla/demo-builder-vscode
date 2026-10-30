@@ -13,6 +13,7 @@
  * @module features/data-installer/types
  */
 
+import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 
@@ -255,4 +256,15 @@ export interface ServiceHealth {
     reachable: boolean;
     message?: string;
     envChecks?: Record<string, string>;
+}
+
+/**
+ * The Admin step an installed pack left (datapack-engine step 12), as `get-datapack-setup-step`
+ * and `check-datapack-setup-step` answer it: in the setup guide's own step format, so it reads as
+ * every other manual step does. `step` is null when the pack left none.
+ */
+export interface DatapackSetupStep {
+    datapackName: string;
+    version: string;
+    step: SetupChecklistItem | null;
 }

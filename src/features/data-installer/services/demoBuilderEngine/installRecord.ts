@@ -51,6 +51,26 @@ export interface TargetCodes {
     storeCode: string;
 }
 
+/**
+ * The Admin step a pack left (step 12, `packRootStep.ts`): the store shares its root category, so
+ * the pack kept its own root, and only the SC can point the store at it.
+ */
+export interface PackRootStep {
+    state: 'open' | 'done';
+    /** The store (store group) to change, by code and as the Admin names it. */
+    storeCode: string;
+    storeName: string;
+    /** The pack's root category, by id and name. */
+    rootId: number;
+    rootName: string;
+    /** The root the store showed before, which removal asks to be put back first. */
+    storeRootId: number;
+    /** The stores sharing that root, as the question names them. */
+    sharedWith: string;
+    /** What the last check found. */
+    note?: string;
+}
+
 /** What the file holds. */
 export interface InstallRecord {
     format: 1;
@@ -63,6 +83,8 @@ export interface InstallRecord {
      * written before it was kept; those read at the project's (rule 3).
      */
     target?: TargetCodes;
+    /** The Admin step the pack left, when its root is a root of its own (step 12). */
+    rootStep?: PackRootStep;
     created: CreatedObject[];
 }
 
@@ -82,6 +104,10 @@ export interface InstallRecorder {
     readonly created: readonly CreatedObject[];
     /** Where the pack was installed, when the record says. */
     readonly target?: TargetCodes;
+    /** The Admin step the pack left, when it left one. */
+    readonly rootStep?: PackRootStep;
+    /** Write down where that step stands. */
+    setRootStep(step: PackRootStep): Promise<void>;
     has(kind: string, id: string): boolean;
     record(object: CreatedObject): Promise<void>;
     /** Change what is kept about an object already recorded; nothing for one that is not. */
@@ -108,6 +134,18 @@ const recordSchema = z.object({
     engine: z.literal('demo-builder'),
     startedAt: z.string(),
     target: z.object({ websiteCode: z.string(), storeCode: z.string() }).optional(),
+    rootStep: z
+        .object({
+            state: z.enum(['open', 'done']),
+            storeCode: z.string(),
+            storeName: z.string(),
+            rootId: z.number(),
+            rootName: z.string(),
+            storeRootId: z.number(),
+            sharedWith: z.string(),
+            note: z.string().optional(),
+        })
+        .optional(),
     created: z.array(
         z.object({
             kind: z.string(),
@@ -223,6 +261,13 @@ export async function openInstallRecord(
             return record.created;
         },
         target: record.target,
+        get rootStep() {
+            return record.rootStep;
+        },
+        async setRootStep(step) {
+            record.rootStep = step;
+            await save();
+        },
         has: (kind, id) => indexOf(kind, id) >= 0,
         async record(object) {
             if (indexOf(object.kind, object.id) >= 0) return;

@@ -28,6 +28,8 @@ import { COUPON_KIND, couponsOfRule, removeCoupon } from './couponsKind';
 import { removeCustomer, removeCustomerGroup } from './customerKinds';
 import type { CreatedObject } from './installRecord';
 import { readOrNull, segment } from './kindContext';
+import { ROOT_KEY } from './packForm';
+import { storeShowingRoot } from './packRootStep';
 import type { StoreCategory } from './productLookups';
 import { PRODUCT_KINDS, removeProduct } from './productsKind';
 import { removeAssignmentPair, removeCatalog, splitPair } from './sharedCatalogKinds';
@@ -158,6 +160,9 @@ async function heldByOthers(get: CommerceGet, object: CreatedObject, removal: Ta
     if (object.kind === 'categories') {
         const category = await readOrNull<StoreCategory>(get, `categories/${segment(object.id)}`);
         const name = category?.name ?? object.id;
+        // Step 12: a store the SC pointed at the pack's root would be left with no root at all.
+        const showing = object.key === ROOT_KEY ? await storeShowingRoot(get, object.id) : undefined;
+        if (showing) return { object, kind: 'category', name, count: 0, holds: 'thing', reason: showing };
         const others = (category?.children ?? '').split(',').map((id) => id.trim()).filter((id) => id !== '' && !taking.has(keyOfObject('categories', id)));
         if (others.length > 0) return { object, kind: 'category', name, count: others.length, holds: 'category' };
         // Its products too: deleting the category would leave the SC's own in no category at all.

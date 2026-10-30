@@ -2,11 +2,12 @@
  * .fact-list — labelled lines that scan as one small table (`ui/FactList`).
  *
  * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `dashboard` and `integrations` (the
- * setup guide). A new host bundle imports it in its entry, or the
+ * setup guide), and `dataInstaller` (a pack's Admin step, `ui/SetupStepFacts`). A new host bundle imports it in its entry, or the
  * list renders as browser-default definition lines with no error.
  *
  * Moved unchanged on 2026-10-23 from the dashboard's integrations.css (.setup-guide-facts),
- * in the same layer.
+ * in the same layer. The step's path, pills and reason (`ui/SetupStepFacts`) moved unchanged from
+ * the same file, in the same layer, on 2026-10-30.
  */
 
 @layer theme {
@@ -27,5 +28,35 @@
     .fact-list dd {
         margin: 0;
         min-width: 0;
+    }
+
+    .setup-guide-path {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 8px;
+    }
+
+    /* A path segment: a quiet pill at body size, so the path reads as the Admin's own menu. */
+    .setup-guide-crumb {
+        padding: 2px 10px;
+        border-radius: 10px;
+        background: var(--spectrum-global-color-gray-200);
+        white-space: nowrap;
+    }
+
+    .setup-guide-crumb-sep {
+        color: var(--spectrum-global-color-gray-500);
+    }
+
+    .setup-guide-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    /* The reason reads a step quieter than the instructions above it. */
+    .setup-guide-why {
+        color: var(--spectrum-global-color-gray-700);
     }
 }

@@ -31,8 +31,7 @@ import React from 'react';
 import { StepHeader } from './StepHeader';
 import type { GuideRun } from './useGuideRun';
 import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
-import { CopyableText } from '@/core/ui/components/ui/CopyableText';
-import { Fact, FactList } from '@/core/ui/components/ui/FactList';
+import { SetupStepFacts } from '@/core/ui/components/ui/SetupStepFacts';
 import { cn } from '@/core/ui/utils/classNames';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
@@ -131,25 +130,6 @@ export function StepList({ items, index, onSelect, checkingId, animateMarks }: S
     );
 }
 
-/** The Admin menu path as breadcrumbs, or the sentence when the catalog gives no path. */
-function WhereLine({ item }: { item: SetupChecklistItem }): React.ReactElement {
-    if (!item.path) return <span>{item.where}</span>;
-    return (
-        <span className="setup-guide-path" aria-label={item.path.join(' > ')}>
-            {item.path.map((segment, i) => (
-                <React.Fragment key={`${i}-${segment}`}>
-                    {i > 0 && (
-                        <span className="setup-guide-crumb-sep" aria-hidden="true">
-                            ›
-                        </span>
-                    )}
-                    <span className="setup-guide-crumb">{segment}</span>
-                </React.Fragment>
-            ))}
-        </span>
-    );
-}
-
 export interface StepProps {
     item: SetupChecklistItem;
     busy: boolean;
@@ -191,30 +171,6 @@ function SkipOrReopen({ item, busy, onSet }: StepProps): React.ReactElement | nu
     );
 }
 
-/** Where / Enter / Then / Why: labelled lines that scan as one small table. */
-function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
-    return (
-        <FactList>
-            <Fact label="Where">
-                <WhereLine item={item} />
-            </Fact>
-            {item.enter && (
-                <Fact label="Enter">
-                    <div className="setup-guide-pills">
-                        {item.enter.map((value) => (
-                            <CopyableText key={value}>{value}</CopyableText>
-                        ))}
-                    </div>
-                </Fact>
-            )}
-            {item.then && <Fact label="Then">{item.then}</Fact>}
-            <Fact label="Why">
-                <span className="setup-guide-why">{item.why}</span>
-            </Fact>
-        </FactList>
-    );
-}
-
 /**
  * One step: its header (title, where it stands, one line), where, what to enter, what then,
  * why, and the quiet skip. The buttons that act on it sit in the dialog's footer (SetupGuideModal), where
@@ -229,7 +185,7 @@ export function SetupGuideStep(props: StepProps): React.ReactElement {
             aria-hidden={shown ? undefined : true}
         >
             <StepHeader item={item} integrationId={props.integrationId} run={props.run} />
-            <StepFacts item={item} />
+            <SetupStepFacts item={item} />
             <SkipOrReopen {...props} />
         </div>
     );

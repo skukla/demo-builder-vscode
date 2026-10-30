@@ -12,7 +12,13 @@
  *   when started from one. Undone by deleting the new version from the library
  *   (`delete-library-datapack`).
  *
- * Both open as every datapack write does (`resolveDatapackWriteAccess`), then check the sign-in
+ * - `get-datapack-setup-step` / `check-datapack-setup-step` (step 12): the one Admin step a pack
+ *   can leave (its root category is a root of its own, and only the SC can point the store at
+ *   it), in the setup guide's step format, and its Check: the install's own read-only check
+ *   (`GET store/storeGroups`), which marks it done with no reinstall. The get reads only the
+ *   install record.
+ *
+ * The rest open as every datapack write does (`resolveDatapackWriteAccess`), then check the sign-in
  * is in the org that owns the store (`orgGuard`, adobe-org-context), since both read it with the
  * project's own credential.
  *
@@ -22,9 +28,13 @@
 import { projectCommerce, readPackItems } from '../services/buildDatapackEngine';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { writePackToStore } from '../services/datapackTransfer';
+import { nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
+import { checkRecordedRootStep, recordedRootStep, rootStepItem } from '../services/demoBuilderEngine/packRootCheck';
+import type { PackRootStep } from '../services/demoBuilderEngine/packRootStep';
 import { type StoreChangesDeps, StoreChangesError, previewChanges, saveStoreChanges } from '../services/demoBuilderEngine/storeChanges';
 import { type DemoPackSave, demoPackSaveFor, recordDemoPackSave } from '../services/demoPack';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
+import type { DatapackSetupStep } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { libraryReads } from './libraryReads';
@@ -32,6 +42,7 @@ import { DATAPACK_SAVE_OPERATION_ID } from '@/core/utils/operationIds';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { type OperationOutcome, withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
+import { handleOpenAdminPanel } from '@/features/dashboard/handlers/openUrlHandlers';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
@@ -160,7 +171,36 @@ async function save(context: HandlerContext, opened: OpenedStore, report: (stage
     }
 }
 
+/** The step's answer: the pack, and its step as the setup guide lists one, or null. */
+function setupStepAnswer(pack: DatapackId, step: PackRootStep | undefined): HandlerResponse {
+    const data: DatapackSetupStep = { datapackName: pack.name, version: pack.version, step: step ? rootStepItem(step) : null };
+    return { success: true, data };
+}
+
 export const storeChangesHandlers = defineHandlers({
+    // Step 12: the Admin step a pack left, from its install record. Reads no store.
+    'get-datapack-setup-step': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
+        const input = readPayload(payload);
+        if ('error' in input) return { success: false, error: input.error };
+        const project = await context.stateManager.getCurrentProject();
+        if (!project) return setupStepAnswer(input.pack, undefined);
+        return setupStepAnswer(input.pack, await recordedRootStep(nodeRecordFiles, project.path, input.pack));
+    },
+
+    // Step 12: the step's Check, read-only against the store; only the install record is written.
+    'check-datapack-setup-step': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
+        const opened = await openStoreChanges(context, payload);
+        if ('response' in opened) return opened.response;
+        try {
+            return setupStepAnswer(opened.pack, await checkRecordedRootStep(opened.deps, opened.pack));
+        } catch (error) {
+            return failure(context, error, 'The step could not be checked.');
+        }
+    },
+
+    // The step's "Open the Admin", as the dashboard's Admin button opens it.
+    openAdminPanel: handleOpenAdminPanel,
+
     'preview-datapack-changes': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
         const opened = await openStoreChanges(context, payload);
         if ('response' in opened) return opened.response;

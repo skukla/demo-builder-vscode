@@ -34,6 +34,8 @@ import {
     removalOrder,
 } from './installRecord';
 import type { KindContext, SettingsDone } from './kindContext';
+import { type RootPlacement, placeCategories, rootPlacement } from './packRoot';
+import { type PackRootStep, settlePackRoot } from './packRootStep';
 import { GIFT_CARD_KIND, PRODUCT_KINDS, installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
 import { type KeptContainer, type RemovalAccess, decideRemovals, takeBack } from './removers';
@@ -111,6 +113,10 @@ export interface InstallOutcome {
     containers: KeptContainer[];
     /** What the store settings kind set and put back (step 09), when the pack holds settings. */
     settings?: SettingsDone;
+    /** Where the pack's own root went (step 12), when it has one. */
+    rootPlacement?: RootPlacement;
+    /** The Admin step the pack left, when its root is a root of its own (step 12). */
+    rootStep?: PackRootStep;
 }
 
 /**
@@ -121,9 +127,12 @@ export interface InstallOutcome {
  * @param onKind - called as each kind starts, for progress
  * @throws UnsupportedKindsError before any write, when the pack holds a kind not listed above
  */
-export async function installPack(ctx: KindContext, items: PackItems, onKind: (kind: string) => void = () => undefined): Promise<InstallOutcome> {
-    const unsupported = unsupportedKinds(items);
+export async function installPack(ctx: KindContext, packItems: PackItems, onKind: (kind: string) => void = () => undefined): Promise<InstallOutcome> {
+    const unsupported = unsupportedKinds(packItems);
     if (unsupported.length > 0) throw new UnsupportedKindsError(unsupported);
+    // Step 12: under the store's own root, the pack's root is left out; the record says which once made.
+    const placement = rootPlacement(packItems.categories, ctx.recorder.created, ctx.session.storeRoot);
+    const items = placeCategories(packItems, placement);
     const plans = await planRepeat(ctx, items, ctx.recorder.created);
     ctx.session.owned = ownedFrom(plans);
     // Hashed means an earlier install finished with it; one that stopped part-way left its
@@ -131,17 +140,26 @@ export async function installPack(ctx: KindContext, items: PackItems, onKind: (k
     ctx.session.productsBefore = new Set(
         ctx.recorder.created.filter((o) => PRODUCT_KINDS.includes(o.kind) && o.fingerprint !== undefined).map((o) => o.id),
     );
+    let rootStep: PackRootStep | undefined;
     for (const step of STEPS) {
         if (!(step.kind in items)) continue;
         onKind(step.kind);
         await applyUpdates(ctx, plans, step.kind);
         await step.install(ctx, items[step.kind]);
+        // The pack kept its own root: the one Admin step, checked and asked for before the rest goes in.
+        if (step.kind === 'categories' && placement === 'own' && ctx.session.storeRoot) rootStep = await settlePackRoot(ctx, ctx.session.storeRoot, ctx.asker);
     }
     const containers = await applyRemovals(ctx, plans);
     await recordFingerprints(ctx, items);
     const settings = ctx.session.settings;
     const keptSettings = (settings?.kept ?? []).map((key): KeptThing => ({ kind: STORE_CONFIG_KIND, key }));
-    return { kept: [...keptOf(plans), ...keptSettings], containers, ...(settings ? { settings } : {}) };
+    return {
+        kept: [...keptOf(plans), ...keptSettings],
+        containers,
+        ...(settings ? { settings } : {}),
+        ...(placement ? { rootPlacement: placement } : {}),
+        ...(rootStep ? { rootStep } : {}),
+    };
 }
 
 /** What a removal did. */

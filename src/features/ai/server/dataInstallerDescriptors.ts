@@ -233,7 +233,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'What installing a datapack again would change in this project\'s store: by data kind, how many ' +
             'things Demo Builder made would be updated to the pack, added, removed, or kept because they were ' +
             'changed in the Admin, with a few names each. Writes nothing. installed:false means Demo Builder ' +
-            'never installed the pack here, so every row would be new.',
+            'never installed the pack here, so every row would be new. root (a pack with a root category of its ' +
+            "own) says where it would go: under the store's own root, or a root of its own with one Admin step.",
         map: importHandlers,
         type: 'preview-datapack-changes',
         inputSchema: {
@@ -316,7 +317,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'Installing a pack again updates and removes what it made before and keeps what was ' +
             'changed in the Admin; the outcome\'s note says what it kept, and preview_datapack_changes ' +
             'says it beforehand. A pack\'s store_config rows are written last, and the note names each ' +
-            'setting set, by path, with its old and new value.',
+            'setting set, by path, with its old and new value. A pack\'s own root category goes under the ' +
+            "store's root when no other store shares it; when one does, the install asks the user for the one " +
+            'Admin step (no API can change a store\'s root), and the note names it if skipped. Running it ' +
+            'again re-checks that step and marks it done once set.',
         map: importHandlers,
         type: 'start-datapack-import',
         confirm: true,
