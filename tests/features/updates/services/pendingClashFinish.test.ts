@@ -41,6 +41,7 @@ type TestDeps = FinishDeps & {
     latestTarget: jest.Mock<Promise<string | undefined>, [Project, PendingClash]>;
     recordTemplateVersion: jest.Mock;
     restorePieces: jest.Mock;
+    livePatches: jest.Mock;
 };
 
 async function keptProject(before?: () => void): Promise<{ project: Project; deps: TestDeps }> {
@@ -59,6 +60,7 @@ async function keptProject(before?: () => void): Promise<{ project: Project; dep
         latestTarget: jest.fn(async (_project: Project, _clash: PendingClash) => fx.t2 as string | undefined),
         recordTemplateVersion: jest.fn(async () => undefined),
         restorePieces: jest.fn(async () => []),
+        livePatches: jest.fn(async () => []),
     };
     return { project, deps };
 }
@@ -281,6 +283,7 @@ describe('finishClash', () => {
             latestTarget: jest.fn(async () => fx.t2),
             recordTemplateVersion: jest.fn(async () => undefined),
             restorePieces: jest.fn(async () => []),
+            livePatches: jest.fn(async () => []),
         };
 
         await expect(finishClash(project, deps)).resolves.toMatchObject({ kind: 'finished' });

@@ -163,7 +163,9 @@ describe('template sync', () => {
             strategy: 'merge',
             syncedCommit: '',
             conflicts: ['blocks/hero/hero.js'],
-            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
+            error:
+                'The update stopped on 1 file that was edited (blocks/hero/hero.js, an edit made in this storefront). '
+                + 'Nothing was changed: the storefront on GitHub is as it was.',
         };
 
         it('by default STOP: reported as a failure naming the file, no reset, no commit recorded', async () => {

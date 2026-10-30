@@ -266,3 +266,35 @@ export function buildQuickEditScriptsJs(existing: string): string {
         ? withSidekick
         : withSidekick.replace(QUICK_EDIT_FIRSTIMAGE_ANCHOR, QUICK_EDIT_FIRSTIMAGE_GUARD);
 }
+
+/** Each marked edit as the text it puts in and the text it replaced: what taking it out swaps. */
+const MARKED_EDITS: ReadonlyArray<{ ours: string; theirs: string }> = [
+    { ours: `${QUICK_EDIT_BRANCH_ANCHOR}${QUICK_EDIT_BRANCH}`, theirs: QUICK_EDIT_BRANCH_ANCHOR },
+    { ours: `${QUICK_EDIT_LOADLAZY_ANCHOR}${QUICK_EDIT_SIDEKICK_BLOCK}`, theirs: QUICK_EDIT_LOADLAZY_ANCHOR },
+    { ours: QUICK_EDIT_FIRSTIMAGE_GUARD, theirs: QUICK_EDIT_FIRSTIMAGE_ANCHOR },
+];
+
+/**
+ * `scripts/scripts.js` with Demo Builder's three marked Quick Edit edits taken out: the
+ * inverse of {@link buildQuickEditScriptsJs}, so an update can apply Adobe's change to Adobe's
+ * own lines and the wiring is put back after it (JustRite, 2026-10-30: Adobe changed the
+ * `loadHeader` line the Sidekick listener sits above, and every update stopped there).
+ *
+ * Only an edit that is in the file exactly as written here, exactly once, comes out; one
+ * someone changed stays and may clash honestly. The `export` on `loadPage` stays: it carries
+ * no marker, so nothing proves it is ours. And nothing comes out unless wiring the result
+ * again gives back exactly this file, so putting it back can never write something new.
+ *
+ * @returns the file without the wiring, or undefined when there is nothing to take out
+ */
+export function withoutQuickEditWiring(content: string): string | undefined {
+    let next = content;
+    for (const { ours, theirs } of MARKED_EDITS) {
+        if (next.split(ours).length !== 2) continue;
+        // Sliced, not String.replace, so a `$` in the text stays literal.
+        const at = next.indexOf(ours);
+        next = next.slice(0, at) + theirs + next.slice(at + ours.length);
+    }
+    if (next === content) return undefined;
+    return buildQuickEditScriptsJs(next) === content ? next : undefined;
+}

@@ -33,7 +33,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
 import type { ExecuteOptions } from '@/core/shell/types';
-import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+import { GitHubFileOperations, type RepoFileAccess } from '@/features/eds/services/github/githubFileOperations';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { Project } from '@/types/base';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -72,6 +72,7 @@ jest.mock('@/features/eds/services/storefront/storefrontUpToDate', () => ({
     bringStorefrontUpToDate: (...args: unknown[]) => mockInstall404(...args),
 }));
 jest.mock('@/features/eds/services/quickEditPublisher', () => ({
+    ...jest.requireActual('@/features/eds/services/quickEditPublisher'),
     installQuickEdit: (...args: unknown[]) => mockInstallQuickEdit(...args),
 }));
 
@@ -275,7 +276,10 @@ describe('merging a template update from the recorded version (real git)', () =>
                 target: fx.t2,
                 preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
             },
-            error: 'Merge conflicts in 1 file (A.txt); the update was not applied.',
+            edits: [{ file: 'A.txt', whose: 'storefront' }],
+            error:
+                'The update stopped on 1 file that was edited (A.txt, an edit made in this storefront). '
+                + 'Nothing was changed: the storefront on GitHub is as it was.',
         });
         expect(originHead(fx)).toBe(before);
     }, REAL_GIT_TIMEOUT_MS);
@@ -451,18 +455,38 @@ describe('a thin-layer storefront updates to the TESTED version, with its fixes 
         ]);
     }, REAL_GIT_TIMEOUT_MS);
 
-    it('puts back the 404 handling and Quick Edit after the update', async () => {
+    it("puts back the 404 handling and Quick Edit in the update's own commit, never through GitHub's API", async () => {
         fx = buildFixture();
         mockReadLkgSha.mockResolvedValue(fx.t2);
+        // The installers write through whatever they are handed; here, a file to find later.
+        mockInstallQuickEdit.mockImplementation(async (files: RepoFileAccess, owner: string, repo: string) =>
+            files.createOrUpdateFile(owner, repo, 'tools/quick-edit/quick-edit.js', 'quick edit\n', 'm'));
+        const before = originHead(fx);
 
         await merge(fx, fx.t1, 'merge', true);
 
-        expect(mockInstall404).toHaveBeenCalledWith(
-            expect.any(GitHubFileOperations), 'skukla', 'demo-storefront', undefined, expect.anything(), 'skukla', 'demo-storefront',
-        );
-        expect(mockInstallQuickEdit).toHaveBeenCalledWith(
-            expect.any(GitHubFileOperations), 'skukla', 'demo-storefront', expect.anything(),
-        );
+        // Before the change is applied, and again on the updated code.
+        expect(mockInstall404).toHaveBeenCalledTimes(2);
+        expect(mockInstall404.mock.calls[0][0]).not.toBeInstanceOf(GitHubFileOperations);
+        expect(mockInstallQuickEdit.mock.calls[0][0]).not.toBeInstanceOf(GitHubFileOperations);
+        // One push, carrying the installer's write with the update.
+        expect(git(fx, fx.scBare, 'rev-list', '--count', `${before}..main`)).toBe('1');
+        expect(originFile(fx, 'tools/quick-edit/quick-edit.js')).toBe('quick edit');
+        expect(originFile(fx, 'A.txt')).toBe(TEMPLATE_A.trim());
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('a stopped update leaves GitHub untouched, though the repairs had written into the clone', async () => {
+        fx = buildFixture((work) => write(work, 'A.txt', SC_CONFLICTING_A));
+        mockReadLkgSha.mockResolvedValue(fx.t2);
+        mockInstallQuickEdit.mockImplementation(async (files: RepoFileAccess, owner: string, repo: string) =>
+            files.createOrUpdateFile(owner, repo, 'tools/quick-edit/quick-edit.js', 'quick edit\n', 'm'));
+        const before = originHead(fx);
+
+        const result = await merge(fx, fx.t1, 'merge', true);
+
+        expect(mockInstallQuickEdit).toHaveBeenCalled();
+        expect(result.conflicts).toEqual(['A.txt']);
+        expect(originHead(fx)).toBe(before);
     }, REAL_GIT_TIMEOUT_MS);
 
     it('refuses a reset to the bare template, which would drop the fixes, and pushes nothing', async () => {

@@ -19,7 +19,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+import type { RepoFileAccess } from '@/features/eds/services/github/githubFileOperations';
 import {
     applyCodePatches,
     CodePatchCriticalError,
@@ -139,7 +139,7 @@ const ROW_OVERLAY: OverlayResolver = (fromConfig) => fromConfig;
  */
 export async function restoreDemoBuilderPieces(
     project: Project,
-    fileOps: GitHubFileOperations,
+    fileOps: RepoFileAccess,
     logger: Logger,
     resolveOverlay: OverlayResolver = ROW_OVERLAY,
 ): Promise<string[]> {

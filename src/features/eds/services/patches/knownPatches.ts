@@ -38,8 +38,8 @@ function occurrences(text: string, needle: string): number {
     return text.split(needle).length - 1;
 }
 
-/** The known patches grouped by the file they change, ledger order kept. */
-function byTarget(patches: readonly CodePatch[]): Map<string, CodePatch[]> {
+/** Patches grouped by the file they change, ledger order kept. */
+export function patchesByTarget(patches: readonly CodePatch[]): Map<string, CodePatch[]> {
     const groups = new Map<string, CodePatch[]>();
     for (const patch of patches) {
         const group = groups.get(patch.target) ?? [];
@@ -78,7 +78,7 @@ function patchedFile(content: string, group: readonly CodePatch[]): { text: stri
  */
 export function applyKnownPatches(files: ReadonlyMap<string, string>, patches: readonly CodePatch[]): KnownPatchApply {
     const result: KnownPatchApply = { files: new Map(), applied: [] };
-    for (const [target, group] of byTarget(patches)) {
+    for (const [target, group] of patchesByTarget(patches)) {
         const content = files.get(target);
         if (content === undefined || !checkPatchTarget(target).allowed) continue;
         const patched = patchedFile(content, group);

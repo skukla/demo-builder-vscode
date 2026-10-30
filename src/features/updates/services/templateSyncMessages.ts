@@ -7,17 +7,25 @@
 
 import { PLACEHOLDER_STUB_PATHS } from '@/features/eds/services/placeholderStubs';
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
-import type { TemplateSyncResult, TemplateSyncTarget } from '@/features/updates/services/templateSyncTypes';
+import type { ClashEdit, TemplateSyncResult, TemplateSyncTarget } from '@/features/updates/services/templateSyncTypes';
+
+/** One clashing file in plain words: "blocks/header/header.js, an edit that came with kmanns/justrite". */
+export function describeEdit(edit: ClashEdit): string {
+    if (edit.whose === 'copied-demo' && edit.from) return `${edit.file}, an edit that came with ${edit.from}`;
+    return `${edit.file}, an edit made in this storefront`;
+}
 
 /**
- * The error text a conflicted merge carries, so every surface says the same thing. It
- * says "the update", not "the template update": the Adobe boilerplate's merge carries it
- * too (it read "template" under an Adobe boilerplate row until 2026-10-21).
+ * The error text a conflicted merge carries, so every surface says the same thing: that it
+ * stopped, the files and whose edit each holds, and that nothing changed. It says "the
+ * update", not "the template update": the Adobe boilerplate's merge carries it too (it read
+ * "template" under an Adobe boilerplate row until 2026-10-21). Until 2026-10-30 it read
+ * "Merge conflicts in …; the update was not applied", and an agent read the run as done.
  */
-export function describeTemplateConflicts(conflicts: string[]): string {
-    const noun = conflicts.length === 1 ? 'file' : 'files';
-    return `Merge conflicts in ${conflicts.length} ${noun} (${conflicts.join(', ')}); `
-        + 'the update was not applied.';
+export function describeTemplateConflicts(edits: readonly ClashEdit[]): string {
+    const noun = edits.length === 1 ? 'file that was' : 'files that were';
+    return `The update stopped on ${edits.length} ${noun} edited (${edits.map(describeEdit).join('; ')}). `
+        + 'Nothing was changed: the storefront on GitHub is as it was.';
 }
 
 export const NO_RECORDED_VERSION = 'This storefront has no recorded template version to update from; '
