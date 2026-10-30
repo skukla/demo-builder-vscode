@@ -277,6 +277,18 @@ export interface CommerceCustomerGroup {
     extension_attributes?: Record<string, unknown>;
 }
 
+/**
+ * `GET directory/countries/{countryId}`, Magento's CountryInformationAcquirerInterface. NOT
+ * captured, and no code in this repo or the Data Installer service read it before step 14: the
+ * field names are Magento's RegionInformationInterface (`id`, `code`, `name`), the same names the
+ * storefront's GraphQL `country(id) { available_regions { id code name } }` reads (the
+ * storefront-account dropin's `getRegions`). A country with no regions has no list.
+ */
+export interface CommerceCountryInfo {
+    id?: string;
+    available_regions?: Array<{ id: string | number; code?: string; name?: string }>;
+}
+
 /** `GET company/{id}` (captured); `{ company }` of `POST company` and `PUT company/{id}`. */
 export interface CommerceCompany {
     id?: number;

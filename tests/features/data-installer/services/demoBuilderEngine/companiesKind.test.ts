@@ -18,7 +18,7 @@ import {
     updateCompany,
 } from '@/features/data-installer/services/demoBuilderEngine/companiesKind';
 import { CUSTOMER_KIND } from '@/features/data-installer/services/demoBuilderEngine/customerKinds';
-import type { CommerceCompanyHierarchyNode } from '@/types/commerceWire';
+import type { CommerceCompanyHierarchyNode, CommerceCountryInfo } from '@/types/commerceWire';
 import { BODEA_COMPANY_ROW, CATALOG_14, COMPANY_21, COMPANY_27_DB08, CREATE_COMPANY_QUERY, CUSTOMER_44 } from '../../../../helpers/commerceB2bFixtures';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
 
@@ -29,6 +29,25 @@ const adminSearch = page('customers/search', filterBy('email', ADMIN));
 const CATALOGS = page('sharedCatalog');
 const PUBLIC = { id: 1, name: 'Default (General)', customer_group_id: 1, type: 1 };
 
+/**
+ * `GET directory/countries/US`, trimmed. NOT captured: no code in this repo or the service reads
+ * it. Typed to `CommerceCountryInfo`, whose field names are Magento's RegionInformationInterface
+ * as the storefront's GraphQL `country.available_regions { id code name }` reads them.
+ */
+const US_REGIONS: CommerceCountryInfo = {
+    id: 'US',
+    available_regions: [
+        { id: '12', code: 'CA', name: 'California' },
+        { id: '57', code: 'TX', name: 'Texas' },
+    ],
+};
+
+/** Bodea's company row with its region named another way. */
+function withRegion(region: Record<string, unknown>) {
+    const input = BODEA_COMPANY_ROW.variables.input;
+    return { ...BODEA_COMPANY_ROW, variables: { input: { ...input, legal_address: { ...input.legal_address, region } } } };
+}
+
 async function store(parts: { companies?: unknown[]; admins?: unknown[] } = {}) {
     const ctx = await fakeContext(
         {
@@ -36,6 +55,7 @@ async function store(parts: { companies?: unknown[]; admins?: unknown[] } = {}) 
             [byEmail]: { items: [] },
             [adminSearch]: { items: parts.admins ?? [] },
             [CATALOGS]: { items: [PUBLIC, CATALOG_14] },
+            'directory/countries/US': US_REGIONS,
         },
         (call) => (call.path === 'customers' ? { ...CUSTOMER_44, id: 60 } : { ...COMPANY_21, id: 30 }),
     );
@@ -125,10 +145,31 @@ describe('installCompanies', () => {
         expect((ctx.sent[0].body as { company: { extension_attributes: unknown } }).company.extension_attributes).toEqual({ quote_config: { is_quote_enabled: true } });
     });
 
-    it('refuses a company whose address names no region id, before anything is sent', () => {
-        const input = { ...BODEA_COMPANY_ROW.variables.input, legal_address: { ...BODEA_COMPANY_ROW.variables.input.legal_address, region: { region_code: 'CA' } } };
+    it('refuses a company whose address names no region at all, before anything is sent', () => {
+        expect(() => parseCompanyRows([withRegion({})])).toThrow(/companies/);
+    });
 
-        expect(() => parseCompanyRows([{ ...BODEA_COMPANY_ROW, variables: { input } }])).toThrow(/companies/);
+    // The service's company schema asks for `region_code` ("prefer region_code (e.g. CA, TX, NY)",
+    // `config/schemas/b2b_companies.json`). The country read is NOT captured: see US_REGIONS.
+    describe('a region named by code or by name', () => {
+        it.each([
+            [{ region_code: 'ca' }, 12],
+            [{ region: 'Texas' }, 57],
+            [{ region_code: 'TX', region: 'Texas', region_id: 12 }, 12],
+        ])("sends the region's id for %j, read from the country unless the row has it", async (region, id) => {
+            const ctx = await store({ admins: [{ ...CUSTOMER_44, id: 52, email: ADMIN, website_id: 3 }] });
+
+            await installCompanies(ctx, parseCompanyRows([withRegion(region)]));
+
+            expect((ctx.sent[0].body as { company: { region_id?: number } }).company.region_id).toBe(id);
+        });
+
+        it('stops, naming it, at a region the country does not have, before the admin is made', async () => {
+            const ctx = await store();
+
+            await expect(installCompanies(ctx, parseCompanyRows([withRegion({ region_code: 'ZZ' })]))).rejects.toThrow('The store has no region ZZ in US.');
+            expect(ctx.sent).toStrictEqual([]);
+        });
     });
 });
 

@@ -16,6 +16,7 @@
  */
 
 import { z } from 'zod';
+import { sameText } from './b2bReads';
 import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, ownedId, readOrNull, segment } from './kindContext';
 import type { CommerceSend } from '@/types/commerceWire';
 
@@ -115,10 +116,6 @@ function sendOption(ctx: KindContext, code: string, option: Record<string, unkno
     return ctx.send('POST', `products/attributes/${segment(code)}/options`, { option });
 }
 
-function sameLabel(a: string | undefined, b: string): boolean {
-    return (a ?? '').trim().toLowerCase() === b.trim().toLowerCase();
-}
-
 async function readOptions(ctx: KindContext, code: string): Promise<StoreOption[]> {
     return (await ctx.get(`products/attributes/${segment(code)}/options`)) as StoreOption[] | null ?? [];
 }
@@ -133,11 +130,11 @@ async function readOptions(ctx: KindContext, code: string): Promise<StoreOption[
  */
 export async function addMissingOptions(ctx: KindContext, code: string, options: readonly PackOption[], input?: string): Promise<void> {
     const have = await readOptions(ctx, code);
-    const missing = options.filter((o) => !have.some((h) => sameLabel(h.label, o.label)));
+    const missing = options.filter((o) => !have.some((h) => sameText(h.label, o.label)));
     for (const option of missing) {
         const { value: _sourceValue, ...body } = option;
         await sendOption(ctx, code, isSwatch(input) ? swatchOption(option) : body);
-        const added = (await readOptions(ctx, code)).find((h) => sameLabel(h.label, option.label));
+        const added = (await readOptions(ctx, code)).find((h) => sameText(h.label, option.label));
         if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
         await ctx.recorder.record({ kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}` });
         ctx.log(`added option "${option.label}" to ${code}`);
