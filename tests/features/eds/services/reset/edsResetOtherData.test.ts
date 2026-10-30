@@ -111,6 +111,22 @@ describe('confirmClearOtherData', () => {
         expect([clear.title, keep]).toEqual(['Remove Those Too', { title: 'Keep Them', isCloseAffordance: true }]);
     });
 
+    it('counts the cart rules it would clear, and says one another website also uses is only taken off (step 11)', async () => {
+        const rules = [
+            { rule_id: 101, name: 'ZZ Test Only', website_ids: [5] },
+            { rule_id: 102, name: 'ZZ Test And JustRite', website_ids: [5, 2] },
+        ];
+        const { deps, context } = setUp(sandbox({ rules }));
+        const plan = await beginOtherDataCheck(PROJECT, context, deps);
+        ask.mockResolvedValue(undefined);
+
+        await confirmClearOtherData(vscode, plan);
+
+        const [message] = ask.mock.calls[0];
+        expect(message).toContain("also holds 5 products, 2 customers and 2 cart rules Demo Builder didn't install.");
+        expect(message).toContain('1 cart rule another website also uses will only be taken off this one.');
+    });
+
     it("says which orders the ERP integration closes, in the list's own line", async () => {
         const erp = jest.fn().mockReturnValue(fakeErp().erp);
         const { deps, context } = setUp(sandbox({ orders: [RESET_RULE_CASES[0].order] }), { erp, others: async () => [CLAIMANT_ELSEWHERE] });

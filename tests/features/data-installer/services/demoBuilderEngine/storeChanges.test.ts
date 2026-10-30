@@ -15,6 +15,8 @@ import { installRecordPath, openInstallRecord, readInstallRecord } from '@/featu
 import { type StoreChangesDeps, previewChanges, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
 import { packedFingerprint } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
 import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
+import { COUPON10, NO_COUPONS_PAGE, NO_RULES_PAGE, TEN_PERCENT_COUPON, WIPER_FLUID } from '../../../../helpers/commerceSalesRuleFixtures';
 import { NOW, PACK, PROJECT, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';
 
 /** The demo's own pack a save writes into (step 07). */
@@ -256,6 +258,19 @@ describe('previewChanges, counted the way a save counts', () => {
             add: { count: 1, names: ['NewRack'] },
             inStore: { count: 1, names: ['OldRack'] },
         });
+    });
+
+    it('counts a cart rule or code the store already has by that name as already in the store (step 11)', async () => {
+        const { d } = await deps(true, {
+            [page('salesRules/search', filterBy('name', '10% Coupon'))]: { items: [{ rule_id: 3, name: '10% Coupon' }], total_count: 1 },
+            [page('salesRules/search', filterBy('name', WIPER_FLUID.rule.name))]: NO_RULES_PAGE,
+            [page('coupons/search', filterBy('code', 'coupon10'))]: NO_COUPONS_PAGE,
+        }, { cart_rules: [TEN_PERCENT_COUPON, WIPER_FLUID], coupons: [COUPON10] });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'cart_rules')).toMatchObject({ add: { count: 1, names: [WIPER_FLUID.rule.name] }, inStore: { count: 1, names: ['10% Coupon'] } });
+        expect(preview.kinds.find((k) => k.kind === 'coupons')).toMatchObject({ add: { count: 1, names: ['coupon10'] } });
     });
 
     it('counts a category the pack dropped but the SC has put a category of their own in as kept, not removed', async () => {

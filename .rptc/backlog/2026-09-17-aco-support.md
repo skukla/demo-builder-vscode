@@ -70,9 +70,44 @@ waits on it, and `EDS-1` (multisite) specifies ACO catalog views per locale.
    project uses ACO.
 6. Reversal for everything above, and the dead code either wired or deleted.
 
+## The ACO pack kinds, and why Demo Builder's engine does not install them (2026-10-30)
+
+Decided in datapack-engine step 11 (`.rptc/plans/datapack-engine/step-11-later.md`): the eight
+`aco_<brand>` packs (`aco_bodea`, `aco_carvello`, `aco_citisignal_new`, `aco_citisignal_original`,
+`aco_frescopa`, `aco_healthbeauty`, `aco_wecafe`, `aco_wknd`, all `main`) stay refused by Demo
+Builder's engine, before anything is written, until this item is planned. Rows read from
+`aco_wknd@main` with `save_datapack_zip` (read-only, 2026-10-30); endpoints from the Data
+Installer's `config/endpoints/aco.json` and `data_processors_aco_import.json`.
+
+| Kind | One row (aco_wknd) | Written by the service with |
+|---|---|---|
+| `aco_metadata` (5) | `{code, source: {locale}, visibleIn, label, dataType, filterable, sortable, searchable, searchTypes, searchWeight}` | `POST /V1/catalog/products/metadata` (delete: `…/metadata/delete`) |
+| `aco_categories` (5) | `{slug, source: {locale}, name, description}` | `POST /V1/catalog/categories` |
+| `aco_products` (93) | `{sku, source: {locale}, name, slug, description, status, visibleIn, metaTags, attributes: [{code, values}], configurations, …}` | `POST /V1/catalog/products` |
+| `aco_price_books` (5) | `{priceBookId, name, currency}` | `POST /V1/catalog/price-books` |
+| `aco_prices` (93) | `{sku, priceBookId, regular}` | `POST /V1/catalog/products/prices` |
+| `aco_product_layers`, `aco_product` | not in aco_wknd | `POST /V1/catalog/products/layers`; `aco_product` is a second name for `aco_products` |
+
+Why it does not map onto the engine:
+
+1. **Another backend.** These go to Adobe Commerce Optimizer's data ingestion API, with its own
+   tenant and an IMS client id and secret (this item's 2026-10-04 research), not the project's
+   signed Commerce REST client every engine kind uses (`projectCommerce`).
+2. **No read-back.** Ingestion has deletes but no list or get (same research), so the engine's
+   seams cannot be built: no store copy to fingerprint (`decideOwnedChange` has nothing to
+   compare), no "edited since", no capture, no container rule, no wipe.
+3. **No ids to record.** Every row is keyed by the pack's own name (`sku`, `slug`, `code`,
+   `priceBookId`), so the install record would only re-state the pack.
+
+**Recommended:** build ACO data as this item's step 3 (data), after beta.153, through one ACO client
+beside `projectCommerce`, with removal by the pack's own keys (the ingestion deletes) and the
+catalog view chosen by the SC (no create API). Until then the engine keeps refusing the eight
+packs by name, which it already does.
+
 ## Shipped so far
 
 - 2026-09-17  docs(backlog): PL-60 finishes ACO support; AB-14 asks where ERP prices go on an ACO storefront (`599c3d9de`)
 - 2026-10-04  2026-10-04 loop (night 4): research + design, nothing built (every next step waits on a product choice). Item re-verified accurate; also dead: executeCommerceCleanup and filterAddonsByPackage. Research (.rptc/research/aco-support/research.md): the generated ACO config is wrong in shape (documented: AC-View-ID required, AC-Source-Locale, optional AC-Price-Book-ID, no all.Store, ACO analytics block); only ACO_TENANT_ID survives as an input (ingestion uses an IMS client id+secret, not an API key); catalog views have no create API; ingestion has deletes but no list. Plan with five owner decisions P1-P5: .rptc/plans/aco-support/overview.md.
 - 2026-10-04  feat(eds,ai): adopt an empty org repository, explain GitHub org refusals, and a skill for building catalog data (`dd6784bb0`)
 - 2026-10-20  DI-4 (has the Data Installer superseded the ACO ingestion tool?) folds in here, owner 2026-10-19: it is this item's data decision (P3). DI-4's findings stand: nothing reaches the ingestion tool, its data source repository is gone, and its own repo is named two ways.
+- 2026-10-30  Datapack-engine step 11 decided the eight ACO packs do not map onto Demo Builder's engine (another backend, no read-back); their kinds, row shapes and endpoints recorded above. Not committed.

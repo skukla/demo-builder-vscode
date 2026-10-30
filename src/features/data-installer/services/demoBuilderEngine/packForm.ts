@@ -13,13 +13,14 @@
  *
  * `keyOf` is what the pack calls a row: the name a repeat install finds it by.
  *
- * Not carried, on purpose (the plan's "Later"): images. `media_gallery_entries` is left out, as
+ * Not carried, on purpose (backlog, step 11): images. `media_gallery_entries` is left out, as
  * the service's export leaves it out.
  *
  * @module features/data-installer/services/demoBuilderEngine/packForm
  */
 
 import { B2B_KEYS } from './b2bKeys';
+import { AMOUNTS_CODE, amountsForPack, withoutAmounts } from './giftCardAmounts';
 import type { ProductLookups, StoreAttribute, StoreCategory } from './productLookups';
 import type { CommerceProduct } from '@/types/commerceWire';
 
@@ -86,6 +87,8 @@ async function extensionAttributes(lk: ProductLookups, ext: Ext): Promise<Ext> {
     if (ext.configurable_product_links) {
         out.configurable_product_links = await Promise.all(ext.configurable_product_links.map((id) => nameOr(id, () => lk.productSku(id))));
     }
+    // A gift card's amounts, each value alone (step 11, `giftCardAmounts.ts`).
+    if (ext[AMOUNTS_CODE]) out[AMOUNTS_CODE] = amountsForPack(ext[AMOUNTS_CODE]);
     return out;
 }
 
@@ -97,7 +100,7 @@ export async function productPackForm(lk: ProductLookups, raw: CommerceProduct):
         product: {
             ...product,
             ...(setId !== undefined ? { attribute_set_id: await nameOr(setId, () => lk.setName(setId)) } : {}),
-            ...(raw.custom_attributes ? { custom_attributes: await Promise.all(raw.custom_attributes.map((a) => customAttribute(lk, a))) } : {}),
+            ...(raw.custom_attributes ? { custom_attributes: await Promise.all(withoutAmounts(raw.custom_attributes).map((a) => customAttribute(lk, a))) } : {}),
             ...(raw.extension_attributes ? { extension_attributes: await extensionAttributes(lk, raw.extension_attributes) } : {}),
             ...(raw.tier_prices
                 ? {
@@ -156,6 +159,9 @@ const flat = (row: unknown, name: string): string => String((row as Row)[name] ?
 /** What a pack calls one row of a kind: the name a repeat install finds it by. */
 const KEYS: Record<string, (row: unknown) => string> = {
     products: (row) => field(row, 'product', 'sku'),
+    giftcards: (row) => field(row, 'product', 'sku'),
+    cart_rules: (row) => field(row, 'rule', 'name'),
+    coupons: (row) => field(row, 'coupon', 'code'),
     categories: (row) => categoryKey((row as { category: Row }).category),
     product_attributes: (row) => field(row, 'attribute', 'attribute_code'),
     attribute_options: (row) => `${flat(row, 'attribute_code')}/${flat(row, 'label')}`,

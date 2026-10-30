@@ -132,14 +132,14 @@ describe('demoBuilderEngine install', () => {
 
     it('fails every kind, writing nothing, for a kind it cannot install yet', async () => {
         const { engine, ctx } = await engineWith({}, () => ({}), {
-            readPack: async () => ({ ...ITEMS, cart_rules: [] }),
+            readPack: async () => ({ ...ITEMS, product_export: [] }),
         });
 
-        const { activationId } = await engine.startImport(request({ dataTypes: ['attribute_sets', 'categories', 'cart_rules'] }));
+        const { activationId } = await engine.startImport(request({ dataTypes: ['attribute_sets', 'categories', 'product_export'] }));
         await settle(engine, activationId);
 
         expect((await engine.getJobFailureReason(activationId))?.error).toBe(
-            'Demo Builder does not install cart_rules yet, so nothing was installed.',
+            'Demo Builder does not install product_export yet, so nothing was installed.',
         );
         expect(ctx.sent).toStrictEqual([]);
     });
@@ -286,7 +286,7 @@ describe('demoBuilderEngine reads', () => {
             request({ target: { websiteCode: 'acme', storeCode: 'default' } }),
             { valid: false, reason: 'The store has no store view default on a website acme. Choose them again in the Commerce step.' },
         ],
-        ['a kind it cannot install', request({ dataTypes: ['categories', 'cart_rules'] }), { valid: false, reason: 'Demo Builder does not install cart_rules yet.' }],
+        ['a kind it cannot install', request({ dataTypes: ['categories', 'aco_products'] }), { valid: false, reason: 'Demo Builder does not install aco_products yet.' }],
     ])('dry run with %s', async (_label, req, expected) => {
         const { engine, ctx } = await engineWith({}, () => ({}));
 

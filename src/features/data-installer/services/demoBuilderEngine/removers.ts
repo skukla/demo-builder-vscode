@@ -3,8 +3,8 @@
  * by removing a whole pack (`runPack.ts`), by a repeat install taking out what the pack no longer
  * has (`repeatInstall.ts`), and by the preview of one, so the three never decide two ways.
  *
- * A category or an attribute set this engine made is kept while it holds anything the engine did
- * not make, or is not taking out in the same removal: Commerce deletes a category's children with
+ * A category, an attribute set or a cart rule this engine made is kept while it holds anything the
+ * engine did not make, or is not taking out in the same removal (a rule's coupons go with it, step 11): Commerce deletes a category's children with
  * it and leaves its products in no category, and (by Magento's schema, from memory, not yet checked
  * live) deletes a set's products with it.
  *
@@ -21,13 +21,15 @@ import { removeAssignment, removeAttributeSet } from './attributeSetsKind';
 import { removeAttribute, removeAttributeOption } from './attributesKind';
 import { type Taking, b2bHeldByOthers, isB2bContainer } from './b2bContainers';
 import { type AssignmentKind, CATALOG_CATEGORIES_KIND, CATALOG_COMPANIES_KIND, CATALOG_KIND, CATALOG_PRODUCTS_KIND, COMPANY_KIND, isAssignmentKind } from './b2bKeys';
+import { CART_RULE_KIND, removeCartRule } from './cartRulesKind';
 import { removeCategory } from './categoriesKind';
 import { removeCompany } from './companiesKind';
+import { COUPON_KIND, couponsOfRule, removeCoupon } from './couponsKind';
 import { removeCustomer, removeCustomerGroup } from './customerKinds';
 import type { CreatedObject } from './installRecord';
 import { readOrNull, segment } from './kindContext';
 import type { StoreCategory } from './productLookups';
-import { removeProduct } from './productsKind';
+import { PRODUCT_KINDS, removeProduct } from './productsKind';
 import { removeAssignmentPair, removeCatalog, splitPair } from './sharedCatalogKinds';
 import { removeSource, removeStock, removeStockSourceLink } from './stockKinds';
 import { andList } from '@/core/utils/andList';
@@ -53,6 +55,7 @@ const REMOVERS: Record<string, Remover> = {
     sources: (c, o) => removeSource(c, o.id),
     stock_source_links: (c, o) => removeStockSourceLink(c.send, o.id),
     products: (c, o) => removeProduct(c.send, o.id),
+    giftcards: (c, o) => removeProduct(c.send, o.id),
     // Step 08.
     customer_groups: (c, o) => removeCustomerGroup(c.send, o.id),
     customers: (c, o) => removeCustomer(c.send, o.id),
@@ -61,6 +64,9 @@ const REMOVERS: Record<string, Remover> = {
     b2b_shared_catalog_company_assignments: (c, o) => removeAssignmentPair(c.send, CATALOG_COMPANIES_KIND, o.id),
     b2b_shared_catalog_categories: (c, o) => removeAssignmentPair(c.send, CATALOG_CATEGORIES_KIND, o.id),
     b2b_shared_catalog_products: (c, o) => removeAssignmentPair(c.send, CATALOG_PRODUCTS_KIND, o.id),
+    // Step 11: Commerce deletes a rule's coupons with it.
+    cart_rules: (c, o) => removeCartRule(c.send, o.id),
+    coupons: (c, o) => removeCoupon(c.send, o.id),
 };
 
 /**
@@ -81,11 +87,11 @@ export async function takeBack(commerce: RemovalAccess, object: CreatedObject): 
 /** A container kept because it holds what the engine did not make. */
 export interface KeptContainer {
     object: CreatedObject;
-    kind: 'category' | 'set' | 'company' | 'shared catalog' | 'customer group' | 'customer';
+    kind: 'category' | 'set' | 'company' | 'shared catalog' | 'customer group' | 'customer' | 'cart rule';
     name: string;
     /** How many things of the SC's it holds. */
     count: number;
-    holds: 'category' | 'product' | 'thing';
+    holds: 'category' | 'product' | 'coupon' | 'thing';
     /**
      * Why it was kept, in words, when one count of one thing cannot say it (step 08: a catalog
      * holding products and a company; a company whose members could not be read).
@@ -125,21 +131,43 @@ async function productsWhere(get: CommerceGet, field: 'attribute_set_id' | 'cate
     }
 }
 
+/** Whether a SKU is a product or gift card the same removal is taking. */
+const takingSku = (taking: ReadonlySet<string>, sku: string): boolean => PRODUCT_KINDS.some((kind) => taking.has(keyOfObject(kind, sku)));
+
+/**
+ * A cart rule this engine made, kept while it holds a coupon not going with it (step 11): Commerce
+ * deletes a rule's coupons with it. Its coupons are `GET coupons/search` on `rule_id`; a read that
+ * fails keeps it. Named as the store calls it now (`GET salesRules/{id}`, `name`).
+ */
+async function cartRuleHeld(get: CommerceGet, object: CreatedObject, taking: ReadonlySet<string>): Promise<KeptContainer | undefined> {
+    let others: number;
+    try {
+        others = (await couponsOfRule(get, object.id)).filter((c) => !taking.has(keyOfObject(COUPON_KIND, String(c.coupon_id)))).length;
+    } catch (error) {
+        if (error instanceof CommerceReadError && error.status === 404) return undefined;
+        return { object, kind: 'cart rule', name: object.key ?? object.id, count: 0, holds: 'thing', reason: 'Demo Builder could not read its coupons' };
+    }
+    if (others === 0) return undefined;
+    const rule = await readOrNull<{ name?: string }>(get, `salesRules/${segment(object.id)}`).catch(() => null);
+    return { object, kind: 'cart rule', name: rule?.name || object.key || object.id, count: others, holds: 'coupon' };
+}
+
 /** What a container holds that is not being taken out with it, or undefined when nothing. */
 async function heldByOthers(get: CommerceGet, object: CreatedObject, removal: Taking, taking: ReadonlySet<string>): Promise<KeptContainer | undefined> {
+    if (object.kind === CART_RULE_KIND) return cartRuleHeld(get, object, taking);
     if (object.kind === 'categories') {
         const category = await readOrNull<StoreCategory>(get, `categories/${segment(object.id)}`);
         const name = category?.name ?? object.id;
         const others = (category?.children ?? '').split(',').map((id) => id.trim()).filter((id) => id !== '' && !taking.has(keyOfObject('categories', id)));
         if (others.length > 0) return { object, kind: 'category', name, count: others.length, holds: 'category' };
         // Its products too: deleting the category would leave the SC's own in no category at all.
-        const products = (await productsWhere(get, 'category_id', object.id)).filter((sku) => !taking.has(keyOfObject('products', sku)));
+        const products = (await productsWhere(get, 'category_id', object.id)).filter((sku) => !takingSku(taking, sku));
         if (products.length === 0) return undefined;
         return { object, kind: 'category', name, count: products.length, holds: 'product' };
     }
     if (isB2bContainer(object.kind)) return b2bHeldByOthers(get, object, removal);
     if (object.kind === 'attribute_sets') {
-        const others = (await productsWhere(get, 'attribute_set_id', object.id)).filter((sku) => !taking.has(keyOfObject('products', sku)));
+        const others = (await productsWhere(get, 'attribute_set_id', object.id)).filter((sku) => !takingSku(taking, sku));
         if (others.length === 0) return undefined;
         const set = await readOrNull<{ attribute_set_name?: string }>(get, `products/attribute-sets/${segment(object.id)}`);
         return { object, kind: 'set', name: set?.attribute_set_name ?? object.id, count: others.length, holds: 'product' };

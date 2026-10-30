@@ -44,7 +44,7 @@ export interface WipeNamed {
     names: string[];
 }
 
-export type WipeKind = 'products' | 'categories' | 'customers' | 'orders';
+export type WipeKind = 'products' | 'categories' | 'customers' | 'orders' | 'cart rules';
 
 /** Things of one kind the wipe leaves, and the one reason. */
 export interface WipeLeft extends WipeNamed {
@@ -83,10 +83,12 @@ export interface WipeErpPart {
 /** What the SC and the agent see before anything is written. Counts and a few names, never rows. */
 export interface WipePreview {
     stores: WipePlanStore[];
-    /** What would be deleted, by kind. */
-    remove: Record<'products' | 'categories' | 'customers', WipeNamed>;
+    /** What would be deleted, by kind. A cart rule's coupons go with it (step 11). */
+    remove: Record<'products' | 'categories' | 'customers' | 'cartRules', WipeNamed>;
     /** Products also sold on websites not chosen: taken off the chosen ones only. */
     takenOff: WipeNamed;
+    /** Cart rules also used on websites not chosen: taken off the chosen ones only (step 11). */
+    rulesTakenOff: WipeNamed;
     /**
      * Orders are never deleted (Commerce cannot): canceled, refunded with a credit memo, or left open
      * with a note when Commerce can do neither; their returns closed. Named by order number.

@@ -17,7 +17,7 @@
 
 import { z } from 'zod';
 import type { KindContext } from './kindContext';
-import { PRODUCT_KIND } from './productsKind';
+import { PRODUCT_KINDS } from './productsKind';
 
 /** Rows per call. */
 const BATCH = 100;
@@ -45,7 +45,7 @@ export function parseSourceItems(records: unknown): SourceItemsPack {
  */
 export async function installSourceItems(ctx: KindContext, pack: SourceItemsPack): Promise<void> {
     const before = ctx.session.productsBefore ?? new Set<string>();
-    const ours = pack.sourceItems.filter((item) => ctx.recorder.has(PRODUCT_KIND, item.sku) && !before.has(item.sku));
+    const ours = pack.sourceItems.filter((item) => PRODUCT_KINDS.some((kind) => ctx.recorder.has(kind, item.sku)) && !before.has(item.sku));
     for (let start = 0; start < ours.length; start += BATCH) {
         await ctx.send('POST', 'inventory/source-items', { sourceItems: ours.slice(start, start + BATCH) });
     }

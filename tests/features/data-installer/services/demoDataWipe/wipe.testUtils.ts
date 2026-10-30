@@ -7,6 +7,7 @@
 
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import type { CommerceCoupon, CommerceSalesRule } from '@/types/commerceSalesRule';
 import type { CommerceCustomer, CommerceOrder, CommerceProduct, CommerceReturn } from '@/types/commerceWire';
 import {
     ADMIN_GROUP,
@@ -28,6 +29,9 @@ export interface SandboxState {
     orders: CommerceOrder[];
     /** Absent: the store has no returns module, and `returns` answers 404. */
     returns?: CommerceReturn[];
+    /** Cart rules (step 11). Absent: `salesRules/search` answers 404, as the wipe reads as none. */
+    rules?: CommerceSalesRule[];
+    coupons?: CommerceCoupon[];
 }
 
 /** The ids a search filters on, from its address: `[field, values]`. */
@@ -55,6 +59,12 @@ function apply(data: SandboxState, path: string, body: unknown): void {
     const order = data.orders.find((o) => String(o.entity_id) === path.split('/')[1]);
     if (order && path.endsWith('/cancel')) order.state = 'canceled';
     if (order && path.endsWith('/comments')) order.status_histories = [...(order.status_histories ?? []), { comment: (body as { statusHistory: { comment: string } }).statusHistory.comment }];
+    if (data.rules && /^salesRules\/\d+$/u.test(path)) {
+        const id = Number(idIn(path));
+        const rule = (body as { rule?: CommerceSalesRule } | undefined)?.rule;
+        data.rules = rule ? data.rules.map((r) => (r.rule_id === id ? rule : r)) : data.rules.filter((r) => r.rule_id !== id);
+        if (!rule) data.coupons = (data.coupons ?? []).filter((c) => c.rule_id !== id);
+    }
     if (path.startsWith('returns/') && data.returns) {
         const rma = data.returns.find((r) => String(r.entity_id) === idIn(path));
         if (rma) rma.status = (body as { rmaDataObject: { status: string } }).rmaDataObject.status;
@@ -86,6 +96,10 @@ function reader(data: SandboxState) {
         if (path.startsWith('orders/')) return data.orders.find((o) => String(o.entity_id) === idIn(path));
         if (data.returns && path.startsWith('returns?')) return page(matching(path, data.returns, (r) => r.order_id));
         if (data.returns && path.startsWith('returns/')) return data.returns.find((r) => String(r.entity_id) === idIn(path));
+        // Every rule, as if no filter were asked: the wipe decides by each rule's websites itself.
+        if (data.rules && path.startsWith('salesRules/search?')) return page(data.rules);
+        if (data.rules && path.startsWith('salesRules/')) return data.rules.find((r) => String(r.rule_id) === idIn(path)) ?? null;
+        if (data.rules && path.startsWith('coupons/search?')) return page(matching(path, data.coupons ?? [], (c) => c.coupon_id));
         throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
     };
 }
@@ -102,6 +116,7 @@ export function sandbox(state: Partial<SandboxState> = {}, refuse: (path: string
         customers: state.customers ?? [...TEST_SITE_CUSTOMERS],
         orders: state.orders ?? [],
         ...(state.returns ? { returns: state.returns } : {}),
+        ...(state.rules ? { rules: state.rules, coupons: state.coupons ?? [] } : {}),
     });
     const reads: string[] = [];
     const sent: Array<{ method: string; path: string; body?: unknown }> = [];

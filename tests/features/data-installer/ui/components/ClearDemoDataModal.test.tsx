@@ -14,6 +14,7 @@ import { press, settle } from '../../../../helpers/reactSettle';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { ClearDemoDataModal } from '@/features/data-installer/ui/components/ClearDemoDataModal';
+import { previewLines } from '@/features/data-installer/ui/clearDemoDataWords';
 import type { DemoDataCheck, WipeChoiceWebsite, WipePreview } from '@/types/demoDataWipe';
 
 const mockRequest = webviewClient.request as jest.Mock;
@@ -36,8 +37,9 @@ const named = (names: string[]) => ({ count: names.length, names });
 
 const PREVIEW: WipePreview = {
     stores: [{ websiteCode: 'bodea', websiteName: 'Bodea', storeCode: 'bodea_store', storeName: 'Bodea Store' }],
-    remove: { products: named(['BD-RACK', 'BD-CHAIR']), categories: named(['Racks']), customers: named(['bd.store@example.com']) },
+    remove: { products: named(['BD-RACK', 'BD-CHAIR']), categories: named(['Racks']), customers: named(['bd.store@example.com']), cartRules: named([]) },
     takenOff: named(['BD-ALSO-ON-MAIN']),
+    rulesTakenOff: named([]),
     orders: { cancel: named(['000000701']), refund: named(['000000702', '000000703']), leftOpen: named(['000000706']), returns: named(['R40']) },
     left: [{ kind: 'products', ...named(['BD-NO-CATEGORY']), why: "which demo they belong to can't be told" }],
     installed: { products: 1 },
@@ -100,6 +102,13 @@ it('asks about the ticked store, and lists what clearing it would do, orders inc
     expect(screen.getByText('1 to cancel, 2 to refund, 1 to leave open with a note, 1 return to close')).toBeInTheDocument();
     expect(screen.getByText("1 product: which demo they belong to can't be told")).toBeInTheDocument();
     expect(screen.getByText(/This can't be undone\./)).toBeInTheDocument();
+});
+
+it('lists the cart rules it would clear on their own line, with what is only taken off (step 11)', () => {
+    const lines = previewLines({ ...PREVIEW, remove: { ...PREVIEW.remove, cartRules: named(['ZZ Ten Off']) }, rulesTakenOff: named(['ZZ Shared']) });
+
+    expect(lines).toContainEqual({ label: 'Cart rules', value: '1 to remove, with their coupons, 1 taken off the chosen websites' });
+    expect(previewLines(PREVIEW).some((l) => l.label === 'Cart rules')).toBe(false);
 });
 
 it('ticks every store of a website when the website is ticked', async () => {

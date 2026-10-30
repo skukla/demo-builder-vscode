@@ -57,7 +57,7 @@ describe('runWipe', () => {
 
         const outcome = await runWipe(store, plan);
 
-        expect(outcome.removed).toEqual({ customers: 1, products: 2, takenOff: 1, categories: 0 });
+        expect(outcome.removed).toEqual({ customers: 1, products: 2, takenOff: 1, cartRules: 0, rulesTakenOff: 0, categories: 0 });
         expect(outcome.failed).toEqual([{ what: 'remove 1 of the products', count: 1, first: 'ZZ-JACKET: Commerce answered 400: The product is in use.' }]);
         expect(outcome.sentence).toContain('Could not remove 1 of the products (ZZ-JACKET: Commerce answered 400: The product is in use.).');
     });

@@ -20,6 +20,8 @@ import type { PackWriteOutcome } from '../datapackTransfer';
 import type { DatapackFile } from '../datapackZip';
 import { loadStoreSets } from './attributeSetsKind';
 import { capturePack } from './capture';
+import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
+import { COUPON_KIND, couponByCode } from './couponsKind';
 import {
     type CreatedObject,
     type InstallRecord,
@@ -33,6 +35,7 @@ import {
 import { type TargetCodes, resolveEngineTarget, sessionFor } from './installTarget';
 import type { KindContext } from './kindContext';
 import { productLookups } from './productLookups';
+import { GIFT_CARD_KIND } from './productsKind';
 import { rebaseRecord } from './recordFingerprints';
 import { containersLine, decideRemovals } from './removers';
 import { type KindPlan, type PlannedObject, keptLine, keptOf, planRepeat, removalsOf } from './repeatInstall';
@@ -82,8 +85,9 @@ export interface KindChanges {
     add: Named;
     /**
      * Rows the store already has that this engine did not make: installing leaves them as they
-     * are. Told apart for products, attributes and sets (which a save then takes into the new
-     * version, as it reads them by the pack's own names) and for sources, stocks and their links
+     * are. Told apart for products, gift cards, attributes and sets (which a save then takes into
+     * the new version, as it reads them by the pack's own names), for cart rules and coupons (by
+     * name and code, step 11) and for sources, stocks and their links
      * (which install uses as they are, `stockKinds.ts`; a switched-off source is switched on, so it
      * counts under `add`). For categories they count under `add`.
      */
@@ -146,7 +150,12 @@ const INVENTORY_KINDS = new Set([SOURCE_KIND, STOCK_KIND, LINK_KIND]);
 async function alreadyInStore(ctx: KindContext, kind: string, keys: string[], inventory: () => Promise<Inventory>): Promise<Set<string>> {
     if (keys.length === 0) return new Set();
     if (INVENTORY_KINDS.has(kind)) return inventoryInStore(inventory, kind, keys);
-    if (kind === 'products') {
+    if (kind === CART_RULE_KIND || kind === COUPON_KIND) {
+        const find = kind === CART_RULE_KIND ? (key: string) => ruleByName(ctx.get, key) : (key: string) => couponByCode(ctx.get, key);
+        const present = await Promise.all(keys.map(async (key) => (await find(key)) !== undefined));
+        return new Set(keys.filter((_key, i) => present[i]));
+    }
+    if (kind === 'products' || kind === GIFT_CARD_KIND) {
         // Commerce matches a SKU whatever its case (install's own lookup does too).
         const found = new Set((await readProducts(ctx, keys)).map((p) => p.sku.toLowerCase()));
         return new Set(keys.filter((sku) => found.has(sku.toLowerCase())));

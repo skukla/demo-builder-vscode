@@ -193,7 +193,7 @@ describe('clear-demo-data', () => {
         const res = await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true });
 
         expect(res.success).toBe(true);
-        expect((res.data as WipeOutcome).removed).toEqual({ customers: 1, products: 3, takenOff: 1, categories: 0 });
+        expect((res.data as WipeOutcome).removed).toEqual({ customers: 1, products: 3, takenOff: 1, cartRules: 0, rulesTakenOff: 0, categories: 0 });
         expect(res.note).toMatch(/^Removed 3 products and 1 customer from the store justrite_test_store\./);
         expect(store.sent).toHaveLength(5);
         expect((await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true })).error).toMatch(/no longer known/);

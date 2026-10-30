@@ -101,14 +101,16 @@ export async function beginOtherDataCheck(project: Project, context: HandlerCont
 
 const counted = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
 
-/** "18 products, 13 categories and 2 customers", the kinds with anything in them. */
+/** "18 products, 13 categories, 2 customers and 1 cart rule", the kinds with anything in them. */
 function kindsLine(plan: WipePlan): string {
-    const { remove, takenOff } = plan.preview;
+    const { remove, takenOff, rulesTakenOff } = plan.preview;
+    const rules = remove.cartRules.count + rulesTakenOff.count;
     return andList(
         [
             remove.products.count + takenOff.count > 0 ? counted(remove.products.count + takenOff.count, 'product', 'products') : '',
             remove.categories.count > 0 ? counted(remove.categories.count, 'category', 'categories') : '',
             remove.customers.count > 0 ? counted(remove.customers.count, 'customer', 'customers') : '',
+            rules > 0 ? counted(rules, 'cart rule', 'cart rules') : '',
         ].filter(Boolean),
     );
 }
@@ -131,12 +133,14 @@ function ordersLine(plan: WipePlan): string {
  */
 export async function confirmClearOtherData(vscode: typeof import('vscode'), plan: WipePlan | undefined): Promise<boolean> {
     if (!plan || plan.preview.total === 0) return false;
-    const { stores, takenOff, left } = plan.preview;
+    const { stores, takenOff, rulesTakenOff, left } = plan.preview;
     const store = stores.map((s) => `${s.storeName} (${s.storeCode}, website ${s.websiteCode})`).join(', ');
     const clearButton: import('vscode').MessageItem = { title: 'Remove Those Too' };
     const keepButton: import('vscode').MessageItem = { title: 'Keep Them', isCloseAffordance: true };
     const holds = kindsLine(plan) ? `also holds ${kindsLine(plan)} Demo Builder didn't install.` : "holds orders Demo Builder didn't place.";
-    const shared = takenOff.count > 0 ? ` ${counted(takenOff.count, 'product', 'products')} another website also sells will only be taken off this one.` : '';
+    const shared =
+        (takenOff.count > 0 ? ` ${counted(takenOff.count, 'product', 'products')} another website also sells will only be taken off this one.` : '') +
+        (rulesTakenOff.count > 0 ? ` ${counted(rulesTakenOff.count, 'cart rule', 'cart rules')} another website also uses will only be taken off this one.` : '');
     const leftLine = left.length > 0 ? ` Some things are left: ${left.map((l) => `${l.count} ${l.kind} (${l.why})`).join('; ')}.` : '';
     const erpLine = plan.preview.erp ? ` ${plan.preview.erp.line}` : '';
     const answer = await vscode.window.showWarningMessage(

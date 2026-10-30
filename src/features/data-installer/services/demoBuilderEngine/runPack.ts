@@ -5,10 +5,12 @@
  * The order is the service's (catalog spec §0): sets before the attributes put in them,
  * categories and stock before the products that name them, products before their quantities.
  * A pack holding a kind this engine cannot install is refused before anything is written, so a
- * half-installed pack is never the answer to "we don't do cart rules yet". Customers and B2B
+ * half-installed pack is never the answer to "we don't do that kind yet" (`product_export`,
+ * `customers_export` and the ACO kinds, today). Customers and B2B
  * (step 08) come after the catalog, in the service's order: groups before the products whose tier
  * prices name them, customers before the companies that make them admins. Store settings (step 09)
- * come last, once the pack's data is in, and are put back first on removal.
+ * come last, once the pack's data is in, and are put back first on removal. Gift cards, cart rules
+ * and coupons (step 11) sit where the service puts them.
  *
  * Removal walks the record in reverse, dropping each object from it as it goes, so a removal
  * that stops part way can be run again; the record goes once it is empty.
@@ -19,8 +21,10 @@
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
 import { installAttributes, parseAttributeRows } from './attributesKind';
 import { ASSIGNMENT_KINDS, CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
+import { CART_RULE_KIND, installCartRules, parseCartRuleRows } from './cartRulesKind';
 import { installCategories, parseCategoryPack } from './categoriesKind';
 import { installCompanies, parseCompanyRows } from './companiesKind';
+import { COUPON_KIND, installCoupons, parseCouponRows } from './couponsKind';
 import { installCustomerGroups, installCustomers, parseCustomerGroupRows, parseCustomerRows } from './customerKinds';
 import {
     type RecordFiles,
@@ -30,7 +34,7 @@ import {
     removalOrder,
 } from './installRecord';
 import type { KindContext, SettingsDone } from './kindContext';
-import { installProducts, parseProductRows } from './productsKind';
+import { GIFT_CARD_KIND, PRODUCT_KINDS, installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
 import { type KeptContainer, type RemovalAccess, decideRemovals, takeBack } from './removers';
 import { type KeptThing, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat } from './repeatInstall';
@@ -67,9 +71,15 @@ const STEPS: readonly KindStep[] = [
     { kind: 'sources', install: (ctx, r) => installSources(ctx, parseSources(r)) },
     { kind: 'stock_source_links', install: (ctx, r) => installStockSourceLinks(ctx, parseStockSourceLinks(r)) },
     { kind: 'products', install: (ctx, r) => installProducts(ctx, parseProductRows(r)) },
+    // Step 11: gift cards are products, made as products are, after them as the service makes them.
+    { kind: GIFT_CARD_KIND, install: (ctx, r) => installProducts(ctx, parseProductRows(r), GIFT_CARD_KIND) },
     { kind: 'source_items', install: (ctx, r) => installSourceItems(ctx, parseSourceItems(r)) },
     // Step 08: customers, then the catalogs and companies, then what is assigned to the catalogs.
     { kind: CUSTOMER_KIND, install: (ctx, r) => installCustomers(ctx, parseCustomerRows(r)) },
+    // Step 11: cart rules, then their coupons, in the service's place: after the groups, categories and
+    // sets their conditions name, before a shared catalog renames a group the rules name by code.
+    { kind: CART_RULE_KIND, install: (ctx, r) => installCartRules(ctx, parseCartRuleRows(r)) },
+    { kind: COUPON_KIND, install: (ctx, r) => installCoupons(ctx, parseCouponRows(r)) },
     { kind: CATALOG_KIND, install: (ctx, r) => installCatalogs(ctx, parseCatalogRows(r)) },
     { kind: COMPANY_KIND, install: (ctx, r) => installCompanies(ctx, parseCompanyRows(r)) },
     ...ASSIGNMENT_KINDS.map((kind): KindStep => ({ kind, install: (ctx, r) => installCatalogAssignments(ctx, kind, r) })),
@@ -119,7 +129,7 @@ export async function installPack(ctx: KindContext, items: PackItems, onKind: (k
     // Hashed means an earlier install finished with it; one that stopped part-way left its
     // products unhashed, and a re-run still sets their quantities.
     ctx.session.productsBefore = new Set(
-        ctx.recorder.created.filter((o) => o.kind === 'products' && o.fingerprint !== undefined).map((o) => o.id),
+        ctx.recorder.created.filter((o) => PRODUCT_KINDS.includes(o.kind) && o.fingerprint !== undefined).map((o) => o.id),
     );
     for (const step of STEPS) {
         if (!(step.kind in items)) continue;

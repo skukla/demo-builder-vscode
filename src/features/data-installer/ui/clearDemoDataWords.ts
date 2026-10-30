@@ -57,7 +57,7 @@ export function viewsLine(views: readonly string[]): string {
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
 
 /** Each kind's word for one of it. */
-const ONE: Record<WipeKind, string> = { products: 'product', categories: 'category', customers: 'customer', orders: 'order' };
+const ONE: Record<WipeKind, string> = { products: 'product', categories: 'category', customers: 'customer', orders: 'order', 'cart rules': 'cart rule' };
 
 /** "3 to remove", or nothing for none. */
 function countOf(count: number, what: string): string {
@@ -83,12 +83,14 @@ function ordersValue(orders: WipePreview['orders']): string {
 
 /** What the clearing would do, kind by kind, then what it leaves and what Demo Builder installed. */
 export function previewLines(preview: WipePreview): PreviewLine[] {
-    const { remove, takenOff, orders, installed } = preview;
+    const { remove, takenOff, rulesTakenOff, orders, installed } = preview;
     const products = [countOf(remove.products.count, 'to remove'), countOf(takenOff.count, 'taken off the chosen websites')].filter(Boolean).join(', ');
+    const rules = [countOf(remove.cartRules.count, 'to remove, with their coupons'), countOf(rulesTakenOff.count, 'taken off the chosen websites')].filter(Boolean).join(', ');
     const lines: PreviewLine[] = [
         { label: 'Products', value: products },
         { label: 'Categories', value: remove.categories.count > 0 ? `${remove.categories.count} to remove` : '' },
         { label: 'Customers', value: remove.customers.count > 0 ? `${remove.customers.count} to remove` : '' },
+        { label: 'Cart rules', value: rules },
         { label: 'Orders', value: ordersValue(orders) },
         // The orders an ERP integration closes, or why it leaves them: its own one line.
         { label: 'ERP', value: preview.erp?.line ?? '' },

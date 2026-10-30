@@ -15,6 +15,8 @@
 import { withoutCredentials } from '../packCredentials';
 import { filterBy, filterIn } from './b2bReads';
 import { B2B_READERS, b2bRowsOf } from './b2bStoreCopies';
+import { CART_RULE_KIND, readRuleCopies } from './cartRulesKind';
+import { COUPON_KIND, readCouponCopies } from './couponsKind';
 import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
 import { eachCopy, type KindContext, segment } from './kindContext';
@@ -66,14 +68,18 @@ async function attributeOrNone(lk: ProductLookups, code: string) {
     }
 }
 
+/** Products by SKU, a page of SKUs at a time; a gift card is one too (step 11). */
+const productReader: Reader = async (ctx, lk, objects) => {
+    const bySku = new Map((await readProducts(ctx, objects.map((o) => o.id))).map((p) => [p.sku, p]));
+    return eachCopy(objects, async (o) => {
+        const raw = bySku.get(o.id);
+        return raw ? productPackForm(lk, raw) : undefined;
+    });
+};
+
 const READERS: Record<string, Reader> = {
-    products: async (ctx, lk, objects) => {
-        const bySku = new Map((await readProducts(ctx, objects.map((o) => o.id))).map((p) => [p.sku, p]));
-        return eachCopy(objects, async (o) => {
-            const raw = bySku.get(o.id);
-            return raw ? productPackForm(lk, raw) : undefined;
-        });
-    },
+    products: productReader,
+    giftcards: productReader,
     categories: (_ctx, lk, objects) =>
         eachCopy(objects, async (o) => {
             const raw = await lk.category(o.id);
@@ -137,6 +143,9 @@ const READERS: Record<string, Reader> = {
     },
     // Customers, groups, companies, shared catalogs and their assignments (step 08).
     ...B2B_READERS,
+    // Cart rules and their coupons (step 11): `GET salesRules/{id}`, `GET coupons/{id}`.
+    [CART_RULE_KIND]: (ctx, lk, objects) => readRuleCopies(ctx, lk, objects),
+    [COUPON_KIND]: (ctx, _lk, objects) => readCouponCopies(ctx, objects),
 };
 
 /** The kinds whose recorded objects can be read back. */
@@ -206,7 +215,7 @@ export function rowsByKey(kind: string, records: unknown): Map<string, unknown> 
 }
 
 /** Kinds a repeat install brings changes to; every other kind is only added or taken away. */
-const UPDATED_WHOLE = new Set(['products', 'categories', 'sources', 'customer_groups', 'customers', 'b2b_companies']);
+const UPDATED_WHOLE = new Set(['products', 'giftcards', 'categories', 'sources', 'customer_groups', 'customers', 'b2b_companies', 'cart_rules', 'coupons']);
 
 /**
  * The fingerprint of a pack row, for "has the pack changed since it was installed?": the whole

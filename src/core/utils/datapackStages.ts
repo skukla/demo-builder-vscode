@@ -64,6 +64,17 @@ export const DATAPACK_STAGES = {
         expectation: 'Usually a second each',
         detail: 'Products other websites also sell',
     },
+    // Step 11: cart rules, before the categories their conditions name.
+    removingCartRules: {
+        label: 'Removing cart rules',
+        expectation: 'Usually a second each',
+        detail: 'With their coupons',
+    },
+    takingRulesOff: {
+        label: 'Taking rules off sites',
+        expectation: 'Usually a second each',
+        detail: 'Rules other websites also use',
+    },
     removingCategories: {
         label: 'Removing categories',
         expectation: 'Usually a second each',

@@ -30,8 +30,8 @@ describe('installPack', () => {
     it('refuses a pack holding a kind it cannot install, before writing anything', async () => {
         const ctx = await fakeContext();
 
-        await expect(installPack(ctx, { categories: { categories: [] }, customers_export: {}, cart_rules: [] })).rejects.toThrow(
-            new UnsupportedKindsError(['customers_export', 'cart_rules']),
+        await expect(installPack(ctx, { categories: { categories: [] }, customers_export: {}, product_export: [] })).rejects.toThrow(
+            new UnsupportedKindsError(['customers_export', 'product_export']),
         );
         expect(ctx.sent).toStrictEqual([]);
     });
@@ -49,8 +49,13 @@ describe('installPack', () => {
             'sources',
             'stock_source_links',
             'products',
+            // Step 11: gift cards after the products, as the service makes them.
+            'giftcards',
             'source_items',
             'customers',
+            // Step 11: cart rules and their coupons, before a shared catalog renames a group they name.
+            'cart_rules',
+            'coupons',
             'b2b_shared_catalogs',
             'b2b_companies',
             'b2b_shared_catalog_company_assignments',
@@ -59,6 +64,14 @@ describe('installPack', () => {
             // Step 09: a pack's store settings, once its data is in.
             'store_config',
         ]);
+    });
+
+    it('installs every kind the five kept packs with cart rules, coupons or gift cards hold, but their bulk product form', () => {
+        // Health & Beauty, Carvello and wknd main (read 2026-10-30); Luma and Venia eds-compatible (get_datapack).
+        const kinds = ['cart_rules', 'coupons', 'giftcards', 'customer_groups', 'customers', 'categories', 'products', 'stocks', 'sources', 'stock_source_links', 'source_items'];
+
+        expect(kinds.filter((kind) => !INSTALLABLE_KINDS.includes(kind))).toStrictEqual([]);
+        expect(INSTALLABLE_KINDS).not.toContain('product_export');
     });
 
     it("installs every one of Bodea's fourteen kinds", () => {

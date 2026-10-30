@@ -18,11 +18,22 @@
  */
 
 import { z } from 'zod';
+import { amountsForStore, withoutAmounts } from './giftCardAmounts';
 import { deleteIfPresent, type KindContext, readOrNull } from './kindContext';
 import { isNumeric, type ProductLookups, productLookups } from './productLookups';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const PRODUCT_KIND = 'products';
+
+/**
+ * Gift cards (step 11): products of `type_id` giftcard, made and removed as products are (the
+ * service's `GiftCardImportProcessor` posts them to `products` too), recorded under their own kind
+ * so a repeat install finds their rows under `giftcards`.
+ */
+export const GIFT_CARD_KIND = 'giftcards';
+
+/** The kinds whose recorded objects are products, by SKU. */
+export const PRODUCT_KINDS: readonly string[] = [PRODUCT_KIND, GIFT_CARD_KIND];
 
 /** Inputs whose values a pack writes as option labels. */
 const OPTION_INPUTS = new Set(['select', 'multiselect']);
@@ -117,7 +128,8 @@ async function configurableOptions(lk: ProductLookups, options: ConfigurableOpti
 }
 
 /** The extension attributes, on this store's website and with this store's ids. */
-async function extensionAttributes(lk: ProductLookups, ext: Record<string, unknown>, websiteId: number): Promise<Record<string, unknown>> {
+async function extensionAttributes(lk: ProductLookups, row: ProductRow, websiteId: number): Promise<Record<string, unknown>> {
+    const ext = row.extension_attributes ?? {};
     const out: Record<string, unknown> = { ...ext, website_ids: [websiteId] };
     const links = ext.category_links as Array<{ category_id: string | number; position?: number }> | undefined;
     if (links) {
@@ -129,11 +141,8 @@ async function extensionAttributes(lk: ProductLookups, ext: Record<string, unkno
     if (options) out.configurable_product_options = await configurableOptions(lk, options);
     const children = ext.configurable_product_links as Array<string | number> | undefined;
     if (children) out.configurable_product_links = await Promise.all(children.map((c) => (isNumeric(c) ? Number(c) : lk.productId(String(c)))));
-    const amounts = ext.giftcard_amounts as Array<Record<string, unknown>> | undefined;
-    if (amounts) {
-        const id = (await lk.attribute('giftcard_amounts')).attribute_id;
-        out.giftcard_amounts = amounts.map((a) => ({ ...a, attribute_id: Number(id), website_id: 0 }));
-    }
+    const amounts = await amountsForStore(lk, ext, row.custom_attributes ?? []);
+    if (amounts) out.giftcard_amounts = amounts;
     return out;
 }
 
@@ -157,16 +166,20 @@ export async function toCommerceProduct(
             ...row,
             attribute_set_id: isNumeric(setName) ? Number(setName) : await lk.setId(setName),
             custom_attributes: (
-                await Promise.all((row.custom_attributes ?? []).map((a) => customAttribute(lk, a, leftAtDefault)))
+                await Promise.all(withoutAmounts(row.custom_attributes ?? []).map((a) => customAttribute(lk, a, leftAtDefault)))
             ).filter((a): a is CustomAttribute => a !== null),
-            extension_attributes: await extensionAttributes(lk, row.extension_attributes ?? {}, websiteId),
+            extension_attributes: await extensionAttributes(lk, row, websiteId),
             tier_prices: tiers,
         },
     };
 }
 
-/** Make each product the store lacks, in the pack's order, and record it. */
-export async function installProducts(ctx: KindContext, rows: readonly ProductRow[]): Promise<void> {
+/**
+ * Make each product the store lacks, in the pack's order, and record it.
+ *
+ * @param kind - the kind it is recorded under: `products`, or `giftcards` for a pack's gift cards
+ */
+export async function installProducts(ctx: KindContext, rows: readonly ProductRow[], kind = PRODUCT_KIND): Promise<void> {
     const websiteId = ctx.session.websiteId;
     if (websiteId === undefined) throw new Error('The install target names no website, so the pack\'s products have nowhere to be sold.');
     const lk = productLookups(ctx);
@@ -178,13 +191,13 @@ export async function installProducts(ctx: KindContext, rows: readonly ProductRo
         ctx.log(`left ${code} "${value}" at the store's default: the store does not offer it`);
     };
     for (const row of rows) {
-        if (ctx.recorder.has(PRODUCT_KIND, row.sku)) continue;
+        if (PRODUCT_KINDS.some((k) => ctx.recorder.has(k, row.sku))) continue;
         if (await readOrNull(ctx.get, `products/${encodeURIComponent(row.sku)}`)) {
             ctx.log(`left ${row.sku} alone: the store already has it`);
             continue;
         }
         await ctx.send('POST', 'products', await toCommerceProduct(lk, row, websiteId, leftAtDefault));
-        await ctx.recorder.record({ kind: PRODUCT_KIND, id: row.sku });
+        await ctx.recorder.record({ kind, id: row.sku });
         ctx.log(`created product ${row.sku}`);
     }
 }

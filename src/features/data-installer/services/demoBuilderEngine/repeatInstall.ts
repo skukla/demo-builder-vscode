@@ -19,14 +19,16 @@
  * | `leave-not-ours` | recorded before hashes were kept: left alone this once, hashed from now on |
  *
  * A container that would take the SC's own things with it is kept too: a category with a
- * category in it, or an attribute set with products in it, that this engine did not make
+ * category in it, an attribute set with products in it, or a cart rule with coupons in it, that this engine did not make
  * (`decideRemovals` in `removers.ts`, which a whole-pack removal and the preview use as well).
  *
  * @module features/data-installer/services/demoBuilderEngine/repeatInstall
  */
 
 import { addMissingOptions, parseAttributeRows } from './attributesKind';
+import { updateCartRule } from './cartRulesKind';
 import { updateCompany } from './companiesKind';
+import { updateCoupon } from './couponsKind';
 import { updateCustomer, updateCustomerGroup } from './customerKinds';
 import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
@@ -110,15 +112,19 @@ export function ownedFrom(plans: readonly KindPlan[]): Map<string, string | null
 
 type Updater = (ctx: KindContext, object: CreatedObject, row: unknown) => Promise<void>;
 
+/** A product brought up to its row with `PUT products/{sku}`; a gift card too (step 11). */
+const updateProduct: Updater = async (ctx, object, row) => {
+    if (ctx.session.websiteId === undefined) throw new Error('The install target names no website, so the pack\'s products have nowhere to be sold.');
+    const [product] = parseProductRows([row]);
+    const { stock_item: _stock, ...ext } = (product.extension_attributes ?? {}) as Row;
+    // Quantities are the source items' business; a stock block would reset them.
+    const body = await toCommerceProduct(productLookups(ctx), { ...product, extension_attributes: ext }, ctx.session.websiteId);
+    await ctx.send('PUT', `products/${encodeURIComponent(object.id)}`, body);
+};
+
 const UPDATERS: Record<string, Updater> = {
-    products: async (ctx, object, row) => {
-        if (ctx.session.websiteId === undefined) throw new Error('The install target names no website, so the pack\'s products have nowhere to be sold.');
-        const [product] = parseProductRows([row]);
-        const { stock_item: _stock, ...ext } = (product.extension_attributes ?? {}) as Row;
-        // Quantities are the source items' business; a stock block would reset them.
-        const body = await toCommerceProduct(productLookups(ctx), { ...product, extension_attributes: ext }, ctx.session.websiteId);
-        await ctx.send('PUT', `products/${encodeURIComponent(object.id)}`, body);
-    },
+    products: updateProduct,
+    giftcards: updateProduct,
     categories: async (ctx, object, row) => {
         // Its place in the tree stays as it is: a moved category would be another row.
         const { id: _id, parent_id: _parent, path: _path, ...fields } = (row as { category: Row }).category;
@@ -135,6 +141,9 @@ const UPDATERS: Record<string, Updater> = {
     customer_groups: (ctx, object, row) => updateCustomerGroup(ctx, object.id, row),
     customers: (ctx, object, row) => updateCustomer(ctx, object.id, row),
     b2b_companies: (ctx, object, row) => updateCompany(ctx, object.id, row),
+    // Step 11: a rule and a coupon whole, on the install target's website.
+    cart_rules: (ctx, object, row) => updateCartRule(ctx, object.id, row),
+    coupons: (ctx, object, row) => updateCoupon(ctx, object.id, row),
 };
 
 /**
@@ -157,7 +166,7 @@ export async function applyUpdates(ctx: KindContext, plans: readonly KindPlan[],
 /** Install order, so removal can run it backwards. */
 const ORDER = [
     'attribute_sets', 'product_attributes', 'attribute_options', 'attribute_assign_to_set', 'categories', 'customer_groups',
-    'stocks', 'sources', 'stock_source_links', 'products', 'customers', 'b2b_shared_catalogs', 'b2b_companies',
+    'stocks', 'sources', 'stock_source_links', 'products', 'giftcards', 'customers', 'cart_rules', 'coupons', 'b2b_shared_catalogs', 'b2b_companies',
     'b2b_shared_catalog_company_assignments', 'b2b_shared_catalog_categories', 'b2b_shared_catalog_products',
 ];
 

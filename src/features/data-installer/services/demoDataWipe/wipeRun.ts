@@ -7,7 +7,8 @@
  * the shown one did not (`withinPlan`): what is gone or closed since (the pack's removal ran in
  * between) is fine, anything new is refused. Then: returns closed, orders closed off (the one reset
  * rule, `wipeOrders.ts` / `wipeOrderRun.ts`), then the reverse of install order: customers, products
- * (deleted, or only taken off the chosen websites), categories deepest first. A write Commerce
+ * (deleted, or only taken off the chosen websites), cart rules (the same two ways, step 11), categories
+ * deepest first: a rule's conditions name categories, so it goes before them. A write Commerce
  * refuses is named and counted, and the rest carry on, so the SC is told exactly what could not be done.
  *
  * When an ERP integration routes some chosen stores' websites (`wipeErp.ts`), it closes every
@@ -21,6 +22,8 @@
  * | delete a product | `DELETE products/{sku}` | the route, yes (the engine's removal) |
  * | take a product off a website | `DELETE products/{sku}/websites/{websiteId}` | **no**: Adobe's REST reference lists it; never called from here |
  * | delete a category | `DELETE categories/{id}` | the route, yes (the engine's removal) |
+ * | delete a cart rule (its coupons go with it) | `DELETE salesRules/{id}` | **no** (step 11) |
+ * | take a cart rule off the chosen websites | `GET salesRules/{id}`, then `PUT salesRules/{id}` with the rest of its websites | **no** (step 11) |
  *
  * Every write but the order and return ones goes through the project's store-wide access (Store: `all`);
  * those name their own order or return id.
@@ -34,6 +37,7 @@ import type { InstallRecord } from '../demoBuilderEngine/installRecord';
 import { deleteIfPresent, segment } from '../demoBuilderEngine/kindContext';
 import { removeProduct } from '../demoBuilderEngine/productsKind';
 import type { RemovalAccess } from '../demoBuilderEngine/removers';
+import { deleteRule, takeRuleOff } from './wipeCartRules';
 import { type ErpClosed, type ErpRefreshed, type WipeErp, closeErpOrders, erpSentence, refreshErp } from './wipeErp';
 import { type OrderOutcome, closeOrder, closeReturn } from './wipeOrderRun';
 import { type WipePlan, planWipeFor, withinPlan } from './wipePlan';
@@ -55,6 +59,8 @@ export interface WipeCounts {
     customers: number;
     products: number;
     takenOff: number;
+    cartRules: number;
+    rulesTakenOff: number;
     categories: number;
 }
 
@@ -108,6 +114,12 @@ function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string): Record<S
             stage: DATAPACK_STAGES.takingProductsOff.label,
             writes: each(plan.takeOff, (t) => t.sku, (t) => deleteIfPresent(send, `products/${encodeURIComponent(t.sku)}/websites/${segment(t.websiteId)}`)),
         },
+        cartRules: { failed: 'remove 1 of the cart rules', stage: DATAPACK_STAGES.removingCartRules.label, writes: each(plan.ruleIds, self, (id) => deleteRule(commerce, id)) },
+        rulesTakenOff: {
+            failed: 'take 1 of the cart rules off a website',
+            stage: DATAPACK_STAGES.takingRulesOff.label,
+            writes: each(plan.ruleTakeOff, (t) => t.id, (t) => takeRuleOff(commerce, t.id, t.websiteIds)),
+        },
         categories: { failed: 'remove 1 of the categories', stage: DATAPACK_STAGES.removingCategories.label, writes: each(plan.categoryIds, self, (id) => removeCategory(send, id)) },
     };
 }
@@ -137,11 +149,13 @@ function sentenceOf(preview: WipePreview, removed: WipeCounts, orders: OrderCoun
         removed.products > 0 ? counted(removed.products, 'product', 'products') : '',
         removed.categories > 0 ? counted(removed.categories, 'category', 'categories') : '',
         removed.customers > 0 ? counted(removed.customers, 'customer', 'customers') : '',
+        removed.cartRules > 0 ? counted(removed.cartRules, 'cart rule', 'cart rules') : '',
     ].filter(Boolean);
     const did = parts.length > 0 ? `Removed ${andList(parts)} from ${where}.` : `Removed nothing from ${where}.`;
     const off = removed.takenOff > 0 ? ` Took ${counted(removed.takenOff, 'product', 'products')} other websites also sell off the chosen websites.` : '';
+    const rulesOff = removed.rulesTakenOff > 0 ? ` Took ${counted(removed.rulesTakenOff, 'cart rule', 'cart rules')} other websites also use off the chosen websites.` : '';
     const not = failed.map((f) => ` Could not ${f.what.replace('1', String(f.count))} (${f.first}).`).join('');
-    return `${did}${ordersSentence(orders)}${off}${not}`;
+    return `${did}${ordersSentence(orders)}${off}${rulesOff}${not}`;
 }
 
 const today = (): string => new Date().toISOString().slice(0, 10);
@@ -160,7 +174,7 @@ function count(key: StepKey, result: OrderOutcome | void, removed: WipeCounts, o
  * @param day - the day the orders' notes name; today by default
  */
 export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (stage: string) => void = () => undefined, day = today()): Promise<WipeOutcome> {
-    const removed: WipeCounts = { customers: 0, products: 0, takenOff: 0, categories: 0 };
+    const removed: WipeCounts = { customers: 0, products: 0, takenOff: 0, cartRules: 0, rulesTakenOff: 0, categories: 0 };
     const orders: OrderCounts = { cancelled: 0, refunded: 0, commented: 0, alreadyClosed: plan.alreadyClosed, returnsClosed: 0, failed: 0 };
     const failed: WipeOutcome['failed'] = [];
     for (const [key, step] of Object.entries(stepsOf(commerce, plan, day)) as Array<[StepKey, WipeStep]>) {

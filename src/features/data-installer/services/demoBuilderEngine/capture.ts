@@ -19,7 +19,8 @@
  * as an ordinary category, §2.)
  *
  * Customers, groups, companies, shared catalogs and their assignments are captured beside these
- * (`captureB2b.ts`, step 08).
+ * (`captureB2b.ts`, step 08), and cart rules with their coupons (`capturePromotions.ts`, step 11). A
+ * gift card is read as a product is, and written under `giftcards`.
  *
  * What the store already had and nothing captured names is left out: the store's Default set and
  * default source, Commerce's own attributes, products the pack did not make. Reads only.
@@ -28,10 +29,12 @@
  */
 
 import { captureB2b } from './captureB2b';
+import { capturePromotions } from './capturePromotions';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, segment } from './kindContext';
 import { ancestorIds, attributePackForm, categoryPackForm, productPackForm } from './packForm';
 import { type ProductLookups, type StoreCategory, productLookups } from './productLookups';
+import { GIFT_CARD_KIND } from './productsKind';
 import { captureSettings } from './storeConfigKind';
 import { onceInventory, readBySku, readCopies, readProducts } from './storeCopies';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
@@ -181,6 +184,8 @@ function categoryUrlKeys(records: unknown): Set<string> {
 /** What the installed version itself names, beside what the record lists. */
 export interface InstalledNames {
     skus: string[];
+    /** The SKUs of its gift cards (step 11), written back under `giftcards`. */
+    giftCards: string[];
     attributeCodes: string[];
     setNames: string[];
 }
@@ -190,6 +195,7 @@ export function installedNames(installed: Record<string, unknown>): InstalledNam
     const pick = (kind: string, outer: string, inner: string) => rowsOf(installed[kind]).map((r) => fieldOf(r, outer, inner)).filter((v): v is string => v !== undefined);
     return {
         skus: pick('products', 'product', 'sku'),
+        giftCards: pick(GIFT_CARD_KIND, 'product', 'sku'),
         attributeCodes: pick('product_attributes', 'attribute', 'attribute_code'),
         setNames: pick('attribute_sets', 'attributeSet', 'attribute_set_name'),
     };
@@ -219,8 +225,13 @@ async function namedSetIds(lk: ProductLookups, names: string[]): Promise<string[
 export async function capturePack(ctx: KindContext, created: readonly CreatedObject[], installed: Record<string, unknown> = {}): Promise<CaptureResult> {
     const lk = productLookups(ctx);
     const names = installedNames(installed);
-    const products = uniqueBySku(await readProducts(ctx, [...new Set([...idsOf(created, 'products'), ...names.skus])])).sort((a, b) => typeRank(a) - typeRank(b));
-    const productRows = await Promise.all(products.map((p) => productPackForm(lk, p)));
+    const giftCards = new Set([...idsOf(created, GIFT_CARD_KIND), ...names.giftCards].map((sku) => sku.toLowerCase()));
+    const skus = [...new Set([...idsOf(created, 'products'), ...names.skus, ...idsOf(created, GIFT_CARD_KIND), ...names.giftCards])];
+    const products = uniqueBySku(await readProducts(ctx, skus)).sort((a, b) => typeRank(a) - typeRank(b));
+    // A gift card's set, categories and quantities are captured with the products'; its row goes under `giftcards`.
+    const isGiftCard = (p: CommerceProduct) => giftCards.has(p.sku.toLowerCase());
+    const productRows = await Promise.all(products.filter((p) => !isGiftCard(p)).map((p) => productPackForm(lk, p)));
+    const giftCardRows = await Promise.all(products.filter(isGiftCard).map((p) => productPackForm(lk, p)));
     const categories = await captureCategories(lk, idsOf(created, 'categories'), products.flatMap(linkedCategories), ctx.session.rootCategory.id);
     const codes = await attributeCodes(lk, products, created);
     for (const code of names.attributeCodes) codes.add(code);
@@ -240,6 +251,7 @@ export async function capturePack(ctx: KindContext, created: readonly CreatedObj
         ...(assignments.length > 0 ? { attribute_assign_to_set: assignments } : {}),
         ...(categories.records ? { categories: categories.records } : {}),
         ...(productRows.length > 0 ? { products: productRows } : {}),
+        ...(giftCardRows.length > 0 ? { [GIFT_CARD_KIND]: giftCardRows } : {}),
         ...(await captureInventory(ctx, lk, products.map((p) => p.sku), created)),
         // Customers, groups, companies, catalogs and what is assigned to them (step 08).
         ...(await captureB2b(ctx, lk, created, installed, {
@@ -247,6 +259,8 @@ export async function capturePack(ctx: KindContext, created: readonly CreatedObj
             categoryKeys: categoryUrlKeys(categories.records),
             tierGroups: products.flatMap((p) => (p.tier_prices ?? []).map((t) => t.customer_group_id)),
         })),
+        // Cart rules and their coupons (step 11).
+        ...(await capturePromotions(ctx, lk, created, installed)),
         // Store settings at their values now, each at its own scope (step 09).
         ...(await captureSettings(ctx.get, created, installed, ctx.session.websiteCode)),
     };

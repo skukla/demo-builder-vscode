@@ -12,7 +12,8 @@
 
 import type { CreatedObject } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { StoreCategory } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
-import { containersLine, decideRemovals } from '@/features/data-installer/services/demoBuilderEngine/removers';
+import { containersLine, decideRemovals, takeBack } from '@/features/data-installer/services/demoBuilderEngine/removers';
+import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const inSet = (id: string) =>
@@ -22,6 +23,7 @@ const inCategory = (id: string) =>
 const category = (id: number, name: string, children: string): StoreCategory => ({ id, name, path: `1/2/${id}`, children });
 
 const obj = (kind: string, id: string): CreatedObject => ({ kind, id });
+const couponsOf = (ruleId: string) => page('coupons/search', filterBy('rule_id', ruleId));
 
 describe('decideRemovals', () => {
     it('takes everything out when nothing else is inside what the pack made', async () => {
@@ -94,6 +96,61 @@ describe('decideRemovals', () => {
         const decided = await decideRemovals(ctx.get, [obj('products', 'vrrack'), obj('attribute_sets', '12')]);
 
         expect(decided.kept).toStrictEqual([]);
+    });
+});
+
+describe('decideRemovals: gift cards and cart rules (step 11)', () => {
+    it("counts the pack's own gift cards in a category as going with it", async () => {
+        const ctx = await fakeContext({
+            'categories/42': category(42, 'Gift Cards', ''),
+            [inCategory('42')]: { items: [{ sku: 'zz-giftcard' }], total_count: 1 },
+        });
+
+        const decided = await decideRemovals(ctx.get, [obj('giftcards', 'zz-giftcard'), obj('categories', '42')]);
+
+        expect(decided.kept).toStrictEqual([]);
+    });
+
+    it("keeps a cart rule holding a coupon the SC added, as Commerce would delete it with the rule, but not for the pack's own coupons", async () => {
+        const ctx = await fakeContext({
+            'salesRules/41': { rule_id: 41, name: 'ZZ Ten Off (renamed)' },
+            [couponsOf('41')]: { items: [{ coupon_id: 88, rule_id: 41, code: 'ZZTEN' }, { coupon_id: 89, rule_id: 41, code: 'MINE' }], total_count: 2 },
+        });
+
+        const decided = await decideRemovals(ctx.get, [obj('coupons', '88'), obj('cart_rules', '41')]);
+
+        expect(decided.take).toEqual([obj('coupons', '88')]);
+        expect(decided.kept).toEqual([
+            { object: obj('cart_rules', '41'), kind: 'cart rule', name: 'ZZ Ten Off (renamed)', count: 1, holds: 'coupon' },
+        ]);
+        expect(containersLine(decided.kept)).toBe('Kept the cart rule ZZ Ten Off (renamed): it holds 1 coupon you added.');
+    });
+
+    it('takes out a cart rule whose coupons are all going with it', async () => {
+        const ctx = await fakeContext({ [couponsOf('41')]: { items: [{ coupon_id: 88, rule_id: 41, code: 'ZZTEN' }], total_count: 1 } });
+
+        const decided = await decideRemovals(ctx.get, [obj('coupons', '88'), obj('cart_rules', '41')]);
+
+        expect(decided).toEqual({ take: [obj('coupons', '88'), obj('cart_rules', '41')], kept: [] });
+    });
+
+    it("keeps a cart rule whose coupons cannot be read, rather than delete what might be the SC's", async () => {
+        const ctx = await fakeContext({ [couponsOf('41')]: () => Promise.reject(new Error('Commerce answered 500')) });
+
+        const decided = await decideRemovals(ctx.get, [obj('cart_rules', '41')]);
+
+        expect(decided.take).toStrictEqual([]);
+        expect(decided.kept[0]).toMatchObject({ kind: 'cart rule', name: '41', reason: 'Demo Builder could not read its coupons' });
+    });
+
+    it('takes each new kind back by its own route', async () => {
+        const ctx = await fakeContext({});
+
+        await takeBack(ctx, obj('giftcards', 'zz-giftcard'));
+        await takeBack(ctx, obj('coupons', '88'));
+        await takeBack(ctx, obj('cart_rules', '41'));
+
+        expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['DELETE products/zz-giftcard', 'DELETE coupons/88', 'DELETE salesRules/41']);
     });
 });
 

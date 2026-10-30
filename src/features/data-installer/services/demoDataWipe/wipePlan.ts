@@ -14,6 +14,7 @@
  * | customers | `wipeCustomers.ts`: of a wholly chosen website, or made in a chosen store with no order elsewhere | made in or ordering from a store not chosen; store not said; in a B2B company |
  * | orders | `wipeOrders.ts`, the one reset rule shared with the ERP reset: placed in a chosen store's views and not invoiced or shipped, cancelled; any other, refunded with an offline credit memo; noted; open returns closed. Never deleted | already Canceled or Closed, or noted by a reset before; neither cancellable nor refundable |
  * | orders an ERP integration handles | `wipeErp.ts`: on a website whose orders an ERP integration sends to an ERP, closed by that integration, not here; its ERP refreshed after | the integration must be updated first, or could not be asked: left open, the line says why |
+ * | cart rules (step 11) | `wipeCartRules.ts`: on wholly chosen websites only, deleted with their coupons; also on a website not chosen, taken off the chosen ones | on a website only partly chosen; holding a coupon Demo Builder installed |
  *
  * Never touched, whatever is there: anything an install record lists (every local project's on the
  * chosen websites, `readWipeClaims`; the pack's removal takes those, by its own rules); product
@@ -27,6 +28,7 @@
 
 import type { InstallRecord } from '../demoBuilderEngine/installRecord';
 import { named } from '../demoBuilderEngine/storeChanges';
+import { type CartRuleDecision, decideCartRules } from './wipeCartRules';
 import { type CustomerDecision, decideCustomers } from './wipeCustomers';
 import { type WipeErp, type WipeErpPlan, type WipeErpRoute, erpCloseIds, erpPartOf, erpPlanOf, splitByErp, websiteCodesOf } from './wipeErp';
 import { type OrderStep, openReturns, orderStepOf } from './wipeOrders';
@@ -50,6 +52,10 @@ export interface WipePlan {
     /** Deepest first, so no delete takes a category another delete still names. */
     categoryIds: string[];
     customerIds: string[];
+    /** Cart rules on only the chosen websites (step 11): deleted, their coupons with them. */
+    ruleIds: string[];
+    /** Cart rules also on websites not chosen: each kept on these websites only. */
+    ruleTakeOff: Array<{ id: string; websiteIds: number[] }>;
     orders: OrderStep[];
     /** Orders in the chosen stores already Canceled or Closed, or handled by a reset before. */
     alreadyClosed: number;
@@ -69,12 +75,19 @@ export const NEVER_TOUCHED =
     'companies and shared catalogs, stocks and sources, websites, stores, store views and root categories, ' +
     "store settings, admin users and the integration's credential. Orders are closed, never deleted.";
 
-type Recorded = Record<'products' | 'categories' | 'customers', Set<string>>;
+type Recorded = Record<'products' | 'categories' | 'customers' | 'rules' | 'coupons', Set<string>>;
 
 function recordedIds(records: readonly InstallRecord[]): Recorded {
-    const of = (kind: string, lower = false) =>
-        new Set(records.flatMap((r) => r.created.filter((o) => o.kind === kind).map((o) => (lower ? o.id.toLowerCase() : o.id))));
-    return { products: of('products', true), categories: of('categories'), customers: of('customers') };
+    const of = (kinds: string[], lower = false) =>
+        new Set(records.flatMap((r) => r.created.filter((o) => kinds.includes(o.kind)).map((o) => (lower ? o.id.toLowerCase() : o.id))));
+    return {
+        // A gift card is a product (step 11).
+        products: of(['products', 'giftcards'], true),
+        categories: of(['categories']),
+        customers: of(['customers']),
+        rules: of(['cart_rules']),
+        coupons: of(['coupons']),
+    };
 }
 
 function installedCounts(records: readonly InstallRecord[]): Record<string, number> {
@@ -110,9 +123,10 @@ function decideCategories(tree: readonly WipeCategory[], scope: WipeScope, recor
 const skus = (products: readonly CommerceProduct[]) => products.map((p) => p.sku);
 const categoryNames = (categories: readonly WipeCategory[]) => categories.map((c) => c.name ?? String(c.id));
 const emails = (customers: CustomerDecision['remove']) => customers.map((c) => c.email);
+const ruleNames = (rules: CartRuleDecision['remove']) => rules.map((r) => r.name);
 const leftRow = (kind: WipeLeft['kind'], names: string[], why: string): WipeLeft => ({ kind, ...named(names), why });
 
-function leftOf({ products, categories, customers }: Decided): WipeLeft[] {
+function leftOf({ products, categories, customers, cartRules }: Decided): WipeLeft[] {
     const left: WipeLeft[] = [
         leftRow('products', skus(products.cannotTell), "nothing ties them to the chosen stores (no category, or only categories other stores share), so which demo they belong to can't be told"),
         leftRow('products', skus(products.elsewhere), 'they are in the categories of a store not chosen'),
@@ -123,6 +137,8 @@ function leftOf({ products, categories, customers }: Decided): WipeLeft[] {
         leftRow('customers', emails(customers.inCompany), 'they are in a B2B company, which a wipe does not clear'),
         leftRow('customers', emails(customers.elsewhere), 'they were made in, or have orders in, a store not chosen'),
         leftRow('customers', emails(customers.unknownStore), 'Commerce did not say which store they were made in'),
+        leftRow('cart rules', ruleNames(cartRules.partWebsite), 'they apply on a website a store not chosen also sells on'),
+        leftRow('cart rules', ruleNames(cartRules.holding), 'they hold a coupon Demo Builder installed'),
     ];
     return left.filter((l) => l.count > 0);
 }
@@ -140,6 +156,7 @@ interface Decided {
     products: ProductDecision;
     categories: CategoryDecision;
     customers: CustomerDecision;
+    cartRules: CartRuleDecision;
     orders: OrderStep[];
     alreadyClosed: number;
     returns: Array<{ id: string; number: string }>;
@@ -174,6 +191,7 @@ async function decideAll(get: CommerceGet, scope: WipeScope, structure: Commerce
         products: decideProducts(await readScopeProducts(get, scope), scope, tree, recorded.products),
         categories: decideCategories(tree, scope, recorded.categories),
         customers: await decideCustomers(get, scope, structure, recorded.customers),
+        cartRules: await decideCartRules(get, scope, { rules: recorded.rules, coupons: recorded.coupons }),
         ...(await decideAllOrders(get, scope, inputs.route)),
     };
 }
@@ -185,13 +203,21 @@ function previewOf(scope: WipeScope, decided: Decided, plan: Omit<WipePlan, 'pre
         plan.takeOff.length +
         plan.categoryIds.length +
         plan.customerIds.length +
+        plan.ruleIds.length +
+        plan.ruleTakeOff.length +
         orders.length +
         plan.returnIds.length +
         erpCloseIds(plan.erp).length;
     return {
         stores: scope.stores.map((s) => ({ websiteCode: s.website.code, websiteName: s.website.name, storeCode: s.code, storeName: s.name })),
-        remove: { products: named(plan.deleteSkus), categories: named(categoryNames(decided.categories.remove)), customers: named(emails(decided.customers.remove)) },
+        remove: {
+            products: named(plan.deleteSkus),
+            categories: named(categoryNames(decided.categories.remove)),
+            customers: named(emails(decided.customers.remove)),
+            cartRules: named(ruleNames(decided.cartRules.remove)),
+        },
         takenOff: named([...new Set(plan.takeOff.map((t) => t.sku))]),
+        rulesTakenOff: named(decided.cartRules.takeOff.map((t) => t.rule.name)),
         orders: {
             cancel: named(orders.filter((o) => o.action === 'cancel').map((o) => o.number)),
             refund: named(orders.filter((o) => o.action === 'refund').map((o) => o.number)),
@@ -222,6 +248,8 @@ export async function planWipe(get: CommerceGet, structure: CommerceStoreStructu
         takeOff: decided.products.takeOff.flatMap((t) => t.websiteIds.map((websiteId) => ({ sku: t.product.sku, websiteId }))),
         categoryIds: decided.categories.remove.map((c) => String(c.id)),
         customerIds: decided.customers.remove.map((c) => String(c.id)),
+        ruleIds: decided.cartRules.remove.map((r) => String(r.rule_id)),
+        ruleTakeOff: decided.cartRules.takeOff.map((t) => ({ id: String(t.rule.rule_id), websiteIds: t.websiteIds })),
         orders: decided.orders,
         alreadyClosed: decided.alreadyClosed,
         returnIds: decided.returns.map((r) => r.id),
@@ -252,6 +280,7 @@ const orderIds = (plan: WipePlan, step: (o: OrderStep) => boolean) => plan.order
 export function withinPlan(shown: WipePlan, now: WipePlan): boolean {
     const inside = (a: readonly string[], b: readonly string[]) => a.every((id) => b.includes(id));
     const offKeys = (plan: WipePlan) => plan.takeOff.map((t) => `${t.sku}@${t.websiteId}`);
+    const ruleOffKeys = (plan: WipePlan) => plan.ruleTakeOff.map((t) => `${t.id}@${t.websiteIds.join(',')}`);
     const steps: Array<(o: OrderStep) => boolean> = [(o) => o.action === 'cancel', (o) => o.action === 'refund', (o) => o.unhold];
     return (
         now.scopeKey === shown.scopeKey &&
@@ -259,6 +288,8 @@ export function withinPlan(shown: WipePlan, now: WipePlan): boolean {
         inside(offKeys(now), offKeys(shown)) &&
         inside(now.categoryIds, shown.categoryIds) &&
         inside(now.customerIds, shown.customerIds) &&
+        inside(now.ruleIds, shown.ruleIds) &&
+        inside(ruleOffKeys(now), ruleOffKeys(shown)) &&
         steps.every((step) => inside(orderIds(now, step), orderIds(shown, step))) &&
         inside(now.returnIds, shown.returnIds) &&
         inside(erpCloseIds(now.erp), erpCloseIds(shown.erp))

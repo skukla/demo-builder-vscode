@@ -763,6 +763,18 @@ when unassigning first moved the SC's customer to group 1 and deleting the admin
 record, and never written into a saved pack, a copy between stores or a zip. Plan:
 `.rptc/plans/datapack-engine/step-08-customers-b2b.md`.
 
+### Cart rules, coupons and gift cards through Demo Builder's engine (datapack-engine step 11, 2026-10-30)
+
+No new tool. `start_datapack_import` now installs `cart_rules`, `coupons` and `giftcards`; its
+answer stays a job id. A rule is made on the install target's website whatever websites the pack
+names, its customer groups and its conditions' categories, sets and option labels turned into this
+store's ids; a coupon is made on the rule its pack row names by NAME, its code kept exactly; a
+gift card is a product (`POST products`), its amounts sent once on every website. A rule or code
+the store already has by that exact name is left alone and not recorded. Removal, reinstall and
+the preview keep a rule the pack made while it holds a code the pack did not ("Kept the cart rule
+… : it holds 1 coupon you added."). `product_export`, `customers_export` and the ACO kinds are
+still refused before anything is written. Plan: `.rptc/plans/datapack-engine/step-11-later.md`.
+
 ### Store settings in a pack (datapack-engine step 09, 2026-10-30)
 
 No new tool. `start_datapack_import` installs a pack's `store_config` rows (`{path, value, scope,
@@ -794,10 +806,12 @@ store's views, and `claimedBy` on a store another local project records as its o
 chosen (the project's own store when none is named; `stores: []` for the choices alone) it also
 answers `data.preview`: what the install records list, by kind; what clearing would delete
 (products tied to the chosen stores, categories under a root only chosen stores use, customers of
-a wholly chosen website or made in a chosen store) and take off the chosen websites (products
-other websites also sell); the orders it would cancel or refund and the returns it would close;
+a wholly chosen website or made in a chosen store, cart rules on wholly chosen websites only, their
+coupons with them) and take off the chosen websites (products other websites also sell, cart rules
+other websites also use); the orders it would cancel or refund and the returns it would close;
 what it would leave and why (a root a store not chosen shares, a product whose demo can't be told,
-a customer in a B2B company, an order Commerce can neither cancel nor refund); and a `token`. What
+a customer in a B2B company, an order Commerce can neither cancel nor refund, a cart rule on a
+website a store not chosen also sells on or holding a coupon Demo Builder installed); and a `token`. What
 a chosen store owns is judged against the whole chosen set.
 
 `clear_demo_data` (confirm-gated; the consent names the stores) needs the stores named, never
@@ -805,8 +819,9 @@ defaulted, and that token. It makes the list again and writes nothing if the sto
 anything the list did not hold, answering the new list instead; otherwise it closes the returns,
 closes off the orders by the one reset rule shared with the ERP integration's reset (nothing
 invoiced or shipped: cancelled; any other: refunded with an offline credit memo; each noted), then
-deletes customers, products, takes shared products off the chosen websites, and deletes categories
-deepest first. Its `note` says what it did and exactly what Commerce refused. Orders are never
+deletes customers, products, takes shared products off the chosen websites, deletes cart rules and
+takes shared ones off the chosen websites (read whole, sent back with the other websites only), and
+deletes categories deepest first. Its `note` says what it did and exactly what Commerce refused. Orders are never
 deleted. It never touches what an install record lists (`reset_datapack` removes that),
 attributes, sets, customer groups, companies, shared catalogs, stocks and sources, websites,
 stores, store views, root categories or settings. Cannot be undone. Project reset asks the same

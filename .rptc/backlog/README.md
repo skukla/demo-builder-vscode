@@ -452,10 +452,10 @@ each item's own file; what has already landed against an item is in its
 | `AB-80` | fix | [An add into a workspace it just made skips the leftover-code check](2026-10-17-add-skips-leftover-check-on-fresh-workspace.md) | — | low | built |
 | `AB-81` | fix | [An order paid on account leaves the buyer short by its shipping](2026-10-22-erp-invoice-carries-no-shipping.md) | — | med | backlog |
 | `AB-82` | feature | [One place for store setup](2026-10-26-one-place-for-store-setup.md) | — | med | active |
-| `AB-83` | fix | [Undo leaves what changed since](2026-10-27-undo-leaves-what-changed-since.md) | — | med | backlog |
+| `AB-83` | fix | [Undo leaves what changed since](2026-10-27-undo-leaves-what-changed-since.md) | — | med | active |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
-### data-installer  (6)
+### data-installer  (8)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -464,6 +464,8 @@ each item's own file; what has already landed against an item is in its
 | `DI-4` | question | [Has the Data Installer superseded the ACO data ingestion tool?](2026-10-07-aco-ingestion-tool-vs-data-installer.md) | — | low | superseded |
 | `DI-5` | feature | [Demo Builder installs datapacks itself, beside the service](2026-10-27-demo-builder-installs-datapacks.md) | — | high | active |
 | `DI-6` | chore | [The Commerce secrets gathered for the Data Installer service are no longer needed](2026-10-28-datapack-credential-gathering-removed.md) | — | med | active |
+| `DI-7` | feature | [Datapack images: how a pack carries its product images](2026-10-30-datapack-images.md) | — | low | backlog |
+| `DI-8` | feature | [`product_export`: the bulk product form Luma and Venia carry](2026-10-30-datapack-bulk-product-form.md) | _the owner reading the four `product_export` items from the service's database (tabled 2026-10-27)_ | med | gated |
 | `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | superseded |
 
 ### prerequisites  (4)
@@ -716,7 +718,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*316 item(s) sit outside the A–G chain.*
+*318 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
