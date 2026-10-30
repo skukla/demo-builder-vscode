@@ -619,7 +619,12 @@ failure recorded", never "did not run" — which is what `invoke_runtime_action`
 one deployed action with a payload (an event handler's `{data:{value}}`, a webhook's cart) and
 answers the whole record, result and log lines, of the run it started. The list takes
 `failedOnly`, `since` and `skip`, and hides the timer firings unless asked. Beside them, `run_commerce_rest` and `write_commerce_rest` reach the
-Commerce REST API for the same instance (AB-29).
+Commerce REST API for the same instance (AB-29). Their signed call (`requestRest`, which the ERP
+fill, the setup checks and the datapack engine share) sends a read again on a network failure, a
+5xx or a 429, and any write again only on a 429, which Commerce answers before processing
+anything; up to three times, waiting 1, 2 then 4 seconds (`commerceRestRetry.ts`, datapack step
+14). Any other failed write is sent once, because it may have landed. A read that ran out its own
+wait is not sent again.
 `get_integration_settings` reads the integration's settings, and `set_integration_settings`
 changes a text setting and redeploys; a secret setting is entered on the
 tile, never passed to a tool.

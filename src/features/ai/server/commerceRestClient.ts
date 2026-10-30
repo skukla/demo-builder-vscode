@@ -27,6 +27,7 @@
  */
 
 import { buildCommerceEndpoints } from './commerceEndpointsTool';
+import { restRetryDelay } from './commerceRestRetry';
 import {
     type CredentialStore,
     forgetCredential,
@@ -34,6 +35,7 @@ import {
     type RestCredential,
     saveCredential,
 } from './savedRestCredential';
+import { sleep } from '@/core/utils/sleep';
 import { noteStoreWrite } from '@/core/utils/storeWrites';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -353,10 +355,6 @@ export function explainStatus(status: number, body: string, signedAsSc = false):
 export type RestAnswer = { ok: boolean; status: number; text: string } | { failed: string };
 
 /**
- * Send one signed call and answer its status and WHOLE body, uncut: for a caller that
- * parses the answer (the ERP fill), where `sendRest`'s cut would break the JSON.
- */
-/**
  * Where a call goes: the synchronous `/V1` API, or the asynchronous bulk API, which
  * takes an ARRAY of requests in one call and answers a `bulk_uuid` to poll
  * (`GET V1/bulk/{uuid}/status`). The bulk API is what makes a catalog load one call
@@ -378,6 +376,14 @@ export function restPrefix(route: RestRoute | undefined): string {
     return route?.bulk ? 'V1/async/bulk' : 'V1';
 }
 
+/**
+ * Send one signed call and answer its status and WHOLE body, uncut: for a caller that
+ * parses the answer (the ERP fill), where `sendRest`'s cut would break the JSON.
+ *
+ * A read is sent again on a network failure, a 5xx or a 429, and any call on a 429, up to
+ * three times with backoff; any other write is sent once (`commerceRestRetry`). The answer is
+ * the last attempt's.
+ */
 export async function requestRest(
     method: RestMethod,
     target: RestTarget,
@@ -387,14 +393,34 @@ export async function requestRest(
     route?: RestRoute,
 ): Promise<RestAnswer> {
     // Counted as it is sent, not as it answers: a write that fails or times out may still land.
+    // Once per call: a 429 sent again was not processed the first time.
     if (method !== 'GET') noteStoreWrite();
+    // Reads, and any call Commerce answered 429, go again; other writes never (`commerceRestRetry`).
+    for (let retries = 0; ; retries += 1) {
+        const { answer, timedOut } = await sendOnce(method, target, path, body, fetchImpl, route);
+        const attempt = 'failed' in answer ? { failed: true as const, timedOut } : { status: answer.status };
+        const wait = restRetryDelay(method, attempt, retries);
+        if (wait === undefined) return answer;
+        await sleep(wait);
+    }
+}
+
+/** One attempt, and whether it ended because its own wait ran out. */
+async function sendOnce(
+    method: RestMethod,
+    target: RestTarget,
+    path: string,
+    body: unknown,
+    fetchImpl: typeof fetch,
+    route: RestRoute | undefined,
+): Promise<{ answer: RestAnswer; timedOut: boolean }> {
     const controller = new AbortController();
     // Commerce on the sandbox can take far longer than 30s to answer anything:
     // a company POST ran past it while sending welcome mail no server delivers,
     // and by evening plain GETs (eventing/supportedList, companyCredits) were
     // aborted at NORMAL three times over (measured 2026-09-24). An aborted write
     // may still land server-side, so a retry risks a duplicate; an aborted read
-    // is a wasted minute. Both wait LONG; the caller's probe sets its own ceiling.
+    // is a wasted minute. Both wait LONG per attempt; the caller's probe sets its own ceiling.
     const timer = setTimeout(() => controller.abort(), TIMEOUTS.LONG);
     try {
         const res = await fetchImpl(`${target.base}/${restPrefix(route)}/${path}`, {
@@ -410,9 +436,12 @@ export async function requestRest(
             ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
             signal: controller.signal,
         });
-        return { ok: res.ok, status: res.status, text: await res.text() };
+        return { answer: { ok: res.ok, status: res.status, text: await res.text() }, timedOut: false };
     } catch (error) {
-        return { failed: error instanceof Error ? error.message : String(error) };
+        return {
+            answer: { failed: error instanceof Error ? error.message : String(error) },
+            timedOut: controller.signal.aborted,
+        };
     } finally {
         clearTimeout(timer);
     }
