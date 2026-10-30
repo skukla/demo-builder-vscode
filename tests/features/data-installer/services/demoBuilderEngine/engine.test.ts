@@ -293,6 +293,30 @@ describe('demoBuilderEngine reads', () => {
         expect(ctx.sent).toStrictEqual([]);
     });
 
+    // Step 14 item 2: the dry run reads the pack's rows, as the service's validate mode does.
+    it("dry run reads the pack's rows and names each kind whose rows Commerce could not take", async () => {
+        const asked: string[][] = [];
+        const { engine, ctx } = await engineWith({}, () => ({}), {
+            readPack: async (_id, kinds) => {
+                asked.push(kinds);
+                return { attribute_sets: [], categories: { categories: [{ category: { name: 'Sale' } }] } };
+            },
+        });
+
+        const verdict = await engine.validateImport(request());
+
+        expect(asked).toEqual([['attribute_sets', 'categories']]);
+        expect(verdict.valid).toBe(false);
+        expect(verdict.reason).toMatch(/^Nothing would be installed: The pack's categories are not in the shape Commerce takes/u);
+        expect(ctx.sent).toStrictEqual([]);
+    });
+
+    it('dry run says when the pack does not hold a kind it was asked for', async () => {
+        const { engine } = await engineWith({}, () => ({}), { readPack: async () => ({ attribute_sets: [] }) });
+
+        await expect(engine.validateImport(request())).resolves.toEqual({ valid: false, reason: 'The pack holds no categories.' });
+    });
+
     it('checks the project\'s own Commerce access, not the credentials in the request', async () => {
         const { engine: works } = await engineWith({}, () => ({}));
         const { engine: refused } = await engineWith({}, () => ({}), { commerce: async () => ({ refusal: 'No credential saved.' }) });
