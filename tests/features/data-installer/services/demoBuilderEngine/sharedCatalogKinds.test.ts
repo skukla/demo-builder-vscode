@@ -172,6 +172,20 @@ describe('the assignment kinds', () => {
         expect(ctx.recorder.created).toEqual([{ kind: CATALOG_PRODUCTS_KIND, id: '40/vrrack', key: 'ServerSavvy Solutions/vrrack' }]);
     });
 
+    // The service trims a product's SKU before sending it (SharedCatalogProductsProcessor.js L198).
+    it('trims the spaces around a SKU before comparing and sending it, and keeps its case', async () => {
+        const ctx = await fakeContext({ [CATALOGS]: { items: [SAVVY] }, ...held(40, { products: ['vrrack'] }) });
+
+        await installAssignments(ctx, CATALOG_PRODUCTS_KIND, { catalogs: [{ name: 'ServerSavvy Solutions', products: [{ sku: ' vrrack ' }, { sku: 'AccessMesh\t' }] }] });
+
+        expect(ctx.sent).toEqual([{ method: 'POST', path: 'sharedCatalog/40/assignProducts', body: { products: [{ sku: 'AccessMesh' }] } }]);
+        expect(ctx.recorder.created).toEqual([{ kind: CATALOG_PRODUCTS_KIND, id: '40/AccessMesh', key: 'ServerSavvy Solutions/AccessMesh' }]);
+    });
+
+    it('refuses a SKU that is only spaces, before anything reaches Commerce', () => {
+        expect(() => flatAssignments(CATALOG_PRODUCTS_KIND, { catalogs: [{ name: 'ServerSavvy Solutions', products: [{ sku: '   ' }] }] })).toThrow(/shared catalog products/);
+    });
+
     it('stops, naming it, at a catalog the store does not have', async () => {
         const ctx = await fakeContext({ [CATALOGS]: { items: [PUBLIC] } });
 

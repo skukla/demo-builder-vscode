@@ -71,7 +71,12 @@ const companyAssignmentRows = z.array(
     z.object({ assignment: z.object({ shared_catalog_name: z.string().min(1), companies: z.array(z.object({ company_name: z.string().min(1) })) }) }),
 );
 const catalogCategories = z.object({ catalogs: z.array(z.object({ name: z.string().min(1), categories: z.array(z.object({ id: z.string().min(1) })) })) });
-const catalogProducts = z.object({ catalogs: z.array(z.object({ name: z.string().min(1), products: z.array(z.object({ sku: z.string().min(1) })) })) });
+/**
+ * A SKU here is trimmed, as the service trims it (`SharedCatalogProductsProcessor.js` L198), so a
+ * space in the pack does not make an assignment the catalog already holds look new. Its case is
+ * kept, as everywhere else in this engine.
+ */
+const catalogProducts = z.object({ catalogs: z.array(z.object({ name: z.string().min(1), products: z.array(z.object({ sku: z.string().trim().min(1) })) })) });
 
 export type CatalogRows = z.infer<typeof catalogRows>;
 
