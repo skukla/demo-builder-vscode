@@ -113,6 +113,20 @@ July and September 2026), so "blocked indefinitely" in older notes is out of dat
 
 A dated finding about a service we do not own — re-verify before relying on it.
 
+### An ACO pack from a Commerce store
+
+The export screen's "Pack type" choice, and `start_datapack_export` with `aco: true`, make an
+Adobe Commerce Optimizer pack from the project's own store (datapack-engine step 14 item 19,
+PL-60): `aco_metadata`, `aco_categories`, `aco_products`, `aco_price_books` and `aco_prices`,
+for the store views the SC ticks (none named means every one). It is Demo Builder's port of the
+service's `process-aco-datapack` export (`services/acoExport/`), so it runs with either engine,
+reads Commerce only, and saves into the SC's datapack **library**, never the shared catalog.
+Each kind is checked against the service's own schemas (`config/aco-schemas/`, copied
+verbatim). An existing name and version is refused; deleting the pack from the library undoes
+the save. What it reads and where it differs from the service, with file:line, is
+[`.rptc/research/datapack-engine/aco-export-spec.md`](../../.rptc/research/datapack-engine/aco-export-spec.md).
+Installing an ACO pack is not built: Demo Builder's engine refuses ACO kinds, and PL-60 owns it.
+
 ## The library in the catalog
 
 The Data Installer screen's catalog shows both stores: one request
