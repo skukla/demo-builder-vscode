@@ -9,10 +9,10 @@
  * | Read | Endpoint | Field read | Captured live? |
  * |---|---|---|---|
  * | a customer by email | `GET customers/search` (`email` eq) | `items[].id`, `email`, `website_id` | no (the item is `GET customers/{id}`'s shape, which is) |
- * | a group by code | `GET customerGroups/search` (`customer_group_code` eq, the field the service and the product lookups search) | `items[].id`, `code` | no (the item is `GET customerGroups/{id}`'s shape, which is) |
+ * | a group by code | `GET customerGroups/search` (`customer_group_code` eq, the field the service and the product lookups search; a filter on `code` answers HTTP 400 "Field code can't be used in filter", live 2026-10-30, pinned in `customerKinds.test.ts`) | `items[].id`, `code` | no (the item is `GET customerGroups/{id}`'s shape, which is) |
  * | a company by name or email | `GET company` (`company_name` / `company_email` eq) | `items[].id`, `company_name`, `company_email` | no |
  * | every shared catalog | `GET sharedCatalog` | `items[].id`, `name`, `type`, `customer_group_id` | yes, one filtered page (2026-09-28); the unfiltered list read live 2026-10-29 (step 06) |
- * | what a catalog holds | `GET sharedCatalog/{id}/companies`, `/products`, `/categories` | the lists | read live 2026-10-29 (step 06), not recorded as files |
+ * | what a catalog holds | `GET sharedCatalog/{id}/companies` (a JSON-encoded string of ids), `/products` (SKUs), `/categories` (ids) | the lists | yes, 2026-10-30 (`CATALOG_19_…_DB08` in `commerceB2bFixtures.ts`) |
  *
  * @module features/data-installer/services/demoBuilderEngine/b2bReads
  */

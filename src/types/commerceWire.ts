@@ -205,10 +205,11 @@ export interface CommerceCompanyRow {
  * - A customer's `addresses[]` rows: NOT captured (the one captured customer has none); typed to
  *   Magento's `Customer/Api/Data/AddressInterface`.
  * - The searches (`customers/search`, `customerGroups/search`, `company?`), the writes
- *   (`POST customers`, `POST customerGroups`, `POST company`, their PUTs and DELETEs) and
- *   `GET hierarchy/{companyId}`: Magento's service contracts and the data installer's processors
- *   (`.rptc/research/datapack-engine/customers-b2b-spec.md`). NOT recorded live; each is read
- *   back the first time the live test runs.
+ *   (`POST customers`, `POST customerGroups`, `POST company`, their PUTs and DELETEs):
+ *   Magento's service contracts and the data installer's processors
+ *   (`.rptc/research/datapack-engine/customers-b2b-spec.md`). NOT recorded live.
+ * - `GET hierarchy/{companyId}`, `GET company/{id}` and what a shared catalog holds: captured
+ *   2026-10-30 on scratch-1028's store (the `…_DB08` fixtures).
  */
 
 /** One row of a customer's `addresses[]` (Magento's AddressInterface; not captured live). */
@@ -301,7 +302,7 @@ export interface CommerceCompany {
     };
 }
 
-/** One node of `GET hierarchy/{companyId}` (Magento's HierarchyInterface; NOT captured live). */
+/** One node of `GET hierarchy/{companyId}` (Magento's HierarchyInterface; captured 2026-10-30, `HIERARCHY_27_DB08`). */
 export interface CommerceCompanyHierarchyNode {
     structure_id?: number;
     entity_id?: number;

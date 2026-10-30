@@ -7,7 +7,8 @@
  * and are built here in the shape of those bodies.
  */
 
-import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
+import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
+import { filterBy, groupByCode } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
 import {
     CUSTOMER_GROUP_KIND,
     CUSTOMER_KIND,
@@ -24,7 +25,14 @@ import {
 } from '@/features/data-installer/services/demoBuilderEngine/customerKinds';
 import { ownedKey } from '@/features/data-installer/services/demoBuilderEngine/kindContext';
 import { productLookups } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
-import { BODEA_CUSTOMER_ROWS, BODEA_GROUP_ROWS, CUSTOMER_44, GROUP_19, TEST_PASSWORD } from '../../../../helpers/commerceB2bFixtures';
+import {
+    BODEA_CUSTOMER_ROWS,
+    BODEA_GROUP_ROWS,
+    CUSTOMER_44,
+    GROUP_19,
+    GROUP_SEARCH_ON_CODE_REFUSED,
+    TEST_PASSWORD,
+} from '../../../../helpers/commerceB2bFixtures';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const groupSearch = (code: string) => page('customerGroups/search', filterBy('customer_group_code', code));
@@ -210,5 +218,37 @@ describe('customers', () => {
         expect([method, path]).toEqual(['PUT', 'customers/44']);
         expect(JSON.stringify(body)).not.toContain(TEST_PASSWORD);
         expect((body as { customer: Record<string, unknown> }).customer).toMatchObject({ id: 44, firstname: 'Samantha', group_id: 31, website_id: 3, store_id: 3, extension_attributes: CUSTOMER_44.extension_attributes });
+    });
+});
+
+/**
+ * Pinned (live, 2026-10-30): `customerGroups/search` refuses a filter on `code` with HTTP 400
+ * "Field code can't be used in filter", although `code` is what a group answers with. Both group
+ * searches must filter on `customer_group_code`; "simplifying" either to `code` breaks every group
+ * lookup on ACCS.
+ */
+describe('searching a customer group by its code', () => {
+    async function liveStore() {
+        const ctx = await fakeContext();
+        const get = jest.fn(async (path: string) => {
+            if (path.includes('[field]=code&')) throw new CommerceReadError(GROUP_SEARCH_ON_CODE_REFUSED.message, GROUP_SEARCH_ON_CODE_REFUSED.status);
+            if (path.includes('[field]=customer_group_code&')) return { items: [GROUP_19], total_count: 1 };
+            throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
+        });
+        return { ...ctx, get };
+    }
+
+    it('filters on customer_group_code when finding a group to make', async () => {
+        const ctx = await liveStore();
+
+        await expect(groupByCode(ctx.get, 'Example Studios')).resolves.toEqual(GROUP_19);
+        expect(ctx.get).toHaveBeenCalledWith(groupSearch('Example Studios'));
+    });
+
+    it("filters on customer_group_code when a row names its group, as products' tier prices and customers do", async () => {
+        const ctx = await liveStore();
+
+        await expect(productLookups(ctx).groupId('Example Studios')).resolves.toBe(19);
+        expect(ctx.get).toHaveBeenCalledWith(lookupGroup('Example Studios'));
     });
 });

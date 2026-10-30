@@ -13,7 +13,7 @@
 
 import { removeAssignment, removeAttributeSet } from './attributeSetsKind';
 import { removeAttribute, removeAttributeOption } from './attributesKind';
-import { b2bHeldByOthers, isB2bContainer } from './b2bContainers';
+import { type Taking, b2bHeldByOthers, isB2bContainer } from './b2bContainers';
 import { CATALOG_CATEGORIES_KIND, CATALOG_COMPANIES_KIND, CATALOG_PRODUCTS_KIND } from './b2bKeys';
 import { removeCategory } from './categoriesKind';
 import { removeCompany } from './companiesKind';
@@ -84,6 +84,16 @@ export interface KeptContainer {
      * holding products and a company; a company whose members could not be read).
      */
     reason?: string;
+    /**
+     * Kept with it, as one: a shared catalog's customer group, which Commerce deletes with the
+     * catalog (live, 2026-10-30; `b2bContainers.ts`). Stays on the record too.
+     */
+    with?: { object: CreatedObject; kind: KeptContainer['kind']; name: string };
+}
+
+/** Every object a removal kept: each container, and what was kept with it. */
+export function keptObjects(kept: readonly KeptContainer[]): CreatedObject[] {
+    return kept.flatMap((k) => (k.with ? [k.object, k.with.object] : [k.object]));
 }
 
 const keyOfObject = (kind: string, id: string) => `${kind}\u0000${id}`;
@@ -100,7 +110,7 @@ async function productsWhere(get: CommerceGet, field: 'attribute_set_id' | 'cate
 }
 
 /** What a container holds that is not being taken out with it, or undefined when nothing. */
-async function heldByOthers(get: CommerceGet, object: CreatedObject, taking: ReadonlySet<string>): Promise<KeptContainer | undefined> {
+async function heldByOthers(get: CommerceGet, object: CreatedObject, removal: Taking, taking: ReadonlySet<string>): Promise<KeptContainer | undefined> {
     if (object.kind === 'categories') {
         const category = await readOrNull<StoreCategory>(get, `categories/${segment(object.id)}`);
         const name = category?.name ?? object.id;
@@ -111,7 +121,7 @@ async function heldByOthers(get: CommerceGet, object: CreatedObject, taking: Rea
         if (products.length === 0) return undefined;
         return { object, kind: 'category', name, count: products.length, holds: 'product' };
     }
-    if (isB2bContainer(object.kind)) return b2bHeldByOthers(get, object, (kind, id) => taking.has(keyOfObject(kind, id)));
+    if (isB2bContainer(object.kind)) return b2bHeldByOthers(get, object, removal);
     if (object.kind === 'attribute_sets') {
         const others = (await productsWhere(get, 'attribute_set_id', object.id)).filter((sku) => !taking.has(keyOfObject('products', sku)));
         if (others.length === 0) return undefined;
@@ -129,16 +139,27 @@ async function heldByOthers(get: CommerceGet, object: CreatedObject, taking: Rea
  */
 export async function decideRemovals(get: CommerceGet, newestFirst: readonly CreatedObject[]): Promise<{ take: CreatedObject[]; kept: KeptContainer[] }> {
     const taking = new Set(newestFirst.map((o) => keyOfObject(o.kind, o.id)));
+    const byKey = new Map(newestFirst.map((o) => [keyOfObject(o.kind, o.id), o]));
+    const removal: Taking = {
+        has: (kind, id) => taking.has(keyOfObject(kind, id)),
+        find: (kind, id) => (taking.has(keyOfObject(kind, id)) ? byKey.get(keyOfObject(kind, id)) : undefined),
+    };
+    // Decided already, kept with a container that was decided first (a catalog's group).
+    const settled = new Set<string>();
     const take: CreatedObject[] = [];
     const kept: KeptContainer[] = [];
     for (const object of newestFirst) {
-        const held = await heldByOthers(get, object, taking);
-        if (held) {
-            taking.delete(keyOfObject(object.kind, object.id));
-            kept.push(held);
-        } else {
+        if (settled.has(keyOfObject(object.kind, object.id))) continue;
+        const held = await heldByOthers(get, object, removal, taking);
+        if (!held) {
             take.push(object);
+            continue;
         }
+        for (const one of keptObjects([held])) {
+            taking.delete(keyOfObject(one.kind, one.id));
+            settled.add(keyOfObject(one.kind, one.id));
+        }
+        kept.push(held);
     }
     return { take, kept };
 }
@@ -152,13 +173,16 @@ function plural(count: number, word: KeptContainer['holds']): string {
 /** Why one container was kept: its own words, or one count of one thing. */
 const reasonOf = (kept: KeptContainer): string => kept.reason ?? `it holds ${plural(kept.count, kept.holds)} you added`;
 
+/** "the shared catalog Gold and its customer group Gold". */
+const namedAs = (kept: KeptContainer): string => `the ${kept.kind} ${kept.name}${kept.with ? ` and its ${kept.with.kind} ${kept.with.name}` : ''}`;
+
 /** The one line a removal says about the containers it kept, or nothing when it kept none. */
 export function containersLine(kept: readonly KeptContainer[]): string | undefined {
     if (kept.length === 0) return undefined;
     if (kept.length === 1) {
         const [one] = kept;
-        return `Kept the ${one.kind} ${one.name}: ${reasonOf(one)}.`;
+        return `Kept ${namedAs(one)}: ${reasonOf(one)}.`;
     }
-    const names = kept.map((k) => `the ${k.kind} ${k.name}`);
+    const names = kept.map(namedAs);
     return `Kept ${kept.length} things that hold what you added: ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}.`;
 }

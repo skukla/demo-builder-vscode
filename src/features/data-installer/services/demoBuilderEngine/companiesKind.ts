@@ -22,7 +22,9 @@
  * What the store already has (by name, or by email) is left alone and not recorded.
  *
  * `companyMembers` reads who is in a company, for removal's container rule: `GET hierarchy/{id}`,
- * its nodes' `entity_type` and `entity_id`. Not captured live; any other shape throws.
+ * its nodes' `entity_type` and `entity_id`. Captured 2026-10-30 for a company holding only its admin
+ * (a flat list of nodes with `structure_parent_id`, `HIERARCHY_27_DB08`); a company with members was
+ * not captured. Any other shape throws.
  *
  * @module features/data-installer/services/demoBuilderEngine/companiesKind
  */

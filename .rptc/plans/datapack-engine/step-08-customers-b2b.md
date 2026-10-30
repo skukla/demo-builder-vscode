@@ -1,6 +1,6 @@
 # Step 08: customers and B2B
 
-Status: **built 2026-10-29, not yet committed or run live.** Customer groups, customers, companies,
+Status: **built 2026-10-29; first live run 2026-10-30 found the catalog/group defect, fixed (below), not yet re-run.** Customer groups, customers, companies,
 shared catalogs and their assignments. Completes Bodea, whose tier prices name customer groups its
 own pack makes: until this is built a Bodea install stops at its first product with a tier price,
 and says why. Specification first, read off the service's processors as catalog-spec.md was:
@@ -103,6 +103,53 @@ in `tests/helpers/commerceB2bFixtures.ts`.
 - A customer of the pack's that the SC has since made a member of their own company: not kept.
 - `ai-coverage-scan` and `security-review` not run this step; no response ceiling re-measured.
 
+### Fixed after the first live run (2026-10-30, scratch-1028)
+
+Measured with a pack holding group "ZZ Test Buyers DB08" and catalog "ZZ Test Catalog DB08" on it:
+making the catalog **renamed the group** to "ZZ Test Catalog DB08" (`GET customerGroups/24`), and
+removing the pack **deleted the catalog, which deleted the group too**, moving the SC's customer to
+group 1. Removal had said "Kept the customer group ZZ Test Buyers DB08: it holds 1 customer you
+added.", which was false twice: the group was gone, and it no longer had that name.
+
+- **A shared catalog and its customer group are one unit** (`b2bContainers.ts`, through
+  `decideRemovals`, so removal, reinstall and the preview agree). The catalog's group is read from
+  `GET sharedCatalog/{id}` (`customer_group_id`). If either holds the SC's things both are kept, in
+  one line: "Kept the shared catalog ZZ Test Catalog DB08 and its customer group ZZ Test Catalog
+  DB08: the customer group holds 1 customer you added." A catalog whose group is not in the same
+  removal is kept ("deleting it would delete the customer group … too, which is staying"). Both
+  stay on the record, so the next removal takes them once empty.
+- **Every "Kept the …" line names the thing as the store calls it now**: `GET company/{id}`
+  (`company_name`), `GET sharedCatalog/{id}` (`name`), `GET customerGroups/{id}` (`code`); the
+  record's key only when the read fails. Categories and sets already read theirs.
+- Captured as typed fixtures (`tests/helpers/commerceB2bFixtures.ts`, `…_DB08`): `GET hierarchy/27`,
+  catalog 19's three lists, `GET company/27`, the renamed group, the customers' `company_attributes`,
+  the `POST customers` answer, and the 400 for a group search on `code` (pinned:
+  `customerKinds.test.ts`, "searching a customer group by its code").
+- **Not checked:** whether Commerce refuses to delete a customer group a shared catalog still uses.
+  The code never asks it to (the unit keeps the group whenever it keeps the catalog). Adobe's
+  "Delete a shared catalog" says only that its companies go back to the public catalog; the group
+  deletion is measured, not documented.
+- **Open, not fixed:** because the group is renamed, a reinstall of a pack whose catalog is not
+  named after its group looks the group up by the pack's code and does not find it (Bodea names
+  each catalog after its group, so it never meets this). The repeat install's `PUT` of the group
+  also renames it back, which Commerce may or may not then undo. Recommended: record the group's
+  code as read after the catalog is made, or name the catalog after the group, before such a pack
+  ships.
+
+### Decision for the owner: companies are made Pending Approval
+
+The engine's `POST company` sends no `status`, and Commerce made the company `status: 0` ("Pending
+approval" in Adobe's "Manage company objects" status list; `COMPANY_27_DB08`, live 2026-10-30), as
+the Data Installer service's companies are. On the Bodea sandbox Altura,
+ServerSavvy Solutions and RackMaster are pending; two companies made by hand are active (1).
+Adobe's "Create a company account" (Experience League, Status field) says only an **Active** company's
+administrator and members "can log in the account from the storefront and make purchases"; a
+company created in the Admin is Active by default, and Pending Approval is for "not ready for the
+account to go live". The page does not say in so many words that a pending company's buyers are
+refused at sign-in; the live test's sign-in (step 2) shows it.
+**Recommended: make companies Active** (`status: 1`), since a demo buyer has to sign in and buy,
+and say so in the pack's install line; keep a pack's own `status` when it carries one. Not changed.
+
 ### Live test (owner's call; project `scratch-1028`, website `justrite_test_website`, never JustRite's own)
 
 A test pack, built from Bodea's shape with names no one could take for real ones: one group
@@ -123,6 +170,17 @@ existing test-website category and one test product assigned to the catalog.
    1 thing you had changed in the Admin."
 5. Add a customer of your own to the company; remove the pack: "Kept the company ZZ Test Company
    DB08: it holds 1 customer you added."; the company and your customer stay, everything else goes.
+   **How to add one** (2026-10-30): `POST customers` with `extension_attributes.company_attributes`
+   does NOT put the customer in the company (measured: it answered `company_id: 0`, which Adobe's
+   "Manage company users" page says every new customer starts at). That page's next step,
+   `PUT /V1/customers/{id}` with `company_attributes`, is marked there as not supported on Adobe
+   Commerce as a Cloud Service. The ACCS route is `PUT /V1/customers/{customerId}/companies/{companyId}`
+   (no body; "Integrate with B2B using REST", service `companyCompanyCustomerAssignmentV1`,
+   developer.adobe.com/commerce/webapi/rest/b2b/integrations/), undone by `DELETE` on the same path.
+   So: make the customer (`write_commerce_rest` `POST customers`, or the Admin), then
+   `write_commerce_rest` `PUT customers/<id>/companies/27`, then `GET hierarchy/27` should list it.
+   In the Admin the same is the customer's Account Information, "Associate to Company". Not yet
+   called.
 6. Delete your customer, remove the pack again: it finishes and the record file goes. Delete the
    test pack from the library. Check in the Admin that no group, customer, catalog or company named
    `DB08` is left, and that the category and product are out of the catalog: the store is back to
