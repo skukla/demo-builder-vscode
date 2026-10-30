@@ -110,6 +110,27 @@ layer is stored as ordinary pack rows, and when a pack carries settings itself, 
 Every step is test-first, reuses before it writes (the house component, hook, client or rule that
 already does the job), and runs the `gate` skill before it is committed.
 
+**Step 10 live, 2026-10-30:** the store wipe ran end to end on `justrite_test_store` with JustRite's
+ERP pair deployed from the branches below: two test orders closed by the one reset rule (one
+canceled, one refunded and closed), removed from Justrite ERP, the ERP refilled; a second and third
+wipe left the ERP's price lists flat after the seed fix.
+
+## Before beta.153 ships (owner, 2026-10-30: "I don't want to lose the merging of those branches")
+
+The store wipe and the ERP reset depend on code that is deployed on JustRite but lives only on
+branches. Merge each into its repository's `main` (plain merge, no trailers), push, then let
+Demo Builder's update check offer it to SCs — merging to `main` IS releasing it to every SC with the
+ERP integration, so it goes in just before the cut, with the owner's go:
+
+| Repo | Branch | Commits | Note |
+|---|---|---|---|
+| `skukla/demo-erp` | `feature/remove-orders` | `88546bc` (admin/remove-orders, contract 23), `0deea9f` (seeded price lists rerun-safe, contract 24) | merge FIRST |
+| `skukla/commerce-erp-integration` | `feature/one-reset-rule` | `18f28a9`, `0a10b95`, `a2556c2`, `1f6de21`, `d783ab2` (one reset rule; store-scoped `erp/close-orders`; vendors contract 24) | its `contract:check` fails until demo-erp's `main` has 24 |
+
+After both: point JustRite's four ERP component folders back at `main` (they were fast-forwarded to
+these branches from local copies on 2026-10-30) and confirm `erp/status` still answers
+`closesOrdersByStore` and `refundsOnReset`.
+
 ## Agents get every action, and every answer is lean (owner, 2026-10-28)
 
 A step that adds a screen action names its agent tools in an **Agent surface** section, with the
