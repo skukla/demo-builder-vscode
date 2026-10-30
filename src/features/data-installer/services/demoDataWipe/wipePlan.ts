@@ -13,6 +13,7 @@
  * | categories | under a root every store using it is chosen, deepest first | under a root a store not chosen also shows (`justrite_test_store` and JustRite's share 119): all left. One holding a category Demo Builder installed: left |
  * | customers | `wipeCustomers.ts`: of a wholly chosen website, or made in a chosen store with no order elsewhere | made in or ordering from a store not chosen; store not said; in a B2B company |
  * | orders | `wipeOrders.ts`, the one reset rule shared with the ERP reset: placed in a chosen store's views and not invoiced or shipped, cancelled; any other, refunded with an offline credit memo; noted; open returns closed. Never deleted | already Canceled or Closed, or noted by a reset before; neither cancellable nor refundable |
+ * | orders an ERP integration handles | `wipeErp.ts`: on a website whose orders an ERP integration sends to an ERP, closed by that integration, not here; its ERP refreshed after | the integration must be updated first, or could not be asked: left open, the line says why |
  *
  * Never touched, whatever is there: anything an install record lists (every local project's on the
  * chosen websites, `readWipeClaims`; the pack's removal takes those, by its own rules); product
@@ -27,6 +28,7 @@
 import type { InstallRecord } from '../demoBuilderEngine/installRecord';
 import { named } from '../demoBuilderEngine/storeChanges';
 import { type CustomerDecision, decideCustomers } from './wipeCustomers';
+import { type WipeErp, type WipeErpPlan, type WipeErpRoute, erpCloseIds, erpPartOf, erpPlanOf, splitByErp, websiteCodesOf } from './wipeErp';
 import { type OrderStep, openReturns, orderStepOf } from './wipeOrders';
 import { type ProductDecision, decideProducts } from './wipeProducts';
 import { type WipeCategory, readCategoryTree, readOrderReturns, readViewOrders, readWebsiteProducts, readWipeStructure } from './wipeReads';
@@ -52,6 +54,14 @@ export interface WipePlan {
     /** Orders in the chosen stores already Canceled or Closed, or handled by a reset before. */
     alreadyClosed: number;
     returnIds: string[];
+    /** Orders an ERP integration handles, when one routes some chosen stores' websites: not in `orders`. */
+    erp?: WipeErpPlan;
+}
+
+/** What a plan must respect beyond the store: every install record, and the ERP integration serving the instance. */
+export interface WipeInputs {
+    records: readonly InstallRecord[];
+    erp?: WipeErp;
 }
 
 export const NEVER_TOUCHED =
@@ -133,6 +143,7 @@ interface Decided {
     orders: OrderStep[];
     alreadyClosed: number;
     returns: Array<{ id: string; number: string }>;
+    erp?: WipeErpPlan;
 }
 
 /** Each order's step; one closed or handled before is only counted. */
@@ -141,23 +152,42 @@ function decideOrders(orders: readonly CommerceOrder[]): Pick<Decided, 'orders' 
     return { orders: steps.filter((s): s is OrderStep => s !== 'done'), alreadyClosed: steps.filter((s) => s === 'done').length };
 }
 
-async function decideAll(get: CommerceGet, scope: WipeScope, structure: CommerceStoreStructure, recorded: Recorded): Promise<Decided> {
+/** The orders the wipe closes itself, and the ERP part: what an ERP integration's websites hold. */
+async function decideAllOrders(get: CommerceGet, scope: WipeScope, route: WipeErpRoute | undefined): Promise<Pick<Decided, 'orders' | 'alreadyClosed' | 'returns' | 'erp'>> {
+    const split = splitByErp(scope, route, await readViewOrders(get, [...scope.viewIds]));
+    // Returns of the ERP's orders are the integration's to close, with their orders.
+    const returns = openReturns(await readOrderReturns(get, split.own.map((o) => Number(o.entity_id))));
+    const own = decideOrders(split.own);
+    const erp = route ? erpPlanOf(scope, route, split.erp) : undefined;
+    return {
+        orders: own.orders,
+        alreadyClosed: own.alreadyClosed + (erp?.alreadyClosed ?? 0),
+        returns: returns.map((r) => ({ id: String(r.entity_id), number: r.increment_id ?? String(r.entity_id) })),
+        ...(erp ? { erp: erp.plan } : {}),
+    };
+}
+
+async function decideAll(get: CommerceGet, scope: WipeScope, structure: CommerceStoreStructure, inputs: { recorded: Recorded; route?: WipeErpRoute }): Promise<Decided> {
+    const { recorded } = inputs;
     const tree = await readCategoryTree(get);
-    const orders = await readViewOrders(get, [...scope.viewIds]);
-    const returns = openReturns(await readOrderReturns(get, orders.map((o) => Number(o.entity_id))));
     return {
         products: decideProducts(await readScopeProducts(get, scope), scope, tree, recorded.products),
         categories: decideCategories(tree, scope, recorded.categories),
         customers: await decideCustomers(get, scope, structure, recorded.customers),
-        ...decideOrders(orders),
-        returns: returns.map((r) => ({ id: String(r.entity_id), number: r.increment_id ?? String(r.entity_id) })),
+        ...(await decideAllOrders(get, scope, inputs.route)),
     };
 }
 
 function previewOf(scope: WipeScope, decided: Decided, plan: Omit<WipePlan, 'preview' | 'choices' | 'scopeKey'>, records: readonly InstallRecord[]): WipePreview {
     const { orders } = plan;
     const total =
-        plan.deleteSkus.length + plan.takeOff.length + plan.categoryIds.length + plan.customerIds.length + orders.length + plan.returnIds.length;
+        plan.deleteSkus.length +
+        plan.takeOff.length +
+        plan.categoryIds.length +
+        plan.customerIds.length +
+        orders.length +
+        plan.returnIds.length +
+        erpCloseIds(plan.erp).length;
     return {
         stores: scope.stores.map((s) => ({ websiteCode: s.website.code, websiteName: s.website.name, storeCode: s.code, storeName: s.name })),
         remove: { products: named(plan.deleteSkus), categories: named(categoryNames(decided.categories.remove)), customers: named(emails(decided.customers.remove)) },
@@ -168,6 +198,7 @@ function previewOf(scope: WipeScope, decided: Decided, plan: Omit<WipePlan, 'pre
             leftOpen: named(orders.filter((o) => o.action === 'note').map((o) => o.number)),
             returns: named(decided.returns.map((r) => r.number)),
         },
+        ...(plan.erp ? { erp: erpPartOf(plan.erp, named) } : {}),
         left: leftOf(decided),
         installed: installedCounts(records),
         total,
@@ -179,10 +210,13 @@ function previewOf(scope: WipeScope, decided: Decided, plan: Omit<WipePlan, 'pre
 /**
  * What clearing the chosen stores would do, read-only.
  *
- * @param records - every install record the wipe must respect (`readWipeClaims`); what they list is left
+ * @param inputs - every install record the wipe must respect (`readWipeClaims`), whose lists are
+ *   left; and the ERP integration serving the instance, asked which chosen websites it routes
  */
-export async function planWipe(get: CommerceGet, structure: CommerceStoreStructure, scope: WipeScope, records: readonly InstallRecord[]): Promise<WipePlan> {
-    const decided = await decideAll(get, scope, structure, recordedIds(records));
+export async function planWipe(get: CommerceGet, structure: CommerceStoreStructure, scope: WipeScope, inputs: WipeInputs): Promise<WipePlan> {
+    const { records } = inputs;
+    const route = inputs.erp ? await inputs.erp.route(websiteCodesOf(scope)) : undefined;
+    const decided = await decideAll(get, scope, structure, { recorded: recordedIds(records), route });
     const ids = {
         deleteSkus: skus(decided.products.remove),
         takeOff: decided.products.takeOff.flatMap((t) => t.websiteIds.map((websiteId) => ({ sku: t.product.sku, websiteId }))),
@@ -191,25 +225,28 @@ export async function planWipe(get: CommerceGet, structure: CommerceStoreStructu
         orders: decided.orders,
         alreadyClosed: decided.alreadyClosed,
         returnIds: decided.returns.map((r) => r.id),
+        ...(decided.erp ? { erp: decided.erp } : {}),
     };
     return { choices: choicesOfScope(scope), scopeKey: scope.key, preview: previewOf(scope, decided, ids, records), ...ids };
 }
 
 /**
- * The same, reading the store structure first: what the clearing re-plans with.
+ * The same, reading the store structure first (and asking the ERP integration, when one serves the
+ * instance, which chosen websites it routes): what the clearing re-plans with.
  *
  * @throws WipeScopeError when a chosen website or store is no longer in the store
  */
-export async function planWipeFor(get: CommerceGet, choices: readonly WipeStoreChoice[], records: readonly InstallRecord[]): Promise<WipePlan> {
+export async function planWipeFor(get: CommerceGet, choices: readonly WipeStoreChoice[], records: readonly InstallRecord[], erp?: WipeErp): Promise<WipePlan> {
     const structure = await readWipeStructure(get);
-    return planWipe(get, structure, resolveWipeScope(structure, choices), records);
+    return planWipe(get, structure, resolveWipeScope(structure, choices), { records, erp });
 }
 
 const orderIds = (plan: WipePlan, step: (o: OrderStep) => boolean) => plan.orders.filter(step).map((o) => o.id);
 
 /**
  * Whether a plan made now takes nothing the plan the SC saw did not: the same stores, and every id
- * it would delete, take off, clear, cancel, refund, release or close was in the one shown. Things
+ * it would delete, take off, clear, cancel, refund, release or close (itself, or through the ERP
+ * integration) was in the one shown. Things
  * gone or closed since are fine.
  */
 export function withinPlan(shown: WipePlan, now: WipePlan): boolean {
@@ -223,6 +260,7 @@ export function withinPlan(shown: WipePlan, now: WipePlan): boolean {
         inside(now.categoryIds, shown.categoryIds) &&
         inside(now.customerIds, shown.customerIds) &&
         steps.every((step) => inside(orderIds(now, step), orderIds(shown, step))) &&
-        inside(now.returnIds, shown.returnIds)
+        inside(now.returnIds, shown.returnIds) &&
+        inside(erpCloseIds(now.erp), erpCloseIds(shown.erp))
     );
 }

@@ -18,6 +18,10 @@
  * answers that as a normal answer, `refused`, so an agent explains it, and the picker locks the
  * store); and what any project's install records list on the chosen websites is left.
  *
+ * Both find the ERP integration serving the instance, from any local project (`findWipeErp`): the
+ * orders of chosen stores whose website it sends to an ERP are closed by it, not here, and its ERP
+ * is filled again from Commerce after the clearing ("One action, ERP included", owner 2026-10-30).
+ *
  * Both open the project's own signed Commerce access (`projectCommerce`, Store: `all`), after the
  * sign-in is checked against the org that owns the store (`orgGuard`, adobe-org-context).
  *
@@ -28,6 +32,8 @@ import { projectCommerce } from '../services/buildDatapackEngine';
 import { type InstallRecord, type RecordFiles, nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
 import type { RemovalAccess } from '../services/demoBuilderEngine/removers';
 import { claimedStores, projectStoreChoice, readWipeClaims } from '../services/demoDataWipe/wipeClaims';
+import type { WipeErp } from '../services/demoDataWipe/wipeErp';
+import { findWipeErp } from '../services/demoDataWipe/wipeErpDeps';
 import { type WipePlan, planWipe, planWipeFor } from '../services/demoDataWipe/wipePlan';
 import { WipeScopeError, readWipeStructure } from '../services/demoDataWipe/wipeReads';
 import { WipeChangedError, clearShown, storesInWords } from '../services/demoDataWipe/wipeRun';
@@ -53,6 +59,8 @@ export interface DemoDataDeps {
     files: RecordFiles;
     /** Every other project on this machine, as the projects list reads them. */
     others: (context: HandlerContext, project: Project) => Promise<Project[]>;
+    /** The ERP integration serving the project's Commerce instance, from any of those projects. */
+    erp: (context: HandlerContext, project: Project, others: readonly Project[]) => WipeErp | undefined;
 }
 
 /** The plans shown, by token, newest last; a few is plenty, since one is shown per question. */
@@ -71,6 +79,7 @@ interface Opened {
     commerce: RemovalAccess;
     structure: CommerceStoreStructure;
     others: Project[];
+    erp?: WipeErp;
 }
 
 /** The open project's store, its structure and the other projects, or the response to answer instead. */
@@ -82,7 +91,8 @@ async function openStore(deps: DemoDataDeps, context: HandlerContext): Promise<O
     const others = await deps.others(context, project);
     const commerce = await deps.commerce(context, project);
     if ('refusal' in commerce) return { response: { success: false, error: commerce.refusal } };
-    return { project, commerce, others, structure: await readWipeStructure(commerce.get) };
+    const erp = deps.erp(context, project, others);
+    return { project, commerce, others, structure: await readWipeStructure(commerce.get), ...(erp ? { erp } : {}) };
 }
 
 function failure(context: HandlerContext, error: unknown, fallback: string): HandlerResponse {
@@ -104,7 +114,7 @@ async function checkIn(deps: DemoDataDeps, plans: Map<string, WipePlan>, opened:
     const choices = choicesOf(structure, scope, claims);
     const wiped = await readWipeClaims(deps.files, project, others, structure, scope);
     if ('refusal' in wiped) return answer({ choices, refused: wiped.refusal });
-    const plan = await planWipe(opened.commerce.get, structure, scope, wiped.records);
+    const plan = await planWipe(opened.commerce.get, structure, scope, { records: wiped.records, erp: opened.erp });
     keep(plans, plan);
     return answer({ choices, preview: plan.preview });
 }
@@ -127,21 +137,22 @@ function clearRefusal(payload: DemoDataRequest | undefined): string | undefined 
         const named = payload.stores.map((s) => (s.storeCode ? `${s.storeCode} (${s.websiteCode})` : `every store of ${s.websiteCode}`)).join(', ');
         return (
             `This removes everything in the stores ${named} that Demo Builder did not install, as listed, ` +
-            'cancels or refunds their orders and closes their returns. It cannot be undone. Confirm to proceed.'
+            'cancels or refunds their orders and closes their returns (through the ERP integration where one serves the store, ' +
+            'then refreshing its ERP from Commerce). It cannot be undone. Confirm to proceed.'
         );
     }
     return undefined;
 }
 
 /** The store would now clear more than was shown: the new list is offered, never acted on. */
-async function offerAgain(plans: Map<string, WipePlan>, commerce: RemovalAccess, shown: WipePlan, records: InstallRecord[], error: WipeChangedError): Promise<HandlerResponse> {
-    const fresh = await planWipeFor(commerce.get, shown.choices, records);
+async function offerAgain(plans: Map<string, WipePlan>, opened: Opened, shown: WipePlan, records: InstallRecord[], error: WipeChangedError): Promise<HandlerResponse> {
+    const fresh = await planWipeFor(opened.commerce.get, shown.choices, records, opened.erp);
     keep(plans, fresh);
     return { success: false, error: error.message, data: { preview: fresh.preview } };
 }
 
 /** Clear the list shown, from this project, when the stores named are the list's and no other project claims one. */
-async function clearIn(deps: DemoDataDeps, plans: Map<string, WipePlan>, context: HandlerContext, shown: WipePlan, stores: WipeStoreChoice[], report: (stage: string) => void): Promise<HandlerResponse> {
+async function clearIn(deps: DemoDataDeps, plans: Map<string, WipePlan>, context: HandlerContext, shown: WipePlan, stores: WipeStoreChoice[], report: (stage: string, step?: string) => void): Promise<HandlerResponse> {
     const opened = await openStore(deps, context);
     if ('response' in opened) return opened.response;
     const scope = resolveWipeScope(opened.structure, stores);
@@ -151,12 +162,12 @@ async function clearIn(deps: DemoDataDeps, plans: Map<string, WipePlan>, context
     if ('refusal' in claims) return { success: false, error: claims.refusal, code: ErrorCode.INVALID_OPERATION };
     try {
         report(DATAPACK_STAGES.checkingStores.label);
-        const outcome = await clearShown(opened.commerce, shown, claims.records, report);
+        const outcome = await clearShown(opened.commerce, shown, claims.records, { report, erp: opened.erp });
         context.logger.info(`${LOG_PREFIX} ${outcome.sentence}`);
         return { success: true, note: outcome.sentence, data: outcome };
     } catch (error) {
         if (!(error instanceof WipeChangedError)) throw error;
-        return offerAgain(plans, opened.commerce, shown, claims.records, error);
+        return offerAgain(plans, opened, shown, claims.records, error);
     }
 }
 
@@ -169,7 +180,7 @@ async function clear(deps: DemoDataDeps, plans: Map<string, WipePlan>, context: 
     const stores = payload.stores;
     return withOperationProgress(options, async (report) => {
         try {
-            return await clearIn(deps, plans, context, shown, stores, (stage) => report(stage));
+            return await clearIn(deps, plans, context, shown, stores, (stage, step) => report(stage, step));
         } catch (error) {
             return failure(context, error, 'The stores could not be cleared.');
         }
@@ -198,6 +209,7 @@ export const DEFAULT_DEMO_DATA_DEPS: DemoDataDeps = {
     guard: async (context, project) => (context.authManager ? (await orgGuard(context, project, context.authManager))?.error : undefined),
     files: nodeRecordFiles,
     others: (context, project) => loadOtherProjects(context, project.path),
+    erp: findWipeErp,
 };
 
 export const demoDataHandlers = createDemoDataHandlers(DEFAULT_DEMO_DATA_DEPS);

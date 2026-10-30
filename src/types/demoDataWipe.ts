@@ -60,6 +60,26 @@ export interface WipePlanStore {
     storeName: string;
 }
 
+/**
+ * The orders an ERP integration handles ("One action, ERP included", owner 2026-10-30): an ERP
+ * integration serves the instance (from any local project) and sends the orders of some chosen
+ * stores' websites to an ERP, so the wipe does not close those itself. It asks the integration to
+ * close them, then refreshes the ERP from Commerce. Left open instead (`held`) when the integration
+ * must be updated first, or could not be asked.
+ */
+export interface WipeErpPart {
+    /** The project the integration is in, as the SC knows it: "JustRite". */
+    integration: string;
+    /** The chosen websites whose orders it sends to an ERP. */
+    websites: string[];
+    /** The open orders placed there, by number. */
+    orders: WipeNamed;
+    /** Why those orders are left this time; absent when the integration closes them. */
+    held?: string;
+    /** The one line the list shows for it. */
+    line: string;
+}
+
 /** What the SC and the agent see before anything is written. Counts and a few names, never rows. */
 export interface WipePreview {
     stores: WipePlanStore[];
@@ -72,6 +92,8 @@ export interface WipePreview {
      * with a note when Commerce can do neither; their returns closed. Named by order number.
      */
     orders: { cancel: WipeNamed; refund: WipeNamed; leftOpen: WipeNamed; returns: WipeNamed };
+    /** Orders an ERP integration handles, when one serves some chosen stores' websites: not in `orders`. */
+    erp?: WipeErpPart;
     left: WipeLeft[];
     /** What the install records list (every local project's, on the chosen websites), by kind: their packs' removal takes those. */
     installed: Record<string, number>;

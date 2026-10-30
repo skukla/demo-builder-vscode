@@ -16,6 +16,8 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { memoryFiles } from '../services/demoBuilderEngine/demoBuilderEngine.testUtils';
 import { PROJECT_RECORDS, sandbox } from '../services/demoDataWipe/wipe.testUtils';
+import { fakeErp } from '../services/demoDataWipe/wipeErp.testUtils';
+import { RESET_RULE_CASES } from '../../../helpers/resetRuleOrders';
 
 /** scratch-1028's shape: the project names JustRite's website and view; the test website is another. */
 const PROJECT = createMockProject({
@@ -30,7 +32,7 @@ function setUp(overrides: Partial<DemoDataDeps> = {}, store = sandbox()) {
     // The project's own record on disk: what it lists must be left to the pack's removal.
     const [record] = PROJECT_RECORDS;
     const files = memoryFiles({ [installRecordPath(PROJECT.path, record.pack)]: JSON.stringify(record) });
-    const deps: DemoDataDeps = { commerce: async () => store, guard: async () => undefined, files, others: async () => [], ...overrides };
+    const deps: DemoDataDeps = { commerce: async () => store, guard: async () => undefined, files, others: async () => [], erp: () => undefined, ...overrides };
     const handlers = createDemoDataHandlers(deps);
     const context = createMockHandlerContext({ stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(PROJECT) }) }) as HandlerContext;
     return { handlers, context, store, files };
@@ -43,6 +45,8 @@ const JUSTRITE = createMockProject({
     componentSelections: { backend: 'adobe-commerce-accs' },
     componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite', ACCS_STORE_VIEW_CODE: 'justrite_us' } },
 });
+/** JustRite's project elsewhere on the machine, recording no store a test chooses. */
+const JUSTRITE_ELSEWHERE = createMockProject({ name: 'justrite', path: '/nonexistent/projects/justrite', componentConfigs: {} });
 const CLAIMED = "The store justrite_store (website justrite) is also JustRite's own store (project JustRite). Clear it from that project, if at all.";
 
 const checked = (data: unknown) => data as DemoDataCheck;
@@ -113,6 +117,29 @@ describe('check-demo-data', () => {
 
         expect(preview?.total).toBe(4);
         expect(preview?.installed).toEqual({ products: 2, customers: 1, categories: 1 });
+    });
+
+    it("never offers Commerce's own Admin website, nor takes it", async () => {
+        const { handlers, context } = setUp();
+
+        const { choices } = checked((await handlers['check-demo-data'](context, { stores: [] })).data);
+
+        expect(choices.map((w) => w.code)).toEqual(['base', 'justrite', 'bodea', 'justrite_test_website']);
+        expect(await handlers['check-demo-data'](context, { stores: [{ websiteCode: 'admin' }] })).toEqual({ success: false, error: 'The store has no website admin.' });
+    });
+
+    it('asks the ERP integration serving the instance, found among every local project, which chosen websites it routes', async () => {
+        const { erp, client } = fakeErp();
+        const find = jest.fn().mockReturnValue(erp);
+        const store = sandbox({ orders: [RESET_RULE_CASES[0].order] });
+        const { handlers, context } = setUp({ erp: find, others: async () => [JUSTRITE_ELSEWHERE] }, store);
+
+        const { preview } = checked((await handlers['check-demo-data'](context, { stores: TEST_STORE })).data);
+
+        expect(find).toHaveBeenCalledWith(context, PROJECT, [JUSTRITE_ELSEWHERE]);
+        expect(client.resolvedSettings).toHaveBeenCalledWith(['justrite_test_website']);
+        expect(preview?.erp?.line).toBe('1 order is handled by the ERP integration (JustRite): it will be closed there, removed from its ERP, and the ERP refreshed.');
+        expect(preview?.orders.cancel.count).toBe(0);
     });
 
     it('names a website the store does not have', async () => {
@@ -193,6 +220,19 @@ describe('clear-demo-data', () => {
         expect(cleared).toEqual({ success: false, error: CLAIMED, code: ErrorCode.INVALID_OPERATION });
         expect(others).toHaveBeenLastCalledWith(context, PROJECT);
         expect(store.sent).toStrictEqual([]);
+    });
+
+    it('has the ERP integration close its stores and refreshes its ERP, in the one clearing', async () => {
+        const { erp, client, refill } = fakeErp();
+        const store = sandbox({ orders: [RESET_RULE_CASES[0].order] });
+        const { handlers, context, token } = await shown(setUp({ erp: () => erp }, store));
+
+        const res = await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true });
+
+        expect(res.success).toBe(true);
+        expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
+        expect(refill).toHaveBeenCalledTimes(1);
+        expect(res.note).toContain("closed through the ERP integration (JustRite), and removed from Justrite ERP. JustRite's ERP was refreshed from Commerce.");
     });
 
     it('writes nothing and offers the new list when the store would now clear more', async () => {

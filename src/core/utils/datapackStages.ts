@@ -32,6 +32,13 @@ export const DATAPACK_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'That the list shown still holds',
     },
+    // An ERP integration serves some chosen stores ("One action, ERP included"): it closes their
+    // orders first, and its ERP is filled again from Commerce last.
+    closingErpOrders: {
+        label: 'Closing orders in the ERP',
+        expectation: 'Usually a minute or two',
+        detail: 'Through the ERP integration',
+    },
     closingReturns: {
         label: 'Closing returns',
         expectation: 'A few seconds each',
@@ -61,5 +68,10 @@ export const DATAPACK_STAGES = {
         label: 'Removing categories',
         expectation: 'Usually a second each',
         detail: 'Deepest first, roots kept',
+    },
+    refreshingErp: {
+        label: 'Refreshing the ERP',
+        expectation: 'Usually a few minutes',
+        detail: 'Filled again from Commerce',
     },
 } as const;

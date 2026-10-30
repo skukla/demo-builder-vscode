@@ -33,13 +33,22 @@ export class WipeScopeError extends Error {
     }
 }
 
-/** The store's websites, stores and store views, as they are now. */
+/**
+ * Commerce's own Admin scope: the website `admin` (id 0) and its store `default`, which the wipe's
+ * store list offered on scratch-1028 (2026-10-30), and the Admin store view, also id 0. Commerce
+ * answers them beside the real ones; they are no demo's, so a wipe never offers or takes them.
+ */
+const ADMIN_SCOPE_ID = 0;
+
+const notAdmin = (id: number | string | undefined): boolean => Number(id) !== ADMIN_SCOPE_ID;
+
+/** The store's websites, stores and store views, as they are now, without the Admin scope. */
 export async function readWipeStructure(get: CommerceGet): Promise<CommerceStoreStructure> {
     const [websites, storeGroups, storeViews] = await Promise.all([get('store/websites'), get('store/storeGroups'), get('store/storeViews')]);
     return {
-        websites: (websites ?? []) as CommerceWebsite[],
-        storeGroups: (storeGroups ?? []) as CommerceStoreGroup[],
-        storeViews: (storeViews ?? []) as CommerceStoreView[],
+        websites: ((websites ?? []) as CommerceWebsite[]).filter((w) => notAdmin(w.id)),
+        storeGroups: ((storeGroups ?? []) as CommerceStoreGroup[]).filter((g) => notAdmin(g.id) && notAdmin(g.website_id)),
+        storeViews: ((storeViews ?? []) as CommerceStoreView[]).filter((v) => notAdmin(v.id) && notAdmin(v.website_id)),
     };
 }
 

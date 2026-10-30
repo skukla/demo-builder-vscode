@@ -9,6 +9,9 @@ import { CommerceReadError } from '@/features/app-builder/services/erpFillReader
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { CommerceCustomer, CommerceOrder, CommerceProduct, CommerceReturn } from '@/types/commerceWire';
 import {
+    ADMIN_GROUP,
+    ADMIN_VIEW,
+    ADMIN_WEBSITE,
     SANDBOX_CATEGORIES,
     SANDBOX_GROUPS,
     SANDBOX_VIEWS,
@@ -65,9 +68,10 @@ function reader(data: SandboxState) {
         return items.filter((item) => values.includes(Number(fieldOf(item))));
     };
     return (path: string): unknown => {
-        if (path === 'store/websites') return SANDBOX_WEBSITES;
-        if (path === 'store/storeGroups') return SANDBOX_GROUPS;
-        if (path === 'store/storeViews') return SANDBOX_VIEWS;
+        // Commerce answers its Admin scope (id 0) first, beside the real ones.
+        if (path === 'store/websites') return [ADMIN_WEBSITE, ...SANDBOX_WEBSITES];
+        if (path === 'store/storeGroups') return [ADMIN_GROUP, ...SANDBOX_GROUPS];
+        if (path === 'store/storeViews') return [ADMIN_VIEW, ...SANDBOX_VIEWS];
         if (path.startsWith('categories/list?')) return page(SANDBOX_CATEGORIES);
         if (path.startsWith('products?')) {
             const [website] = filterOf(path)[1];

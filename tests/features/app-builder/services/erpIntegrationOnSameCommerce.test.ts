@@ -9,6 +9,7 @@
  */
 
 import {
+    erpIntegrationIdOf,
     erpIntegrationOnSameCommerce,
     oneErpIntegrationPerInstance,
 } from '@/features/app-builder/services/erpIntegrationOnSameCommerce';
@@ -145,5 +146,15 @@ describe('naming the project that holds the instance', () => {
 
     it('falls back to the folder name for a project with no title — control', () => {
         expect(oneErpIntegrationPerInstance({ name: 'justrite' })).toMatch(/^justrite already has/);
+    });
+});
+
+describe('erpIntegrationIdOf', () => {
+    it('names the deployed ERP integration a project runs, and nothing for a solo integration or an undeployed one', () => {
+        expect(erpIntegrationIdOf(onInstance('justrite', INSTANCE, JUSTRITE_PAIR), CATALOG)).toBe('erp-integration');
+        const solo = { 'commerce-integration-starter-kit': state('integration') };
+        expect(erpIntegrationIdOf(onInstance('solo', INSTANCE, solo), CATALOG)).toBeUndefined();
+        const failed = { ...JUSTRITE_PAIR, 'erp-integration': state('integration', { status: 'error' }) };
+        expect(erpIntegrationIdOf(onInstance('failed', INSTANCE, failed), CATALOG)).toBeUndefined();
     });
 });

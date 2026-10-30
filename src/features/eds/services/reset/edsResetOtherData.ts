@@ -22,6 +22,10 @@
  * Debug Logs carries the one line naming the other project. What any project's install records list
  * on the store's website is left too.
  *
+ * **An ERP integration serving the instance closes its websites' orders** (`findWipeErp`, from any
+ * local project, "One action, ERP included", owner 2026-10-30), and its ERP is filled again after:
+ * the question says so in the list's own line.
+ *
  * @module features/eds/services/reset/edsResetOtherData
  */
 
@@ -33,6 +37,8 @@ import { commerceBackendOf } from '@/features/data-installer/services/commerceBa
 import { type RecordFiles, nodeRecordFiles } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { RemovalAccess } from '@/features/data-installer/services/demoBuilderEngine/removers';
 import { type WipeClaims, projectStoreChoice, readWipeClaims } from '@/features/data-installer/services/demoDataWipe/wipeClaims';
+import type { WipeErp } from '@/features/data-installer/services/demoDataWipe/wipeErp';
+import { findWipeErp } from '@/features/data-installer/services/demoDataWipe/wipeErpDeps';
 import { type WipePlan, planWipe } from '@/features/data-installer/services/demoDataWipe/wipePlan';
 import { readWipeStructure } from '@/features/data-installer/services/demoDataWipe/wipeReads';
 import { clearShown } from '@/features/data-installer/services/demoDataWipe/wipeRun';
@@ -49,12 +55,15 @@ export interface OtherDataDeps {
     files: RecordFiles;
     /** Every other project on this machine, as the projects list reads them. */
     others: (project: Project, context: HandlerContext) => Promise<Project[]>;
+    /** The ERP integration serving the project's Commerce instance, from any of those projects. */
+    erp: (context: HandlerContext, project: Project, others: readonly Project[]) => WipeErp | undefined;
 }
 
 export const DEFAULT_OTHER_DATA_DEPS: OtherDataDeps = {
     commerce: (project, context) => projectCommerce({ project, authManager: context.authManager, secrets: context.context?.secrets })(),
     files: nodeRecordFiles,
     others: (project, context) => loadOtherProjects(context, project.path),
+    erp: findWipeErp,
 };
 
 /** What clearing these stores from the project must respect, read from the store as it is now. */
@@ -63,8 +72,9 @@ async function claimsOf(project: Project, context: HandlerContext, deps: OtherDa
     const chosen = stores ?? [projectStoreChoice(structure, project)].flatMap((s) => s ?? []);
     if (chosen.length === 0) return undefined;
     const scope = resolveWipeScope(structure, chosen);
-    const claims: WipeClaims = await readWipeClaims(deps.files, project, await deps.others(project, context), structure, scope);
-    return { structure, scope, claims };
+    const others = await deps.others(project, context);
+    const claims: WipeClaims = await readWipeClaims(deps.files, project, others, structure, scope);
+    return { structure, scope, claims, erp: deps.erp(context, project, others) };
 }
 
 /**
@@ -82,7 +92,7 @@ export async function beginOtherDataCheck(project: Project, context: HandlerCont
             context.logger.info(`${LOG_PREFIX} Not offering to clear the store: ${read.claims.refusal}`);
             return undefined;
         }
-        return await planWipe(commerce.get, read.structure, read.scope, read.claims.records);
+        return await planWipe(commerce.get, read.structure, read.scope, { records: read.claims.records, erp: read.erp });
     } catch (error) {
         context.logger.debug(`${LOG_PREFIX} What else the store holds could not be read: ${error instanceof Error ? error.message : String(error)}`);
         return undefined;
@@ -128,8 +138,10 @@ export async function confirmClearOtherData(vscode: typeof import('vscode'), pla
     const holds = kindsLine(plan) ? `also holds ${kindsLine(plan)} Demo Builder didn't install.` : "holds orders Demo Builder didn't place.";
     const shared = takenOff.count > 0 ? ` ${counted(takenOff.count, 'product', 'products')} another website also sells will only be taken off this one.` : '';
     const leftLine = left.length > 0 ? ` Some things are left: ${left.map((l) => `${l.count} ${l.kind} (${l.why})`).join('; ')}.` : '';
+    const erpLine = plan.preview.erp ? ` ${plan.preview.erp.line}` : '';
     const answer = await vscode.window.showWarningMessage(
-        `This demo's store, ${store}, ${holds}${ordersLine(plan)}${shared}${leftLine} ` + "Also remove those, to leave this demo's store empty? This can't be undone.",
+        `This demo's store, ${store}, ${holds}${ordersLine(plan)}${erpLine}${shared}${leftLine} ` +
+            "Also remove those, to leave this demo's store empty? This can't be undone.",
         { modal: true },
         clearButton,
         keepButton,
@@ -161,7 +173,7 @@ export async function clearProjectOtherData(
         const read = await claimsOf(project, context, deps, commerce, plan.choices);
         if (!read) return notCleared(context, 'the project names no store');
         if ('refusal' in read.claims) return notCleared(context, read.claims.refusal);
-        const outcome = await clearShown(commerce, plan, read.claims.records, (stage) => report(stage));
+        const outcome = await clearShown(commerce, plan, read.claims.records, { report: (stage, step) => report(stage, step), erp: read.erp });
         const log = outcome.failed.length > 0 ? context.logger.warn : context.logger.info;
         log.call(context.logger, `${LOG_PREFIX} ${outcome.sentence}`);
         return { cleared: true, sentence: outcome.sentence };

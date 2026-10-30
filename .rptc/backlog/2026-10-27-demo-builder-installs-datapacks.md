@@ -74,3 +74,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-29  fix(data-installer): a removal keeps a company's admin and its catalog links, deciding before any write (`bbd3ab715`)
 - 2026-10-29  feat(data-installer): clear a demo's leftover data, share a pack, and install to the recorded website (datapack step 10) (`bbd5a9f49`)
 - 2026-10-30  fix(data-installer): the wipe refuses a website another local project calls its own (`b7092cf70`)
+- 2026-10-30  feat(data-installer): the wipe clears a chosen set of stores and closes their orders by the one reset rule (`8edccf458`)

@@ -90,6 +90,8 @@ export function previewLines(preview: WipePreview): PreviewLine[] {
         { label: 'Categories', value: remove.categories.count > 0 ? `${remove.categories.count} to remove` : '' },
         { label: 'Customers', value: remove.customers.count > 0 ? `${remove.customers.count} to remove` : '' },
         { label: 'Orders', value: ordersValue(orders) },
+        // The orders an ERP integration closes, or why it leaves them: its own one line.
+        { label: 'ERP', value: preview.erp?.line ?? '' },
         ...preview.left.map((l) => ({ label: 'Left', value: `${plural(l.count, ONE[l.kind], l.kind)}: ${l.why}` })),
     ];
     const made = Object.entries(installed).map(([kind, count]) => `${count} ${kind.replace(/_/gu, ' ')}`);

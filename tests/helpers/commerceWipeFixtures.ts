@@ -26,6 +26,15 @@ export const SANDBOX_WEBSITES: CommerceWebsite[] = [
     { id: TEST_SITE_ID, code: 'justrite_test_website', name: 'JustRite Test' },
 ];
 
+/**
+ * Commerce's own Admin scope, which the three structure reads answer beside the real ones: the
+ * website `admin` (id 0) and its store `default` were offered by the wipe's store list on
+ * scratch-1028 (2026-10-30). The view's code and name are Commerce's usual ones, not captured.
+ */
+export const ADMIN_WEBSITE: CommerceWebsite = { id: 0, code: 'admin', name: 'Admin' };
+export const ADMIN_GROUP: CommerceStoreGroup = { id: 0, code: 'default', name: 'Default', website_id: 0, root_category_id: 0 };
+export const ADMIN_VIEW: CommerceStoreView = { id: 0, code: 'admin', name: 'Admin', store_group_id: 0, website_id: 0, is_active: 1 };
+
 /** `justrite_test_store` shows JustRite's root 119; Bodea's two stores have roots of their own, 150 and 160. */
 export const SANDBOX_GROUPS: CommerceStoreGroup[] = [
     { id: 1, code: 'main_website_store', name: 'Main Website Store', website_id: 1, root_category_id: 2 },

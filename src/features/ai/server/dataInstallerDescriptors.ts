@@ -264,7 +264,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'check_demo_data',
         needsAuth: ['adobe'],
-        readOnly: true, // reads the store structure, the chosen stores' products, categories, customers, orders and returns, and the records
+        readOnly: true, // reads the store structure, the chosen stores' products, categories, customers, orders and returns, the records, and the ERP integration's erp/status and erp/settings (GETs)
         description:
             "What some STORES of this project's Commerce instance hold that Demo Builder did not install, and what clearing them would do. " +
             'Answers data.choices: every website and its stores (store views listed under each, never chosen alone; a store another ' +
@@ -272,6 +272,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'products, categories and customers it would remove, products other websites also sell that would only be taken off the ' +
             "chosen websites, orders it would cancel or refund (never delete) and returns it would close, what it would leave and why " +
             "(a root category a store not chosen shares, a product whose demo can't be told, a B2B company), and a token clear_demo_data needs. " +
+            'When an ERP integration on this instance (in any local project) sends a chosen store\'s orders to an ERP, those orders ' +
+            'are in data.preview.erp instead (its line says so): that integration closes them and its ERP is refreshed from Commerce ' +
+            'after; when it must be updated first or cannot be asked, data.preview.erp.held says why and they are left open. ' +
             "Also counts what Demo Builder installed (removed by reset_datapack, never by the clearing). Writes nothing. Defaults to the " +
             "project's own store; stores: [] answers the choices alone. When a chosen store is another project's, answers data.refused " +
             'instead of a preview: tell the user that sentence; it names the project to clear it from.',
@@ -286,7 +289,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Clear the chosen stores of everything check_demo_data listed: deletes those products, categories and customers, takes the ' +
             'shared products off the chosen websites, cancels or refunds their orders (closing them, never deleting) and closes their ' +
-            "returns. Cannot be undone. Show the user check_demo_data's list and ask first. Needs the stores named exactly as checked " +
+            "returns; orders an ERP integration handles are closed by it first, and its ERP is refreshed from Commerce last, in the " +
+            "same call (the note merges its counts). Cannot be undone. Show the user check_demo_data's list and ask first. Needs the stores named exactly as checked " +
             'and the token from that check; if the store would now clear anything the list did not hold, nothing is written and the ' +
             'new list comes back. Refused when another project on this machine records a chosen store as its own. ' +
             "Never touches what any project's install records list, other stores' things, attributes, customer groups, companies, " +

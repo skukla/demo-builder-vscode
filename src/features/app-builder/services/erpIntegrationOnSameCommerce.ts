@@ -27,11 +27,19 @@ function instanceOf(project: CommerceSource): string | undefined {
     return 'error' in target ? undefined : target.commerceBaseUrl.toLowerCase();
 }
 
+/**
+ * The id of the deployed ERP integration a project runs (the first, or a numbered copy), else
+ * undefined. The demo-data wipe asks it of the instance's holder, to call that integration.
+ */
+export function erpIntegrationIdOf(project: Project, catalog: Catalog): string | undefined {
+    return Object.entries(project.appBuilderComponents ?? {}).find(
+        ([id, state]) => isDeployed(state) && bringsSystem({ kind: state.kind, id, catalogId: state.catalogId }, catalog),
+    )?.[0];
+}
+
 /** Whether a project runs an ERP integration (the first, or a numbered copy). */
 function runsErpIntegration(project: Project, catalog: Catalog): boolean {
-    return Object.entries(project.appBuilderComponents ?? {}).some(
-        ([id, state]) => isDeployed(state) && bringsSystem({ kind: state.kind, id, catalogId: state.catalogId }, catalog),
-    );
+    return erpIntegrationIdOf(project, catalog) !== undefined;
 }
 
 /**

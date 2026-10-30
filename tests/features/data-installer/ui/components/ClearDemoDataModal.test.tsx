@@ -143,3 +143,26 @@ it('says the stores could not be read when the first check is refused', async ()
     expect(screen.getByText("Couldn't read the stores")).toBeInTheDocument();
     expect(screen.getByText('Sign in to Adobe first.')).toBeInTheDocument();
 });
+
+it('lists the orders an ERP integration closes as their own line', async () => {
+    const line = '2 orders are handled by the ERP integration (JustRite): they will be closed there, removed from its ERP, and the ERP refreshed.';
+    const erp = { integration: 'JustRite', websites: ['bodea'], orders: named(['000000801', '000000802']), line };
+    withStore((stores) => (stores.length ? { choices: CHOICES, preview: { ...PREVIEW, erp } } : { choices: CHOICES }));
+    await openModal();
+
+    await tick(/Bodea Store/);
+
+    expect(screen.getByText(line)).toBeInTheDocument();
+});
+
+it('says why an ERP integration leaves its orders open, even with nothing else to clear', async () => {
+    const line = '1 order handled by the ERP integration (JustRite) is left open: it must be updated first.';
+    const erp = { integration: 'JustRite', websites: ['bodea'], orders: named(['000000801']), held: 'it must be updated first', line };
+    withStore((stores) => (stores.length ? { choices: CHOICES, preview: { ...PREVIEW, total: 0, erp } } : { choices: CHOICES }));
+    await openModal();
+
+    await tick(/Bodea Store/);
+
+    expect(screen.getByText(line)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear' })).toHaveAttribute('aria-disabled', 'true');
+});

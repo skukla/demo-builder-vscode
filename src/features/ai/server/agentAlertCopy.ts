@@ -258,7 +258,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     clear_demo_data: {
         action: "Clear these stores' demo data",
         consequence:
-            "Deletes the products, categories and customers these stores own that Demo Builder did not install, as listed, takes products other websites sell off them, and cancels or refunds their orders and closes their returns. This can't be undone.",
+            "Deletes the products, categories and customers these stores own that Demo Builder did not install, as listed, takes products other websites sell off them, and cancels or refunds their orders and closes their returns (through the ERP integration where one serves the store, then refreshing its ERP). This can't be undone.",
         target: ['stores'],
         sessionGrant: false,
     },

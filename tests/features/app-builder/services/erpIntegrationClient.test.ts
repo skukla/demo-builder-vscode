@@ -9,6 +9,7 @@ import {
     callErpApi,
     deriveErpActionUrl,
 } from '@/features/app-builder/services/erpIntegrationClient';
+import { STORE_CLOSE } from '../../../helpers/erpWipeFixtures';
 
 const URLS = {
     'runtime/erp/status': 'https://ns.adobeioruntime.net/api/v1/web/erp/status',
@@ -18,6 +19,7 @@ const URLS = {
     'runtime/erp/history': 'https://ns.adobeioruntime.net/api/v1/web/erp/history',
     'runtime/erp/erps': 'https://ns.adobeioruntime.net/api/v1/web/erp/erps',
     'runtime/erp/settings': 'https://ns.adobeioruntime.net/api/v1/web/erp/settings',
+    'runtime/erp/close-orders': 'https://ns.adobeioruntime.net/api/v1/web/erp/close-orders',
 };
 const AUTH = { accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' };
 
@@ -108,6 +110,19 @@ describe('ErpIntegrationClient', () => {
             closeOrders: true,
         });
         expect(report.closed?.cancelled).toBe(1);
+    });
+
+    it("POSTs close-orders with the store codes and a run id, for a demo-data wipe's close of those stores alone", async () => {
+        // The answer's shape is the integration's own box test's (test/box/close-store-orders.test.js, 1f6de21).
+        const fetchImpl = answering(200, STORE_CLOSE);
+
+        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).closeOrders(['justrite_test_store']);
+
+        expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/close-orders']);
+        const init = fetchImpl.mock.calls[0][1] as RequestInit;
+        expect(init.method).toBe('POST');
+        expect(JSON.parse(String(init.body))).toEqual({ run: expect.stringMatching(RUN_ID), stores: ['justrite_test_store'] });
+        expect(report).toEqual(STORE_CLOSE);
     });
 
     it('PUTs the whole key map as JSON, and knows a deployment without the action keeps none', async () => {
@@ -447,6 +462,16 @@ describe('ErpIntegrationClient.detach, when the answer is cut off at 60 seconds 
         // It pauses before each read, and says once that the undo is still going.
         expect(wait).toHaveBeenCalledTimes(2);
         expect(onProgress.mock.calls).toEqual([["Still undoing the ERP's changes in Commerce"]]);
+    });
+
+    it('follows a cut-off close-orders by its own run id, once erp/status says closesOrdersByStore', async () => {
+        const CLOSE = URLS['runtime/erp/close-orders'];
+        const fetchImpl = cutOffThen({ status: 200, body: { ...LIVE, closesOrdersByStore: true } }, [record('done', { result: STORE_CLOSE })]);
+
+        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl, noWait()).closeOrders(['justrite_test_store']);
+
+        expect(report).toEqual(STORE_CLOSE);
+        expect(fetchImpl.mock.calls.map(([url, init]) => `${init?.method} ${String(url)}`)).toContain(`GET ${CLOSE}?run=${sentRun(fetchImpl)}`);
     });
 
     it("throws the run's own error when the run failed", async () => {

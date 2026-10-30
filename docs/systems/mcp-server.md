@@ -822,6 +822,20 @@ JustRite's own store (project JustRite). Clear it from that project, if at all."
 does not ask its second question and logs the sentence. What another project's install records
 list on the chosen websites is left, as this project's is.
 
+**One action, ERP included** (owner, 2026-10-30). Every door also finds the ERP integration
+serving the instance, from any local project (`findWipeErp`: the deployed ERP integration of a
+project on the same Commerce instance, as the one-per-instance add refusal matches it). Orders of
+chosen stores whose website it sends to an ERP (`GET erp/settings?websites=`, `orders_send`) are
+not the wipe's own: `data.preview.erp` counts and names them, with one line ("2 orders are handled
+by the ERP integration (JustRite): they will be closed there, removed from its ERP, and the ERP
+refreshed."), and `clear_demo_data` has the integration close EVERY order of those stores first
+(`POST erp/close-orders` with their store codes, followed by its run id; each ERP that held one
+removes its documents for them), runs no order rule of its own there, does its other writes, then
+fills the integration's ERPs from Commerce again (`fillEveryErp`). The note merges the
+integration's counts with its own and names the ERPs the orders were removed from. A deployment whose `erp/status` lacks `closesOrdersByStore`, or one that cannot be
+asked, is never called: `data.preview.erp.held` says why (with the update to run) and those orders
+are left open. The store list never offers Commerce's own Admin website (`admin`, id 0).
+
 ### Sharing a library pack (owner, 2026-10-30)
 
 `share_datapack` (confirm-gated; the consent names the pack and whether it is shared) shares every

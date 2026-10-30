@@ -5,7 +5,8 @@
  * which the ERP fill sorts records by), `erp/keymap` and `erp/erps` (the key map and the list of
  * ERPs, both replaced whole by Demo Builder), `erp/prices` (publish an ERP's customer prices into
  * the companies' shared catalogs, run after every fill, AB-26z) and `erp/detach` (undo what the
- * integration wrote into Commerce, run by a reset and before the integration is removed). The
+ * integration wrote into Commerce, run by a reset and before the integration is removed) and
+ * `erp/close-orders` (close the orders of some stores only, the demo-data wipe's close). The
  * reset and the fill are Demo Builder's own since 2026-09-27 (AB-26y).
  *
  * All are web actions with `require-adobe-auth`, so they take the same
@@ -34,13 +35,8 @@ import type {
     ErpLookup,
     ErpOrderTrace,
     ErpPricesReport,
+    ErpStoreCloseReport,
 } from '@/types/erpIntegration';
-
-/** One detach run as the integration records it (`GET erp/detach?run=<id>`). */
-export type ErpDetachRun = ErpActionRun<ErpDetachReport>;
-
-/** One price publish run as the integration records it (`GET erp/prices?run=<id>`). */
-export type ErpPricesRun = ErpActionRun<ErpPricesReport>;
 
 export type ErpAction =
     | 'status'
@@ -50,7 +46,12 @@ export type ErpAction =
     | 'settings'
     | 'keymap'
     | 'erps'
-    | 'prices';
+    | 'prices'
+    | 'close-orders';
+
+/** The action runs a caller can follow past a cut-off answer, and the `erp/status` flag saying so. */
+type FollowedAction = 'detach' | 'prices' | 'close-orders';
+type RunFlag = 'detachRuns' | 'priceRuns' | 'closesOrdersByStore';
 
 /** The detach's words while a cut-off undo is followed (`erpActionRun`). */
 const DETACH_RUN_WORDS: ActionRunWords = {
@@ -58,6 +59,13 @@ const DETACH_RUN_WORDS: ActionRunWords = {
     stillRunningAtEnd:
         "The integration is still undoing the ERP's changes in Commerce. Try again in a few minutes.",
     failed: 'ERP detach failed',
+};
+
+/** The store close's words while a cut-off close is followed. */
+const CLOSE_RUN_WORDS: ActionRunWords = {
+    stillRunning: "Still closing the stores' orders",
+    stillRunningAtEnd: "The integration is still closing the stores' orders. Check again in a few minutes.",
+    failed: 'Closing the orders failed',
 };
 
 /** The publish's words while a cut-off publish is followed: plain, nothing about Runtime. */
@@ -133,25 +141,40 @@ export class ErpIntegrationClient {
         options: { closeOrders?: boolean } = {},
         onProgress?: (message: string) => void,
     ): Promise<ErpDetachReport> {
-        const run = newRunId();
-        const body = { run, ...(options.closeOrders ? { closeOrders: true } : {}) };
-        const post = this.call('detach', 'POST', undefined, body) as Promise<ErpDetachReport>;
-        const source: ActionRunSource<ErpDetachReport> = {
-            recordsRuns: () => this.recordsRuns('detachRuns'),
-            readRun: (id) => this.detachRun(id),
-            emptyResult: () => ({}),
+        const body = options.closeOrders ? { closeOrders: true } : {};
+        const how = { flag: 'detachRuns' as const, words: DETACH_RUN_WORDS, emptyResult: () => ({}) };
+        return this.followed<ErpDetachReport>('detach', body, how, onProgress);
+    }
+
+    /**
+     * Close the orders placed in these stores (store group codes) only, by the one reset rule, each
+     * ERP that held one removing its documents for them (`POST erp/close-orders`, integration
+     * a2556c2 + 1f6de21): the demo-data wipe's close. No ledgered write is undone and no other
+     * order touched. Ask `status().closesOrdersByStore` first: a deployment before has no action.
+     */
+    async closeOrders(stores: readonly string[], onProgress?: (message: string) => void): Promise<ErpStoreCloseReport> {
+        const emptyResult = (): ErpStoreCloseReport => {
+            throw new Error(`${CLOSE_RUN_WORDS.failed}: the run ended without a result`);
         };
-        return reportOf(post, source, run, DETACH_RUN_WORDS, { wait: this.wait, onProgress });
+        const how = { flag: 'closesOrdersByStore' as const, words: CLOSE_RUN_WORDS, emptyResult };
+        return this.followed<ErpStoreCloseReport>('close-orders', { stores }, how, onProgress);
     }
 
-    /** One detach run's record (`GET erp/detach?run=`); a 404 when the integration has none. */
-    async detachRun(run: string): Promise<ErpDetachRun> {
-        return (await this.call('detach', 'GET', { run })) as ErpDetachRun;
-    }
-
-    /** One price publish run's record (`GET erp/prices?run=`); a 404 when the integration has none. */
-    async priceRun(run: string): Promise<ErpPricesRun> {
-        return (await this.call('prices', 'GET', { run })) as ErpPricesRun;
+    /** POST under a fresh run id; follow it by that id (`GET erp/<action>?run=`) when cut off at 60 s. */
+    private followed<R>(
+        action: FollowedAction,
+        body: Record<string, unknown>,
+        how: { flag: RunFlag; words: ActionRunWords; emptyResult: () => R },
+        onProgress?: (message: string) => void,
+    ): Promise<R> {
+        const run = newRunId();
+        const post = this.call(action, 'POST', undefined, { run, ...body }) as Promise<R>;
+        const source: ActionRunSource<R> = {
+            recordsRuns: () => this.recordsRuns(how.flag),
+            readRun: async (id) => (await this.call(action, 'GET', { run: id })) as ErpActionRun<R>,
+            emptyResult: how.emptyResult,
+        };
+        return reportOf(post, source, run, how.words, { wait: this.wait, onProgress });
     }
 
     /**
@@ -159,7 +182,7 @@ export class ErpIntegrationClient {
      * A status that cannot be read is no proof a GET is safe (one deployed before would run the
      * action), so that reads as "no".
      */
-    private recordsRuns(flag: 'detachRuns' | 'priceRuns'): Promise<boolean> {
+    private recordsRuns(flag: RunFlag): Promise<boolean> {
         return this.status().then(
             (status) => status[flag] === true,
             () => false,
@@ -212,17 +235,14 @@ export class ErpIntegrationClient {
         erpId?: string,
         onProgress?: (message: string) => void,
     ): Promise<ErpPricesReport> {
-        const run = newRunId();
-        const body = { run, ...(erpId ? { erpId } : {}) };
-        const post = this.call('prices', 'POST', undefined, body) as Promise<ErpPricesReport>;
-        const source: ActionRunSource<ErpPricesReport> = {
-            recordsRuns: () => this.recordsRuns('priceRuns'),
-            readRun: (id) => this.priceRun(id),
-            emptyResult: () => {
+        const how = {
+            flag: 'priceRuns' as const,
+            words: PRICES_RUN_WORDS,
+            emptyResult: (): ErpPricesReport => {
                 throw new Error(`${PRICES_RUN_WORDS.failed}: the run ended without a result`);
             },
         };
-        return reportOf(post, source, run, PRICES_RUN_WORDS, { wait: this.wait, onProgress });
+        return this.followed<ErpPricesReport>('prices', erpId ? { erpId } : {}, how, onProgress);
     }
 
     /** Whether this deployment serves several ERPs (`erp/erps`); one deployed before it does not. */

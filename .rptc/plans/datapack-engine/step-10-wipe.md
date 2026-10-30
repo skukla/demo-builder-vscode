@@ -1,7 +1,8 @@
 # Step 10: reset clears a demo's part of the store
 
 Status: **built 2026-10-30, widened the same day to a chosen set of stores with their orders
-closed; not yet live.** B2B and settings are still left (decision 3 of the first build). Decided
+closed, then to "One action, ERP included" (an ERP integration's orders closed by it, its ERP
+refilled); not yet live.** B2B and settings are still left (decision 3 of the first build). Decided
 by the owner, 2026-10-27 and 2026-10-30.
 
 ## Why
@@ -118,6 +119,115 @@ Where each part comes from: the integration's `src/lib/reset-rule.js` (`cancella
 `PostV1OrderOrderIdRefund`), which has no `isOnline` field, so none is sent; the return close is
 `PUT returns/{id}` (`PutV1ReturnsId`). The seven example orders both repositories test, named the
 same: `tests/helpers/resetRuleOrders.ts` here, `test/lib/reset-rule-orders.js` there.
+
+## One action, ERP included (owner, 2026-10-30)
+
+> "You wanna wipe. That should wipe. I shouldn't have to wipe things in two separate systems,
+> especially when the ERP is expected to be transient and can be easily populated from absolutely
+> nothing."
+
+Measured live the same day: on this instance JustRite's ERP integration (project `justrite`,
+`erp-integration`) answers `structure_owns: "all"` and `orders_send: true` for every website,
+`justrite_test_website` included. So the test store's orders go to JustRite's ERP, and the wipe's
+own cancel or refund would be passed on to it by the integration's order handlers (it stays silent
+only for orders it marked closed itself, `lib/order-parts.js markClosedByReset`).
+
+**What a wipe now does**, at every door (both tools, the Data Installer's "Clear demo data",
+reset's second question):
+
+1. **Finds the ERP integration serving the instance** from ANY local project, this one included
+   (`wipeErpDeps.findWipeErp`): the deployed ERP integration of a project on the same Commerce
+   instance, matched as the one-per-instance add refusal matches it (`erpIntegrationHolder`). Its
+   project being another one is fine; the per-store claims guard still applies to the stores.
+2. **Asks it which chosen websites send orders to an ERP** (`GET erp/settings?websites=`,
+   `orders_send`) and whether its deployment closes by store (`GET erp/status`,
+   `closesOrdersByStore`). The orders of those websites' chosen stores, and their returns, are not
+   the wipe's own: the list carries one line for them, counted and named ("2 orders are handled by
+   the ERP integration (JustRite): they will be closed there, removed from its ERP, and the ERP
+   refreshed.").
+3. **Clearing: the integration closes EVERY order of those stores first** (`POST erp/close-orders`
+   with their store codes, followed by its run id when the answer is cut off; commerce-erp-integration
+   a2556c2 + 1f6de21). Every order, not only the ones an ERP holds: one it never got would be sent as
+   new by the first save to it. Each ERP that held one removes its documents for them
+   (`admin/remove-orders`, demo-erp contract 23). The wipe runs no order rule of its own for those
+   stores; it does its other writes as before, then **the integration's ERPs are filled again from
+   Commerce** (`fillEveryErp`, what the ERP reset runs after its wipe). The note merges the
+   integration's counts with the wipe's and names the ERPs: "Removed nothing from the store
+   justrite_test_store. Canceled 1 order and refunded 1 order. Closed 1 return. 2 of the orders were
+   closed through the ERP integration (JustRite), and removed from Justrite ERP. JustRite's ERP was
+   refreshed from Commerce." An ERP that kept its copies is named with why.
+4. **A deployment that cannot close by store, or cannot be asked, is never called**: those orders
+   are left open, uncounted, and the line says why with the update to run ("... are left open: it
+   must be updated before a wipe can close them: open the project justrite and update
+   erp-integration (Update on its card, or update_integration), then check again."). The rest of the
+   wipe goes ahead. One that cannot be asked holds every chosen website's orders (the safe way).
+5. **Never the Admin website**: Commerce answers its own Admin scope (website `admin`, id 0, store
+   `default`, view id 0) beside the real ones; `readWipeStructure` drops it, so the picker never
+   offers it and naming it is "The store has no website admin."
+
+The token covers the ERP part: a clearing that would now have the integration close an order the
+list did not (it was held, or was the wipe's own) writes nothing and offers the new list.
+
+### Reuse
+
+| Piece | | Where |
+|---|---|---|
+| Finding the integration on the same instance | REUSED: `erpIntegrationHolder`; `erpIntegrationIdOf` split out of its `runsErpIntegration` | `app-builder/services/erpIntegrationOnSameCommerce.ts` |
+| The other projects | REUSED: the list the claims guard already reads (`loadOtherProjects`) | `core/state/otherProjects.ts` |
+| The client and its run-and-poll | REUSED: `ErpIntegrationClient`, one method added (`closeOrders`, for `erp/close-orders`). Its POST-then-follow is now one private helper shared with `detach` and `publishPrices` (the third copy of the same eleven lines) | `app-builder/services/erpIntegrationClient.ts`, `erpActionRun.ts` |
+| The sign-in its actions take | REUSED: `resolveAppManagementAuth`, as `openErpCall` | `project-creation/services/appBuilderComponentRunnerDeps.ts` |
+| The routing read | REUSED: `resolvedSettings` (the fill's read) | `erpIntegrationClient.ts` |
+| The refill | REUSED: `fillEveryErp`, `summarizeFills`, `fillWarnings` | `project-creation/services/erpFillForProject.ts` |
+| The counts' names | REUSED: the reset's (`cancelled`, `refunded`, `commented`, `alreadyClosed`, `returnsClosed`, `failed`), merged into `OrderCounts` | `wipeRun.ts` |
+| Progress | REUSED: the wipe's progress window; two stages added (`closingErpOrders`, `refreshingErp`) | `core/utils/datapackStages.ts` |
+| The list line | REUSED: the modal's `FactList` and reset's question, one line each | `clearDemoDataWords.ts`, `edsResetOtherData.ts` |
+| NEW | `wipeErp.ts` (routing, the split, the line, the close and refill, the sentence), `wipeErpDeps.ts` (the composition) | `services/demoDataWipe/` |
+
+### Which reads and calls are confirmed
+
+| Read or call | Endpoint and field | Confirmed? |
+|---|---|---|
+| which websites send orders | `GET erp/settings?websites=`, `websites.<code>.orders_send` (else `default`) | yes: JustRite answered `true` for every website (`get_erp_settings`, 2026-10-30); the field is what the integration's `order-sync.js readyToSend` reads |
+| whether it closes by store | `GET erp/status`, `closesOrdersByStore` | from the integration's code (`actions/erp/status`, a2556c2); **not yet from a deployment** |
+| the close | `POST erp/close-orders` `{ run, stores: [<store group code>] }`, `GET erp/close-orders?run=` | from the integration's action and README (a2556c2); **not yet from a deployment** |
+| its answer | `{ scope, closed { cancelled, refunded, commented, alreadyClosed, returnsClosed, partsRemoved, failed[{ orderId, error }] }, touched[{ orderId, outcome }], orders, holds, erpRemoved { <listId>: { removed, notFound } \| "unsupported" \| { failed } } }` | the shape the integration's box test pins (`test/box/close-store-orders.test.js`, 1f6de21), copied into `erpWipeFixtures.ts`; **not yet from a deployment** |
+| the refill | `fillEveryErp` (Commerce reads, `POST admin/import`, `erp/keymap`, `erp/prices`) | yes, the ERP reset's own fill (live) |
+| the Admin scope in the structure reads | `store/websites` `id 0`, `store/storeGroups` `website_id 0` | the website and store yes (offered on scratch-1028); the view id 0 **no** |
+
+### Open decisions (recommendation first)
+
+1. **Settled by the integration (a2556c2):** the close is its own action, `erp/close-orders`, not a
+   flag on `erp/detach` (detach also undoes the ledger and clears ERP numbers instance-wide). It
+   closes every order of the named stores and removes them from each ERP that held them.
+2. **The integration is called for a served store even when it has no open orders** (closed ones
+   are still forgotten and taken out of the ERP). Recommended: keep; it is one call, and a store
+   with no orders at all closes nothing.
+3. **The refresh is a fill, not a wipe and a fill.** The close already took the stores' orders out
+   of the ERP; a fill adds and updates. An `admin/wipe` first would also remove other websites'
+   live orders (JustRite's). Confirmed right by the integration's author, 2026-10-30.
+4. **A close the integration could not make does not stop the wipe's own writes** (the ERP reset
+   stops before its wipe instead). Recommended: keep. The wipe's Commerce deletes do not depend on
+   those orders, the failed ones are named, and a second wipe closes them (run twice is safe).
+5. **The refresh runs on every clearing of a routed store**, open orders or not, and fills every
+   ERP the integration serves (the fill has no website scope). Recommended: keep; it is safe and
+   adds the fill's minutes.
+6. **The update line sends the SC to the integration's project**: `update_integration` acts on the
+   open project. Recommended: later, let it name a project.
+
+### Tests
+
+`wipeErp.test.ts` (14: routing, the plan's ERP part, the clearing's order of calls and merged
+counts, no order rule of the wipe's own for a served store, an ERP that kept its copies, a served
+store with only closed orders, a failed close, a failed refill, a held integration never called,
+the token), `wipeErpDeps.test.ts`
+(4: found in another project or this one, none elsewhere or undeployed, no sign-in asks nothing),
+`erpIntegrationClient.test.ts` (+2: the close's body and answer, and its follow by run id once
+status says `closesOrdersByStore`),
+`erpIntegrationOnSameCommerce.test.ts` (+1), `demoDataHandlers.test.ts` (+3: the Admin website,
+the ERP asked with every local project, the clearing through it), `edsResetOtherData.test.ts`
+(+2), `ClearDemoDataModal.test.tsx` (+2). Typed answers in `tests/helpers/erpWipeFixtures.ts`. The reset
+suites' shared mock (`edsResetUI.testUtils.ts`) now reads its two auth fakes through an arrow: the
+reset reaches `edsHelpers` through the ERP link while that file is still loading.
 
 ## What was built (2026-10-30)
 
@@ -271,3 +381,29 @@ Nothing here can be undone, so the clearing only ever meets things the test made
    return: the two orders and the credit memo stay as history, closed (Commerce cannot delete them).
 5. Not run live: taking a shared product off a website, a return, a website only partly chosen, and
    the reset question (scratch-1028's own store is JustRite's).
+
+### Live test, ERP included (owner's call; same store only; JustRite's integration deployed from `feature/one-reset-rule` at 1f6de21 or later)
+
+Precondition: that integration, and JustRite's demo-erp at contract 23 (`admin/remove-orders`), are
+deployed to JustRite (owner's go: a deploy to a live demo). Until then the wipe answers the held
+line and leaves the test store's orders open, which is itself step 1's check.
+
+1. **Before the deploy, read-only.** `check_demo_data` for `justrite_test_store`: `preview.erp.held`
+   names the update, `preview.erp.orders` counts the test store's open orders, and none of them is in
+   `preview.orders`. The store list has no `admin` website.
+2. **After the deploy**: `get_erp_status` (or `GET erp/status`) answers `closesOrdersByStore: true`.
+   Place two orders on the test store (one left pending, one invoiced), then `check_demo_data`:
+   `preview.erp.line` is "2 orders are handled by the ERP integration (JustRite): they will be closed
+   there, removed from its ERP, and the ERP refreshed."; `preview.orders` counts none.
+3. `clear_demo_data` with that token. Expected: the progress window shows "Closing orders in the ERP"
+   first and "Refreshing the ERP" last; the note says "Canceled 1 order and refunded 1 order ... 2 of
+   the orders were closed through the ERP integration (JustRite), and removed from Justrite ERP.
+   JustRite's ERP was refreshed from Commerce." In the Admin: the pending order Canceled, the invoiced one Closed with a credit memo,
+   each with the reset's note. `get_erp_order_trace` for each: the ERP was not told to cancel or
+   refund (the integration marked them closed first).
+4. **Back to zero:** `check_demo_data` answers `total` 0 and `preview.erp.orders.count` 0 (both
+   orders carry a reset's note). JustRite's website reads as before (`GET products` with its
+   `website_id`, the same `total_count`), and its ERP holds JustRite's records (`get_erp_status`).
+   Justrite ERP no longer lists the two orders (`run_erp_rest GET orders`). What does not return:
+   the two orders and the credit memo stay as history, closed, in Commerce; Commerce cannot delete
+   an order.

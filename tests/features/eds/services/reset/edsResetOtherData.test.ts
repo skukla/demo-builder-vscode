@@ -17,6 +17,8 @@ import { createMockHandlerContext } from '../../../../helpers/handlerContextTest
 import { createMockProject } from '../../../../helpers/projectFake';
 import { memoryFiles } from '../../../data-installer/services/demoBuilderEngine/demoBuilderEngine.testUtils';
 import { PROJECT_RECORDS, sandbox } from '../../../data-installer/services/demoDataWipe/wipe.testUtils';
+import { fakeErp } from '../../../data-installer/services/demoDataWipe/wipeErp.testUtils';
+import { RESET_RULE_CASES } from '../../../../helpers/resetRuleOrders';
 
 /** A project whose own store is the test website's, so the reset's question is about it. */
 const PROJECT = createMockProject({
@@ -27,7 +29,7 @@ const PROJECT = createMockProject({
 });
 
 function setUp(store = sandbox(), overrides: Partial<OtherDataDeps> = {}) {
-    const deps: OtherDataDeps = { commerce: async () => store, files: memoryFiles(), others: async () => [], ...overrides };
+    const deps: OtherDataDeps = { commerce: async () => store, files: memoryFiles(), others: async () => [], erp: () => undefined, ...overrides };
     const context = createMockHandlerContext() as HandlerContext;
     return { deps, context, store };
 }
@@ -109,6 +111,17 @@ describe('confirmClearOtherData', () => {
         expect([clear.title, keep]).toEqual(['Remove Those Too', { title: 'Keep Them', isCloseAffordance: true }]);
     });
 
+    it("says which orders the ERP integration closes, in the list's own line", async () => {
+        const erp = jest.fn().mockReturnValue(fakeErp().erp);
+        const { deps, context } = setUp(sandbox({ orders: [RESET_RULE_CASES[0].order] }), { erp, others: async () => [CLAIMANT_ELSEWHERE] });
+        ask.mockResolvedValue(undefined);
+
+        await confirmClearOtherData(vscode, await beginOtherDataCheck(PROJECT, context, deps));
+
+        expect(erp).toHaveBeenCalledWith(context, PROJECT, [CLAIMANT_ELSEWHERE]);
+        expect(ask.mock.calls[0][0]).toContain(' 1 order is handled by the ERP integration (JustRite): it will be closed there, removed from its ERP, and the ERP refreshed.');
+    });
+
     it('keeps everything on Esc', async () => {
         const { deps, context } = setUp();
         ask.mockResolvedValue(undefined);
@@ -124,7 +137,22 @@ describe('confirmClearOtherData', () => {
     });
 });
 
+/** A local project that records no store of this test, so the reset's question is still asked. */
+const CLAIMANT_ELSEWHERE = createMockProject({ name: 'justrite', path: '/nonexistent/projects/justrite', componentConfigs: {} });
+
 describe('clearProjectOtherData', () => {
+    it('has the ERP integration close its stores, and refreshes its ERP', async () => {
+        const { erp, client, refill } = fakeErp();
+        const { deps, context } = setUp(sandbox({ orders: [RESET_RULE_CASES[0].order] }), { erp: () => erp });
+        const plan = await beginOtherDataCheck(PROJECT, context, deps);
+
+        const done = await clearProjectOtherData(PROJECT, context, jest.fn(), plan!, deps);
+
+        expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
+        expect(refill).toHaveBeenCalledTimes(1);
+        expect(done.sentence).toContain("JustRite's ERP was refreshed from Commerce.");
+    });
+
     it('clears what was shown and logs what it did', async () => {
         const { deps, context, store } = setUp();
         const plan = await beginOtherDataCheck(PROJECT, context, deps);

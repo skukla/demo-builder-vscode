@@ -10,6 +10,10 @@
  * (deleted, or only taken off the chosen websites), categories deepest first. A write Commerce
  * refuses is named and counted, and the rest carry on, so the SC is told exactly what could not be done.
  *
+ * When an ERP integration routes some chosen stores' websites (`wipeErp.ts`), it closes every
+ * order of those stores first (the wipe closes none of them itself) and takes them out of its ERPs,
+ * and the ERP is filled again from Commerce last; its counts are merged into the wipe's.
+ *
  * | Write | Route | Confirmed from a real answer? |
  * |---|---|---|
  * | close a return, close off an order | see `wipeOrderRun.ts` | see there |
@@ -30,6 +34,7 @@ import type { InstallRecord } from '../demoBuilderEngine/installRecord';
 import { deleteIfPresent, segment } from '../demoBuilderEngine/kindContext';
 import { removeProduct } from '../demoBuilderEngine/productsKind';
 import type { RemovalAccess } from '../demoBuilderEngine/removers';
+import { type ErpClosed, type ErpRefreshed, type WipeErp, closeErpOrders, erpSentence, refreshErp } from './wipeErp';
 import { type OrderOutcome, closeOrder, closeReturn } from './wipeOrderRun';
 import { type WipePlan, planWipeFor, withinPlan } from './wipePlan';
 import { andList } from '@/core/utils/andList';
@@ -83,6 +88,8 @@ export interface WipeOutcome {
     /** Each step with refusals: how many, and the first in Commerce's words. */
     failed: Array<{ what: string; count: number; first: string }>;
     sentence: string;
+    /** The ERP part, when an ERP integration routed some chosen stores' websites. */
+    erp?: { integration: string; orderNumbers: string[]; removedFrom: string[]; refreshed: boolean; said?: string };
 }
 
 const each = <T>(items: readonly T[], idOf: (item: T) => string, write: (item: T) => Promise<OrderOutcome | void>): WipeStep['writes'] =>
@@ -172,19 +179,37 @@ export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (
     return { removed, orders, failed, sentence: sentenceOf(plan.preview, removed, orders, failed) };
 }
 
+/** The wipe's outcome with the integration's close merged in, and the sentence said again. */
+function withErp(outcome: WipeOutcome, plan: WipePlan, closed: ErpClosed | undefined, refreshed: ErpRefreshed | undefined): WipeOutcome {
+    if (!plan.erp) return outcome;
+    const orders = { ...outcome.orders };
+    for (const key of Object.keys(orders) as Array<keyof OrderCounts>) orders[key] += closed?.counts[key] ?? 0;
+    const failed = closed?.failed ? [closed.failed, ...outcome.failed] : outcome.failed;
+    const sentence = `${sentenceOf(plan.preview, outcome.removed, orders, failed)}${erpSentence(plan.erp, closed, refreshed)}`;
+    const said = refreshed?.said ? { said: refreshed.said } : {};
+    const touched = { orderNumbers: closed?.orderNumbers ?? [], removedFrom: closed?.removedFrom ?? [] };
+    const erp = { integration: plan.erp.route.name, ...touched, refreshed: refreshed?.refreshed ?? false, ...said };
+    return { ...outcome, orders, failed, sentence, erp };
+}
+
+/** How a clearing is run: its progress, and the ERP integration serving the instance, if one does. */
+export interface ClearOptions {
+    report?: (stage: string, step?: string) => void;
+    erp?: WipeErp;
+}
+
 /**
  * Clear the stores as shown: make the plan again, refuse when it takes anything the shown plan did
- * not, then carry it out.
+ * not, then carry it out: the ERP integration's close first, the wipe's own writes, then the ERP
+ * filled again from Commerce.
  *
  * @throws WipeChangedError, writing nothing, when the store would now clear something not shown
  */
-export async function clearShown(
-    commerce: RemovalAccess,
-    shown: WipePlan,
-    records: readonly InstallRecord[],
-    report?: (stage: string) => void,
-): Promise<WipeOutcome> {
-    const now = await planWipeFor(commerce.get, shown.choices, records);
+export async function clearShown(commerce: RemovalAccess, shown: WipePlan, records: readonly InstallRecord[], options: ClearOptions = {}): Promise<WipeOutcome> {
+    const { report = () => undefined, erp } = options;
+    const now = await planWipeFor(commerce.get, shown.choices, records, erp);
     if (!withinPlan(shown, now)) throw new WipeChangedError(now.preview);
-    return runWipe(commerce, now, report);
+    const closed = await closeErpOrders(erp, now.erp, report);
+    const outcome = await runWipe(commerce, now, report);
+    return withErp(outcome, now, closed, await refreshErp(erp, now.erp, report));
 }

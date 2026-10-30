@@ -17,8 +17,11 @@
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
 import type { GitHubAppService } from '@/features/eds/services/github/githubAppService';
 
+// Read through an arrow, not captured: a module that imports edsHelpers while this file is still
+// loading (the reset reaches it through the wipe's ERP link, 2026-10-30) would otherwise meet the
+// `const` below before it is initialised.
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    ensureDaLiveAuth: mockEnsureDaLiveAuth,
+    ensureDaLiveAuth: (...args: unknown[]) => mockEnsureDaLiveAuth(...args),
     getDaLiveAuthService: jest.fn().mockReturnValue({
         getAccessToken: jest.fn().mockResolvedValue('mock-dalive-token'),
     }),
@@ -31,7 +34,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ),
 }));
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: mockEnsureAdobeIOAuth,
+    ensureAdobeIOAuth: (...args: unknown[]) => mockEnsureAdobeIOAuth(...args),
 }));
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {

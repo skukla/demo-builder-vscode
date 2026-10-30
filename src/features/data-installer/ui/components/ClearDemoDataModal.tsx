@@ -28,7 +28,7 @@ import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
-import type { DemoDataCheck, WipeStoreChoice } from '@/types/demoDataWipe';
+import type { DemoDataCheck, WipePreview, WipeStoreChoice } from '@/types/demoDataWipe';
 
 /** Every string the modal shows that is not the extension's own. */
 export const CLEAR_COPY = {
@@ -53,6 +53,9 @@ export interface ClearDemoDataModalProps {
 /** Ticks before the SC chooses any. Module-level: a stable reference for the check's effect. */
 const NONE: ReadonlySet<string> = new Set();
 
+/** Orders an ERP integration leaves open still need saying, nothing else to clear or not: the SC acts on that line. */
+const leavesErpOrders = (preview: WipePreview): boolean => preview.erp?.held !== undefined && preview.erp.orders.count > 0;
+
 function PreviewView({ answer, loading, hasTicks }: { answer: DemoDataCheck | null; loading: boolean; hasTicks: boolean }) {
     if (loading && hasTicks) {
         return (
@@ -66,7 +69,7 @@ function PreviewView({ answer, loading, hasTicks }: { answer: DemoDataCheck | nu
     if (answer.refused) return <InlineNotice title={CLEAR_COPY.claimed}>{answer.refused}</InlineNotice>;
     const preview = answer.preview;
     if (!preview) return null;
-    if (preview.total === 0) return <Text>{CLEAR_COPY.nothing}</Text>;
+    if (preview.total === 0 && !leavesErpOrders(preview)) return <Text>{CLEAR_COPY.nothing}</Text>;
     return (
         <>
             <FactList>
