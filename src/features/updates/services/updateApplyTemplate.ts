@@ -9,6 +9,7 @@
 
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import { refreshBaseFromColleague, type BaseRefreshDeps } from '@/features/updates/services/boilerplateBaseRefresh';
@@ -104,7 +105,7 @@ export async function applyTemplate(
     const result = emptyResult();
     const succeededPaths = new Set<string>();
     if (items.length === 0) return { result, succeededPaths };
-    const svc = new TemplateSyncService(getGitHubServices(ctx.secrets), ctx.logger, ctx.commandManager);
+    const svc = new TemplateSyncService(getGitHubServices(ctx.secrets), ctx.logger, ctx.commandManager, resolveByomOverlayConfig);
     for (const { project } of items) {
         onProgress?.(S.updatingTemplate.label, project.name);
         try {
@@ -154,7 +155,7 @@ export async function applyBoilerplate(
 ): Promise<CategoryResult> {
     const result = emptyResult();
     if (items.length === 0) return result;
-    const svc = new TemplateSyncService(getGitHubServices(ctx.secrets), ctx.logger, ctx.commandManager);
+    const svc = new TemplateSyncService(getGitHubServices(ctx.secrets), ctx.logger, ctx.commandManager, resolveByomOverlayConfig);
     for (const { project, base, tested } of items) {
         onProgress?.(S.updatingTemplate.label, `${project.name}: Adobe boilerplate`);
         try {

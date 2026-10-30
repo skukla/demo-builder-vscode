@@ -30,6 +30,7 @@ import {
 import * as vscode from 'vscode';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
+import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 const getConfigMock = vscode.workspace.getConfiguration as jest.Mock;
@@ -121,11 +122,13 @@ describe('template sync', () => {
             onProgress
         );
 
-        // The extension's own GitHub services for this context, handed in (EDS-49).
+        // The extension's own GitHub services for this context, handed in (EDS-49), and the
+        // overlay lookup the resets use, so the update puts the first-visit script in 404.html.
         expect(TemplateSyncServiceCtor).toHaveBeenCalledWith(
             getGitHubServices(ctx.secrets),
             ctx.logger,
-            ctx.commandManager
+            ctx.commandManager,
+            resolveByomOverlayConfig,
         );
         expect(mockSyncWithTemplate).toHaveBeenCalledWith(project, { strategy: 'merge' });
         expect(mockUpdateLastSyncedCommit).toHaveBeenCalledWith(project, 'c1', ctx.stateManager);

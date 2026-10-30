@@ -10,6 +10,7 @@
 
 import type { Project } from '@/types/base';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import type { OverlayResolver } from '@/features/updates/services/thinLayerUpdate';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -64,13 +65,14 @@ export function edsProject(metadataOverrides: Record<string, unknown> = {}): Pro
     });
 }
 
-export function service(logger = createMockLogger()): TemplateSyncService {
+export function service(logger = createMockLogger(), resolveOverlay?: OverlayResolver): TemplateSyncService {
     // The token is the one call each case steers (signed in, or not).
     const access = githubAccessFor(createMockSecretStorage(githubTokenSecret('gh-token')).secrets, logger);
     return new TemplateSyncService(
         { ...access, tokenService: { getToken: () => mockGetToken() } },
         logger,
         createMockCommandExecutor({ execute: (...a: unknown[]) => mockExecute(...a) }),
+        resolveOverlay,
     );
 }
 

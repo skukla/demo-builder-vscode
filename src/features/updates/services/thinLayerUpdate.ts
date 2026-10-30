@@ -118,9 +118,22 @@ export function patchesNotPutBack(results: readonly CodePatchResult[]): string[]
 }
 
 /**
+ * The product-page overlay's address for a storefront: the project row's, then the user's
+ * `demoBuilder.byom.*` settings, stamped with the storefront's org and site. In VS Code this is
+ * `resolveByomOverlayConfig`, which both resets use; outside it (the patch canary) the row's.
+ */
+export type OverlayResolver = (fromConfig: string | undefined, org: string, site: string) => string | undefined;
+
+const ROW_OVERLAY: OverlayResolver = (fromConfig) => fromConfig;
+
+/**
  * Put back the 404 handling and Quick Edit if an update left them out, and run the storefront
  * repairs creation and reset run. Each checks for its own markers first, so a storefront that
  * already has them is untouched.
+ *
+ * The overlay goes through `resolveOverlay`, as a reset's does. Without it every update saw the
+ * overlay as off: no first-visit script in 404.html, so Demo Builder's old copy stayed in
+ * delayed.js and the Adobe boilerplate update failed on it (JustRite, 2026-10-30).
  *
  * @returns one plain line per piece that could not be put back
  */
@@ -128,10 +141,12 @@ export async function restoreDemoBuilderPieces(
     project: Project,
     fileOps: GitHubFileOperations,
     logger: Logger,
+    resolveOverlay: OverlayResolver = ROW_OVERLAY,
 ): Promise<string[]> {
     const extracted = extractResetParams(project);
     if (!extracted.success) return [];
-    const { repoOwner, repoName, byomOverlayUrl, daLiveOrg, daLiveSite } = extracted.params;
+    const { repoOwner, repoName, daLiveOrg, daLiveSite } = extracted.params;
+    const byomOverlayUrl = resolveOverlay(extracted.params.byomOverlayUrl, daLiveOrg, daLiveSite);
     const { smart404 } = await bringStorefrontUpToDate(
         fileOps, repoOwner, repoName, byomOverlayUrl, logger, daLiveOrg, daLiveSite,
     );

@@ -7,6 +7,7 @@
  * @module features/updates/services/pendingClashFinishDeps
  */
 
+import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { readBoilerplateBase } from '@/features/updates/services/boilerplateBase';
@@ -31,11 +32,11 @@ export function createFinishDeps(ctx: UpdateContext): FinishDeps {
             return found?.latestCommit;
         },
         async recordTemplateVersion(project, commit) {
-            const svc = new TemplateSyncService(github, ctx.logger, ctx.commandManager);
+            const svc = new TemplateSyncService(github, ctx.logger, ctx.commandManager, resolveByomOverlayConfig);
             await svc.updateLastSyncedCommit(project, commit, ctx.stateManager);
             // The colleague may have moved their own Adobe base; keep ours true (EDS-56 D4).
             await refreshBaseFromColleague(project, baseRefreshDeps(ctx));
         },
-        restorePieces: (project) => restoreDemoBuilderPieces(project, github.fileOperations, ctx.logger),
+        restorePieces: (project) => restoreDemoBuilderPieces(project, github.fileOperations, ctx.logger, resolveByomOverlayConfig),
     };
 }

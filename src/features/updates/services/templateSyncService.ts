@@ -67,6 +67,7 @@ import {
     restoreDemoBuilderPieces,
     TESTED_VERSION_UNREADABLE,
     THIN_LAYER_RESET_REFUSED,
+    type OverlayResolver,
 } from '@/features/updates/services/thinLayerUpdate';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -82,11 +83,15 @@ export class TemplateSyncService {
      * ADR-015: every dependency arrives here; nothing is fetched from a service cache.
      * The callers (commands and handlers, the boundary) pass the extension's own GitHub
      * services; the patch canary passes its own, outside VS Code (EDS-49).
+     *
+     * @param resolveOverlay - the product-page overlay lookup the resets use
+     *   (`resolveByomOverlayConfig`); absent outside VS Code, where the project row's is used
      */
     constructor(
         private readonly github: GitHubAccess,
         private readonly logger: Logger,
         private readonly commandManager: Pick<CommandExecutor, 'execute'>,
+        private readonly resolveOverlay?: OverlayResolver,
     ) {}
 
     /** What the shared checkout needs from this service. */
@@ -160,7 +165,7 @@ export class TemplateSyncService {
             this.mergeFromBase(checkout, target, { base, tested, preserveFiles, fixes: Boolean(tested) }, project),
         );
         if (!merged.success || !tested) return merged;
-        const pieces = await restoreDemoBuilderPieces(project, this.github.fileOperations, this.logger);
+        const pieces = await restoreDemoBuilderPieces(project, this.github.fileOperations, this.logger, this.resolveOverlay);
         if (pieces.length === 0) return merged;
         return { ...merged, notes: [...(merged.notes ?? []), ...pieces] };
     }
@@ -215,7 +220,7 @@ export class TemplateSyncService {
      * @returns one plain line per piece that could not be put back
      */
     private moveScriptsOutOfDelayedJs(project: Project): Promise<string[]> {
-        return restoreDemoBuilderPieces(project, this.github.fileOperations, this.logger);
+        return restoreDemoBuilderPieces(project, this.github.fileOperations, this.logger, this.resolveOverlay);
     }
 
     /**

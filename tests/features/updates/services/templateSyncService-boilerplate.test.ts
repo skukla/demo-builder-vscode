@@ -64,10 +64,13 @@ describe("syncBoilerplate: Demo Builder's scripts leave delayed.js first", () =>
     it('moves them before the clone the change is applied in exists', async () => {
         answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
         const project = colleagueStorefront();
+        const resolveOverlay = jest.fn(() => 'https://overlay.test/render-pdp');
 
-        await service().syncBoilerplate(project, { base: BASE, tested: TESTED_SHA });
+        await service(undefined, resolveOverlay).syncBoilerplate(project, { base: BASE, tested: TESTED_SHA });
 
-        expect(mockRestorePieces).toHaveBeenCalledWith(project, expect.anything(), expect.anything());
+        // With the overlay the caller resolves, as a reset does: without it the first-visit
+        // script never reached 404.html, so its old copy stayed in delayed.js (JustRite, 2026-10-30).
+        expect(mockRestorePieces).toHaveBeenCalledWith(project, expect.anything(), expect.anything(), resolveOverlay);
         expect(gitCallsAtMove).toBe(0);
         expect(gitCalls().length).toBeGreaterThan(0);
     });
