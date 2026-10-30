@@ -256,9 +256,10 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         sessionGrant: false,
     },
     clear_demo_data: {
-        action: "Clear a website's store data",
-        consequence: "Deletes the products, categories and customers on this website that Demo Builder did not install, as listed, and takes products other websites sell off it. This can't be undone.",
-        target: ['websiteCode'],
+        action: "Clear these stores' demo data",
+        consequence:
+            "Deletes the products, categories and customers these stores own that Demo Builder did not install, as listed, takes products other websites sell off them, and cancels or refunds their orders and closes their returns. This can't be undone.",
+        target: ['stores'],
         sessionGrant: false,
     },
     reinstall_integration: {

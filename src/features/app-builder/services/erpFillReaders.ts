@@ -72,8 +72,8 @@ export async function readAllPages<T>(get: CommerceGet, path: string, criteria =
     return items;
 }
 
-/** A read that answers empty when the store does not have the endpoint (no MSI, no B2B). */
-async function absentAsEmpty<T>(read: () => Promise<T[]>): Promise<T[]> {
+/** A read that answers empty when the store does not have the endpoint (no MSI, no B2B, no returns). */
+export async function absentAsEmpty<T>(read: () => Promise<T[]>): Promise<T[]> {
     try {
         return await read();
     } catch (error) {

@@ -1,7 +1,8 @@
 # Step 10: reset clears a demo's part of the store
 
-Status: **built 2026-10-30, not yet live** (products, categories and customers; B2B, orders and
-settings are left, decision 3 below). Decided by the owner, 2026-10-27.
+Status: **built 2026-10-30, widened the same day to a chosen set of stores with their orders
+closed; not yet live.** B2B and settings are still left (decision 3 of the first build). Decided
+by the owner, 2026-10-27 and 2026-10-30.
 
 ## Why
 
@@ -31,20 +32,22 @@ An SC resets a demo to put new data in. The cases:
    > [Reset] [Cancel]
 
    With nothing else there, the box does not appear.
-3. **It only ever clears this demo's part of the store.** The owner's one ACCS instance holds
-   several demos (Justrite, Bodea and others), so emptying the instance would empty theirs:
-   - **products** on this demo's website; one another website also sells is only taken off this
-     website;
-   - **categories** under this demo's own root category. If that root is shared with another
-     store (as `justrite_test_website`'s is with Justrite's, root 119), categories are left and
-     the screen says why;
-   - **customers** of this demo's website;
+3. **It only ever clears this demo's part of the store** (widened 2026-10-30 from one website to a
+   chosen set of STORES, see "Decisions recorded"). The owner's one ACCS instance holds several
+   demos (Justrite, Bodea and others), so emptying the instance would empty theirs:
+   - **products** tied to the chosen stores; one other websites also sell is only taken off the
+     chosen websites;
+   - **categories** under a root every store using it is chosen. If that root is shared with a
+     store not chosen (as `justrite_test_store`'s is with `justrite_store`'s, root 119),
+     categories are left and the screen says why;
+   - **customers** of a wholly chosen website, or made in a chosen store;
+   - **orders** placed in a chosen store: closed off, never deleted (the one reset rule below);
    - **never** anything the instance shares (product attributes, attribute sets), the websites,
-     stores and root categories themselves, admin users, or the integration's credential. A
-     new pack reuses an attribute that is already there, so leaving them blocks nothing.
+     stores, store views and root categories themselves, admin users, or the integration's
+     credential. A new pack reuses an attribute that is already there, so leaving them blocks nothing.
 
-Emptying a whole instance is not part of reset. If it is ever offered, it is its own action with
-the strongest warning.
+Emptying a whole instance is not part of reset, and is not offered at all (owner, 2026-10-30:
+"clean instance" rejected).
 
 ## What has to be settled when it is built
 
@@ -68,166 +71,203 @@ the strongest warning.
   `actions/constants.js`), and its "purge by commerce_instance" (`getInstalledDatapacks.js`)
   deletes its own install records, not anything in Commerce.
 
-## Agent surface
+## Decisions recorded (owner, 2026-10-30)
 
-Names are proposed; fixed when built.
+1. **The unit is the STORE.** A wipe means "make this demo's part of the store clean for the next
+   customer". SCs run several demos on one instance at once: some give each demo its own website,
+   one colleague gives each demo its own store on a single website. So the SC picks stores;
+   ticking a website ticks all of its stores; store views are shown under their store and never
+   picked separately (nothing in Commerce belongs to a view except translations and the view an
+   order was placed in). What a chosen store owns is judged against the WHOLE chosen set.
+2. **Orders are closed, never deleted** (Commerce cannot delete an order), by the one reset rule
+   below, shared with the ERP integration's reset.
+3. **A clean instance is rejected**: emptying a whole instance is not offered.
+4. **The claims guard is per store**: a store another local project records as its own (the store
+   its recorded website and store view codes name, `resolveInstallTarget`, the accessor the guard
+   always used) cannot be ticked, and the refusal names the project.
 
-| Tool | New or changed | Read or write | Chat wording | Dialog |
-|---|---|---|---|---|
-| `check_demo_data` | new: what Demo Builder installed in this demo's part of the store, and what else is there, by kind with counts | read | "Checking this demo's store data" | none |
-| `reset_project` | takes "also clear the data Demo Builder did not install", off unless asked | write | unchanged | names the website it will clear, and says it cannot be undone |
+## One reset rule (shared with the ERP reset)
 
-**Lean answers:** `check_demo_data` answers counts per kind, never the objects. **Battery
-prompt:** "Reset this demo and leave its store empty", expecting `check_demo_data` then
-`reset_project` with the clearing asked for, and the agent asking the user first. Traced, then
-`ai-coverage-scan`.
+The same rule closes orders in the demo-data wipe here and in the ERP integration's reset
+(`commerce-erp-integration`, branch feature/one-reset-rule, 0a10b95). In plain words:
 
-## Reuse
+- **An order with nothing invoiced and nothing shipped, in a state Commerce can cancel, is
+  canceled**, then noted "Canceled by the demo reset on <day>."
+- **Any other order that is not already Canceled or Closed has what is invoiced refunded with an
+  offline credit memo** (every invoiced line and the invoiced shipping). The order is read back:
+  Closed, it is noted "Refunded and closed by the demo reset on <day>."; still open (partly
+  invoiced), "Refunded the invoiced items by the demo reset on <day>." Both count as refunded.
+- **An order Commerce can neither cancel nor refund is left open with a note and counted**: one
+  shipped but never invoiced (nothing shipped is canceled), or one in payment review (Commerce
+  refuses a credit memo there). A refused cancel ends the same way.
+- **Its returns are set Closed**: the return's header as read, status "closed", no items (Commerce
+  refuses an approved item sent back, even unchanged), then read back.
+- **Run it twice and nothing new happens**: an order whose history already carries "by the demo
+  reset on" was handled before and is left, counted as already closed.
+- An order On Hold is released first, since Commerce cancels and refunds nothing on hold.
 
-| Need | Reuse | Where it is |
-|---|---|---|
-| The reset confirmation | Project reset's existing confirmation and progress | `edsResetSampleData.ts`, `OperationProgressModal` |
-| The box | The house checkbox row | `CheckboxRow` |
-| Which website, store view and root | The same lookup the engine and Assign products use | `storeScopeOf` |
-| Removing what Demo Builder installed | The engine's removal | `removePack` (`runPack.ts`) |
-| Switching off a source | The ERP warehouse step's switch | `setSourceEnabled` |
+The counts carry the ERP reset's names: `cancelled`, `refunded`, `commented` (left open with a
+note), `alreadyClosed`, `returnsClosed`, `failed`. One wording differs on purpose: the note on an
+order left open. The ERP reset's says its ERP documents were removed; a wipe removes none, so its
+note says "Left open by the demo reset on <day>: Commerce can neither cancel nor refund it."
+
+Where each part comes from: the integration's `src/lib/reset-rule.js` (`cancellableByReset`,
+`UNCANCELLABLE_STATES`, `refundOf`, `resetStepOf`, the notes) and `src/lib/close-orders.js`
+(`closeOne`, `settle`, `closeReturn`); the refund route is Adobe's "Issues an offline refund"
+(`POST order/{orderId}/refund`, tutorial `rest/tutorials/orders/order-issue-refund`, ACCS reference
+`PostV1OrderOrderIdRefund`), which has no `isOnline` field, so none is sent; the return close is
+`PUT returns/{id}` (`PutV1ReturnsId`). The seven example orders both repositories test, named the
+same: `tests/helpers/resetRuleOrders.ts` here, `test/lib/reset-rule-orders.js` there.
 
 ## What was built (2026-10-30)
 
 **One plan, read-only, then the same plan carried out.** `planWipe` (`services/demoDataWipe/wipePlan.ts`)
-reads one website and decides; `clearShown` (`wipeRun.ts`) makes the plan again and writes only when
-the new plan takes nothing the shown one did not (things gone since are fine: the pack's removal may
-run in between). The SC or the agent always sees the list first.
+reads the chosen stores and decides; `clearShown` (`wipeRun.ts`) makes the plan again and writes only
+when the new plan takes nothing the shown one did not (things gone or closed since are fine: the
+pack's removal may run in between). The SC or the agent always sees the list first.
 
-| Kind | Removed | Left, and the reason said |
+| Module | Job |
+|---|---|
+| `wipeScope.ts` (new) | the chosen stores against the store structure: wholly / partly chosen websites, cleared / shared / other demos' roots, the views; the picker's tree (`choicesOf`) |
+| `wipeReads.ts` | the reads (table below) |
+| `wipeProducts.ts`, `wipeCustomers.ts` (new) | the product and customer rules, split out of `wipePlan.ts` to keep it under its size |
+| `wipeOrders.ts`, `wipeOrderRun.ts` (new) | the one reset rule: decide, then write |
+| `wipePlan.ts`, `wipeRun.ts` | generalised from one website to the set: same token, same "refuse if the store would now clear more" |
+| `wipeClaims.ts` | the guard, per store |
+
+| Kind | Done | Left, and the reason said |
 |---|---|---|
-| products | on this website only: `DELETE products/{sku}` | also on another website: only taken off this one, `DELETE products/{sku}/websites/{id}`. Not shown on its own (visibility 1) and not a variant of a configurable being deleted: left (it may belong to a product another website sells). Websites or visibility not answered: left |
-| categories | under a root only this website's store groups show, deepest first, `DELETE categories/{id}` | under a root another website shows (`justrite_test_website` and JustRite's 119): all left. One holding a category an install record lists: left |
-| customers | accounts of this website, `DELETE customers/{id}` | in a B2B company (`company_attributes.company_id` > 0): left |
+| products | every website it is on wholly chosen, or partly chosen with every category link under a cleared root (a configurable's child judged by its parent): deleted. Some of its websites chosen: taken off those | no category, or only shared roots: "which demo they belong to can't be told". In a store not chosen's own categories: left. Variant of nothing deleted; fields not answered: left |
+| categories | under a root every store using it is chosen, deepest first | under a root a store not chosen shares, naming that store; holding a category Demo Builder installed |
+| customers | of a wholly chosen website; on a partly chosen one, made in a chosen store's view (`store_id`, else `created_in` by the view's name) with no order in a store not chosen | made in, or ordering from, a store not chosen; made in the Admin (store not said); in a B2B company |
+| orders, returns | placed in a chosen store's views, and those orders' returns: the one reset rule | already Canceled, Closed or noted by a reset (counted, nothing written) |
 
-**Never touched:** anything an install record lists: every record of this project
-(`readProjectRecords`, new in `installRecord.ts`) and, since the guard below, every other local
-project's records on the same website (`reset_datapack` removes those by its own rules), attributes and sets, customer
-groups, companies and shared catalogs (a catalog and its group are one unit; deleting either moves
-customers to General; a company's admin cannot be deleted while it stands), stocks and sources (the
-Default Stock and Source included), websites, stores and root categories, orders and invoices, store
-settings, admin users, the integration's credential. Commerce access is `projectCommerce` (Store:
-`all`), behind `orgGuard`.
+Writes go through `projectCommerce` (Store: `all`) behind `orgGuard`; the order and return writes
+name their own order or return id. Order of writes: returns, orders, customers, products, take-offs,
+categories. A refusal is counted and named; the rest carry on.
 
-**A website another project claims is refused (owner, 2026-10-30).** Every door (both tools, both
-handlers, reset's question and its clearing) first reads every other project on this machine
-(`readWipeClaims` in `services/demoDataWipe/wipeClaims.ts`, over `loadOtherProjects`, moved to
-`src/core/state/otherProjects.ts` so the reset service does not pull in a dashboard handler's
-dependencies). When another project records the website as its own (`resolveInstallTarget`, the
-reading the wipe takes its default from), nothing is read from the store and the answer is one
-sentence naming it: "The website justrite is also JustRite's own website (project JustRite). Clear
-it from that project, if at all." (several: "…also A's and B's own website (projects A and B). Clear
-it from one of those projects, if at all."). `check_demo_data` answers it as a normal answer,
-`{ website, refused }` (`WipeRefusal`), so an agent explains it; `clear_demo_data` refuses
-(`INVALID_OPERATION`) and drops the token, also when the claim appeared after the list was shown.
-Reset does not ask its second question and says nothing on screen: the SC asked to reset their
-storefront and never saw that question, so a notice about it would be the one unexplained thing in
-the run; Debug Logs gets "[EdsReset] Not offering to clear the website: …". When the website is the
-project's own and no other project claims it, everything behaves as before.
+**Human surfaces.** (1) The Data Installer's catalog header: "Clear demo data" opens a modal with
+the store tree (websites, their stores, each store's views on its row; claimed stores locked with
+the sentence naming the project), checks as the SC ticks, lists what clearing would do (orders
+included: "1 to cancel, 2 to refund, 1 to leave open with a note, 1 return to close"), and the red "Clear N things" runs it in
+the screen's progress window. (2) Project reset's second question, for the project's own store,
+now names the store and its orders.
 
-**Decision 5, built.** Another project's install records are read too: those whose `target` names
-this website, a record with no `target` read at its project's own website (rule 3), and a record
-whose website nothing says kept, since it may be this one. An unreadable record anywhere refuses the
-wipe (`InstallRecordError`): ignoring it could delete what it lists.
+**Agent surface.** No new tools. `check_demo_data` and `clear_demo_data` take
+`stores: [{ websiteCode, storeCode? }]` in place of `websiteCode` (removed, not kept alongside).
+The check answers `{ choices, preview? , refused? }`; `stores: []` answers the choices alone. The
+consent names the stores and says orders are canceled or refunded; narration "Clearing
+justrite_test_store". Battery prompt `reset-demo-leave-store-empty` reworded to the test store.
 
-**Order and refusals.** Customers, products, products taken off, categories (the reverse of install
-order). A write Commerce refuses is counted and named, the rest carry on, and the one sentence says
-exactly what could not be removed ("Could not remove 1 of the products (ZZ-JACKET: …).").
+### Reuse
 
-**The human surface: project reset.** After the datapack question, when the SC chose "Remove
-Datapack" or the project names none, and the website holds something: "This demo's store, the
-website JustRite Test (justrite_test_website), also holds 5 products and 2 customers Demo Builder
-didn't install. 1 product another website also sells will only be taken off this one. Some things are
-left: … Also remove those, to leave this demo's store empty? This can't be undone." [Remove Those Too]
-[Keep Them]. Esc keeps. The list is read beside the datapack check (`edsResetOtherData.ts`), the
-clearing runs after the pack's removal and before the storefront reset, and no outcome fails the
-reset. Edge Delivery reset only: the headless reset never touched data (decision 6).
+| Piece | | Where |
+|---|---|---|
+| The store tree's data | REUSED: the three lists `storeScopeOf` and store discovery read, in `CommerceStoreStructure` | `wipeReads.readWipeStructure`, `types/commerceStore.ts` |
+| The store picker's rows | REUSED: `CheckboxRow`, given `isIndeterminate` for a partly ticked website | `core/ui/components/selection/CheckboxRow.tsx` |
+| The picker itself | NEW `StorePickList.tsx`: the Business Structure pickers (`StoreSelectionRow` / `useStoreDiscovery`) choose ONE website, store and view through the wizard's discovery with form credentials; the ERP "Assign products" list is a searchable product table | `data-installer/ui/components/` |
+| The planner and runner | REUSED, generalised in place | `wipePlan.ts`, `wipeRun.ts` |
+| The claims guard, install records, container rule | REUSED | `wipeClaims.ts`, `installRecord.ts`, `resolveInstallTarget` |
+| The order rule, its writes and counts | MIRRORED line for line from the ERP integration's one-reset-rule branch (an App Builder app, not importable) | `reset-rule.js`, `close-orders.js` |
+| Its seven example orders | SHARED: the same cases, names and bodies in both repositories | `tests/helpers/resetRuleOrders.ts` |
+| The list | REUSED: `ui/Modal`, `FactList`, `LeadText`, `SectionLabel`, `InlineNotice`, `StatusDisplay`, `LoadingDisplay` | `core/ui/components/` |
+| Progress | REUSED: `OperationProgressModal` through `useOperationRunner`, as `useSaveStoreChanges`; stages in `DATAPACK_STAGES` | `useClearDemoData.tsx` |
+| The "in" search | REUSED: `filterIn` beside `filterBy`; `storeCopies.ts`'s own copy now uses it | `b2bReads.ts` |
 
-**The agent surface.** `check_demo_data` (read; "Checking this demo's store data"): the preview,
-counts and at most three names per kind, what it leaves and why, what the records list by kind, and a
-`token`. `clear_demo_data` (write, confirm-gated, `AGENT_ALERT_COPY` naming `websiteCode`: "Deletes the
-products, categories and customers on this website that Demo Builder did not install, as listed, and
-takes products other websites sell off it. This can't be undone."; narrated "Clearing
-<website>"): needs the website named, never defaulted, and the check's token; if the store would now
-clear more, nothing is written and the new list comes back. Battery prompt
-`reset-demo-leave-store-empty` added, not run. No response ceiling measured (both are in the
-`PENDING_LIVE_MEASUREMENT` set); `ai-coverage-scan` and `security-review` not run this step.
-
-**Tests.** `wipePlan.test.ts` (9), `wipeRun.test.ts` (5), `wipeClaims.test.ts` (9),
-`demoDataHandlers.test.ts` (13), `edsResetOtherData.test.ts` (11), `edsResetOtherData-reset.test.ts`
-(4), `tests/core/state/otherProjects.test.ts` (2), over a typed sandbox
-(`tests/helpers/commerceWipeFixtures.ts`, shaped like the owner's: JustRite, Bodea and the test website
-sharing root 119). The safety rules were written before their tests; five mutations (a shared product
-deleted, a shared root cleared, a recorded product taken, a company customer taken, any new plan
-allowed) each turned the suite red. The guard's two halves were mutated the same way (the claim
-check never refusing: 7 tests red; other projects' records never read: 5 red).
-
-### Which reads are confirmed against a captured real response
+### Which reads and writes are confirmed against a captured real response
 
 | Read or write | Endpoint and field | Confirmed? |
 |---|---|---|
-| the website and its store groups | `GET store/websites` (`id`, `code`, `name`), `GET store/storeGroups` (`website_id`, `root_category_id`) | yes, by `storeScopeOf` and store discovery |
+| the structure | `GET store/websites`, `store/storeGroups`, `store/storeViews` | yes, by `storeScopeOf` and store discovery |
 | a website's products | `GET products`, `website_id` eq, `website_ids` | yes (Assign products, 2026-10-19) |
-| | `visibility`, `extension_attributes.configurable_product_links` in a LIST answer | **no**. Missing, the product is left |
+| | `visibility`, `configurable_product_links`, `category_links` in a LIST answer | **no**. Missing, the product is left |
 | the category tree | `GET categories/list` (`id`, `name`, `path`) | yes, by `listCategoryLabels` |
-| a website's customers | `GET customers/search`, `website_id` eq | **no** (the answer is also filtered on `website_id` here, so a filter that does nothing takes nothing extra) |
-| | `extension_attributes.company_attributes.company_id` | yes (2026-10-30, `…_DB08`) |
-| take a product off a website | `DELETE products/{sku}/websites/{websiteId}` | **no**: never called from this extension before |
-| delete a customer, product, category | `DELETE customers/{id}`, `products/{sku}`, `categories/{id}` | the routes yes (the engine's removals); a delete of something with orders, **no** |
+| a website's customers | `GET customers/search`, `website_id` eq | **no** (also filtered here) |
+| | `store_id`, `created_in` | **no** |
+| | `extension_attributes.company_attributes.company_id` | yes (2026-10-30) |
+| the stores' orders | `GET orders`, `store_id` in, with `items[qty_*]`, `status_histories[comment]`, `base_shipping_invoiced/refunded` | **no** (the integration reads the same fields from `GET orders/{id}`) |
+| where customers ordered | `GET orders`, `customer_id` in, `store_id` | **no** |
+| those orders' returns | `GET returns`, `order_id` in; `GET returns/{id}` | **no** from here (the integration reads `returns` by `order_id`) |
+| cancel, unhold, note | `POST orders/{id}/cancel`, `/unhold`, `/comments` | the integration's, live; from here **no** |
+| refund | `POST order/{id}/refund`, then `GET orders/{id}` (`state`) | **no**; the integration's measured its answer (the credit memo id) 2026-10-02 |
+| close a return | `PUT returns/{id}` `{ rmaDataObject }`, header only, `items: []`, then read back | **no** from here; the integration measured the shape 2026-10-02 |
+| take a product off a website | `DELETE products/{sku}/websites/{websiteId}` | **no** |
+| delete a customer, product, category | `DELETE customers/{id}`, `products/{sku}`, `categories/{id}` | the routes yes |
 
-### Decisions for the owner
+### Decisions from the first build, still standing
 
-1. **A second question, not a box.** A VS Code modal has no checkbox. Built: the next question, only
-   when there is something, Esc keeps. Recommended: keep.
-2. **A tool of its own, not a flag on `reset_project`.** The agent's `reset_project` never removes a
-   datapack (`reset_datapack` does), so a flag there would clear the rest while leaving the pack.
-   Built: `check_demo_data` + `clear_demo_data`. Recommended: keep.
-3. **B2B is not cleared.** Companies, shared catalogs and customer groups are store-wide and come as
-   units. Recommended next: clear a company whose admin and every member are this website's
-   customers, then its catalog and that catalog's group together, only when no other website's
-   customer is in the group.
-4. **Orders, invoices, credit memos, cart rules and website settings are never touched.**
-   Recommended: keep; say it in the SC guide.
-5. **Several projects on one website.** Built 2026-10-30: every local project's records on the
-   website are read and what any lists is left (see "Decision 5, built" above).
-6. **The headless reset** never removed data, so it does not ask. Recommended: ask both questions
-   there too, in a later step.
-7. **Install records afterwards.** The plan said they are cleared; built: the clearing never takes
-   what they list, so they stay true and `reset_datapack` still works. Recommended: keep.
-8. **The human question uses the project's own website.** scratch-1028's own website is JustRite's,
-   so its reset would offer to clear JustRite's live demo (with the website named, and opt in).
-   Built 2026-10-30: a website another local project records as its own is refused at every door,
-   and reset does not ask (see "A website another project claims is refused" above).
+1. A second question on reset, not a box (a VS Code modal has no checkbox); Esc keeps.
+2. Tools of their own (`check_demo_data`, `clear_demo_data`), not a flag on `reset_project`.
+3. B2B is not cleared (companies, shared catalogs and customer groups are store-wide units).
+   Recommended next: clear a company whose admin and members are all the chosen stores' customers,
+   with its catalog and group, only when no other store's customer is in the group.
+5. Several projects on one website: every local project's records on the chosen websites are read
+   and what any lists is left.
+6. The headless reset does not ask. Recommended: ask there too, later.
+7. Install records stay as they are: the clearing never takes what they list.
 
-### Live test (owner's call; `scratch-1028`, website `justrite_test_website` ONLY, never JustRite's own)
+### Open decisions (recommendation first)
+
+1. **Where the picker lives.** Built: a "Clear demo data" link in the Data Installer's catalog
+   header. Recommended: keep; it is where datapacks are removed.
+2. **The picker opens with nothing ticked**, not the project's own store. Recommended: keep (the
+   agent's check still defaults to the project's own).
+3. **The note on an order left open** says what the wipe did, not the ERP reset's "documents
+   removed" (a wipe removes none). Recommended: keep the two wordings apart; both carry
+   "by the demo reset on", so run-twice works across both.
+4. **Returns are read by the chosen stores' orders** (`order_id`), as the ERP reset reads them,
+   not by the return's own `store_id`. Recommended: keep.
+5. **Customers of a wholly chosen website are removed whatever their orders** (the owner's rule),
+   including orders on other websites under global account sharing. Recommended: keep.
+6. **A product on a wholly chosen website is deleted even when its categories are in a shared
+   root** (the owner's rule, read literally). Recommended: keep.
+7. **Retry in the progress window resends a spent token** and is refused "no longer known".
+   Recommended: a small follow-up to re-check instead.
+8. **A store whose recorded view is gone** claims every store of its website (the safe direction).
+   Recommended: keep.
+9. **The modal's red button renders as the secondary style** (`ui/Modal` maps `negative` to
+   secondary for every caller). Recommended: a Modal-wide change, not this step.
+10. Still open from the first build: B2B (3) and the headless reset (6) above.
+
+### Tests
+
+`wipeScope.test.ts` (11), `wipePlan.test.ts` (16), `wipeOrders.test.ts` (18, the seven rule
+examples by name first), `wipeRun.test.ts` (5), `wipeClaims.test.ts` (11), `demoDataHandlers.test.ts`
+(16), `edsResetOtherData.test.ts` (11), `ClearDemoDataModal.test.tsx` (7), `CheckboxRow.test.tsx`
+(2), `consentText.test.ts` (2), over typed fixtures (`commerceWipeFixtures.ts`, with Bodea given a
+second store, invented, to have a website only partly chosen; `resetRuleOrders.ts`).
+
+### Live test (owner's call; `scratch-1028`, `justrite_test_website` / `justrite_test_store` ONLY)
 
 Nothing here can be undone, so the clearing only ever meets things the test made itself.
 
 0. **Read-only, for the owner to review before anything is written.** `check_demo_data` with
-   `websiteCode: justrite_test_website`. Expected: every category under root 119 in `left` ("under
-   root category 119, which justrite also shows"); `takenOff` naming any product JustRite also sells;
-   `remove` naming what is the test website's alone. Then confirm the unconfirmed fields, read-only,
-   and record the answers as typed fixtures: `run_commerce_rest GET` `products` with the `website_id`
-   filter, `searchCriteria[pageSize]=5` and
-   `fields=items[sku,visibility,extension_attributes[website_ids,configurable_product_links]]`; and
-   `customers/search` with the `website_id` filter, page size 5. **Stop. The owner reads the list.**
-   If `total` is not 0, the test website holds things nobody made for this test: the clearing is not
-   run until the owner says those may go, since they cannot come back.
-1. With `total` 0 (or the owner's go): make two throwaway things on the test website only, by hand or
-   `write_commerce_rest`: product `zz-db10-only` (`website_ids` the test website's id, visibility 4)
-   and customer `db10.shopper@example.com` on the test website. `check_demo_data`: `remove` names
-   exactly those two.
+   `stores: [{ websiteCode: justrite_test_website, storeCode: justrite_test_store }]`. Expected:
+   `choices` lists `justrite_store` with `claimedBy` naming JustRite (if that project is on this
+   machine); every category under root 119 in `left` ("which the store justrite_store (website
+   justrite) also shows"); `takenOff` naming any product JustRite also sells; `orders` counting the
+   test view's orders. Then confirm the unconfirmed fields, read-only, and record the answers as
+   typed fixtures: `run_commerce_rest GET` `products` (the test website's `website_id`, page size 5,
+   `fields=items[sku,visibility,extension_attributes[website_ids,configurable_product_links,category_links]]`);
+   `customers/search` (same filter, page size 5, `items[id,store_id,created_in]`); `orders`
+   (`store_id` in the test view's id, page size 5, the wipe's fields); `returns` (`store_id` in, page
+   size 5). **Stop. The owner reads the list.** If `total` is not 0, the test store holds things
+   nobody made for this test: the clearing is not run until the owner says those may go.
+1. With `total` 0 (or the owner's go): make throwaway things in the test store only: product
+   `zz-db10-only` (the test website only, visibility 4, in a category under no shared root, or
+   none, since the website is wholly chosen), customer `db10.shopper@example.com` in the test view,
+   and, if the owner agrees to orders, two orders placed on the test store (one left pending, one
+   invoiced with `POST order/{id}/invoice`). `check_demo_data`: `remove` names the product and the
+   customer; `orders` says "1 to cancel, 1 to refund".
 2. Make one more customer, `db10.late@example.com`, then `clear_demo_data` with the step 1 token:
-   refused, "The store changed since the list was made", nothing written (Debug Logs: no DELETE).
-3. `check_demo_data` again (three things), then `clear_demo_data` with the new token: "Removed 1
-   product and 2 customers from justrite_test_website."
-4. **Back to zero:** `check_demo_data` answers `total` 0 with the same `left` as step 0, and JustRite's
-   website reads as before (`run_commerce_rest GET products` with JustRite's `website_id`, the same
-   `total_count` as at step 0).
-5. Not run live: taking a shared product off a website (it needs a product on a second website the
-   owner names as safe), and the reset question (scratch-1028's own website is JustRite's).
+   refused, "The store changed since the list was made", nothing written.
+3. `check_demo_data` again, then `clear_demo_data` with the new token. Expected note: "Removed 1
+   product and 2 customers from the store justrite_test_store. Canceled 1 order and refunded 1
+   order." In the Admin: the
+   pending order Canceled, the invoiced one Closed with a credit memo, each with its note.
+4. **Back to zero:** `check_demo_data` answers `total` 0 with the same `left` as step 0: the two
+   orders now carry a reset's note, so they count as handled. JustRite's website reads as before
+   (`GET products` with JustRite's `website_id`, the same `total_count` as at step 0). What does not
+   return: the two orders and the credit memo stay as history, closed (Commerce cannot delete them).
+5. Not run live: taking a shared product off a website, a return, a website only partly chosen, and
+   the reset question (scratch-1028's own store is JustRite's).

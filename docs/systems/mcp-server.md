@@ -785,29 +785,42 @@ justrite_test_website. Remove it first, or install it there."), by `validate_dat
 
 ### Clearing a demo's part of the store (datapack-engine step 10, 2026-10-30)
 
-`check_demo_data` (a read) answers, for one website (the project's unless `websiteCode` names
-another): what this project's install records list, by kind; what clearing would delete
-(products sold only there, categories under a root only this website shows, its customers) and
-take off it (products another website also sells), with at most three names each; what it would
-leave and why (a root another website shares, a customer in a B2B company, a variant that may
-belong to another website's product, a field Commerce did not answer); and a `token`.
-`clear_demo_data` (confirm-gated; the consent names the website) needs the website named, never
-defaulted, and that token. It makes the list again and writes nothing if the store would now clear
-anything the list did not hold, answering the new list instead; otherwise it deletes customers,
-then products, takes shared products off the website, then deletes categories deepest first, and
-its `note` says what it removed and exactly what Commerce refused. It never touches what an
-install record lists (`reset_datapack` removes that), attributes, sets, customer groups,
-companies, shared catalogs, stocks and sources, websites, stores, root categories, orders or
-settings. Cannot be undone. Project reset asks the same question after the datapack one. Plan:
-`.rptc/plans/datapack-engine/step-10-wipe.md`.
+The unit chosen is the **store** (store group), by website and store code (owner, 2026-10-30):
+`stores: [{ websiteCode, storeCode? }]`, where a website without a store means all of its stores.
+Store views are listed under their store and never chosen on their own.
 
-Every door (both tools and reset's question) first reads every other project on this machine
-(`readWipeClaims`, over `loadOtherProjects`). A website another project records as its own is
-refused before the store is opened, naming that project ("The website justrite is also
-JustRite's own website (project JustRite). Clear it from that project, if at all."):
+`check_demo_data` (a read) always answers `data.choices`: every website and its stores, each
+store's views, and `claimedBy` on a store another local project records as its own. With stores
+chosen (the project's own store when none is named; `stores: []` for the choices alone) it also
+answers `data.preview`: what the install records list, by kind; what clearing would delete
+(products tied to the chosen stores, categories under a root only chosen stores use, customers of
+a wholly chosen website or made in a chosen store) and take off the chosen websites (products
+other websites also sell); the orders it would cancel or refund and the returns it would close;
+what it would leave and why (a root a store not chosen shares, a product whose demo can't be told,
+a customer in a B2B company, an order Commerce can neither cancel nor refund); and a `token`. What
+a chosen store owns is judged against the whole chosen set.
+
+`clear_demo_data` (confirm-gated; the consent names the stores) needs the stores named, never
+defaulted, and that token. It makes the list again and writes nothing if the store would now clear
+anything the list did not hold, answering the new list instead; otherwise it closes the returns,
+closes off the orders by the one reset rule shared with the ERP integration's reset (nothing
+invoiced or shipped: cancelled; any other: refunded with an offline credit memo; each noted), then
+deletes customers, products, takes shared products off the chosen websites, and deletes categories
+deepest first. Its `note` says what it did and exactly what Commerce refused. Orders are never
+deleted. It never touches what an install record lists (`reset_datapack` removes that),
+attributes, sets, customer groups, companies, shared catalogs, stocks and sources, websites,
+stores, store views, root categories or settings. Cannot be undone. Project reset asks the same
+question for the project's own store after the datapack one; the Data Installer's "Clear demo
+data" is the human surface with the store picker. Plan: `.rptc/plans/datapack-engine/step-10-wipe.md`.
+
+Every door (both tools, the Data Installer and reset's question) reads every other project on this
+machine (`readWipeClaims`, over `loadOtherProjects`). A chosen store another project records as
+its own (the store its recorded store view belongs to) is refused before any product, customer or
+order is read, naming that project ("The store justrite_store (website justrite) is also
+JustRite's own store (project JustRite). Clear it from that project, if at all."):
 `check_demo_data` answers it as `data.refused`, a normal answer; `clear_demo_data` refuses; reset
 does not ask its second question and logs the sentence. What another project's install records
-list on the website is left, as this project's is.
+list on the chosen websites is left, as this project's is.
 
 ### Sharing a library pack (owner, 2026-10-30)
 

@@ -201,8 +201,8 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `check_demo_data` | read | What a website of this project's store holds that Demo Builder did not install, and what clearing it would do: |
-| `clear_demo_data` | **confirm** | Clear a website of everything check_demo_data listed: deletes those products, categories and customers and takes the |
+| `check_demo_data` | read | What some STORES of this project's Commerce instance hold that Demo Builder did not install, and what clearing them would do. |
+| `clear_demo_data` | **confirm** | Clear the chosen stores of everything check_demo_data listed: deletes those products, categories and customers, takes the |
 | `copy_library_datapack_to_installer` | **confirm** | Copy a datapack library pack into the Data Installer's catalog, for the Data Installer |
 | `delete_library_datapack` | **confirm** | Delete one of your own packs from the datapack library — the undo of |
 | `get_datapack_import_status` | read | Progress of the running or most recent datapack import/reset. Poll this after |

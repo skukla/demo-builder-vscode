@@ -6,6 +6,8 @@
  * - the bulk accept and the bulk status: Adobe's REST docs, `use-rest/bulk-endpoints` and
  *   `use-rest/operation-status-endpoints` (read 2026-10-09); the sandbox answered a
  *   `bulk_uuid` the same way on 2026-09-30 (backlog item demo-data-authoring);
+ * - the orders and returns the demo-data wipe closes: Adobe's ACCS REST reference
+ *   (adobe-commerce-saas.redoc.ly, read 2026-10-30) and Magento's `Sales` / `Rma` service contracts;
  * - the attribute sets, their attributes and their groups: Magento's service contracts behind
  *   the routes (`Eav/Api/Data/AttributeSetInterface`, `AttributeGroupInterface` and its
  *   extension attributes `attribute_group_code` / `sort_order`, 2.4-develop, read 2026-10-09).
@@ -334,6 +336,52 @@ export interface CommerceSharedCatalog {
 export interface CommerceSharedCatalogList {
     items?: CommerceSharedCatalog[];
     total_count?: number;
+}
+
+/**
+ * One line of an order, in the fields the demo-data wipe decides by (`Sales/Api/Data/OrderItemInterface`;
+ * the ERP integration's reset reads the same `qty_*` fields, `commerce-erp-integration` `src/lib/close-orders.js:48-59`).
+ * A configurable's child line names its parent in `parent_item_id`. No live answer is recorded in the repo.
+ */
+export interface CommerceOrderItem {
+    item_id?: number;
+    parent_item_id?: number;
+    sku?: string;
+    qty_ordered?: number;
+    qty_invoiced?: number;
+    qty_refunded?: number;
+    qty_canceled?: number;
+    qty_shipped?: number;
+}
+
+/** `GET /V1/orders` item (`Sales/Api/Data/OrderInterface`), in the fields the wipe reads. */
+export interface CommerceOrder {
+    entity_id: number;
+    increment_id?: string;
+    state?: string;
+    status?: string;
+    store_id?: number;
+    customer_id?: number;
+    base_shipping_invoiced?: number;
+    base_shipping_refunded?: number;
+    items?: CommerceOrderItem[];
+    /** The order's comments: a reset's note says it was handled before. */
+    status_histories?: Array<{ comment?: string }>;
+}
+
+/**
+ * `GET /V1/returns` item and `GET /V1/returns/{id}` (`Rma/Api/Data/RmaInterface`). `PUT /V1/returns/{id}`
+ * takes the whole object back as `{ rmaDataObject }`: Adobe's ACCS REST reference (operation
+ * `PutV1ReturnsId`, read 2026-10-30) marks every field below required, so the rest rides along untouched.
+ */
+export interface CommerceReturn {
+    entity_id: number;
+    increment_id?: string;
+    order_id?: number;
+    order_increment_id?: string;
+    store_id?: number;
+    status?: string;
+    [key: string]: unknown;
 }
 
 /**

@@ -260,7 +260,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     start_datapack_import: 'Importing the sample data',
     start_datapack_export: 'Capturing the sample data',
     reset_datapack: 'Removing the sample data',
-    // "Clear a website of everything check_demo_data listed".
+    // "Clear the chosen stores of everything check_demo_data listed".
     clear_demo_data: "Clearing the demo's store data",
     save_datapack_zip: 'Saving the datapack as a file',
     open_datapack_zip: 'Reading the datapack file',
@@ -333,6 +333,19 @@ const addingErp: NamedForm = (args, project) => {
 };
 
 /**
+ * "Clearing justrite_test_store", "Clearing bodea_store and bodea_outlet", "Clearing every store of
+ * bodea": the stores `clear_demo_data` is handed (`stores`, each a website code and, usually, a store code).
+ */
+const clearingStores: NamedForm = (args) => {
+    const stores = args?.stores;
+    if (!Array.isArray(stores) || stores.length === 0) return undefined;
+    const names = stores.map((s: { websiteCode?: unknown; storeCode?: unknown }) =>
+        typeof s?.storeCode === 'string' ? s.storeCode : `every store of ${String(s?.websiteCode ?? '?')}`,
+    );
+    return `Clearing ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`}`;
+};
+
+/**
  * The phrase for a call that names what it acts on, when the name is readable.
  *
  * "Agent · Deleting the Adobe workspace" said everything but WHICH one (owner,
@@ -349,7 +362,7 @@ const NAMED_NARRATION: Readonly<Record<string, NamedForm>> = {
     cleanup_dalive_site: naming(['org', 'site'], (org, site) => `Deleting ${org}/${site} content`),
     delete_page: naming(['path'], (path) => `Deleting ${path}`),
     reset_datapack: naming(['datapackName'], (name) => `Resetting ${name}`),
-    clear_demo_data: naming(['websiteCode'], (website) => `Clearing ${website}`),
+    clear_demo_data: clearingStores,
     start_datapack_import: naming(['datapackName'], (name) => `Importing ${name}`),
     start_datapack_export: naming(['datapackName'], (name) => `Exporting ${name}`),
     delete_library_datapack: naming(['datapackName'], (name) => `Deleting ${name}`),

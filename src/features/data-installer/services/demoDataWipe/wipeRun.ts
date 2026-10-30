@@ -1,19 +1,25 @@
 /**
  * Clearing a demo's part of the store (datapack-engine step 10): the plan the SC saw, carried out.
- * Cannot be undone: it removes things no install record lists, so there is nothing to put back.
+ * Cannot be undone: it removes things no install record lists and closes orders, so there is nothing
+ * to put back.
  *
  * The plan is made again first, and the clearing goes ahead only when the new plan takes nothing
- * the shown one did not (`withinPlan`): what is gone since (the pack's removal ran in between) is
- * fine, anything new is refused. Then, in the reverse of install order: customers, products
- * (deleted, or only taken off this website), categories deepest first. A write Commerce refuses is
- * named and counted, and the rest carry on, so the SC is told exactly what could not be removed.
+ * the shown one did not (`withinPlan`): what is gone or closed since (the pack's removal ran in
+ * between) is fine, anything new is refused. Then: returns closed, orders closed off (the one reset
+ * rule, `wipeOrders.ts` / `wipeOrderRun.ts`), then the reverse of install order: customers, products
+ * (deleted, or only taken off the chosen websites), categories deepest first. A write Commerce
+ * refuses is named and counted, and the rest carry on, so the SC is told exactly what could not be done.
  *
  * | Write | Route | Confirmed from a real answer? |
  * |---|---|---|
+ * | close a return, close off an order | see `wipeOrderRun.ts` | see there |
  * | delete a customer | `DELETE customers/{id}` | the route, yes (step 08's removal, live 2026-10-30) |
  * | delete a product | `DELETE products/{sku}` | the route, yes (the engine's removal) |
  * | take a product off a website | `DELETE products/{sku}/websites/{websiteId}` | **no**: Adobe's REST reference lists it; never called from here |
  * | delete a category | `DELETE categories/{id}` | the route, yes (the engine's removal) |
+ *
+ * Every write but the order and return ones goes through the project's store-wide access (Store: `all`);
+ * those name their own order or return id.
  *
  * @module features/data-installer/services/demoDataWipe/wipeRun
  */
@@ -24,9 +30,12 @@ import type { InstallRecord } from '../demoBuilderEngine/installRecord';
 import { deleteIfPresent, segment } from '../demoBuilderEngine/kindContext';
 import { removeProduct } from '../demoBuilderEngine/productsKind';
 import type { RemovalAccess } from '../demoBuilderEngine/removers';
-import { type WipePlan, type WipePreview, planWipe, withinPlan } from './wipePlan';
+import { type OrderOutcome, closeOrder, closeReturn } from './wipeOrderRun';
+import { type WipePlan, planWipeFor, withinPlan } from './wipePlan';
 import { andList } from '@/core/utils/andList';
+import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
+import type { WipePreview } from '@/types/demoDataWipe';
 
 /** The store would now clear something the SC was not shown: nothing was written. */
 export class WipeChangedError extends Error {
@@ -36,77 +45,135 @@ export class WipeChangedError extends Error {
     }
 }
 
+/** What the clearing removed, by kind. */
+export interface WipeCounts {
+    customers: number;
+    products: number;
+    takenOff: number;
+    categories: number;
+}
+
+/** What it did with the orders: the ERP reset's own counts, by the same names. */
+export interface OrderCounts {
+    cancelled: number;
+    refunded: number;
+    /** Left open with a note: Commerce could neither cancel nor refund them. */
+    commented: number;
+    /** Closed before, or handled by a reset before: nothing written. */
+    alreadyClosed: number;
+    returnsClosed: number;
+    failed: number;
+}
+
+type StepKey = keyof WipeCounts | 'returns' | 'orders';
+
 /** One step of the clearing, and what it is called in the outcome. */
 interface WipeStep {
-    /** "Could not remove 2 of the products": the verb and the kind, plural. */
+    /** "Could not remove 2 of the products": the verb and the kind, plural, with 1 as the count. */
     failed: string;
     stage: string;
-    ids: string[];
-    write: (commerce: RemovalAccess, id: string) => Promise<void>;
+    /** Each write, by the id the outcome names it by; an order's answers how it ended. */
+    writes: Array<{ id: string; write: () => Promise<OrderOutcome | void> }>;
 }
 
 /** What the clearing did. */
 export interface WipeOutcome {
-    removed: { customers: number; products: number; takenOff: number; categories: number };
+    removed: WipeCounts;
+    orders: OrderCounts;
     /** Each step with refusals: how many, and the first in Commerce's words. */
     failed: Array<{ what: string; count: number; first: string }>;
     sentence: string;
 }
 
-function stepsOf(plan: WipePlan): Record<keyof WipeOutcome['removed'], WipeStep> {
+const each = <T>(items: readonly T[], idOf: (item: T) => string, write: (item: T) => Promise<OrderOutcome | void>): WipeStep['writes'] =>
+    items.map((item) => ({ id: idOf(item), write: () => write(item) }));
+const self = (id: string): string => id;
+
+function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string): Record<StepKey, WipeStep> {
+    const { send } = commerce;
     return {
-        customers: { failed: 'remove 1 of the customers', stage: 'Removing customers', ids: plan.customerIds, write: (c, id) => removeCustomer(c.send, id) },
-        products: { failed: 'remove 1 of the products', stage: 'Removing products', ids: plan.deleteSkus, write: (c, sku) => removeProduct(c.send, sku) },
+        returns: { failed: 'close 1 of the returns', stage: DATAPACK_STAGES.closingReturns.label, writes: each(plan.returnIds, self, (id) => closeReturn(commerce, id)) },
+        orders: { failed: 'close 1 of the orders', stage: DATAPACK_STAGES.closingOrders.label, writes: each(plan.orders, (o) => o.number, (o) => closeOrder(commerce, o, day)) },
+        customers: { failed: 'remove 1 of the customers', stage: DATAPACK_STAGES.removingCustomers.label, writes: each(plan.customerIds, self, (id) => removeCustomer(send, id)) },
+        products: { failed: 'remove 1 of the products', stage: DATAPACK_STAGES.removingProducts.label, writes: each(plan.deleteSkus, self, (sku) => removeProduct(send, sku)) },
         takenOff: {
-            failed: 'take 1 of the products off the website',
-            stage: 'Taking products off the website',
-            ids: plan.takeOffSkus,
-            write: (c, sku) => deleteIfPresent(c.send, `products/${encodeURIComponent(sku)}/websites/${segment(plan.websiteId)}`),
+            failed: 'take 1 of the products off a website',
+            stage: DATAPACK_STAGES.takingProductsOff.label,
+            writes: each(plan.takeOff, (t) => t.sku, (t) => deleteIfPresent(send, `products/${encodeURIComponent(t.sku)}/websites/${segment(t.websiteId)}`)),
         },
-        categories: { failed: 'remove 1 of the categories', stage: 'Removing categories', ids: plan.categoryIds, write: (c, id) => removeCategory(c.send, id) },
+        categories: { failed: 'remove 1 of the categories', stage: DATAPACK_STAGES.removingCategories.label, writes: each(plan.categoryIds, self, (id) => removeCategory(send, id)) },
     };
 }
 
 const counted = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
-function sentenceOf(website: string, removed: WipeOutcome['removed'], failed: WipeOutcome['failed']): string {
+/** "the store justrite_test_store", "the stores bodea_store and bodea_outlet". */
+export function storesInWords(preview: WipePreview): string {
+    const codes = preview.stores.map((s) => s.storeCode);
+    return `${codes.length === 1 ? 'the store' : 'the stores'} ${andList(codes)}`;
+}
+
+/** " Canceled 1 order, refunded 2 and left 1 open with a note. Closed 1 return.", or nothing. */
+function ordersSentence(orders: OrderCounts): string {
+    const did = [
+        orders.cancelled > 0 ? `canceled ${counted(orders.cancelled, 'order', 'orders')}` : '',
+        orders.refunded > 0 ? `refunded ${counted(orders.refunded, 'order', 'orders')}` : '',
+        orders.commented > 0 ? `left ${counted(orders.commented, 'order', 'orders')} open with a note` : '',
+    ].filter(Boolean);
+    const first = did.length > 0 ? ` ${andList(did).replace(/^./u, (c) => c.toUpperCase())}.` : '';
+    return `${first}${orders.returnsClosed > 0 ? ` Closed ${counted(orders.returnsClosed, 'return', 'returns')}.` : ''}`;
+}
+
+function sentenceOf(preview: WipePreview, removed: WipeCounts, orders: OrderCounts, failed: WipeOutcome['failed']): string {
+    const where = storesInWords(preview);
     const parts = [
         removed.products > 0 ? counted(removed.products, 'product', 'products') : '',
         removed.categories > 0 ? counted(removed.categories, 'category', 'categories') : '',
         removed.customers > 0 ? counted(removed.customers, 'customer', 'customers') : '',
     ].filter(Boolean);
-    const did = parts.length > 0 ? `Removed ${andList(parts)} from ${website}.` : `Removed nothing from ${website}.`;
-    const off = removed.takenOff > 0 ? ` Took ${counted(removed.takenOff, 'product', 'products')} another website also sells off ${website}.` : '';
+    const did = parts.length > 0 ? `Removed ${andList(parts)} from ${where}.` : `Removed nothing from ${where}.`;
+    const off = removed.takenOff > 0 ? ` Took ${counted(removed.takenOff, 'product', 'products')} other websites also sell off the chosen websites.` : '';
     const not = failed.map((f) => ` Could not ${f.what.replace('1', String(f.count))} (${f.first}).`).join('');
-    return `${did}${off}${not}`;
+    return `${did}${ordersSentence(orders)}${off}${not}`;
+}
+
+const today = (): string => new Date().toISOString().slice(0, 10);
+
+/** Count one write that went through. */
+function count(key: StepKey, result: OrderOutcome | void, removed: WipeCounts, orders: OrderCounts): void {
+    if (key === 'returns') orders.returnsClosed += 1;
+    else if (key === 'orders') orders[result || 'commented'] += 1;
+    else removed[key] += 1;
 }
 
 /**
  * Carry a plan out, as made: every write named in it, in order, counting what Commerce refused.
  *
  * @param report - called as each kind starts, for the progress window
+ * @param day - the day the orders' notes name; today by default
  */
-export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (stage: string) => void = () => undefined): Promise<WipeOutcome> {
-    const removed: WipeOutcome['removed'] = { customers: 0, products: 0, takenOff: 0, categories: 0 };
+export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (stage: string) => void = () => undefined, day = today()): Promise<WipeOutcome> {
+    const removed: WipeCounts = { customers: 0, products: 0, takenOff: 0, categories: 0 };
+    const orders: OrderCounts = { cancelled: 0, refunded: 0, commented: 0, alreadyClosed: plan.alreadyClosed, returnsClosed: 0, failed: 0 };
     const failed: WipeOutcome['failed'] = [];
-    for (const [key, step] of Object.entries(stepsOf(plan)) as Array<[keyof WipeOutcome['removed'], WipeStep]>) {
-        if (step.ids.length > 0) report(step.stage);
+    for (const [key, step] of Object.entries(stepsOf(commerce, plan, day)) as Array<[StepKey, WipeStep]>) {
+        if (step.writes.length > 0) report(step.stage);
         const refused: string[] = [];
-        for (const id of step.ids) {
+        for (const { id, write } of step.writes) {
             try {
-                await step.write(commerce, id);
-                removed[key] += 1;
+                count(key, await write(), removed, orders);
             } catch (error) {
                 refused.push(`${id}: ${errorText(error)}`);
             }
         }
+        if (key === 'orders' || key === 'returns') orders.failed += refused.length;
         if (refused.length > 0) failed.push({ what: step.failed, count: refused.length, first: refused[0] });
     }
-    return { removed, failed, sentence: sentenceOf(plan.preview.website.code, removed, failed) };
+    return { removed, orders, failed, sentence: sentenceOf(plan.preview, removed, orders, failed) };
 }
 
 /**
- * Clear the website as shown: make the plan again, refuse when it takes anything the shown plan did
+ * Clear the stores as shown: make the plan again, refuse when it takes anything the shown plan did
  * not, then carry it out.
  *
  * @throws WipeChangedError, writing nothing, when the store would now clear something not shown
@@ -117,7 +184,7 @@ export async function clearShown(
     records: readonly InstallRecord[],
     report?: (stage: string) => void,
 ): Promise<WipeOutcome> {
-    const now = await planWipe(commerce.get, shown.preview.website.code, records);
+    const now = await planWipeFor(commerce.get, shown.choices, records);
     if (!withinPlan(shown, now)) throw new WipeChangedError(now.preview);
     return runWipe(commerce, now, report);
 }

@@ -48,11 +48,30 @@ function humanizeKey(key: string): string {
 /** Arg keys whose VALUES must never reach a dialog (or anywhere else). */
 const SECRET_KEY_RE = /token|secret|password|credential|apikey|api_key/i;
 
+/** One list item as a person reads it: a scalar as itself, a flat object as its scalar values joined by "/". */
+function itemText(item: unknown): string {
+    if (item && typeof item === 'object') {
+        return Object.values(item as Record<string, unknown>)
+            .filter((v) => typeof v === 'string' || typeof v === 'number')
+            .join('/');
+    }
+    return String(item);
+}
+
+/** A value as the dialog shows it: scalars as they are, a list of scalars or flat objects joined; anything else nothing. */
+function consentValue(value: unknown): string | undefined {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    // A list names WHICH things (`clear_demo_data`'s stores): leaving it out would leave the line blank.
+    if (Array.isArray(value)) return value.map(itemText).join(', ');
+    return undefined;
+}
+
 /**
  * Render a call's args for the consent dialog — the informed half of
- * informed consent. Scalars only (an object arg is structure, not a decision
- * input), the `confirm` marker itself skipped, secret-shaped keys masked,
- * long values elided. This deliberately DOES show values where the logging
+ * informed consent. Scalars and lists of them only (an object arg is structure,
+ * not a decision input), the `confirm` marker itself skipped, secret-shaped keys
+ * masked, long values elided. This deliberately DOES show values where the logging
  * wrapper shows only keys: "publish /products/x" is the substance the user
  * is consenting to.
  */
@@ -73,17 +92,13 @@ export function renderTargetForConsent(args: unknown, keys: string[]): string {
             lines.push(`${humanizeKey(key)}: ***`);
             continue;
         }
-        if (typeof value === 'string') {
-            lines.push(
-                `${humanizeKey(key)}: ${
-                    value.length > CONSENT_DETAIL_VALUE_MAX
-                        ? `${value.slice(0, CONSENT_DETAIL_VALUE_MAX)}… (${value.length} chars)`
-                        : value
-                }`,
-            );
-        } else if (typeof value === 'number' || typeof value === 'boolean') {
-            lines.push(`${humanizeKey(key)}: ${value}`);
-        }
+        const text = consentValue(value);
+        if (text === undefined) continue;
+        lines.push(
+            `${humanizeKey(key)}: ${
+                text.length > CONSENT_DETAIL_VALUE_MAX ? `${text.slice(0, CONSENT_DETAIL_VALUE_MAX)}… (${text.length} chars)` : text
+            }`,
+        );
     }
     return lines.join('\n');
 }

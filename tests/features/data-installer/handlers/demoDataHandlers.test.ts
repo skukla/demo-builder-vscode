@@ -1,14 +1,14 @@
 /**
  * The two handlers behind "check this demo's store data" and "clear it" (datapack-engine step 10),
- * driven against the sandbox fake with the real plan and clearing: the check writes nothing, and the
- * clearing refuses until it is named, confirmed and handed the list that was shown.
+ * driven against the sandbox fake with the real plan and clearing: the check writes nothing and
+ * answers the stores to choose from, and the clearing refuses until it is named, confirmed and
+ * handed the list that was shown.
  */
 
 import { type DemoDataDeps, createDemoDataHandlers } from '@/features/data-installer/handlers/demoDataHandlers';
 import { installRecordPath } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import type { WipeRefusal } from '@/features/data-installer/handlers/demoDataHandlers';
-import type { WipePreview } from '@/features/data-installer/services/demoDataWipe/wipePlan';
 import type { WipeOutcome } from '@/features/data-installer/services/demoDataWipe/wipeRun';
+import type { DemoDataCheck } from '@/types/demoDataWipe';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -17,13 +17,14 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { memoryFiles } from '../services/demoBuilderEngine/demoBuilderEngine.testUtils';
 import { PROJECT_RECORDS, sandbox } from '../services/demoDataWipe/wipe.testUtils';
 
-/** scratch-1028's shape: the project names JustRite's website; the test website is another. */
+/** scratch-1028's shape: the project names JustRite's website and view; the test website is another. */
 const PROJECT = createMockProject({
     name: 'scratch-1028',
     path: '/nonexistent/projects/scratch-1028',
     componentSelections: { backend: 'adobe-commerce-accs' },
     componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite', ACCS_STORE_VIEW_CODE: 'justrite_us' } },
 });
+const TEST_STORE = [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }];
 
 function setUp(overrides: Partial<DemoDataDeps> = {}, store = sandbox()) {
     // The project's own record on disk: what it lists must be left to the pack's removal.
@@ -35,85 +36,102 @@ function setUp(overrides: Partial<DemoDataDeps> = {}, store = sandbox()) {
     return { handlers, context, store, files };
 }
 
-/** JustRite's own project, which records the website `justrite` as its own. */
+/** JustRite's own project, which records the store `justrite_store` (through its view) as its own. */
 const JUSTRITE = createMockProject({
     name: 'JustRite',
     path: '/nonexistent/projects/JustRite',
     componentSelections: { backend: 'adobe-commerce-accs' },
     componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite', ACCS_STORE_VIEW_CODE: 'justrite_us' } },
 });
-const CLAIMED = "The website justrite is also JustRite's own website (project JustRite). Clear it from that project, if at all.";
+const CLAIMED = "The store justrite_store (website justrite) is also JustRite's own store (project JustRite). Clear it from that project, if at all.";
+
+const checked = (data: unknown) => data as DemoDataCheck;
 
 describe('check-demo-data', () => {
-    it('answers the list for the website named, writing nothing', async () => {
+    it('answers the list for the stores named, with every store to choose from, writing nothing', async () => {
         const { handlers, context, store } = setUp();
 
-        const res = await handlers['check-demo-data'](context, { websiteCode: 'justrite_test_website' });
+        const res = await handlers['check-demo-data'](context, { stores: TEST_STORE });
 
         expect(res.success).toBe(true);
-        expect((res.data as WipePreview).website.code).toBe('justrite_test_website');
-        expect((res.data as WipePreview).total).toBe(5);
+        const { preview, choices } = checked(res.data);
+        expect(preview?.stores.map((s) => s.storeCode)).toEqual(['justrite_test_store']);
+        expect(preview?.total).toBe(5);
+        expect(choices.find((w) => w.code === 'justrite_test_website')?.stores).toEqual([
+            { code: 'justrite_test_store', name: 'JustRite Test Store', views: ['JustRite Test View'], ticked: true },
+        ]);
         expect(store.sent).toStrictEqual([]);
     });
 
-    it("looks at the project's own website when none is named", async () => {
+    it("looks at the project's own store when none is named", async () => {
         const { handlers, context } = setUp();
 
         const res = await handlers['check-demo-data'](context, {});
 
-        expect((res.data as WipePreview).website.code).toBe('justrite');
+        expect(checked(res.data).preview?.stores).toEqual([{ websiteCode: 'justrite', websiteName: 'JustRite', storeCode: 'justrite_store', storeName: 'JustRite Store' }]);
+    });
+
+    it('answers the choices alone, reading nothing but the structure, when no stores are chosen', async () => {
+        const { handlers, context, store } = setUp();
+
+        const res = await handlers['check-demo-data'](context, { stores: [] });
+
+        expect(checked(res.data)).toEqual({ choices: expect.any(Array) });
+        expect(store.reads).toStrictEqual(['store/websites', 'store/storeGroups', 'store/storeViews']);
     });
 
     it('stops at an org mismatch before reading the store', async () => {
         const { handlers, context, store } = setUp({ guard: async () => 'Project uses a different Adobe organization.' });
 
-        const res = await handlers['check-demo-data'](context, { websiteCode: 'justrite_test_website' });
+        const res = await handlers['check-demo-data'](context, { stores: TEST_STORE });
 
         expect(res).toEqual({ success: false, error: 'Project uses a different Adobe organization.', code: ErrorCode.ORG_MISMATCH });
         expect(store.reads).toStrictEqual([]);
     });
 
-    it('answers, as a normal answer, that another project records the website as its own, reading nothing from the store', async () => {
+    it('answers, as a normal answer, that another project records the store as its own, and locks it in the choices', async () => {
         const others = jest.fn().mockResolvedValue([JUSTRITE]);
         const { handlers, context, store } = setUp({ others });
 
         const res = await handlers['check-demo-data'](context, {});
 
-        expect(res).toEqual({ success: true, data: { website: { code: 'justrite' }, refused: CLAIMED } satisfies WipeRefusal });
+        const { refused, preview, choices } = checked(res.data);
+        expect(refused).toBe(CLAIMED);
+        expect(preview).toBeUndefined();
+        expect(choices.find((w) => w.code === 'justrite')?.stores[0]).toMatchObject({ code: 'justrite_store', ticked: true, claimedBy: CLAIMED });
         expect(others).toHaveBeenCalledWith(context, PROJECT);
-        expect(store.reads).toStrictEqual([]);
+        expect(store.reads).toStrictEqual(['store/websites', 'store/storeGroups', 'store/storeViews']);
     });
 
-    it("leaves what another project's install records list on the website", async () => {
+    it("leaves what another project's install records list on the chosen websites", async () => {
         const other = createMockProject({ name: 'bodea-demo', path: '/nonexistent/projects/bodea-demo', componentConfigs: {} });
         const theirs = { ...PROJECT_RECORDS[0], pack: { name: 'theirs', version: '1' }, created: [{ kind: 'products', id: 'ZZ-ONLY-HERE' }] };
         const { handlers, context, files } = setUp({ others: async () => [other] });
         files.data.set(installRecordPath(other.path, theirs.pack), JSON.stringify(theirs));
 
-        const res = await handlers['check-demo-data'](context, { websiteCode: 'justrite_test_website' });
+        const { preview } = checked((await handlers['check-demo-data'](context, { stores: TEST_STORE })).data);
 
-        expect((res.data as WipePreview).total).toBe(4);
-        expect((res.data as WipePreview).installed).toEqual({ products: 2, customers: 1, categories: 1 });
+        expect(preview?.total).toBe(4);
+        expect(preview?.installed).toEqual({ products: 2, customers: 1, categories: 1 });
     });
 
     it('names a website the store does not have', async () => {
         const { handlers, context } = setUp();
 
-        expect(await handlers['check-demo-data'](context, { websiteCode: 'nope' })).toEqual({ success: false, error: 'The store has no website nope.' });
+        expect(await handlers['check-demo-data'](context, { stores: [{ websiteCode: 'nope' }] })).toEqual({ success: false, error: 'The store has no website nope.' });
     });
 });
 
 describe('clear-demo-data', () => {
-    async function shown() {
-        const made = setUp();
-        const res = await made.handlers['check-demo-data'](made.context, { websiteCode: 'justrite_test_website' });
-        return { ...made, token: (res.data as WipePreview).token };
+    async function shown(made = setUp()) {
+        const res = await made.handlers['check-demo-data'](made.context, { stores: TEST_STORE });
+        return { ...made, token: checked(res.data).preview?.token ?? '' };
     }
 
     it.each([
-        ['no website', {}, /Name the website to clear/],
-        ['no token', { websiteCode: 'justrite_test_website' }, /Check what would be removed first/],
-        ['no confirm', { websiteCode: 'justrite_test_website', token: 'x' }, /website justrite_test_website .* cannot be undone/],
+        ['no stores', {}, /Name the stores to clear/],
+        ['no token', { stores: TEST_STORE }, /Check what would be removed first/],
+        ['no confirm', { stores: TEST_STORE, token: 'x' }, /stores justrite_test_store \(justrite_test_website\) .*cancels or refunds their orders.* cannot be undone/],
     ])('refuses, writing nothing, with %s', async (_label, payload, error) => {
         const { handlers, context, store } = setUp();
 
@@ -124,35 +142,53 @@ describe('clear-demo-data', () => {
         expect(store.sent).toStrictEqual([]);
     });
 
-    it('refuses a token for another website, or one never shown', async () => {
+    it('refuses a token for other stores, or one never shown', async () => {
         const { handlers, context, token, store } = await shown();
 
-        expect((await handlers['clear-demo-data'](context, { websiteCode: 'justrite', token, confirm: true })).error).toBe(
-            'That list is for the website justrite_test_website, not justrite.',
+        expect((await handlers['clear-demo-data'](context, { stores: [{ websiteCode: 'justrite' }], token, confirm: true })).error).toBe(
+            'That list is for the store justrite_test_store, not the stores named.',
         );
-        expect((await handlers['clear-demo-data'](context, { websiteCode: 'justrite_test_website', token: 'made-up', confirm: true })).error).toMatch(/no longer known/);
+        expect((await handlers['clear-demo-data'](context, { stores: TEST_STORE, token: 'made-up', confirm: true })).error).toMatch(/no longer known/);
         expect(store.sent).toStrictEqual([]);
+    });
+
+    it('takes the website named alone as all its stores, the same list', async () => {
+        const { handlers, context, token } = await shown();
+
+        const res = await handlers['clear-demo-data'](context, { stores: [{ websiteCode: 'justrite_test_website' }], token, confirm: true });
+
+        expect(res.success).toBe(true);
     });
 
     it('clears what was shown, once, and says what it did', async () => {
         const { handlers, context, token, store } = await shown();
 
-        const res = await handlers['clear-demo-data'](context, { websiteCode: 'justrite_test_website', token, confirm: true });
+        const res = await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true });
 
         expect(res.success).toBe(true);
         expect((res.data as WipeOutcome).removed).toEqual({ customers: 1, products: 3, takenOff: 1, categories: 0 });
-        expect(res.note).toMatch(/^Removed 3 products and 1 customer from justrite_test_website\./);
+        expect(res.note).toMatch(/^Removed 3 products and 1 customer from the store justrite_test_store\./);
         expect(store.sent).toHaveLength(5);
-        expect((await handlers['clear-demo-data'](context, { websiteCode: 'justrite_test_website', token, confirm: true })).error).toMatch(/no longer known/);
+        expect((await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true })).error).toMatch(/no longer known/);
     });
 
-    it('refuses, writing nothing, once another project records the website as its own', async () => {
+    it("tells the screen's progress window each stage, and ends it on the one sentence", async () => {
+        const { handlers, context, token } = await shown();
+
+        await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true, progress: 'modal' });
+
+        const pushed = (context.sendMessage as jest.Mock).mock.calls.filter(([type]) => type === 'operationProgress').map(([, payload]) => payload);
+        expect(pushed).toContainEqual(expect.objectContaining({ id: 'demo-data-clear', state: 'running', stage: 'Removing customers' }));
+        expect(pushed).toContainEqual(expect.objectContaining({ id: 'demo-data-clear', state: 'succeeded', note: expect.stringMatching(/^Removed 3 products/) }));
+    });
+
+    it('refuses, writing nothing, once another project records the store as its own', async () => {
         const others = jest.fn().mockResolvedValue([]);
         const { handlers, context, store } = setUp({ others });
         const res = await handlers['check-demo-data'](context, {});
         others.mockResolvedValue([JUSTRITE]);
 
-        const cleared = await handlers['clear-demo-data'](context, { websiteCode: 'justrite', token: (res.data as WipePreview).token, confirm: true });
+        const cleared = await handlers['clear-demo-data'](context, { stores: [{ websiteCode: 'justrite', storeCode: 'justrite_store' }], token: checked(res.data).preview?.token, confirm: true });
 
         expect(cleared).toEqual({ success: false, error: CLAIMED, code: ErrorCode.INVALID_OPERATION });
         expect(others).toHaveBeenLastCalledWith(context, PROJECT);
@@ -163,11 +199,11 @@ describe('clear-demo-data', () => {
         const { handlers, context, token, store } = await shown();
         store.data.customers.push({ id: 99, email: 'new@example.com', firstname: 'N', lastname: 'W', website_id: 5 });
 
-        const res = await handlers['clear-demo-data'](context, { websiteCode: 'justrite_test_website', token, confirm: true });
+        const res = await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true });
 
         expect(res.success).toBe(false);
         expect(res.error).toMatch(/store changed since the list was made/);
-        expect((res.data as { preview: WipePreview }).preview.remove.customers.count).toBe(2);
+        expect((res.data as { preview: { remove: { customers: { count: number } } } }).preview.remove.customers.count).toBe(2);
         expect(store.sent).toStrictEqual([]);
     });
 });

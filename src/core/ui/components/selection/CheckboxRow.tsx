@@ -7,6 +7,8 @@
  * feature's `add-integration-flow.css`, which the projects list bundle does not load, so
  * the row would have rendered unstyled there (ADR-017 §6). The rules moved unchanged, in
  * the same layer, to `core/ui/styles/checkbox-row.css`, which each host bundle imports.
+ * `isIndeterminate` was added 2026-10-30 for the Data Installer's "Clear demo data", where a
+ * website's row stands for all of its stores.
  *
  * @module core/ui/components/selection/CheckboxRow
  */
@@ -22,6 +24,8 @@ export interface CheckboxRowProps {
     /** Why the row cannot change, shown after the detail. */
     reason?: string;
     isSelected: boolean;
+    /** Some, not all, of what the row stands for is ticked (a website with some of its stores). */
+    isIndeterminate?: boolean;
     isDisabled?: boolean;
     onChange: () => void;
 }
@@ -32,12 +36,13 @@ export function CheckboxRow({
     detail,
     reason,
     isSelected,
+    isIndeterminate,
     isDisabled,
     onChange,
 }: CheckboxRowProps): React.ReactElement {
     return (
         <div className="checkbox-row">
-            <Checkbox isSelected={isSelected} isDisabled={isDisabled} onChange={onChange}>
+            <Checkbox isSelected={isSelected} isIndeterminate={isIndeterminate} isDisabled={isDisabled} onChange={onChange}>
                 <span className="checkbox-row-label">{label}</span>
                 {detail !== undefined && <span className="checkbox-row-detail">{detail}</span>}
                 {reason !== undefined && <span className="checkbox-row-reason">{reason}</span>}

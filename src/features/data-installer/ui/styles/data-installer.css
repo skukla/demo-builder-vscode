@@ -573,3 +573,34 @@
     gap: 6px;
 }
 }
+
+/* "Clear demo data" (ClearDemoDataModal, StorePickList): the store tree, its stores indented
+   under their website, scrolling past a dozen rows so the list of what clearing does stays in
+   view; the line while a check runs; and the never-touched sentence, quieter than the list. */
+@layer theme {
+.clear-demo-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.clear-demo-store-list {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.clear-demo-stores {
+    padding-left: 24px;
+}
+
+.clear-demo-checking {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.clear-demo-never {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}
+}

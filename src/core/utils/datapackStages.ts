@@ -25,4 +25,41 @@ export const DATAPACK_STAGES = {
         expectation: 'Usually a few seconds',
         detail: "This demo's pack in the library",
     },
+    // Clearing a demo's stores (step 10), in the order the clearing runs. FIRST ESTIMATES, NOT
+    // MEASURED: the clearing has not yet run against a live store.
+    checkingStores: {
+        label: 'Checking the stores',
+        expectation: 'Usually under a minute',
+        detail: 'That the list shown still holds',
+    },
+    closingReturns: {
+        label: 'Closing returns',
+        expectation: 'A few seconds each',
+        detail: 'Returns placed in the chosen stores',
+    },
+    closingOrders: {
+        label: 'Closing orders',
+        expectation: 'A few seconds each',
+        detail: 'Canceled, or refunded, then noted',
+    },
+    removingCustomers: {
+        label: 'Removing customers',
+        expectation: 'Usually a second each',
+        detail: "Accounts the chosen stores own",
+    },
+    removingProducts: {
+        label: 'Removing products',
+        expectation: 'Usually a second each',
+        detail: 'Products the chosen stores own',
+    },
+    takingProductsOff: {
+        label: 'Taking products off sites',
+        expectation: 'Usually a second each',
+        detail: 'Products other websites also sell',
+    },
+    removingCategories: {
+        label: 'Removing categories',
+        expectation: 'Usually a second each',
+        detail: 'Deepest first, roots kept',
+    },
 } as const;

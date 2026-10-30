@@ -34,6 +34,15 @@ export function filterBy(field: string, value: string | number): string {
     );
 }
 
+/** One `in` filter over several values, joined by commas as Commerce reads them, escaped. */
+export function filterIn(field: string, values: ReadonlyArray<string | number>): string {
+    return (
+        `&searchCriteria[filterGroups][0][filters][0][field]=${field}` +
+        `&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(values.join(','))}` +
+        '&searchCriteria[filterGroups][0][filters][0][conditionType]=in'
+    );
+}
+
 const sameText = (a: string | undefined, b: string): boolean => (a ?? '').trim().toLowerCase() === b.trim().toLowerCase();
 
 /** Every customer with this email, on any website. Commerce compares emails without case. */

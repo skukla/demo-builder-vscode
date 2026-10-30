@@ -52,6 +52,9 @@ export const DATAPACK_OPERATION_ID = 'datapack';
  */
 export const DATAPACK_SAVE_OPERATION_ID = 'datapack-save';
 
+/** "Clear demo data" (datapack-engine step 10): the chosen stores cleared. One at a time. */
+export const DEMO_DATA_CLEAR_OPERATION_ID = 'demo-data-clear';
+
 /** Applying an edit from the Manage APIs modal. */
 export const CONSOLE_APIS_OPERATION_ID = 'console-apis';
 

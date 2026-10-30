@@ -115,6 +115,10 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     getDemoPackagePreview: TIMEOUTS.LONG, // 180s - repository reads + published-page index
     saveDemoPackage: TIMEOUTS.LONG, // 180s - description file write + card
     removeDemoPackage: TIMEOUTS.LONG, // 180s - description file delete + card
+
+    // "Clear demo data" (datapack-engine step 10): the check reads every product, customer and
+    // order of the chosen websites and stores, a page of 100 at a time. Not measured live yet.
+    'check-demo-data': TIMEOUTS.LONG, // 180s - store structure + products, customers, orders, returns
 };
 
 /**

@@ -55,6 +55,9 @@ const STAGE_REPORTERS = [
     'src/features/dashboard/handlers/edsContentHandlers.ts',
     'src/features/eds/services/storefront/storefrontContentRepublishService.ts',
     'src/features/eds/services/storefront/storefrontRepublishService.ts',
+    // Clearing a demo's stores (datapack-engine step 10): its stages are the table's.
+    'src/features/data-installer/services/demoDataWipe/wipeRun.ts',
+    'src/features/data-installer/handlers/demoDataHandlers.ts',
 ];
 
 /** A progress call whose FIRST argument is a string or template literal. */

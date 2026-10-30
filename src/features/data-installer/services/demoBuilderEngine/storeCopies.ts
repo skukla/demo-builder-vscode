@@ -13,6 +13,7 @@
  */
 
 import { withoutCredentials } from '../packCredentials';
+import { filterBy, filterIn } from './b2bReads';
 import { B2B_READERS, b2bRowsOf } from './b2bStoreCopies';
 import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
@@ -31,14 +32,6 @@ export function packKindOf(kind: string): string {
     return kind === 'attribute_options' ? 'product_attributes' : kind;
 }
 
-function skuSearch(skus: string[]): string {
-    return (
-        '&searchCriteria[filterGroups][0][filters][0][field]=sku' +
-        `&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(skus.join(','))}` +
-        '&searchCriteria[filterGroups][0][filters][0][conditionType]=in'
-    );
-}
-
 /**
  * Every row a search route holds for these SKUs, a page of SKUs at a time: products from
  * `products`, quantities from `inventory/source-items`.
@@ -48,10 +41,10 @@ export async function readBySku<T>(ctx: KindContext, route: string, skus: readon
     // A comma would split one SKU into two in an "in" search; such a SKU is read on its own.
     const plain = skus.filter((sku) => !sku.includes(','));
     for (let start = 0; start < plain.length; start += SKUS_PER_READ) {
-        found.push(...(await readAllPages<T>(ctx.get, route, skuSearch(plain.slice(start, start + SKUS_PER_READ)))));
+        found.push(...(await readAllPages<T>(ctx.get, route, filterIn('sku', plain.slice(start, start + SKUS_PER_READ)))));
     }
     for (const sku of skus.filter((s) => s.includes(','))) {
-        found.push(...(await readAllPages<T>(ctx.get, route, skuSearch([sku]).replace('conditionType]=in', 'conditionType]=eq'))));
+        found.push(...(await readAllPages<T>(ctx.get, route, filterBy('sku', sku))));
     }
     return found;
 }

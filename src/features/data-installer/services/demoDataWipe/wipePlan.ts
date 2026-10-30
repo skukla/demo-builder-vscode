@@ -1,77 +1,63 @@
 /**
- * What clearing a demo's part of the store would remove (datapack-engine step 10, owner
- * 2026-10-27): everything on one website that Demo Builder did NOT install, decided from reads
- * alone. Writes nothing; `wipeRun.ts` carries the plan out.
+ * What clearing a demo's part of the store would do (datapack-engine step 10, owner 2026-10-27,
+ * widened from one website to a set of STORES 2026-10-30): everything the chosen stores own that
+ * Demo Builder did NOT install, decided from reads alone. Writes nothing; `wipeRun.ts` carries the
+ * plan out.
  *
- * The sandbox holds several demos (JustRite's live demo, Bodea, BJU, CitiSignal), so the plan
- * only ever takes what is this website's alone:
+ * The sandbox holds several demos at once (JustRite's live demo, Bodea, BJU, CitiSignal), so what a
+ * store owns is judged against the whole chosen set (`wipeScope.ts`):
  *
- * | Kind | Removed | Left, and said why |
+ * | Kind | Done | Left, and said why |
  * |---|---|---|
- * | products | on this website only: deleted | also on another website: only taken off this one. Not shown on its own (a variant) and not a variant of a product being deleted: left, it may belong to a product another website sells. Websites or visibility not answered: left |
- * | categories | under a root only this website's store groups show, deepest first | under a root another website shows too (`justrite_test_website` and JustRite share root 119): all left. One holding a category Demo Builder installed: left |
- * | customers | accounts of this website | in a B2B company (an admin cannot be deleted while its company stands): left |
+ * | products | `wipeProducts.ts`: deleted when tied to the chosen stores on every website they are on; taken off the chosen websites when also sold elsewhere | can't tell which demo they belong to; in a store not chosen; variants; fields not answered |
+ * | categories | under a root every store using it is chosen, deepest first | under a root a store not chosen also shows (`justrite_test_store` and JustRite's share 119): all left. One holding a category Demo Builder installed: left |
+ * | customers | `wipeCustomers.ts`: of a wholly chosen website, or made in a chosen store with no order elsewhere | made in or ordering from a store not chosen; store not said; in a B2B company |
+ * | orders | `wipeOrders.ts`, the one reset rule shared with the ERP reset: placed in a chosen store's views and not invoiced or shipped, cancelled; any other, refunded with an offline credit memo; noted; open returns closed. Never deleted | already Canceled or Closed, or noted by a reset before; neither cancellable nor refundable |
  *
- * Never touched, whatever is there: anything an install record lists, this project's or another local
- * project's on the same website (`readWipeClaims`; the pack's removal takes those, by its own rules); product attributes and attribute sets; customer groups,
- * companies and shared catalogs (a catalog and its group are one unit, and deleting either moves
- * customers to General); stocks and sources (the Default Stock and Source included); websites,
- * stores and root categories; orders and invoices; store settings; admin users; the integration's
- * credential.
+ * Never touched, whatever is there: anything an install record lists (every local project's on the
+ * chosen websites, `readWipeClaims`; the pack's removal takes those, by its own rules); product
+ * attributes and attribute sets; customer groups, companies and shared catalogs (a catalog and its
+ * group are one unit, and deleting either moves customers to General); stocks and sources (the
+ * Default Stock and Source included); websites, stores, store views and root categories; store
+ * settings; admin users; the integration's credential.
  *
  * @module features/data-installer/services/demoDataWipe/wipePlan
  */
 
 import type { InstallRecord } from '../demoBuilderEngine/installRecord';
-import { type Named, named } from '../demoBuilderEngine/storeChanges';
-import { type WipeCategory, type WipeWebsite, readCategoryTree, readWebsiteCustomers, readWebsiteProducts, readWipeWebsite } from './wipeReads';
+import { named } from '../demoBuilderEngine/storeChanges';
+import { type CustomerDecision, decideCustomers } from './wipeCustomers';
+import { type OrderStep, openReturns, orderStepOf } from './wipeOrders';
+import { type ProductDecision, decideProducts } from './wipeProducts';
+import { type WipeCategory, readCategoryTree, readOrderReturns, readViewOrders, readWebsiteProducts, readWipeStructure } from './wipeReads';
+import { type WipeScope, choicesOfScope, resolveWipeScope } from './wipeScope';
 import { sha256 } from '@/core/utils/sha256';
-import type { CommerceCustomer, CommerceGet, CommerceProduct } from '@/types/commerceWire';
-
-export type WipeKind = 'products' | 'categories' | 'customers';
-
-/** Things of one kind the wipe leaves, and the one reason. */
-export interface WipeLeft extends Named {
-    kind: WipeKind;
-    why: string;
-}
-
-/** What the SC and the agent see before anything is written. Counts and a few names, never rows. */
-export interface WipePreview {
-    website: { code: string; name: string };
-    /** What would be deleted, by kind. */
-    remove: Record<WipeKind, Named>;
-    /** Products another website also sells: taken off this website only. */
-    takenOff: Named;
-    left: WipeLeft[];
-    /** What the install records list (this project's, and other local projects' on this website), by kind: their packs' removal takes those. */
-    installed: Record<string, number>;
-    /** How many things the wipe would change. */
-    total: number;
-    /** Names this exact plan; the clearing must be handed it back. */
-    token: string;
-    /** What is never touched, in one sentence. */
-    never: string;
-}
+import type { CommerceStoreStructure } from '@/types/commerceStore';
+import type { CommerceGet, CommerceOrder, CommerceProduct } from '@/types/commerceWire';
+import type { WipeLeft, WipePreview, WipeStoreChoice } from '@/types/demoDataWipe';
 
 /** The plan in full: the preview, and every id it would write to. */
 export interface WipePlan {
-    websiteId: number;
+    /** The chosen stores, by code: what the clearing re-plans against. */
+    choices: WipeStoreChoice[];
+    /** The chosen stores as one key, the same however they were named. */
+    scopeKey: string;
     preview: WipePreview;
     deleteSkus: string[];
-    takeOffSkus: string[];
+    takeOff: Array<{ sku: string; websiteId: number }>;
     /** Deepest first, so no delete takes a category another delete still names. */
     categoryIds: string[];
     customerIds: string[];
+    orders: OrderStep[];
+    /** Orders in the chosen stores already Canceled or Closed, or handled by a reset before. */
+    alreadyClosed: number;
+    returnIds: string[];
 }
 
 export const NEVER_TOUCHED =
     'Never touched: what Demo Builder installed (its removal takes that), product attributes and sets, customer groups, ' +
-    'companies and shared catalogs, stocks and sources, websites, stores and root categories, orders and invoices, ' +
-    "store settings, admin users and the integration's credential.";
-
-/** Commerce's "Not Visible Individually": a product shown only as part of another. */
-const NOT_VISIBLE = 1;
+    'companies and shared catalogs, stocks and sources, websites, stores, store views and root categories, ' +
+    "store settings, admin users and the integration's credential. Orders are closed, never deleted.";
 
 type Recorded = Record<'products' | 'categories' | 'customers', Set<string>>;
 
@@ -87,32 +73,6 @@ function installedCounts(records: readonly InstallRecord[]): Record<string, numb
     return counts;
 }
 
-interface ProductDecision {
-    remove: CommerceProduct[];
-    takeOff: CommerceProduct[];
-    variants: CommerceProduct[];
-    unknown: CommerceProduct[];
-}
-
-const websitesOf = (p: CommerceProduct): number[] | undefined => p.extension_attributes?.website_ids?.map(Number);
-const isOnlyHere = (p: CommerceProduct, websiteId: number): boolean => websitesOf(p)?.length === 1 && websitesOf(p)?.[0] === websiteId;
-
-/** Which of the website's products go, which are only taken off it, and which stay. */
-function decideProducts(products: readonly CommerceProduct[], websiteId: number, recorded: Set<string>): ProductDecision {
-    const mine = products.filter((p) => !recorded.has(p.sku.toLowerCase()) && websitesOf(p)?.includes(websiteId) !== false);
-    const decided: ProductDecision = { remove: [], takeOff: [], variants: [], unknown: [] };
-    const shown = (p: CommerceProduct) => p.visibility !== undefined && Number(p.visibility) !== NOT_VISIBLE;
-    const parents = mine.filter((p) => isOnlyHere(p, websiteId) && shown(p));
-    const children = new Set(parents.flatMap((p) => (p.extension_attributes?.configurable_product_links ?? []).map(String)));
-    for (const product of mine) {
-        if (websitesOf(product) === undefined || product.visibility === undefined) decided.unknown.push(product);
-        else if (!isOnlyHere(product, websiteId)) decided.takeOff.push(product);
-        else if (shown(product) || children.has(String(product.id))) decided.remove.push(product);
-        else decided.variants.push(product);
-    }
-    return decided;
-}
-
 interface CategoryDecision {
     remove: WipeCategory[];
     shared: Array<{ root: string; under: WipeCategory[]; with: string[] }>;
@@ -121,90 +81,148 @@ interface CategoryDecision {
 
 const segmentsOf = (c: WipeCategory): string[] => (c.path ?? '').split('/').filter(Boolean);
 
-/** The categories under each of the website's roots: deleted, or left with the reason. */
-function decideCategories(tree: readonly WipeCategory[], website: WipeWebsite, recorded: Set<string>): CategoryDecision {
+/** The categories under each chosen store's root: deleted, or left with the reason. */
+function decideCategories(tree: readonly WipeCategory[], scope: WipeScope, recorded: Set<string>): CategoryDecision {
     const decided: CategoryDecision = { remove: [], shared: [], holding: [] };
     const holdsRecorded = new Set(tree.filter((c) => recorded.has(String(c.id))).flatMap((c) => segmentsOf(c).slice(0, -1)));
-    for (const root of website.roots) {
-        const under = tree.filter((c) => segmentsOf(c)[1] === root && segmentsOf(c).length > 2);
-        const others = website.sharedRoots.get(root);
-        if (others) {
-            decided.shared.push({ root, under, with: others });
-            continue;
-        }
-        for (const category of under) {
+    const under = (root: string) => tree.filter((c) => segmentsOf(c)[1] === root && segmentsOf(c).length > 2);
+    for (const [root, others] of scope.sharedRoots) decided.shared.push({ root, under: under(root), with: others });
+    for (const root of scope.clearedRoots) {
+        for (const category of under(root)) {
             if (recorded.has(String(category.id))) continue;
-            if (holdsRecorded.has(String(category.id))) decided.holding.push(category);
-            else decided.remove.push(category);
+            (holdsRecorded.has(String(category.id)) ? decided.holding : decided.remove).push(category);
         }
     }
     decided.remove.sort((a, b) => segmentsOf(b).length - segmentsOf(a).length);
     return decided;
 }
 
-function decideCustomers(customers: readonly CommerceCustomer[], recorded: Set<string>): { remove: CommerceCustomer[]; inCompany: CommerceCustomer[] } {
-    const mine = customers.filter((c) => c.id !== undefined && !recorded.has(String(c.id)));
-    const inCompany = mine.filter((c) => Number(c.extension_attributes?.company_attributes?.company_id ?? 0) > 0);
-    return { remove: mine.filter((c) => !inCompany.includes(c)), inCompany };
-}
-
 const skus = (products: readonly CommerceProduct[]) => products.map((p) => p.sku);
 const categoryNames = (categories: readonly WipeCategory[]) => categories.map((c) => c.name ?? String(c.id));
+const emails = (customers: CustomerDecision['remove']) => customers.map((c) => c.email);
+const leftRow = (kind: WipeLeft['kind'], names: string[], why: string): WipeLeft => ({ kind, ...named(names), why });
 
-function leftOf(products: ProductDecision, categories: CategoryDecision, inCompany: readonly CommerceCustomer[]): WipeLeft[] {
+function leftOf({ products, categories, customers }: Decided): WipeLeft[] {
     const left: WipeLeft[] = [
-        { kind: 'products', ...named(skus(products.variants)), why: 'shown only as part of another product, which may be one another website sells' },
-        { kind: 'products', ...named(skus(products.unknown)), why: 'Commerce did not say which websites they are on or whether they are shown on their own' },
-        ...categories.shared.map((s): WipeLeft => ({ kind: 'categories', ...named(categoryNames(s.under)), why: `under root category ${s.root}, which ${s.with.join(', ')} also shows` })),
-        { kind: 'categories', ...named(categoryNames(categories.holding)), why: 'they hold a category Demo Builder installed' },
-        { kind: 'customers', ...named(inCompany.map((c) => c.email)), why: 'they are in a B2B company, which a wipe does not clear' },
+        leftRow('products', skus(products.cannotTell), "nothing ties them to the chosen stores (no category, or only categories other stores share), so which demo they belong to can't be told"),
+        leftRow('products', skus(products.elsewhere), 'they are in the categories of a store not chosen'),
+        leftRow('products', skus(products.variants), 'shown only as part of another product, which may be one another website sells'),
+        leftRow('products', skus(products.unknown), 'Commerce did not say which websites they are on or whether they are shown on their own'),
+        ...categories.shared.map((s) => leftRow('categories', categoryNames(s.under), `under root category ${s.root}, which ${s.with.join(' and ')} also shows`)),
+        leftRow('categories', categoryNames(categories.holding), 'they hold a category Demo Builder installed'),
+        leftRow('customers', emails(customers.inCompany), 'they are in a B2B company, which a wipe does not clear'),
+        leftRow('customers', emails(customers.elsewhere), 'they were made in, or have orders in, a store not chosen'),
+        leftRow('customers', emails(customers.unknownStore), 'Commerce did not say which store they were made in'),
     ];
     return left.filter((l) => l.count > 0);
 }
 
-/**
- * What clearing the website would do, read-only.
- *
- * @param records - every install record the wipe must respect (`readWipeClaims`); what they list is left
- * @throws WipeScopeError when the store has no such website; any read Commerce refuses
- */
-export async function planWipe(get: CommerceGet, websiteCode: string, records: readonly InstallRecord[]): Promise<WipePlan> {
-    const website = await readWipeWebsite(get, websiteCode);
-    const recorded = recordedIds(records);
-    const products = decideProducts(await readWebsiteProducts(get, website.id), website.id, recorded.products);
-    const categories = decideCategories(await readCategoryTree(get), website, recorded.categories);
-    const customers = decideCustomers(await readWebsiteCustomers(get, website.id), recorded.customers);
-    const ids = {
-        deleteSkus: skus(products.remove),
-        takeOffSkus: skus(products.takeOff),
-        categoryIds: categories.remove.map((c) => String(c.id)),
-        customerIds: customers.remove.map((c) => String(c.id)),
+/** Every product on the chosen websites, each once. */
+async function readScopeProducts(get: CommerceGet, scope: WipeScope): Promise<CommerceProduct[]> {
+    const bySku = new Map<string, CommerceProduct>();
+    for (const websiteId of [...scope.websites.whole, ...scope.websites.part]) {
+        for (const product of await readWebsiteProducts(get, websiteId)) bySku.set(product.sku, product);
+    }
+    return [...bySku.values()];
+}
+
+interface Decided {
+    products: ProductDecision;
+    categories: CategoryDecision;
+    customers: CustomerDecision;
+    orders: OrderStep[];
+    alreadyClosed: number;
+    returns: Array<{ id: string; number: string }>;
+}
+
+/** Each order's step; one closed or handled before is only counted. */
+function decideOrders(orders: readonly CommerceOrder[]): Pick<Decided, 'orders' | 'alreadyClosed'> {
+    const steps = orders.map(orderStepOf);
+    return { orders: steps.filter((s): s is OrderStep => s !== 'done'), alreadyClosed: steps.filter((s) => s === 'done').length };
+}
+
+async function decideAll(get: CommerceGet, scope: WipeScope, structure: CommerceStoreStructure, recorded: Recorded): Promise<Decided> {
+    const tree = await readCategoryTree(get);
+    const orders = await readViewOrders(get, [...scope.viewIds]);
+    const returns = openReturns(await readOrderReturns(get, orders.map((o) => Number(o.entity_id))));
+    return {
+        products: decideProducts(await readScopeProducts(get, scope), scope, tree, recorded.products),
+        categories: decideCategories(tree, scope, recorded.categories),
+        customers: await decideCustomers(get, scope, structure, recorded.customers),
+        ...decideOrders(orders),
+        returns: returns.map((r) => ({ id: String(r.entity_id), number: r.increment_id ?? String(r.entity_id) })),
     };
-    const total = ids.deleteSkus.length + ids.takeOffSkus.length + ids.categoryIds.length + ids.customerIds.length;
-    const preview: WipePreview = {
-        website: { code: website.code, name: website.name },
-        remove: { products: named(ids.deleteSkus), categories: named(categoryNames(categories.remove)), customers: named(customers.remove.map((c) => c.email)) },
-        takenOff: named(ids.takeOffSkus),
-        left: leftOf(products, categories, customers.inCompany),
+}
+
+function previewOf(scope: WipeScope, decided: Decided, plan: Omit<WipePlan, 'preview' | 'choices' | 'scopeKey'>, records: readonly InstallRecord[]): WipePreview {
+    const { orders } = plan;
+    const total =
+        plan.deleteSkus.length + plan.takeOff.length + plan.categoryIds.length + plan.customerIds.length + orders.length + plan.returnIds.length;
+    return {
+        stores: scope.stores.map((s) => ({ websiteCode: s.website.code, websiteName: s.website.name, storeCode: s.code, storeName: s.name })),
+        remove: { products: named(plan.deleteSkus), categories: named(categoryNames(decided.categories.remove)), customers: named(emails(decided.customers.remove)) },
+        takenOff: named([...new Set(plan.takeOff.map((t) => t.sku))]),
+        orders: {
+            cancel: named(orders.filter((o) => o.action === 'cancel').map((o) => o.number)),
+            refund: named(orders.filter((o) => o.action === 'refund').map((o) => o.number)),
+            leftOpen: named(orders.filter((o) => o.action === 'note').map((o) => o.number)),
+            returns: named(decided.returns.map((r) => r.number)),
+        },
+        left: leftOf(decided),
         installed: installedCounts(records),
         total,
-        token: sha256(JSON.stringify({ website: website.code, ...ids })),
+        token: sha256(JSON.stringify({ stores: scope.key, ...plan })),
         never: NEVER_TOUCHED,
     };
-    return { websiteId: website.id, preview, ...ids };
 }
 
 /**
- * Whether a plan made now takes nothing the plan the SC saw did not: same website, and every id
- * it would delete, take off or clear was in the one shown. Things gone since are fine.
+ * What clearing the chosen stores would do, read-only.
+ *
+ * @param records - every install record the wipe must respect (`readWipeClaims`); what they list is left
+ */
+export async function planWipe(get: CommerceGet, structure: CommerceStoreStructure, scope: WipeScope, records: readonly InstallRecord[]): Promise<WipePlan> {
+    const decided = await decideAll(get, scope, structure, recordedIds(records));
+    const ids = {
+        deleteSkus: skus(decided.products.remove),
+        takeOff: decided.products.takeOff.flatMap((t) => t.websiteIds.map((websiteId) => ({ sku: t.product.sku, websiteId }))),
+        categoryIds: decided.categories.remove.map((c) => String(c.id)),
+        customerIds: decided.customers.remove.map((c) => String(c.id)),
+        orders: decided.orders,
+        alreadyClosed: decided.alreadyClosed,
+        returnIds: decided.returns.map((r) => r.id),
+    };
+    return { choices: choicesOfScope(scope), scopeKey: scope.key, preview: previewOf(scope, decided, ids, records), ...ids };
+}
+
+/**
+ * The same, reading the store structure first: what the clearing re-plans with.
+ *
+ * @throws WipeScopeError when a chosen website or store is no longer in the store
+ */
+export async function planWipeFor(get: CommerceGet, choices: readonly WipeStoreChoice[], records: readonly InstallRecord[]): Promise<WipePlan> {
+    const structure = await readWipeStructure(get);
+    return planWipe(get, structure, resolveWipeScope(structure, choices), records);
+}
+
+const orderIds = (plan: WipePlan, step: (o: OrderStep) => boolean) => plan.orders.filter(step).map((o) => o.id);
+
+/**
+ * Whether a plan made now takes nothing the plan the SC saw did not: the same stores, and every id
+ * it would delete, take off, clear, cancel, refund, release or close was in the one shown. Things
+ * gone or closed since are fine.
  */
 export function withinPlan(shown: WipePlan, now: WipePlan): boolean {
     const inside = (a: readonly string[], b: readonly string[]) => a.every((id) => b.includes(id));
+    const offKeys = (plan: WipePlan) => plan.takeOff.map((t) => `${t.sku}@${t.websiteId}`);
+    const steps: Array<(o: OrderStep) => boolean> = [(o) => o.action === 'cancel', (o) => o.action === 'refund', (o) => o.unhold];
     return (
-        now.preview.website.code === shown.preview.website.code &&
+        now.scopeKey === shown.scopeKey &&
         inside(now.deleteSkus, shown.deleteSkus) &&
-        inside(now.takeOffSkus, shown.takeOffSkus) &&
+        inside(offKeys(now), offKeys(shown)) &&
         inside(now.categoryIds, shown.categoryIds) &&
-        inside(now.customerIds, shown.customerIds)
+        inside(now.customerIds, shown.customerIds) &&
+        steps.every((step) => inside(orderIds(now, step), orderIds(shown, step))) &&
+        inside(now.returnIds, shown.returnIds)
     );
 }

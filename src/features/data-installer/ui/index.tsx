@@ -43,6 +43,10 @@ import '@/core/ui/styles/inline-controls.css';
 // to this pack" opens (datapack-engine step 05).
 import '@/core/ui/styles/checkbox-row.css';
 import '@/core/ui/styles/work-row.css';
+// .fact-list and .lead-text/.section-label — "Clear demo data" lists what clearing the chosen
+// stores would do (datapack-engine step 10).
+import '@/core/ui/styles/fact-list.css';
+import '@/core/ui/styles/modal-text.css';
 // Feature-scoped: this is the ONLY entry that loads it, so its classes exist in
 // this bundle and nowhere else.
 import './styles/data-installer.css';
