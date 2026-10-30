@@ -36,7 +36,8 @@ import type { Project } from '@/types/base';
 export type LocalRefreshOutcome =
     | { kind: 'refreshed'; from: string; to: string }
     | { kind: 'current' }
-    | { kind: 'left'; reason: string };
+    /** `reason` names the file, for the log and the agent; `plain` names none, for the SC's row (owner, 2026-10-24). */
+    | { kind: 'left'; reason: string; plain?: string };
 
 export interface LocalRefreshRequest {
     /** The local copy's folder. */
@@ -47,7 +48,7 @@ export interface LocalRefreshRequest {
     branch: string;
 }
 
-const left = (reason: string): LocalRefreshOutcome => ({ kind: 'left', reason });
+const left = (reason: string, plain?: string): LocalRefreshOutcome => ({ kind: 'left', reason, ...(plain ? { plain } : {}) });
 
 /** One `git status --porcelain=v1 -z` entry: two status letters and a path. */
 interface LocalChange {
@@ -89,18 +90,18 @@ async function drop(git: GitStep, storefrontPath: string, change: LocalChange): 
     return (await git(`git checkout -- "${change.file}"`, TIMEOUTS.QUICK)).code === 0;
 }
 
-/** Clear every local change GitHub already holds; the reason when one it does not. */
-async function clearLocalChanges(git: GitStep, storefrontPath: string): Promise<string | undefined> {
+/** Clear every local change GitHub already holds; why not, with and without the file, when one it does not. */
+async function clearLocalChanges(git: GitStep, storefrontPath: string): Promise<{ reason: string; plain: string } | undefined> {
     const status = await git('git status --porcelain=v1 -z --untracked-files=all', TIMEOUTS.QUICK);
-    if (status.code !== 0) return 'its git status could not be read';
+    if (status.code !== 0) return { reason: 'its git status could not be read', plain: 'its git status could not be read' };
     const changes = parseStatus(status.stdout);
     for (const change of changes) {
         if (!(await matchesGitHub(git, change))) {
-            return `it has a local change GitHub does not have (${change.file})`;
+            return { reason: `it has a local change GitHub does not have (${change.file})`, plain: 'it has a local change GitHub does not have' };
         }
     }
     for (const change of changes) {
-        if (!(await drop(git, storefrontPath, change))) return `${change.file} could not be reset`;
+        if (!(await drop(git, storefrontPath, change))) return { reason: `${change.file} could not be reset`, plain: 'a local change could not be reset' };
     }
     return undefined;
 }
@@ -129,7 +130,7 @@ export async function refreshLocalStorefront(
     if (behind.code !== 0) return left('it has commits GitHub does not have');
 
     const unsafe = await clearLocalChanges(git, storefrontPath);
-    if (unsafe) return left(unsafe);
+    if (unsafe) return left(unsafe.reason, unsafe.plain);
     if (head === target) return { kind: 'current' };
 
     const merged = await git(`git merge --ff-only --quiet ${target}`, TIMEOUTS.NORMAL);
@@ -203,7 +204,7 @@ export async function refreshLocalStorefronts(
             const outcome = await refreshLocalStorefront(copy.git, copy);
             if (outcome.kind === 'left') {
                 ctx.logger.info(`[Updates] Local storefront copy of ${project.name} left as it is: ${outcome.reason}`);
-                onCopy?.(project, { state: 'skipped', message: `Left as it is — ${outcome.reason}.` });
+                onCopy?.(project, { state: 'skipped', message: `Left as it is: ${outcome.plain ?? outcome.reason}.` });
                 continue;
             }
             if (outcome.kind === 'refreshed') {

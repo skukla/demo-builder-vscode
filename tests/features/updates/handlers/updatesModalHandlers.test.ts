@@ -136,7 +136,7 @@ describe('applyUpdates', () => {
             const [library] = sel.blockLibrary;
             options.onItem('blockLibrary', library, { state: 'done' });
             options.onLocalCopy(library.project, { state: 'running' });
-            options.onLocalCopy(library.project, { state: 'skipped', message: 'Left as it is — GitHub could not be reached.' });
+            options.onLocalCopy(library.project, { state: 'skipped', message: 'Left as it is: GitHub could not be reached.' });
             return applied();
         });
 
@@ -147,7 +147,7 @@ describe('applyUpdates', () => {
         expect(statusesSent(ctx)).toEqual([
             { id: 'blockLibrary:1', state: 'done' },
             { id: 'localCopy:/p/bodea', state: 'running' },
-            { id: 'localCopy:/p/bodea', state: 'skipped', message: 'Left as it is — GitHub could not be reached.' },
+            { id: 'localCopy:/p/bodea', state: 'skipped', message: 'Left as it is: GitHub could not be reached.' },
         ]);
         expect(answer).toEqual({ success: true });
     });

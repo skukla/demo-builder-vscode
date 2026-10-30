@@ -134,6 +134,8 @@ describe('refreshLocalStorefront', () => {
         await expect(refreshLocalStorefront(runInLocal, request())).resolves.toEqual({
             kind: 'left',
             reason: 'it has a local change GitHub does not have (blocks/header/header.js)',
+            // The SC's row names no file (owner, 2026-10-24); the log and the agent keep it.
+            plain: 'it has a local change GitHub does not have',
         });
 
         expect(git(fx.local, 'rev-parse', 'HEAD')).toBe(head);
