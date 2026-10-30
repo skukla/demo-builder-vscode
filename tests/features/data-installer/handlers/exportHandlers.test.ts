@@ -160,10 +160,11 @@ describe('list-datapack-export-items', () => {
 });
 
 describe('start-datapack-export', () => {
-    // 2026-10-29: export is the service's, which has not saved what it reads since
-    // August and ignores the credentials it is sent. With Demo Builder's engine (the
-    // default) it refuses before anything reaches the shared catalog.
-    it("refuses with Demo Builder's engine chosen, writing nothing", async () => {
+    // The service's export has not saved what it reads since August. With Demo Builder's
+    // engine (the default) the export is Demo Builder's own save into the demo's own pack
+    // (step 14, `storeChangesHandlers-picks.test.ts`), which refuses the service's fields
+    // (a pack name in the shared catalog) before anything is read or written.
+    it("refuses the service's export with Demo Builder's engine chosen, writing nothing", async () => {
         (selectedDatapackEngine as jest.Mock).mockReturnValueOnce('demo-builder');
 
         const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);

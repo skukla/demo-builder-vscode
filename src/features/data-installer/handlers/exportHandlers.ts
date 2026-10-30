@@ -23,9 +23,16 @@
  * is shared infrastructure — 23 curated entries other teams depend on — and the
  * service will not stop a pack written under the wrong name.
  *
+ * **With Demo Builder's engine** (the default) both message types are Demo Builder's own
+ * (datapack-engine step 14): the list reads one kind of the project's store with the
+ * project's own credential (`listPickableItems`), and the export saves what is picked into
+ * a new version of this demo's own library pack (`saveFromStore`), with the project's own
+ * pack when Demo Builder installed it. Nothing reaches the service or its shared catalog.
+ *
  * @module features/data-installer/handlers/exportHandlers
  */
 
+import type { Selections } from '../pickableKinds';
 import { selectedDatapackEngine } from '../services/dataInstallerConfig';
 import {
     DataInstallerExportClient,
@@ -33,14 +40,11 @@ import {
     type ExportOutcome,
 } from '../services/dataInstallerExportClient';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
+import { listPickableItems, saveFromStore } from './storeChangesHandlers';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-
-const EXPORT_NEEDS_SERVICE =
-    "Exporting a store into a datapack is not available with Demo Builder's engine yet. " +
-    'To export with the Data Installer service, set demoBuilder.dataInstaller.engine to "service".';
 
 export const exportHandlers = defineHandlers({
     /**
@@ -54,6 +58,7 @@ export const exportHandlers = defineHandlers({
         context: HandlerContext,
         payload?: ExportPayload,
     ): Promise<HandlerResponse> => {
+        if (selectedDatapackEngine() !== 'service') return listPickableItems(context, payload);
         if (!payload?.dataType) {
             return { success: false, error: 'Choose a data type to list.' };
         }
@@ -91,12 +96,9 @@ export const exportHandlers = defineHandlers({
         context: HandlerContext,
         payload?: ExportPayload,
     ): Promise<HandlerResponse> => {
-        // The service's export, which has not saved what it reads since August, into a
-        // catalog other teams share. With Demo Builder's engine it does not run at all
-        // (2026-10-29); the screen hides its link for the same reason.
-        if (selectedDatapackEngine() !== 'service') {
-            return { success: false, error: EXPORT_NEEDS_SERVICE, code: ErrorCode.INVALID_OPERATION };
-        }
+        // The service's export has not saved what it reads since August, into a catalog other
+        // teams share. With Demo Builder's engine the export is Demo Builder's own save (step 14).
+        if (selectedDatapackEngine() !== 'service') return saveFromStore(context, payload);
         const prepared = await prepareExport(context, payload);
         if ('response' in prepared) {
             return prepared.response;
@@ -153,8 +155,10 @@ export interface ExportPayload {
     dataTypes?: string[];
     /** List call only: which type to enumerate. */
     dataType?: string;
-    /** `{<type>: {<idField>: [ids]}}` — omitted means "everything allowed". */
-    selections?: Record<string, Record<string, Array<string | number>>>;
+    /** `{<type>: {<idField>: [ids]}}` — omitted means "everything allowed" (the service's engine). */
+    selections?: Selections;
+    /** Demo Builder's engine: the save must be confirmed, as `save-store-changes-to-pack`'s is. */
+    confirm?: boolean;
 }
 
 /**

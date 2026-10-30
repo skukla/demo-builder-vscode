@@ -9,6 +9,7 @@ import {
     myVersions,
     ownPackName,
     recordDemoPackSave,
+    recordOwnPackName,
     savedVersion,
 } from '@/features/data-installer/services/demoPack';
 import type { Project } from '@/types/base';
@@ -104,6 +105,25 @@ describe('recordDemoPackSave', () => {
 
         expect(recorded.ownDatapack).toEqual({ name: 'acme-demo-abc123', displayName: 'Acme Q4', renamed: true });
         expect(recorded.datapack).not.toHaveProperty('origin');
+    });
+});
+
+// Step 14: a save of picks from a store Demo Builder did not fill names no pack it was made from.
+describe('a save of picks alone', () => {
+    it('makes a version of the demo\'s own pack made from nothing', () => {
+        const save = demoPackSaveFor(project({ datapack: BODEA }), undefined, AT);
+
+        expect(save.id).toEqual({ name: expect.stringMatching(/^acme-demo-[0-9a-f]{6}$/u), version: '20261029-183005' });
+        expect(save).not.toHaveProperty('origin');
+    });
+
+    it("records only the own pack's name, leaving the pack the project installs from as it was", () => {
+        const recorded = project({ datapack: BODEA });
+
+        recordOwnPackName(recorded, { id: { name: 'acme-demo-abc123', version: '20261029-183005' }, displayName: 'Acme Demo' });
+
+        expect(recorded.datapack).toEqual(BODEA);
+        expect(recorded.ownDatapack).toEqual({ name: 'acme-demo-abc123', displayName: 'Acme Demo' });
     });
 });
 

@@ -36,6 +36,7 @@ import { z } from 'zod';
 import { AGENT_PAGE_SIZE } from './projectors';
 import type { ToolDescriptor } from './toolDescriptors';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { PICKABLE_KINDS, PICK_FIELDS } from '@/features/data-installer/pickableKinds';
 import type { HandlerResponse } from '@/types/handlers';
 
 /** One store a demo-data check or clearing is about (`WipeStoreChoice`): a website alone means all its stores. */
@@ -65,6 +66,21 @@ const DATAPACK_ID = {
     datapackName: z.string().describe('Datapack name from find_datapacks'),
     version: z.string().describe('Datapack version, e.g. main (required — there is no "latest")'),
 };
+
+/**
+ * What a save from the store picks (datapack-engine step 14), as the service's export `selections`:
+ * `{<kind>: {<field>: [ids]}}`, each kind's field in `pickableKinds.ts`. The ids are the ones
+ * list_datapack_export_items answers.
+ */
+const SELECTIONS = z
+    .record(z.record(z.array(z.union([z.string(), z.number()]))))
+    .optional()
+    .describe(
+        `Things to pick from the store, as {kind: {field: [ids]}} with ids from list_datapack_export_items: ${PICKABLE_KINDS.map((kind) => `${kind} by ${PICK_FIELDS[kind]}`).join(', ')}`,
+    );
+
+/** The service engine's export fields: with Demo Builder's engine, sending any of them is refused. */
+const SERVICE_ONLY = ' (service engine only; refused with the demo-builder engine)';
 
 /**
  * Where the data lands, and which parts of it.
@@ -128,7 +144,7 @@ function pageExportItems(res: HandlerResponse, args: Record<string, unknown>): s
     if (!res.success) return JSON.stringify(res);
 
     const page = res.data as
-        | { items?: unknown[]; totalCount?: number; excludedCount?: number }
+        | { items?: unknown[]; totalCount?: number; excludedCount?: number; inPackCount?: number }
         | undefined;
     const items = page?.items ?? [];
     const limit = Math.max(1, Math.trunc(Number(args.limit) || AGENT_PAGE_SIZE));
@@ -141,6 +157,8 @@ function pageExportItems(res: HandlerResponse, args: Record<string, unknown>): s
         // fabricated-envelope mistake.
         ...(page?.totalCount !== undefined ? { totalCount: page.totalCount } : {}),
         ...(page?.excludedCount !== undefined ? { excludedCount: page.excludedCount } : {}),
+        // Demo Builder's engine: left off `items` because the pack being saved holds them.
+        ...(page?.inPackCount !== undefined ? { inPackCount: page.inPackCount } : {}),
     });
 }
 
@@ -183,19 +201,29 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: true,
         description:
             'What this Commerce instance holds for one data type, to choose from before exporting. ' +
-            'Paged — totalCount reports how many exist.',
+            'Paged — totalCount reports how many exist. With the demo-builder engine (the default), it ' +
+            "reads the project's own store, scoped to its website (products, customers, cart rules), its " +
+            `root category (categories) or its customers (companies), for one of: ${PICKABLE_KINDS.join(', ')}; ` +
+            "each item's id is what selections names it by. Commerce's own (the Default set, its five groups, " +
+            'the public catalog) is counted in excludedCount. Items the pack being saved already holds (the ' +
+            "pack named, else the project's own when Demo Builder installed it) are left off, counted in " +
+            'inPackCount: what is left is what was added by hand. Send only dataType (and datapackName with ' +
+            'version for a pack named). With the service engine, it asks the service, and needs ' +
+            'datapackName, version, commerceInstance and dataTypes.',
         map: importHandlers,
         type: 'list-datapack-export-items',
         inputSchema: {
-            ...DATAPACK_ID,
+            datapackName: z.string().optional().describe('The pack being saved, whose items are left off; omit for the project\'s own'),
+            version: z.string().optional().describe('That pack\'s version'),
+            source: PACK_SOURCE,
             dataType: z.string().describe('The single data type to enumerate'),
-            // Required for the same reason as the import's: `prepareExport`
-            // refuses without it ("A Commerce instance is required.").
-            commerceInstance: z.string().describe('Source Commerce instance id'),
+            // The service engine's `prepareExport` refuses without it ("A Commerce instance is required.").
+            commerceInstance: z.string().optional().describe('Source Commerce instance id (service engine only)'),
             dataTypes: z
                 .array(z.string())
                 .min(1)
-                .describe('Data types the export would cover; at least one, same as start'),
+                .optional()
+                .describe('Data types the export would cover; at least one, same as start (service engine only)'),
             limit: z
                 .number()
                 .optional()
@@ -250,15 +278,26 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Save the store\'s copy of a datapack Demo Builder installed in this project as a NEW version of this ' +
             'demo\'s own pack in the datapack library (made at the first save and named for the project), with the ' +
-            'categories, set, attributes and quantities its products need. The pack installed is never changed; undo ' +
-            'by deleting the new version with delete_library_datapack. Answers the demo\'s pack and its new version. ' +
-            'Nothing in Commerce changes.',
+            'categories, set, attributes and quantities its products need. Things added by hand in the Admin go in ' +
+            'too when picked in selections (list_datapack_export_items lists them). No pack named: the project\'s own ' +
+            'when Demo Builder installed it, else none, and the version holds only what is picked (a store Demo ' +
+            'Builder did not fill). The pack installed is never changed, and nothing picked is ever removed with it; ' +
+            'undo by deleting the new version with delete_library_datapack. Answers the demo\'s pack and its new ' +
+            'version, unnamed (ids kept because the store could not name them) and leftOut (what the store has, of ' +
+            'products, gift cards, categories, cart rules, customers and companies, that the version does not ' +
+            'hold); its message says both. A version the install would refuse is not saved, and the message says ' +
+            'why. Nothing in Commerce changes.',
         map: importHandlers,
         type: 'save-store-changes-to-pack',
         // Gated twice, as reset_datapack is: the row refuses before dispatch, and the same flag
         // satisfies the handler's own confirm check.
         confirm: true,
-        inputSchema: { ...DATAPACK_ID, source: PACK_SOURCE },
+        inputSchema: {
+            datapackName: z.string().optional().describe("The pack installed, from find_datapacks. Omit for the project's own"),
+            version: z.string().optional().describe('Its version, e.g. main (required with datapackName)'),
+            source: PACK_SOURCE,
+            selections: SELECTIONS,
+        },
     },
 
     // ── clearing a demo's part of the store (datapack-engine step 10) ────────
@@ -353,16 +392,21 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Capture data from a Commerce instance into a datapack. **Writes into the SHARED ' +
-            'catalog other teams depend on** — requires confirm:true and confirmName equal to the ' +
-            'datapack name. List what it would contain first.',
+            'Capture data from a Commerce instance into a datapack. With the demo-builder engine (the ' +
+            "default): saves what is picked in selections from this project's store as a new version of this " +
+            "demo's own library pack, with the project's own pack when Demo Builder installed it; the same save " +
+            'as save_store_changes_to_pack, answering the same way. Send only selections and confirm. With the ' +
+            'service engine: **writes into the SHARED catalog other teams depend on** — requires confirm:true ' +
+            'and confirmName equal to the datapack name. List what it would contain first.',
         map: importHandlers,
         type: 'start-datapack-export',
         confirm: true,
         inputSchema: {
-            ...DATAPACK_ID,
-            commerceInstance: z.string().describe('Source Commerce instance id'),
-            dataTypes: z.array(z.string()).min(1).describe('Data types to capture; at least one'),
+            datapackName: z.string().optional().describe(`Datapack name to write${SERVICE_ONLY}`),
+            version: z.string().optional().describe(`Datapack version to write${SERVICE_ONLY}`),
+            commerceInstance: z.string().optional().describe(`Source Commerce instance id${SERVICE_ONLY}`),
+            dataTypes: z.array(z.string()).min(1).optional().describe(`Data types to capture; at least one${SERVICE_ONLY}`),
+            selections: SELECTIONS,
             confirmName: z
                 .string()
                 .optional()
@@ -370,9 +414,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         },
         // The echo is checked BEFORE dispatch, like delete_github_repo's. A
         // confirm alone is the bar for "your own project"; this writes somewhere
-        // other people read.
+        // other people read. A call naming no pack writes no shared pack, so it
+        // needs none (Demo Builder's engine; the service's refuses it anyway).
         preflight: (args) =>
-            args.confirmName === args.datapackName
+            args.datapackName === undefined || args.confirmName === args.datapackName
                 ? undefined
                 : {
                       error:

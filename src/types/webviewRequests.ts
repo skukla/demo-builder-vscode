@@ -35,6 +35,7 @@ import type {
 import type { ViewMode, ViewModeList } from './viewMode';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
+import type { LeftOut, Selections } from '@/features/data-installer/pickableKinds';
 
 /**
  * `check-store-view-products` — does a guest see any products in the store view
@@ -906,8 +907,14 @@ export interface RenameAdobeProjectRequestPayload {
  * in the datapack library. `preview-datapack-changes` takes the same name and version.
  */
 export interface SaveStoreChangesRequest {
-    datapackName: string;
-    version: string;
+    /**
+     * The pack installed whose store copy is saved. Omitted: the project's own pack when Demo
+     * Builder installed it, else none, and the new version holds only what is picked (step 14).
+     */
+    datapackName?: string;
+    version?: string;
+    /** Things the SC made by hand to save too, as `{<kind>: {<field>: [ids]}}` (`pickableKinds.ts`). */
+    selections?: Selections;
     /** Must be true: nothing is saved by default. */
     confirm: true;
     /** Which store holds the pack, so the save reads the installed version's own rows there. */
@@ -926,10 +933,14 @@ export interface SaveStoreChangesResult {
     version: string;
     /** What the SC sees the demo's pack called. */
     displayName: string;
-    /** The pack installed before the save, which the save left as it was. */
-    previous: { name: string; version: string };
+    /** The pack installed before the save, which the save left as it was; none for a save of picks alone. */
+    previous?: { name: string; version: string };
     /** How many of each data kind the new version holds. */
     counts: Record<string, number>;
     /** The one sentence the SC reads: "Saved to the Acme Demo pack. Bodea is unchanged." */
     message: string;
+    /** Each id kept because the store could not name it, as "category 57" (step 14). */
+    unnamed: string[];
+    /** What the store has, of the kinds an SC adds by hand, that the new version does not hold (step 14). */
+    leftOut: LeftOut[];
 }

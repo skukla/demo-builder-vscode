@@ -1,84 +1,33 @@
 /**
- * The two actions step 05 adds beside install and removal (owner, 2026-10-27):
+ * What installing a pack again would change (step 05, owner 2026-10-27; `previewChanges`): for
+ * each kind, how many things this engine made would be brought up to the pack, taken out, or kept
+ * because the SC changed them, and how many rows are new, with a few names each. Reads only.
  *
- * - **What installing again would change** (`previewChanges`): for each kind, how many things
- *   this engine made would be brought up to the pack, taken out, or kept because the SC changed
- *   them, and how many rows are new, with a few names each. Reads only.
- * - **Save store changes** (`saveStoreChanges`): the store's copy of the pack (`capture.ts`:
- *   what the install record lists, and what the installed version's own rows name) written
- *   into the library as a new version of the demo's OWN pack (step 07, `demoPack.ts`); the pack
- *   installed is never written over, so the save is undone by deleting the new version. The install record then moves
- *   onto the new version, hashed afresh, so the store and it start out as one another.
- *
- * Both open the same read access the engine installs with: the project's own signed Commerce
- * client and the install target's ids (`resolveEngineTarget`).
+ * "Save store changes" is its sibling (`saveStore.ts`); both open the store the same way
+ * (`storeAccess.ts`): the project's own signed Commerce client and the install target's ids.
  *
  * @module features/data-installer/services/demoBuilderEngine/storeChanges
  */
 
-import type { PackWriteOutcome } from '../datapackTransfer';
-import type { DatapackFile } from '../datapackZip';
 import { loadStoreSets } from './attributeSetsKind';
-import { capturePack } from './capture';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import { COUPON_KIND, couponByCode } from './couponsKind';
-import {
-    type CreatedObject,
-    type InstallRecord,
-    type RecordFiles,
-    forgetInstallRecord,
-    nodeRecordFiles,
-    openInstallRecord,
-    readInstallRecord,
-    writeInstallRecord,
-} from './installRecord';
-import { type TargetCodes, resolveEngineTarget, sessionFor } from './installTarget';
+import { type CreatedObject, nodeRecordFiles, readInstallRecord } from './installRecord';
 import type { KindContext } from './kindContext';
-import { packRootOf, placeCategories, readStoreRoot, rootPlacement } from './packRoot';
+import { placeCategories, rootPlacement } from './packRoot';
 import { rootPreview } from './packRootStep';
 import { productLookups } from './productLookups';
 import { GIFT_CARD_KIND } from './productsKind';
-import { rebaseRecord } from './recordFingerprints';
 import { containersLine, decideRemovals } from './removers';
 import { type KindPlan, type PlannedObject, keptLine, keptOf, ownedFrom, planRepeat, removalsOf } from './repeatInstall';
+import { type Named, named } from './saveOutcome';
 import { LINK_KIND, SOURCE_KIND, STOCK_KIND } from './stockKinds';
+import { type StoreChangesDeps, openStore } from './storeAccess';
 import { STORE_CONFIG_KIND, type SettingOutcome, packSettings, planSettings } from './storeConfigKind';
 import { onceInventory, readProducts } from './storeCopies';
 import { clashLine, placedClashes } from './urlKeyClashes';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { Inventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
-import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
-
-/** What both actions need: the project's store, where its packs are read, and its path. */
-export interface StoreChangesDeps {
-    /** The project's signed Commerce access, or why there is none. */
-    commerce: () => Promise<{ get: CommerceGet; send: CommerceSend } | { refusal: string }>;
-    /** The pack's rows by kind, from the store that holds it. */
-    readPack: (id: DatapackId, source: DatapackStoreName) => Promise<Record<string, unknown>>;
-    /** What the pack is called and says, for the new version's catalog entry. */
-    describe: (id: DatapackId) => Promise<{ displayName: string; description?: string }>;
-    projectPath: string;
-    /** The website and store view the project installs into. */
-    target: TargetCodes | undefined;
-    log: (line: string) => void;
-    files?: RecordFiles;
-    now?: () => Date;
-}
-
-/** A save or preview that cannot go ahead, in words an SC can act on. */
-export class StoreChangesError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = 'StoreChangesError';
-    }
-}
-
-/** How many, and at most a few of their names. */
-export interface Named {
-    count: number;
-    names: string[];
-}
 
 /** What installing again would do to one kind. */
 export interface KindChanges {
@@ -111,31 +60,6 @@ export interface ChangePreview {
      * root of its own with the one Admin step it leaves.
      */
     root?: string;
-}
-
-/** The names shown per count: enough to recognise, never the rows. */
-const NAMES_SHOWN = 3;
-
-/** How many, with the first few names: every count an agent or the SC reads is this shape. */
-export const named = (names: string[]): Named => ({ count: names.length, names: names.slice(0, NAMES_SHOWN) });
-const labelPack = (pack: DatapackId) => `${pack.name}@${pack.version}`;
-
-/**
- * The engine's read access to the project's store, pointed where the pack was installed: the
- * record's target, else (a record made before it was kept, or none) the project's (rule 3).
- */
-async function openStore(deps: StoreChangesDeps, pack: DatapackId, record: InstallRecord | undefined, categories?: unknown): Promise<KindContext> {
-    const codes = record?.target ?? deps.target;
-    if (!codes) throw new StoreChangesError('Choose the website and store view to install into first.');
-    const commerce = await deps.commerce();
-    if ('refusal' in commerce) throw new StoreChangesError(commerce.refusal);
-    const target = await resolveEngineTarget(commerce.get, codes);
-    // Opened to read what it lists; neither action records anything through it.
-    const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack, () => (deps.now ?? (() => new Date()))().toISOString());
-    const session = sessionFor(target);
-    // Step 12: where a pack's own root goes is decided as the install decides it.
-    if (packRootOf(categories)) session.storeRoot = await readStoreRoot(commerce.get, codes);
-    return { ...commerce, recorder, session, log: deps.log };
 }
 
 /**
@@ -235,100 +159,4 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     const kept = [keptLine(keptThings), containersLine(containers)].filter(Boolean).join(' ');
     const kinds = [...(await summarize(ctx, plans, take)), ...(settings ? [settings] : [])];
     return { installed: record !== undefined, kinds, ...(kept ? { kept } : {}), ...(root ? { root } : {}) };
-}
-
-/**
- * The installed version's own rows: from the store named, else the library, else the Data
- * Installer. A save that cannot read them stops, rather than save a version missing the pack's
- * products the store already had.
- */
-async function readInstalled(
-    deps: StoreChangesDeps,
-    target: { pack: DatapackId; source?: DatapackStoreName },
-): Promise<{ rows: Record<string, unknown>; source: DatapackStoreName }> {
-    const stores: DatapackStoreName[] = target.source ? [target.source] : ['library', 'installer'];
-    for (const source of stores) {
-        try {
-            return { rows: await deps.readPack(target.pack, source), source };
-        } catch (error) {
-            deps.log(`could not read ${labelPack(target.pack)} from the ${source}: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    }
-    throw new StoreChangesError(
-        `${labelPack(target.pack)} cannot be read from the library or the Data Installer, so the products it holds that the store already had cannot be saved with it. Nothing was saved.`,
-    );
-}
-
-/** Where a save writes: the demo's own pack, at a new version, and what the SC sees it called. */
-export interface SaveAs {
-    id: DatapackId;
-    displayName: string;
-}
-
-/** What a save did. */
-export interface SaveResult {
-    /** The new version, now in the library and on the install record. */
-    saved: DatapackId;
-    /** How many of each kind it holds. */
-    counts: Record<string, number>;
-    /** The store the installed version's own rows were read from. */
-    readFrom: DatapackStoreName;
-    /** The one sentence the SC reads. */
-    sentence: string;
-}
-
-/**
- * Save the store's copy of a pack Demo Builder installed here as a new version of it.
- *
- * @param write - writes the new version into the library (`writePackToStore`, never `update`)
- * @param report - called as each stage starts, for the progress window
- * @throws StoreChangesError when Demo Builder did not install the pack here, the store holds
- *   nothing of it, or the library refused part of it (then the record stays where it was)
- */
-export async function saveStoreChanges(
-    deps: StoreChangesDeps,
-    target: { pack: DatapackId; source?: DatapackStoreName; saveAs: SaveAs },
-    write: (file: DatapackFile) => Promise<PackWriteOutcome>,
-    report: (stage: string) => void = () => undefined,
-): Promise<SaveResult> {
-    const { pack } = target;
-    const files = deps.files ?? nodeRecordFiles;
-    const record = await readInstallRecord(files, deps.projectPath, pack);
-    if (!record) throw new StoreChangesError(`Demo Builder did not install ${labelPack(pack)} in this project, so there are no store changes of it to save.`);
-    report(OPERATION_STAGES.readingStoreChanges.label);
-    const installed = await readInstalled(deps, target);
-    const ctx = await openStore(deps, pack, record);
-    const captured = await capturePack(ctx, record.created, installed.rows);
-    if (Object.keys(captured.items).length === 0) throw new StoreChangesError(`The store no longer holds anything ${labelPack(pack)} made, so there is nothing to save.`);
-    const now = (deps.now ?? (() => new Date()))();
-    const saved = target.saveAs.id;
-    const about = await deps.describe(pack);
-    report(OPERATION_STAGES.savingToLibrary.label);
-    const outcome = await write({
-        id: saved,
-        displayName: target.saveAs.displayName,
-        ...(about.description ? { description: about.description } : {}),
-        items: Object.entries(captured.items).map(([dataType, records]) => ({ dataType, records })),
-        source: 'library',
-        exportedAt: now.toISOString(),
-    });
-    if (outcome.failed.length > 0) {
-        const reasons = outcome.failed.map((f) => `${f.dataType}: ${f.reason}`).join('; ');
-        throw new StoreChangesError(`The library did not take all of ${labelPack(saved)} (${reasons}). Delete that version from the library and try again.`);
-    }
-    const created = await rebaseRecord(ctx, record.created, captured.items);
-    await writeInstallRecord(files, deps.projectPath, { ...record, pack: saved, created });
-    await forgetInstallRecord(files, deps.projectPath, pack);
-    return {
-        saved,
-        counts: captured.counts,
-        readFrom: installed.source,
-        sentence: savedSentence(target.saveAs, pack, about.displayName),
-    };
-}
-
-/** "Saved to the Acme Demo pack.", and that the pack it came from is unchanged when it is another. */
-function savedSentence(saveAs: SaveAs, installed: DatapackId, installedName: string): string {
-    const where = `Saved to the ${saveAs.displayName} pack.`;
-    return saveAs.id.name === installed.name ? where : `${where} ${installedName} is unchanged.`;
 }
