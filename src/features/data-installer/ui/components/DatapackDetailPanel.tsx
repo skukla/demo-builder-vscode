@@ -26,18 +26,15 @@
  * @module features/data-installer/ui/components/DatapackDetailPanel
  */
 
-import { ActionButton, Button } from '@adobe/react-spectrum';
+import { ActionButton } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import type { DataItemInventory, DatapackDetail } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
-import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
-import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
-import { SaveDatapackFileButton } from './SaveDatapackFileButton';
-import { ShareLibraryPackButton } from './ShareLibraryPackButton';
+import { PackActions } from './PackActions';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
 import type { DatapackId } from '@/types/datapack';
@@ -131,7 +128,7 @@ export function DatapackDetailPanel({
                         {renderPanelBody({ detail, inventory, loading, failure, onRetry })}
                         {detail && !loading ? setupStep : null}
                         {canImport({ importable, loading, failure }) && detail ? (
-                            <PanelActions
+                            <PackActions
                                 detail={detail}
                                 onImport={onImport}
                                 onRemoved={onRemoved}
@@ -173,68 +170,6 @@ function canImport(args: {
 }): boolean {
     const { importable, loading, failure } = args;
     return !loading && !failure && importable.length > 0;
-}
-
-/**
- * The flyout's actions, by store.
- *
- * A Data Installer pack: Import and Save as file. A library pack: Import when Demo Builder's
- * engine is chosen (it reads the library itself), else Copy to the Data Installer (the service
- * installs only from its own catalog; Import is offered once the copy lands); then Save as
- * file, and Share or Stop sharing and Remove when it is the SC's own. Either, when it is the pack
- * the open project holds: Save store changes to this pack.
- */
-function PanelActions({
-    detail,
-    onImport,
-    onRemoved,
-    installsFromLibrary,
-    onSaveStoreChanges,
-    sharedInFile,
-    onSharingChanged,
-}: {
-    detail: DatapackDetail;
-    onImport: (id: DatapackId) => void;
-    onRemoved: () => void;
-    installsFromLibrary: boolean;
-    onSaveStoreChanges?: (id: DatapackId) => void;
-    sharedInFile?: string;
-    onSharingChanged?: () => void;
-}): React.JSX.Element {
-    const saveStoreChanges = onSaveStoreChanges ? (
-        <Button variant="secondary" onPress={() => onSaveStoreChanges(detail.id)}>
-            Save store changes to this pack
-        </Button>
-    ) : null;
-    if (detail.store !== 'library') {
-        return (
-            <div className="db-drawer-actions">
-                <Button variant="accent" onPress={() => onImport(detail.id)}>
-                    Import
-                </Button>
-                <SaveDatapackFileButton id={detail.id} />
-                {saveStoreChanges}
-            </div>
-        );
-    }
-    return (
-        <>
-            {installsFromLibrary ? null : <CopyToInstallerButton id={detail.id} onImport={onImport} />}
-            <div className="db-drawer-actions">
-                {installsFromLibrary ? (
-                    <Button variant="accent" onPress={() => onImport(detail.id)}>
-                        Import
-                    </Button>
-                ) : null}
-                <SaveDatapackFileButton id={detail.id} source="library" />
-                {saveStoreChanges}
-                {detail.mine ? <ShareLibraryPackButton id={detail.id} shared={detail.shared} onChanged={onSharingChanged} /> : null}
-                {detail.mine ? (
-                    <RemoveFromLibraryButton id={detail.id} onRemoved={onRemoved} warning={sharedInFile} />
-                ) : null}
-            </div>
-        </>
-    );
 }
 
 /** Pick the one body state to show. */

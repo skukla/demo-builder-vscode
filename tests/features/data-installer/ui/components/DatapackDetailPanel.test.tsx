@@ -358,114 +358,22 @@ describe('DatapackDetailPanel', () => {
     });
 });
 
-describe('DatapackDetailPanel — a library pack', () => {
-    const LIBRARY = makeDetail({ store: 'library', shared: false });
-
-    it('offers Copy to the Data Installer instead of Import, warns it is shared, and saves from the library', () => {
-        renderPanel({ detail: LIBRARY });
-
-        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
-        expect(
-            screen.getByRole('button', { name: 'Copy to the Data Installer' })
-        ).toBeInTheDocument();
-        expect(
-            screen.getByText(/Other teams will see bodea in the Data Installer/)
-        ).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Save as file' })).toBeInTheDocument();
-        expect(screen.getByText('Library, only you')).toBeInTheDocument();
-    });
-
-    it('offers Remove only when the pack is the SC own', () => {
-        const { unmount } = renderPanel({ detail: LIBRARY });
-        expect(
-            screen.queryByRole('button', { name: 'Remove it from the library' })
-        ).not.toBeInTheDocument();
-        unmount();
-
-        renderPanel({ detail: { ...LIBRARY, mine: true } });
-        expect(
-            screen.getByRole('button', { name: 'Remove it from the library' })
-        ).toBeInTheDocument();
-    });
-
-    // DI-5: Demo Builder's engine reads the library itself, so with it chosen a library pack is
-    // imported where it is, and there is nothing to copy first.
-    it("offers Import in place of Copy when Demo Builder's engine is chosen", () => {
-        const onImport = jest.fn();
-        renderPanel({ detail: LIBRARY, installsFromLibrary: true, onImport });
-
-        expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Import' }));
-        expect(onImport).toHaveBeenCalledWith(LIBRARY.id);
-        expect(screen.getByRole('button', { name: 'Save as file' })).toBeInTheDocument();
-    });
-
-    it('a Data Installer pack keeps Import and never offers Remove — the control', () => {
-        renderPanel({ detail: makeDetail({ mine: true }) });
+/**
+ * The actions live in `PackActions` (its own suite): Import on view, the rest in the kebab. The
+ * panel only hands it the pack, and offers nothing while the detail is loading or failed.
+ */
+describe('DatapackDetailPanel — actions', () => {
+    it('puts Import and the menu for this pack in the flyout', () => {
+        renderPanel({ onSaveStoreChanges: jest.fn() });
 
         expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
-        expect(
-            screen.queryByRole('button', { name: 'Remove it from the library' })
-        ).not.toBeInTheDocument();
-    });
-});
-
-/**
- * "Save store changes to this pack" (datapack-engine step 05). The catalog offers it only for
- * the pack the open project holds, installed by Demo Builder's engine, so the flyout shows it
- * exactly when it is handed the callback, and raises it with the pack's id: the catalog hosts
- * the progress window, as it hosts the import modal, rather than a dialog inside the drawer.
- */
-describe('Save store changes to this pack', () => {
-    const LABEL = 'Save store changes to this pack';
-
-    it('is not offered when the catalog does not ask for it', () => {
-        renderPanel();
-
-        expect(screen.queryByRole('button', { name: LABEL })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'More actions for Bodea' })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: 'Save store changes to this pack' })).toBeInTheDocument();
     });
 
-    it('raises the pack it was pressed for, from a Data Installer pack', () => {
-        const onSaveStoreChanges = jest.fn();
-        renderPanel({ onSaveStoreChanges });
+    it('offers no menu while the detail is loading', () => {
+        renderPanel({ loading: true });
 
-        fireEvent.click(screen.getByRole('button', { name: LABEL }));
-
-        expect(onSaveStoreChanges).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
-    });
-
-    it('is offered on a library pack too', () => {
-        const onSaveStoreChanges = jest.fn();
-        renderPanel({ detail: makeDetail({ store: 'library', mine: true }), installsFromLibrary: true, onSaveStoreChanges });
-
-        fireEvent.click(screen.getByRole('button', { name: LABEL }));
-
-        expect(onSaveStoreChanges).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
-    });
-});
-
-/** Share or Stop sharing, on the SC's OWN library pack only (owner, 2026-10-30). */
-describe('DatapackDetailPanel — sharing the SC\'s own pack', () => {
-    const own = (overrides: Partial<DatapackDetail>) => makeDetail({ store: 'library', mine: true, shared: false, ...overrides });
-
-    it('offers Share on a private pack of the SC, and Stop sharing on a shared one', () => {
-        const { unmount } = renderPanel({ detail: own({}) });
-        expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
-        unmount();
-
-        renderPanel({ detail: own({ shared: true }) });
-        expect(screen.getByRole('button', { name: 'Stop sharing' })).toBeInTheDocument();
-    });
-
-    const NOT_OWN: Array<[string, Partial<DatapackDetail>]> = [
-        ["a colleague's library pack", { mine: undefined, shared: true }],
-        ['a Data Installer pack', { store: undefined, mine: undefined }],
-    ];
-
-    it.each(NOT_OWN)('offers neither on %s', (_label, overrides) => {
-        renderPanel({ detail: own(overrides) });
-
-        expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Stop sharing' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'More actions for Bodea' })).not.toBeInTheDocument();
     });
 });

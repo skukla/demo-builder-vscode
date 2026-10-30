@@ -49,7 +49,7 @@ describe('Save store changes to this pack', () => {
         store('demo-builder', { name: 'bodea', version: 'main' });
         await openBodea();
 
-        await press(screen.getByRole('button', { name: LABEL }));
+        await press(screen.getByRole('menuitem', { name: LABEL }));
         expect(await screen.findByRole('heading', { name: 'Save from this store' })).toBeInTheDocument();
         expect(mockPost).not.toHaveBeenCalled();
         await press(screen.getByRole('button', { name: 'Save' }));
@@ -70,13 +70,17 @@ describe('Save store changes to this pack', () => {
         store('demo-builder', { name: 'wknd', version: 'main' });
         await openBodea();
 
-        expect(screen.queryByRole('button', { name: LABEL })).not.toBeInTheDocument();
+        // The control: the menu is there, only this row is not.
+        expect(screen.getByRole('menuitem', { name: 'Save as file' })).toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: LABEL })).not.toBeInTheDocument();
     });
 
     it('is not offered when the service engine is chosen, which keeps no record to read back', async () => {
         store('service', { name: 'bodea', version: 'main' });
         await openBodea();
 
-        expect(screen.queryByRole('button', { name: LABEL })).not.toBeInTheDocument();
+        // The control: the menu is there, only this row is not.
+        expect(screen.getByRole('menuitem', { name: 'Save as file' })).toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: LABEL })).not.toBeInTheDocument();
     });
 });

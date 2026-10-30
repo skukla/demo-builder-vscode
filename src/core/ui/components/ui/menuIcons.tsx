@@ -19,10 +19,12 @@ import Beaker from '@spectrum-icons/workflow/Beaker';
 import Clock from '@spectrum-icons/workflow/Clock';
 import Copy from '@spectrum-icons/workflow/Copy';
 import DataAdd from '@spectrum-icons/workflow/DataAdd';
+import DataUpload from '@spectrum-icons/workflow/DataUpload';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Duplicate from '@spectrum-icons/workflow/Duplicate';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
+import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Globe from '@spectrum-icons/workflow/Globe';
 import Key from '@spectrum-icons/workflow/Key';
 import MagicWand from '@spectrum-icons/workflow/MagicWand';
@@ -32,7 +34,9 @@ import PinOn from '@spectrum-icons/workflow/PinOn';
 import Play from '@spectrum-icons/workflow/Play';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Revert from '@spectrum-icons/workflow/Revert';
+import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy';
 import Settings from '@spectrum-icons/workflow/Settings';
+import Share from '@spectrum-icons/workflow/Share';
 import Stop from '@spectrum-icons/workflow/Stop';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
@@ -68,6 +72,14 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     add: <Add size="S" />,
     /** Something unavailable for a while (a demo ERP's simulated downtime). */
     downtime: <Clock size="S" />,
+    /** Keep a copy as a file the SC chooses where to put (a datapack's Save as file). */
+    saveFile: <SaveFloppy size="S" />,
+    /** Open a file the SC picks (a datapack's Load from file). */
+    openFile: <FolderOpen size="S" />,
+    /** Take what is in a store into something kept (Save store changes to this pack). */
+    capture: <DataUpload size="S" />,
+    /** Let others see and use it (a library pack's Share and Stop sharing). */
+    share: <Share size="S" />,
 };
 
 /**

@@ -2,9 +2,10 @@
  * "Save as file" — one pack, from one store, into a datapack zip the SC chooses
  * where to keep.
  *
- * Self-contained on purpose: it owns its one request, so the two places that offer
- * it (a pack's detail flyout, and the result of an export) each drop it in without
- * threading save state through a view that is already past its size guideline. The
+ * Self-contained on purpose: it owns its one request, so the result of an export drops
+ * it in without threading save state through a view that is already past its size
+ * guideline. The flyout offers it as a menu row instead (`PackActions`), through the same
+ * request (`useSaveDatapackFile`). The
  * host opens VS Code's own save dialog; a dismissed dialog is not a failure and
  * shows nothing.
  *
@@ -28,22 +29,38 @@ export interface SaveDatapackFileButtonProps {
     source?: DatapackStoreName;
 }
 
-export function SaveDatapackFileButton({
-    id,
-    source = 'installer',
-}: SaveDatapackFileButtonProps): React.JSX.Element {
+/** A pack's Save as file: start it, whether it is running, and the line saying where it went. */
+export interface SaveDatapackFile {
+    start: () => void;
+    saving: boolean;
+    /** Where it went, or why not; nothing for a dismissed dialog or before the first save. */
+    note: React.JSX.Element | null;
+}
+
+/**
+ * The save on its own, for the flyout's menu row (`PackActions`), which starts it from the menu
+ * and shows the line under the flyout's actions.
+ */
+export function useSaveDatapackFile(id: DatapackId, source: DatapackStoreName = 'installer'): SaveDatapackFile {
     const save = useDataInstallerRequest<SaveResult>('save-datapack-zip');
     const run = save.load;
     const start = useCallback((): void => {
         run({ source, datapackName: id.name, version: id.version });
     }, [run, source, id.name, id.version]);
+    return { start, saving: save.loading, note: renderSaveNote(save.value, save.failure?.message) };
+}
 
+export function SaveDatapackFileButton({
+    id,
+    source = 'installer',
+}: SaveDatapackFileButtonProps): React.JSX.Element {
+    const { start, saving, note } = useSaveDatapackFile(id, source);
     return (
         <div className="datapack-save-file">
-            <Button variant="secondary" onPress={start} isDisabled={save.loading}>
-                {save.loading ? 'Saving' : 'Save as file'}
+            <Button variant="secondary" onPress={start} isDisabled={saving}>
+                {saving ? 'Saving' : 'Save as file'}
             </Button>
-            {renderSaveNote(save.value, save.failure?.message)}
+            {note}
         </div>
     );
 }
