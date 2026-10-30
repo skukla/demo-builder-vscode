@@ -40,10 +40,11 @@ import { productLookups } from './productLookups';
 import { GIFT_CARD_KIND } from './productsKind';
 import { rebaseRecord } from './recordFingerprints';
 import { containersLine, decideRemovals } from './removers';
-import { type KindPlan, type PlannedObject, keptLine, keptOf, planRepeat, removalsOf } from './repeatInstall';
+import { type KindPlan, type PlannedObject, keptLine, keptOf, ownedFrom, planRepeat, removalsOf } from './repeatInstall';
 import { LINK_KIND, SOURCE_KIND, STOCK_KIND } from './stockKinds';
 import { STORE_CONFIG_KIND, type SettingOutcome, packSettings, planSettings } from './storeConfigKind';
 import { onceInventory, readProducts } from './storeCopies';
+import { clashLine, placedClashes } from './urlKeyClashes';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { Inventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -223,8 +224,10 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     const ctx = await openStore(deps, pack, record, asked.categories);
     const placement = rootPlacement(asked.categories, record?.created ?? [], ctx.session.storeRoot);
     const items = placeCategories(asked, placement);
-    const root = rootPreview(placement, asked.categories, ctx.session.storeRoot, record?.rootStep);
     const plans = await planRepeat(ctx, items, record?.created ?? []);
+    const scope = { storeRootId: ctx.session.rootCategory.id, created: record?.created ?? [], owned: ownedFrom(plans) };
+    const clash = clashLine(await placedClashes(ctx.get, items, placement, scope));
+    const root = [rootPreview(placement, asked.categories, ctx.session.storeRoot, record?.rootStep), clash].filter(Boolean).join(' ');
     // The containers an install would keep, decided the way it decides them, read-only.
     const { take, kept: containers } = await decideRemovals(ctx.get, removalsOf(plans));
     const settings = STORE_CONFIG_KIND in items ? await settingsChanges(ctx, items[STORE_CONFIG_KIND], record?.created ?? []) : undefined;

@@ -17,7 +17,7 @@ import { packedFingerprint } from '@/features/data-installer/services/demoBuilde
 import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
 import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
 import { COUPON10, NO_COUPONS_PAGE, NO_RULES_PAGE, TEN_PERCENT_COUPON, WIPER_FLUID } from '../../../../helpers/commerceSalesRuleFixtures';
-import { NOW, PACK, PROJECT, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';
+import { NOW, PACK, PROJECT, fakeContext, memoryFiles, noneUnder, page } from './demoBuilderEngine.testUtils';
 
 /** The demo's own pack a save writes into (step 07). */
 const SAVE_AS = { id: { name: 'acme-demo-1a2b3c', version: '20261029-183000' }, displayName: 'Acme Demo' };
@@ -29,6 +29,7 @@ const STORE = {
     'categories/2': { id: 2, name: 'Default Category', path: '1/2' },
     'categories/41': { id: 41, name: 'Server Racks', path: '1/2/41', is_active: true },
     [page('products/attribute-sets/sets/list')]: { items: [], total_count: 0 },
+    ...noneUnder(2, { Racks: 'racks', Cables: 'cables' }),
 };
 const RACKS = { category: { name: 'Racks', path: 'Default Category', is_active: true } };
 const ITEMS = { categories: { categories: [RACKS, { category: { name: 'Cables', path: 'Default Category' } }] } };

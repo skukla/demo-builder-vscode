@@ -455,7 +455,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-83` | fix | [Undo leaves what changed since](2026-10-27-undo-leaves-what-changed-since.md) | — | med | active |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
-### data-installer  (8)
+### data-installer  (9)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -466,6 +466,7 @@ each item's own file; what has already landed against an item is in its
 | `DI-6` | chore | [The Commerce secrets gathered for the Data Installer service are no longer needed](2026-10-28-datapack-credential-gathering-removed.md) | — | med | active |
 | `DI-7` | feature | [Datapack images: how a pack carries its product images](2026-10-30-datapack-images.md) | — | low | backlog |
 | `DI-8` | feature | [`product_export`: the bulk product form Luma and Venia carry](2026-10-30-datapack-bulk-product-form.md) | _the owner reading the four `product_export` items from the service's database (tabled 2026-10-27)_ | med | gated |
+| `DI-9` | fix | [A pack links products to categories by url key, which two categories can share](2026-10-30-datapack-category-links-by-url-key.md) | — | med | backlog |
 | `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | superseded |
 
 ### prerequisites  (4)
@@ -718,7 +719,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*318 item(s) sit outside the A–G chain.*
+*319 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

@@ -51,6 +51,7 @@ import {
     parseStocks,
 } from './stockKinds';
 import { STORE_CONFIG_KIND, installStoreConfig, putBackSettings } from './storeConfigKind';
+import { UrlKeyClashError, placedClashes } from './urlKeyClashes';
 import type { DatapackId } from '@/types/datapack';
 
 /** A pack's rows, by data kind, as its items hold them. */
@@ -126,6 +127,7 @@ export interface InstallOutcome {
  *
  * @param onKind - called as each kind starts, for progress
  * @throws UnsupportedKindsError before any write, when the pack holds a kind not listed above
+ * @throws UrlKeyClashError before any write, when a category would take a url key the store uses
  */
 export async function installPack(ctx: KindContext, packItems: PackItems, onKind: (kind: string) => void = () => undefined): Promise<InstallOutcome> {
     const unsupported = unsupportedKinds(packItems);
@@ -135,6 +137,9 @@ export async function installPack(ctx: KindContext, packItems: PackItems, onKind
     const items = placeCategories(packItems, placement);
     const plans = await planRepeat(ctx, items, ctx.recorder.created);
     ctx.session.owned = ownedFrom(plans);
+    const scope = { storeRootId: ctx.session.rootCategory.id, created: ctx.recorder.created, owned: ctx.session.owned };
+    const clashes = await placedClashes(ctx.get, items, placement, scope);
+    if (clashes.length > 0) throw new UrlKeyClashError(clashes);
     // Hashed means an earlier install finished with it; one that stopped part-way left its
     // products unhashed, and a re-run still sets their quantities.
     ctx.session.productsBefore = new Set(

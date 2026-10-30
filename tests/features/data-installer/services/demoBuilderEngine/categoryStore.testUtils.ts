@@ -13,7 +13,7 @@ import { CommerceReadError } from '@/features/app-builder/services/erpFillReader
 import { type RecordFiles, openInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { sessionFor } from '@/features/data-installer/services/demoBuilderEngine/installTarget';
 import type { KindContext } from '@/features/data-installer/services/demoBuilderEngine/kindContext';
-import type { StoreCategory } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
+import { type StoreCategory, urlKeyOf } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
 import type { CommerceStoreGroup } from '@/types/commerceStore';
 import { ADMIN_GROUP, SANDBOX_GROUPS, SANDBOX_VIEWS, SANDBOX_WEBSITES } from '../../../../helpers/commerceWipeFixtures';
 import { NOW, PACK, PROJECT, type SentCall } from './demoBuilderEngine.testUtils';
@@ -78,7 +78,8 @@ export function categoryStore(): CategoryStore {
         if (path.startsWith('categories/list?')) {
             const parent = Number(filterValue(path, 'parent_id'));
             const name = filterValue(path, 'name');
-            const items = childrenOf(parent).filter((c) => c.name === name);
+            const urlKey = filterValue(path, 'url_key');
+            const items = childrenOf(parent).filter((c) => (name !== undefined ? c.name === name : urlKeyOf(c) === urlKey));
             return { items, total_count: items.length };
         }
         if (path.startsWith('products?')) return { items: [], total_count: 0 };

@@ -320,7 +320,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'setting set, by path, with its old and new value. A pack\'s own root category goes under the ' +
             "store's root when no other store shares it; when one does, the install asks the user for the one " +
             'Admin step (no API can change a store\'s root), and the note names it if skipped. Running it ' +
-            'again re-checks that step and marks it done once set.',
+            'again re-checks that step and marks it done once set. Under the store\'s root, a pack category ' +
+            'whose url key the store already uses in the same place stops the install before any write.',
         map: importHandlers,
         type: 'start-datapack-import',
         confirm: true,

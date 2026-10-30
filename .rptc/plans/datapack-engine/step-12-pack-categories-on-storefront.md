@@ -181,6 +181,17 @@ is in `docs/systems/data-installer.md` ("Setting up a store for a demo"). `ai-co
 `republish` rebuilds the catalog menu; the skills say so. How Catalog Service takes a root change is
 still untested (the live test reads it).
 
+**Url keys, checked before any write (owner, 2026-10-30, after comparing with the Data Installer
+service).** Under the store's root a category gets a storefront url, so a pack category whose url
+key the store already uses under the same parent would collide. Commerce refuses that, from its
+rules as understood here; not seen live. The service never meets it, because it always makes the
+pack's root, and that root belongs to no store. `urlKeyClashes.ts` walks the tree the way
+`installCategories` does: a category found by name is reused, one under a category the install
+would create can't collide, and the pack's own (by its plan, `ownedFrom`) never counts. Any clash
+stops the install before it writes anything, naming the category, the key and the store's
+category using it. `preview_datapack_changes` says the same in `root`. A pack with no root of its
+own goes under the store's root every time, so it is checked too.
+
 ### Which reads are confirmed against a captured real response
 
 | Read | Endpoint and field | Confirmed? |
@@ -192,6 +203,7 @@ still untested (the live test reads it).
 | a store's root after the SC changes it in the Admin | the same `GET store/storeGroups` | **no**: assumed the Admin's Root Category is that column (`Store/etc/db_schema.xml`) |
 | deleting a category a store shows as its root | `DELETE categories/{id}` | **no**: never sent (the root is kept); whether Commerce would refuse it is unknown |
 | Catalog Service after a root change | the storefront's category reads | **no** |
+| a url-key clash | `GET categories/list` with `parent_id` and `url_key` (filtered in two groups) | the `url_key` filter yes (product lookups, step 03); that Commerce refuses a duplicate key under one parent: **no**, from its rules |
 
 ### Decisions for the owner (recommendation first)
 
@@ -253,3 +265,6 @@ still untested (the live test reads it).
 9. Separately, if a store with a root of its own is free to use: install the same pack there and
    check no question, no "ZZ Root DB12" made, the two categories under that store's root; remove;
    back to zero.
+   In the same store, before installing, make a category of its own with url key `zz-coffee-db12`
+   under its root; `preview_datapack_changes` names the clash and `start_datapack_import` stops with
+   nothing written. Delete it, and the install goes ahead.

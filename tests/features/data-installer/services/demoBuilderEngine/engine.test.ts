@@ -10,7 +10,7 @@ import { demoBuilderEngine, type DemoBuilderEngineDeps } from '@/features/data-i
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import type { ImportRequest } from '@/features/data-installer/services/dataInstallerWriteClient';
 import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
-import { PACK, PROJECT, type SentCall, fakeContext, memoryFiles } from './demoBuilderEngine.testUtils';
+import { PACK, PROJECT, type SentCall, fakeContext, memoryFiles, noneUnder } from './demoBuilderEngine.testUtils';
 
 /** The store's three structure reads: website base, store view default, root category 2. */
 const STORE = {
@@ -20,12 +20,6 @@ const STORE = {
 };
 
 const SETS_PAGE = 'products/attribute-sets/sets/list?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100';
-const childSearch = (parentId: number, name: string) =>
-    'categories/list?searchCriteria[filterGroups][0][filters][0][field]=parent_id' +
-    `&searchCriteria[filterGroups][0][filters][0][value]=${parentId}` +
-    '&searchCriteria[filterGroups][1][filters][0][field]=name' +
-    `&searchCriteria[filterGroups][1][filters][0][value]=${encodeURIComponent(name)}`;
-
 function request(overrides: Partial<ImportRequest> = {}): ImportRequest {
     return {
         id: PACK,
@@ -74,7 +68,7 @@ async function settle(engine: DatapackEngine, activationId: string) {
 describe('demoBuilderEngine install', () => {
     it('answers a job id at once, then reports every requested kind succeeded, and keeps the record', async () => {
         const { engine, files } = await engineWith(
-            { [SETS_PAGE]: { items: [], total_count: 0 }, [childSearch(2, 'Sale')]: { items: [] } },
+            { [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) },
             () => ({ id: 40 }),
         );
 
@@ -110,7 +104,12 @@ describe('demoBuilderEngine install', () => {
     });
 
     it('marks the failing kind and every later one as failed, and says why', async () => {
-        const { engine } = await engineWith({ [SETS_PAGE]: { items: [], total_count: 0 } }, () => ({ id: 40 }));
+        // The category's write fails; its reads (and the url-key check's, before any write) succeed.
+        const failCategory = (call: SentCall) => {
+            if (call.path === 'categories') throw new Error('Commerce answered 404 for POST categories');
+            return { id: 40 };
+        };
+        const { engine } = await engineWith({ [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) }, failCategory);
 
         const { activationId } = await engine.startImport(request());
         const status = await settle(engine, activationId);
@@ -174,7 +173,7 @@ describe('demoBuilderEngine install', () => {
 });
 
 describe('demoBuilderEngine and the website a pack was installed to', () => {
-    const READS = { [SETS_PAGE]: { items: [], total_count: 0 }, [childSearch(2, 'Sale')]: { items: [] } };
+    const READS = { [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) };
     const ELSEWHERE = { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' };
     const MOVED = `${PACK.name}@${PACK.version} is installed on the website justrite_test_website. Remove it first, or install it there.`;
 

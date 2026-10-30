@@ -68,3 +68,19 @@ export const page = (path: string, criteria = '') =>
 /** One equals filter, as the engine's lookups write it. */
 export const by = (field: string, value: string) =>
     `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(value)}`;
+
+/** The categories under `parentId` whose `field` is `value`, as `childrenWhere` asks for them. */
+export const childSearch = (parentId: number, value: string, field = 'name') =>
+    'categories/list?searchCriteria[filterGroups][0][filters][0][field]=parent_id' +
+    `&searchCriteria[filterGroups][0][filters][0][value]=${parentId}` +
+    `&searchCriteria[filterGroups][1][filters][0][field]=${field}` +
+    `&searchCriteria[filterGroups][1][filters][0][value]=${encodeURIComponent(value)}`;
+
+/** A store with none of these categories under `parentId`, by name and by url key (`urlKeyClashes`). */
+export const noneUnder = (parentId: number, names: Record<string, string>): Record<string, unknown> =>
+    Object.fromEntries(
+        Object.entries(names).flatMap(([name, urlKey]) => [
+            [childSearch(parentId, name), { items: [] }],
+            [childSearch(parentId, urlKey, 'url_key'), { items: [] }],
+        ]),
+    );

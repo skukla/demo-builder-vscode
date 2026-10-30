@@ -191,6 +191,10 @@ What to know before installing a pack into a store, because the Commerce API can
   A skipped step stays in the pack's flyout on the Data Installer screen, with its own Check.
   Removing the pack while your store still shows its root keeps that root: set the store's Root
   Category back first, then remove it again.
+  When the pack's categories go under your store's root, one with a url key the store already uses
+  for another category in the same place would be refused by Commerce, so Demo Builder checks first:
+  the preview names it, and the install stops before writing anything. Change that category's URL
+  Key in the Admin (Catalog > Categories, Search Engine Optimization), then install.
 - **Commerce Optimizer (ACO)** groups its catalog by product family, not by a store's root, so it
   probably has no such step (not tested).
 

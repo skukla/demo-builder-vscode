@@ -25,7 +25,7 @@
 import { z } from 'zod';
 import { deleteIfPresent, type KindContext, ownedId, segment } from './kindContext';
 import { keyOf } from './packForm';
-import type { CommerceSend } from '@/types/commerceWire';
+import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 export const CATEGORY_KIND = 'categories';
 
@@ -48,7 +48,7 @@ const packSchema = z.object({
 export type CategoryPack = z.infer<typeof packSchema>;
 type CategoryFields = z.infer<z.ZodObject<typeof fields>>;
 
-interface FoundCategory {
+export interface FoundCategory {
     id: number;
     name?: string;
     parent_id?: number;
@@ -69,15 +69,20 @@ function body(category: CategoryFields & Record<string, unknown>, parentId: numb
     return { category: { ...rest, parent_id: parentId } };
 }
 
-/** The category named `name` directly under `parentId`, if the store has one. */
-async function findChild(ctx: KindContext, parentId: number, name: string): Promise<number | undefined> {
+/** The categories directly under `parentId` whose `field` is `value`: `GET categories/list`, two filter groups. */
+export async function childrenWhere(get: CommerceGet, parentId: number, field: string, value: string): Promise<FoundCategory[]> {
     const criteria =
         'searchCriteria[filterGroups][0][filters][0][field]=parent_id' +
         `&searchCriteria[filterGroups][0][filters][0][value]=${parentId}` +
-        '&searchCriteria[filterGroups][1][filters][0][field]=name' +
-        `&searchCriteria[filterGroups][1][filters][0][value]=${encodeURIComponent(name)}`;
-    const answer = (await ctx.get(`categories/list?${criteria}`)) as { items?: FoundCategory[] } | null;
-    return answer?.items?.find((c) => c.name === name && Number(c.parent_id) === parentId)?.id;
+        `&searchCriteria[filterGroups][1][filters][0][field]=${field}` +
+        `&searchCriteria[filterGroups][1][filters][0][value]=${encodeURIComponent(value)}`;
+    const answer = (await get(`categories/list?${criteria}`)) as { items?: FoundCategory[] } | null;
+    return (answer?.items ?? []).filter((c) => Number(c.parent_id) === parentId);
+}
+
+/** The category named `name` directly under `parentId`, if the store has one. */
+export async function findChild(get: CommerceGet, parentId: number, name: string): Promise<number | undefined> {
+    return (await childrenWhere(get, parentId, 'name', name)).find((c) => c.name === name)?.id;
 }
 
 /**
@@ -94,7 +99,7 @@ async function findOrCreate(
     const owned = ownedId(ctx.session, CATEGORY_KIND, keyOf(CATEGORY_KIND, { category: { ...category, path } }) ?? '');
     if (owned === null) return undefined;
     if (owned !== undefined) return Number(owned);
-    const existing = await findChild(ctx, parentId, category.name);
+    const existing = await findChild(ctx.get, parentId, category.name);
     if (existing !== undefined) return Number(existing);
     const created = (await ctx.send('POST', 'categories', body(category, parentId))) as FoundCategory | null;
     if (created?.id === undefined) throw new Error(`Commerce made no category ${category.name}.`);
