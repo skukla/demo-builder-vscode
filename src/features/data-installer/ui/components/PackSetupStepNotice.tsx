@@ -15,11 +15,20 @@
 import { Button } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect } from 'react';
 import type { DatapackSetupStep } from '../../types';
-import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { type DataInstallerFailure, useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { SetupStepFacts } from '@/core/ui/components/ui/SetupStepFacts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { DatapackId } from '@/types/datapack';
+
+/** A Check whose request gave up: the extension may still have finished and recorded it. */
+export const CHECK_NO_ANSWER = "Demo Builder didn't get an answer in time. The check may still have finished; press Check to try again.";
+
+/** Why a Check could not say, in the SC's words: the handler's own sentence, never transport text. */
+function checkFailureText(failure: DataInstallerFailure | null): string | undefined {
+    if (!failure) return undefined;
+    return failure.unanswered ? CHECK_NO_ANSWER : failure.message;
+}
 
 export interface PackSetupStepNoticeProps {
     /** The pack the open project holds, installed by Demo Builder's engine. */
@@ -45,7 +54,7 @@ export function PackSetupStepNotice({ id }: PackSetupStepNoticeProps): React.JSX
     }
     return (
         <div data-testid="pack-setup-step">
-            <InlineNotice title={step.title} hint={check.failure?.message ?? step.note}>
+            <InlineNotice title={step.title} hint={checkFailureText(check.failure) ?? step.note}>
                 One step is left in the Admin for this pack.
             </InlineNotice>
             <SetupStepFacts item={step} />

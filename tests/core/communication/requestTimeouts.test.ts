@@ -63,6 +63,14 @@ describe('REQUEST_TIMEOUTS', () => {
         expect([...budgetedTypes()]).toContain('start-datapack-export');
     });
 
+    // The pack's Admin step Check (datapack-engine step 12): the sign-in, the org check, the
+    // project's Commerce credential and two store reads, the credential path
+    // getErpOwnershipOptions reads. Unbudgeted, a Check pressed live showed no answer while the
+    // extension went on to write one into the install record (2026-10-30, DI-5).
+    it('budgets the pack step Check check-datapack-setup-step', () => {
+        expect([...budgetedTypes()]).toContain('check-datapack-setup-step');
+    });
+
     it.each(['listConsoleApis', 'addConsoleApis', 'setConsoleApis'])(
         'budgets the dashboard console-API message %s',
         (type) => {

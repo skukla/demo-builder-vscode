@@ -120,6 +120,10 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // order of the chosen websites and stores, a page of 100 at a time. Not measured live yet.
     'check-demo-data': TIMEOUTS.LONG, // 180s - store structure + products, customers, orders, returns
     'start-datapack-export': TIMEOUTS.EXTENDED, // 10min - answered inline; an ACO pack reads every product per store view
+    // The pack's Admin step Check (datapack-engine step 12): the sign-in, the org check, the
+    // project's Commerce credential, then the store's stores and one category. A Check pressed
+    // live showed no answer while the extension went on to record one (2026-10-30, DI-5).
+    'check-datapack-setup-step': TIMEOUTS.LONG, // 180s - credential read + two Commerce reads
 };
 
 /**

@@ -33,6 +33,12 @@ export interface DataInstallerFailure {
     message: string;
     /** `ErrorCode` the guard set, when the failure came back as an envelope. */
     code?: string;
+    /**
+     * No answer came back: the request itself threw (the webview gave up waiting, or the
+     * handler threw). The message is then transport text, not words for the SC, and the work
+     * may still have finished on the extension's side.
+     */
+    unanswered?: true;
 }
 
 export interface DataInstallerRequest<T> {
@@ -74,7 +80,7 @@ export function useDataInstallerRequest<T>(
 
     const failure = useMemo((): DataInstallerFailure | null => {
         if (error) {
-            return { message: error.message };
+            return { message: error.message, unanswered: true };
         }
         if (data && data.success === false) {
             return {
