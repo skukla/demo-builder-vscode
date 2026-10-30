@@ -28,6 +28,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { z } from 'zod';
+import { type PendingObject, pendingSchema } from './pendingRecord';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import type { DatapackId } from '@/types/datapack';
 
@@ -47,22 +48,6 @@ export interface CreatedObject {
     fingerprint?: string;
     /** The pack's row, hashed as it was installed: what "the pack changed" compares. */
     wrote?: string;
-}
-
-/**
- * A create sent, or about to be, whose answer has not come back (step 14 item 1): what a re-run or
- * a removal looks for in the store to tell whether it landed.
- */
-export interface PendingObject {
-    kind: string;
-    /** The pack's name for it: a SKU, a code, an email, a name, `<path>@<scope>` for a setting. */
-    key: string;
-    /** Its id, when known before Commerce answers (a SKU, an attribute code, an assignment pair). */
-    id?: string;
-    /** What else finding it needs: a category's `parentId` and `name`, a customer's `websiteId`, a company's `email`. */
-    find?: Record<string, string | number>;
-    /** What the object is recorded with once made, known before the create (a stock's website, a company's admin). */
-    previous?: unknown;
 }
 
 /** What an update may change about an object; the kind and id say which one. */
@@ -189,17 +174,7 @@ const recordSchema = z.object({
             wrote: z.string().optional(),
         }),
     ),
-    pending: z
-        .array(
-            z.object({
-                kind: z.string(),
-                key: z.string(),
-                id: z.string().optional(),
-                find: z.record(z.union([z.string(), z.number()])).optional(),
-                previous: z.unknown().optional(),
-            }),
-        )
-        .optional(),
+    pending: z.array(pendingSchema).optional(),
 });
 
 function packLabel(pack: DatapackId): string {

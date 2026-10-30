@@ -30,9 +30,10 @@
  */
 
 import { z } from 'zod';
-import type { CreatedObject, PendingObject } from './installRecord';
+import type { CreatedObject } from './installRecord';
 import { type KindContext, type SettingsDone, parseRows } from './kindContext';
 import { certainlyNotMade } from './pendingCreates';
+import type { PendingObject } from './pendingRecord';
 import { skipRow } from './refusedRows';
 import { andList } from '@/core/utils/andList';
 import { decideOwnedChange } from '@/core/utils/ownedChange';

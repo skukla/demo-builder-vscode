@@ -6,7 +6,8 @@
 
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import { filterBy, filterIn } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
-import { type CreatedObject, type PendingObject, installRecordPath, openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import { type CreatedObject, installRecordPath, openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import type { PendingObject } from '@/features/data-installer/services/demoBuilderEngine/pendingRecord';
 import { SETTLED_KINDS, settlePending } from '@/features/data-installer/services/demoBuilderEngine/pendingFinders';
 import { installPack, removePack } from '@/features/data-installer/services/demoBuilderEngine/runPack';
 import { NOW, PACK, PROJECT, type SentCall, childSearch, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';

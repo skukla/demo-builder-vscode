@@ -13,7 +13,7 @@ import { installCategories, parseCategoryPack } from '@/features/data-installer/
 import { installCompanies, parseCompanyRows } from '@/features/data-installer/services/demoBuilderEngine/companiesKind';
 import { installCoupons, parseCouponRows } from '@/features/data-installer/services/demoBuilderEngine/couponsKind';
 import { installCustomerGroups, installCustomers, parseCustomerGroupRows, parseCustomerRows } from '@/features/data-installer/services/demoBuilderEngine/customerKinds';
-import type { PendingObject } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import type { PendingObject } from '@/features/data-installer/services/demoBuilderEngine/pendingRecord';
 import type { KindContext } from '@/features/data-installer/services/demoBuilderEngine/kindContext';
 import { createOne } from '@/features/data-installer/services/demoBuilderEngine/pendingCreates';
 import { installProducts, parseProductRows } from '@/features/data-installer/services/demoBuilderEngine/productsKind';

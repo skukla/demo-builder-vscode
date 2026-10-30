@@ -21,8 +21,9 @@ import { companyByName, customerByEmail, groupByCode, readCatalogs, readHeld } f
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import { CATEGORY_KIND, findChild } from './categoriesKind';
 import { COUPON_KIND, couponByCode } from './couponsKind';
-import type { CreatedObject, InstallRecorder, PendingObject } from './installRecord';
+import type { CreatedObject, InstallRecorder } from './installRecord';
 import { readOrNull, segment } from './kindContext';
+import type { PendingObject } from './pendingRecord';
 import { GIFT_CARD_KIND, PRODUCT_KIND } from './productsKind';
 import { splitPair } from './sharedCatalogKinds';
 import { LINK_KIND, SOURCE_KIND, STOCK_KIND } from './stockKinds';
@@ -40,8 +41,11 @@ const same = (a: string | undefined, b: string) => (a ?? '').trim().toLowerCase(
 const num = (value: string | number | undefined): number | undefined => (value === undefined ? undefined : Number(value));
 
 /** Known by the id it was sent with: there when `exists` says so. */
-const byId = (exists: (get: CommerceGet, id: string) => Promise<boolean>, keyed = false): Finder => async (get, p) =>
-    p.id !== undefined && (await exists(get, p.id)) ? { kind: p.kind, id: p.id, ...(keyed ? { key: p.key } : {}) } : undefined;
+const byId = (exists: (get: CommerceGet, id: string) => Promise<boolean>, keyed = false): Finder => async (get, p) => {
+    if (p.id === undefined || !(await exists(get, p.id))) return undefined;
+    const key = keyed ? { key: p.key } : {};
+    return { kind: p.kind, id: p.id, ...key };
+};
 
 /** Known by a search on its name: the id the store gave it, with the key it is recorded by. */
 const byName = (find: (get: CommerceGet, p: PendingObject) => Promise<number | string | undefined>, keyed = true): Finder => async (get, p) => {

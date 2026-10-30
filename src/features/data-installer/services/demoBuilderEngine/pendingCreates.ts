@@ -14,8 +14,9 @@
  * @module features/data-installer/services/demoBuilderEngine/pendingCreates
  */
 
-import type { CreatedObject, PendingObject } from './installRecord';
+import type { CreatedObject } from './installRecord';
 import { type KindContext, MissingNameError } from './kindContext';
+import type { PendingObject } from './pendingRecord';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 
 /**
