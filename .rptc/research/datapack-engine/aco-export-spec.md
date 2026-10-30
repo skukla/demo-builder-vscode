@@ -83,7 +83,12 @@ group 0 (`apiFilterBuilder.js` L72-84), and filters inside one group are ORed by
   `is_visible_on_front`, `used_in_product_listing` and `is_visible_in_advanced_search` as strings
   (`"0"`/`"1"`). If REST answers them that way, `Boolean("0")` is true, and the `=== true` tests are
   never true. The service's own tests use booleans
-  (`tests/actions/processor/acoMetadataExportTransform.test.js` L14-27). Needs one live read.
+  (`tests/actions/processor/acoMetadataExportTransform.test.js` L14-27).
+  **Read live 2026-10-30 (ACCS sandbox, `GET products/attributes`): confirmed.** `is_filterable`,
+  `is_filterable_in_search` and `is_used_in_grid` come back as booleans; `is_searchable`,
+  `is_comparable`, `is_visible_on_front` and `used_in_product_listing` as `"0"`/`"1"`. So the
+  service marks every attribute searchable and almost never lists one. Our port reads both forms
+  (`flag` in `acoCatalogRows.ts`) and does NOT carry the quirk.
 - Not applied: the selection filter runs on the RAW rows and so would store Magento rows, not
   ACO rows (L256-262); our port takes no selections.
 
@@ -187,8 +192,8 @@ pack from the library (`delete_library_datapack`).
 | `aco_product_layers` stub | not written, and said so | the service writes none |
 | later page fails silently | a failed page fails the kind | `readAllPages` throws; never a silent short pack |
 | `datapack_type` | not sent: the store's default (`accs`), as the service when not told | the library's `batch-get-data-items` defaults to `accs` (`accs-discovery-service/actions/lib/datapack.js` L47-51); typing it `aco` would hide it from every read the extension makes |
-| the metadata quirk (§3) | ported as is | the same rows the service makes; one live read decides |
-| category description from the top level | ported as is | same |
+| the metadata quirk (§3) | fixed after the live read (2026-10-30) | "0" reads as no, "1" as yes |
+| category description from the top level | fixed after the live read (2026-10-30) | read from `custom_attributes` first; `categories/list` has no top-level description |
 
 **Not portable without a live check:** whether REST answers the attribute flags as strings
 (metadata `visibleIn`, `searchable`); whether the product list carries

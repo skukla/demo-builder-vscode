@@ -91,15 +91,37 @@ describe('metadataRows', () => {
         expect(row.visibleIn).toEqual(['PRODUCT_DETAIL', 'PRODUCT_LISTING', 'SEARCH_RESULTS']);
     });
 
-    it('carries the service quirk: a "0" flag is not false, so it is truthy where Boolean() reads it', () => {
-        const [row] = metadataRows(
-            [attributeRow({ attribute_code: 'x', is_searchable: '0', is_filterable: false })],
+    // Live read on the ACCS sandbox, 2026-10-30 (`GET products/attributes`): Commerce sends
+    // is_filterable as a boolean and is_searchable, is_comparable, is_visible_on_front and
+    // used_in_product_listing as the text "0" / "1". The service read "0" as yes; this does not.
+    it('reads a flag Commerce sends as the text "0" or "1" as no or yes', () => {
+        const [cableSize] = metadataRows(
+            [
+                attributeRow({
+                    attribute_code: 'cable_size',
+                    is_filterable: true,
+                    is_searchable: '0',
+                    is_comparable: '0',
+                    is_visible_on_front: '0',
+                    used_in_product_listing: '1',
+                }),
+            ],
             ['default']
         );
 
-        expect(row.searchable).toBe(true);
-        expect(row.filterable).toBe(false);
-        expect(row.visibleIn).toEqual(['PRODUCT_DETAIL']);
+        expect(cableSize.searchable).toBe(false);
+        expect(cableSize.filterable).toBe(true);
+        expect(cableSize.visibleIn).toEqual(['PRODUCT_LISTING']);
+    });
+
+    it('shows a "1" flag where it says, as a true one does', () => {
+        const [brand] = metadataRows(
+            [attributeRow({ attribute_code: 'brand', is_searchable: '1', is_comparable: '1', is_visible_on_front: '0' })],
+            ['default']
+        );
+
+        expect(brand.searchable).toBe(true);
+        expect(brand.visibleIn).toEqual(['SEARCH_RESULTS', 'PRODUCT_COMPARE']);
     });
 
     it('leaves out filterable, sortable and searchable when Commerce does not send them', () => {
@@ -150,6 +172,28 @@ describe('categoryRows', () => {
         expect(rows).toEqual([
             { slug: 'sale', source: { locale: 'default' }, name: 'Sale', description: 'Half off' },
         ]);
+    });
+
+    // Live read, 2026-10-30: `categories/list` answers a category's attributes in custom_attributes
+    // and puts no description at the top level.
+    it('takes the description from the category\'s custom attributes, where Commerce answers it', () => {
+        const rows = categoryRows(
+            [
+                ...ACO_CATEGORIES.slice(0, 2),
+                {
+                    id: 9,
+                    name: 'Sale',
+                    parent_id: 2,
+                    custom_attributes: [
+                        { attribute_code: 'url_path', value: 'sale' },
+                        { attribute_code: 'description', value: '<p>Half off</p>' },
+                    ],
+                },
+            ],
+            'default'
+        );
+
+        expect(rows[0].description).toBe('<p>Half off</p>');
     });
 
     it('leaves out a category with no usable url path or no name', () => {

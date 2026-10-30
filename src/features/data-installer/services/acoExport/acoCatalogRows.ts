@@ -31,22 +31,26 @@ const EVERYWHERE: AcoMetadataVisibility[] = [
 ];
 
 /**
- * Where ACO shows an attribute. The flags are tested against `true` and `false` exactly as the
- * service tests them (L55-77), so a flag Commerce sends as `"1"` counts for nothing here: one live
- * read decides whether that should change (spec §3).
+ * A Commerce attribute flag as a yes or no, or undefined when Commerce sent none. Commerce answers
+ * some flags as booleans and others as the text "0" and "1" (live read on the ACCS sandbox,
+ * 2026-10-30: `is_filterable` true, `is_searchable` "1", `is_visible_on_front` "0"). The service
+ * tested `=== true` and `Boolean()`, so "0" counted as yes and "1" as nothing; this reads both forms.
  */
+function flag(value: CommerceAttributeRow['is_searchable']): boolean | undefined {
+    if (value === undefined || value === null) return undefined;
+    return value === true || value === 1 || value === '1' || value === 'true';
+}
+
+/** Where ACO shows an attribute, from its flags as the service maps them (L55-77). */
 function visibilityOf(attribute: CommerceAttributeRow): AcoMetadataVisibility[] {
     const shown: AcoMetadataVisibility[] = [];
-    if (
-        attribute.is_visible_on_front !== false &&
-        attribute.is_visible_in_advanced_search !== false
-    )
+    if (flag(attribute.is_visible_on_front) !== false && flag(attribute.is_visible_in_advanced_search) !== false)
         shown.push('PRODUCT_DETAIL');
-    if (attribute.used_in_product_listing === true || attribute.is_used_in_grid === true)
+    if (flag(attribute.used_in_product_listing) === true || flag(attribute.is_used_in_grid) === true)
         shown.push('PRODUCT_LISTING');
-    if (attribute.is_searchable === true || attribute.is_visible_in_advanced_search === true)
+    if (flag(attribute.is_searchable) === true || flag(attribute.is_visible_in_advanced_search) === true)
         shown.push('SEARCH_RESULTS');
-    if (attribute.is_comparable === true) shown.push('PRODUCT_COMPARE');
+    if (flag(attribute.is_comparable) === true) shown.push('PRODUCT_COMPARE');
     return shown.length > 0 ? shown : [...EVERYWHERE];
 }
 
@@ -60,23 +64,17 @@ function dataTypeOf(attribute: CommerceAttributeRow): AcoMetadataRow['dataType']
     return 'TEXT';
 }
 
-/**
- * The three search flags, each only when Commerce sent it, read with `Boolean()` as the service
- * reads them (L151-159): `"0"` is truthy, a quirk carried as it is.
- */
+/** The three search flags, each only when Commerce sent it (L151-159), read by `flag`. */
 function searchFlags(
     attribute: CommerceAttributeRow,
 ): Pick<AcoMetadataRow, 'filterable' | 'sortable' | 'searchable'> {
+    const filterable = flag(attribute.is_filterable);
+    const sortable = flag(attribute.used_for_sort_by);
+    const searchable = flag(attribute.is_searchable);
     return {
-        ...(attribute.is_filterable !== undefined
-            ? { filterable: Boolean(attribute.is_filterable) }
-            : {}),
-        ...(attribute.used_for_sort_by !== undefined
-            ? { sortable: Boolean(attribute.used_for_sort_by) }
-            : {}),
-        ...(attribute.is_searchable !== undefined
-            ? { searchable: Boolean(attribute.is_searchable) }
-            : {}),
+        ...(filterable !== undefined ? { filterable } : {}),
+        ...(sortable !== undefined ? { sortable } : {}),
+        ...(searchable !== undefined ? { searchable } : {}),
     };
 }
 
@@ -126,7 +124,9 @@ const slugOf = (category: CommerceCategoryRow) => slugOfPath(customAttributeMap(
 
 /**
  * One row per category for this store view. A category without a usable url path or a name is
- * left out; the description is the category's own top-level field, else null (L71-75).
+ * left out. The description is a custom attribute in Commerce's answer (live read, 2026-10-30:
+ * `categories/list` puts no `description` at the top level), so it is read there first; the
+ * service read only the top level (L71-75) and so always wrote null.
  */
 export function categoryRows(
     categories: readonly CommerceCategoryRow[],
@@ -137,7 +137,7 @@ export function categoryRows(
         const slug = slugOf(category);
         const name = (category.name ?? '').trim();
         if (!slug || !name) continue;
-        const description = category.description ? category.description : null;
+        const description = customAttributeMap(category).description || category.description || null;
         rows.push({ slug, source: { locale }, name, description });
     }
     return rows;
