@@ -10,8 +10,8 @@
  */
 
 import { restoreDemoBuilderPieces } from '@/features/updates/services/thinLayerUpdate';
-import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const mockBringUpToDate = jest.fn();
 jest.mock('@/features/eds/services/storefront/storefrontUpToDate', () => ({
@@ -24,7 +24,7 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     extractResetParams: (...a: unknown[]) => mockExtract(...a),
 }));
 
-const project = { name: 'justrite' } as Project;
+const project = createMockProject({ name: 'justrite' });
 const fileOps = {} as Parameters<typeof restoreDemoBuilderPieces>[1];
 const OVERLAY = 'https://overlay.test/render-pdp?org=kukla&site=kukla-justrite';
 
