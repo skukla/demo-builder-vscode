@@ -51,8 +51,14 @@ Each group is built on its own branch off `loop/2026-10-05-release-candidate`, t
 ### G4: what the screen and the client show and survive (`dataInstallerHandlers.ts`, the activity view, `commerceRestClient.ts`)
 
 17. Installs by Demo Builder's engine show as installed and in the activity history, on the screen
-    and through the agent tools.
+    and through the agent tools. **Built** (branch `parity/g4-surfaces-retries`): the two reads
+    put the project's own rows first (install records; a new append-only
+    `.demo-builder/datapack-activity.jsonl` the engine writes when each job ends, through a new
+    `onJobEnd` hook in `engine.ts`), then the service's, each tagged `source`, paged as one list
+    (`engineHistoryReads.ts`). A removal stays in the history after its record is gone.
 18. Reads, and any call Commerce answered 429, are retried with backoff; other writes never are.
+    **Built** (same branch): up to three retries, 1, 2 then 4 seconds; a read that ran out its
+    own wait is not retried (`commerceRestRetry.ts`).
 
 ### G5: an ACO pack from a Commerce store (PL-60)
 

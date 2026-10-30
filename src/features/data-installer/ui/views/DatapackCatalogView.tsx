@@ -122,7 +122,10 @@ export function DatapackCatalogView(): React.JSX.Element {
     }, [loadProjectContext]);
 
     /**
-     * What the SERVICE records as installed on this project's instance.
+     * What is recorded as installed on this project's instance: Demo Builder's
+     * engine's install records, then the service's tracking (step 14,
+     * `engineHistoryReads`). Before step 14 this was the service's alone, so a
+     * pack our engine installed wore no check.
      *
      * Scoped to the instance, so it answers "what is on the box this project
      * writes to" rather than the global cross-instance list an earlier Installed

@@ -93,14 +93,24 @@ export interface InstalledDatapack {
     art: DatapackArt;
     installedAt?: string;
     processingTimeMs?: number;
+    /** Which engine says so: the service's tracking, or Demo Builder's install record (step 14). */
+    source?: DatapackEngineId;
+    /** Demo Builder's only: how many Commerce objects its record lists, which removal takes away. */
+    objectCount?: number;
 }
 
-/** One row of the service's own request log. */
+/** One row of a request log: the service's own, or Demo Builder's engine's (`source`). */
 export interface ActivityEntry {
     id: DatapackId;
     dataTypes: string[];
     commerceInstance?: string;
     mode?: string;
+    /** Which engine ran it (step 14). */
+    source?: DatapackEngineId;
+    /** Demo Builder's only: whether every requested kind succeeded. The service's log does not say. */
+    outcome?: 'success' | 'failed';
+    /** Demo Builder's only: why it failed, or what it said about a run that worked. */
+    detail?: string;
     siteType?: string;
     /**
      * Opaque on purpose. The documented enum (`SINGLE_DB`, `ENTIRE_DB`, …) does
@@ -126,6 +136,13 @@ export type DatapackEngineId = 'service' | 'demo-builder';
  * installs only from its own catalog.
  */
 export type CatalogPage = Page<DatapackSummary> & { libraryError?: string; engine?: DatapackEngineId };
+
+/**
+ * What is installed, or what happened, from both engines (step 14): Demo Builder's rows first,
+ * then the service's, each tagged with its `source`. Each error says why one source's rows are
+ * missing, when they are.
+ */
+export type HistoryPage<T> = Page<T> & { serviceError?: string; engineError?: string };
 
 export interface Page<T> {
     items: T[];

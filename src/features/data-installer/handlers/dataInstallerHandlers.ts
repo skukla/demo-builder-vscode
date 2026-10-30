@@ -3,7 +3,8 @@
  *
  * Six read message types, each three lines: guard, client call, response. All the
  * judgement lives in {@link resolveDataInstallerAccess}, so a new handler cannot
- * accidentally skip a check.
+ * accidentally skip a check. The installed and activity reads add Demo Builder's own
+ * engine's rows to the service's (`engineHistoryReads`).
  *
  * These handlers serve BOTH surfaces — the webview panel and the MCP tools — which
  * is why the guard branches on `context.panel`. `ensureAdobeIOAuth` shows a VS Code
@@ -27,6 +28,7 @@ import { orgNumberOf } from '../services/dataInstallerSignIn';
 import { packReadsVia } from '../services/recordedPack';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import type { CatalogPage, DatapackSummary, OperationMode, Page } from '../types';
+import { activityFromBoth, installedFromBoth } from './engineHistoryReads';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
@@ -446,6 +448,8 @@ export const dataInstallerHandlers = defineHandlers({
         }));
     },
 
+    // Both answer Demo Builder's engine's rows first, then the service's (step 14,
+    // `engineHistoryReads`); the service is asked only for the page past ours.
     'list-installed-datapacks': async (
         context: HandlerContext,
         payload?: {
@@ -455,8 +459,10 @@ export const dataInstallerHandlers = defineHandlers({
             skip?: number;
         },
     ): Promise<HandlerResponse> =>
-        withClient(context, 'Could not list installed datapacks.', (client) =>
-            client.getInstalledDatapacks({ ...(payload ?? {}) }),
+        installedFromBoth(context, payload ?? {}, (paging) =>
+            withClient(context, 'Could not list installed datapacks.', (client) =>
+                client.getInstalledDatapacks({ ...(payload ?? {}), ...paging }),
+            ),
         ),
 
     'get-datapack-activity': async (
@@ -469,8 +475,10 @@ export const dataInstallerHandlers = defineHandlers({
             skip?: number;
         },
     ): Promise<HandlerResponse> =>
-        withClient(context, 'Could not load activity.', (client) =>
-            client.getActivityLog({ ...(payload ?? {}) }),
+        activityFromBoth(context, payload ?? {}, (paging) =>
+            withClient(context, 'Could not load activity.', (client) =>
+                client.getActivityLog({ ...(payload ?? {}), ...paging }),
+            ),
         ),
 });
 

@@ -134,6 +134,37 @@ If the library cannot be reached, the Data Installer's packs still show, with a 
 saying why the library's are missing. Agents get the same through `find_datapacks`
 (`store`, `includeLibrary`) and `get_datapack` (`store`).
 
+## What is installed, and what happened, from both engines (step 14)
+
+The service tracks what it installed on each store and logs every run it makes. Demo Builder's
+engine keeps its own, beside the open project:
+
+- **Installed:** one install record per pack, `<project>/.demo-builder/datapacks/<name>@<version>.json`
+  (`installRecord.ts`). A record is there for as long as the store holds something the pack made,
+  including after an install that stopped part way.
+- **Activity:** `<project>/.demo-builder/datapack-activity.jsonl`, one line per install or removal
+  the engine finished (`engineActivityLog.ts`), written when the job ends (`onJobEnd` in
+  `engine.ts`) whether or not anything is still watching it. Appended, never rewritten, so a
+  removal's line outlives the record the removal deleted. It sits outside the records' folder,
+  because every `.json` file there is read as a record. A line that cannot be read is skipped.
+  Nothing is decided from this log: removal reads the record.
+
+`list-installed-datapacks` and `get-datapack-activity` (`engineHistoryReads.ts`) answer
+Demo Builder's rows first and the service's after, each row tagged `source` (`demo-builder` or
+`service`). Ours add `objectCount` (installed) and `outcome` and `detail` (activity). Paging
+counts our rows first and asks the service only for the rest of the page, so the Activity tab's
+"Load 50 more" neither skips nor repeats a row. A source that cannot be read costs only its own
+rows and says why (`serviceError`, `engineError`); with no rows of ours, a service refusal is
+answered as before. The catalog's check mark and the Activity tab both read these, and so do
+`list_installed_datapacks` and `get_datapack_activity`.
+
+What they do not cover: installs by Demo Builder's engine in another project, and runs from
+before step 14 (no log was kept then).
+
+The engine writes Commerce through the signed REST call the ERP work shares, which sends a read
+again on a network failure, a 5xx or a 429, and a write again only on a 429
+(`commerceRestRetry.ts`).
+
 ## Datapack files (save to a zip, load from one)
 
 Neither the service nor the datapack library has a file form, so the zip is built and

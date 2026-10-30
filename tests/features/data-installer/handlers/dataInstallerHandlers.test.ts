@@ -24,6 +24,7 @@ import {
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 import { DataInstallerApiError } from '@/features/data-installer/services/dataInstallerErrors';
 import type { AdobeOrg } from '@/features/authentication/services/types';
+import type { ActivityEntry, InstalledDatapack, Page } from '@/features/data-installer/types';
 import { ErrorCode } from '@/types/errorCodes';
 
 describe('dataInstallerHandlers', () => {
@@ -547,8 +548,12 @@ describe('dataInstallerHandlers', () => {
             });
         });
 
+        // With no project open there are no rows of Demo Builder's own, so the service's page
+        // comes back as it was, each row tagged with where it came from (step 14);
+        // `dataInstallerHandlers-engineHistory.test.ts` covers the two sources together.
         it('list-installed-datapacks forwards its filters and returns the listing', async () => {
-            const installed = jest.fn().mockResolvedValue({ items: [{ datapackName: 'cs' }] });
+            const row: InstalledDatapack = { commerceInstance: 'instance-1', id: { name: 'cs', version: 'main' }, dataTypes: [], art: {} };
+            const installed = jest.fn().mockResolvedValue({ items: [row], count: 1 } satisfies Page<InstalledDatapack>);
             MockedClient.prototype.getInstalledDatapacks = installed;
 
             const res = await dataInstallerHandlers['list-installed-datapacks'](
@@ -557,11 +562,12 @@ describe('dataInstallerHandlers', () => {
             );
 
             expect(installed).toHaveBeenCalledWith({ commerceInstance: 'instance-1', limit: 5 });
-            expect(res).toStrictEqual({ success: true, data: { items: [{ datapackName: 'cs' }] } });
+            expect(res).toStrictEqual({ success: true, data: { items: [{ ...row, source: 'service' }], count: 1, limit: 5 } });
         });
 
         it('get-datapack-activity forwards its filters and returns the log', async () => {
-            const activity = jest.fn().mockResolvedValue({ items: [{ operationMode: 'import' }] });
+            const row: ActivityEntry = { id: { name: 'citisignal_new', version: 'main' }, dataTypes: [], mode: 'import' };
+            const activity = jest.fn().mockResolvedValue({ items: [row], count: 1 } satisfies Page<ActivityEntry>);
             MockedClient.prototype.getActivityLog = activity;
 
             const res = await dataInstallerHandlers['get-datapack-activity'](makeAccessContext(), {
@@ -575,7 +581,7 @@ describe('dataInstallerHandlers', () => {
             });
             expect(res).toStrictEqual({
                 success: true,
-                data: { items: [{ operationMode: 'import' }] },
+                data: { items: [{ ...row, source: 'service' }], count: 1 },
             });
         });
 
