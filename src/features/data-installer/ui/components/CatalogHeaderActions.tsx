@@ -7,10 +7,12 @@
  * Each link owns the modal it opens, so the catalog view carries no modal's
  * state — it was past its size guideline before either existed beside the other.
  *
- * Capturing depends on the engine. With the service's, "Export from this instance" opens its
- * export into the shared catalog. With Demo Builder's, the default, "Save from this store"
- * opens the pick screen, which saves into this demo's own library pack (datapack-engine step
- * 14); the view hosts that screen with the save's progress window (`useSaveStoreChanges`).
+ * Capturing depends on the engine. "Export from this instance" always shows, since an ACO pack
+ * is made with either engine (datapack-engine step 14 item 19); its screen offers the Commerce
+ * export into the shared catalog only with the service's engine chosen (2026-10-29: the service
+ * has not saved what it reads since August). With Demo Builder's, the default, "Save from this
+ * store" opens the pick screen, which saves into this demo's own library pack (step 14); the
+ * view hosts that screen with the save's progress window (`useSaveStoreChanges`).
  *
  * @module features/data-installer/ui/components/CatalogHeaderActions
  */
@@ -26,7 +28,10 @@ import type { WipeStoreChoice } from '@/types/demoDataWipe';
 export interface CatalogHeaderActionsProps {
     /** A file was loaded (or the load modal closed): the catalog may have changed. Stable. */
     onCatalogChanged: () => void;
-    /** The engine chosen, which decides how a pack is captured from the store. */
+    /**
+     * The engine chosen, which decides how a pack is captured from the store: the service's
+     * Commerce export runs only with `service`; an ACO pack always can.
+     */
     engine?: 'service' | 'demo-builder';
     /** Demo Builder's engine: open the pick screen with no pack. Stable. */
     onSaveFromStore: () => void;
@@ -59,11 +64,9 @@ export function CatalogHeaderActions({
 
     return (
         <>
-            {engine === 'service' ? (
-                <Link isQuiet onPress={() => setExporting(true)}>
-                    Export from this instance
-                </Link>
-            ) : null}
+            <Link isQuiet onPress={() => setExporting(true)}>
+                Export from this instance
+            </Link>
             {engine === 'demo-builder' ? (
                 <Link isQuiet onPress={onSaveFromStore}>
                     Save from this store
@@ -75,7 +78,9 @@ export function CatalogHeaderActions({
             <Link isQuiet onPress={() => setClearing(true)}>
                 Clear demo data
             </Link>
-            {exporting ? <ExportDatapackModal onClose={closeExport} /> : null}
+            {exporting ? (
+                <ExportDatapackModal onClose={closeExport} commerceExport={engine === 'service'} />
+            ) : null}
             {loadingFile ? <LoadDatapackFileModal onClose={closeLoad} /> : null}
             {clearing ? <ClearDemoDataModal onClose={closeClear} onClear={startClear} /> : null}
             {progressWindow}

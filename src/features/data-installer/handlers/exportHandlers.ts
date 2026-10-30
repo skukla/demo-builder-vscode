@@ -28,6 +28,8 @@
  * project's own credential (`listPickableItems`), and the export saves what is picked into
  * a new version of this demo's own library pack (`saveFromStore`), with the project's own
  * pack when Demo Builder installed it. Nothing reaches the service or its shared catalog.
+ * With `aco: true`, with either engine, the export makes an ACO pack from the project's store
+ * into the SC's library instead (`startAcoExport`, step 14 item 19).
  *
  * @module features/data-installer/handlers/exportHandlers
  */
@@ -39,6 +41,7 @@ import {
     type ExportRequest,
     type ExportOutcome,
 } from '../services/dataInstallerExportClient';
+import { startAcoExport } from './acoExportHandler';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { listPickableItems, saveFromStore } from './storeChangesHandlers';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
@@ -96,6 +99,9 @@ export const exportHandlers = defineHandlers({
         context: HandlerContext,
         payload?: ExportPayload,
     ): Promise<HandlerResponse> => {
+        // An ACO pack is Demo Builder's own (step 14 item 19): read here, saved into the
+        // library, with either engine.
+        if (payload?.aco === true) return startAcoExport(context, payload);
         // The service's export has not saved what it reads since August, into a catalog other
         // teams share. With Demo Builder's engine the export is Demo Builder's own save (step 14).
         if (selectedDatapackEngine() !== 'service') return saveFromStore(context, payload);
@@ -159,6 +165,10 @@ export interface ExportPayload {
     selections?: Selections;
     /** Demo Builder's engine: the save must be confirmed, as `save-store-changes-to-pack`'s is. */
     confirm?: boolean;
+    /** Make an ACO pack from this store, into the library (`acoExportHandler.ts`). */
+    aco?: boolean;
+    /** ACO only: the store views to make it for; omitted means every one. */
+    storeViews?: string[];
 }
 
 /**

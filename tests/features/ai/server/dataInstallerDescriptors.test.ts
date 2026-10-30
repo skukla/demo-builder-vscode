@@ -109,6 +109,13 @@ describe('start_datapack_export name echo', () => {
         expect(preflight()({ datapackName: 'shared-pack' })).toBeDefined();
     });
 
+    it('asks the echo for an ACO pack too, naming the library it writes into, not the shared catalog', () => {
+        const out = preflight()({ datapackName: 'aco_acme', aco: true }) as { error: string; sharedCatalog: boolean };
+
+        expect(out.error).toBe('start_datapack_export writes "aco_acme" into your datapack library. To proceed, call again with confirmName:"aco_acme".');
+        expect(out.sharedCatalog).toBe(false);
+    });
+
     it('allows dispatch when the echo matches', () => {
         expect(
             preflight()({ datapackName: 'shared-pack', confirmName: 'shared-pack' }),
@@ -260,9 +267,9 @@ describe('what each row accepts', () => {
         );
     });
 
-    it('gives the export the name echo that guards the shared catalog, and the picks', () => {
+    it('gives the export the name echo that guards the shared catalog, the picks and the ACO choice', () => {
         expect(keys('start_datapack_export')).toEqual(
-            ['commerceInstance', 'confirmName', 'dataTypes', 'datapackName', 'selections', 'version'].sort(),
+            ['aco', 'commerceInstance', 'confirmName', 'dataTypes', 'datapackName', 'selections', 'storeViews', 'version'].sort(),
         );
     });
 

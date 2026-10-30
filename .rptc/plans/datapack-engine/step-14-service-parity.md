@@ -129,6 +129,9 @@ one, so a source would never get back to zero).
 
 19. Port the service's ACO export (`processAcoDataPack.js`, `config/data_processors_aco_export.json`).
     Installing ACO packs stays PL-60's.
+    **Built 2026-10-30 on `parity/g5-aco-export`, not yet live.** `services/acoExport/`, the
+    export screen's pack-type choice, `start_datapack_export` `aco: true`; saved into the
+    library. Spec and differences: `.rptc/research/datapack-engine/aco-export-spec.md`.
 
 ### Owner's decision (asked 2026-10-30)
 

@@ -441,7 +441,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_export: {
         action: 'Export sample data',
         consequence:
-            "With Demo Builder's engine, saves what was picked from this project's store as a new version of this demo's own pack in the datapack library; nothing in Commerce changes. With the Data Installer service's, captures this instance's data into the shared catalogue, where other people will see it.",
+            "With Demo Builder's engine, saves what was picked from this project's store as a new version of this demo's own pack in the datapack library; nothing in Commerce changes. With the Data Installer service's, captures this instance's data into the shared catalogue, where other people will see it. An ACO pack, with either engine, goes into your own datapack library.",
         // The pack and the store it is captured FROM. `confirmName` is the
         // proof-of-intent echo, not the target.
         target: ['datapackName', 'version', 'commerceInstance'],

@@ -82,6 +82,9 @@ const SELECTIONS = z
 /** The service engine's export fields: with Demo Builder's engine, sending any of them is refused. */
 const SERVICE_ONLY = ' (service engine only; refused with the demo-builder engine)';
 
+/** The same, except that an ACO pack (aco:true) takes them with either engine. */
+const SERVICE_OR_ACO = ' (service engine, or with aco either engine; otherwise refused with the demo-builder engine)';
+
 /**
  * Where the data lands, and which parts of it.
  *
@@ -404,16 +407,33 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "demo's own library pack, with the project's own pack when Demo Builder installed it; the same save " +
             'as save_store_changes_to_pack, answering the same way. Send only selections and confirm. With the ' +
             'service engine: **writes into the SHARED catalog other teams depend on** — requires confirm:true ' +
-            'and confirmName equal to the datapack name. List what it would contain first.',
+            'and confirmName equal to the datapack name. List what it would contain first. With aco:true, with ' +
+            "either engine, it instead makes an Adobe Commerce Optimizer (ACO) pack from the project's store " +
+            '(aco_metadata, aco_categories, aco_products, aco_price_books, aco_prices) for the storeViews named ' +
+            '(omit for every one), saved into YOUR datapack library as datapackName and version (confirmName ' +
+            'equal to it); dataTypes then names ACO kinds (omit for all five), and commerceInstance and ' +
+            'selections are refused.',
         map: importHandlers,
         type: 'start-datapack-export',
         confirm: true,
         inputSchema: {
-            datapackName: z.string().optional().describe(`Datapack name to write${SERVICE_ONLY}`),
-            version: z.string().optional().describe(`Datapack version to write${SERVICE_ONLY}`),
-            commerceInstance: z.string().optional().describe(`Source Commerce instance id${SERVICE_ONLY}`),
-            dataTypes: z.array(z.string()).min(1).optional().describe(`Data types to capture; at least one${SERVICE_ONLY}`),
+            datapackName: z.string().optional().describe(`Datapack name to write${SERVICE_OR_ACO}`),
+            version: z.string().optional().describe(`Datapack version to write${SERVICE_OR_ACO}`),
+            commerceInstance: z
+                .string()
+                .optional()
+                .describe(`Source Commerce instance id${SERVICE_ONLY}; refused with aco too`),
+            dataTypes: z
+                .array(z.string())
+                .min(1)
+                .optional()
+                .describe(`Data types to capture; at least one${SERVICE_OR_ACO}. With aco, ACO kinds (omit for all five)`),
             selections: SELECTIONS,
+            aco: z.boolean().optional().describe("Make an ACO pack from the project's store, into your datapack library"),
+            storeViews: z
+                .array(z.string())
+                .optional()
+                .describe('With aco: the store view codes to make it for; omit for every one'),
             confirmName: z
                 .string()
                 .optional()
@@ -428,9 +448,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 ? undefined
                 : {
                       error:
-                          `start_datapack_export writes "${String(args.datapackName)}" into the shared ` +
-                          `datapack catalog. To proceed, call again with confirmName:"${String(args.datapackName)}".`,
-                      sharedCatalog: true,
+                          `start_datapack_export writes "${String(args.datapackName)}" into ` +
+                          (args.aco === true ? 'your datapack library' : 'the shared datapack catalog') +
+                          `. To proceed, call again with confirmName:"${String(args.datapackName)}".`,
+                      sharedCatalog: args.aco !== true,
                   },
     },
 

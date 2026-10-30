@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "discountEntry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Percentage discount",
+          "properties": {
+            "code": { "type": "string", "description": "Discount code" },
+            "percentage": { "type": "number", "description": "Percentage (float)" }
+          },
+          "required": ["code", "percentage"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Fixed amount discount",
+          "properties": {
+            "code": { "type": "string", "description": "Discount code" },
+            "price": { "type": "number", "description": "Fixed amount (float)" }
+          },
+          "required": ["code", "price"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "tierEntry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Tier percentage",
+          "properties": {
+            "qty": { "type": "number", "description": "Quantity threshold (float)" },
+            "percentage": { "type": "number", "description": "Percentage (float)" }
+          },
+          "required": ["qty", "percentage"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Tier fixed price",
+          "properties": {
+            "qty": { "type": "number", "description": "Quantity threshold (float)" },
+            "price": { "type": "number", "description": "Tier price (float)" }
+          },
+          "required": ["qty", "price"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "type": "array",
+  "description": "Schema for aco_prices — ACO product prices per price book. Required per row: sku, regular (number), and price book id (priceBookId). discounts[] items: { code, percentage } OR { code, price }. tierPrices[] items: { qty, percentage } OR { qty, price }.",
+  "minItems": 1,
+  "items": {
+    "allOf": [
+      {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "Product SKU",
+            "minLength": 1
+          },
+          "priceBookId": {
+            "type": "string",
+            "description": "Price book identifier (camelCase)",
+            "minLength": 1
+          },
+          "regular": {
+            "type": "number",
+            "description": "Base price before discounts or tier pricing"
+          },
+          "discounts": {
+            "type": "array",
+            "description": "Discount rows: code plus either percentage or price (number each)",
+            "items": { "$ref": "#/definitions/discountEntry" }
+          },
+          "tierPrices": {
+            "type": "array",
+            "description": "Quantity tiers (camelCase): qty plus either percentage or price",
+            "items": { "$ref": "#/definitions/tierEntry" }
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "required": ["sku", "regular"]
+      },
+      {
+        "anyOf": [{ "required": ["priceBookId"] }]
+      }
+    ]
+  }
+}

@@ -119,6 +119,7 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // "Clear demo data" (datapack-engine step 10): the check reads every product, customer and
     // order of the chosen websites and stores, a page of 100 at a time. Not measured live yet.
     'check-demo-data': TIMEOUTS.LONG, // 180s - store structure + products, customers, orders, returns
+    'start-datapack-export': TIMEOUTS.EXTENDED, // 10min - answered inline; an ACO pack reads every product per store view
 };
 
 /**

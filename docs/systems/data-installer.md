@@ -161,7 +161,8 @@ trip (install a pack into an empty store, save it back, compare) is pinned by
 ## Stage 3 (export, the service's engine)
 
 Implemented (`handlers/exportHandlers.ts`, `services/dataInstallerExportClient.ts`). With the
-service engine chosen, "Export from this instance" opens `ServiceExportModal`. A
+service engine chosen, "Export from this instance" opens `ServiceExportModal` with its Commerce
+export offered; with Demo Builder's, the same link opens it for an ACO pack only (below). A
 probe on 2026-08-14 found it authenticating and connecting but storing nothing
 ("MongoDB connection URI required"). That investigation is in
 [`.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md`](../../.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md),
@@ -176,6 +177,21 @@ context for the address. One line fixes it; the proof and the prepared patch are
 July and September 2026), so "blocked indefinitely" in older notes is out of date.
 
 A dated finding about a service we do not own — re-verify before relying on it.
+
+### An ACO pack from a Commerce store
+
+The export screen's "Pack type" choice, and `start_datapack_export` with `aco: true`, make an
+Adobe Commerce Optimizer pack from the project's own store (datapack-engine step 14 item 19,
+PL-60): `aco_metadata`, `aco_categories`, `aco_products`, `aco_price_books` and `aco_prices`,
+for the store views the SC ticks (none named means every one). It is Demo Builder's port of the
+service's `process-aco-datapack` export (`services/acoExport/`), so it runs with either engine,
+reads Commerce only, and saves into the SC's datapack **library**, never the shared catalog.
+Each kind is checked against the service's own schemas (`config/aco-schemas/`, copied
+verbatim). An existing name and version is refused, and so are `commerceInstance` and
+`selections` sent with `aco`; deleting the pack from the library undoes
+the save. What it reads and where it differs from the service, with file:line, is
+[`.rptc/research/datapack-engine/aco-export-spec.md`](../../.rptc/research/datapack-engine/aco-export-spec.md).
+Installing an ACO pack is not built: Demo Builder's engine refuses ACO kinds, and PL-60 owns it.
 
 ## The library in the catalog
 

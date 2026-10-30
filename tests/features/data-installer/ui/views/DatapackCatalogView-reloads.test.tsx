@@ -182,12 +182,12 @@ describe('the two doors out of the catalog', () => {
         expect(mockPostMessage).toHaveBeenCalledWith('open-data-installer-settings');
     });
 
-    // 2026-10-29: export is the Data Installer service's own, so the link shows only with
-    // that engine chosen; with Demo Builder's (the default) it offered an export that
-    // cannot work and writes to a catalog other teams share.
+    // 2026-10-29: the Commerce export is the Data Installer service's own, so it is offered only
+    // with that engine chosen. Since step 14 item 19 the link shows with every engine: an ACO
+    // pack is made with either (the modal offers ACO only without the service's).
     it.each([
-        ['demo-builder', false],
-        [undefined, false],
+        ['demo-builder', true],
+        [undefined, true],
         ['service', true],
     ] as const)('with the %s engine, shows the export link: %s', async (engine, shown) => {
         mockRequest.mockResolvedValue({

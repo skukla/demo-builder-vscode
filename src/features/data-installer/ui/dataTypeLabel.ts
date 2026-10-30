@@ -24,6 +24,8 @@
  */
 const ACRONYMS: Record<string, string> = {
     b2b: 'B2B',
+    // Adobe Commerce Optimizer's kinds: `aco_price_books` → "ACO price books".
+    aco: 'ACO',
 };
 
 /**

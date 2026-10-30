@@ -115,12 +115,29 @@ describe('installCatalogs', () => {
             expect(ctx.session.catalogStandIns?.get('Platinum Buyer')).toBe(14);
         });
 
-        it('still stops on any other refusal', async () => {
+        // G2 wrote this as "still stops on any other refusal"; G1 (step 14 item 3) then made a row
+        // Commerce refuses a skipped row, not a stopped install. What G2 guarded still holds: any
+        // other refusal is not read as "already there".
+        it('skips the row on any other refusal, naming why, and takes no stand-in', async () => {
             const ctx = await fakeContext({ [CATALOGS]: { items: [PUBLIC] }, ...PLATINUM_GROUP }, () => {
                 throw new CommerceReadError('Commerce answered 400 for sharedCatalog: {"message":"Invalid tax class."}', 400);
             });
 
-            await expect(installCatalogs(ctx, parseCatalogRows([BODEA_CATALOG_ROWS[1]]))).rejects.toThrow(/Invalid tax class/);
+            await installCatalogs(ctx, parseCatalogRows([BODEA_CATALOG_ROWS[1]]));
+
+            expect(ctx.session.skipped).toEqual([
+                expect.objectContaining({ kind: CATALOG_KIND, key: 'Platinum Buyer', reason: expect.stringMatching(/Invalid tax class/u) }),
+            ]);
+            expect(ctx.session.catalogStandIns?.get('Platinum Buyer')).toBeUndefined();
+            expect(ctx.recorder.created).toStrictEqual([]);
+        });
+
+        it('still stops on an answer that is not the row\'s own refusal', async () => {
+            const ctx = await fakeContext({ [CATALOGS]: { items: [PUBLIC] }, ...PLATINUM_GROUP }, () => {
+                throw new CommerceReadError('Commerce answered 503 for sharedCatalog: Service Unavailable', 503);
+            });
+
+            await expect(installCatalogs(ctx, parseCatalogRows([BODEA_CATALOG_ROWS[1]]))).rejects.toThrow(/503/);
         });
     });
 

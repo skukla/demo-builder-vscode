@@ -122,7 +122,8 @@ types. You do not have to reason about what to remove first.
 pack in the datapack library: the pack Demo Builder installed here, plus anything you pick in
 `selections`. With no pack named it uses the project's own when Demo Builder installed it, else
 it saves only what is picked, which is how a store built by hand in the Admin becomes a pack.
-`start_datapack_export` is the same save with this engine: send only `selections` and `confirm`.
+`start_datapack_export` is the same save with this engine: send only `selections` and `confirm`
+(or `aco: true` for an ACO pack, below).
 
 - **Pick with `list_datapack_export_items`** (`dataType`: products, giftcards, categories,
   cart_rules, customers, b2b_companies, customer_groups, b2b_shared_catalogs,
@@ -147,6 +148,14 @@ for the same reason: the risk is not to your own work.
 
 Use `list_datapack_export_items` first to see what would be captured. It is paged;
 `totalCount` tells you how many exist beyond the page.
+
+**An ACO pack** (Adobe Commerce Optimizer), with EITHER engine, is the same tool with
+`aco: true`: it reads the project's own store and saves `aco_metadata`, `aco_categories`,
+`aco_products`, `aco_price_books` and `aco_prices` into the SC's datapack LIBRARY, not the
+shared catalog, under the `datapackName` and `version` you give. Name the store views with
+`storeViews` (omit for every one); `commerceInstance` and `selections` are refused with it.
+It still takes `confirm` and `confirmName`. Undo it with `delete_library_datapack`.
+Demo Builder cannot install an ACO pack yet.
 
 ### Export is the one operation you must order yourself
 
