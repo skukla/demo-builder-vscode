@@ -137,7 +137,7 @@ async function postCatalog(ctx: KindContext, sharedCatalog: CommerceSharedCatalo
  * Use the store's catalog for the group in place of the pack's: Commerce holds one per customer
  * group. Nothing is recorded, so removal never takes the store's catalog.
  */
-function useStandIn(ctx: KindContext, name: string, catalog: CommerceSharedCatalog | undefined): void {
+function takeStandIn(ctx: KindContext, name: string, catalog: CommerceSharedCatalog | undefined): void {
     if (catalog?.id === undefined) {
         ctx.log(`left shared catalog ${name} out: its customer group already has a catalog`);
         return;
@@ -159,7 +159,7 @@ export async function installCatalogs(ctx: KindContext, rows: CatalogRows): Prom
         if (existing.some((c) => c.name === row.name)) continue;
         const group = row.customer_group_id === undefined ? undefined : await lk.groupId(String(row.customer_group_id));
         if (catalogOfGroup(existing, group)) {
-            useStandIn(ctx, row.name, catalogOfGroup(existing, group));
+            takeStandIn(ctx, row.name, catalogOfGroup(existing, group));
             continue;
         }
         const sharedCatalog: CommerceSharedCatalog = {
@@ -171,7 +171,7 @@ export async function installCatalogs(ctx: KindContext, rows: CatalogRows): Prom
         };
         const answer = await postCatalog(ctx, sharedCatalog);
         if (answer === undefined) {
-            useStandIn(ctx, row.name, catalogOfGroup(await readCatalogs(ctx.get), group));
+            takeStandIn(ctx, row.name, catalogOfGroup(await readCatalogs(ctx.get), group));
             continue;
         }
         const id = Number(answer);

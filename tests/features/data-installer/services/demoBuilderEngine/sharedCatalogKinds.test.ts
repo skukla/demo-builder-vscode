@@ -6,6 +6,7 @@
  */
 
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
+import type { CommerceSharedCatalog } from '@/types/commerceWire';
 import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
 import { ownedKey } from '@/features/data-installer/services/demoBuilderEngine/kindContext';
 import {
@@ -101,7 +102,7 @@ describe('installCatalogs', () => {
         // The refusal's words are the service's test's (`SharedCatalogImportProcessor.test.js`
         // L175), not a captured Commerce answer.
         it("reads Commerce's refusal as already there, and records nothing", async () => {
-            let listed = [PUBLIC];
+            let listed: CommerceSharedCatalog[] = [PUBLIC];
             const ctx = await fakeContext({ [CATALOGS]: () => ({ items: listed }), ...PLATINUM_GROUP }, () => {
                 listed = [PUBLIC, WHOLESALE];
                 throw new CommerceReadError('Commerce answered 400 for sharedCatalog: {"message":"A catalog already exists with customer group Platinum Buyer."}', 400);
