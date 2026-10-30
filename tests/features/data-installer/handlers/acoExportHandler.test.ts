@@ -187,6 +187,22 @@ describe('start-datapack-export with aco', () => {
         expect(mockedExport).not.toHaveBeenCalled();
     });
 
+    it('refuses, saying why, when the library cannot be opened, before anything is read', async () => {
+        mockedAccess.mockImplementation(async (_context, store = 'installer') =>
+            store === 'library'
+                ? { ok: false, response: { success: false, error: 'The datapack library is not configured.' } }
+                : {
+                      ok: true,
+                      baseUrl: INSTALLER,
+                      getToken: async () => 'tok',
+                      client: new DataInstallerClient({ baseUrl: INSTALLER, getToken: async () => 'tok' }),
+                  },
+        );
+
+        await expect(send({})).resolves.toEqual({ success: false, error: 'The datapack library is not configured.' });
+        expect(mockedExport).not.toHaveBeenCalled();
+    });
+
     it('answers an export refusal in its own words', async () => {
         mockedExport.mockRejectedValue(
             new AcoExportError('The store has no store view nl. It has default.')

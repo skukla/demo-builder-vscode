@@ -17,10 +17,9 @@
 
 import { type AcoExportOutcome, exportAcoPack } from '../services/acoExport/acoPackExport';
 import { type AcoCommerce, AcoExportError } from '../services/acoExport/acoStoreReads';
-import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { writePackToStore } from '../services/datapackTransfer';
-import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
+import { openLibraryWriter } from './libraryWriter';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { commerceClientForProject } from '@/features/project-creation/services/erpFillForProject';
 import type { Project } from '@/types/base';
@@ -94,14 +93,9 @@ export async function startAcoExport(
         if (mismatch)
             return { success: false, error: mismatch.error, code: ErrorCode.ORG_MISMATCH };
     }
-    const library = await resolveDataInstallerAccess(context, 'library');
-    if (!library.ok) return library.response;
-    const writer = new DatapackStoreWriter({
-        baseUrl: library.baseUrl,
-        getToken: library.getToken,
-        ...(library.orgCode ? { orgCode: library.orgCode } : {}),
-        log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
-    });
+    const library = await openLibraryWriter(context);
+    if (!library.ok) return { success: false, error: library.reason };
+    const { writer } = library;
     const id = { name, version };
     try {
         const outcome = await exportAcoPack(
