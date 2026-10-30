@@ -118,3 +118,4 @@ packs by name, which it already does.
 - 2026-10-30  feat(data-installer): make an ACO pack from the project's store and save it to the library (`47f47c9c2`)
 - 2026-10-30  feat(data-installer): ACO pack rows made from Commerce answers, as the service makes them (`8a3c43e2f`)
 - 2026-10-30  docs(datapack): port spec for the Data Installer's ACO export (`6bf5fe8ac`)
+- 2026-10-30  fix(data-installer): an ACO pack reads Commerce's "0"/"1" attribute flags and category descriptions as Commerce sends them (`83817aa33`)

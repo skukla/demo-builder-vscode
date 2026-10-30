@@ -81,3 +81,4 @@ storefronts that are not forks but meet the requirements above.
 - 2026-10-20  feat(updates): find the Adobe commit a colleague's storefront was built from (`c3c454542`)
 - 2026-10-20  docs(backlog): EDS-56 owner decisions, and where the description file lives (`69fb06c64`)
 - 2026-10-20  docs(backlog): EDS-56, tested boilerplate updates for a qualifying colleague's storefront, with its plan (`ba3da9ac8`)
+- 2026-10-30  fix(updates): a storefront update no longer clashes with Demo Builder's own pieces, and a stop changes nothing (`780840113`)
