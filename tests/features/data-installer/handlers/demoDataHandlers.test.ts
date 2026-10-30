@@ -6,6 +6,7 @@
 
 import { type DemoDataDeps, createDemoDataHandlers } from '@/features/data-installer/handlers/demoDataHandlers';
 import { installRecordPath } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import type { WipeRefusal } from '@/features/data-installer/handlers/demoDataHandlers';
 import type { WipePreview } from '@/features/data-installer/services/demoDataWipe/wipePlan';
 import type { WipeOutcome } from '@/features/data-installer/services/demoDataWipe/wipeRun';
 import { ErrorCode } from '@/types/errorCodes';
@@ -28,11 +29,20 @@ function setUp(overrides: Partial<DemoDataDeps> = {}, store = sandbox()) {
     // The project's own record on disk: what it lists must be left to the pack's removal.
     const [record] = PROJECT_RECORDS;
     const files = memoryFiles({ [installRecordPath(PROJECT.path, record.pack)]: JSON.stringify(record) });
-    const deps: DemoDataDeps = { commerce: async () => store, guard: async () => undefined, files, ...overrides };
+    const deps: DemoDataDeps = { commerce: async () => store, guard: async () => undefined, files, others: async () => [], ...overrides };
     const handlers = createDemoDataHandlers(deps);
     const context = createMockHandlerContext({ stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(PROJECT) }) }) as HandlerContext;
-    return { handlers, context, store };
+    return { handlers, context, store, files };
 }
+
+/** JustRite's own project, which records the website `justrite` as its own. */
+const JUSTRITE = createMockProject({
+    name: 'JustRite',
+    path: '/nonexistent/projects/JustRite',
+    componentSelections: { backend: 'adobe-commerce-accs' },
+    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite', ACCS_STORE_VIEW_CODE: 'justrite_us' } },
+});
+const CLAIMED = "The website justrite is also JustRite's own website (project JustRite). Clear it from that project, if at all.";
 
 describe('check-demo-data', () => {
     it('answers the list for the website named, writing nothing', async () => {
@@ -61,6 +71,29 @@ describe('check-demo-data', () => {
 
         expect(res).toEqual({ success: false, error: 'Project uses a different Adobe organization.', code: ErrorCode.ORG_MISMATCH });
         expect(store.reads).toStrictEqual([]);
+    });
+
+    it('answers, as a normal answer, that another project records the website as its own, reading nothing from the store', async () => {
+        const others = jest.fn().mockResolvedValue([JUSTRITE]);
+        const { handlers, context, store } = setUp({ others });
+
+        const res = await handlers['check-demo-data'](context, {});
+
+        expect(res).toEqual({ success: true, data: { website: { code: 'justrite' }, refused: CLAIMED } satisfies WipeRefusal });
+        expect(others).toHaveBeenCalledWith(context, PROJECT);
+        expect(store.reads).toStrictEqual([]);
+    });
+
+    it("leaves what another project's install records list on the website", async () => {
+        const other = createMockProject({ name: 'bodea-demo', path: '/nonexistent/projects/bodea-demo', componentConfigs: {} });
+        const theirs = { ...PROJECT_RECORDS[0], pack: { name: 'theirs', version: '1' }, created: [{ kind: 'products', id: 'ZZ-ONLY-HERE' }] };
+        const { handlers, context, files } = setUp({ others: async () => [other] });
+        files.data.set(installRecordPath(other.path, theirs.pack), JSON.stringify(theirs));
+
+        const res = await handlers['check-demo-data'](context, { websiteCode: 'justrite_test_website' });
+
+        expect((res.data as WipePreview).total).toBe(4);
+        expect((res.data as WipePreview).installed).toEqual({ products: 2, customers: 1, categories: 1 });
     });
 
     it('names a website the store does not have', async () => {
@@ -111,6 +144,19 @@ describe('clear-demo-data', () => {
         expect(res.note).toMatch(/^Removed 3 products and 1 customer from justrite_test_website\./);
         expect(store.sent).toHaveLength(5);
         expect((await handlers['clear-demo-data'](context, { websiteCode: 'justrite_test_website', token, confirm: true })).error).toMatch(/no longer known/);
+    });
+
+    it('refuses, writing nothing, once another project records the website as its own', async () => {
+        const others = jest.fn().mockResolvedValue([]);
+        const { handlers, context, store } = setUp({ others });
+        const res = await handlers['check-demo-data'](context, {});
+        others.mockResolvedValue([JUSTRITE]);
+
+        const cleared = await handlers['clear-demo-data'](context, { websiteCode: 'justrite', token: (res.data as WipePreview).token, confirm: true });
+
+        expect(cleared).toEqual({ success: false, error: CLAIMED, code: ErrorCode.INVALID_OPERATION });
+        expect(others).toHaveBeenLastCalledWith(context, PROJECT);
+        expect(store.sent).toStrictEqual([]);
     });
 
     it('writes nothing and offers the new list when the store would now clear more', async () => {

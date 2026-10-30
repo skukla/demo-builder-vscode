@@ -262,7 +262,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'products, categories and customers it would remove, products another website also sells that would only be taken ' +
             'off this one, and what it would leave and why (a root category another website shares, a B2B company, a variant). ' +
             'Also counts what Demo Builder installed (removed by reset_datapack, never by the clearing). Writes nothing. ' +
-            "Answers counts and a few names, and a token clear_demo_data needs. Defaults to the project's website; name another with websiteCode.",
+            "Answers counts and a few names, and a token clear_demo_data needs. Defaults to the project's website; name another with websiteCode. " +
+            'When another project on this machine records the website as its own, answers data.refused instead (no list, no token): ' +
+            'tell the user that sentence; it names the project to clear it from.',
         map: importHandlers,
         type: 'check-demo-data',
         inputSchema: { websiteCode: z.string().optional().describe("The website to look at, by code. Omit for the project's own") },
@@ -275,7 +277,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'Clear a website of everything check_demo_data listed: deletes those products, categories and customers and takes the ' +
             "shared products off the website. Cannot be undone. Show the user check_demo_data's list and ask first. Needs the " +
             'website named and the token from that check; if the store would now clear anything the list did not hold, nothing ' +
-            "is written and the new list comes back. Never touches what Demo Builder installed, other websites' things, " +
+            "is written and the new list comes back. Refused when another project on this machine records the website as its own. " +
+            "Never touches what any project's install records list, other websites' things, " +
             'attributes, customer groups, companies, shared catalogs, stocks, orders or settings.',
         map: importHandlers,
         type: 'clear-demo-data',

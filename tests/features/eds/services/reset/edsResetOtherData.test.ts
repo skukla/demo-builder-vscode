@@ -5,6 +5,7 @@
  */
 
 import * as vscode from 'vscode';
+import { installRecordPath } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import {
     type OtherDataDeps,
     beginOtherDataCheck,
@@ -15,7 +16,7 @@ import type { HandlerContext } from '@/types/handlers';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../../helpers/projectFake';
 import { memoryFiles } from '../../../data-installer/services/demoBuilderEngine/demoBuilderEngine.testUtils';
-import { sandbox } from '../../../data-installer/services/demoDataWipe/wipe.testUtils';
+import { PROJECT_RECORDS, sandbox } from '../../../data-installer/services/demoDataWipe/wipe.testUtils';
 
 /** A project whose own website is the test website, so the reset's question is about it. */
 const PROJECT = createMockProject({
@@ -26,10 +27,21 @@ const PROJECT = createMockProject({
 });
 
 function setUp(store = sandbox(), overrides: Partial<OtherDataDeps> = {}) {
-    const deps: OtherDataDeps = { commerce: async () => store, files: memoryFiles(), ...overrides };
+    const deps: OtherDataDeps = { commerce: async () => store, files: memoryFiles(), others: async () => [], ...overrides };
     const context = createMockHandlerContext() as HandlerContext;
     return { deps, context, store };
 }
+
+/** Another local project that records the same website as its own. */
+const CLAIMANT = createMockProject({
+    name: 'test-site-demo',
+    title: 'Test Site Demo',
+    path: '/nonexistent/projects/test-site-demo',
+    componentSelections: { backend: 'adobe-commerce-accs' },
+    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite_test_website', ACCS_STORE_VIEW_CODE: 'justrite_test_view' } },
+});
+const CLAIMED =
+    "The website justrite_test_website is also Test Site Demo's own website (project test-site-demo). Clear it from that project, if at all.";
 
 const ask = vscode.window.showWarningMessage as jest.Mock;
 
@@ -51,6 +63,27 @@ describe('beginOtherDataCheck', () => {
 
         expect(await beginOtherDataCheck(PROJECT, context, deps)).toBeUndefined();
         expect(await beginOtherDataCheck(PROJECT, failing.context, failing.deps)).toBeUndefined();
+    });
+
+    it('answers nothing, reading nothing from the store, when another project records the website as its own', async () => {
+        const others = jest.fn().mockResolvedValue([CLAIMANT]);
+        const { deps, context, store } = setUp(sandbox(), { others });
+
+        expect(await beginOtherDataCheck(PROJECT, context, deps)).toBeUndefined();
+        expect(others).toHaveBeenCalledWith(PROJECT, context);
+        expect(store.reads).toStrictEqual([]);
+    });
+
+    it("leaves what another project's install records list on the website", async () => {
+        const other = createMockProject({ name: 'other', path: '/nonexistent/projects/other', componentConfigs: {} });
+        const theirs = { ...PROJECT_RECORDS[0], created: [{ kind: 'products', id: 'ZZ-ONLY-HERE' }] };
+        const files = memoryFiles({ [installRecordPath(other.path, theirs.pack)]: JSON.stringify(theirs) });
+        const { deps, context } = setUp(sandbox(), { files, others: async () => [other] });
+
+        const plan = await beginOtherDataCheck(PROJECT, context, deps);
+
+        expect(plan?.preview.remove.products.count).toBe(3);
+        expect(plan?.preview.installed).toEqual({ products: 1 });
     });
 
     it('answers nothing for a project that names no website', async () => {
@@ -103,6 +136,19 @@ describe('clearProjectOtherData', () => {
             cleared: true,
             sentence: 'Removed 4 products and 2 customers from justrite_test_website. Took 1 product another website also sells off justrite_test_website.',
         });
+    });
+
+    it('writes nothing when another project has claimed the website since the list was shown', async () => {
+        const others = jest.fn().mockResolvedValue([]);
+        const { deps, context, store } = setUp(sandbox(), { others });
+        const plan = await beginOtherDataCheck(PROJECT, context, deps);
+        others.mockResolvedValue([CLAIMANT]);
+
+        const done = await clearProjectOtherData(PROJECT, context, jest.fn(), plan!, deps);
+
+        expect(others).toHaveBeenLastCalledWith(PROJECT, context);
+        expect(store.sent).toStrictEqual([]);
+        expect(done).toEqual({ cleared: false, sentence: `The website was not cleared: ${CLAIMED}` });
     });
 
     it('never throws, and writes nothing, when the store would now clear more than was shown', async () => {

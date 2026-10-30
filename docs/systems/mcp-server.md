@@ -801,6 +801,14 @@ companies, shared catalogs, stocks and sources, websites, stores, root categorie
 settings. Cannot be undone. Project reset asks the same question after the datapack one. Plan:
 `.rptc/plans/datapack-engine/step-10-wipe.md`.
 
+Every door (both tools and reset's question) first reads every other project on this machine
+(`readWipeClaims`, over `loadOtherProjects`). A website another project records as its own is
+refused before the store is opened, naming that project ("The website justrite is also
+JustRite's own website (project JustRite). Clear it from that project, if at all."):
+`check_demo_data` answers it as `data.refused`, a normal answer; `clear_demo_data` refuses; reset
+does not ask its second question and logs the sentence. What another project's install records
+list on the website is left, as this project's is.
+
 ### Sharing a library pack (owner, 2026-10-30)
 
 `share_datapack` (confirm-gated; the consent names the pack and whether it is shared) shares every

@@ -13,13 +13,13 @@
  * @module features/project-creation/handlers/erpIntegrationHolderHandler
  */
 
+import { loadOtherProjects } from '@/core/state/otherProjects';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import {
     erpIntegrationHolder,
     oneErpIntegrationPerInstance,
 } from '@/features/app-builder/services/erpIntegrationOnSameCommerce';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { loadOtherProjects } from '@/features/dashboard/handlers/replaceDeployedElsewhere';
 import type { CommerceSource } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type {

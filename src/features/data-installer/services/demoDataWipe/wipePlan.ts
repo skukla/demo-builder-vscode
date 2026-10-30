@@ -12,8 +12,8 @@
  * | categories | under a root only this website's store groups show, deepest first | under a root another website shows too (`justrite_test_website` and JustRite share root 119): all left. One holding a category Demo Builder installed: left |
  * | customers | accounts of this website | in a B2B company (an admin cannot be deleted while its company stands): left |
  *
- * Never touched, whatever is there: anything an install record of this project lists (the pack's
- * removal takes those, by its own rules); product attributes and attribute sets; customer groups,
+ * Never touched, whatever is there: anything an install record lists, this project's or another local
+ * project's on the same website (`readWipeClaims`; the pack's removal takes those, by its own rules); product attributes and attribute sets; customer groups,
  * companies and shared catalogs (a catalog and its group are one unit, and deleting either moves
  * customers to General); stocks and sources (the Default Stock and Source included); websites,
  * stores and root categories; orders and invoices; store settings; admin users; the integration's
@@ -44,7 +44,7 @@ export interface WipePreview {
     /** Products another website also sells: taken off this website only. */
     takenOff: Named;
     left: WipeLeft[];
-    /** What this project's install records list, by kind: the pack's removal takes those. */
+    /** What the install records list (this project's, and other local projects' on this website), by kind: their packs' removal takes those. */
     installed: Record<string, number>;
     /** How many things the wipe would change. */
     total: number;
@@ -165,7 +165,7 @@ function leftOf(products: ProductDecision, categories: CategoryDecision, inCompa
 /**
  * What clearing the website would do, read-only.
  *
- * @param records - every install record of the project (`readProjectRecords`); what they list is left
+ * @param records - every install record the wipe must respect (`readWipeClaims`); what they list is left
  * @throws WipeScopeError when the store has no such website; any read Commerce refuses
  */
 export async function planWipe(get: CommerceGet, websiteCode: string, records: readonly InstallRecord[]): Promise<WipePlan> {

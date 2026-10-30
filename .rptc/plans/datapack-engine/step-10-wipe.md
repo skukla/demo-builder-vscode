@@ -105,13 +105,35 @@ run in between). The SC or the agent always sees the list first.
 | categories | under a root only this website's store groups show, deepest first, `DELETE categories/{id}` | under a root another website shows (`justrite_test_website` and JustRite's 119): all left. One holding a category an install record lists: left |
 | customers | accounts of this website, `DELETE customers/{id}` | in a B2B company (`company_attributes.company_id` > 0): left |
 
-**Never touched:** anything any install record of this project lists (`readProjectRecords`, new in
-`installRecord.ts`; `reset_datapack` removes those by its own rules), attributes and sets, customer
+**Never touched:** anything an install record lists: every record of this project
+(`readProjectRecords`, new in `installRecord.ts`) and, since the guard below, every other local
+project's records on the same website (`reset_datapack` removes those by its own rules), attributes and sets, customer
 groups, companies and shared catalogs (a catalog and its group are one unit; deleting either moves
 customers to General; a company's admin cannot be deleted while it stands), stocks and sources (the
 Default Stock and Source included), websites, stores and root categories, orders and invoices, store
 settings, admin users, the integration's credential. Commerce access is `projectCommerce` (Store:
 `all`), behind `orgGuard`.
+
+**A website another project claims is refused (owner, 2026-10-30).** Every door (both tools, both
+handlers, reset's question and its clearing) first reads every other project on this machine
+(`readWipeClaims` in `services/demoDataWipe/wipeClaims.ts`, over `loadOtherProjects`, moved to
+`src/core/state/otherProjects.ts` so the reset service does not pull in a dashboard handler's
+dependencies). When another project records the website as its own (`resolveInstallTarget`, the
+reading the wipe takes its default from), nothing is read from the store and the answer is one
+sentence naming it: "The website justrite is also JustRite's own website (project JustRite). Clear
+it from that project, if at all." (several: "…also A's and B's own website (projects A and B). Clear
+it from one of those projects, if at all."). `check_demo_data` answers it as a normal answer,
+`{ website, refused }` (`WipeRefusal`), so an agent explains it; `clear_demo_data` refuses
+(`INVALID_OPERATION`) and drops the token, also when the claim appeared after the list was shown.
+Reset does not ask its second question and says nothing on screen: the SC asked to reset their
+storefront and never saw that question, so a notice about it would be the one unexplained thing in
+the run; Debug Logs gets "[EdsReset] Not offering to clear the website: …". When the website is the
+project's own and no other project claims it, everything behaves as before.
+
+**Decision 5, built.** Another project's install records are read too: those whose `target` names
+this website, a record with no `target` read at its project's own website (rule 3), and a record
+whose website nothing says kept, since it may be this one. An unreadable record anywhere refuses the
+wipe (`InstallRecordError`): ignoring it could delete what it lists.
 
 **Order and refusals.** Customers, products, products taken off, categories (the reverse of install
 order). A write Commerce refuses is counted and named, the rest carry on, and the one sentence says
@@ -136,12 +158,14 @@ clear more, nothing is written and the new list comes back. Battery prompt
 `reset-demo-leave-store-empty` added, not run. No response ceiling measured (both are in the
 `PENDING_LIVE_MEASUREMENT` set); `ai-coverage-scan` and `security-review` not run this step.
 
-**Tests.** `wipePlan.test.ts` (9), `wipeRun.test.ts` (5), `demoDataHandlers.test.ts` (10),
-`edsResetOtherData.test.ts` (8), `edsResetOtherData-reset.test.ts` (4), over a typed sandbox
+**Tests.** `wipePlan.test.ts` (9), `wipeRun.test.ts` (5), `wipeClaims.test.ts` (9),
+`demoDataHandlers.test.ts` (13), `edsResetOtherData.test.ts` (11), `edsResetOtherData-reset.test.ts`
+(4), `tests/core/state/otherProjects.test.ts` (2), over a typed sandbox
 (`tests/helpers/commerceWipeFixtures.ts`, shaped like the owner's: JustRite, Bodea and the test website
 sharing root 119). The safety rules were written before their tests; five mutations (a shared product
 deleted, a shared root cleared, a recorded product taken, a company customer taken, any new plan
-allowed) each turned the suite red.
+allowed) each turned the suite red. The guard's two halves were mutated the same way (the claim
+check never refusing: 7 tests red; other projects' records never read: 5 red).
 
 ### Which reads are confirmed against a captured real response
 
@@ -169,18 +193,16 @@ allowed) each turned the suite red.
    customer is in the group.
 4. **Orders, invoices, credit memos, cart rules and website settings are never touched.**
    Recommended: keep; say it in the SC guide.
-5. **Several projects on one website.** Only THIS project's records are known, so things another
-   project's engine installed on the same website would be cleared and its record stranded.
-   Recommended: before shipping, read every project's records on this machine (the projects list
-   knows them) and leave what any lists.
+5. **Several projects on one website.** Built 2026-10-30: every local project's records on the
+   website are read and what any lists is left (see "Decision 5, built" above).
 6. **The headless reset** never removed data, so it does not ask. Recommended: ask both questions
    there too, in a later step.
 7. **Install records afterwards.** The plan said they are cleared; built: the clearing never takes
    what they list, so they stay true and `reset_datapack` still works. Recommended: keep.
 8. **The human question uses the project's own website.** scratch-1028's own website is JustRite's,
    so its reset would offer to clear JustRite's live demo (with the website named, and opt in).
-   Recommended: never answer "Remove Those Too" on scratch-1028; and before release, refuse the
-   question for a website another project on this machine names as its own.
+   Built 2026-10-30: a website another local project records as its own is refused at every door,
+   and reset does not ask (see "A website another project claims is refused" above).
 
 ### Live test (owner's call; `scratch-1028`, website `justrite_test_website` ONLY, never JustRite's own)
 

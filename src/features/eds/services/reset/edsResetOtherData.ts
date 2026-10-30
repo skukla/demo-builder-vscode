@@ -12,15 +12,24 @@
  * the store would clear nothing that list did not hold (`clearShown`); what the datapack's removal
  * took in between is fine. No outcome here may fail the reset: every one is a log line.
  *
+ * **Not asked for a website another project on this machine records as its own** (`readWipeClaims`,
+ * owner 2026-10-30): scratch-1028 records JustRite's website, so its reset offered to clear JustRite's
+ * live demo. The SC is told nothing extra: they asked to reset their storefront, never saw this
+ * question, and a notice about a question not asked would be the only unexplained thing on screen.
+ * Debug Logs carries the one line naming the other project. What any project's install records list
+ * on the website is left too.
+ *
  * @module features/eds/services/reset/edsResetOtherData
  */
 
+import { loadOtherProjects } from '@/core/state/otherProjects';
 import { andList } from '@/core/utils/andList';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { projectCommerce } from '@/features/data-installer/services/buildDatapackEngine';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
-import { type RecordFiles, nodeRecordFiles, readProjectRecords } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import { type RecordFiles, nodeRecordFiles } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { RemovalAccess } from '@/features/data-installer/services/demoBuilderEngine/removers';
+import { type WipeClaims, readWipeClaims } from '@/features/data-installer/services/demoDataWipe/wipeClaims';
 import { type WipePlan, planWipe } from '@/features/data-installer/services/demoDataWipe/wipePlan';
 import { clearShown } from '@/features/data-installer/services/demoDataWipe/wipeRun';
 import { resolveInstallTarget } from '@/features/data-installer/services/sampleDataInstall';
@@ -29,16 +38,23 @@ import type { HandlerContext } from '@/types/handlers';
 
 const LOG_PREFIX = '[EdsReset]';
 
-/** The project's store and records, handed in so a test drives a fake store. */
+/** The project's store and records, and the other local projects, handed in so a test drives fakes. */
 export interface OtherDataDeps {
     commerce: (project: Project, context: HandlerContext) => Promise<RemovalAccess | { refusal: string }>;
     files: RecordFiles;
+    /** Every other project on this machine, as the projects list reads them. */
+    others: (project: Project, context: HandlerContext) => Promise<Project[]>;
 }
 
 export const DEFAULT_OTHER_DATA_DEPS: OtherDataDeps = {
     commerce: (project, context) => projectCommerce({ project, authManager: context.authManager, secrets: context.context?.secrets })(),
     files: nodeRecordFiles,
+    others: (project, context) => loadOtherProjects(context, project.path),
 };
+
+async function claimsOf(project: Project, context: HandlerContext, deps: OtherDataDeps, websiteCode: string): Promise<WipeClaims> {
+    return readWipeClaims(deps.files, project, await deps.others(project, context), websiteCode);
+}
 
 /**
  * What clearing the project's website would remove, started early, awaited late. **Never rejects**:
@@ -48,9 +64,14 @@ export async function beginOtherDataCheck(project: Project, context: HandlerCont
     try {
         const websiteCode = resolveInstallTarget(project)?.websiteCode;
         if (!websiteCode || !commerceBackendOf(project)) return undefined;
+        const claims = await claimsOf(project, context, deps, websiteCode);
+        if ('refusal' in claims) {
+            context.logger.info(`${LOG_PREFIX} Not offering to clear the website: ${claims.refusal}`);
+            return undefined;
+        }
         const commerce = await deps.commerce(project, context);
         if ('refusal' in commerce) return undefined;
-        return await planWipe(commerce.get, websiteCode, await readProjectRecords(deps.files, project.path));
+        return await planWipe(commerce.get, websiteCode, claims.records);
     } catch (error) {
         context.logger.debug(`${LOG_PREFIX} What else the website holds could not be read: ${error instanceof Error ? error.message : String(error)}`);
         return undefined;
@@ -92,6 +113,12 @@ export async function confirmClearOtherData(vscode: typeof import('vscode'), pla
     return answer?.title === clearButton.title;
 }
 
+function notCleared(context: HandlerContext, why: string): { cleared: false; sentence: string } {
+    const sentence = `The website was not cleared: ${why}`;
+    context.logger.warn(`${LOG_PREFIX} ${sentence}`);
+    return { cleared: false, sentence };
+}
+
 /**
  * Clear what the SC was shown. Reports rather than throws: the reset stands whatever happens here.
  *
@@ -105,13 +132,11 @@ export async function clearProjectOtherData(
     deps: OtherDataDeps = DEFAULT_OTHER_DATA_DEPS,
 ): Promise<{ cleared: boolean; sentence: string }> {
     try {
+        const claims = await claimsOf(project, context, deps, plan.preview.website.code);
+        if ('refusal' in claims) return notCleared(context, claims.refusal);
         const commerce = await deps.commerce(project, context);
-        if ('refusal' in commerce) {
-            const sentence = `The website was not cleared: ${commerce.refusal}`;
-            context.logger.warn(`${LOG_PREFIX} ${sentence}`);
-            return { cleared: false, sentence };
-        }
-        const outcome = await clearShown(commerce, plan, await readProjectRecords(deps.files, project.path), (stage) => report(stage));
+        if ('refusal' in commerce) return notCleared(context, commerce.refusal);
+        const outcome = await clearShown(commerce, plan, claims.records, (stage) => report(stage));
         const log = outcome.failed.length > 0 ? context.logger.warn : context.logger.info;
         log.call(context.logger, `${LOG_PREFIX} ${outcome.sentence}`);
         return { cleared: true, sentence: outcome.sentence };
