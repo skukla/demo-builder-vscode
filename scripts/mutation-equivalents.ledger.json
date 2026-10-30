@@ -10423,7 +10423,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "module": "src/features/data-installer/ui/components/ServiceExportModal.tsx",
             "anchors": [
                 "const [dismissed, setDismissed] = useState(false);"
             ],
@@ -10435,7 +10435,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "module": "src/features/data-installer/ui/components/ServiceExportModal.tsx",
             "anchors": [
                 "}, [loadTypes]);"
             ],
@@ -10447,7 +10447,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "module": "src/features/data-installer/ui/components/ServiceExportModal.tsx",
             "anchors": [
                 "}, [loadTarget]);"
             ],
@@ -10459,7 +10459,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "module": "src/features/data-installer/ui/components/ServiceExportModal.tsx",
             "anchors": [
                 "}, []);"
             ],
@@ -10472,7 +10472,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "module": "src/features/data-installer/ui/components/ServiceExportModal.tsx",
             "anchors": [
                 "const goBack = useCallback((): void => setDismissed(true), []);"
             ],
@@ -10484,7 +10484,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "module": "src/features/data-installer/ui/components/ServiceExportModal.tsx",
             "anchors": [
                 "const allSelected = available.length > 0 && selected.length === available.length;"
             ],
@@ -10496,7 +10496,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "module": "src/features/data-installer/ui/components/ServiceExportModal.tsx",
             "anchors": [
                 "const perType = outcome?.perType ?? [];",
                 "variant={outcome?.success ? 'success' : 'error'}",

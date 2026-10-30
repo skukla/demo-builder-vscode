@@ -1,16 +1,16 @@
 /**
  * The catalog header's two ways to add a pack: capture one from this project's
- * instance ("Export from this instance"), or load one from a datapack file; and
+ * instance, or load one from a datapack file; and
  * "Clear demo data", which clears the stores the SC ticks of what Demo Builder did not
  * install (datapack-engine step 10), in the screen's progress window.
  *
  * Each link owns the modal it opens, so the catalog view carries no modal's
  * state — it was past its size guideline before either existed beside the other.
  *
- * Export is the Data Installer service's own, so its link shows only with the service
- * engine chosen (2026-10-29): the service has not saved what it reads since August, and
- * with Demo Builder's engine, the default, the link offered an export that cannot work
- * into a catalog other teams share.
+ * Capturing depends on the engine. With the service's, "Export from this instance" opens its
+ * export into the shared catalog. With Demo Builder's, the default, "Save from this store"
+ * opens the pick screen, which saves into this demo's own library pack (datapack-engine step
+ * 14); the view hosts that screen with the save's progress window (`useSaveStoreChanges`).
  *
  * @module features/data-installer/ui/components/CatalogHeaderActions
  */
@@ -26,13 +26,16 @@ import type { WipeStoreChoice } from '@/types/demoDataWipe';
 export interface CatalogHeaderActionsProps {
     /** A file was loaded (or the load modal closed): the catalog may have changed. Stable. */
     onCatalogChanged: () => void;
-    /** The service engine is chosen, so its export can run. */
-    canExport: boolean;
+    /** The engine chosen, which decides how a pack is captured from the store. */
+    engine?: 'service' | 'demo-builder';
+    /** Demo Builder's engine: open the pick screen with no pack. Stable. */
+    onSaveFromStore: () => void;
 }
 
 export function CatalogHeaderActions({
     onCatalogChanged,
-    canExport,
+    engine,
+    onSaveFromStore,
 }: CatalogHeaderActionsProps): React.JSX.Element {
     const [exporting, setExporting] = useState(false);
     const [loadingFile, setLoadingFile] = useState(false);
@@ -56,9 +59,14 @@ export function CatalogHeaderActions({
 
     return (
         <>
-            {canExport ? (
+            {engine === 'service' ? (
                 <Link isQuiet onPress={() => setExporting(true)}>
                     Export from this instance
+                </Link>
+            ) : null}
+            {engine === 'demo-builder' ? (
+                <Link isQuiet onPress={onSaveFromStore}>
+                    Save from this store
                 </Link>
             ) : null}
             <Link isQuiet onPress={() => setLoadingFile(true)}>

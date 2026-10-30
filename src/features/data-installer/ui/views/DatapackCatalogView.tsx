@@ -232,8 +232,10 @@ export function DatapackCatalogView(): React.JSX.Element {
     /**
      * "Save store changes to this pack" (datapack-engine step 05): offered only for the pack the
      * project holds, and only with Demo Builder's engine chosen, the one that keeps a record of
-     * what it made to read back. Closing its window reads the catalog and the project again,
-     * since the library now holds a new version and the project records it.
+     * what it made to read back. It opens the pick screen first, so what the SC added by hand
+     * can go in too (step 14); the header's "Save from this store" opens it with no pack. Closing
+     * the progress window reads the catalog and the project again, since the library now holds a
+     * new version.
      */
     const afterSave = useCallback((): void => {
         loadProjectContext({});
@@ -242,12 +244,13 @@ export function DatapackCatalogView(): React.JSX.Element {
     const storeChanges = useSaveStoreChanges(afterSave);
     const held = projectContext.value?.datapack;
     const holdsSelected = held !== undefined && held.name === selected?.name && held.version === selected.version;
-    const saveStoreChanges = storeChanges.save;
+    const offerStoreSave = storeChanges.offer;
     const displayName = detail.value?.detail.displayName;
     const offerSave = useCallback(
-        (id: DatapackId): void => saveStoreChanges(id, displayName ?? id.name, selectedStore),
-        [saveStoreChanges, displayName, selectedStore],
+        (id: DatapackId): void => offerStoreSave({ id, displayName: displayName ?? id.name, source: selectedStore }),
+        [offerStoreSave, displayName, selectedStore],
     );
+    const saveFromStore = useCallback((): void => offerStoreSave(), [offerStoreSave]);
 
     const retryDetail = useCallback((): void => {
         if (selected) {
@@ -329,10 +332,11 @@ export function DatapackCatalogView(): React.JSX.Element {
                                 >
                                     Include community datapacks
                                 </Switch>
-                                {/* Export from this instance, and Load from file. */}
+                                {/* Export (or Save from this store), and Load from file. */}
                                 <CatalogHeaderActions
                                     onCatalogChanged={refresh}
-                                    canExport={value?.engine === 'service'}
+                                    engine={value?.engine}
+                                    onSaveFromStore={saveFromStore}
                                 />
                             </Flex>
                         }
@@ -371,7 +375,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                 sharedInFile={detail.value?.sharedInFile}
                 onSharingChanged={sharingChanged}
             />
-            {storeChanges.progressWindow}
+            {storeChanges.windows}
 
             {/* Only what the service HOLDS is importable — the inventory, never
                 the pack's declared types. Mounted while `importing` is set, so

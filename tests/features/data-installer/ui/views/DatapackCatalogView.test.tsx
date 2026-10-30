@@ -322,7 +322,6 @@ describe('DatapackCatalogView', () => {
             await openImport();
             await screen.findByRole('button', { name: /start import/i });
 
-            screen.debug(undefined, 8000);
             expect(screen.getByRole('checkbox', { name: 'Products' })).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Giftcards' })).not.toBeInTheDocument();
         });

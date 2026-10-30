@@ -199,7 +199,25 @@ describe('the two doors out of the catalog', () => {
         await screen.findAllByTestId('datapack-card');
 
         expect(screen.queryByText('Export from this instance') !== null).toBe(shown);
+        // Step 14: Demo Builder's engine saves from the store into the demo's own pack instead.
+        expect(screen.queryByText('Save from this store') !== null).toBe(engine === 'demo-builder');
         expect(screen.getByText('Load from file')).toBeInTheDocument();
+    });
+
+    it("opens the pick screen from the header with Demo Builder's engine, with no pack", async () => {
+        mockRequest.mockImplementation(async (type: string) =>
+            type === 'list-datapack-export-items'
+                ? { success: true, data: { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 } }
+                : { success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine: 'demo-builder' } },
+        );
+        render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+
+        await press(screen.getByText('Save from this store'));
+
+        expect(await screen.findByText(/^Saves what you pick from this store/u)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('opens the export modal from the header link, and closes it again', async () => {

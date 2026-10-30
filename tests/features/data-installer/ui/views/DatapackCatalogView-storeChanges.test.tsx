@@ -2,9 +2,9 @@
  * DatapackCatalogView — "Save store changes to this pack" (datapack-engine step 05).
  *
  * Offered only in the flyout of the pack the open project holds, with Demo Builder's engine
- * chosen: that is the only pack whose store copy Demo Builder can read back. Pressing it starts
- * the save through the house progress window the VIEW hosts (as it hosts the import modal), so
- * the window is never a dialog inside the drawer.
+ * chosen: that is the only pack whose store copy Demo Builder can read back. Pressing it opens the
+ * pick screen (step 14), whose Save starts the save through the house progress window the VIEW
+ * hosts (as it hosts the import modal), so neither is a dialog inside the drawer.
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -44,11 +44,15 @@ beforeEach(() => {
 });
 
 describe('Save store changes to this pack', () => {
-    it('is offered for the pack the project holds, and starts the save in the progress window', async () => {
+    // Step 14: it opens the pick screen first, so what the SC added by hand can go in too.
+    it('is offered for the pack the project holds, picks first, then starts the save in the progress window', async () => {
         store('demo-builder', { name: 'bodea', version: 'main' });
         await openBodea();
 
         await press(screen.getByRole('button', { name: LABEL }));
+        expect(await screen.findByRole('heading', { name: 'Save from this store' })).toBeInTheDocument();
+        expect(mockPost).not.toHaveBeenCalled();
+        await press(screen.getByRole('button', { name: 'Save' }));
 
         expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
             datapackName: 'bodea',

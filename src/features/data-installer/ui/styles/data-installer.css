@@ -563,6 +563,24 @@
 }
 }
 
+/* "Save from this store" (SaveFromStoreModal, StoreItemChecklist; datapack-engine step 14): one
+   kind's items, searchable, in a list that scrolls inside the modal rather than growing it. Only
+   this bundle renders it. */
+@layer theme {
+.datapack-pick-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+}
+
+@layer theme {
+.datapack-pick-rows {
+    max-height: 320px;
+    overflow-y: auto;
+}
+}
+
 /* "Save as file" and the line saying where it went (SaveDatapackFileButton).
    Used in the detail flyout's actions and an export's result, both only in this bundle. */
 @layer theme {
