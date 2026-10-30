@@ -318,7 +318,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // pack's root category is always assigned by hand: Demo Builder's engine puts the pack's categories
 // under the store's own root, and only a SHARED root leaves one Admin step, which the install asks
 // for and a reinstall re-checks. Existing projects would keep telling the agent every root is manual.
-export const AI_CONTEXT_VERSION = 47;
+// v48 (2026-10-30, datapack-engine step 14): import-datapack says an install checks every row
+// before writing and skips (and names) a row Commerce refuses; removing a pack with no install
+// record points to Clear demo data; a pack can be saved from any store with the items picked;
+// and an ACO pack can be made from the store. Existing projects would keep telling the agent one
+// bad row stops everything and that only a pack the engine installed can be saved.
+export const AI_CONTEXT_VERSION = 48;
 
 /**
  * Component IDs for standardized component instance access

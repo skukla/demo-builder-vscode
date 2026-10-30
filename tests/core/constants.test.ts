@@ -147,7 +147,7 @@ describe('AI_CONTEXT_VERSION', () => {
     // v47: import-datapack and diagnose-demo say a pack's root goes under the store's own root,
     // and only a shared root leaves the one Admin step (datapack-engine step 12).
     it("is 47 (the skills say only a shared store root leaves a pack's root by hand)", () => {
-        expect(AI_CONTEXT_VERSION).toBe(47);
+        expect(AI_CONTEXT_VERSION).toBe(48);
     });
 });
 
