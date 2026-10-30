@@ -16,6 +16,7 @@ import { capturePack } from '@/features/data-installer/services/demoBuilderEngin
 import type { CreatedObject } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { StoreAttribute, StoreCategory } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const CAPTURED = JSON.parse(
@@ -128,5 +129,17 @@ describe('capturePack', () => {
         const { result } = await capture();
 
         expect(result.counts).toMatchObject({ products: 1, categories: 2, attribute_sets: 1, product_attributes: 1, source_items: 1 });
+    });
+
+    it('takes in each store setting the record lists, at its value in the store now (step 09)', async () => {
+        const GRID = 'catalog/frontend/grid_per_page';
+        const ctx = await fakeContext({ ...STORE, [configListPath([GRID], 'default')]: { items: [{ path: GRID, value: '30', scope: 'default' }] } });
+        ctx.session.rootCategory = { id: 2, name: '' };
+        const setting: CreatedObject = { kind: 'store_config', id: `${GRID}@default`, key: `${GRID}@default`, previous: { path: GRID, scope: 'default', stored: '12', effective: '12', wrote: '24' } };
+
+        const result = await capturePack(ctx, [...RECORD, setting]);
+
+        expect(result.items.store_config).toEqual([{ path: GRID, value: '30', scope: 'default' }]);
+        expect(result.counts.store_config).toBe(1);
     });
 });

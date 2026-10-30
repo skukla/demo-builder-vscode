@@ -757,6 +757,18 @@ shared catalog or customer group the pack made while it holds something the pack
 record, and never written into a saved pack, a copy between stores or a zip. Plan:
 `.rptc/plans/datapack-engine/step-08-customers-b2b.md`.
 
+### Store settings in a pack (datapack-engine step 09, 2026-10-30)
+
+No new tool. `start_datapack_import` installs a pack's `store_config` rows (`{path, value, scope,
+scope_code}`) last, through the setup guide's settings fix: store-wide (`default`) or for the
+install target's website, whatever website the row names; a store-view row, a base URL, cookie,
+Admin or credential path, or a path that holds no value anywhere is refused before anything is
+written. The outcome's `note` names each setting set ("Set catalog/frontend/grid_per_page: 12 →
+24."). `reset_datapack` puts each back first, keeping one the SC changed since ("Kept
+catalog/frontend/grid_per_page as it is: it was changed after Demo Builder set it."), and the
+`note` says which. `preview_datapack_changes` counts settings like any kind. Plan:
+`.rptc/plans/datapack-engine/step-09-store-settings.md`.
+
 ### Renaming a library pack, and a pack shared in a file (datapack-engine step 07, 2026-10-29)
 
 `rename_datapack` (confirm-gated) gives every version of one of the SC's own library packs a new

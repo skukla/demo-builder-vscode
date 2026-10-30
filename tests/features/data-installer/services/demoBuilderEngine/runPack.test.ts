@@ -13,6 +13,7 @@ import {
     removePack,
 } from '@/features/data-installer/services/demoBuilderEngine/runPack';
 import { NOW, PACK, PROJECT, type SentCall, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';
+import { GRID, configStore, row, storeContext } from './storeConfig.testUtils';
 
 describe('installPack', () => {
     it('runs the kinds the pack holds in the store\'s order, whatever order the pack lists them in', async () => {
@@ -55,6 +56,8 @@ describe('installPack', () => {
             'b2b_shared_catalog_company_assignments',
             'b2b_shared_catalog_categories',
             'b2b_shared_catalog_products',
+            // Step 09: a pack's store settings, once its data is in.
+            'store_config',
         ]);
     });
 
@@ -128,5 +131,34 @@ describe('removePack', () => {
             'Could not take back categories 41: Commerce answered 500',
         );
         expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'categories', id: '41' }]);
+    });
+});
+
+describe("a pack's store settings (step 09)", () => {
+    it('installs them through the whole-pack install, and says what it set and what it kept', async () => {
+        const store = configStore({ default: { [GRID]: '12' } });
+        const ctx = await storeContext(store);
+
+        const first = await installPack(ctx, { store_config: [row(GRID, '24')] });
+        store.state.default[GRID] = '48';
+        ctx.session.settings = undefined;
+        const again = await installPack(ctx, { store_config: [row(GRID, '24')] });
+
+        expect(first.settings?.changes).toEqual([`${GRID}: 12 → 24`]);
+        expect(again.kept).toEqual([{ kind: 'store_config', key: `${GRID}@default` }]);
+    });
+
+    it('puts them back on removal, says what it put back, and forgets the record', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'store_config', id: `${GRID}@default`, key: `${GRID}@default`, previous: { path: GRID, scope: 'default', stored: '12', effective: '12', wrote: '24' } });
+        const store = configStore({ default: { [GRID]: '24' } });
+        const ctx = await storeContext(store);
+
+        const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(store.state.default[GRID]).toBe('12');
+        expect(result.settings?.changes).toEqual([`${GRID}: 24 → 12`]);
+        expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
     });
 });

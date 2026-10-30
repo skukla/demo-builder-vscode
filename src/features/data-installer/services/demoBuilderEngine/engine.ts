@@ -24,6 +24,7 @@ import { resolveEngineTarget, sessionFor } from './installTarget';
 import { containersLine } from './removers';
 import { keptLine } from './repeatInstall';
 import { type PackItems, installPack, removePack, unsupportedKinds } from './runPack';
+import { settingsLine } from './storeConfigKind';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -81,7 +82,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         current = kind;
         job.perType[kind] = 'processing';
     });
-    job.note = [keptLine(outcome.kept), containersLine(outcome.containers)].filter(Boolean).join(' ') || undefined;
+    job.note = [keptLine(outcome.kept), containersLine(outcome.containers), settingsLine(outcome.settings, 'Set')].filter(Boolean).join(' ') || undefined;
     if (current) job.perType[current] = 'success';
 }
 
@@ -135,7 +136,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
             start(deps, jobs, request, async (job) => {
                 const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id });
                 if (result.noRecord) throw new Error('Demo Builder did not install this pack in this project, so there is nothing of its to remove.');
-                job.note = containersLine(result.kept);
+                job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
                 for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';
             }),
         async getJobStatus(activationId) {

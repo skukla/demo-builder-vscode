@@ -25,6 +25,9 @@ import type { SetupConfigFix, SetupConfigFixItem } from '@/types/appBuilderCompo
 import type { CommerceSystemConfigList, CommerceSystemConfigPutAnswer, CommerceSystemConfigWrite, CommerceGet } from '@/types/commerceWire';
 import type { CommerceConfigPrevious, ConfigStepRecord, StorePreparationStepRecord } from '@/types/storePreparation';
 
+/** A setting's path as the API takes it: section/group/field, lower case. */
+export const SETTING_PATH = /^[a-z0-9_]+(\/[a-z0-9_]+)+$/u;
+
 /** What Commerce holds for a Yes/No or a choice nothing has set. */
 const COMMERCE_DEFAULT = '0';
 

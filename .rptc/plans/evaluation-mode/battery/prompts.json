@@ -1479,5 +1479,14 @@
         ],
         "cwd": "project",
         "why": "Datapack-engine step 08: Demo Builder's engine now installs Bodea's customer groups, customers, companies and shared catalogs, so the whole pack goes through the one import tool with no service copy first. What this judges is that the agent reaches start_datapack_import (after validate_datapack_import at most) and reads the outcome from get_datapack_import_status, without detours or a write_commerce_rest per customer. Writes to a store, so the battery stops at the consent."
+    },
+    {
+        "id": "install-pack-with-store-settings",
+        "prompt": "Install the store-settings test pack from the datapack library onto this project's test website, and tell me which Commerce settings it changed and what they were before.",
+        "expect": [
+            "start_datapack_import"
+        ],
+        "cwd": "project",
+        "why": "Datapack-engine step 09: a pack's store_config rows install through the one import tool, last, through the setup guide's settings fix. What this judges is that the agent reaches start_datapack_import and reads the settings it set, by path with old and new value, from get_datapack_import_status's note, without a set_commerce_config or write_commerce_rest per setting. Writes to a store, so the battery stops at the consent."
     }
 ]

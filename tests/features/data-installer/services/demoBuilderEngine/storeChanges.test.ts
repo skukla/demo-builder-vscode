@@ -14,6 +14,7 @@ import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEn
 import { installRecordPath, openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { type StoreChangesDeps, previewChanges, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
 import { packedFingerprint } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
 import { NOW, PACK, PROJECT, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';
 
 /** The demo's own pack a save writes into (step 07). */
@@ -56,6 +57,26 @@ async function deps(record = true, reads: Record<string, unknown> = {}, items: R
 }
 
 describe('previewChanges', () => {
+    it("counts a pack's store settings by what installing would do to each, writing nothing (step 09)", async () => {
+        const GRID = 'catalog/frontend/grid_per_page';
+        const LIST = 'catalog/frontend/list_per_page';
+        const reads = { [configListPath([GRID, LIST], 'default')]: { items: [{ path: GRID, value: '12', scope: 'default' }, { path: LIST, value: '20', scope: 'default' }] } };
+        const settings = [{ path: GRID, value: '24', scope: 'default' }, { path: LIST, value: '20', scope: 'default' }];
+        const { d, ctx } = await deps(false, reads, { store_config: settings });
+
+        const preview = await previewChanges(d, PACK, 'library');
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(preview.kinds).toContainEqual({
+            kind: 'store_config',
+            update: { count: 0, names: [] },
+            add: { count: 1, names: [`${GRID}@default`] },
+            inStore: { count: 1, names: [`${LIST}@default`] },
+            remove: { count: 0, names: [] },
+            keep: { count: 0, names: [] },
+        });
+    });
+
     it('counts what installing again would do, by kind, with a few names each, and writes nothing', async () => {
         const { d, ctx, files } = await deps();
         const before = files.data.get(installRecordPath(PROJECT, PACK));

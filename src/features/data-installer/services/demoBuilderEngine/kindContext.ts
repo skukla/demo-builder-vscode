@@ -52,6 +52,21 @@ export interface CatalogSession {
      * changed in the Admin could not be told from one the pack set.
      */
     productsBefore?: ReadonlySet<string>;
+    /**
+     * What the store settings kind did (step 09), for the install's one line: each change in the
+     * settings fix's words, its lines for settings kept, and the keys of the ones kept.
+     */
+    settings?: SettingsDone;
+}
+
+/** What the store settings kind did (step 09, `storeConfigKind.ts`), for an install's or removal's one line. */
+export interface SettingsDone {
+    /** Each change in the settings fix's words: "catalog/frontend/grid_per_page: 12 → 24". */
+    changes: string[];
+    /** Its lines for a setting kept because the SC changed it since. */
+    notes: string[];
+    /** The record's keys of the settings kept, for the "Kept N things" count. */
+    kept: string[];
 }
 
 /** The key `CatalogSession.owned` holds a row under. */

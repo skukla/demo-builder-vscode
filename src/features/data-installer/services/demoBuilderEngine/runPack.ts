@@ -7,7 +7,8 @@
  * A pack holding a kind this engine cannot install is refused before anything is written, so a
  * half-installed pack is never the answer to "we don't do cart rules yet". Customers and B2B
  * (step 08) come after the catalog, in the service's order: groups before the products whose tier
- * prices name them, customers before the companies that make them admins.
+ * prices name them, customers before the companies that make them admins. Store settings (step 09)
+ * come last, once the pack's data is in, and are put back first on removal.
  *
  * Removal walks the record in reverse, dropping each object from it as it goes, so a removal
  * that stops part way can be run again; the record goes once it is empty.
@@ -28,7 +29,7 @@ import {
     readInstallRecord,
     removalOrder,
 } from './installRecord';
-import type { KindContext } from './kindContext';
+import type { KindContext, SettingsDone } from './kindContext';
 import { installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
 import { type KeptContainer, type RemovalAccess, decideRemovals, takeBack } from './removers';
@@ -43,6 +44,7 @@ import {
     parseStockSourceLinks,
     parseStocks,
 } from './stockKinds';
+import { STORE_CONFIG_KIND, installStoreConfig, putBackSettings } from './storeConfigKind';
 import type { DatapackId } from '@/types/datapack';
 
 /** A pack's rows, by data kind, as its items hold them. */
@@ -71,6 +73,8 @@ const STEPS: readonly KindStep[] = [
     { kind: CATALOG_KIND, install: (ctx, r) => installCatalogs(ctx, parseCatalogRows(r)) },
     { kind: COMPANY_KIND, install: (ctx, r) => installCompanies(ctx, parseCompanyRows(r)) },
     ...ASSIGNMENT_KINDS.map((kind): KindStep => ({ kind, install: (ctx, r) => installCatalogAssignments(ctx, kind, r) })),
+    // Step 09: the pack's store settings, once its data is in.
+    { kind: STORE_CONFIG_KIND, install: installStoreConfig },
 ];
 
 /** The kinds this engine can install, in order. */
@@ -95,6 +99,8 @@ export interface InstallOutcome {
     kept: KeptThing[];
     /** Containers it did not take out because they hold what the engine did not make. */
     containers: KeptContainer[];
+    /** What the store settings kind set and put back (step 09), when the pack holds settings. */
+    settings?: SettingsDone;
 }
 
 /**
@@ -123,7 +129,9 @@ export async function installPack(ctx: KindContext, items: PackItems, onKind: (k
     }
     const containers = await applyRemovals(ctx, plans);
     await recordFingerprints(ctx, items);
-    return { kept: keptOf(plans), containers };
+    const settings = ctx.session.settings;
+    const keptSettings = (settings?.kept ?? []).map((key): KeptThing => ({ kind: STORE_CONFIG_KIND, key }));
+    return { kept: [...keptOf(plans), ...keptSettings], containers, ...(settings ? { settings } : {}) };
 }
 
 /** What a removal did. */
@@ -137,6 +145,8 @@ export interface RemovalResult {
      * (step 05). They stay on the record, so a later removal takes them once they are empty.
      */
     kept: KeptContainer[];
+    /** What putting the pack's store settings back did (step 09), when it had any. */
+    settings?: SettingsDone;
 }
 
 /**
@@ -155,11 +165,14 @@ export async function removePack(
     const record = await readInstallRecord(files, target.projectPath, target.pack);
     if (!record) return { removed: 0, noRecord: true, kept: [] };
     const recorder = await openInstallRecord(files, target.projectPath, target.pack, () => record.startedAt);
-    const { take, kept } = await decideRemovals(commerce.get, removalOrder(record));
+    // Settings first: they went in last. Each leaves the record once put back or kept.
+    const settingObjects = record.created.filter((o) => o.kind === STORE_CONFIG_KIND);
+    const settings = settingObjects.length > 0 ? await putBackSettings(commerce, settingObjects, (o) => recorder.drop(o)) : undefined;
+    const { take, kept } = await decideRemovals(commerce.get, removalOrder(record).filter((o) => o.kind !== STORE_CONFIG_KIND));
     for (const object of take) {
         await takeBack(commerce, object);
         await recorder.drop(object);
     }
     if (kept.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
-    return { removed: take.length, noRecord: false, kept };
+    return { removed: take.length + settingObjects.length, noRecord: false, kept, ...(settings ? { settings } : {}) };
 }

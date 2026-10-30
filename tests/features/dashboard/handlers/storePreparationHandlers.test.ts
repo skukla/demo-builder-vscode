@@ -49,6 +49,8 @@ jest.mock('@/features/app-builder/services/storePreparation/storePreparationEngi
 }));
 const mockConfigFix = { preview: jest.fn(), apply: jest.fn(), undo: jest.fn(), previewUndo: jest.fn() };
 jest.mock('@/features/app-builder/services/storePreparation/configFix', () => ({
+    // The path rule is the real one: the handler validates with it, and a pack's settings share it.
+    SETTING_PATH: jest.requireActual('@/features/app-builder/services/storePreparation/configFix').SETTING_PATH,
     configFix: jest.fn(() => mockConfigFix),
 }));
 

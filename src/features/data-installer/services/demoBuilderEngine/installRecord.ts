@@ -43,7 +43,7 @@ export interface CreatedObject {
 }
 
 /** What an update may change about an object; the kind and id say which one. */
-export type ObjectUpdate = Pick<CreatedObject, 'kind' | 'id'> & Partial<Pick<CreatedObject, 'key' | 'fingerprint' | 'wrote'>>;
+export type ObjectUpdate = Pick<CreatedObject, 'kind' | 'id'> & Partial<Pick<CreatedObject, 'key' | 'fingerprint' | 'wrote' | 'previous'>>;
 
 /** What the file holds. */
 export interface InstallRecord {

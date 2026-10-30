@@ -9,6 +9,7 @@ import { openInstallRecord, readInstallRecord } from '@/features/data-installer/
 import { demoBuilderEngine, type DemoBuilderEngineDeps } from '@/features/data-installer/services/demoBuilderEngine/engine';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import type { ImportRequest } from '@/features/data-installer/services/dataInstallerWriteClient';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
 import { PACK, PROJECT, type SentCall, fakeContext, memoryFiles } from './demoBuilderEngine.testUtils';
 
 /** The store's three structure reads: website base, store view default, root category 2. */
@@ -247,5 +248,38 @@ describe('demoBuilderEngine reads', () => {
 
         await expect(works.checkCredentials(request())).resolves.toEqual({ usable: true });
         await expect(refused.checkCredentials(request())).resolves.toEqual({ usable: false, reason: 'No credential saved.' });
+    });
+});
+
+describe("demoBuilderEngine and a pack's store settings (step 09)", () => {
+    const GRID = 'catalog/frontend/grid_per_page';
+    const at = (value: string) => ({ [configListPath([GRID], 'default')]: { items: [{ path: GRID, value, scope: 'default' }] } });
+
+    it('says in one line which settings the install set, by path', async () => {
+        const { engine } = await engineWith(at('12'), () => ({ items: [], errors: [] }), {
+            readPack: async () => ({ store_config: [{ path: GRID, value: '24', scope: 'default' }] }),
+        });
+
+        const { activationId } = await engine.startImport(request({ dataTypes: ['store_config'] }));
+        const status = await settle(engine, activationId);
+
+        expect(status.perType).toEqual({ store_config: 'success' });
+        expect(status.note).toBe(`Set ${GRID}: 12 → 24.`);
+    });
+
+    it('says in one line which settings the removal put back, by path', async () => {
+        const { engine, ctx, files } = await engineWith(at('24'), () => ({ items: [], errors: [] }));
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({
+            kind: 'store_config',
+            id: `${GRID}@default`,
+            key: `${GRID}@default`,
+            previous: { path: GRID, scope: 'default', stored: '12', effective: '12', wrote: '24' },
+        });
+
+        const { activationId } = await engine.startDelete(request({ dataTypes: ['store_config'] }));
+        const status = await settle(engine, activationId);
+
+        expect(ctx.sent).toEqual([{ method: 'PUT', path: 'system/config', body: { items: [{ path: GRID, value: '12', scope: 'default' }] } }]);
+        expect(status.note).toBe(`Put back ${GRID}: 24 → 12.`);
     });
 });

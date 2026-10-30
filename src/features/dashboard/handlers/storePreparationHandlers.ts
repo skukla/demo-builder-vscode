@@ -19,7 +19,7 @@ import { OPERATION_STAGES, type OperationStage } from '@/core/utils/operationSta
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
 import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
-import { configFix } from '@/features/app-builder/services/storePreparation/configFix';
+import { SETTING_PATH, configFix } from '@/features/app-builder/services/storePreparation/configFix';
 import type { FixDeps } from '@/features/app-builder/services/storePreparation/fixContract';
 import {
     applyPreparation,
@@ -262,8 +262,6 @@ export const handleUndoCommerceStorePreparation: MessageHandler<UndoStorePrepara
     },
     (payload) => payload?.id ?? '',
 );
-
-const SETTING_PATH = /^[a-z0-9_]+(\/[a-z0-9_]+)+$/u;
 
 /** The items as the tool must send them, or why not. */
 function validItems(items: unknown): SetupConfigFixItem[] | string {

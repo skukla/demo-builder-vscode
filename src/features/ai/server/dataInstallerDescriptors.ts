@@ -262,7 +262,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'the job starts — poll get_datapack_import_status for the outcome. Validate first. ' +
             'Installing a pack again updates and removes what it made before and keeps what was ' +
             'changed in the Admin; the outcome\'s note says what it kept, and preview_datapack_changes ' +
-            'says it beforehand.',
+            'says it beforehand. A pack\'s store_config rows are written last, and the note names each ' +
+            'setting set, by path, with its old and new value.',
         map: importHandlers,
         type: 'start-datapack-import',
         confirm: true,
@@ -276,7 +277,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "Remove a datapack's data from the Commerce instance so the project can be reused. " +
             'Cannot be undone. Returns an activationId; poll get_datapack_import_status. With the ' +
             'demo-builder engine, a category or set the pack made that holds things it did not make ' +
-            "is kept, and the outcome's note says which.",
+            "is kept, and the outcome's note says which; store settings it set are put back first, " +
+            'unless changed since, and the note names each by path.',
         map: importHandlers,
         type: 'reset-datapack',
         // Gated TWICE, and that is not redundant. The handler has always required

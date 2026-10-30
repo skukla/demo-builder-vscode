@@ -32,6 +32,7 @@ import type { CreatedObject } from './installRecord';
 import { type KindContext, segment } from './kindContext';
 import { ancestorIds, attributePackForm, categoryPackForm, productPackForm } from './packForm';
 import { type ProductLookups, type StoreCategory, productLookups } from './productLookups';
+import { captureSettings } from './storeConfigKind';
 import { onceInventory, readBySku, readCopies, readProducts } from './storeCopies';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
 
@@ -246,6 +247,8 @@ export async function capturePack(ctx: KindContext, created: readonly CreatedObj
             categoryKeys: categoryUrlKeys(categories.records),
             tierGroups: products.flatMap((p) => (p.tier_prices ?? []).map((t) => t.customer_group_id)),
         })),
+        // Store settings at their values now, each at its own scope (step 09).
+        ...(await captureSettings(ctx.get, created, installed, ctx.session.websiteCode)),
     };
     const counts = Object.fromEntries(Object.entries(items).map(([kind, records]) => [kind, kind === 'categories' ? categories.count : countOf(records)]));
     return { items, counts };

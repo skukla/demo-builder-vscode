@@ -33,9 +33,10 @@ import { type TargetCodes, resolveEngineTarget, sessionFor } from './installTarg
 import type { KindContext } from './kindContext';
 import { productLookups } from './productLookups';
 import { rebaseRecord } from './recordFingerprints';
-import { type KeptContainer, containersLine, decideRemovals } from './removers';
+import { type KeptContainer, containersLine, decideRemovals, keptObjects } from './removers';
 import { type KindPlan, type PlannedObject, keptLine, keptOf, planRepeat, removalsOf } from './repeatInstall';
 import { LINK_KIND, SOURCE_KIND, STOCK_KIND } from './stockKinds';
+import { STORE_CONFIG_KIND, type SettingOutcome, packSettings, planSettings } from './storeConfigKind';
 import { onceInventory, readProducts } from './storeCopies';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { Inventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
@@ -159,7 +160,7 @@ async function alreadyInStore(ctx: KindContext, kind: string, keys: string[], in
 const keyOfObject = (object: CreatedObject) => object.key ?? object.id;
 
 async function summarize(ctx: KindContext, plans: readonly KindPlan[], kept: readonly KeptContainer[]): Promise<KindChanges[]> {
-    const keptHere = new Set(kept.map((k) => k.object));
+    const keptHere = new Set(keptObjects(kept));
     const inventory = onceInventory(ctx);
     return Promise.all(
         plans.map(async ({ kind, objects, added }) => {
@@ -177,6 +178,13 @@ async function summarize(ctx: KindContext, plans: readonly KindPlan[], kept: rea
     );
 }
 
+/** What installing would do to the pack's store settings (step 09), planned as the install plans them. */
+async function settingsChanges(ctx: KindContext, records: unknown, created: readonly CreatedObject[]): Promise<KindChanges> {
+    const plan = await planSettings(ctx.get, packSettings(records, ctx.session.websiteCode), created, ctx.session.websiteCode);
+    const keys = (...outcomes: SettingOutcome[]) => named(plan.filter((p) => outcomes.includes(p.outcome)).map((p) => p.key));
+    return { kind: STORE_CONFIG_KIND, update: keys('update'), add: keys('set', 'unknown-before'), inStore: keys('already'), remove: keys('remove'), keep: keys('kept') };
+}
+
 /**
  * What installing the pack again would do, by kind. Writes nothing to the store or the record.
  *
@@ -190,8 +198,11 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     const plans = await planRepeat(ctx, items, record?.created ?? []);
     // The containers an install would keep, decided the way it decides them, read-only.
     const { kept: containers } = await decideRemovals(ctx.get, removalsOf(plans));
-    const kept = [keptLine(keptOf(plans)), containersLine(containers)].filter(Boolean).join(' ');
-    return { installed: record !== undefined, kinds: await summarize(ctx, plans, containers), ...(kept ? { kept } : {}) };
+    const settings = STORE_CONFIG_KIND in items ? await settingsChanges(ctx, items[STORE_CONFIG_KIND], record?.created ?? []) : undefined;
+    const keptThings = [...keptOf(plans), ...(settings?.keep.names ?? []).map((key) => ({ kind: STORE_CONFIG_KIND, key }))];
+    const kept = [keptLine(keptThings), containersLine(containers)].filter(Boolean).join(' ');
+    const kinds = [...(await summarize(ctx, plans, containers)), ...(settings ? [settings] : [])];
+    return { installed: record !== undefined, kinds, ...(kept ? { kept } : {}) };
 }
 
 /**
