@@ -21,6 +21,8 @@ import { readPackFromStore } from './datapackTransfer';
 import { type DemoBuilderEngineDeps, demoBuilderEngine } from './demoBuilderEngine/engine';
 import { type RecordFiles, nodeRecordFiles, readInstallRecord } from './demoBuilderEngine/installRecord';
 import type { PackItems } from './demoBuilderEngine/runPack';
+import { nodeActivityFiles, recordJobEnd } from './engineActivityLog';
+import { deriveImportInstance } from './importInstance';
 import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
@@ -64,11 +66,19 @@ export async function readPackItems(
  */
 export function buildDatapackEngine(id: DatapackEngineId, access: DatapackEngineAccess, log: (line: string) => void): DatapackEngine {
     if (id === 'service') return buildServiceEngine(access, log);
+    // Each finished job goes in the project's activity log (step 14): the service logs its own runs.
+    const writeActivity = recordJobEnd({
+        files: nodeActivityFiles,
+        projectPath: access.project.path,
+        commerceInstance: deriveImportInstance(access.project.componentConfigs),
+        log,
+    });
     return demoBuilderEngine({
         commerce: projectCommerce(access),
         readPack: (pack, _dataTypes, source) => readPackItems(access, pack, source),
         projectPath: access.project.path,
         log,
+        onJobEnd: (end) => void writeActivity(end),
         // Step 12: the one Admin step a pack can leave is asked where the SC is looking (PL-59).
         asker: {
             ask: (question, ...actions) => askDuringOperation(question, ...actions),

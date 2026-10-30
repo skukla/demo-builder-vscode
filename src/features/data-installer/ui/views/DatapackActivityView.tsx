@@ -1,5 +1,7 @@
 /**
- * The service's own request log.
+ * What happened on this store: Demo Builder's engine's installs and removals, then the
+ * service's own request log (step 14). Each row says which engine ran it; a source that could
+ * not be read says why its rows are missing.
  *
  * Paged by a "Load 50 more" button, deliberately NOT by a pagination component:
  * the repo has none, one consumer does not justify inventing one, and this is a
@@ -25,7 +27,7 @@
 
 import { Button, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { ActivityEntry, OperationMode, Page } from '../../types';
+import type { ActivityEntry, DatapackEngineId, HistoryPage, OperationMode } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
@@ -66,6 +68,12 @@ const MODE_OPTIONS: { key: string; label: string }[] = [
     ...MODES.map((mode) => ({ key: mode, label: mode })),
 ];
 
+/** What each row calls the engine that ran it. */
+const SOURCE_LABELS: Record<DatapackEngineId, string> = {
+    'demo-builder': 'Demo Builder',
+    service: 'Data Installer',
+};
+
 export function DatapackActivityView(): React.JSX.Element {
     const [mode, setMode] = useState<string>(ALL_MODES);
     const [entries, setEntries] = useState<ActivityEntry[]>([]);
@@ -73,7 +81,7 @@ export function DatapackActivityView(): React.JSX.Element {
     const [hasLoaded, setHasLoaded] = useState(false);
 
     const { load, loading, value, failure, settled } =
-        useDataInstallerRequest<Page<ActivityEntry>>('get-datapack-activity');
+        useDataInstallerRequest<HistoryPage<ActivityEntry>>('get-datapack-activity');
 
     /**
      * The skip we ASKED for, which decides append vs replace.
@@ -199,6 +207,7 @@ export function DatapackActivityView(): React.JSX.Element {
                     </div>
                 }
             >
+                <SourceNotes page={value} />
                 {renderActivityBody({ loading, settled, entries, total, loadMore })}
             </FullScreenSurface>
         </>
@@ -243,7 +252,7 @@ function renderActivityBody({
         return (
             <EmptyState
                 title="No activity yet"
-                description="The Data Installer has logged no requests matching this filter."
+                description="Neither Demo Builder nor the Data Installer has a run on this store matching this filter."
             />
         );
     }
@@ -265,7 +274,25 @@ function renderActivityBody({
     );
 }
 
-/** One logged request. */
+/** Why one source's rows are missing, when they are: the feed must not quietly show less. */
+function SourceNotes({ page }: { page: HistoryPage<ActivityEntry> | null }): React.JSX.Element | null {
+    const notes = [
+        page?.serviceError ? `The Data Installer's own log could not be read: ${page.serviceError}` : undefined,
+        page?.engineError,
+    ].filter((note): note is string => Boolean(note));
+    if (notes.length === 0) return null;
+    return (
+        <>
+            {notes.map((note) => (
+                <p key={note} className="datapack-export-note">
+                    {note}
+                </p>
+            ))}
+        </>
+    );
+}
+
+/** One logged run: which engine ran it, and, for Demo Builder's, whether it failed and why. */
 function ActivityRow({ entry }: { entry: ActivityEntry }): React.JSX.Element {
     return (
         <div className="datapack-row" data-testid="activity-row">
@@ -273,6 +300,8 @@ function ActivityRow({ entry }: { entry: ActivityEntry }): React.JSX.Element {
                 <span className="datapack-row-title">{entry.id.name}</span>
                 <span className="datapack-row-version">{entry.id.version}</span>
                 {entry.mode ? <span className="datapack-row-mode">{entry.mode}</span> : null}
+                {entry.outcome === 'failed' ? <span className="datapack-row-mode">failed</span> : null}
+                {entry.source ? <span className="datapack-row-mode">{SOURCE_LABELS[entry.source]}</span> : null}
             </div>
             <div className="datapack-row-meta">
                 {entry.commerceInstance ? (
@@ -282,6 +311,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }): React.JSX.Element {
                 {/* Verbatim: the documented enum does not match live values. */}
                 {entry.scenario ? <span>{entry.scenario}</span> : null}
                 {entry.at ? <span>{formatDateTime(entry.at)}</span> : null}
+                {entry.detail ? <span>{entry.detail}</span> : null}
             </div>
         </div>
     );

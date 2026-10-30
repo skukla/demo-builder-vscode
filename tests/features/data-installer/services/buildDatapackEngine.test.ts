@@ -13,6 +13,10 @@ import {
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { InstallRecordError, installRecordPath, openInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { NOW, PACK, PROJECT, memoryFiles } from './demoBuilderEngine/demoBuilderEngine.testUtils';
+import { nodeActivityFiles, readEngineActivity } from '@/features/data-installer/services/engineActivityLog';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { createMockProject } from '../../../helpers/projectFake';
 
 const mockCommerceClientForProject = jest.fn();
@@ -52,6 +56,30 @@ describe('buildDatapackEngine', () => {
                 dataTypes: ['categories'],
             }),
         ).resolves.toEqual({ usable: false, reason: "Adobe sign-in is required to write to this project's store." });
+    });
+});
+
+describe('buildDatapackEngine activity log', () => {
+    // Step 14, item 17: every job Demo Builder's engine finishes is appended beside the project,
+    // so the Activity tab and get_datapack_activity can show it after the record is gone.
+    it("appends each job Demo Builder's engine finishes to the project's activity log", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'build-engine-activity-'));
+        try {
+            const engine = buildDatapackEngine('demo-builder', access({ project: createMockProject({ path: dir }) }), jest.fn());
+
+            // No target: the job stops at once, which is a job that ended all the same.
+            await engine.startImport({ id: PACK, commerceInstance: 'unused', dataTypes: ['categories'] });
+            let entries = await readEngineActivity(nodeActivityFiles, dir);
+            for (let i = 0; i < 100 && entries.length === 0; i += 1) {
+                await new Promise((resolve) => setImmediate(resolve));
+                entries = await readEngineActivity(nodeActivityFiles, dir);
+            }
+
+            expect(entries).toHaveLength(1);
+            expect(entries[0]).toMatchObject({ pack: PACK, operation: 'import', outcome: 'failed' });
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
     });
 });
 

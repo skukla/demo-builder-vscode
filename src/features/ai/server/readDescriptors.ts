@@ -711,8 +711,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'Datapacks the Data Installer records as installed, and the Commerce instance each ' +
-            "went into. This is the service's own tracking, not a live check of the instance.",
+            "Datapacks recorded as installed, and the Commerce instance each went into: Demo Builder's " +
+            "own installs in the open project first (source:\"demo-builder\", with objectCount), then the " +
+            'Data Installer\'s tracking (source:"service"). Records, not a live check of the instance. ' +
+            'serviceError or engineError says why one source\'s rows are missing.',
         map: dataInstallerHandlers,
         type: 'list-installed-datapacks',
         shape: (res) => shapeRows(res, leanDatapackRow),
@@ -727,8 +729,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            "The Data Installer's own request log — which packs were imported, exported or " +
-            'validated, against which instance, and when. Use to see what a previous run did.',
+            "Which packs were installed, removed, imported, exported or validated, against which " +
+            "instance, and when: Demo Builder's own runs in the open project first (source:\"demo-builder\", " +
+            'with outcome and detail), then the Data Installer\'s request log (source:"service"). Use to ' +
+            "see what a previous run did. serviceError or engineError says why one source's rows are missing.",
         map: dataInstallerHandlers,
         type: 'get-datapack-activity',
         inputSchema: {

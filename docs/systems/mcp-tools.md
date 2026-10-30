@@ -284,7 +284,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `check_mesh` | read | Report whether the current project's API mesh is deployed and up to date |
 | `find_datapacks` | read | List Adobe Commerce sample-data datapacks the Data Installer holds. Returns one row |
 | `get_datapack` | read | One datapack's metadata plus which of its declared data types the service actually |
-| `get_datapack_activity` | read | The Data Installer's own request log — which packs were imported, exported or |
+| `get_datapack_activity` | read | Which packs were installed, removed, imported, exported or validated, against which |
 | `get_erp_order_trace` | read | Read one Commerce order's whole life across Commerce, the ERP integration and the |
 | `get_erp_record` | read | Read one product (by SKU) or one B2B company (by Commerce id) as BOTH Commerce and |
 | `get_erp_settings` | read | Read one ERP's own settings in force: which products it owns (ownership) and, per |
@@ -297,7 +297,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `list_ai_prompts` | read | List saved AI prompts for the current project (global + project-local, merged). |
 | `list_console_apis` | read | List the Adobe APIs (sdk codes + names) the org can subscribe to on this project's |
 | `list_datapack_data_types` | read | The data types the Data Installer can process for one operation mode, in dependency |
-| `list_installed_datapacks` | read | Datapacks the Data Installer records as installed, and the Commerce instance each |
+| `list_installed_datapacks` | read | Datapacks recorded as installed, and the Commerce instance each went into: Demo Builder's |
 | `list_runtime_activations` | read | List what RAN in this project's Adobe I/O Runtime namespace, newest first: each |
 | `list_runtime_packages` | read | List the packages, triggers (timers) and rules deployed in this project's Adobe I/O |
 | `probe_shared_demo` | read | Read a colleague's demo before adding it: what kind of storefront it is (Edge Delivery or headless), |

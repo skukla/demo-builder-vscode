@@ -759,6 +759,18 @@ next removal can finish the job (live, 2026-10-30). Both read the store with the
 credential, behind the same org guard as the import. Plan:
 `.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
 
+### What is installed and what happened, from both engines (datapack-engine step 14, 2026-10-30)
+
+`list_installed_datapacks` and `get_datapack_activity` used to read only the Data Installer
+service, so a pack Demo Builder's engine installed was missing from both. Each now answers the
+open project's own rows first (its install records, and its activity log
+`.demo-builder/datapack-activity.jsonl`), then the service's, every row tagged
+`source: "demo-builder" | "service"`. Ours carry `objectCount` (installed) or `outcome` and
+`detail` (activity), and a removal stays in the activity after its record is gone. `limit` and
+`skip` page across both as one list. A source that cannot be read costs only its rows and says why
+(`serviceError`, `engineError`); with no rows of ours, a service refusal (sign-in, settings) comes
+back exactly as before. Both stay reads. Details: `docs/systems/data-installer.md`.
+
 ### Customers and B2B through Demo Builder's engine (datapack-engine step 08, 2026-10-29)
 
 No new tool. `start_datapack_import` now installs customer groups, customers, shared catalogs,
