@@ -60,6 +60,13 @@ button — the happy path. As a safety net, closing the dashboard webview auto-o
 the projects list in a new tab (`shouldAutoReopenProjectsList` plus a `dispose()`
 override), so nobody is stranded without a navigation surface.
 
+That safety net fires on EVERY dashboard close outside a webview transition, ~100 ms
+later. Code that closes the dashboard in order to show the list must close it inside
+one (`swapWebviewSurface`, or the transition the `demoBuilder.showProjectsList` handler
+in `commandManager.ts` holds), or the net opens the list a second time while the first
+is still loading. That second load is what dropped the Updates modal on Review
+(2026-10-30, `tests/commands/commandManager-reviewUpdates.test.ts`).
+
 Rationale: [ADR-004](../../../docs/architecture/adr/004-claude-code-harness.md).
 
 ## Handlers
