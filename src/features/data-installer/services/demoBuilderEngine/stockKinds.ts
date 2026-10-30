@@ -20,8 +20,9 @@
 
 import { z } from 'zod';
 import type { CreatedObject } from './installRecord';
-import { SOURCE_CODE, deleteIfPresent, type KindContext, parseRows, ownedId, readOrNull, segment } from './kindContext';
+import { MissingNameError, SOURCE_CODE, deleteIfPresent, type KindContext, parseRows, ownedId, readOrNull, segment } from './kindContext';
 import { createOne } from './pendingCreates';
+import { needsUnskipped, tryRow } from './refusedRows';
 import { readInventory, sellsTo, setSourceEnabled } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { CommerceGet, CommerceInventoryStock, CommerceSend } from '@/types/commerceWire';
 
@@ -63,18 +64,23 @@ export async function installSources(ctx: KindContext, pack: SourcesPack): Promi
         const existing = sources.find((s) => s.source_code === source.source_code);
         if (!existing) {
             const code = source.source_code;
-            await createOne(ctx, { kind: SOURCE_KIND, key: code, id: code }, async () => {
-                await ctx.send('POST', 'inventory/sources', { source });
-                return { kind: SOURCE_KIND, id: code };
-            });
-            ctx.log(`created source ${source.name}`);
+            // Step 14 item 3: a row Commerce refuses is skipped, and the rest go on.
+            const made = await tryRow(ctx, { kind: SOURCE_KIND, key: code }, () =>
+                createOne(ctx, { kind: SOURCE_KIND, key: code, id: code }, async () => {
+                    await ctx.send('POST', 'inventory/sources', { source });
+                    return { kind: SOURCE_KIND, id: code };
+                }),
+            );
+            if (made) ctx.log(`created source ${source.name}`);
         } else if (existing.enabled === false) {
             const code = source.source_code;
-            await createOne(ctx, { kind: SOURCE_KIND, key: code, id: code, previous: { enabled: false } }, async () => {
-                await setSourceEnabled(ctx, code, true);
-                return { kind: SOURCE_KIND, id: code, previous: { enabled: false } };
-            });
-            ctx.log(`switched source ${source.name} back on`);
+            const made = await tryRow(ctx, { kind: SOURCE_KIND, key: code }, () =>
+                createOne(ctx, { kind: SOURCE_KIND, key: code, id: code, previous: { enabled: false } }, async () => {
+                    await setSourceEnabled(ctx, code, true);
+                    return { kind: SOURCE_KIND, id: code, previous: { enabled: false } };
+                }),
+            );
+            if (made) ctx.log(`switched source ${source.name} back on`);
         }
     }
 }
@@ -91,11 +97,14 @@ export async function installStocks(ctx: KindContext, pack: StocksPack): Promise
         const body: { stock: CommerceInventoryStock } = {
             stock: { ...stock, extension_attributes: { sales_channels: [{ type: 'website', code: websiteCode }] } },
         };
-        const made = await createOne(ctx, { kind: STOCK_KIND, key: stock.name, previous }, async () => {
-            const answer = Number(await ctx.send('POST', 'inventory/stocks', body));
-            if (!Number.isInteger(answer)) throw new Error(`Commerce did not answer the new stock ${stock.name}'s id.`);
-            return { kind: STOCK_KIND, id: String(answer), previous };
-        });
+        const made = await tryRow(ctx, { kind: STOCK_KIND, key: stock.name }, () =>
+            createOne(ctx, { kind: STOCK_KIND, key: stock.name, previous }, async () => {
+                const answer = Number(await ctx.send('POST', 'inventory/stocks', body));
+                if (!Number.isInteger(answer)) throw new Error(`Commerce did not answer the new stock ${stock.name}'s id.`);
+                return { kind: STOCK_KIND, id: String(answer), previous };
+            }),
+        );
+        if (!made) continue;
         const id = Number(made.id);
         stocks.push({ ...body.stock, stock_id: id });
         ctx.log(`created stock ${stock.name}, selling to ${websiteCode}`);
@@ -106,19 +115,25 @@ export async function installStocks(ctx: KindContext, pack: StocksPack): Promise
 export async function installStockSourceLinks(ctx: KindContext, pack: LinksPack): Promise<void> {
     const { stocks, links } = await readInventory(ctx.get);
     for (const { stockSourceLink: link } of pack.stockSourceLinks) {
-        if (ownedId(ctx.session, LINK_KIND, `${link.stock_id}/${link.source_code}`) === null) continue;
-        const stockId = stocks.find((s) => s.name === link.stock_id)?.stock_id;
-        if (stockId === undefined) throw new Error(`The store has no stock named ${link.stock_id}.`);
-        if (links.some((l) => l.stock_id === stockId && l.source_code === link.source_code)) continue;
-        const id = `${stockId}/${link.source_code}`;
-        await createOne(ctx, { kind: LINK_KIND, key: id, id }, async () => {
-            await ctx.send('POST', 'inventory/stock-source-links', {
-                links: [{ stock_id: stockId, source_code: link.source_code, priority: link.priority ?? 1 }],
+        const key = `${link.stock_id}/${link.source_code}`;
+        if (ownedId(ctx.session, LINK_KIND, key) === null) continue;
+        // Step 14 item 3: a link to a stock or source this install skipped, or one Commerce refuses, is skipped.
+        await tryRow(ctx, { kind: LINK_KIND, key }, async () => {
+            needsUnskipped(ctx.session, SOURCE_KIND, link.source_code);
+            needsUnskipped(ctx.session, STOCK_KIND, link.stock_id);
+            const stockId = stocks.find((s) => s.name === link.stock_id)?.stock_id;
+            if (stockId === undefined) throw new MissingNameError(STOCK_KIND, link.stock_id, `The store has no stock named ${link.stock_id}.`);
+            if (links.some((l) => l.stock_id === stockId && l.source_code === link.source_code)) return;
+            const id = `${stockId}/${link.source_code}`;
+            await createOne(ctx, { kind: LINK_KIND, key: id, id }, async () => {
+                await ctx.send('POST', 'inventory/stock-source-links', {
+                    links: [{ stock_id: stockId, source_code: link.source_code, priority: link.priority ?? 1 }],
+                });
+                return { kind: LINK_KIND, id };
             });
-            return { kind: LINK_KIND, id };
+            links.push({ stock_id: stockId, source_code: link.source_code });
+            ctx.log(`linked ${link.source_code} to ${link.stock_id}`);
         });
-        links.push({ stock_id: stockId, source_code: link.source_code });
-        ctx.log(`linked ${link.source_code} to ${link.stock_id}`);
     }
 }
 

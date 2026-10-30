@@ -41,13 +41,15 @@ import {
     CATALOG_COMPANIES_KIND,
     CATALOG_KIND,
     CATALOG_PRODUCTS_KIND,
+    COMPANY_KIND,
     type FlatAssignment,
     assignmentKey,
 } from './b2bKeys';
 import { companyByName, readCatalogs, readHeld } from './b2bReads';
-import { deleteIfPresent, isAlreadyGone, type KindContext, parseRows, ownedId, segment } from './kindContext';
+import { deleteIfPresent, isAlreadyGone, type KindContext, MissingNameError, parseRows, ownedId, segment } from './kindContext';
 import { createOne, createRecorded } from './pendingCreates';
 import { productLookups } from './productLookups';
+import { isRowRefusal, needsUnskipped, reasonOf, skipRow, tryRow } from './refusedRows';
 import type { CommerceSend, CommerceSharedCatalog } from '@/types/commerceWire';
 import type { SharedCatalogHeld } from '@/types/storePreparation';
 
@@ -117,22 +119,25 @@ export async function installCatalogs(ctx: KindContext, rows: CatalogRows): Prom
     for (const { sharedCatalog: row } of rows) {
         if (ownedId(ctx.session, CATALOG_KIND, row.name) !== undefined || ctx.recorder.byKey(CATALOG_KIND, row.name)) continue;
         if (existing.some((c) => c.name === row.name)) continue;
-        const group = row.customer_group_id === undefined ? undefined : await lk.groupId(String(row.customer_group_id));
-        const sharedCatalog: CommerceSharedCatalog = {
-            name: row.name,
-            type: CUSTOM_CATALOG,
-            store_id: 0,
-            tax_class_id: row.tax_class_id ?? RETAIL_TAX_CLASS,
-            ...(group !== undefined ? { customer_group_id: group } : {}),
-        };
-        await createOne(ctx, { kind: CATALOG_KIND, key: row.name }, async () => {
-            const id = Number(await ctx.send('POST', 'sharedCatalog', { sharedCatalog }));
-            if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new shared catalog ${row.name}'s id.`);
-            // A failed read-back records no `held`: removal then counts everything in it as not the pack's.
-            const held = await readHeld(ctx.get, id).catch(() => undefined);
-            return { kind: CATALOG_KIND, id: String(id), key: row.name, ...(held ? { previous: { held } } : {}) };
+        // Step 14 item 3: a catalog Commerce refuses, or whose group was skipped, is skipped; the rest go on.
+        const made = await tryRow(ctx, { kind: CATALOG_KIND, key: row.name }, async () => {
+            const group = row.customer_group_id === undefined ? undefined : await lk.groupId(String(row.customer_group_id));
+            const sharedCatalog: CommerceSharedCatalog = {
+                name: row.name,
+                type: CUSTOM_CATALOG,
+                store_id: 0,
+                tax_class_id: row.tax_class_id ?? RETAIL_TAX_CLASS,
+                ...(group !== undefined ? { customer_group_id: group } : {}),
+            };
+            return createOne(ctx, { kind: CATALOG_KIND, key: row.name }, async () => {
+                const id = Number(await ctx.send('POST', 'sharedCatalog', { sharedCatalog }));
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new shared catalog ${row.name}'s id.`);
+                // A failed read-back records no `held`: removal then counts everything in it as not the pack's.
+                const held = await readHeld(ctx.get, id).catch(() => undefined);
+                return { kind: CATALOG_KIND, id: String(id), key: row.name, ...(held ? { previous: { held } } : {}) };
+            });
         });
-        ctx.log(`created shared catalog ${row.name}`);
+        if (made) ctx.log(`created shared catalog ${row.name}`);
     }
 }
 
@@ -147,13 +152,26 @@ const ROUTES: Record<AssignmentKind, { verb: string; list: keyof SharedCatalogHe
     [CATALOG_PRODUCTS_KIND]: { verb: 'Products', list: 'products', body: (refs) => ({ products: refs.map((sku) => ({ sku })) }) },
 };
 
-/** This store's id (or SKU) for a member the pack names. */
+/** The kinds whose skipped rows an assignment kind's members can be. */
+const MEMBER_KINDS: Record<AssignmentKind, readonly string[]> = {
+    [CATALOG_COMPANIES_KIND]: [COMPANY_KIND],
+    [CATALOG_CATEGORIES_KIND]: ['categories'],
+    [CATALOG_PRODUCTS_KIND]: ['products', 'giftcards'],
+};
+
+/** This store's id (or SKU) for a member the pack names; a member skipped by this install is refused by name. */
 async function memberRef(ctx: KindContext, kind: AssignmentKind, member: string): Promise<string> {
+    needsUnskipped(ctx.session, MEMBER_KINDS[kind], member);
     if (kind === CATALOG_PRODUCTS_KIND) return member;
     if (kind === CATALOG_CATEGORIES_KIND) return productLookups(ctx).categoryId(member);
     const company = await companyByName(ctx.get, member);
-    if (!company) throw new Error(`The store has no company named ${member}.`);
+    if (!company) throw new MissingNameError(COMPANY_KIND, member, `The store has no company named ${member}.`);
     return String(company.id);
+}
+
+/** Skip every pair in `pairs` for one reason (step 14 item 3). */
+function skipPairs(ctx: KindContext, kind: AssignmentKind, pairs: readonly FlatAssignment[], reason: string): void {
+    for (const pair of pairs) skipRow(ctx, { kind, key: assignmentKey(pair), reason });
 }
 
 /** Assign what each catalog does not hold yet, one call per catalog; record each pair assigned. */
@@ -162,23 +180,35 @@ export async function installAssignments(ctx: KindContext, kind: AssignmentKind,
     const catalogs = await readCatalogs(ctx.get);
     const route = ROUTES[kind];
     for (const name of new Set(pairs.map((p) => p.catalog))) {
+        const ofCatalog = pairs.filter((p) => p.catalog === name);
         const catalog = catalogs.find((c) => c.name === name);
-        if (catalog?.id === undefined) throw new Error(`The store has no shared catalog named ${name}.`);
+        if (catalog?.id === undefined) {
+            // Step 14 item 3: a catalog the store lacks (or this install skipped) skips what goes in it, by name.
+            skipPairs(ctx, kind, ofCatalog, reasonOf(ctx.session, new MissingNameError(CATALOG_KIND, name, `The store has no shared catalog named ${name}.`)));
+            continue;
+        }
         const held = new Set((await readHeld(ctx.get, catalog.id))[route.list].map(String));
-        const adding: Array<{ ref: string; key: string }> = [];
-        for (const pair of pairs.filter((p) => p.catalog === name)) {
+        const adding: Array<{ ref: string; key: string; pair: FlatAssignment }> = [];
+        for (const pair of ofCatalog) {
             const key = assignmentKey(pair);
             if (ownedId(ctx.session, kind, key) !== undefined) continue;
-            const ref = await memberRef(ctx, kind, pair.member);
-            if (!held.has(ref) && !adding.some((a) => a.ref === ref)) adding.push({ ref, key });
+            const ref = await tryRow(ctx, { kind, key }, () => memberRef(ctx, kind, pair.member));
+            if (ref !== undefined && !held.has(ref) && !adding.some((a) => a.ref === ref)) adding.push({ ref, key, pair });
         }
         if (adding.length === 0) continue;
         const catalogId = catalog.id;
         const made = adding.map(({ ref, key }) => ({ kind, id: `${catalogId}/${ref}`, key }));
-        await createRecorded(ctx, made, async () => {
-            await ctx.send('POST', `sharedCatalog/${segment(catalogId)}/assign${route.verb}`, route.body(adding.map((a) => a.ref)));
-            return made;
-        });
+        try {
+            await createRecorded(ctx, made, async () => {
+                await ctx.send('POST', `sharedCatalog/${segment(catalogId)}/assign${route.verb}`, route.body(adding.map((a) => a.ref)));
+                return made;
+            });
+        } catch (error) {
+            // One call carries the catalog's whole batch, so a refusal skips each pair in it, each named.
+            if (!isRowRefusal(error)) throw error;
+            skipPairs(ctx, kind, adding.map((a) => a.pair), reasonOf(ctx.session, error));
+            continue;
+        }
         ctx.log(`assigned ${adding.length} to shared catalog ${name}`);
     }
 }

@@ -18,6 +18,7 @@
 import { z } from 'zod';
 import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, ownedId, readOrNull, segment } from './kindContext';
 import { createOne } from './pendingCreates';
+import { tryRow } from './refusedRows';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const ATTRIBUTE_KIND = 'product_attributes';
@@ -73,7 +74,8 @@ export async function installAttributes(ctx: KindContext, rows: readonly Attribu
             await addMissingOptions(ctx, code, row.attribute.options ?? []);
             continue;
         }
-        if (!existing) await createAttribute(ctx, row);
+        // Step 14 item 3: an attribute Commerce refuses is skipped, and the rows that need it with it.
+        if (!existing) await tryRow(ctx, { kind: ATTRIBUTE_KIND, key: code }, () => createAttribute(ctx, row));
     }
 }
 
@@ -109,13 +111,16 @@ export async function addMissingOptions(ctx: KindContext, code: string, options:
     const missing = options.filter((o) => !have.some((h) => sameLabel(h.label, o.label)));
     for (const option of missing) {
         const { value: _sourceValue, ...body } = option;
-        await createOne(ctx, { kind: ATTRIBUTE_OPTION_KIND, key: `${code}/${option.label}` }, async () => {
-            await ctx.send('POST', `products/attributes/${segment(code)}/options`, { option: body });
-            const added = (await readOptions(ctx, code)).find((h) => sameLabel(h.label, option.label));
-            if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
-            return { kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}` };
-        });
-        ctx.log(`added option "${option.label}" to ${code}`);
+        const key = `${code}/${option.label}`;
+        const made = await tryRow(ctx, { kind: ATTRIBUTE_OPTION_KIND, key }, () =>
+            createOne(ctx, { kind: ATTRIBUTE_OPTION_KIND, key }, async () => {
+                await ctx.send('POST', `products/attributes/${segment(code)}/options`, { option: body });
+                const added = (await readOptions(ctx, code)).find((h) => sameLabel(h.label, option.label));
+                if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
+                return { kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}` };
+            }),
+        );
+        if (made) ctx.log(`added option "${option.label}" to ${code}`);
     }
 }
 

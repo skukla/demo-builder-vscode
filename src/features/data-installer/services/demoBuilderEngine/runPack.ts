@@ -33,7 +33,7 @@ import {
     readInstallRecord,
     removalOrder,
 } from './installRecord';
-import type { KindContext, SettingsDone } from './kindContext';
+import type { KindContext, SettingsDone, SkippedRow } from './kindContext';
 import { type RootPlacement, placeCategories, rootPlacement } from './packRoot';
 import { type PackRootStep, settlePackRoot } from './packRootStep';
 import { settlePending } from './pendingFinders';
@@ -160,6 +160,8 @@ export interface InstallOutcome {
     rootPlacement?: RootPlacement;
     /** The Admin step the pack left, when its root is a root of its own (step 12). */
     rootStep?: PackRootStep;
+    /** The rows skipped because Commerce refused them or they needed one that was (step 14 item 3). */
+    skipped: SkippedRow[];
 }
 
 /**
@@ -208,6 +210,7 @@ export async function installPack(ctx: KindContext, packItems: PackItems, onKind
     return {
         kept: [...keptOf(plans), ...keptSettings],
         containers,
+        skipped: ctx.session.skipped ?? [],
         ...(settings ? { settings } : {}),
         ...(placement ? { rootPlacement: placement } : {}),
         ...(rootStep ? { rootStep } : {}),

@@ -77,6 +77,15 @@ A refusal comes back as a verdict, not an error:
 `success: true` with `valid: false` means the call worked and the answer is no. Read the
 reason to the user rather than retrying.
 
+With Demo Builder's own engine (the default) the dry run also reads the pack's rows, every
+kind's, and names each kind whose rows Commerce could not take; the real import checks the
+same before its first write. Once writing, a row Commerce refuses is skipped and the rest go
+in: the status's `note` starts "Skipped N rows" and names each row with Commerce's reason,
+and any row that needed a skipped one (a product in a skipped category) is skipped with it,
+by name. Every kind still reads `success`, so read the note. Sign-in, throttling, a Commerce
+error or no answer at all still stop the import; running it again carries on, and anything
+the store did make without answering is found then and counted as the pack's.
+
 ## Arguments that are required and look optional
 
 All four, on every write call:

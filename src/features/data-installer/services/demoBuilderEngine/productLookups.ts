@@ -22,7 +22,7 @@
  */
 
 import { loadStoreSets } from './attributeSetsKind';
-import { type KindContext, readOrNull, segment } from './kindContext';
+import { type KindContext, MissingNameError, readOrNull, segment } from './kindContext';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 
 /** What the store holds for an attribute: how it is entered and its options. */
@@ -113,7 +113,7 @@ function setLookups(ctx: KindContext): Pick<ProductLookups, 'setId' | 'setName'>
         setId: cached(async (name) => {
             await loadStoreSets(ctx);
             const id = ctx.session.setIds.get(name);
-            if (id === undefined) throw new Error(`The store has no attribute set named ${name}.`);
+            if (id === undefined) throw new MissingNameError('attribute_sets', name, `The store has no attribute set named ${name}.`);
             return id;
         }),
         setName: async (id) => {
@@ -131,7 +131,7 @@ function categoryLookups(ctx: KindContext): Pick<ProductLookups, 'categoryId' | 
             const found = await readAllPages<{ id: number; path?: string }>(ctx.get, 'categories/list', `&${search('url_key', urlKey)}`);
             const root = `/${ctx.session.rootCategory.id}/`;
             const pick = found.find((c) => `${c.path ?? ''}/`.includes(root)) ?? found[0];
-            if (!pick) throw new Error(`The store has no category with the url key ${urlKey}.`);
+            if (!pick) throw new MissingNameError('categories', urlKey, `The store has no category with the url key ${urlKey}.`);
             return String(pick.id);
         }),
         categoryUrlKey: async (id) => {
@@ -146,7 +146,7 @@ function categoryLookups(ctx: KindContext): Pick<ProductLookups, 'categoryId' | 
 function attributeLookups(ctx: KindContext): Pick<ProductLookups, 'attribute' | 'attributeCode' | 'optionId' | 'optionLabel'> {
     const attribute = cached(async (code) => {
         const found = await readOrNull<StoreAttribute>(ctx.get, `products/attributes/${encodeURIComponent(code)}`);
-        if (!found) throw new Error(`The store has no attribute ${code}.`);
+        if (!found) throw new MissingNameError('product_attributes', code, `The store has no attribute ${code}.`);
         return found;
     });
     return {
@@ -157,7 +157,7 @@ function attributeLookups(ctx: KindContext): Pick<ProductLookups, 'attribute' | 
             // stores and a pack sends (`1column`, never "1 column").
             const options = (await attribute(code)).options ?? [];
             const option = options.find((o) => equalLabel(o.label, label)) ?? options.find((o) => o.value === label);
-            if (!option?.value) throw new Error(`The attribute ${code} has no option "${label}".`);
+            if (!option?.value) throw new MissingNameError('product_attributes', code, `The attribute ${code} has no option "${label}".`);
             return option.value;
         },
         optionLabel: async (code, id) => {
@@ -180,7 +180,7 @@ function groupLookups(ctx: KindContext): Pick<ProductLookups, 'groupId' | 'group
                 const pick = found.find((g) => g.code === wanted);
                 if (pick) return pick.id;
             }
-            throw new Error(`The store has no customer group ${code}.`);
+            throw new MissingNameError('customer_groups', code, `The store has no customer group ${code}.`);
         }),
         groupCode: cached(async (id) => (await readOrNull<{ code?: string }>(ctx.get, `customerGroups/${segment(id)}`))?.code),
     };
@@ -191,7 +191,7 @@ function productIdLookups(ctx: KindContext): Pick<ProductLookups, 'productId' | 
     return {
         productId: cached(async (sku) => {
             const found = await readOrNull<{ id?: number }>(ctx.get, `products/${encodeURIComponent(sku)}`);
-            if (found?.id === undefined) throw new Error(`The store has no product ${sku}.`);
+            if (found?.id === undefined) throw new MissingNameError('products', sku, `The store has no product ${sku}.`);
             return found.id;
         }),
         productSku: cached(async (id) => (await firstWhere<{ sku?: string }>(ctx, 'products', 'entity_id', id))?.sku),

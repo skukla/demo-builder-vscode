@@ -47,10 +47,13 @@ describe('coupons install', () => {
         expect((ctx.sent[0].body as { coupon: { rule_id: number } }).coupon.rule_id).toBe(7);
     });
 
-    it('stops, naming both, when the store has no rule by that name', async () => {
+    // Step 14 item 3: skipped and named, and the rest of the pack goes on.
+    it('skips the code, naming both, when the store has no rule by that name', async () => {
         const ctx = await fakeContext({ [couponSearch('FF2021')]: NO_COUPONS_PAGE, [ruleSearch(String(FF2021.coupon.rule_id))]: NO_RULES_PAGE });
 
-        await expect(installCoupons(ctx, parseCouponRows([FF2021]))).rejects.toThrow('The store has no cart rule named Anaïs Clément - Friends and Family Promo, so the coupon FF2021');
+        await installCoupons(ctx, parseCouponRows([FF2021]));
+
+        expect(ctx.session.skipped?.[0]).toMatchObject({ kind: 'coupons', key: 'FF2021', reason: expect.stringContaining('The store has no cart rule named Anaïs Clément - Friends and Family Promo, so the coupon FF2021') });
         expect(ctx.sent).toStrictEqual([]);
     });
 

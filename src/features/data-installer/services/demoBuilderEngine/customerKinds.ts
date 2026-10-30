@@ -35,6 +35,7 @@ import { customerByEmail, groupByCode } from './b2bReads';
 import { deleteIfPresent, type KindContext, parseRows, ownedId, readOrNull, segment } from './kindContext';
 import { createOne } from './pendingCreates';
 import { type ProductLookups, productLookups } from './productLookups';
+import { tryRow } from './refusedRows';
 import type { CommerceCustomer, CommerceCustomerAddress, CommerceCustomerGroup, CommerceSend } from '@/types/commerceWire';
 
 export { CUSTOMER_GROUP_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
@@ -72,12 +73,16 @@ export async function installCustomerGroups(ctx: KindContext, rows: CustomerGrou
     for (const { customer_group: group } of rows) {
         if (ownedId(ctx.session, CUSTOMER_GROUP_KIND, group.code) !== undefined) continue;
         if (await groupByCode(ctx.get, group.code)) continue;
-        const body: { group: CommerceCustomerGroup } = { group: { code: group.code, tax_class_id: group.tax_class_id ?? RETAIL_TAX_CLASS } };
-        await createOne(ctx, { kind: CUSTOMER_GROUP_KIND, key: group.code }, async () => {
-            const id = Number(((await ctx.send('POST', 'customerGroups', body)) as CommerceCustomerGroup | null)?.id);
-            if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer group ${group.code}'s id.`);
-            return { kind: CUSTOMER_GROUP_KIND, id: String(id), key: group.code };
+        // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
+        const made = await tryRow(ctx, { kind: CUSTOMER_GROUP_KIND, key: group.code }, async () => {
+            const body: { group: CommerceCustomerGroup } = { group: { code: group.code, tax_class_id: group.tax_class_id ?? RETAIL_TAX_CLASS } };
+            return createOne(ctx, { kind: CUSTOMER_GROUP_KIND, key: group.code }, async () => {
+                const id = Number(((await ctx.send('POST', 'customerGroups', body)) as CommerceCustomerGroup | null)?.id);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer group ${group.code}'s id.`);
+                return { kind: CUSTOMER_GROUP_KIND, id: String(id), key: group.code };
+            });
         });
+        if (!made) continue;
         ctx.log(`created customer group ${group.code}`);
     }
 }
@@ -134,13 +139,17 @@ export async function installCustomers(ctx: KindContext, rows: CustomerRows): Pr
             ctx.log(`left customer ${key} as it is: the website already has it`);
             continue;
         }
-        const customer = { ...(await customerFields(lk, row)), website_id: websiteId, store_id: ctx.session.storeId } as CommerceCustomer;
-        await createOne(ctx, { kind: CUSTOMER_KIND, key, find: { websiteId } }, async () => {
-            const answer = (await ctx.send('POST', 'customers', { customer, ...(row.password ? { password: row.password } : {}) })) as CommerceCustomer | null;
-            const id = Number(answer?.id);
-            if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer ${key}'s id.`);
-            return { kind: CUSTOMER_KIND, id: String(id), key };
+        // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
+        const made = await tryRow(ctx, { kind: CUSTOMER_KIND, key }, async () => {
+            const customer = { ...(await customerFields(lk, row)), website_id: websiteId, store_id: ctx.session.storeId } as CommerceCustomer;
+            return createOne(ctx, { kind: CUSTOMER_KIND, key, find: { websiteId } }, async () => {
+                const answer = (await ctx.send('POST', 'customers', { customer, ...(row.password ? { password: row.password } : {}) })) as CommerceCustomer | null;
+                const id = Number(answer?.id);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer ${key}'s id.`);
+                return { kind: CUSTOMER_KIND, id: String(id), key };
+            });
         });
+        if (!made) continue;
         ctx.log(`created customer ${key}`);
     }
 }

@@ -28,9 +28,10 @@ import { z } from 'zod';
 import { filterBy } from './b2bReads';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import type { CreatedObject } from './installRecord';
-import { deleteIfPresent, eachCopy, type KindContext, ownedId, parseRows, readOrNull, segment } from './kindContext';
+import { deleteIfPresent, eachCopy, type KindContext, MissingNameError, ownedId, parseRows, readOrNull, segment } from './kindContext';
 import { createOne } from './pendingCreates';
 import { isNumeric } from './productLookups';
+import { tryRow } from './refusedRows';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceCoupon, CommerceSalesRule } from '@/types/commerceSalesRule';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -81,7 +82,7 @@ async function ruleIdOf(ctx: KindContext, coupon: PackCoupon): Promise<number | 
     const made = owned ?? ctx.recorder.byKey(CART_RULE_KIND, named)?.id;
     if (made !== undefined) return Number(made);
     const found = await ruleByName(ctx.get, named);
-    if (found?.rule_id === undefined) throw new Error(`The store has no cart rule named ${named}, so the coupon ${coupon.code} has nothing to belong to.`);
+    if (found?.rule_id === undefined) throw new MissingNameError(CART_RULE_KIND, named, `The store has no cart rule named ${named}, so the coupon ${coupon.code} has nothing to belong to.`);
     return found.rule_id;
 }
 
@@ -93,18 +94,19 @@ export async function installCoupons(ctx: KindContext, rows: CouponRows): Promis
             ctx.log(`left coupon ${coupon.code} as it is: the store already has it`);
             continue;
         }
-        const ruleId = await ruleIdOf(ctx, coupon);
-        if (ruleId === null) {
-            ctx.log(`left coupon ${coupon.code} out: you deleted its cart rule ${String(coupon.rule_id)} since it was installed`);
-            continue;
-        }
-        await createOne(ctx, { kind: COUPON_KIND, key: coupon.code }, async () => {
-            const answer = (await ctx.send('POST', 'coupons', { coupon: { ...without(coupon), rule_id: ruleId } })) as CommerceCoupon | null;
-            const id = Number(answer?.coupon_id);
-            if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new coupon ${coupon.code}'s id.`);
-            return { kind: COUPON_KIND, id: String(id), key: coupon.code };
+        // Step 14 item 3: a code Commerce refuses, or whose rule was skipped, is skipped; the rest go on.
+        const made = await tryRow(ctx, { kind: COUPON_KIND, key: coupon.code }, async () => {
+            const ruleId = await ruleIdOf(ctx, coupon);
+            if (ruleId === null) return 'left out' as const;
+            return createOne(ctx, { kind: COUPON_KIND, key: coupon.code }, async () => {
+                const answer = (await ctx.send('POST', 'coupons', { coupon: { ...without(coupon), rule_id: ruleId } })) as CommerceCoupon | null;
+                const id = Number(answer?.coupon_id);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new coupon ${coupon.code}'s id.`);
+                return { kind: COUPON_KIND, id: String(id), key: coupon.code };
+            });
         });
-        ctx.log(`created coupon ${coupon.code}`);
+        if (made === 'left out') ctx.log(`left coupon ${coupon.code} out: you deleted its cart rule ${String(coupon.rule_id)} since it was installed`);
+        else if (made) ctx.log(`created coupon ${coupon.code}`);
     }
 }
 

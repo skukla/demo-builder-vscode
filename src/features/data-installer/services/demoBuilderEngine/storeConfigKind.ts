@@ -33,6 +33,7 @@ import { z } from 'zod';
 import type { CreatedObject, PendingObject } from './installRecord';
 import { type KindContext, type SettingsDone, parseRows } from './kindContext';
 import { certainlyNotMade } from './pendingCreates';
+import { skipRow } from './refusedRows';
 import { andList } from '@/core/utils/andList';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
 import { SETTING_PATH, configFix, readPrevious } from '@/features/app-builder/services/storePreparation/configFix';
@@ -236,11 +237,23 @@ async function writeSettings(ctx: KindContext, writing: readonly PlannedSetting[
 }
 
 /**
+ * Each setting Commerce refused, skipped and named (step 14 item 3): the settings fix words a refusal
+ * `<path>: <old> → <new>: <why>`, and the rest of the pack carries on.
+ */
+function skipRefused(ctx: KindContext, writing: readonly PlannedSetting[], rejected: readonly string[]): void {
+    for (const text of rejected) {
+        const planned = writing.find((p) => p.item && text.startsWith(`${p.item.path}: `));
+        const path = planned?.item?.path ?? text.split(': ')[0];
+        skipRow(ctx, { kind: STORE_CONFIG_KIND, key: planned?.key ?? path, reason: text.slice(path.length + 2) });
+    }
+}
+
+/**
  * Install the pack's settings (see the module comment). A repeat install brings a setting this
  * engine set up to the pack, keeps one the SC changed since, and puts back one the pack dropped.
  *
- * @throws Error before any write when a row is refused; after the writes, naming each setting
- *   Commerce refused (the ones it saved stay recorded)
+ * @throws Error before any write when a row is refused. A setting Commerce refuses is skipped and
+ *   named in the install's note (step 14 item 3); the ones it saved stay recorded.
  */
 export async function installStoreConfig(ctx: KindContext, records: unknown): Promise<void> {
     const settings = packSettings(records, ctx.session.websiteCode);
@@ -254,7 +267,7 @@ export async function installStoreConfig(ctx: KindContext, records: unknown): Pr
     const back = await putBackSettings(ctx, dropped, (o) => ctx.recorder.drop(o));
     const putBack = settingsLine(back, 'Put back');
     if (putBack) done.notes.push(putBack);
-    if (rejected.length > 0) throw new Error(`Commerce refused ${andList(rejected)}.`);
+    skipRefused(ctx, plan.filter((p) => p.outcome === 'set' || p.outcome === 'update'), rejected);
 }
 
 /**

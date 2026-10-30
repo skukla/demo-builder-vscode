@@ -15,11 +15,15 @@
  */
 
 import type { CreatedObject, PendingObject } from './installRecord';
-import type { KindContext } from './kindContext';
+import { type KindContext, MissingNameError } from './kindContext';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 
-/** True when a failed create certainly made nothing: Commerce answered it with a 4xx. */
+/**
+ * True when a failed create certainly made nothing: Commerce answered it with a 4xx, or the row
+ * named something the store lacks, so it was never sent.
+ */
 export function certainlyNotMade(error: unknown): boolean {
+    if (error instanceof MissingNameError) return true;
     if (!(error instanceof CommerceReadError) || error.status === undefined) return false;
     return error.status >= 400 && error.status < 500;
 }

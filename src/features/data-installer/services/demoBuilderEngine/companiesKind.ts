@@ -40,6 +40,7 @@ import { COMPANY_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
 import { PUBLIC_CATALOG_TYPE, companyByName, customerByEmail, readCatalogs } from './b2bReads';
 import { deleteIfPresent, type KindContext, ownedId, parseRows, readOrNull, segment } from './kindContext';
 import { createOne } from './pendingCreates';
+import { tryRow } from './refusedRows';
 import type { CommerceCompany, CommerceCompanyHierarchyNode, CommerceCustomer, CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 export { COMPANY_KIND } from './b2bKeys';
@@ -141,20 +142,24 @@ export async function installCompanies(ctx: KindContext, rows: CompanyRows): Pro
             ctx.log(`left company ${name} as it is: the store already has it`);
             continue;
         }
-        const superUserId = await adminId(ctx, admin, websiteId);
-        const ext = portableExt(row.extension_attributes);
-        const company: CommerceCompany = {
-            ...companyFields(row),
-            super_user_id: superUserId,
-            status: row.status ?? ACTIVE,
-            ...(publicGroup !== undefined ? { customer_group_id: publicGroup } : {}),
-            ...(ext ? { extension_attributes: ext } : {}),
-        };
-        await createOne(ctx, { kind: COMPANY_KIND, key: name, find: { email }, previous: { superUserId } }, async () => {
-            const id = Number(((await ctx.send('POST', 'company', { company })) as CommerceCompany | null)?.id);
-            if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new company ${name}'s id.`);
-            return { kind: COMPANY_KIND, id: String(id), key: name, previous: { superUserId } };
+        // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
+        const made = await tryRow(ctx, { kind: COMPANY_KIND, key: name }, async () => {
+            const superUserId = await adminId(ctx, admin, websiteId);
+            const ext = portableExt(row.extension_attributes);
+            const company: CommerceCompany = {
+                ...companyFields(row),
+                super_user_id: superUserId,
+                status: row.status ?? ACTIVE,
+                ...(publicGroup !== undefined ? { customer_group_id: publicGroup } : {}),
+                ...(ext ? { extension_attributes: ext } : {}),
+            };
+            return createOne(ctx, { kind: COMPANY_KIND, key: name, find: { email }, previous: { superUserId } }, async () => {
+                const id = Number(((await ctx.send('POST', 'company', { company })) as CommerceCompany | null)?.id);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new company ${name}'s id.`);
+                return { kind: COMPANY_KIND, id: String(id), key: name, previous: { superUserId } };
+            });
         });
+        if (!made) continue;
         ctx.log(`created company ${name}`);
     }
 }

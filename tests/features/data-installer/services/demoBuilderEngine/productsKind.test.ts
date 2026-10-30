@@ -179,11 +179,13 @@ describe('installProducts', () => {
         expect(ctx.recorder.created).toStrictEqual([]);
     });
 
-    it('stops at an option label the store does not have, rather than sending it on', async () => {
+    it('skips a product naming an option label the store does not have, rather than sending it on', async () => {
         const ctx = await storeContext();
         const row = { product: { ...CABLE.product, extension_attributes: { website_ids: [3] }, custom_attributes: [{ attribute_code: 'cable_size', value: '9 foot' }] } };
 
-        await expect(installProducts(ctx, parseProductRows([row]))).rejects.toThrow('The attribute cable_size has no option "9 foot".');
+        await installProducts(ctx, parseProductRows([row]));
+
+        expect(ctx.session.skipped?.map((r) => r.reason)).toEqual(['The attribute cable_size has no option "9 foot".']);
         expect(ctx.sent).toStrictEqual([]);
     });
 
@@ -240,10 +242,14 @@ describe('installProducts', () => {
         });
     });
 
-    it('stops at a customer group the store does not have', async () => {
+    // Step 14 item 3: skipped and named, and the rest of the pack goes on.
+    it('skips a product naming a customer group the store does not have, naming it', async () => {
         const ctx = await storeContext({ [page('customerGroups/search', by('customer_group_code', 'Platinum Buyer'))]: { items: [], total_count: 0 } });
 
-        await expect(installProducts(ctx, parseProductRows([VR_RACK]))).rejects.toThrow('The store has no customer group Platinum Buyer.');
+        await installProducts(ctx, parseProductRows([VR_RACK]));
+
+        expect(ctx.session.skipped).toEqual([{ kind: 'products', key: VR_RACK.product.sku, reason: 'The store has no customer group Platinum Buyer.' }]);
+        expect(ctx.sent).toStrictEqual([]);
     });
 
     it('refuses when the install target names no website', async () => {

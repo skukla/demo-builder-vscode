@@ -73,12 +73,15 @@ describe('installing a pack’s store settings', () => {
         expect(ctx.sent).toStrictEqual([]);
     });
 
-    it('names each setting Commerce refused, keeping the ones it saved on the record', async () => {
+    // Step 14 item 3: one refused row does not stop the rest; the install's note names it.
+    it('skips each setting Commerce refused, naming it, and keeps the ones it saved on the record', async () => {
         const ctx = await storeContext(configStore({ default: { [GRID]: '12', [LIST]: '10' } }, [LIST]));
 
-        await expect(installStoreConfig(ctx, [row(GRID, '24'), row(LIST, '20')])).rejects.toThrow(`Commerce refused ${LIST}: 10 → 20: not allowed.`);
+        await installStoreConfig(ctx, [row(GRID, '24'), row(LIST, '20')]);
 
         expect(ctx.recorder.created.map((o) => o.key)).toEqual([`${GRID}@default`]);
+        expect(ctx.session.skipped).toEqual([{ kind: 'store_config', key: `${LIST}@default`, reason: '10 → 20: not allowed' }]);
+        expect(ctx.recorder.pending).toStrictEqual([]);
     });
 });
 

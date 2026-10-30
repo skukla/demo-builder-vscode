@@ -23,6 +23,7 @@ import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord,
 import { resolveEngineTarget, sessionFor } from './installTarget';
 import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
 import { type RootStepAsker, rootStepLine } from './packRootStep';
+import { skippedLine } from './refusedRows';
 import { containersLine } from './removers';
 import { keptLine } from './repeatInstall';
 import { type PackItems, PackRowsError, installPack, packRowProblems, removePack, unsupportedKinds } from './runPack';
@@ -129,6 +130,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         job.perType[kind] = 'processing';
     });
     job.note = [
+        skippedLine(outcome.skipped),
         keptLine(outcome.kept),
         containersLine(outcome.containers),
         settingsLine(outcome.settings, 'Set'),

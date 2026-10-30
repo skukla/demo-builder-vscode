@@ -214,7 +214,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Dry-run an import: same guard, same credentials, same request body as the real thing, ' +
             'without writing. Run this before start_datapack_import. A refusal comes back as ' +
-            'valid:false with a reason, not as an error.',
+            'valid:false with a reason, not as an error. With the demo-builder engine it also reads ' +
+            "the pack's rows and names each kind whose rows Commerce could not take.",
         map: importHandlers,
         type: 'validate-datapack-import',
         inputSchema: { ...DATAPACK_ID, ...IMPORT_TARGET },
@@ -321,7 +322,11 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "store's root when no other store shares it; when one does, the install asks the user for the one " +
             'Admin step (no API can change a store\'s root), and the note names it if skipped. Running it ' +
             'again re-checks that step and marks it done once set. Under the store\'s root, a pack category ' +
-            'whose url key the store already uses in the same place stops the install before any write.',
+            'whose url key the store already uses in the same place stops the install before any write. ' +
+            "Every kind's rows are checked before any write. A row Commerce refuses is skipped and the rest " +
+            'go in; the note names each skipped row and why, and every row that needed it. Every kind still ' +
+            'reads success, so read the note. Sign-in, throttling, a Commerce error or no answer stop it; ' +
+            'running it again carries on and counts anything made without an answer as the pack\'s.',
         map: importHandlers,
         type: 'start-datapack-import',
         confirm: true,

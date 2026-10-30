@@ -103,6 +103,23 @@ describe('demoBuilderEngine install', () => {
         expect(ctx.sent).toStrictEqual([]);
     });
 
+    // Step 14 item 3: one refused row does not stop the rest. The kind still ends success (it ran to
+    // its end), and the note names the row and Commerce's reason.
+    it('carries on past a row Commerce refuses, and the note names it with the reason', async () => {
+        const refuseCategory = (call: SentCall) => {
+            if (call.path === 'categories') throw new CommerceReadError('Commerce answered 400 for categories: {"message":"URL key for specified store already exists."}', 400);
+            return { id: 40 };
+        };
+        const { engine } = await engineWith({ [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) }, refuseCategory);
+
+        const { activationId } = await engine.startImport(request());
+        const status = await settle(engine, activationId);
+
+        expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
+        expect(status.note).toBe('Skipped 1 row, and installed the rest: categories Sale (URL key for specified store already exists).');
+        expect(await engine.getJobFailureReason(activationId)).toBeUndefined();
+    });
+
     it('marks the failing kind and every later one as failed, and says why', async () => {
         // The category's write fails; its reads (and the url-key check's, before any write) succeed.
         const failCategory = (call: SentCall) => {

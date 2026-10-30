@@ -22,6 +22,7 @@ import { amountsForStore, withoutAmounts } from './giftCardAmounts';
 import { deleteIfPresent, type KindContext, readOrNull } from './kindContext';
 import { createOne } from './pendingCreates';
 import { isNumeric, type ProductLookups, productLookups } from './productLookups';
+import { tryRow } from './refusedRows';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const PRODUCT_KIND = 'products';
@@ -197,10 +198,14 @@ export async function installProducts(ctx: KindContext, rows: readonly ProductRo
             ctx.log(`left ${row.sku} alone: the store already has it`);
             continue;
         }
-        await createOne(ctx, { kind, key: row.sku, id: row.sku }, async () => {
-            await ctx.send('POST', 'products', await toCommerceProduct(lk, row, websiteId, leftAtDefault));
-            return { kind, id: row.sku };
-        });
+        // Step 14 item 3: a product Commerce refuses, or that needs a row skipped, is skipped too.
+        const made = await tryRow(ctx, { kind, key: row.sku }, () =>
+            createOne(ctx, { kind, key: row.sku, id: row.sku }, async () => {
+                await ctx.send('POST', 'products', await toCommerceProduct(lk, row, websiteId, leftAtDefault));
+                return { kind, id: row.sku };
+            }),
+        );
+        if (!made) continue;
         ctx.log(`created product ${row.sku}`);
     }
 }
