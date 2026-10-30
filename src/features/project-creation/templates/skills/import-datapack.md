@@ -111,6 +111,13 @@ to your own work.
 Use `list_datapack_export_items` first to see what would be captured. It is paged;
 `totalCount` tells you how many exist beyond the page.
 
+**An ACO pack** (Adobe Commerce Optimizer) is the same tool with `aco: true`: it reads the
+project's own store and saves `aco_metadata`, `aco_categories`, `aco_products`,
+`aco_price_books` and `aco_prices` into the SC's datapack LIBRARY, not the shared catalog.
+Name the store views with `storeViews` (omit for every one); `commerceInstance` is not
+needed. It still takes `confirm` and `confirmName`. Undo it with `delete_library_datapack`.
+Demo Builder cannot install an ACO pack yet.
+
 ### Export is the one operation you must order yourself
 
 Import and reset are ordered BY THE SERVICE. Export is not. You can export data types

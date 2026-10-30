@@ -7,10 +7,11 @@
  * Each link owns the modal it opens, so the catalog view carries no modal's
  * state — it was past its size guideline before either existed beside the other.
  *
- * Export is the Data Installer service's own, so its link shows only with the service
- * engine chosen (2026-10-29): the service has not saved what it reads since August, and
- * with Demo Builder's engine, the default, the link offered an export that cannot work
- * into a catalog other teams share.
+ * The Commerce export is the Data Installer service's own, so the export screen offers it only
+ * with the service engine chosen (2026-10-29): the service has not saved what it reads since
+ * August, and with Demo Builder's engine, the default, it offered an export that cannot work
+ * into a catalog other teams share. The link itself always shows, since an ACO pack is made
+ * with either engine (datapack-engine step 14 item 19).
  *
  * @module features/data-installer/ui/components/CatalogHeaderActions
  */
@@ -26,7 +27,7 @@ import type { WipeStoreChoice } from '@/types/demoDataWipe';
 export interface CatalogHeaderActionsProps {
     /** A file was loaded (or the load modal closed): the catalog may have changed. Stable. */
     onCatalogChanged: () => void;
-    /** The service engine is chosen, so its export can run. */
+    /** The service engine is chosen, so its Commerce export can run; an ACO pack always can. */
     canExport: boolean;
 }
 
@@ -56,18 +57,16 @@ export function CatalogHeaderActions({
 
     return (
         <>
-            {canExport ? (
-                <Link isQuiet onPress={() => setExporting(true)}>
-                    Export from this instance
-                </Link>
-            ) : null}
+            <Link isQuiet onPress={() => setExporting(true)}>
+                Export from this instance
+            </Link>
             <Link isQuiet onPress={() => setLoadingFile(true)}>
                 Load from file
             </Link>
             <Link isQuiet onPress={() => setClearing(true)}>
                 Clear demo data
             </Link>
-            {exporting ? <ExportDatapackModal onClose={closeExport} /> : null}
+            {exporting ? <ExportDatapackModal onClose={closeExport} commerceExport={canExport} /> : null}
             {loadingFile ? <LoadDatapackFileModal onClose={closeLoad} /> : null}
             {clearing ? <ClearDemoDataModal onClose={closeClear} onClear={startClear} /> : null}
             {progressWindow}

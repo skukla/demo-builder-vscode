@@ -76,7 +76,7 @@ describe('ExportDatapackModal — the per-type lines', () => {
         await runExport(exportResult([{ ...CAPTURED, exported: 8, excluded: 3 }]));
 
         expect(
-            await screen.findByText(/8 exported \(3 excluded by the service\)/)
+            await screen.findByText(/8 exported \(3 left out\)/)
         ).toBeInTheDocument();
     });
 
@@ -86,6 +86,6 @@ describe('ExportDatapackModal — the per-type lines', () => {
         await runExport(exportResult([CAPTURED]));
 
         expect(await screen.findByText(/8 exported$/)).toBeInTheDocument();
-        expect(screen.queryByText(/excluded by the service/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/left out/)).not.toBeInTheDocument();
     });
 });

@@ -32,6 +32,7 @@ import {
     type ExportRequest,
     type ExportOutcome,
 } from '../services/dataInstallerExportClient';
+import { startAcoExport } from './acoExportHandler';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
@@ -91,6 +92,9 @@ export const exportHandlers = defineHandlers({
         context: HandlerContext,
         payload?: ExportPayload,
     ): Promise<HandlerResponse> => {
+        // An ACO pack is Demo Builder's own (step 14 item 19): read here, saved into the
+        // library, with either engine.
+        if (payload?.aco === true) return startAcoExport(context, payload);
         // The service's export, which has not saved what it reads since August, into a
         // catalog other teams share. With Demo Builder's engine it does not run at all
         // (2026-10-29); the screen hides its link for the same reason.
@@ -155,6 +159,10 @@ export interface ExportPayload {
     dataType?: string;
     /** `{<type>: {<idField>: [ids]}}` — omitted means "everything allowed". */
     selections?: Record<string, Record<string, Array<string | number>>>;
+    /** Make an ACO pack from this store, into the library (`acoExportHandler.ts`). */
+    aco?: boolean;
+    /** ACO only: the store views to make it for; omitted means every one. */
+    storeViews?: string[];
 }
 
 /**

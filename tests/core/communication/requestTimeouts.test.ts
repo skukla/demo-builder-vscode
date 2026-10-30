@@ -57,6 +57,12 @@ describe('REQUEST_TIMEOUTS', () => {
         expect([...budgetedTypes()]).toContain('getErpOwnershipOptions');
     });
 
+    // An export answers inline: the service's runs up to 300s, and an ACO pack reads every
+    // product once per store view picked (datapack-engine step 14 item 19).
+    it('budgets the export start-datapack-export', () => {
+        expect([...budgetedTypes()]).toContain('start-datapack-export');
+    });
+
     it.each(['listConsoleApis', 'addConsoleApis', 'setConsoleApis'])(
         'budgets the dashboard console-API message %s',
         (type) => {

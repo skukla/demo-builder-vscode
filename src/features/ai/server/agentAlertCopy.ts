@@ -441,7 +441,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_export: {
         action: 'Export sample data',
         consequence:
-            "Captures this instance's data into the shared catalogue, where other people will see it.",
+            "Captures this instance's data into the shared catalogue, where other people will see it, or an ACO pack into your own datapack library.",
         // The pack and the store it is captured FROM. `confirmName` is the
         // proof-of-intent echo, not the target.
         target: ['datapackName', 'version', 'commerceInstance'],

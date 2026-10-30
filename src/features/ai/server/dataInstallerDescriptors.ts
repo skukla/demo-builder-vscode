@@ -355,14 +355,27 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Capture data from a Commerce instance into a datapack. **Writes into the SHARED ' +
             'catalog other teams depend on** — requires confirm:true and confirmName equal to the ' +
-            'datapack name. List what it would contain first.',
+            'datapack name. List what it would contain first. With aco:true it instead makes an ' +
+            'Adobe Commerce Optimizer (ACO) pack from the project\'s store (aco_metadata, ' +
+            'aco_categories, aco_products, aco_price_books, aco_prices) for the storeViews named ' +
+            '(omit for every one), saved into YOUR datapack library, with either engine; ' +
+            'commerceInstance is not needed then.',
         map: importHandlers,
         type: 'start-datapack-export',
         confirm: true,
         inputSchema: {
             ...DATAPACK_ID,
-            commerceInstance: z.string().describe('Source Commerce instance id'),
-            dataTypes: z.array(z.string()).min(1).describe('Data types to capture; at least one'),
+            commerceInstance: z.string().optional().describe('Source Commerce instance id; required unless aco is true'),
+            dataTypes: z
+                .array(z.string())
+                .min(1)
+                .optional()
+                .describe('Data types to capture; at least one. With aco, ACO kinds (omit for all five)'),
+            aco: z.boolean().optional().describe("Make an ACO pack from the project's store, into your datapack library"),
+            storeViews: z
+                .array(z.string())
+                .optional()
+                .describe('With aco: the store view codes to make it for; omit for every one'),
             confirmName: z
                 .string()
                 .optional()
@@ -376,9 +389,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 ? undefined
                 : {
                       error:
-                          `start_datapack_export writes "${String(args.datapackName)}" into the shared ` +
-                          `datapack catalog. To proceed, call again with confirmName:"${String(args.datapackName)}".`,
-                      sharedCatalog: true,
+                          `start_datapack_export writes "${String(args.datapackName)}" into ` +
+                          (args.aco === true ? 'your datapack library' : 'the shared datapack catalog') +
+                          `. To proceed, call again with confirmName:"${String(args.datapackName)}".`,
+                      sharedCatalog: args.aco !== true,
                   },
     },
 

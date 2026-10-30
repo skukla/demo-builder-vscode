@@ -22,31 +22,23 @@
  * Two views only — form and result — because an export returns inline. There is
  * no activation id to watch, unlike an import.
  *
+ * **Or an ACO pack** (datapack-engine step 14 item 19, `AcoExportChoices`): made by Demo
+ * Builder into the SC's library, so offered with any engine; the Commerce pack only with the
+ * service's. The result view is `ExportDatapackResult`.
+ *
  * @module features/data-installer/ui/components/ExportDatapackModal
  */
 
 import { ActionButton, Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
+import { type AcoExportChoice, useAcoExportChoice } from '../hooks/useAcoExportChoice';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { AcoExportChoices } from './AcoExportChoices';
+import { type ExportOutcome, ExportDatapackResult } from './ExportDatapackResult';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { FormField } from '@/core/ui/components/forms/FormField';
 import { Modal } from '@/core/ui/components/ui/Modal';
-
-/** What one data type's export did, as the handler reports it. */
-interface ExportTypeOutcome {
-    dataType: string;
-    success: boolean;
-    exported: number;
-    excluded: number;
-    reason?: string;
-}
-
-interface ExportOutcome {
-    success: boolean;
-    perType: ExportTypeOutcome[];
-}
 
 /** What the project implies about where to export FROM. */
 interface ProjectTarget {
@@ -75,9 +67,11 @@ interface TypeChoices {
 
 export interface ExportDatapackModalProps {
     onClose: () => void;
+    /** The service's Commerce export can run (its engine is chosen); without it, ACO only. */
+    commerceExport?: boolean;
 }
 
-export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): React.JSX.Element {
+export function ExportDatapackModal({ onClose, commerceExport = true }: ExportDatapackModalProps): React.JSX.Element {
     const [name, setName] = useState('');
     const [version, setVersion] = useState('');
     const [selected, setSelected] = useState<string[]>([]);
@@ -91,6 +85,7 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
     const types = useDataInstallerRequest<{ dataTypes?: string[] }>('list-datapack-data-types');
     const target = useDataInstallerRequest<ProjectTarget>('get-datapack-import-target');
     const run = useDataInstallerRequest<ExportOutcome>('start-datapack-export');
+    const aco = useAcoExportChoice(commerceExport);
 
     const loadTypes = types.load;
     useEffect(() => {
@@ -124,18 +119,15 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
         setSelected(allSelected ? [] : [...available]);
     }, [allSelected, available]);
 
-    const canExport =
-        name.trim().length > 0 && version.trim().length > 0 && selected.length > 0 && !run.loading;
+    const chosen = aco.isAco ? aco.ready : selected.length > 0;
+    const canExport = name.trim().length > 0 && version.trim().length > 0 && chosen && !run.loading;
 
     const start = useCallback((): void => {
         setDismissed(false);
-        run.load({
-            datapackName: name.trim(),
-            version: version.trim(),
-            commerceInstance: target.value?.instance ?? '',
-            dataTypes: selected,
-        });
-    }, [run, name, version, selected, target.value]);
+        const id = { datapackName: name.trim(), version: version.trim() };
+        const commerce = { commerceInstance: target.value?.instance ?? '', dataTypes: selected };
+        run.load(aco.isAco ? { ...id, ...aco.fields() } : { ...id, ...commerce });
+    }, [run, name, version, selected, target.value, aco]);
 
     const goBack = useCallback((): void => setDismissed(true), []);
 
@@ -172,8 +164,10 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
                 <div className="datapack-export-body">
                     {showingResult ? (
                         <>
-                            <ExportResult outcome={outcome} error={failure?.message} />
-                            {savable ? <SaveDatapackFileButton id={savable} /> : null}
+                            <ExportDatapackResult outcome={outcome} error={failure?.message} />
+                            {savable ? (
+                                <SaveDatapackFileButton id={savable} source={aco.isAco ? 'library' : 'installer'} />
+                            ) : null}
                         </>
                     ) : (
                         <ExportForm
@@ -182,6 +176,7 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
                             version={version}
                             onNameChange={setName}
                             onVersionChange={setVersion}
+                            aco={aco}
                             types={{
                                 available,
                                 selected,
@@ -207,6 +202,7 @@ function ExportForm({
     version,
     onNameChange,
     onVersionChange,
+    aco,
     types,
 }: {
     projectName?: string;
@@ -214,6 +210,7 @@ function ExportForm({
     version: string;
     onNameChange: (value: string) => void;
     onVersionChange: (value: string) => void;
+    aco: AcoExportChoice;
     types: TypeChoices;
 }): React.JSX.Element {
     return (
@@ -222,8 +219,9 @@ function ExportForm({
                 {projectName
                     ? `Capture data from ${projectName} into a new datapack.`
                     : 'Capture data from this project’s Commerce instance into a new datapack.'}{' '}
-                The name and version identify it in the shared catalog, so pick something other
-                teams will recognise as yours.
+                {aco.isAco
+                    ? 'The name and version identify it in your datapack library.'
+                    : 'The name and version identify it in the shared catalog, so pick something other teams will recognise as yours.'}
             </p>
 
             <FormField
@@ -245,19 +243,21 @@ function ExportForm({
                 placeholder="e.g. main"
             />
 
-            <div className="datapack-import-types">
-                {/* Label and bulk toggle side by side, matching the import list.
-                    The toggle appears only once there is a list to act on. */}
-                <div className="datapack-import-types-head">
-                    <span className="datapack-import-label">Data types</span>
-                    {types.available.length > 0 ? (
-                        <ActionButton isQuiet onPress={types.onToggleAll}>
-                            {types.allSelected ? 'Clear all' : 'Select all'}
-                        </ActionButton>
-                    ) : null}
+            <AcoExportChoices choice={aco}>
+                <div className="datapack-import-types">
+                    {/* Label and bulk toggle side by side, matching the import list.
+                        The toggle appears only once there is a list to act on. */}
+                    <div className="datapack-import-types-head">
+                        <span className="datapack-import-label">Data types</span>
+                        {types.available.length > 0 ? (
+                            <ActionButton isQuiet onPress={types.onToggleAll}>
+                                {types.allSelected ? 'Clear all' : 'Select all'}
+                            </ActionButton>
+                        ) : null}
+                    </div>
+                    {renderTypeChoices(types)}
                 </div>
-                {renderTypeChoices(types)}
-            </div>
+            </AcoExportChoices>
         </>
     );
 }
@@ -304,46 +304,4 @@ function renderTypeChoices({
             ))}
         </div>
     );
-}
-
-/**
- * What the export did, per type.
- *
- * The `reason` line is the point of this view. The service reports a failed
- * export as an all-zero count with no explanation unless `verbose` is asked for;
- * the client asks, so the explanation exists and belongs on screen.
- */
-function ExportResult({
-    outcome,
-    error,
-}: {
-    outcome: ExportOutcome | null;
-    error?: string;
-}): React.JSX.Element {
-    if (error) {
-        return <StatusDisplay variant="error" title="The export could not run" message={error} />;
-    }
-    const perType = outcome?.perType ?? [];
-    const captured = perType.filter((row) => row.success);
-    return (
-        <StatusDisplay
-            variant={outcome?.success ? 'success' : 'error'}
-            title={
-                outcome?.success
-                    ? `Exported ${captured.length} of ${perType.length} data types`
-                    : 'The export did not complete'
-            }
-            details={perType.map(describeType)}
-        />
-    );
-}
-
-/** One line per type: what it captured, or why it did not. */
-function describeType(row: ExportTypeOutcome): string {
-    const label = dataTypeLabel(row.dataType);
-    if (!row.success) {
-        return `${label}: failed — ${row.reason ?? 'the service gave no reason'}`;
-    }
-    const excluded = row.excluded > 0 ? ` (${row.excluded} excluded by the service)` : '';
-    return `${label}: ${row.exported} exported${excluded}`;
 }

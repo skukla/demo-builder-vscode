@@ -721,12 +721,15 @@ export const RadioGroup: React.FC<any> = ({ children, value, onChange, label, de
     </div>
 );
 
-export const Radio: React.FC<any> = ({ children, value, selectedValue, onSelect, ...props }) => (
+// `isDisabled` disables the input, as Spectrum's own does; dropping it made a disabled
+// choice look enabled to every test (2026-10-30, the export screen's pack type).
+export const Radio: React.FC<any> = ({ children, value, selectedValue, onSelect, isDisabled, ...props }) => (
     <label data-testid="spectrum-radio" {...filterSpectrumProps(props)}>
         <input
             type="radio"
             value={value}
             checked={value === selectedValue}
+            disabled={Boolean(isDisabled)}
             onChange={() => onSelect?.(value)}
         />
         {children}
