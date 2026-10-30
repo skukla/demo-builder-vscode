@@ -1,5 +1,5 @@
 /**
- * "Save from this store" (datapack-engine step 14): the export screen with Demo Builder's engine.
+ * The pick screen, "Choose what goes in the pack" (datapack-engine step 14): the export screen with Demo Builder's engine.
  * One kind at a time, its items asked of `list-datapack-export-items` (less what the pack being
  * saved holds), picks kept across kinds, and Save handing them on.
  *

@@ -41,7 +41,7 @@ export interface HeldPackInput {
 export interface HeldPack {
     /** "Save store changes to this pack", for the held pack only. */
     offerSave?: (id: DatapackId) => void;
-    /** "Save from this store": the pick screen with no pack. */
+    /** Create datapack, Commerce: the pick screen with no pack. */
     saveFromStore: () => void;
     /** The held pack's Admin step, as one line for the flyout. */
     setupStepLine: React.JSX.Element | null;

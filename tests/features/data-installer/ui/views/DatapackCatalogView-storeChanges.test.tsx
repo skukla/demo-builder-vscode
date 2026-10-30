@@ -50,7 +50,7 @@ describe('Save store changes to this pack', () => {
         await openBodea();
 
         await press(screen.getByRole('menuitem', { name: LABEL }));
-        expect(await screen.findByRole('heading', { name: 'Save from this store' })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Choose what goes in the pack' })).toBeInTheDocument();
         expect(mockPost).not.toHaveBeenCalled();
         await press(screen.getByRole('button', { name: 'Save' }));
 

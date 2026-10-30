@@ -1,5 +1,5 @@
 /**
- * Save from this store into the demo's own pack, picking what goes in (datapack-engine step 14,
+ * The pick screen ("Choose what goes in the pack"): save from this project's Commerce instance into the demo's own pack, picking what goes in (datapack-engine step 14,
  * items 10 and 11). The Commerce pack with Demo Builder's engine: "Create datapack"
  * (`CreateDatapackModal`) opens this instead of the service's export form, and "Save store
  * changes to this pack" opens it too, with the pack, so the SC can add what they made by hand in
@@ -85,7 +85,7 @@ export function SaveFromStoreModal({ onClose, onSave, pack }: SaveFromStoreModal
             <Modal
                 size="L"
                 wide
-                title="Save from this store"
+                title="Choose what goes in the pack"
                 onClose={onClose}
                 closeLabel="Close"
                 actionButtons={[{ label: count > 0 ? `Save with ${count} picked` : 'Save', variant: 'accent', onPress: save, isDisabled: !pack && count === 0 }]}
