@@ -47,6 +47,20 @@ export interface DemoBuilderEngineDeps {
      * Absent, the step is left open on the record without a question.
      */
     asker?: RootStepAsker;
+    /** Told once when a job ends, however it ends: the activity log's writer (step 14). */
+    onJobEnd?: (end: JobEnd) => void;
+}
+
+/** How one job ended, for the activity log (`engineActivityLog.ts`). */
+export interface JobEnd {
+    activationId: string;
+    operation: 'import' | 'delete';
+    request: ImportRequest;
+    perType: Record<string, DataTypeStatus>;
+    reason?: string;
+    note?: string;
+    startedAt: number;
+    finishedAt: number;
 }
 
 const NO_TARGET = 'Choose the website and store view to install into first.';
@@ -124,7 +138,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
 }
 
 /** Run a job in the background, ending every requested kind terminal whatever happens. */
-function start(deps: DemoBuilderEngineDeps, jobs: Map<string, Job>, request: ImportRequest, work: (job: Job) => Promise<void>): ImportStart {
+function start(deps: DemoBuilderEngineDeps, jobs: Map<string, Job>, request: ImportRequest, operation: JobEnd['operation'], work: (job: Job) => Promise<void>): ImportStart {
     const activationId = `demo-builder-${crypto.randomUUID()}`;
     const job: Job = { perType: Object.fromEntries(request.dataTypes.map((kind) => [kind, 'pending' as DataTypeStatus])), startedAt: Date.now() };
     jobs.set(activationId, job);
@@ -135,6 +149,8 @@ function start(deps: DemoBuilderEngineDeps, jobs: Map<string, Job>, request: Imp
         })
         .finally(() => {
             job.finishedAt = Date.now();
+            const { perType, reason, note, startedAt, finishedAt } = job;
+            deps.onJobEnd?.({ activationId, operation, request, perType: { ...perType }, reason, note, startedAt, finishedAt });
         });
     return { activationId };
 }
@@ -170,9 +186,9 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 return { valid: false, reason: errorText(error) };
             }
         },
-        startImport: async (request) => start(deps, jobs, request, (job) => runInstall(deps, request, job)),
+        startImport: async (request) => start(deps, jobs, request, 'import', (job) => runInstall(deps, request, job)),
         startDelete: async (request) =>
-            start(deps, jobs, request, async (job) => {
+            start(deps, jobs, request, 'delete', async (job) => {
                 const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id });
                 if (result.noRecord) throw new Error('Demo Builder did not install this pack in this project, so there is nothing of its to remove.');
                 job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
