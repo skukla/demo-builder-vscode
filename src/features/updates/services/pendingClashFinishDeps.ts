@@ -10,6 +10,7 @@
 import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
+import { readShippedPatches } from '@/features/eds/services/patches/shippedPatchLedger';
 import { readBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import { refreshBaseFromColleague } from '@/features/updates/services/boilerplateBaseRefresh';
 import type { FinishDeps } from '@/features/updates/services/pendingClashFinish';
@@ -38,5 +39,6 @@ export function createFinishDeps(ctx: UpdateContext): FinishDeps {
             await refreshBaseFromColleague(project, baseRefreshDeps(ctx));
         },
         restorePieces: (project) => restoreDemoBuilderPieces(project, github.fileOperations, ctx.logger, resolveByomOverlayConfig),
+        livePatches: async () => (await readShippedPatches(ctx.logger)).live,
     };
 }

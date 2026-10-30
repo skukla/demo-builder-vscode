@@ -9,6 +9,9 @@
  * @module features/updates/services/updateApplyResult
  */
 
+import { describeEdit } from '@/features/updates/services/templateSyncMessages';
+import type { ClashEdit } from '@/features/updates/services/templateSyncTypes';
+
 /** Per-category outcome. */
 export interface CategoryResult {
     successCount: number;
@@ -47,6 +50,8 @@ export interface ClashReport {
     track: 'template' | 'boilerplate';
     /** The clashing files, repository-relative. */
     files: string[];
+    /** Whose edit each clashing file holds, when the update could tell. */
+    edits?: ClashEdit[];
     /** The local storefront copy holding the clash, when it was kept for fixing. */
     keptIn?: string;
     /** Why keeping it for fixing did not work, when that was tried. */
@@ -118,10 +123,69 @@ export function answeredClashOutcome(result: CategoryResult): ItemOutcome {
     return { state: 'skipped', message: clashes.map(answeredClashLine).join(' ') };
 }
 
+/**
+ * Whose edits a clash ran into, in a few words and no file names (owner, 2026-10-24: the AI is
+ * handed those): "an edit that came with kmanns/justrite", or "an edit made in this storefront".
+ */
+function whoseEditsLine(clash: ClashReport): string {
+    const edits = clash.edits ?? [];
+    const from = edits.length > 0 && edits.every((e) => e.whose === 'copied-demo' && e.from === edits[0].from) ? edits[0].from : undefined;
+    const noun = clash.files.length > 1 ? 'edits' : 'an edit';
+    return from ? `${noun} that came with ${from}` : `${noun} made in this storefront`;
+}
+
 /** What a clash the SC answered says under its row, which already names the update. */
 function answeredClashLine(clash: ClashReport): string {
     if (clash.keptIn) return 'Not updated yet. Your AI is working on it, and nothing goes live until you approve it.';
-    return 'Not updated. The earlier edits were left as they are.';
+    const left = clash.files.length > 1 ? 'were left as they are' : 'was left as it is';
+    return `Not updated. It clashes with ${whoseEditsLine(clash)}, which ${left}. Nothing was changed.`;
+}
+
+/** A storefront update that stopped on a clash, as the agent tool reports it at the top. */
+export interface StoppedUpdate {
+    project: string;
+    projectName: string;
+    /** Which update stopped. */
+    update: 'template' | 'Adobe boilerplate' | 'finishing a kept fix';
+    files: string[];
+    edits?: ClashEdit[];
+    /** Always false: a stopped update pushes nothing. */
+    pushed: false;
+    keptIn?: string;
+    notKept?: string;
+}
+
+const UPDATE_NAME: Record<'template' | 'boilerplate' | 'finish', StoppedUpdate['update']> = {
+    template: 'template',
+    boilerplate: 'Adobe boilerplate',
+    finish: 'finishing a kept fix',
+};
+
+/** Every storefront update in a run that stopped on a clash, across the three categories that can. */
+export function stoppedUpdates(result: Pick<ApplyUpdatesResult, 'template' | 'boilerplate' | 'finish'>): StoppedUpdate[] {
+    return (['template', 'boilerplate', 'finish'] as const).flatMap((category) =>
+        (result[category].clashes ?? []).map((clash) => ({
+            project: clash.project,
+            projectName: clash.projectName,
+            update: category === 'finish' ? UPDATE_NAME.finish : UPDATE_NAME[clash.track],
+            files: clash.files,
+            ...(clash.edits ? { edits: clash.edits } : {}),
+            pushed: false as const,
+            ...(clash.keptIn ? { keptIn: clash.keptIn } : {}),
+            ...(clash.notKept ? { notKept: clash.notKept } : {}),
+        })),
+    );
+}
+
+/** One sentence for the stopped updates: what stopped, on what, and that nothing changed. */
+export function describeStopped(stopped: readonly StoppedUpdate[]): string {
+    const each = stopped.map((s) => {
+        const files = s.edits?.length ? s.edits.map(describeEdit).join('; ') : s.files.join(', ');
+        const kept = s.keptIn ? ` Kept in ${s.keptIn} to fix.` : '';
+        return `${s.project} (${s.update}) stopped on ${files}.${kept}`;
+    });
+    const noun = stopped.length === 1 ? 'update' : 'updates';
+    return `${stopped.length} storefront ${noun} did NOT apply and changed nothing on GitHub. ${each.join(' ')}`;
 }
 
 const LINE_LISTS = ['deferred', 'applied', 'installed', 'leftOut'] as const;

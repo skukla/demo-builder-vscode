@@ -15,6 +15,7 @@
 
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { keepClash, type ClashTrack } from '@/features/updates/services/pendingClash';
+import { describeEdit } from '@/features/updates/services/templateSyncMessages';
 import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
 import { isThinLayerProject } from '@/features/updates/services/thinLayerUpdate';
 import type { ClashReport } from '@/features/updates/services/updateApplyResult';
@@ -80,7 +81,14 @@ export function stoppedClash(
     const name = getProjectDisplayName(project);
     return {
         line: `${name}${LABEL[track]}: ${r.error ?? 'the update clashed'}${reason}`,
-        report: { project: name, projectName: project.name, track, files: r.conflicts ?? [], ...(notKept ? { notKept } : {}) },
+        report: {
+            project: name,
+            projectName: project.name,
+            track,
+            files: r.conflicts ?? [],
+            ...(r.edits ? { edits: r.edits } : {}),
+            ...(notKept ? { notKept } : {}),
+        },
     };
 }
 
@@ -105,8 +113,15 @@ export async function keepForFixing(
     return {
         line:
             `${name}${LABEL[track]}: ${conflicts.length} ${noun} with edits in the storefront ` +
-            `(${conflicts.join(', ')}). It is kept in the project's local copy to fix with AI; ` +
-            'nothing was pushed.',
-        report: { project: name, projectName: project.name, track, files: conflicts, keptIn: outcome.storefrontPath },
+            `(${r.edits?.length ? r.edits.map(describeEdit).join('; ') : conflicts.join(', ')}). ` +
+            "It is kept in the project's local copy to fix with AI; nothing was pushed.",
+        report: {
+            project: name,
+            projectName: project.name,
+            track,
+            files: conflicts,
+            ...(r.edits ? { edits: r.edits } : {}),
+            keptIn: outcome.storefrontPath,
+        },
     };
 }

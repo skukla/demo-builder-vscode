@@ -40,8 +40,8 @@ function occurrences(text: string, needle: string): number {
     return text.split(needle).length - 1;
 }
 
-/** Why one retired patch cannot be taken out of these files, or undefined when it can. */
-function blocker(files: ReadonlyMap<string, string>, patch: RetiredCodePatch): string | undefined {
+/** Why one patch cannot be taken out of these files, or undefined when it can. */
+function blocker(files: ReadonlyMap<string, string>, patch: CodePatch): string | undefined {
     const content = files.get(patch.target);
     // An empty replacement is in every file; it can never prove the fix is ours.
     if (content === undefined || !patch.replacement || !content.includes(patch.replacement)) return 'absent';
@@ -79,9 +79,26 @@ export function undoRetiredPatches(
     files: ReadonlyMap<string, string>,
     retired: readonly RetiredCodePatch[],
 ): RetiredUndo {
+    return undoPatchGroups(files, retiredTogether(retired));
+}
+
+/**
+ * Undo patches group by group: a group comes out together or not at all, and each patch only
+ * where its replacement is in the file verbatim, exactly once. Pure. The retired undo above
+ * groups by the commit that retired them; an update setting Demo Builder's live fixes aside
+ * groups by file (`setAsidePieces.ts`).
+ *
+ * @param files - repository-relative path to the file's current text
+ * @param groups - the patches, in the groups that must come out together
+ * @returns the changed files, the ids undone, and the ones left with why
+ */
+export function undoPatchGroups(
+    files: ReadonlyMap<string, string>,
+    groups: ReadonlyArray<readonly CodePatch[]>,
+): RetiredUndo {
     const working = new Map(files);
     const result: RetiredUndo = { files: new Map(), undone: [], skipped: [] };
-    for (const group of retiredTogether(retired)) {
+    for (const group of groups) {
         const reasons = group.map((patch) => ({ patch, reason: blocker(working, patch) }));
         // A storefront that never had this fix: nothing to say.
         if (reasons.every((r) => r.reason === 'absent')) continue;

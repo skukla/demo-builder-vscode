@@ -27,6 +27,24 @@ export interface TemplateClash {
     target: string;
     /** Files left out of the change, as the update left them out. */
     preserveFiles: string[];
+    /**
+     * The change is Adobe's tested boilerplate, so Demo Builder's own pieces were set aside
+     * around it (`adobeChangePrep.ts`); applying it again elsewhere must do the same.
+     */
+    ownPiecesAside?: boolean;
+}
+
+/**
+ * Whose edit a clashing file holds. Demo Builder's own pieces are set aside before Adobe's
+ * change, so what still clashes is somebody's: made in this storefront, or brought along by
+ * the colleague's demo it was copied from (JustRite's header.js, 2026-10-30).
+ */
+export interface ClashEdit {
+    file: string;
+    /** `storefront`: edited in this storefront. `copied-demo`: the same edit is in `from`. */
+    whose: 'storefront' | 'copied-demo';
+    /** The colleague's repository, `owner/repo`, when `whose` is `copied-demo`. */
+    from?: string;
 }
 
 /** Result of template sync operation */
@@ -50,6 +68,8 @@ export interface TemplateSyncResult {
      * the clash is kept for fixing (EDS-57).
      */
     clash?: TemplateClash;
+    /** With `conflicts`: whose edit each clashing file holds, in the same order. */
+    edits?: ClashEdit[];
     /** Error message if sync failed */
     error?: string;
     /**

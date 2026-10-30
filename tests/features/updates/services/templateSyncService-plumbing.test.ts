@@ -319,7 +319,10 @@ describe('merge strategy — the exact git conversation', () => {
                 target: TEMPLATE_HEAD,
                 preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
             },
-            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
+            edits: [{ file: 'blocks/hero/hero.js', whose: 'storefront' }],
+            error:
+                'The update stopped on 1 file that was edited (blocks/hero/hero.js, an edit made in this storefront). '
+                + 'Nothing was changed: the storefront on GitHub is as it was.',
         });
         expect(mockRm).toHaveBeenCalledWith(TEMP_DIR, { recursive: true, force: true });
     });

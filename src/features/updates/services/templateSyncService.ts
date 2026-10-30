@@ -32,9 +32,12 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
+import { prepareForAdobeChange, repairInCheckout, type AdobeChangePrep } from '@/features/updates/services/adobeChangePrep';
 import type { BoilerplateBase } from '@/features/updates/services/boilerplateBase';
+import { copiedDemoOf, stoppedOnClash, type CopiedDemoAt } from '@/features/updates/services/clashAttribution';
 import { checkoutLabelAccess, labelsPutBack, repairStubbedLabelFiles } from '@/features/updates/services/labelStubRepair';
 import { removeFilesNotBackedUp, restorePreservedFiles } from '@/features/updates/services/preservedFiles';
+import { blockLibraryFolders, putBackOwnPieces } from '@/features/updates/services/setAsidePieces';
 import { commitAndPush, withCheckout, type SyncDeps } from '@/features/updates/services/templateCheckout';
 import {
     applyTemplateChangeSince,
@@ -45,7 +48,6 @@ import {
     COMMIT_SHA,
     BOILERPLATE_COMMIT,
     DEFAULT_PRESERVE_FILES,
-    describeTemplateConflicts,
     LABEL_SHEET_FILES,
     TEMPLATE_COMMIT,
     failure,
@@ -56,6 +58,7 @@ import { TemplateSyncStepError } from '@/features/updates/services/templateSyncS
 import type {
     Checkout,
     GitHubAccess,
+    TemplateClash,
     TemplateSyncOptions,
     TemplateSyncResult,
     TemplateSyncTarget,
@@ -64,7 +67,6 @@ import {
     lkgSourceOf,
     patchesNotPutBack,
     reapplyPatchesInCheckout,
-    restoreDemoBuilderPieces,
     TESTED_VERSION_UNREADABLE,
     THIN_LAYER_RESET_REFUSED,
     type OverlayResolver,
@@ -72,12 +74,20 @@ import {
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
+/** What one merge applies, and between which versions. */
+interface MergeVersions {
+    base: string;
+    /** Adobe's tested boilerplate version: the change is Adobe's, so Demo Builder's pieces are set aside. */
+    tested?: string;
+    preserveFiles: string[];
+    /** A thin-layer storefront: its fixes ride in the update's commit. */
+    fixes: boolean;
+    message?: string;
+    /** On the Adobe boilerplate track: the colleague's demo, to say whose edit a clash is. */
+    copiedFrom?: CopiedDemoAt;
+}
 
-/**
- * Template Sync Service
- *
- * Synchronizes an EDS project with its upstream template.
- */
+/** Synchronizes an EDS project with its upstream template (see the module header). */
 export class TemplateSyncService {
     /**
      * ADR-015: every dependency arrives here; nothing is fetched from a service cache.
@@ -159,15 +169,9 @@ export class TemplateSyncService {
         // which nothing has checked against its fixes (EDS-51).
         const tested = lkgSource ? await readLkgSha(lkgSource, this.logger) : undefined;
         if (lkgSource && !tested) return failure('merge', TESTED_VERSION_UNREADABLE);
-        // What this reports comes from the same call after the update, so it is not kept here.
-        if (tested) await this.moveScriptsOutOfDelayedJs(project);
-        const merged = await withCheckout(this.deps, 'merge', target, preserveFiles, (checkout) =>
+        return withCheckout(this.deps, 'merge', target, preserveFiles, (checkout) =>
             this.mergeFromBase(checkout, target, { base, tested, preserveFiles, fixes: Boolean(tested) }, project),
         );
-        if (!merged.success || !tested) return merged;
-        const pieces = await restoreDemoBuilderPieces(project, this.github.fileOperations, this.logger, this.resolveOverlay);
-        if (pieces.length === 0) return merged;
-        return { ...merged, notes: [...(merged.notes ?? []), ...pieces] };
     }
 
     /**
@@ -195,32 +199,15 @@ export class TemplateSyncService {
             templateRepo: base.template.repo,
         };
         const preserveFiles = [...DEFAULT_PRESERVE_FILES];
-        const pieces = await this.moveScriptsOutOfDelayedJs(project);
-        const merged = await withCheckout(this.deps, 'merge', target, preserveFiles, (checkout) =>
+        const copiedFrom = copiedDemoOf(metadata);
+        return withCheckout(this.deps, 'merge', target, preserveFiles, (checkout) =>
             this.mergeFromBase(
                 checkout,
                 target,
-                { base: base.commit, tested, preserveFiles, fixes: false, message: BOILERPLATE_COMMIT },
+                { base: base.commit, tested, preserveFiles, fixes: false, message: BOILERPLATE_COMMIT, copiedFrom },
                 project,
             ),
         );
-        return pieces.length === 0 ? merged : { ...merged, notes: [...(merged.notes ?? []), ...pieces] };
-    }
-
-    /**
-     * Put Demo Builder's scripts where they now live (`head.html`, `404.html`) and take the
-     * old copies out of `scripts/delayed.js`, BEFORE the tested boilerplate is applied.
-     *
-     * The tested boilerplate deletes `delayed.js` (Adobe, 2026-07-30), and git cannot delete
-     * a file that differs from the version the change starts from. A storefront not reset
-     * since beta.152 still carries Demo Builder's two blocks there, so every update stopped
-     * with "patch failed: scripts/delayed.js:1" and was offered again (JustRite, 2026-10-29).
-     * Once the blocks are out, the file is Adobe's own again (measured on JustRite: byte-equal).
-     *
-     * @returns one plain line per piece that could not be put back
-     */
-    private moveScriptsOutOfDelayedJs(project: Project): Promise<string[]> {
-        return restoreDemoBuilderPieces(project, this.github.fileOperations, this.logger, this.resolveOverlay);
     }
 
     /**
@@ -248,26 +235,35 @@ export class TemplateSyncService {
 
     /**
      * Apply the template's change from the recorded `base` to its latest commit,
-     * keeping the SC's own edits, then commit and push.
+     * keeping the SC's own edits, then commit and push, once.
      *
-     * A conflict means the SC edited the same region the template changed. The
+     * When the change is Adobe's tested boilerplate, Demo Builder's repairs are written into
+     * this clone first and its own pieces are set aside (`adobeChangePrep.ts`), then put back
+     * after the apply: a clash is then somebody's edit, never ours, and a stopped update has
+     * pushed nothing at all (JustRite, 2026-10-30). Block folders an installed library owns
+     * are left out of every template change; the library's update keeps them current.
+     *
+     * A conflict means someone edited the same region the template changed. The
      * clone is restored and the files are reported; it is never turned into a
      * reset here (a user's own edits are never overwritten — CLAUDE.md, rule 2).
      */
     private async mergeFromBase(
         checkout: Checkout,
         target: TemplateSyncTarget,
-        versions: { base: string; tested?: string; preserveFiles: string[]; fixes: boolean; message?: string },
+        versions: MergeVersions,
         project: Project,
     ): Promise<TemplateSyncResult> {
         const { tempDir, repoDir } = checkout;
-        const { base, tested, preserveFiles, fixes } = versions;
+        const { base, tested, fixes } = versions;
         const git: GitStep = (command, timeout) => this.git(repoDir, command, timeout);
-        const patchFile = path.join(tempDir, 'template.patch');
+        const prep = tested
+            ? await prepareForAdobeChange({ dir: repoDir, git, project, logger: this.logger, resolveOverlay: this.resolveOverlay })
+            : undefined;
+        const leftOut = [...versions.preserveFiles, ...blockLibraryFolders(project)];
         const outcome = await applyTemplateChangeSince(git, {
             base,
-            preserveFiles,
-            patchFile,
+            preserveFiles: leftOut,
+            patchFile: path.join(tempDir, 'template.patch'),
             ...(tested ? { target: tested } : {}),
         });
 
@@ -280,26 +276,33 @@ export class TemplateSyncService {
                 // The SC's repo stays exactly as it was: nothing pushed, the files named.
                 const { conflicts, restored } = outcome;
                 const note = restored ? '' : ' (temp clone not restored)';
-                const count = conflicts.length;
-                this.logger.warn(`[TemplateSync] Merge conflicts in ${count} file(s); not pushing${note}`);
-                const source = { owner: target.templateOwner, repo: target.templateRepo };
-                const clash = { source, base, target: outcome.templateHead, preserveFiles };
-                return { ...failure('merge', describeTemplateConflicts(conflicts)), conflicts, clash };
+                this.logger.warn(`[TemplateSync] Merge conflicts in ${conflicts.length} file(s); not pushing${note}`);
+                const clash: TemplateClash = {
+                    source: { owner: target.templateOwner, repo: target.templateRepo },
+                    base,
+                    target: outcome.templateHead,
+                    preserveFiles: leftOut,
+                    ...(prep ? { ownPiecesAside: true } : {}),
+                };
+                const token = versions.copiedFrom ? (await this.github.tokenService.getToken())?.token : undefined;
+                return stoppedOnClash(git, conflicts, clash, versions.copiedFrom, token);
             }
             case 'unchanged':
-                return this.repairLabelsOnly(checkout, git, outcome.templateHead, versions.message);
+                return this.repairLabelsOnly(checkout, git, outcome.templateHead, versions.message, prep);
         }
 
         await restorePreservedFiles(repoDir, checkout.backups, this.logger);
         // Our stub over the template's labels goes, in the update's own commit.
         const labels = await repairStubbedLabelFiles(checkoutLabelAccess(repoDir, git, outcome.templateHead));
-        // A thin-layer storefront's fixes ride in the same commit as the update.
+        const putBack = prep ? await putBackOwnPieces(repoDir, prep.aside) : [];
+        // A thin-layer storefront's fixes ride in the same commit as the update, and its
+        // repairs run again on the updated code, as they did after the push before 2026-10-30.
         const patched = fixes ? await reapplyPatchesInCheckout(repoDir, project, this.logger) : [];
-        const message = versions.message ?? TEMPLATE_COMMIT;
-        await commitAndPush(this.deps, repoDir, message, `git push origin ${checkout.branch}`);
+        const pieces = fixes ? await repairInCheckout(repoDir, project, this.logger, this.resolveOverlay) : (prep?.lines ?? []);
+        await commitAndPush(this.deps, repoDir, versions.message ?? TEMPLATE_COMMIT, `git push origin ${checkout.branch}`);
 
         this.logger.info(`[TemplateSync] Merge completed successfully`);
-        const notes = [...labelsPutBack(labels), ...patchesNotPutBack(patched)];
+        const notes = [...labelsPutBack(labels), ...putBack, ...patchesNotPutBack(patched), ...pieces];
         return {
             success: true,
             strategy: 'merge',
@@ -310,23 +313,33 @@ export class TemplateSyncService {
 
     /**
      * The template has nothing to apply, but a label file may still be our stub over the
-     * template's labels (storefronts made before 2026-10-22): put those back and push them.
-     * Nothing to repair pushes nothing.
+     * template's labels (storefronts made before 2026-10-22), and Demo Builder's repairs may
+     * have changed the clone: push those. Nothing changed pushes nothing.
      */
     private async repairLabelsOnly(
         checkout: Checkout,
         git: GitStep,
         templateHead: string,
         message = TEMPLATE_COMMIT,
+        prep?: AdobeChangePrep,
     ): Promise<TemplateSyncResult> {
+        const putBack = prep ? await putBackOwnPieces(checkout.repoDir, prep.aside) : [];
         const labels = await repairStubbedLabelFiles(checkoutLabelAccess(checkout.repoDir, git, templateHead));
-        if (labels.length === 0) {
+        if (labels.length === 0 && !(prep && (await this.anythingToCommit(git)))) {
             this.logger.info(`[TemplateSync] No template change to apply`);
-            return { success: true, strategy: 'merge', syncedCommit: templateHead };
+            const lines = [...putBack, ...(prep?.lines ?? [])];
+            return { success: true, strategy: 'merge', syncedCommit: templateHead, ...(lines.length ? { notes: lines } : {}) };
         }
         await commitAndPush(this.deps, checkout.repoDir, message, `git push origin ${checkout.branch}`);
-        this.logger.info(`[TemplateSync] No template change to apply; label files put back: ${labels.join(', ')}`);
-        return { success: true, strategy: 'merge', syncedCommit: templateHead, notes: labelsPutBack(labels) };
+        this.logger.info(`[TemplateSync] No template change to apply; pushed: ${labels.join(', ') || "Demo Builder's repairs"}`);
+        const notes = [...labelsPutBack(labels), ...putBack, ...(prep?.lines ?? [])];
+        return { success: true, strategy: 'merge', syncedCommit: templateHead, ...(notes.length ? { notes } : {}) };
+    }
+
+    /** Whether the clone differs from its last commit once everything is staged. */
+    private async anythingToCommit(git: GitStep): Promise<boolean> {
+        await git('git add -A', TIMEOUTS.QUICK);
+        return (await git('git status --porcelain', TIMEOUTS.QUICK)).stdout.trim() !== '';
     }
 
     /** Reset the checkout to the template's content, keeping the preserved files; force-push. */
@@ -356,13 +369,7 @@ export class TemplateSyncService {
         return { success: true, strategy: 'reset', syncedCommit: templateHead };
     }
 
-    /**
-     * Update the project's lastSyncedCommit after successful sync
-     *
-     * @param project - Project to update
-     * @param commitSha - New commit SHA to save
-     * @param stateManager - State manager for persistence
-     */
+    /** Record `commitSha` as the template version the storefront matches, after a successful sync. */
     async updateLastSyncedCommit(
         project: Project,
         commitSha: string,

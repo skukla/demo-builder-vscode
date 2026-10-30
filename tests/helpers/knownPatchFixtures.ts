@@ -49,3 +49,21 @@ export const HEADER_JS = "export default async function decorate(block) {\n  con
 export const TEASER_JS =
     "import {\n  rootLink,\n} from '../../scripts/commerce.js';\n\n" +
     'export default function decorate() {\n  const href = rootLink(`/products/${urlKey}/${sku}`);\n}\n';
+
+/**
+ * The AEM Assets dropin patch, as `eds-demo-patches/b2b/code-patches.json` lists it (read
+ * 2026-10-30). JustRite's Adobe boilerplate update stopped on this one: Adobe's new dropin build
+ * changed the lines around it.
+ */
+export const ASSETS_SKU_SANITIZATION: CodePatch = {
+    id: 'aem-assets-sku-sanitization',
+    target: 'scripts/__dropins__/tools/lib/aem/assets.js',
+    description: 'Sanitize SKU aliases (replace / with -) in the AEM Assets image slot.',
+    precondition:
+        'const{wrapper:s,alias:m,params:r,imageProps:i}=e;if(!i.src)throw new Error("An image source is required. ' +
+        'Please provide a `src` or `imageProps.src`.");const n=s??document.createElement("div"),o=w(i.src,m,r)',
+    replacement:
+        'const{wrapper:s,alias:m,params:r,imageProps:i}=e;if(!i.src)throw new Error("An image source is required. ' +
+        'Please provide a `src` or `imageProps.src`.");const sanitizedAlias=m.replace(/\\//g,"-");' +
+        'const n=s??document.createElement("div"),o=w(i.src,sanitizedAlias,r)',
+};

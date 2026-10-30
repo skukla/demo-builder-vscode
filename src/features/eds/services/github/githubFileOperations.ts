@@ -43,6 +43,13 @@ export function isStaleShaFailure(error: unknown): boolean {
 }
 
 /**
+ * Reading and writing one file at a time: all the storefront repairs and the Quick Edit
+ * installer need. Narrow on purpose, so an update can hand them its own checkout instead
+ * of GitHub (`checkoutFiles.ts`) and push their writes once, with the update.
+ */
+export type RepoFileAccess = Pick<GitHubFileOperations, 'getFileContent' | 'createOrUpdateFile'>;
+
+/**
  * GitHub File Operations Service
  */
 export class GitHubFileOperations extends GitHubAuthenticatedOperations {

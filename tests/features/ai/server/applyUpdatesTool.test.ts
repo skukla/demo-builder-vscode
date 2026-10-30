@@ -33,10 +33,29 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { callRequestsConsent } from '@/features/ai/server/inExtensionMcpServer';
+import { emptyResult, type ApplyUpdatesResult } from '@/features/updates/services/updateApplyResult';
 
 const computeMock = computeProjectUpdateSelections as jest.Mock;
 const applyMock = applyUpdatesHeadless as jest.Mock;
 const countMock = countSelections as jest.Mock;
+
+/** A whole apply result, typed to the real one: every category the tool reads is there. */
+function applyResult(overrides: Partial<ApplyUpdatesResult> = {}): ApplyUpdatesResult {
+    return {
+        forkSync: emptyResult(),
+        template: emptyResult(),
+        boilerplate: emptyResult(),
+        finish: emptyResult(),
+        component: emptyResult(),
+        adobeMcp: emptyResult(),
+        addon: emptyResult(),
+        blockLibraryInstall: emptyResult(),
+        integration: emptyResult(),
+        totalApplied: 0,
+        totalFailed: 0,
+        ...overrides,
+    };
+}
 
 const EMPTY = { forkSync: [], template: [], boilerplate: [], finish: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [], integration: [] };
 
@@ -87,15 +106,9 @@ describe('apply_updates', () => {
         getCurrentProject.mockResolvedValue({ name: 'p', path: '/p', status: 'stopped' });
         computeMock.mockResolvedValue({ ...EMPTY, component: [{ componentId: 'mesh', latestVersion: '2.0.0' }] });
         countMock.mockReturnValue(1);
-        applyMock.mockResolvedValue({
-            forkSync: { successCount: 0, failCount: 0, errors: [] },
-            template: { successCount: 0, failCount: 0, errors: [] },
-            component: { successCount: 1, failCount: 0, errors: [] },
-            adobeMcp: { successCount: 0, failCount: 0, errors: [] },
-            addon: { successCount: 0, failCount: 0, errors: [] },
-            totalApplied: 1,
-            totalFailed: 0,
-        });
+        applyMock.mockResolvedValue(
+            applyResult({ component: { successCount: 1, failCount: 0, errors: [] }, totalApplied: 1 }),
+        );
     });
 
     it('raises the consent dialog when it is told to apply (EDS-51)', () => {
@@ -204,12 +217,7 @@ describe('apply_updates', () => {
             errors: [],
             installed: ['Added 1 block from Demo Builder Blocks to test-storefront.'],
         };
-        applyMock.mockResolvedValueOnce({
-            forkSync: {}, template: {}, component: {}, adobeMcp: {}, addon: {},
-            blockLibraryInstall: installResult,
-            totalApplied: 1,
-            totalFailed: 0,
-        });
+        applyMock.mockResolvedValueOnce(applyResult({ blockLibraryInstall: installResult, totalApplied: 1 }));
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -221,12 +229,7 @@ describe('apply_updates', () => {
 
     it("says in its description that a colleague's storefront can get the tested Adobe boilerplate, and reports it", async () => {
         const boilerplate = { successCount: 1, failCount: 0, errors: [] };
-        applyMock.mockResolvedValueOnce({
-            forkSync: {}, template: {}, boilerplate, component: {}, adobeMcp: {}, addon: {}, blockLibraryInstall: {},
-            integration: {},
-            totalApplied: 1,
-            totalFailed: 0,
-        });
+        applyMock.mockResolvedValueOnce(applyResult({ boilerplate, totalApplied: 1 }));
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -234,6 +237,53 @@ describe('apply_updates', () => {
         const res = await s.call({ confirm: true });
 
         expect(res.categories.boilerplate).toStrictEqual(boilerplate);
+    });
+
+    // JustRite, 2026-10-30: the boilerplate update stopped on a clash, the answer led with
+    // counts, and the agent calling it read the run as done.
+    it('puts a stopped update FIRST, with the files, whose edit each holds, and that nothing was pushed', async () => {
+        const boilerplate = {
+            successCount: 0,
+            failCount: 1,
+            errors: ['Justrite (Adobe boilerplate): The update stopped on 1 file that was edited (…).'],
+            clashes: [{
+                project: 'Justrite',
+                projectName: 'justrite',
+                track: 'boilerplate' as const,
+                files: ['blocks/header/header.js'],
+                edits: [{ file: 'blocks/header/header.js', whose: 'copied-demo' as const, from: 'kmanns/justrite' }],
+            }],
+        };
+        applyMock.mockResolvedValueOnce(applyResult({ boilerplate, totalFailed: 1 }));
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        const res = await s.call({ confirm: true });
+
+        expect(Object.keys(res).slice(0, 2)).toEqual(['stopped', 'message']);
+        expect(res.stopped).toStrictEqual([{
+            project: 'Justrite',
+            projectName: 'justrite',
+            update: 'Adobe boilerplate',
+            files: ['blocks/header/header.js'],
+            edits: [{ file: 'blocks/header/header.js', whose: 'copied-demo', from: 'kmanns/justrite' }],
+            pushed: false,
+        }]);
+        expect(res.message).toBe(
+            '1 storefront update did NOT apply and changed nothing on GitHub. Justrite (Adobe boilerplate) stopped on '
+                + 'blocks/header/header.js, an edit that came with kmanns/justrite.',
+        );
+        expect(s.definition().description).toMatch(/top-level stopped/);
+    });
+
+    it('says nothing about stopping when nothing stopped', async () => {
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        const res = await s.call({ confirm: true });
+
+        expect(res).not.toHaveProperty('stopped');
+        expect(res).not.toHaveProperty('message');
     });
 
     it('refuses to apply while the demo is running', async () => {
@@ -328,15 +378,7 @@ describe('apply_updates', () => {
             report(S.syncingSourceRepos.label, 'me/a');
             report(S.syncingSourceRepos.label, 'me/b');
             report(S.updatingComponents.label, 'mesh in demo');
-            return {
-                forkSync: { successCount: 0, failCount: 0, errors: [] },
-                template: { successCount: 0, failCount: 0, errors: [] },
-                component: { successCount: 1, failCount: 0, errors: [] },
-                adobeMcp: { successCount: 0, failCount: 0, errors: [] },
-                addon: { successCount: 0, failCount: 0, errors: [] },
-                totalApplied: 1,
-                totalFailed: 0,
-            };
+            return applyResult({ component: { successCount: 1, failCount: 0, errors: [] }, totalApplied: 1 });
         });
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
@@ -403,12 +445,7 @@ describe('apply_updates — integrations', () => {
 
     it('with confirm, hands the apply a context that can run the pair update, and reports the category', async () => {
         const integration = { successCount: 1, failCount: 0, errors: [], applied: ['Updated from a to b.'] };
-        applyMock.mockResolvedValueOnce({
-            forkSync: {}, template: {}, component: {}, adobeMcp: {}, addon: {}, blockLibraryInstall: {},
-            integration,
-            totalApplied: 1,
-            totalFailed: 0,
-        });
+        applyMock.mockResolvedValueOnce(applyResult({ integration, totalApplied: 1 }));
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -424,7 +461,7 @@ describe('apply_updates — integrations', () => {
         const pairUpdate = updateIntegrationPairFor as jest.Mock;
         const outcome = { success: true, message: 'Updated from a to b.' };
         pairUpdate.mockResolvedValueOnce(outcome);
-        applyMock.mockResolvedValueOnce({ totalApplied: 0, totalFailed: 0 });
+        applyMock.mockResolvedValueOnce(applyResult());
         const ctx = ctxFactory();
         const s = fakeServer();
         registerApplyUpdatesTool(s, () => ctx);

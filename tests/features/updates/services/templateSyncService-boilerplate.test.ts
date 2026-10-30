@@ -13,11 +13,11 @@ import {
     applyStops,
     edsProject,
     gitCalls,
-    mockExecute,
     pushed,
     resetFakes,
     service,
 } from './templateSyncService.testUtils';
+import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { BoilerplateBase } from '@/features/updates/services/boilerplateBase';
 
 const mockRestorePieces = jest.fn();
@@ -57,11 +57,14 @@ beforeEach(() => {
     });
 });
 
-describe("syncBoilerplate: Demo Builder's scripts leave delayed.js first", () => {
+describe("syncBoilerplate: Demo Builder's repairs run in the update's clone, before the change", () => {
     // Adobe's tested boilerplate deletes scripts/delayed.js, and git cannot delete a file our
     // blocks still sit in: JustRite's update stopped on "patch failed: scripts/delayed.js:1"
-    // and was offered again every time (2026-10-29).
-    it('moves them before the clone the change is applied in exists', async () => {
+    // and was offered again every time (2026-10-29). The repairs that take them out ran
+    // against GitHub until 2026-10-30, so a stopped update had already pushed them.
+    const indexOf = (pattern: RegExp) => gitCalls().findIndex((c) => pattern.test(c));
+
+    it('runs them in the clone, after cloning and before the change is applied, never through GitHub', async () => {
         answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
         const project = colleagueStorefront();
         const resolveOverlay = jest.fn(() => 'https://overlay.test/render-pdp');
@@ -71,8 +74,9 @@ describe("syncBoilerplate: Demo Builder's scripts leave delayed.js first", () =>
         // With the overlay the caller resolves, as a reset does: without it the first-visit
         // script never reached 404.html, so its old copy stayed in delayed.js (JustRite, 2026-10-30).
         expect(mockRestorePieces).toHaveBeenCalledWith(project, expect.anything(), expect.anything(), resolveOverlay);
-        expect(gitCallsAtMove).toBe(0);
-        expect(gitCalls().length).toBeGreaterThan(0);
+        expect(mockRestorePieces.mock.calls[0][1]).not.toBeInstanceOf(GitHubFileOperations);
+        expect(gitCallsAtMove).toBeGreaterThan(indexOf(/^git clone /));
+        expect(gitCallsAtMove).toBeLessThanOrEqual(indexOf(/^git apply /));
     });
 
     it('says what could not be put back, beside the update', async () => {
@@ -87,19 +91,20 @@ describe("syncBoilerplate: Demo Builder's scripts leave delayed.js first", () =>
         });
     });
 
-    it("moves them first on a storefront built on Demo Builder's tested boilerplate too", async () => {
+    it("runs them twice in the clone on a storefront built on Demo Builder's tested boilerplate, before its one push", async () => {
         answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
         mockReadLkgSha.mockResolvedValue(TESTED_SHA);
         const project = edsProject({ lkgSource: BASE.lkgSource });
 
         await service().syncWithTemplate(project, { strategy: 'merge' });
 
-        // Once before the clone, and once after the push as it always ran.
+        // Before the change, and again on the updated code; both before the push.
         expect(mockRestorePieces).toHaveBeenCalledTimes(2);
-        expect(mockRestorePieces.mock.invocationCallOrder[0]).toBeLessThan(mockExecute.mock.invocationCallOrder[0]);
+        expect(gitCallsAtMove).toBeLessThan(indexOf(/^git push /));
+        expect(gitCalls().filter((c) => /^git push /.test(c))).toHaveLength(1);
     });
 
-    it('moves nothing on a storefront that follows its template with no tested version', async () => {
+    it('runs nothing on a storefront that follows its template with no tested version', async () => {
         answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
 
         await service().syncWithTemplate(edsProject(), { strategy: 'merge' });

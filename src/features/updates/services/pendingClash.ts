@@ -14,6 +14,12 @@
  * refuses a copy holding anything GitHub lacks), so undoing a mismatched apply with
  * `git reset --hard` only discards what this module just applied. Nothing here pushes.
  *
+ * An Adobe boilerplate change is prepared here exactly as the throwaway clone prepared it
+ * (`adobeChangePrep.ts`): Demo Builder's repairs written in, its own pieces set aside. Without
+ * that the copy clashes on our pieces where the clone did not, and the clash is never kept.
+ * The pieces go back into every file but the clashing ones at once; those get theirs back
+ * when the fix is finished (`pendingClashFinish.ts`), recorded here as `aside`.
+ *
  * @module features/updates/services/pendingClash
  */
 
@@ -22,10 +28,13 @@ import * as os from 'os';
 import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
 import { markKeptClash } from '@/features/eds/services/storefront/keptClashMark';
+import { prepareForAdobeChange } from '@/features/updates/services/adobeChangePrep';
 import { openLocalCopy, refreshLocalStorefront, type LocalCopy } from '@/features/updates/services/localStorefrontRefresh';
+import { filesSetAside, NOTHING_ASIDE, putBackOwnPieces, type SetAside } from '@/features/updates/services/setAsidePieces';
 import { applyChangeKeepingConflicts } from '@/features/updates/services/templateMergeBase';
 import type { TemplateClash } from '@/features/updates/services/templateSyncTypes';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
@@ -49,6 +58,18 @@ export interface PendingClash {
     fixes: boolean;
     /** When it was kept (ISO). */
     keptAt: string;
+    /**
+     * Demo Builder's own pieces set aside around the change and not yet back in a clashing
+     * file: the patch ids, and whether Quick Edit's wiring was one. Put back at finishing.
+     */
+    aside?: { patches: string[]; quickEdit: boolean };
+}
+
+/** The recorded set-aside, when the field holds a well-formed one. */
+function isAsideRecord(value: unknown): value is NonNullable<PendingClash['aside']> {
+    if (typeof value !== 'object' || value === null) return false;
+    const aside = value as { patches?: unknown; quickEdit?: unknown };
+    return Array.isArray(aside.patches) && aside.patches.every((id) => typeof id === 'string') && typeof aside.quickEdit === 'boolean';
 }
 
 export type KeepClashOutcome =
@@ -78,7 +99,8 @@ export function readPendingClash(project: Project): PendingClash | undefined {
         Array.isArray(clash.files) &&
         clash.files.length > 0 &&
         typeof clash.fixes === 'boolean' &&
-        typeof clash.keptAt === 'string';
+        typeof clash.keptAt === 'string' &&
+        (clash.aside === undefined || isAsideRecord(clash.aside));
     return ok ? (clash as PendingClash) : undefined;
 }
 
@@ -103,6 +125,32 @@ export interface KeepClashRequest {
 
 const sameFiles = (a: string[], b: string[]) =>
     a.length === b.length && [...a].sort().every((file, i) => file === [...b].sort()[i]);
+
+/**
+ * For Adobe's change, prepare the refreshed copy as the clone was prepared; for any other,
+ * nothing. Staged, so the 3-way apply can run on it.
+ */
+async function prepareCopy(copy: LocalCopy, project: Project, request: KeepClashRequest, ctx: UpdateContext): Promise<SetAside> {
+    if (!request.clash.ownPiecesAside) return NOTHING_ASIDE;
+    const prepared = await prepareForAdobeChange({
+        dir: copy.storefrontPath,
+        git: copy.git,
+        project,
+        logger: ctx.logger,
+        resolveOverlay: resolveByomOverlayConfig,
+    });
+    return prepared.aside;
+}
+
+/** Put the set-aside pieces back in every file but the clashing ones, staged; what is left for finishing. */
+async function putBackAroundClash(copy: LocalCopy, aside: SetAside, conflicts: string[]): Promise<PendingClash['aside']> {
+    const touched = filesSetAside(aside);
+    if (touched.length === 0) return undefined;
+    await putBackOwnPieces(copy.storefrontPath, aside, conflicts);
+    const clean = touched.filter((file) => !conflicts.includes(file));
+    if (clean.length > 0) await copy.git(`git add -- ${clean.map((file) => `"${file}"`).join(' ')}`, TIMEOUTS.QUICK);
+    return { patches: aside.patches.map((patch) => patch.id), quickEdit: aside.quickEdit };
+}
 
 /** Apply the change in the refreshed copy; the reason when it is not the clone's clash. */
 async function applyInCopy(copy: LocalCopy, request: KeepClashRequest, token: string): Promise<string | undefined> {
@@ -166,10 +214,22 @@ export async function keepClash(project: Project, request: KeepClashRequest, ctx
 
     const refreshed = await refreshLocalStorefront(copy.git, copy);
     if (refreshed.kind === 'left') return notKept(`its local copy was left as it is: ${refreshed.reason}`);
+    let prepared: SetAside;
+    try {
+        prepared = await prepareCopy(copy, project, request, ctx);
+    } catch {
+        await copy.git('git reset --hard --quiet HEAD', TIMEOUTS.QUICK);
+        return notKept('its local copy could not be prepared for the update');
+    }
     const problem = await applyInCopy(copy, request, token);
-    if (problem) return notKept(problem);
+    if (problem) {
+        // The copy refreshed clean, so this drops only what was just prepared and applied.
+        await copy.git('git reset --hard --quiet HEAD', TIMEOUTS.QUICK);
+        return notKept(problem);
+    }
 
     const { track, clash, conflicts, fixes } = request;
+    const aside = await putBackAroundClash(copy, prepared, conflicts);
     const applied = await stagedChange(copy);
     if (!applied) {
         await copy.git('git reset --hard --quiet HEAD', TIMEOUTS.QUICK);
@@ -186,6 +246,7 @@ export async function keepClash(project: Project, request: KeepClashRequest, ctx
         files: conflicts,
         fixes,
         keptAt: new Date().toISOString(),
+        ...(aside ? { aside } : {}),
     });
     ctx.logger.info(`[Updates] Kept the ${track} clash for ${project.name} in its local copy (${conflicts.join(', ')})`);
     return { kind: 'kept', storefrontPath: copy.storefrontPath, files: conflicts };
