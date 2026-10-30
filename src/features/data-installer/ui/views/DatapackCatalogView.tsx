@@ -48,7 +48,7 @@ import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
-import { useSaveStoreChanges } from '../hooks/useSaveStoreChanges';
+import { useHeldPack } from '../hooks/useHeldPack';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
@@ -233,27 +233,23 @@ export function DatapackCatalogView(): React.JSX.Element {
     }, [loadProjectContext, loadInstalled, commerceInstance]);
 
     /**
-     * "Save store changes to this pack" (datapack-engine step 05): offered only for the pack the
-     * project holds, and only with Demo Builder's engine chosen, the one that keeps a record of
-     * what it made to read back. It opens the pick screen first, so what the SC added by hand
-     * can go in too (step 14); the header's "Save from this store" opens it with no pack. Closing
-     * the progress window reads the catalog and the project again, since the library now holds a
-     * new version.
+     * The held pack's actions (`useHeldPack`): "Save store changes to this pack" and "Save from
+     * this store" (steps 05 and 14), and its one Admin step (step 12). Closing a save's progress
+     * window reads the catalog and the project again, since the library now holds a new version.
      */
     const afterSave = useCallback((): void => {
         loadProjectContext({});
         refresh();
     }, [loadProjectContext, refresh]);
-    const storeChanges = useSaveStoreChanges(afterSave);
-    const held = projectContext.value?.datapack;
-    const holdsSelected = held !== undefined && held.name === selected?.name && held.version === selected.version;
-    const offerStoreSave = storeChanges.offer;
-    const displayName = detail.value?.detail.displayName;
-    const offerSave = useCallback(
-        (id: DatapackId): void => offerStoreSave({ id, displayName: displayName ?? id.name, source: selectedStore }),
-        [offerStoreSave, displayName, selectedStore],
-    );
-    const saveFromStore = useCallback((): void => offerStoreSave(), [offerStoreSave]);
+    const heldPack = useHeldPack({
+        selected,
+        selectedStore,
+        held: projectContext.value?.datapack,
+        engine: value?.engine,
+        detail: detail.value?.detail,
+        detailLoading: detail.loading,
+        onSaved: afterSave,
+    });
 
     const retryDetail = useCallback((): void => {
         if (selected) {
@@ -339,7 +335,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                                 <CatalogHeaderActions
                                     onCatalogChanged={refresh}
                                     engine={value?.engine}
-                                    onSaveFromStore={saveFromStore}
+                                    onSaveFromStore={heldPack.saveFromStore}
                                 />
                             </Flex>
                         }
@@ -373,12 +369,13 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onImport={openImport}
                 onRemoved={removedFromLibrary}
                 installsFromLibrary={value?.engine === 'demo-builder'}
-                onSaveStoreChanges={holdsSelected && value?.engine === 'demo-builder' ? offerSave : undefined}
+                onSaveStoreChanges={heldPack.offerSave}
+                setupStep={heldPack.setupStepLine}
                 onRename={renamePack}
                 sharedInFile={detail.value?.sharedInFile}
                 onSharingChanged={sharingChanged}
             />
-            {storeChanges.windows}
+            {heldPack.windows}
 
             {/* Only what the service HOLDS is importable — the inventory, never
                 the pack's declared types. Mounted while `importing` is set, so

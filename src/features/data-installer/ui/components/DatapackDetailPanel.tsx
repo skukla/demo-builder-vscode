@@ -35,7 +35,6 @@ import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
-import { PackSetupStepNotice } from './PackSetupStepNotice';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';
 import { ShareLibraryPackButton } from './ShareLibraryPackButton';
@@ -75,9 +74,10 @@ export interface DatapackDetailPanelProps {
      * so with it chosen a library pack offers Copy to the Data Installer instead (DI-5).
      */
     installsFromLibrary: boolean;
-    /**
-     * "Save store changes to this pack" (step 05); with it, that pack's Admin step (step 12). Only for the pack the project holds by Demo Builder's engine; the catalog hosts the progress. */
+    /** "Save store changes to this pack" (step 05), for the pack the project holds by Demo Builder's engine. */
     onSaveStoreChanges?: (id: DatapackId) => void;
+    /** That pack's Admin step (step 12) as one line; its dialog is mounted beside the flyout (`usePackSetupStep`). */
+    setupStep?: React.ReactNode;
     /**
      * Rename the SC's own library pack (datapack-engine step 07), through the house
      * `InlineRenameField`: resolve null on success, or the reason to show inline.
@@ -101,6 +101,7 @@ export function DatapackDetailPanel({
     onRemoved,
     installsFromLibrary,
     onSaveStoreChanges,
+    setupStep,
     onRename,
     sharedInFile,
     onSharingChanged,
@@ -128,7 +129,7 @@ export function DatapackDetailPanel({
                     </div>
                     <div className="db-drawer-body">
                         {renderPanelBody({ detail, inventory, loading, failure, onRetry })}
-                        {onSaveStoreChanges && detail && !loading ? <PackSetupStepNotice id={detail.id} /> : null}
+                        {detail && !loading ? setupStep : null}
                         {canImport({ importable, loading, failure }) && detail ? (
                             <PanelActions
                                 detail={detail}

@@ -30,6 +30,7 @@ import * as path from 'path';
 import { z } from 'zod';
 import { type PendingObject, pendingSchema } from './pendingRecord';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
+import type { SetupCheckOutcome } from '@/types/base';
 import type { DatapackId } from '@/types/datapack';
 
 /** One object an install created: its pack data kind and the id Commerce knows it by. */
@@ -77,6 +78,11 @@ export interface PackRootStep {
     sharedWith: string;
     /** What the last check found. */
     note?: string;
+    /**
+     * What the last Check concluded (DI-5): passed, failed, or unknown when it could not tell (the
+     * stores could not be read). Absent on a record kept before it was, which reads as its note says.
+     */
+    lastCheck?: SetupCheckOutcome;
 }
 
 /** What the file holds. */
@@ -162,6 +168,7 @@ const recordSchema = z.object({
             storeRootId: z.number(),
             sharedWith: z.string(),
             note: z.string().optional(),
+            lastCheck: z.enum(['passed', 'failed', 'unknown']).optional(),
         })
         .optional(),
     created: z.array(

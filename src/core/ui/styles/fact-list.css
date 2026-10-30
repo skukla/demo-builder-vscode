@@ -2,12 +2,14 @@
  * .fact-list — labelled lines that scan as one small table (`ui/FactList`).
  *
  * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `dashboard` and `integrations` (the
- * setup guide), and `dataInstaller` (a pack's Admin step, `ui/SetupStepFacts`). A new host bundle imports it in its entry, or the
+ * setup guide), and `dataInstaller` (a pack's Admin step dialog, `ui/SetupStepHeader` and
+ * `ui/SetupStepFacts`). A new host bundle imports it in its entry, or the
  * list renders as browser-default definition lines with no error.
  *
  * Moved unchanged on 2026-10-23 from the dashboard's integrations.css (.setup-guide-facts),
  * in the same layer. The step's path, pills and reason (`ui/SetupStepFacts`) moved unchanged from
- * the same file, in the same layer, on 2026-10-30.
+ * the same file, in the same layer, on 2026-10-30; then the step's box, title and header
+ * (`ui/SetupStepHeader`, .setup-guide-step*), the same day, for the pack step dialog (DI-5).
  */
 
 @layer theme {
@@ -58,5 +60,38 @@
     /* The reason reads a step quieter than the instructions above it. */
     .setup-guide-why {
         color: var(--spectrum-global-color-gray-700);
+    }
+
+    /* One step (`ui/SetupStepHeader` over `ui/SetupStepFacts`): the setup guide's, and the Data
+       Installer's pack step dialog. */
+    .setup-guide-step {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        min-width: 0;
+    }
+
+    /* The step's title with its Optional badge beside it, centred on the title's line. */
+    .setup-guide-step-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .setup-guide-step-title > h3 {
+        margin: 0;
+    }
+
+    /* A step's header (`ui/SetupStepHeader`, AB-82): the title, then the house banner for
+       where the step stands, closer to the title than the step's other parts. */
+    .setup-guide-step-head {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .setup-guide-step-head > .inline-notice {
+        margin: 0;
     }
 }
