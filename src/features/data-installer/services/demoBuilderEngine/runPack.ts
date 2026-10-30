@@ -33,14 +33,15 @@ import {
     readInstallRecord,
     removalOrder,
 } from './installRecord';
-import type { KindContext, SettingsDone } from './kindContext';
+import type { KindContext, SettingsDone, SkippedRow } from './kindContext';
 import { type RootPlacement, placeCategories, rootPlacement } from './packRoot';
 import { type PackRootStep, settlePackRoot } from './packRootStep';
+import { settlePending } from './pendingFinders';
 import { GIFT_CARD_KIND, PRODUCT_KINDS, installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
 import { type KeptContainer, type RemovalAccess, decideRemovals, takeBack } from './removers';
 import { type KeptThing, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat } from './repeatInstall';
-import { installCatalogs, installAssignments as installCatalogAssignments, parseCatalogRows } from './sharedCatalogKinds';
+import { flatAssignments, installCatalogs, installAssignments as installCatalogAssignments, parseCatalogRows } from './sharedCatalogKinds';
 import { installSourceItems, parseSourceItems } from './sourceItemsKind';
 import {
     installSources,
@@ -50,44 +51,56 @@ import {
     parseStockSourceLinks,
     parseStocks,
 } from './stockKinds';
-import { STORE_CONFIG_KIND, installStoreConfig, putBackSettings } from './storeConfigKind';
+import { STORE_CONFIG_KIND, installStoreConfig, packSettings, putBackSettings } from './storeConfigKind';
 import { UrlKeyClashError, placedClashes } from './urlKeyClashes';
 import type { DatapackId } from '@/types/datapack';
 
 /** A pack's rows, by data kind, as its items hold them. */
 export type PackItems = Record<string, unknown>;
 
-/** One kind: how its rows are read, and how they are installed. */
+/** One kind: how its rows are checked, and how they are installed. */
 interface KindStep {
     kind: string;
+    /**
+     * Read the kind's rows, throwing why Commerce could not take them; writes nothing. Every kind's
+     * runs before the first write (step 14 item 2, as the service checks, `processDataPack.js` L394-398).
+     */
+    check: (records: unknown, websiteCode: string | undefined) => void;
     install: (ctx: KindContext, records: unknown) => Promise<void>;
+}
+
+/** A kind whose rows one parser reads, for both the check and the install. */
+function step<T>(kind: string, parse: (records: unknown) => T, install: (ctx: KindContext, rows: T) => Promise<void>): KindStep {
+    return { kind, check: (records) => void parse(records), install: (ctx, records) => install(ctx, parse(records)) };
 }
 
 /** The kinds this engine installs, in the order it installs them. */
 const STEPS: readonly KindStep[] = [
-    { kind: 'attribute_sets', install: (ctx, r) => installAttributeSets(ctx, parseAttributeSetRows(r)) },
-    { kind: 'product_attributes', install: (ctx, r) => installAttributes(ctx, parseAttributeRows(r)) },
-    { kind: 'attribute_assign_to_set', install: (ctx, r) => installAssignments(ctx, parseAssignmentRows(r)) },
-    { kind: 'categories', install: (ctx, r) => installCategories(ctx, parseCategoryPack(r)) },
-    { kind: CUSTOMER_GROUP_KIND, install: (ctx, r) => installCustomerGroups(ctx, parseCustomerGroupRows(r)) },
-    { kind: 'stocks', install: (ctx, r) => installStocks(ctx, parseStocks(r)) },
-    { kind: 'sources', install: (ctx, r) => installSources(ctx, parseSources(r)) },
-    { kind: 'stock_source_links', install: (ctx, r) => installStockSourceLinks(ctx, parseStockSourceLinks(r)) },
-    { kind: 'products', install: (ctx, r) => installProducts(ctx, parseProductRows(r)) },
+    step('attribute_sets', parseAttributeSetRows, installAttributeSets),
+    step('product_attributes', parseAttributeRows, installAttributes),
+    step('attribute_assign_to_set', parseAssignmentRows, installAssignments),
+    step('categories', parseCategoryPack, installCategories),
+    step(CUSTOMER_GROUP_KIND, parseCustomerGroupRows, installCustomerGroups),
+    step('stocks', parseStocks, installStocks),
+    step('sources', parseSources, installSources),
+    step('stock_source_links', parseStockSourceLinks, installStockSourceLinks),
+    step('products', parseProductRows, installProducts),
     // Step 11: gift cards are products, made as products are, after them as the service makes them.
-    { kind: GIFT_CARD_KIND, install: (ctx, r) => installProducts(ctx, parseProductRows(r), GIFT_CARD_KIND) },
-    { kind: 'source_items', install: (ctx, r) => installSourceItems(ctx, parseSourceItems(r)) },
+    step(GIFT_CARD_KIND, parseProductRows, (ctx, rows) => installProducts(ctx, rows, GIFT_CARD_KIND)),
+    step('source_items', parseSourceItems, installSourceItems),
     // Step 08: customers, then the catalogs and companies, then what is assigned to the catalogs.
-    { kind: CUSTOMER_KIND, install: (ctx, r) => installCustomers(ctx, parseCustomerRows(r)) },
+    step(CUSTOMER_KIND, parseCustomerRows, installCustomers),
     // Step 11: cart rules, then their coupons, in the service's place: after the groups, categories and
     // sets their conditions name, before a shared catalog renames a group the rules name by code.
-    { kind: CART_RULE_KIND, install: (ctx, r) => installCartRules(ctx, parseCartRuleRows(r)) },
-    { kind: COUPON_KIND, install: (ctx, r) => installCoupons(ctx, parseCouponRows(r)) },
-    { kind: CATALOG_KIND, install: (ctx, r) => installCatalogs(ctx, parseCatalogRows(r)) },
-    { kind: COMPANY_KIND, install: (ctx, r) => installCompanies(ctx, parseCompanyRows(r)) },
-    ...ASSIGNMENT_KINDS.map((kind): KindStep => ({ kind, install: (ctx, r) => installCatalogAssignments(ctx, kind, r) })),
+    step(CART_RULE_KIND, parseCartRuleRows, installCartRules),
+    step(COUPON_KIND, parseCouponRows, installCoupons),
+    step(CATALOG_KIND, parseCatalogRows, installCatalogs),
+    step(COMPANY_KIND, parseCompanyRows, installCompanies),
+    ...ASSIGNMENT_KINDS.map(
+        (kind): KindStep => ({ kind, check: (records) => void flatAssignments(kind, records), install: (ctx, r) => installCatalogAssignments(ctx, kind, r) }),
+    ),
     // Step 09: the pack's store settings, once its data is in.
-    { kind: STORE_CONFIG_KIND, install: installStoreConfig },
+    { kind: STORE_CONFIG_KIND, check: (records, websiteCode) => void packSettings(records, websiteCode), install: installStoreConfig },
 ];
 
 /** The kinds this engine can install, in order. */
@@ -106,6 +119,35 @@ export function unsupportedKinds(items: PackItems): string[] {
     return Object.keys(items).filter((kind) => !INSTALLABLE_KINDS.includes(kind));
 }
 
+/**
+ * Why each of the pack's kinds cannot be installed, from its rows alone: every kind's parser, run
+ * before anything is written, by the install and by the dry run alike. None when every row reads.
+ *
+ * @param websiteCode - the install target's website, which a pack's website settings are written for
+ */
+export function packRowProblems(items: PackItems, websiteCode?: string): string[] {
+    const problems: string[] = [];
+    for (const { kind, check } of STEPS) {
+        if (!(kind in items)) continue;
+        try {
+            check(items[kind], websiteCode);
+        } catch (error) {
+            problems.push(error instanceof Error ? error.message : String(error));
+        }
+    }
+    return problems;
+}
+
+const sentence = (text: string): string => (/[.!?]$/u.test(text) ? text : `${text}.`);
+
+/** A pack holds rows Commerce could not take; nothing was written. */
+export class PackRowsError extends Error {
+    constructor(readonly problems: string[], verb = 'was') {
+        super(`Nothing ${verb} installed: ${problems.map(sentence).join(' ')}`);
+        this.name = 'PackRowsError';
+    }
+}
+
 /** What an install did beyond writing the pack: the SC's own changes it kept. */
 export interface InstallOutcome {
     /** What it kept because the SC changed or deleted it in the Admin. */
@@ -118,6 +160,8 @@ export interface InstallOutcome {
     rootPlacement?: RootPlacement;
     /** The Admin step the pack left, when its root is a root of its own (step 12). */
     rootStep?: PackRootStep;
+    /** The rows skipped because Commerce refused them or they needed one that was (step 14 item 3). */
+    skipped: SkippedRow[];
 }
 
 /**
@@ -127,11 +171,16 @@ export interface InstallOutcome {
  *
  * @param onKind - called as each kind starts, for progress
  * @throws UnsupportedKindsError before any write, when the pack holds a kind not listed above
+ * @throws PackRowsError before any write, naming every kind whose rows Commerce could not take
  * @throws UrlKeyClashError before any write, when a category would take a url key the store uses
  */
 export async function installPack(ctx: KindContext, packItems: PackItems, onKind: (kind: string) => void = () => undefined): Promise<InstallOutcome> {
     const unsupported = unsupportedKinds(packItems);
     if (unsupported.length > 0) throw new UnsupportedKindsError(unsupported);
+    const problems = packRowProblems(packItems, ctx.session.websiteCode);
+    if (problems.length > 0) throw new PackRowsError(problems);
+    // Step 14 item 1: what an earlier install sent and never heard back about, found or forgotten.
+    await settlePending(ctx.get, ctx.recorder, ctx.log);
     // Step 12: under the store's own root, the pack's root is left out; the record says which once made.
     const placement = rootPlacement(packItems.categories, ctx.recorder.created, ctx.session.storeRoot);
     const items = placeCategories(packItems, placement);
@@ -161,6 +210,7 @@ export async function installPack(ctx: KindContext, packItems: PackItems, onKind
     return {
         kept: [...keptOf(plans), ...keptSettings],
         containers,
+        skipped: ctx.session.skipped ?? [],
         ...(settings ? { settings } : {}),
         ...(placement ? { rootPlacement: placement } : {}),
         ...(rootStep ? { rootStep } : {}),
@@ -200,10 +250,13 @@ export async function removePack(
     const record = await readInstallRecord(files, target.projectPath, target.pack);
     if (!record) return { removed: 0, noRecord: true, kept: [] };
     const recorder = await openInstallRecord(files, target.projectPath, target.pack, () => record.startedAt);
+    // Step 14 item 1: a create that landed unanswered is taken back too; one that never did costs nothing.
+    await settlePending(commerce.get, recorder, () => undefined);
+    const created = recorder.created;
     // Settings first: they went in last. Each leaves the record once put back or kept.
-    const settingObjects = record.created.filter((o) => o.kind === STORE_CONFIG_KIND);
+    const settingObjects = created.filter((o) => o.kind === STORE_CONFIG_KIND);
     const settings = settingObjects.length > 0 ? await putBackSettings(commerce, settingObjects, (o) => recorder.drop(o)) : undefined;
-    const { take, kept } = await decideRemovals(commerce.get, removalOrder(record).filter((o) => o.kind !== STORE_CONFIG_KIND));
+    const { take, kept } = await decideRemovals(commerce.get, removalOrder({ ...record, created: [...created] }).filter((o) => o.kind !== STORE_CONFIG_KIND));
     for (const object of take) {
         await takeBack(commerce, object);
         await recorder.drop(object);

@@ -187,10 +187,14 @@ describe('the assignment kinds', () => {
         expect(() => flatAssignments(CATALOG_PRODUCTS_KIND, { catalogs: [{ name: 'ServerSavvy Solutions', products: [{ sku: '   ' }] }] })).toThrow(/shared catalog products/);
     });
 
-    it('stops, naming it, at a catalog the store does not have', async () => {
+    // Step 14 item 3: what goes in it is skipped and named, and the rest of the pack goes on.
+    it('skips, naming it, what goes in a catalog the store does not have', async () => {
         const ctx = await fakeContext({ [CATALOGS]: { items: [PUBLIC] } });
 
-        await expect(installAssignments(ctx, CATALOG_PRODUCTS_KIND, BODEA_CATALOG_PRODUCTS)).rejects.toThrow(/no shared catalog named ServerSavvy Solutions/);
+        await installAssignments(ctx, CATALOG_PRODUCTS_KIND, BODEA_CATALOG_PRODUCTS);
+
+        expect(ctx.session.skipped?.length).toBeGreaterThan(0);
+        expect(ctx.session.skipped?.every((r) => /no shared catalog named ServerSavvy Solutions/u.test(r.reason))).toBe(true);
         expect(ctx.sent).toStrictEqual([]);
     });
 

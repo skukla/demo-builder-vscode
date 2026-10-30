@@ -18,13 +18,17 @@
  */
 
 import { z } from 'zod';
-import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, ownedId, segment } from './kindContext';
+import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, MissingNameError, ownedId, segment } from './kindContext';
+import { createOne } from './pendingCreates';
+import { needsUnskipped, tryRow } from './refusedRows';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import { pickAttributeGroup, readSetGroups } from '@/features/app-builder/services/erpOwnerAttributeSets';
 import type { CommerceAttributeSetList, CommerceSend, CommerceSetAttribute } from '@/types/commerceWire';
 
 export const ATTRIBUTE_SET_KIND = 'attribute_sets';
 export const ASSIGNMENT_KIND = 'attribute_assign_to_set';
+/** `attributesKind`'s kind, named here so an assignment can say it needs a skipped attribute. */
+const ATTRIBUTE_KIND_NAME = 'product_attributes';
 
 /** Magento's product entity type, and the Default set every new set is copied from. */
 const PRODUCT_ENTITY_TYPE = 4;
@@ -115,15 +119,20 @@ export async function installAttributeSets(ctx: KindContext, rows: readonly Attr
             if ((await groupInSet(ctx, name, existing)) === undefined && ours) await createOwnGroup(ctx, name, existing);
             continue;
         }
-        const created = (await ctx.send('POST', 'products/attribute-sets', {
-            attributeSet: { entity_type_id: PRODUCT_ENTITY_TYPE, sort_order: 0, ...attributeSet },
-            skeletonId: skeletonId ?? DEFAULT_SKELETON,
-        })) as { attribute_set_id?: number } | null;
-        if (created?.attribute_set_id === undefined) throw new Error(`Commerce made no attribute set ${name}.`);
-        ctx.session.setIds.set(name, created.attribute_set_id);
-        await ctx.recorder.record({ kind: ATTRIBUTE_SET_KIND, id: String(created.attribute_set_id) });
-        ctx.log(`created attribute set ${name}`);
-        await createOwnGroup(ctx, name, created.attribute_set_id);
+        // Step 14 item 3: a set Commerce refuses is skipped, and the rows that need it with it.
+        await tryRow(ctx, { kind: ATTRIBUTE_SET_KIND, key: name }, async () => {
+            const made = await createOne(ctx, { kind: ATTRIBUTE_SET_KIND, key: name }, async () => {
+                const created = (await ctx.send('POST', 'products/attribute-sets', {
+                    attributeSet: { entity_type_id: PRODUCT_ENTITY_TYPE, sort_order: 0, ...attributeSet },
+                    skeletonId: skeletonId ?? DEFAULT_SKELETON,
+                })) as { attribute_set_id?: number } | null;
+                if (created?.attribute_set_id === undefined) throw new Error(`Commerce made no attribute set ${name}.`);
+                return { kind: ATTRIBUTE_SET_KIND, id: String(created.attribute_set_id) };
+            });
+            ctx.session.setIds.set(name, Number(made.id));
+            ctx.log(`created attribute set ${name}`);
+            await createOwnGroup(ctx, name, Number(made.id));
+        });
     }
 }
 
@@ -132,26 +141,36 @@ export async function installAssignments(ctx: KindContext, rows: readonly Assign
     await loadStoreSets(ctx);
     const inSet = new Map<number, Set<string>>();
     for (const row of rows) {
-        if (ownedId(ctx.session, ASSIGNMENT_KIND, `${row.attributeSetId}/${row.attributeCode}`) === null) continue;
-        const setId = ctx.session.setIds.get(row.attributeSetId);
-        if (setId === undefined) throw new Error(`The store has no attribute set named ${row.attributeSetId}.`);
-        if (!inSet.has(setId)) {
-            const attributes = ((await ctx.get(`products/attribute-sets/${segment(setId)}/attributes`)) ?? []) as CommerceSetAttribute[];
-            inSet.set(setId, new Set(attributes.map((a) => a.attribute_code ?? '')));
-        }
-        if (inSet.get(setId)?.has(row.attributeCode)) continue;
-        const groupId = await groupInSet(ctx, row.attributeSetId, setId);
-        if (groupId === undefined) throw new Error(`The attribute set ${row.attributeSetId} has no group to put ${row.attributeCode} in.`);
+        const key = `${row.attributeSetId}/${row.attributeCode}`;
+        if (ownedId(ctx.session, ASSIGNMENT_KIND, key) === null) continue;
+        await tryRow(ctx, { kind: ASSIGNMENT_KIND, key }, () => assign(ctx, row, inSet));
+    }
+}
+
+/** Put one attribute in its set unless it is there already, and record it. */
+async function assign(ctx: KindContext, row: AssignmentRow, inSet: Map<number, Set<string>>): Promise<void> {
+    needsUnskipped(ctx.session, ATTRIBUTE_KIND_NAME, row.attributeCode);
+    const setId = ctx.session.setIds.get(row.attributeSetId);
+    if (setId === undefined) throw new MissingNameError(ATTRIBUTE_SET_KIND, row.attributeSetId, `The store has no attribute set named ${row.attributeSetId}.`);
+    if (!inSet.has(setId)) {
+        const attributes = ((await ctx.get(`products/attribute-sets/${segment(setId)}/attributes`)) ?? []) as CommerceSetAttribute[];
+        inSet.set(setId, new Set(attributes.map((a) => a.attribute_code ?? '')));
+    }
+    if (inSet.get(setId)?.has(row.attributeCode)) return;
+    const groupId = await groupInSet(ctx, row.attributeSetId, setId);
+    if (groupId === undefined) throw new Error(`The attribute set ${row.attributeSetId} has no group to put ${row.attributeCode} in.`);
+    const id = `${setId}/${row.attributeCode}`;
+    await createOne(ctx, { kind: ASSIGNMENT_KIND, key: id, id }, async () => {
         await ctx.send('POST', 'products/attribute-sets/attributes', {
             attributeSetId: setId,
             attributeGroupId: groupId,
             attributeCode: row.attributeCode,
             sortOrder: row.sortOrder ?? 0,
         });
-        inSet.get(setId)?.add(row.attributeCode);
-        await ctx.recorder.record({ kind: ASSIGNMENT_KIND, id: `${setId}/${row.attributeCode}` });
-        ctx.log(`added ${row.attributeCode} to ${row.attributeSetId}`);
-    }
+        return { kind: ASSIGNMENT_KIND, id };
+    });
+    inSet.get(setId)?.add(row.attributeCode);
+    ctx.log(`added ${row.attributeCode} to ${row.attributeSetId}`);
 }
 
 /** Take back one set this engine created; its own group goes with it. */

@@ -325,3 +325,62 @@ describe('nodeRecordFiles', () => {
         await expect(forgetInstallRecord(nodeRecordFiles, dir, PACK)).resolves.toBeUndefined();
     });
 });
+
+// Step 14 item 1: a create whose answer is lost is still the pack's. Its pending entry is written
+// before the create, so a re-run or a removal can look for it.
+describe('pending entries', () => {
+    it('writes a pending entry to disk, then swaps it for the object once made', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+
+        await recorder.markPending([{ kind: 'products', key: 'vrrack', id: 'vrrack' }]);
+        expect(stored(files)).toMatchObject({ created: [], pending: [{ kind: 'products', key: 'vrrack', id: 'vrrack' }] });
+
+        await recorder.confirm([{ kind: 'products', key: 'vrrack', id: 'vrrack' }], [{ kind: 'products', id: 'vrrack' }]);
+        expect(stored(files)).toMatchObject({ created: [{ kind: 'products', id: 'vrrack' }] });
+        // None pending: the file is as a record written before pending entries existed.
+        expect(stored(files)).not.toHaveProperty('pending');
+        expect(recorder.pending).toStrictEqual([]);
+    });
+
+    it('keeps a pending entry when the same one is marked twice, once', async () => {
+        const recorder = await openInstallRecord(memoryFiles(), PROJECT, PACK, NOW);
+
+        await recorder.markPending([{ kind: 'categories', key: 'Bodea/Racks', find: { parentId: 2, name: 'Racks' } }]);
+        await recorder.markPending([{ kind: 'categories', key: 'Bodea/Racks', find: { parentId: 2, name: 'Racks' } }]);
+
+        expect(recorder.pending).toHaveLength(1);
+    });
+
+    it('forgets a pending entry whose create Commerce refused', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.markPending([{ kind: 'coupons', key: 'SPRING' }]);
+
+        await recorder.forgetPending([{ kind: 'coupons', key: 'SPRING' }]);
+
+        expect((await readInstallRecord(files, PROJECT, PACK))?.pending).toBeUndefined();
+    });
+
+    it('carries pending entries over when a later install opens the record', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW)).markPending([{ kind: 'customers', key: 'ann@x.test', find: { websiteId: 1 } }]);
+
+        const again = await openInstallRecord(files, PROJECT, PACK, NOW);
+
+        expect(again.pending).toEqual([{ kind: 'customers', key: 'ann@x.test', find: { websiteId: 1 } }]);
+    });
+
+    it('still reads a record an earlier version wrote, with no pending entries at all', async () => {
+        const files = memoryFiles({
+            [installRecordPath(PROJECT, PACK)]: JSON.stringify({
+                format: 1, pack: PACK, engine: 'demo-builder', startedAt: NOW(), created: [{ kind: 'products', id: 'vrrack' }],
+            }),
+        });
+
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+
+        expect(recorder.created).toEqual([{ kind: 'products', id: 'vrrack' }]);
+        expect(recorder.pending).toStrictEqual([]);
+    });
+});

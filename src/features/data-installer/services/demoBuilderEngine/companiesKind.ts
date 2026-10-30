@@ -42,6 +42,8 @@ import { z } from 'zod';
 import { COMPANY_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
 import { PUBLIC_CATALOG_TYPE, companyByName, customerByEmail, readCatalogs, sameText } from './b2bReads';
 import { deleteIfPresent, type KindContext, ownedId, parseRows, readOrNull, segment } from './kindContext';
+import { createOne } from './pendingCreates';
+import { tryRow } from './refusedRows';
 import type { CommerceCompany, CommerceCompanyHierarchyNode, CommerceCountryInfo, CommerceCustomer, CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 export { COMPANY_KIND } from './b2bKeys';
@@ -146,11 +148,14 @@ async function adminId(ctx: KindContext, admin: CompanyRow['variables']['input']
     const existing = (await customerByEmail(ctx.get, admin.email, websiteId)) ?? (await customerByEmail(ctx.get, admin.email));
     if (existing?.id !== undefined) return existing.id;
     const customer: CommerceCustomer = { email: admin.email, firstname: admin.firstname, lastname: admin.lastname, website_id: websiteId, store_id: ctx.session.storeId };
-    const id = Number(((await ctx.send('POST', 'customers', { customer })) as CommerceCustomer | null)?.id);
-    if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new company admin ${admin.email}'s id.`);
-    await ctx.recorder.record({ kind: CUSTOMER_KIND, id: String(id), key: customerKey(admin.email) });
-    ctx.log(`created customer ${customerKey(admin.email)}, a company admin`);
-    return id;
+    const key = customerKey(admin.email);
+    const made = await createOne(ctx, { kind: CUSTOMER_KIND, key, find: { websiteId } }, async () => {
+        const id = Number(((await ctx.send('POST', 'customers', { customer })) as CommerceCustomer | null)?.id);
+        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new company admin ${admin.email}'s id.`);
+        return { kind: CUSTOMER_KIND, id: String(id), key };
+    });
+    ctx.log(`created customer ${key}, a company admin`);
+    return Number(made.id);
 }
 
 /** Make each company the store lacks, with its admin; record it by its name. */
@@ -166,20 +171,26 @@ export async function installCompanies(ctx: KindContext, rows: CompanyRows): Pro
             ctx.log(`left company ${name} as it is: the store already has it`);
             continue;
         }
-        // Before the admin, so a region the store lacks makes nothing.
-        const regionId = await regionIdOf(ctx.get, row.variables.input.legal_address, regions);
-        const superUserId = await adminId(ctx, admin, websiteId);
-        const ext = portableExt(row.extension_attributes);
-        const company: CommerceCompany = {
-            ...companyFields(row, regionId),
-            super_user_id: superUserId,
-            status: row.status ?? ACTIVE,
-            ...(publicGroup !== undefined ? { customer_group_id: publicGroup } : {}),
-            ...(ext ? { extension_attributes: ext } : {}),
-        };
-        const id = Number(((await ctx.send('POST', 'company', { company })) as CommerceCompany | null)?.id);
-        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new company ${name}'s id.`);
-        await ctx.recorder.record({ kind: COMPANY_KIND, id: String(id), key: name, previous: { superUserId } });
+        // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
+        const made = await tryRow(ctx, { kind: COMPANY_KIND, key: name }, async () => {
+            // Before the admin, so a region the store lacks makes nothing.
+            const regionId = await regionIdOf(ctx.get, row.variables.input.legal_address, regions);
+            const superUserId = await adminId(ctx, admin, websiteId);
+            const ext = portableExt(row.extension_attributes);
+            const company: CommerceCompany = {
+                ...companyFields(row, regionId),
+                super_user_id: superUserId,
+                status: row.status ?? ACTIVE,
+                ...(publicGroup !== undefined ? { customer_group_id: publicGroup } : {}),
+                ...(ext ? { extension_attributes: ext } : {}),
+            };
+            return createOne(ctx, { kind: COMPANY_KIND, key: name, find: { email }, previous: { superUserId } }, async () => {
+                const id = Number(((await ctx.send('POST', 'company', { company })) as CommerceCompany | null)?.id);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new company ${name}'s id.`);
+                return { kind: COMPANY_KIND, id: String(id), key: name, previous: { superUserId } };
+            });
+        });
+        if (!made) continue;
         ctx.log(`created company ${name}`);
     }
 }

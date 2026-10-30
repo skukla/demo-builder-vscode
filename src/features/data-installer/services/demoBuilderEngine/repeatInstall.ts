@@ -35,6 +35,7 @@ import type { CreatedObject } from './installRecord';
 import { type KindContext, ownedKey, segment } from './kindContext';
 import { productLookups } from './productLookups';
 import { parseProductRows, toCommerceProduct } from './productsKind';
+import { tryRow } from './refusedRows';
 import { type KeptContainer, decideRemovals, takeBack } from './removers';
 import { READABLE_KINDS, packKindOf, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
 import { type OwnedChange, decideOwnedChange } from '@/core/utils/ownedChange';
@@ -156,7 +157,9 @@ export async function applyUpdates(ctx: KindContext, plans: readonly KindPlan[],
         const update = UPDATERS[plan.kind];
         for (const { object, outcome, row } of plan.objects) {
             if (outcome !== 'update' || !update) continue;
-            await update(ctx, object, row);
+            // Step 14 item 3: an update Commerce refuses is skipped, named, and tried again next install.
+            const done = await tryRow(ctx, { kind: object.kind, key: object.key ?? object.id }, async () => (await update(ctx, object, row), true));
+            if (!done) continue;
             await ctx.recorder.update({ kind: object.kind, id: object.id, fingerprint: undefined, wrote: packedFingerprint(plan.kind, row) });
             ctx.log(`brought ${object.kind} ${object.key ?? object.id} up to the pack`);
         }

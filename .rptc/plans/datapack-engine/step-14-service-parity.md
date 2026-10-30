@@ -18,13 +18,20 @@ Each group is built on its own branch off `loop/2026-10-05-release-candidate`, t
 1. **A create whose answer is lost is still the pack's.** Today a write that times out but lands
    is found on the next run, called "the store already has it", never recorded, and never
    removed (rule 1). Record a pending entry before each create; a re-run adopts a match for a
-   pending entry; removal treats an adopted one as the pack's.
+   pending entry; removal treats an adopted one as the pack's. **Built (G1):** every create site
+   (`pendingCreates.ts`) and store settings; looked up by `pendingFinders.ts` at the start of
+   every install and removal. `pending` is an optional record field, written only while non-empty.
 2. **Every kind's rows are checked before anything is written**, in the install and the dry run
-   (`validate_datapack_import`), as the service does (`processDataPack.js` L394-398).
+   (`validate_datapack_import`), as the service does (`processDataPack.js` L394-398). **Built
+   (G1):** `packRowProblems` in `runPack.ts`, run by `installPack` and the engine's dry run, which
+   now reads the pack.
 3. **One refused row does not stop the rest** (step 11 decision 5): the row is skipped, the
    install carries on, and the note names each skipped row and Commerce's reason, as the
    service's `processingOrchestration.js` L263-341 does. A row that later rows depend on (a
-   category, an attribute set) skips its dependants with it, by name.
+   category, an attribute set) skips its dependants with it, by name. **Built (G1):**
+   `refusedRows.ts`. Skipped: 400/404/409/422 and a name the store lacks. Still stops: 401, 403,
+   429, 5xx, no answer, a kind's own reads. Per-kind status stays `success` (the kind ran to its
+   end); the note names each skipped row. Refused settings and repeat-install updates skip too.
 
 ### G2: the kinds that refuse what the service accepted
 
@@ -107,7 +114,11 @@ one, so a source would never get back to zero).
 
 ### Owner's decision (asked 2026-10-30)
 
-20. Removing a pack the service installed, which our engine has no record of.
+20. Removing a pack the service installed, which our engine has no record of. **Decided (owner,
+    2026-10-30): keep refusing, match nothing by name; the refusal points the SC to "Clear demo
+    data".** Built on G1: the message (`engine.ts` `NO_RECORD`), the `reset_datapack` description
+    (agents: `check_demo_data` then `clear_demo_data`), the `import-datapack` skill template, and
+    `docs/systems/data-installer.md`.
 
 ## Rules for every group
 

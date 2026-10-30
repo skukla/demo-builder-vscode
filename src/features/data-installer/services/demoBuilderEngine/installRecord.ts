@@ -12,6 +12,13 @@
  * it goes, for the same reason. A setting the pack changes is recorded with the value it had
  * before, so removal puts that back instead of deleting anything.
  *
+ * A create is written down twice (step 14 item 1): as a pending entry before it is sent, naming
+ * the kind and what it will be found by, and as an object once Commerce answers. A create whose
+ * answer is lost (a write that times out can still land; Commerce writes have taken over 120 s)
+ * leaves its pending entry, and the next install or removal looks for it (`pendingFinders.ts`):
+ * found, it is the pack's, as if the answer had come; not found, the entry goes. A record an
+ * earlier version wrote has no `pending` and reads as before.
+ *
  * One file per installed pack, beside the project, not in the manifest: the list can run to
  * hundreds of objects, and the manifest is rewritten whole by every save.
  *
@@ -21,6 +28,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { z } from 'zod';
+import { type PendingObject, pendingSchema } from './pendingRecord';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import type { DatapackId } from '@/types/datapack';
 
@@ -86,6 +94,8 @@ export interface InstallRecord {
     /** The Admin step the pack left, when its root is a root of its own (step 12). */
     rootStep?: PackRootStep;
     created: CreatedObject[];
+    /** Creates whose answer has not come back (step 14 item 1); absent on a record written before. */
+    pending?: PendingObject[];
 }
 
 /** The four file operations the record needs, handed in so tests need no disk. */
@@ -115,6 +125,14 @@ export interface InstallRecorder {
     /** The object of a kind the pack names `key`; an object recorded with no key answers by its id. */
     byKey(kind: string, key: string): CreatedObject | undefined;
     drop(object: Pick<CreatedObject, 'kind' | 'id'>): Promise<void>;
+    /** Creates whose answer has not come back. */
+    readonly pending: readonly PendingObject[];
+    /** Write these down as about to be created, before the create is sent. */
+    markPending(objects: readonly PendingObject[]): Promise<void>;
+    /** Swap pending entries for the objects Commerce made: one write. */
+    confirm(pending: readonly PendingObject[], objects: readonly CreatedObject[]): Promise<void>;
+    /** Drop pending entries that certainly did not land. */
+    forgetPending(pending: readonly PendingObject[]): Promise<void>;
 }
 
 /** The record is missing a safe name, unreadable, or belongs to another pack. */
@@ -156,6 +174,7 @@ const recordSchema = z.object({
             wrote: z.string().optional(),
         }),
     ),
+    pending: z.array(pendingSchema).optional(),
 });
 
 function packLabel(pack: DatapackId): string {
@@ -252,9 +271,19 @@ export async function openInstallRecord(
         ...(target ? { target: { websiteCode: target.websiteCode, storeCode: target.storeCode } } : {}),
         created: [],
     };
-    const save = () => files.write(filePath, `${JSON.stringify(record, null, 2)}\n`);
+    const pending: PendingObject[] = [...(record.pending ?? [])];
+    // Written only while something is pending, so a record with none reads as one written before.
+    const save = () => {
+        const { pending: _was, ...rest } = record;
+        return files.write(filePath, `${JSON.stringify(pending.length > 0 ? { ...rest, pending } : rest, null, 2)}\n`);
+    };
     const indexOf = (kind: string, id: string) =>
         record.created.findIndex((o) => o.kind === kind && o.id === id);
+    const samePending = (a: PendingObject) => (b: PendingObject) => a.kind === b.kind && a.key === b.key;
+    const withoutPending = (gone: readonly PendingObject[]) => {
+        const kept = pending.filter((p) => !gone.some(samePending(p)));
+        pending.splice(0, pending.length, ...kept);
+    };
 
     return {
         get created() {
@@ -285,6 +314,22 @@ export async function openInstallRecord(
             const index = indexOf(kind, id);
             if (index < 0) return;
             record.created.splice(index, 1);
+            await save();
+        },
+        pending,
+        async markPending(objects) {
+            if (objects.length === 0) return;
+            for (const object of objects) if (!pending.some(samePending(object))) pending.push(object);
+            await save();
+        },
+        async confirm(gone, objects) {
+            withoutPending(gone);
+            for (const object of objects) if (indexOf(object.kind, object.id) < 0) record.created.push(object);
+            await save();
+        },
+        async forgetPending(gone) {
+            if (!gone.some((g) => pending.some(samePending(g)))) return;
+            withoutPending(gone);
             await save();
         },
     };

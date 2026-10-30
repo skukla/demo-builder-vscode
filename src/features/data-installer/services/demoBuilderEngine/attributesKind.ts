@@ -18,6 +18,8 @@
 import { z } from 'zod';
 import { sameText } from './b2bReads';
 import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, ownedId, readOrNull, segment } from './kindContext';
+import { createOne } from './pendingCreates';
+import { tryRow } from './refusedRows';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const ATTRIBUTE_KIND = 'product_attributes';
@@ -76,7 +78,8 @@ export async function installAttributes(ctx: KindContext, rows: readonly Attribu
             await addMissingOptions(ctx, code, row.attribute.options ?? [], row.attribute.frontend_input);
             continue;
         }
-        if (!existing) await createAttribute(ctx, row);
+        // Step 14 item 3: an attribute Commerce refuses is skipped, and the rows that need it with it.
+        if (!existing) await tryRow(ctx, { kind: ATTRIBUTE_KIND, key: code }, () => createAttribute(ctx, row));
     }
 }
 
@@ -91,10 +94,13 @@ async function createAttribute(ctx: KindContext, row: AttributeRow): Promise<voi
     const { options: _later, default_value: _default, ...withoutOptions } = whole;
     const attribute = swatch ? withoutOptions : whole;
     const labels = attribute.frontend_labels?.map((l) => ({ ...l, store_id: ctx.session.storeId }));
-    await ctx.send('POST', 'products/attributes', {
-        attribute: { ...attribute, ...(labels ? { frontend_labels: labels } : {}) },
+    const code = attribute.attribute_code;
+    await createOne(ctx, { kind: ATTRIBUTE_KIND, key: code, id: code }, async () => {
+        await ctx.send('POST', 'products/attributes', {
+            attribute: { ...attribute, ...(labels ? { frontend_labels: labels } : {}) },
+        });
+        return { kind: ATTRIBUTE_KIND, id: code };
     });
-    await ctx.recorder.record({ kind: ATTRIBUTE_KIND, id: attribute.attribute_code });
     ctx.log(`created attribute ${attribute.attribute_code}`);
     if (!swatch) return;
     // Its options go with it on removal, so they are not recorded one by one.
@@ -133,11 +139,16 @@ export async function addMissingOptions(ctx: KindContext, code: string, options:
     const missing = options.filter((o) => !have.some((h) => sameText(h.label, o.label)));
     for (const option of missing) {
         const { value: _sourceValue, ...body } = option;
-        await sendOption(ctx, code, isSwatch(input) ? swatchOption(option) : body);
-        const added = (await readOptions(ctx, code)).find((h) => sameText(h.label, option.label));
-        if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
-        await ctx.recorder.record({ kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}` });
-        ctx.log(`added option "${option.label}" to ${code}`);
+        const key = `${code}/${option.label}`;
+        const made = await tryRow(ctx, { kind: ATTRIBUTE_OPTION_KIND, key }, () =>
+            createOne(ctx, { kind: ATTRIBUTE_OPTION_KIND, key }, async () => {
+                await sendOption(ctx, code, isSwatch(input) ? swatchOption(option) : body);
+                const added = (await readOptions(ctx, code)).find((h) => sameText(h.label, option.label));
+                if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
+                return { kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}` };
+            }),
+        );
+        if (made) ctx.log(`added option "${option.label}" to ${code}`);
     }
 }
 

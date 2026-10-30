@@ -78,6 +78,44 @@ products), with before/after snapshots via the instance's own REST API:
 Corroborated by the service's own records: all 434 historical delete runs carry a
 scenario expressed in terms of the *pack's* items. No type-wide wipe scenario exists.
 
+## Demo Builder's engine: removal, and an install that hits trouble
+
+Demo Builder's own engine (`services/demoBuilderEngine/`, the default) removes a pack
+from its install record, `<project>/.demo-builder/datapacks/<name>@<version>.json`,
+which lists every object the install made. It never removes by name.
+
+- **A pack it has no record of** (one the service installed, or one installed from
+  another project) is refused, and nothing is removed (owner, 2026-10-30, step 14
+  item 20). The refusal points the SC at **Clear demo data** on the Data Installer
+  screen (agents: `check_demo_data`, then `clear_demo_data`), which clears what Demo
+  Builder did not install from the stores the SC picks (`demoDataWipe/wipePlan.ts`).
+
+When an install hits trouble (step 14 items 1 to 3):
+
+- **Every kind's rows are checked before the first write**, by the install and by the
+  dry run (`validate_datapack_import`), which now reads the pack's rows too
+  (`packRowProblems` in `runPack.ts`). A bad row in any kind stops it with nothing
+  written, naming each kind at fault.
+- **One refused row does not stop the rest** (`refusedRows.ts`). A row Commerce answers
+  400, 404, 409 or 422, or one naming something the store lacks, is skipped; the rest
+  go in. A row that needs a skipped one is skipped with it and says which it needed: a
+  category's children, the products in it, the products and assignments of a set, a
+  coupon of a cart rule, a customer of a group, a link to a stock, a catalog's
+  members. The job's note starts "Skipped N rows, and installed the rest:" and names
+  each, with Commerce's own message. Each kind still ends `success`, because it ran to
+  its end; the note is where the skips are said. A setting Commerce refuses is skipped
+  the same way, and so is a repeat install's update (tried again next install).
+- **What is the store's fault still stops the install:** 401, 403, 429, a 5xx, no answer
+  at all, a read a kind makes before its rows, and anything unexpected. Running the
+  install again carries on from the record.
+- **A create whose answer is lost is still the pack's** (`pendingCreates.ts`,
+  `pendingFinders.ts`). Each create is written to the record as pending before it is
+  sent. A 4xx drops the entry; no answer, a 5xx or an answer missing the new id keep
+  it. The next install, and any removal, look each pending entry up the way its kind
+  looks before creating: found, it is recorded as the pack's (and removed with it);
+  not found, the entry goes. The record's `pending` field is optional and only written
+  while something is pending, so records from earlier versions read unchanged.
+
 ## What agents are not given
 
 Six read tools. Three groups are held back deliberately — the most reviewable

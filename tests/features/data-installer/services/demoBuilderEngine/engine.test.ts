@@ -103,6 +103,23 @@ describe('demoBuilderEngine install', () => {
         expect(ctx.sent).toStrictEqual([]);
     });
 
+    // Step 14 item 3: one refused row does not stop the rest. The kind still ends success (it ran to
+    // its end), and the note names the row and Commerce's reason.
+    it('carries on past a row Commerce refuses, and the note names it with the reason', async () => {
+        const refuseCategory = (call: SentCall) => {
+            if (call.path === 'categories') throw new CommerceReadError('Commerce answered 400 for categories: {"message":"URL key for specified store already exists."}', 400);
+            return { id: 40 };
+        };
+        const { engine } = await engineWith({ [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) }, refuseCategory);
+
+        const { activationId } = await engine.startImport(request());
+        const status = await settle(engine, activationId);
+
+        expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
+        expect(status.note).toBe('Skipped 1 row, and installed the rest: categories Sale (URL key for specified store already exists).');
+        expect(await engine.getJobFailureReason(activationId)).toBeUndefined();
+    });
+
     it('marks the failing kind and every later one as failed, and says why', async () => {
         // The category's write fails; its reads (and the url-key check's, before any write) succeed.
         const failCategory = (call: SentCall) => {
@@ -248,13 +265,20 @@ describe('demoBuilderEngine removal', () => {
         expect('leftInStore' in status).toBe(false);
     });
 
-    it('fails, saying so, when this engine never installed the pack here', async () => {
-        const { engine } = await engineWith({}, () => true);
+    // Step 14 item 20 (owner, 2026-10-30): still refused, nothing matched by name, and the SC is
+    // pointed at the one thing that clears what an earlier install left.
+    it('fails, removing nothing, when this engine never installed the pack here, and points to Clear demo data', async () => {
+        const { engine, ctx } = await engineWith({}, () => true);
 
         const { activationId } = await engine.startDelete(request());
-        await settle(engine, activationId);
+        const status = await settle(engine, activationId);
 
-        expect((await engine.getJobFailureReason(activationId))?.error).toMatch(/did not install this pack in this project/);
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(
+            'Demo Builder did not install this pack in this project, so it has no record of what the pack made and removes ' +
+                'nothing by name. To clear what an earlier install left in the store, use Clear demo data on the Data Installer screen.',
+        );
+        expect(status.perType).toEqual({ attribute_sets: 'error', categories: 'error' });
+        expect(ctx.sent).toStrictEqual([]);
     });
 
     it('keeps on the record what Commerce refused to remove', async () => {
@@ -291,6 +315,30 @@ describe('demoBuilderEngine reads', () => {
 
         await expect(engine.validateImport(req)).resolves.toEqual(expected);
         expect(ctx.sent).toStrictEqual([]);
+    });
+
+    // Step 14 item 2: the dry run reads the pack's rows, as the service's validate mode does.
+    it("dry run reads the pack's rows and names each kind whose rows Commerce could not take", async () => {
+        const asked: string[][] = [];
+        const { engine, ctx } = await engineWith({}, () => ({}), {
+            readPack: async (_id, kinds) => {
+                asked.push(kinds);
+                return { attribute_sets: [], categories: { categories: [{ category: { name: 'Sale' } }] } };
+            },
+        });
+
+        const verdict = await engine.validateImport(request());
+
+        expect(asked).toEqual([['attribute_sets', 'categories']]);
+        expect(verdict.valid).toBe(false);
+        expect(verdict.reason).toMatch(/^Nothing would be installed: The pack's categories are not in the shape Commerce takes/u);
+        expect(ctx.sent).toStrictEqual([]);
+    });
+
+    it('dry run says when the pack does not hold a kind it was asked for', async () => {
+        const { engine } = await engineWith({}, () => ({}), { readPack: async () => ({ attribute_sets: [] }) });
+
+        await expect(engine.validateImport(request())).resolves.toEqual({ valid: false, reason: 'The pack holds no categories.' });
     });
 
     it('checks the project\'s own Commerce access, not the credentials in the request', async () => {

@@ -77,6 +77,15 @@ A refusal comes back as a verdict, not an error:
 `success: true` with `valid: false` means the call worked and the answer is no. Read the
 reason to the user rather than retrying.
 
+With Demo Builder's own engine (the default) the dry run also reads the pack's rows, every
+kind's, and names each kind whose rows Commerce could not take; the real import checks the
+same before its first write. Once writing, a row Commerce refuses is skipped and the rest go
+in: the status's `note` starts "Skipped N rows" and names each row with Commerce's reason,
+and any row that needed a skipped one (a product in a skipped category) is skipped with it,
+by name. Every kind still reads `success`, so read the note. Sign-in, throttling, a Commerce
+error or no answer at all still stop the import; running it again carries on, and anything
+the store did make without answering is found then and counted as the pack's.
+
 ## Arguments that are required and look optional
 
 All four, on every write call:
@@ -96,6 +105,12 @@ an instance wipe, and data that arrived some other way is untouched.
 It is confirm-gated and **cannot be undone** — the service has no undo — but "cannot be
 undone" and "unbounded" are different claims, and only the first is true here. Say the
 scope when you ask the user, rather than implying the instance is at risk.
+
+With Demo Builder's own engine (the default), removal takes back only what the project's
+install record lists. A pack this project's engine never installed (the service did, or
+another project did) is refused and nothing is removed by name; to clear what an earlier
+install left, use `check_demo_data` and then `clear_demo_data` (the screen's "Clear demo
+data").
 
 Like an import it returns a handle and is polled, and **the service supplies its own
 dependency ordering for the delete** — a different order from import, over the same data

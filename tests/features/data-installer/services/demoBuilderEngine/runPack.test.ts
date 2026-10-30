@@ -8,8 +8,10 @@ import { CommerceReadError } from '@/features/app-builder/services/erpFillReader
 import { installRecordPath, openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import {
     INSTALLABLE_KINDS,
+    PackRowsError,
     UnsupportedKindsError,
     installPack,
+    packRowProblems,
     removePack,
 } from '@/features/data-installer/services/demoBuilderEngine/runPack';
 import { NOW, PACK, PROJECT, type SentCall, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';
@@ -34,6 +36,32 @@ describe('installPack', () => {
             new UnsupportedKindsError(['customers_export', 'product_export']),
         );
         expect(ctx.sent).toStrictEqual([]);
+    });
+
+    // Step 14 item 2: the service checks every kind's shape before writing (`processDataPack.js` L394-398).
+    it("checks every kind's rows before writing anything, and names each kind whose rows are wrong", async () => {
+        const ctx = await fakeContext({ [page('products/attribute-sets/sets/list')]: { items: [], total_count: 0 } });
+        const pack = {
+            attribute_sets: [{ attributeSet: { attribute_set_name: 'Racks' } }],
+            products: [{ product: { sku: 'vrrack' } }],
+            coupons: [{ coupon: { rule_id: 'Spring' } }],
+        };
+
+        const refusal = installPack(ctx, pack);
+
+        await expect(refusal).rejects.toThrow(PackRowsError);
+        await expect(refusal).rejects.toThrow(/products are not in the shape.*coupons are not in the shape/su);
+        expect(ctx.sent).toStrictEqual([]);
+    });
+
+    it('finds nothing wrong with rows every kind can read', () => {
+        expect(packRowProblems({ attribute_sets: [], categories: { categories: [] }, b2b_shared_catalog_products: { catalogs: [] } })).toStrictEqual([]);
+    });
+
+    it('names a shared catalog assignment kind and a store settings kind whose rows are wrong', () => {
+        const problems = packRowProblems({ b2b_shared_catalog_products: { catalogs: [{ name: 'Retail' }] }, store_config: [{ path: 'web/unsecure/base_url', value: 'x', scope: 'default' }] });
+
+        expect(problems).toEqual([expect.stringMatching(/shared catalog products/u), expect.stringMatching(/store settings cannot be installed/u)]);
     });
 
     // Step 08: groups before the products whose tier prices name them; customers before the

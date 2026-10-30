@@ -161,12 +161,14 @@ describe('installStockSourceLinks', () => {
         expect(ctx.recorder.created).toEqual([{ kind: LINK_KIND, id: '7/carvelo_broadway' }]);
     });
 
-    it('fails on a stock the store does not have', async () => {
+    // Step 14 item 3: skipped and named, and the rest of the pack goes on.
+    it('skips a link to a stock the store does not have, naming it', async () => {
         const ctx = await fakeContext(inventory({}));
 
-        await expect(installStockSourceLinks(ctx, parseStockSourceLinks(LINKS_PACK))).rejects.toThrow(
-            'The store has no stock named Carvelo Inventory.',
-        );
+        await installStockSourceLinks(ctx, parseStockSourceLinks(LINKS_PACK));
+
+        expect(ctx.session.skipped?.map((r) => r.reason)).toContain('The store has no stock named Carvelo Inventory.');
+        expect(ctx.sent).toStrictEqual([]);
     });
 });
 

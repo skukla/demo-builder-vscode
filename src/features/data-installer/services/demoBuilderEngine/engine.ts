@@ -23,9 +23,10 @@ import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord,
 import { resolveEngineTarget, sessionFor } from './installTarget';
 import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
 import { type RootStepAsker, rootStepLine } from './packRootStep';
+import { skippedLine } from './refusedRows';
 import { containersLine } from './removers';
 import { keptLine } from './repeatInstall';
-import { type PackItems, installPack, removePack, unsupportedKinds } from './runPack';
+import { type PackItems, PackRowsError, installPack, packRowProblems, removePack, unsupportedKinds } from './runPack';
 import { settingsLine, settingsWebsite } from './storeConfigKind';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -50,6 +51,15 @@ export interface DemoBuilderEngineDeps {
 }
 
 const NO_TARGET = 'Choose the website and store view to install into first.';
+
+/**
+ * A removal of a pack this engine has no record of (step 14 item 20, owner 2026-10-30): refused,
+ * with nothing matched by name, and the SC pointed at "Clear demo data" (`demoDataWipe/wipePlan.ts`),
+ * which clears what Demo Builder did not install. Agents reach it as `check_demo_data` and `clear_demo_data`.
+ */
+const NO_RECORD =
+    'Demo Builder did not install this pack in this project, so it has no record of what the pack made and removes ' +
+    'nothing by name. To clear what an earlier install left in the store, use Clear demo data on the Data Installer screen.';
 
 interface Job {
     perType: Record<string, DataTypeStatus>;
@@ -92,14 +102,20 @@ async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, ta
     return `${request.id.name}@${request.id.version} is installed on ${where}. Remove it first, or install it there.`;
 }
 
+/** Why the pack cannot answer the request, when it lacks a kind the request asks for. */
+function missingKinds(request: ImportRequest, items: PackItems): string | undefined {
+    const missing = request.dataTypes.filter((kind) => !(kind in items));
+    return missing.length > 0 ? `The pack holds no ${missing.join(', ')}.` : undefined;
+}
+
 /** Install: the target, the rows, then each kind in order, its status moving as it runs. */
 async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, job: Job): Promise<void> {
     if (!request.target) throw new Error(NO_TARGET);
     const conflict = await elsewhere(deps, request, request.target);
     if (conflict) throw new Error(conflict);
     const items = await deps.readPack(request.id, request.dataTypes, request.source ?? 'installer');
-    const missing = request.dataTypes.filter((kind) => !(kind in items));
-    if (missing.length > 0) throw new Error(`The pack holds no ${missing.join(', ')}.`);
+    const missing = missingKinds(request, items);
+    if (missing) throw new Error(missing);
     const commerce = await access(deps);
     const target = await resolveEngineTarget(commerce.get, request.target);
     const session = sessionFor(target);
@@ -114,6 +130,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         job.perType[kind] = 'processing';
     });
     job.note = [
+        skippedLine(outcome.skipped),
         keptLine(outcome.kept),
         containersLine(outcome.containers),
         settingsLine(outcome.settings, 'Set'),
@@ -164,6 +181,12 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 if (unsupported.length > 0) return { valid: false, reason: `Demo Builder does not install ${unsupported.join(', ')} yet.` };
                 const conflict = await elsewhere(deps, request, request.target);
                 if (conflict) return { valid: false, reason: conflict };
+                // Step 14 item 2: the pack's rows, every kind's, as the install checks them before its first write.
+                const items = await deps.readPack(request.id, request.dataTypes, request.source ?? 'installer');
+                const missing = missingKinds(request, items);
+                if (missing) return { valid: false, reason: missing };
+                const problems = packRowProblems(items, request.target.websiteCode);
+                if (problems.length > 0) return { valid: false, reason: new PackRowsError(problems, 'would be').message };
                 await resolveEngineTarget((await access(deps)).get, request.target);
                 return { valid: true };
             } catch (error) {
@@ -174,7 +197,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
         startDelete: async (request) =>
             start(deps, jobs, request, async (job) => {
                 const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id });
-                if (result.noRecord) throw new Error('Demo Builder did not install this pack in this project, so there is nothing of its to remove.');
+                if (result.noRecord) throw new Error(NO_RECORD);
                 job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
                 if (result.kept.length > 0) job.leftInStore = true;
                 for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';

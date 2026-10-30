@@ -73,6 +73,36 @@ export interface CatalogSession {
      * kinds assign to that catalog; it is the store's, so nothing records or removes it.
      */
     catalogStandIns?: Map<string, number>;
+    /**
+     * The rows skipped because Commerce refused them, or because they need one that was (step 14
+     * item 3, `refusedRows.ts`): the install carries on, and its note names each.
+     */
+    skipped?: SkippedRow[];
+}
+
+/** A pack row the install skipped, by kind and the pack's name for it, and why. */
+export interface SkippedRow {
+    kind: string;
+    key: string;
+    reason: string;
+    /** Other names later rows know it by (a category's url key), so a row needing it is told why. */
+    names?: string[];
+}
+
+/**
+ * A pack row names something the store does not have: an attribute set, a category's url key, a
+ * customer group, a cart rule. The row is skipped, not the install (step 14 item 3); when the thing
+ * named was itself skipped, the row's reason says so.
+ */
+export class MissingNameError extends Error {
+    constructor(
+        readonly kind: string,
+        readonly missing: string,
+        message: string,
+    ) {
+        super(message);
+        this.name = 'MissingNameError';
+    }
 }
 
 /** What the store settings kind did (step 09, `storeConfigKind.ts`), for an install's or removal's one line. */

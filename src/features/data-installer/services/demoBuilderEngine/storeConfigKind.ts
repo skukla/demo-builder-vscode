@@ -32,6 +32,9 @@
 import { z } from 'zod';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, type SettingsDone, parseRows } from './kindContext';
+import { certainlyNotMade } from './pendingCreates';
+import type { PendingObject } from './pendingRecord';
+import { skipRow } from './refusedRows';
 import { andList } from '@/core/utils/andList';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
 import { SETTING_PATH, configFix, readPrevious } from '@/features/app-builder/services/storePreparation/configFix';
@@ -184,11 +187,36 @@ const NONE = (): SettingsDone => ({ changes: [], notes: [], kept: [] });
 
 const fixDeps = (commerce: { get: CommerceGet; send: CommerceSend }, websiteCode: string | undefined): FixDeps => ({ commerce, websiteCode, erpNames: [] });
 
+/**
+ * Each new setting as pending (step 14 item 1), with what its scope holds now and the value about to
+ * be written: a PUT whose answer is lost is then found by that value and put back on removal.
+ */
+async function pendingSettings(ctx: KindContext, writing: readonly PlannedSetting[]): Promise<PendingObject[]> {
+    const fresh = writing.flatMap((p) => (p.item && !p.object ? [{ key: p.key, item: p.item }] : []));
+    if (fresh.length === 0) return [];
+    const now = await readPrevious(ctx.get, fresh.map(({ item }) => ({ path: item.path, scope: item.scope })), ctx.session.websiteCode);
+    return fresh.map(({ key, item }, i) => ({ kind: STORE_CONFIG_KIND, key, previous: { ...now[i], wrote: item.value } }));
+}
+
 /** Write the planned sets and updates in one PUT; record each one Commerce saved. */
 async function writeSettings(ctx: KindContext, writing: readonly PlannedSetting[], done: SettingsDone): Promise<string[]> {
     if (writing.length === 0) return [];
     const items = writing.flatMap((p) => (p.item ? [p.item] : []));
-    const applied = await configFix({ kind: 'config', items }).apply(fixDeps(ctx, ctx.session.websiteCode));
+    const pending = await pendingSettings(ctx, writing);
+    await ctx.recorder.markPending(pending);
+    // The settings fix counts a PUT that threw as refused; one with no answer may have landed, so
+    // its pending entries stay and the install stops, as for any write that loses its answer.
+    let lost: unknown;
+    const send: CommerceSend = async (method, path, body) => {
+        try {
+            return await ctx.send(method, path, body);
+        } catch (error) {
+            if (!certainlyNotMade(error)) lost = error;
+            throw error;
+        }
+    };
+    const applied = await configFix({ kind: 'config', items }).apply(fixDeps({ get: ctx.get, send }, ctx.session.websiteCode));
+    if (lost !== undefined) throw lost;
     const saved = applied.record?.kind === 'config' ? applied.record.previous : [];
     done.changes.push(...applied.changes);
     for (const planned of writing) {
@@ -199,19 +227,34 @@ async function writeSettings(ctx: KindContext, writing: readonly PlannedSetting[
             const original = recordedPrevious(planned.object) ?? before;
             await ctx.recorder.update({ kind: STORE_CONFIG_KIND, id: planned.object.id, previous: { ...original, wrote: planned.item.value } });
         } else {
-            await ctx.recorder.record({ kind: STORE_CONFIG_KIND, id: planned.key, key: planned.key, previous: before });
+            const mine = pending.filter((p) => p.key === planned.key);
+            await ctx.recorder.confirm(mine, [{ kind: STORE_CONFIG_KIND, id: planned.key, key: planned.key, previous: before }]);
         }
         ctx.log(`set ${planned.key}`);
     }
+    // Commerce answered, and did not save these: they never landed.
+    await ctx.recorder.forgetPending(pending);
     return applied.rejected;
+}
+
+/**
+ * Each setting Commerce refused, skipped and named (step 14 item 3): the settings fix words a refusal
+ * `<path>: <old> → <new>: <why>`, and the rest of the pack carries on.
+ */
+function skipRefused(ctx: KindContext, writing: readonly PlannedSetting[], rejected: readonly string[]): void {
+    for (const text of rejected) {
+        const planned = writing.find((p) => p.item && text.startsWith(`${p.item.path}: `));
+        const path = planned?.item?.path ?? text.split(': ')[0];
+        skipRow(ctx, { kind: STORE_CONFIG_KIND, key: planned?.key ?? path, reason: text.slice(path.length + 2) });
+    }
 }
 
 /**
  * Install the pack's settings (see the module comment). A repeat install brings a setting this
  * engine set up to the pack, keeps one the SC changed since, and puts back one the pack dropped.
  *
- * @throws Error before any write when a row is refused; after the writes, naming each setting
- *   Commerce refused (the ones it saved stay recorded)
+ * @throws Error before any write when a row is refused. A setting Commerce refuses is skipped and
+ *   named in the install's note (step 14 item 3); the ones it saved stay recorded.
  */
 export async function installStoreConfig(ctx: KindContext, records: unknown): Promise<void> {
     const settings = packSettings(records, ctx.session.websiteCode);
@@ -225,7 +268,7 @@ export async function installStoreConfig(ctx: KindContext, records: unknown): Pr
     const back = await putBackSettings(ctx, dropped, (o) => ctx.recorder.drop(o));
     const putBack = settingsLine(back, 'Put back');
     if (putBack) done.notes.push(putBack);
-    if (rejected.length > 0) throw new Error(`Commerce refused ${andList(rejected)}.`);
+    skipRefused(ctx, plan.filter((p) => p.outcome === 'set' || p.outcome === 'update'), rejected);
 }
 
 /**

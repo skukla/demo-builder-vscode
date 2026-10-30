@@ -149,12 +149,14 @@ describe('installAssignments', () => {
         expect(ctx.recorder.created).toStrictEqual([]);
     });
 
-    it('fails on a set the store does not have', async () => {
+    // Step 14 item 3: skipped and named, and the rest of the pack goes on.
+    it('skips an assignment to a set the store does not have, naming it', async () => {
         const ctx = await fakeContext({ [SETS_PAGE]: STORE_SETS });
 
-        await expect(installAssignments(ctx, parseAssignmentRows([{ ...ROW, attributeSetId: 'Nope' }]))).rejects.toThrow(
-            'The store has no attribute set named Nope.',
-        );
+        await installAssignments(ctx, parseAssignmentRows([{ ...ROW, attributeSetId: 'Nope' }]));
+
+        expect(ctx.session.skipped).toEqual([{ kind: 'attribute_assign_to_set', key: `Nope/${ROW.attributeCode}`, reason: 'The store has no attribute set named Nope.' }]);
+        expect(ctx.sent).toStrictEqual([]);
     });
 });
 

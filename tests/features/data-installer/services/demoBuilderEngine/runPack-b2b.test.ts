@@ -182,7 +182,7 @@ describe('a customer and B2B pack', () => {
         const outcome = await installPack(ctx, PACK_ITEMS);
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(outcome).toEqual({ kept: [], containers: [] });
+        expect(outcome).toEqual({ kept: [], containers: [], skipped: [] });
     });
 
     it("keeps a company the SC changed in the Admin, and brings in the pack's change to one left as it was", async () => {
