@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "description": "Schema for aco_price_books — ACO price book hierarchy (camelCase only). Root priceBookId is the Commerce website code. Child priceBookId is websiteCode, colon, and sanitized customer group code (lowercase alphanumeric, spaces as hyphens; max 64 characters total). currency is required only on root rows (no parentId).",
+  "minItems": 1,
+  "items": {
+    "allOf": [
+      {
+        "type": "object",
+        "properties": {
+          "priceBookId": {
+            "type": "string",
+            "description": "Root: website code. Child: websiteCode:sanitized-group-code (max 64 chars total)",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Parent price book id (website code) when this row is a child",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name",
+            "minLength": 1
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 — required on root rows only",
+            "minLength": 1,
+            "maxLength": 5
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "required": ["priceBookId"]
+      },
+      {
+        "if": {
+          "required": ["parentId"]
+        },
+        "then": {
+          "required": ["name"]
+        },
+        "else": {
+          "required": ["name", "currency"]
+        }
+      }
+    ]
+  }
+}
