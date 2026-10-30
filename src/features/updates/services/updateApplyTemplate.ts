@@ -53,6 +53,8 @@ export interface UpdateQuestions {
     onUnfinished(project: Project, reason: string): Promise<UnfinishedAnswer>;
     /** A block library under the `ask` sync setting: replace its blocks with the new ones? */
     replaceLibraryBlocks(libraryName: string, project: Project): Promise<boolean>;
+    /** Whether the SC's AI asks before a fix it makes goes live (`demoBuilder.ai.requireAgentConsent`). */
+    aiAsksFirst(): boolean;
 }
 
 /** A merge that stopped on a clash, and what was decided about it. */

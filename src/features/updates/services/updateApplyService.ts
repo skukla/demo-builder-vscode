@@ -326,6 +326,8 @@ async function applyProject(s: UpdateSelections, run: ApplyRun, into: Record<Cat
     const { ctx, onProgress, onItem } = run;
     const { questions, templateConflicts: policy } = run.options;
     const add = (key: CategoryKey, result: CategoryResult): void => mergeInto(into[key], result);
+    // Only a person is told how a kept clash reads; without one, nothing reads the row.
+    const answered: DescribeItem = (result) => answeredClashOutcome(result, questions?.aiAsksFirst() ?? true);
     // First among the storefront writes: a fixed clash finishes before anything else moves the repository.
     add('finish', await eachItem('finish', s.finish, (some) => applyFinish(some, ctx, onProgress, questions), onItem));
     const succeededPaths = new Set<string>();
@@ -333,9 +335,9 @@ async function applyProject(s: UpdateSelections, run: ApplyRun, into: Record<Cat
         const applied = await applyTemplate(some, ctx, onProgress, policy, questions);
         applied.succeededPaths.forEach((path) => succeededPaths.add(path));
         return applied.result;
-    }, onItem, answeredClashOutcome));
+    }, onItem, answered));
     add('boilerplate', await eachItem('boilerplate', s.boilerplate, (some) =>
-        applyBoilerplate(some, ctx, onProgress, policy, questions), onItem, answeredClashOutcome));
+        applyBoilerplate(some, ctx, onProgress, policy, questions), onItem, answered));
     add('component', await eachItem('component', s.component, (some) => applyComponents(some, ctx, onProgress), onItem));
     add('adobeMcp', await eachItem('adobeMcp', s.adobeMcp, (some) => applyAdobeMcp(some, ctx, onProgress), onItem));
     // Libraries first, then the Inspector SDK: one category, as the agent reads it.

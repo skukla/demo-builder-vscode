@@ -90,6 +90,7 @@ describe('local storefront refresh after an apply', () => {
             onClash: jest.fn(),
             onUnfinished: jest.fn(),
             replaceLibraryBlocks: jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true),
+            aiAsksFirst: jest.fn(() => true),
         };
 
         await applyUpdatesHeadless(selections, makeCtx(), undefined, { questions, onItem: jest.fn() });

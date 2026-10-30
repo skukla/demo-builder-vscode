@@ -114,13 +114,32 @@ export function outcomeOf(result: CategoryResult, deferredLine?: (deferred: stri
  * could not be kept, or any other failure alongside it, still fails with its reason.
  *
  * @param result - what applying that one item answered
+ * @param aiAsksFirst - whether the SC's AI asks before a fix goes live (`whenItGoesLive`)
  * @returns skipped with what became of the clash, else as `outcomeOf` says
  */
-export function answeredClashOutcome(result: CategoryResult): ItemOutcome {
+export function answeredClashOutcome(result: CategoryResult, aiAsksFirst: boolean): ItemOutcome {
     const clashes = result.clashes ?? [];
     const answered = clashes.length > 0 && clashes.length === result.failCount && clashes.every((c) => !c.notKept);
     if (!answered) return outcomeOf(result);
-    return { state: 'skipped', message: clashes.map(answeredClashLine).join(' ') };
+    return { state: 'skipped', message: clashes.map((clash) => answeredClashLine(clash, aiAsksFirst)).join(' ') };
+}
+
+/**
+ * When a fix the SC's AI is making goes live, by `demoBuilder.ai.requireAgentConsent`: on,
+ * the AI asks first; off, nothing asks (owner, 2026-10-30: "nothing goes live until you
+ * approve it" was said either way, and was false with approvals off).
+ *
+ * @param aiAsksFirst - whether the setting is on
+ * @returns the clause, lowercase, without a full stop
+ */
+function whenItGoesLive(aiAsksFirst: boolean): string {
+    return aiAsksFirst ? 'your AI asks you before anything goes live' : 'it goes live as soon as your AI finishes';
+}
+
+/** {@link whenItGoesLive} as a sentence of its own. */
+export function whenItGoesLiveSentence(aiAsksFirst: boolean): string {
+    const clause = whenItGoesLive(aiAsksFirst);
+    return `${clause.charAt(0).toUpperCase()}${clause.slice(1)}.`;
 }
 
 /**
@@ -135,8 +154,8 @@ function whoseEditsLine(clash: ClashReport): string {
 }
 
 /** What a clash the SC answered says under its row, which already names the update. */
-function answeredClashLine(clash: ClashReport): string {
-    if (clash.keptIn) return 'Not updated yet. Your AI is working on it, and nothing goes live until you approve it.';
+function answeredClashLine(clash: ClashReport, aiAsksFirst: boolean): string {
+    if (clash.keptIn) return `Not updated yet. Your AI is working on it, and ${whenItGoesLive(aiAsksFirst)}.`;
     const left = clash.files.length > 1 ? 'were left as they are' : 'was left as it is';
     return `Not updated. It clashes with ${whoseEditsLine(clash)}, which ${left}. Nothing was changed.`;
 }

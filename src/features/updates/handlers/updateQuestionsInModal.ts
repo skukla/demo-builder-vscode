@@ -10,7 +10,9 @@
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { agentConsentRequired } from '@/core/vscode/agentConsentSetting';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
+import { whenItGoesLiveSentence } from '@/features/updates/services/updateApplyResult';
 import type { UpdateQuestions } from '@/features/updates/services/updateApplyService';
 import type { ClashAnswer, ClashQuestion, UnfinishedAnswer } from '@/features/updates/services/updateClash';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
@@ -34,7 +36,7 @@ export const questionsInModal: UpdateQuestions = {
         // is named for the notification this falls back to.
         const lines = [
             `This update changes something that was already edited in ${getProjectDisplayName(project)}'s ` +
-                'storefront. Use AI to keep both changes. Nothing goes live until you approve it.',
+                `storefront. Use AI to keep both changes. ${whenItGoesLiveSentence(agentConsentRequired())}`,
             ...(canReset ? ['Or use the update and drop those edits.'] : []),
         ];
         const answer = await askDuringOperation(
@@ -75,6 +77,7 @@ export const questionsInModal: UpdateQuestions = {
         );
         return answer === REPLACE_BLOCKS;
     },
+    aiAsksFirst: agentConsentRequired,
 };
 
 /** What the running-demo question leaves to apply, and the sentences for what it left out. */

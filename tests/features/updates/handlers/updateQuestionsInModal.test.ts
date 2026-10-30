@@ -3,6 +3,7 @@
  * the two the shared apply asks, and whether to stop a running demo first.
  */
 
+import * as vscode from 'vscode';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import { questionsInModal, stopRunningDemos } from '@/features/updates/handlers/updateQuestionsInModal';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
@@ -31,7 +32,17 @@ function selections(): UpdateSelections {
     };
 }
 
-beforeEach(() => ask.mockReset());
+const getConfig = vscode.workspace.getConfiguration as jest.Mock;
+
+/** demoBuilder.ai.requireAgentConsent, as the SC set it. */
+function approvals(on: boolean): void {
+    getConfig.mockReturnValue({ get: jest.fn(() => on) });
+}
+
+beforeEach(() => {
+    ask.mockReset();
+    approvals(true);
+});
 
 
 /** A question with this heading, whose sentence contains `part`. */
@@ -55,13 +66,33 @@ describe('questionsInModal', () => {
                 title: 'The update clashes with your edits',
                 message:
                     "This update changes something that was already edited in Bodea's storefront. " +
-                    'Use AI to keep both changes. Nothing goes live until you approve it.\n' +
+                    'Use AI to keep both changes. Your AI asks you before anything goes live.\n' +
                     'Or use the update and drop those edits.',
             },
             'Fix with AI',
             'Leave it as it is',
             'Use the update',
         );
+    });
+
+    // Owner, 2026-10-30: it said "Nothing goes live until you approve it" with approvals off.
+    it('says it goes live as soon as the AI finishes when approvals are off', async () => {
+        approvals(false);
+        ask.mockResolvedValue('Fix with AI');
+
+        await questionsInModal.onClash(stopped, { track: 'boilerplate', files: ['blocks/header/header.js'], canReset: false });
+
+        expect(ask.mock.calls[0][0].message).toBe(
+            "This update changes something that was already edited in Bodea's storefront. " +
+                'Use AI to keep both changes. It goes live as soon as your AI finishes.',
+        );
+    });
+
+    it('says whether the AI asks before anything goes live, from the setting, read each time', () => {
+        approvals(false);
+        expect(questionsInModal.aiAsksFirst()).toBe(false);
+        approvals(true);
+        expect(questionsInModal.aiAsksFirst()).toBe(true);
     });
 
     it("never offers a reset on Adobe's row", async () => {

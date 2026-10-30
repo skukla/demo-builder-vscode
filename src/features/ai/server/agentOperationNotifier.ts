@@ -38,6 +38,7 @@ import { narrationForCall } from './toolNarration';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { withHandBackSinks, type HandBack } from '@/core/utils/agentPhaseChannel';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { agentConsentRequired } from '@/core/vscode/agentConsentSetting';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -119,10 +120,7 @@ export function createAgentConsentGate(
     // block below and agentAlertCopy for why the agent-facing text is not human
     // copy. Kept in the signature so the gate's contract is stable.
     return async (toolName, args, _description) => {
-        const required = vscode.workspace
-            .getConfiguration('demoBuilder')
-            .get<boolean>('ai.requireAgentConsent', true);
-        if (!required) {
+        if (!agentConsentRequired()) {
             return { allowed: true };
         }
 

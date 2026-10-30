@@ -20,6 +20,7 @@ import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { agentConsentRequired } from '@/core/vscode/agentConsentSetting';
 import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
@@ -745,10 +746,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             consentGate: createAgentConsentGate(logger),
             // Standing consent, read live — must beat the chat ask (see the
             // option's doc: headless clients auto-decline elicitation).
-            consentNotRequired: () =>
-                vscode.workspace
-                    .getConfiguration('demoBuilder')
-                    .get<boolean>('ai.requireAgentConsent', true) === false,
+            consentNotRequired: () => !agentConsentRequired(),
             trace: agentTrace,
             registerExtraTools: (connectionServer, scopedProjectDir) => {
                 // Each connection has its own working project (AI-15). A session

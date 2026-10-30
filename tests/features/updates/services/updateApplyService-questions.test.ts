@@ -33,11 +33,12 @@ function setSyncBehavior(value: 'ask' | 'enabled' | 'disabled'): void {
     getConfigMock.mockReturnValue({ get: jest.fn((_k: string, def: unknown) => value ?? def) });
 }
 
-function questions(answers: { clash?: ClashAnswer; replace?: boolean } = {}): jest.Mocked<UpdateQuestions> {
+function questions(answers: { clash?: ClashAnswer; replace?: boolean; aiAsksFirst?: boolean } = {}): jest.Mocked<UpdateQuestions> {
     return {
         onClash: jest.fn().mockResolvedValue(answers.clash ?? 'leave'),
         onUnfinished: jest.fn().mockResolvedValue('later'),
         replaceLibraryBlocks: jest.fn().mockResolvedValue(answers.replace ?? false),
+        aiAsksFirst: jest.fn(() => answers.aiAsksFirst ?? true),
     };
 }
 
@@ -244,22 +245,32 @@ describe("Adobe's boilerplate update that clashes", () => {
 });
 
 describe("a template update's row, when its clash was answered", () => {
-    const tell = async (answer: ClashAnswer) => {
+    const tell = async (answer: ClashAnswer, aiAsksFirst = true) => {
         mockSyncWithTemplate.mockResolvedValue(CONFLICTED);
         const onItem = jest.fn();
         await applyUpdatesHeadless({ ...emptySelections(), template: [{ project: edsProject() }] }, makeCtx(), undefined, {
-            questions: questions({ clash: answer }),
+            questions: questions({ clash: answer, aiAsksFirst }),
             onItem,
         });
         return onItem.mock.calls.at(-1)?.[2];
     };
 
-    it('is left alone, saying where the clash is, when it was kept to fix with AI', async () => {
+    it('is left alone, saying the AI asks before it goes live, when it was kept to fix with AI and approvals are on', async () => {
         mockKeepClash.mockResolvedValue({ kind: 'kept', storefrontPath: '/p/demo/components/eds-storefront', files: ['blocks/hero/hero.js'] });
 
         expect(await tell('fix')).toEqual({
             state: 'skipped',
-            message: 'Not updated yet. Your AI is working on it, and nothing goes live until you approve it.',
+            message: 'Not updated yet. Your AI is working on it, and your AI asks you before anything goes live.',
+        });
+    });
+
+    // Owner, 2026-10-30: "nothing goes live until you approve it" was false with approvals off.
+    it('says it goes live as soon as the AI finishes when approvals are off', async () => {
+        mockKeepClash.mockResolvedValue({ kind: 'kept', storefrontPath: '/p/demo/components/eds-storefront', files: ['blocks/hero/hero.js'] });
+
+        expect(await tell('fix', false)).toEqual({
+            state: 'skipped',
+            message: 'Not updated yet. Your AI is working on it, and it goes live as soon as your AI finishes.',
         });
     });
 

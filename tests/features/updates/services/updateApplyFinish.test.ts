@@ -53,11 +53,12 @@ function ctx(): UpdateContext {
     };
 }
 
-function asking(answer: UnfinishedAnswer): jest.Mocked<UpdateQuestions> {
+function asking(answer: UnfinishedAnswer, aiAsksFirst = true): jest.Mocked<UpdateQuestions> {
     return {
         onClash: jest.fn(),
         onUnfinished: jest.fn().mockResolvedValue(answer),
         replaceLibraryBlocks: jest.fn(),
+        aiAsksFirst: jest.fn(() => aiAsksFirst),
     };
 }
 
@@ -67,7 +68,13 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('applyFinish', () => {
     it('reports a finished fix as applied, with any fix that could not be put back', async () => {
-        finishMock.mockResolvedValue({ kind: 'finished', commit: 'c'.repeat(40), files: CLASH.files, notes: ['A Demo Builder fix could not be put back: x (y).'] });
+        finishMock.mockResolvedValue({
+            kind: 'finished',
+            commit: 'c'.repeat(40),
+            files: CLASH.files,
+            notes: ['A Demo Builder fix could not be put back: x (y).'],
+            localCopyClean: true,
+        });
 
         const result = await finish();
 
@@ -98,12 +105,20 @@ describe('applyFinish', () => {
         const result = await finish(questions);
 
         expect(questions.onUnfinished).toHaveBeenCalledWith(justrite, 'blocks/header/header.js still has conflict markers');
-        expect(result.errors).toEqual(['JustRite: the AI is having another go. Nothing goes live until you approve it.']);
+        expect(result.errors).toEqual(['JustRite: the AI is having another go. Your AI asks you before anything goes live.']);
         // keptIn is what makes the boundary open the SC's AI on it again.
         expect(result.clashes).toEqual([
             { project: 'JustRite', projectName: 'justrite', track: 'boilerplate', files: CLASH.files, keptIn: STOREFRONT },
         ]);
         expect(leaveMock).not.toHaveBeenCalled();
+    });
+
+    it('says the fix goes live as soon as the AI finishes when approvals are off', async () => {
+        finishMock.mockResolvedValue({ kind: 'not-fixed', reason: 'x' });
+
+        const result = await finish(asking('fix', false));
+
+        expect(result.errors).toEqual(['JustRite: the AI is having another go. It goes live as soon as your AI finishes.']);
     });
 
     it('keeps the fix for later without reopening the AI', async () => {
