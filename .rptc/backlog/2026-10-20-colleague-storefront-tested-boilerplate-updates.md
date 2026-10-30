@@ -82,3 +82,7 @@ storefronts that are not forks but meet the requirements above.
 - 2026-10-20  docs(backlog): EDS-56 owner decisions, and where the description file lives (`69fb06c64`)
 - 2026-10-20  docs(backlog): EDS-56, tested boilerplate updates for a qualifying colleague's storefront, with its plan (`ba3da9ac8`)
 - 2026-10-30  fix(updates): a storefront update no longer clashes with Demo Builder's own pieces, and a stop changes nothing (`780840113`)
+- 2026-10-30  fix(updates): the local-copy row names no file (`c1f7cf320`)
+- 2026-10-30  feat(updates): tell the SC when their AI finishes or drops a storefront fix (`d0917eba2`)
+- 2026-10-30  fix(updates): say when a fix with AI goes live by the approvals setting (`ab697244e`)
+- 2026-10-30  Merge parity/g6-update-own-pieces: an update never clashes with Demo Builder's own pieces, and a stop changes nothing (`403a18d08`)

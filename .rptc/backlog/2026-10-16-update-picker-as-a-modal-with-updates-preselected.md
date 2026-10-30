@@ -74,3 +74,4 @@ The agent's `apply_updates` keeps working against the same apply service either 
 - 2026-10-24  fix(updates): Apply checks again when the list it was shown is gone (`c07aa3109`)
 - 2026-10-30  fix(updates): Review opens the Updates window when a dashboard is open (`86a006623`)
 - 2026-10-30  fix(projects-list): a second open during the page load joins it (`445f32684`)
+- 2026-10-30  Merge parity/g7-review-opens-updates: Review opens the Updates window; one projects-list load at a time (`dfa3fe87b`)
