@@ -13,10 +13,15 @@ jest.mock('@/features/updates/services/pendingClashFinish', () => ({
 jest.mock('@/features/updates/services/pendingClashFinishDeps', () => ({
     createFinishDeps: jest.fn((ctx: unknown) => ({ builtFrom: ctx })),
 }));
+// The notification and the Updates window's row are fixEndedNotice.test's.
+jest.mock('@/features/updates/handlers/fixEndedNotice', () => ({
+    tellFixEnded: jest.fn(() => 'what the SC was shown'),
+}));
 
 import { registerFinishStorefrontUpdateTool } from '@/features/ai/server/finishStorefrontUpdateTool';
 import { callRequestsConsent } from '@/features/ai/server/inExtensionMcpServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { tellFixEnded } from '@/features/updates/handlers/fixEndedNotice';
 import { finishClash, leaveClash, previewClash } from '@/features/updates/services/pendingClashFinish';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -25,6 +30,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 const finishMock = finishClash as jest.Mock;
 const leaveMock = leaveClash as jest.Mock;
 const previewMock = previewClash as jest.Mock;
+const tellMock = tellFixEnded as jest.Mock;
 
 const JUSTRITE = { name: 'justrite', path: '/p/justrite' };
 const PREVIEW = { track: 'boilerplate', files: ['blocks/header/header.js'], markersLeft: [], diff: '-old\n+new\n' };
@@ -98,7 +104,7 @@ describe('finish_storefront_update', () => {
     });
 
     it('finishes through the one finishing path, with the deps built for it', async () => {
-        finishMock.mockResolvedValue({ kind: 'finished', commit: 'c'.repeat(40), files: PREVIEW.files, notes: [] });
+        finishMock.mockResolvedValue({ kind: 'finished', commit: 'c'.repeat(40), files: PREVIEW.files, notes: [], localCopyClean: true });
 
         const out = await server().call({ project: 'justrite', confirm: true });
 
@@ -109,12 +115,51 @@ describe('finish_storefront_update', () => {
         expect(out).toMatchObject({ project: 'justrite', kind: 'finished' });
     });
 
-    it('drops the fix on leave, and never finishes', async () => {
+    // Owner, 2026-10-30: the AI finished and the SC was never told. The agent is told the SC
+    // was, so it does not send them to look.
+    it('tells the SC a finished update is live, and tells the agent it did', async () => {
+        finishMock.mockResolvedValue({ kind: 'finished', commit: 'c'.repeat(40), files: PREVIEW.files, notes: [], localCopyClean: true });
+
+        const out = await server().call({ project: 'justrite', confirm: true });
+
+        expect(tellMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'justrite' }), 'boilerplate', 'finished', true);
+        expect(out.scNotified).toBe('what the SC was shown');
+    });
+
+    it('tells the SC when the fix was dropped for a newer version', async () => {
+        finishMock.mockResolvedValue({ kind: 'moved-on' });
+
+        const out = await server().call({ project: 'justrite', confirm: true });
+
+        expect(tellMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'justrite' }), 'boilerplate', 'moved-on');
+        expect(out).toMatchObject({ kind: 'moved-on', scNotified: 'what the SC was shown' });
+    });
+
+    it.each([
+        ['not fixed yet', { kind: 'not-fixed', reason: 'blocks/header/header.js still has conflict markers' }],
+        ['failed', { kind: 'failed', reason: 'GitHub refused the push' }],
+    ])('tells the SC nothing while the fix is %s: the AI is still on it', async (_label, outcome) => {
+        finishMock.mockResolvedValue(outcome);
+
+        const out = await server().call({ project: 'justrite', confirm: true });
+
+        expect(tellMock).not.toHaveBeenCalled();
+        expect(out).not.toHaveProperty('scNotified');
+    });
+
+    it('drops the fix on leave, never finishes, and tells the SC', async () => {
         const out = await server().call({ project: 'justrite', confirm: true, leave: true });
 
         expect(leaveMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'justrite' }), expect.anything());
         expect(finishMock).not.toHaveBeenCalled();
-        expect(out).toMatchObject({ left: true });
+        expect(tellMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'justrite' }), 'boilerplate', 'left');
+        expect(out).toMatchObject({ left: true, scNotified: 'what the SC was shown' });
+    });
+
+    it('tells the SC nothing on a preview', async () => {
+        await server().call({ project: 'justrite' });
+
+        expect(tellMock).not.toHaveBeenCalled();
     });
 
     it('answers plainly for a project with nothing kept', async () => {

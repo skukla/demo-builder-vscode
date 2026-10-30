@@ -98,10 +98,30 @@ const PROJECT_KINDS: { [K in ProjectSelectionKind]: (entry: UpdateSelections[K][
  * both read "EDS template"). Mirrors the checker's split (`templateUpdateChecker.ts`).
  */
 function templateLabel(project: Project): string {
+    const source = colleagueSource(project);
+    return source ? `Changes from ${source}` : 'EDS template';
+}
+
+/** The colleague's repository a storefront's template follows, as `owner/repo`; none for ours. */
+function colleagueSource(project: Project): string | undefined {
     const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
     const source = getTemplateSource(project);
-    if (metadata?.lkgSource || !source) return 'EDS template';
-    return `Changes from ${source.owner}/${source.repo}`;
+    return metadata?.lkgSource || !source ? undefined : `${source.owner}/${source.repo}`;
+}
+
+/**
+ * A storefront update named in a sentence, as its row names it: "Adobe boilerplate update",
+ * "EDS template update", "update with changes from kmanns/justrite". For what is said after
+ * the row has gone, such as the notification when the SC's AI finishes a fix (EDS-56).
+ *
+ * @param project - the project the update is for
+ * @param track - which of its storefront updates
+ * @returns the update's name, lowercase but for proper names
+ */
+export function storefrontUpdateName(project: Project, track: 'template' | 'boilerplate'): string {
+    if (track === 'boilerplate') return 'Adobe boilerplate update';
+    const source = colleagueSource(project);
+    return source ? `update with changes from ${source}` : 'EDS template update';
 }
 
 /**

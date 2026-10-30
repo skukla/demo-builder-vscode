@@ -526,6 +526,11 @@ parse), pushes one commit with the user's token and records the version; with `l
 it drops the fix instead. It takes the project by name, because the Updates window's Fix
 with AI starts on Your Projects, where the open project can be any other. The agent never
 pushes a fixed clash itself: the tool is the one path that checks it and records it.
+When the fix is finished or dropped (by `leave:true`, or because a newer version came out)
+the tool tells the user itself, with a notification (a finished one offers the live
+storefront) and, when the Updates window that kept the clash is still showing that run,
+by flipping its row (`fixEndedNotice.ts`, EDS-56). The answer's `scNotified` is the
+sentence the user was shown, so the agent need not send them to look.
 
 **Extra-strict gating for irreversible ops.** Three tools require a `confirmName`
 that exactly echoes the resource, so an agent can't destroy the wrong one on a

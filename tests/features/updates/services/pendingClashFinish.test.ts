@@ -83,7 +83,8 @@ describe('finishClash', () => {
 
         const outcome = await finishClash(project, deps);
 
-        expect(outcome).toEqual({ kind: 'finished', commit: pushedHead(), files: ['blocks/header/header.js'], notes: [] });
+        expect(outcome).toEqual({ kind: 'finished', commit: pushedHead(), files: ['blocks/header/header.js'], notes: [], localCopyClean: true });
+        expect(git(fx.local, 'status', '--porcelain')).toBe('');
         expect(git(fx.scBare, 'rev-list', '--count', `${before}..main`)).toBe('1');
         expect(git(fx.scBare, 'log', '-1', '--format=%s', 'main')).toBe('chore: update the Adobe boilerplate to the tested version');
         expect(git(fx.scBare, 'show', 'main:blocks/header/header.js') + '\n').toBe(FIXED_HEADER);
@@ -104,7 +105,7 @@ describe('finishClash', () => {
 
         const outcome = await finishClash(project, deps);
 
-        expect(outcome).toEqual({ kind: 'finished', commit: pushedByHook, files: ['blocks/header/header.js'], notes: [] });
+        expect(outcome).toEqual({ kind: 'finished', commit: pushedByHook, files: ['blocks/header/header.js'], notes: [], localCopyClean: true });
         expect(pushedHead()).toBe(pushedByHook);
         expect(readBoilerplateBase(project)?.commit).toBe(fx.t2);
         expect(readPendingClash(project)).toBeUndefined();
@@ -292,6 +293,23 @@ describe('finishClash', () => {
         expect(git(fx.scBare, 'log', '-1', '--format=%s', 'main')).toBe('chore: sync with template');
         // Only a tested-boilerplate storefront gets its pieces put back.
         expect(deps.restorePieces).not.toHaveBeenCalled();
+    }, REAL_GIT_TIMEOUT_MS);
+
+    // The Updates window's "Your local copy" line is told it is up to date only when it is (EDS-56).
+    it('says the local copy is not clean when it changed after the push', async () => {
+        const project = storefrontProject();
+        const ctx = updateContext();
+        await keepClash(project, { ...request(), track: 'template', clash: { ...request().clash, source: TEMPLATE } }, ctx);
+        write(fx.local, 'blocks/header/header.js', FIXED_HEADER);
+        const deps = {
+            ctx,
+            latestTarget: jest.fn(async () => fx.t2),
+            recordTemplateVersion: jest.fn(async () => write(fx.local, 'notes.txt', 'written after the push')),
+            restorePieces: jest.fn(async () => []),
+            livePatches: jest.fn(async () => []),
+        };
+
+        await expect(finishClash(project, deps)).resolves.toMatchObject({ kind: 'finished', localCopyClean: false });
     }, REAL_GIT_TIMEOUT_MS);
 
     it('answers nothing for a project with no kept clash', async () => {

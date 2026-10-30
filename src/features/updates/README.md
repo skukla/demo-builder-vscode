@@ -155,6 +155,7 @@ question: Fix with AI, Leave it as it is, or (the colleague's row only) Use the 
 | Opened | the SC's chosen engine, by the Chat command, with the files and both sides' diffs (`fixWithAi.ts`, `clashPrompt.ts`) |
 | Offered | a "Finish" row in place of its track's own row, until finished or dropped (`updateSelections.ts` `finish`, `updateApplyFinish.ts`); a fix not ready asks Fix with AI, Keep it for later, or Drop the fix |
 | Finished | `finish_storefront_update` and the Finish row (`pendingClashFinish.ts`), the one place it is pushed: still the current update, only the clashing files changed, no markers, JavaScript and JSON parse; then commit, push with the SC's token, record the version |
+| Told | when the AI's `finish_storefront_update` finishes or drops the fix, a notification (a finished one offers the live storefront), and the Updates window's row flipped when that run is still on screen (`fixEndedNotice.ts`, EDS-56) |
 | Guarded | Sync Storefront refuses while the mark is there (`keptClashMark.ts`), for the button and `sync_storefront` alike |
 | Never | the AI committing or pushing; a stale fix going out (the update moved on: dropped, copy put back) |
 

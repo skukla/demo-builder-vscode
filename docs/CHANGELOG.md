@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **You are told when your AI finishes a storefront update.** After "Fix with AI", nothing said when the AI was done: the Updates window kept saying it was working on it. Now Demo Builder shows a notification when the AI finishes ("JustRite's Adobe boilerplate update is live.", with an Open storefront button), or when it drops the fix (nothing changed, and the update is still offered). If the Updates window is still showing that run, the row turns to "Updated by your AI", the window's title follows, and "Your local copy" reads up to date when it is. While the AI works, the row no longer always says "nothing goes live until you approve it": with `demoBuilder.ai.requireAgentConsent` on it says your AI asks you first, and with it off it says the fix goes live as soon as your AI finishes. (EDS-56)
+
 - **The Adobe boilerplate update applies to a storefront that has not been reset since beta.152.** Adobe's tested boilerplate deletes `scripts/delayed.js`, and a storefront not reset since beta.152 still had Demo Builder's Inspector loader and first-visit page script in that file, so the update stopped with "patch failed: scripts/delayed.js:1" and was offered again every time. The update now moves those two scripts to `head.html` and `404.html` first, as a reset does, and then applies Adobe's change. Any real clash with your own edits is then offered as a clash, with Fix with AI.
 
 ## [1.0.0-beta.152] - 2026-10-29

@@ -219,6 +219,22 @@ describe('UpdatesModal', () => {
         expect(screen.getByText('One block left out.')).toHaveClass('work-row-note');
     });
 
+    // EDS-56, 2026-10-30: the row the SC's AI was fixing turns done when the AI finishes,
+    // after the run ended with "1 update did not apply"; the title follows the rows.
+    it('titles the run "Updates applied" once a row that did not apply is done after all', () => {
+        const c = running(
+            {
+                extension: { id: 'extension', state: 'done' },
+                'blockLibrary:0': { id: 'blockLibrary:0', state: 'done', message: 'Updated by your AI.' },
+            },
+            { state: 'succeeded', warning: '1 update did not apply.' },
+        );
+        render(<UpdatesModal controls={c} />);
+
+        expect(screen.getByRole('dialog', { name: 'Updates applied' })).toBeInTheDocument();
+        expect(screen.getByText('Updated by your AI.')).toHaveClass('work-row-note');
+    });
+
     it('says why a run failed outright, and offers the logs', () => {
         const c = running({}, { state: 'failed', error: 'This list of updates is out of date. Check for updates again.' });
         render(<UpdatesModal controls={c} />);

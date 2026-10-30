@@ -29,7 +29,7 @@
 
 import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
-import { APPLYING_TITLE, type UpdatesModalControls } from '../hooks/useUpdatesModal';
+import { APPLYING_TITLE, type RowStatuses, type UpdatesModalControls } from '../hooks/useUpdatesModal';
 import { groupsOf, type RowGroup } from './updateGroups';
 import { UpdatesRunView } from './UpdatesRunView';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
@@ -112,11 +112,16 @@ function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: Up
     );
 }
 
-/** The run's title: what it is doing, then how it ended. */
-function runTitleOf(progress: OperationProgressPayload | null): string {
+/**
+ * The run's title: what it is doing, then how it ended. A row can end after the run: the
+ * SC's AI finishing a kept fix turns its row done (EDS-56), so every row done is
+ * "Updates applied" whatever the run's warning said when it ended.
+ */
+function runTitleOf(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): string {
     if (progress?.state === 'failed') return "Couldn't apply the updates";
     if (progress?.state !== 'succeeded') return APPLYING_TITLE;
-    return progress.warning ? "Some updates didn't apply" : 'Updates applied';
+    const allDone = rows.every((row) => statuses[row.id]?.state === 'done');
+    return progress.warning && !allDone ? "Some updates didn't apply" : 'Updates applied';
 }
 
 /** The window's dismiss button and the buttons beside it. */
@@ -174,7 +179,7 @@ function contentFor(controls: UpdatesModalControls): Chrome & { title: string; b
                 remaining={controls.remaining}
             />
         );
-        return { title: runTitleOf(controls.progress), body, ...runChrome(controls) };
+        return { title: runTitleOf(controls.progress, view.rows, controls.statuses), body, ...runChrome(controls) };
     }
     const rows = view.phase === 'list' ? view.rows : [];
     const count = rows.filter((r) => controls.ticked.has(r.id) && !r.lockedReason).length;

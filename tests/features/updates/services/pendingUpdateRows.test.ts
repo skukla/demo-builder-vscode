@@ -10,6 +10,7 @@
 import {
     rowIdsOf,
     selectionsForIds,
+    storefrontUpdateName,
     toPendingUpdateRows,
 } from '@/features/updates/services/pendingUpdateRows';
 import type { BoilerplateBase } from '@/features/updates/services/boilerplateBase';
@@ -79,6 +80,15 @@ describe('toPendingUpdateRows', () => {
         const [row] = toPendingUpdateRows({ ...empty(), template: [{ project: storefront(metadata) }] }, undefined, undefined);
 
         expect(row).toMatchObject({ label: expected, detail: LIVE });
+    });
+
+    // The notification a finished fix raises names the update as its row does (EDS-56, 2026-10-30).
+    it.each([
+        ['our tested template', { lkgSource: { owner: 'skukla', repo: 'eds-demo-patches' } }, 'template', 'EDS template update'],
+        ["a colleague's repository", { templateOwner: 'kmanns', templateRepo: 'justrite' }, 'template', 'update with changes from kmanns/justrite'],
+        ['any storefront', { templateOwner: 'kmanns', templateRepo: 'justrite' }, 'boilerplate', 'Adobe boilerplate update'],
+    ] as const)('names a storefront update in a sentence as its row does: %s, %s track', (_label, metadata, track, expected) => {
+        expect(storefrontUpdateName(storefront(metadata), track)).toBe(expected);
     });
 
     it('words every kind of update, under its project, everything ticked but the redeploy', () => {

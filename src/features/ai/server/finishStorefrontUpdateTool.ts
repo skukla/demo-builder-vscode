@@ -16,12 +16,19 @@
  *
  * Named by project, not the open one: Fix with AI starts on Your Projects, where the open
  * project can be any other.
+ *
+ * When the fix ends (finished, dropped, or dropped for a newer version) the SC is told
+ * here, not left to the agent (EDS-56, owner 2026-10-30: the AI finished and the Updates
+ * window still said it was working). The answer's `scNotified` is what they were shown, so
+ * the agent does not send them to look. The telling is a side channel; the answer never
+ * waits on it.
  */
 
 import { z } from 'zod';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { tellFixEnded } from '@/features/updates/handlers/fixEndedNotice';
 import { finishClash, leaveClash, previewClash } from '@/features/updates/services/pendingClashFinish';
 import { createFinishDeps } from '@/features/updates/services/pendingClashFinishDeps';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
@@ -62,7 +69,8 @@ export function registerFinishStorefrontUpdateTool(server: McpToolServer, ctxFac
                 + 'confirm:true and Demo Builder checks the files (no markers left, JavaScript and JSON parse, nothing else '
                 + 'changed), pushes one commit and records the version. Without confirm it changes nothing and returns the '
                 + 'files, which still have markers, and the diff that would go live. With leave:true and confirm:true it '
-                + 'drops the fix instead and puts the local copy back.',
+                + 'drops the fix instead and puts the local copy back. Demo Builder tells the SC itself when the fix is '
+                + 'finished or dropped; scNotified is what they were shown.',
             inputSchema: {
                 project: z.string().describe('The project name (as get_project_status takes it)'),
                 leave: z.boolean().optional().describe('Drop the fix and put the local copy back, instead of finishing'),
@@ -90,9 +98,16 @@ export function registerFinishStorefrontUpdateTool(server: McpToolServer, ctxFac
             }
             if (args.leave === true) {
                 await leaveClash(project, updateCtx);
-                return asText({ project: name, left: true, message: 'The fix was dropped and the local copy put back. The update is offered again.' });
+                const scNotified = tellFixEnded(project, preview.track, 'left');
+                return asText({ project: name, left: true, message: 'The fix was dropped and the local copy put back. The update is offered again.', scNotified });
             }
             const outcome = await finishClash(project, createFinishDeps(updateCtx));
+            if (outcome.kind === 'finished') {
+                return asText({ project: name, ...outcome, scNotified: tellFixEnded(project, preview.track, 'finished', outcome.localCopyClean) });
+            }
+            if (outcome.kind === 'moved-on') {
+                return asText({ project: name, ...outcome, scNotified: tellFixEnded(project, preview.track, 'moved-on') });
+            }
             return asText({ project: name, ...outcome });
         },
     );

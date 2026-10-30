@@ -55,7 +55,8 @@ import type { Project } from '@/types/base';
 const COMMIT_SHA = /^[0-9a-f]{40}$/;
 
 export type FinishOutcome =
-    | { kind: 'finished'; commit: string; files: string[]; notes: string[] }
+    /** `localCopyClean`: the copy holds nothing GitHub does not, read after the version was recorded. */
+    | { kind: 'finished'; commit: string; files: string[]; notes: string[]; localCopyClean: boolean }
     | { kind: 'not-fixed'; reason: string }
     | { kind: 'moved-on' }
     | { kind: 'nothing' }
@@ -242,7 +243,9 @@ export async function finishClash(project: Project, deps: FinishDeps): Promise<F
     const pieces = await recordVersion(project, clash, deps);
     await ctx.stateManager.saveProject(project);
     ctx.logger.info(`[Updates] Finished the ${clash.track} update for ${project.name} (${pushed.commit.slice(0, 7)})`);
-    return { kind: 'finished', commit: pushed.commit, files: clash.files, notes: [...pushed.notes, ...pieces] };
+    const status = await copy.git('git status --porcelain', TIMEOUTS.QUICK);
+    const localCopyClean = status.code === 0 && status.stdout.trim() === '';
+    return { kind: 'finished', commit: pushed.commit, files: clash.files, notes: [...pushed.notes, ...pieces], localCopyClean };
 }
 
 /** Leave the kept clash: undo the local copy to its last commit, forget the clash, save. */

@@ -19,6 +19,7 @@
  */
 
 import * as vscode from 'vscode';
+import { forgetKeptRows, watchKeptRows, type KeptRow } from './fixEndedNotice';
 import { questionsInModal, stopRunningDemos } from './updateQuestionsInModal';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
@@ -109,6 +110,8 @@ function rowTellerFor(context: HandlerContext, shownId: (id: string) => string =
  * @returns the rows to show
  */
 export function presentUpdates(found: FoundUpdates): PendingUpdateRow[] {
+    // Another list: the last run's ids would name its rows.
+    forgetKeptRows();
     const rows = rowsOf(found);
     shown = { found, rows };
     return rows;
@@ -151,6 +154,7 @@ export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOu
         if (!presented && tickedRows.length === 0) return { success: false, error: OUT_OF_DATE };
         shown = undefined;
         applying = true;
+        forgetKeptRows();
         // The run saves every project it updates; none of them may become the open one.
         const runContext = { ...context, stateManager: createNonSwitchingStateManager(context.stateManager) };
         try {
@@ -238,10 +242,15 @@ async function applyTicked(
             void tellScreen(context, { id: localCopyRowId(project.path), state: outcome.state, ...(message ? { message } : {}) });
         },
     });
-    // A clash the SC chose to fix with AI is kept; open their AI on it (EDS-57).
-    await openFixWithAi(keptClashProjects(selections, result), updateContext, (request) =>
+    // A clash the SC chose to fix with AI is kept; open their AI on it (EDS-57), and leave
+    // its row where the AI's finish can flip it while this run is on screen (EDS-56).
+    const keptForAi = keptClashes(selections, result);
+    await openFixWithAi(uniqueProjects(keptForAi), updateContext, (request) =>
         vscode.commands.executeCommand('demoBuilder.openInClaude', request),
     );
+    const screenId = shownId ?? ((id: string) => id);
+    const keptRows = keptRowsOf(keptForAi, (entry) => screenId(rowOf.get(entry) ?? ''));
+    watchKeptRows(keptRows, (status) => void tellScreen(context, status));
     // Last: it ends by offering a reload, which closes this screen.
     if (picked.extension && found.extension?.releaseInfo) {
         rows.tell('extension', 'running');
@@ -288,18 +297,29 @@ function lineOf(outcome: ItemOutcome): string | undefined {
     return outcome.state === 'running' ? undefined : outcome.message;
 }
 
-/** The projects whose clash the apply kept for fixing, each once. */
-function keptClashProjects(selections: UpdateSelections, result: ApplyUpdatesResult): Project[] {
-    const kept = new Set(
-        [...(result.template.clashes ?? []), ...(result.boilerplate.clashes ?? []), ...(result.finish.clashes ?? [])]
-            .filter((clash) => clash.keptIn)
-            .map((clash) => clash.projectName),
-    );
-    const projects = new Map<string, Project>();
-    for (const { project } of [...selections.template, ...selections.boilerplate, ...selections.finish]) {
-        if (kept.has(project.name)) projects.set(project.name, project);
-    }
-    return [...projects.values()];
+/** A selection entry whose clash the apply kept for fixing. */
+type KeptEntry = { project: Project };
+
+/** The entries whose clash the apply kept for fixing, each with its own category's row. */
+function keptClashes(selections: UpdateSelections, result: ApplyUpdatesResult): KeptEntry[] {
+    return (['template', 'boilerplate', 'finish'] as const).flatMap((category) => {
+        const kept = new Set((result[category].clashes ?? []).filter((clash) => clash.keptIn).map((clash) => clash.projectName));
+        return (selections[category] as KeptEntry[]).filter(({ project }) => kept.has(project.name));
+    });
+}
+
+/** Each kept entry's project, once. */
+function uniqueProjects(kept: KeptEntry[]): Project[] {
+    return [...new Map(kept.map(({ project }) => [project.name, project])).values()];
+}
+
+/** Where each kept clash sits on the screen: its row, and its project's local copy step. */
+function keptRowsOf(kept: KeptEntry[], screenIdOf: (entry: object) => string): KeptRow[] {
+    return kept.map((entry) => ({
+        projectName: entry.project.name,
+        rowId: screenIdOf(entry),
+        localCopyId: localCopyRowId(entry.project.path),
+    }));
 }
 
 /** What the apply cores are built from, under this screen's context. */
