@@ -29,6 +29,7 @@ import { setLoadingState } from '@/core/utils/loadingHTML';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ProjectDashboardWebviewCommand, screenAfterClose } from '@/features/dashboard/commands/showDashboard';
+import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { presentedRows } from '@/features/updates/handlers/updatesModalHandlers';
 import { handleTakeUpdatesRequest } from '@/features/updates/handlers/updatesModalRequest';
 import { findAllUpdates, type FoundUpdates } from '@/features/updates/services/allUpdates';
@@ -68,9 +69,16 @@ const FOUND: FoundUpdates = {
 interface Screen {
     loads: number;
     updatesWindow: PendingUpdateRow[] | null;
+    /** The page loaded and has not had its `init` yet, so the app has not rendered. */
+    waitingForInit: boolean;
 }
 
+/** A screen before any page has loaded. */
+const NO_SCREEN = (): Screen => ({ loads: 0, updatesWindow: null, waitingForInit: false });
+
 let screen: Screen;
+/** How long a page load takes; MIN_LOADING unless a test models a slower machine. */
+let loadMs: number = TIMEOUTS.UI.MIN_LOADING;
 const commandsById = new Map<string, (...args: unknown[]) => unknown>();
 
 /** A panel whose `dispose` fires its disposal listeners, as VS Code's does. */
@@ -105,6 +113,12 @@ function fakeChannel(): unknown {
         dispose: jest.fn(),
         sendMessage: jest.fn(async (type: string, payload?: { rows?: PendingUpdateRow[] }) => {
             if (type === 'showUpdates' && payload?.rows?.length) screen.updatesWindow = payload.rows;
+            // WebviewApp renders the app on its first `init`; the app then asks once.
+            if (type === 'init' && screen.waitingForInit) {
+                screen.waitingForInit = false;
+                const answer = await handleTakeUpdatesRequest(createMockHandlerContext());
+                screen.updatesWindow = answer.data?.rows ?? null;
+            }
         }),
     };
 }
@@ -123,13 +137,11 @@ function wireVsCode(): void {
     const home: vscode.WorkspaceFolder[] = [{ uri: vscode.Uri.file(PROJECTS_ROOT), name: 'projects', index: 0 }];
     Object.assign(vscode.workspace, { workspaceFolders: home });
     (createWebviewCommunication as jest.Mock).mockImplementation(async () => fakeChannel());
-    // A page load: the loading screen for at least MIN_LOADING, then the page, which
-    // mounts afresh and asks once for the Updates window it should open on.
+    // A page load: the loading screen for at least MIN_LOADING, then a fresh page, which
+    // replaces whatever the last one showed and waits for its `init`.
     (setLoadingState as jest.Mock).mockImplementation(async () => {
-        await new Promise((resolve) => setTimeout(resolve, TIMEOUTS.UI.MIN_LOADING));
-        screen.loads++;
-        const answer = await handleTakeUpdatesRequest(createMockHandlerContext());
-        screen.updatesWindow = answer.data?.rows ?? null;
+        await new Promise((resolve) => setTimeout(resolve, loadMs));
+        screen = { loads: screen.loads + 1, updatesWindow: null, waitingForInit: true };
     });
     // The disposal callback extension.ts installs (activate, `setDisposalCallback`).
     BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
@@ -154,8 +166,11 @@ function activate(): Deps {
     return [context, stateManager, logger];
 }
 
+/** A screen whose panel can be opened without loading its page. */
+type PanelScreen = ProjectDashboardWebviewCommand | ConfigureProjectWebviewCommand | CreateProjectWebviewCommand;
+
 /** Open a screen's panel, as its command does before loading the page. */
-async function openPanelOf(command: ProjectDashboardWebviewCommand | ConfigureProjectWebviewCommand): Promise<void> {
+async function openPanelOf(command: PanelScreen): Promise<void> {
     await (command as unknown as { createOrRevealPanel(): Promise<unknown> }).createOrRevealPanel();
 }
 
@@ -164,19 +179,30 @@ async function settle(): Promise<void> {
     await jest.advanceTimersByTimeAsync(TIMEOUTS.UI.MIN_LOADING * 4);
 }
 
-/** Click Review on the background check's notification, and let it finish. */
-async function clickReview(): Promise<void> {
+/** Click Review on the background check's notification; resolves once it has finished. */
+function startReview(): Thenable<unknown> {
     (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Review');
-    const run = vscode.commands.executeCommand('demoBuilder.checkForUpdates', { background: true });
+    return vscode.commands.executeCommand('demoBuilder.checkForUpdates', { background: true });
+}
+
+/** Click Review, and let it finish. */
+async function clickReview(): Promise<void> {
+    const run = startReview();
     await settle();
     await run;
+}
+
+/** The sidebar's way in (`sidebarProvider.ts`, `openMainDashboard`): the bare command. */
+function clickSidebar(): Thenable<unknown> {
+    return vscode.commands.executeCommand('demoBuilder.showProjectsList');
 }
 
 describe('Review on the update notification', () => {
     beforeEach(() => {
         jest.useFakeTimers();
         commandsById.clear();
-        screen = { loads: 0, updatesWindow: null };
+        screen = NO_SCREEN();
+        loadMs = TIMEOUTS.UI.MIN_LOADING;
         BaseWebviewCommand.disposeAllActivePanels();
         BaseWebviewCommand.endWebviewTransition();
         wireVsCode();
@@ -235,7 +261,7 @@ describe('Review on the update notification', () => {
         const opening = vscode.commands.executeCommand('demoBuilder.showProjectsList');
         await settle();
         await opening;
-        screen = { loads: 0, updatesWindow: null };
+        screen = NO_SCREEN();
 
         await clickReview();
 
@@ -254,5 +280,51 @@ describe('Review on the update notification', () => {
 
         expect(screen.loads).toBe(1);
         expect(BaseWebviewCommand.isWebviewTransitionInProgress()).toBe(true);
+    });
+
+    // A second open while the first page is still loading joins that load: loading the
+    // page again would replace the screen, and with it any Updates window it opened.
+    describe('a second open while the list is still loading', () => {
+        it('Review during a plain open still opens the Updates window', async () => {
+            activate();
+            const opening = clickSidebar();
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.UI.MIN_LOADING / 2);
+
+            const review = startReview();
+            await settle();
+            await Promise.all([opening, review]);
+
+            expect(screen.loads).toBe(1);
+            expect(screen.updatesWindow).toEqual(presentedRows());
+        });
+
+        it("a sidebar click during Review's load keeps the Updates window", async () => {
+            activate();
+            const review = startReview();
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.UI.MIN_LOADING / 2);
+
+            const opening = clickSidebar();
+            await settle();
+            await Promise.all([opening, review]);
+
+            expect(screen.loads).toBe(1);
+            expect(screen.updatesWindow).toEqual(presentedRows());
+        });
+
+        it("closing the wizard during a slow load keeps the Updates window", async () => {
+            // Slower than the transition's safety timeout, which then no longer holds back
+            // the reopen the wizard's dispose() runs (createProject.ts).
+            loadMs = TIMEOUTS.WEBVIEW_TRANSITION + TIMEOUTS.UI.MIN_LOADING;
+            await openPanelOf(new CreateProjectWebviewCommand(...activate()));
+            const review = startReview();
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.WEBVIEW_TRANSITION + TIMEOUTS.UI.UPDATE_DELAY);
+
+            CreateProjectWebviewCommand.disposeActivePanel();
+            await jest.advanceTimersByTimeAsync(loadMs * 2);
+            await review;
+
+            expect(screen.loads).toBe(1);
+            expect(screen.updatesWindow).toEqual(presentedRows());
+        });
     });
 });
