@@ -16,7 +16,10 @@
  * - **Its group** is the public catalog's: a company sits there until a shared catalog takes it
  *   (`b2b_shared_catalog_company_assignments`). Never a bare group (owner, 2026-09-26).
  * - **Its region** is the pack's `region_id`, which every Bodea company carries; Commerce's region
- *   ids are the same on every store. A row naming its region another way is refused.
+ *   ids are the same on every store. A row naming it only by `region_code` (what the service's
+ *   schema asks for) or by name has it turned into its id from the country's regions
+ *   (`GET directory/countries/{id}`, step 14; that read is not captured, see
+ *   `CommerceCountryInfo`). A region the country lacks stops the install, naming it.
  * - `extension_attributes.quote_config.company_id` is the source store's id and is never sent.
  * - **Its status** is Active (`1`) unless the row carries its own `status`, which wins (owner,
  *   2026-10-30). Commerce makes a company sent without one Pending Approval (`0`, live 2026-10-30,
@@ -37,9 +40,9 @@
 
 import { z } from 'zod';
 import { COMPANY_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
-import { PUBLIC_CATALOG_TYPE, companyByName, customerByEmail, readCatalogs } from './b2bReads';
+import { PUBLIC_CATALOG_TYPE, companyByName, customerByEmail, readCatalogs, sameText } from './b2bReads';
 import { deleteIfPresent, type KindContext, ownedId, parseRows, readOrNull, segment } from './kindContext';
-import type { CommerceCompany, CommerceCompanyHierarchyNode, CommerceCustomer, CommerceGet, CommerceSend } from '@/types/commerceWire';
+import type { CommerceCompany, CommerceCompanyHierarchyNode, CommerceCountryInfo, CommerceCustomer, CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 export { COMPANY_KIND } from './b2bKeys';
 
@@ -62,7 +65,16 @@ const companyRows = z.array(
                             country_id: z.string().length(2),
                             postcode: z.string().min(1),
                             telephone: z.string().min(1),
-                            region: z.object({ region_id: z.union([z.number(), z.string().regex(/^\d+$/u)]) }, { message: 'names its region by region_id' }).passthrough(),
+                            region: z
+                                .object({
+                                    region_id: z.union([z.number(), z.string().regex(/^\d+$/u)]).optional(),
+                                    region_code: z.string().min(1).optional(),
+                                    region: z.string().min(1).optional(),
+                                })
+                                .passthrough()
+                                .refine((r) => r.region_id !== undefined || r.region_code !== undefined || r.region !== undefined, {
+                                    message: 'names no region (region_id, region_code or region)',
+                                }),
                         }),
                         company_admin: z.object({ email: z.string().email(), firstname: z.string().min(1), lastname: z.string().min(1) }).passthrough(),
                     })
@@ -97,7 +109,7 @@ function portableExt(ext: Record<string, unknown> | undefined): Ext | undefined 
 }
 
 /** The pack's company fields, as Commerce's company takes them: its address block flattened. */
-function companyFields(row: CompanyRow): Omit<CommerceCompany, 'super_user_id'> {
+function companyFields(row: CompanyRow, regionId: number): Omit<CommerceCompany, 'super_user_id'> {
     const input = row.variables.input;
     const address = input.legal_address;
     return {
@@ -107,10 +119,26 @@ function companyFields(row: CompanyRow): Omit<CommerceCompany, 'super_user_id'> 
         street: Array.isArray(address.street) ? address.street : [address.street],
         city: address.city,
         country_id: address.country_id,
-        region_id: Number(address.region.region_id),
+        region_id: regionId,
         postcode: address.postcode,
         telephone: address.telephone,
     };
+}
+
+type Address = CompanyRow['variables']['input']['legal_address'];
+/** Each country's regions, read once per install. */
+type Regions = Map<string, Promise<CommerceCountryInfo | null>>;
+
+/** The address's region id: the row's own, else the country's region with that code, else with that name. */
+async function regionIdOf(get: CommerceGet, address: Address, regions: Regions = new Map()): Promise<number> {
+    const { region_id: id, region_code: code, region: name } = address.region;
+    if (id !== undefined) return Number(id);
+    const country = address.country_id;
+    if (!regions.has(country)) regions.set(country, readOrNull<CommerceCountryInfo>(get, `directory/countries/${segment(country)}`));
+    const listed = (await regions.get(country))?.available_regions ?? [];
+    const found = listed.find((r) => code !== undefined && sameText(r.code, code)) ?? listed.find((r) => name !== undefined && sameText(r.name, name));
+    if (found === undefined) throw new Error(`The store has no region ${code ?? name} in ${country}.`);
+    return Number(found.id);
 }
 
 /** The admin's customer id: the website's own customer by that email, else one made and recorded. */
@@ -130,6 +158,7 @@ export async function installCompanies(ctx: KindContext, rows: CompanyRows): Pro
     const websiteId = ctx.session.websiteId;
     if (websiteId === undefined) throw new Error("The install target names no website, so the pack's companies have no admin to sign in.");
     const publicGroup = (await readCatalogs(ctx.get)).find((c) => c.type === PUBLIC_CATALOG_TYPE)?.customer_group_id;
+    const regions: Regions = new Map();
     for (const row of rows) {
         const { company_name: name, company_email: email, company_admin: admin } = row.variables.input;
         if (ownedId(ctx.session, COMPANY_KIND, name) !== undefined || ctx.recorder.byKey(COMPANY_KIND, name)) continue;
@@ -137,10 +166,12 @@ export async function installCompanies(ctx: KindContext, rows: CompanyRows): Pro
             ctx.log(`left company ${name} as it is: the store already has it`);
             continue;
         }
+        // Before the admin, so a region the store lacks makes nothing.
+        const regionId = await regionIdOf(ctx.get, row.variables.input.legal_address, regions);
         const superUserId = await adminId(ctx, admin, websiteId);
         const ext = portableExt(row.extension_attributes);
         const company: CommerceCompany = {
-            ...companyFields(row),
+            ...companyFields(row, regionId),
             super_user_id: superUserId,
             status: row.status ?? ACTIVE,
             ...(publicGroup !== undefined ? { customer_group_id: publicGroup } : {}),
@@ -165,7 +196,7 @@ export async function updateCompany(ctx: KindContext, id: string, row: unknown):
     const ext = portableExt(pack.extension_attributes);
     const company: CommerceCompany = {
         ...current,
-        ...companyFields(pack),
+        ...companyFields(pack, await regionIdOf(ctx.get, pack.variables.input.legal_address)),
         ...(pack.status !== undefined ? { status: pack.status } : {}),
         id: current.id ?? Number(id),
         ...(ext ? { extension_attributes: { ...current.extension_attributes, ...ext, quote_config: { ...current.extension_attributes?.quote_config, ...ext.quote_config } } } : {}),

@@ -240,6 +240,34 @@ describe('installProducts', () => {
         });
     });
 
+    // The service turns an `additional_attributes` object into custom attributes, values as text
+    // (ProductImportProcessor.js L97-114). No pack in the library audit or on this machine is
+    // known to carry one; the rows here are Bodea's, with the object added.
+    describe('additional_attributes', () => {
+        it("become custom attributes, as text and in this store's ids, and are not sent as they are", async () => {
+            const ctx = await storeContext({ 'products/outdoorpatchcable-6foot': { id: 77, sku: 'outdoorpatchcable-6foot' } });
+            const { custom_attributes: _own, ...cable } = CABLE.product;
+
+            await installProducts(ctx, parseProductRows([{ product: { ...cable, additional_attributes: { cable_size: '6 foot', warranty_years: 3 } } }]));
+
+            const [product] = posted(ctx);
+            expect(product.custom_attributes).toEqual([
+                { attribute_code: 'cable_size', value: '301' },
+                { attribute_code: 'warranty_years', value: '3' },
+            ]);
+            expect(product).not.toHaveProperty('additional_attributes');
+        });
+
+        it("never override the row's own custom attribute of the same code", async () => {
+            const ctx = await storeContext();
+
+            await installProducts(ctx, parseProductRows([{ product: { ...VR_RACK.product, additional_attributes: { url_key: 'another-key' } } }]));
+
+            expect(posted(ctx)[0].custom_attributes).toContainEqual({ attribute_code: 'url_key', value: 'vrrack' });
+            expect(posted(ctx)[0].custom_attributes).not.toContainEqual({ attribute_code: 'url_key', value: 'another-key' });
+        });
+    });
+
     it('stops at a customer group the store does not have', async () => {
         const ctx = await storeContext({ [page('customerGroups/search', by('customer_group_code', 'Platinum Buyer'))]: { items: [], total_count: 0 } });
 

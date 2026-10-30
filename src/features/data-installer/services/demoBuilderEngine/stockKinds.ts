@@ -9,7 +9,8 @@
  *   needs is switched on, and switched off again on removal;
  * - a new stock sells to the install target's website, which takes that website off the stock
  *   it sold from, so the record keeps that stock and removal puts the website back on it. The
- *   service leaves the website with no stock at all (spec §5, Remove);
+ *   service leaves the website with no stock at all (spec §5, Remove). Removal empties the
+ *   stock's sales channels before deleting it, as the service does (`removeStock`);
  * - a link is taken out again. The service removes none (spec §7).
  *
  * Commerce answers a new stock with its id alone, a bare number (the ERP warehouse step, live).
@@ -114,9 +115,21 @@ export async function removeSource(commerce: { get: CommerceGet; send: CommerceS
     await setSourceEnabled(commerce, code, false);
 }
 
-/** Delete a stock this engine made, then put the website back on the stock it sold from. */
+/**
+ * Delete a stock this engine made, then put the website back on the stock it sold from.
+ *
+ * The stock's sales channels are emptied first, with the service's own call and body
+ * (`StocksDeleteProcessor.js` L1-8, L181-227): its comment says Commerce requires that before a
+ * stock with channels can be deleted, and it was added to fix stocks not deleting on a store with
+ * several websites (DEMOSYS-1532). Not seen live from here either way.
+ */
 export async function removeStock(commerce: { get: CommerceGet; send: CommerceSend }, object: CreatedObject): Promise<void> {
-    await deleteIfPresent(commerce.send, `inventory/stocks/${segment(object.id)}`);
+    const path = `inventory/stocks/${segment(object.id)}`;
+    const made = await readOrNull<CommerceInventoryStock>(commerce.get, path);
+    if (made) {
+        await commerce.send('PUT', path, { stock: { name: made.name, extension_attributes: { sales_channels: [] } } });
+        await deleteIfPresent(commerce.send, path);
+    }
     const previous = object.previous as StockPrevious | undefined;
     if (previous?.stockId === undefined) return;
     const before = await readOrNull<CommerceInventoryStock>(commerce.get, `inventory/stocks/${segment(previous.stockId)}`);

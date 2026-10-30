@@ -56,6 +56,8 @@ const productSchema = z
         type_id: z.string(),
         attribute_set_id: z.union([z.string(), z.number()]),
         custom_attributes: z.array(z.object({ attribute_code: z.string(), value: z.unknown() })).optional(),
+        /** Code → value, an export form the service turns into custom attributes (`additionalAsCustom`). */
+        additional_attributes: z.record(z.unknown()).optional(),
         extension_attributes: z.record(z.unknown()).optional(),
         tier_prices: z
             .array(z.object({ customer_group_id: z.union([z.string(), z.number()]) }).passthrough())
@@ -146,13 +148,29 @@ async function extensionAttributes(lk: ProductLookups, row: ProductRow, websiteI
     return out;
 }
 
+/**
+ * The row's custom attributes, with its `additional_attributes` object turned into more of them,
+ * each value as text and a missing one as empty, as the service does (`ProductImportProcessor.js`
+ * L97-114). The service then drops the row's own custom attributes; here the row's own win, code
+ * for code, and the rest are kept.
+ */
+function additionalAsCustom(row: ProductRow): CustomAttribute[] {
+    const own = row.custom_attributes ?? [];
+    const added = Object.entries(row.additional_attributes ?? {})
+        .filter(([code]) => !own.some((a) => a.attribute_code === code))
+        .map(([code, value]) => ({ attribute_code: code, value: value === null || value === undefined ? '' : String(value) }));
+    return [...own, ...added];
+}
+
 /** The body Commerce is sent for one row. */
 export async function toCommerceProduct(
     lk: ProductLookups,
-    row: ProductRow,
+    whole: ProductRow,
     websiteId: number,
     leftAtDefault: LeftAtDefault = () => undefined,
 ): Promise<{ product: unknown }> {
+    const { additional_attributes: _asCustom, ...rest } = whole;
+    const row: ProductRow = { ...rest, custom_attributes: additionalAsCustom(whole) };
     const setName = String(row.attribute_set_id);
     const tiers = await Promise.all(
         (row.tier_prices ?? []).map(async (tier) => ({

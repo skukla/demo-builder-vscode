@@ -5,7 +5,10 @@
  * - `b2b_shared_catalogs`: a catalog the store lacks is made, custom (never a second public one),
  *   with the group the pack names by code. Right after it is made, what it holds is read and
  *   recorded (`previous.held`), so removal can tell what Commerce put there from what the SC did
- *   (the setup guide's catalogs do the same, step 06).
+ *   (the setup guide's catalogs do the same, step 06). Commerce holds one catalog per customer
+ *   group: when the pack's group already has one, that catalog stands in for the pack's, is
+ *   never recorded, and takes the pack's assignments (step 14; the service reads Commerce's
+ *   refusal the same way, and this also looks first, since the list names each catalog's group).
  * - the three assignment kinds: a company, a category (by url key) or a product (by SKU) the
  *   catalog does not hold yet is assigned, and each one assigned is recorded as its own pair,
  *   `<catalog id>/<company id | category id | SKU>`. One already there is left, and not recorded,
@@ -68,7 +71,12 @@ const companyAssignmentRows = z.array(
     z.object({ assignment: z.object({ shared_catalog_name: z.string().min(1), companies: z.array(z.object({ company_name: z.string().min(1) })) }) }),
 );
 const catalogCategories = z.object({ catalogs: z.array(z.object({ name: z.string().min(1), categories: z.array(z.object({ id: z.string().min(1) })) })) });
-const catalogProducts = z.object({ catalogs: z.array(z.object({ name: z.string().min(1), products: z.array(z.object({ sku: z.string().min(1) })) })) });
+/**
+ * A SKU here is trimmed, as the service trims it (`SharedCatalogProductsProcessor.js` L198), so a
+ * space in the pack does not make an assignment the catalog already holds look new. Its case is
+ * kept, as everywhere else in this engine.
+ */
+const catalogProducts = z.object({ catalogs: z.array(z.object({ name: z.string().min(1), products: z.array(z.object({ sku: z.string().trim().min(1) })) })) });
 
 export type CatalogRows = z.infer<typeof catalogRows>;
 
@@ -109,6 +117,39 @@ export function groupedAssignments(kind: AssignmentKind, pairs: readonly FlatAss
     return { catalogs: groups.map(([name, members]) => ({ name, products: members.map((sku) => ({ sku })) })) };
 }
 
+/**
+ * Commerce's refusal of a second catalog for one customer group, in the service's words
+ * (`SharedCatalogImportProcessor.js` L9-32). Read off the service, not a captured answer.
+ */
+const GROUP_HAS_CATALOG = /a catalog already exists with customer group/iu;
+
+/** What `POST sharedCatalog` answered, or `undefined` when Commerce refused it as the group's second. */
+async function postCatalog(ctx: KindContext, sharedCatalog: CommerceSharedCatalog): Promise<unknown> {
+    try {
+        return await ctx.send('POST', 'sharedCatalog', { sharedCatalog });
+    } catch (error) {
+        if (error instanceof Error && GROUP_HAS_CATALOG.test(error.message)) return undefined;
+        throw error;
+    }
+}
+
+/**
+ * Use the store's catalog for the group in place of the pack's: Commerce holds one per customer
+ * group. Nothing is recorded, so removal never takes the store's catalog.
+ */
+function takeStandIn(ctx: KindContext, name: string, catalog: CommerceSharedCatalog | undefined): void {
+    if (catalog?.id === undefined) {
+        ctx.log(`left shared catalog ${name} out: its customer group already has a catalog`);
+        return;
+    }
+    (ctx.session.catalogStandIns ??= new Map()).set(name, catalog.id);
+    ctx.log(`used shared catalog ${catalog.name} for ${name}: its customer group already has that catalog`);
+}
+
+/** The store's catalog for a customer group, if it has one. */
+const catalogOfGroup = (catalogs: readonly CommerceSharedCatalog[], group: number | undefined) =>
+    group === undefined ? undefined : catalogs.find((c) => c.customer_group_id === group);
+
 /** Make each catalog the store lacks, custom, and record it with what it held when made. */
 export async function installCatalogs(ctx: KindContext, rows: CatalogRows): Promise<void> {
     const existing = await readCatalogs(ctx.get);
@@ -117,6 +158,10 @@ export async function installCatalogs(ctx: KindContext, rows: CatalogRows): Prom
         if (ownedId(ctx.session, CATALOG_KIND, row.name) !== undefined || ctx.recorder.byKey(CATALOG_KIND, row.name)) continue;
         if (existing.some((c) => c.name === row.name)) continue;
         const group = row.customer_group_id === undefined ? undefined : await lk.groupId(String(row.customer_group_id));
+        if (catalogOfGroup(existing, group)) {
+            takeStandIn(ctx, row.name, catalogOfGroup(existing, group));
+            continue;
+        }
         const sharedCatalog: CommerceSharedCatalog = {
             name: row.name,
             type: CUSTOM_CATALOG,
@@ -124,7 +169,12 @@ export async function installCatalogs(ctx: KindContext, rows: CatalogRows): Prom
             tax_class_id: row.tax_class_id ?? RETAIL_TAX_CLASS,
             ...(group !== undefined ? { customer_group_id: group } : {}),
         };
-        const id = Number(await ctx.send('POST', 'sharedCatalog', { sharedCatalog }));
+        const answer = await postCatalog(ctx, sharedCatalog);
+        if (answer === undefined) {
+            takeStandIn(ctx, row.name, catalogOfGroup(await readCatalogs(ctx.get), group));
+            continue;
+        }
+        const id = Number(answer);
         if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new shared catalog ${row.name}'s id.`);
         // A failed read-back records no `held`: removal then counts everything in it as not the pack's.
         const held = await readHeld(ctx.get, id).catch(() => undefined);
@@ -159,7 +209,8 @@ export async function installAssignments(ctx: KindContext, kind: AssignmentKind,
     const catalogs = await readCatalogs(ctx.get);
     const route = ROUTES[kind];
     for (const name of new Set(pairs.map((p) => p.catalog))) {
-        const catalog = catalogs.find((c) => c.name === name);
+        const standIn = ctx.session.catalogStandIns?.get(name);
+        const catalog = catalogs.find((c) => c.name === name) ?? catalogs.find((c) => standIn !== undefined && c.id === standIn);
         if (catalog?.id === undefined) throw new Error(`The store has no shared catalog named ${name}.`);
         const held = new Set((await readHeld(ctx.get, catalog.id))[route.list].map(String));
         const adding: Array<{ ref: string; key: string }> = [];

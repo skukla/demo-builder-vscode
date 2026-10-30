@@ -28,13 +28,59 @@ Each group is built on its own branch off `loop/2026-10-05-release-candidate`, t
 
 ### G2: the kinds that refuse what the service accepted
 
-4. Removing a stock takes its website off first (`StocksDeleteProcessor.js` L181-227).
+4. Removing a stock takes its website off first (`StocksDeleteProcessor.js` L181-227). **Built**
+   (`05ee5f38c`): PUT empty `sales_channels` with the service's body, DELETE, then the website goes
+   back on its earlier stock. Whether Commerce requires the PUT is still unproven either way; the
+   service added it for DEMOSYS-1532 ("Stocks not deleting on multisite setup").
 5. Swatch attributes install, in the service's two steps (`ProductAttributeImportProcessor.js` L338-352).
+   **Built** (`490c98528`), on the create path, for a store's own swatch, and on a repeat install.
+   What Commerce answers as a swatch's `frontend_input` is not captured, so a swatch our save wrote
+   is pinned to reinstall in both forms (as a swatch, or as a plain dropdown).
 6. A shared catalog whose customer group already has one: Commerce's refusal read as "already
-   there" (`SharedCatalogImportProcessor.js` L9-32).
-7. A company region named by code resolves to its id.
-8. Shared-catalog product SKUs are trimmed before comparing.
+   there" (`SharedCatalogImportProcessor.js` L9-32). **Built** (`e4aaa0443`): looks first (the
+   list names each catalog's group) and reads the refusal too; the store's catalog stands in for
+   the pack's, is never recorded, and takes the pack's assignments, which are.
+7. A company region named by code resolves to its id. **Built** (`0c832aa15`) through
+   `GET directory/countries/{id}`: no code here or in the service read it before, so its shape
+   (`CommerceCountryInfo`) is not captured. Name works too.
+8. Shared-catalog product SKUs are trimmed before comparing. **Built** (`125948ed3`); case kept.
 9. A product's `additional_attributes` become custom attributes (`ProductImportProcessor.js` L97-114).
+   **Built** (`85fe6315e`). No pack on this machine or in the library audit is known to carry it.
+
+#### G2 live test (owner; `scratch-1028`, website `justrite_test_website` only; ends at zero)
+
+A test pack `zz-g2-parity`, loaded from a file into the library. No sources (Commerce cannot delete
+one, so a source would never get back to zero).
+
+| Kind | Row |
+|---|---|
+| `product_attributes` | `zz_g2_color`, `frontend_input: swatch_visual`, options Black `#1d1d1d`, Blue `#286785` |
+| `stocks` | `ZZ G2 Stock` |
+| `products` | simple `ZZ-G2-1`, set `Default`, `url_key` `zz-g2-1`, `additional_attributes: { meta_title: "ZZ G2 meta" }` |
+| `b2b_companies` | `ZZ G2 Company`, region `{ region_code: "TX" }`, admin `zz.g2.admin@example.com` |
+| `b2b_shared_catalogs` | `ZZ G2 Catalog`, `customer_group_id: "General"` (the public catalog's group) |
+| `b2b_shared_catalog_products` | `ZZ G2 Catalog`: `{ sku: " ZZ-G2-1 " }` (spaces on purpose) |
+
+1. Read only: `GET directory/countries/US` (expect `available_regions[]` with `id`, `code`, `name`;
+   anything else, stop: item 7's read is wrong). `GET sharedCatalog` (note the public catalog's id
+   and group). `GET inventory/stocks` (note which stock sells to `justrite_test_website`).
+2. Preview the install (`validate_datapack_import`), then install it (`start_datapack_import`).
+   Expect in Debug Logs: the attribute made, then two option writes; `ZZ G2 Stock` selling to
+   `justrite_test_website`; `ZZ-G2-1` made; the company made; "used shared catalog <the public
+   catalog's name> for ZZ G2 Catalog: its customer group already has that catalog". Then either
+   "assigned 1 to shared catalog ZZ G2 Catalog", or no assignment line at all if Commerce put the
+   new product in the public catalog itself (the trimmed SKU then matched; untrimmed, it would not).
+3. Check: Admin, Stores > Attributes > Product > `zz_g2_color` shows two colour swatches.
+   `GET products/attributes/zz_g2_color`: write down its `frontend_input` (this settles how our save
+   sees a swatch). `GET products/ZZ-G2-1`: `meta_title` is "ZZ G2 meta". The company's `region_id`
+   is Texas's id from step 1. `GET sharedCatalog/<public id>/products` holds `ZZ-G2-1`, no spaces.
+4. Remove the pack (`reset_datapack`, confirm). Expect a PUT then a DELETE on `ZZ G2 Stock`, and the
+   website back on the stock from step 1. If the DELETE is refused, note Commerce's words.
+5. Back at zero: `GET inventory/stocks` has no `ZZ G2 Stock`, and step 1's stock sells to
+   `justrite_test_website` again; `GET products/ZZ-G2-1` and `GET products/attributes/zz_g2_color`
+   answer 404; no `ZZ G2 Company`; no customer `zz.g2.admin@example.com`; the public catalog no
+   longer holds `ZZ-G2-1` and still exists; `list_installed_datapacks` shows no `zz-g2-parity`.
+   Then remove `zz-g2-parity` from the library (`delete_library_datapack`).
 
 ### G3: a pack from any store (`capture.ts`, `storeChanges.ts`, `packForm.ts`, the export screen and tool)
 

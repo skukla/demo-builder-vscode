@@ -197,6 +197,24 @@ What to know before installing a pack into a store, because the Commerce API can
   Key in the Admin (Catalog > Categories, Search Engine Optimization), then install.
 - **Commerce Optimizer (ACO)** groups its catalog by product family, not by a store's root, so it
   probably has no such step (not tested).
+- **A customer group has one shared catalog.** Commerce allows only one per group. When a pack's
+  catalog names a group your store already gave a catalog, Demo Builder's engine uses your
+  catalog instead: it adds the pack's companies, categories and products to it, and removing the
+  pack takes those back out but never deletes your catalog. The install log names the catalog it
+  used.
+
+## What Demo Builder's engine does with a pack's rows (step 14)
+
+Where it now does what the Data Installer service did. None of these has run against a live
+store yet; the step 14 plan's live-test script covers them.
+
+| Rows | What happens |
+|---|---|
+| Swatch attributes (`swatch_visual`, `swatch_text`) | made in the service's two steps: the attribute, then each option with its swatch as its value |
+| A company region named by `region_code` or by name | turned into its region id from the country's regions; a region the country lacks stops the install, naming it, before anything is made for that company |
+| Shared-catalog product SKUs | the spaces around them are trimmed; their case is kept |
+| A product's `additional_attributes` object | turned into custom attributes; the row's own custom attribute of the same code wins |
+| Removing a stock the pack made | its website is taken off it first, then it is deleted, then the website goes back on the stock it sold from |
 
 ## Conventions that bind this
 

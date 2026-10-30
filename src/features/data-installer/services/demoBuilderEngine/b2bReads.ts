@@ -43,7 +43,8 @@ export function filterIn(field: string, values: ReadonlyArray<string | number>):
     );
 }
 
-const sameText = (a: string | undefined, b: string): boolean => (a ?? '').trim().toLowerCase() === b.trim().toLowerCase();
+/** Two names or codes the same but for case and the spaces around them. */
+export const sameText = (a: string | undefined, b: string): boolean => (a ?? '').trim().toLowerCase() === b.trim().toLowerCase();
 
 /** Every customer with this email, on any website. Commerce compares emails without case. */
 export async function customersByEmail(get: CommerceGet, email: string): Promise<CommerceCustomer[]> {

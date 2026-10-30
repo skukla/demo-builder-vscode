@@ -11,6 +11,7 @@
 
 import type { CreatedObject } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
+import { attributePackForm } from '@/features/data-installer/services/demoBuilderEngine/packForm';
 import { keptLine } from '@/features/data-installer/services/demoBuilderEngine/repeatInstall';
 import { installPack } from '@/features/data-installer/services/demoBuilderEngine/runPack';
 import { packedFingerprint } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
@@ -265,6 +266,33 @@ describe('things the SC renamed or deleted in the Admin', () => {
 
         expect(ctx.sent).toStrictEqual([]);
         expect(outcome.kept).toEqual([{ kind: 'product_attributes', key: 'bodea_fabric' }]);
+    });
+
+    it('adds an option the pack gained to a swatch it made, with its swatch', async () => {
+        const before = { attribute: { attribute_code: 'cs_color', frontend_input: 'swatch_visual', options: [{ label: 'Black', value: '#1d1d1d' }] } };
+        const after = { attribute: { ...before.attribute, options: [...before.attribute.options, { label: 'Blue', value: '#286785' }] } };
+        const stored = { attribute_code: 'cs_color', frontend_input: 'swatch_visual', is_user_defined: true, options: [{ label: 'Black', value: '60' }] };
+        let options = stored.options;
+        const ctx = await fakeContext(
+            { 'products/attributes/cs_color': () => ({ ...stored, options }), 'products/attributes/cs_color/options': () => options },
+            (call) => {
+                if (call.path.endsWith('/options')) options = [...options, { label: 'Blue', value: '61' }];
+                return '61';
+            },
+        );
+        await ctx.recorder.record({
+            kind: 'product_attributes',
+            id: 'cs_color',
+            key: 'cs_color',
+            fingerprint: fingerprintRow(attributePackForm(stored)),
+            wrote: packedFingerprint('product_attributes', before),
+        });
+
+        await installPack(ctx, { product_attributes: [after] });
+
+        expect(ctx.sent).toEqual<SentCall[]>([
+            { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Blue', value: '#286785', sort_order: 0, is_default: false } } },
+        ]);
     });
 });
 
