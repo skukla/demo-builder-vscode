@@ -409,6 +409,47 @@ describe('Modal', () => {
         });
     });
 
+    // A spinner in the label's place while the button's work runs, not a "-ing" label, which
+    // changed the button's width and read as a new label (owner, 2026-10-31).
+    describe('a pending action button', () => {
+        function pendingButton(onPress: jest.Mock) {
+            const actionButtons: ActionButton[] = [
+                { label: 'Check', variant: 'accent', onPress, isPending: true },
+            ];
+            renderWithProvider(<Modal {...defaultProps} actionButtons={actionButtons} />);
+            return screen.getByRole('button', { name: 'Check' });
+        }
+
+        it('ignores presses, keeps its name, and says it is busy', () => {
+            const onPress = jest.fn();
+            const button = pendingButton(onPress);
+
+            fireEvent.click(button);
+
+            expect(onPress).not.toHaveBeenCalled();
+            expect(button).toHaveAttribute('aria-busy', 'true');
+            expect(button).toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('shows a spinner over the hidden label, and is not dimmed as disabled', () => {
+            const button = pendingButton(jest.fn());
+
+            expect(button.querySelector('.modal-button-pending-label')).toHaveTextContent('Check');
+            expect(button.querySelector('.modal-button-pending-spinner')).not.toBeNull();
+            expect(button).toHaveClass('modal-button-busy');
+            expect(button).not.toHaveClass('modal-button-disabled');
+        });
+
+        it('a button that is not pending shows its label alone', () => {
+            const actionButtons: ActionButton[] = [{ label: 'Check', variant: 'accent', onPress: jest.fn() }];
+            renderWithProvider(<Modal {...defaultProps} actionButtons={actionButtons} />);
+
+            const button = screen.getByRole('button', { name: 'Check' });
+            expect(button).not.toHaveAttribute('aria-busy');
+            expect(button.querySelector('.modal-button-pending-spinner')).toBeNull();
+        });
+    });
+
     // The handlers are memoised. A memo whose dependency list forgets the
     // handler keeps calling the one it closed over on the first render.
     describe('after a re-render with a new handler', () => {

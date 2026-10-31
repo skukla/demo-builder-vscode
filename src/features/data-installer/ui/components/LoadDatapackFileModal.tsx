@@ -97,10 +97,10 @@ export function LoadDatapackFileModal({
                         ? [{ label: 'Done', variant: 'secondary', onPress: onClose }]
                         : [
                               {
-                                  label: loading.loading ? 'Loading' : 'Load',
+                                  label: 'Load',
                                   variant: 'accent',
                                   onPress: load,
-                                  isDisabled: loading.loading,
+                                  isPending: loading.loading,
                               },
                           ]
                 }

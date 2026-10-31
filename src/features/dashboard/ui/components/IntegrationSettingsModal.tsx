@@ -163,12 +163,13 @@ export function IntegrationSettingsModal({
                     onClose={onClose}
                     closeLabel={isSaving ? 'Close' : 'Cancel'}
                     actionButtons={[{
-                        label: isSaving ? 'Saving and redeploying' : 'Save and redeploy',
+                        label: 'Save and redeploy',
                         variant: 'accent',
                         onPress: () => {
                             void handleSave();
                         },
-                        isDisabled: !isDirty || hasBlank || isSaving,
+                        isDisabled: !isDirty || hasBlank,
+                        isPending: isSaving,
                     }]}
                 >
                     <View marginBottom="size-200">

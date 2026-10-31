@@ -138,7 +138,10 @@ describe('IntegrationSettingsModal', () => {
         fireEvent.click(saveButton());
         await flush();
 
-        expect(screen.getByRole('button', { name: /saving and redeploying/i })).toHaveAttribute('aria-disabled', 'true');
+        // A spinner in the button's place, not a "-ing" label (owner, 2026-10-31).
+        const busy = screen.getByRole('button', { name: 'Save and redeploy' });
+        expect(busy).toHaveAttribute('aria-disabled', 'true');
+        expect(busy).toHaveAttribute('aria-busy', 'true');
         expect(screen.getByText(/you\s+can close this window/)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });

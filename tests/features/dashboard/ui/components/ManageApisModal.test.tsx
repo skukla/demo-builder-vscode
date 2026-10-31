@@ -237,8 +237,10 @@ describe('ManageApisModal', () => {
             fireEvent.click(applyButton());
             await flush();
 
-            const busy = screen.getByRole('button', { name: /applying/i });
+            // A spinner in the button's place, not a "-ing" label (owner, 2026-10-31).
+            const busy = screen.getByRole('button', { name: 'Apply' });
             expect(busy).toHaveAttribute('aria-disabled', 'true');
+            expect(busy).toHaveAttribute('aria-busy', 'true');
         });
 
         it("shows the subscribe's own stage and step once it reports them, and a plain Applying before", async () => {

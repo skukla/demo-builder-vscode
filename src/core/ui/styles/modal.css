@@ -200,6 +200,30 @@
     pointer-events: none;
 }
 
+/* Busy (`isPending`): presses ignored, not dimmed, and a small spinner over the label, which stays
+   in place hidden so the button keeps its width (owner, 2026-10-31). */
+.modal-button-busy {
+    cursor: default;
+    pointer-events: none;
+}
+
+.modal-button-pending {
+    display: inline-grid;
+    place-items: center;
+}
+
+.modal-button-pending > * {
+    grid-area: 1 / 1;
+}
+
+.modal-button-pending-label {
+    visibility: hidden;
+}
+
+.modal-button-pending-spinner {
+    display: inline-flex;
+}
+
 /* The progress modal's body (PL-59, OperationProgressModal): ONE height for every
  * state, with the content centred in it, so the modal never resizes as stages come and
  * go, a step wraps, or it turns into a failure (owner, 2026-09-19). Sized for the

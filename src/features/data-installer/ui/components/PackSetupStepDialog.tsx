@@ -45,7 +45,7 @@ function footer({ item, checking, onCheck, onOpenAdmin }: PackSetupStepDialogPro
     if (item.state === 'done') return [];
     return [
         { label: 'Open the Admin', variant: 'secondary', onPress: onOpenAdmin },
-        { label: checking ? 'Checking' : 'Check', variant: 'accent', onPress: onCheck, isDisabled: checking },
+        { label: 'Check', variant: 'accent', onPress: onCheck, isPending: checking },
     ];
 }
 

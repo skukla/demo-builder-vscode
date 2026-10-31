@@ -1,5 +1,6 @@
 import { Dialog, Heading, Content, Divider } from '@adobe/react-spectrum';
 import React, { ReactNode, useCallback } from 'react';
+import { Spinner } from './Spinner';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface ActionButton {
@@ -7,6 +8,12 @@ export interface ActionButton {
     variant: 'primary' | 'secondary' | 'accent' | 'negative';
     onPress: () => void;
     isDisabled?: boolean;
+    /**
+     * The button's work is running: a small spinner takes the label's place, at the same width,
+     * and presses are ignored. Not a "-ing" label: that changed the button's width and read as a
+     * new label rather than as waiting (owner, 2026-10-31).
+     */
+    isPending?: boolean;
 }
 
 export interface ModalProps {
@@ -62,10 +69,28 @@ interface FocusableButtonProps {
     variant: 'primary' | 'secondary' | 'accent' | 'negative';
     onPress: () => void;
     isDisabled?: boolean;
+    isPending?: boolean;
+    /** The button's name while pending, when the label it shows is hidden behind the spinner. */
+    pendingName?: string;
     children: React.ReactNode;
 }
 
-function FocusableButton({ variant, onPress, isDisabled, children }: FocusableButtonProps) {
+/** The label, or while pending a spinner over the hidden label, which keeps the button's width. */
+function ButtonFace({ children, isPending, onColour }: { children: React.ReactNode; isPending?: boolean; onColour: boolean }) {
+    if (!isPending) return <>{children}</>;
+    return (
+        <span className="modal-button-pending">
+            <span className="modal-button-pending-label">{children}</span>
+            <span className="modal-button-pending-spinner">
+                <Spinner size="S" aria-label="Working" staticColor={onColour ? 'white' : undefined} />
+            </span>
+        </span>
+    );
+}
+
+function FocusableButton({ variant, onPress, isDisabled: disabled, isPending, pendingName, children }: FocusableButtonProps) {
+    // Pending ignores presses like disabled does, without dimming: the button is busy, not unavailable.
+    const isDisabled = disabled === true || isPending === true;
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
             if (isDisabled) return;
@@ -96,10 +121,14 @@ function FocusableButton({ variant, onPress, isDisabled, children }: FocusableBu
             tabIndex={isDisabled ? -1 : 0}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className={cn('modal-button', variantClass, isDisabled && 'modal-button-disabled')}
+            className={cn('modal-button', variantClass, disabled && 'modal-button-disabled', isPending && 'modal-button-busy')}
             aria-disabled={isDisabled}
+            aria-busy={isPending || undefined}
+            aria-label={isPending ? pendingName : undefined}
         >
-            {children}
+            <ButtonFace isPending={isPending} onColour={variantClass === 'modal-button-primary'}>
+                {children}
+            </ButtonFace>
         </div>
     );
 }
@@ -152,6 +181,8 @@ export function Modal({
                             variant={button.variant}
                             onPress={button.onPress}
                             isDisabled={button.isDisabled}
+                            isPending={button.isPending}
+                            pendingName={button.label}
                         >
                             {button.label}
                         </FocusableButton>

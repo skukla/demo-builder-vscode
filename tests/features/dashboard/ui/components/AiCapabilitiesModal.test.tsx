@@ -349,18 +349,19 @@ describe('AiCapabilitiesModal', () => {
         renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
         // The shared Modal renders actions as accessible div-buttons (aria-disabled),
         // not native <button disabled>.
-        expect(screen.getByRole('button', { name: /regenerating/i })).toHaveAttribute(
+        expect(screen.getByRole('button', { name: /^regenerate ai files$/i })).toHaveAttribute(
             'aria-disabled',
             'true'
         );
     });
 
-    it('changes the action label to "Regenerating" while busy so the disabled state has visible cause', () => {
+    // The body's own loading state is the visible cause (next test), so the button keeps its
+    // label: one spinner per wait, and no "-ing" label (owner, 2026-10-31).
+    it('keeps the action label while busy, with no second spinner on the button', () => {
         renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
-        expect(
-            screen.queryByRole('button', { name: /^regenerate ai files$/i })
-        ).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /regenerating/i })).toBeInTheDocument();
+        const button = screen.getByRole('button', { name: /^regenerate ai files$/i });
+        expect(button).not.toHaveAttribute('aria-busy');
+        expect(screen.queryByRole('button', { name: /regenerating/i })).not.toBeInTheDocument();
     });
 
     it('replaces the body with a centered loading state while busy', () => {

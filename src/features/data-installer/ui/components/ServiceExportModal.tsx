@@ -123,7 +123,7 @@ export function ServiceExportModal({ onClose, packType }: ServiceExportModalProp
     }, [allSelected, available]);
 
     const chosen = aco.isAco ? aco.ready : selected.length > 0;
-    const canExport = name.trim().length > 0 && version.trim().length > 0 && chosen && !run.loading;
+    const canExport = name.trim().length > 0 && version.trim().length > 0 && chosen;
 
     const start = useCallback((): void => {
         setDismissed(false);
@@ -156,10 +156,11 @@ export function ServiceExportModal({ onClose, packType }: ServiceExportModalProp
                         ? [{ label: 'Back', variant: 'secondary', onPress: goBack }]
                         : [
                               {
-                                  label: run.loading ? 'Exporting' : 'Export',
+                                  label: 'Export',
                                   variant: 'accent',
                                   onPress: start,
                                   isDisabled: !canExport,
+                                  isPending: run.loading,
                               },
                           ]
                 }

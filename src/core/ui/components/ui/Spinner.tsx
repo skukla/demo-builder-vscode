@@ -8,6 +8,8 @@ export interface SpinnerProps {
     isIndeterminate?: boolean;
     /** Optional aria-label for accessibility */
     'aria-label'?: string;
+    /** White, for a spinner drawn on a coloured background (an accent button's). */
+    staticColor?: 'white';
 }
 
 /**
@@ -25,12 +27,14 @@ export function Spinner({
     size = 'M',
     isIndeterminate = true,
     'aria-label': ariaLabel = 'Loading',
+    staticColor,
 }: SpinnerProps) {
     return (
         <ProgressCircle
             size={size}
             isIndeterminate={isIndeterminate}
             aria-label={ariaLabel}
+            staticColor={staticColor}
         />
     );
 }
