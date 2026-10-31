@@ -21,6 +21,7 @@ Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows. *
 - Six new Demo Builder skills — verified shipped; see the sub-part marked ✅ below
 - 2026-10-03  Parked 2026-10-03 (owner): stays waiting on Mod Agent access.
 - 2026-10-31  A fourth Playwright-driven skill, scrape-products-to-aco (PL-60 slice A), reads a site's PRODUCTS into an ACO datapack rather than its design into blocks. It does not change this item's Mod Agent gate.
+- 2026-10-31  docs(backlog): EDS-3 notes the ACO product-scraping skill beside it (`85ed4d555`)
 
 ## Provenance
 

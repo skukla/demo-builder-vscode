@@ -139,3 +139,7 @@ storefront config).
 - 2026-10-30  feat(data-installer): ACO pack rows made from Commerce answers, as the service makes them (`8a3c43e2f`)
 - 2026-10-30  docs(datapack): port spec for the Data Installer's ACO export (`6bf5fe8ac`)
 - 2026-10-30  fix(data-installer): an ACO pack reads Commerce's "0"/"1" attribute flags and category descriptions as Commerce sends them (`83817aa33`)
+- 2026-10-31  feat(data-installer): Create datapack offers an ACO pack "From a website" (`2e7233a9f`)
+- 2026-10-31  feat(ai): a generated skill for scraping a website's products into an ACO pack (`e0558ceb6`)
+- 2026-10-31  feat(data-installer): save a website's products as an ACO pack in the library (`a025d9483`)
+- 2026-10-31  docs(aco): record the owner's answers to P1-P5 and what DSC's scraper is reported to do (`02137bbe8`)
