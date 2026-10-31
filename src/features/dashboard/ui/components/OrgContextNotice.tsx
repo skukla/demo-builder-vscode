@@ -13,7 +13,7 @@
  * @module features/dashboard/ui/components/OrgContextNotice
  */
 
-import { Text, Button, ProgressCircle } from '@adobe/react-spectrum';
+import { Text, Button } from '@adobe/react-spectrum';
 import React from 'react';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
@@ -71,20 +71,9 @@ export function OrgContextNotice({
                 testId="org-mismatch-banner"
                 hint={switchAttempted ? buildHint(currentOrg) : undefined}
                 action={
-                    <Button variant="accent" onPress={onSwitchOrg} isDisabled={isSwitching}>
-                        {isSwitching ? (
-                            <>
-                                <ProgressCircle
-                                    size="S"
-                                    isIndeterminate
-                                    aria-label="Switching organization"
-                                    UNSAFE_className="inline-notice-spinner"
-                                />
-                                <Text>Switching</Text>
-                            </>
-                        ) : (
-                            <Text>Switch IMS Org</Text>
-                        )}
+                    // Spectrum's busy button, not a spinner plus "Switching" (owner, 2026-10-31).
+                    <Button variant="accent" onPress={onSwitchOrg} isPending={isSwitching}>
+                        <Text>Switch IMS Org</Text>
                     </Button>
                 }
             >

@@ -144,6 +144,8 @@ export interface StepProps {
     integrationId: string;
     /** The guide's run, on the shown step only (AB-82, `StepHeader`). */
     run?: GuideRun;
+    /** Check all steps is checking this step now: its banner shows the spinner. */
+    checking?: boolean;
 }
 
 /** The quiet link's words for each state: what pressing it will do. */
@@ -184,7 +186,7 @@ export function SetupGuideStep(props: StepProps): React.ReactElement {
             data-testid={shown ? 'setup-guide-step' : undefined}
             aria-hidden={shown ? undefined : true}
         >
-            <StepHeader item={item} integrationId={props.integrationId} run={props.run} />
+            <StepHeader item={item} integrationId={props.integrationId} run={props.run} checking={props.checking} />
             <SetupStepFacts item={item} />
             <SkipOrReopen {...props} />
         </div>

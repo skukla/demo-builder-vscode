@@ -162,8 +162,8 @@ function runChrome(controls: UpdatesModalControls): Chrome {
 /** "Back to updates" beside Close, when rows the SC left unticked are still waiting. */
 function backTo(controls: UpdatesModalControls): ActionButton[] {
     if (controls.remaining === 0) return NO_ACTIONS;
-    const label = controls.rechecking ? 'Checking for updates' : 'Back to updates';
-    return [{ label, variant: 'secondary', onPress: controls.back, isDisabled: controls.rechecking }];
+    // The button's spinner while the list is read again, not "Checking for updates" (owner, 2026-10-31).
+    return [{ label: 'Back to updates', variant: 'secondary', onPress: controls.back, isPending: controls.rechecking }];
 }
 
 /** What the modal shows: its title, body, dismiss label and the buttons beside it. */

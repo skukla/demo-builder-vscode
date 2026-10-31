@@ -99,11 +99,6 @@
     margin-top: 8px;
 }
 
-/* In-flight spinner inside the "Switching…" button — small gap before the label. */
-.inline-notice-spinner {
-    margin-right: 6px;
-}
-
 /* --------------------------------------------------------------------------
  * InlineRenameField (core/ui/forms) — rename-in-place for a displayed name.
  * Shared by the project card name and the dashboard title: the input inherits

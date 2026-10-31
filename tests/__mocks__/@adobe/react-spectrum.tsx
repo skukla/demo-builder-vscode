@@ -314,8 +314,10 @@ export const Checkbox: React.FC<any> = ({
 // button is the accent one is a decision, and filtering it made it unobservable.
 // Spectrum's `style` is "fill" or "outline", not a CSS object: surfaced as data-style rather
 // than handed to the DOM, which throws on a string style.
+// `isPending` is Spectrum's busy button: presses are ignored and a spinner shows (after a
+// second, in the real one). The mock marks it `aria-busy` and ignores presses at once.
 export const Button = React.forwardRef<HTMLButtonElement, any>(
-    ({ children, onPress, onClick, isDisabled, variant, style, ...props }, ref) => (
+    ({ children, onPress, onClick, isDisabled, isPending, variant, style, ...props }, ref) => (
         <button
             ref={ref}
             data-testid="spectrum-button"
@@ -323,10 +325,12 @@ export const Button = React.forwardRef<HTMLButtonElement, any>(
             data-style={typeof style === 'string' ? style : undefined}
             tabIndex={0}
             onClick={(e) => {
+                if (isPending) return;
                 onClick?.(e);
                 onPress?.(e);
             }}
             disabled={isDisabled}
+            aria-busy={isPending ? 'true' : undefined}
             {...filterSpectrumProps(props)}
         >
             {children}

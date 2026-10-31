@@ -84,12 +84,14 @@ interface StepHeaderProps {
     integrationId: string;
     /** The guide's run, on the shown step only; it also lets the plan read the store. */
     run?: GuideRun;
+    /** Check all steps is checking this step now. */
+    checking?: boolean;
 }
 
 /** The shared step header (`SetupStepHeader`), with the run's status and Apply's plan. */
-export function StepHeader({ item, integrationId, run }: StepHeaderProps): React.ReactElement {
+export function StepHeader({ item, integrationId, run, checking = false }: StepHeaderProps): React.ReactElement {
     const status = statusOf(item, run);
     // Only the shown step reads the store for its plan: the others are drawn, invisible, for height.
     const plan = status.plan && run ? <StepPlan id={integrationId} stepId={item.id} /> : undefined;
-    return <SetupStepHeader item={item} status={status} plan={plan} />;
+    return <SetupStepHeader item={item} status={status} plan={plan} busy={checking} />;
 }

@@ -112,10 +112,11 @@ jest.mock('@adobe/react-spectrum', () => {
         Text: ({ children, ...props }: any) => (
             <span {...filterSpectrumProps(props)}>{children}</span>
         ),
-        Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
+        Button: ({ children, onPress, variant, isDisabled, isPending, ...props }: any) => (
             <button
-                onClick={onPress}
+                onClick={isPending ? undefined : onPress}
                 disabled={isDisabled}
+                aria-busy={isPending ? 'true' : undefined}
                 data-variant={variant}
                 data-testid="back-button"
                 {...filterSpectrumProps(props)}

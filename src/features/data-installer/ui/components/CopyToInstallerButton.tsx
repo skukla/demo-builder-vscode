@@ -48,8 +48,9 @@ export function CopyToInstallerButton({
                 Other teams will see {id.name} in the Data Installer&apos;s catalog, and it cannot
                 be removed from here.
             </p>
-            <Button variant="accent" onPress={start} isDisabled={copy.loading}>
-                {copy.loading ? 'Copying' : 'Copy to the Data Installer'}
+            {/* Spectrum's busy button, not a "-ing" label (owner, 2026-10-31). */}
+            <Button variant="accent" onPress={start} isPending={copy.loading}>
+                Copy to the Data Installer
             </Button>
             {copy.failure ? (
                 <p className="datapack-export-note">It was not copied: {copy.failure.message}</p>

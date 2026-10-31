@@ -1,6 +1,6 @@
 /**
  * The setup guide's buttons (AB-26x, AB-77, AB-82): the shown step's Apply and Undo, Mark as
- * done and Open Commerce Admin in the footer; the check's words, and which steps Apply all
+ * done and Open Commerce Admin in the footer; which steps the check covers, and which steps Apply all
  * applies, for the buttons under the list. Split out of `SetupGuideModal.tsx` (2026-10-26),
  * which keeps the dialog and which step is shown.
  *
@@ -11,7 +11,6 @@
  * @module features/dashboard/ui/components/integrations/setupGuideFooter
  */
 
-import type { CheckProgress } from './useSetupChecklist';
 import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
@@ -53,15 +52,6 @@ function fixButtons(item: SetupChecklistItem, fix: FooterInput['fix'], busy: boo
     const undo: ActionButton = { label: FIX_COPY.undo, variant: 'secondary', onPress: () => fix('undo'), isDisabled: busy };
     if (item.state === 'done') return item.fixApplied ? [undo] : [];
     return item.fixApplied ? [apply, undo] : [apply];
-}
-
-/**
- * The check button's words: idle, connecting (a run waiting on the Commerce sign-in the
- * guide started as it opened), or how far a run is.
- */
-export function checkLabel(progress: CheckProgress | undefined, connecting: boolean): string {
-    if (!progress) return 'Check all steps';
-    return connecting ? 'Connecting to Commerce' : `Checking ${progress.position} of ${progress.total}`;
 }
 
 /** The steps a check run covers, in list order: every checkable one not skipped. */

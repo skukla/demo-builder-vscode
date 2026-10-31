@@ -27,7 +27,7 @@
 import { Button, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
-import { FIX_COPY, applyAllIds, checkLabel, checkableIds, footerButtons } from './setupGuideFooter';
+import { FIX_COPY, applyAllIds, checkableIds, footerButtons } from './setupGuideFooter';
 import { SetupGuideStep, StepList } from './SetupGuideStep';
 import { useGuideRun } from './useGuideRun';
 import { type CheckFailure, useSetupChecklist } from './useSetupChecklist';
@@ -165,6 +165,8 @@ function Guide({
     );
     const run = useGuideRun(model, items, onAsk ? handOff : undefined);
     const busyNow = actions.busy || run.running;
+    /** A pressed Check all steps is waiting on the Commerce sign-in the guide started as it opened. */
+    const runWaitsOnSignIn = actions.connecting && actions.progress !== undefined;
     const buttons = footerButtons({
         item,
         busy: busyNow,
@@ -196,8 +198,18 @@ function Guide({
                     />
                     <div className="setup-guide-list-actions">
                         {hasCheckable && (
-                            <Button variant="secondary" onPress={() => void checkAll()} isDisabled={busyNow}>
-                                {checkLabel(actions.progress, actions.connecting)}
+                            // No "Checking 2 of 5" (owner, 2026-10-31): the list marks the step
+                            // being checked and the open step's banner shows its spinner, so the
+                            // button only stops taking presses. A run waiting on the Commerce
+                            // sign-in moves nothing else, so the button shows its own spinner
+                            // then. The sign-in the guide starts as it opens is not a wait yet.
+                            <Button
+                                variant="secondary"
+                                onPress={() => void checkAll()}
+                                isDisabled={busyNow && !runWaitsOnSignIn}
+                                isPending={runWaitsOnSignIn}
+                            >
+                                Check all steps
                             </Button>
                         )}
                         {applyAll && (
@@ -220,6 +232,7 @@ function Guide({
                                 item={step}
                                 shown={step.id === item?.id}
                                 busy={busyNow}
+                                checking={step.id === actions.progress?.stepId}
                                 onSet={(state) => actions.setStep(step.id, state)}
                                 integrationId={model.id}
                                 {...(step.id === item?.id ? { run } : {})}

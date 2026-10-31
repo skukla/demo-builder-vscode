@@ -64,8 +64,9 @@ export function RemoveFromLibraryButton({ id, onRemoved }: RemoveFromLibraryButt
     if (removed) return <>{note}</>;
     return (
         <div className="datapack-save-file">
-            <Button variant="secondary" onPress={start} isDisabled={removing}>
-                {removing ? 'Removing' : 'Remove it from the library'}
+            {/* Spectrum's busy button, not a "-ing" label (owner, 2026-10-31). */}
+            <Button variant="secondary" onPress={start} isPending={removing}>
+                Remove it from the library
             </Button>
             {note}
         </div>

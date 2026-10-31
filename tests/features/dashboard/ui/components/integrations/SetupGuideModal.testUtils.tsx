@@ -8,8 +8,8 @@ import React from 'react';
 
 jest.mock('@adobe/react-spectrum', () => ({
     Badge: ({ children }: any) => <span data-testid="badge">{children}</span>,
-    Button: ({ children, onPress, isDisabled, variant: _v, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>
+    Button: ({ children, onPress, isDisabled, isPending, variant: _v, ...props }: any) => (
+        <button onClick={isPending ? undefined : onPress} disabled={isDisabled} aria-busy={isPending ? 'true' : undefined} {...props}>
             {children}
         </button>
     ),

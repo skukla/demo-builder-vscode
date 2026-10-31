@@ -57,8 +57,9 @@ export function SaveDatapackFileButton({
     const { start, saving, note } = useSaveDatapackFile(id, source);
     return (
         <div className="datapack-save-file">
-            <Button variant="secondary" onPress={start} isDisabled={saving}>
-                {saving ? 'Saving' : 'Save as file'}
+            {/* Spectrum's busy button, not a "-ing" label (owner, 2026-10-31). */}
+            <Button variant="secondary" onPress={start} isPending={saving}>
+                Save as file
             </Button>
             {note}
         </div>

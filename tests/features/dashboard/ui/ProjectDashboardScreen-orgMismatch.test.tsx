@@ -196,7 +196,9 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         expect(webviewClient.request).toHaveBeenCalledWith('switchOrg');
     });
 
-    it('shows a disabled "Switching" button while the forced switch is in flight', async () => {
+    // Spectrum's busy button, not a spinner plus "Switching" (owner, 2026-10-31): the label
+    // stays and the button ignores presses while the switch is in flight.
+    it('shows the switch button busy while the forced switch is in flight', async () => {
         const { webviewClient } = require('@/core/ui/utils/WebviewClient');
         // Default request mock never resolves — the switch stays in flight.
         webviewClient.request.mockReturnValue(new Promise(() => {}));
@@ -204,11 +206,10 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
 
         fireEvent.click(screen.getByText(/Switch IMS Org/i));
 
-        const switching = await screen.findByText(/Switching/i);
-        expect(switching).toBeInTheDocument();
-        expect(switching.closest('button')).toBeDisabled();
-        // The standing "Switch IMS Org" label is gone while busy.
-        expect(screen.queryByText(/^Switch IMS Org$/i)).not.toBeInTheDocument();
+        await waitFor(() =>
+            expect(screen.getByText(/^Switch IMS Org$/i).closest('button')).toHaveAttribute('aria-busy', 'true')
+        );
+        expect(screen.queryByText(/Switching/i)).not.toBeInTheDocument();
     });
 
     it('ignores repeated presses while a switch is already in flight', async () => {
@@ -216,10 +217,9 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         webviewClient.request.mockReturnValue(new Promise(() => {}));
         await showMismatchBanner();
 
-        // Re-query each time: after the first press the button flips to a disabled
-        // "Switching" state — a second press must not fire the round-trip again.
-        const liveSwitchButton = () =>
-            screen.getByText(/Switch IMS Org|Switching/i).closest('button')!;
+        // Re-query each time: after the first press the button is busy, and a second press
+        // must not fire the round-trip again.
+        const liveSwitchButton = () => screen.getByText(/Switch IMS Org/i).closest('button')!;
         fireEvent.click(liveSwitchButton());
         fireEvent.click(liveSwitchButton());
 
@@ -244,6 +244,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         await waitFor(() => {
             const button = screen.getByText(/Switch IMS Org/i).closest('button');
             expect(button).not.toBeDisabled();
+            expect(button).not.toHaveAttribute('aria-busy');
         });
     });
 

@@ -34,7 +34,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
             {children}
             {!hideClose && <button onClick={onClose}>{closeLabel ?? 'Close'}</button>}
             {actionButtons.map((b) => (
-                <button key={b.label} onClick={b.onPress} disabled={b.isDisabled}>
+                <button key={b.label} onClick={b.onPress} disabled={b.isDisabled} aria-busy={b.isPending ? 'true' : undefined}>
                     {b.label}
                 </button>
             ))}
@@ -428,10 +428,11 @@ describe('UpdatesModal', () => {
             expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
 
-        it('says it is checking while the check runs, and cannot be pressed again', () => {
+        // The button's spinner, not a "Checking for updates" label (owner, 2026-10-31).
+        it('shows the button busy while the check runs, so it cannot be pressed again', () => {
             render(<UpdatesModal controls={{ ...ended(1), rechecking: true }} />);
 
-            expect(screen.getByRole('button', { name: 'Checking for updates' })).toBeDisabled();
+            expect(screen.getByRole('button', { name: 'Back to updates' })).toHaveAttribute('aria-busy', 'true');
         });
 
         it('offers nothing new while the run is still going', () => {

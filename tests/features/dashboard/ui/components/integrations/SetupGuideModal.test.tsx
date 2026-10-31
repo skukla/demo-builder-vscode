@@ -266,7 +266,9 @@ describe('SetupGuideModal', () => {
         expect(checkCalls()).toHaveLength(0);
     });
 
-    it('says Connecting to Commerce while a run waits on that sign-in', async () => {
+    // Waiting on the Commerce sign-in nothing else moves, so the button shows its own spinner;
+    // once steps are checked, the list and the open step's banner show it (owner, 2026-10-31).
+    it('shows the button busy while a run waits on the Commerce sign-in, then only disabled', async () => {
         let signedIn: (answer: unknown) => void = () => undefined;
         mockRequest.mockImplementation((type: string) =>
             type === 'prepareSetupChecks'
@@ -277,9 +279,11 @@ describe('SetupGuideModal', () => {
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Check all steps' }));
         });
-        expect(screen.getByRole('button', { name: 'Connecting to Commerce' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Check all steps' })).toHaveAttribute('aria-busy', 'true');
         await act(async () => signedIn(PREPARED));
-        expect(screen.getByRole('button', { name: 'Checking 1 of 1' })).toBeDisabled();
+        const button = screen.getByRole('button', { name: 'Check all steps' });
+        expect(button).toBeDisabled();
+        expect(button).not.toHaveAttribute('aria-busy');
     });
 
     it('closes from the dialog footer', async () => {
@@ -358,7 +362,7 @@ describe('SetupGuideModal', () => {
         expect(screen.queryByRole('button', { name: 'Mark as done' })).not.toBeInTheDocument();
     });
 
-    it('checks the steps one at a time, showing which and how far, then lands on the first still open', async () => {
+    it('checks the steps one at a time, showing which, then lands on the first still open', async () => {
         const checkable = [
             step({ id: 'a', title: 'Step A', checkable: true }),
             step({ id: 'b', title: 'Step B', checkable: true }),
@@ -370,15 +374,17 @@ describe('SetupGuideModal', () => {
         await renderGuide(checkable);
         fireEvent.click(screen.getByRole('button', { name: 'Check all steps' }));
 
-        // The first step is being checked: its mark is a spinner and the button counts.
-        expect(screen.getByRole('button', { name: 'Checking 1 of 2' })).toBeDisabled();
+        // The first step is being checked: its mark is a spinner, the open step's banner shows the
+        // spinner over its words, and the button only stops taking presses (no "Checking 1 of 2").
+        expect(screen.getByRole('button', { name: 'Check all steps' })).toBeDisabled();
         expect(screen.getByRole('tab', { name: /Step A/ })).toHaveAttribute('aria-busy', 'true');
         expect(screen.getByRole('progressbar', { name: 'Checking Step A' })).toBeInTheDocument();
+        expect(within(shown()).getByTestId('setup-guide-step-status').parentElement).toHaveAttribute('aria-busy', 'true');
         expect(mockRequest).toHaveBeenLastCalledWith('checkSetupSteps', { id: 'erp-integration', stepId: 'a' });
 
         const afterA = checkable.map((item) => (item.id === 'a' ? { ...item, state: 'done' as const } : item));
         await act(async () => pending[0]({ success: true, data: { items: afterA } }));
-        expect(screen.getByRole('button', { name: 'Checking 2 of 2' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: /Step B/ })).toHaveAttribute('aria-busy', 'true');
         // A skipped step is not checked; a step with no check is not asked for.
         expect(mockRequest).toHaveBeenLastCalledWith('checkSetupSteps', { id: 'erp-integration', stepId: 'b' });
 
