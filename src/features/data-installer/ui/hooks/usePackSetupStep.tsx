@@ -23,6 +23,7 @@ import { PackSetupStepLine } from '../components/PackSetupStepLine';
 import { type DataInstallerFailure, useDataInstallerRequest } from './useDataInstallerRequest';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { sleep } from '@/core/utils/sleep';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { DatapackId } from '@/types/datapack';
 
@@ -83,7 +84,7 @@ export function usePackSetupStep(pack: DatapackId | undefined): PackSetupStepVie
     const [opening, setOpening] = useState(false);
     const openAdmin = useCallback((): void => {
         setOpening(true);
-        const started = new Promise((resolve) => setTimeout(resolve, FRONTEND_TIMEOUTS.BROWSER_START));
+        const started = sleep(FRONTEND_TIMEOUTS.BROWSER_START);
         const answered = webviewClient.request('openAdminPanel', {}).catch(() => undefined);
         void Promise.all([answered, started]).then(() => setOpening(false));
     }, []);
