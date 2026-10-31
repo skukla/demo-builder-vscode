@@ -107,6 +107,30 @@ export interface WipePreview {
     never: string;
 }
 
+/** An ACO kind's count and a few of its names (PL-60). */
+export interface AcoNamed {
+    count: number;
+    names: string[];
+}
+
+/**
+ * What clearing the project's ACO catalog would do (PL-60, owner 2026-10-31): what its catalog view
+ * shows that no installed pack holds. Counts and a few names, never rows.
+ */
+export interface AcoWipePreview {
+    products: AcoNamed;
+    categories: AcoNamed;
+    /** Categories could not be listed (`categorySearch` refused): the clear leaves them, and says so. */
+    categoriesUnlisted: boolean;
+    /** How many products installed packs hold: their packs' removal takes those. */
+    installed: number;
+    total: number;
+    /** Names this exact plan; the clearing must be handed it back. */
+    token: string;
+    /** The one limit a clear through the storefront search has, in one sentence. */
+    limit: string;
+}
+
 /**
  * `check-demo-data`'s answer: every website and store to choose from, and, when stores were chosen,
  * either the list of what clearing them would do or why it may not be done from this project.
@@ -116,6 +140,8 @@ export interface DemoDataCheck {
     preview?: WipePreview;
     /** A chosen store another local project records as its own: one sentence per store, naming it. */
     refused?: string;
+    /** Asked with `aco`: what clearing the project's ACO catalog would do. */
+    aco?: AcoWipePreview;
 }
 
 /** What either handler is sent. Checked in the handler: an agent sends these too. */
@@ -128,4 +154,6 @@ export interface DemoDataRequest {
     confirm?: boolean;
     /** Started from the Data Installer's button, so its progress goes to the screen's progress window. */
     progress?: 'modal';
+    /** The project's ACO catalog instead of Commerce stores (PL-60): `stores` is then not used. */
+    aco?: boolean;
 }

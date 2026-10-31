@@ -28,7 +28,8 @@
  * @module features/data-installer/handlers/demoDataHandlers
  */
 
-import { projectCommerce } from '../services/buildDatapackEngine';
+import { createAcoSearch, type AcoWipePlan } from '../services/aco/acoWipe';
+import { projectAco, projectCommerce } from '../services/buildDatapackEngine';
 import { type InstallRecord, type RecordFiles, nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
 import type { RemovalAccess } from '../services/demoBuilderEngine/removers';
 import { claimedStores, projectStoreChoice, readWipeClaims } from '../services/demoDataWipe/wipeClaims';
@@ -38,6 +39,7 @@ import { type WipePlan, planWipe, planWipeFor } from '../services/demoDataWipe/w
 import { WipeScopeError, readWipeStructure } from '../services/demoDataWipe/wipeReads';
 import { WipeChangedError, clearShown, storesInWords } from '../services/demoDataWipe/wipeRun';
 import { choicesOf, resolveWipeScope } from '../services/demoDataWipe/wipeScope';
+import { type AcoDemoDataDeps, checkAco, clearAco } from './acoDemoData';
 import { loadOtherProjects } from '@/core/state/otherProjects';
 import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
 import { DEMO_DATA_CLEAR_OPERATION_ID } from '@/core/utils/operationIds';
@@ -61,7 +63,13 @@ export interface DemoDataDeps {
     others: (context: HandlerContext, project: Project) => Promise<Project[]>;
     /** The ERP integration serving the project's Commerce instance, from any of those projects. */
     erp: (context: HandlerContext, project: Project, others: readonly Project[]) => WipeErp | undefined;
+    /** The project's ACO access and the storefront search over its view, for `aco: true` (PL-60). */
+    aco: AcoDemoDataDeps['aco'];
+    acoSearch: AcoDemoDataDeps['search'];
 }
+
+/** The ACO path's deps, from the handlers' own. */
+const acoDeps = (deps: DemoDataDeps): AcoDemoDataDeps => ({ aco: deps.aco, search: deps.acoSearch, files: deps.files, others: deps.others });
 
 /** The plans shown, by token, newest last; a few is plenty, since one is shown per question. */
 const PLANS_KEPT = 10;
@@ -194,14 +202,25 @@ async function clear(deps: DemoDataDeps, plans: Map<string, WipePlan>, context: 
  */
 export function createDemoDataHandlers(deps: DemoDataDeps) {
     const plans = new Map<string, WipePlan>();
+    const acoPlans = new Map<string, AcoWipePlan>();
     return defineHandlers({
-        'check-demo-data': (context: HandlerContext, payload?: DemoDataRequest) => check(deps, plans, context, payload),
+        'check-demo-data': (context: HandlerContext, payload?: DemoDataRequest) =>
+            payload?.aco ? checkAco(acoDeps(deps), acoPlans, context) : check(deps, plans, context, payload),
         'clear-demo-data': narrateOutcomeToModal<DemoDataRequest>(
-            (context, payload) => clear(deps, plans, context, payload),
+            (context, payload) => (payload?.aco ? clearAcoWithProgress(deps, acoPlans, context, payload) : clear(deps, plans, context, payload)),
             () => DEMO_DATA_CLEAR_OPERATION_ID,
         ),
     });
 }
+
+/** The ACO clearing, told in the same progress window as the stores' (PL-60). */
+function clearAcoWithProgress(deps: DemoDataDeps, acoPlans: Map<string, AcoWipePlan>, context: HandlerContext, payload: DemoDataRequest): Promise<HandlerResponse> {
+    const options = { id: DEMO_DATA_CLEAR_OPERATION_ID, title: 'Clearing ACO demo data', inModal: payload.progress === 'modal' };
+    return withOperationProgress(options, (report) => clearAco(acoDeps(deps), acoPlans, context, payload, (stage) => report(ACO_STAGES[stage] ?? stage)));
+}
+
+/** What each ACO clearing stage is called in the progress window. */
+const ACO_STAGES: Record<string, string> = { prices: 'Removing prices', products: 'Removing products', categories: 'Removing categories' };
 
 /** The project's own access, the org check against the store's org, the records on disk, and every other local project. */
 export const DEFAULT_DEMO_DATA_DEPS: DemoDataDeps = {
@@ -210,6 +229,8 @@ export const DEFAULT_DEMO_DATA_DEPS: DemoDataDeps = {
     files: nodeRecordFiles,
     others: (context, project) => loadOtherProjects(context, project.path),
     erp: findWipeErp,
+    aco: (context, project) => projectAco({ project, secrets: context.context?.secrets })(),
+    acoSearch: (settings) => createAcoSearch(settings),
 };
 
 export const demoDataHandlers = createDemoDataHandlers(DEFAULT_DEMO_DATA_DEPS);

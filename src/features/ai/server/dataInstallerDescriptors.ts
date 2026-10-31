@@ -323,10 +323,16 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'after; when it must be updated first or cannot be asked, data.preview.erp.held says why and they are left open. ' +
             "Also counts what Demo Builder installed (removed by reset_datapack, never by the clearing). Writes nothing. Defaults to the " +
             "project's own store; stores: [] answers the choices alone. When a chosen store is another project's, answers data.refused " +
-            'instead of a preview: tell the user that sentence; it names the project to clear it from.',
+            'instead of a preview: tell the user that sentence; it names the project to clear it from. ' +
+            "With aco: true, looks at the project's Adobe Commerce Optimizer catalog instead (stores ignored): data.aco names the " +
+            'products and categories its catalog view shows that no installed pack holds, a token, and its limit (only what the view ' +
+            'shows can be found), read through the storefront search; categoriesUnlisted when ACO would not list categories.',
         map: importHandlers,
         type: 'check-demo-data',
-        inputSchema: { stores: z.array(WIPE_STORE).optional().describe("The stores to look at, by website and store code. Omit for the project's own; [] for the choices alone") },
+        inputSchema: {
+            stores: z.array(WIPE_STORE).optional().describe("The stores to look at, by website and store code. Omit for the project's own; [] for the choices alone"),
+            aco: z.boolean().optional().describe("true: the project's ACO catalog instead of its Commerce stores"),
+        },
     },
     {
         tool: 'clear_demo_data',
@@ -340,13 +346,16 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'and the token from that check; if the store would now clear anything the list did not hold, nothing is written and the ' +
             'new list comes back. Refused when another project on this machine records a chosen store as its own. ' +
             "Never touches what any project's install records list, other stores' things, attributes, customer groups, companies, " +
-            'shared catalogs, stocks or settings.',
+            'shared catalogs, stocks or settings. With aco: true, clears the project\'s ACO catalog instead: deletes the prices (in the ' +
+            "view's price book), products and categories check_demo_data with aco listed, by its token; never what an installed pack holds, " +
+            'never attribute definitions; cannot be undone.',
         map: importHandlers,
         type: 'clear-demo-data',
         confirm: true, // gated twice, as reset_datapack is: the row, then the handler's own check
         inputSchema: {
-            stores: z.array(WIPE_STORE).describe('The stores to clear, by website and store code, as check_demo_data was asked about them. Never defaulted'),
-            token: z.string().describe("check_demo_data's token for those stores"),
+            stores: z.array(WIPE_STORE).optional().describe('The stores to clear, by website and store code, as check_demo_data was asked about them. Never defaulted; required unless aco'),
+            token: z.string().describe("check_demo_data's token for those stores, or for the ACO catalog"),
+            aco: z.boolean().optional().describe("true: clear the project's ACO catalog instead of Commerce stores"),
         },
     },
 

@@ -29,6 +29,7 @@ import { chunks } from './acoPackInstall';
 import { acoGraphqlUrl } from '@/features/components/services/acoSettings';
 import { acoHeaders } from '@/features/eds/services/acoStorefrontConfig';
 import type { AcoStorefrontSettings } from '@/types/aco';
+import type { AcoNamed, AcoWipePreview } from '@/types/demoDataWipe';
 
 /** The page size `productSearch` takes at most (the ingestion script's). */
 const PAGE_SIZE = 200;
@@ -46,26 +47,6 @@ export class AcoSearchError extends Error {
         super(message);
         this.name = 'AcoSearchError';
     }
-}
-
-/** A kind's count and a few of its names. */
-export interface AcoNamed {
-    count: number;
-    names: string[];
-}
-
-/** What the SC and the agent see before anything is deleted. */
-export interface AcoWipePreview {
-    products: AcoNamed;
-    categories: AcoNamed;
-    /** Categories could not be listed (`categorySearch` refused): the clear leaves them, and says so. */
-    categoriesUnlisted: boolean;
-    /** How many products installed packs hold: their packs' removal takes those. */
-    installed: number;
-    total: number;
-    /** Names this exact plan; the clearing must be handed it back. */
-    token: string;
-    limit: string;
 }
 
 /** A plan: the preview and the keys it names. */

@@ -32,7 +32,17 @@ function setUp(overrides: Partial<DemoDataDeps> = {}, store = sandbox()) {
     // The project's own record on disk: what it lists must be left to the pack's removal.
     const [record] = PROJECT_RECORDS;
     const files = memoryFiles({ [installRecordPath(PROJECT.path, record.pack)]: JSON.stringify(record) });
-    const deps: DemoDataDeps = { commerce: async () => store, guard: async () => undefined, files, others: async () => [], erp: () => undefined, ...overrides };
+    const deps: DemoDataDeps = {
+        commerce: async () => store,
+        guard: async () => undefined,
+        files,
+        others: async () => [],
+        erp: () => undefined,
+        // The ACO path has its own suite (demoDataHandlers-aco); these never reach it.
+        aco: async () => ({ refusal: 'not used here' }),
+        acoSearch: () => ({ productSkus: async () => [], categorySlugs: async () => [] }),
+        ...overrides,
+    };
     const handlers = createDemoDataHandlers(deps);
     const context = createMockHandlerContext({ stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(PROJECT) }) }) as HandlerContext;
     return { handlers, context, store, files };
