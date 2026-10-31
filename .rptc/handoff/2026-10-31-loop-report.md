@@ -88,6 +88,32 @@ clean over the dialog work.
 
 - The visual harness is still running on port 23427.
 
+## ACO (PL-60), added after you asked
+
+**A merge rehearsal**, to the supervised edge. On `loop/2026-10-31-aco-merge` (pushed), both ACO
+branches are merged onto today's develop, conflicts resolved, and the full gate passes (36,993
+tests). Develop is untouched; the real merge still waits for after beta.153. Git recorded each
+resolution, so the real merge reapplies them.
+
+- **Create datapack** was the one real design merge: develop's one dialog keeps the pack type
+  on top, and choosing ACO adds "Made from" under it. "From this Commerce instance" is the ACO
+  export form; "From a website" is the URL and a Continue that hands over to the AI.
+- **The AI files version goes to 49**: the scrape branch's new skill would otherwise never
+  reach existing projects. The branch had left this for the merge.
+- **ADR-016's example** named the deleted ToolManager; it names a file that exists.
+- **No screen moved at rest**: the same nine-screen comparison against develop came back
+  empty, with a control proving the ACO build was the one served.
+- **This branch and the dialog branch** conflict in two small places (one engine block, one
+  line-number ledger), for whenever both land.
+
+**A live-check checklist** at `.rptc/plans/aco-support/live-check.md`: six steps, each settling
+one unverified point (the Console's name for the ingestion API, what ingestion answers, and
+whether the storefront needs one more header) and saying what to send back.
+
+**ACO "Clear demo data", researched** at `.rptc/research/aco-support/clear-demo-data.md`. It is
+possible through the storefront's product search, with one limit: it can only clear what the
+project's catalog view shows. Recommendation: build it after the live check.
+
 ## Your decisions
 
 1. **Merge the branch into develop for beta.153?** It holds the dialog design, its fixes,
@@ -95,8 +121,8 @@ clean over the dialog work.
 2. **The shared-demo plan**: the eight decisions in it.
 3. **DI-9's real fix**: should a saved pack write a category key that is unique (its full
    path), with old packs still installing as before?
-4. **PL-84 and EDS-68** are fixed on develop already (the DA.live signed-out notice). Set
-   them to built?
+4. **PL-84 and EDS-68**: done, set to built as you said.
+5. **ACO "Clear demo data"**: needed before 1.0, or after?
 
 ## Walkthrough queue
 
