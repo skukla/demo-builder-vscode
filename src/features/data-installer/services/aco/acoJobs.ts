@@ -58,7 +58,8 @@ export function unknownAcoKinds(kinds: readonly string[]): string[] {
     return kinds.filter((kind) => !ACO_KINDS.some((entry) => entry.kind === kind));
 }
 
-const sameInstance = (a: AcoInstance, b: AcoInstance) => a.tenantId === b.tenantId && a.region === b.region && a.environment === b.environment;
+/** Whether two ACO instances are the same one: tenant, region and environment. */
+export const sameInstance = (a: AcoInstance, b: AcoInstance) => a.tenantId === b.tenantId && a.region === b.region && a.environment === b.environment;
 
 const nameOf = (instance: AcoInstance) => `${instance.tenantId} (${instance.region}, ${instance.environment})`;
 
