@@ -143,3 +143,4 @@ because it holds the credential-APIs fix that develop does not have.
 - 2026-10-16  test(sop): the reset's two dialogs moved two and three lines (`efd036c2d`)
 - 2026-10-16  feat(reset): eleven steps an SC can name, each with what it is doing under it (`1a208f515`)
 - 2026-10-31  fix(auth): a late Sign In still signs in, and DA.live asks in modals (`1d25e47da`)
+- 2026-10-31  fix(auth): "already signed in" asks in a modal, with no second Cancel (`5de270881`)
