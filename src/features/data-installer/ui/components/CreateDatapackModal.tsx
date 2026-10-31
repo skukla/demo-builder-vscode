@@ -70,13 +70,9 @@ export function CreateDatapackModal({ engine, onClose, onSaveFromStore }: Create
     if (chosen) return <ServiceExportModal onClose={onClose} packType={chosen} />;
     return (
         <DialogContainer onDismiss={onClose}>
-            {/* The width of the dialog it hands over to (the pick screen, or the service's
-                export form, both L and wide), so the job reads as one window that changes its
-                content, not two (owner, 2026-10-31: a chain of dialogs keeps one width). */}
             <Modal
                 title="Create a datapack"
-                size="L"
-                wide
+                fitContent
                 onClose={onClose}
                 actionButtons={[{ label: 'Continue', variant: 'accent', onPress: proceed }]}
             >
