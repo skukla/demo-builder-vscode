@@ -22,7 +22,7 @@
  */
 
 import { loadStoreSets } from './attributeSetsKind';
-import { type KindContext, MissingNameError, readOrNull, segment } from './kindContext';
+import { type AmbiguousCategoryKey, type KindContext, MissingNameError, readOrNull, segment } from './kindContext';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 
 /** What the store holds for an attribute: how it is entered and its options. */
@@ -130,14 +130,43 @@ function setLookups(ctx: KindContext): Pick<ProductLookups, 'setId' | 'setName'>
 }
 
 /** Categories: url key to id (under the pack's root first) and id back to url key. */
+/** A category as `categories/list` answers it, enough to place it and name it. */
+interface FoundCategory {
+    id: number;
+    path?: string;
+    name?: string;
+}
+
+/** Record a url key that matched more than one category, for the install's result (DI-9). */
+function noteAmbiguousKey(session: KindContext['session'], urlKey: string, candidates: FoundCategory[]): void {
+    const names = candidates.map((c) => c.name ?? String(c.id));
+    if (!session.ambiguousCategoryKeys) session.ambiguousCategoryKeys = new Map();
+    session.ambiguousCategoryKeys.set(urlKey, { chosen: names[0], names });
+}
+
+/**
+ * The install result's line for the url keys that matched more than one category (DI-9): which
+ * key, which categories, and where everything linking it went. Nothing when every key was unique.
+ */
+export function ambiguousKeysLine(keys: ReadonlyMap<string, AmbiguousCategoryKey> | undefined): string | undefined {
+    if (!keys || keys.size === 0) return undefined;
+    return [...keys]
+        .map(([key, { chosen, names }]) => `The url key ${key} names ${names.length} categories (${names.join(', ')}), so everything linking it went into ${chosen}.`)
+        .join(' ');
+}
+
 function categoryLookups(ctx: KindContext): Pick<ProductLookups, 'categoryId' | 'categoryUrlKey' | 'category'> {
     const category = cached((id) => readOrNull<StoreCategory>(ctx.get, `categories/${segment(id)}`));
     return {
         categoryId: cached(async (urlKey) => {
-            const found = await readAllPages<{ id: number; path?: string }>(ctx.get, 'categories/list', `&${search('url_key', urlKey)}`);
+            const found = await readAllPages<FoundCategory>(ctx.get, 'categories/list', `&${search('url_key', urlKey)}`);
             const root = `/${ctx.session.rootCategory.id}/`;
-            const pick = found.find((c) => `${c.path ?? ''}/`.includes(root)) ?? found[0];
+            // Under the target's root first; anywhere when nothing there matches.
+            const underRoot = found.filter((c) => `${c.path ?? ''}/`.includes(root));
+            const candidates = underRoot.length > 0 ? underRoot : found;
+            const pick = candidates[0];
             if (!pick) throw new MissingNameError('categories', urlKey, `The store has no category with the url key ${urlKey}.`);
+            if (candidates.length > 1) noteAmbiguousKey(ctx.session, urlKey, candidates);
             return String(pick.id);
         }),
         categoryUrlKey: async (id) => {

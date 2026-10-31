@@ -21,7 +21,23 @@ import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
  * Ids one kind finds or makes that a later kind needs: products and assignments name their
  * attribute set, and the group an attribute goes in, by the set's NAME.
  */
+/** A url key a pack's links named that matched more than one category (DI-9). */
+export interface AmbiguousCategoryKey {
+    /** The category everything linking the key went into: the first match. */
+    chosen: string;
+    /** Every category the key matched, by name, the chosen one first. */
+    names: string[];
+}
+
 export interface CatalogSession {
+    /**
+     * Url keys a pack's links named that matched more than one category where the install looked
+     * (DI-9). A pack names a product's categories by url key alone, and Commerce lets a child reuse
+     * its parent's key (Bodea's "Servers and Racks" and its "Racks" are both `racks`), so
+     * everything linking such a key went into the first match. The install says so on its result
+     * rather than choosing in silence.
+     */
+    ambiguousCategoryKeys?: Map<string, AmbiguousCategoryKey>;
     /** Attribute set name → its id in this store. */
     setIds: Map<string, number>;
     /** Attribute set name → the group the pack's attributes go in. */

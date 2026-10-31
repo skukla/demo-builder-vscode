@@ -23,6 +23,7 @@ import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord,
 import { resolveEngineTarget, sessionFor } from './installTarget';
 import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
 import { type RootStepAsker, rootStepLine } from './packRootStep';
+import { ambiguousKeysLine } from './productLookups';
 import { skippedLine } from './refusedRows';
 import { containersLine } from './removers';
 import { keptLine } from './repeatInstall';
@@ -152,6 +153,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         settingsLine(outcome.settings, 'Set'),
         underStoreRootLine(outcome.rootPlacement, items.categories, session.storeRoot),
         rootStepLine(outcome.rootStep),
+        ambiguousKeysLine(session.ambiguousCategoryKeys),
     ].filter(Boolean).join(' ') || undefined;
     if (current) job.perType[current] = 'success';
 }
