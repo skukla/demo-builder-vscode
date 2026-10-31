@@ -42,8 +42,11 @@ export interface SetupGuideModalProps {
     /** The integration whose guide is open, or null when none is. */
     model: IntegrationCardModel | null;
     onClose: () => void;
-    /** Opens Commerce Admin (the grid's 'openAdminPanel' request). */
-    onOpenAdmin: () => void;
+    /**
+     * Opens Commerce Admin (the grid's 'openAdminPanel' request); settles once Chrome's window is
+     * likely up, and the footer's Open Commerce Admin shows its spinner until then.
+     */
+    onOpenAdmin: () => Promise<unknown>;
     /**
      * A run that stops on a question (sign in, another org) goes to the progress window, which
      * asks it, with the step the SC was on (AB-82). Absent, the guide offers no Apply or Undo.
@@ -165,13 +168,21 @@ function Guide({
     );
     const run = useGuideRun(model, items, onAsk ? handOff : undefined);
     const busyNow = actions.busy || run.running;
+    // Open Commerce Admin's spinner, until the extension answers: once Chrome's window is likely
+    // up, two or three seconds after the press (owner, 2026-10-31).
+    const [openingAdmin, setOpeningAdmin] = useState(false);
+    const openAdmin = useCallback((): void => {
+        setOpeningAdmin(true);
+        void onOpenAdmin().finally(() => setOpeningAdmin(false));
+    }, [onOpenAdmin]);
     /** A pressed Check all steps is waiting on the Commerce sign-in the guide started as it opened. */
     const runWaitsOnSignIn = actions.connecting && actions.progress !== undefined;
     const buttons = footerButtons({
         item,
         busy: busyNow,
         setDone: () => item && actions.setStep(item.id, 'done'),
-        openAdmin: onOpenAdmin,
+        openAdmin,
+        openingAdmin,
         fix: onAsk && item ? (mode) => run.start(mode, [item.id]) : undefined,
     });
     // Apply all (AB-82): what "Prepare this store" did, from the one place the steps live.

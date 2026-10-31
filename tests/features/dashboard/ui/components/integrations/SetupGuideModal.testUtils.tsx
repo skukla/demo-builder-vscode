@@ -31,7 +31,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
             {children}
             <button onClick={onClose}>{closeLabel ?? 'Close'}</button>
             {actionButtons.map((b: any) => (
-                <button key={b.label} onClick={b.onPress} disabled={b.isDisabled}>
+                <button key={b.label} onClick={b.onPress} disabled={b.isDisabled} data-pending={b.isPending ? 'true' : undefined}>
                     {b.label}
                 </button>
             ))}

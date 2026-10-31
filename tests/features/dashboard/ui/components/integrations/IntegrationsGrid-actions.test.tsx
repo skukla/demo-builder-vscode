@@ -190,7 +190,9 @@ describe('IntegrationsGrid actions', () => {
             const tile = card('custom-app', 'Deployed');
             await user.click(within(tile).getByRole('button', { name: /^open commerce admin$/i }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('openAdminPanel', {});
+            // A menu item closes as it is picked, so it asks for the "Opening a private browser"
+            // notification while Chrome starts (owner, 2026-10-31).
+            expect(getClient().postMessage).toHaveBeenCalledWith('openAdminPanel', { notify: true });
         });
 
         // Open moved from the card FACE to the kebab (a healthy card is calm), so

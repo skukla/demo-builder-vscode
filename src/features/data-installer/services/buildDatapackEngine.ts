@@ -83,7 +83,8 @@ export function buildDatapackEngine(id: DatapackEngineId, access: DatapackEngine
         asker: {
             ask: (question, ...actions) => askDuringOperation(question, ...actions),
             openAdmin: async () => {
-                const opening = await openCommerceAdmin(access.project);
+                // The question that offered it has closed, so the notification shows Chrome starting.
+                const opening = await openCommerceAdmin(access.project, { notify: true });
                 if (opening.outcome !== 'opened') log(`could not open the Admin: ${opening.outcome === 'no-url' ? 'no Admin URL is set for this project' : 'its URL is not valid'}`);
             },
         },

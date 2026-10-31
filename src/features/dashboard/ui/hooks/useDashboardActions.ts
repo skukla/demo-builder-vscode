@@ -7,7 +7,7 @@
  * @module features/dashboard/ui/hooks/useDashboardActions
  */
 
-import { useCallback, Dispatch, SetStateAction } from 'react';
+import { useCallback, useState, Dispatch, SetStateAction } from 'react';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
@@ -69,7 +69,15 @@ export interface UseDashboardActionsReturn {
     handleVerifyOrg: () => void;
     /** Forced Adobe account/org switch (after an org mismatch); resolves when the round-trip completes */
     handleSwitchOrg: () => Promise<void>;
+    /**
+     * The tile whose private Chrome window is opening, until the extension answers (once the window
+     * is likely up): its icon is a spinner meanwhile (owner, 2026-10-31).
+     */
+    openingTile: OpeningTile;
 }
+
+/** Which tile is opening a private Chrome window, if one is. */
+export type OpeningTile = 'live' | 'admin' | null;
 
 /**
  * Hook to manage dashboard action handlers
@@ -110,13 +118,23 @@ export function useDashboardActions({
         setTimeout(() => setIsOpeningBrowser(false), FRONTEND_TIMEOUTS.DOUBLE_CLICK_PREVENTION);
     }, [isOpeningBrowser, setIsOpeningBrowser]);
 
+    const [openingTile, setOpeningTile] = useState<OpeningTile>(null);
+    /** Ask the extension to open a private window, the tile busy until it answers. */
+    const openFromTile = useCallback((tile: Exclude<OpeningTile, null>, type: string, payload?: object): Promise<void> => {
+        setOpeningTile(tile);
+        return webviewClient
+            .request(type, payload)
+            .then(() => undefined, () => undefined)
+            .finally(() => setOpeningTile(null));
+    }, []);
+
     const handleOpenLiveSite = useCallback(() => {
         if (isOpeningBrowser || !edsLiveUrl) return; // Prevent double-click or missing URL
         setIsOpeningBrowser(true);
-        webviewClient.postMessage('openLiveSite', { url: edsLiveUrl });
-        // Re-enable after delay
-        setTimeout(() => setIsOpeningBrowser(false), FRONTEND_TIMEOUTS.DOUBLE_CLICK_PREVENTION);
-    }, [isOpeningBrowser, setIsOpeningBrowser, edsLiveUrl]);
+        // Asked, not posted: it answers once Chrome's window is likely up, and the tile shows a
+        // spinner until then (owner, 2026-10-31).
+        void openFromTile('live', 'openLiveSite', { url: edsLiveUrl }).finally(() => setIsOpeningBrowser(false));
+    }, [isOpeningBrowser, setIsOpeningBrowser, edsLiveUrl, openFromTile]);
 
     const handleOpenDaLive = useCallback(() => {
         if (isOpeningBrowser || !edsDaLiveUrl) return; // Prevent double-click or missing URL
@@ -127,8 +145,9 @@ export function useDashboardActions({
     }, [isOpeningBrowser, setIsOpeningBrowser, edsDaLiveUrl]);
 
     const handleOpenAdminPanel = useCallback(() => {
-        webviewClient.postMessage('openAdminPanel');
-    }, []);
+        if (openingTile === 'admin') return; // Prevent double-click
+        void openFromTile('admin', 'openAdminPanel');
+    }, [openingTile, openFromTile]);
 
     const handleConfigure = useCallback(() => {
         webviewClient.postMessage('configure');
@@ -184,5 +203,6 @@ export function useDashboardActions({
         handleReAuthenticate,
         handleVerifyOrg,
         handleSwitchOrg,
+        openingTile,
     };
 }

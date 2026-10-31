@@ -23,8 +23,13 @@ jest.mock('vscode', () => ({
     Uri: { parse: (value: string) => ({ value }) },
 }), { virtual: true });
 
+// Chrome's start is waited out through the shared sleep(), mocked so no test sleeps for real.
+const mockSleep = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/core/utils/sleep', () => ({ sleep: (ms: number) => mockSleep(ms) }));
+
 import * as vscode from 'vscode';
 import { openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 const realPlatform = process.platform;
 function onPlatform(platform: NodeJS.Platform): void {
@@ -51,6 +56,28 @@ describe('openInIncognito', () => {
             expect.any(Function),
         );
         expect(mockOpenExternal).not.toHaveBeenCalled();
+    });
+
+    // `open` returns once Chrome is launched, two or three seconds before its window shows, so
+    // the open is not done until Chrome's usual start has passed (owner, 2026-10-31).
+    it("waits Chrome's usual start after `open` returns, before answering", async () => {
+        onPlatform('darwin');
+        const order: string[] = [];
+        mockExecFile.mockImplementation((_file, _args, callback) => { order.push('open'); callback(null, '', ''); });
+        mockSleep.mockImplementation(async () => { order.push('wait'); });
+
+        await openInIncognito('https://admin.example/');
+
+        expect(mockSleep).toHaveBeenCalledWith(TIMEOUTS.UI.BROWSER_START);
+        expect(order).toEqual(['open', 'wait']);
+    });
+
+    it('does not wait when it falls back to the default browser', async () => {
+        onPlatform('linux');
+
+        await openInIncognito('https://admin.example/');
+
+        expect(mockSleep).not.toHaveBeenCalled();
     });
 
     it('falls back to the default browser when Chrome cannot be opened', async () => {

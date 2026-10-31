@@ -54,7 +54,12 @@ export function useSetupGuide(cards: IntegrationCardModel[]): SetupGuideControls
     const leftRef = useRef<GuideAt | null>(null);
     const open = useCallback((cardId: string, stepId?: string) => setAt({ cardId, stepId }), []);
     const close = useCallback(() => setAt(null), []);
-    const openAdmin = useCallback(() => webviewClient.postMessage('openAdminPanel', {}), []);
+    // Asked, not posted: it answers once Chrome's window is likely up, and the guide's button
+    // shows its spinner until then. A failure is the handler's to say (it offers Configure).
+    const openAdmin = useCallback(
+        (): Promise<unknown> => webviewClient.request('openAdminPanel', {}).catch(() => undefined),
+        [],
+    );
     const leave = useCallback((cardId: string, stepId: string) => {
         leftRef.current = { cardId, stepId };
         setLeft(leftRef.current);

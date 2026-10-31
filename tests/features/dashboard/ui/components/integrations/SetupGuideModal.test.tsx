@@ -52,13 +52,13 @@ const model = (items: SetupChecklistItem[]) =>
 /** Render the guide and let its sign-in ahead of the checks settle, as it does on open. */
 async function renderGuide(
     items: SetupChecklistItem[] = THREE,
-    props: { onClose?: () => void; onOpenAdmin?: () => void } = {}
+    props: { onClose?: () => void; onOpenAdmin?: () => Promise<unknown> } = {}
 ) {
     const rendered = render(
         <SetupGuideModal
             model={model(items)}
             onClose={props.onClose ?? jest.fn()}
-            onOpenAdmin={props.onOpenAdmin ?? jest.fn()}
+            onOpenAdmin={props.onOpenAdmin ?? jest.fn().mockResolvedValue(undefined)}
         />
     );
     await act(async () => {});
@@ -430,11 +430,17 @@ describe('SetupGuideModal', () => {
         );
     });
 
-    it('opens Commerce Admin', async () => {
-        const onOpenAdmin = jest.fn();
+    // Busy until the extension answers, once Chrome's private window is likely up (owner, 2026-10-31).
+    it('opens Commerce Admin, the button busy until it has opened', async () => {
+        let opened: () => void = () => undefined;
+        const onOpenAdmin = jest.fn(() => new Promise<void>((resolve) => { opened = resolve; }));
         await renderGuide(THREE, { onOpenAdmin });
         fireEvent.click(screen.getByRole('button', { name: 'Open Commerce Admin' }));
         expect(onOpenAdmin).toHaveBeenCalledTimes(1);
+        expect(screen.getByRole('button', { name: 'Open Commerce Admin' })).toHaveAttribute('data-pending', 'true');
+
+        await act(async () => opened());
+        expect(screen.getByRole('button', { name: 'Open Commerce Admin' })).not.toHaveAttribute('data-pending');
     });
 
     it('stays on the step when the pushed-back model marks it done', async () => {

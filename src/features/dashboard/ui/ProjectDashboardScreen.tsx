@@ -138,6 +138,7 @@ export function ProjectDashboardScreen({
         handleReAuthenticate,
         handleVerifyOrg,
         handleSwitchOrg,
+        openingTile,
     } = useDashboardActions({
         isOpeningBrowser,
         setIsTransitioning,
@@ -255,6 +256,7 @@ export function ProjectDashboardScreen({
                                     isStopDisabled={isStopDisabled}
                                     isMeshActionDisabled={isMeshActionDisabled}
                                     isOpeningBrowser={isOpeningBrowser}
+                                    openingTile={openingTile}
                                     demoStatus={demoStatusDisplay}
                                     handleRestartDemo={handleRestartDemo}
                                     dataInstallerAvailable={dataInstallerAvailable}

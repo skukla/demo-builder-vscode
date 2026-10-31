@@ -26,6 +26,7 @@ jest.mock('@adobe/react-spectrum', () => {
         Text: ({ children, ...props }: any) => <span {...domProps(props)}>{children}</span>,
         TooltipTrigger: ({ children }: any) => <>{children}</>,
         Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
+        ProgressCircle: ({ 'aria-label': label }: any) => <span role="progressbar" aria-label={label} />,
     };
 });
 
@@ -181,5 +182,34 @@ describe('DashboardTile', () => {
         );
 
         expect(within(screen.getByRole('button')).getByTestId('dot')).toBeInTheDocument();
+    });
+
+    // A tile opening a private Chrome window: a spinner in the icon's place, presses ignored,
+    // until the extension answers (owner, 2026-10-31).
+    describe('busy', () => {
+        it("shows a spinner in the icon's place and ignores presses", () => {
+            const onPress = jest.fn();
+            render(<DashboardTile label="Manage Commerce" icon={icon} onPress={onPress} isBusy />);
+
+            const button = screen.getByRole('button');
+            expect(button).toHaveAttribute('aria-busy', 'true');
+            expect(within(button).getByRole('progressbar', { name: 'Opening' })).toBeInTheDocument();
+            expect(within(button).queryByTestId('icon')).not.toBeInTheDocument();
+            expect(within(button).getByText('Manage Commerce')).toBeInTheDocument();
+
+            button.click();
+            expect(onPress).not.toHaveBeenCalled();
+        });
+
+        it('shows the icon and takes presses when not busy', () => {
+            const onPress = jest.fn();
+            render(<DashboardTile label="Manage Commerce" icon={icon} onPress={onPress} />);
+
+            const button = screen.getByRole('button');
+            expect(button).not.toHaveAttribute('aria-busy');
+            expect(within(button).getByTestId('icon')).toBeInTheDocument();
+            button.click();
+            expect(onPress).toHaveBeenCalledTimes(1);
+        });
     });
 });

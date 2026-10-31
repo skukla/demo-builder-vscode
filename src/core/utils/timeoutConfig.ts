@@ -75,6 +75,16 @@ export const TIMEOUTS = {
         /** Minimum loading indicator display (prevents flash-of-content) */
         MIN_LOADING: 1500,
 
+        /**
+         * How long Chrome usually takes to show a private window after `open` returns. `open`
+         * answers once Chrome is launched, two or three seconds before its window shows, and
+         * macOS reports no "window is up" without asking the SC to let the extension control
+         * Chrome. A private-window open waits this long so whatever shows it working (a
+         * button's spinner, the "Opening a private browser" notification) lasts until the
+         * window is likely there (owner, 2026-10-31). An estimate, not a signal.
+         */
+        BROWSER_START: 3000,
+
         /** Fallback timeout for MutationObserver-based focus management */
         FOCUS_FALLBACK: 1000,
 

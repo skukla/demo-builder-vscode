@@ -137,7 +137,7 @@ describe('ProjectDashboardScreen - screen-owned wiring', () => {
             rerenderWith({ isEds: true, edsLiveUrl: 'https://first.example.com' });
             fireEvent.click(screen.getByText('Open in Browser'));
 
-            expect(client().postMessage).toHaveBeenCalledWith('openLiveSite', {
+            expect(client().request).toHaveBeenCalledWith('openLiveSite', {
                 url: 'https://first.example.com',
             });
         });
@@ -151,7 +151,7 @@ describe('ProjectDashboardScreen - screen-owned wiring', () => {
             rerenderWith({ isEds: true, edsLiveUrl: 'https://second.example.com' });
             fireEvent.click(screen.getByText('Open in Browser'));
 
-            expect(client().postMessage).toHaveBeenCalledWith('openLiveSite', {
+            expect(client().request).toHaveBeenCalledWith('openLiveSite', {
                 url: 'https://first.example.com',
             });
         });

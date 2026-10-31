@@ -36,6 +36,8 @@ export interface FooterInput {
     busy: boolean;
     setDone: () => void;
     openAdmin: () => void;
+    /** The Admin is opening: Chrome takes two or three seconds to show its window. */
+    openingAdmin?: boolean;
     /** The step's fix or its undo, when the guide offers one. */
     fix?: (mode: 'apply' | 'undo') => void;
 }
@@ -74,8 +76,8 @@ export function applyAllIds(items: SetupChecklistItem[], shownId: string | undef
  * under the list); otherwise the SC says it is done. A skipped or finished step the SC cannot
  * check has nothing to settle.
  */
-export function footerButtons({ item, busy, setDone, openAdmin, fix }: FooterInput): ActionButton[] {
-    const open: ActionButton = { label: 'Open Commerce Admin', variant: 'accent', onPress: openAdmin };
+export function footerButtons({ item, busy, setDone, openAdmin, openingAdmin, fix }: FooterInput): ActionButton[] {
+    const open: ActionButton = { label: 'Open Commerce Admin', variant: 'accent', onPress: openAdmin, isPending: openingAdmin };
     if (!item) return [open];
     if (item.checkable && item.state !== 'dismissed') return [...fixButtons(item, fix, busy), open];
     if (item.state === 'open') {

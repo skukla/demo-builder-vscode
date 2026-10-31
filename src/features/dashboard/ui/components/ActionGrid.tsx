@@ -90,6 +90,7 @@
  */
 
 import React from 'react';
+import type { OpeningTile } from '../hooks/useDashboardActions';
 import type { MeshStatus, StatusDisplay } from '../hooks/useDashboardStatus';
 import { BuildZone } from './BuildZone';
 import { IntegrationsSummaryTile } from './IntegrationsSummaryTile';
@@ -131,6 +132,8 @@ export interface ActionGridProps {
     meshStatus?: MeshStatus;
     /** Whether browser is currently opening */
     isOpeningBrowser: boolean;
+    /** The tile whose private Chrome window is opening; its icon is a spinner meanwhile. */
+    openingTile?: OpeningTile;
     /**
      * The artifact's own status, rendered INSIDE the zone that owns it — the
      * runtime line in Primary for non-EDS, the publish line in Storefront for
@@ -222,6 +225,7 @@ export function ActionGrid({
     isStopDisabled,
     isMeshActionDisabled,
     isOpeningBrowser,
+    openingTile = null,
     demoStatus,
     handleRestartDemo,
     dataInstallerAvailable,
@@ -271,6 +275,7 @@ export function ActionGrid({
                 isStartDisabled={isStartDisabled}
                 isStopDisabled={isStopDisabled}
                 isOpeningBrowser={isOpeningBrowser}
+                openingTile={openingTile}
                 lifecycleDot={lifecycleDot}
                 statusText={demoStatus?.text}
                 canRestart={canRestart}

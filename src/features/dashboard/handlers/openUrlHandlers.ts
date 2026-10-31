@@ -10,7 +10,7 @@
 
 import * as vscode from 'vscode';
 import { hasAdobeWorkspaceContext, hasAdobeProjectContext } from './meshStatusHelpers';
-import { openPrivateBrowser } from '@/core/utils/browserUtils';
+import { openInIncognito } from '@/core/utils/browserUtils';
 import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
 import { validateURL } from '@/core/validation/URLValidator';
 import {
@@ -76,8 +76,9 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
     }
 
     // Incognito keeps the demo clean — no cached content, nobody signed in — and
-    // falls back to the normal browser where it is not available.
-    const openedIncognito = await openPrivateBrowser(url);
+    // falls back to the normal browser where it is not available. The dashboard's tile shows
+    // its own spinner until this answers, once Chrome's window is likely up (owner, 2026-10-31).
+    const openedIncognito = await openInIncognito(url);
     context.logger.debug(`[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`);
 
     return { success: true };
@@ -116,11 +117,13 @@ export const handleOpenDaLive: MessageHandler = async (context, data) => {
  * SaaS projects derive it from the ACCS tenant endpoint. When unresolvable,
  * a notification offers a jump to Configure instead of failing.
  */
-export const handleOpenAdminPanel: MessageHandler = async (context) => {
+export const handleOpenAdminPanel: MessageHandler<{ notify?: boolean }> = async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     // Validated before it opens (a user-supplied URL), in a private window; shared with a
-    // datapack install's "Open the Admin" (`openCommerceAdmin`). No URL in the log.
-    const opening = await openCommerceAdmin(project);
+    // datapack install's "Open the Admin" (`openCommerceAdmin`). No URL in the log. Answered once
+    // Chrome's window is likely up, so a button shows its spinner until then; a link with no
+    // spinner of its own asks for the notification instead (`notify`, owner 2026-10-31).
+    const opening = await openCommerceAdmin(project, { notify: payload?.notify === true });
 
     if (opening.outcome === 'no-url') {
         // Fire-and-forget — the notification must not block the handler response.

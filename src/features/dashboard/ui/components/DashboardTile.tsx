@@ -28,6 +28,7 @@
 
 import { ActionButton, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import React from 'react';
+import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { StatusDot, type StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
 import { cn } from '@/core/ui/utils/classNames';
 /** A dot and the words for it — inseparable by construction. */
@@ -58,6 +59,11 @@ export interface DashboardTileProps {
     isDisabled?: boolean;
     /** Extra tile classes, e.g. the primary zone's `--hero` modifier. */
     className?: string;
+    /**
+     * The tile's action is under way (a private Chrome window opening): a spinner takes the icon's
+     * place, at the icon's size, and presses are ignored (owner, 2026-10-31).
+     */
+    isBusy?: boolean;
     /** `data-action` hook used by tests and styling. */
     action?: string;
 }
@@ -76,6 +82,7 @@ export function DashboardTile({
     isDisabled,
     className,
     action,
+    isBusy = false,
 }: DashboardTileProps): React.ReactElement {
     // A card with something to report says it on its second line — dot and word
     // where "where this goes" usually sits — instead of a corner dot a card's
@@ -84,7 +91,7 @@ export function DashboardTile({
     const inlineStatus = description && status?.label ? status : undefined;
     const button = (
         <ActionButton
-            onPress={onPress}
+            onPress={isBusy ? undefined : onPress}
             isQuiet
             isDisabled={isDisabled}
             UNSAFE_className={cn('dashboard-action-button', className)}
@@ -92,8 +99,15 @@ export function DashboardTile({
             // A card's name is its title; the description line is a hint, not
             // part of what the button is called.
             aria-label={description ? label : undefined}
+            aria-busy={isBusy || undefined}
         >
-            {icon}
+            {isBusy ? (
+                <span className="dashboard-tile-busy">
+                    <Spinner size="S" aria-label="Opening" />
+                </span>
+            ) : (
+                icon
+            )}
             {description ? (
                 <span className="dashboard-tile-text">
                     <Text UNSAFE_className="icon-label">{label}</Text>

@@ -19,9 +19,11 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
     entryFitsProjectAxes: jest.fn().mockReturnValue(true),
 }));
 
-const mockOpenInIncognito = jest.fn();
+// The ERP card's menu item closes as it is picked, so the screen opens with the "Opening a
+// private browser" notification (owner, 2026-10-31). Only that opener is mocked.
+const mockOpenPrivateBrowser = jest.fn();
 jest.mock('@/core/utils/browserUtils', () => ({
-    openInIncognito: (...a: unknown[]) => mockOpenInIncognito(...a),
+    openPrivateBrowser: (...a: unknown[]) => mockOpenPrivateBrowser(...a),
 }));
 
 jest.mock('@/features/dashboard/handlers/statusHandlers', () => ({
@@ -66,7 +68,7 @@ function contextWith(erp: AppBuilderComponentState | undefined, storeKey = true)
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockOpenInIncognito.mockResolvedValue(true);
+    mockOpenPrivateBrowser.mockResolvedValue(true);
 });
 
 describe('handleOpenErpScreen', () => {
@@ -75,7 +77,7 @@ describe('handleOpenErpScreen', () => {
 
         const result = await handleOpenErpScreen(context, { id: 'erp-integration' });
 
-        expect(mockOpenInIncognito).toHaveBeenCalledWith(`${SCREEN}/?key=${KEY}`);
+        expect(mockOpenPrivateBrowser).toHaveBeenCalledWith(`${SCREEN}/?key=${KEY}`);
         expect(result).toEqual({ success: true, data: { id: 'erp-integration', erp: 'demo-erp', screenUrl: SCREEN } });
     });
 
@@ -95,7 +97,7 @@ describe('handleOpenErpScreen', () => {
         const result = await handleOpenErpScreen(context, { id: 'erp-integration' });
 
         expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
-        expect(mockOpenInIncognito).not.toHaveBeenCalled();
+        expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
     });
 
     it('refuses an ERP deployed before it had a screen, and says to redeploy', async () => {
@@ -108,7 +110,7 @@ describe('handleOpenErpScreen', () => {
             error: 'Nordwind has no screen deployed. Redeploy it to add one.',
             code: ErrorCode.INVALID_OPERATION,
         });
-        expect(mockOpenInIncognito).not.toHaveBeenCalled();
+        expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
     });
 
     it('refuses when this machine holds no key, and says to redeploy', async () => {
@@ -118,7 +120,7 @@ describe('handleOpenErpScreen', () => {
 
         expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
         expect((result as { error: string }).error).toContain('Redeploy it');
-        expect(mockOpenInIncognito).not.toHaveBeenCalled();
+        expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
     });
 
     it('requires an id', async () => {
@@ -163,6 +165,6 @@ describe('handleOpenErpScreen for a second pair', () => {
         const result = await handleOpenErpScreen(mocks.mockContext, { id: 'erp-integration-2' });
 
         expect(result).toMatchObject({ success: true, data: { erp: 'demo-erp-2', screenUrl: screen2 } });
-        expect(mockOpenInIncognito).toHaveBeenCalledWith(expect.stringContaining('second-key-for-tests'));
+        expect(mockOpenPrivateBrowser).toHaveBeenCalledWith(expect.stringContaining('second-key-for-tests'));
     });
 });

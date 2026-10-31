@@ -5,6 +5,7 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
+import type { OpeningTile } from '../hooks/useDashboardActions';
 import { DashboardTile } from './DashboardTile';
 import { DashboardZone, RemedyTile } from './DashboardZone';
 
@@ -74,6 +75,7 @@ export function OpenZone({
     isStartDisabled,
     isStopDisabled,
     isOpeningBrowser,
+    openingTile = null,
     lifecycleDot,
     statusText,
     canRestart,
@@ -92,6 +94,8 @@ export function OpenZone({
     isStartDisabled: boolean;
     isStopDisabled: boolean;
     isOpeningBrowser: boolean;
+    /** The tile whose private Chrome window is opening (live site, Admin): a spinner for its icon. */
+    openingTile?: OpeningTile;
     lifecycleDot: 'info' | 'error' | undefined;
     statusText: string | undefined;
     canRestart: boolean;
@@ -142,6 +146,7 @@ export function OpenZone({
                 icon={<Globe size="L" />}
                 onPress={isEds ? (handleOpenLiveSite ?? NOOP) : handleOpenBrowser}
                 isDisabled={isOpeningBrowser || (!isEds && !isRunning)}
+                isBusy={openingTile === 'live'}
                 className={isEds ? 'dashboard-action-button--hero' : undefined}
                 description={isEds ? 'The live storefront' : 'The local storefront'}
             />
@@ -159,12 +164,14 @@ export function OpenZone({
             )}
 
             {/* Manage Commerce — always visible; the admin URL resolves
-                backend-side, so no isOpeningBrowser gating here. */}
+                backend-side, so no isOpeningBrowser gating here. Busy while its
+                private window opens (owner, 2026-10-31). */}
             <DashboardTile
                 label="Manage Commerce"
                 description="The Commerce Admin"
                 icon={<UserAdmin size="L" />}
                 onPress={handleOpenAdminPanel}
+                isBusy={openingTile === 'admin'}
             />
 
             {integrations}

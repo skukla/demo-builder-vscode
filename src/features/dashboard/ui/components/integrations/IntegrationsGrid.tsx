@@ -161,8 +161,9 @@ export function IntegrationsGrid({
             // message: the extension side resolves the admin URL per flavor
             // (explicit PaaS field or derived ACCS tenant URL) and already
             // offers a jump to Configure when it cannot.
+            // A link with no spinner of its own: the notification shows Chrome starting.
             if (action === 'open-admin') {
-                webviewClient.postMessage('openAdminPanel', {});
+                webviewClient.postMessage('openAdminPanel', { notify: true });
                 return;
             }
             // Remove is checked BEFORE the mesh branch. handleMeshAction treats

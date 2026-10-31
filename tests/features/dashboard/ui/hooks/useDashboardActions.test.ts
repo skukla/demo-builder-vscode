@@ -231,14 +231,23 @@ describe('useDashboardActions', () => {
             expect(mockRequest).toHaveBeenCalledWith('switchOrg');
         });
 
-        it('should send openAdminPanel message', () => {
+        // Asked, not posted: it answers once Chrome's private window is likely up, and the
+        // Manage Commerce tile shows a spinner until then (owner, 2026-10-31).
+        it('asks openAdminPanel, the admin tile busy until it answers', async () => {
+            let answer: (value: unknown) => void = () => undefined;
+            (webviewClient.request as jest.Mock).mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
             const { result } = renderActionsHook();
 
             act(() => {
                 result.current.handleOpenAdminPanel();
             });
 
-            expect(mockPostMessage).toHaveBeenCalledWith('openAdminPanel');
+            expect(webviewClient.request).toHaveBeenCalledWith('openAdminPanel', undefined);
+            expect(mockPostMessage).not.toHaveBeenCalled();
+            expect(result.current.openingTile).toBe('admin');
+
+            await act(async () => answer({ success: true }));
+            expect(result.current.openingTile).toBeNull();
         });
 
         it('should send editProject message', () => {
@@ -309,7 +318,9 @@ describe('useDashboardActions', () => {
     describe('Open Live Site Action', () => {
         const LIVE_URL = 'https://main--demo--acme.aem.live/';
 
-        it('should send openLiveSite carrying the live URL', () => {
+        it('asks openLiveSite carrying the live URL, the live tile busy meanwhile', async () => {
+            let answer: (value: unknown) => void = () => undefined;
+            (webviewClient.request as jest.Mock).mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
             const { result } = renderActionsHook(false, { edsLiveUrl: LIVE_URL });
 
             act(() => {
@@ -317,7 +328,9 @@ describe('useDashboardActions', () => {
             });
 
             expect(mockSetIsOpeningBrowser).toHaveBeenCalledWith(true);
-            expect(mockPostMessage).toHaveBeenCalledWith('openLiveSite', { url: LIVE_URL });
+            expect(webviewClient.request).toHaveBeenCalledWith('openLiveSite', { url: LIVE_URL });
+            expect(result.current.openingTile).toBe('live');
+            await act(async () => answer({ success: true }));
         });
 
         it('should do nothing when there is no live URL', () => {
@@ -338,11 +351,14 @@ describe('useDashboardActions', () => {
                 result.current.handleOpenLiveSite();
             });
 
-            expect(mockPostMessage).not.toHaveBeenCalled();
+            expect(webviewClient.request).not.toHaveBeenCalled();
             expect(mockSetIsOpeningBrowser).not.toHaveBeenCalled();
         });
 
-        it('should re-enable opening after the double-click delay', () => {
+        // Re-enabled when the extension answers (Chrome's window likely up), not on a timer.
+        it('re-enables opening when the extension answers', async () => {
+            let answer: (value: unknown) => void = () => undefined;
+            (webviewClient.request as jest.Mock).mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
             const { result } = renderActionsHook(false, { edsLiveUrl: LIVE_URL });
 
             act(() => {
@@ -351,8 +367,11 @@ describe('useDashboardActions', () => {
             act(() => {
                 jest.advanceTimersByTime(1000);
             });
+            expect(mockSetIsOpeningBrowser).not.toHaveBeenCalledWith(false);
 
+            await act(async () => answer({ success: true }));
             expect(mockSetIsOpeningBrowser).toHaveBeenLastCalledWith(false);
+            expect(result.current.openingTile).toBeNull();
         });
     });
 
@@ -444,7 +463,7 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).not.toHaveBeenCalled();
         });
 
-        it('should send the live URL from the latest render', () => {
+        it('should send the live URL from the latest render', async () => {
             const { result, rerender } = renderWithProps({
                 ...baseProps(),
                 edsLiveUrl: 'https://old--demo--acme.aem.live/',
@@ -452,11 +471,11 @@ describe('useDashboardActions', () => {
 
             rerender({ ...baseProps(), edsLiveUrl: 'https://new--demo--acme.aem.live/' });
 
-            act(() => {
+            await act(async () => {
                 result.current.handleOpenLiveSite();
             });
 
-            expect(mockPostMessage).toHaveBeenCalledWith('openLiveSite', {
+            expect(webviewClient.request).toHaveBeenCalledWith('openLiveSite', {
                 url: 'https://new--demo--acme.aem.live/',
             });
         });

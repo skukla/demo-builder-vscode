@@ -21,9 +21,7 @@ import type { DatapackSetupStep } from '../../types';
 import { PackSetupStepDialog } from '../components/PackSetupStepDialog';
 import { PackSetupStepLine } from '../components/PackSetupStepLine';
 import { type DataInstallerFailure, useDataInstallerRequest } from './useDataInstallerRequest';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { sleep } from '@/core/utils/sleep';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { DatapackId } from '@/types/datapack';
 
@@ -78,15 +76,15 @@ export function usePackSetupStep(pack: DatapackId | undefined): PackSetupStepVie
     }, [runCheck, name, version]);
     // Asked, not posted, so the button can show it is working until the browser has started: two
     // or three seconds with no response read as a press that did nothing (owner, 2026-10-31). The
-    // answer comes once Chrome is launched, before its window shows, so the button also stays busy
-    // for Chrome's usual start (`BROWSER_START`). What went wrong, if anything, the handler says
-    // itself (a missing URL offers Configure).
+    // extension answers once Chrome's window is likely up (`openInIncognito` waits Chrome's usual
+    // start). What went wrong, if anything, the handler says itself (a missing URL offers Configure).
     const [opening, setOpening] = useState(false);
     const openAdmin = useCallback((): void => {
         setOpening(true);
-        const started = sleep(FRONTEND_TIMEOUTS.BROWSER_START);
-        const answered = webviewClient.request('openAdminPanel', {}).catch(() => undefined);
-        void Promise.all([answered, started]).then(() => setOpening(false));
+        void webviewClient
+            .request('openAdminPanel', {})
+            .catch(() => undefined)
+            .finally(() => setOpening(false));
     }, []);
     const show = useCallback((): void => setShowing(true), []);
     const close = useCallback((): void => setShowing(false), []);

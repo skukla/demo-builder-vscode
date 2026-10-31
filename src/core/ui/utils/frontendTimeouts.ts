@@ -20,14 +20,6 @@ export const FRONTEND_TIMEOUTS = {
     SCROLL_ANIMATION: 150,
 
     /**
-     * How long a button that opens a browser stays busy at least. The extension's `open` returns
-     * once Chrome is launched, two or three seconds before its window shows, and macOS reports no
-     * "window is up" without asking the SC to let the extension control Chrome (owner,
-     * 2026-10-31: the spinner stopped while nothing had appeared yet). An estimate, not a signal.
-     */
-    BROWSER_START: 3000,
-
-    /**
      * Delay for UI state updates to settle before DOM operations.
      * Matches TIMEOUTS.UI.UPDATE_DELAY from backend (100ms).
      */

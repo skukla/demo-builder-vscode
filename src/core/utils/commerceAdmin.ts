@@ -11,7 +11,7 @@
  * @module core/utils/commerceAdmin
  */
 
-import { openInIncognito } from './browserUtils';
+import { openInIncognito, openPrivateBrowser } from './browserUtils';
 import { validateURL } from '@/core/validation/URLValidator';
 import type { Project } from '@/types/base';
 import { getAdminPanelUrl } from '@/types/typeGuards';
@@ -23,8 +23,10 @@ export type AdminOpening = { outcome: 'opened' } | { outcome: 'no-url' } | { out
  * Open the project's Commerce Admin, or say why not. Never logs the URL: it may embed credentials.
  *
  * @param project - the project whose Admin to open
+ * @param options.notify - show the "Opening a private browser" notification while Chrome starts,
+ *   for an open with no button to show its own spinner (a link, a menu item, a closed dialog)
  */
-export async function openCommerceAdmin(project: Project | undefined | null): Promise<AdminOpening> {
+export async function openCommerceAdmin(project: Project | undefined | null, options: { notify?: boolean } = {}): Promise<AdminOpening> {
     const url = getAdminPanelUrl(project);
     if (!url) return { outcome: 'no-url' };
     try {
@@ -32,6 +34,6 @@ export async function openCommerceAdmin(project: Project | undefined | null): Pr
     } catch (error) {
         return { outcome: 'invalid', error };
     }
-    await openInIncognito(url);
+    await (options.notify ? openPrivateBrowser(url) : openInIncognito(url));
     return { outcome: 'opened' };
 }

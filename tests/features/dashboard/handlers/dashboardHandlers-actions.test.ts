@@ -10,8 +10,10 @@
 import './dashboardValidatorMocks';
 
 const mockOpenInIncognito = jest.fn().mockResolvedValue(true);
+const mockOpenPrivateBrowser = jest.fn().mockResolvedValue(true);
 jest.mock('@/core/utils/browserUtils', () => ({
     openInIncognito: (...args: unknown[]) => mockOpenInIncognito(...args),
+    openPrivateBrowser: (...args: unknown[]) => mockOpenPrivateBrowser(...args),
 }));
 import * as vscode from 'vscode';
 import {
@@ -263,6 +265,20 @@ describe('Dashboard Action Handlers', () => {
             // A private window: a normal profile's adobe.com cookies overflow the
             // Admin's header limit.
             expect(mockOpenInIncognito).toHaveBeenCalledWith(adminUrl);
+            // A button shows its own spinner, so no notification beside it (owner, 2026-10-31).
+            expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
+        });
+
+        // A link with no spinner of its own (the integration card's Open Commerce Admin) asks for
+        // the "Opening a private browser" notification while Chrome starts.
+        it('opens with the notification when the caller asks for it', async () => {
+            const { mockContext } = setupWithAdminUrl();
+
+            const result = await handleOpenAdminPanel(mockContext, { notify: true });
+
+            expect(result).toEqual({ success: true });
+            expect(mockOpenPrivateBrowser).toHaveBeenCalledWith(adminUrl);
+            expect(mockOpenInIncognito).not.toHaveBeenCalled();
         });
 
         it('should return an error and not open the browser when the URL is invalid', async () => {

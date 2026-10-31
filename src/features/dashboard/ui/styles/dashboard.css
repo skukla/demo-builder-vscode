@@ -410,6 +410,27 @@
     height: 20px;
 }
 
+/* A busy tile's spinner sits in the icon's place, at the icon's size, so nothing moves
+   (`DashboardTile isBusy`, owner 2026-10-31). Sized per layout below, as the icon is. */
+.dashboard-tile-busy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 20px;
+    height: 20px;
+}
+
+.dashboard-card-row > .dashboard-action-button .dashboard-tile-busy {
+    width: 22px;
+    height: 22px;
+}
+
+.dashboard-compact-list .dashboard-action-button .dashboard-tile-busy {
+    width: 16px;
+    height: 16px;
+}
+
 /* Hero accent — emphasize the top-tier actions (Start/Stop, Open, AI).
    A modifier class, NOT a Spectrum variant, to keep the icon-over-label tile look. */
 .dashboard-action-button--hero {
