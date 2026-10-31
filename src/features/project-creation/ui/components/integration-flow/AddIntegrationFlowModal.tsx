@@ -90,9 +90,17 @@ export interface AddIntegrationFlowModalProps {
      * for it (wizard `authenticate`, dashboard `reAuthenticate`).
      */
     onSignIn?: () => Promise<unknown>;
+    /**
+     * A confirmation the finished add needs, shown in THIS window in place of the flow: the
+     * dashboard's "prepare the store" (`PrepareOnAddConfirm`) before the ERP integration's add
+     * runs (owner, 2026-10-31,
+     * the multi-dialog audit). The same container holds it, so the window changes its content
+     * instead of closing for a second dialog. A full `Modal`, built by the host.
+     */
+    confirmation?: React.ReactNode;
 }
 
-type JourneyProps = Omit<AddIntegrationFlowModalProps, 'isOpen'>;
+type JourneyProps = Omit<AddIntegrationFlowModalProps, 'isOpen' | 'confirmation'>;
 
 /** Stages that ARE the destination picker — the line would be redundant there. */
 const DEST_PICKER_STAGES: ReadonlySet<string> = new Set([
@@ -193,6 +201,7 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
  */
 export function AddIntegrationFlowModal({
     isOpen,
+    confirmation,
     ...journey
 }: AddIntegrationFlowModalProps): React.ReactElement {
     // Warm the extension-side org-services cache the moment the modal opens (once
@@ -216,7 +225,7 @@ export function AddIntegrationFlowModal({
     // APIs, on the same size="L") already hugged its content.
     return (
         <DialogContainer onDismiss={journey.onClose}>
-            {isOpen && <FlowJourney {...journey} />}
+            {confirmation ?? (isOpen && <FlowJourney {...journey} />)}
         </DialogContainer>
     );
 }

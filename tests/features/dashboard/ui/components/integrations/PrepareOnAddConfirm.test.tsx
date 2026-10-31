@@ -1,5 +1,6 @@
 /**
- * PrepareOnAddDialog — the confirm in front of adding the ERP integration (owner, 2026-10-22):
+ * The confirm in front of adding the ERP integration (owner, 2026-10-22), shown in the Add
+ * Integration flow's own window since 2026-10-31:
  * the add prepares the store, so before it runs the SC sees what that will change, read from
  * the store as the dialog opens, and which steps change something every website on the
  * Commerce shares. Its one accent button sends the add WITH confirm and opens its progress.
@@ -9,17 +10,17 @@
 import { mockPostMessage, mockRequest } from '../../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
 
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { DialogContainer, Provider, defaultTheme } from '@adobe/react-spectrum';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 
 // Below the mock on purpose: jest.mock hoists within its own module only.
 import {
     PREPARE_ON_ADD_COPY,
-    PrepareOnAddDialog,
+    prepareOnAddConfirmation,
     usePrepareOnAdd,
     type PrepareOnAddControls,
-} from '@/features/dashboard/ui/components/integrations/PrepareOnAddDialog';
+} from '@/features/dashboard/ui/components/integrations/PrepareOnAddConfirm';
 import type { PreparationStepReport } from '@/types/storePreparation';
 
 const PAYLOAD = { id: 'erp-integration', name: 'Justrite ERP', apis: [] };
@@ -31,9 +32,13 @@ const STEPS: PreparationStepReport[] = [
 ];
 
 let controls: PrepareOnAddControls;
+/**
+ * The confirm as the Add Integration flow shows it: in that flow's own dialog container, in place
+ * of the flow (owner, 2026-10-31, the multi-dialog audit), not a second dialog.
+ */
 function Harness({ started }: { started: jest.Mock }): React.ReactElement {
     controls = usePrepareOnAdd(started);
-    return <PrepareOnAddDialog {...controls.dialog} />;
+    return <DialogContainer onDismiss={controls.dialog.onClose}>{prepareOnAddConfirmation(controls.dialog) ?? null}</DialogContainer>;
 }
 
 function renderDialog(): jest.Mock {

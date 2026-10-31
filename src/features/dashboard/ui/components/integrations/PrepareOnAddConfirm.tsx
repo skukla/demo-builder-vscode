@@ -6,13 +6,17 @@
  * that preview when it is sent without `confirm`), and which steps reach every website. Its
  * one accent button sends the add WITH confirm and opens the add's progress.
  *
- * Held by the Integrations screen beside the Prepare dialogs; built on the house `Modal`, the
- * preview's wait and notice (`PreviewWait`) and its step rows (`PreparationStepRow`).
+ * Shown in the Add Integration flow's own window, in place of the flow, once its Add is pressed
+ * (owner, 2026-10-31, the multi-dialog audit: it was a second dialog the flow closed for). The
+ * Integrations screen builds it (`PrepareOnAddConfirm`) and hands it to the flow as its
+ * `confirmation`. Built on the house `Modal`, the preview's wait and notice (`PreviewWait`) and its
+ * step rows (`PreparationStepRow`). The flow's own size, L and fitted to its content, so the
+ * window keeps its proportions.
  *
- * @module features/dashboard/ui/components/integrations/PrepareOnAddDialog
+ * @module features/dashboard/ui/components/integrations/PrepareOnAddConfirm
  */
 
-import { DialogContainer, Text } from '@adobe/react-spectrum';
+import { Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PreparationStepRow } from './PreparationStepRow';
 import { PreviewWait } from './StepPlan';
@@ -47,10 +51,10 @@ export interface PrepareOnAddTarget {
 /** What the screen gets: open the confirm, and the dialog's props. */
 export interface PrepareOnAddControls {
     confirmAdd: (target: PrepareOnAddTarget) => void;
-    dialog: PrepareOnAddDialogProps;
+    dialog: PrepareOnAddConfirmProps;
 }
 
-export interface PrepareOnAddDialogProps {
+export interface PrepareOnAddConfirmProps {
     target: PrepareOnAddTarget | null;
     onConfirm: (target: PrepareOnAddTarget) => void;
     onClose: () => void;
@@ -129,13 +133,14 @@ function PreparationBody({ preparation }: { preparation: AddPreparationPreview }
     );
 }
 
-/** The confirm itself, read when it opens. */
-function ConfirmBody({ target, onConfirm, onClose }: PrepareOnAddDialogProps & { target: PrepareOnAddTarget }): React.ReactElement {
+/** The confirm itself, read when it opens: a full `Modal`, for the flow's window to show. */
+export function PrepareOnAddConfirm({ target, onConfirm, onClose }: PrepareOnAddConfirmProps & { target: PrepareOnAddTarget }): React.ReactElement {
     const { preparation, error } = useAddPreview(target.payload);
     return (
         <Modal
             title={PREPARE_ON_ADD_COPY.title(target.name)}
             size="L"
+            fitContent
             onClose={onClose}
             actionButtons={[
                 { label: PREPARE_ON_ADD_COPY.action, variant: 'accent', onPress: () => onConfirm(target), isDisabled: !preparation },
@@ -150,12 +155,12 @@ function ConfirmBody({ target, onConfirm, onClose }: PrepareOnAddDialogProps & {
     );
 }
 
-/** The dialog, mounted only while an add waits for its confirm. */
-export function PrepareOnAddDialog(props: PrepareOnAddDialogProps): React.ReactElement | null {
-    if (props.target === null) return null;
-    return (
-        <DialogContainer onDismiss={props.onClose}>
-            <ConfirmBody {...props} target={props.target} />
-        </DialogContainer>
-    );
+/**
+ * The confirm for the flow's window, or nothing while no add waits on one.
+ *
+ * @param props - the waiting add, and the confirm and close callbacks
+ * @returns the confirm `Modal`, or undefined
+ */
+export function prepareOnAddConfirmation(props: PrepareOnAddConfirmProps): React.ReactElement | undefined {
+    return props.target ? <PrepareOnAddConfirm {...props} target={props.target} /> : undefined;
 }

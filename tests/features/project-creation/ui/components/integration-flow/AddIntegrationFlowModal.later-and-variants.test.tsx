@@ -357,3 +357,23 @@ describe('AddIntegrationFlowModal — phase-running bridge', () => {
  * `reExportIndex` ledger fails the build if a re-export index reappears. The
  * component tests around it are what still measure behaviour.
  */
+
+/**
+ * A confirmation the finished add waits on (the dashboard's "prepare the store" before the ERP
+ * integration's add) shows in the flow's OWN window, in place of the flow, not as a second dialog
+ * (owner, 2026-10-31, the multi-dialog audit).
+ */
+describe('a confirmation the add waits on', () => {
+    it('takes the flow window over, once, even after the flow itself has closed', () => {
+        renderModal({ isOpen: false, confirmation: <div role="dialog" aria-label="Add ERP Integration and prepare the store" /> });
+
+        expect(screen.getAllByRole('dialog')).toHaveLength(1);
+        expect(screen.getByRole('dialog', { name: 'Add ERP Integration and prepare the store' })).toBeInTheDocument();
+    });
+
+    it('shows the flow as usual when nothing waits', () => {
+        renderModal();
+
+        expect(screen.queryByRole('dialog', { name: /prepare the store/ })).not.toBeInTheDocument();
+    });
+});

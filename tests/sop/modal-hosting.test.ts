@@ -49,6 +49,9 @@ const HOSTS = /DialogContainer|DialogTrigger/;
 const HOSTED_BY_PARENT: Record<string, string> = {
     'AiCapabilitiesModal.tsx': 'DashboardDialogs.tsx',
     'PromptEditDialog.tsx': 'AiOverviewScreen.tsx',
+    // The ERP add's "prepare the store", shown in the Add Integration flow's own container
+    // through its `confirmation` slot (owner, 2026-10-31: one window, not a second dialog).
+    'PrepareOnAddConfirm.tsx': 'AddIntegrationFlowModal.tsx',
 };
 
 /** Every .ts/.tsx file under src/. */

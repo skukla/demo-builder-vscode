@@ -175,6 +175,7 @@ interface HarnessProps {
         onAddCustomAppBuilderComponent: jest.Mock;
     };
     updateSpy: jest.Mock;
+    confirmation?: React.ReactNode;
 }
 
 /** Hosts the modal over a REAL useState wizard state (commits re-render the tree). */
@@ -189,6 +190,7 @@ function Harness({
     onClose,
     builder,
     updateSpy,
+    confirmation,
 }: HarnessProps): React.ReactElement {
     const [state, setState] = useState<WizardState>(() => makeState(initial));
     const updateState = useCallback(
@@ -210,6 +212,7 @@ function Harness({
             blankComponent={blankComponent}
             reservedIds={reservedIds}
             builder={builder}
+            confirmation={confirmation}
         />
     );
 }
@@ -224,6 +227,8 @@ export interface RenderOptions {
     blankComponent?: AppBuilderComponentCatalogEntry;
     /** Per-suite collision domain. */
     reservedIds: Set<string>;
+    /** A confirmation the finished add waits on, shown in the flow's own window. */
+    confirmation?: React.ReactNode;
 }
 
 export function renderFlowModal(options: RenderOptions) {
@@ -252,6 +257,7 @@ export function renderFlowModal(options: RenderOptions) {
                 onClose={onClose}
                 builder={builder}
                 updateSpy={updateSpy}
+                confirmation={options.confirmation}
             />
         </Provider>
     );

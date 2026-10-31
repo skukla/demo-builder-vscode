@@ -4,7 +4,7 @@
  * on a shared Commerce some of that changes settings every website shares. Before the project
  * exists nothing can read its store, so Review names the steps from the catalog; the run
  * checks each first and leaves one already done as it is. The Integrations screen's add reads
- * the store instead (`PrepareOnAddDialog`).
+ * the store instead (`PrepareOnAddConfirm`, in the Add Integration flow's window).
  *
  * Pure: the catalog is handed in.
  *

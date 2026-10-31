@@ -81,6 +81,8 @@ export interface AddIntegrationFlowAdapterProps {
      * sends it (owner, 2026-10-22). Without this it is sent at once.
      */
     onConfirmAdd?: (target: { id: string; name: string; payload: AddAppBuilderComponentRequestPayload }) => void;
+    /** The confirmation the finished add waits on, shown in the flow's own window (`AddIntegrationFlowModal`). */
+    confirmation?: React.ReactNode;
     /**
      * A destination was chosen (mode `destination`). The move itself belongs to
      * the SCREEN, which hosts the progress modal it narrates into — this only
@@ -106,6 +108,7 @@ export function AddIntegrationFlowAdapter({
     onAddStarted,
     onConfirmAdd,
     onDestinationChosen,
+    confirmation,
 }: AddIntegrationFlowAdapterProps): React.ReactElement {
     // Read through a ref: the builder callbacks below are memoised once.
     const onAddStartedRef = useRef(onAddStarted);
@@ -294,6 +297,7 @@ export function AddIntegrationFlowAdapter({
             reservedIds={reservedIds}
             builder={builder}
             onSignIn={signIn}
+            confirmation={confirmation}
         />
     );
 }

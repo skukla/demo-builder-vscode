@@ -23,7 +23,7 @@ import { Flex, Text } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
 import { ErpAssignDialogs, useErpAssignDialogs } from '../components/integrations/ErpAssignDialogs';
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
-import { PrepareOnAddDialog, usePrepareOnAdd } from '../components/integrations/PrepareOnAddDialog';
+import { prepareOnAddConfirmation, usePrepareOnAdd } from '../components/integrations/PrepareOnAddConfirm';
 import { SetupGuideModal } from '../components/integrations/SetupGuideModal';
 import { setupNextStep, useSetupGuide } from '../components/integrations/useSetupGuide';
 import { useComponentOperation } from '../hooks/useComponentOperation';
@@ -231,6 +231,8 @@ export function IntegrationsScreen({
                     onAddStarted={operations.started}
                     onConfirmAdd={prepareOnAdd.confirmAdd}
                     onDestinationChosen={actions.handleDestinationChosen}
+                    // The ERP add's "prepare the store", in the flow's own window (owner, 2026-10-31).
+                    confirmation={prepareOnAddConfirmation(prepareOnAdd.dialog)}
                 />
 
                 {/* The operation progress modal (PL-59). Here, not in the grid: the
@@ -245,7 +247,6 @@ export function IntegrationsScreen({
                 />
                 <SetupGuideModal {...guideModal} onAsk={askFromGuide} />
                 <ErpAssignDialogs {...erpAssign.dialogs} />
-                <PrepareOnAddDialog {...prepareOnAdd.dialog} />
             </FullScreenSurface>
         </PageLayout>
     );
