@@ -20,6 +20,7 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
+import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { type ActionButton, Modal } from '@/core/ui/components/ui/Modal';
 import { SetupStepFacts } from '@/core/ui/components/ui/SetupStepFacts';
 import { STATUS_COPY, SetupStepHeader, type StepStatusView, savedStepStatus } from '@/core/ui/components/ui/SetupStepHeader';
@@ -38,10 +39,16 @@ export interface PackSetupStepDialogProps {
     onClose: () => void;
 }
 
-/** Where the step stands: a Check that could not answer says so; otherwise the saved step decides. */
+/**
+ * Where the step stands: a Check that could not answer says so; otherwise the saved step decides.
+ * Done says what the Check found ("The store … shows ZZ Root DB12's categories."), as the side
+ * panel does, not the guide's "Already set up in the store.", which read oddly right after the SC
+ * did it (owner, 2026-10-31).
+ */
 function statusOf(item: SetupChecklistItem, failure: string | undefined): StepStatusView {
     if (failure) return { label: STATUS_COPY.unknown, tone: 'warning', line: failure };
-    return savedStepStatus(item);
+    const saved = savedStepStatus(item);
+    return item.state === 'done' && item.note ? { ...saved, line: item.note } : saved;
 }
 
 /** Open the Admin and Check while the step is open; nothing but Close once it is done. */
@@ -63,10 +70,14 @@ export function PackSetupStepDialog(props: PackSetupStepDialogProps): React.JSX.
             {/* The step's own title is the dialog's: "One step in the Admin" over it was a second
                 heading saying the same (owner, 2026-10-31). */}
             <Modal title={item.title} fitContent onClose={onClose} actionButtons={footer(props)}>
-                <div className="setup-guide-step" data-testid="pack-setup-step-dialog">
-                    <SetupStepHeader item={item} status={status} busy={checking} hideTitle />
-                    <SetupStepFacts item={item} />
-                </div>
+                {/* Held at the tallest it has been, so "Done" (one line) after "Not set up" (two)
+                    does not shrink the dialog and re-centre it (owner, 2026-10-31). */}
+                <SteadyHeight align="start">
+                    <div className="setup-guide-step" data-testid="pack-setup-step-dialog">
+                        <SetupStepHeader item={item} status={status} busy={checking} hideTitle />
+                        <SetupStepFacts item={item} />
+                    </div>
+                </SteadyHeight>
             </Modal>
         </DialogContainer>
     );

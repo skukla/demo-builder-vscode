@@ -183,7 +183,9 @@ it('a Check that finds it done shows the check mark in the dialog, offers no Che
     await press(screen.getByRole('button', { name: 'Check' }));
 
     expect(banner()).toHaveTextContent('Done');
-    expect(banner()).toHaveTextContent('Already set up in the store.');
+    // What the Check found, as the panel says it, not the guide's "Already set up in the store."
+    expect(banner()).toHaveTextContent("The store Justrite Test Store shows ZZ Root DB12's categories.");
+    expect(banner()).not.toHaveTextContent('Already set up');
     expect(screen.queryByRole('button', { name: 'Check' })).not.toBeInTheDocument();
     expect(panel()).toHaveTextContent("The store Justrite Test Store shows ZZ Root DB12's categories.");
     expect(within(panel()).queryByRole('button', { name: 'Show step' })).not.toBeInTheDocument();
