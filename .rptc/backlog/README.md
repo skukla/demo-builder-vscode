@@ -455,7 +455,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-83` | fix | [Undo leaves what changed since](2026-10-27-undo-leaves-what-changed-since.md) | — | med | active |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
-### data-installer  (9)
+### data-installer  (10)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -467,6 +467,7 @@ each item's own file; what has already landed against an item is in its
 | `DI-7` | feature | [Datapack images: how a pack carries its product images](2026-10-30-datapack-images.md) | — | low | backlog |
 | `DI-8` | feature | [`product_export`: the bulk product form Luma and Venia carry](2026-10-30-datapack-bulk-product-form.md) | _the owner reading the four `product_export` items from the service's database (tabled 2026-10-27)_ | med | gated |
 | `DI-9` | fix | [A pack links products to categories by url key, which two categories can share](2026-10-30-datapack-category-links-by-url-key.md) | — | med | backlog |
+| `DI-10` | feature | [A colleague's shared pack should say who made it](2026-10-31-library-pack-owner-name.md) | — | low | backlog |
 | `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | superseded |
 
 ### prerequisites  (4)
@@ -547,7 +548,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-56g` | chore | └ [A feature page for moving projects](2026-09-11-portability-docs.md) | PL-56d | low | built |
 | `PL-56h` | feature | └ [An imported or copied project gets its own storefront and its own Adobe project, already named](2026-10-07-import-copy-gets-its-own-everything.md) | — | med | backlog |
 | `PL-59` | feature | [A long operation should say what it is doing, not just spin](2026-09-16-progress-surface-for-long-operations.md) | — | high | built |
-| `PL-60` | feature | [Finish Adobe Commerce Optimizer (ACO) support](2026-09-17-aco-support.md) | — | high | planned |
+| `PL-60` | feature | [Finish Adobe Commerce Optimizer (ACO) support](2026-09-17-aco-support.md) | — | high | active |
 | `PL-61` | question | [What does a product profile per Commerce instance change for each SC?](2026-09-17-per-instance-commerce-profiles.md) | — | high | dropped |
 | `PL-62` | feature | [Adding something is a card, everywhere](2026-09-21-add-is-a-card.md) | — | low | built |
 | `PL-63` | fix | [The CSS baseline check refuses every push that MERGES a stylesheet change](2026-09-23-css-baseline-cannot-accept-a-merged-capture.md) | — | med | built |
@@ -719,7 +720,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*319 item(s) sit outside the A–G chain.*
+*320 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
