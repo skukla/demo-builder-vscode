@@ -1,0 +1,16 @@
+/**
+ * .menu-trigger-caret: the arrow after a menu button's word ("More ▾", `CardActionsMenu` with a
+ * `label`, owner 2026-10-31). A character in the text, since Spectrum moves any icon in a button
+ * to before the word. Sized and spaced as the sidebar's "Chat ▾" caret (`.sidebar-tile-caret`).
+ *
+ * FEATURE-SCOPED (ADR-017 §6): imported by every entry that renders `CardActionsMenu` (aiOverview,
+ * dataInstaller, integrations, projectsList, siteAccess, wizard), since the class sits in its
+ * source. Only the Data Installer's pack panel passes a label today.
+ */
+@layer theme {
+.menu-trigger-caret {
+    font-size: 1.15em;
+    line-height: 1;
+    margin-left: 6px;
+}
+}

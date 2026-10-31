@@ -98,7 +98,7 @@
        into every webview; `.sample-data-note` above already relies on one.)
        The fallback is the accent blue rather than another grey — if the var is
        ever missing, a visible chip is the failure we want. */
-    /* .number-badge moved to utilities.css (ADR-017 §6). It is used by two
+    /* .number-badge moved out (ADR-017 §6), first to utilities.css and now step-scaffold.css. It is used by two
        CORE components — NumberedInstructions and FieldHelpButton — and this sheet
        is imported by only 4 of the 8 entries, so the badge rendered unstyled on
        the other four. The rule kept its `@layer theme` wrapper at the

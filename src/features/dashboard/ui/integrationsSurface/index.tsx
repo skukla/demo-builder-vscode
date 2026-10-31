@@ -45,6 +45,8 @@ import '@/core/ui/styles/add-card.css';
 import '@/core/ui/styles/modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
+// `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
+import '@/core/ui/styles/menu-trigger.css';
 // .integrations-* — this surface's own shell and grid.
 import '../styles/integrations.css';
 // .choice-* — project-creation's option cards, rendered here too.

@@ -28,6 +28,8 @@ import '@/core/ui/styles/modal.css';
 // whose graph reaches PromptGrid, the component's one consumer.
 import '@/core/ui/styles/two-column-layout.css';
 import '@/core/ui/styles/shared-ui.css';
+// `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
+import '@/core/ui/styles/menu-trigger.css';
 // .add-card — the "New prompt" card at the prompt grid's end (PL-62). A stylesheet
 // reaches only the bundles whose entry imports it (ADR-017 §6).
 import '@/core/ui/styles/add-card.css';

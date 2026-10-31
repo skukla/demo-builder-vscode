@@ -73,6 +73,8 @@ import '../styles/build-areas.css';
 import '@/core/ui/styles/inline-controls.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
+// `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
+import '@/core/ui/styles/menu-trigger.css';
 // .icon-* — the icon-above-label pattern.
 import '@/core/ui/styles/icon-label.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';

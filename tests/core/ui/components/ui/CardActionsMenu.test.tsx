@@ -44,6 +44,11 @@ jest.mock('@adobe/react-spectrum', () => ({
     ),
     Item: ({ children }: any) => <>{children}</>,
     Text: ({ children }: any) => <span>{children}</span>,
+    Button: ({ children, onPress, variant, ...props }: any) => (
+        <button onClick={onPress} data-variant={variant} {...props}>
+            {children}
+        </button>
+    ),
 }));
 
 
@@ -176,13 +181,14 @@ describe('CardActionsMenu — where it opens', () => {
  * a down arrow does. Cards keep the kebab.
  */
 describe('CardActionsMenu — with a label', () => {
-    it('shows the label and a down arrow instead of the kebab, and opens below', () => {
+    it('shows a pill button with the label and an arrow after it, and opens below', () => {
         renderMenu({ label: 'More' });
 
-        // The icons share one module mock here, so the label and where it opens are what this
-        // can tell apart; the kebab's own test above has no text at all.
+        // The house pill (a secondary Button, like Import beside it), the arrow AFTER the word.
         const trigger = screen.getByRole('button', { name: 'More actions for ERP Sync' });
-        expect(trigger).toHaveTextContent('More');
+        expect(trigger).toHaveTextContent('More▾');
+        expect(trigger).toHaveAttribute('data-variant', 'secondary');
+        expect(screen.queryByTestId('icon-kebab')).not.toBeInTheDocument();
         expect(screen.getByTestId('menu-trigger')).toHaveAttribute('data-direction', 'bottom');
     });
 

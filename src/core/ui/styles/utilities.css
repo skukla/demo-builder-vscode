@@ -407,13 +407,3 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-semantic-negative-color-icon);
 }
 }
-
-/* ============================================
-   NUMBER BADGE  (moved 2026-08-29, ADR-017 §6)
-   ============================================
-   From src/core/ui/styles/wizard.css, which only 4 of the 8 bundle entries
-   import — while `NumberedInstructions` and `FieldHelpButton` are core
-   components any surface can render. Wrapped in `@layer theme` exactly as it was
-   at its old home, so the cascade position does not move with it. */
-@layer theme {
-}

@@ -20,6 +20,8 @@ import '@/core/ui/styles/utilities.css';
 import '@/core/ui/styles/modal.css';
 // The shared UI vocabulary — status text, the search band.
 import '@/core/ui/styles/shared-ui.css';
+// `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
+import '@/core/ui/styles/menu-trigger.css';
 // .inline-notice-* — every notice on this screen.
 import '@/core/ui/styles/inline-controls.css';
 // .integration-row* — each person is drawn as the house list row.

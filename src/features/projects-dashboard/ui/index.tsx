@@ -48,6 +48,8 @@ import './styles/project-cards.css';
 import './styles/updates-modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
+// `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
+import '@/core/ui/styles/menu-trigger.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
 // The progress modal a reset narrates into is hosted here now (PL-59): a
