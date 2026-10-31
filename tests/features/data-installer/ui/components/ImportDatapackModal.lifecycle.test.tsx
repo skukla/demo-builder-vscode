@@ -69,17 +69,17 @@ describe('ImportDatapackModal — job lifecycle', () => {
             expect(resetCalls()).toHaveLength(0);
         });
 
-        it('names the instance the data will be removed from, and says there is no undo', async () => {
+        it('names where the data will be removed from, and says there is no undo', async () => {
             renderModal();
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
             await press(resetButton());
 
-            expect(await screen.findByText(/cannot be undone/i)).toBeInTheDocument();
-            // The instance id exactly ('inst', per the shared fixture). This was
-            // /inst/, which also matches the word "instance" in the prose — so it
-            // would have passed with the id absent, the one thing it checks.
+            expect(await screen.findByText(/can.t be undone/i)).toBeInTheDocument();
+            // The store by the names the SC picked; with no websites discovered (this fixture),
+            // the instance id exactly ('inst'), never a near match in the prose.
+            expect(screen.getByText('Store')).toBeInTheDocument();
             expect(screen.getByText('inst')).toBeInTheDocument();
         });
 
@@ -98,8 +98,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
             await press(resetButton());
 
-            await screen.findByText(/cannot be undone/i);
-            expect(screen.getByText(/1 data type\b/)).toBeInTheDocument();
+            await screen.findByText(/can.t be undone/i);
+            expect(screen.getByText('Data (1)')).toBeInTheDocument();
+            expect(screen.getByText('Categories', { selector: 'dd' })).toBeInTheDocument();
             expect(screen.queryByText(/stock_source_links|b2b_shared/)).not.toBeInTheDocument();
         });
 

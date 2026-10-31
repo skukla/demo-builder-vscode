@@ -244,16 +244,18 @@ describe('ImportDatapackModal — decisions', () => {
             await press(screen.getByRole('button', { name: /^remove data/i }));
         }
 
-        it('counts a single type in the singular', async () => {
+        // Counted as the side panel counts a pack's data (owner, 2026-10-31: the confirmation
+        // now uses the extension's label-and-value rows).
+        it('counts one type', async () => {
             await armReset(['Categories']);
 
-            expect(screen.getByText(/^1 data\s+type$/)).toBeInTheDocument();
+            expect(screen.getByText('Data (1)')).toBeInTheDocument();
         });
 
-        it('counts several types in the plural', async () => {
+        it('counts several types', async () => {
             await armReset(['Products']);
 
-            expect(screen.getByText(/^2 data\s+types$/)).toBeInTheDocument();
+            expect(screen.getByText('Data (2)')).toBeInTheDocument();
         });
     });
 

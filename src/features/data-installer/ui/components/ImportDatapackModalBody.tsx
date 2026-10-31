@@ -9,6 +9,7 @@
  * @module features/data-installer/ui/components/ImportDatapackModalBody
  */
 
+import { Text } from '@adobe/react-spectrum';
 import React from 'react';
 import type { ImportJobRecord } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
@@ -20,6 +21,8 @@ import type { ResultContent } from './importResult';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
+import { Fact, FactList } from '@/core/ui/components/ui/FactList';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
 
 /**
  * The project names no Commerce instance.
@@ -36,6 +39,37 @@ function NoInstanceNotice(): React.JSX.Element {
             message="Connect a Commerce backend on the project dashboard, then import from here."
             height="auto"
         />
+    );
+}
+
+/** The chosen target by name, "Justrite Test Store US (Justrite Test)", or the instance when unnamed. */
+function targetName(ctx: BodyContext): string {
+    const website = ctx.scope.websites.find((w) => w.code === ctx.scope.websiteCode);
+    const store = website?.storeViews.find((v) => v.code === ctx.scope.storeCode);
+    if (website && store) return `${store.name} (${website.name})`;
+    return website?.name ?? ctx.commerceInstance;
+}
+
+/**
+ * The armed removal, in the extension's confirmation shape (owner, 2026-10-31: the old block, a
+ * red left border, tiny capital labels and the raw instance id, read as cramped and as nothing
+ * else in the extension): the question, then Store and Data as label-and-value rows, as Clear
+ * demo data and the setup step's Where / Enter do, then the same muted "can't be undone" line.
+ * The store by the names the SC picked, not the 22-character instance id nobody can check. The
+ * data types stay listed in full: a destructive confirmation is the one place the picking should
+ * be checkable, by the labels the boxes showed.
+ */
+function ResetConfirm({ ctx }: { ctx: BodyContext }): React.JSX.Element {
+    return (
+        <>
+            <LeadText>Remove {ctx.displayName}&rsquo;s data from this store?</LeadText>
+            <FactList>
+                <Fact label="Store">{targetName(ctx)}</Fact>
+                {/* Counted as the side panel counts a pack's data, "Data (2)". */}
+                <Fact label={`Data (${ctx.selected.length})`}>{ctx.selected.map(dataTypeLabel).join(', ')}</Fact>
+            </FactList>
+            <Text UNSAFE_className="clear-demo-never">This can&rsquo;t be undone.</Text>
+        </>
     );
 }
 
@@ -85,46 +119,7 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
                         />
                     ) : null}
 
-                    {view === 'confirm-reset' ? (
-                        // Three lines, not one sentence. This read as a single run
-                        // of prose carrying fourteen raw service codes
-                        // (`b2b_shared_catalog_company_assignments`) and a bare
-                        // 22-character tenant id — the shape nobody reads before
-                        // pressing the button that cannot be undone.
-                        //
-                        // The list stays in full rather than being summarised to a
-                        // count: the user picked these types, and a destructive
-                        // confirmation is the one place they should be able to
-                        // check the picking. It is the CODES that were unreadable,
-                        // so they go through the same `dataTypeLabel` as the
-                        // checkboxes they were chosen from.
-                        <div className="datapack-import-danger">
-                            <p className="datapack-danger-lede">
-                                Remove {ctx.displayName}&rsquo;s sample data from this Commerce
-                                instance?
-                            </p>
-                            {/* Term and value each in their own element. A bare
-                                text node beside the term leaves the value with no
-                                element of its own, so nothing can query or style
-                                it independently. */}
-                            <p>
-                                <span className="datapack-danger-term">Instance</span>
-                                <span className="datapack-danger-value">
-                                    {ctx.commerceInstance}
-                                </span>
-                            </p>
-                            <p>
-                                <span className="datapack-danger-term">
-                                    {ctx.selected.length} data{' '}
-                                    {ctx.selected.length === 1 ? 'type' : 'types'}
-                                </span>
-                                <span className="datapack-danger-value">
-                                    {ctx.selected.map(dataTypeLabel).join(', ')}
-                                </span>
-                            </p>
-                            <p className="datapack-danger-warning">This cannot be undone.</p>
-                        </div>
-                    ) : null}
+                    {view === 'confirm-reset' ? <ResetConfirm ctx={ctx} /> : null}
 
                     {view === 'watching' && ctx.record ? (
                         <WatchProgress record={ctx.record} watching={ctx.watching} />
