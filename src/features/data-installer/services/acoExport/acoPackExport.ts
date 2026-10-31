@@ -10,8 +10,8 @@
  * (`writePackToStore`, never `update`), so a name and version already in the library is refused
  * and the save is undone by deleting the pack from the library.
  *
- * Installing an ACO pack is not here: Demo Builder's engine refuses ACO kinds (step 11), and
- * PL-60 owns their install.
+ * Installing an ACO pack is not here: Demo Builder's engine loads one into the project's ACO
+ * instance (`services/aco/acoJobs.ts`, PL-60).
  *
  * @module features/data-installer/services/acoExport/acoPackExport
  */

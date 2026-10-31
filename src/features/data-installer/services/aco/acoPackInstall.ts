@@ -189,6 +189,21 @@ function removalGroups(created: readonly CreatedObject[]): Array<{ kind: AcoKind
  * @throws AcoApiError when ACO refuses a delete; what was deleted stays off the record, so running
  *   it again carries on from there
  */
+/**
+ * Send one batch of deletes; a 404 is read as already gone, which is what a delete wants. Shared by
+ * a pack's removal and Clear demo data, so a row that went between a check and a clear (or ACO
+ * deleting it later, as it does asynchronously) never stops either.
+ *
+ * @throws AcoApiError for any other refusal
+ */
+export async function deleteBatch(client: AcoClient, kind: AcoKind, rows: readonly unknown[]): Promise<void> {
+    try {
+        await client.post(deletePathOf(kind), rows);
+    } catch (error) {
+        if (!(error instanceof AcoApiError && error.status === 404)) throw error;
+    }
+}
+
 export async function removeAcoPack(
     client: AcoClient,
     files: RecordFiles,
@@ -200,12 +215,7 @@ export async function removeAcoPack(
     let removed = 0;
     for (const { kind, objects } of removalGroups(recorder.created)) {
         for (const batch of chunks(objects, kind.batch)) {
-            try {
-                await client.post(deletePathOf(kind), batch.map((o) => JSON.parse(o.id) as unknown));
-            } catch (error) {
-                // Not there is gone: what removal wants.
-                if (!(error instanceof AcoApiError && error.status === 404)) throw error;
-            }
+            await deleteBatch(client, kind, batch.map((o) => JSON.parse(o.id) as unknown));
             for (const object of batch) await recorder.drop(object);
             removed += batch.length;
         }

@@ -12,6 +12,7 @@
  */
 
 import { ACO_SETTINGS, fakeAco } from './acoFakes.testUtils';
+import { AcoApiError } from '@/features/data-installer/services/aco/acoClient';
 import { type AcoSearch, AcoSearchError, createAcoSearch, planAcoWipe, runAcoWipe } from '@/features/data-installer/services/aco/acoWipe';
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { AcoStorefrontSettings } from '@/types/aco';
@@ -138,6 +139,22 @@ describe('the clearing', () => {
 
         await expect(runAcoWipe(plan, aco)).resolves.toMatchObject({ prices: 0, products: 1 });
         expect(aco.calls.map((c) => c.path)).toEqual(['/v1/catalog/products/delete']);
+    });
+
+    // A product ACO deleted between the check and the clear (its deletes are asynchronous) is gone,
+    // which is what the clear wants: the same rule a pack's removal has.
+    it('carries on past a 404, reading the row as already gone', async () => {
+        const plan = await planAcoWipe(search(['S1'], ['phones']), ACO_SETTINGS, []);
+        const aco = fakeAco((call) => (call.path === '/v1/catalog/products/delete' ? new AcoApiError('ACO answered 404', 'ingestion', 404) : undefined));
+
+        await expect(runAcoWipe(plan, aco)).resolves.toMatchObject({ products: 1, categories: 1 });
+    });
+
+    it('stops on any other refusal — control', async () => {
+        const plan = await planAcoWipe(search(['S1']), ACO_SETTINGS, []);
+        const aco = fakeAco(() => new AcoApiError('ACO answered 403', 'ingestion', 403));
+
+        await expect(runAcoWipe(plan, aco)).rejects.toBeInstanceOf(AcoApiError);
     });
 
     it('sends nothing for an empty plan — control', async () => {

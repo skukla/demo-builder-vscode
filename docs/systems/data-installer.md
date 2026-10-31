@@ -219,7 +219,10 @@ one ACO client (`services/aco/`) beside the Commerce one. The service engine is 
   changed in ACO's screens, and whether or not ACO held a row with that key before the install.
   The outcome note says so every time, and also says when the pack's locale is not the one the
   storefront reads.
-- **Clear demo data** is Commerce-only: it leaves ACO records to their own removal.
+- **Clear demo data** reaches ACO too (`check_demo_data` / `clear_demo_data` with `aco: true`,
+  `services/aco/acoWipe.ts`): it deletes what the project's catalog view shows that no installed
+  pack holds, found through the storefront search, so only what that view shows can be cleared.
+  Installed packs' rows are left to their own removal.
 
 ### An ACO pack from a website
 

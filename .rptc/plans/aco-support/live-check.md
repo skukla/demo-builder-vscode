@@ -40,6 +40,18 @@ workspace credential.
 the storefront's catalog empty after a republish.
 - *Also settles 2* (the delete answers). Send the result screen.
 
+**5b. Clear demo data, ACO part** (after step 5, with a few stray products loaded some other way).
+Ask the agent for `check_demo_data` with `aco: true`, then `clear_demo_data` with its token.
+- Settles whether the storefront search answers without a token through the project's view, and
+  (re-run the check a few minutes later) how long ACO takes to finish deleting. Send both answers.
+
+**5c. Two questions from the 2026-10-31 audit** (`.rptc/research/aco-support/audit-2026-10-31.md`):
+- Does ACO's admin GraphQL accept the project's ingestion credential (the service lists catalog
+  views and price books there)? If yes, the SC can pick the view from a list, and the clear can
+  remove every price book's prices.
+- Load a pack with a configurable product and look at a category page: do its variants show as
+  separate products? If yes, the export should hide them.
+
 **6. Turn ACO off** (Configure, untick, Save). The API is unsubscribed and the pair forgotten;
 the credential itself stays, as you decided. The project is back to zero.
 

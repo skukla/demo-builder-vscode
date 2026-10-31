@@ -24,8 +24,8 @@ import * as crypto from 'crypto';
 import type { InstallRecord } from '../demoBuilderEngine/installRecord';
 import type { AcoClient } from './acoClient';
 import { sameInstance } from './acoJobs';
-import { acoKind, deletePathOf } from './acoKinds';
-import { chunks } from './acoPackInstall';
+import { acoKind } from './acoKinds';
+import { chunks, deleteBatch } from './acoPackInstall';
 import { acoGraphqlUrl } from '@/features/components/services/acoSettings';
 import { acoHeaders } from '@/features/eds/services/acoStorefrontConfig';
 import type { AcoStorefrontSettings } from '@/types/aco';
@@ -38,8 +38,10 @@ const PAGE_SIZE = 200;
 const NAMES_SHOWN = 5;
 
 /** Said on every preview: the one limit a clear through the storefront search has. */
+// "Hidden from search" is the ingestion tool's finding (delete-everything.js: productSearch returns
+// only visible products, so hidden variants are never found), not checked live here.
 export const ACO_WIPE_LIMIT =
-    'Only what this catalog view shows can be found: a product in another view, or with no price in its price book, stays.';
+    'Only what this catalog view shows can be found: a product in another view, with no price in its price book, or hidden from search (a variant, usually) stays.';
 
 /** Why a search could not be used. */
 export class AcoSearchError extends Error {
@@ -172,7 +174,7 @@ async function deleteRows(client: AcoClient, kindName: string, rows: Record<stri
     if (!kind || rows.length === 0) return 0;
     let deleted = 0;
     for (const batch of chunks(rows, kind.batch)) {
-        await client.post(deletePathOf(kind), batch);
+        await deleteBatch(client, kind, batch);
         deleted += batch.length;
     }
     return deleted;

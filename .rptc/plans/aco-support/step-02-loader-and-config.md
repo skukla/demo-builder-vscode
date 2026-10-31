@@ -32,8 +32,8 @@ one client). The sibling step (website scrape to ACO pack) is on `aco/aco-scrape
 
 ## Still open
 
-1. An ACO "Clear demo data" (no list API; a lead is `commerce-demo-ingestion/aco/delete-everything.js`, which reads the storefront GraphQL through a catalog view).
-2. ADR-016 and ADR-023 still name `toolManager.ts` as history; ADR-016 uses it as a worked example the owner may want replaced.
+1. ~~An ACO "Clear demo data"~~: built 2026-10-31 on `loop/2026-10-31-aco-clear` (`services/aco/acoWipe.ts`), its dialog part waiting for the new dialog design.
+2. ~~ADR-016's worked example~~: replaced on the merge rehearsal (it names `configGenerator.ts`); ADR-023 keeps `toolManager.ts` as history.
 3. Everything under "Unverified" below.
 
 ## Decisions for the owner
