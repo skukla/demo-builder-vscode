@@ -21,6 +21,14 @@
         overflow-wrap: anywhere;
     }
 
+    /* The body's last line leaves the gap to the buttons to the footer, which sets it; in a
+       dialog's stack of parts the stack sets the gaps (its own margin doubled them, measured
+       32 for 16 on 2026-10-31). */
+    .lead-text:last-child,
+    .dialog-stack > .lead-text {
+        margin-bottom: 0;
+    }
+
     /* A label over a group or a field: small, muted, sentence case. It was small capitals, which
        sat beside sentence-case labels in the same dialog (dialog design rules, 2026-10-31). */
     .section-label {

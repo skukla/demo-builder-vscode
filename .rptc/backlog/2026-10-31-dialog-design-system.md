@@ -36,3 +36,7 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 
 **Still to build:** a long-content fixture for each layout in the visual harness
 (`webview-visual-baseline`), measured at 420px, so wrapping is proven on the real bundles.
+
+## Shipped so far
+
+- 2026-10-31  feat(ui): dialogs follow one design for content, size and motion (`9698ac5fa`)

@@ -113,9 +113,12 @@
     position: sticky;
     bottom: 0;
     z-index: 1;
+    /* 24 between the body and the buttons (dialog design rules). The 16px of padding that
+       sat over the rule line went with the line. */
     margin-top: 24px;
-    padding-top: 16px;
-    padding-bottom: 16px;
+    padding-top: 0;
+    /* None: the dialog's own padding below matches the 40 above its title. */
+    padding-bottom: 0;
     display: flex;
     justify-content: flex-end;
     /* Wraps the row, never a label, when the dialog is too narrow for its buttons. */
@@ -154,10 +157,12 @@
 }
 
 /* Pinned near the top, not centred: content that grows pushes only the bottom edge down, so
-   nothing above it moves under the pointer. Spectrum's wrapper centres its panel; the panel's
-   unhashed `react-spectrum-Modal` class is the stable handle, and a fullscreen dialog keeps
-   Spectrum's placement. */
-.react-spectrum-Modal:has(.modal-dialog):not([class*="fullscreen"]) {
+   nothing above it moves under the pointer. Spectrum's wrapper centres its panel, and the panel
+   is the element whose direct child is our dialog. Every Spectrum class arrives with a build
+   prefix (`PDo2aW_react-spectrum-Modal`, measured in the built bundle 2026-10-31: a selector
+   on the bare name matched nothing), so the panel is found by its child, and a fullscreen
+   dialog keeps Spectrum's placement. */
+[class*="spectrum-Modal"]:has(> .modal-dialog):not([class*="fullscreen"]) {
     align-self: flex-start;
     margin-top: calc(var(--spectrum-visual-viewport-height) * 0.08);
     max-height: calc(var(--spectrum-visual-viewport-height) * 0.84);
@@ -204,7 +209,8 @@
     margin: 0;
     font-size: 12px;
     line-height: 1.5;
-    color: var(--spectrum-global-color-gray-700);
+    /* The labels' grey: gray-700 read nearly as bright as body text in the dark theme. */
+    color: var(--spectrum-global-color-gray-600);
 }
 
 /* Modal step crossfade transition (architecture ↔ block libraries) */
@@ -274,16 +280,17 @@
 }
 
 /* A dangerous main action: solid red. It was mapped to the outline style, so no removal in any
-   house dialog showed red. */
+   house dialog showed red. Spectrum's own token for a negative button, not the colour scale:
+   the dark theme inverts the scale, so red-600 drew pale pink (measured 2026-10-31). */
 .modal-button-negative {
-    background: var(--spectrum-global-color-red-600);
+    background: var(--spectrum-negative-background-color-default);
     color: white;
-    border-color: var(--spectrum-global-color-red-600);
+    border-color: var(--spectrum-negative-background-color-default);
 }
 
 .modal-button-negative:hover {
-    background: var(--spectrum-global-color-red-700);
-    border-color: var(--spectrum-global-color-red-700);
+    background: var(--spectrum-negative-background-color-hover);
+    border-color: var(--spectrum-negative-background-color-hover);
 }
 
 /* An action beside the main one: no border until hovered. */
