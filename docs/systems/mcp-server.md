@@ -764,6 +764,19 @@ next removal can finish the job (live, 2026-10-30). Both read the store with the
 credential, behind the same org guard as the import. Plan:
 `.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
 
+### An ACO pack from a website (PL-60 slice A, 2026-10-31)
+
+`make_aco_pack_from_products` (confirm-gated) takes the products an agent read off a public
+listing page, typed `ScrapedProduct` (`src/types/scrapedProduct.ts`), with each product's
+`proposed` list naming every value the page did not state, and saves them as an ACO pack (the
+five `aco_*` kinds G5's export makes) in the SC's datapack library. Every nested object in its
+input is strict, so a misspelt `proposed` is refused rather than dropped. A SKU left out is made
+from the name and added to `proposed`; a product with no price gets no price row and is listed in
+`unpriced`. Its answer's `proposed` and `unpriced`, and the pack's description, are what the SC
+reviews before loading. It writes nothing to ACO or Commerce; `delete_library_datapack` undoes it.
+How to read the page is the generated `scrape-products-to-aco` skill (Playwright, JSON-LD first);
+the human door is "Create datapack" → ACO → "From a website", which opens the AI on the URL.
+
 ### What is installed and what happened, from both engines (datapack-engine step 14, 2026-10-30)
 
 `list_installed_datapacks` and `get_datapack_activity` used to read only the Data Installer

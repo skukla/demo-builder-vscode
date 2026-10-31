@@ -195,6 +195,23 @@ the save. What it reads and where it differs from the service, with file:line, i
 [`.rptc/research/datapack-engine/aco-export-spec.md`](../../.rptc/research/datapack-engine/aco-export-spec.md).
 Installing an ACO pack is not built: Demo Builder's engine refuses ACO kinds, and PL-60 owns it.
 
+### An ACO pack from a website
+
+"Create datapack" → ACO → **"From a website"** (owner, 2026-10-31, PL-60 slice A) takes the
+address of a page that lists products and opens the project's AI on it
+(`scrape-website-to-aco-pack`, through `demoBuilder.openInClaude`). The AI follows the generated
+`scrape-products-to-aco` skill: it reads the page with the Playwright browser, prefers schema.org
+`Product` JSON-LD where the page has it, and marks every value the page did not state (a price,
+a currency, a SKU) as proposed. Then `make_aco_pack_from_products` turns those products
+(`ScrapedProduct`, `src/types/scrapedProduct.ts`) into the same five ACO kinds as above
+(`services/acoWebsite/`), checks each against the service's schemas, and saves the pack into the
+SC's **library** for review. Its answer, and the pack's description, name what was proposed and
+which products have no price. A SKU the page did not state is made from the name and named as
+proposed; a product with no price gets no price row. Nothing reaches ACO or Commerce; deleting
+the pack from the library undoes it. DSC 3.0 does this with its own scraper service, which
+refused our sign-in; what that service is reported to do is
+[`.rptc/research/aco-support/dsc-scraper.md`](../../.rptc/research/aco-support/dsc-scraper.md).
+
 ## The library in the catalog
 
 The Data Installer screen's catalog shows both stores: one request
@@ -271,6 +288,7 @@ A zip whose files sit under one root folder reads the same.
 | See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
 | Write it into a store | "Load from file", library by default | `load_datapack_zip` |
 | Undo a load into the library | "Remove it from the library", in the load result | `delete_library_datapack` |
+| Make an ACO pack from a website's products | "Create datapack" → ACO → "From a website" (opens the AI) | `make_aco_pack_from_products` |
 
 Loading puts a pack in a store; installing it into Commerce is still Import. Each data
 type is one `add-data-item` request, so a type too large for one request is refused by

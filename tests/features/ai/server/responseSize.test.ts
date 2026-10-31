@@ -424,6 +424,9 @@ describe('rows with no output safety net are classified', () => {
         'save_datapack_zip',
         'open_datapack_zip',
         'load_datapack_zip',
+        // The saved pack, its kind counts and one proposed entry per product with a proposed
+        // value: bounded by the input's 100-product cap (PL-60 slice A).
+        'make_aco_pack_from_products',
         // `{datapackName, version, deleted}` on success.
         'delete_library_datapack',
         // `{datapackName, version, target, pack, stored, failed}`, as load answers.

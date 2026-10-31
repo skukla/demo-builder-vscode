@@ -1507,5 +1507,14 @@
         ],
         "cwd": "project",
         "why": "Owner, 2026-10-30: a project file names its pack by reference, and a private library pack is the owner's alone. Judges that the agent finds the demo's own pack (find_datapacks mine, or export_project_settings' packNote), asks the user, and calls share_datapack with shared:true rather than copying the pack anywhere. Writes to the library, so the battery stops at the consent."
+    },
+    {
+        "id": "aco-pack-from-website",
+        "prompt": "Make an ACO datapack from the products on https://shop.example.com/collections/boots and put it in my datapack library. Tell me which prices or SKUs you had to make up.",
+        "expect": [
+            "make_aco_pack_from_products"
+        ],
+        "cwd": "project",
+        "why": "PL-60 slice A (owner, 2026-10-31): 'From a website' turns a public listing page into an ACO pack in the SC's library. The agent reads the page with the Playwright browser (scrape-products-to-aco skill), marks every value the page did not state, and saves through the one tool; without it, it would hand-build the five ACO kinds and page them into the library over curl. Judges findability and that proposed values are named. Writes to the library, so the battery stops at the consent."
     }
 ]

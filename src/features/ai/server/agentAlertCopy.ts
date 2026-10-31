@@ -461,6 +461,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
+    make_aco_pack_from_products: {
+        action: 'Save website products as an ACO datapack',
+        consequence:
+            'Adds a new ACO pack, made from the products read off the website, to your own datapack library for review; nothing in ACO or Commerce changes, and deleting the pack undoes it.',
+        target: ['datapackName', 'version'],
+        sessionGrant: false,
+    },
     delete_library_datapack: {
         action: 'Delete a library datapack',
         consequence:

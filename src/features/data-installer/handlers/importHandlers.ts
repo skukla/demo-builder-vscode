@@ -28,6 +28,7 @@ import type { ImportRequest, ImportTarget } from '../services/dataInstallerWrite
 import type { DatapackEngine } from '../services/datapackEngine';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { ImportJobRecord } from '../types';
+import { acoWebsiteHandlers } from './acoWebsiteHandlers';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
 import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
 import { datapackZipHandlers } from './datapackZipHandlers';
@@ -83,6 +84,8 @@ export const importHandlers = defineHandlers({
     ...storeChangesHandlers,
     // What a website holds that Demo Builder did not install, and clearing it (step 10).
     ...demoDataHandlers,
+    // An ACO pack from a website's products, and the dialog's door to it (PL-60 slice A).
+    ...acoWebsiteHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,
