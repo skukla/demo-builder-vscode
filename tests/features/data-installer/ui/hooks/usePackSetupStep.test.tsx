@@ -130,6 +130,30 @@ it("has Open the Admin and Check in the dialog's footer", async () => {
     expect(mockRequest).toHaveBeenCalledWith('check-datapack-setup-step', { datapackName: ID.name, version: ID.version }, undefined);
 });
 
+// The banner is the only thing a Check changes, so the waiting shows there: a spinner over the
+// banner's hidden words, at the same size, and the button stops taking presses (owner, 2026-10-31).
+it('shows the Check running in the banner, not on the button', async () => {
+    let checked: (value: HandlerResponse) => void = () => undefined;
+    mockRequest.mockImplementation((type: string) => {
+        if (type === 'check-datapack-setup-step') return new Promise<HandlerResponse>((resolve) => { checked = resolve; });
+        return Promise.resolve(answer(STEP));
+    });
+    await renderStep();
+    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+
+    await press(screen.getByRole('button', { name: 'Check' }));
+    const status = banner().parentElement as HTMLElement;
+    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(within(status).getByLabelText('Checking')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Check' });
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).not.toHaveAttribute('aria-busy');
+
+    await act(async () => checked(answer(STEP)));
+    expect(banner().parentElement).not.toHaveAttribute('aria-busy');
+    expect(within(dialog()).queryByLabelText('Checking')).not.toBeInTheDocument();
+});
+
 // The browser takes two or three seconds to start; until the extension answers, the button
 // shows a spinner rather than nothing (owner, 2026-10-31).
 it('shows Open the Admin as busy until the Admin has opened', async () => {

@@ -91,7 +91,26 @@
         gap: 12px;
     }
 
-    .setup-guide-step-head > .inline-notice {
+    .setup-guide-step-status > .inline-notice {
         margin: 0;
+    }
+
+    /* A check running on the step (`busy`): the banner keeps its size and border, its words
+       hidden, and a small spinner in the middle, so the SC sees the place the answer will land
+       refresh, even when the answer is the same (owner, 2026-10-31). */
+    .setup-guide-step-status {
+        position: relative;
+    }
+
+    .setup-guide-step-status.is-busy > .inline-notice > * {
+        visibility: hidden;
+    }
+
+    .setup-guide-step-status-spinner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }

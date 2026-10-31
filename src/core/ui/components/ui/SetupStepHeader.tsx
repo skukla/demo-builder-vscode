@@ -25,7 +25,9 @@
 
 import { Badge, Heading } from '@adobe/react-spectrum';
 import React from 'react';
+import { Spinner } from './Spinner';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
+import { cn } from '@/core/ui/utils/classNames';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 /** The banner's titles, in one place. */
@@ -94,6 +96,11 @@ export interface SetupStepHeaderProps {
     status: StepStatusView;
     /** Drawn in place of the line, when the status is a plan (the guide's read of what Apply will do). */
     plan?: React.ReactNode;
+    /**
+     * A check is running on the step: the banner keeps its size, its words hidden behind a small
+     * spinner, so the place the answer will land is what visibly refreshes (owner, 2026-10-31).
+     */
+    busy?: boolean;
 }
 
 /**
@@ -101,7 +108,7 @@ export interface SetupStepHeaderProps {
  * one short sentence at most (owner, 2026-10-26: "draw attention using existing banner methods
  * but keep text simple and concise").
  */
-export function SetupStepHeader({ item, status, plan }: SetupStepHeaderProps): React.ReactElement {
+export function SetupStepHeader({ item, status, plan, busy = false }: SetupStepHeaderProps): React.ReactElement {
     return (
         <div className="setup-guide-step-head">
             <div className="setup-guide-step-title">
@@ -109,9 +116,16 @@ export function SetupStepHeader({ item, status, plan }: SetupStepHeaderProps): R
                 {/* Only some demos need this step, so it is not counted as left to do (`isLeftToDo`). */}
                 {item.optional && <Badge variant="neutral">Optional</Badge>}
             </div>
-            <InlineNotice tone={status.tone} title={status.label} testId="setup-guide-step-status">
-                {plan ?? status.line ?? BLANK_LINE}
-            </InlineNotice>
+            <div className={cn('setup-guide-step-status', busy && 'is-busy')} aria-busy={busy || undefined}>
+                <InlineNotice tone={busy ? 'info' : status.tone} title={status.label} testId="setup-guide-step-status">
+                    {plan ?? status.line ?? BLANK_LINE}
+                </InlineNotice>
+                {busy ? (
+                    <span className="setup-guide-step-status-spinner">
+                        <Spinner size="S" aria-label="Checking" />
+                    </span>
+                ) : null}
+            </div>
         </div>
     );
 }

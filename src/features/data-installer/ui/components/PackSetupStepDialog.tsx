@@ -6,7 +6,9 @@
  * Where as breadcrumbs, the value to copy and Why (`SetupStepFacts`). Its two buttons sit in the
  * dialog's footer, where the guide keeps a step's actions: Open the Admin and Check.
  *
- * The banner says what the Check found. Still open: Not set up, with what the store uses now. Done:
+ * The banner says what the Check found, and shows the spinner while one runs (owner, 2026-10-31: the
+ * banner is the only thing a Check changes, so it is where the waiting shows). Still open: Not set
+ * up, with what the store uses now. Done:
  * the green check mark. Could not check: why, in the handler's words, or that no answer came back.
  * A done step offers no Check: there is nothing left to settle.
  *
@@ -47,7 +49,8 @@ function footer({ item, checking, onCheck, openingAdmin, onOpenAdmin }: PackSetu
     if (item.state === 'done') return [];
     return [
         { label: 'Open the Admin', variant: 'secondary', onPress: onOpenAdmin, isPending: openingAdmin },
-        { label: 'Check', variant: 'accent', onPress: onCheck, isPending: checking },
+        // The banner shows the spinner while a Check runs, so the button only stops taking presses.
+        { label: 'Check', variant: 'accent', onPress: onCheck, isDisabled: checking },
     ];
 }
 
@@ -59,7 +62,7 @@ export function PackSetupStepDialog(props: PackSetupStepDialogProps): React.JSX.
         <DialogContainer onDismiss={onClose}>
             <Modal title="One step in the Admin" fitContent onClose={onClose} actionButtons={footer(props)}>
                 <div className="setup-guide-step" data-testid="pack-setup-step-dialog">
-                    <SetupStepHeader item={item} status={status} />
+                    <SetupStepHeader item={item} status={status} busy={checking} />
                     <SetupStepFacts item={item} />
                 </div>
             </Modal>
