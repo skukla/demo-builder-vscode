@@ -29,6 +29,8 @@ import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/utilities.css';
+// Every enabled button shows the hand on hover, Spectrum's included.
+import '@/core/ui/styles/interaction.css';
 // .ai-* rules, moved out of utilities.css by the CSS migration. Three
 // entries reach a component using them, so all three import it.
 import './styles/ai.css';

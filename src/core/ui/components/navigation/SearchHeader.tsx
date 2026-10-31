@@ -121,7 +121,6 @@ function renderRefreshButton(
             onPress={onRefresh}
             aria-label={refreshAriaLabel}
             isDisabled={isRefreshing}
-            UNSAFE_className="cursor-pointer"
         >
             {isRefreshing ? <Spinner size="S" /> : <Refresh />}
         </ActionButton>
@@ -142,7 +141,7 @@ function renderViewToggle(
                     onPress={() => onViewModeChange('cards')}
                     aria-label="Card view"
                     aria-pressed={viewMode === 'cards'}
-                    UNSAFE_className="cursor-pointer search-header-toggle"
+                    UNSAFE_className="search-header-toggle"
                 >
                     <ViewGrid />
                 </ActionButton>
@@ -154,7 +153,7 @@ function renderViewToggle(
                     onPress={() => onViewModeChange('rows')}
                     aria-label="List view"
                     aria-pressed={viewMode === 'rows'}
-                    UNSAFE_className="cursor-pointer search-header-toggle"
+                    UNSAFE_className="search-header-toggle"
                 >
                     <ViewList />
                 </ActionButton>

@@ -19,6 +19,8 @@ import { createRoot } from 'react-dom/client';
 import '@/core/ui/styles/reset.css';
 import '@/core/ui/styles/tokens.css';
 import '@/core/ui/styles/utilities.css';
+// Every enabled button shows the hand on hover, Spectrum's included.
+import '@/core/ui/styles/interaction.css';
 // .icon-* — the icon-above-label pattern.
 import '@/core/ui/styles/icon-label.css';
 // .sidebar-* — this panel's own styles, including its short-panel breakpoint.

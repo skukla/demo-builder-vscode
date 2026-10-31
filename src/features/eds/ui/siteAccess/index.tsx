@@ -16,6 +16,8 @@ import '@/core/ui/styles/tokens.css';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/utilities.css';
+// Every enabled button shows the hand on hover, Spectrum's included.
+import '@/core/ui/styles/interaction.css';
 // .modal-* — the shared Modal shell that confirms a removal.
 import '@/core/ui/styles/modal.css';
 // The shared UI vocabulary — status text, the search band.

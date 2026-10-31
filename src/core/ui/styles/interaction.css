@@ -1,0 +1,17 @@
+/**
+ * Every enabled button shows the hand on hover (owner, 2026-10-31).
+ *
+ * Spectrum's buttons (Button, ActionButton, the dashboard tiles, Select all, More) keep the arrow
+ * by default, while the extension's own dialog buttons (`.modal-button`) show the hand, so one
+ * dialog had both. Eight places added `cursor-pointer` one button at a time; this is the one rule
+ * instead. `@layer theme`, above Spectrum's `@layer vendor`, or Spectrum's own `cursor: default`
+ * would win (ADR-018 §1). A disabled button keeps the arrow.
+ *
+ * Loaded by every webview entry, because every one renders buttons.
+ */
+@layer theme {
+    button:not(:disabled):not([aria-disabled='true']),
+    [role='button']:not([aria-disabled='true']) {
+        cursor: pointer;
+    }
+}

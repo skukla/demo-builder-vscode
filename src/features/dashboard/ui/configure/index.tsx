@@ -23,6 +23,8 @@ import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/utilities.css';
+// Every enabled button shows the hand on hover, Spectrum's included.
+import '@/core/ui/styles/interaction.css';
 // .inline-notice-* — the store pickers' "Guests won't see any products in this
 // store view." line (EDS-46) is an InlineNotice, and this screen renders the
 // same pickers as the wizard.

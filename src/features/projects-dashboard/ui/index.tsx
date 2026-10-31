@@ -39,6 +39,8 @@ import '@/core/ui/styles/reset.css';
 import '@/core/ui/styles/tokens.css';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/utilities.css';
+// Every enabled button shows the hand on hover, Spectrum's included.
+import '@/core/ui/styles/interaction.css';
 // .project-card-* and .project-row-* rules, moved out of utilities.css by
 // the CSS migration. This is the ONLY entry whose graph reaches a component using
 // them — the family looked cross-cutting on a bare `project-` prefix match, which

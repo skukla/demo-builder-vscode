@@ -22,6 +22,8 @@ import '@/core/ui/styles/tokens.css';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/utilities.css';
+// Every enabled button shows the hand on hover, Spectrum's included.
+import '@/core/ui/styles/interaction.css';
 // .datapack-* rules, moved out of utilities.css by the CSS migration.
 // The wizard and the data installer both render a component using them; kept
 // separate from data-installer.css so the wizard does not drag in that
