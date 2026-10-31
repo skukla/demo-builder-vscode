@@ -193,7 +193,33 @@ verbatim). An existing name and version is refused, and so are `commerceInstance
 `selections` sent with `aco`; deleting the pack from the library undoes
 the save. What it reads and where it differs from the service, with file:line, is
 [`.rptc/research/datapack-engine/aco-export-spec.md`](../../.rptc/research/datapack-engine/aco-export-spec.md).
-Installing an ACO pack is not built: Demo Builder's engine refuses ACO kinds, and PL-60 owns it.
+
+### Loading an ACO pack (PL-60)
+
+Demo Builder's engine loads a pack whose kinds are all ACO's (`aco_metadata`,
+`aco_categories`, `aco_products` and its second name `aco_product`, `aco_price_books`,
+`aco_prices`, `aco_product_layers`) into the project's Adobe Commerce Optimizer instance, through
+one ACO client (`services/aco/`) beside the Commerce one. The service engine is not used for it.
+
+- **Needs:** the ACO add-on on the project with its settings filled in (tenant id, region,
+  sandbox or production, catalog view id, locale), and the ingestion credential Demo Builder
+  made in the project's Adobe workspace (`set_up_aco_credential`). No Commerce website or store
+  view is asked for. A pack mixing ACO and Commerce kinds is refused before anything is written.
+- **Order and checks:** the service's order (metadata, categories, products, price books,
+  prices, layers) and batch sizes. Every row is checked against the service's schemas before the
+  first write, and a pack with one row ACO could not take is refused whole, naming it. A row
+  ACO refuses at write time is skipped and named; the rest go in.
+- **The record:** every row is written down by the pack's own key (SKU and locale, slug and
+  locale, attribute code and locale, price book id, SKU and price book) before its batch is
+  sent, with the ACO instance it went to. Removal (`reset_datapack`, the screen's Remove) sends
+  ACO's ingestion deletes for exactly those keys, newest kind first, to that instance.
+- **What it cannot know:** ACO's ingestion API has deletes but no list or get, so nothing reads
+  ACO back. There are no fingerprints and no "edited since": installing again sends every row
+  again and replaces ACO's copy, and removal deletes every listed key, whether or not it was
+  changed in ACO's screens, and whether or not ACO held a row with that key before the install.
+  The outcome note says so every time, and also says when the pack's locale is not the one the
+  storefront reads.
+- **Clear demo data** is Commerce-only: it leaves ACO records to their own removal.
 
 ## The library in the catalog
 

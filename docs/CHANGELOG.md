@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **ACO packs load into Adobe Commerce Optimizer, and come back out.** With the ACO add-on on a project, importing an ACO datapack (`aco_wknd` and the other `aco_` packs) now loads it into the project's ACO instance instead of being refused, and removing it deletes exactly what it loaded. Demo Builder makes the ACO credential itself in the project's Adobe workspace, so you type no client id or secret, and the storefront's config.json reads the catalog from your ACO catalog view. ACO cannot be read back, so the result says plainly that Demo Builder cannot tell what was changed in ACO since. For now this is reached through your AI (`configure_project`, `set_up_aco_credential`, `start_datapack_import`); the Catalog step and Configure controls are still to come. (PL-60)
+
 ### Changed
 
 - **One Create datapack on the Data Installer screen.** "Export from this instance" and "Save from this store" are now one button, Create datapack. It asks first whether you are making a Commerce pack or an ACO pack, names the project it reads from, then opens the screen that makes that pack. The header's actions are quiet buttons with icons, and Clear demo data sits apart at the end.

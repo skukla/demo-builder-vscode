@@ -21,9 +21,14 @@ would be empty is not shown.
 | Project | always | The project name |
 | Adobe Commerce Cloud Service, or Adobe Commerce | the project's backend | How Demo Builder reaches Commerce: the GraphQL endpoint, and on PaaS the URL, Admin URL, username and password |
 | Business Structure | the backend has store codes | The website, store and store view codes, chosen from the instance's structure |
-| Catalog Service, Adobe Assets, Adobe Commerce Optimizer, Experience Platform, Additional Settings | a selected component declares fields in that group | That service's settings (`SERVICE_GROUP_DEFINITIONS`, `serviceGroupTransforms.ts`) |
+| Catalog Service, Adobe Assets, Experience Platform, Additional Settings | a selected component declares fields in that group | That service's settings (`SERVICE_GROUP_DEFINITIONS`, `serviceGroupTransforms.ts`) |
 | Block Libraries | Edge Delivery projects with a library to show | Which block libraries the storefront has |
 | Authoring | Edge Delivery projects | DA.live classic or Experience Workspace |
+
+The Adobe Commerce Optimizer group is defined but does not render yet: Configure collects
+fields from the stack's components only, never from add-ons (`useSelectedComponents`), and the
+registry it reads has no add-on bucket. Until PL-60 builds it, an ACO project's settings are set
+through `configure_project` (`env` under `adobe-commerce-aco`).
 
 Integrations are not here. Their settings live on each integration's tile on the
 Integrations screen (AB-21), and so do the mesh's deploy and remove, and the Adobe
