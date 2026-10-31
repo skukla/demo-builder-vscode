@@ -75,10 +75,18 @@ export function claimedStores(structure: CommerceStoreStructure, project: Projec
     return new Map([...byStore].map(([id, claimants]) => [id, claimSentence(structure, id, claimants)]));
 }
 
+/**
+ * A project's records of what is in its Commerce store: an ACO pack's record lists rows in an ACO
+ * instance, which a Commerce wipe never touches (PL-60).
+ */
+async function commerceRecords(files: RecordFiles, projectPath: string): Promise<InstallRecord[]> {
+    return (await readProjectRecords(files, projectPath)).filter((record) => record.aco === undefined);
+}
+
 /** Another project's records that list things on the chosen websites, or may. */
 async function recordsOnWebsites(files: RecordFiles, other: Project, websiteCodes: ReadonlySet<string>): Promise<InstallRecord[]> {
     const own = resolveInstallTarget(other)?.websiteCode;
-    const records = await readProjectRecords(files, other.path);
+    const records = await commerceRecords(files, other.path);
     return records.filter((record) => {
         const website = record.target?.websiteCode ?? own;
         return website === undefined || websiteCodes.has(website);
@@ -102,7 +110,7 @@ export async function readWipeClaims(
     const refused = scope.stores.flatMap((s) => claims.get(s.id) ?? []);
     if (refused.length > 0) return { refusal: refused.join(' ') };
     const websites = new Set(scope.stores.map((s) => s.website.code));
-    const records = await readProjectRecords(files, project.path);
+    const records = await commerceRecords(files, project.path);
     for (const other of others.filter((o) => o.path !== project.path)) records.push(...(await recordsOnWebsites(files, other, websites)));
     return { records };
 }

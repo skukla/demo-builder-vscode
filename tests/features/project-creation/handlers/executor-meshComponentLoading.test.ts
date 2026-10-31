@@ -23,6 +23,12 @@ import { HandlerContext } from '@/types/handlers';
 // Track getComponentById calls to verify fallback is being used
 let getComponentByIdCalls: string[] = [];
 
+// The ACO credential step (PL-60) is its own suite's concern: a project here that has the ACO
+// add-on would otherwise run the Adobe guard chain this suite does not set up.
+jest.mock('@/features/project-creation/handlers/executorAcoPhase', () => ({
+    executeAcoCredentialPhase: jest.fn().mockResolvedValue(undefined),
+}));
+
 // Mock ComponentManager
 jest.mock('@/features/components/services/componentManager', () => ({
     ComponentManager: jest.fn().mockImplementation(() => ({

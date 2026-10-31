@@ -86,6 +86,16 @@ export function useSelectedComponents({
             if (sys) components.push({ id: sys.id, data: sys, type: 'External System' });
         });
 
+        // The add-ons the project has chosen (PL-60): not part of the stack, so they
+        // come from `selectedAddons`, after the stack's own components, as the wizard
+        // collects them (`collectStackComponents`).
+        project.selectedAddons?.forEach((addonId: string) => {
+            const addon = componentsData.addons?.find((a) => a.id === addonId);
+            if (addon && !components.some((c) => c.id === addonId)) {
+                components.push({ id: addon.id, data: addon, type: 'Add-on' });
+            }
+        });
+
         // No appBuilder branch: the wire has no `componentsData.appBuilder`
         // bucket since c98e5125 removed the appBuilderApps mechanism. App
         // Builder env fields flow via `appBuilderComponentCatalog` (bucket 3),
@@ -101,5 +111,5 @@ export function useSelectedComponents({
         }
 
         return components;
-    }, [project.componentSelections, project.componentInstances, componentsData]);
+    }, [project.componentSelections, project.selectedAddons, project.componentInstances, componentsData]);
 }

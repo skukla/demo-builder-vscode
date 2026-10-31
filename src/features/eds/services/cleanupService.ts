@@ -4,7 +4,7 @@
  * Orchestrates cleanup of EDS (Edge Delivery Services) project resources.
  * Handles cleanup in the correct order to avoid orphaned resources:
  *
- * 1. Backend Data - Must clean up while tool config exists
+ * 1. Configuration Service - The site's config, keyed by the repository's owner/name
  * 2. DA.live - Content can be removed independently
  * 3. GitHub - Most destructive, do last; a DELETE (not an archive) takes the site's
  *    code on aem.live with it (EDS-67, `deleteStorefrontRepository`)
@@ -21,7 +21,6 @@ import {
     type StorefrontRepoDeletion,
     type StorefrontRepoDeletionDeps,
 } from './storefront/storefrontCodeRemoval';
-import type { ToolManager } from './toolManager';
 import type {
     EdsMetadata,
     EdsCleanupOptions,
@@ -49,14 +48,12 @@ export class CleanupService {
     private githubRepoOps: GitHubRepoLifecycle;
     private daLiveOrgOps: DaLiveOrgOperations;
     private configurationService?: ConfigurationService;
-    private toolManager: ToolManager;
     private codeRemoval: CodeRemovalWiring;
 
     /**
      * Create a CleanupService
      * @param githubRepoOps - GitHub repository operations for delete/archive
      * @param daLiveOrgOps - DA.live org operations for site deletion
-     * @param toolManager - Tool manager for backend cleanup
      * @param codeRemoval - How a deleted repository's code is removed from aem.live
      *   (EDS-67). Required, so no delete through this service can leave the code behind
      *   by being built without it.
@@ -66,7 +63,6 @@ export class CleanupService {
     constructor(
         githubRepoOps: GitHubRepoLifecycle,
         daLiveOrgOps: DaLiveOrgOperations,
-        toolManager: ToolManager,
         codeRemoval: CodeRemovalWiring,
         logger?: Logger,
         configurationService?: ConfigurationService,
@@ -75,15 +71,13 @@ export class CleanupService {
         this.codeRemoval = codeRemoval;
         this.daLiveOrgOps = daLiveOrgOps;
         this.configurationService = configurationService;
-        this.toolManager = toolManager;
         this.logger = logger ?? getLogger();
     }
 
     /**
      * Clean up EDS resources based on provided metadata and options.
      *
-     * CRITICAL: Cleanup order is Backend -> DA.live -> GitHub
-     * - Backend data requires tool config (must be first)
+     * CRITICAL: Cleanup order is Configuration Service -> DA.live -> GitHub
      * - DA.live can be done independently
      * - GitHub is most destructive (do last)
      *
@@ -98,29 +92,23 @@ export class CleanupService {
         this.logger.debug('[Cleanup] Starting EDS resource cleanup');
 
         const result: EdsCleanupResult = {
-            backendData: this.createSkippedResult(),
             configService: this.createSkippedResult(),
             daLive: this.createSkippedResult(),
             github: this.createSkippedResult(),
             siteCode: this.createSkippedResult(),
         };
 
-        // 1. Backend Data Cleanup (FIRST - requires tool config)
-        if (options.cleanupBackendData && metadata.backendType) {
-            result.backendData = await this.cleanupBackendData(metadata);
-        }
-
-        // 2. Configuration Service Deletion (requires repo info for org/site)
+        // 1. Configuration Service Deletion (requires repo info for org/site)
         if (options.deleteConfigService && metadata.githubRepo) {
             result.configService = await this.cleanupConfigService(metadata);
         }
 
-        // 3. DA.live Content Deletion
+        // 2. DA.live Content Deletion
         if (options.deleteDaLive && metadata.daLiveOrg && metadata.daLiveSite) {
             result.daLive = await this.cleanupDaLive(metadata);
         }
 
-        // 4. GitHub Repository (LAST - most destructive)
+        // 3. GitHub Repository (LAST - most destructive)
         if (options.deleteGitHub && metadata.githubRepo) {
             const github = await this.cleanupGitHub(metadata, options);
             result.github = github.result;
@@ -134,44 +122,6 @@ export class CleanupService {
     // ==========================================================
     // Individual Cleanup Operations
     // ==========================================================
-
-    /**
-     * Clean up backend data (Commerce or ACO)
-     */
-    private async cleanupBackendData(metadata: EdsMetadata): Promise<CleanupOperationResult> {
-        this.logger.debug(`[Cleanup] Cleaning up ${metadata.backendType} backend data`);
-
-        try {
-            let toolResult;
-
-            if (metadata.backendType === 'aco') {
-                toolResult = await this.toolManager.executeAcoCleanup();
-            } else if (metadata.backendType === 'commerce') {
-                toolResult = await this.toolManager.executeCommerceCleanup();
-            } else {
-                return this.createSkippedResult();
-            }
-
-            if (toolResult.success) {
-                this.logger.debug('[Cleanup] Backend data cleaned up successfully');
-                return { success: true, skipped: false };
-            } else {
-                return {
-                    success: false,
-                    skipped: false,
-                    error: toolResult.error || 'Backend cleanup failed',
-                };
-            }
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            this.logger.error('[Cleanup] Backend data cleanup failed', error as Error);
-            return {
-                success: false,
-                skipped: false,
-                error: errorMessage,
-            };
-        }
-    }
 
     /**
      * Delete site configuration from the AEM Configuration Service

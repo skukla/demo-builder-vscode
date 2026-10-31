@@ -133,7 +133,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 94 handlers', () => {
+        it('should have exactly 96 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
@@ -311,7 +311,10 @@ describe('dashboardHandlers', () => {
             // getStorefrontReport + takeStorefrontReportRequest + checkForUpdates removed
             // (97 → 94, EDS-64, 2026-10-23): the report window is gone; Diagnostics and the
             // get_storefront_report tool carry what it said.
-            expect(types).toHaveLength(94);
+            // setUpAcoCredential + removeAcoCredential (94 → 96, PL-60, 2026-10-31): Demo
+            // Builder makes the project's ACO ingestion credential in its workspace, and
+            // takes it away again.
+            expect(types).toHaveLength(96);
         });
 
         it('should have handlers as functions', () => {

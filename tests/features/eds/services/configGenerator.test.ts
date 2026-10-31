@@ -93,17 +93,6 @@ describe('configGenerator', () => {
                 },
             ],
             [
-                'ACO carries the Optimizer placeholders instead of the store scope',
-                { ...coordinates, ...storeScope, ...credentials, environmentType: 'aco' },
-                {
-                    all: { Store: 'en_us' },
-                    cs: {
-                        'AC-View-ID': '{{AC_VIEW_ID}}',
-                        'AC-Price-Book-ID': '{{AC_PRICE_BOOK_ID}}',
-                    },
-                },
-            ],
-            [
                 'an absent store scope falls back to default/default/base and blank credentials',
                 { ...coordinates, environmentType: 'paas' },
                 {
@@ -181,17 +170,6 @@ describe('configGenerator', () => {
                         'Magento-Store-Code': 'us_store',
                         'Magento-Store-View-Code': 'en_us',
                         'Magento-Website-Code': 'us_website',
-                    },
-                },
-            ],
-            [
-                'aco',
-                { ...baseParams, environmentType: 'aco' },
-                {
-                    all: { Store: 'en_us' },
-                    cs: {
-                        'AC-View-ID': '{{AC_VIEW_ID}}',
-                        'AC-Price-Book-ID': '{{AC_PRICE_BOOK_ID}}',
                     },
                 },
             ],

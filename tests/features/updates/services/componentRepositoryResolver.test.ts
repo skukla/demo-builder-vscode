@@ -103,11 +103,6 @@ describe('ComponentRepositoryResolver', () => {
             const info = await resolver.getRepositoryInfo('headless-commerce-mesh');
             expect(info).toBeDefined();
         });
-
-        it('should extract from tools category', async () => {
-            const info = await resolver.getRepositoryInfo('commerce-demo-ingestion');
-            expect(info).toBeDefined();
-        });
     });
 
     describe('extractRepositoryFromUrl (public API)', () => {
@@ -179,21 +174,21 @@ describe('ComponentRepositoryResolver', () => {
         it('leaves out a component whose git URL cannot be parsed, and warns once', async () => {
             loadRegistry({
                 version: '3.0.0',
-                tools: {
-                    'odd-tool': {
-                        name: 'Odd Tool',
-                        source: { type: 'git', url: 'git@github.com:skukla/odd-tool.git' },
+                mesh: {
+                    'odd-mesh': {
+                        name: 'Odd Mesh',
+                        source: { type: 'git', url: 'git@github.com:skukla/odd-mesh.git' },
                     },
-                    'fine-tool': {
-                        name: 'Fine Tool',
-                        source: { type: 'git', url: 'https://github.com/skukla/fine-tool' },
+                    'fine-mesh': {
+                        name: 'Fine Mesh',
+                        source: { type: 'git', url: 'https://github.com/skukla/fine-mesh' },
                     },
                 },
             });
 
             const repositories = await resolver.getAllRepositories();
 
-            expect([...repositories.keys()]).toEqual(['fine-tool']);
+            expect([...repositories.keys()]).toEqual(['fine-mesh']);
             expect(mockLogger.warn).toHaveBeenCalledTimes(1);
         });
     });

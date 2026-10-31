@@ -5,8 +5,9 @@
  * The order is the service's (catalog spec §0): sets before the attributes put in them,
  * categories and stock before the products that name them, products before their quantities.
  * A pack holding a kind this engine cannot install is refused before anything is written, so a
- * half-installed pack is never the answer to "we don't do that kind yet" (`product_export`,
- * `customers_export` and the ACO kinds, today). Customers and B2B
+ * half-installed pack is never the answer to "we don't do that kind yet" (`product_export` and
+ * `customers_export`, today). A pack of ACO kinds never reaches this: the engine sends it to the
+ * project's ACO instance (`aco/acoJobs.ts`, PL-60), and refuses one that mixes the two. Customers and B2B
  * (step 08) come after the catalog, in the service's order: groups before the products whose tier
  * prices name them, customers before the companies that make them admins. Store settings (step 09)
  * come last, once the pack's data is in, and are put back first on removal. Gift cards, cart rules

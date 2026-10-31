@@ -245,12 +245,12 @@ describe('create_project_from_file — a headless file reaches creation whole', 
                 },
             ],
         });
-        // The addon's key and the mesh's key, read from components.json. The stack's
-        // own components are not resolvable here: the shared stub knows only the two
-        // EDS stacks (see the EDS suite below for a backend's key).
+        // The mesh's key, read from components.json. The ACO add-on declares none: its
+        // ingestion credential is made in the project's Adobe workspace, never typed
+        // (PL-60). The stack's own components are not resolvable here: the shared stub
+        // knows only the two EDS stacks (see the EDS suite below for a backend's key).
         expect(res.stillNeeded.credentials).toEqual([
             { component: COMPONENT_IDS.HEADLESS_COMMERCE_MESH, key: 'ADOBE_CATALOG_API_KEY' },
-            { component: 'adobe-commerce-aco', key: 'ACO_API_KEY' },
         ]);
     });
 });

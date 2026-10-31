@@ -14,15 +14,12 @@
  * - TokenManager
  * - DaLiveOrgOperations (extracted from DaLiveService)
  * - GitHubTokenService (extracted from GitHubService)
- * - ToolManager
  * - EdsProjectService
  * - HelixService
  * - CleanupService
  */
 
 import type { Logger } from '@/types/logger';
-import { ToolManager } from '@/features/eds/services/toolManager';
-import { createMockCommandExecutor } from '../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../helpers/loggerFake';
 
 // Track calls to getLogger to verify DI is working
@@ -206,27 +203,6 @@ describe('Service Logger Injection', () => {
         });
     });
 
-    describe('ToolManager', () => {
-        /**
-         * REWRITTEN 2026-08-28. This used to load the class through `require`,
-         * which types as `any` — so the compiler checked NOTHING here, and the
-         * test asserted a no-argument constructor still worked. ADR-015 made
-         * the executor required, and the old test would have kept passing
-         * regardless, because JavaScript does not enforce argument counts.
-         *
-         * A statically imported class is what makes the contract checkable.
-         */
-        it('requires the executor and still takes an optional logger', () => {
-            const executor = createMockCommandExecutor({ execute: jest.fn() });
-
-            const withoutLogger = new ToolManager(executor);
-            expect(withoutLogger).toBeDefined();
-
-            const withLogger = new ToolManager(executor, mockLogger);
-            expect(withLogger).toBeDefined();
-        });
-    });
-
     // Note: EdsProjectService tests removed - class was refactored into edsSetupPhases.ts
 
     describe('HelixService', () => {
@@ -255,7 +231,6 @@ describe('Service Logger Injection', () => {
             // Mock dependencies
             const mockGithubService = { deleteRepository: jest.fn() };
             const mockDaLiveService = { deleteSite: jest.fn() };
-            const mockToolManager = { executeAcoCleanup: jest.fn() };
             const mockCodeRemoval = { files: { listRepoFiles: jest.fn() } };
 
             const { CleanupService } = require('@/features/eds/services/cleanupService');
@@ -264,7 +239,6 @@ describe('Service Logger Injection', () => {
             const service1 = new CleanupService(
                 mockGithubService,
                 mockDaLiveService,
-                mockToolManager,
                 mockCodeRemoval
             );
             expect(service1).toBeDefined();
@@ -273,7 +247,6 @@ describe('Service Logger Injection', () => {
             const service2 = new CleanupService(
                 mockGithubService,
                 mockDaLiveService,
-                mockToolManager,
                 mockCodeRemoval,
                 mockLogger
             );

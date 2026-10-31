@@ -944,6 +944,7 @@ What an agent needs to know to act on the right one:
 | Code it left behind (an action moved or renamed, a timer and its rule dropped) | Every deploy deletes it. For older leftovers, or when a deploy warned it could not: `delete_undeclared_runtime_code` with `componentId` (confirm-gated) |
 | Give one integration an Adobe API | `add_console_apis` / `set_console_apis` with `componentId`. Without it the API goes on the project's workspace, which that integration never uses |
 | What APIs does it have? | `list_console_apis` with `componentId` |
+| Give the project Adobe Commerce Optimizer (PL-60) | `configure_project` with `addons` including `adobe-commerce-aco` and its fields under `env`, then `set_up_aco_credential`: it subscribes the ACO ingestion API on the project's workspace credential and keeps the client id and secret in SecretStorage. ACO packs then load and remove through `start_datapack_import` / `reset_datapack` (Demo Builder's engine). `remove_aco_credential` is the undo (confirm-gated; refused while an ACO pack is still loaded) |
 
 `deploy_integration`, `redeploy_integration` and `remove_integration` find the
 workspace themselves. Removing an integration also deletes its workspace, once

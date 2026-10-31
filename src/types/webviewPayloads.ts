@@ -24,6 +24,7 @@ import type { BlockLibrary, CustomBlockLibrary, InstalledBlockLibrary } from './
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
 import type { AddedDemo } from './projectFile';
+import type { AddonOffer } from './stacks';
 import type { ViewMode } from './viewMode';
 import type { ComponentSelection, CreationProgress, ThemeMode, UnifiedProgress } from './webview';
 import type { EditProjectConfig, ProjectSeed, WizardStepDefinition } from './wizard';
@@ -220,6 +221,8 @@ export interface ConfigureComponentsData {
     dependencies: TransformedComponentDefinition[];
     mesh?: TransformedComponentDefinition[];
     integrations?: TransformedComponentDefinition[];
+    /** Add-ons (the ACO add-on, PL-60); their fields render when the project selects them. */
+    addons?: TransformedComponentDefinition[];
     envVars: Record<string, EnvVarDefinition>;
 }
 
@@ -244,6 +247,11 @@ export interface ConfigureInitialData {
     theme: ThemeMode;
     project: Project;
     componentsData: ConfigureComponentsData;
+    /**
+     * Whether the ACO add-on may be turned on or off on this screen (PL-60): the project's stack
+     * offers it and its demo package allows it, or requires it.
+     */
+    acoOffer?: AddonOffer;
     /** Existing env values from component .env files. */
     existingEnvValues: Record<string, Record<string, string>>;
     /** All project names — rename validation. */

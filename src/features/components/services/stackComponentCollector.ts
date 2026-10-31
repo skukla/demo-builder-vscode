@@ -43,6 +43,8 @@ export type ComponentSections<T> = {
     mesh?: T[];
     integrations?: T[];
     appBuilder?: T[];
+    /** Add-ons, chosen beside the stack (`components.json` `addons`). */
+    addons?: T[];
 };
 
 /** One collected entry, as the Configure screen consumes it. */
@@ -68,18 +70,23 @@ export function hasConfigurableEnvVars(component: CollectableComponent | undefin
     return required + optional > 0;
 }
 
+/** No add-ons chosen: one stable empty list. */
+const NO_ADDONS: readonly string[] = [];
+
 /**
  * Collect every component a stack contributes, in Configure-screen order:
  * frontend, backend, then the stack's own dependencies — each followed by its
- * qualifying dependencies.
+ * qualifying dependencies — and then the add-ons the project has chosen.
  *
  * @param stack - the resolved stack definition, or undefined when none is selected
  * @param componentsData - the full components registry (searched by id)
+ * @param selectedAddons - the add-on ids the project has chosen (`selectedAddons`)
  * @returns the collected entries; empty when there is no stack
  */
 export function collectStackComponents<T extends CollectableComponent>(
     stack: CollectableStack | undefined,
     componentsData: ComponentSections<T> | undefined,
+    selectedAddons: readonly string[] = NO_ADDONS,
 ): Array<CollectedComponent<T>> {
     const collected: Array<CollectedComponent<T>> = [];
     if (!stack) return collected;
@@ -114,6 +121,12 @@ export function collectStackComponents<T extends CollectableComponent>(
     // Searched across ALL registry sections, not just `dependencies`, so mesh
     // components (eds-accs-mesh, eds-commerce-mesh) are included.
     stack.dependencies?.forEach(addDependency);
+    // The add-ons the project has chosen, after the stack's own (PL-60): an add-on is
+    // not part of any stack, so it is collected by the selection, not by the stack.
+    for (const addonId of selectedAddons) {
+        const addon = componentsData?.addons?.find((entry) => entry.id === addonId);
+        if (addon && !collected.some((entry) => entry.id === addon.id)) addWithDeps(addon, 'Add-on');
+    }
 
     return collected;
 }

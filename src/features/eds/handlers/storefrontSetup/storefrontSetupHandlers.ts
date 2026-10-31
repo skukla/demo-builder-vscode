@@ -20,7 +20,6 @@ import {
     createDaLiveTokenProvider,
     createDaLiveServiceTokenProvider,
 } from '../../services/daLive/daLiveTokenProviders';
-import { ToolManager } from '../../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../../services/types';
 import {
     ensureDaLiveAuth,
@@ -32,7 +31,6 @@ import { rehydratePackageDerivedConfig } from './storefrontSetupConfigRehydratio
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
-import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type {
@@ -434,13 +432,11 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-    const toolManager = new ToolManager(ServiceLocator.getCommandExecutor(), context.logger);
     const configurationService = new ConfigurationService(daLiveTokenProvider, context.logger);
 
     return new CleanupService(
         githubRepoOps,
         daLiveOrgOps,
-        toolManager,
         // A deleted repository's code on aem.live goes after it (EDS-67): the files are
         // read first, and the DA.live IMS token is the one the code bus DELETE accepts.
         { files: fileOperations, tokenProvider: daLiveTokenProvider },

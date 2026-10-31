@@ -128,7 +128,7 @@ describe('stacks.json', () => {
          */
         function getAllComponentIds(config: Record<string, unknown>): Set<string> {
             const ids = new Set<string>();
-            const sections = ['frontends', 'backends', 'mesh', 'dependencies', 'integrations', 'tools'];
+            const sections = ['frontends', 'backends', 'mesh', 'dependencies', 'integrations'];
 
             sections.forEach(section => {
                 const sectionData = config[section] as Record<string, unknown> | undefined;

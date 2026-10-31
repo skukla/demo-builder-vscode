@@ -53,6 +53,7 @@ import {
 import { sectionBody } from './commerceStepBodies';
 import { isSetInConfigure } from './editLocks';
 import { isCommerceConfigured, isAdobeSignedIn } from './tileStatus';
+import { useAcoAddonChoice } from './useAcoAddonChoice';
 import { useProjectBuilder } from './useProjectBuilder';
 import {
     ACCS_STORE_VIEW_CODE,
@@ -74,6 +75,7 @@ const ACCS_BACKEND = 'adobe-commerce-accs';
 const EMPTY_PACKAGES: DemoPackage[] = [];
 const EMPTY_STACKS: Stack[] = [];
 const EMPTY_CONFIGS: ComponentConfigs = {};
+const NO_ADDONS: readonly string[] = [];
 
 export interface CommerceStepProps extends BaseStepProps {
     /** Available demo packages (catalog data). */
@@ -234,6 +236,7 @@ export function CommerceStep({
             <ConnectStoreStepContent
                 section={activeStep as 'connection' | 'business-structure' | 'catalog'}
                 selectedStackId={configStackId}
+                selectedAddons={state.selectedAddons ?? NO_ADDONS}
                 componentConfigs={state.componentConfigs ?? EMPTY_CONFIGS}
                 packageConfigDefaults={state.packageConfigDefaults}
                 adobeOrg={state.adobeOrg}
@@ -276,6 +279,9 @@ export function CommerceStep({
 
     // Only the ACTIVE step's body is built (no all-steps map). The config form is
     // passed only when the active step is a config step.
+    // The ACO add-on (PL-60 P1): off by default, offered only where the stack and package allow it.
+    const acoChoice = useAcoAddonChoice(state.selectedAddons, stacks.find((s) => s.id === configStackId), pkg, handlers.onAddonsChange);
+
     const activeBody = useMemo(
         () =>
             sectionBody(activeStep, {
@@ -286,6 +292,7 @@ export function CommerceStep({
                 state,
                 updateState,
                 configForm,
+                acoChoice,
                 setInConfigure: isSetInConfigure(state),
             }),
         [
@@ -296,6 +303,7 @@ export function CommerceStep({
             handleBackendSelect,
             updateState,
             configForm,
+            acoChoice,
         ],
     );
 

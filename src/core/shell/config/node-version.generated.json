@@ -80,11 +80,5 @@
             "ref": "@dropins/ai-tools@^1.0.0",
             "range": ">=18.0.0"
         }
-    ],
-    "excluded": [
-        {
-            "id": "commerce-demo-ingestion",
-            "reason": "Private repo, unreadable; nothing calls the tool today, and DI-4 decides whether it stays"
-        }
     ]
 }

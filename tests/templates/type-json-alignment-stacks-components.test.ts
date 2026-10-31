@@ -54,7 +54,6 @@ const COMPONENTS_ROOT_FIELDS = new Set([
     'dependencies',
     'integrations',
     'addons',
-    'tools',
     'services',
     'envVars',
     'selectionGroups',
@@ -300,10 +299,7 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
             ['dependencies', 'Dependency component'],
             ['integrations', 'Integration'],
             ['addons', 'Addon'],
-            ['tools', 'Tool'],
             ['infrastructure', 'Infrastructure component'],
-            ['brands', 'Brand (in components.json)'],
-            ['stacks', 'Stack (in components.json)'],
         ] as const;
 
         it.each(componentSections)(
@@ -324,7 +320,6 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
                 'mesh',
                 'integrations',
                 'addons',
-                'tools',
             ] as const;
 
             sectionsWithConfig.forEach((section) => {
@@ -352,7 +347,7 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
         it('should have no unknown fields in component source blocks', () => {
             const problems: string[] = [];
 
-            const sectionsWithSource = ['frontends', 'backends', 'mesh', 'tools'] as const;
+            const sectionsWithSource = ['frontends', 'backends', 'mesh'] as const;
 
             sectionsWithSource.forEach((section) => {
                 const components = componentsConfig[section] as
@@ -379,7 +374,7 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
         it('should have no unknown fields in source.gitOptions blocks', () => {
             const problems: string[] = [];
 
-            const sectionsWithSource = ['frontends', 'backends', 'mesh', 'tools'] as const;
+            const sectionsWithSource = ['frontends', 'backends', 'mesh'] as const;
 
             sectionsWithSource.forEach((section) => {
                 const components = componentsConfig[section] as

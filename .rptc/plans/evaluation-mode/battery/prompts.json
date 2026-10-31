@@ -1507,5 +1507,21 @@
         ],
         "cwd": "project",
         "why": "Owner, 2026-10-30: a project file names its pack by reference, and a private library pack is the owner's alone. Judges that the agent finds the demo's own pack (find_datapacks mine, or export_project_settings' packNote), asks the user, and calls share_datapack with shared:true rather than copying the pack anywhere. Writes to the library, so the battery stops at the consent."
+    },
+    {
+        "id": "aco-credential",
+        "prompt": "Turn on Adobe Commerce Optimizer for this demo and get it ready to load ACO datapacks.",
+        "expect": [
+            "set_up_aco_credential"
+        ],
+        "why": "PL-60: the SC types no ACO credential. Judges that the agent turns the add-on on (configure_project) and then asks Demo Builder to make the credential in the project's workspace, rather than asking the user for a client id or secret. Subscribes an API on a live workspace, so the battery stops at the consent."
+    },
+    {
+        "id": "aco-credential-remove",
+        "prompt": "We're done with ACO on this project. Take away the ACO access Demo Builder set up.",
+        "expect": [
+            "remove_aco_credential"
+        ],
+        "why": "PL-60's undo. Judges that the agent removes any ACO pack Demo Builder loaded first (reset_datapack) when the tool says so, then removes the credential. Unsubscribes an API on a live workspace, so the battery stops at the consent."
     }
 ]

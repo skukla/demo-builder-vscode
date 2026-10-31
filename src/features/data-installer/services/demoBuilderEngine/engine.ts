@@ -17,6 +17,7 @@
 
 import * as crypto from 'crypto';
 import type { DataTypeStatus, ImportStart, ValidationResult } from '../../types';
+import { type AcoAccessSource, acoConflict, acoRowsRefusal, asksForAco, mixedKinds, openAco, runAcoInstall, runAcoRemoval } from '../aco/acoJobs';
 import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient';
 import type { DatapackEngine } from '../datapackEngine';
 import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
@@ -50,6 +51,11 @@ export interface DemoBuilderEngineDeps {
     asker?: RootStepAsker;
     /** Told once when a job ends, however it ends: the activity log's writer (step 14). */
     onJobEnd?: (end: JobEnd) => void;
+    /**
+     * The project's Adobe Commerce Optimizer access (PL-60), for a pack whose kinds are all ACO's:
+     * those go to ACO through its own client, not to Commerce. Absent, such a pack is refused.
+     */
+    aco?: AcoAccessSource;
 }
 
 /** How one job ended, for the activity log (`engineActivityLog.ts`). */
@@ -122,8 +128,39 @@ function missingKinds(request: ImportRequest, items: PackItems): string | undefi
     return missing.length > 0 ? `The pack holds no ${missing.join(', ')}.` : undefined;
 }
 
+/** Move the job's statuses as each kind starts: the one before it is done. */
+function progress(job: Job): { onKind: (kind: string) => void; finish: () => void } {
+    let current: string | undefined;
+    return {
+        onKind: (kind) => {
+            if (current) job.perType[current] = 'success';
+            current = kind;
+            job.perType[kind] = 'processing';
+        },
+        finish: () => {
+            if (current) job.perType[current] = 'success';
+        },
+    };
+}
+
+/** Load an ACO pack into the project's ACO instance (PL-60): no Commerce website or store view. */
+async function runAcoJob(deps: DemoBuilderEngineDeps, request: ImportRequest, job: Job): Promise<void> {
+    const access = await openAco(deps.aco);
+    const items = await deps.readPack(request.id, request.dataTypes, request.source ?? 'installer');
+    const missing = missingKinds(request, items);
+    if (missing) throw new Error(missing);
+    const steps = progress(job);
+    const scope = { files: deps.files ?? nodeRecordFiles, projectPath: deps.projectPath, pack: request.id };
+    const now = deps.now ?? (() => new Date());
+    job.note = await runAcoInstall({ ...scope, now: () => now().toISOString(), log: deps.log, onKind: steps.onKind }, access, items);
+    steps.finish();
+}
+
 /** Install: the target, the rows, then each kind in order, its status moving as it runs. */
 async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, job: Job): Promise<void> {
+    const mixed = mixedKinds(request.dataTypes);
+    if (mixed) throw new Error(mixed);
+    if (asksForAco(request.dataTypes)) return runAcoJob(deps, request, job);
     if (!request.target) throw new Error(NO_TARGET);
     const conflict = await elsewhere(deps, request, request.target);
     if (conflict) throw new Error(conflict);
@@ -137,12 +174,8 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     if (packRootOf(items.categories)) session.storeRoot = await readStoreRoot(commerce.get, request.target);
     const now = deps.now ?? (() => new Date());
     const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString(), request.target);
-    let current: string | undefined;
-    const outcome = await installPack({ ...commerce, recorder, session, log: deps.log, asker: deps.asker }, items, (kind) => {
-        if (current) job.perType[current] = 'success';
-        current = kind;
-        job.perType[kind] = 'processing';
-    });
+    const steps = progress(job);
+    const outcome = await installPack({ ...commerce, recorder, session, log: deps.log, asker: deps.asker }, items, steps.onKind);
     job.note = [
         skippedLine(outcome.skipped),
         keptLine(outcome.kept),
@@ -151,7 +184,37 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         underStoreRootLine(outcome.rootPlacement, items.categories, session.storeRoot),
         rootStepLine(outcome.rootStep),
     ].filter(Boolean).join(' ') || undefined;
-    if (current) job.perType[current] = 'success';
+    steps.finish();
+}
+
+/** The dry run of an ACO pack: the instance, the kinds, the record, then every row. */
+async function validateAco(deps: DemoBuilderEngineDeps, request: ImportRequest): Promise<ValidationResult> {
+    const access = await openAco(deps.aco);
+    const scope = { files: deps.files ?? nodeRecordFiles, projectPath: deps.projectPath, pack: request.id };
+    const conflict = await acoConflict(scope, request.dataTypes, access.settings);
+    if (conflict) return { valid: false, reason: conflict };
+    const items = await deps.readPack(request.id, request.dataTypes, request.source ?? 'installer');
+    const missing = missingKinds(request, items);
+    if (missing) return { valid: false, reason: missing };
+    const refused = acoRowsRefusal(items, 'would be');
+    return refused ? { valid: false, reason: refused } : { valid: true };
+}
+
+/** Remove a pack by its record: an ACO pack from the ACO instance it names, else from Commerce. */
+async function runRemoval(deps: DemoBuilderEngineDeps, request: ImportRequest, job: Job): Promise<void> {
+    const files = deps.files ?? nodeRecordFiles;
+    const record = await readInstallRecord(files, deps.projectPath, request.id);
+    if (record?.aco) {
+        const removed = await runAcoRemoval({ files, projectPath: deps.projectPath, pack: request.id }, deps.aco);
+        if (removed === undefined) throw new Error(NO_RECORD);
+        job.note = `Deleted ${removed} ACO rows by the pack's own keys.`;
+    } else {
+        const result = await removePack(await access(deps), files, { projectPath: deps.projectPath, pack: request.id });
+        if (result.noRecord) throw new Error(NO_RECORD);
+        job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
+        if (result.kept.length > 0) job.leftInStore = true;
+    }
+    for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';
 }
 
 /** Run a job in the background, ending every requested kind terminal whatever happens. */
@@ -182,8 +245,13 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
     const jobs = new Map<string, Job>();
     return {
         id: 'demo-builder',
-        async checkCredentials(): Promise<CredentialCheck> {
+        async checkCredentials(request): Promise<CredentialCheck> {
             try {
+                if (asksForAco(request.dataTypes)) {
+                    const aco = await openAco(deps.aco);
+                    await aco.clientFor(aco.settings).authenticate();
+                    return { usable: true };
+                }
                 await (await access(deps)).get('store/websites');
                 return { usable: true };
             } catch (error) {
@@ -192,6 +260,9 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
         },
         async validateImport(request): Promise<ValidationResult> {
             try {
+                const mixed = mixedKinds(request.dataTypes);
+                if (mixed) return { valid: false, reason: mixed };
+                if (asksForAco(request.dataTypes)) return await validateAco(deps, request);
                 if (!request.target) return { valid: false, reason: NO_TARGET };
                 const unsupported = unsupportedKinds(Object.fromEntries(request.dataTypes.map((kind) => [kind, null])));
                 if (unsupported.length > 0) return { valid: false, reason: `Demo Builder does not install ${unsupported.join(', ')} yet.` };
@@ -210,14 +281,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
             }
         },
         startImport: async (request) => start(deps, jobs, request, 'import', (job) => runInstall(deps, request, job)),
-        startDelete: async (request) =>
-            start(deps, jobs, request, 'delete', async (job) => {
-                const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id });
-                if (result.noRecord) throw new Error(NO_RECORD);
-                job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
-                if (result.kept.length > 0) job.leftInStore = true;
-                for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';
-            }),
+        startDelete: async (request) => start(deps, jobs, request, 'delete', (job) => runRemoval(deps, request, job)),
         async getJobStatus(activationId) {
             const job = jobs.get(activationId);
             return {

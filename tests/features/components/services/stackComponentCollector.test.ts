@@ -69,6 +69,21 @@ describe('hasConfigurableEnvVars', () => {
 });
 
 describe('collectStackComponents', () => {
+    // PL-60: an add-on is chosen beside the stack, so it is collected by the selection.
+    it('adds the chosen add-ons after the stack\'s own components, and only those chosen', () => {
+        lookup({});
+        const data = {
+            frontends: [withoutEnv('fe')],
+            addons: [withEnv('adobe-commerce-aco'), withEnv('other-addon')],
+        };
+        const result = collectStackComponents({ frontend: 'fe' }, data, ['adobe-commerce-aco']);
+        expect(result.map((entry) => [entry.id, entry.type])).toStrictEqual([
+            ['fe', 'Frontend'],
+            ['adobe-commerce-aco', 'Add-on'],
+        ]);
+        expect(ids(collectStackComponents({ frontend: 'fe' }, data))).toStrictEqual(['fe']);
+    });
+
     it('returns nothing without a stack', () => {
         expect(collectStackComponents(undefined, {})).toStrictEqual([]);
     });

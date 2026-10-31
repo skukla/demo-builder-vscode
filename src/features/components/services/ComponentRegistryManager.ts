@@ -45,6 +45,7 @@ export class ComponentRegistryManager {
             mesh: TransformedComponentDefinition[];
             appBuilder: TransformedComponentDefinition[];
             integrations: TransformedComponentDefinition[];
+            addons: TransformedComponentDefinition[];
         } = {
             frontends: [],
             backends: [],
@@ -52,6 +53,7 @@ export class ComponentRegistryManager {
             mesh: [],
             appBuilder: [],
             integrations: [],
+            addons: [],
         };
 
         const groups = raw.selectionGroups || {};
@@ -64,6 +66,7 @@ export class ComponentRegistryManager {
             ...(raw.appBuilder || {}),      // App Builder app components
             ...(raw.dependencies || {}),    // v3.0.0: dependencies section
             ...(raw.integrations || {}),    // v3.0.0: integrations section
+            ...(raw.addons || {}),          // add-ons, chosen beside the stack (PL-60)
         };
 
         const enhanceComponent = (id: string): TransformedComponentDefinition | null => {
@@ -103,6 +106,13 @@ export class ComponentRegistryManager {
                 const enhanced = enhanceComponent(id);
                 if (enhanced) components.appBuilder.push(enhanced);
             }
+        }
+
+        // Add-ons load directly from their section too: a project selects them by id
+        // (`selectedAddons`), never through selectionGroups.
+        for (const id of Object.keys(raw.addons ?? {})) {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.addons.push(enhanced);
         }
 
         const infrastructure: TransformedComponentDefinition[] = [];
@@ -154,6 +164,11 @@ export class ComponentRegistryManager {
     async getAppBuilder(): Promise<TransformedComponentDefinition[]> {
         const registry = await this.loadRegistry();
         return registry.components.appBuilder || [];
+    }
+
+    async getAddons(): Promise<TransformedComponentDefinition[]> {
+        const registry = await this.loadRegistry();
+        return registry.components.addons ?? [];
     }
 
     async getServices(): Promise<Record<string, ServiceDefinition>> {

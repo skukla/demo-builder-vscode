@@ -21,6 +21,7 @@
  */
 
 import * as vscode from 'vscode';
+import { handleRemoveAcoCredential, handleSetUpAcoCredential } from './acoCredentialHandlers';
 import {
     handleGetDemoPackagePreview,
     handleSaveDemoPackage,
@@ -436,6 +437,9 @@ export const dashboardHandlers = defineHandlers({
     listConsoleApis: handleListConsoleApis,
     addConsoleApis: handleAddConsoleApis,
     setConsoleApis: handleSetConsoleApis,
+    // The project's ACO ingestion credential (PL-60): made in its workspace, never typed.
+    setUpAcoCredential: handleSetUpAcoCredential,
+    removeAcoCredential: handleRemoveAcoCredential,
 
     // What is deployed in the project's Runtime namespace (list_runtime_packages)
     listRuntimePackages: handleListRuntimePackages,

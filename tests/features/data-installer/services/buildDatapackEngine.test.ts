@@ -6,7 +6,9 @@
 
 import {
     buildDatapackEngine,
+    NO_ACO_CREDENTIAL,
     engineThatInstalled,
+    projectAco,
     projectCommerce,
     type DatapackEngineAccess,
 } from '@/features/data-installer/services/buildDatapackEngine';
@@ -18,6 +20,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { acoCredentialKey } from '@/features/components/services/acoCredentialStore';
 
 const mockCommerceClientForProject = jest.fn();
 jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
@@ -96,6 +100,43 @@ describe('projectCommerce', () => {
         await projectCommerce({ project, authManager, secrets: undefined })();
 
         expect(mockCommerceClientForProject).toHaveBeenCalledWith(project, authManager, undefined, undefined, 'all');
+    });
+});
+
+describe('projectAco', () => {
+    const ACO_VALUES = {
+        ACO_TENANT_ID: 'TenantAbc123',
+        ACO_REGION: 'na1',
+        ACO_ENVIRONMENT: 'sandbox',
+        ACO_CATALOG_VIEW_ID: 'view-1',
+        ACO_LOCALE: 'en-US',
+    };
+    const acoProject = (values: Record<string, string> = ACO_VALUES, addons = ['adobe-commerce-aco']) =>
+        createMockProject({ path: '/projects/frescopa', selectedAddons: addons, componentConfigs: { 'adobe-commerce-aco': values } });
+    const kept = () => createMockSecretStorage({ [acoCredentialKey('/projects/frescopa')]: JSON.stringify({ clientId: 'c', clientSecret: 'fake-test-pw-not-a-secret' }) });
+
+    it('refuses when the project does not use ACO', async () => {
+        await expect(projectAco({ project: acoProject(ACO_VALUES, []), secrets: kept().secrets })()).resolves.toEqual({
+            refusal: expect.stringMatching(/does not use Adobe Commerce Optimizer/u),
+        });
+    });
+
+    it('names the settings still empty', async () => {
+        await expect(projectAco({ project: acoProject({ ...ACO_VALUES, ACO_CATALOG_VIEW_ID: '' }), secrets: kept().secrets })()).resolves.toEqual({
+            refusal: expect.stringMatching(/set ACO_CATALOG_VIEW_ID in Configure/u),
+        });
+    });
+
+    it('refuses when Demo Builder holds no credential for the project', async () => {
+        await expect(projectAco({ project: acoProject(), secrets: createMockSecretStorage().secrets })()).resolves.toEqual({ refusal: NO_ACO_CREDENTIAL });
+        await expect(projectAco({ project: acoProject(), secrets: undefined })()).resolves.toEqual({ refusal: NO_ACO_CREDENTIAL });
+    });
+
+    it('answers the settings and a client for the instance asked', async () => {
+        const answer = await projectAco({ project: acoProject(), secrets: kept().secrets })();
+        if ('refusal' in answer) throw new Error(answer.refusal);
+        expect(answer.settings).toEqual({ tenantId: 'TenantAbc123', region: 'na1', environment: 'sandbox', catalogViewId: 'view-1', locale: 'en-US' });
+        expect(typeof answer.clientFor(answer.settings).post).toBe('function');
     });
 });
 

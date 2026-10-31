@@ -62,10 +62,21 @@ export const CATALOG_SERVICE_ENDPOINT = 'ADOBE_CATALOG_SERVICE_ENDPOINT';
 export const PAAS_CATALOG_SERVICE_ENDPOINT = 'PAAS_CATALOG_SERVICE_ENDPOINT';
 
 // ==========================================================
-// ACO (Adobe Commerce Optimizer) / Experience Platform
+// ACO (Adobe Commerce Optimizer), PL-60. None is a credential: the ingestion
+// credential lives in SecretStorage, never in componentConfigs.
 // ==========================================================
 
-export const ACO_API_KEY = 'ACO_API_KEY';
+export const ACO_TENANT_ID = 'ACO_TENANT_ID';
+export const ACO_REGION = 'ACO_REGION';
+export const ACO_ENVIRONMENT = 'ACO_ENVIRONMENT';
+export const ACO_CATALOG_VIEW_ID = 'ACO_CATALOG_VIEW_ID';
+export const ACO_LOCALE = 'ACO_LOCALE';
+export const ACO_PRICE_BOOK_ID = 'ACO_PRICE_BOOK_ID';
+
+// ==========================================================
+// Experience Platform
+// ==========================================================
+
 export const EXPERIENCE_PLATFORM_API_KEY = 'EXPERIENCE_PLATFORM_API_KEY';
 
 /**
@@ -133,7 +144,6 @@ export const SECRET_ENV_KEYS: readonly string[] = [
     PAAS_ADMIN_PASSWORD,
     ACCS_OAUTH_CLIENT_SECRET,
     CATALOG_API_KEY,
-    ACO_API_KEY,
     EXPERIENCE_PLATFORM_API_KEY,
 ];
 

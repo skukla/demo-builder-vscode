@@ -21,9 +21,20 @@ would be empty is not shown.
 | Project | always | The project name |
 | Adobe Commerce Cloud Service, or Adobe Commerce | the project's backend | How Demo Builder reaches Commerce: the GraphQL endpoint, and on PaaS the URL, Admin URL, username and password |
 | Business Structure | the backend has store codes | The website, store and store view codes, chosen from the instance's structure |
-| Catalog Service, Adobe Assets, Adobe Commerce Optimizer, Experience Platform, Additional Settings | a selected component declares fields in that group | That service's settings (`SERVICE_GROUP_DEFINITIONS`, `serviceGroupTransforms.ts`) |
+| Catalog Service, Adobe Assets, Experience Platform, Additional Settings | a selected component declares fields in that group | That service's settings (`SERVICE_GROUP_DEFINITIONS`, `serviceGroupTransforms.ts`) |
 | Block Libraries | Edge Delivery projects with a library to show | Which block libraries the storefront has |
 | Authoring | Edge Delivery projects | DA.live classic or Experience Workspace |
+
+**Adobe Commerce Optimizer** (PL-60) has a tab wherever the project's stack offers ACO and its
+demo package allows it (`addonOffer`; today CitiSignal on its Edge Delivery stacks). The tab
+holds one checkbox, off by default, and once ticked ACO's fields (tenant id, region, instance
+type, catalog view id, locale, optional price book id). Add-ons' fields are read like the
+stack's own: the registry has an `addons` bucket and `useSelectedComponents` takes the project's
+`selectedAddons`. The tick is held until Save: Save first sets up the ACO credential in the
+project's Adobe workspace (turning it off removes it, refused while an ACO datapack Demo Builder
+loaded is still in the instance) and keeps the change only if that worked
+(`applyAcoAddonChange`). Turning ACO on or off marks the storefront out of date, so the usual
+republish prompt follows. Edit hides the wizard's Catalog step, which is why the toggle is here.
 
 Integrations are not here. Their settings live on each integration's tile on the
 Integrations screen (AB-21), and so do the mesh's deploy and remove, and the Adobe

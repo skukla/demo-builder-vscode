@@ -4,7 +4,8 @@
  *
  * Deleting a project removed its folder and left every secret it had stored in the
  * keychain: its Commerce connection secrets, its integrations' secret settings and screen
- * keys, and the Commerce REST credential kept for its workspaces. Found 2026-10-01 while
+ * keys, and the Commerce REST credential kept for its workspaces. The ACO ingestion credential
+ * (PL-60) joined them 2026-10-31. Found 2026-10-01 while
  * adding that last one; owner: "file and address the gap". Each kind is deleted by the
  * module that owns its key scheme, so the scheme stays defined in one place.
  *
@@ -31,6 +32,7 @@ import {
     reKeyAppBuilderComponentSecrets,
     type SecretDeleter,
 } from '@/features/app-builder/services/componentSettingSecrets';
+import { forgetAcoCredential, moveAcoCredential } from '@/features/components/services/acoCredentialStore';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     forgetProjectCommerceSecrets,
@@ -76,6 +78,7 @@ export async function forgetProjectSecrets(
         ['integration secrets', () => forgetAppBuilderComponentSecrets(componentEntries(project), projectPath, secrets)],
         ['Commerce REST credentials', () =>
             Promise.all(workspacesOf(project).map((id) => forgetCredential(secrets, id)))],
+        ['ACO credential', () => forgetAcoCredential(secrets, projectPath)],
     ];
     for (const [kind, forget] of kinds) {
         try {
@@ -103,4 +106,7 @@ export async function moveProjectSecrets(
     const commerceIds = Object.keys(project.componentConfigs ?? {});
     await reKeyProjectSecrets(oldPath, newPath, commerceIds, secrets, log);
     await reKeyAppBuilderComponentSecrets(componentEntries(project), oldPath, newPath, secrets, log);
+    if ((await moveAcoCredential(secrets, oldPath, newPath)) === 'not-verified') {
+        log('ACO credential: re-key not verified, left at the old key');
+    }
 }

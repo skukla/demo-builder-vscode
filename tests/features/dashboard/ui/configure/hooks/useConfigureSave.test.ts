@@ -78,6 +78,17 @@ describe('useConfigureSave', () => {
         });
     });
 
+    it('sends ACO on or off only when the screen changed it (PL-60)', async () => {
+        const { result } = render({ acoAddon: true });
+        await act(() => result.current.handleSave());
+        expect(mockRequest.mock.calls[0][1]).toMatchObject({ acoAddon: true });
+
+        mockRequest.mockClear();
+        const unchanged = render();
+        await act(() => unchanged.result.current.handleSave());
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('acoAddon');
+    });
+
     it('sends the trimmed title when it changed, even by capitalisation alone', async () => {
         const { result } = render({ projectName: '  bodea demo  ' });
 

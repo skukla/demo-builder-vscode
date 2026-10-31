@@ -27,7 +27,6 @@ practice actually is, measured 2026-09-10 across all 21 error classes in `src/`:
 |---|---|---|
 | `DaLiveAuthError` (`features/eds/services/types.ts`) | 8 | 11 |
 | `DataInstallerApiError` (`features/data-installer/…`) | 9 | 4 |
-| `ToolManagerError` (`features/eds/services/types.ts`) | 9 | 1 |
 | `IoEventsApiError`, `HelixApiError`, `PushRejectedError`, … | 2–5 each | 1–6 each |
 
 `src/core/errors/index.ts` is the **legacy central hierarchy**, and this section used to

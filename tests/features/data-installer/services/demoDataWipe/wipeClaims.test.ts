@@ -134,6 +134,22 @@ describe('readWipeClaims', () => {
         expect(await claims(filesWith([[nowhere, old]]), SCRATCH, [nowhere], TEST_STORE)).toEqual({ records: [old] });
     });
 
+    it("leaves out an ACO pack's record, the project's own or another's: it lists rows in ACO, not the store (PL-60)", async () => {
+        const nowhere = createMockProject({ name: 'no-website', path: '/nonexistent/projects/no-website', componentConfigs: {} });
+        const aco = (name: string): InstallRecord => ({
+            ...record(name, undefined, 'unused'),
+            aco: { tenantId: 'TenantAbc123', region: 'na1', environment: 'sandbox' },
+            created: [{ kind: 'aco_products', id: '{"sku":"A","source":{"locale":"en-US"}}', key: 'A (en-US)' }],
+        });
+        const files = filesWith([
+            [SCRATCH, PROJECT_RECORDS[0]],
+            [SCRATCH, aco('own-aco')],
+            [nowhere, aco('their-aco')],
+        ]);
+
+        expect(await claims(files, SCRATCH, [nowhere], TEST_STORE)).toEqual({ records: [PROJECT_RECORDS[0]] });
+    });
+
     it("refuses when another project's record cannot be read: what it lists could be taken", async () => {
         const other = accsProject('other-demo', 'bodea', 'bodea_en');
         const files = memoryFiles({ [installRecordPath(other.path, { name: 'broken', version: '1' })]: '{not json' });

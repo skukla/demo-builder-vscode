@@ -8,7 +8,6 @@
  * Extracts repository information from all component types:
  * - frontends (headless)
  * - mesh (commerce-mesh)
- * - tools (commerce-demo-ingestion)
  */
 
 import * as path from 'path';
@@ -66,7 +65,6 @@ export class ComponentRepositoryResolver {
         // Extract repositories from each component category
         this.extractFromCategory(registry.frontends, repositories);
         this.extractFromCategory(registry.mesh, repositories);
-        this.extractFromCategory(registry.tools, repositories);
 
         this.cache = repositories;
         return repositories;

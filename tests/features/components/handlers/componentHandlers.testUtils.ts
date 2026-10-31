@@ -46,6 +46,8 @@ export function createMockRegistryManager(): jest.Mocked<ComponentRegistryManage
         getIntegrations: jest.fn(),
         getDependencies: jest.fn(),
         getMesh: jest.fn(),
+        // Add-ons (PL-60): none unless a test says so.
+        getAddons: jest.fn().mockResolvedValue([]),
         loadRegistry: jest.fn(),
         checkCompatibility: jest.fn(),
     } as unknown as jest.Mocked<ComponentRegistryManager>;

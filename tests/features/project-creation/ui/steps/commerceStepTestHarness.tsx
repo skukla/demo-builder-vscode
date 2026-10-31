@@ -133,7 +133,10 @@ export function baseState(initial: Partial<WizardState> = {}): WizardState {
  * `rerender`, kept for callers that simulate external state changes) lets a test
  * push a new state object from outside (e.g. a sign-in completing).
  */
-export function setup(initial: Partial<WizardState> = {}) {
+export function setup(
+    initial: Partial<WizardState> = {},
+    catalog: { packages: DemoPackage[]; stacks: Stack[] } = { packages: PACKAGES, stacks: STACKS },
+) {
     const stateRef = { current: baseState(initial) };
     const setCanProceed = jest.fn();
     let setHostState: (s: WizardState) => void = () => {};
@@ -158,8 +161,8 @@ export function setup(initial: Partial<WizardState> = {}) {
                     state={hostState}
                     updateState={updateState}
                     setCanProceed={setCanProceed}
-                    packages={PACKAGES}
-                    stacks={STACKS}
+                    packages={catalog.packages}
+                    stacks={catalog.stacks}
                 />
                 <div className="commerce-summary-content">
                     <BuildYourProjectSummary

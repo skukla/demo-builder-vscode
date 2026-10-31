@@ -432,7 +432,6 @@ export interface ProjectCreationConfig {
         githubOwner?: string;
         isPrivate?: boolean;
         skipContent?: boolean;
-        skipTools?: boolean;
         // Template source repo (from frontendSource) for GitHub reset operations
         templateOwner?: string;
         templateRepo?: string;
@@ -529,6 +528,8 @@ export interface ComponentsDataPayload {
     integrations: ComponentDataDTO[];
     dependencies: ComponentDataDTO[];
     mesh: ComponentDataDTO[];
+    /** Add-ons (the ACO add-on, PL-60): their fields join the stack's when the project selects them. */
+    addons: ComponentDataDTO[];
     /** Keyed defs with `key` injected (`withEnvVarKeys`) — the registry record omits it. */
     envVars: Record<string, EnvVarDefinition>;
     services: Record<string, ServiceDefinition>;

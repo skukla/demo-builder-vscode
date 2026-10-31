@@ -22,6 +22,7 @@ export function getAllComponentDefinitions(data: ComponentsData): TransformedCom
         data.dependencies,
         data.mesh,
         data.integrations,
+        data.addons,
     ];
     return categories.flatMap((arr) => arr ?? []);
 }

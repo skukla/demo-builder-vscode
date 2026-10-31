@@ -384,7 +384,7 @@ describe('a domain error lives with the domain that throws it', () => {
         // module accounted for four throws in the whole codebase, against 354 plain
         // `throw new Error(...)`. The errors that are actually used are defined beside
         // the code that throws them — DaLiveAuthError 8 thrown / 11 caught,
-        // DataInstallerApiError 9/4, ToolManagerError 9/1.
+        // DataInstallerApiError 9/4.
         //
         // Three of core's six domain errors — ValidationError, PrerequisiteError,
         // MeshError — had never been thrown OR caught anywhere, while

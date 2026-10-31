@@ -19,6 +19,7 @@ export function findComponentById<T extends { id: string }>(
         mesh?: T[];
         integrations?: T[];
         appBuilder?: T[];
+        addons?: T[];
     },
     componentId: string,
 ): T | undefined {
@@ -27,5 +28,6 @@ export function findComponentById<T extends { id: string }>(
            data.dependencies?.find(c => c.id === componentId) ||
            data.mesh?.find(c => c.id === componentId) ||
            data.integrations?.find(c => c.id === componentId) ||
-           data.appBuilder?.find(c => c.id === componentId);
+           data.appBuilder?.find(c => c.id === componentId) ||
+           data.addons?.find(c => c.id === componentId);
 }

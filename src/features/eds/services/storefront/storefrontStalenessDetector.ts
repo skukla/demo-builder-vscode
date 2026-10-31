@@ -21,8 +21,15 @@ import {
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
     ACCS_CUSTOMER_GROUP,
+    ACO_CATALOG_VIEW_ID,
+    ACO_ENVIRONMENT,
+    ACO_LOCALE,
+    ACO_PRICE_BOOK_ID,
+    ACO_REGION,
+    ACO_TENANT_ID,
 } from '@/core/config/envVarKeys';
 import { getLogger } from '@/core/logging/debugLogger';
+import { ACO_ADDON_ID } from '@/features/components/services/acoSettings';
 import { mergeComponentConfigs } from '@/features/eds/services/storefrontConfigParams';
 import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
@@ -85,6 +92,16 @@ const STOREFRONT_CONFIG_ENV_VARS = [
     ACCS_STORE_VIEW_CODE,
     ACCS_CUSTOMER_GROUP,
     'AEM_ASSETS_ENABLED',
+    // The ACO add-on's settings (PL-60): config.json reads them only while ACO is
+    // on (`acoStorefrontConfig.ts`), so they count only then (`storefrontValues`).
+    // Turning ACO on or off therefore changes what is compared, and prompts a
+    // republish like any other change.
+    ACO_TENANT_ID,
+    ACO_REGION,
+    ACO_ENVIRONMENT,
+    ACO_CATALOG_VIEW_ID,
+    ACO_LOCALE,
+    ACO_PRICE_BOOK_ID,
 ];
 
 // ==========================================================
@@ -137,6 +154,26 @@ export function getStorefrontEnvVars(
     return result;
 }
 
+/** The ACO keys above: what config.json reads only while the add-on is on. */
+const ACO_KEYS = [ACO_TENANT_ID, ACO_REGION, ACO_ENVIRONMENT, ACO_CATALOG_VIEW_ID, ACO_LOCALE, ACO_PRICE_BOOK_ID];
+
+/**
+ * The values config.json is generated from, as the comparison and the record read them: every
+ * watched key, except an add-on's while the add-on is off (PL-60). A project recorded before the
+ * ACO keys were watched has none of them, and with ACO off it compares as before.
+ */
+function storefrontValues(
+    project: Project,
+    componentConfigs: Record<string, unknown>,
+    selectedAddons: readonly string[] | undefined,
+): Record<string, string> {
+    const values = getStorefrontEnvVars(mergedForStorefront(project, componentConfigs));
+    if (!(selectedAddons ?? []).includes(ACO_ADDON_ID)) {
+        for (const key of ACO_KEYS) delete values[key];
+    }
+    return values;
+}
+
 /**
  * Get current storefront state from project
  */
@@ -162,6 +199,7 @@ export function getCurrentStorefrontState(project: Project): StorefrontState | n
 export function detectStorefrontChanges(
     project: Project,
     newComponentConfigs: Record<string, unknown>,
+    newSelectedAddons: readonly string[] | undefined = project.selectedAddons,
 ): StorefrontChanges {
     const logger = getLogger();
 
@@ -178,7 +216,7 @@ export function detectStorefrontChanges(
     }
 
     // Merge ALL new componentConfigs for cross-boundary values
-    const newEnvVars = getStorefrontEnvVars(mergedForStorefront(project, newComponentConfigs));
+    const newEnvVars = storefrontValues(project, newComponentConfigs, newSelectedAddons);
 
     // Compare each storefront env var
     const changedEnvVars: string[] = [];
@@ -236,7 +274,7 @@ export function updateStorefrontState(
     publishedComponentConfigs: Record<string, unknown>,
 ): void {
     // Merge all configs for cross-boundary values
-    const envVars = getStorefrontEnvVars(mergedForStorefront(project, publishedComponentConfigs));
+    const envVars = storefrontValues(project, publishedComponentConfigs, project.selectedAddons);
 
     project.edsStorefrontState = {
         envVars,

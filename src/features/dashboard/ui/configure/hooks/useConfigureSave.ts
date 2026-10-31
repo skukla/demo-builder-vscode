@@ -46,6 +46,8 @@ export interface UseConfigureSaveProps {
      * touched the picker, and then nothing about them is sent.
      */
     blockLibrarySelection?: BlockLibrarySelection;
+    /** ACO turned on or off, sent only when it differs from the project's (PL-60). */
+    acoAddon?: boolean;
     /** Told what a successful save sent, so the field values can start over from it. */
     onSaved?: (sent: ComponentConfigs) => void;
 }
@@ -77,6 +79,7 @@ export function useConfigureSave({
     authoringExperience,
     initialAuthoringExperience,
     blockLibrarySelection,
+    acoAddon,
     onSaved,
 }: UseConfigureSaveProps): UseConfigureSaveReturn {
     const [isSaving, setIsSaving] = useState(false);
@@ -118,6 +121,7 @@ export function useConfigureSave({
                         touchedFields,
                     ),
                     newProjectName,
+                    ...(acoAddon !== undefined ? { acoAddon } : {}),
                     ...(isEds
                         ? {
                               ...(authoringChanged ? { authoringExperience } : {}),
@@ -153,6 +157,7 @@ export function useConfigureSave({
         isEds,
         authoringExperience,
         blockLibrarySelection,
+        acoAddon,
         onSaved,
     ]);
 

@@ -244,38 +244,17 @@
     "addons": {
         "adobe-commerce-aco": {
             "name": "Adobe Commerce Optimizer",
-            "description": "Catalog optimization service for enhanced product discovery and merchandising",
+            "description": "The storefront reads its catalog from an Adobe Commerce Optimizer instance; carts and orders stay with the Commerce backend",
             "configuration": {
                 "providesServices": ["catalog-service", "live-search"],
                 "requiredEnvVars": [
-                    "ACO_API_URL",
-                    "ACO_API_KEY",
                     "ACO_TENANT_ID",
-                    "ACO_ENVIRONMENT_ID"
-                ]
-            }
-        }
-    },
-
-    "tools": {
-        "commerce-demo-ingestion": {
-            "name": "Commerce Demo Ingestion",
-            "description": "Tool for populating ACCS instances with demo data",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/PMET-public/commerce-demo-ingestion",
-                "gitOptions": {
-                    "shallow": true,
-                    "tag": "v1.0.0"
-                }
-            },
-            "configuration": {
-                "requiredEnvVars": [
-                    "ACO_API_URL",
-                    "ACO_API_KEY",
-                    "ACO_TENANT_ID",
-                    "ACO_ENVIRONMENT_ID"
-                ]
+                    "ACO_REGION",
+                    "ACO_ENVIRONMENT",
+                    "ACO_CATALOG_VIEW_ID",
+                    "ACO_LOCALE"
+                ],
+                "optionalEnvVars": ["ACO_PRICE_BOOK_ID"]
             }
         }
     },
@@ -571,36 +550,63 @@
             "description": "Create a datastream in the Adobe Experience Platform Data Collection UI",
             "group": "experience-platform"
         },
-        "ACO_API_URL": {
-            "label": "ACO API URL",
-            "type": "url",
-            "required": true,
-            "placeholder": "https://commerce-optimizer.adobe.io",
-            "description": "Adobe Commerce Optimizer API endpoint",
-            "group": "adobe-commerce-aco"
-        },
-        "ACO_API_KEY": {
-            "label": "ACO API Key",
-            "type": "text",
-            "required": true,
-            "placeholder": "your-aco-api-key",
-            "description": "API key for Adobe Commerce Optimizer",
-            "group": "adobe-commerce-aco"
-        },
         "ACO_TENANT_ID": {
             "label": "ACO Tenant ID",
             "type": "text",
             "required": true,
             "placeholder": "your-tenant-id",
-            "description": "Your Adobe Commerce Optimizer tenant identifier",
+            "validation": {
+                "pattern": "^[A-Za-z0-9_-]+$",
+                "message": "Letters, numbers, - and _ only: the id as it appears in the instance's URLs"
+            },
+            "description": "The Adobe Commerce Optimizer instance's id: the part after the host in its URLs (…/<tenant id>/graphql)",
             "group": "adobe-commerce-aco"
         },
-        "ACO_ENVIRONMENT_ID": {
-            "label": "ACO Environment ID",
+        "ACO_REGION": {
+            "label": "ACO Region",
             "type": "text",
             "required": true,
-            "placeholder": "your-environment-id",
-            "description": "Your Adobe Commerce Optimizer environment identifier",
+            "default": "na1",
+            "validation": {
+                "pattern": "^[a-z0-9]+$",
+                "message": "A region code such as na1"
+            },
+            "description": "The instance's cloud region. Sandbox instances exist only in na1",
+            "group": "adobe-commerce-aco"
+        },
+        "ACO_ENVIRONMENT": {
+            "label": "ACO Instance Type",
+            "type": "select",
+            "required": true,
+            "default": "sandbox",
+            "options": [
+                { "value": "sandbox", "label": "Sandbox" },
+                { "value": "production", "label": "Production" }
+            ],
+            "description": "Sandbox instances have -sandbox in their host name",
+            "group": "adobe-commerce-aco"
+        },
+        "ACO_CATALOG_VIEW_ID": {
+            "label": "Catalog View ID",
+            "type": "text",
+            "required": true,
+            "placeholder": "00000000-0000-0000-0000-000000000000",
+            "description": "The catalog view the storefront reads. Create it in Adobe Commerce Optimizer's own screens (no API creates one) and copy its ID from there",
+            "group": "adobe-commerce-aco"
+        },
+        "ACO_LOCALE": {
+            "label": "Catalog Locale",
+            "type": "text",
+            "required": true,
+            "default": "en-US",
+            "description": "The catalog source locale the storefront asks for. A datapack's rows load for the locale they name",
+            "group": "adobe-commerce-aco"
+        },
+        "ACO_PRICE_BOOK_ID": {
+            "label": "Price Book ID",
+            "type": "text",
+            "required": false,
+            "description": "Optional. Without one, the catalog view's default price book is used",
             "group": "adobe-commerce-aco"
         }
     },

@@ -22,9 +22,11 @@
  */
 
 import configTemplate from '../config/config-template.json';
+import { applyAcoStorefront } from './acoStorefrontConfig';
 import componentsConfig from '@/features/components/config/components.json';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import { buildConfigGeneratorParams } from '@/features/eds/services/storefrontConfigParams';
+import type { AcoStorefrontSettings } from '@/types/aco';
 import type { Project } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -41,9 +43,11 @@ import type { Logger } from '@/types/logger';
  *
  * - **paas**: Adobe Commerce PaaS - requires x-api-key, Magento-Environment-Id headers
  * - **accs**: Adobe Commerce Cloud Services - store codes only, no API key headers
- * - **aco**: Adobe Commerce Optimizer - AC-View-ID, AC-Price-Book-ID placeholders
+ *
+ * Adobe Commerce Optimizer is not one: it is an add-on beside either backend, and its config is
+ * applied on top when the project has it (`aco` below, `acoStorefrontConfig.ts`, PL-60).
  */
-export type EnvironmentType = 'paas' | 'accs' | 'aco';
+export type EnvironmentType = 'paas' | 'accs';
 
 /**
  * Parameters for config.json generation
@@ -57,7 +61,7 @@ export interface ConfigGeneratorParams {
     daLiveOrg: string;
     /** DA.live site name */
     daLiveSite: string;
-    /** Backend environment type (paas, accs, aco) - defaults to 'paas' for backward compatibility */
+    /** Backend environment type (paas, accs) - defaults to 'paas' for backward compatibility */
     environmentType?: EnvironmentType;
     /** Commerce GraphQL endpoint (mesh or direct) */
     commerceEndpoint?: string;
@@ -79,6 +83,11 @@ export interface ConfigGeneratorParams {
     aemAssetsEnabled?: boolean;
     /** Selected addon IDs (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
+    /**
+     * The project's Adobe Commerce Optimizer settings, when the ACO add-on is on and complete: the
+     * storefront then reads its catalog from that instance (PL-60).
+     */
+    aco?: AcoStorefrontSettings;
     /** Selected demo package ID (e.g., 'b2b') - drives package-level configFlags */
     selectedPackage?: string;
     /** The project's storefront row when it was built on an added demo; its flags win over the catalog's. */
@@ -114,7 +123,8 @@ interface ConfigHeaders {
  * Different Adobe Commerce environments require different headers:
  * - **PaaS**: Full authentication headers (x-api-key, Magento-Environment-Id, store codes)
  * - **ACCS**: Store codes only (no API key headers required)
- * - **ACO**: Commerce Optimizer headers (AC-View-ID, AC-Price-Book-ID placeholders)
+ *
+ * An ACO storefront's headers replace these (`acoHeaders`), in `generateConfigJson`.
  *
  * @param params - Configuration parameters including environment type. Partial
  *   because only optional fields are read, so a caller holding just a store scope
@@ -137,16 +147,6 @@ export function generateHeaders(params: Partial<ConfigGeneratorParams>): ConfigH
     const environmentType = params.environmentType || 'paas';
 
     switch (environmentType) {
-        case 'aco':
-            // Adobe Commerce Optimizer - ACO-specific headers with placeholders
-            return {
-                ...baseHeaders,
-                cs: {
-                    'AC-View-ID': '{{AC_VIEW_ID}}',
-                    'AC-Price-Book-ID': '{{AC_PRICE_BOOK_ID}}',
-                },
-            };
-
         case 'accs':
             // Adobe Commerce Cloud Services - store codes only, no API key
             return {
@@ -341,6 +341,9 @@ export function generateConfigJson(
             // Note: commerce-core-endpoint is preserved for ALL environment types,
             // even when it equals commerce-endpoint. The storefront uses its existence
             // to route cs headers (Magento-Website-Code, etc.) to catalog queries.
+
+            // ACO on: the catalog comes from the ACO instance, carts from Commerce (PL-60).
+            if (params.aco) applyAcoStorefront(finalConfig.public.default, params.aco, commerceEndpoint);
         }
 
         // Inject addon-specific config flags

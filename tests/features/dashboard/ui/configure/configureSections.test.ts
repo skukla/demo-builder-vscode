@@ -75,6 +75,27 @@ const baseInput = {
     isProjectNameValid: true,
 };
 
+describe('buildConfigureSections — the ACO tab (PL-60)', () => {
+    const ACO_GROUP: ServiceGroup = { id: 'adobe-commerce-aco', label: 'Adobe Commerce Optimizer', fields: [keyedField('ACO_TENANT_ID', true)] };
+
+    it('has an ACO tab while ACO is off but offered, holding only the choice', () => {
+        const aco = buildConfigureSections({ ...baseInput, acoOffer: 'optional' }).find((s) => s.id === 'adobe-commerce-aco');
+        expect(aco).toMatchObject({ kind: 'aco', label: 'Adobe Commerce Optimizer', requiredTotal: 0, isComplete: true });
+    });
+
+    it('has none where ACO is not offered and the project does not have it', () => {
+        expect(buildConfigureSections({ ...baseInput, acoOffer: 'not-offered' }).some((s) => s.id === 'adobe-commerce-aco')).toBe(false);
+        expect(buildConfigureSections(baseInput).some((s) => s.id === 'adobe-commerce-aco')).toBe(false);
+    });
+
+    it('makes the ACO group\'s tab the ACO kind once ACO is on, counting its fields, and only once', () => {
+        const sections = buildConfigureSections({ ...baseInput, serviceGroups: [...baseInput.serviceGroups, ACO_GROUP], acoOffer: 'optional' });
+        const aco = sections.filter((s) => s.id === 'adobe-commerce-aco');
+        expect(aco).toHaveLength(1);
+        expect(aco[0]).toMatchObject({ kind: 'aco', requiredTotal: 1 });
+    });
+});
+
 describe('buildConfigureSections', () => {
     describe('order and kinds', () => {
         it('returns Project → service groups → Authoring', () => {

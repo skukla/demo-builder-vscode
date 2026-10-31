@@ -30,6 +30,7 @@ import * as path from 'path';
 import { z } from 'zod';
 import { type PendingObject, pendingSchema } from './pendingRecord';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
+import type { AcoInstance } from '@/types/aco';
 import type { SetupCheckOutcome } from '@/types/base';
 import type { DatapackId } from '@/types/datapack';
 
@@ -58,6 +59,14 @@ export type ObjectUpdate = Pick<CreatedObject, 'kind' | 'id'> & Partial<Pick<Cre
 export interface TargetCodes {
     websiteCode: string;
     storeCode: string;
+}
+
+/**
+ * Where an ACO pack was loaded (PL-60): the instance, so removal deletes from the one it went to,
+ * whatever the project names now.
+ */
+export interface AcoTarget {
+    aco: AcoInstance;
 }
 
 /**
@@ -97,6 +106,8 @@ export interface InstallRecord {
      * written before it was kept; those read at the project's (rule 3).
      */
     target?: TargetCodes;
+    /** The ACO instance an ACO pack was loaded into (PL-60); absent on every Commerce record. */
+    aco?: AcoInstance;
     /** The Admin step the pack left, when its root is a root of its own (step 12). */
     rootStep?: PackRootStep;
     created: CreatedObject[];
@@ -120,6 +131,8 @@ export interface InstallRecorder {
     readonly created: readonly CreatedObject[];
     /** Where the pack was installed, when the record says. */
     readonly target?: TargetCodes;
+    /** The ACO instance, when the record is an ACO pack's. */
+    readonly aco?: AcoInstance;
     /** The Admin step the pack left, when it left one. */
     readonly rootStep?: PackRootStep;
     /** Write down where that step stands. */
@@ -158,6 +171,7 @@ const recordSchema = z.object({
     engine: z.literal('demo-builder'),
     startedAt: z.string(),
     target: z.object({ websiteCode: z.string(), storeCode: z.string() }).optional(),
+    aco: z.object({ tenantId: z.string(), region: z.string(), environment: z.enum(['sandbox', 'production']) }).optional(),
     rootStep: z
         .object({
             state: z.enum(['open', 'done']),
@@ -256,18 +270,29 @@ function parseRecord(text: string, label: string): InstallRecord {
     return parsed.data;
 }
 
+/** Where a new record says its pack went. */
+function newTarget(target: TargetCodes | AcoTarget | undefined): Pick<InstallRecord, 'target' | 'aco'> {
+    if (!target) return {};
+    if ('aco' in target) {
+        const { tenantId, region, environment } = target.aco;
+        return { aco: { tenantId, region, environment } };
+    }
+    return { target: { websiteCode: target.websiteCode, storeCode: target.storeCode } };
+}
+
 /**
  * Start recording an install, or carry on the record a failed one left.
  *
  * @param now - the time to stamp a new record with
- * @param target - where a new record's install goes; a record carried on keeps the one it has
+ * @param target - where a new record's install goes (a website and store view, or an ACO instance);
+ *   a record carried on keeps the one it has
  */
 export async function openInstallRecord(
     files: RecordFiles,
     projectPath: string,
     pack: DatapackId,
     now: () => string,
-    target?: TargetCodes,
+    target?: TargetCodes | AcoTarget,
 ): Promise<InstallRecorder> {
     const filePath = installRecordPath(projectPath, pack);
     const record: InstallRecord = (await readInstallRecord(files, projectPath, pack)) ?? {
@@ -275,7 +300,7 @@ export async function openInstallRecord(
         pack: { name: pack.name, version: pack.version },
         engine: 'demo-builder',
         startedAt: now(),
-        ...(target ? { target: { websiteCode: target.websiteCode, storeCode: target.storeCode } } : {}),
+        ...newTarget(target),
         created: [],
     };
     const pending: PendingObject[] = [...(record.pending ?? [])];
@@ -297,6 +322,7 @@ export async function openInstallRecord(
             return record.created;
         },
         target: record.target,
+        aco: record.aco,
         get rootStep() {
             return record.rootStep;
         },

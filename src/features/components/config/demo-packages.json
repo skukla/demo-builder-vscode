@@ -186,7 +186,7 @@
       "featured": true,
       "requiresMesh": false,
       "addons": {
-        "adobe-commerce-aco": "excluded"
+        "adobe-commerce-aco": "optional"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",

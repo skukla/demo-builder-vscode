@@ -28,8 +28,6 @@ export interface EdsProjectMetadata {
     daLiveOrg: string | undefined;
     /** DA.live site name */
     daLiveSite: string | undefined;
-    /** Backend type for data cleanup */
-    backendType?: 'commerce' | 'aco' | undefined;
 }
 
 /**
@@ -49,7 +47,7 @@ export interface EdsProjectInfo {
  */
 export interface CleanupResultItem {
     /** Resource type */
-    type: 'github' | 'daLive' | 'helix' | 'backend' | 'datapack';
+    type: 'github' | 'daLive' | 'helix' | 'datapack';
     /** Resource name/identifier */
     name: string;
     /** Whether operation succeeded */
@@ -93,7 +91,6 @@ export function extractEdsMetadata(project: Project): EdsProjectMetadata | null 
         // without it, deleting a migrated project skipped the DA site cleanup.
         daLiveSite:
             (metadata?.daLiveSite as string | undefined) ?? githubRepo?.split('/')[1],
-        backendType: metadata?.backendType as 'commerce' | 'aco' | undefined,
     };
 }
 
@@ -186,8 +183,6 @@ function formatResourceName(type: CleanupResultItem['type'], name: string): stri
             return `DA.live site (${name})`;
         case 'helix':
             return `Helix CDN (${name})`;
-        case 'backend':
-            return `Backend data (${name})`;
         case 'datapack':
             return `Datapack (${name})`;
         default:

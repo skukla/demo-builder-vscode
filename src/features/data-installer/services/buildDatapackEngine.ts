@@ -10,11 +10,14 @@
  * - `demo-builder`: Demo Builder does it, over the project's own signed Commerce access (the
  *   client the ERP work opens, `commerceClientForProject`), reading the pack's rows from the
  *   store that holds it (the service's catalog or the datapack library, `readPackItems`)
- *   through the reader the datapack file and library tools use (`readPackFromStore`).
+ *   through the reader the datapack file and library tools use (`readPackFromStore`). A pack of
+ *   ACO kinds goes to the project's ACO instance through the one ACO client (`projectAco`, PL-60).
  *
  * @module features/data-installer/services/buildDatapackEngine
  */
 
+import { createAcoClient } from './aco/acoClient';
+import type { AcoAccessSource } from './aco/acoJobs';
 import type { DataInstallerClient } from './dataInstallerClient';
 import { type DatapackEngine, type DatapackEngineId, type ServiceEngineAccess, buildServiceEngine } from './datapackEngine';
 import { readPackFromStore } from './datapackTransfer';
@@ -27,6 +30,8 @@ import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import { readAcoCredential } from '@/features/components/services/acoCredentialStore';
+import { acoSettingsProblem, readAcoSettings } from '@/features/components/services/acoSettings';
 import { commerceClientForProject } from '@/features/project-creation/services/erpFillForProject';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -75,6 +80,7 @@ export function buildDatapackEngine(id: DatapackEngineId, access: DatapackEngine
     });
     return demoBuilderEngine({
         commerce: projectCommerce(access),
+        aco: projectAco(access),
         readPack: (pack, _dataTypes, source) => readPackItems(access, pack, source),
         projectPath: access.project.path,
         log,
@@ -114,6 +120,27 @@ export function projectCommerce(
         authManager
             ? commerceClientForProject(access.project, authManager, access.secrets, undefined, STORE_WIDE)
             : { refusal: 'Adobe sign-in is required to write to this project\'s store.' };
+}
+
+/** Said when ACO is on but Demo Builder holds no ingestion credential for the project. */
+export const NO_ACO_CREDENTIAL =
+    'Demo Builder holds no Adobe Commerce Optimizer credential for this project. Turn ACO on for the project again so ' +
+    'Demo Builder can set one up in its Adobe workspace.';
+
+/**
+ * The project's ACO access (PL-60, owner 2026-10-31 P4), or why there is none: the instance, catalog
+ * view and locale it names (`readAcoSettings`), and a client over the ingestion credential Demo
+ * Builder keeps for it in SecretStorage (`readAcoCredential`). The client is built for the instance
+ * asked for, so a removal reaches the instance its record names.
+ */
+export function projectAco(access: Pick<DatapackEngineAccess, 'project' | 'secrets'>): AcoAccessSource {
+    return async () => {
+        const read = readAcoSettings(access.project);
+        if (!read || 'missing' in read) return { refusal: acoSettingsProblem(read) ?? NO_ACO_CREDENTIAL };
+        const credential = await readAcoCredential(access.secrets, access.project.path);
+        if (!credential) return { refusal: NO_ACO_CREDENTIAL };
+        return { settings: read.settings, clientFor: (instance) => createAcoClient({ instance, credential }) };
+    };
 }
 
 /**

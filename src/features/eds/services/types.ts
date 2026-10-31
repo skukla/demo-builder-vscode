@@ -336,7 +336,6 @@ export type EdsSetupPhase =
     | 'content'
     | 'block-library'
     | 'publish'
-    | 'tools-clone'
     | 'env-config'
     | 'complete';
 
@@ -380,8 +379,6 @@ export interface EdsProjectConfig {
     isPrivate?: boolean;
     /** Whether to skip DA.live content population */
     skipContent?: boolean;
-    /** Whether to skip tools cloning */
-    skipTools?: boolean;
     /** Repository mode: create new or use existing */
     repoMode?: 'new' | 'existing';
     /** Existing repository full name (owner/repo format, for existing repos) */
@@ -492,74 +489,6 @@ export class GitHubAppNotInstalledError extends EdsProjectError {
 }
 
 // ==========================================================
-// Tool Manager Types
-// ==========================================================
-
-/**
- * ACO (Adobe Commerce Optimizer) configuration for tool .env file
- */
-export interface ACOConfig {
-    /** ACO API URL */
-    apiUrl: string;
-    /** ACO API Key for authentication */
-    apiKey: string;
-    /** ACO Tenant ID */
-    tenantId: string;
-    /** ACO Environment ID */
-    environmentId: string;
-}
-
-/**
- * Result of tool script execution
- */
-export interface ToolExecutionResult {
-    /** Whether the execution succeeded (exit code 0) */
-    success: boolean;
-    /** Standard output from the command */
-    stdout: string;
-    /** Standard error output from the command */
-    stderr: string;
-    /** Error message if execution failed */
-    error?: string;
-    /** Execution duration in milliseconds */
-    duration: number;
-}
-
-/**
- * Options for tool installation
- */
-export interface ToolInstallOptions {
-    /** Force reinstall even if tool exists (default: false) */
-    forceReinstall?: boolean;
-}
-
-/**
- * Options for tool script execution
- */
-export interface ToolExecutionOptions {
-    /** Callback for streaming output */
-    onOutput?: (data: string) => void;
-    /** Execution timeout in milliseconds */
-    timeout?: number;
-    /** Whether to run in dry run mode (for cleanup operations) */
-    dryRun?: boolean;
-}
-
-/**
- * Error class for Tool Manager operations
- */
-export class ToolManagerError extends Error {
-    constructor(
-        message: string,
-        public readonly operation: 'clone' | 'install' | 'configure' | 'execute',
-        public readonly cause?: Error,
-    ) {
-        super(message);
-        this.name = 'ToolManagerError';
-    }
-}
-
-// ==========================================================
 // EDS Error Formatting Types
 // ==========================================================
 
@@ -639,10 +568,6 @@ export interface EdsMetadata {
     daLiveSite?: string;
     /** ISO timestamp of last publish */
     lastPublished?: string;
-    /** Backend type for data cleanup */
-    backendType?: 'commerce' | 'aco';
-    /** Brand ID for backend data */
-    brandId?: string;
 
     // === Template Sync Fields ===
     // These fields enable EDS storefronts to receive updates from their upstream template repository.
@@ -685,8 +610,6 @@ export interface EdsMetadata {
  * Options for EDS cleanup operations
  */
 export interface EdsCleanupOptions {
-    /** Clean up backend data (Commerce/ACO) via commerce-demo-ingestion tool */
-    cleanupBackendData?: boolean;
     /** Delete GitHub repository */
     deleteGitHub?: boolean;
     /** Archive repository instead of deleting (safer, default: true) */
@@ -713,8 +636,6 @@ export interface CleanupOperationResult {
  * Comprehensive result of EDS cleanup operations
  */
 export interface EdsCleanupResult {
-    /** Backend data cleanup result */
-    backendData: CleanupOperationResult;
     /** Configuration Service site deletion result */
     configService: CleanupOperationResult;
     /** DA.live content deletion result */

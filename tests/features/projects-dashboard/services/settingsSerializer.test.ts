@@ -392,7 +392,6 @@ describe('settingsSerializer', () => {
                     ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret',
                 },
                 'some-integration': {
-                    ACO_API_KEY: 'aco-key-value',
                     EXPERIENCE_PLATFORM_API_KEY: 'ep-key-value',
                 },
             },

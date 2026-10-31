@@ -45,6 +45,12 @@ export interface ServiceGroup {
 
 export interface UseComponentConfigProps {
     selectedStack?: string;
+    /**
+     * The add-ons the project has chosen (PL-60). Their fields join the stack's. Pass a
+     * stable reference (a module-level empty list when there are none), or the field
+     * list rebuilds every render.
+     */
+    selectedAddons?: readonly string[];
     componentConfigs: ComponentConfigs;
     packageConfigDefaults?: Record<string, string>;
     onConfigsChange: (configs: ComponentConfigs) => void;
@@ -105,6 +111,7 @@ export function resetComponentRegistryCache(): void {
 
 export function useComponentConfig({
     selectedStack,
+    selectedAddons,
     componentConfigs: initialConfigs,
     packageConfigDefaults,
     onConfigsChange,
@@ -209,8 +216,9 @@ export function useComponentConfig({
             collectStackComponents<ComponentDataDTO>(
                 selectedStack ? getStackById(selectedStack) : undefined,
                 componentsData,
+                selectedAddons,
             ),
-        [selectedStack, componentsData],
+        [selectedStack, componentsData, selectedAddons],
     );
 
     // Build service groups from selected components

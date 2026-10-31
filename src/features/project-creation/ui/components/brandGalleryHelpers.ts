@@ -6,23 +6,6 @@
  */
 
 import type { DemoPackage } from '@/types/demoPackages';
-import type { OptionalAddon } from '@/types/stacks';
-
-/**
- * Filters stack addons using blacklist logic: show all unless explicitly excluded.
- *
- * Stacks define all possible addons; packages can exclude specific addons by
- * setting them to 'excluded'. Addons not mentioned in the package's addons map
- * pass through (they are NOT gated). If the package has no addons map, all
- * stack addons pass.
- */
-export function filterAddonsByPackage(stackAddons: OptionalAddon[], pkg: DemoPackage): OptionalAddon[] {
-    if (!pkg.addons) return stackAddons;
-    return stackAddons.filter(addon => {
-        const config = pkg.addons?.[addon.id];
-        return config !== 'excluded';
-    });
-}
 
 /**
  * Sorts packages preserving JSON config order, with "coming-soon" packages last.

@@ -19,7 +19,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ROOT, workingTreeFiles } from './architectureScan';
 import generated from '@/core/shell/config/node-version.generated.json';
-import { excludedNodeSources, listNodeSources } from '@/features/components/services/nodeResolution';
+import { listNodeSources } from '@/features/components/services/nodeResolution';
 
 /** A quoted major or full version, e.g. '24' or "20.11.0". */
 const QUOTED_VERSION = /['"`]\d{1,2}(?:\.\d+\.\d+)?['"`]/;
@@ -74,9 +74,5 @@ describe('the generated Node covers every component that ships', () => {
         const listed = (await listNodeSources()).map((s) => s.ref).sort();
         expect(listed.length).toBeGreaterThan(5);
         expect(generated.sources.map((s) => s.ref).sort()).toStrictEqual(listed);
-    });
-
-    it('excludes exactly what the resolver excludes', () => {
-        expect(generated.excluded).toStrictEqual(excludedNodeSources());
     });
 });

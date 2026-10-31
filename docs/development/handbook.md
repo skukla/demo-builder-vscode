@@ -430,7 +430,7 @@ meant.
 > accounted for **four throws in the entire codebase** against 354 plain
 > `throw new Error(...)`; the errors people actually use are defined beside the code
 > that throws them — `DaLiveAuthError` 8 thrown and 11 caught, `DataInstallerApiError`
-> 9 and 4, `ToolManagerError` 9 and 1. A convention telling everyone to use the
+> 9 and 4. A convention telling everyone to use the
 > central classes would have been a policy with 354 counter-examples.
 > *The evidence that it was not working:* three of core's six domain errors —
 > `ValidationError`, `PrerequisiteError`, `MeshError` — had never been thrown or caught

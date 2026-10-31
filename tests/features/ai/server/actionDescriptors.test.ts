@@ -157,6 +157,8 @@ describe('ACTION_DESCRIPTORS', () => {
             'refresh_block_library',
             // Uninstalls from Commerce first; its settings may reset (AB-13).
             'reinstall_integration',
+            // Unsubscribes the ACO ingestion API on a live workspace credential (PL-60).
+            'remove_aco_credential',
             'remove_integration',
             // Wipes the ERP and undoes what it wrote into Commerce companies
             // (plan step 05, 2026-09-14).

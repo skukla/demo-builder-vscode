@@ -19,6 +19,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { creationReporter, creationSteps } from './creationProgress';
+import { executeAcoCredentialPhase } from './executorAcoPhase';
 import {
     executeAppBuilderIntegrationsPhase,
     ensureWorkspaceRuntimeReady,
@@ -373,10 +374,10 @@ async function createOrRebuild(
     );
 
     // ========================================================================
-    // PHASE 3b: APP BUILDER INTEGRATIONS
+    // PHASE 3b: APP BUILDER INTEGRATIONS, then 3c: the ACO credential (PL-60)
     // ========================================================================
-
     await executeAppBuilderIntegrationsPhase(context, project, typedConfig, progressTracker);
+    await executeAcoCredentialPhase(context, project, progressTracker);
 
     // ========================================================================
     // PHASE 4-5: FINALIZATION

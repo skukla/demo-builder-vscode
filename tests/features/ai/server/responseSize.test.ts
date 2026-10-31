@@ -278,6 +278,10 @@ describe('rows with no output safety net are classified', () => {
         'set_console_apis',
         'set_project_destination',
         'add_console_apis',
+        // Category 2, read before listing: `handleSetUpAcoCredential` returns
+        // `{success, apiCode}` and `handleRemoveAcoCredential` `{success}`, or a named refusal (PL-60).
+        'set_up_aco_credential',
+        'remove_aco_credential',
         // Category 2, read before listing: `handleDeleteUndeclaredRuntimeCode` returns
         // `{namespace, deleted, failed}`, or a named refusal.
         'delete_undeclared_runtime_code',
