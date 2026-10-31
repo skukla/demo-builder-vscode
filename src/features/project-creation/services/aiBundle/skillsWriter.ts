@@ -51,6 +51,7 @@ import importDatapackContent from '../../templates/skills/import-datapack.md';
 import refineVisualMatchContent from '../../templates/skills/refine-visual-match.md';
 import registerCustomBlockContent from '../../templates/skills/register-custom-block.md';
 import removeCustomBlockContent from '../../templates/skills/remove-custom-block.md';
+import scrapeProductsToAcoContent from '../../templates/skills/scrape-products-to-aco.md';
 import scrapeReferenceSiteContent from '../../templates/skills/scrape-reference-site.md';
 import syncChangesContent from '../../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../../templates/skills/update-credentials.md';
@@ -102,6 +103,7 @@ const SKILL_CONTENT: Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], stri
     'demo-data-injector': demoDataInjectorContent,
     'header-nav-footer': headerNavFooterContent,
     'refine-visual-match': refineVisualMatchContent,
+    'scrape-products-to-aco': scrapeProductsToAcoContent,
     'register-custom-block': registerCustomBlockContent,
     'remove-custom-block': removeCustomBlockContent,
 };

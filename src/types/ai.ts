@@ -42,6 +42,8 @@ export const DEMO_BUILDER_ALWAYS_ON_SKILLS = [
     // Sample data
     'import-datapack',
     'author-commerce-data',
+    // ACO datapack from the products on a website (PL-60 slice A)
+    'scrape-products-to-aco',
     // EDS site-scraping
     'scrape-reference-site',
     'connect-authenticated-site',
@@ -91,6 +93,8 @@ export const SKILL_MCP_TOOL_DEPENDENCIES = {
     'scrape-reference-site': 'playwright',
     'connect-authenticated-site': 'playwright',
     'refine-visual-match': 'playwright',
+    // Reads a listing page with the browser to make an ACO pack (PL-60 slice A, 2026-10-31).
+    'scrape-products-to-aco': 'playwright',
 } as const satisfies Partial<Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], string>>;
 
 /** Every skill name that identifies a first-party skill, however it was delivered. */

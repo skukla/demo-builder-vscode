@@ -100,29 +100,30 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
         mockDisk();
     });
 
-    it('the dependency map still names exactly the three playwright skills (fixture guard)', () => {
+    it('the dependency map still names exactly the four playwright skills (fixture guard)', () => {
         expect([...PLAYWRIGHT_SKILLS].sort()).toEqual([
             'connect-authenticated-site',
             'refine-visual-match',
+            'scrape-products-to-aco',
             'scrape-reference-site',
         ]);
     });
 
     describe('EDS project (playwright entry applies)', () => {
-        it('writes all fourteen skills when @playwright/mcp is installed (pins hold)', async () => {
+        it('writes all sixteen skills when @playwright/mcp is installed (pins hold)', async () => {
             mockDisk(playwrightInstalled());
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), makeTestWriter(PROJECT_PATH));
 
             // 15 → 14 (AI-1o): extend-app-builder-app follows App Builder work,
-            // and a storefront alone is not doing any.
-            expect(writtenFiles()).toHaveLength(15);
+            // and a storefront alone is not doing any. 15 → 16: scrape-products-to-aco (PL-60).
+            expect(writtenFiles()).toHaveLength(16);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(writtenFiles().some((p) => p.endsWith(`${filename}/SKILL.md`))).toBe(true);
             }
         });
 
-        it('writes three fewer skills when @playwright/mcp is not in the manifest', async () => {
+        it('writes four fewer skills when @playwright/mcp is not in the manifest', async () => {
             mockDisk({ [MANIFEST_PATH]: mcpToolsManifest(['@some/other-package']) });
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), makeTestWriter(PROJECT_PATH));
@@ -240,9 +241,9 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                     'register-custom-block',
                 ])
             );
-            // Fourteen always-written skills; no extend-app-builder-app for a
-            // storefront that builds no App Builder app (AI-1o).
-            expect(summary.written).toHaveLength(15);
+            // Sixteen always-written skills (scrape-products-to-aco, PL-60); no
+            // extend-app-builder-app for a storefront that builds no App Builder app (AI-1o).
+            expect(summary.written).toHaveLength(16);
             expect(summary.written).not.toContain('extend-app-builder-app');
         });
 

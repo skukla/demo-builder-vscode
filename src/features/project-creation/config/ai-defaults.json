@@ -20,7 +20,7 @@
       "args": [
         "node_modules/@playwright/mcp/cli.js"
       ],
-      "description": "Playwright browser-automation MCP \u2014 drives the EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, refine-visual-match). Uses the machine's installed Google Chrome by default (verified 2026-08-22 on 0.0.75 and 0.0.79: works with the bundled-browser store empty; UA matches installed Chrome) \u2014 no download when Chrome is present. Chrome-less machines need a one-time ~150 MB Chromium install via the server's install-browser subcommand. Tilde range, not caret: for 0.0.x versions a caret is an exact pin (^0.0.75 froze installs at 0.0.75), while ~0.0.x tracks patch releases.",
+      "description": "Playwright browser-automation MCP \u2014 drives the EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, refine-visual-match) and scrape-products-to-aco (a website's products into an ACO datapack). Uses the machine's installed Google Chrome by default (verified 2026-08-22 on 0.0.75 and 0.0.79: works with the bundled-browser store empty; UA matches installed Chrome) \u2014 no download when Chrome is present. Chrome-less machines need a one-time ~150 MB Chromium install via the server's install-browser subcommand. Tilde range, not caret: for 0.0.x versions a caret is an exact pin (^0.0.75 froze installs at 0.0.75), while ~0.0.x tracks patch releases.",
       "requires": "eds-storefront",
       "thirdParty": true
     },
