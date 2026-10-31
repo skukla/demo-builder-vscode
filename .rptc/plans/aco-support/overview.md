@@ -70,6 +70,40 @@ group (never rendered). Live: `selectedAddons` persistence, the `configure_proje
 | P4 | Does the extension load data itself (needs an ingestion client id + secret) or only point the storefront at ACO? | Point only, first. Loading is P3's datapack; a client secret is one more SecretStorage value to manage for no demo gain yet |
 | P5 | AB-14 per-customer prices | Separate item: a storefront block change (send the buyer's price-book id after sign-in) plus an ERP price-book writer |
 
+### The owner's answers (2026-10-31)
+
+| # | Answer | Who builds it |
+|---|---|---|
+| P1 | **Both places.** ACO is offered in the wizard's Commerce → Catalog step, off by default and only where the package allows it. It is ALSO a choice in "Create datapack", where the ACO pack offers two sources: **"From this Commerce instance"** (built: G5's ACO export) and **"From a website"** (scrape a public listing page into a pack) | wizard and Configure: slice C; "From a website": slice A (`aco/aco-scrape-to-pack`) |
+| P2 | **The SC types nothing for credentials.** Demo Builder creates the ACO credential in the project's own Developer Console workspace. The SC picks the ACO instance and the catalog view. The three never-used fields (`ACO_API_KEY`, `ACO_ENVIRONMENT_ID`, `ACO_API_URL`) are deleted, not deprecated | the credential: slice B; the fields and the pickers: slice C |
+| P3 | **One ACO pack format, three sources.** The format is the Data Installer's `aco_*` kinds. The sources are: library packs (`aco_bodea` and the other seven), the Commerce-instance export (G5), and website scraping. A scraped pack lands in the SC's own datapack library first, for review, before anything is loaded | the website source: slice A |
+| P4 | **Demo Builder loads ACO packs itself,** through one ACO client, and removes them by the pack's own keys (`sku`, `slug`, `code`, `priceBookId`), since ingestion has no list | slice B |
+| P5 | **Unchanged:** a separate item, `AB-14` | — |
+
+P4 overrides the 2026-10-04 recommendation ("point only, first"); P2 makes the credential the
+extension's job, so the client-secret cost that recommendation weighed is no longer the SC's.
+
+#### Slice A: "From a website" (branch `aco/aco-scrape-to-pack`)
+
+DSC 3.0 scrapes with a separate Adobe service that refused our sign-in (2026-10-31; what it does
+is in `.rptc/research/aco-support/dsc-scraper.md`, reported by FluffyJaws and not verified by us).
+So Demo Builder rebuilds it with what every project already has:
+
+1. **The project's own agent scrapes**, with the `@playwright/mcp` browser tool every project
+   ships, following a generated skill, `scrape-products-to-aco`: open the listing, scroll until
+   the page stops growing, read the product cards, prefer what the page itself states
+   (schema.org `Product` JSON-LD when present, which DSC does not read), and mark every value it
+   had to propose (price, SKU, currency) instead of passing it off as read.
+2. **One MCP tool, `make_aco_pack_from_products`,** turns those typed products
+   (`ScrapedProduct`, `src/types/scrapedProduct.ts`) into rows of the existing ACO pack shapes
+   (`src/types/acoPack.ts`), checks them against the Data Installer's schemas, and saves the pack
+   into the SC's library through the house writer (`openLibraryWriter`). Its answer names every
+   proposed value. Undo: `delete_library_datapack`.
+3. **The human surface:** "Create datapack" → ACO → "From a website" takes a URL and opens the
+   project's AI with a prompt to do steps 1 and 2.
+
+Loading the pack into ACO is slice B's (P4); nothing in slice A writes to ACO or Commerce.
+
 ## Build order once P1–P4 are answered
 
 1. Delete the dead paths P3 makes dead (tool manager ACO ingestion/cleanup, `cleanupBackendData`,

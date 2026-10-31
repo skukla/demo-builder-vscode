@@ -104,6 +104,26 @@ beside `projectCommerce`, with removal by the pack's own keys (the ingestion del
 catalog view chosen by the SC (no create API). Until then the engine keeps refusing the eight
 packs by name, which it already does.
 
+## The owner's answers to P1–P5 (2026-10-31)
+
+Recorded in full in `.rptc/plans/aco-support/overview.md` ("The owner's answers"). In short:
+
+- **P1** ACO is offered in the wizard's Catalog step (off by default, package-gated) AND in
+  "Create datapack", whose ACO choice has two sources: "From this Commerce instance" (built, G5)
+  and "From a website" (slice A).
+- **P2** The SC types nothing for credentials: Demo Builder creates the ACO credential in the
+  project's Developer Console workspace (slice B); the SC picks the ACO instance and catalog view;
+  `ACO_API_KEY`, `ACO_ENVIRONMENT_ID` and `ACO_API_URL` are deleted (slice C).
+- **P3** One pack format (the Data Installer's `aco_*` kinds), three sources: library packs, the
+  Commerce-instance export, website scraping. A scraped pack lands in the SC's library first.
+- **P4** Demo Builder's engine loads ACO packs through one ACO client, removing by the pack's own
+  keys (slice B). This replaces the 2026-10-04 "point only, first" recommendation.
+- **P5** Unchanged: `AB-14`.
+
+Three slices run in parallel: A `aco/aco-scrape-to-pack` (website → pack), B
+`aco/aco-loader-and-config` (ACO client, loading, Console credential), C (wizard, Configure,
+storefront config).
+
 ## Shipped so far
 
 - 2026-09-17  docs(backlog): PL-60 finishes ACO support; AB-14 asks where ERP prices go on an ACO storefront (`599c3d9de`)
