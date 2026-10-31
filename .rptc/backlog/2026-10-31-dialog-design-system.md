@@ -40,3 +40,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 ## Shipped so far
 
 - 2026-10-31  feat(ui): dialogs follow one design for content, size and motion (`9698ac5fa`)
+- 2026-10-31  fix(ui): pin dialogs, red that reads red, and the 24px gap, as measured (`e651eb2bf`)
