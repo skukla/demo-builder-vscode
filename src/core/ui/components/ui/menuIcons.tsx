@@ -21,6 +21,7 @@ import Copy from '@spectrum-icons/workflow/Copy';
 import DataAdd from '@spectrum-icons/workflow/DataAdd';
 import DataUpload from '@spectrum-icons/workflow/DataUpload';
 import Delete from '@spectrum-icons/workflow/Delete';
+import Deselect from '@spectrum-icons/workflow/Deselect';
 import Duplicate from '@spectrum-icons/workflow/Duplicate';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
@@ -35,6 +36,7 @@ import Play from '@spectrum-icons/workflow/Play';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Revert from '@spectrum-icons/workflow/Revert';
 import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy';
+import SelectBoxAll from '@spectrum-icons/workflow/SelectBoxAll';
 import Settings from '@spectrum-icons/workflow/Settings';
 import Share from '@spectrum-icons/workflow/Share';
 import Stop from '@spectrum-icons/workflow/Stop';
@@ -80,6 +82,10 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     capture: <DataUpload size="S" />,
     /** Let others see and use it (a library pack's Share and Stop sharing). */
     share: <Share size="S" />,
+    /** Tick every box in a list (a datapack form's Select all). */
+    selectAll: <SelectBoxAll size="S" />,
+    /** Untick every box in a list (the same button's Clear all). */
+    clearAll: <Deselect size="S" />,
 };
 
 /**

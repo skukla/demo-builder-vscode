@@ -9,9 +9,9 @@
  * @module features/data-installer/ui/components/StoreItemChecklist
  */
 
-import { ActionButton } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import type { StoreItem } from '../../pickableKinds';
+import { SelectAllToggle } from './SelectAllToggle';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 
@@ -54,9 +54,7 @@ export function StoreItemChecklist({ items, nouns, picked, onChange }: StoreItem
                 alwaysShowCount
                 countTrailing={
                     shown.length > 0 ? (
-                        <ActionButton isQuiet onPress={toggleShown}>
-                            {allShown ? 'Clear all' : 'Select all'}
-                        </ActionButton>
+                        <SelectAllToggle allSelected={allShown} onToggle={toggleShown} />
                     ) : null
                 }
             />

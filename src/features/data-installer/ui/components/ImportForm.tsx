@@ -12,11 +12,12 @@
  * @module features/data-installer/ui/components/ImportForm
  */
 
-import { ActionButton, Checkbox, Item, Picker, ProgressCircle } from '@adobe/react-spectrum';
+import { Checkbox, Item, Picker, ProgressCircle } from '@adobe/react-spectrum';
 import React from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { TargetWebsite } from '../hooks/useImportScopes';
 import { blockedBy, missingDependencies } from '../importDependencies';
+import { SelectAllToggle } from './SelectAllToggle';
 
 /**
  * Dependencies the selected types need that this datapack does not contain.
@@ -255,9 +256,7 @@ export function ImportForm({
                     and was easy to miss entirely. */}
                 <div className="datapack-import-types-head">
                     <span className="datapack-import-label">Data types</span>
-                    <ActionButton isQuiet onPress={onToggleAll}>
-                        {allSelected ? 'Clear all' : 'Select all'}
-                    </ActionButton>
+                    <SelectAllToggle allSelected={allSelected} onToggle={onToggleAll} />
                 </div>
                 {/* The grid is shared with the export modal — see
                     .datapack-type-grid for why they are one class. */}

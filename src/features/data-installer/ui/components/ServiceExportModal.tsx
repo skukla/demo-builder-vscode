@@ -32,7 +32,7 @@
  * @module features/data-installer/ui/components/ServiceExportModal
  */
 
-import { ActionButton, Checkbox, DialogContainer } from '@adobe/react-spectrum';
+import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { type AcoExportChoice, useAcoExportChoice } from '../hooks/useAcoExportChoice';
@@ -40,6 +40,7 @@ import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { AcoExportChoices } from './AcoExportChoices';
 import { type ExportOutcome, ExportDatapackResult } from './ExportDatapackResult';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';
+import { SelectAllToggle } from './SelectAllToggle';
 import { FormField } from '@/core/ui/components/forms/FormField';
 import { Modal } from '@/core/ui/components/ui/Modal';
 
@@ -254,9 +255,7 @@ function ExportForm({
                     <div className="datapack-import-types-head">
                         <span className="datapack-import-label">Data types</span>
                         {types.available.length > 0 ? (
-                            <ActionButton isQuiet onPress={types.onToggleAll}>
-                                {types.allSelected ? 'Clear all' : 'Select all'}
-                            </ActionButton>
+                            <SelectAllToggle allSelected={types.allSelected} onToggle={types.onToggleAll} />
                         ) : null}
                     </div>
                     {renderTypeChoices(types)}
