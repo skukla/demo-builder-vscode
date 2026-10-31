@@ -37,6 +37,13 @@ export interface SaveFromStoreModalProps {
     /** Start the save with these picks. */
     onSave: (picks: StorePicks) => void;
     pack?: PackBeingSaved;
+    /** The dialog's title; "Choose what goes in the pack" when it stands alone. */
+    title?: string;
+    /**
+     * Shown above the list, for a dialog that hosts this as one of its choices: Create datapack's
+     * pack-type choice, so the choice and the pick list are one window (owner, 2026-10-31).
+     */
+    lead?: React.ReactNode;
 }
 
 function intro(pack: PackBeingSaved | undefined): string {
@@ -63,7 +70,17 @@ function KindItems({ kind, page, failure, loading, picked, onChange }: { kind: P
     );
 }
 
-export function SaveFromStoreModal({ onClose, onSave, pack }: SaveFromStoreModalProps): React.JSX.Element {
+/** The pick screen in its own dialog ("Save store changes to this pack"). */
+export function SaveFromStoreModal(props: SaveFromStoreModalProps): React.JSX.Element {
+    return (
+        <DialogContainer onDismiss={props.onClose}>
+            <SaveFromStoreDialog {...props} />
+        </DialogContainer>
+    );
+}
+
+/** The pick screen's dialog, for a `DialogContainer` the caller holds (Create datapack's). */
+export function SaveFromStoreDialog({ onClose, onSave, pack, title = 'Choose what goes in the pack', lead }: SaveFromStoreModalProps): React.JSX.Element {
     const [kind, setKind] = useState<PickableKind>('products');
     const [picks, setPicks] = useState<StorePicks>({});
     const list = useDataInstallerRequest<StoreItemPage>('list-datapack-export-items');
@@ -81,16 +98,16 @@ export function SaveFromStoreModal({ onClose, onSave, pack }: SaveFromStoreModal
     const save = useCallback((): void => onSave(picks), [onSave, picks]);
 
     return (
-        <DialogContainer onDismiss={onClose}>
             <Modal
                 size="L"
                 wide
-                title="Choose what goes in the pack"
+                title={title}
                 onClose={onClose}
                 closeLabel="Close"
                 actionButtons={[{ label: count > 0 ? `Save with ${count} picked` : 'Save', variant: 'accent', onPress: save, isDisabled: !pack && count === 0 }]}
             >
                 <div className="datapack-export-body">
+                    {lead}
                     <p className="datapack-export-intro">{intro(pack)}</p>
                     <Picker label="Pick from" selectedKey={kind} onSelectionChange={choose}>
                         {PICKABLE_KINDS.map((each) => {
@@ -102,6 +119,5 @@ export function SaveFromStoreModal({ onClose, onSave, pack }: SaveFromStoreModal
                     <KindItems kind={kind} page={list.value} failure={list.failure?.message} loading={list.loading || !list.settled} picked={picks[kind] ?? []} onChange={pickKind} />
                 </div>
             </Modal>
-        </DialogContainer>
     );
 }

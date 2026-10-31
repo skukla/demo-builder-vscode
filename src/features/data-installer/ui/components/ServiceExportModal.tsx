@@ -73,9 +73,26 @@ export interface ServiceExportModalProps {
     onClose: () => void;
     /** The pack this makes: the service's Commerce export, or an ACO pack (`CreateDatapackModal` asks). */
     packType: 'commerce' | 'aco';
+    /** The dialog's title; "Export a datapack" when it stands alone. */
+    title?: string;
+    /**
+     * Shown above the form, for a dialog that hosts this as one of its choices: Create datapack's
+     * pack-type choice, so the choice and its form are one window (owner, 2026-10-31).
+     */
+    lead?: React.ReactNode;
 }
 
-export function ServiceExportModal({ onClose, packType }: ServiceExportModalProps): React.JSX.Element {
+/** The export in its own dialog. */
+export function ServiceExportModal(props: ServiceExportModalProps): React.JSX.Element {
+    return (
+        <DialogContainer onDismiss={props.onClose}>
+            <ServiceExportDialog {...props} />
+        </DialogContainer>
+    );
+}
+
+/** The export's dialog, for a `DialogContainer` the caller holds (Create datapack's). */
+export function ServiceExportDialog({ onClose, packType, title = 'Export a datapack', lead }: ServiceExportModalProps): React.JSX.Element {
     const [name, setName] = useState('');
     const [version, setVersion] = useState('');
     const [selected, setSelected] = useState<string[]>([]);
@@ -142,14 +159,13 @@ export function ServiceExportModal({ onClose, packType }: ServiceExportModalProp
     const savable = captured ? { name: name.trim(), version: version.trim() } : null;
 
     return (
-        <DialogContainer onDismiss={onClose}>
             <Modal
                 // L, not the default M: there are 18 exportable types and the
                 // longest (b2b_shared_catalog_company_assignments) is 38
                 // characters. At M they either wrap mid-name or scroll.
                 size="L"
                 wide
-                title="Export a datapack"
+                title={title}
                 onClose={onClose}
                 closeLabel="Close"
                 actionButtons={
@@ -175,6 +191,8 @@ export function ServiceExportModal({ onClose, packType }: ServiceExportModalProp
                             ) : null}
                         </>
                     ) : (
+                        <>
+                        {lead}
                         <ExportForm
                             projectName={target.value?.projectName}
                             name={name}
@@ -193,10 +211,10 @@ export function ServiceExportModal({ onClose, packType }: ServiceExportModalProp
                                 onToggleAll: toggleAll,
                             }}
                         />
+                        </>
                     )}
                 </div>
             </Modal>
-        </DialogContainer>
     );
 }
 

@@ -17,6 +17,7 @@
  */
 
 import React, { useCallback } from 'react';
+import type { StorePicks } from '../../pickableKinds';
 import { usePackSetupStep } from './usePackSetupStep';
 import { useSaveStoreChanges } from './useSaveStoreChanges';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
@@ -41,8 +42,8 @@ export interface HeldPackInput {
 export interface HeldPack {
     /** "Save store changes to this pack", for the held pack only. */
     offerSave?: (id: DatapackId) => void;
-    /** Create datapack, Commerce: the pick screen with no pack. */
-    saveFromStore: () => void;
+    /** Create datapack, Commerce: save the picks made in its pick list, into this demo's own pack. */
+    saveFromStore: (picks: StorePicks) => void;
     /** The held pack's Admin step, as one line for the flyout. */
     setupStepLine: React.JSX.Element | null;
     /** The pick screen, the save's progress window and the Admin step's dialog: mount once, beside the flyout. */
@@ -59,7 +60,7 @@ export function useHeldPack({ selected, selectedStore, held, engine, detail, det
         (id: DatapackId): void => offerStoreSave({ id, displayName: displayName ?? id.name, source: selectedStore }),
         [offerStoreSave, displayName, selectedStore],
     );
-    const saveFromStore = useCallback((): void => offerStoreSave(), [offerStoreSave]);
+    const saveFromStore = storeChanges.saveNew;
     const setupStep = usePackSetupStep(ownsStore && detail && !detailLoading ? selected : undefined);
 
     return {

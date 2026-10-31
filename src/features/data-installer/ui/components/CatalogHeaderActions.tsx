@@ -21,6 +21,7 @@
 
 import { ActionButton, Divider, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
+import type { StorePicks } from '../../pickableKinds';
 import { useClearDemoData } from '../hooks/useClearDemoData';
 import { ClearDemoDataModal } from './ClearDemoDataModal';
 import { CreateDatapackModal } from './CreateDatapackModal';
@@ -34,7 +35,7 @@ export interface CatalogHeaderActionsProps {
     /** The engine chosen, which decides where a Commerce pack is made (`CreateDatapackModal`). */
     engine?: 'service' | 'demo-builder';
     /** Demo Builder's engine, a Commerce pack: open the pick screen with no pack. Stable. */
-    onSaveFromStore: () => void;
+    onSaveFromStore: (picks: StorePicks) => void;
 }
 
 /** Which dialog the header has open. */

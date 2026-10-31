@@ -10463,10 +10463,10 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 116,
+            "line": 133,
             "mutants": 1,
             "category": "other",
-            "reason": "The toggle callback closes over nothing \u2014 it updates selection through the functional form of setSelected \u2014 so a dependency array of constants invalidates the memo exactly as often as an empty one does, which is never. Verified by planting. Re-anchored 2026-10-30 (113 -> 115): unchanged code, moved by two docstring lines above it (\"Create datapack\" asks the pack type, DI-5). Re-anchored 2026-10-31 (115 -> 116): unchanged code; the shared Select all button's import was added above it.",
+            "reason": "The toggle callback closes over nothing \u2014 it updates selection through the functional form of setSelected \u2014 so a dependency array of constants invalidates the memo exactly as often as an empty one does, which is never. Verified by planting. Re-anchored 2026-10-30 (113 -> 115): unchanged code, moved by two docstring lines above it (\"Create datapack\" asks the pack type, DI-5). Re-anchored 2026-10-31 (115 -> 116): unchanged code; the shared Select all button's import was added above it. Re-anchored 2026-10-31 (116 -> 133): unchanged code; the export split into a standalone dialog and one Create datapack hosts.",
             "decision": "none \u2014 [] is the correct dependency list",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"

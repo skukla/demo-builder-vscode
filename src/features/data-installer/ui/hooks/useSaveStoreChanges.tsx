@@ -23,8 +23,13 @@ import type { SaveStoreChangesRequest } from '@/types/webviewRequests';
 
 /** The save's start, and the windows to mount. */
 export interface SaveStoreChanges {
-    /** Open the pick screen: for the pack the project holds, or with none to save from the store alone. */
+    /** Open the pick screen for the pack the project holds ("Save store changes to this pack"). */
     offer: (pack?: PackBeingSaved) => void;
+    /**
+     * Start a save from the store alone with picks already made: Create datapack's pick list, which
+     * is its own dialog's step rather than a second dialog (owner, 2026-10-31).
+     */
+    saveNew: (picks: StorePicks) => void;
     /** The pick screen and the progress window; mount once, beside the flyout. */
     windows: React.JSX.Element;
 }
@@ -54,22 +59,29 @@ export function useSaveStoreChanges(onClosed: () => void): SaveStoreChanges {
     const closeOffer = useCallback((): void => setOffered(undefined), []);
     const pack = offered?.pack;
 
-    const save = useCallback(
-        (picks: StorePicks): void => {
-            setOffered(undefined);
+    const run = useCallback(
+        (picks: StorePicks, saving?: PackBeingSaved): void => {
             start({
                 id: DATAPACK_SAVE_OPERATION_ID,
-                name: pack?.id.name ?? 'store',
+                name: saving?.id.name ?? 'store',
                 message: 'save-store-changes-to-pack',
-                payload: { ...requestOf(pack, picks) },
+                payload: { ...requestOf(saving, picks) },
                 title: 'Saving store changes',
-                subject: pack?.displayName ?? 'This store',
+                subject: saving?.displayName ?? 'This store',
                 failureTitle: "Couldn't save the store changes",
                 successTitle: 'Store changes saved',
             });
         },
-        [start, pack],
+        [start],
     );
+    const save = useCallback(
+        (picks: StorePicks): void => {
+            setOffered(undefined);
+            run(picks, pack);
+        },
+        [run, pack],
+    );
+    const saveNew = useCallback((picks: StorePicks): void => run(picks), [run]);
 
     const closeWindow = useCallback((): void => {
         close();
@@ -82,5 +94,5 @@ export function useSaveStoreChanges(onClosed: () => void): SaveStoreChanges {
             <OperationProgressModal operation={open} onRetry={retry} onClose={closeWindow} />
         </>
     );
-    return { offer, windows };
+    return { offer, saveNew, windows };
 }
