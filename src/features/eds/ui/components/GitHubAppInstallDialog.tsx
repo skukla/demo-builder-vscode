@@ -103,7 +103,7 @@ export function GitHubAppInstallDialog({
         return (
             <CenteredFeedbackContainer>
                 <LoadingDisplay
-                    size="L"
+                    size="M" centered
                     message="Checking for GitHub App Installation"
                     subMessage={`Verifying ${owner}/${repo}`}
                 />

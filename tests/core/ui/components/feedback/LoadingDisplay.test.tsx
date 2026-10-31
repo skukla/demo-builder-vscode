@@ -257,6 +257,19 @@ describe('LoadingDisplay', () => {
             expect(inner).toHaveStyle({ alignItems: 'start' });
         });
 
+        // A job dialog's wait: medium, centred (owner, 2026-10-31: the large spinner dominated a
+        // short dialog).
+        it('centres the medium size when asked, at the medium size', () => {
+            const { container } = renderWithProviders(
+                <LoadingDisplay size="M" centered message="Loading" />
+            );
+
+            const [outer, inner] = flexes(container);
+            expect(outer).toHaveStyle({ justifyContent: 'center', height: '100%' });
+            expect(inner).toHaveStyle({ alignItems: 'center' });
+            expect(container.querySelector('.text-base')).toHaveTextContent('Loading');
+        });
+
         it.each([
             ['L', undefined, 'text-lg font-medium'],
             ['M', 'M' as const, 'text-base font-medium'],

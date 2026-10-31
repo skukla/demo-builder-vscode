@@ -1,5 +1,8 @@
 /**
- * Every enabled button shows the hand on hover (owner, 2026-10-31).
+ * How the webviews respond to the SC: every enabled button shows the hand, and a dialog that
+ * grows eases into its new height (owner, 2026-10-31).
+ *
+ * THE HAND.
  *
  * Spectrum's buttons (Button, ActionButton, the dashboard tiles, Select all, More) keep the arrow
  * by default, while the extension's own dialog buttons (`.modal-button`) show the hand, so one
@@ -13,5 +16,24 @@
     button:not(:disabled):not([aria-disabled='true']),
     [role='button']:not([aria-disabled='true']) {
         cursor: pointer;
+    }
+}
+
+/* THE GROWTH. A `SteadyHeight` floor that rises eases from the old height to the new one rather
+   than snapping (`useGrowthAnimation`): a real height only while growing, the new content revealed
+   as it grows. Not for reduced motion, which the reset's own rule cannot reach from its lower
+   layer. */
+@layer theme {
+    .steady-height.is-growing {
+        overflow: hidden;
+        transition: height var(--spectrum-global-animation-duration-200) ease-out;
+    }
+}
+
+@layer overrides {
+    @media (prefers-reduced-motion: reduce) {
+        .steady-height.is-growing {
+            transition: none;
+        }
     }
 }

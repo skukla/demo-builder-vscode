@@ -294,7 +294,7 @@ export function AssignProductList({ options, value, selected, onChange, summary,
                     height="100%"
                     // The reading and "none match" sit where the rows will be, under the headings.
                     renderEmptyState={() => (loading
-                        ? <LoadingDisplay size="L" message={LIST_COPY.reading} />
+                        ? <LoadingDisplay size="M" centered message={LIST_COPY.reading} />
                         : <div className="assign-list-empty">{LIST_COPY.nothing}</div>)}
                 >
                     {/* Each column and cell written out: Spectrum's table throws ("reading

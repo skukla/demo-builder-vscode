@@ -77,10 +77,10 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
         <SteadyHeight align={view === 'form' ? 'start' : 'center'}>
             <div className="datapack-import-body">
                     {view === 'busy' ? (
-                        // Size L on purpose: LoadingDisplay keys the wizard
-                        // treatment off it — M left-aligns and shrinks the text.
+                        // Medium and centred, a job dialog's wait: the large spinner
+                        // dominated this short dialog (owner, 2026-10-31).
                         <LoadingDisplay
-                            size="L"
+                            size="M" centered
                             message={ctx.busyMessage}
                         />
                     ) : null}
@@ -190,7 +190,7 @@ function WatchProgress({
 
     return (
         <LoadingDisplay
-            size="L"
+            size="M" centered
             steady
             message={watching ? progressStep(op) : 'Stopped watching.'}
             subMessage={label}

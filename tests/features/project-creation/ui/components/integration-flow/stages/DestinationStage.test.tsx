@@ -419,7 +419,8 @@ describe('DestinationStage', () => {
         it('a running phase with no message renders an empty spinner title', () => {
             setPhases({ phase: 'creating', phaseMessage: undefined });
             renderStage('project');
-            const main = screen.getByRole('status').querySelector('.text-lg');
+            // The medium spinner's title (a job dialog's wait, owner 2026-10-31).
+            const main = screen.getByRole('status').querySelector('.text-base');
             expect(main).not.toBeNull();
             expect(main?.textContent).toBe('');
         });

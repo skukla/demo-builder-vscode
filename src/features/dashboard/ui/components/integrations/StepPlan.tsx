@@ -44,7 +44,7 @@ export function PreviewWait({ error }: { error?: string }): React.ReactElement {
     return (
         <div data-testid="prepare-store-loading">
             <LoadingDisplay
-                size="L"
+                size="M" centered
                 message={STEP_PREVIEW_COPY.loading}
                 subMessage={STEP_PREVIEW_COPY.loadingAll}
             />

@@ -77,7 +77,7 @@ function PhaseSpinner({ phases }: { phases: Phases }): React.ReactElement {
     return (
         <CenteredFeedbackContainer height={PHASE_VIEW_HEIGHT}>
             <LoadingDisplay
-                size="L"
+                size="M" centered
                 message={phases.phaseMessage ?? ''}
                 subMessage={phases.phaseSubMessage}
                 helperText="This may take a minute"

@@ -125,7 +125,7 @@ function Journey({ isEds, onClose }: Omit<ShareModalProps, 'isOpen'>): React.Rea
         <Modal title={SHARE_COPY.title} size="L" fitContent onClose={onClose} closeLabel="Close">
             {storefront.status === 'loading' ? (
                 <CenteredFeedbackContainer height="280px">
-                    <LoadingDisplay size="L" message={SHARE_COPY.looking} helperText={SHARE_COPY.lookingFor} />
+                    <LoadingDisplay size="M" centered message={SHARE_COPY.looking} helperText={SHARE_COPY.lookingFor} />
                 </CenteredFeedbackContainer>
             ) : (
                 <div className="intflow-stage-body export-body">

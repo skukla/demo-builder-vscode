@@ -135,7 +135,7 @@ function AfterAdding({ store, options, added, onAssign }: {
         body = (
             <CenteredFeedbackContainer height={PREVIEW_SPACE}>
                 <View paddingTop="size-300">
-                    <LoadingDisplay size="L" message={ADD_ERP_COPY.readingStore} />
+                    <LoadingDisplay size="M" centered message={ADD_ERP_COPY.readingStore} />
                 </View>
             </CenteredFeedbackContainer>
         );

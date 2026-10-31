@@ -300,7 +300,7 @@ export function ManageApisModal({
                             nothing else (PL-59 slice 6). */}
                         {isApplying ? (
                             <LoadingDisplay
-                                size="L"
+                                size="M" centered
                                 message={applying?.stage ?? 'Applying'}
                                 subMessage={applying?.step}
                             />

@@ -20,6 +20,12 @@ export const FRONTEND_TIMEOUTS = {
     SCROLL_ANIMATION: 150,
 
     /**
+     * When a growing `SteadyHeight` goes back to a plain minimum height: longer than the growth
+     * itself (Spectrum's 200-step animation duration, about 160ms).
+     */
+    GROWTH_SETTLE: 400,
+
+    /**
      * Delay for UI state updates to settle before DOM operations.
      * Matches TIMEOUTS.UI.UPDATE_DELAY from backend (100ms).
      */

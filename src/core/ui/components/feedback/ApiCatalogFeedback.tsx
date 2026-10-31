@@ -70,7 +70,7 @@ export function renderApiCatalogFeedback(
         // opens are instant; the first can span three tries at Adobe's 60s cutoff.
         return (
             <LoadingDisplay
-                size="L"
+                size="M" centered
                 message="Loading Adobe APIs"
                 subMessage={loadingStage}
                 helperText="The first load can take a few minutes"

@@ -20,6 +20,8 @@
 
 import { Flex } from '@adobe/react-spectrum';
 import React, { useLayoutEffect, useRef, useState } from 'react';
+import { useGrowthAnimation } from './useGrowthAnimation';
+import { cn } from '@/core/ui/utils/classNames';
 
 export interface SteadyHeightProps {
     children: React.ReactNode;
@@ -50,6 +52,7 @@ export function SteadyHeight({
 }: SteadyHeightProps): React.ReactElement {
     const content = useRef<HTMLDivElement>(null);
     const [tallest, setTallest] = useState(minHeight);
+    const growth = useGrowthAnimation();
 
     // After every render, with no dependency list: what changes is the CONTENT, and
     // a parent re-rendering with different children is exactly the case to measure.
@@ -63,6 +66,8 @@ export function SteadyHeight({
     useLayoutEffect(() => {
         const needed = content.current?.scrollHeight ?? 0;
         if (needed > tallest) {
+            // Ease from the old floor; the first measure has nothing to ease from.
+            if (tallest > 0) growth.grow(tallest, needed);
             setTallest(needed);
         }
     });
@@ -80,7 +85,9 @@ export function SteadyHeight({
             direction="column"
             justifyContent={align}
             minHeight={tallest || undefined}
+            height={growth.height}
             width="100%"
+            UNSAFE_className={cn('steady-height', growth.growing && 'is-growing')}
         >
             <div ref={content}>{children}</div>
         </Flex>

@@ -38,7 +38,7 @@ function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
         return (
             <CenteredFeedbackContainer height="280px">
                 <LoadingDisplay
-                    size="L"
+                    size="M" centered
                     message={flow.importStep?.message ?? COPY.importing}
                     subMessage={flow.importStep?.detail}
                 />
@@ -49,7 +49,7 @@ function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
         // A form that sits unchanged while the commit runs reads as a press that did nothing.
         return (
             <CenteredFeedbackContainer height="280px">
-                <LoadingDisplay size="L" message={mode === 'change' ? COPY.change.changing : COPY.adding} />
+                <LoadingDisplay size="M" centered message={mode === 'change' ? COPY.change.changing : COPY.adding} />
             </CenteredFeedbackContainer>
         );
     }

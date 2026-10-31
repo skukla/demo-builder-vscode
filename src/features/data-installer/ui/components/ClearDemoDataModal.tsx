@@ -103,7 +103,7 @@ function ClearForm({ onClose, onClear }: ClearDemoDataModalProps) {
             actionButtons={failed ? [] : [{ label: total > 0 ? clearLabel(total) : 'Clear', variant: 'negative', onPress: clear, isDisabled: total === 0 }]}
         >
             {failed && <StatusDisplay variant="error" title={CLEAR_COPY.readFailed} message={check.failure?.message ?? ''} />}
-            {!failed && !check.ready && <LoadingDisplay size="M" message={CLEAR_COPY.checking} />}
+            {!failed && !check.ready && <LoadingDisplay size="M" centered message={CLEAR_COPY.checking} />}
             {check.ready && (
                 <div className="clear-demo-body">
                     <LeadText>{CLEAR_COPY.lead}</LeadText>

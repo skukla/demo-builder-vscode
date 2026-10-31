@@ -80,7 +80,7 @@ export function FoundStage({
     if (probe.status === 'idle' || probe.status === 'loading') {
         // The three-row contract: the step, the thing it is reading, what to expect.
         const repo = draft.source ? `${draft.source.owner}/${draft.source.repo}` : undefined;
-        return <LoadingDisplay size="L" message={COPY.looking} subMessage={repo} helperText={COPY.lookingFor} />;
+        return <LoadingDisplay size="M" centered message={COPY.looking} subMessage={repo} helperText={COPY.lookingFor} />;
     }
     if (probe.status === 'failed') {
         // A missing sign-in is not a verdict on the demo: say what to do instead.

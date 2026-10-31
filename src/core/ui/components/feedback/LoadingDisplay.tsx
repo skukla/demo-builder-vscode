@@ -22,6 +22,13 @@ export interface LoadingDisplayProps {
      * whose lines change every few seconds.
      */
     steady?: boolean;
+    /**
+     * Centre the spinner and its message, at any size. Large is always centred; medium is
+     * left-aligned for a loading row unless this is set. A job dialog's wait is medium and
+     * centred: the large spinner is for a whole page, panel or the progress window, and
+     * dominated a short dialog (owner, 2026-10-31).
+     */
+    centered?: boolean;
 }
 
 /**
@@ -67,9 +74,11 @@ export function LoadingDisplay({
     progress,
     className,
     steady = false,
+    centered = false,
 }: LoadingDisplayProps) {
-    // Center display for large size, left-align for smaller sizes
-    const shouldCenter = size === 'L';
+    // Centred for the large size, or when asked (a job dialog's medium wait); a loading row
+    // left-aligns.
+    const shouldCenter = size === 'L' || centered;
     const hasDeterminateProgress = progress !== undefined && progress >= 0;
 
     // Text size by circle size. Written as literals AT each use below rather

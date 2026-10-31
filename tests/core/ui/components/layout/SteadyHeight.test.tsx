@@ -8,9 +8,10 @@
  * sees.
  */
 
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import React from 'react';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 /**
  * Make every element report `height` for `scrollHeight`, as a laid-out browser
@@ -138,4 +139,55 @@ it('centres a shorter state by default, and pins it to the top when asked', () =
         </SteadyHeight>,
     );
     expect(reservedBox()).not.toHaveStyle({ justifyContent: 'center' });
+});
+
+/**
+ * Growth eases instead of snapping (owner, 2026-10-31). The floor is a minimum, so for the growth
+ * only the box takes a real height: the old floor, then the new one a frame later (the stylesheet
+ * eases between them), then a plain minimum again so nothing can be cut off.
+ */
+describe('easing into a taller state', () => {
+    function grown() {
+        const measure = measuringAt(400);
+        const { rerender } = render(
+            <SteadyHeight>
+                <div data-testid="content">the form</div>
+            </SteadyHeight>,
+        );
+        measure(560);
+        rerender(
+            <SteadyHeight>
+                <div data-testid="content">a long confirmation</div>
+            </SteadyHeight>,
+        );
+    }
+
+    it('starts at the old height, then moves to the new one on the next frame', () => {
+        grown();
+        expect(reservedBox()).toHaveClass('steady-height', 'is-growing');
+        expect(reservedBox()).toHaveStyle({ height: '400px' });
+
+        act(() => { jest.advanceTimersToNextFrame(); });
+        expect(reservedBox()).toHaveStyle({ height: '560px' });
+    });
+
+    it('goes back to a plain minimum once the growth is over', () => {
+        grown();
+        act(() => { jest.advanceTimersToNextFrame(); });
+        act(() => { jest.advanceTimersByTime(FRONTEND_TIMEOUTS.GROWTH_SETTLE); });
+
+        expect(reservedBox()).not.toHaveClass('is-growing');
+        expect(reservedBox().style.height).toBe('');
+        expect(reservedBox()).toHaveStyle({ minHeight: '560px' });
+    });
+
+    it('does not animate the first measure, which has nothing to ease from', () => {
+        measuringAt(400);
+        render(
+            <SteadyHeight>
+                <div data-testid="content">the form</div>
+            </SteadyHeight>,
+        );
+        expect(reservedBox()).not.toHaveClass('is-growing');
+    });
 });

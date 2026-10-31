@@ -177,7 +177,7 @@ export function AiCapabilitiesModal({
                             // sees each step (install → AGENTS.md → MCP → skills → finalize)
                             // and the determinate progress ring when a percentage is set.
                             <LoadingDisplay
-                                size="L"
+                                size="M" centered
                                 message={progress.currentOperation}
                                 subMessage={progress.message}
                                 progress={progress.progress}
