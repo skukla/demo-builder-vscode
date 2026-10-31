@@ -119,6 +119,7 @@ export function DatapackDetailPanel({
                     <div className="db-drawer-head">
                         <div className="datapack-panel-title">
                             <DatapackPanelTitle title={title} detail={loading || failure ? null : detail} onRename={onRename} />
+                            <span className="datapack-panel-version">{selected.version}</span>
                         </div>
                         <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
                             <Close size="S" />
@@ -214,12 +215,11 @@ function DetailRows({
 
     return (
         <>
-            <PanelRow label="Version">{detail.id.version}</PanelRow>
             {detail.description ? (
                 <PanelRow label="Description">{detail.description}</PanelRow>
             ) : null}
-            {detail.owner ? <PanelRow label="Owner">{detail.owner}</PanelRow> : null}
-            <PanelRow label="Curation">{curationLabel(detail)}</PanelRow>
+            {ownerLabel(detail) ? <PanelRow label="Owner">{ownerLabel(detail)}</PanelRow> : null}
+            <PanelRow label="Visible to">{visibleTo(detail)}</PanelRow>
             {detail.updatedAt ? (
                 <PanelRow label="Updated">{formatDate(detail.updatedAt)}</PanelRow>
             ) : null}
@@ -247,12 +247,20 @@ function DetailRows({
     );
 }
 
+/**
+ * Whose pack it is, in words a person can read (owner, 2026-10-31). A library pack's `owner` is
+ * the account's internal Adobe id, never a name: "You" for the SC's own, and no row for a
+ * colleague's, since there is no name to show. A catalog pack's owner is a team ("CoreTech").
+ */
+function ownerLabel(detail: DatapackDetail): string | undefined {
+    if (detail.store !== 'library') return detail.owner;
+    return detail.mine ? 'You' : undefined;
+}
+
 /** Who can see it. In the library, "shared" means every SC sees it; otherwise only its owner. */
-function curationLabel(detail: DatapackDetail): string {
-    if (detail.store === 'library') {
-        return detail.shared ? 'Library, shared with everyone' : 'Library, only you';
-    }
-    return detail.shared ? 'Shared' : 'Community';
+function visibleTo(detail: DatapackDetail): string {
+    if (detail.store === 'library' && !detail.shared) return 'Only you';
+    return detail.shared ? 'Everyone' : 'Everyone (community)';
 }
 
 /** One key/value detail row. */

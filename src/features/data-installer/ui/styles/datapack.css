@@ -113,16 +113,19 @@
 }
 }
 
+/* Quiet, since it is a label and not a button, but readable at a glance: it was 10px grey
+   on a grey outline, the faintest thing on the card (owner, 2026-10-31). */
 @layer theme {
 .datapack-card-tag {
     flex-shrink: 0;
     padding: 1px 6px;
-    border: 1px solid var(--spectrum-global-color-gray-300);
+    border: 1px solid var(--spectrum-global-color-gray-500);
     border-radius: 4px;
-    font-size: 10px;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--spectrum-global-color-gray-600);
+    color: var(--spectrum-global-color-gray-800);
 }
 }
 

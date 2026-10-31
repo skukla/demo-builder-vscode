@@ -160,17 +160,59 @@ describe('DatapackDetailPanel', () => {
             expect(screen.queryByText('Data (3)')).not.toBeInTheDocument();
         });
 
-        it('says whether the pack is shared or community', () => {
+        // "Visible to", in plain words: it replaced a Curation row reading "Library, only you"
+        // (owner, 2026-10-31).
+        it('says a curated pack is visible to everyone', () => {
             renderPanel();
 
-            expect(screen.getByText('Shared')).toBeInTheDocument();
+            expect(screen.getByText('Visible to')).toBeInTheDocument();
+            expect(screen.getByText('Everyone')).toBeInTheDocument();
+            expect(screen.queryByText('Curation')).not.toBeInTheDocument();
         });
 
-        it('calls an unshared pack Community', () => {
+        it('says a community pack is visible to everyone, as a community pack', () => {
             renderPanel({ detail: makeDetail({ shared: false }) });
 
-            expect(screen.getByText('Community')).toBeInTheDocument();
-            expect(screen.queryByText('Shared')).not.toBeInTheDocument();
+            expect(screen.getByText('Everyone (community)')).toBeInTheDocument();
+        });
+
+        it("says the SC's own unshared library pack is visible only to them", () => {
+            renderPanel({ detail: makeDetail({ store: 'library', mine: true, shared: false }) });
+
+            expect(screen.getByText('Only you')).toBeInTheDocument();
+        });
+
+        it('says a shared library pack is visible to everyone', () => {
+            renderPanel({ detail: makeDetail({ store: 'library', mine: true, shared: true }) });
+
+            expect(screen.getByText('Everyone')).toBeInTheDocument();
+        });
+
+        // A library pack's owner is the account's internal Adobe id, never a name.
+        it("calls the SC's own library pack's owner You, never the internal id", () => {
+            renderPanel({
+                detail: makeDetail({ store: 'library', mine: true, owner: 'fe785d7c5b6d82680a495cea@adobe.com' }),
+            });
+
+            expect(screen.getByText('You')).toBeInTheDocument();
+            expect(screen.queryByText(/fe785d7c/)).not.toBeInTheDocument();
+        });
+
+        it("shows no owner for a colleague's library pack, since there is no name to show", () => {
+            renderPanel({
+                detail: makeDetail({ store: 'library', mine: false, owner: 'abc123@adobe.com' }),
+            });
+
+            expect(screen.queryByText('Owner')).not.toBeInTheDocument();
+            expect(screen.queryByText(/abc123/)).not.toBeInTheDocument();
+        });
+
+        // The version sits beside the title, in place of a Version row.
+        it('shows the version beside the title, and no Version row', () => {
+            renderPanel();
+
+            expect(screen.getByText('main')).toBeInTheDocument();
+            expect(screen.queryByText('Version')).not.toBeInTheDocument();
         });
 
         // These cross the webview boundary as ISO strings, and a raw one on screen
@@ -332,7 +374,7 @@ describe('DatapackDetailPanel', () => {
             renderPanel({ loading: true });
 
             expect(screen.getByText(/loading/i)).toBeInTheDocument();
-            expect(screen.queryByText('Version')).not.toBeInTheDocument();
+            expect(screen.queryByText('Visible to')).not.toBeInTheDocument();
         });
 
         it('shows the failure treatment with a retry', () => {
