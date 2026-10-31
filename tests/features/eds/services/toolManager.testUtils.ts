@@ -14,7 +14,6 @@
  */
 
 import type { CommandResult } from '@/core/shell/types';
-import type { ACOConfig } from '@/features/eds/services/types';
 
 /** The home directory both suites make `os.homedir()` answer with. */
 export const MOCK_HOME = '/Users/testuser';
@@ -23,17 +22,6 @@ export const MOCK_HOME = '/Users/testuser';
 export const TOOLS_BASE_PATH = `${MOCK_HOME}/.demo-builder/tools`;
 export const TOOL_PATH = `${TOOLS_BASE_PATH}/commerce-demo-ingestion`;
 export const DATA_REPO_PATH = `${TOOLS_BASE_PATH}/vertical-data-citisignal`;
-
-/** A credential set that passes every guard in `validateAcoConfig`. */
-export function validAcoConfig(overrides: Partial<ACOConfig> = {}): ACOConfig {
-    return {
-        apiUrl: 'https://aco.example.com/api',
-        apiKey: 'test-api-key-12345',
-        tenantId: 'test-tenant-123',
-        environmentId: 'test-env-456',
-        ...overrides,
-    };
-}
 
 /**
  * A shell result typed to the REAL `CommandResult`, so a suite cannot invent a

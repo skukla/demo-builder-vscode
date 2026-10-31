@@ -216,17 +216,21 @@ describe('SERVICE_GROUP_DEFINITIONS field order', () => {
         ]);
     });
 
-    it('puts the ACO URL and key before the tenant and environment ids', () => {
+    it('puts the ACO instance first, then the catalog view and locale, then the optional price book', () => {
         expect(orderOf('adobe-commerce-aco', [
-            'ACO_API_URL',
-            'ACO_API_KEY',
+            'ACO_PRICE_BOOK_ID',
+            'ACO_LOCALE',
+            'ACO_CATALOG_VIEW_ID',
+            'ACO_ENVIRONMENT',
+            'ACO_REGION',
             'ACO_TENANT_ID',
-            'ACO_ENVIRONMENT_ID',
         ])).toEqual([
-            'ACO_API_URL',
-            'ACO_API_KEY',
             'ACO_TENANT_ID',
-            'ACO_ENVIRONMENT_ID',
+            'ACO_REGION',
+            'ACO_ENVIRONMENT',
+            'ACO_CATALOG_VIEW_ID',
+            'ACO_LOCALE',
+            'ACO_PRICE_BOOK_ID',
         ]);
     });
 

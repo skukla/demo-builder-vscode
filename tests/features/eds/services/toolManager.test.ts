@@ -1,15 +1,14 @@
 /**
  * Unit Tests: ToolManager
  *
- * Tests for tool installation, configuration, execution, and error handling
+ * Tests for tool installation, execution, and error handling
  * for commerce-demo-ingestion and vertical-data tools.
  *
  * Note: Tool updates are handled by the extension's component update system,
  * not by ToolManager. The tool is registered as a hidden component.
  *
- * Coverage: 30 tests across 5 categories
+ * Coverage: tests across 4 categories
  * - Tool Installation (5 tests)
- * - Configuration (5 tests)
  * - Execution (9 tests)
  * - Edge Cases (7 tests)
  * - Error Handling (4 tests)
@@ -23,15 +22,11 @@ import * as _path from 'path';
 // Mock fs/promises
 const mockFsAccess = jest.fn();
 const mockFsMkdir = jest.fn();
-const mockFsReadFile = jest.fn();
-const mockFsWriteFile = jest.fn();
 const mockFsStat = jest.fn();
 const mockFsRm = jest.fn();
 jest.mock('fs/promises', () => ({
     access: (...args: any[]) => mockFsAccess(...args),
     mkdir: (...args: any[]) => mockFsMkdir(...args),
-    readFile: (...args: any[]) => mockFsReadFile(...args),
-    writeFile: (...args: any[]) => mockFsWriteFile(...args),
     stat: (...args: any[]) => mockFsStat(...args),
     rm: (...args: any[]) => mockFsRm(...args),
 }));
@@ -65,7 +60,6 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 // Import after mocks
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { ToolManager } from '@/features/eds/services/toolManager';
-import type { ACOConfig } from '@/features/eds/services/types';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import {
@@ -73,7 +67,6 @@ import {
     MOCK_HOME,
     TOOL_PATH,
     TOOLS_BASE_PATH,
-    validAcoConfig,
 } from './toolManager.testUtils';
 
 describe('ToolManager', () => {
@@ -86,8 +79,6 @@ describe('ToolManager', () => {
         mockHomedir.mockReturnValue(MOCK_HOME);
         mockFsAccess.mockRejectedValue(new Error('ENOENT')); // Default: file/dir doesn't exist
         mockFsMkdir.mockResolvedValue(undefined);
-        mockFsWriteFile.mockResolvedValue(undefined);
-        mockFsReadFile.mockResolvedValue('');
         mockFsStat.mockResolvedValue({ mtime: new Date(Date.now() - 48 * 60 * 60 * 1000) }); // 48 hours ago
         mockFsRm.mockResolvedValue(undefined);
 
@@ -190,106 +181,6 @@ describe('ToolManager', () => {
                 TOOLS_BASE_PATH,
                 { recursive: true }
             );
-        });
-    });
-
-    // ==========================================================
-    // Configuration Tests (5 tests)
-    // ==========================================================
-    describe('Configuration', () => {
-        const mockAcoConfig = validAcoConfig();
-
-        beforeEach(() => {
-            // Tool exists for configuration tests
-            mockFsAccess.mockResolvedValue(undefined);
-        });
-
-        it('should generate .env file with ACCS credentials', async () => {
-            // Given: ACO configuration
-            // When: Configuring tool environment
-            await toolManager.configureToolEnvironment(mockAcoConfig);
-
-            // Then: Should write .env file with ACO credentials
-            expect(mockFsWriteFile).toHaveBeenCalledWith(
-                expect.stringContaining('.env'),
-                expect.stringContaining('ACO_API_URL=https://aco.example.com/api'),
-                'utf-8'
-            );
-            expect(mockFsWriteFile).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.stringContaining('ACO_API_KEY=test-api-key-12345'),
-                'utf-8'
-            );
-        });
-
-        it('should set DATA_REPO_PATH to vertical-data location', async () => {
-            // Given: ACO configuration
-            // When: Configuring tool environment
-            await toolManager.configureToolEnvironment(mockAcoConfig);
-
-            // Then: Should include DATA_REPO_PATH pointing to vertical-data
-            expect(mockFsWriteFile).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.stringContaining('DATA_REPO_PATH=../vertical-data-citisignal'),
-                'utf-8'
-            );
-        });
-
-        it('should include all required ACO environment variables', async () => {
-            // Given: ACO configuration
-            // When: Configuring tool environment
-            await toolManager.configureToolEnvironment(mockAcoConfig);
-
-            // Then: Should include all required variables
-            const writeCall = mockFsWriteFile.mock.calls[0];
-            const envContent = writeCall[1] as string;
-
-            expect(envContent).toContain('ACO_API_URL=');
-            expect(envContent).toContain('ACO_API_KEY=');
-            expect(envContent).toContain('ACO_TENANT_ID=');
-            expect(envContent).toContain('ACO_ENVIRONMENT_ID=');
-            expect(envContent).toContain('DATA_REPO_PATH=');
-        });
-
-        it('should preserve existing .env values not in config', async () => {
-            // Given: Existing .env file with custom values
-            mockFsReadFile.mockResolvedValue(
-                'CUSTOM_VAR=custom-value\nDEBUG=true\n'
-            );
-
-            // When: Configuring tool environment
-            await toolManager.configureToolEnvironment(mockAcoConfig);
-
-            // Then: Should preserve existing values
-            const writeCall = mockFsWriteFile.mock.calls[0];
-            const envContent = writeCall[1] as string;
-
-            expect(envContent).toContain('CUSTOM_VAR=custom-value');
-            expect(envContent).toContain('DEBUG=true');
-        });
-
-        it('should sanitize credentials before writing to .env', async () => {
-            // Given: ACO config with potentially dangerous characters
-            const dangerousConfig: ACOConfig = {
-                apiUrl: 'https://aco.example.com/api',
-                apiKey: 'key-with-$pecial-chars\ninjection',
-                tenantId: 'tenant\r\nwith-newlines',
-                environmentId: 'env-id',
-            };
-
-            // When: Configuring tool environment
-            await toolManager.configureToolEnvironment(dangerousConfig);
-
-            // Then: Should sanitize dangerous characters
-            const writeCall = mockFsWriteFile.mock.calls[0];
-            const envContent = writeCall[1] as string;
-
-            // Should not contain raw newlines in values
-            const lines = envContent.split('\n');
-            const offenders = lines
-                .filter((line) => line.includes('=') && !line.startsWith('#'))
-                .filter((line) => /[\r\n]/.test(line.split('=')[1] ?? ''));
-            expect(offenders).toStrictEqual([]);
         });
     });
 
@@ -650,29 +541,6 @@ describe('ToolManager', () => {
             await expect(toolManager.ensureToolInstalled()).rejects.toThrow(
                 expect.objectContaining({
                     message: expect.stringContaining('npm install'),
-                })
-            );
-        });
-
-        it('should handle missing credentials gracefully', async () => {
-            // Given: Incomplete ACO config (missing required field)
-            const incompleteConfig = {
-                apiUrl: 'https://aco.example.com/api',
-                apiKey: '', // Empty API key
-                tenantId: 'tenant-123',
-                environmentId: 'env-456',
-            } as ACOConfig;
-
-            // Tool exists
-            mockFsAccess.mockResolvedValue(undefined);
-
-            // When: Configuring with incomplete credentials
-            // Then: Should throw validation error
-            await expect(
-                toolManager.configureToolEnvironment(incompleteConfig)
-            ).rejects.toThrow(
-                expect.objectContaining({
-                    message: expect.stringMatching(/missing|required|invalid/i),
                 })
             );
         });

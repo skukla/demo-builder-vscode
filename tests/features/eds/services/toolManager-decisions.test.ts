@@ -5,23 +5,19 @@
  * `stringContaining`/`objectContaining`. That style proves a call happened; it
  * cannot see a malformed one. A mutation run (PL-22, MUT-07) found 55 decisions in
  * this module that no test constrained — the force-reinstall guard, the clone
- * error taxonomy, the `.env` parser's skip rules, and the whole options object
- * handed to the shell executor. Everything here asserts an exact command string,
- * an exact options object, an exact thrown message, or the exact file content
- * written, because those are the only forms a wrong argument cannot pass through.
+ * error taxonomy, and the whole options object handed to the shell executor.
+ * Everything here asserts an exact command string, an exact options object, or an
+ * exact thrown message, because those are the only forms a wrong argument cannot
+ * pass through.
  */
 
 // Mock fs/promises — arrow indirection keeps the jest.mock factory hoist-safe.
 const mockFsAccess = jest.fn();
 const mockFsMkdir = jest.fn();
-const mockFsReadFile = jest.fn();
-const mockFsWriteFile = jest.fn();
 const mockFsRm = jest.fn();
 jest.mock('fs/promises', () => ({
     access: (...args: unknown[]) => mockFsAccess(...args),
     mkdir: (...args: unknown[]) => mockFsMkdir(...args),
-    readFile: (...args: unknown[]) => mockFsReadFile(...args),
-    writeFile: (...args: unknown[]) => mockFsWriteFile(...args),
     rm: (...args: unknown[]) => mockFsRm(...args),
 }));
 
@@ -40,17 +36,13 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { ToolManager } from '@/features/eds/services/toolManager';
-import type { ACOConfig } from '@/features/eds/services/types';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import {
     commandResult,
     DATA_REPO_PATH,
     MOCK_HOME,
     TOOL_PATH,
-    validAcoConfig,
 } from './toolManager.testUtils';
-
-const VALID_CONFIG = validAcoConfig();
 
 describe('ToolManager decisions', () => {
     let toolManager: ToolManager;
@@ -79,8 +71,6 @@ describe('ToolManager decisions', () => {
         mockHomedir.mockReturnValue(MOCK_HOME);
         toolIsMissing();
         mockFsMkdir.mockResolvedValue(undefined);
-        mockFsWriteFile.mockResolvedValue(undefined);
-        mockFsReadFile.mockResolvedValue('');
         mockFsRm.mockResolvedValue(undefined);
 
         executor = createMockCommandExecutor();
@@ -189,90 +179,6 @@ describe('ToolManager decisions', () => {
             expect(executor.execute).toHaveBeenCalledWith(
                 'DRY_RUN=true npm run delete:aco --dry-run',
                 expect.objectContaining({ cwd: TOOL_PATH }),
-            );
-        });
-    });
-
-    // ==========================================================
-    // Credential validation
-    // ==========================================================
-    describe('validateAcoConfig', () => {
-        const FIELDS: Array<[keyof ACOConfig, string]> = [
-            ['apiUrl', 'Missing required ACO API URL'],
-            ['apiKey', 'Missing required ACO API Key'],
-            ['tenantId', 'Missing required ACO Tenant ID'],
-            ['environmentId', 'Missing required ACO Environment ID'],
-        ];
-
-        it.each(FIELDS)('rejects an empty %s', async (field, message) => {
-            toolIsInstalled();
-
-            expect(
-                await rejectionMessage(
-                    toolManager.configureToolEnvironment({ ...VALID_CONFIG, [field]: '' }),
-                ),
-            ).toBe(message);
-            expect(mockFsWriteFile).not.toHaveBeenCalled();
-        });
-
-        // Whitespace is the case the `!value` half of each guard cannot see: a
-        // blank-but-present credential is present as far as truthiness goes, and only
-        // the `.trim() === ''` half rejects it.
-        it.each(FIELDS)('rejects a whitespace-only %s', async (field, message) => {
-            toolIsInstalled();
-
-            expect(
-                await rejectionMessage(
-                    toolManager.configureToolEnvironment({ ...VALID_CONFIG, [field]: '   ' }),
-                ),
-            ).toBe(message);
-            expect(mockFsWriteFile).not.toHaveBeenCalled();
-        });
-    });
-
-    // ==========================================================
-    // .env generation: the exact bytes written
-    // ==========================================================
-    describe('configureToolEnvironment', () => {
-        beforeEach(() => toolIsInstalled());
-
-        it('writes the merged file exactly, preserving only real assignments', async () => {
-            // Every line here is a decision the parser makes: a comment that looks
-            // like an assignment, a blank line, leading indentation, a line with no
-            // key, a line with no `=`, and a value that itself contains one.
-            mockFsReadFile.mockResolvedValue(
-                [
-                    '# a plain comment',
-                    '#DEBUG=old',
-                    '',
-                    '  CUSTOM_VAR=custom-value',
-                    '=novalue',
-                    'JUSTAKEY',
-                    'TOKEN=a=b',
-                ].join('\n'),
-            );
-
-            await toolManager.configureToolEnvironment({
-                ...VALID_CONFIG,
-                apiUrl: '  https://aco.example.com/api  ',
-            });
-
-            expect(mockFsWriteFile).toHaveBeenCalledWith(
-                `${TOOL_PATH}/.env`,
-                [
-                    '# Commerce Demo Ingestion Tool Configuration',
-                    '# Generated by Adobe Demo Builder',
-                    '',
-                    'CUSTOM_VAR=custom-value',
-                    'TOKEN=a=b',
-                    'DATA_REPO_PATH=../vertical-data-citisignal',
-                    'ACO_API_URL=https://aco.example.com/api',
-                    'ACO_API_KEY=test-api-key-12345',
-                    'ACO_TENANT_ID=test-tenant-123',
-                    'ACO_ENVIRONMENT_ID=test-env-456',
-                    '',
-                ].join('\n'),
-                'utf-8',
             );
         });
     });

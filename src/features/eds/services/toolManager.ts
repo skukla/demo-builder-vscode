@@ -18,7 +18,6 @@ import * as os from 'os';
 import * as path from 'path';
 import {
     ToolManagerError,
-    type ACOConfig,
     type ToolExecutionResult,
     type ToolInstallOptions,
     type ToolExecutionOptions,
@@ -65,7 +64,6 @@ const NPM_INSTALL_FLAGS = '--no-fund';
  *
  * Provides complete management of the commerce-demo-ingestion tool:
  * - Installation via git clone (shallow, branch-specific)
- * - ACO credentials configuration (.env generation)
  * - npm script execution with Node 18+ isolation
  * - Dry run support for safe cleanup operations
  *
@@ -76,14 +74,6 @@ const NPM_INSTALL_FLAGS = '--no-fund';
  * // Install tool and data repo
  * await manager.ensureToolInstalled();
  * await manager.ensureDataRepoInstalled();
- *
- * // Configure with ACO credentials
- * await manager.configureToolEnvironment({
- *   apiUrl: 'https://aco.example.com/api',
- *   apiKey: 'your-api-key',
- *   tenantId: 'tenant-123',
- *   environmentId: 'env-456'
- * });
  *
  * // Execute ingestion
  * const result = await manager.executeAcoIngestion();
@@ -165,47 +155,6 @@ export class ToolManager {
         if (!dataRepoExists) {
             await this.cloneDataRepo();
         }
-    }
-
-    // ==========================================================
-    // Configuration
-    // ==========================================================
-
-    /**
-     * Configure tool environment by generating .env file with ACO credentials
-     *
-     * @param config - ACO configuration
-     */
-    async configureToolEnvironment(config: ACOConfig): Promise<void> {
-        // Validate credentials
-        this.validateAcoConfig(config);
-
-        const envPath = path.join(this.toolPath, '.env');
-
-        // Read existing .env if present
-        let existingEnv: Record<string, string> = {};
-        try {
-            const content = await fs.readFile(envPath, 'utf-8');
-            existingEnv = this.parseEnvFile(content);
-        } catch {
-            // File doesn't exist, start fresh
-        }
-
-        // Merge with new config (new values override existing)
-        const envVars: Record<string, string> = {
-            ...existingEnv,
-            DATA_REPO_PATH: '../vertical-data-citisignal',
-            ACO_API_URL: this.sanitizeEnvValue(config.apiUrl),
-            ACO_API_KEY: this.sanitizeEnvValue(config.apiKey),
-            ACO_TENANT_ID: this.sanitizeEnvValue(config.tenantId),
-            ACO_ENVIRONMENT_ID: this.sanitizeEnvValue(config.environmentId),
-        };
-
-        // Generate .env content
-        const envContent = this.generateEnvContent(envVars);
-
-        await fs.writeFile(envPath, envContent, 'utf-8');
-        this.logger.debug('[ToolManager] .env file configured');
     }
 
     // ==========================================================
@@ -413,79 +362,6 @@ export class ToolManager {
         }
 
         this.logger.debug('[ToolManager] npm install complete');
-    }
-
-    // ==========================================================
-    // Private: Configuration Helpers
-    // ==========================================================
-
-    /**
-     * Validate ACO configuration
-     */
-    private validateAcoConfig(config: ACOConfig): void {
-        if (!config.apiUrl || config.apiUrl.trim() === '') {
-            throw new ToolManagerError('Missing required ACO API URL', 'configure');
-        }
-        if (!config.apiKey || config.apiKey.trim() === '') {
-            throw new ToolManagerError('Missing required ACO API Key', 'configure');
-        }
-        if (!config.tenantId || config.tenantId.trim() === '') {
-            throw new ToolManagerError('Missing required ACO Tenant ID', 'configure');
-        }
-        if (!config.environmentId || config.environmentId.trim() === '') {
-            throw new ToolManagerError('Missing required ACO Environment ID', 'configure');
-        }
-    }
-
-    /**
-     * Sanitize a value for .env file (remove newlines, escape special chars)
-     */
-    private sanitizeEnvValue(value: string): string {
-        return value
-            .replace(/[\r\n]/g, '') // Remove newlines
-            .replace(/\\/g, '\\\\') // Escape backslashes
-            .trim();
-    }
-
-    /**
-     * Parse .env file content into key-value pairs
-     */
-    private parseEnvFile(content: string): Record<string, string> {
-        const result: Record<string, string> = {};
-        const lines = content.split('\n');
-
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || trimmed.startsWith('#')) {
-                continue;
-            }
-
-            const eqIndex = trimmed.indexOf('=');
-            if (eqIndex > 0) {
-                const key = trimmed.slice(0, eqIndex);
-                const value = trimmed.slice(eqIndex + 1);
-                result[key] = value;
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * Generate .env file content from key-value pairs
-     */
-    private generateEnvContent(vars: Record<string, string>): string {
-        const lines = [
-            '# Commerce Demo Ingestion Tool Configuration',
-            '# Generated by Adobe Demo Builder',
-            '',
-        ];
-
-        for (const [key, value] of Object.entries(vars)) {
-            lines.push(`${key}=${value}`);
-        }
-
-        return lines.join('\n') + '\n';
     }
 
     /**

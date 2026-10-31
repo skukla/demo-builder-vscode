@@ -24,7 +24,7 @@ const manifest = () => ({
         'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_PASSWORD: SECRET, WEBSITE: 'base' },
     },
     meshState: { envVars: { ADOBE_CATALOG_API_KEY: SECRET, OTHER: 'keep' }, sourceHash: 'h' },
-    edsStorefrontState: { envVars: { ACO_API_KEY: SECRET }, lastPublished: 'x' },
+    edsStorefrontState: { envVars: { ACCS_OAUTH_CLIENT_SECRET: SECRET }, lastPublished: 'x' },
     frontendEnvState: { envVars: { EXPERIENCE_PLATFORM_API_KEY: SECRET }, capturedAt: 'x' },
     appBuilderComponents: {
         mesh: {
@@ -46,7 +46,7 @@ describe('every env-carrying field', () => {
 
     it.each([
         ['meshState', 'ADOBE_CATALOG_API_KEY'],
-        ['edsStorefrontState', 'ACO_API_KEY'],
+        ['edsStorefrontState', 'ACCS_OAUTH_CLIENT_SECRET'],
         ['frontendEnvState', 'EXPERIENCE_PLATFORM_API_KEY'],
     ])('strips %s.envVars', (field, key) => {
         const safe = stripManifestSecrets(manifest()) as unknown as Record<

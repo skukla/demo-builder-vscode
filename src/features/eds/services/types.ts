@@ -496,20 +496,6 @@ export class GitHubAppNotInstalledError extends EdsProjectError {
 // ==========================================================
 
 /**
- * ACO (Adobe Commerce Optimizer) configuration for tool .env file
- */
-export interface ACOConfig {
-    /** ACO API URL */
-    apiUrl: string;
-    /** ACO API Key for authentication */
-    apiKey: string;
-    /** ACO Tenant ID */
-    tenantId: string;
-    /** ACO Environment ID */
-    environmentId: string;
-}
-
-/**
  * Result of tool script execution
  */
 export interface ToolExecutionResult {
