@@ -10,6 +10,7 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
+import { handleRemoveAcoCredential, handleSetUpAcoCredential } from '@/features/dashboard/handlers/acoCredentialHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { subscribeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
@@ -45,6 +46,7 @@ jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
             { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
             { code: 'FireflyAPISDK', name: 'Firefly Services' },
             { code: 'GraphQLServiceSDK', name: 'API Mesh' },
+            { code: 'AcoIngestionCode', name: 'Adobe Commerce Optimizer Ingestion API', type: 'entp' },
         ]),
     })),
 }));
@@ -67,6 +69,14 @@ jest.mock('@/core/di/serviceLocator', () => ({
         getAuthenticationService: jest.fn(() =>
             poolUnits({
                 getCachedOrganization: jest.fn().mockReturnValue(undefined),
+                // The ACO credential handlers read the workspace credential's pair.
+                getS2SDeployCredentials: async () => ({
+                    clientId: 'client-1',
+                    clientSecret: 'fake-test-pw-not-a-secret',
+                    technicalAccountId: 't',
+                    technicalAccountEmail: 't@example.invalid',
+                    imsOrgCode: 'org-1',
+                }),
             }),
         ),
     },
@@ -93,6 +103,8 @@ export function consoleApiContext(project: Record<string, unknown> | null): Hand
 }
 
 export {
+    handleRemoveAcoCredential,
+    handleSetUpAcoCredential,
     resolveDesiredApis,
     handleAddConsoleApis,
     handleListConsoleApis,

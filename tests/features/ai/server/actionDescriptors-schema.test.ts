@@ -47,6 +47,9 @@ const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
     set_setup_step: false,
     check_setup_steps: ['adobe'],
     set_console_apis: ['adobe'],
+    // The project's ACO credential (PL-60): a subscribe on the workspace credential, and its undo.
+    set_up_aco_credential: ['adobe'],
+    remove_aco_credential: ['adobe'],
     set_project_destination: ['adobe'],
     deploy_integration: ['adobe'],
     redeploy_integration: ['adobe'],
@@ -104,6 +107,8 @@ const INPUT_KEYS: Record<string, string[]> = {
     set_setup_step: ['id', 'state', 'stepId'],
     check_setup_steps: ['id'],
     set_console_apis: ['apis', 'componentId'],
+    set_up_aco_credential: [],
+    remove_aco_credential: [],
     set_project_destination: ['project', 'workspace'],
     deploy_integration: ['id', 'refreshCli'],
     redeploy_integration: ['id', 'refreshCli'],

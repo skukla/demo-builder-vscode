@@ -82,8 +82,6 @@ const CREDENTIAL_CEILINGS: Record<string, number> = {
     'tests/features/components/services/commerceCredentialStore.test.ts': 1,
     'tests/features/data-installer/handlers/dataInstallerHandlers.test.ts': 1,
     'tests/features/eds/services/commerceStoreDiscovery.test.ts': 6,
-    'tests/features/eds/services/toolManager.test.ts': 1,
-    'tests/features/eds/services/toolManager.testUtils.ts': 1,
     'tests/features/project-creation/helpers/envFileGenerator-values.test.ts': 1,
     'tests/features/project-creation/ui/helpers/stackHelpers.test.ts': 4,
 };

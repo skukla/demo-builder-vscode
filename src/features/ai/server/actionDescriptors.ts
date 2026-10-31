@@ -1109,6 +1109,32 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'set_up_aco_credential',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Make this project's Adobe Commerce Optimizer (ACO) credential: subscribe the ACO ingestion API on " +
+            "its Developer Console workspace credential and keep the client id and secret in VS Code's " +
+            'SecretStorage, so Demo Builder can load and remove ACO datapacks. The SC types no credential. ' +
+            'Run after configure_project turns the adobe-commerce-aco add-on on. Safe to run again.',
+        map: dashboardHandlers,
+        type: 'setUpAcoCredential',
+        inputSchema: {},
+    },
+    {
+        tool: 'remove_aco_credential',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Undo set_up_aco_credential: take the ACO ingestion API off this project's workspace credential and " +
+            'forget the stored client id and secret. Refused while an ACO datapack Demo Builder loaded is still ' +
+            'in the instance (remove it with reset_datapack first). The workspace credential itself stays.',
+        map: dashboardHandlers,
+        type: 'removeAcoCredential',
+        confirm: true,
+        inputSchema: {},
+    },
+    {
         tool: 'add_console_apis',
         needsAuth: ['adobe'],
         readOnly: false,

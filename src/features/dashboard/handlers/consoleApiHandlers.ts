@@ -168,8 +168,11 @@ function validateSdkCodes(
  * and any extra NOT in `desired` is dropped — so a shorter `desired` removes.
  * Persist happens only AFTER a successful subscribe (a failed reconcile must not
  * poison later ones).
+ *
+ * Also the ACO add-on's door (`acoCredentialHandlers.ts`, PL-60): its API is kept under its
+ * own owner key, `adobe-commerce-aco`, so every later reconcile carries it.
  */
-async function reconcileExtras(
+export async function reconcileExtras(
     context: HandlerContext,
     project: Project,
     desiredExtras: string[],
@@ -320,7 +323,7 @@ type ConsoleApiRefusal = {
  * sits between the load and the guards, and moving it would change which
  * refusal a signed-out, org-less project sees.
  */
-async function loadProjectAndGuard(
+export async function loadProjectAndGuard(
     context: HandlerContext,
 ): Promise<
     { project: Project; refusal?: undefined } | { project?: undefined; refusal: ConsoleApiRefusal }

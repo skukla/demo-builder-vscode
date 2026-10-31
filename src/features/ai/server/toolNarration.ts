@@ -165,6 +165,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     rename_adobe_project: 'Renaming the Adobe project',
     delete_adobe_workspace: 'Deleting the Adobe workspace',
     add_console_apis: 'Adding Adobe API access',
+    set_up_aco_credential: 'Setting up the ACO credential',
+    remove_aco_credential: 'Removing the ACO credential',
     // Replaces the list EXACTLY — anything unlisted is removed.
     set_console_apis: 'Replacing the optional APIs',
 

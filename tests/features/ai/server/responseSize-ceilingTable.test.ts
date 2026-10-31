@@ -23,6 +23,10 @@ describe('the ceiling table tracks the tool surface', () => {
     // which no measurement has ever found large. Listed rather than inferred,
     // so adding a tool cannot silently join them.
     const EXEMPT = new Set([
+        // The ACO credential (PL-60): `{success, apiCode}` or `{success}`, or one refusal sentence.
+        // The client secret is never in the response; it goes to SecretStorage.
+        'set_up_aco_credential',
+        'remove_aco_credential',
         // Datapack files: a path, a byte count and at most one entry per data type —
         // bounded by the 28 type codes, never by the size of the pack's rows, which
         // go to disk or to the store and never into the response.

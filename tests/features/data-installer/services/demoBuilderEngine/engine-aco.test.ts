@@ -80,7 +80,7 @@ describe('demoBuilderEngine with an ACO pack', () => {
         const { activationId } = await engine.startImport(request({ dataTypes: ['aco_products'] }));
         await settle(engine, activationId);
         expect((await engine.getJobFailureReason(activationId))?.error).toMatch(/^Nothing was installed: aco_products row 1:/u);
-        expect(aco.calls).toEqual([]);
+        expect(aco.calls).toStrictEqual([]);
     });
 
     it('refuses a pack that mixes ACO and Commerce kinds, writing nothing', async () => {
@@ -90,7 +90,7 @@ describe('demoBuilderEngine with an ACO pack', () => {
         const { activationId } = await engine.startImport(mixed);
         await settle(engine, activationId);
         expect((await engine.getJobFailureReason(activationId))?.error).toMatch(/nothing was installed/u);
-        expect(aco.calls).toEqual([]);
+        expect(aco.calls).toStrictEqual([]);
     });
 
     it('refuses an ACO pack when the project has no ACO', async () => {
@@ -108,7 +108,7 @@ describe('demoBuilderEngine with an ACO pack', () => {
         const { engine, aco } = engineWith();
         await expect(engine.checkCredentials(request())).resolves.toEqual({ usable: true });
         expect(aco.authenticated).toBe(1);
-        expect(aco.calls).toEqual([]);
+        expect(aco.calls).toStrictEqual([]);
     });
 
     it('dry-runs an ACO pack without a website or store view', async () => {

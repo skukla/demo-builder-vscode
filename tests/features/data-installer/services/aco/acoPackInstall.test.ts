@@ -43,7 +43,7 @@ async function setUp(files = memoryFiles()) {
 
 describe('acoRowProblems', () => {
     it('finds nothing in rows ACO takes', () => {
-        expect(acoRowProblems(PACK_ITEMS)).toEqual([]);
+        expect(acoRowProblems(PACK_ITEMS)).toStrictEqual([]);
     });
 
     it('names the kind and the row ACO could not take, before anything is written', () => {
@@ -58,7 +58,7 @@ describe('acoRowProblems', () => {
 
     it('checks a product layer by its sku and layer', () => {
         expect(acoRowProblems({ aco_product_layers: [{ sku: 'A', source: { locale: 'en-US' } }] })[0]).toMatch(/source\.layer/u);
-        expect(acoRowProblems({ aco_product_layers: [{ sku: 'A', source: { layer: 'winter' } }] })).toEqual([]);
+        expect(acoRowProblems({ aco_product_layers: [{ sku: 'A', source: { layer: 'winter' } }] })).toStrictEqual([]);
     });
 });
 
