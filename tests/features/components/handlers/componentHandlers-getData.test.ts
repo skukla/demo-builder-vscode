@@ -150,6 +150,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                             configuration: {},
                         },
                     ],
+                    addons: [],
                     envVars: {
                         NEXT_PUBLIC_API_URL: {
                             key: 'NEXT_PUBLIC_API_URL',
@@ -251,6 +252,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                     integrations: [],
                     dependencies: [],
                     mesh: [],
+                    addons: [],
                     envVars: {},
                     services: {},
                 },

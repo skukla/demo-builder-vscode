@@ -10,7 +10,11 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
-import { handleRemoveAcoCredential, handleSetUpAcoCredential } from '@/features/dashboard/handlers/acoCredentialHandlers';
+import {
+    applyAcoAddonChange,
+    handleRemoveAcoCredential,
+    handleSetUpAcoCredential,
+} from '@/features/dashboard/handlers/acoCredentialHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { subscribeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
@@ -24,6 +28,10 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
+    runGuards: jest.fn().mockResolvedValue(undefined),
+}));
+// The ACO add-on switch calls the guard chain from its own module (PL-60).
+jest.mock('@/features/dashboard/handlers/appBuilderComponentGuards', () => ({
     runGuards: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/features/app-builder/services/apiSubscriber', () => ({
@@ -91,7 +99,7 @@ export function consoleApiProject(overrides: Record<string, unknown> = {}): Reco
     };
 }
 
-export function consoleApiContext(project: Record<string, unknown> | null): HandlerContext {
+export function consoleApiContext(project: object | null): HandlerContext {
     return createMockHandlerContext({
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
@@ -103,6 +111,7 @@ export function consoleApiContext(project: Record<string, unknown> | null): Hand
 }
 
 export {
+    applyAcoAddonChange,
     handleRemoveAcoCredential,
     handleSetUpAcoCredential,
     resolveDesiredApis,

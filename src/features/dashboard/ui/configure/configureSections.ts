@@ -25,9 +25,14 @@ import {
     isConnectionGroup,
     type ConnectStoreSection,
 } from '@/features/components/config/storeFieldHelpers';
+import { ACO_ADDON_ID } from '@/features/components/services/acoSettings';
+import type { AddonOffer } from '@/types/stacks';
+
+/** The ACO tab's label when ACO is off (its service group's label when on). */
+const ACO_TAB_LABEL = 'Adobe Commerce Optimizer';
 
 /** Which of the four sources a section came from. Callers should not need to care. */
-export type ConfigureSectionKind = 'project' | 'serviceGroup' | 'blockLibraries' | 'authoring';
+export type ConfigureSectionKind = 'project' | 'serviceGroup' | 'blockLibraries' | 'authoring' | 'aco';
 
 /** One configurable section of the Configure screen, whatever its source. */
 export interface ConfigureSection {
@@ -65,6 +70,11 @@ export interface BuildConfigureSectionsInput {
     hasBlockLibraryChoices: boolean;
     /** The project name is set and passes validation. */
     isProjectNameValid: boolean;
+    /**
+     * Whether the project may have the ACO add-on (PL-60). Where it may, the ACO tab is there
+     * even while ACO is off, so the SC can turn it on; its fields join once it is on.
+     */
+    acoOffer?: AddonOffer;
 }
 
 /** A section with no required fields of its own — complete by construction. */
@@ -176,6 +186,7 @@ export function buildConfigureSections({
     isEds,
     hasBlockLibraryChoices,
     isProjectNameValid,
+    acoOffer,
 }: BuildConfigureSectionsInput): ConfigureSection[] {
     // The project name is the section's one required field: it is always populated, so
     // "complete" here means "valid" (a duplicate or malformed name is what makes it not).
@@ -222,7 +233,14 @@ export function buildConfigureSections({
             }
             continue;
         }
-        sections.push(toServiceGroupSection(group, isFieldComplete, fieldHasError));
+        const section = toServiceGroupSection(group, isFieldComplete, fieldHasError);
+        // ACO's fields sit under its on/off choice, in a tab of their own kind.
+        sections.push(group.id === ACO_ADDON_ID ? { ...section, kind: 'aco' } : section);
+    }
+
+    // ACO off but offered: the tab still appears, holding only the choice to turn it on.
+    if (acoOffer && acoOffer !== 'not-offered' && !sections.some((s) => s.id === ACO_ADDON_ID)) {
+        sections.push(unvalidatedSection(ACO_ADDON_ID, ACO_TAB_LABEL, 'aco'));
     }
 
     // Block Libraries is a set of tick boxes: any combination, none included, is a

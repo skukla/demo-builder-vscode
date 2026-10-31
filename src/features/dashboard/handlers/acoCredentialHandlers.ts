@@ -8,20 +8,26 @@
  * @module features/dashboard/handlers/acoCredentialHandlers
  */
 
+import { runGuards } from './appBuilderComponentGuards';
 import { loadProjectAndGuard, reconcileExtras } from './consoleApiHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { removeAcoCredential, setUpAcoCredential, type AcoCredentialDeps } from '@/features/app-builder/services/acoCredential';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
-import { ACO_ADDON_ID } from '@/features/components/services/acoSettings';
+import { ACO_ADDON_ID, usesAco } from '@/features/components/services/acoSettings';
+import { addonOffer } from '@/features/components/services/addonOffer';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
+import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import { nodeRecordFiles, readProjectRecords } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { Project } from '@/types/base';
+import type { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, MessageHandler } from '@/types/handlers';
+import type { AddonOffer } from '@/types/stacks';
 
 const NO_ADOBE = 'This project has no Adobe project and workspace yet. Complete Adobe setup first.';
 const NO_SECRETS = 'SecretStorage is not available here, so Demo Builder cannot keep the ACO credential.';
 
 /** The steps' Adobe and SecretStorage access for this project, or why there is none. */
-function credentialDeps(context: HandlerContext, project: Project): AcoCredentialDeps | string {
+export function credentialDeps(context: HandlerContext, project: Project): AcoCredentialDeps | string {
     const adobe = project.adobe;
     if (!adobe?.organization || !adobe.projectId || !adobe.workspace) return NO_ADOBE;
     const secrets = context.context?.secrets;
@@ -57,9 +63,46 @@ export const handleRemoveAcoCredential: MessageHandler = async (context) => {
     if (loaded.refusal) return loaded.refusal;
     const deps = credentialDeps(context, loaded.project);
     if (typeof deps === 'string') return { success: false, error: deps };
-    const records = await readProjectRecords(nodeRecordFiles, loaded.project.path);
-    const acoPacks = records.filter((record) => record.aco).map((record) => `${record.pack.name}@${record.pack.version}`);
-    const result = await removeAcoCredential(deps, acoPacks);
+    const result = await removeAcoCredential(deps, await loadedAcoPacks(loaded.project));
     if (result.success) context.logger.info('[ACO] Credential removed from the project');
     return result;
 };
+
+/** Whether this project may have ACO: its stack offers it and its package allows it. */
+export function projectAcoOffer(project: Project): AddonOffer {
+    const stack = project.selectedStack ? getStackById(project.selectedStack) : undefined;
+    return addonOffer(ACO_ADDON_ID, stack, resolveStorefrontForProject(project)?.package);
+}
+
+/** The ACO packs Demo Builder loaded into this project's instance and has not removed. */
+async function loadedAcoPacks(project: Project): Promise<string[]> {
+    const records = await readProjectRecords(nodeRecordFiles, project.path);
+    return records.filter((record) => record.aco).map((record) => `${record.pack.name}@${record.pack.version}`);
+}
+
+/** How turning ACO on or off went. */
+export type AcoAddonChange = { success: true } | { success: false; error: string; code?: ErrorCode };
+
+/**
+ * Turn the ACO add-on on or off for a saved project (Configure's save, PL-60): on sets up the
+ * credential in the project's workspace first and keeps the add-on only if that worked; off
+ * removes the credential first (refused while an ACO pack is loaded) and drops the add-on only if
+ * that worked. Changes `project.selectedAddons` in place; the caller saves the project, and the
+ * storefront's staleness check then sees ACO's settings come or go (republish prompt).
+ */
+export async function applyAcoAddonChange(context: HandlerContext, project: Project, on: boolean): Promise<AcoAddonChange> {
+    if (on === usesAco(project)) return { success: true };
+    const offer = projectAcoOffer(project);
+    if (on && offer === 'not-offered') return { success: false, error: "This project's demo package does not offer Adobe Commerce Optimizer." };
+    if (!on && offer === 'required') return { success: false, error: "This project's demo package requires Adobe Commerce Optimizer." };
+    const guard = await runGuards(context, project);
+    if (guard) return { success: false, error: guard.error, code: guard.code };
+    const deps = credentialDeps(context, project);
+    if (typeof deps === 'string') return { success: false, error: deps };
+    const result = on ? await setUpAcoCredential(deps) : await removeAcoCredential(deps, await loadedAcoPacks(project));
+    if (!result.success) return result;
+    const others = (project.selectedAddons ?? []).filter((id) => id !== ACO_ADDON_ID);
+    project.selectedAddons = on ? [...others, ACO_ADDON_ID] : others;
+    context.logger.info(`[ACO] Turned ${on ? 'on' : 'off'} for ${project.name}`);
+    return { success: true };
+}

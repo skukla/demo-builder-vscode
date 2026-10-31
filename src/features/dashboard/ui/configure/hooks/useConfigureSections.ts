@@ -24,6 +24,7 @@ import {
 } from '../configureSections';
 import type { ServiceGroup, UniqueField } from '../configureTypes';
 import type { StepTab } from '@/core/ui/components/navigation/StepRail';
+import type { AddonOffer } from '@/types/stacks';
 import { hasEntries } from '@/types/typeGuards';
 
 export interface UseConfigureSectionsProps {
@@ -41,6 +42,8 @@ export interface UseConfigureSectionsProps {
     hasBlockLibraryChoices: boolean;
     /** The project-name field's error, if any. */
     projectNameError: string | undefined;
+    /** Whether the project may have the ACO add-on; gates the ACO tab while ACO is off (PL-60). */
+    acoOffer?: AddonOffer;
 }
 
 export interface UseConfigureSectionsReturn {
@@ -70,6 +73,7 @@ export function useConfigureSections({
     isEds,
     hasBlockLibraryChoices,
     projectNameError,
+    acoOffer,
 }: UseConfigureSectionsProps): UseConfigureSectionsReturn {
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     // Which section the rail is on. It survives a tab-away (`retainContextWhenHidden`),
@@ -98,8 +102,9 @@ export function useConfigureSections({
                 isEds,
                 hasBlockLibraryChoices,
                 isProjectNameValid: !projectNameError,
+                acoOffer,
             }),
-        [serviceGroups, isFieldComplete, fieldHasError, isEds, hasBlockLibraryChoices, projectNameError],
+        [serviceGroups, isFieldComplete, fieldHasError, isEds, hasBlockLibraryChoices, projectNameError, acoOffer],
     );
 
     // Sections come and go as components are configured, so the stored id can go stale;

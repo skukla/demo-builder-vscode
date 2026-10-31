@@ -29,6 +29,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { hasBlockLibraryChoices } from './BlockLibrariesSection';
 import { ConfigureSectionBody } from './ConfigureSectionBody';
 import type { UniqueField } from './configureTypes';
+import { useAcoAddonSwitch } from './hooks/useAcoAddonSwitch';
 import { useBlockLibraryChoices } from './hooks/useBlockLibraryChoices';
 import { useBlockLibrarySelection } from './hooks/useBlockLibrarySelection';
 import { useConfigureFieldRow } from './hooks/useConfigureFieldRow';
@@ -79,6 +80,7 @@ export function ConfigureScreen({
     authoringExperience: initialAuthoringExperience,
     blockLibraryChoices: initialBlockLibraryChoices,
     componentSecretFlags = EMPTY_SECRET_FLAGS,
+    acoOffer,
 }: ConfigureScreenProps) {
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
         initialAuthoringExperience ?? 'da-live-classic',
@@ -125,6 +127,9 @@ export function ConfigureScreen({
         containFocus: true,
     });
 
+    // ACO on or off (PL-60): held until Save, and the screen reads the project as if it held it.
+    const { viewProject, choice: acoChoice, acoAddon, markAcoSaved } = useAcoAddonSwitch(project, acoOffer);
+
     // Every section's field values, lifted so an edit survives switching sections.
     const {
         componentConfigs,
@@ -138,6 +143,14 @@ export function ConfigureScreen({
         markSaved,
     } = useConfigureFieldValues({ project, existingEnvValues });
 
+    const handleSaved = useCallback(
+        (sent: Parameters<typeof markSaved>[0]) => {
+            markSaved(sent);
+            markAcoSaved();
+        },
+        [markSaved, markAcoSaved],
+    );
+
     const { isSaving, isDeploying, handleSave, handleCancel } = useConfigureSave({
         project,
         projectName,
@@ -148,14 +161,15 @@ export function ConfigureScreen({
         authoringExperience,
         initialAuthoringExperience: initialAuthoringExperience ?? 'da-live-classic',
         blockLibrarySelection: changedSelection,
-        onSaved: markSaved,
+        acoAddon,
+        onSaved: handleSaved,
     });
 
     // The storefront Republish a save offers, told in this screen's progress modal.
     const republish = useRepublishProgress();
 
     // Get all selected components with their data (using extracted hook)
-    const selectedComponents = useSelectedComponents({ project, componentsData });
+    const selectedComponents = useSelectedComponents({ project: viewProject, componentsData });
 
     // Deduplicate fields and organize by service group
     const serviceGroups = useServiceGroups({ selectedComponents, componentsData });
@@ -176,6 +190,7 @@ export function ConfigureScreen({
             isEds,
             hasBlockLibraryChoices: hasBlockLibraryChoices(blockLibraryChoices),
             projectNameError,
+            acoOffer: acoChoice?.offer,
         });
 
     const { renderFieldRow, autoDetectKey } = useConfigureFieldRow({
@@ -226,6 +241,7 @@ export function ConfigureScreen({
                                 authoringExperience={authoringExperience}
                                 onAuthoringExperienceChange={setAuthoringExperience}
                                 blockLibraries={blockLibraries}
+                                acoChoice={acoChoice}
                             />
                         </Form>
                     </StepAreaShell>

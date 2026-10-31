@@ -30,6 +30,8 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { internals } from '../../../helpers/commandInternals';
 
+const mockApplyAcoAddonChange = jest.fn();
+jest.mock('@/features/dashboard/handlers/acoCredentialHandlers', () => ({ applyAcoAddonChange: (...a: unknown[]) => mockApplyAcoAddonChange(...a), projectAcoOffer: () => 'not-offered' }));
 jest.mock('@/commands/handlerContextFactory', () => ({
     createPanelHandlerContext: jest.fn(() => ({ stub: 'handler-context' })),
 }));
@@ -93,7 +95,7 @@ interface SaveInternals {
         newProjectName?: string;
         authoringExperience?: string;
         selectedBlockLibraries?: string[];
-    }): Promise<unknown>;
+        acoAddon?: boolean; }): Promise<unknown>;
     renameProjectIfRequested(project: Project, newName: string | undefined): Promise<Project>;
     applyAuthoringExperienceMetadata(project: Project, experience: string | undefined): boolean;
     applyAuthoringSideEffects(project: Project, experience: string): Promise<void>;
@@ -182,6 +184,23 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
         internals(command).showPostSaveNotifications = jest.fn().mockResolvedValue(undefined);
     });
 
+    describe('handleSaveConfiguration — ACO on or off (PL-60; the steps have their own suite)', () => {
+        it('turns ACO on before staging and saves it; leaves it alone when unchanged', async () => {
+            const project = edsProject();
+            stateManager.getCurrentProject.mockResolvedValue(project);
+            mockApplyAcoAddonChange.mockImplementation(async (_c: unknown, p: Project) => ((p.selectedAddons = ['adobe-commerce-aco']), { success: true }));
+            await save(command).handleSaveConfiguration({ configChanges: {}, acoAddon: true });
+            expect(mockApplyAcoAddonChange).toHaveBeenCalledWith(expect.anything(), project, true);
+            expect(stateManager.saveProject).toHaveBeenCalledWith(expect.objectContaining({ selectedAddons: ['adobe-commerce-aco'] }));
+            mockApplyAcoAddonChange.mockClear();
+            await save(command).handleSaveConfiguration({ configChanges: {} });
+            expect(mockApplyAcoAddonChange).not.toHaveBeenCalled();
+        });
+        it('answers the refusal and saves nothing when ACO cannot be turned off', async () => {
+            mockApplyAcoAddonChange.mockResolvedValue({ success: false, error: 'Remove the ACO packs first' });
+            expect(await save(command).handleSaveConfiguration({ configChanges: {}, acoAddon: false })).toEqual({ success: false, error: 'Remove the ACO packs first' });
+            expect(stateManager.saveProject).not.toHaveBeenCalled();
+        }); });
     describe('handleSaveConfiguration', () => {
         it('returns a coded failure — not a throw — when there is no project', async () => {
             stateManager.getCurrentProject.mockResolvedValue(undefined);

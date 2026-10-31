@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { applyAcoAddonChange, projectAcoOffer } from '../handlers/acoCredentialHandlers';
 import { configureHandlers } from '../handlers/configureHandlers';
 import { runConfigureRepublish } from './configureRepublishRun';
 import { storefrontPrompt } from './configureStorefrontRepublish';
@@ -66,6 +67,8 @@ interface SaveConfigurationData extends BlockLibrarySelectionInput {
     configChanges?: ComponentConfigs;
     newProjectName?: string;
     authoringExperience?: AuthoringExperience;
+    /** ACO turned on or off on this screen (PL-60); absent when the SC left it alone. */
+    acoAddon?: boolean;
 }
 
 export class ConfigureProjectWebviewCommand extends BundledPanelCommand<ConfigureInitialData> {
@@ -177,6 +180,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             dependencies: registry.components.dependencies,
             mesh: registry.components.mesh,
             integrations: registry.components.integrations,
+            addons: registry.components.addons,
             envVars: withEnvVarKeys(registry.envVars),
         };
 
@@ -213,6 +217,8 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             // `vscode`-free function from the same loader the wizard's picker uses.
             blockLibraryChoices: buildBlockLibraryChoices(project, readCustomLibrarySetting()),
             componentSecretFlags,
+            // Whether the ACO add-on may be turned on or off here (PL-60).
+            acoOffer: projectAcoOffer(project),
         };
     }
 
@@ -269,6 +275,13 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
 
             // Handle project rename if name changed (renameProjectCore moves path-keyed secrets)
             project = await this.renameProjectIfRequested(project, data.newProjectName);
+
+            // ACO on or off (PL-60): the credential first, the add-on only once it worked.
+            // Before staging, so the storefront check below sees ACO's settings come or go.
+            if (data.acoAddon !== undefined) {
+                const aco = await applyAcoAddonChange(this.createHandlerContext(), project, data.acoAddon);
+                if (!aco.success) return aco;
+            }
 
             // The screen sends only what the SC changed (PL-76). Staging lays it over
             // the settings as they are now, keeps integration settings, moves secrets,

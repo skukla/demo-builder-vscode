@@ -73,6 +73,8 @@ export interface SectionBodyContext {
     updateState: (partial: Partial<WizardState>) => void;
     /** The single ConnectStoreStepContent (rendered only by a config step's body). */
     configForm: React.ReactNode;
+    /** The ACO add-on's choice, above the Catalog step's form (PL-60); null where not offered. */
+    acoChoice?: React.ReactNode;
     /** Edit leaves the settings steps to Configure: Backend says so, once. */
     setInConfigure: boolean;
 }
@@ -115,6 +117,16 @@ export function sectionBody(id: CommerceSectionId, ctx: SectionBodyContext): Rea
     if (id === 'sample-data') {
         return (
             <SampleDataStep state={ctx.state} updateState={ctx.updateState} setCanProceed={NOOP} />
+        );
+    }
+    // Catalog: whether the catalog comes from ACO comes first, then the catalog's
+    // fields, which include ACO's once it is on (PL-60).
+    if (id === 'catalog') {
+        return (
+            <>
+                {ctx.acoChoice}
+                {ctx.configForm}
+            </>
         );
     }
     // Config steps render ONLY the form — the footer Continue advances to the next

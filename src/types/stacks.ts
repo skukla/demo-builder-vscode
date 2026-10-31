@@ -10,6 +10,12 @@ import type { AddonSource } from './demoPackages';
 /**
  * OptionalAddon - An addon that can be optionally enabled for a stack
  */
+/**
+ * What a project may do with an add-on: its stack must offer it, and its demo package may require
+ * or exclude it (`features/components/services/addonOffer.ts`, PL-60).
+ */
+export type AddonOffer = 'not-offered' | 'optional' | 'required';
+
 export interface OptionalAddon {
     /** Addon component ID from components.json */
     id: string;

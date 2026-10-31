@@ -2,7 +2,6 @@
  * BrandGallery Helper Tests
  *
  * Tests for brandGalleryHelpers utility functions:
- * - filterAddonsByPackage: Blacklist filtering (show all unless explicitly excluded)
  * - sortPackages: Alphabetical sort with coming-soon packages last
  * - filterPackagesBySearchQuery: Case-insensitive name/description search
  *
@@ -11,11 +10,9 @@
 
 import {
     filterPackagesBySearchQuery,
-    filterAddonsByPackage,
     sortPackages,
 } from '@/features/project-creation/ui/components/brandGalleryHelpers';
 import type { DemoPackage } from '@/types/demoPackages';
-import type { OptionalAddon } from '@/types/stacks';
 
 describe('brandGalleryHelpers', () => {
     // Test fixtures - realistic package data
@@ -239,181 +236,6 @@ describe('brandGalleryHelpers', () => {
                 // Then: Original array should be unchanged
                 expect(mockPackages).toEqual(originalPackages);
             });
-        });
-    });
-
-    describe('filterAddonsByPackage (blacklist logic)', () => {
-        const stackAddons: OptionalAddon[] = [
-            { id: 'commerce-block-collection' },
-            { id: 'custom-addon' },
-            { id: 'adobe-commerce-aco' },
-        ];
-
-        it('should return all stack addons when package has no addons map', () => {
-            // Given: A package without an addons field
-            const pkg: DemoPackage = {
-                id: 'generic',
-                name: 'Generic',
-                description: 'No addons specified',
-                configDefaults: {},
-                storefronts: {},
-            };
-
-            // When: Filtering stack addons by package
-            const result = filterAddonsByPackage(stackAddons, pkg);
-
-            // Then: All stack addons pass through (no restrictions)
-            expect(result).toHaveLength(3);
-            expect(result.map(a => a.id)).toEqual([
-                'commerce-block-collection',
-                'custom-addon',
-                'adobe-commerce-aco',
-            ]);
-        });
-
-        it('should filter out addons explicitly set to excluded', () => {
-            // Given: A package that excludes one addon
-            const pkg: DemoPackage = {
-                id: 'citisignal',
-                name: 'CitiSignal',
-                description: 'Telecom demo',
-                configDefaults: {},
-                storefronts: {},
-                addons: { 'adobe-commerce-aco': 'excluded' },
-            };
-
-            // When: Filtering stack addons by package
-            const result = filterAddonsByPackage(stackAddons, pkg);
-
-            // Then: Excluded addon is removed, others pass through
-            expect(result).toHaveLength(2);
-            expect(result.map(a => a.id)).toEqual([
-                'commerce-block-collection',
-                'custom-addon',
-            ]);
-        });
-
-        it('should pass through addons marked as required', () => {
-            // Given: A package with a required addon
-            const pkg: DemoPackage = {
-                id: 'buildright',
-                name: 'BuildRight',
-                description: 'Hardware demo',
-                configDefaults: {},
-                storefronts: {},
-                addons: { 'custom-addon': 'required' },
-            };
-
-            // When: Filtering stack addons by package
-            const result = filterAddonsByPackage(stackAddons, pkg);
-
-            // Then: Required addon passes through along with unmentioned addons
-            expect(result.map(a => a.id)).toContain('custom-addon');
-        });
-
-        it('should pass through addons marked as optional', () => {
-            // Given: A package with an optional addon
-            const pkg: DemoPackage = {
-                id: 'citisignal',
-                name: 'CitiSignal',
-                description: 'Telecom demo',
-                configDefaults: {},
-                storefronts: {},
-                addons: { 'commerce-block-collection': 'optional' },
-            };
-
-            // When: Filtering stack addons by package
-            const result = filterAddonsByPackage(stackAddons, pkg);
-
-            // Then: Optional addon passes through
-            expect(result.map(a => a.id)).toContain('commerce-block-collection');
-        });
-
-        it('should pass through addons NOT mentioned in the package addons map', () => {
-            // Given: A package that only mentions one addon, leaving others unmentioned
-            // This is the KEY behavioral change from whitelist to blacklist
-            const pkg: DemoPackage = {
-                id: 'buildright',
-                name: 'BuildRight',
-                description: 'Hardware demo',
-                configDefaults: {},
-                storefronts: {},
-                addons: { 'custom-addon': 'optional' },
-            };
-
-            // When: Filtering stack addons by package
-            const result = filterAddonsByPackage(stackAddons, pkg);
-
-            // Then: Unmentioned addons ALSO pass through (blacklist, not whitelist)
-            expect(result).toHaveLength(3);
-            expect(result.map(a => a.id)).toContain('commerce-block-collection');
-            expect(result.map(a => a.id)).toContain('adobe-commerce-aco');
-        });
-
-        it('should correctly filter a mix of excluded and non-excluded addons', () => {
-            // Given: A package with a mix of excluded, required, optional, and unmentioned
-            const pkg: DemoPackage = {
-                id: 'mixed',
-                name: 'Mixed Brand',
-                description: 'Mixed config',
-                configDefaults: {},
-                storefronts: {},
-                addons: {
-                    'commerce-block-collection': 'required',
-                    'custom-addon': 'excluded',
-                    // adobe-commerce-aco not mentioned
-                },
-            };
-
-            // When: Filtering stack addons by package
-            const result = filterAddonsByPackage(stackAddons, pkg);
-
-            // Then: Only excluded addon removed; required and unmentioned pass
-            expect(result).toHaveLength(2);
-            expect(result.map(a => a.id)).toEqual([
-                'commerce-block-collection',
-                'adobe-commerce-aco',
-            ]);
-        });
-
-        it('should return empty array when stack has no addons', () => {
-            // Given: No stack addons available
-            const pkg: DemoPackage = {
-                id: 'citisignal',
-                name: 'CitiSignal',
-                description: 'Telecom',
-                configDefaults: {},
-                storefronts: {},
-                addons: { 'custom-addon': 'optional' },
-            };
-
-            // When: Filtering empty stack addons
-            const result = filterAddonsByPackage([], pkg);
-
-            // Then: Empty result regardless of package config
-            expect(result).toHaveLength(0);
-        });
-
-        it('should return empty array when all addons are excluded', () => {
-            // Given: A package that excludes every stack addon
-            const pkg: DemoPackage = {
-                id: 'minimal',
-                name: 'Minimal',
-                description: 'No addons wanted',
-                configDefaults: {},
-                storefronts: {},
-                addons: {
-                    'commerce-block-collection': 'excluded',
-                    'custom-addon': 'excluded',
-                    'adobe-commerce-aco': 'excluded',
-                },
-            };
-
-            // When: Filtering stack addons by package
-            const result = filterAddonsByPackage(stackAddons, pkg);
-
-            // Then: All excluded, nothing passes through
-            expect(result).toHaveLength(0);
         });
     });
 

@@ -31,7 +31,7 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
  * @returns The same object when nothing was missing
  */
 export function fillCreationDefaults(
-    config: Pick<ProjectCreationConfig, 'components' | 'selectedPackage' | 'selectedStack' | 'demo'>,
+    config: Pick<ProjectCreationConfig, 'components' | 'selectedPackage' | 'selectedStack' | 'demo' | 'selectedAddons'>,
     registry: Pick<ComponentRegistry, 'components' | 'envVars' | 'services'>,
     componentConfigs: ComponentConfigs,
 ): ComponentConfigs {
@@ -45,6 +45,8 @@ export function fillCreationDefaults(
             dependencies: selection.dependencies,
         },
         registry.components,
+        // An add-on's fields get their defaults too (ACO's region, instance type, locale).
+        config.selectedAddons,
     );
     const fields = collectConfigFields(
         components,

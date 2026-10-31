@@ -25,6 +25,7 @@ import {
     isConnectionGroup,
     type ConnectStoreSection,
 } from '@/features/components/config/storeFieldHelpers';
+import { AcoAddonChoice, type AcoAddonChoiceProps } from '@/features/components/ui/components/AcoAddonChoice';
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
 import type { AuthoringExperience } from '@/types/base';
 
@@ -55,6 +56,8 @@ export interface ConfigureSectionBodyProps {
     onAuthoringExperienceChange: (value: AuthoringExperience) => void;
     /** The block libraries choice, drawn by the Block Libraries section alone (EDS-39). */
     blockLibraries?: BlockLibrariesSectionProps;
+    /** The ACO add-on's on/off, drawn at the top of the ACO tab (PL-60). */
+    acoChoice?: AcoAddonChoiceProps;
 }
 
 /**
@@ -259,6 +262,7 @@ export function ConfigureSectionBody({
     authoringExperience,
     onAuthoringExperienceChange,
     blockLibraries,
+    acoChoice,
 }: ConfigureSectionBodyProps): React.ReactElement | null {
     if (section.kind === 'project') {
         return (
@@ -296,6 +300,16 @@ export function ConfigureSectionBody({
     }
 
     const group = serviceGroups.find((g) => g.id === section.id);
+
+    // ACO: the on/off first, then its fields once it is on (PL-60).
+    if (section.kind === 'aco') {
+        return (
+            <>
+                {acoChoice && <AcoAddonChoice {...acoChoice} />}
+                {group && <ServiceGroupList groups={[group]} renderFieldRow={renderFieldRow} />}
+            </>
+        );
+    }
     if (!group) return null;
 
     // The Commerce group is TWO tasks: reaching the instance, and choosing the

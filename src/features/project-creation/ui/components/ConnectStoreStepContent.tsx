@@ -42,6 +42,8 @@ import type { ComponentConfigs } from '@/types/webview';
 
 export interface ConnectStoreStepContentProps {
     selectedStackId: string;
+    /** The add-ons chosen (PL-60), whose fields join the stack's; a stable reference. */
+    selectedAddons?: readonly string[];
     componentConfigs: ComponentConfigs;
     packageConfigDefaults?: Record<string, string>;
     adobeOrg?: { id: string; code?: string };
@@ -96,6 +98,7 @@ function mergeSlices(
 
 export function ConnectStoreStepContent({
     selectedStackId,
+    selectedAddons,
     componentConfigs,
     packageConfigDefaults,
     adobeOrg,
@@ -118,6 +121,7 @@ export function ConnectStoreStepContent({
         normalizeUrlField,
     } = useComponentConfig({
         selectedStack: selectedStackId,
+        selectedAddons,
         componentConfigs,
         packageConfigDefaults,
         onConfigsChange: onComponentConfigsChange,

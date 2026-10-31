@@ -57,6 +57,7 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
         const integrations = await registryManager.getIntegrations();
         const dependencies = await registryManager.getDependencies();
         const mesh = await registryManager.getMesh();
+        const addons = await registryManager.getAddons();
         const registry = await registryManager.loadRegistry();
 
         const componentsData: ComponentsDataPayload = {
@@ -65,6 +66,7 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             integrations: toComponentDataArray(integrations, { includeDependencies: true }),
             dependencies: toComponentDataArray(dependencies, { includeDependencies: true }),
             mesh: toComponentDataArray(mesh, { includeDependencies: true }),
+            addons: toComponentDataArray(addons, { includeDependencies: true }),
             envVars: withEnvVarKeys(registry.envVars),
             services: registry.services || {},
         };

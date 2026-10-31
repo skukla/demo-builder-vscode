@@ -4290,7 +4290,7 @@
             "anchors": [
                 "[updateState],"
             ],
-            "line": 217,
+            "line": 219,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker empties this useCallback's dependency array. The array's ONLY entry is updateState, and updateState is created by useWizardState with useCallback(fn, []) (src/features/project-creation/ui/wizard/hooks/useWizardState.ts:505) \u2014 it is the same function object for the life of the wizard, and CommerceStep receives it unchanged through BaseStepProps. React therefore builds the callback exactly once either way, closing over the same updateState. No sequence of renders can distinguish them. (handleStoreLoadingChange)",
@@ -7164,7 +7164,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
             ],
-            "line": 101,
+            "line": 104,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",
@@ -7645,7 +7645,7 @@
             "anchors": [
                 "if (cancelled) return;"
             ],
-            "line": 184,
+            "line": 191,
             "mutants": 1,
             "category": "branch",
             "reason": "The first of the two post-unmount guards, after a resolved response. React 18 no longer warns when state is set on an unmounted component, so a late setState has no observable effect at all: no render happens, no console output the gate could catch, and result.current is unreachable after unmount. The suite drives both post-unmount paths (a resolved response and a rejected one) to prove they do not throw, which is the most a test can see here. The row at line 192 described both guards and accounted for one mutant; this one makes the count match the reason (PL-69 sitting 7 re-triage, the gap had been hidden by a stale baseline row).",
@@ -7658,7 +7658,7 @@
             "anchors": [
                 "if (cancelled) return;"
             ],
-            "line": 192,
+            "line": 199,
             "mutants": 1,
             "category": "branch",
             "reason": "React 18 no longer warns when state is set on an unmounted component, so a late setState has no observable effect at all: no render happens, no console output the gate could catch, and result.current is unreachable after unmount. The suite drives both post-unmount paths (a resolved response and a rejected one) to prove they do not throw, which is the most a test can see here.",
@@ -7695,7 +7695,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 201,
+            "line": 208,
             "mutants": 1,
             "category": "other",
             "reason": "Giving the load effect a non-empty dependency array makes it re-run on every render, and both re-entry paths are already idempotent: after the load, 'registryCache !== undefined' returns immediately, and before it, 'registryInFlight ??=' hands every caller the same in-flight promise. The suite pins that the request is made exactly once across two mounts.",
@@ -7780,7 +7780,7 @@
             "anchors": [
                 "if (!result.valid && result.error) {"
             ],
-            "line": 295,
+            "line": 303,
             "mutants": 1,
             "category": "branch",
             "reason": "The URL block's copy of the guard. Swapping && for || cannot be observed because the Validator never produces the disagreeing pair. Its result is either { valid: true } with no error or { valid: false } with one, so '!valid && error' and '!valid || error' agree on every value it returns. Verified by planting the || form on BOTH validation blocks at once: 97 tests still pass, including the ones that assert a bad URL, a pattern mismatch, and their absence on valid input. The row at line 308 names both blocks (it was verified by planting the || form on both at once) and accounted for one mutant; this one makes the count match the reason (PL-69 sitting 7 re-triage, the gap had been hidden by a stale baseline row).",
@@ -7793,7 +7793,7 @@
             "anchors": [
                 "if (!result.valid && result.error) {"
             ],
-            "line": 308,
+            "line": 316,
             "mutants": 1,
             "category": "branch",
             "reason": "Swapping && for || cannot be observed because the Validator never produces the disagreeing pair. Its result is either { valid: true } with no error or { valid: false } with one, so '!valid && error' and '!valid || error' agree on every value it returns. Verified by planting the || form on BOTH validation blocks at once: 97 tests still pass, including the ones that assert a bad URL, a pattern mismatch, and their absence on valid input.",
@@ -10364,7 +10364,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 161,
+            "line": 166,
             "mutants": 1,
             "category": "other",
             "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
@@ -11490,7 +11490,7 @@
             "anchors": [
                 "const instanceType = instance?.type;"
             ],
-            "line": 56,
+            "line": 57,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Stryker drops the `?.`, which throws only if an entry of `componentInstances` is null. The parameter is typed `Record<string, ComponentInstance>`, so no compliant caller can produce that \u2014 the only caller hands over `project.componentInstances` straight from persisted state, and the guard is there for a corrupt file rather than for anything the types allow. Killing it would mean casting a null past the parameter's own type, which ADR-016 rule 2 refuses. Planted the mutation and ran the suite (2026-09-06): 22 tests, all green.",
@@ -13060,7 +13060,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 98,
+            "line": 101,
             "mutants": 1,
             "category": "other",
             "reason": "The deployment-status subscription's dependency array holds no values, so ['Stryker was here'] is just as constant as [] when React compares it element-wise with Object.is on every render: the effect subscribes once on mount and unsubscribes on unmount either way. The listener reads nothing from the render it was created in, only the stable setIsDeploying setter. Survived identically on ConfigureScreen.tsx before the EDS-8 split, where the PL-22 row for the handlers already described the same equivalence.",
@@ -14020,7 +14020,7 @@
             "anchors": [
                 "if (!payload || typeof payload !== 'object') {"
             ],
-            "line": 103,
+            "line": 105,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. The clause now lives once, in readStackPayload, which every selection handler in this file opens with (PL-69 sitting 8, 2026-10-09; it was the first line of each handler's own copy before). Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value, a string, a number, a boolean, the destructured fields come back undefined and the SECOND guard below refuses with the identical undefined, so the handler answers the same { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
