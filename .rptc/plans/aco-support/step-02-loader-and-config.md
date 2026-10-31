@@ -17,37 +17,35 @@ one client). The sibling step (website scrape to ACO pack) is on `aco/aco-scrape
 | Credential | `app-builder/services/acoCredential.ts`, `dashboard/handlers/acoCredentialHandlers.ts`, `components/services/acoCredentialStore.ts` | API found by name in the org's service list; subscribed via `reconcileExtras` under owner key `adobe-commerce-aco`; pair from `getS2SDeployCredentials` into SecretStorage (`demoBuilder.acoCredential.<projectPath>`); deleted and moved with the project |
 | Agent surface | `set_up_aco_credential`, `remove_aco_credential` (confirm) | Plus `configure_project` (add-on and fields) and `start_datapack_import` / `reset_datapack` |
 
-## Not built (next slice)
+## Slice 2 (built the same day, coordinator's order)
 
-1. **The human controls (P1).** The Catalog step toggle (off by default, only where the
-   package does not exclude the add-on) and Configure's ACO tab plus on/off. Two blockers found:
-   Configure and the wizard read fields only from stack components (`useSelectedComponents`,
-   `collectStackComponents`) and the registry they read has no `addons` bucket
-   (`ComponentRegistryManager.ts`), so the ACO group never renders; and Edit mode drops the
-   Catalog step from the strip (`isSetInConfigure`), so Configure must carry the toggle. No
-   selectable demo package allows ACO today (four exclude it; `buildright` requires it but is
-   hidden), so `demo-packages.json` must change for the toggle to appear anywhere.
-2. **Provisioning on the human paths.** Turning ACO on in Configure, or creating a project with
-   it, should call `setUpAcoCredential` (creation: an executor phase after the Adobe workspace
-   exists); turning it off should call `removeAcoCredential` and regenerate config.json.
-3. **Republish on add-on toggle.** The staleness detector watches values, not `selectedAddons`.
-4. **ToolManager's remaining ACO paths** (`executeAcoIngestion`, `executeAcoCleanup`, the
-   `cleanupBackendData` / `backendType` chain, the `commerce-demo-ingestion` tool entry) are
-   dead now that the engine loads ACO packs; delete them in one change.
-5. **ACO "Clear demo data".** Without a list API, a wipe has to read the storefront GraphQL
-   (`productSearch` through a catalog view), as `commerce-demo-ingestion/aco/delete-everything.js`
-   does. A lead, not a design.
+| Piece | Where |
+|---|---|
+| Add-on fields read like the stack's own | registry `addons` bucket (`ComponentRegistryManager`), `collectStackComponents(stack, data, selectedAddons)` for the wizard and headless creation defaults, `useSelectedComponents` reads `selectedAddons` for Configure |
+| Who may have ACO | `components/services/addonOffer.ts`: the stack offers it and the package does not exclude it (the schema's blacklist model); replaces BrandGallery's dead `filterAddonsByPackage` |
+| CitiSignal allows ACO | `demo-packages.json`: `optional`. Chosen because a CitiSignal ACO storefront and two CitiSignal ACO packs (`aco_citisignal_new`, `aco_citisignal_original`) already exist, and it ships on both Edge Delivery stacks ACO is offered on. Bodea (B2B, per-company shared catalogs) and starter stay excluded; BuildRight stays hidden (it needs its own persona price books and a mesh storefront) |
+| The one checkbox | `components/ui/components/AcoAddonChoice.tsx` (the house `CheckboxRow`), in the wizard's Catalog step and Configure's ACO tab |
+| Configure | ACO tab (`kind: 'aco'`), the tick held until Save (`useAcoAddonSwitch`), Save sends `acoAddon`; `applyAcoAddonChange` sets up / removes the credential first and keeps the change only if that worked |
+| Creation | `executeAcoCredentialPhase` after the integrations phase: guards, then the credential; a failure stops creation with the reason |
+| Republish prompt | the staleness detector counts ACO's values only while ACO is on, so turning it on or off is a change |
+| Old ingestion tool | deleted in one commit (`35a054624`) |
+
+## Still open
+
+1. An ACO "Clear demo data" (no list API; a lead is `commerce-demo-ingestion/aco/delete-everything.js`, which reads the storefront GraphQL through a catalog view).
+2. ADR-016 and ADR-023 still name `toolManager.ts` as history; ADR-016 uses it as a worked example the owner may want replaced.
+3. Everything under "Unverified" below.
 
 ## Decisions for the owner
 
-- **Rows ACO already held.** No read-back means an install can overwrite a SKU someone else
-  loaded, and removal then deletes it. Recommendation: accept and say it (done in the note);
-  the alternative, refusing keys not made by us, is impossible without a list API.
-- **The locale.** Pack rows load for the locale they name (the service does not rewrite it
-  either); the outcome note warns when it is not the storefront's. Recommendation: keep; offer a
-  rewrite only if packs made from Commerce (store view codes as locales) prove common.
+Accepted by the owner 2026-10-31, as recommended:
+
+- **Rows ACO already held.** An install can overwrite a SKU someone else loaded, and removal then
+  deletes it; the outcome note says so every time.
+- **The locale.** Rows load for the locale the pack names, with the warning when it is not the
+  storefront's.
 - **The credential is the shared workspace one.** Removing ACO unsubscribes the API and forgets
-  the pair, but leaves the credential. Recommendation: keep; it is App Builder's too.
+  the pair, and keeps the credential.
 
 ## Unverified (needs the live test below)
 

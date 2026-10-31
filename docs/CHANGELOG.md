@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **ACO packs load into Adobe Commerce Optimizer, and come back out.** With the ACO add-on on a project, importing an ACO datapack (`aco_wknd` and the other `aco_` packs) now loads it into the project's ACO instance instead of being refused, and removing it deletes exactly what it loaded. Demo Builder makes the ACO credential itself in the project's Adobe workspace, so you type no client id or secret, and the storefront's config.json reads the catalog from your ACO catalog view. ACO cannot be read back, so the result says plainly that Demo Builder cannot tell what was changed in ACO since. For now this is reached through your AI (`configure_project`, `set_up_aco_credential`, `start_datapack_import`); the Catalog step and Configure controls are still to come. (PL-60)
+- **ACO packs load into Adobe Commerce Optimizer, and come back out.** With the ACO add-on on a project, importing an ACO datapack (`aco_wknd` and the other `aco_` packs) now loads it into the project's ACO instance instead of being refused, and removing it deletes exactly what it loaded. Demo Builder makes the ACO credential itself in the project's Adobe workspace, so you type no client id or secret, and the storefront's config.json reads the catalog from your ACO catalog view. ACO cannot be read back, so the result says plainly that Demo Builder cannot tell what was changed in ACO since. Turn it on in the wizard's Catalog step (off by default) or on Configure's Adobe Commerce Optimizer tab; CitiSignal is the first demo package to offer it. Turning it on sets up the credential, turning it off removes it (Demo Builder refuses while an ACO datapack it loaded is still there), and either way you are asked to republish the storefront. Your AI can do the same (`configure_project`, `set_up_aco_credential`, `start_datapack_import`). (PL-60)
+
+### Removed
+
+- **The old ACO ingestion tool.** The bundled `commerce-demo-ingestion` tool, which nothing ever ran, is gone with everything it left; Demo Builder loads ACO datapacks itself. (PL-60)
 
 ### Changed
 

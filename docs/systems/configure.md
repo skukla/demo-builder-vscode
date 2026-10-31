@@ -25,10 +25,16 @@ would be empty is not shown.
 | Block Libraries | Edge Delivery projects with a library to show | Which block libraries the storefront has |
 | Authoring | Edge Delivery projects | DA.live classic or Experience Workspace |
 
-The Adobe Commerce Optimizer group is defined but does not render yet: Configure collects
-fields from the stack's components only, never from add-ons (`useSelectedComponents`), and the
-registry it reads has no add-on bucket. Until PL-60 builds it, an ACO project's settings are set
-through `configure_project` (`env` under `adobe-commerce-aco`).
+**Adobe Commerce Optimizer** (PL-60) has a tab wherever the project's stack offers ACO and its
+demo package allows it (`addonOffer`; today CitiSignal on its Edge Delivery stacks). The tab
+holds one checkbox, off by default, and once ticked ACO's fields (tenant id, region, instance
+type, catalog view id, locale, optional price book id). Add-ons' fields are read like the
+stack's own: the registry has an `addons` bucket and `useSelectedComponents` takes the project's
+`selectedAddons`. The tick is held until Save: Save first sets up the ACO credential in the
+project's Adobe workspace (turning it off removes it, refused while an ACO datapack Demo Builder
+loaded is still in the instance) and keeps the change only if that worked
+(`applyAcoAddonChange`). Turning ACO on or off marks the storefront out of date, so the usual
+republish prompt follows. Edit hides the wizard's Catalog step, which is why the toggle is here.
 
 Integrations are not here. Their settings live on each integration's tile on the
 Integrations screen (AB-21), and so do the mesh's deploy and remove, and the Adobe
