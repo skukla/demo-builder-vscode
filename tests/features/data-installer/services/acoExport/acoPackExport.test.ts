@@ -140,11 +140,16 @@ describe('exportAcoPack: what it saves', () => {
         ]);
     });
 
-    it('says what it saved, where, and for which store views', async () => {
+    it('says what it saved, where, for which store views and in which locales', async () => {
         const { sentence } = await harness().run({ storeViews: ['default', 'fr'] });
         expect(sentence).toBe(
-            'Saved the ACO pack aco_acme@main to your datapack library: 5 kinds for default, fr.'
+            'Saved the ACO pack aco_acme@main to your datapack library: 5 kinds for default, fr, in en-US, fr-FR.'
         );
+    });
+
+    it('says "1 kind", not "1 kinds"', async () => {
+        const { sentence } = await harness().run({ storeViews: ['default'], dataTypes: ['aco_metadata'] });
+        expect(sentence).toBe('Saved the ACO pack aco_acme@main to your datapack library: 1 kind for default, in en-US.');
     });
 
     it('makes only the kinds asked for', async () => {
@@ -335,5 +340,46 @@ describe('exportAcoPack: what goes wrong', () => {
             sentence: 'The store had nothing to put in an ACO pack, so nothing was saved.',
         });
         expect(result).not.toHaveProperty('saved');
+    });
+});
+
+/**
+ * A row's locale is the store view's LOCALE, as the storefront asks ACO for it (owner, 2026-10-31,
+ * the ACO audit): stamped with the view's code (`default`), a pack Demo Builder exported never showed
+ * on a storefront Demo Builder set up. Commerce's store configs carry it (`en_US`, as
+ * `tests/fixtures/commerce-rest/store-configs.json` captured it), spelled the ACO way (`en-US`).
+ */
+describe("exportAcoPack: each row in its store view's locale", () => {
+    type Localised = { sku?: string; slug?: string; code?: string; source: { locale: string } };
+    const rowsOf = (h: ReturnType<typeof harness>, kind: string) =>
+        (h.written[0].items.find((i) => i.dataType === kind)?.records ?? []) as Localised[];
+
+    it('stamps products, categories and attributes with the locale, not the code', async () => {
+        const h = harness();
+        await h.run({ storeViews: ['fr'] });
+
+        for (const kind of ['aco_products', 'aco_categories', 'aco_metadata']) {
+            const locales = new Set(rowsOf(h, kind).map((r) => r.source.locale));
+            expect([kind, [...locales]]).toStrictEqual([kind, ['fr-FR']]);
+        }
+    });
+
+    it("keeps a view's code when Commerce names no locale for it — control", async () => {
+        const h = harness(store({ storeConfigs: ACO_STORE_CONFIGS.map(({ locale: _locale, ...rest }) => rest) }));
+        await h.run({ storeViews: ['fr'] });
+
+        expect(new Set(rowsOf(h, 'aco_products').map((r) => r.source.locale))).toStrictEqual(new Set(['fr']));
+    });
+
+    // Two views on two websites can share a locale; a product both sell is one row, not two.
+    it('sends a product two same-locale views share once', async () => {
+        const h = harness();
+        await h.run({ storeViews: ['default', 'citisignal_us'] });
+
+        const keys = rowsOf(h, 'aco_products').map((r) => `${r.sku}|${r.source.locale}`);
+        expect(keys.length).toBeGreaterThan(0);
+        expect(new Set(keys).size).toBe(keys.length);
+        const attributes = rowsOf(h, 'aco_metadata').map((r) => `${r.code}|${r.source.locale}`);
+        expect(new Set(attributes).size).toBe(attributes.length);
     });
 });

@@ -72,7 +72,8 @@ const OUTCOME: AcoExportOutcome = {
     perType: [{ dataType: 'aco_products', success: true, exported: 3, excluded: 1 }],
     saved: { name: 'aco_acme', version: 'main' },
     storeViews: ['default'],
-    sentence: 'Saved the ACO pack aco_acme@main to your datapack library: 1 kinds for default.',
+    locales: ['en-US'],
+    sentence: 'Saved the ACO pack aco_acme@main to your datapack library: 1 kind for default, in en-US.',
 };
 
 const send = (payload: Record<string, unknown>) =>

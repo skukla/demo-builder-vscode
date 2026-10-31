@@ -82,8 +82,11 @@ async function ask<T>(doFetch: typeof fetch, settings: AcoStorefrontSettings, qu
     return (await response.json()) as GraphqlAnswer<T>;
 }
 
+// A single space lists every product; "*" answers "No index found" (BuildRight's tested finding,
+// `buildright-aco/docs/archive/ACO-CLEANUP-LESSONS-LEARNED.md` §3). The ingestion script's empty
+// phrase was never tested there.
 const PRODUCTS_QUERY = `query ProductSearch($page: Int!, $pageSize: Int!) {
-  productSearch(phrase: "", current_page: $page, page_size: $pageSize) {
+  productSearch(phrase: " ", current_page: $page, page_size: $pageSize) {
     page_info { current_page total_pages }
     items { productView { sku } }
   }

@@ -202,11 +202,14 @@ export const ACO_STORE_VIEWS: CommerceStoreView[] = [
     { id: 4, code: 'fr', name: 'French', store_group_id: 1, website_id: 1, is_active: 1 },
 ];
 
-/** Each store view's display currency (`store-configs.json` shape). */
+/**
+ * Each store view's display currency and locale (`store-configs.json` shape). Two views share
+ * `en_US` on purpose: a pack made for both must send a product both sell once.
+ */
 export const ACO_STORE_CONFIGS: CommerceStoreConfigRow[] = [
-    { id: 1, code: 'default', website_id: 1, default_display_currency_code: 'USD' },
-    { id: 2, code: 'citisignal_us', website_id: 2, default_display_currency_code: 'usd' },
-    { id: 4, code: 'fr', website_id: 1, default_display_currency_code: 'EUR' },
+    { id: 1, code: 'default', website_id: 1, default_display_currency_code: 'USD', locale: 'en_US' },
+    { id: 2, code: 'citisignal_us', website_id: 2, default_display_currency_code: 'usd', locale: 'en_US' },
+    { id: 4, code: 'fr', website_id: 1, default_display_currency_code: 'EUR', locale: 'fr_FR' },
 ];
 
 /** Commerce's four standard groups and a B2B one with a code that needs slugging. */

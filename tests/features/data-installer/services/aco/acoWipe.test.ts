@@ -99,6 +99,10 @@ describe('the storefront search', () => {
         expect(sent[0].url).toBe('https://na1-sandbox.api.commerce.adobe.com/TenantAbc123/graphql');
         expect(sent[0].init.headers).toMatchObject({ 'AC-View-ID': ACO_SETTINGS.catalogViewId, 'AC-Source-Locale': 'en-US', 'AC-Environment-Id': 'TenantAbc123' });
         expect(JSON.parse(String(sent[1].init.body)).variables).toEqual({ page: 2, pageSize: 200 });
+        // A space, not "*" (which answers "No index found"), nor the untested empty phrase.
+        expect(JSON.parse(String(sent[0].init.body)).query).toContain('productSearch(phrase: " "');
+        // No token: ACO's storefront GraphQL takes none (BuildRight, ACO-OAUTH-DISCOVERY.md).
+        expect(sent[0].init.headers).not.toHaveProperty('Authorization');
     });
 
     // The script this follows stopped quietly and kept what it had; a clear must not.

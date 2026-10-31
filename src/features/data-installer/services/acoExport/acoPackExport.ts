@@ -18,7 +18,7 @@
 
 import { DatapackTransferError, type PackWriteOutcome } from '../datapackTransfer';
 import type { DatapackFile } from '../datapackZip';
-import { type ChosenViews, buildAcoKind } from './acoPackKinds';
+import { type ChosenViews, acoLocale, buildAcoKind, localeOf } from './acoPackKinds';
 import { acoRowsProblem } from './acoPackSchemas';
 import { type AcoCommerce, AcoExportError, AcoStoreReads } from './acoStoreReads';
 import { ACO_EXPORT_KINDS, type AcoExportKind, type AcoPackRows } from '@/types/acoPack';
@@ -53,6 +53,8 @@ export interface AcoExportOutcome {
     saved?: DatapackId;
     /** The store views the rows were made for. */
     storeViews: string[];
+    /** The ACO locales the rows were made for, one per distinct view locale. */
+    locales: string[];
     /** The one sentence the SC reads. */
     sentence: string;
 }
@@ -83,13 +85,18 @@ async function storeViewsAsked(
     asked: readonly string[] | undefined,
 ): Promise<ChosenViews> {
     const known = (await reads.storeViews()).map((view) => view.code);
-    if (!asked || asked.length === 0) return { codes: [...new Set(known)].sort(), chosen: false };
+    const locales = new Map<string, string>();
+    for (const config of await reads.storeConfigs()) {
+        const locale = acoLocale(config.locale);
+        if (locale) locales.set(config.code, locale);
+    }
+    if (!asked || asked.length === 0) return { codes: [...new Set(known)].sort(), chosen: false, locales };
     const missing = asked.filter((code) => !known.includes(code));
     if (missing.length > 0)
         throw new AcoExportError(
             `The store has no store view ${missing.join(', ')}. It has ${known.join(', ')}.`,
         );
-    return { codes: [...new Set(asked)].sort(), chosen: true };
+    return { codes: [...new Set(asked)].sort(), chosen: true, locales };
 }
 
 /** One kind's rows, or why there are none. */
@@ -170,7 +177,7 @@ function sentenceFor(outcome: Omit<AcoExportOutcome, 'sentence'>, id: DatapackId
     const made = outcome.perType.filter((t) => t.success && t.exported > 0).length;
     const failed = outcome.perType.filter((t) => !t.success).length;
     const tail = failed > 0 ? ` ${failed} of the kinds could not be made; each says why.` : '';
-    return `Saved the ACO pack ${id.name}@${id.version} to your datapack library: ${made} kinds for ${outcome.storeViews.join(', ')}.${tail}`;
+    return `Saved the ACO pack ${id.name}@${id.version} to your datapack library: ${made} ${made === 1 ? 'kind' : 'kinds'} for ${outcome.storeViews.join(', ')}, in ${outcome.locales.join(', ')}.${tail}`;
 }
 
 /**
@@ -198,6 +205,7 @@ export async function exportAcoPack(
         success: perType.every((t) => t.success),
         perType,
         storeViews: views.codes,
+        locales: [...new Set(views.codes.map((code) => localeOf(views, code)))],
         ...(saved ? { saved } : {}),
     };
     return { ...outcome, sentence: sentenceFor(outcome, request.id) };

@@ -274,4 +274,6 @@ export interface CommerceStoreConfigRow {
     code: string;
     website_id: number;
     default_display_currency_code?: string;
+    /** The view's locale, Commerce's spelling (`en_US`; `tests/fixtures/commerce-rest/store-configs.json`). */
+    locale?: string;
 }

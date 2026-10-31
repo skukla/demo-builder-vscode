@@ -25,10 +25,48 @@ import type {
 } from '@/types/acoPack';
 import type { CommerceWebsite } from '@/types/commerceStore';
 
-/** The store views the rows are made for, and whether the SC picked them. */
+/**
+ * The store views the rows are made for, whether the SC picked them, and each view's ACO locale.
+ *
+ * A row's `source.locale` is the view's LOCALE (`en-US`), not its code (owner, 2026-10-31, the ACO
+ * audit): the storefront asks ACO for a locale, so a pack stamped with `justrite_us` never showed
+ * on a storefront Demo Builder set up, and the install warned about it. The service stamps the
+ * code; we read the view's own locale from the store configs instead.
+ */
 export interface ChosenViews {
     codes: string[];
     chosen: boolean;
+    /** Store view code to its ACO locale. A view Commerce names no locale for keeps its code. */
+    locales: ReadonlyMap<string, string>;
+}
+
+/** A view's ACO locale. */
+export function localeOf(views: ChosenViews, code: string): string {
+    return views.locales.get(code) ?? code;
+}
+
+/**
+ * Commerce's locale as ACO spells it: `en_US` becomes `en-US`.
+ *
+ * @returns undefined when Commerce named none
+ */
+export function acoLocale(commerce: string | undefined): string | undefined {
+    const trimmed = commerce?.trim();
+    return trimmed ? trimmed.replace(/_/gu, '-') : undefined;
+}
+
+/**
+ * The first row of each key and locale. Two views can share a locale (two US stores on two
+ * websites), and a product both sell would otherwise be sent twice under one key.
+ */
+function firstOfEach<T extends { source: { locale: string } }>(rows: readonly T[], keyOf: (row: T) => string): T[] {
+    const seen = new Set<string>();
+    return rows.filter((row) => {
+        const key = `${keyOf(row)}\u0000${row.source.locale}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 }
 
 /** A kind's rows, and how many products were left out on the way. */
@@ -52,13 +90,14 @@ function keptFor(
 }
 
 async function metadataKind(reads: AcoStoreReads, views: ChosenViews): Promise<BuiltKind> {
-    return { rows: metadataRows(await reads.userAttributes(), views.codes), excluded: 0 };
+    const locales = [...new Set(views.codes.map((code) => localeOf(views, code)))];
+    return { rows: metadataRows(await reads.userAttributes(), locales), excluded: 0 };
 }
 
 async function categoriesKind(reads: AcoStoreReads, views: ChosenViews): Promise<BuiltKind> {
     const rows = [];
-    for (const view of views.codes) rows.push(...categoryRows(await reads.categories(view), view));
-    return { rows, excluded: 0 };
+    for (const view of views.codes) rows.push(...categoryRows(await reads.categories(view), localeOf(views, view)));
+    return { rows: firstOfEach(rows, (row) => row.slug), excluded: 0 };
 }
 
 async function productsKind(reads: AcoStoreReads, views: ChosenViews): Promise<BuiltKind> {
@@ -74,10 +113,10 @@ async function productsKind(reads: AcoStoreReads, views: ChosenViews): Promise<B
                 withOptions(catalog, code, await reads.options(code));
         }
         rows.push(
-            ...productGraph(kept, view, categorySlugs(await reads.categories(view)), catalog),
+            ...productGraph(kept, localeOf(views, view), categorySlugs(await reads.categories(view)), catalog),
         );
     }
-    return { rows, excluded };
+    return { rows: firstOfEach(rows, (row) => row.sku), excluded };
 }
 
 /** The websites priced, each with the store view it is read through; one with none is left out. */
