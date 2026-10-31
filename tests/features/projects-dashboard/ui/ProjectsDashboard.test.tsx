@@ -172,7 +172,7 @@ describe('ProjectsDashboard', () => {
             });
         });
 
-        it('should show "Showing X of Y projects" when filtering', async () => {
+        it('should show "X of Y projects" when filtering', async () => {
             const projects = createMockProjects(6);
             renderWithProvider(
                 <ProjectsDashboard
@@ -186,7 +186,7 @@ describe('ProjectsDashboard', () => {
             fireEvent.change(searchField, { target: { value: 'Project 1' } });
 
             await waitFor(() => {
-                expect(screen.getByText(/showing 1 of 6/i)).toBeInTheDocument();
+                expect(screen.getByText(/^1 of 6 projects$/i)).toBeInTheDocument();
             });
         });
     });

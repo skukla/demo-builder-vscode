@@ -114,7 +114,7 @@ describe('SearchHeader', () => {
                 />
             );
 
-            expect(screen.getByText('Showing 3 of 10 items')).toBeInTheDocument();
+            expect(screen.getByText('3 of 10 items')).toBeInTheDocument();
         });
 
         it('should use singular noun when count is 1', () => {
@@ -274,7 +274,7 @@ describe('SearchHeader', () => {
                 />
             );
 
-            expect(screen.getByText('Showing 3 of 10 items')).toBeInTheDocument();
+            expect(screen.getByText('3 of 10 items')).toBeInTheDocument();
             expect(screen.queryByText('1 integration, 1 system')).not.toBeInTheDocument();
         });
     });
@@ -289,8 +289,8 @@ describe('SearchHeader', () => {
 
     describe('what counts as filtering', () => {
         it('treats a whitespace-only query as no filter', () => {
-            // Without the trim, spaces alone flip the count line to "Showing X
-            // of Y" while every item is still listed.
+            // Without the trim, spaces alone flip the count line to "X of Y"
+            // while every item is still listed.
             renderWithProvider(
                 <SearchHeader
                     {...defaultProps}
@@ -302,7 +302,44 @@ describe('SearchHeader', () => {
             );
 
             expect(screen.getByText('10 items')).toBeInTheDocument();
-            expect(screen.queryByText(/Showing/)).not.toBeInTheDocument();
+            expect(screen.queryByText('10 of 10 items')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('typing in the filter moves nothing (owner, 2026-10-31)', () => {
+        // "Showing 1 of 12 datapacks" took room from the Data Installer's buttons and cut
+        // their labels. The count now holds the width of its longest form from the start.
+        it('holds the longest count while unfiltered, and the same while filtered', () => {
+            const props = { ...defaultProps, totalCount: 12, itemNoun: 'datapack', alwaysShowCount: true };
+            const { container, rerender } = renderWithProvider(
+                <SearchHeader {...props} searchQuery="" filteredCount={12} />
+            );
+            const held = () => container.querySelector('.search-header-count')?.getAttribute('data-longest');
+            expect(held()).toBe('12 of 12 datapacks');
+
+            rerender(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <SearchHeader {...props} searchQuery="zz" filteredCount={1} />
+                </Provider>
+            );
+
+            expect(screen.getByText('1 of 12 datapacks')).toBeInTheDocument();
+            expect(held()).toBe('12 of 12 datapacks');
+        });
+
+        it('holds a longer custom count line when there is one', () => {
+            const { container } = renderWithProvider(
+                <SearchHeader
+                    {...defaultProps}
+                    totalCount={2}
+                    filteredCount={2}
+                    alwaysShowCount
+                    countText="1 integration, 1 system"
+                />
+            );
+            expect(container.querySelector('.search-header-count')?.getAttribute('data-longest')).toBe(
+                '1 integration, 1 system'
+            );
         });
     });
 

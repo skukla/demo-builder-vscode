@@ -8,7 +8,7 @@
  * - Search field (shown when items exceed threshold)
  * - Refresh button with loading state
  * - View mode toggle (cards/rows)
- * - Item count display ("Showing X of Y items")
+ * - Item count display ("Y items", and "X of Y items" while filtering)
  * - Configurable visibility and behavior
  *
  * `searchThreshold` IS NOT A TUNING KNOB — it changes the header's SHAPE.
@@ -21,6 +21,13 @@
  * Page-level surfaces therefore pass 0 (`ProjectsDashboard`, `IntegrationsActionBand`) so the
  * field is present from the first item and the layout never moves. Pick non-zero only for a
  * bounded in-page list where you have decided both layouts are acceptable.
+ *
+ * Typing in the field must not move anything either (owner, 2026-10-31). The count holds the
+ * width of its longest form ("12 of 12 datapacks") from the start, and nothing on its row
+ * shrinks, so the filtered count cannot take room from the buttons beside it. It used to:
+ * "Showing 1 of 12 datapacks" squeezed the Data Installer's buttons until their labels were cut.
+ * A row too narrow for everything wraps its buttons below the count, and that depends only on
+ * the window's width, never on the filter.
  */
 
 import {
@@ -86,7 +93,7 @@ export interface SearchHeaderProps {
     /**
      * Replaces the built count line, for a list holding more than one kind of
      * thing ("1 integration, 1 system"). Ignored while filtering, where
-     * "Showing N of M" is the answer whatever the kinds are.
+     * "N of M items" is the answer whatever the kinds are.
      */
     countText?: string;
 
@@ -185,8 +192,17 @@ function buildCountText(
     displayNoun: string,
 ): string {
     return isFiltering
-        ? `Showing ${filteredCount} of ${totalCount} ${displayNoun}`
+        ? `${filteredCount} of ${totalCount} ${displayNoun}`
         : `${totalCount} ${displayNoun}`;
+}
+
+/**
+ * The count line's longest form, which the line holds the width of whatever it shows: drawn by a
+ * hidden `::before` (`.search-header-count`), so it is in no test's text and no screen reader's.
+ */
+function longestCountText(totalCount: number, displayNoun: string, countText?: string): string {
+    const filtered = buildCountText(true, totalCount, totalCount, displayNoun);
+    return countText && countText.length > filtered.length ? countText : filtered;
 }
 
 /** Render action buttons group */
@@ -264,15 +280,20 @@ export function SearchHeader(props: SearchHeaderProps) {
             )}
 
             {showCount && (
-                <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-                    <Text UNSAFE_className="text-sm text-gray-600">
-                        {!isFiltering && props.countText
-                            ? props.countText
-                            : buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
-                    </Text>
+                <div className="search-header-count-row">
+                    <span
+                        className="search-header-count"
+                        data-longest={longestCountText(totalCount, displayNoun, props.countText)}
+                    >
+                        <Text UNSAFE_className="text-sm text-gray-600">
+                            {!isFiltering && props.countText
+                                ? props.countText
+                                : buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
+                        </Text>
+                    </span>
                     {!showSearch && ActionButtons}
                     {countTrailing}
-                </Flex>
+                </div>
             )}
         </div>
     );

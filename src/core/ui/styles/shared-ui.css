@@ -391,6 +391,40 @@
 }
 }
 
+/* The count row: nothing on it shrinks, so the filtered count cannot squeeze the buttons beside
+   it, and the count holds the width of its longest form ("12 of 12 datapacks", drawn hidden from
+   `data-longest`) so typing in the filter moves nothing (owner, 2026-10-31). */
+@layer theme {
+.search-header-count-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spectrum-global-dimension-size-200);
+    margin-bottom: var(--spectrum-global-dimension-size-200);
+}
+
+.search-header-count-row > * {
+    flex-shrink: 0;
+}
+
+.search-header-count {
+    display: inline-grid;
+}
+
+.search-header-count::before {
+    content: attr(data-longest);
+    visibility: hidden;
+    font-size: 12px; /* `.text-sm`, the visible count's size */
+}
+
+.search-header-count::before,
+.search-header-count > * {
+    grid-area: 1 / 1;
+    white-space: nowrap;
+}
+}
+
 @layer theme {
     /* Also target via the icon positioning wrapper */
     .search-field-custom [class*="icon"] + input,
