@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # The DA.live status still says signed in when IMS has cancelled the sign-in
@@ -51,3 +51,4 @@ would add an IMS call to every DA.live tool call; not done here.
 
 ## Shipped so far
 - 2026-10-28  fix(eds): a storefront delete removes the site's code, and stops when DA.live is signed out (`a2072e04f`)
+- 2026-10-31  Owner set built 2026-10-31: the one DA.live sign-in reader PL-84 builds on is on develop
