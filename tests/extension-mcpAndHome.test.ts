@@ -22,6 +22,7 @@ import {
     mockMcpStart,
     mockMcpDispose,
     mockEnsureHomeAiContext,
+    mockEnsureHomeMcpTools,
     mockRefreshHomeAgentsMd,
     mockRefreshGlobalMcpIfPresent,
 } from './extension.testUtils';
@@ -142,6 +143,23 @@ describe('the home AI context', () => {
             expect.any(String),
             undefined,
             'demo-a',
+        );
+    });
+
+    it("then installs the home's own MCP tools at the projects root, after the context is written", async () => {
+        mockGetCurrentProject.mockResolvedValue(undefined);
+
+        await activate(createActivationContext());
+        await settle();
+
+        expect(mockEnsureHomeMcpTools).toHaveBeenCalledWith(
+            resolveProjectsRoot(),
+            expect.any(String),
+            expect.anything(),
+            expect.anything(),
+        );
+        expect(mockEnsureHomeAiContext.mock.invocationCallOrder[0]).toBeLessThan(
+            mockEnsureHomeMcpTools.mock.invocationCallOrder[0],
         );
     });
 

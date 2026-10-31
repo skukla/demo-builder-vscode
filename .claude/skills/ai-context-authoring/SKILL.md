@@ -61,6 +61,7 @@ NOT a fifth seam: it lives inside `aiDefaultsEntryApplies` via an injected resol
 | same, Adobe bundles | prefixed skill DIRS | Two SOURCES: component `aiSkillBundle` copies from the component's own `node_modules` (EDS/aem); the integration-starter-kit copies from `resolveMcpToolsDir()` (installed by the installer — ordering matters, install precedes writers on both paths). `copyAdobeSkillBundle` ENOENT-skips silently |
 | `aiContextWriter.generateAgentsMd` | `AGENTS.md` | Section builders returning `''` when not applicable (e.g. `buildConsoleApiAccess`; builders live in `agentsMdSections.ts`); sanitize every interpolated project value |
 | `mcpConfigWriter` | `.mcp.json`, `.claude/mcp.json`, settings merge | demo-builder entry + per-entry ai-defaults gating; args anchored to the isolated tools dir |
+| `homeAiContextWriter` | the HOME Chat's `.mcp.json`, settings, `AGENTS.md`, skills at the projects root | outside the seam (no manifest; rewritten every activation, so no version bump). Its tools are `homeMcpEntryApplies` (the tools a skill drives, after the opt-out), installed into `<projectsRoot>/.demo-builder-mcp/` by `ensureHomeMcpTools`; a tool-driving skill is written only while its tool is installed there |
 
 Orchestrated by `generateAIContextFiles` (creation phase 6 + regenerate + update post-step).
 

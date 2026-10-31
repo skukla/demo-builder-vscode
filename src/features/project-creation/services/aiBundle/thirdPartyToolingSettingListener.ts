@@ -75,11 +75,15 @@ async function applyToAllProjects(
 /**
  * Register the listener. Returns the disposable for the extension's
  * subscription list.
+ *
+ * @param refreshHome - applies the answer to the home Chat at the projects root too
+ *   (`ensureHomeMcpTools`, composed in `extension.ts`)
  */
 export function registerThirdPartyToolingSettingListener(
     commandManager: CommandExecutor,
     extensionPath: string,
     logger: Logger,
+    refreshHome: () => Promise<void> = async () => undefined,
 ): vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration(async (event) => {
         if (!event.affectsConfiguration(SETTING)) return;
@@ -107,7 +111,11 @@ export function registerThirdPartyToolingSettingListener(
                     : 'Demo Builder: removing third-party AI tooling',
                 cancellable: false,
             },
-            () => applyToAllProjects(extensionPath, logger, commandManager),
+            async () => {
+                await applyToAllProjects(extensionPath, logger, commandManager);
+                // The home Chat at the projects root carries the same tool and skills.
+                await refreshHome();
+            },
         );
     });
 }

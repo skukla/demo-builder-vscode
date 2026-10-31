@@ -14,7 +14,7 @@
         "src/features/eds/commands/manageGitHubRepos.ts:274": "The repository deletion itself, from the palette. One notification is the right surface.",
         "src/features/eds/commands/manageGitHubRepos.ts:185": "Palette command, loading the repository list before anything is chosen.",
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:271": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
-        "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts:102": "Runs when a VS Code setting changes, so there is no screen and no agent \u2014 a notification is the only surface available.",
+        "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts:106": "Runs when a VS Code setting changes, so there is no screen and no agent \u2014 a notification is the only surface available.",
         "src/commands/commandManager.ts:467": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
     },
     "blockingDialogs": {

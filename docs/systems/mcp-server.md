@@ -1191,6 +1191,17 @@ config when a project is created (and on "Regenerate AI files"):
 - All three are added to the project's **`.gitignore`** — they contain
   machine-specific absolute paths and must not be committed.
 
+**The home Chat's own tools** (PL-60, 2026-10-31). The home Chat at the projects root
+carries every generated skill, so it now gets the ai-defaults tools those skills drive
+(`homeMcpEntryApplies`: Playwright today), installed into its own isolated dir,
+`<projectsRoot>/.demo-builder-mcp/`, by the same pipeline a project uses
+(`installMcpEntries`). Activation runs `ensureHomeMcpTools` after writing the home context:
+npm runs only when a package is missing or at another version, then the home's two
+`mcp.json` files and skills are written again. A tool reaches the home's `.mcp.json`, and the
+skills that drive it are written, only once it is installed there; with
+`demoBuilder.ai.enableThirdPartyTools` off neither is (its "Apply Now" re-runs the home too).
+The home is rewritten on every activation, so this needs no `AI_CONTEXT_VERSION` bump.
+
 Additionally, the **Demo Builder: Register Global MCP** palette command
 (`src/features/project-creation/services/aiBundle/globalMcpRegistration.ts`) upserts a
 `demo-builder` entry into the user-scope config of every agent that keeps one

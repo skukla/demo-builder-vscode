@@ -15,6 +15,7 @@
 
 import aiDefaultsConfig from '../../config/ai-defaults.json';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
+import { SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import type { AiDefaults, AiDefaultsMcpServer } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 
@@ -101,6 +102,23 @@ export function aiDefaultsEntryApplies(entry: AiDefaultsMcpServer, project: Proj
         return projectHasEdsStorefront(project);
     }
     return projectNeedsAppBuilderTooling(project);
+}
+
+/** The ai-defaults tools some generated skill drives (`SKILL_MCP_TOOL_DEPENDENCIES`). */
+const SKILL_DRIVEN_TOOL_IDS: ReadonlySet<string> = new Set(Object.values(SKILL_MCP_TOOL_DEPENDENCIES));
+
+/**
+ * True when an ai-defaults entry applies to the HOME Chat at the projects root.
+ *
+ * The home has no project to read a `requires` gate off: it carries every generated skill,
+ * whatever each project is made of. So it gets exactly the tools those skills drive
+ * (Playwright, for the three EDS scraping skills and `scrape-products-to-aco`), and no other
+ * entry. The third-party opt-out gates first, as it does for a project, so turning it off
+ * takes the tool and its skills out of the home too.
+ */
+export function homeMcpEntryApplies(entry: AiDefaultsMcpServer): boolean {
+    if (entry.thirdParty && !thirdPartyToolsEnabled()) return false;
+    return SKILL_DRIVEN_TOOL_IDS.has(entry.id);
 }
 
 /**

@@ -33,10 +33,10 @@ import aiDefaultsConfig from '../../config/ai-defaults.json';
 import { aiDefaultsEntryApplies } from './aiToolingGate';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
-import type { AiDefaults } from '@/types/aiDefaults';
+import type { AiDefaults, AiDefaultsMcpServer } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -125,14 +125,34 @@ export async function installAiDefaultsMcpTools(
     onProgress?: (message: string) => void,
     logger?: Pick<Logger, 'debug' | 'warn'>,
 ): Promise<InstallAiDefaultsResult> {
-    const toolsDir = resolveMcpToolsDir(projectPath);
+    return installMcpEntries(
+        resolveMcpToolsDir(projectPath),
+        aiDefaults.mcpServers.filter((entry) => aiDefaultsEntryApplies(entry, project)),
+        commandManager,
+        onProgress,
+        logger,
+    );
+}
 
+/**
+ * Install these ai-defaults entries' packages into an isolated tools dir: the pipeline
+ * `installAiDefaultsMcpTools` runs for a project, and the home Chat's install
+ * (`homeMcpTools`) runs for the projects root. Callers choose the entries; this only installs.
+ *
+ * @param toolsDir - the isolated dir (`resolveMcpToolsDir(<folder>)`)
+ */
+export async function installMcpEntries(
+    toolsDir: string,
+    entries: readonly Pick<AiDefaultsMcpServer, 'package' | 'version'>[],
+    commandManager: CommandExecutor,
+    onProgress?: (message: string) => void,
+    logger?: Pick<Logger, 'debug' | 'warn'>,
+): Promise<InstallAiDefaultsResult> {
     try {
         await fsPromises.mkdir(toolsDir, { recursive: true });
 
         const dependencies: Record<string, string> = {};
-        for (const entry of aiDefaults.mcpServers) {
-            if (!aiDefaultsEntryApplies(entry, project)) continue;
+        for (const entry of entries) {
             dependencies[entry.package] = entry.version;
         }
         if (Object.keys(dependencies).length === 0) {

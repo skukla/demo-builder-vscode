@@ -16,46 +16,24 @@
  * The writer is best-effort: it must never throw on write failure.
  */
 
-import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import {
+    captureWrite,
     ensureHomeAiContext,
+    fsPromises,
+    EXTENSION_DIST,
+    homeTools,
+    PROJECTS_ROOT,
     refreshHomeAgentsMd,
-} from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
+    TEST_NODE_PATH,
+    wasWritten,
+} from './homeAiContextWriter.testUtils';
+import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { DEMO_BUILDER_SKILLS } from '@/features/project-creation/services/aiBundle/skillsWriter';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 
-jest.mock('fs/promises', () => ({
-    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-    realpath: jest.fn(async (p: string) => p),
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    rm: jest.fn().mockResolvedValue(undefined),
-}));
-
-const PROJECTS_ROOT = '/home/user/.demo-builder/projects';
-const EXTENSION_DIST = '/path/to/extension/dist';
-const TEST_NODE_PATH = '/usr/local/bin/node';
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/**
- * Find the first writeFile call whose path ends with `suffix` and return its
- * raw string content. Throws if no matching write happened.
- */
-function captureWrite(suffix: string): string {
-    const writeFileMock = fsPromises.writeFile as jest.Mock;
-    const call = writeFileMock.mock.calls.find(([p]: [string]) => p.endsWith(suffix));
-    if (!call) {
-        throw new Error(`No writeFile call found for path ending with: ${suffix}`);
-    }
-    return call[1] as string;
-}
-
-function wasWritten(suffix: string): boolean {
-    const writeFileMock = fsPromises.writeFile as jest.Mock;
-    return writeFileMock.mock.calls.some(([p]: [string]) => p.endsWith(suffix));
-}
+beforeEach(() => homeTools(false));
+afterEach(() => setThirdPartyToolsResolver(() => true));
 
 // ─── MCP config ──────────────────────────────────────────────────────────────
 
@@ -99,7 +77,7 @@ describe('ensureHomeAiContext — MCP config', () => {
         }
     });
 
-    it('does not write any ai-defaults / external MCP entries (home has no storefront)', async () => {
+    it('writes no ai-defaults entry while the home has none of its tools installed', async () => {
         await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
 
         const config = JSON.parse(captureWrite('.claude/mcp.json')) as {
@@ -317,6 +295,7 @@ describe('refreshHomeAgentsMd — stating the active project', () => {
 describe('ensureHomeAiContext — skills', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        homeTools(true);
     });
 
     it('writes ALL Demo Builder skills (the single home Chat edits any project)', async () => {
@@ -327,6 +306,7 @@ describe('ensureHomeAiContext — skills', () => {
         const expectedSkills = [
             'create-eds-project',
             'scrape-reference-site',
+            'scrape-products-to-aco',
             'register-custom-block',
             'sync-changes',
             'commerce-block-mapper',
@@ -397,6 +377,7 @@ describe('ensureHomeAiContext — best-effort', () => {
 describe('ensureHomeAiContext — directories and legacy skill cleanup', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        homeTools(true);
     });
 
     it('creates the skills directory recursively, so a root with no .claude works', async () => {
