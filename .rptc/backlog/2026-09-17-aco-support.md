@@ -143,3 +143,4 @@ storefront config).
 - 2026-10-31  feat(ai): a generated skill for scraping a website's products into an ACO pack (`e0558ceb6`)
 - 2026-10-31  feat(data-installer): save a website's products as an ACO pack in the library (`a025d9483`)
 - 2026-10-31  docs(aco): record the owner's answers to P1-P5 and what DSC's scraper is reported to do (`02137bbe8`)
+- 2026-10-31  feat(ai): the home Chat gets its own Playwright browser tool (`e64d906e3`)
