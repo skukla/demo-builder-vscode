@@ -152,3 +152,4 @@ storefront config).
 - 2026-10-31  feat(data-installer): save a website's products as an ACO pack in the library (`a025d9483`)
 - 2026-10-31  docs(aco): record the owner's answers to P1-P5 and what DSC's scraper is reported to do (`02137bbe8`)
 - 2026-10-31  feat(ai): the home Chat gets its own Playwright browser tool (`e64d906e3`)
+- 2026-10-31  Owner 2026-10-31: ACO Clear demo data is needed before 1.0. Built on loop/2026-10-31-aco-clear: the plan and clearing service (a9f26a588) and the aco option on check/clear demo data for the screen's handlers and the agent's tools (680d12c13). Left: the Clear demo data dialog's ACO part, to be built once in the new dialog design (PL-85); the live check settles whether the storefront search answers through the project's view.
