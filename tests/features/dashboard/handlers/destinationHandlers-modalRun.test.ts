@@ -23,6 +23,7 @@ import {
 } from './destinationHandlers.testUtils';
 import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { answerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 type Context = ReturnType<typeof makeContextWithComponents>['context'];
@@ -188,5 +189,52 @@ describe('the confirm before leaving an Adobe project', () => {
             },
             'Move',
         );
+    });
+});
+
+/**
+ * Leaving the Adobe project is asked in the progress window that is narrating the move, not in a
+ * VS Code dialog beside it (owner, 2026-10-31, the multi-dialog audit).
+ */
+describe('the question about leaving the Adobe project, in a screen\'s modal', () => {
+    const ERP_WORKSPACE = { id: 'ws-erp', name: 'Northwind-ERP', title: 'Northwind ERP' };
+    const leavingContext = () =>
+        makeContextWithComponents({
+            'erp-integration': { kind: 'integration', status: 'deployed', workspace: ERP_WORKSPACE },
+        });
+
+    /** The screen answers the window's question with `answer`, as the SC pressing it would. */
+    async function runAnswering(answer: string | undefined) {
+        const { context } = leavingContext();
+        const screen = jest.fn(async (type: string, payload?: unknown): Promise<void> => {
+            const push = payload as OperationProgressPayload | undefined;
+            if (type === 'operationProgress' && push?.prompt) answerOperationPrompt(push.id, answer);
+        });
+        context.sendMessage = screen;
+        const result = await handleSetProjectDestination(context, { ...NEW_DESTINATION, id: 'screen-op-9', progress: 'modal' });
+        const prompts = screen.mock.calls
+            .map(([, payload]) => (payload as OperationProgressPayload | undefined)?.prompt)
+            .filter(Boolean);
+        return { result, prompts };
+    }
+
+    it('asks in the window, with Move and Cancel, and no VS Code dialog', async () => {
+        const { prompts } = await runAnswering('Move');
+
+        expect(prompts).toHaveLength(1);
+        expect(prompts[0]).toMatchObject({
+            title: 'Move this project to New Project?',
+            message: expect.stringContaining('Northwind ERP will be removed from Old Project'),
+            actions: ['Move', 'Cancel'],
+        });
+        expect(mockShowWarningMessage).not.toHaveBeenCalled();
+        expect(mockMove).toHaveBeenCalled();
+    });
+
+    it('changes nothing when the SC cancels in the window', async () => {
+        const { result } = await runAnswering('Cancel');
+
+        expect(result).toMatchObject({ success: false, cancelled: true });
+        expect(mockMove).not.toHaveBeenCalled();
     });
 });

@@ -41,7 +41,6 @@
         "src/core/build/buildStampUi.ts:72": "Not a decision: shows which build of Demo Builder is running. Modal on purpose, because it is read when someone is unsure which build they have, and a toast that disappears is too easy to miss.",
         "src/features/authentication/handlers/deleteAdobeProjectHandler.ts:129": "Gates: permanently delete an Adobe I/O project and its event registrations and providers. Cannot be undone.",
         "src/features/dashboard/handlers/appBuilderComponentPromote.ts:333": "Gates: delete from GitHub the repository Demo Builder created when an app was saved to one. Cannot be undone. Skipped only for an agent that sends confirm: true after asking the user (delete_app_github_repo).",
-        "src/features/dashboard/handlers/destinationHandlers.ts:315": "Gates: move the project to another Adobe project, which removes each integration with a workspace of its own from the old one (uninstalled from Commerce, workspace deleted). An Edit asks this before anything runs.",
         "src/features/projects-dashboard/services/deletionConfirmation.ts:41": "Gates: delete a project's files and configuration from this computer. Cannot be undone.",
         "src/features/project-creation/commands/createProject.ts:426": "Gates: throw away the changes made in this Edit and open project configuration? Asked only when the Edit has changes; leaving for Configure would discard them.",
         "src/features/dashboard/handlers/statusHandlers.ts:56": "Gates: sign in to Adobe now, which opens the browser? Asked once per expiry when the dashboard finds the sign-in expired; a no opens nothing (owner, 2026-10-17).",
@@ -49,6 +48,7 @@
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:177": "Gates: read the clipboard once the SC has copied their DA.live token in the browser. Still there, centred, when they come back.",
         "src/features/eds/handlers/daLive/daLiveSignedOutNotice.ts:44": "Gates: sign in to DA.live again, now that signing in to Adobe again signed the SC out of it. Never awaited, so the work it interrupted carries on behind it (owner, 2026-10-31).",
         "src/commands/commandManager.ts:399": "Gates: sign in to Adobe again when already signed in (the org-switch recovery), which opens the browser and can also sign the SC out of DA.live. Asked only from the Sign In command (owner, 2026-10-31).",
-        "src/commands/commandManager.ts:467": "Gates: sign in to GitHub again when already signed in, which opens the browser. Asked only from the Sign In command (owner, 2026-10-31)."
+        "src/commands/commandManager.ts:467": "Gates: sign in to GitHub again when already signed in, which opens the browser. Asked only from the Sign In command (owner, 2026-10-31).",
+        "src/features/dashboard/handlers/destinationHandlers.ts:325": "Gates: move the project to another Adobe project, which removes each integration with a workspace of its own from the old one (uninstalled from Commerce, workspace deleted). Only when no progress window hosts the move (an Edit asks this before anything runs); the Integrations screen's change of destination asks it in the progress window instead (owner, 2026-10-31)."
     }
 }
