@@ -21,6 +21,12 @@ import {
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
     ACCS_CUSTOMER_GROUP,
+    ACO_CATALOG_VIEW_ID,
+    ACO_ENVIRONMENT,
+    ACO_LOCALE,
+    ACO_PRICE_BOOK_ID,
+    ACO_REGION,
+    ACO_TENANT_ID,
 } from '@/core/config/envVarKeys';
 import { getLogger } from '@/core/logging/debugLogger';
 import { mergeComponentConfigs } from '@/features/eds/services/storefrontConfigParams';
@@ -85,6 +91,16 @@ const STOREFRONT_CONFIG_ENV_VARS = [
     ACCS_STORE_VIEW_CODE,
     ACCS_CUSTOMER_GROUP,
     'AEM_ASSETS_ENABLED',
+    // The ACO add-on's settings (PL-60): config.json reads them when ACO is on
+    // (`acoStorefrontConfig.ts`). Turning the add-on on or off is not a value
+    // change, so this list cannot see it: that is an open PL-60 item, and until it
+    // closes the SC republishes after turning ACO on or off.
+    ACO_TENANT_ID,
+    ACO_REGION,
+    ACO_ENVIRONMENT,
+    ACO_CATALOG_VIEW_ID,
+    ACO_LOCALE,
+    ACO_PRICE_BOOK_ID,
 ];
 
 // ==========================================================

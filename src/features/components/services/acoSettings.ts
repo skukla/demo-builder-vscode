@@ -16,7 +16,7 @@ import {
     ACO_REGION,
     ACO_TENANT_ID,
 } from '@/core/config/envVarKeys';
-import type { AcoEnvironment, AcoStorefrontSettings } from '@/types/aco';
+import type { AcoEnvironment, AcoInstance, AcoStorefrontSettings } from '@/types/aco';
 
 /** The ACO add-on's id, in `components.json` `addons` and `stacks.json` `addonDefinitions`. */
 export const ACO_ADDON_ID = 'adobe-commerce-aco';
@@ -25,6 +25,27 @@ export const ACO_ADDON_ID = 'adobe-commerce-aco';
 export interface AcoSettingsSource {
     selectedAddons?: readonly string[];
     componentConfigs?: Record<string, Record<string, string | boolean | number | undefined> | undefined>;
+}
+
+const TENANT_ID = /^[A-Za-z0-9_-]+$/u;
+const REGION = /^[a-z0-9]+$/u;
+
+/**
+ * The instance's API root: `https://{region}[-sandbox].api.commerce.adobe.com/{tenantId}` (Adobe's
+ * documented base URL). Its parts come from the SC, so each is checked before it builds a URL.
+ *
+ * @throws Error naming the part that could not be one
+ */
+export function acoApiBase(instance: AcoInstance): string {
+    if (!TENANT_ID.test(instance.tenantId)) throw new Error(`"${instance.tenantId}" is not an ACO tenant id.`);
+    if (!REGION.test(instance.region)) throw new Error(`"${instance.region}" is not an ACO region.`);
+    const host = instance.environment === 'sandbox' ? `${instance.region}-sandbox` : instance.region;
+    return `https://${host}.api.commerce.adobe.com/${instance.tenantId}`;
+}
+
+/** The storefront's GraphQL endpoint for the instance (the Merchandising API). */
+export function acoGraphqlUrl(instance: AcoInstance): string {
+    return `${acoApiBase(instance)}/graphql`;
 }
 
 /** The project's ACO settings, or the fields still empty. */

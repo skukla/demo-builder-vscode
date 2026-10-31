@@ -14,10 +14,9 @@ import {
     ACO_IMS_TOKEN_URL,
     ACO_INGESTION_SCOPES,
     AcoApiError,
-    acoApiBase,
-    acoGraphqlUrl,
     createAcoClient,
 } from '@/features/data-installer/services/aco/acoClient';
+import { acoApiBase, acoGraphqlUrl } from '@/features/components/services/acoSettings';
 import type { AcoInstance } from '@/types/aco';
 
 const SANDBOX: AcoInstance = { tenantId: 'TenantAbc123', region: 'na1', environment: 'sandbox' };

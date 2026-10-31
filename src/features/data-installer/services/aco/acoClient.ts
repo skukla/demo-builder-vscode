@@ -18,6 +18,7 @@
  */
 
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { acoApiBase } from '@/features/components/services/acoSettings';
 import type { AcoCredential, AcoInstance } from '@/types/aco';
 
 /** Adobe IMS's token endpoint, as the ingestion docs name it. */
@@ -26,23 +27,24 @@ export const ACO_IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v3';
 /** The scopes the ingestion docs' token request asks for. */
 export const ACO_INGESTION_SCOPES = 'openid,AdobeID,profile,email,commerce.aco.ingestion';
 
-/** How long a token request may take. */
-const TOKEN_TIMEOUT_MS = TIMEOUTS.NORMAL;
-
-/** How long one ingestion write may take: a batch of 100 products, sent and accepted. */
-const WRITE_TIMEOUT_MS = TIMEOUTS.LONG;
+/**
+ * The timeouts, read when a call is made rather than when the module loads, so a suite that stubs
+ * part of `TIMEOUTS` can still import a module that imports this one.
+ */
+const TIMEOUT = {
+    /** How long a token request may take. */
+    token: () => TIMEOUTS.NORMAL,
+    /** How long one ingestion write may take: a batch of 100 products, sent and accepted. */
+    write: () => TIMEOUTS.LONG,
+    /** The wait before a retry when ACO's 429 names none. */
+    rateLimit: () => TIMEOUTS.POLL.MAX,
+};
 
 /** A token this close to expiring is renewed first (the SDK's own margin, five minutes). */
 const TOKEN_MARGIN_MS = 5 * 60 * 1000;
 
 /** How many times a write refused with 429 is tried again before the 429 stands. */
 const RATE_LIMIT_RETRIES = 3;
-
-/** The wait before a retry when ACO's 429 names none. */
-const RATE_LIMIT_WAIT_MS = TIMEOUTS.POLL.MAX;
-
-const TENANT_ID = /^[A-Za-z0-9_-]+$/u;
-const REGION = /^[a-z0-9]+$/u;
 
 /** Which call failed: the token, or the write. */
 export type AcoCallStage = 'token' | 'ingestion';
@@ -58,23 +60,6 @@ export class AcoApiError extends Error {
         super(message);
         this.name = 'AcoApiError';
     }
-}
-
-/**
- * The instance's API root. Its parts come from the SC, so each is checked before it builds a URL.
- *
- * @throws Error naming the part that could not be one
- */
-export function acoApiBase(instance: AcoInstance): string {
-    if (!TENANT_ID.test(instance.tenantId)) throw new Error(`"${instance.tenantId}" is not an ACO tenant id.`);
-    if (!REGION.test(instance.region)) throw new Error(`"${instance.region}" is not an ACO region.`);
-    const host = instance.environment === 'sandbox' ? `${instance.region}-sandbox` : instance.region;
-    return `https://${host}.api.commerce.adobe.com/${instance.tenantId}`;
-}
-
-/** The storefront's GraphQL endpoint for the instance (the Merchandising API). */
-export function acoGraphqlUrl(instance: AcoInstance): string {
-    return `${acoApiBase(instance)}/graphql`;
 }
 
 /** A Data Ingestion API path, under the instance. */
@@ -143,7 +128,7 @@ async function send(doFetch: typeof fetch, url: string, init: RequestInit, stage
 
 function retryWait(response: Response): number {
     const seconds = Number(response.headers.get('retry-after'));
-    return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : RATE_LIMIT_WAIT_MS;
+    return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : TIMEOUT.rateLimit();
 }
 
 /**
@@ -169,7 +154,7 @@ export function createAcoClient(deps: AcoClientDeps): AcoClient {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: body.toString(),
-            signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
+            signal: AbortSignal.timeout(TIMEOUT.token()),
         };
         const response = await send(doFetch, ACO_IMS_TOKEN_URL, init, 'token', 'the token request');
         const text = await readText(response);
@@ -190,7 +175,7 @@ export function createAcoClient(deps: AcoClientDeps): AcoClient {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await bearer()}` },
                 body: JSON.stringify(rows),
-                signal: AbortSignal.timeout(WRITE_TIMEOUT_MS),
+                signal: AbortSignal.timeout(TIMEOUT.write()),
             };
             const response = await send(doFetch, `${base}${path}`, init, 'ingestion', what);
             if (response.status !== 429 || attempt >= RATE_LIMIT_RETRIES) return response;

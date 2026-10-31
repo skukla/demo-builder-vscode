@@ -23,7 +23,8 @@ describe('mapBackendToEnvironmentType', () => {
     it.each<[string, string | undefined, EnvironmentType]>([
         ['the PaaS backend id', 'adobe-commerce-paas', 'paas'],
         ['the ACCS backend id', 'adobe-commerce-accs', 'accs'],
-        ['the ACO backend id', 'adobe-commerce-aco', 'aco'],
+        // ACO is an add-on beside a backend, never a backend (PL-60): its id maps like any other.
+        ['the ACO add-on id', 'adobe-commerce-aco', 'paas'],
         // The default arm has to be a real environment, not "neither": a
         // project whose backend was never recorded still generates a config.
         ['an id the switch does not name', 'unknown-backend', 'paas'],

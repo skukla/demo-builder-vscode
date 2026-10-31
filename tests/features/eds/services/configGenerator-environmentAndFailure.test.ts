@@ -52,7 +52,7 @@ describe('configGenerator — environment fork and failure reporting', () => {
      *
      * On ACCS and ACO the two are EQUAL, and the storefront reads the
      * *existence* of `commerce-core-endpoint` to decide which requests carry cs
-     * headers (Magento-Website-Code on ACCS, AC-View-ID on ACO). An assertion
+     * headers (Magento-Website-Code on ACCS). An assertion
      * that only names the core endpoint cannot tell "kept, equal to the
      * commerce endpoint" from "dropped, and the reader fell back".
      */
@@ -68,8 +68,8 @@ describe('configGenerator — environment fork and failure reporting', () => {
             // projects do not have.
             ['on ACCS it is the commerce endpoint, and the catalog value is ignored',
                 { ...baseParams, environmentType: 'accs' }, MESH],
-            ['on ACO it is the commerce endpoint too',
-                { ...baseParams, environmentType: 'aco' }, MESH],
+            // ACO is an add-on, not an environment type: with it on, the core endpoint is the
+            // commerce endpoint and the catalog moves to ACO (acoStorefrontConfig.test.ts).
             // The default has to be a real environment: falling through to the
             // ACCS shape would drop the Catalog Service split on every project
             // whose backend was not recorded.

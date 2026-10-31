@@ -34,7 +34,9 @@ import {
     getMeshAppBuilderComponent,
 } from '@/core/state/appBuilderComponentState';
 import componentsConfig from '@/features/components/config/components.json';
+import { readAcoSettings } from '@/features/components/services/acoSettings';
 import type { ConfigGeneratorParams, EnvironmentType } from '@/features/eds/services/configGenerator';
+import type { AcoStorefrontSettings } from '@/types/aco';
 import type { Project } from '@/types/base';
 
 /**
@@ -52,8 +54,6 @@ export function mapBackendToEnvironmentType(backendComponentId?: string): Enviro
     switch (backendComponentId) {
         case 'adobe-commerce-accs':
             return 'accs';
-        case 'adobe-commerce-aco':
-            return 'aco';
         case 'adobe-commerce-paas':
         default:
             return 'paas';
@@ -228,8 +228,18 @@ function sourcesOfProject(project: Project): ConfigParamSources {
     };
 }
 
+/**
+ * The project's ACO settings for the storefront, when the add-on is on and every field is set; an
+ * incomplete one leaves the storefront on Commerce's catalog, as Configure's required fields say.
+ */
+function acoFrom(sources: ConfigParamSources): AcoStorefrontSettings | undefined {
+    const read = readAcoSettings({ selectedAddons: sources.selectedAddons, componentConfigs: sources.componentConfigs });
+    return read && 'settings' in read ? read.settings : undefined;
+}
+
 /** The Commerce half of the params: everything except the repository coordinates. */
 function commerceParamsFrom(sources: ConfigParamSources): Partial<ConfigGeneratorParams> {
+    const aco = acoFrom(sources);
     return {
         ...extractConfigParamsFromConfigs(
             sources.componentConfigs,
@@ -239,6 +249,7 @@ function commerceParamsFrom(sources: ConfigParamSources): Partial<ConfigGenerato
         selectedAddons: sources.selectedAddons,
         selectedPackage: sources.selectedPackage,
         demo: sources.demo,
+        ...(aco ? { aco } : {}),
     };
 }
 

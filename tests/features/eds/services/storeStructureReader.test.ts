@@ -356,18 +356,3 @@ describe('readStoreStructure — ACCS', () => {
     });
 });
 
-describe('readStoreStructure — unsupported backend', () => {
-    it('declines an ACO project instead of guessing a request shape', async () => {
-        const project = createMockProject({
-            componentSelections: { backend: 'adobe-commerce-aco' },
-            componentConfigs: {},
-        });
-
-        const result = await readStoreStructure(project);
-
-        expect(result.success).toBe(false);
-        if (result.success) return;
-        expect(result.error).toMatch(/aco/i);
-        expect(mockDiscover).not.toHaveBeenCalled();
-    });
-});
