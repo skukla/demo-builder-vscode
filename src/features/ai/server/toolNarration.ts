@@ -267,6 +267,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     save_datapack_zip: 'Saving the datapack as a file',
     open_datapack_zip: 'Reading the datapack file',
     load_datapack_zip: 'Loading a datapack file',
+    // "Save products read off a website as an ACO datapack in YOUR datapack library".
+    make_aco_pack_from_products: 'Saving products as an ACO pack',
     delete_library_datapack: 'Deleting a library datapack',
     rename_datapack: 'Renaming the datapack',
     // "Share one of your own datapack library packs with your team, or stop sharing it".

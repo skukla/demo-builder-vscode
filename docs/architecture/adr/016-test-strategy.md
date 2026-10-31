@@ -63,8 +63,8 @@ own thing": they were not allowed to share.
 The rule, from here:
 
 **A test file lives at the path its subject lives at, with `src/` replaced by
-`tests/`.** `src/features/eds/services/toolManager.ts` is tested by
-`tests/features/eds/services/toolManager*.test.ts` and nowhere else. A suite
+`tests/`.** `src/features/eds/services/configGenerator.ts` is tested by
+`tests/features/eds/services/configGenerator*.test.ts` and nowhere else. A suite
 split for size keeps the base name and adds a `-suffix`; the split shares one
 `*.testUtils.ts` beside it.
 

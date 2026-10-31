@@ -323,7 +323,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // record points to Clear demo data; a pack can be saved from any store with the items picked;
 // and an ACO pack can be made from the store. Existing projects would keep telling the agent one
 // bad row stops everything and that only a pack the engine installed can be saved.
-export const AI_CONTEXT_VERSION = 48;
+// v49 (2026-10-31, PL-60): the scrape-products-to-aco skill (written when the Playwright tools
+// are, like the other browser skills) turns a public listing page into an ACO pack in the SC's
+// library through make_aco_pack_from_products, and the ACO credential is Demo Builder's to make
+// (set_up_aco_credential / remove_aco_credential), never typed. Existing projects would keep
+// lacking the skill and the tools' place in it.
+export const AI_CONTEXT_VERSION = 49;
 
 /**
  * Component IDs for standardized component instance access

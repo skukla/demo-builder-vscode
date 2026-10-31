@@ -35,7 +35,7 @@ import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
 import { nodeFolderEnv } from '@/core/shell/nodeFolder';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
-import type { AiDefaults } from '@/types/aiDefaults';
+import type { AiDefaults, AiDefaultsMcpServer } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 
 const execFile = promisify(childProcess.execFile);
@@ -216,11 +216,26 @@ async function buildMcpConfig(
     const fnmPath = new EnvironmentSetup().findFnmPath();
     for (const entry of defaults.mcpServers) {
         if (!aiDefaultsEntryApplies(entry, project)) continue;
-        const args = entry.args.map((arg) => (path.isAbsolute(arg) ? arg : path.join(toolsDir, arg)));
-        mcpServers[entry.id] = launchUnderNode(entry.command, args, fnmPath);
+        mcpServers[entry.id] = buildAiDefaultsServerEntry(entry, toolsDir, fnmPath);
     }
 
     return { mcpServers };
+}
+
+/**
+ * One ai-defaults server's `.mcp.json` entry, its declared args anchored to the isolated
+ * tools dir it was installed into. Shared by the per-project config above and the home
+ * Chat's (`homeMcpTools`), so both launch a tool the same way.
+ *
+ * @param fnmPath - `new EnvironmentSetup().findFnmPath()`; null runs the declared command
+ */
+export function buildAiDefaultsServerEntry(
+    entry: Pick<AiDefaultsMcpServer, 'command' | 'args'>,
+    toolsDir: string,
+    fnmPath: string | null,
+): McpServerEntry {
+    const args = entry.args.map((arg) => (path.isAbsolute(arg) ? arg : path.join(toolsDir, arg)));
+    return launchUnderNode(entry.command, args, fnmPath);
 }
 
 /**

@@ -146,8 +146,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // v46: AGENTS.md says the smart-404 recovery script lives in 404.html, not delayed.js.
     // v47: import-datapack and diagnose-demo say a pack's root goes under the store's own root,
     // and only a shared root leaves the one Admin step (datapack-engine step 12).
-    it("is 47 (the skills say only a shared store root leaves a pack's root by hand)", () => {
-        expect(AI_CONTEXT_VERSION).toBe(48);
+    // v48: import-datapack says an install skips (and names) a row Commerce refuses (step 14).
+    // v49: the scrape-products-to-aco skill, and the ACO credential is Demo Builder's (PL-60).
+    it('is 49 (the ACO skill and credential tools reach existing projects)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(49);
     });
 });
 

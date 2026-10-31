@@ -28,6 +28,9 @@ const FILES = [
         .filter((f) => f.endsWith('.ts'))
         .map((f) => `${SERVER_DIR}/${f}`),
     'src/mcp-server.ts',
+    // make_aco_pack_from_products publishes this schema; its handler checks the same one, so it
+    // lives with the handler's feature rather than in the server directory (PL-60 slice A).
+    'src/features/data-installer/services/acoWebsite/scrapedProductInput.ts',
 ];
 const LEDGER: Record<string, string> = JSON.parse(
     readFileSync(join(__dirname, 'tool-input-constraints.ledger.json'), 'utf8'),

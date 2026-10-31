@@ -1523,5 +1523,14 @@
             "remove_aco_credential"
         ],
         "why": "PL-60's undo. Judges that the agent removes any ACO pack Demo Builder loaded first (reset_datapack) when the tool says so, then removes the credential. Unsubscribes an API on a live workspace, so the battery stops at the consent."
+    },
+    {
+        "id": "aco-pack-from-website",
+        "prompt": "Make an ACO datapack from the products on https://shop.example.com/collections/boots and put it in my datapack library. Tell me which prices or SKUs you had to make up.",
+        "expect": [
+            "make_aco_pack_from_products"
+        ],
+        "cwd": "project",
+        "why": "PL-60 slice A (owner, 2026-10-31): 'From a website' turns a public listing page into an ACO pack in the SC's library. The agent reads the page with the Playwright browser (scrape-products-to-aco skill), marks every value the page did not state, and saves through the one tool; without it, it would hand-build the five ACO kinds and page them into the library over curl. Judges findability and that proposed values are named. Writes to the library, so the battery stops at the consent."
     }
 ]

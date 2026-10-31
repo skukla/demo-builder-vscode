@@ -219,8 +219,10 @@ jest.mock('fs/promises', () => ({
  */
 export const mockEnsureHomeAiContext = jest.fn();
 export const mockRefreshHomeAgentsMd = jest.fn();
+export const mockEnsureHomeMcpTools = jest.fn();
 jest.mock('@/features/project-creation/services/aiBundle/homeAiContextWriter', () => ({
     ensureHomeAiContext: (...a: unknown[]) => mockEnsureHomeAiContext(...a),
+    ensureHomeMcpTools: (...a: unknown[]) => mockEnsureHomeMcpTools(...a),
     refreshHomeAgentsMd: (...a: unknown[]) => mockRefreshHomeAgentsMd(...a),
 }));
 

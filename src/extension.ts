@@ -104,6 +104,7 @@ import { setThirdPartyToolsResolver } from '@/features/project-creation/services
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
 import {
     ensureHomeAiContext,
+    ensureHomeMcpTools,
     refreshHomeAgentsMd,
 } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener';
@@ -411,6 +412,14 @@ export async function activate(context: vscode.ExtensionContext) {
                 undefined,
                 current?.name,
             );
+            // Then the home's own Playwright install, so "From a website" and the browser
+            // skills work in the home Chat (PL-60); a no-op once it is in place.
+            await ensureHomeMcpTools(
+                projectsRoot,
+                path.join(context.extensionPath, 'dist'),
+                externalCommandManager,
+                logger,
+            );
         })();
 
         // Keep the home AGENTS.md in step with the current-project pointer.
@@ -514,6 +523,14 @@ export async function activate(context: vscode.ExtensionContext) {
                 ServiceLocator.getCommandExecutor(),
                 context.extensionPath,
                 logger,
+                // The home Chat follows the setting too: its tool and skills go and come back.
+                () =>
+                    ensureHomeMcpTools(
+                        projectsRoot,
+                        path.join(context.extensionPath, 'dist'),
+                        ServiceLocator.getCommandExecutor(),
+                        logger,
+                    ),
             ),
         );
 

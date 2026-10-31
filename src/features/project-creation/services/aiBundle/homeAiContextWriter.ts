@@ -33,11 +33,16 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { escapeMarkdown, sanitizeTemplateValue } from '../sanitization';
 import { generateHomeClaudeSettings } from './claudeSettingsWriter';
+import { buildHomeAgentsMd } from './homeAgentsMd';
+import { buildHomeToolEntries, installHomeMcpTools } from './homeMcpTools';
 import { buildDemoBuilderMcpEntry, resolveNodePath, type McpServerEntry } from './mcpConfigWriter';
 import { DEMO_BUILDER_SKILLS } from './skillsWriter';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { EnvironmentSetup } from '@/core/shell/environmentSetup';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
+import { SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
+import type { Logger } from '@/types/logger';
 
 interface McpConfig {
     mcpServers: Record<string, McpServerEntry>;
@@ -63,7 +68,8 @@ const CLAUDE_MD_POINTER = 'see @AGENTS.md\n';
  * - `<root>/AGENTS.md` plus `<root>/CLAUDE.md` and `<root>/.claude/CLAUDE.md`
  *   `see @AGENTS.md` pointers.
  * - `<root>/.claude/skills/<name>/SKILL.md` — ALL Demo Builder skills (the one
- *   home Chat does deep work on any project, so it needs every skill).
+ *   home Chat does deep work on any project, so it needs every skill), less any that
+ *   drives a tool the home has not installed (`writeHomeToolSurface`).
  *
  * Best-effort: never throws. On any failure it logs to stderr and returns.
  *
@@ -89,12 +95,8 @@ export async function ensureHomeAiContext(
         // `node -e`), so they always agree on the same binary.
         const resolvedNode = nodePath ?? (await resolveNodePath());
 
-        const mcpConfig = await buildHomeMcpConfig(projectsRoot, extensionDistPath, resolvedNode);
-        const mcpJson = JSON.stringify(mcpConfig, null, 2);
-
         await Promise.all([
-            fsPromises.writeFile(path.join(projectsRoot, '.mcp.json'), mcpJson, 'utf-8'),
-            fsPromises.writeFile(path.join(claudeDir, 'mcp.json'), mcpJson, 'utf-8'),
+            writeHomeToolSurface(projectsRoot, extensionDistPath, resolvedNode),
             // Project-aware home git-sync hook: auto-commits/pushes storefront
             // edits made by the home Chat, scoped to repos UNDER the projects
             // root that are a project's own Edge Delivery storefront (see
@@ -125,20 +127,6 @@ export async function ensureHomeAiContext(
             ),
             fsPromises.writeFile(path.join(projectsRoot, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
             fsPromises.writeFile(path.join(claudeDir, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
-            // ALL skills — the single home Chat edits any project's files, so it
-            // needs the full skill surface, not just one global skill. Each
-            // lands as `<name>/SKILL.md` (the Agent Skills layout: the only one
-            // Claude Code registers as an invocable skill, and the one Copilot
-            // reads from `.claude/skills/` too — see skillsWriter); the legacy pre-v27
-            // flat `<name>.md` is unlinked best-effort, safe here because this
-            // surface is regenerated wholesale on every activation and the
-            // names are ours.
-            ...DEMO_BUILDER_SKILLS.map(async ({ name, content }) => {
-                const skillDir = path.join(skillsDir, name);
-                await fsPromises.mkdir(skillDir, { recursive: true });
-                await fsPromises.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf-8');
-                await fsPromises.rm(path.join(skillsDir, `${name}.md`), { force: true });
-            }),
         ]);
     } catch (err) {
         // Best-effort: the home AI context is a convenience, never a hard
@@ -197,157 +185,108 @@ export async function refreshHomeAgentsMd(
     }
 }
 
-// ─── Private helpers ──────────────────────────────────────────────────────────
-
-async function buildHomeMcpConfig(
+/**
+ * Rewrite the home's MCP config and skills: the two parts that depend on which ai-defaults
+ * tools the home has installed (`homeMcpTools`). `ensureHomeAiContext` writes them with the
+ * rest; activation calls this again once the home's tools install, and so does the
+ * third-party setting's "Apply Now", so a Chat started afterwards sees the change.
+ *
+ * Best-effort: never throws.
+ *
+ * @param fnmPath - how an ai-defaults tool is launched (`EnvironmentSetup.findFnmPath`);
+ *   looked up when omitted
+ */
+export async function refreshHomeToolSurface(
     projectsRoot: string,
     extensionDistPath: string,
     nodePath?: string,
-): Promise<McpConfig> {
-    const entry = await buildDemoBuilderMcpEntry(
-        extensionDistPath,
-        resolveMcpSocketPath(projectsRoot),
-        nodePath,
-    );
-    return { mcpServers: { 'demo-builder': entry } };
-}
-
-/**
- * Generated-file banner for the HOME context. Unlike the per-project bundle
- * (hash-and-skip: edits kept), home files are rewritten on every activation —
- * the banner states that contract so an edit is never lost silently.
- */
-const HOME_GENERATED_NOTICE =
-    '<!-- GENERATED by Adobe Demo Builder and rewritten on every VS Code activation. ' +
-    'Edits to this file will be overwritten — it is not a place for your own notes. -->';
-
-/**
- * The home `AGENTS.md`. Frames this directory as the Demo Builder home for the
- * single home Chat and reuses the `## Reporting Back to the User` convention
- * from `aiContextWriter`.
- *
- * Every value is static EXCEPT the current project name, which is user-supplied
- * and therefore sanitized like every other interpolated project value (see
- * `../sanitization`).
- */
-function buildHomeAgentsMd(currentProjectName?: string): string {
-    return [
-        HOME_GENERATED_NOTICE,
-        buildHomeHeader(),
-        buildHomeWhatYouCanDo(),
-        buildHomeWorkingOnProjects(currentProjectName),
-        buildHomeReportingStyle(),
-    ].join('\n\n');
-}
-
-function buildHomeHeader(): string {
-    return [
-        '# Demo Builder Home',
-        '',
-        'This is the Demo Builder **home**, rooted at the projects directory that holds every',
-        'Demo Builder project. **Every project is a subdirectory here.** This is the single',
-        'Chat for all Demo Builder work — there is no separate per-project Chat. You are',
-        'connected to the Demo Builder MCP server and can both edit project files directly and',
-        'operate on any project by name.',
-    ].join('\n');
-}
-
-function buildHomeWhatYouCanDo(): string {
-    return [
-        '## What You Can Do From Here',
-        '- **See every project:** call `list_projects` to list all Demo Builder projects.',
-        '- **Create a new project:** call `create_project` to scaffold a new demo (EDS or',
-        '  headless) end to end — see the `create-eds-project` skill in `.claude/skills/`.',
-        '  From an exported project file, call `create_project_from_file` with its absolute path;',
-        '  the file never carries credentials or the Adobe workspace (same skill, section 7).',
-        '- **Check or change sign-in:** call `get_auth_status` to see the current Adobe',
-        '  sign-in, and `sign_in` to authenticate.',
-        '- **Operate on a project by name:** the project tools accept a `projectName` argument,',
-        '  so you can run them against any existing project (`get_project`, `sync_storefront`,',
-        '  `promote_block_to_library`, `deploy_mesh`, etc.).',
-    ].join('\n');
-}
-
-function buildHomeWorkingOnProjects(currentProjectName?: string): string {
-    return [
-        '## Working on Projects',
-        "You can **read and edit any project's files directly** — every project is a",
-        'subdirectory of this root, so you do NOT open a project separately to work on it.',
-        'You can also operate on projects **by name** via the tools (`list_projects`,',
-        '`create_project`, `get_project`, `sync_storefront`, `promote_block_to_library`,',
-        '`deploy_mesh`, etc.).',
-        '',
-        buildActiveProjectDirective(currentProjectName),
-        '',
-        'Storefront edits are **auto-committed and pushed** by a hook as you make them.',
-        '`sync_storefront` (see the `sync-changes` skill) remains available for an explicit push.',
-    ].join('\n');
-}
-
-/**
- * Which project the agent should consider active, and how it should find out.
- *
- * Two forms, and the difference is whether the CALLER could read the pointer at
- * a moment close enough to the agent reading this file for the answer to still
- * be true:
- *
- * - **Name supplied** (Chat launch): state it, and say plainly that no call is
- *   needed to confirm it. This is the whole point of the parameter — five of
- *   six measured agent runs spent a round trip on `get_current_project` because
- *   this document ordered them to, and a round trip is the unit of cost (2 calls
- *   and 4 calls both measured ~47k tokens; see
- *   `docs/research/2026-08-24-llm-path-measurement.md`).
- * - **Name omitted** (extension activation): keep the original instruction
- *   verbatim. Activation happens once and the pointer changes freely afterwards,
- *   so a name written here would be stale by the time any agent read it —
- *   exactly the "right data, wrong project" failure that made
- *   `StateManager.getCurrentProject()` re-read the pointer from disk on every
- *   call. When we cannot know, we must not claim.
- *
- * The supplied form still yields to reality: a tool result or the user naming a
- * different project outranks this line, because a resumed conversation never
- * re-reads this file (see `buildRehomePrefix` in `openInClaude.ts`, which states
- * the same fact on the resumed path — the one most launches actually take).
- */
-function buildActiveProjectDirective(currentProjectName?: string): string {
-    if (!currentProjectName) {
-        return [
-            '**Before starting any project task, call the `get_current_project` MCP tool and',
-            'state which project you are working on (e.g. "Working on <project-name>…") before',
-            "taking any action — substitute the actual `name` from the tool's response; do NOT",
-            'parrot the placeholder. If `get_current_project` returns null, ask the user which',
-            'project they mean rather than guessing. The other tools resolve the same active',
-            'project automatically, but naming it up front confirms you and the user are on',
-            'the same project.**',
-        ].join('\n');
+    fnmPath?: string | null,
+): Promise<void> {
+    try {
+        await fsPromises.mkdir(path.join(projectsRoot, '.claude', 'skills'), { recursive: true });
+        await writeHomeToolSurface(projectsRoot, extensionDistPath, nodePath ?? (await resolveNodePath()), fnmPath);
+    } catch (err) {
+        process.stderr.write(
+            `[Demo Builder] WARNING: Could not refresh the home MCP tools at ${projectsRoot}. Error: ` +
+                `${err instanceof Error ? err.message : String(err)}\n`,
+        );
     }
-
-    const name = escapeMarkdown(sanitizeTemplateValue(currentProjectName));
-    return [
-        `**The active project is \`${name}\`.** Say so before your first action (e.g.`,
-        `"Working on ${name}…"), so you and the user agree on the target. Every other`,
-        'tool resolves this same active project on its own, so do **not** spend a call on',
-        '`get_current_project` to confirm what this line already tells you.',
-        '',
-        'This line was written when the Chat was launched. If the user names a different',
-        'project, or a tool reports one, believe that instead — and call',
-        '`get_current_project` if you need to re-resolve the pointer.',
-    ].join('\n');
 }
 
 /**
- * The same `## Reporting Back to the User` convention `aiContextWriter` adds to
- * every project AGENTS.md — kept verbatim so the agent reports consistently
- * whether it is launched from the home or from a project.
+ * Install the home's ai-defaults tools when any is missing (`installHomeMcpTools`), then
+ * write its MCP config and skills again if npm ran. Activation calls it after
+ * `ensureHomeAiContext`, in the background; the third-party setting's "Apply Now" calls it
+ * too. A failed install is logged and leaves the home without the tool, and its skills,
+ * until the next activation tries again.
+ *
+ * Never throws.
  */
-function buildHomeReportingStyle(): string {
-    return [
-        '## Reporting Back to the User',
-        'When you finish a task, write the final message for a demo builder, not an engineer. Keep it short and scannable:',
-        '- **Lead with status in one line**, and separate what is *done* from what is *unverified or still up to them*. Never stack a confident "done!" against a long hedge — state both plainly (e.g. "X is live; Y isn\'t tested yet").',
-        '- **Use plain language, not internals.** Skip function names, file paths, JSON/tool field names, and pixel breakpoints unless asked. Say what changed and what they can now do.',
-        '- **Give the one next action or thing to verify** — not a QA checklist. Offer the full checklist only if they want it.',
-        '- **Surface the single most important caveat.** Keep process trivia (commit/lint gates, re-auth retries) out of the headline — mention it in a line or save it to memory.',
-        '- **Never paste raw tool-result JSON.** Translate sub-step results into a one-line outcome.',
-    ].join('\n');
+export async function ensureHomeMcpTools(
+    projectsRoot: string,
+    extensionDistPath: string,
+    commandManager: CommandExecutor,
+    logger: Pick<Logger, 'debug' | 'warn'>,
+): Promise<void> {
+    try {
+        const install = await installHomeMcpTools(projectsRoot, commandManager, logger);
+        if (!install.success) {
+            logger.warn(`[AI Tools] The home Chat's MCP tools did not install: ${install.error ?? 'no reason given'}`);
+        }
+        // Always rewrite: the opt-out may have just taken a tool away with nothing to install.
+        await refreshHomeToolSurface(projectsRoot, extensionDistPath);
+    } catch (err) {
+        logger.warn(`[AI Tools] The home Chat's MCP tools could not be set up: ${err instanceof Error ? err.message : String(err)}`);
+    }
+}
+
+/**
+ * The two `mcp.json` files and the skills. A skill that drives an ai-defaults tool
+ * (`SKILL_MCP_TOOL_DEPENDENCIES`) is written only while the home has that tool, and its
+ * folder is removed when it does not: the rule a project's skills follow (`skillsWriter`),
+ * so the opt-out takes a tool and its skills out together. Removing is safe here because
+ * the home is regenerated wholesale and the names are ours.
+ */
+async function writeHomeToolSurface(
+    projectsRoot: string,
+    extensionDistPath: string,
+    nodePath: string,
+    fnmPath?: string | null,
+): Promise<void> {
+    const claudeDir = path.join(projectsRoot, '.claude');
+    const skillsDir = path.join(claudeDir, 'skills');
+    const tools = await buildHomeToolEntries(projectsRoot, () =>
+        fnmPath === undefined ? new EnvironmentSetup().findFnmPath() : fnmPath,
+    );
+    const mcpConfig: McpConfig = {
+        mcpServers: {
+            'demo-builder': await buildDemoBuilderMcpEntry(extensionDistPath, resolveMcpSocketPath(projectsRoot), nodePath),
+            ...tools,
+        },
+    };
+    const mcpJson = JSON.stringify(mcpConfig, null, 2);
+    const toolDependencies: Readonly<Record<string, string>> = SKILL_MCP_TOOL_DEPENDENCIES;
+    const usable = (name: string): boolean => {
+        const tool = toolDependencies[name];
+        return tool === undefined || tool in tools;
+    };
+    await Promise.all([
+        fsPromises.writeFile(path.join(projectsRoot, '.mcp.json'), mcpJson, 'utf-8'),
+        fsPromises.writeFile(path.join(claudeDir, 'mcp.json'), mcpJson, 'utf-8'),
+        // Every usable skill — the single home Chat edits any project's files, so it needs
+        // the full skill surface. Each lands as `<name>/SKILL.md` (the Agent Skills layout:
+        // the only one Claude Code registers as an invocable skill, and the one Copilot
+        // reads from `.claude/skills/` too — see skillsWriter); the legacy pre-v27 flat
+        // `<name>.md` is unlinked best-effort.
+        ...DEMO_BUILDER_SKILLS.map(async ({ name, content }) => {
+            const skillDir = path.join(skillsDir, name);
+            if (!usable(name)) {
+                await fsPromises.rm(skillDir, { recursive: true, force: true });
+            } else {
+                await fsPromises.mkdir(skillDir, { recursive: true });
+                await fsPromises.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf-8');
+            }
+            await fsPromises.rm(path.join(skillsDir, `${name}.md`), { force: true });
+        }),
+    ]);
 }

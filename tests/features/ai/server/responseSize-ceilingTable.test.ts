@@ -181,6 +181,9 @@ describe('the ceiling table tracks the tool surface', () => {
             'clear_demo_data',
             // share_datapack (owner, 2026-10-30): three fixed fields; not yet run live.
             'share_datapack',
+            // make_aco_pack_from_products (PL-60 slice A): kind counts plus one proposed entry per
+            // product with a proposed value, bounded by the 100-product input cap; not yet run live.
+            'make_aco_pack_from_products',
         ]);
 
         const missing = descriptorTools.filter(

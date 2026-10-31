@@ -79,9 +79,10 @@ const EXPECTED: Record<string, number> = {
     // 71 -> 72 on 2026-10-29: rename_datapack renames a library pack through the sign-in (datapack-engine step 07).
     // 72 -> 74 on 2026-10-30: check_demo_data and clear_demo_data (datapack-engine step 10).
     // 74 -> 75 on 2026-10-30: share_datapack (owner's decision on sharing a library pack).
-    // 75 -> 77 on 2026-10-31: set_up_aco_credential and remove_aco_credential subscribe and
-    // unsubscribe the ACO ingestion API on the workspace credential (PL-60).
-    adobe: 77,
+    // 75 -> 78 on 2026-10-31: set_up_aco_credential and remove_aco_credential subscribe and
+    // unsubscribe the ACO ingestion API on the workspace credential, and make_aco_pack_from_products
+    // saves into the library through the sign-in (PL-60, both branches merged).
+    adobe: 78,
     // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
     // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
     // 23 -> 24 on 2026-10-03: create_project_from_file, the same creation as create_project.
@@ -139,7 +140,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 178; // 176 -> 178 on 2026-10-31: set_up_aco_credential and remove_aco_credential (PL-60). 175 -> 176 on 2026-10-30: share_datapack. 173 -> 175 on 2026-10-30: check_demo_data and clear_demo_data (datapack-engine step 10). 172 -> 173 on 2026-10-29: rename_datapack (datapack-engine step 07). 170 -> 172 on 2026-10-29: preview_datapack_changes and save_store_changes_to_pack (datapack-engine step 05). 165 -> 170 on 2026-10-27: the five datapack file and library tools, merged from feature/datapack-zip (built 2026-10-01). 166 -> 165 on 2026-10-23: sync_content removed, its job now republish's (EDS-63). 168 -> 166 on 2026-10-22: check_category_pages and add_category_pages removed (EDS-61). 167 -> 168 on 2026-10-21: finish_storefront_update (EDS-57). 165 -> 167 on 2026-10-18: save_app_to_github and delete_app_github_repo (AB-1c). 162 -> 165 on 2026-10-10: the three AB-77 store-preparation tools. 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 179; // 176 -> 179 on 2026-10-31: set_up_aco_credential, remove_aco_credential and make_aco_pack_from_products (PL-60, both branches merged). 175 -> 176 on 2026-10-30: share_datapack. 173 -> 175 on 2026-10-30: check_demo_data and clear_demo_data (datapack-engine step 10). 172 -> 173 on 2026-10-29: rename_datapack (datapack-engine step 07). 170 -> 172 on 2026-10-29: preview_datapack_changes and save_store_changes_to_pack (datapack-engine step 05). 165 -> 170 on 2026-10-27: the five datapack file and library tools, merged from feature/datapack-zip (built 2026-10-01). 166 -> 165 on 2026-10-23: sync_content removed, its job now republish's (EDS-63). 168 -> 166 on 2026-10-22: check_category_pages and add_category_pages removed (EDS-61). 167 -> 168 on 2026-10-21: finish_storefront_update (EDS-57). 165 -> 167 on 2026-10-18: save_app_to_github and delete_app_github_repo (AB-1c). 162 -> 165 on 2026-10-10: the three AB-77 store-preparation tools. 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).

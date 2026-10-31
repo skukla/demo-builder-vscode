@@ -236,6 +236,7 @@ describe('every open_view the bundle teaches names a view the tool accepts', () 
         'src/features/project-creation/services/aiBundle/agentsMdStorefrontSections.ts',
         'src/features/project-creation/services/aiBundle/agentsMdAdobeSections.ts',
         'src/features/project-creation/services/aiBundle/homeAiContextWriter.ts',
+        'src/features/project-creation/services/aiBundle/homeAgentsMd.ts',
     ];
 
     it('CONTROL: the enum was read and the corpus names open_view somewhere', () => {

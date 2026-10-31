@@ -328,6 +328,7 @@ describe('gatedSkillReasons', () => {
             'scrape-reference-site',
             'connect-authenticated-site',
             'refine-visual-match',
+            'scrape-products-to-aco',
         ]);
         expect(reasons.every((r) => r.reason === 'tool-missing')).toBe(true);
     });

@@ -8,14 +8,18 @@
  * - Commerce, with the service's engine: the service's export, into the shared catalog.
  * - ACO, with either engine: the ACO export, into the SC's library.
  *
- * No Continue and no second dialog: switching the choice swaps the form in the same window.
+ * - ACO made from a website (PL-60 slice A): a URL under the choices, and Continue opens the
+ *   project's AI on it (`scrape-website-to-aco-pack`); the dialog closes once the AI is open.
+ *
+ * No second dialog: switching a choice swaps the form in the same window. Only the website form
+ * has a Continue, because it hands over to the AI rather than making the pack itself.
  */
 
 import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { press, settle } from '../../../../helpers/reactSettle';
+import { change, press, settle } from '../../../../helpers/reactSettle';
 
 // Below the mocks on purpose: they hoist above these imports.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -107,4 +111,63 @@ it('closes without making anything', async () => {
     expect(props.onClose).toHaveBeenCalledTimes(1);
     expect(props.onSaveFromStore).not.toHaveBeenCalled();
     expect(mockRequest).not.toHaveBeenCalledWith('start-datapack-export', expect.anything(), undefined);
+});
+
+describe('an ACO pack made from a website', () => {
+    async function chooseWebsite() {
+        const props = await renderCreate('demo-builder');
+        await press(screen.getByRole('radio', { name: /^ACO datapack/ }));
+        await press(screen.getByRole('radio', { name: 'From a website' }));
+        return props;
+    }
+
+    it('offers the two sources once ACO is chosen, this Commerce instance first', async () => {
+        await renderCreate('demo-builder');
+        expect(screen.queryByRole('radio', { name: 'From a website' })).not.toBeInTheDocument();
+
+        await press(screen.getByRole('radio', { name: /^ACO datapack/ }));
+
+        expect(screen.getByRole('radio', { name: 'From this Commerce instance' })).toBeChecked();
+        expect(screen.getByRole('radio', { name: 'From a website' })).not.toBeChecked();
+        expect(screen.queryByRole('textbox', { name: /Product listing page/ })).not.toBeInTheDocument();
+    });
+
+    it('asks for the page and keeps Continue off until there is one', async () => {
+        await chooseWebsite();
+
+        expect(screen.getByRole('textbox', { name: /Product listing page/ })).toBeInTheDocument();
+        // The house Modal's buttons are div role=button: disabled is aria-disabled.
+        expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute('aria-disabled', 'true');
+        await press(screen.getByRole('button', { name: 'Continue' }));
+        expect(mockRequest).not.toHaveBeenCalledWith('scrape-website-to-aco-pack', expect.anything(), undefined);
+    });
+
+    it("sends the URL to open the project's AI, then closes without opening an export screen", async () => {
+        const props = await chooseWebsite();
+
+        await change(screen.getByRole('textbox', { name: /Product listing page/ }), 'https://shop.example.com/boots');
+        await press(screen.getByRole('button', { name: 'Continue' }));
+
+        expect(mockRequest).toHaveBeenCalledWith('scrape-website-to-aco-pack', { url: 'https://shop.example.com/boots' }, undefined);
+        expect(mockRequest).not.toHaveBeenCalledWith('start-datapack-export', expect.anything(), undefined);
+        expect(props.onClose).toHaveBeenCalledTimes(1);
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    });
+
+    it("shows the handler's refusal on the field and stays open", async () => {
+        const refusal = 'Enter the address of a page that lists products, starting with https:// or http://.';
+        // Every other request answers as the suite's default does: the pick list renders first.
+        const answerDefault = mockRequest.getMockImplementation();
+        mockRequest.mockImplementation(async (type: string, payload?: Record<string, unknown>) => {
+            if (type === 'scrape-website-to-aco-pack') return { success: false, error: refusal };
+            return answerDefault?.(type, payload);
+        });
+        const props = await chooseWebsite();
+
+        await change(screen.getByRole('textbox', { name: /Product listing page/ }), 'shop');
+        await press(screen.getByRole('button', { name: 'Continue' }));
+
+        expect(screen.getByText(refusal)).toBeInTheDocument();
+        expect(props.onClose).not.toHaveBeenCalled();
+    });
 });

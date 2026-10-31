@@ -764,6 +764,19 @@ next removal can finish the job (live, 2026-10-30). Both read the store with the
 credential, behind the same org guard as the import. Plan:
 `.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
 
+### An ACO pack from a website (PL-60 slice A, 2026-10-31)
+
+`make_aco_pack_from_products` (confirm-gated) takes the products an agent read off a public
+listing page, typed `ScrapedProduct` (`src/types/scrapedProduct.ts`), with each product's
+`proposed` list naming every value the page did not state, and saves them as an ACO pack (the
+five `aco_*` kinds G5's export makes) in the SC's datapack library. Every nested object in its
+input is strict, so a misspelt `proposed` is refused rather than dropped. A SKU left out is made
+from the name and added to `proposed`; a product with no price gets no price row and is listed in
+`unpriced`. Its answer's `proposed` and `unpriced`, and the pack's description, are what the SC
+reviews before loading. It writes nothing to ACO or Commerce; `delete_library_datapack` undoes it.
+How to read the page is the generated `scrape-products-to-aco` skill (Playwright, JSON-LD first);
+the human door is "Create datapack" → ACO → "From a website", which opens the AI on the URL.
+
 ### What is installed and what happened, from both engines (datapack-engine step 14, 2026-10-30)
 
 `list_installed_datapacks` and `get_datapack_activity` used to read only the Data Installer
@@ -1178,6 +1191,17 @@ config when a project is created (and on "Regenerate AI files"):
   `PostToolUse` entries survive a regenerate.
 - All three are added to the project's **`.gitignore`** — they contain
   machine-specific absolute paths and must not be committed.
+
+**The home Chat's own tools** (PL-60, 2026-10-31). The home Chat at the projects root
+carries every generated skill, so it now gets the ai-defaults tools those skills drive
+(`homeMcpEntryApplies`: Playwright today), installed into its own isolated dir,
+`<projectsRoot>/.demo-builder-mcp/`, by the same pipeline a project uses
+(`installMcpEntries`). Activation runs `ensureHomeMcpTools` after writing the home context:
+npm runs only when a package is missing or at another version, then the home's two
+`mcp.json` files and skills are written again. A tool reaches the home's `.mcp.json`, and the
+skills that drive it are written, only once it is installed there; with
+`demoBuilder.ai.enableThirdPartyTools` off neither is (its "Apply Now" re-runs the home too).
+The home is rewritten on every activation, so this needs no `AI_CONTEXT_VERSION` bump.
 
 Additionally, the **Demo Builder: Register Global MCP** palette command
 (`src/features/project-creation/services/aiBundle/globalMcpRegistration.ts`) upserts a

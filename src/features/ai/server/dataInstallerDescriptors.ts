@@ -37,6 +37,7 @@ import { AGENT_PAGE_SIZE } from './projectors';
 import type { ToolDescriptor } from './toolDescriptors';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { PICKABLE_KINDS, PICK_FIELDS } from '@/features/data-installer/pickableKinds';
+import { MAKE_ACO_PACK_INPUT } from '@/features/data-installer/services/acoWebsite/scrapedProductInput';
 import type { HandlerResponse } from '@/types/handlers';
 
 /** One store a demo-data check or clearing is about (`WipeStoreChoice`): a website alone means all its stores. */
@@ -453,6 +454,25 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                           `. To proceed, call again with confirmName:"${String(args.datapackName)}".`,
                       sharedCatalog: args.aco !== true,
                   },
+    },
+
+    {
+        tool: 'make_aco_pack_from_products',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Save products read off a website as an Adobe Commerce Optimizer (ACO) datapack in YOUR datapack " +
+            'library, for review before loading (the scrape-products-to-aco skill reads them). Makes ' +
+            'aco_categories, aco_products, aco_price_books, aco_prices and, for option dimensions, aco_metadata. ' +
+            'Mark every value the page did not state in proposed; a SKU left out is made from the name and ' +
+            'named as proposed too. Answers which values were proposed and which products have no price. ' +
+            'Writes nothing to ACO or Commerce; undo with delete_library_datapack.',
+        map: importHandlers,
+        type: 'make-aco-pack-from-products',
+        // The library is the SC's own and the save is undone by delete_library_datapack, so a
+        // confirm (not a name echo) is the bar, as load_datapack_zip's library write.
+        confirm: true,
+        inputSchema: MAKE_ACO_PACK_INPUT,
     },
 
     // ── datapack files ──────────────────────────────────────────────────────
