@@ -45,7 +45,7 @@ import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportScopes } from '../hooks/useImportScopes';
 import { deselectType, selectType, type TypeSelection } from '../importDependencies';
 import { ImportDatapackModalBody, type BodyContext } from './ImportDatapackModalBody';
-import { buildActions, busyMessage, resolveView, watchedActivation } from './importModalView';
+import { buildActions, busyMessage, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
 import { resolveResult, type LastAction } from './importResult';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -232,7 +232,7 @@ export function ImportDatapackModal({
     const busy = dryRun.loading || start.loading || reset.loading;
     const result =
         !dismissed && !busy
-            ? resolveResult(lastAction, { dryRun, start, reset, record, startedActivation })
+            ? resolveResult(lastAction, { name: displayName, dryRun, start, reset, record, startedActivation })
             : null;
     // `scopes.loading` is in here because the target is still resolving while it
     // is true. Without it the user can tick types and press Start during the
@@ -283,14 +283,31 @@ export function ImportDatapackModal({
         onClose();
     };
 
+    // "Remove …" while a removal starts or runs, so the wait's title says what the window is doing
+    // (owner, 2026-10-31), including a reopened watch of one. The confirm asks its own question
+    // and a result's title is its outcome (`viewFrame`); the form is always the import's.
+    const removing =
+        resetArmed ||
+        (lastAction === 'reset' && view !== 'form') ||
+        (view === 'watching' && record?.operation === 'reset');
+
+    const frame = viewFrame({
+        view,
+        displayName,
+        removing,
+        store: targetName(scope, commerceInstance),
+        typeCount: availableTypes.length,
+        result,
+    });
+
     return (
         <DialogContainer type="modal" onDismiss={close}>
             <Modal
-                // Wide, so the type list fits three uniform columns instead of
-                // two scrolling ones. The target block's removal freed the rest.
-                wide
-                title={`Import ${displayName}`}
-                size="L"
+                title={frame.title}
+                status={frame.status}
+                size={frame.size}
+                wide={frame.wide}
+                hideClose={frame.hideClose}
                 fitContent
                 onClose={close}
                 closeLabel={running ? 'Run in background' : 'Close'}

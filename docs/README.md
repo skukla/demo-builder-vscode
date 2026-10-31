@@ -78,6 +78,8 @@ Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must 
   — the seams where doing one job two ways causes real bugs
 - [development/sop/testing-guide.md](development/sop/testing-guide.md) — the two
   project-specific test traps
+- [development/sop/dialog-design.md](development/sop/dialog-design.md) — what goes
+  inside a dialog, how big it is and how it moves: five layouts and the noise test
 - [development/styling-guide.md](development/styling-guide.md) — the practical half
   of CSS; [ADR-018](architecture/adr/018-css-architecture.md) is the architecture
 

@@ -15,6 +15,7 @@
  * @module features/data-installer/services/demoBuilderEngine/packRootStep
  */
 
+import type { KeptRootStep } from '../../types';
 import type { PackRootStep } from './installRecord';
 import { type KindContext, readOrNull, segment } from './kindContext';
 import { type RootPlacement, type StoreRoot, packRootOf } from './packRoot';
@@ -89,18 +90,48 @@ export async function checkPackRoot(get: CommerceGet, step: PackRootStep): Promi
  * store with none, and only the SC can point the store back, in the Admin. Reads
  * `GET store/storeGroups` (`root_category_id`, `name`); a read that fails keeps the root too.
  *
- * @returns the reason, for the removal's "Kept the category …" line, or undefined when no store shows it
+ * @returns the reason, for the removal's "Kept the category …" line, and the store as the Admin
+ *   names it when one was read; undefined when no store shows it
  */
-export async function storeShowingRoot(get: CommerceGet, rootId: string): Promise<string | undefined> {
+export async function storeShowingRoot(get: CommerceGet, rootId: string): Promise<{ reason: string; store?: string } | undefined> {
     let groups: Array<{ id?: number | string; name?: string; root_category_id?: number | string }>;
     try {
         groups = ((await get('store/storeGroups')) ?? []) as typeof groups;
     } catch {
-        return 'Demo Builder could not read which store shows it as its root category';
+        return { reason: 'Demo Builder could not read which store shows it as its root category' };
     }
-    const store = groups.find((g) => Number(g.id) !== 0 && String(g.root_category_id) === rootId);
-    if (!store) return undefined;
-    return `the store ${store.name ?? store.id} shows it as its root category. In the Admin, Stores > All Stores > ${store.name ?? store.id}, set Root Category back to the one it had and Save Store, then remove the pack again`;
+    const found = groups.find((g) => Number(g.id) !== 0 && String(g.root_category_id) === rootId);
+    if (!found) return undefined;
+    const store = String(found.name ?? found.id);
+    return {
+        store,
+        reason: `the store ${store} shows it as its root category. In the Admin, Stores > All Stores > ${store}, set Root Category back to the one it had and Save Store, then remove the pack again`,
+    };
+}
+
+/**
+ * The kept root's Admin step, for the removal's result to show as rows (owner, 2026-10-31): the
+ * store, the category, and the root the store showed before the pack (from the install record's
+ * step, read by name), when the removal kept the root for a store.
+ *
+ * @param kept - the containers the removal kept; the root is the one a store shows (`rootOfStore`)
+ * @param before - the root the store showed before, from the install record's step
+ */
+export async function keptRootStep(
+    get: CommerceGet,
+    kept: ReadonlyArray<{ name: string; rootOfStore?: string }>,
+    before: number | undefined,
+): Promise<KeptRootStep | undefined> {
+    const root = kept.find((k) => k.rootOfStore !== undefined);
+    if (!root?.rootOfStore) return undefined;
+    const restore = before === undefined ? undefined : await rootLabelOrNone(get, before);
+    return { store: root.rootOfStore, category: root.name, ...(restore ? { restore } : {}) };
+}
+
+/** A category's name, or undefined when it cannot be read. */
+async function rootLabelOrNone(get: CommerceGet, id: number): Promise<string | undefined> {
+    const category = await readOrNull<{ name?: string }>(get, `categories/${segment(id)}`).catch(() => null);
+    return category?.name;
 }
 
 /**

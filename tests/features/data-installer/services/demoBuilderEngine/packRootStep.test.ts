@@ -15,6 +15,7 @@ import {
     rootPreview,
     rootStepLine,
     settlePackRoot,
+    keptRootStep,
     storeShowingRoot,
 } from '@/features/data-installer/services/demoBuilderEngine/packRootStep';
 import type { SetupStep } from '@/types/appBuilderComponents';
@@ -189,9 +190,43 @@ describe('storeShowingRoot', () => {
 
         await expect(storeShowingRoot(ctx.get, '300')).resolves.toBeUndefined();
         store.setRoot('justrite_test_store', 300);
-        await expect(storeShowingRoot(ctx.get, '300')).resolves.toBe(
-            'the store JustRite Test Store shows it as its root category. In the Admin, Stores > All Stores > JustRite Test Store, set Root Category back to the one it had and Save Store, then remove the pack again',
-        );
+        await expect(storeShowingRoot(ctx.get, '300')).resolves.toEqual({
+            store: 'JustRite Test Store',
+            reason: 'the store JustRite Test Store shows it as its root category. In the Admin, Stores > All Stores > JustRite Test Store, set Root Category back to the one it had and Save Store, then remove the pack again',
+        });
+    });
+});
+
+/**
+ * The kept root's Admin step, for the removal's result to show as Where / Enter / Then rows
+ * (owner, 2026-10-31): the store, the category, and the root the store had before, by name.
+ */
+describe('keptRootStep', () => {
+    const get = (names: Record<string, string>) => async (path: string) => {
+        const id = path.replace('categories/', '');
+        if (!(id in names)) throw new Error('404');
+        return { id, name: names[id] };
+    };
+
+    it('names the store, the kept category, and the root to put back', async () => {
+        const kept = [{ name: 'Some category' }, { name: 'ZZ Root DB12', rootOfStore: 'Justrite Test Store' }];
+
+        await expect(keptRootStep(get({ '119': 'Justrite Catalog' }), kept, 119)).resolves.toEqual({
+            store: 'Justrite Test Store',
+            category: 'ZZ Root DB12',
+            restore: 'Justrite Catalog',
+        });
+    });
+
+    it('leaves the root to put back out when it cannot be read, or the record had none', async () => {
+        const kept = [{ name: 'ZZ Root DB12', rootOfStore: 'Justrite Test Store' }];
+
+        await expect(keptRootStep(get({}), kept, 119)).resolves.toEqual({ store: 'Justrite Test Store', category: 'ZZ Root DB12' });
+        await expect(keptRootStep(get({}), kept, undefined)).resolves.toEqual({ store: 'Justrite Test Store', category: 'ZZ Root DB12' });
+    });
+
+    it('is nothing when no store kept the root', async () => {
+        await expect(keptRootStep(get({}), [{ name: 'A category' }], 119)).resolves.toBeUndefined();
     });
 });
 

@@ -4,11 +4,11 @@
  *
  * Asserted: nothing until a second is up; it counts from the START the extension
  * stamped, not from when the modal opened; it does not restart while the start stays
- * the same; no start, no clock. And `tookLine` words the end.
+ * the same; no start, no clock. And `tookValue` words the end.
  */
 
 import { act, renderHook } from '@testing-library/react';
-import { tookLine, useRunClock } from '@/core/ui/hooks/useRunClock';
+import { tookValue, useRunClock } from '@/core/ui/hooks/useRunClock';
 
 /** The setup file already installs fake timers; move them by hand. */
 function tick(ms: number): void {
@@ -56,14 +56,14 @@ describe('useRunClock', () => {
     });
 });
 
-describe('tookLine', () => {
+describe('tookValue', () => {
     it('says how long the whole run took', () => {
-        expect(tookLine(192_000)).toBe('Took 3 minutes, 12 seconds');
+        expect(tookValue(192_000)).toBe('3 minutes, 12 seconds');
     });
 
     // A run under a minute was over before anyone wondered (owner, 2026-10-26).
     it('says nothing for a run under a minute, and from a minute on', () => {
-        expect(tookLine(59_999)).toBeUndefined();
-        expect(tookLine(60_000)).toBe('Took 1 minute');
+        expect(tookValue(59_999)).toBeUndefined();
+        expect(tookValue(60_000)).toBe('1 minute');
     });
 });

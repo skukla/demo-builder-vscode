@@ -18,6 +18,7 @@
  * @module features/data-installer/services/demoBuilderEngine/runPack
  */
 
+import type { KeptRootStep } from '../../types';
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
 import { installAttributes, parseAttributeRows } from './attributesKind';
 import { ASSIGNMENT_KINDS, CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
@@ -35,7 +36,7 @@ import {
 } from './installRecord';
 import type { KindContext, SettingsDone, SkippedRow } from './kindContext';
 import { type RootPlacement, placeCategories, rootPlacement } from './packRoot';
-import { type PackRootStep, settlePackRoot } from './packRootStep';
+import { type PackRootStep, keptRootStep, settlePackRoot } from './packRootStep';
 import { settlePending } from './pendingFinders';
 import { GIFT_CARD_KIND, PRODUCT_KINDS, installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
@@ -242,6 +243,8 @@ export interface RemovalResult {
     kept: KeptContainer[];
     /** What putting the pack's store settings back did (step 09), when it had any. */
     settings?: SettingsDone;
+    /** The kept root's Admin step, when a store shows the pack's root (step 12). */
+    keptRoot?: KeptRootStep;
 }
 
 /**
@@ -274,5 +277,6 @@ export async function removePack(
         await recorder.drop(object);
     }
     if (kept.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
-    return { removed: take.length + settingObjects.length, noRecord: false, kept, ...(settings ? { settings } : {}) };
+    const keptRoot = await keptRootStep(commerce.get, kept, record.rootStep?.storeRootId);
+    return { removed: take.length + settingObjects.length, noRecord: false, kept, ...(settings ? { settings } : {}), ...(keptRoot ? { keptRoot } : {}) };
 }

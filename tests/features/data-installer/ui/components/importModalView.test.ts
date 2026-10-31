@@ -30,8 +30,11 @@ import {
     buildActions,
     busyMessage,
     resolveView,
+    targetName,
+    viewFrame,
     watchedActivation,
 } from '@/features/data-installer/ui/components/importModalView';
+import type { ImportScopes } from '@/features/data-installer/ui/hooks/useImportScopes';
 import type { LastAction, ResultContent } from '@/features/data-installer/ui/components/importResult';
 
 describe('watchedActivation', () => {
@@ -180,12 +183,13 @@ describe('buildActions', () => {
         expect(actions[0].onPress).toBe(args.stopWatching);
     });
 
-    it('asks to keep or remove the data when a removal is armed', () => {
+    // Cancel stands in for Close, which the confirm's frame hides: one way back, not two.
+    it('offers Cancel and a red Remove when a removal is armed', () => {
         const args = actionArgs({ view: 'confirm-reset' });
         const actions = buildActions(args);
         expect(rows(args)).toStrictEqual([
-            { label: 'Keep the data', variant: 'secondary' },
-            { label: 'Remove the data', variant: 'negative' },
+            { label: 'Cancel', variant: 'secondary' },
+            { label: 'Remove', variant: 'negative' },
         ]);
         expect(actions[0].onPress).toBe(args.disarmReset);
         expect(actions[1].onPress).toBe(args.confirmReset);
@@ -197,16 +201,17 @@ describe('buildActions', () => {
         expect(buildActions(args)[0].onPress).toBe(args.goBack);
     });
 
-    it('shows Dry run, Remove data and Start import on the form, each wired', () => {
+    // The main action last; the two beside it quiet (dialog design rules, 2026-10-31).
+    it('shows Remove data and Dry run quiet, then Import, each wired', () => {
         const args = actionArgs();
         const actions = buildActions(args);
         expect(rows(args)).toStrictEqual([
-            { label: 'Dry run', variant: 'secondary', isDisabled: false },
-            { label: 'Remove data', variant: 'secondary', isDisabled: false },
-            { label: 'Start import', variant: 'accent', isDisabled: false },
+            { label: 'Remove data', variant: 'quiet', isDisabled: false },
+            { label: 'Dry run', variant: 'quiet', isDisabled: false },
+            { label: 'Import', variant: 'accent', isDisabled: false },
         ]);
-        expect(actions[0].onPress).toBe(args.validate);
-        expect(actions[1].onPress).toBe(args.armReset);
+        expect(actions[0].onPress).toBe(args.armReset);
+        expect(actions[1].onPress).toBe(args.validate);
         expect(actions[2].onPress).toBe(args.startImport);
     });
 
@@ -222,8 +227,72 @@ describe('buildActions', () => {
     it('keeps every label while a check or a start runs', () => {
         for (const busy of [{ checking: true }, { starting: true }]) {
             const actions = buildActions(actionArgs({ view: 'busy', canStart: false, ...busy }));
-            expect(actions.map((a) => a.label)).toStrictEqual(['Dry run', 'Remove data', 'Start import']);
+            expect(actions.map((a) => a.label)).toStrictEqual(['Remove data', 'Dry run', 'Import']);
             expect(actions.every((a) => a.isDisabled === true)).toBe(true);
         }
+    });
+});
+
+/** A scope with one website and its store view chosen, as the import form leaves it. */
+const CHOSEN: ImportScopes = {
+    websites: [{ code: 'justrite_test_website', name: 'Justrite Test', storeViews: [{ code: 'justrite_test_store_us', name: 'Justrite Test Store US' }] }],
+    loading: false,
+    websiteCode: 'justrite_test_website',
+    storeCode: 'justrite_test_store_us',
+    chooseWebsite: jest.fn(),
+    chooseStore: jest.fn(),
+    targetFields: () => ({}),
+};
+
+describe('targetName', () => {
+    it('names the store view and its website as the SC picked them', () => {
+        expect(targetName(CHOSEN, 'inst-1')).toBe('Justrite Test Store US (Justrite Test)');
+    });
+
+    it('falls back to the instance when nothing was discovered', () => {
+        expect(targetName({ ...CHOSEN, websites: [] }, 'inst-1')).toBe('inst-1');
+    });
+});
+
+/**
+ * Each view's title, status and width, by the dialog design rules (owner, 2026-10-31): the form
+ * as wide as its types need, everything after it small; the confirm asks with the store in its
+ * title; a result's title is its outcome.
+ */
+describe('viewFrame', () => {
+    const base = { displayName: 'Frescopa', removing: false, store: 'Justrite Test Store US (Justrite Test)', typeCount: 1, result: null };
+
+    it.each([
+        [1, 'M', false],
+        [6, 'M', false],
+        [7, 'L', false],
+        [12, 'L', false],
+        [13, 'L', true],
+    ])('gives a form of %i types the %s width (extra-wide: %s)', (typeCount, size, wide) => {
+        expect(viewFrame({ ...base, view: 'form', typeCount })).toMatchObject({ size, wide, title: 'Import Frescopa', hideClose: false });
+    });
+
+    it('asks the removal as the title, naming the store, amber, with Close hidden for Cancel', () => {
+        expect(viewFrame({ ...base, view: 'confirm-reset' })).toEqual({
+            title: 'Remove from Justrite Test Store US (Justrite Test)?',
+            status: 'warning',
+            size: 'S',
+            wide: false,
+            hideClose: true,
+        });
+    });
+
+    it('titles a running removal as a removal, small', () => {
+        expect(viewFrame({ ...base, view: 'watching', removing: true })).toMatchObject({ title: 'Remove Frescopa', size: 'S' });
+    });
+
+    it.each([
+        ['success', 'success'],
+        ['warning', 'warning'],
+        ['error', 'error'],
+        ['info', undefined],
+    ] as const)('takes a %s result’s title and gives it the %s icon', (variant, status) => {
+        const result: ResultContent = { variant, title: 'Removed Frescopa' };
+        expect(viewFrame({ ...base, view: 'result', result })).toEqual({ title: 'Removed Frescopa', status, size: 'S', wide: false, hideClose: false });
     });
 });

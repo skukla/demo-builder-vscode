@@ -1,6 +1,7 @@
 /**
- * Select all / Clear all over a datapack form's boxes, with an icon like the catalog header's
- * buttons: the bare words were reported as hard to see (owner, 2026-10-31).
+ * Select all / Clear all over a datapack form's boxes: accent-coloured words beside the list's
+ * label. A grey quiet button was reported as hard to see, and the "select box" icon that replaced
+ * it is drawn as a ticked checkbox, so it read as "everything is selected" (owner, 2026-10-31).
  */
 
 import React from 'react';
@@ -9,12 +10,13 @@ import '@testing-library/jest-dom';
 import { SelectAllToggle } from '@/features/data-installer/ui/components/SelectAllToggle';
 
 describe('SelectAllToggle', () => {
-    it('offers Select all, with an icon, while some box is unticked', () => {
+    it('offers Select all as accent words, with no icon, while some box is unticked', () => {
         const onToggle = jest.fn();
         render(<SelectAllToggle allSelected={false} onToggle={onToggle} />);
 
-        const button = screen.getByRole('button', { name: /Select all/ });
-        expect(button.querySelector('svg, [data-testid^="icon"]')).not.toBeNull();
+        const button = screen.getByRole('button', { name: 'Select all' });
+        expect(button).toHaveClass('inline-action-link');
+        expect(button.querySelector('svg')).toBeNull();
 
         button.click();
         expect(onToggle).toHaveBeenCalledTimes(1);

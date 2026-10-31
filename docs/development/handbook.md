@@ -569,19 +569,19 @@ meant.
 > that cannot tell those apart would fail honest lines, and a rule people switch off
 > is worse than one they can read.
 
-> **Convention.** A modal does not change size while it works.
+> **Convention.** A modal does not jump between sizes while it works.
 > *Why:* a body that renders a form, then a spinner, then a result is three different
-> amounts of content, and with nothing holding a floor under them the whole dialog
-> jumps at every step. The Data Installer's import modal did it twice in one dry run
-> before anyone measured it (owner, 2026-09-20: "this is bad UX"). Three things hold a
-> floor: `SteadyHeight` measures the tallest state so far and never goes below it,
-> `.modal-progress-body` fixes one height for a body whose states are known, and
-> `CenteredFeedbackContainer` reserves a height the caller names. Measure rather than
-> name a number when the tallest state is data-dependent — the import form is as tall
-> as the pack has data types, so any fixed reserve is dead space for a small pack and
-> still jumps for a large one.
+> amounts of content, and with nothing managing the change the whole dialog jumps at
+> every step. The Data Installer's import modal did it twice in one dry run before
+> anyone measured it (owner, 2026-09-20: "this is bad UX"). Two things manage it:
+> `SteadyHeight` fits each state and eases between them, growing or shrinking, and
+> `CenteredFeedbackContainer` reserves a height the caller names. `SteadyHeight` used to
+> hold the tallest state and never shrink, which stopped the jumps and left short states
+> in dead space; the dialog design rules (owner, 2026-10-31,
+> `docs/development/sop/dialog-design.md`) settled on fit-and-ease, with dialogs pinned
+> near the top so a change moves only the bottom edge.
 >
-> What no check can see is whether the floor is the RIGHT height; the ledger is where
+> What no check can see is whether the change LOOKS right; the ledger is where
 > a body the scan reads as multi-view says it has only one. Enforced by
 > `tests/sop/modal-steady-height.test.ts` against `modal-steady-height.ledger.json`.
 

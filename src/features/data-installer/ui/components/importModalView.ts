@@ -10,8 +10,10 @@
  * @module features/data-installer/ui/components/importModalView
  */
 
+import type { ImportScopes } from '../hooks/useImportScopes';
 import type { ModalView } from './ImportDatapackModalBody';
 import type { LastAction, ResultContent } from './importResult';
+import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 
 /**
  * Which job to watch: the one the LAST action started.
@@ -102,7 +104,7 @@ export function buildActions(a: {
     goBack: () => void;
 }): {
     label: string;
-    variant: 'secondary' | 'accent' | 'negative';
+    variant: 'secondary' | 'accent' | 'negative' | 'quiet';
     onPress: () => void;
     isDisabled?: boolean;
 }[] {
@@ -111,9 +113,11 @@ export function buildActions(a: {
         return [{ label: 'Stop watching', variant: 'secondary', onPress: a.stopWatching }];
     }
     if (a.view === 'confirm-reset') {
+        // Cancel stands in for Close here (the frame hides Close): two buttons that both
+        // backed out was one too many (dialog design rules).
         return [
-            { label: 'Keep the data', variant: 'secondary', onPress: a.disarmReset },
-            { label: 'Remove the data', variant: 'negative', onPress: a.confirmReset },
+            { label: 'Cancel', variant: 'secondary', onPress: a.disarmReset },
+            { label: 'Remove', variant: 'negative', onPress: a.confirmReset },
         ];
     }
     if (a.view === 'result') {
@@ -123,24 +127,86 @@ export function buildActions(a: {
     // its label and stops taking presses: one spinner per wait, and no "-ing" label (owner,
     // 2026-10-31).
     return [
-        {
-            label: 'Dry run',
-            variant: 'secondary',
-            onPress: a.validate,
-            isDisabled: !a.canStart,
-        },
         // Arms only. Removing data always takes a second, explicit press.
         //
         // "Remove data…", not "Reset…": a project RESET restores the pack —
         // deletes it and imports the same one again — so the same word meant
         // opposite things one menu apart, and this modal's own confirm text
         // ("cannot be undone") was true here and false there.
-        { label: 'Remove data', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
+        { label: 'Remove data', variant: 'quiet', onPress: a.armReset, isDisabled: !a.canStart },
+        { label: 'Dry run', variant: 'quiet', onPress: a.validate, isDisabled: !a.canStart },
         {
-            label: 'Start import',
+            label: 'Import',
             variant: 'accent',
             onPress: a.startImport,
             isDisabled: !a.canStart,
         },
     ];
+}
+
+/** The chosen target by name, "Justrite Test Store US (Justrite Test)", or the instance when unnamed. */
+export function targetName(scope: ImportScopes, commerceInstance: string): string {
+    const website = scope.websites.find((w) => w.code === scope.websiteCode);
+    const store = website?.storeViews.find((v) => v.code === scope.storeCode);
+    if (website && store) return `${store.name} (${website.name})`;
+    return website?.name ?? commerceInstance;
+}
+
+/** The dialog around the view: its title, the title's status, its width, and whether Close shows. */
+export interface ViewFrame {
+    title: string;
+    status?: ModalStatus;
+    size: 'S' | 'M' | 'L';
+    wide: boolean;
+    hideClose: boolean;
+}
+
+/**
+ * The form's width, from how many data types it lists: one column at medium, two at large, three
+ * extra-wide (`.datapack-type-grid` takes columns of at least 260px). Decided by the pack, so it is
+ * fixed for the dialog's life; the dialog was extra-wide for every pack until 2026-10-31, which
+ * left a one-type pack's form floating in a 980px box.
+ */
+function formWidth(typeCount: number): Pick<ViewFrame, 'size' | 'wide'> {
+    if (typeCount <= 6) return { size: 'M', wide: false };
+    if (typeCount <= 12) return { size: 'L', wide: false };
+    return { size: 'L', wide: true };
+}
+
+const RESULT_STATUS: Record<ResultContent['variant'], ModalStatus | undefined> = {
+    success: 'success',
+    warning: 'warning',
+    error: 'error',
+    info: undefined,
+};
+
+/**
+ * Each view's frame, by the dialog design rules (`docs/development/sop/dialog-design.md`): the
+ * form takes the width its types need; the confirm, the wait and the result are small, and the
+ * dialog eases between widths. The confirm asks its question as the title, naming the store, so
+ * a removal aimed at the wrong store is hard to miss (owner, 2026-10-31: one nearly went to the
+ * real website). A result's title is the outcome, with its status icon.
+ */
+export function viewFrame(a: {
+    view: ModalView;
+    displayName: string;
+    removing: boolean;
+    store: string;
+    typeCount: number;
+    result: ResultContent | null;
+}): ViewFrame {
+    const small = { size: 'S' as const, wide: false, hideClose: false };
+    switch (a.view) {
+        case 'confirm-reset':
+            return { ...small, title: `Remove from ${a.store}?`, status: 'warning', hideClose: true };
+        case 'result':
+            return a.result
+                ? { ...small, title: a.result.title, status: RESULT_STATUS[a.result.variant] }
+                : { ...small, title: `Import ${a.displayName}` };
+        case 'busy':
+        case 'watching':
+            return { ...small, title: `${a.removing ? 'Remove' : 'Import'} ${a.displayName}` };
+        default:
+            return { ...formWidth(a.typeCount), hideClose: false, title: `Import ${a.displayName}` };
+    }
 }

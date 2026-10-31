@@ -112,6 +112,7 @@ async function watchAndRecord(
             perType: result.perType,
             ...(result.reason ? { reason: result.reason } : {}),
             ...(result.note ? { note: result.note } : {}),
+            ...(result.keptRoot ? { keptRoot: result.keptRoot } : {}),
             ...(result.processingTimeMs !== undefined
                 ? { processingTimeMs: result.processingTimeMs }
                 : {}),

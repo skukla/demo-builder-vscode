@@ -136,21 +136,19 @@ describe('the progress modal', () => {
     it('shows the success, then closes by itself', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
-        const modal = await startDeploy(user);
+        await startDeploy(user);
 
         push({ id: 'custom-app', state: 'succeeded' });
 
-        const success = within(modal).getByTestId('status-display');
-        // The green tick itself is asserted where the mock carries the variant:
-        // tests/core/ui/components/feedback/OperationProgressModal-prompt.tsx.
-        expect(within(success).getByText('custom-app deployed')).toBeInTheDocument();
+        // The outcome is the dialog's title, green (dialog design rules, 2026-10-31).
+        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toHaveAttribute('data-status', 'success');
 
         // Long enough to read, then gone without a click.
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
         });
         expect(
-            screen.queryByRole('dialog', { name: 'Deploying custom-app' }),
+            screen.queryByRole('dialog', { name: 'custom-app deployed' }),
         ).not.toBeInTheDocument();
     });
 
@@ -163,18 +161,16 @@ describe('the progress modal', () => {
 
         push({ id: 'custom-app', state: 'succeeded', warning: 'Prices were not published.' });
 
-        const result = within(modal).getByTestId('status-display');
-        expect(result).toHaveAttribute('data-variant', 'warning');
-        expect(within(result).getByText('custom-app deployed')).toBeInTheDocument();
-        expect(within(result).getByText('Prices were not published.')).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toHaveAttribute('data-status', 'warning');
+        expect(within(modal).getByTestId('operation-end')).toHaveTextContent('Prices were not published.');
 
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'Deploying custom-app' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toBeInTheDocument();
         await user.click(within(modal).getByRole('button', { name: 'Close' }));
         expect(
-            screen.queryByRole('dialog', { name: 'Deploying custom-app' }),
+            screen.queryByRole('dialog', { name: 'custom-app deployed' }),
         ).not.toBeInTheDocument();
     });
 
@@ -191,22 +187,18 @@ describe('the progress modal', () => {
             note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
         });
 
-        const result = within(modal).getByTestId('status-display');
-        expect(result).toHaveAttribute('data-variant', 'success');
-        expect(within(result).getByText('custom-app deployed')).toBeInTheDocument();
-        expect(
-            within(result).getByText(
-                'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
-            ),
-        ).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toHaveAttribute('data-status', 'success');
+        expect(within(modal).getByTestId('operation-end')).toHaveTextContent(
+            'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+        );
 
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'Deploying custom-app' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toBeInTheDocument();
         await user.click(within(modal).getByRole('button', { name: 'Close' }));
         expect(
-            screen.queryByRole('dialog', { name: 'Deploying custom-app' }),
+            screen.queryByRole('dialog', { name: 'custom-app deployed' }),
         ).not.toBeInTheDocument();
     });
 
@@ -226,8 +218,9 @@ describe('the progress modal', () => {
             tookMs: 72000,
         });
 
-        const lines = within(modal).getAllByTestId('status-detail').map((line) => line.textContent);
-        expect(lines).toStrictEqual(['Removed 49 product pages.', 'Took 1 minute, 12 seconds']);
+        const end = within(modal).getByTestId('operation-end');
+        expect(within(end).getByText('Removed 49 product pages.')).toBeInTheDocument();
+        expect(within(end).getByText('Took 1 minute, 12 seconds')).toBeInTheDocument();
         const rows = within(within(modal).getByTestId('operation-changes')).getAllByRole('listitem');
         expect(rows).toHaveLength(1);
         expect(rows[0]).toHaveTextContent('Product attributes');
@@ -235,11 +228,11 @@ describe('the progress modal', () => {
             'Added erp_owner to the attribute set Default',
             'By hand: Check the PDP.',
         ]);
-        expect(within(modal).getByTestId('status-display')).toHaveAttribute('data-variant', 'success');
+        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toHaveAttribute('data-status', 'success');
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'Deploying custom-app' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toBeInTheDocument();
     });
 
     it('stays open on failure with the reason', async () => {
@@ -249,9 +242,8 @@ describe('the progress modal', () => {
 
         push({ id: 'custom-app', state: 'failed', error: 'Adobe refused this.' });
 
-        const failure = within(modal).getByTestId('status-display');
-        expect(within(failure).getByText("Couldn't deploy custom-app")).toBeInTheDocument();
-        expect(within(failure).getByText('Adobe refused this.')).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: "Couldn't deploy custom-app" })).toHaveAttribute('data-status', 'error');
+        expect(within(modal).getByTestId('operation-end')).toHaveTextContent('Adobe refused this.');
     });
 
     it('Retry sends the same operation and starts the modal clean, not on the old reason', async () => {

@@ -6,11 +6,12 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { Modal, ActionButton } from '@/core/ui/components/ui/Modal';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 // Helper to render with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {
@@ -197,7 +198,8 @@ describe('Modal', () => {
             expect(button).toHaveClass('modal-button-secondary');
         });
 
-        it('applies secondary CSS class to negative variant', () => {
+        // It was mapped to the outline style, so no removal in any house dialog showed red.
+        it('draws the negative variant solid red', () => {
             const actionButtons: ActionButton[] = [
                 { label: 'Negative Action', variant: 'negative', onPress: jest.fn() },
             ];
@@ -207,7 +209,15 @@ describe('Modal', () => {
             );
 
             const button = screen.getByRole('button', { name: 'Negative Action' });
-            expect(button).toHaveClass('modal-button-secondary');
+            expect(button).toHaveClass('modal-button-negative');
+        });
+
+        it('draws the quiet variant borderless', () => {
+            const actionButtons: ActionButton[] = [{ label: 'Dry run', variant: 'quiet', onPress: jest.fn() }];
+
+            renderWithProvider(<Modal {...defaultProps} actionButtons={actionButtons} />);
+
+            expect(screen.getByRole('button', { name: 'Dry run' })).toHaveClass('modal-button-quiet');
         });
 
         it('renders with no action buttons (empty array)', () => {
@@ -300,16 +310,17 @@ describe('Modal', () => {
     // The two opt-ins ride on UNSAFE_className, so what lands on the dialog IS
     // the behaviour — including the absence of a class when neither is asked for.
     describe('the size overrides', () => {
-        it('gives the dialog no class at all when neither is opted into', () => {
+        // `modal-dialog` pins every house dialog near the top and eases its width.
+        it('gives the dialog only its own class when neither is opted into', () => {
             renderWithProvider(<Modal {...defaultProps} />);
 
-            expect(screen.getByRole('dialog')).not.toHaveAttribute('class');
+            expect(screen.getByRole('dialog')).toHaveAttribute('class', 'modal-dialog');
         });
 
         it('marks the dialog wide when only wide is opted into', () => {
             renderWithProvider(<Modal {...defaultProps} wide />);
 
-            expect(screen.getByRole('dialog')).toHaveAttribute('class', 'modal-wide');
+            expect(screen.getByRole('dialog')).toHaveAttribute('class', 'modal-dialog modal-wide');
         });
 
         it('carries both, in order, when both are opted into', () => {
@@ -317,8 +328,53 @@ describe('Modal', () => {
 
             expect(screen.getByRole('dialog')).toHaveAttribute(
                 'class',
-                'modal-fit-content modal-wide',
+                'modal-dialog modal-fit-content modal-wide',
             );
+        });
+    });
+
+    // The dialog design rules (2026-10-31): how things stand is an icon before the title.
+    describe('the title status', () => {
+        it.each([
+            ['success', 'modal-status-success'],
+            ['warning', 'modal-status-warning'],
+            ['error', 'modal-status-error'],
+        ] as const)('puts the %s icon before the title', (status, iconClass) => {
+            renderWithProvider(<Modal {...defaultProps} status={status} />);
+
+            const heading = screen.getByRole('heading');
+            expect(heading.querySelector(`.${iconClass}`)).not.toBeNull();
+            expect(heading).toHaveTextContent(defaultProps.title);
+        });
+
+        it('draws no icon for a title without a status — control', () => {
+            renderWithProvider(<Modal {...defaultProps} />);
+
+            expect(screen.getByRole('heading').querySelector('.modal-status-icon')).toBeNull();
+        });
+    });
+
+    // A change of width step hides the content while the box eases, then shows it.
+    describe('a change of width', () => {
+        it('hides the content while the dialog eases to its new width, then shows it', () => {
+            const { rerender } = renderWithProvider(<Modal {...defaultProps} size="M" />);
+            expect(screen.getByRole('dialog')).not.toHaveClass('is-resizing');
+
+            rerender(<Provider theme={defaultTheme}><Modal {...defaultProps} size="S" /></Provider>);
+            expect(screen.getByRole('dialog')).toHaveClass('is-resizing');
+
+            act(() => {
+                jest.advanceTimersByTime(FRONTEND_TIMEOUTS.GROWTH_SETTLE);
+            });
+            expect(screen.getByRole('dialog')).not.toHaveClass('is-resizing');
+        });
+
+        it('does not hide the content when the width stays the same — control', () => {
+            const { rerender } = renderWithProvider(<Modal {...defaultProps} size="M" />);
+
+            rerender(<Provider theme={defaultTheme}><Modal {...defaultProps} size="M" title="Another title" /></Provider>);
+
+            expect(screen.getByRole('dialog')).not.toHaveClass('is-resizing');
         });
     });
 

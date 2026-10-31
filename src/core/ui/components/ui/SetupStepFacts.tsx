@@ -52,9 +52,12 @@ export function SetupStepFacts({ item }: { item: SetupChecklistItem }): React.Re
                 </Fact>
             )}
             {item.then && <Fact label="Then">{item.then}</Fact>}
-            <Fact label="Why">
-                <span className="setup-guide-why">{item.why}</span>
-            </Fact>
+            {/* Left out when empty: a result that hands over a step has already said why. */}
+            {item.why ? (
+                <Fact label="Why">
+                    <span className="setup-guide-why">{item.why}</span>
+                </Fact>
+            ) : null}
         </FactList>
     );
 }

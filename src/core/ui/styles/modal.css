@@ -118,9 +118,93 @@
     padding-bottom: 16px;
     display: flex;
     justify-content: flex-end;
+    /* Wraps the row, never a label, when the dialog is too narrow for its buttons. */
+    flex-wrap: wrap;
     gap: 8px;
-    border-top: 1px solid var(--spectrum-global-color-gray-200);
+    /* No rule over the buttons: one rule per dialog, under the title (dialog design rules,
+       docs/development/sop/dialog-design.md). The background still hides content scrolling
+       under the pinned footer. */
     background: var(--spectrum-global-color-gray-100);
+}
+
+/* The title, with how things stand as an icon before it (Modal `status`). The icon sits on the
+   title's first line when a long title wraps. */
+.modal-title {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 10px;
+    overflow-wrap: anywhere;
+}
+
+.modal-status-icon {
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+.modal-status-success {
+    color: var(--spectrum-global-color-green-600);
+}
+
+.modal-status-warning {
+    color: var(--spectrum-global-color-orange-600);
+}
+
+.modal-status-error {
+    color: var(--spectrum-global-color-red-600);
+}
+
+/* Pinned near the top, not centred: content that grows pushes only the bottom edge down, so
+   nothing above it moves under the pointer. Spectrum's wrapper centres its panel; the panel's
+   unhashed `react-spectrum-Modal` class is the stable handle, and a fullscreen dialog keeps
+   Spectrum's placement. */
+.react-spectrum-Modal:has(.modal-dialog):not([class*="fullscreen"]) {
+    align-self: flex-start;
+    margin-top: calc(var(--spectrum-visual-viewport-height) * 0.08);
+    max-height: calc(var(--spectrum-visual-viewport-height) * 0.84);
+}
+
+/* Width is a step (Spectrum's small, medium, large; `modal-wide` past them). A change of step
+   eases, with the content hidden until the box has its new width, so text never visibly
+   rewraps; then the content fades in. */
+.modal-dialog {
+    transition: width var(--spectrum-global-animation-duration-200) ease-out;
+}
+
+.modal-dialog .modal-content {
+    transition: opacity var(--spectrum-global-animation-duration-200) ease-in;
+}
+
+.modal-dialog.is-resizing .modal-content {
+    opacity: 0;
+    transition: none;
+}
+
+/* A dialog body's parts, 16px apart, each without margins of its own. */
+.dialog-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.dialog-stack > * {
+    margin: 0;
+}
+
+/* A line of body text that is not the lead (a result's troubled types). */
+.dialog-line {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-800);
+    overflow-wrap: anywhere;
+}
+
+/* A note: small and muted, for what the SC need only know. */
+.dialog-note {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
 }
 
 /* Modal step crossfade transition (architecture ↔ block libraries) */
@@ -189,6 +273,29 @@
     border-color: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600));
 }
 
+/* A dangerous main action: solid red. It was mapped to the outline style, so no removal in any
+   house dialog showed red. */
+.modal-button-negative {
+    background: var(--spectrum-global-color-red-600);
+    color: white;
+    border-color: var(--spectrum-global-color-red-600);
+}
+
+.modal-button-negative:hover {
+    background: var(--spectrum-global-color-red-700);
+    border-color: var(--spectrum-global-color-red-700);
+}
+
+/* An action beside the main one: no border until hovered. */
+.modal-button-quiet {
+    background: transparent;
+    color: var(--spectrum-global-color-gray-800);
+}
+
+.modal-button-quiet:hover {
+    background: rgba(255, 255, 255, 0.07);
+}
+
 .modal-button:focus-visible {
     outline: 2px solid var(--spectrum-global-color-blue-400);
     outline-offset: 2px;
@@ -224,24 +331,6 @@
     display: inline-flex;
 }
 
-/* The progress modal's body (PL-59, OperationProgressModal): ONE height for every
- * state, with the content centred in it, so the modal never resizes as stages come and
- * go, a step wraps, or it turns into a failure (owner, 2026-09-19). Sized for the
- * tallest state — a failure whose reason runs to three lines; a longer one scrolls
- * inside. Here rather than in a feature sheet because every screen that hosts a Modal
- * hosts this one, and this sheet is what reaches them. */
-.modal-progress-body {
-    display: flex;
-    flex-direction: column;
-    /* `safe`: content taller than the body (a result's rows) starts at the top and
-       scrolls, rather than overflowing above it where nothing can scroll to. */
-    justify-content: safe center;
-    /* 240px until 2026-10-28, when the delete question (two boxes, each naming what it
-       deletes) overflowed it; 280 leaves a margin for a question one box longer. */
-    height: 280px;
-    overflow-y: auto;
-}
-
 /* A question's checkbox detail (what the box deletes), on its own smaller line inside the
    box's label, so it lines up under the label and the delete question fits the body's one
    height without scrolling (owner, 2026-10-28). */
@@ -252,13 +341,20 @@
 }
 
 /* What the operation acts on, under a short title instead of inside a long one that
- * wrapped ("Changing destination to Kukla Test App 2 · Production", 2026-10-28). One
- * line in every state, so the body below keeps its one height. */
+ * wrapped ("Changing destination to Kukla Test App 2 · Production", 2026-10-28). Wraps
+ * rather than cutting off: nothing in a dialog ends in an ellipsis (dialog design rules). */
 .modal-progress-subject {
     font-size: 14px;
     color: var(--spectrum-global-color-gray-700);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
+}
+
+@layer overrides {
+    @media (prefers-reduced-motion: reduce) {
+        .modal-dialog,
+        .modal-dialog .modal-content {
+            transition: none;
+        }
+    }
 }

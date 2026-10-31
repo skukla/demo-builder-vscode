@@ -14,21 +14,18 @@
 @layer theme {
     /* The sentence at the top of a step saying what it is for. */
     .lead-text {
-        margin: 0 0 12px;
-        font-size: 13px;
+        margin: 0 0 16px;
+        font-size: 14px;
         line-height: 1.5;
-        color: var(--spectrum-global-color-gray-700);
+        color: var(--spectrum-global-color-gray-800);
+        overflow-wrap: anywhere;
     }
 
-    /* Section label inside a modal ("Start from"): small caps over a group, making it read
-       as a labeled sub-part rather than the modal's main event (the unlabeled seed row was
-       the owner's 2026-08-27 design flag). */
+    /* A label over a group or a field: small, muted, sentence case. It was small capitals, which
+       sat beside sentence-case labels in the same dialog (dialog design rules, 2026-10-31). */
     .section-label {
-        margin: 0 0 8px;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
+        margin: 0 0 4px;
+        font-size: 12px;
         color: var(--spectrum-global-color-gray-600);
     }
 }

@@ -1,16 +1,16 @@
 /**
- * A modal does not change size while it works (owner, 2026-09-20).
+ * A modal does not jump between sizes while it works (owner, 2026-09-20).
  *
  * The Data Installer's import modal was three different heights in one dry run: the
  * form, then the spinner, then "Dry run passed". Each state is a different amount of
- * content and nothing held a floor under them, so the whole dialog jumped twice
- * while the SC watched it work.
+ * content and nothing managed the change, so the whole dialog jumped twice while the
+ * SC watched it work.
  *
  * A modal is at risk when its body renders DIFFERENT views — a form, a spinner, a
- * result. Three things hold a floor, and one of them has to be there:
+ * result. Two things manage the change, and one of them has to be there:
  *
- *   `SteadyHeight`               the tallest state so far, measured
- *   `modal-progress-body`        one fixed height, for a body whose states are known
+ *   `SteadyHeight`               fits each state and eases between them (the dialog
+ *                                design rules, 2026-10-31)
  *   `CenteredFeedbackContainer`  a height the caller names
  *
  * What this cannot see: whether the floor is the RIGHT height. That is a judgement,
@@ -31,11 +31,11 @@ const LEDGER: { _what: string; noViewsOfItsOwn: Record<string, string> } = JSON.
 const BRANCH = /(view === |phase === |state === |stage === |step === |mode === |status === )/g;
 
 /**
- * The three ways a modal body holds a floor under its states, as they appear when
+ * The two ways a modal body manages the change between its states, as they appear when
  * they are USED. Matching the bare names would match the import line too — which the
  * first version did, so deleting the floor and leaving the import passed the check.
  */
-const HOLDS = [/<SteadyHeight[\s>]/, /modal-progress-body/, /<CenteredFeedbackContainer[\s>]/];
+const HOLDS = [/<SteadyHeight[\s>]/, /<CenteredFeedbackContainer[\s>]/];
 
 const COMPONENTS = workingTreeFiles('src')
     .filter((f) => f.endsWith('.tsx'));

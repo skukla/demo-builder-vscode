@@ -312,7 +312,7 @@ describe('DatapackCatalogView', () => {
             await openImport();
 
             expect(
-                await screen.findByRole('button', { name: /start import/i })
+                await screen.findByText('Import', { selector: '.modal-button' })
             ).toBeInTheDocument();
         });
 
@@ -320,7 +320,7 @@ describe('DatapackCatalogView', () => {
         // inventory — never what the pack declares.
         it('offers only the data types the service stores', async () => {
             await openImport();
-            await screen.findByRole('button', { name: /start import/i });
+            await screen.findByText('Import', { selector: '.modal-button' });
 
             expect(screen.getByRole('checkbox', { name: 'Products' })).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Giftcards' })).not.toBeInTheDocument();
@@ -328,7 +328,7 @@ describe('DatapackCatalogView', () => {
 
         it('closes without closing the flyout behind it', async () => {
             await openImport();
-            await screen.findByRole('button', { name: /start import/i });
+            await screen.findByText('Import', { selector: '.modal-button' });
 
             await press(screen.getByRole('button', { name: /^close$/i }));
 

@@ -1,11 +1,12 @@
 /**
  * SteadyHeight — a modal that walks through states must not jump between them
- * (owner, 2026-09-20).
+ * (owner, 2026-09-20), and must not leave a short state in dead space either: the box
+ * fits its content and eases each change, growing or shrinking (dialog design rules,
+ * owner 2026-10-31).
  *
  * jsdom lays nothing out, so `scrollHeight` is 0 for everything unless it is told
  * otherwise. Each test therefore says what the content measures, the same way the
- * browser would, and asserts the FLOOR the box holds — which is the thing the SC
- * sees.
+ * browser would, and asserts the height the box takes while it eases.
  */
 
 import { act, render, screen } from '@testing-library/react';
@@ -42,55 +43,6 @@ afterEach(() => {
     delete HTMLElement.prototype.scrollHeight;
 });
 
-it('reserves what the first state needed', () => {
-    measuringAt(400);
-
-    render(
-        <SteadyHeight>
-            <div data-testid="content">the form</div>
-        </SteadyHeight>,
-    );
-
-    expect(reservedBox()).toHaveStyle({ minHeight: '400px' });
-});
-
-it('keeps that height when a shorter state replaces it', () => {
-    const measure = measuringAt(400);
-    const { rerender } = render(
-        <SteadyHeight>
-            <div data-testid="content">the form</div>
-        </SteadyHeight>,
-    );
-
-    // The spinner: a fraction of the form's height, and the jump the SC saw.
-    measure(120);
-    rerender(
-        <SteadyHeight>
-            <div data-testid="content">checking…</div>
-        </SteadyHeight>,
-    );
-
-    expect(reservedBox()).toHaveStyle({ minHeight: '400px' });
-});
-
-it('grows for a state taller than anything before it', () => {
-    const measure = measuringAt(400);
-    const { rerender } = render(
-        <SteadyHeight>
-            <div data-testid="content">the form</div>
-        </SteadyHeight>,
-    );
-
-    measure(560);
-    rerender(
-        <SteadyHeight>
-            <div data-testid="content">a long confirmation</div>
-        </SteadyHeight>,
-    );
-
-    expect(reservedBox()).toHaveStyle({ minHeight: '560px' });
-});
-
 it('starts from a floor the caller names', () => {
     measuringAt(0);
 
@@ -120,13 +72,12 @@ it('leaves the caller element, and its class, untouched inside', () => {
     expect(screen.getByTestId('content').parentElement).toHaveClass('datapack-import-body');
 });
 
-// The Add Integration window keeps the project list's height when the shorter
-// "Create New Project" form replaces it, and the form floated mid-window while the
-// list had started at the top (owner, 2026-10-17). A form reads from the top.
-it('centres a shorter state by default, and pins it to the top when asked', () => {
+// Content shorter than a named floor: centred by default (a spinner), from the top when
+// asked (a form reads from the top).
+it('centres content shorter than its floor by default, and pins it to the top when asked', () => {
     measuringAt(100);
     const { unmount } = render(
-        <SteadyHeight>
+        <SteadyHeight minHeight={240}>
             <div data-testid="content">a spinner</div>
         </SteadyHeight>,
     );
@@ -134,7 +85,7 @@ it('centres a shorter state by default, and pins it to the top when asked', () =
     unmount();
 
     render(
-        <SteadyHeight align="start">
+        <SteadyHeight minHeight={240} align="start">
             <div data-testid="content">a form</div>
         </SteadyHeight>,
     );
@@ -142,43 +93,48 @@ it('centres a shorter state by default, and pins it to the top when asked', () =
 });
 
 /**
- * Growth eases instead of snapping (owner, 2026-10-31). The floor is a minimum, so for the growth
- * only the box takes a real height: the old floor, then the new one a frame later (the stylesheet
- * eases between them), then a plain minimum again so nothing can be cut off.
+ * Each change eases instead of snapping, taller or shorter (owner, 2026-10-31). The box takes a
+ * real height for the change only: the old one, then the new one a frame later (the stylesheet
+ * eases between them), then its content's own height again so nothing can be cut off.
  */
-describe('easing into a taller state', () => {
-    function grown() {
-        const measure = measuringAt(400);
+describe('easing between states', () => {
+    function changed(from: number, to: number) {
+        const measure = measuringAt(from);
         const { rerender } = render(
             <SteadyHeight>
                 <div data-testid="content">the form</div>
             </SteadyHeight>,
         );
-        measure(560);
+        measure(to);
         rerender(
             <SteadyHeight>
-                <div data-testid="content">a long confirmation</div>
+                <div data-testid="content">the next state</div>
             </SteadyHeight>,
         );
     }
 
-    it('starts at the old height, then moves to the new one on the next frame', () => {
-        grown();
+    it.each([
+        ['a taller state', 400, 560],
+        ['a shorter state', 400, 120],
+    ])('eases into %s: the old height, then the new one on the next frame', (_label, from, to) => {
+        changed(from, to);
         expect(reservedBox()).toHaveClass('steady-height', 'is-growing');
-        expect(reservedBox()).toHaveStyle({ height: '400px' });
+        expect(reservedBox()).toHaveStyle({ height: `${from}px` });
 
         act(() => { jest.advanceTimersToNextFrame(); });
-        expect(reservedBox()).toHaveStyle({ height: '560px' });
+        expect(reservedBox()).toHaveStyle({ height: `${to}px` });
     });
 
-    it('goes back to a plain minimum once the growth is over', () => {
-        grown();
+    // It used to hold the tallest height for good, which left a one-line result in a
+    // form-sized box.
+    it('lets go of the height once the change is over, so the box fits the content', () => {
+        changed(400, 120);
         act(() => { jest.advanceTimersToNextFrame(); });
         act(() => { jest.advanceTimersByTime(FRONTEND_TIMEOUTS.GROWTH_SETTLE); });
 
         expect(reservedBox()).not.toHaveClass('is-growing');
         expect(reservedBox().style.height).toBe('');
-        expect(reservedBox()).toHaveStyle({ minHeight: '560px' });
+        expect(reservedBox().style.minHeight).toBe('');
     });
 
     it('does not animate the first measure, which has nothing to ease from', () => {
@@ -186,6 +142,22 @@ describe('easing into a taller state', () => {
         render(
             <SteadyHeight>
                 <div data-testid="content">the form</div>
+            </SteadyHeight>,
+        );
+        expect(reservedBox()).not.toHaveClass('is-growing');
+    });
+
+    it('does not animate a re-render whose content kept its height — control', () => {
+        const measure = measuringAt(400);
+        const { rerender } = render(
+            <SteadyHeight>
+                <div data-testid="content">the form</div>
+            </SteadyHeight>,
+        );
+        measure(400);
+        rerender(
+            <SteadyHeight>
+                <div data-testid="content">the form, ticked</div>
             </SteadyHeight>,
         );
         expect(reservedBox()).not.toHaveClass('is-growing');

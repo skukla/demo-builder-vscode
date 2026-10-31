@@ -67,7 +67,7 @@ function stallScopes() {
 
 /** Wait until discovery has settled: the picker exists AND is enabled. */
 async function awaitScopes(): Promise<void> {
-    await waitFor(() => expect(pickerFor(/target website/i)).not.toBeDisabled());
+    await waitFor(() => expect(pickerFor(/^website$/i)).not.toBeDisabled());
 }
 
 /**
@@ -94,20 +94,20 @@ describe('import targeting', () => {
         renderModal();
 
         await awaitScopes();
-        expect(pickerFor(/target website/i)).toHaveTextContent('Bodea');
+        expect(pickerFor(/^website$/i)).toHaveTextContent('Bodea');
     });
 
     it('sends the chosen pair with the import', async () => {
         renderModal();
         await awaitScopes();
 
-        await change(pickerFor(/target website/i), 'bodea');
+        await change(pickerFor(/^website$/i), 'bodea');
         await waitFor(() => expect(pickerFor(/store view/i)).not.toBeDisabled());
         await change(pickerFor(/store view/i), 'bodea_view');
 
         // canStart also needs a data type; without one the button is disabled.
         await press(screen.getByRole('checkbox', { name: 'Categories' }));
-        await press(screen.getByRole('button', { name: /start import/i }));
+        await press(screen.getByRole('button', { name: /^import$/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -130,7 +130,7 @@ describe('import targeting', () => {
         await awaitScopes();
 
         await press(screen.getByRole('checkbox', { name: 'Categories' }));
-        await press(screen.getByRole('button', { name: /start import/i }));
+        await press(screen.getByRole('button', { name: /^import$/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -144,7 +144,7 @@ describe('import targeting', () => {
         renderModal();
         await awaitScopes();
 
-        await change(pickerFor(/target website/i), 'bodea');
+        await change(pickerFor(/^website$/i), 'bodea');
 
         await waitFor(() => expect(pickerFor(/store view/i)).not.toBeDisabled());
         const options = Array.from(pickerFor(/store view/i).options).map((o) => o.value);
@@ -162,7 +162,7 @@ describe('import targeting', () => {
         renderModal();
 
         await waitFor(() =>
-            expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /^import$/i })).toBeInTheDocument()
         );
         // Wait for the failure to SETTLE — the spinner standing in for the
         // pickers is what marks the in-flight state, so its absence is the
@@ -246,7 +246,7 @@ describe('seeding the target scope', () => {
         withScopedProject(BODEA_SCOPE);
         renderModal();
 
-        await waitFor(() => expect(pickerFor(/target website/i)).toHaveValue('bodea'));
+        await waitFor(() => expect(pickerFor(/^website$/i)).toHaveValue('bodea'));
     });
 
     it('selects the store view the project recorded', async () => {
@@ -259,10 +259,10 @@ describe('seeding the target scope', () => {
     it('sends the recorded scope without the user touching a picker', async () => {
         withScopedProject(BODEA_SCOPE);
         renderModal();
-        await waitFor(() => expect(pickerFor(/target website/i)).toHaveValue('bodea'));
+        await waitFor(() => expect(pickerFor(/^website$/i)).toHaveValue('bodea'));
 
         await press(screen.getByRole('checkbox', { name: 'Categories' }));
-        await press(screen.getByRole('button', { name: /start import/i }));
+        await press(screen.getByRole('button', { name: /^import$/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -276,7 +276,7 @@ describe('seeding the target scope', () => {
 
         // Unchanged behaviour for an unconfigured project — the fallback is the
         // service's own default, not a guess.
-        await waitFor(() => expect(pickerFor(/target website/i)).toHaveValue('base'));
+        await waitFor(() => expect(pickerFor(/^website$/i)).toHaveValue('base'));
     });
 });
 
@@ -314,42 +314,32 @@ describe('seeding the target scope', () => {
  */
 describe('the redesigned target section', () => {
     /**
-     * 1. The SPINNER STANDS IN FOR THE CONTROL, under a label that stays put.
+     * 1. ONE SPINNER STANDS IN FOR THE ROW while the stores load, where the pickers will land
+     * (owner, 2026-10-31: each picker had its own, two spinners for one request).
      *
      * The pickers used to render disabled with a placeholder. That held the space
      * — which is the point, since before it the fields appeared late and the
      * dialog jumped — but presented a control that could not be used, showing a
      * value it did not have.
      */
-    it('shows a spinner in place of each picker while scopes are loading', async () => {
+    it('shows one spinner in place of both pickers while the stores load', async () => {
         stallScopes();
         renderModal();
 
-        expect(await screen.findByLabelText('Loading websites')).toBeInTheDocument();
-        expect(screen.getByLabelText('Loading store views')).toBeInTheDocument();
+        expect(await screen.findAllByLabelText('Loading the stores')).toHaveLength(1);
         expect(screen.queryAllByTestId('spectrum-picker-select')).toHaveLength(0);
     });
 
-    /** The labels do not wait for the data — only the controls under them do. */
-    it('shows both field labels while still loading', async () => {
-        stallScopes();
-        renderModal();
-
-        await screen.findByLabelText('Loading websites');
-
-        expect(screen.getByText('Target website')).toBeInTheDocument();
-        expect(screen.getByText('Target store view')).toBeInTheDocument();
-    });
-
-    /** CONTROL — the swap goes both ways: pickers in, spinners out. */
-    it('CONTROL — replaces the spinners with the pickers once scopes arrive', async () => {
+    /** CONTROL — the swap goes both ways: pickers in, spinner out, under sentence-case labels. */
+    it('CONTROL — replaces the spinner with the labelled pickers once the stores arrive', async () => {
         withScopes();
         renderModal();
         await awaitScopes();
 
-        expect(screen.queryByLabelText('Loading websites')).not.toBeInTheDocument();
-        expect(screen.queryByLabelText('Loading store views')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Loading the stores')).not.toBeInTheDocument();
         expect(screen.getAllByTestId('spectrum-picker-select')).toHaveLength(2);
+        expect(screen.getByText('Website')).toBeInTheDocument();
+        expect(screen.getByText('Store view')).toBeInTheDocument();
     });
 
     /** The spinner carries "busy"; no field repeats it as static text. */
@@ -357,9 +347,9 @@ describe('the redesigned target section', () => {
         stallScopes();
         renderModal();
 
-        await screen.findByLabelText('Loading websites');
+        await screen.findByLabelText('Loading the stores');
 
-        expect(screen.queryByText(/loading websites…/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/loading the stores/i)).not.toBeInTheDocument();
         expect(screen.queryByText(/^loading…$/i)).not.toBeInTheDocument();
     });
 
@@ -375,14 +365,14 @@ describe('the redesigned target section', () => {
         stallScopes();
         renderModal({ availableTypes: ['categories'] });
 
-        await screen.findByLabelText('Loading websites');
+        await screen.findByLabelText('Loading the stores');
         await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
         // The shared Modal renders actions as div[role="button"][aria-disabled],
         // not <button disabled>, so jest-dom's toBeDisabled() does not apply —
         // and worse, `.not.toBeDisabled()` passes vacuously on a div. Assert the
         // attribute, as the sibling suites do.
-        expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
+        expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
             'aria-disabled',
             'true'
         );
@@ -409,7 +399,7 @@ describe('the redesigned target section', () => {
         await press(await screen.findByRole('checkbox', { name: 'Categories' }));
 
         await waitFor(() =>
-            expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
+            expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
                 'aria-disabled',
                 'false'
             )
@@ -482,7 +472,7 @@ describe('default scope selection', () => {
         renderModal();
         await awaitScopes();
 
-        expect(pickerFor(/target website/i)).toHaveValue('base');
+        expect(pickerFor(/^website$/i)).toHaveValue('base');
         expect(pickerFor(/store view/i)).toHaveValue('default');
     });
 
@@ -491,7 +481,7 @@ describe('default scope selection', () => {
         renderModal();
         await awaitScopes();
         await press(screen.getByRole('checkbox', { name: 'Categories' }));
-        await press(screen.getByRole('button', { name: /start import/i }));
+        await press(screen.getByRole('button', { name: /^import$/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -504,7 +494,7 @@ describe('default scope selection', () => {
         renderModal();
         await awaitScopes();
 
-        await change(pickerFor(/target website/i), 'bodea');
+        await change(pickerFor(/^website$/i), 'bodea');
 
         await waitFor(() => expect(pickerFor(/store view/i)).toHaveValue('bodea_view'));
     });

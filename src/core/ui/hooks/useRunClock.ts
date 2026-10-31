@@ -48,12 +48,13 @@ export function useRunClock(startedAt: number | undefined): string | undefined {
 export const TOOK_WORTH_SAYING_MS = 60_000;
 
 /**
- * The line a run's last view carries: "Took 3 minutes, 12 seconds". Nothing for a run
- * under {@link TOOK_WORTH_SAYING_MS}.
+ * How long a run took, as the value of a labelled "Took" row ("3 minutes, 12 seconds"), or
+ * undefined for a run under {@link TOOK_WORTH_SAYING_MS}: the result screens show it as a row
+ * (owner, 2026-10-31).
  *
  * @param tookMs - how long the run took, as the extension measured it
- * @returns the line, or undefined when the run was short
+ * @returns the value, or undefined when the run was short
  */
-export function tookLine(tookMs: number): string | undefined {
-    return tookMs < TOOK_WORTH_SAYING_MS ? undefined : `Took ${formatElapsed(tookMs)}`;
+export function tookValue(tookMs: number): string | undefined {
+    return tookMs < TOOK_WORTH_SAYING_MS ? undefined : formatElapsed(tookMs);
 }
