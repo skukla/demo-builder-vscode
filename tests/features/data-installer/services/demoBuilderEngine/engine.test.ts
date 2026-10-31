@@ -309,7 +309,7 @@ describe('demoBuilderEngine reads', () => {
             request({ target: { websiteCode: 'acme', storeCode: 'default' } }),
             { valid: false, reason: 'The store has no store view default on a website acme. Choose them again in the Commerce step.' },
         ],
-        ['a kind it cannot install', request({ dataTypes: ['categories', 'aco_products'] }), { valid: false, reason: 'Demo Builder does not install aco_products yet.' }],
+        ['a kind it cannot install', request({ dataTypes: ['categories', 'product_export'] }), { valid: false, reason: 'Demo Builder does not install product_export yet.' }],
     ])('dry run with %s', async (_label, req, expected) => {
         const { engine, ctx } = await engineWith({}, () => ({}));
 

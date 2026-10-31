@@ -9,6 +9,7 @@
  */
 
 import { secretKey } from '@/features/app-builder/services/secretKey';
+import { acoCredentialKey } from '@/features/components/services/acoCredentialStore';
 import { commerceSecretKey } from '@/features/components/services/commerceCredentialStore';
 import {
     forgetProjectSecrets,
@@ -52,6 +53,7 @@ const KEPT = [
     secretKey(PATH, 'demo-erp', 'ERP_SCREEN_KEY'),
     'demoBuilder.commerceRest.credential.ws-project',
     'demoBuilder.commerceRest.credential.ws-erp',
+    acoCredentialKey(PATH),
 ];
 
 describe('forgetProjectSecrets', () => {
@@ -100,15 +102,15 @@ describe('moveProjectSecrets — a rename takes the secrets to the new path', ()
     ] as const;
     const at = (path: string) => SECRETS.map(([keyOf, id, name]) => keyOf(path, id, name)).sort();
 
-    it("moves the Commerce secrets and the systems' screen keys, and leaves the REST credentials", async () => {
+    it("moves the Commerce secrets, the systems' screen keys and the ACO credential, and leaves the REST credentials", async () => {
         const rest = 'demoBuilder.commerceRest.credential.ws-erp';
         const { secrets, store } = createMockSecretStorage(
-            Object.fromEntries([...at(PATH), rest].map((key) => [key, 'fake-test-pw-not-a-secret'])),
+            Object.fromEntries([...at(PATH), rest, acoCredentialKey(PATH)].map((key) => [key, 'fake-test-pw-not-a-secret'])),
         );
 
         await moveProjectSecrets(renamed(), PATH, secrets, jest.fn());
 
-        expect([...store.keys()].sort()).toStrictEqual([...at(NEW), rest].sort());
+        expect([...store.keys()].sort()).toStrictEqual([...at(NEW), rest, acoCredentialKey(NEW)].sort());
     });
 
     it('does nothing when the path did not change, or without SecretStorage', async () => {
