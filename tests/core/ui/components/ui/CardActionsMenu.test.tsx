@@ -43,7 +43,9 @@ jest.mock('@adobe/react-spectrum', () => ({
         </ul>
     ),
     Item: ({ children }: any) => <>{children}</>,
+    Text: ({ children }: any) => <span>{children}</span>,
 }));
+
 
 jest.mock('@spectrum-icons/workflow/MoreSmallListVert', () => ({
     __esModule: true,
@@ -84,6 +86,7 @@ describe('CardActionsMenu', () => {
             screen.getByRole('button', { name: 'More actions for ERP Sync' })
         ).toBeInTheDocument();
         expect(screen.getByTestId('icon-kebab')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'More actions for ERP Sync' })).not.toHaveTextContent(/\S/);
     });
 
     it('passes its children through as menu items', () => {
@@ -164,5 +167,30 @@ describe('CardActionsMenu — where it opens', () => {
         );
 
         expect(screen.getByTestId('menu-trigger')).toHaveAttribute('data-direction', 'end');
+    });
+});
+
+/**
+ * A labelled trigger, for a menu beside a primary button: the datapack panel's "More" beside
+ * Import, where a bare ⋯ read as unclear (owner, 2026-10-31). It opens below, as a button with
+ * a down arrow does. Cards keep the kebab.
+ */
+describe('CardActionsMenu — with a label', () => {
+    it('shows the label and a down arrow instead of the kebab, and opens below', () => {
+        renderMenu({ label: 'More' });
+
+        // The icons share one module mock here, so the label and where it opens are what this
+        // can tell apart; the kebab's own test above has no text at all.
+        const trigger = screen.getByRole('button', { name: 'More actions for ERP Sync' });
+        expect(trigger).toHaveTextContent('More');
+        expect(screen.getByTestId('menu-trigger')).toHaveAttribute('data-direction', 'bottom');
+    });
+
+    it('still routes a pick to onAction', () => {
+        const { onAction } = renderMenu({ label: 'More' });
+
+        fireEvent.click(screen.getByText('Remove'));
+
+        expect(onAction).toHaveBeenCalledWith('remove');
     });
 });

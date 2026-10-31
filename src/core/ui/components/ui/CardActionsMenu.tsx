@@ -21,8 +21,9 @@
  * @module core/ui/components/ui/CardActionsMenu
  */
 
-import { ActionButton, Menu, MenuTrigger } from '@adobe/react-spectrum';
+import { ActionButton, Menu, MenuTrigger, Text } from '@adobe/react-spectrum';
 import type { CollectionChildren } from '@react-types/shared';
+import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import React, { useCallback } from 'react';
 
@@ -33,6 +34,12 @@ export interface CardActionsMenuProps {
     onAction: (key: React.Key) => void;
     /** Class for the trigger button (e.g. the hover-reveal rule). */
     className?: string;
+    /**
+     * Show the trigger as a labelled button ("More", with a down arrow) that opens its menu
+     * below, instead of the kebab. For a menu beside a primary button, where a bare ⋯ read as
+     * unclear (the datapack panel's Import, owner 2026-10-31). Cards keep the kebab.
+     */
+    label?: string;
     /**
      * `Item`s, or `Section`/`SubmenuTrigger` for a grouped menu.
      *
@@ -52,6 +59,7 @@ export function CardActionsMenu({
     ariaLabel,
     onAction,
     className,
+    label,
     children,
 }: CardActionsMenuProps): React.ReactElement {
     // Containment: opening the menu or picking an item must never bubble into the
@@ -67,9 +75,10 @@ export function CardActionsMenu({
                 project card's twelve rows fit neither way in an 820 px window, and the
                 menu became a scrolling list with Delete out of sight. Beside it, the
                 menu can use the window's whole height. */}
-            <MenuTrigger direction="end">
-                <ActionButton isQuiet aria-label={ariaLabel} UNSAFE_className={className}>
-                    <MoreSmallListVert size="S" />
+            <MenuTrigger direction={label ? 'bottom' : 'end'} align={label ? 'end' : 'start'}>
+                <ActionButton isQuiet={!label} aria-label={ariaLabel} UNSAFE_className={className}>
+                    {label ? <Text>{label}</Text> : <MoreSmallListVert size="S" />}
+                    {label ? <ChevronDown size="S" /> : null}
                 </ActionButton>
                 {/* Spectrum types Menu's children as `CollectionChildren`, a shape
                     a `ReactNode` prop cannot satisfy. The cast lives HERE, once, so

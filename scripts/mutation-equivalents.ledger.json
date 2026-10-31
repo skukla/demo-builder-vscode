@@ -13675,10 +13675,10 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 61,
+            "line": 69,
             "mutants": 1,
             "category": "other",
-            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is, and the length never changes between renders, so a constant literal is equal to itself on every render and the memoized callback is recomputed exactly as often as before: never. No caller, and no test that could be written, can observe the difference \u2014 the mutation was planted and all three suites in the group stayed green.",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is, and the length never changes between renders, so a constant literal is equal to itself on every render and the memoized callback is recomputed exactly as often as before: never. No caller, and no test that could be written, can observe the difference \u2014 the mutation was planted and all three suites in the group stayed green. Re-anchored 2026-10-31 (61 -> 69): unchanged code; a label option for the trigger was added above it.",
             "decision": "none \u2014 the empty deps array is correct; the containment callback depends on nothing",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"

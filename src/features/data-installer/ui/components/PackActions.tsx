@@ -1,6 +1,7 @@
 /**
  * The flyout's actions (owner, 2026-10-30): Import is the one button on view, and everything else
- * is in the house kebab (`CardActionsMenu`, icons from `renderMenuIcon`), where it was five buttons
+ * is behind a "More" button (`CardActionsMenu` with a label, owner 2026-10-31: a bare ⋯ beside
+ * Import read as unclear; icons from `renderMenuIcon`), where it was five buttons
  * on three rows. In the menu, in order: Save as file; Save store changes to this pack, for the
  * pack the open project holds by Demo Builder's engine; Share or Stop sharing, on the SC's own
  * library pack; and Remove from library, the same pack only, in its own section at the bottom.
@@ -110,7 +111,7 @@ export function PackActions({
                         Import
                     </Button>
                 ) : null}
-                <CardActionsMenu ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
+                <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
                     <Section key="pack">{packRows(detail, onSaveStoreChanges !== undefined).map(renderRow)}</Section>
                     {library && detail.mine ? (
                         <Section key="remove">
