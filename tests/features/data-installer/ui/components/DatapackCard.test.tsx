@@ -504,6 +504,8 @@ describe('DatapackCard — where the pack lives', () => {
             />,
         );
         expect(screen.getByText('Yours')).toBeInTheDocument();
+        // Spectrum's grey badge, as the integration card's type label (owner, 2026-10-31).
+        expect(screen.getByText('Yours').closest('[data-variant]')).toHaveAttribute('data-variant', 'neutral');
     });
 });
 

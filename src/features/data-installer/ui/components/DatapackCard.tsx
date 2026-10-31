@@ -25,7 +25,7 @@
  * @module features/data-installer/ui/components/DatapackCard
  */
 
-import { Item, Picker } from '@adobe/react-spectrum';
+import { Badge, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
 import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackSummary } from '../../types';
@@ -253,8 +253,17 @@ function cardTag(group: DatapackGroup): string | undefined {
     return group.shared ? undefined : 'Community';
 }
 
+/**
+ * Spectrum's grey badge, as the integration card's type label ("ERP") and a setup step's
+ * "Optional" draw theirs (owner, 2026-10-31). It was a hand-made outline, the faintest thing on
+ * the card. Grey, not blue: blue on these cards means selected.
+ */
 function renderTag(tag: string | undefined): React.JSX.Element | null {
-    return tag ? <span className="datapack-card-tag">{tag}</span> : null;
+    return tag ? (
+        <Badge variant="neutral" UNSAFE_className="datapack-card-tag">
+            {tag}
+        </Badge>
+    ) : null;
 }
 
 function stopPropagation(event: React.SyntheticEvent): void {
