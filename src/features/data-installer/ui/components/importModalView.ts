@@ -119,11 +119,12 @@ export function buildActions(a: {
     if (a.view === 'result') {
         return [{ label: 'Back', variant: 'secondary', onPress: a.goBack }];
     }
-    // form and busy share the row; busy swaps the active label and freezes it —
-    // ManageApisModal's 'Applying…' pattern.
+    // form and busy share the row. While busy the body shows the spinner, so every button keeps
+    // its label and stops taking presses: one spinner per wait, and no "-ing" label (owner,
+    // 2026-10-31).
     return [
         {
-            label: a.checking ? 'Checking' : 'Dry run',
+            label: 'Dry run',
             variant: 'secondary',
             onPress: a.validate,
             isDisabled: !a.canStart,
@@ -136,7 +137,7 @@ export function buildActions(a: {
         // ("cannot be undone") was true here and false there.
         { label: 'Remove data', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
         {
-            label: a.starting ? 'Starting' : 'Start import',
+            label: 'Start import',
             variant: 'accent',
             onPress: a.startImport,
             isDisabled: !a.canStart,

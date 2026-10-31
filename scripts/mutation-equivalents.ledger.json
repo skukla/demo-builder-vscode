@@ -14211,10 +14211,10 @@
             "anchors": [
                 "{view === 'result' && ctx.result ? ("
             ],
-            "line": 129,
+            "line": 133,
             "mutants": 2,
             "category": "branch",
-            "reason": "Both survivors need a state the state machine cannot produce: a non-null result while the view is not 'result'. resolveView returns 'result' whenever result is truthy and none of busy, resetArmed or running outranks it; result is forced null while busy, resolveResult returns null for a record still watching, and the affordances that set lastAction or arm a reset are absent from the views that outrank it. So view === 'result' and a truthy result coincide exactly.",
+            "reason": "Both survivors need a state the state machine cannot produce: a non-null result while the view is not 'result'. resolveView returns 'result' whenever result is truthy and none of busy, resetArmed or running outranks it; result is forced null while busy, resolveResult returns null for a record still watching, and the affordances that set lastAction or arm a reset are absent from the views that outrank it. So view === 'result' and a truthy result coincide exactly. Re-anchored 2026-10-31 (129 -> 133): unchanged code; the floor's alignment comment above it grew.",
             "decision": "none \u2014 the view check keeps this body consistent with the five beside it",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"

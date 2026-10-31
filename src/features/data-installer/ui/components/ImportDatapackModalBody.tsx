@@ -34,6 +34,7 @@ function NoInstanceNotice(): React.JSX.Element {
             variant="error"
             title="This project has no Commerce instance"
             message="Connect a Commerce backend on the project dashboard, then import from here."
+            height="auto"
         />
     );
 }
@@ -69,8 +70,11 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
     return (
         // Six views, six natural heights. Without a floor the dialog jumps every time
         // one replaces another — form, then spinner, then result, all different sizes
-        // in one dry run (owner, 2026-09-20).
-        <SteadyHeight>
+        // in one dry run (owner, 2026-09-20). The form reads from the top; the spinner and
+        // a result sit centred. Results take only the room they need, so the form's height
+        // is the floor and Back does not leave the form floating in a taller box (owner,
+        // 2026-10-31).
+        <SteadyHeight align={view === 'form' ? 'start' : 'center'}>
             <div className="datapack-import-body">
                     {view === 'busy' ? (
                         // Size L on purpose: LoadingDisplay keys the wizard
@@ -132,6 +136,7 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
                             title={ctx.result.title}
                             message={ctx.result.message}
                             details={ctx.result.details}
+                            height="auto"
                         />
                     ) : null}
 

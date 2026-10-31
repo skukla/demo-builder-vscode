@@ -215,13 +215,15 @@ describe('buildActions', () => {
         expect(disabled).toStrictEqual([true, true, true]);
     });
 
-    /** Busy shares the form's row and swaps the active label. */
-    it('reads Checking on the dry-run button while the check runs', () => {
-        const labels = buildActions(actionArgs({ view: 'busy', checking: true })).map((a) => a.label);
-        expect(labels).toStrictEqual(['Checking', 'Remove data', 'Start import']);
-    });
-
-    it('reads Starting on the start button while an import starts', () => {
-        expect(buildActions(actionArgs({ view: 'busy', starting: true }))[2].label).toBe('Starting');
+    /**
+     * Busy shares the form's row. The body shows the spinner, so every button keeps its label and
+     * stops taking presses: one spinner per wait, no "-ing" label (owner, 2026-10-31).
+     */
+    it('keeps every label while a check or a start runs', () => {
+        for (const busy of [{ checking: true }, { starting: true }]) {
+            const actions = buildActions(actionArgs({ view: 'busy', canStart: false, ...busy }));
+            expect(actions.map((a) => a.label)).toStrictEqual(['Dry run', 'Remove data', 'Start import']);
+            expect(actions.every((a) => a.isDisabled === true)).toBe(true);
+        }
     });
 });

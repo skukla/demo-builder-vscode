@@ -151,7 +151,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
             );
         }
 
-        it('shows a busy Dry run button while the check is in flight', async () => {
+        // The body shows the spinner, so the button keeps its label and stops taking presses
+        // (owner, 2026-10-31: no "-ing" label).
+        it('keeps the Dry run label, frozen, while the check is in flight', async () => {
             neverResolve('validate-datapack-import');
             renderModal();
             await awaitForm();
@@ -159,7 +161,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
             await press(screen.getByRole('button', { name: /^dry run$/i }));
 
-            expect(await screen.findByRole('button', { name: /^checking$/i })).toBeInTheDocument();
+            await screen.findByText(/checking with the service/i);
+            expect(screen.getByRole('button', { name: /^dry run$/i })).toHaveAttribute('aria-disabled', 'true');
+            expect(screen.queryByRole('button', { name: /^checking$/i })).not.toBeInTheDocument();
         });
 
         it('shows a spinner while an import is starting', async () => {
@@ -171,7 +175,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(startButton());
 
             expect(await screen.findByText(/starting import/i)).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /^starting$/i })).toBeInTheDocument();
+            expect(startButton()).toHaveAttribute('aria-disabled', 'true');
+            expect(screen.queryByRole('button', { name: /^starting$/i })).not.toBeInTheDocument();
         });
 
         // All three in-flight states share one visual: the form swaps for a
@@ -197,7 +202,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
             await press(screen.getByRole('button', { name: /^dry run$/i }));
-            await screen.findByRole('button', { name: /^checking$/i });
+            await screen.findByText(/checking with the service/i);
 
             expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
                 'aria-disabled',
