@@ -74,7 +74,17 @@ export function usePackSetupStep(pack: DatapackId | undefined): PackSetupStepVie
         setCheckedFor(`${name}@${version}`);
         runCheck({ datapackName: name, version });
     }, [runCheck, name, version]);
-    const openAdmin = useCallback((): void => webviewClient.postMessage('openAdminPanel', {}), []);
+    // Asked, not posted, so the button can show it is working until the browser has started: two
+    // or three seconds with no response read as a press that did nothing (owner, 2026-10-31). What
+    // went wrong, if anything, the handler says itself (a missing URL offers Configure).
+    const [opening, setOpening] = useState(false);
+    const openAdmin = useCallback((): void => {
+        setOpening(true);
+        webviewClient
+            .request('openAdminPanel', {})
+            .catch(() => undefined)
+            .finally(() => setOpening(false));
+    }, []);
     const show = useCallback((): void => setShowing(true), []);
     const close = useCallback((): void => setShowing(false), []);
 
@@ -89,6 +99,7 @@ export function usePackSetupStep(pack: DatapackId | undefined): PackSetupStepVie
                 checking={check.loading}
                 failure={failure}
                 onCheck={onCheck}
+                openingAdmin={opening}
                 onOpenAdmin={openAdmin}
                 onClose={close}
             />

@@ -30,6 +30,8 @@ export interface PackSetupStepDialogProps {
     /** Why the last Check could not answer, in the SC's words; it decides the banner while shown. */
     failure?: string;
     onCheck: () => void;
+    /** The Admin is being opened: the browser takes a few seconds to start. */
+    openingAdmin?: boolean;
     onOpenAdmin: () => void;
     onClose: () => void;
 }
@@ -41,10 +43,10 @@ function statusOf(item: SetupChecklistItem, failure: string | undefined): StepSt
 }
 
 /** Open the Admin and Check while the step is open; nothing but Close once it is done. */
-function footer({ item, checking, onCheck, onOpenAdmin }: PackSetupStepDialogProps): ActionButton[] {
+function footer({ item, checking, onCheck, openingAdmin, onOpenAdmin }: PackSetupStepDialogProps): ActionButton[] {
     if (item.state === 'done') return [];
     return [
-        { label: 'Open the Admin', variant: 'secondary', onPress: onOpenAdmin },
+        { label: 'Open the Admin', variant: 'secondary', onPress: onOpenAdmin, isPending: openingAdmin },
         { label: 'Check', variant: 'accent', onPress: onCheck, isPending: checking },
     ];
 }

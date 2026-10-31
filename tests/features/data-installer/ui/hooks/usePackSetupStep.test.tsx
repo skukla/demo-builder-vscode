@@ -12,7 +12,7 @@
 
 import '../../../../helpers/webviewClientMock';
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { press, settle } from '../../../../helpers/reactSettle';
 
@@ -26,7 +26,6 @@ import type { DatapackId } from '@/types/datapack';
 import type { HandlerResponse } from '@/types/handlers';
 
 const mockRequest = webviewClient.request as jest.Mock;
-const mockPost = webviewClient.postMessage as jest.Mock;
 const ID: DatapackId = { name: 'zz-test-root-db12', version: 'v1' };
 const STEP: PackRootStep = {
     state: 'open',
@@ -77,7 +76,6 @@ const banner = () => within(dialog()).getByTestId('setup-guide-step-status');
 
 beforeEach(() => {
     mockRequest.mockReset();
-    mockPost.mockReset();
 });
 
 it('shows what the Check found without closing the panel: read without a note, Check answers with one', async () => {
@@ -127,9 +125,27 @@ it("has Open the Admin and Check in the dialog's footer", async () => {
     await press(within(panel()).getByRole('button', { name: 'Show step' }));
 
     await press(screen.getByRole('button', { name: 'Open the Admin' }));
-    expect(mockPost).toHaveBeenCalledWith('openAdminPanel', {});
+    expect(mockRequest).toHaveBeenCalledWith('openAdminPanel', {});
     await press(screen.getByRole('button', { name: 'Check' }));
     expect(mockRequest).toHaveBeenCalledWith('check-datapack-setup-step', { datapackName: ID.name, version: ID.version }, undefined);
+});
+
+// The browser takes two or three seconds to start; until the extension answers, the button
+// shows a spinner rather than nothing (owner, 2026-10-31).
+it('shows Open the Admin as busy until the Admin has opened', async () => {
+    let opened: (value: HandlerResponse) => void = () => undefined;
+    mockRequest.mockImplementation((type: string) => {
+        if (type === 'openAdminPanel') return new Promise<HandlerResponse>((resolve) => { opened = resolve; });
+        return Promise.resolve(answer(STEP));
+    });
+    await renderStep();
+    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+
+    await press(screen.getByRole('button', { name: 'Open the Admin' }));
+    expect(screen.getByRole('button', { name: 'Open the Admin' })).toHaveAttribute('aria-busy', 'true');
+
+    await act(async () => opened({ success: true }));
+    expect(screen.getByRole('button', { name: 'Open the Admin' })).not.toHaveAttribute('aria-busy');
 });
 
 it('a Check that finds it done shows the check mark in the dialog, offers no Check, and leaves a check-marked line in the panel', async () => {
