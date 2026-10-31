@@ -17,6 +17,7 @@ import '@testing-library/jest-dom';
 import { press, settle } from '../../../../helpers/reactSettle';
 
 // Below the mocks on purpose: they hoist above these imports.
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { rootStepItem } from '@/features/data-installer/services/demoBuilderEngine/packRootCheck';
 import type { PackRootStep } from '@/features/data-installer/services/demoBuilderEngine/packRootStep';
@@ -166,6 +167,28 @@ it('shows Open the Admin as busy until the Admin has opened', async () => {
     await press(within(panel()).getByRole('button', { name: 'Show step' }));
 
     await press(screen.getByRole('button', { name: 'Open the Admin' }));
+    expect(screen.getByRole('button', { name: 'Open the Admin' })).toHaveAttribute('aria-busy', 'true');
+
+    // The answer comes once Chrome is launched, before its window shows: still busy until
+    // Chrome's usual start has passed too.
+    await act(async () => opened({ success: true }));
+    expect(screen.getByRole('button', { name: 'Open the Admin' })).toHaveAttribute('aria-busy', 'true');
+
+    await act(async () => { jest.advanceTimersByTime(FRONTEND_TIMEOUTS.BROWSER_START); });
+    expect(screen.getByRole('button', { name: 'Open the Admin' })).not.toHaveAttribute('aria-busy');
+});
+
+it('keeps Open the Admin busy past Chrome\'s usual start while the extension has not answered', async () => {
+    let opened: (value: HandlerResponse) => void = () => undefined;
+    mockRequest.mockImplementation((type: string) => {
+        if (type === 'openAdminPanel') return new Promise<HandlerResponse>((resolve) => { opened = resolve; });
+        return Promise.resolve(answer(STEP));
+    });
+    await renderStep();
+    await press(within(panel()).getByRole('button', { name: 'Show step' }));
+    await press(screen.getByRole('button', { name: 'Open the Admin' }));
+
+    await act(async () => { jest.advanceTimersByTime(FRONTEND_TIMEOUTS.BROWSER_START); });
     expect(screen.getByRole('button', { name: 'Open the Admin' })).toHaveAttribute('aria-busy', 'true');
 
     await act(async () => opened({ success: true }));
