@@ -22,7 +22,6 @@
     "dependencies": { "$ref": "#/definitions/componentSection" },
     "integrations": { "$ref": "#/definitions/componentSection" },
     "addons": { "$ref": "#/definitions/componentSection" },
-    "tools": { "$ref": "#/definitions/componentSection" },
     "services": {
       "type": "object",
       "additionalProperties": { "type": "object" }

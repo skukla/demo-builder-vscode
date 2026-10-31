@@ -1,10 +1,10 @@
 /**
  * Unit Tests: CleanupService
  *
- * Tests for EDS project cleanup orchestration including backend data cleanup,
- * DA.live deletion, and GitHub repository deletion/archiving.
+ * Tests for EDS project cleanup orchestration: DA.live deletion and GitHub
+ * repository deletion/archiving.
  *
- * CRITICAL: Cleanup order MUST be Backend -> Config Service -> DA.live -> GitHub
+ * CRITICAL: Cleanup order MUST be Config Service -> DA.live -> GitHub
  *
  * The Configuration Service half of that order lives in
  * `cleanupService-configService.test.ts`; the shared harness in
@@ -23,7 +23,6 @@ describe('CleanupService', () => {
     let cleanupService: CleanupHarness['cleanupService'];
     let mockGitHubRepoOps: CleanupHarness['githubRepoOps'];
     let mockDaLiveOrgOps: CleanupHarness['daLiveOrgOps'];
-    let mockToolManager: CleanupHarness['toolManager'];
 
     // Track operation order for verifying cleanup sequence
     let operationOrder: string[];
@@ -34,19 +33,17 @@ describe('CleanupService', () => {
         cleanupService = harness.cleanupService;
         mockGitHubRepoOps = harness.githubRepoOps;
         mockDaLiveOrgOps = harness.daLiveOrgOps;
-        mockToolManager = harness.toolManager;
         operationOrder = harness.operationOrder;
     });
 
     // ==========================================================
-    // Cleanup Flow Tests (10 tests)
+    // Cleanup Flow Tests (7 tests)
     // ==========================================================
     describe('Cleanup Flow', () => {
         it('should skip cleanup for non-EDS projects (no EDS metadata)', async () => {
             // Given: Project with no EDS metadata
             const metadata: EdsMetadata = {};
             const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
                 deleteGitHub: true,
                 deleteDaLive: true,
             };
@@ -55,13 +52,10 @@ describe('CleanupService', () => {
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: All operations should be skipped
-            expect(result.backendData.skipped).toBe(true);
             expect(result.daLive.skipped).toBe(true);
             expect(result.github.skipped).toBe(true);
 
             // No actual cleanup should happen
-            expect(mockToolManager.executeAcoCleanup).not.toHaveBeenCalled();
-            expect(mockToolManager.executeCommerceCleanup).not.toHaveBeenCalled();
             expect(mockDaLiveOrgOps.deleteSite).not.toHaveBeenCalled();
             expect(mockGitHubRepoOps.deleteRepository).not.toHaveBeenCalled();
             expect(mockGitHubRepoOps.archiveRepository).not.toHaveBeenCalled();
@@ -73,10 +67,8 @@ describe('CleanupService', () => {
                 githubRepo: 'testuser/my-site',
                 daLiveOrg: 'testorg',
                 daLiveSite: 'my-site',
-                backendType: 'aco',
             };
             const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
                 deleteGitHub: true,
                 deleteDaLive: true,
             };
@@ -85,7 +77,6 @@ describe('CleanupService', () => {
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: All operations should succeed and none report themselves skipped
-            expect(result.backendData).toEqual({ success: true, skipped: false });
             expect(result.daLive).toEqual({ success: true, skipped: false });
             expect(result.github).toEqual({ success: true, skipped: false });
         });
@@ -131,16 +122,14 @@ describe('CleanupService', () => {
             expect(result.github.success).toBe(true);
         });
 
-        it('should cleanup in correct order (Backend -> DA.live -> GitHub)', async () => {
+        it('should cleanup in correct order (DA.live -> GitHub)', async () => {
             // Given: Full EDS metadata
             const metadata: EdsMetadata = {
                 githubRepo: 'testuser/my-site',
                 daLiveOrg: 'testorg',
                 daLiveSite: 'my-site',
-                backendType: 'aco',
             };
             const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
                 deleteGitHub: true,
                 deleteDaLive: true,
             };
@@ -149,68 +138,7 @@ describe('CleanupService', () => {
             await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: Operations should be in correct order
-            expect(operationOrder).toEqual(['backend', 'dalive', 'github']);
-        });
-
-        it('should use ACO cleanup for ACO backend type', async () => {
-            // Given: ACO backend type
-            const metadata: EdsMetadata = {
-                backendType: 'aco',
-            };
-            const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
-            };
-
-            // When: Running cleanup
-            await cleanupService.cleanupEdsResources(metadata, options);
-
-            // Then: Should use ACO cleanup
-            expect(mockToolManager.executeAcoCleanup).toHaveBeenCalled();
-            expect(mockToolManager.executeCommerceCleanup).not.toHaveBeenCalled();
-        });
-
-        it('should use Commerce cleanup for Commerce backend type', async () => {
-            // Given: Commerce backend type
-            const metadata: EdsMetadata = {
-                backendType: 'commerce',
-            };
-            const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
-            };
-
-            // When: Running cleanup
-            await cleanupService.cleanupEdsResources(metadata, options);
-
-            // Then: Should use Commerce cleanup
-            expect(mockToolManager.executeCommerceCleanup).toHaveBeenCalled();
-            expect(mockToolManager.executeAcoCleanup).not.toHaveBeenCalled();
-        });
-
-        it('should continue cleanup even if backend cleanup fails', async () => {
-            // Given: Backend cleanup fails
-            mockToolManager.executeAcoCleanup = jest.fn().mockResolvedValue({
-                success: false,
-                stdout: '',
-                stderr: 'Backend error',
-                error: 'Connection refused',
-                duration: 500,
-            });
-
-            const metadata: EdsMetadata = {
-                githubRepo: 'testuser/my-site',
-                backendType: 'aco',
-            };
-            const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
-                deleteGitHub: true,
-            };
-
-            // When: Running cleanup
-            const result = await cleanupService.cleanupEdsResources(metadata, options);
-
-            // Then: Backend should fail but GitHub should still run
-            expect(result.backendData.success).toBe(false);
-            expect(result.github.success).toBe(true);
+            expect(operationOrder).toEqual(['dalive', 'github']);
         });
 
         it('should skip cleanup for resources with missing metadata', async () => {
@@ -220,7 +148,6 @@ describe('CleanupService', () => {
                 // No DA.live metadata
             };
             const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
                 deleteGitHub: true,
                 deleteDaLive: true,
             };
@@ -229,7 +156,6 @@ describe('CleanupService', () => {
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: Only GitHub should run, others skipped
-            expect(result.backendData.skipped).toBe(true);
             expect(result.daLive.skipped).toBe(true);
             expect(result.github.success).toBe(true);
             expect(result.github.skipped).toBe(false);
@@ -408,80 +334,6 @@ describe('CleanupService', () => {
     });
 
     // ==========================================================
-    // Backend Cleanup Tests (3 tests)
-    // ==========================================================
-    describe('Backend Cleanup', () => {
-        it('should skip backend cleanup when backendType is not set', async () => {
-            // Given: No backend type
-            const metadata: EdsMetadata = {
-                githubRepo: 'testuser/my-site',
-                // backendType not set
-            };
-            const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
-            };
-
-            // When: Running cleanup
-            const result = await cleanupService.cleanupEdsResources(metadata, options);
-
-            // Then: Backend cleanup should be skipped, and a skipped result never claims success
-            expect(result.backendData).toEqual({ success: false, skipped: true });
-            expect(mockToolManager.executeAcoCleanup).not.toHaveBeenCalled();
-            expect(mockToolManager.executeCommerceCleanup).not.toHaveBeenCalled();
-        });
-
-        it('should pass through tool execution errors', async () => {
-            // Given: Tool manager throws
-            mockToolManager.executeAcoCleanup = jest.fn().mockRejectedValue(
-                new Error('Tool not installed'),
-            );
-
-            const metadata: EdsMetadata = {
-                backendType: 'aco',
-            };
-            const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
-            };
-
-            // When: Running cleanup
-            const result = await cleanupService.cleanupEdsResources(metadata, options);
-
-            // Then: Should fail with tool error, marked attempted rather than skipped
-            expect(result.backendData.success).toBe(false);
-            expect(result.backendData.skipped).toBe(false);
-            expect(result.backendData.error).toContain('Tool not installed');
-        });
-
-        it('should handle cleanup result with success: false', async () => {
-            // Given: Cleanup returns success: false
-            mockToolManager.executeCommerceCleanup = jest.fn().mockResolvedValue({
-                success: false,
-                stdout: '',
-                stderr: 'API returned 401',
-                error: 'Unauthorized',
-                duration: 1000,
-            });
-
-            const metadata: EdsMetadata = {
-                backendType: 'commerce',
-            };
-            const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
-            };
-
-            // When: Running cleanup
-            const result = await cleanupService.cleanupEdsResources(metadata, options);
-
-            // Then: Should report the tool's own error verbatim, not skipped
-            expect(result.backendData).toEqual({
-                success: false,
-                skipped: false,
-                error: 'Unauthorized',
-            });
-        });
-    });
-
-    // ==========================================================
     // Error Handling Tests (2 tests)
     // ==========================================================
     describe('Error Handling', () => {
@@ -491,10 +343,8 @@ describe('CleanupService', () => {
                 githubRepo: 'testuser/my-site',
                 daLiveOrg: 'testorg',
                 daLiveSite: 'my-site',
-                backendType: 'aco',
             };
             const options: EdsCleanupOptions = {
-                cleanupBackendData: false,
                 deleteGitHub: false,
                 deleteDaLive: false,
             };
@@ -503,14 +353,12 @@ describe('CleanupService', () => {
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: All should be skipped
-            expect(result.backendData.skipped).toBe(true);
             expect(result.daLive.skipped).toBe(true);
             expect(result.github.skipped).toBe(true);
         });
 
         it('should handle simultaneous failures gracefully', async () => {
             // Given: Multiple services fail
-            mockToolManager.executeAcoCleanup = jest.fn().mockRejectedValue(new Error('Backend failed'));
             mockDaLiveOrgOps.deleteSite = jest.fn().mockRejectedValue(new Error('DA.live failed'));
             mockGitHubRepoOps.deleteRepository = jest.fn().mockRejectedValue(new Error('GitHub failed'));
 
@@ -518,10 +366,8 @@ describe('CleanupService', () => {
                 githubRepo: 'testuser/my-site',
                 daLiveOrg: 'testorg',
                 daLiveSite: 'my-site',
-                backendType: 'aco',
             };
             const options: EdsCleanupOptions = {
-                cleanupBackendData: true,
                 deleteGitHub: true,
                 deleteDaLive: true,
                 archiveInsteadOfDelete: false,
@@ -531,8 +377,6 @@ describe('CleanupService', () => {
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
             // Then: All should have errors but not throw
-            expect(result.backendData.success).toBe(false);
-            expect(result.backendData.error).toContain('Backend failed');
             expect(result.daLive.success).toBe(false);
             expect(result.daLive.error).toContain('DA.live failed');
             expect(result.github.success).toBe(false);

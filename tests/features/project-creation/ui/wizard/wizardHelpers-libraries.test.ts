@@ -384,22 +384,6 @@ describe('buildProjectConfig', () => {
             expect(edit('citisignal')).toMatchObject({ resetSiteContent: false });
         });
 
-        it('should skip the tools install unless the ACO addon was chosen', () => {
-            expect(withEds({})).toMatchObject({ skipTools: true });
-
-            const withAco = buildProjectConfig(
-                {
-                    ...base,
-                    edsConfig: {},
-                    selectedAddons: ['adobe-commerce-aco'],
-                } as unknown as WizardState,
-                null,
-                []
-            );
-
-            expect(withAco.edsConfig).toMatchObject({ skipTools: false });
-        });
-
         it('should hand over the block libraries storefront setup installed, so creation records them', () => {
             const installed: InstalledBlockLibrary[] = [
                 {

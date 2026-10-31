@@ -432,7 +432,6 @@ export interface ProjectCreationConfig {
         githubOwner?: string;
         isPrivate?: boolean;
         skipContent?: boolean;
-        skipTools?: boolean;
         // Template source repo (from frontendSource) for GitHub reset operations
         templateOwner?: string;
         templateRepo?: string;

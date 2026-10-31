@@ -28,20 +28,6 @@ export interface NodeSource {
     ref: string;
 }
 
-/** A source left out on purpose, with the reason the generated file prints. */
-export interface ExcludedNodeSource {
-    id: string;
-    reason: string;
-}
-
-/**
- * Sources read on purpose by nothing. Each names why, and goes when the reason does.
- */
-const EXCLUDED: Record<string, string> = {
-    'commerce-demo-ingestion':
-        'Private repo, unreadable; nothing calls the tool today, and DI-4 decides whether it stays',
-};
-
 /** The parts of a `components.json` git source this reads. */
 interface GitSource {
     url?: string;
@@ -53,7 +39,7 @@ interface GitSource {
 type CatalogEntry = { source?: GitSource | null; [key: string]: unknown };
 
 /** The `components.json` sections that hold installable things. */
-const SECTIONS = ['infrastructure', 'frontends', 'backends', 'mesh', 'dependencies', 'integrations', 'addons', 'tools'] as const;
+const SECTIONS = ['infrastructure', 'frontends', 'backends', 'mesh', 'dependencies', 'integrations', 'addons'] as const;
 
 /** `owner/repo` from a GitHub URL, or undefined for anything else. */
 function githubRepoOf(url: string | undefined): string | undefined {
@@ -71,7 +57,7 @@ function componentSources(): NodeSource[] {
     for (const name of SECTIONS) {
         for (const [id, entry] of Object.entries(sections[name] ?? {})) {
             const repo = githubRepoOf(entry?.source?.url);
-            if (repo && entry.source && !(id in EXCLUDED)) {
+            if (repo && entry.source) {
                 found.push({ id, from: 'github', ref: `${repo}@${refOf(entry.source)}` });
             }
         }
@@ -146,11 +132,6 @@ export async function listNodeSources(): Promise<NodeSource[]> {
     ];
     const seen = new Set<string>();
     return all.filter((source) => !seen.has(source.ref) && seen.add(source.ref));
-}
-
-/** Sources deliberately not read, with why. */
-export function excludedNodeSources(): ExcludedNodeSource[] {
-    return Object.entries(EXCLUDED).map(([id, reason]) => ({ id, reason }));
 }
 
 // The rule itself runs at runtime too (a custom integration's Node), so it lives in core;

@@ -259,21 +259,6 @@
         }
     },
 
-    "tools": {
-        "commerce-demo-ingestion": {
-            "name": "Commerce Demo Ingestion",
-            "description": "Tool for populating ACCS instances with demo data",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/PMET-public/commerce-demo-ingestion",
-                "gitOptions": {
-                    "shallow": true,
-                    "tag": "v1.0.0"
-                }
-            }
-        }
-    },
-
     "services": {
         "catalog-service": {
             "name": "Catalog Service",

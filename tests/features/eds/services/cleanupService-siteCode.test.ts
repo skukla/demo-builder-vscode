@@ -16,7 +16,6 @@ import type { CodeRemovalWiring } from '@/features/eds/services/cleanupService';
 import type { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import type { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { GitHubRepoLifecycle } from '@/features/eds/services/github/githubRepoLifecycle';
-import type { ToolManager } from '@/features/eds/services/toolManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 const METADATA = { githubRepo: 'acme/site', daLiveOrg: 'acme', daLiveSite: 'site' };
@@ -29,7 +28,6 @@ function serviceWith(codeRemoval: CodeRemovalWiring): CleanupService {
     return new CleanupService(
         h.githubRepoOps as unknown as GitHubRepoLifecycle,
         h.daLiveOrgOps as unknown as DaLiveOrgOperations,
-        h.toolManager as unknown as ToolManager,
         codeRemoval,
         createMockLogger(),
         h.configurationService as unknown as ConfigurationService,

@@ -5,9 +5,8 @@
  * `@/core/utils/timeoutConfig` for a service that reads no timeout — measured
  * 2026-09-05, all 36 tests pass without it. Deleted rather than moved.
  *
- * What IS shared is the arrangement every test needs: four collaborator fakes,
- * the order tape that proves cleanup runs Backend -> Config Service -> DA.live ->
- * GitHub, and the two constructions of the subject (with and without a
+ * What IS shared is the arrangement every test needs: three collaborator fakes,
+ * the order tape that proves cleanup runs Config Service -> DA.live -> GitHub, and the two constructions of the subject (with and without a
  * ConfigurationService, since whether one was injected is itself a decision the
  * service makes).
  *
@@ -21,7 +20,6 @@ import { CleanupService, type CodeRemovalWiring } from '@/features/eds/services/
 import type { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import type { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { GitHubRepoLifecycle } from '@/features/eds/services/github/githubRepoLifecycle';
-import type { ToolManager } from '@/features/eds/services/toolManager';
 
 export { CleanupService };
 export type { EdsCleanupOptions, EdsMetadata } from '@/features/eds/services/types';
@@ -30,7 +28,6 @@ export type { EdsCleanupOptions, EdsMetadata } from '@/features/eds/services/typ
 export interface CleanupHarness {
     githubRepoOps: jest.Mocked<Partial<GitHubRepoLifecycle>>;
     daLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
-    toolManager: jest.Mocked<Partial<ToolManager>>;
     configurationService: jest.Mocked<Partial<ConfigurationService>>;
     /**
      * How a deleted repository's code would be removed (EDS-67). Its file list is empty,
@@ -73,17 +70,6 @@ export function setupCleanupHarness(): CleanupHarness {
         }),
     };
 
-    const toolManager: jest.Mocked<Partial<ToolManager>> = {
-        executeAcoCleanup: jest.fn().mockImplementation(async () => {
-            operationOrder.push('backend');
-            return { success: true, stdout: 'Cleanup complete', stderr: '', duration: 1000 };
-        }),
-        executeCommerceCleanup: jest.fn().mockImplementation(async () => {
-            operationOrder.push('backend');
-            return { success: true, stdout: 'Cleanup complete', stderr: '', duration: 1000 };
-        }),
-    };
-
     const configurationService: jest.Mocked<Partial<ConfigurationService>> = {
         deleteSiteConfig: jest.fn().mockImplementation(async () => {
             operationOrder.push('configService');
@@ -97,7 +83,6 @@ export function setupCleanupHarness(): CleanupHarness {
         codeRemoval,
         githubRepoOps,
         daLiveOrgOps,
-        toolManager,
         configurationService,
         operationOrder,
         cleanupService: buildService(),
@@ -111,7 +96,6 @@ export function setupCleanupHarness(): CleanupHarness {
         return new CleanupService(
             githubRepoOps as unknown as GitHubRepoLifecycle,
             daLiveOrgOps as unknown as DaLiveOrgOperations,
-            toolManager as unknown as ToolManager,
             codeRemoval,
             undefined,
             injected,

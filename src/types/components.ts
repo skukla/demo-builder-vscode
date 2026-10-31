@@ -242,8 +242,6 @@ export interface RawComponentRegistry {
     infrastructure?: Record<string, RawComponentDefinition>;
     /** Optional addons (e.g., adobe-commerce-aco) — read by configGenerator and the MCP discovery sections */
     addons?: Record<string, RawComponentDefinition>;
-    /** v3.0.0: Tools (standalone CLI tools) */
-    tools?: Record<string, RawComponentDefinition>;
     services?: Record<string, ServiceDefinition>;
     envVars?: Record<string, Omit<EnvVarDefinition, 'key'>>;
 }

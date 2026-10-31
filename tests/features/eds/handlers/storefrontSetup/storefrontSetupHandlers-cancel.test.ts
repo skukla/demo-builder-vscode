@@ -40,15 +40,6 @@ jest.mock('@/features/eds/services/configService/configurationService', () => ({
     },
 }));
 
-const mockToolManagerCtor = jest.fn();
-jest.mock('@/features/eds/services/toolManager', () => ({
-    ToolManager: class {
-        constructor(...args: unknown[]) {
-            mockToolManagerCtor(...args);
-        }
-    },
-}));
-
 const mockDaLiveOrgOperationsCtor = jest.fn();
 jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     DaLiveOrgOperations: class {
@@ -77,11 +68,6 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn(),
     resolveByomOverlayConfig: jest.fn(),
     explainAbsentOverlay: jest.fn(),
-}));
-
-const COMMAND_EXECUTOR = { kind: 'command-executor' };
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: { getCommandExecutor: jest.fn(() => COMMAND_EXECUTOR) },
 }));
 
 // =============================================================================
@@ -114,7 +100,7 @@ const CONFIRM = 'Yes, Cancel';
 /** Every operation succeeded and none was skipped — the ordinary cleanup answer. */
 function cleanupSucceeded(): EdsCleanupResult {
     const ok = { success: true, skipped: false };
-    return { backendData: ok, configService: ok, daLive: ok, github: ok, siteCode: ok };
+    return { configService: ok, daLive: ok, github: ok, siteCode: ok };
 }
 
 const AUTH_MANAGER = createMockAuthenticationService();
@@ -426,12 +412,10 @@ describe('the cleanup service cancel builds', () => {
             DA_LIVE_TOKEN_PROVIDER,
             context.logger
         );
-        expect(mockToolManagerCtor).toHaveBeenCalledWith(COMMAND_EXECUTOR, context.logger);
         // The repository's files, read before it is deleted, and the DA.live sign-in
         // that removes its code from aem.live after (EDS-67).
         expect(mockCleanupServiceCtor).toHaveBeenCalledWith(
             REPO_OPERATIONS,
-            expect.any(Object),
             expect.any(Object),
             { files: FILE_OPERATIONS, tokenProvider: DA_LIVE_TOKEN_PROVIDER },
             context.logger,

@@ -26,7 +26,7 @@
         "src/core/vscode/operationPrompt.ts:136": "Gates: sign in (or answer another question the work needs) before an agent's call can go on. Modal like the agent's consent dialogs, so a question an agent asks is never a corner notification (owner, 2026-09-21).",
         "src/features/eds/commands/cleanupDaLiveSites.ts:172": "Gates: delete these DA.live sites? Named in the detail: the pages come off the live site and the content does not come back.",
         "src/features/eds/commands/manageGitHubRepos.ts:263": "Gates: delete these GitHub repositories? Named in the detail, and they do not come back.",
-        "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts:95": "Gates: cancel setup, knowing the GitHub repo and DA.live content created so far will be deleted? The cost of stopping is not obvious without asking.",
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts:93": "Gates: cancel setup, knowing the GitHub repo and DA.live content created so far will be deleted? The cost of stopping is not obvious without asking.",
         "src/features/lifecycle/services/projectResetService.ts:421": "Gates: delete the components and reinstall them from scratch? Configuration and integrations survive, the rest does not.",
         "src/features/ai/server/agentOperationNotifier.ts:170": "Gates: let the agent run this tool? A cloud write an agent proposes is confirmed by a person before it happens.",
         "src/features/project-creation/handlers/executorEditApply.ts:229": "Gates: an Edit that changes the package resets the storefront to it. Its code and content are replaced; asked before anything in the Edit runs (PL-75).",

@@ -4,7 +4,7 @@
  * The rule itself is tested in tests/core/shell/nodeRangeRule.test.ts.
  */
 
-import { excludedNodeSources, listNodeSources } from '@/features/components/services/nodeResolution';
+import { listNodeSources } from '@/features/components/services/nodeResolution';
 
 describe('listNodeSources: where the ranges are read', () => {
     let refs: () => string[];
@@ -43,11 +43,6 @@ describe('listNodeSources: where the ranges are read', () => {
             '@adobe/aio-cli-plugin-api-mesh@latest',
             '@dropins/ai-tools@^1.0.0',
         ]));
-    });
-
-    it('leaves the unreadable ingestion tool out, and says why', () => {
-        expect(refs().some((r) => r.includes('commerce-demo-ingestion'))).toBe(false);
-        expect(excludedNodeSources().map((e) => e.id)).toStrictEqual(['commerce-demo-ingestion']);
     });
 
     it('lists each ref once', () => {

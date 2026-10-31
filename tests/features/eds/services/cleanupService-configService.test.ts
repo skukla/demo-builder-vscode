@@ -18,7 +18,6 @@ describe('CleanupService', () => {
     let cleanupService: CleanupHarness['cleanupService'];
     let mockGitHubRepoOps: CleanupHarness['githubRepoOps'];
     let mockDaLiveOrgOps: CleanupHarness['daLiveOrgOps'];
-    let mockToolManager: CleanupHarness['toolManager'];
     let mockConfigurationService: CleanupHarness['configurationService'];
     let withConfigService: CleanupHarness['withConfigService'];
 
@@ -31,7 +30,6 @@ describe('CleanupService', () => {
         cleanupService = harness.cleanupService;
         mockGitHubRepoOps = harness.githubRepoOps;
         mockDaLiveOrgOps = harness.daLiveOrgOps;
-        mockToolManager = harness.toolManager;
         mockConfigurationService = harness.configurationService;
         withConfigService = harness.withConfigService;
         operationOrder = harness.operationOrder;
@@ -186,7 +184,7 @@ describe('CleanupService', () => {
             });
         });
 
-        it('should run after backend cleanup and before DA.live and GitHub', async () => {
+        it('should run before DA.live and GitHub', async () => {
             // Given: Every resource present and every option enabled
             const service = withConfigService();
 
@@ -196,18 +194,16 @@ describe('CleanupService', () => {
                     githubRepo: 'testuser/my-site',
                     daLiveOrg: 'testorg',
                     daLiveSite: 'my-site',
-                    backendType: 'aco',
                 },
                 {
-                    cleanupBackendData: true,
                     deleteConfigService: true,
                     deleteDaLive: true,
                     deleteGitHub: true,
                 },
             );
 
-            // Then: Config Service deletion sits between backend and DA.live
-            expect(operationOrder).toEqual(['backend', 'configService', 'dalive', 'github']);
+            // Then: Config Service deletion comes first, then DA.live, then GitHub
+            expect(operationOrder).toEqual(['configService', 'dalive', 'github']);
         });
     });
 
@@ -230,29 +226,6 @@ describe('CleanupService', () => {
                 success: false,
                 skipped: false,
                 error: 'DA.live deletion failed',
-            });
-        });
-
-        it('should fall back to a generic message when backend cleanup reports no error', async () => {
-            // Given: The backend tool fails without an error string
-            mockToolManager.executeCommerceCleanup = jest.fn().mockResolvedValue({
-                success: false,
-                stdout: '',
-                stderr: '',
-                duration: 10,
-            });
-
-            // When: Cleaning up backend data
-            const result = await cleanupService.cleanupEdsResources(
-                { backendType: 'commerce' },
-                { cleanupBackendData: true },
-            );
-
-            // Then: A generic message stands in
-            expect(result.backendData).toEqual({
-                success: false,
-                skipped: false,
-                error: 'Backend cleanup failed',
             });
         });
 

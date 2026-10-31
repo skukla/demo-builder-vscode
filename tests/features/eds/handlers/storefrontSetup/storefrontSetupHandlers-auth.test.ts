@@ -63,7 +63,6 @@ jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
 jest.mock('@/features/eds/services/daLive/daLiveOrgOperations');
 jest.mock('@/features/eds/services/github/githubRepoOperations');
 jest.mock('@/features/eds/services/github/githubTokenService');
-jest.mock('@/features/eds/services/toolManager');
 
 // =============================================================================
 // Imports (after mocks)

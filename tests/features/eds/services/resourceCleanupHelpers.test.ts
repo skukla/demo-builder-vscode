@@ -50,7 +50,6 @@ describe('extractEdsMetadata', () => {
                     githubRepo: 'owner/repo',
                     daLiveOrg: 'test-org',
                     daLiveSite: 'test-site',
-                    backendType: 'commerce',
                 }),
             },
         });
@@ -61,7 +60,6 @@ describe('extractEdsMetadata', () => {
             githubRepo: 'owner/repo',
             daLiveOrg: 'test-org',
             daLiveSite: 'test-site',
-            backendType: 'commerce',
         });
     });
 
@@ -85,7 +83,6 @@ describe('extractEdsMetadata', () => {
             // repo name, so an absent field means "same as the repo" — without
             // this, deleting a migrated project skipped the DA site cleanup.
             daLiveSite: 'repo',
-            backendType: undefined,
         });
     });
 
@@ -127,23 +124,7 @@ describe('extractEdsMetadata', () => {
             githubRepo: undefined,
             daLiveOrg: undefined,
             daLiveSite: undefined,
-            backendType: undefined,
         });
-    });
-
-    it('should correctly extract ACO backend type', () => {
-        const project = createMockProject({
-            componentInstances: {
-                [COMPONENT_IDS.EDS_STOREFRONT]: createEdsComponentInstance({
-                    githubRepo: 'owner/repo',
-                    backendType: 'aco',
-                }),
-            },
-        });
-
-        const metadata = extractEdsMetadata(project);
-
-        expect(metadata?.backendType).toBe('aco');
     });
 });
 
@@ -204,7 +185,6 @@ describe('getLinkedEdsProjects', () => {
                 githubRepo: 'owner/repo1',
                 daLiveOrg: 'org1',
                 daLiveSite: 'site1',
-                backendType: undefined,
             },
         });
     });
@@ -338,14 +318,14 @@ describe('formatCleanupResults', () => {
     it('should format skipped results', () => {
         const results: CleanupResultItem[] = [
             { type: 'github', name: 'owner/repo', success: true },
-            { type: 'backend', name: 'commerce', success: false, skipped: true },
+            { type: 'datapack', name: 'citisignal', success: false, skipped: true },
         ];
 
         const formatted = formatCleanupResults(results);
 
         expect(formatted).toContain('✓ Cleaned up:');
         expect(formatted).toContain('○ Skipped:');
-        expect(formatted).toContain('Backend data');
+        expect(formatted).toContain('Datapack');
     });
 
     it('should handle empty results', () => {
@@ -363,13 +343,13 @@ describe('formatCleanupResults', () => {
         const results: CleanupResultItem[] = [
             { type: 'github', name: 'owner/repo', success: true },
             { type: 'daLive', name: 'org/site', success: false, error: 'Access denied' },
-            { type: 'backend', name: 'commerce', success: false, skipped: true },
+            { type: 'datapack', name: 'citisignal', success: false, skipped: true },
         ];
 
         expect(formatCleanupResults(results)).toBe(
             '\u2713 Cleaned up: GitHub repo (owner/repo)\n' +
                 '\u2717 Failed: DA.live site (org/site) - Access denied\n' +
-                '\u25cb Skipped: Backend data (commerce)'
+                '\u25cb Skipped: Datapack (citisignal)'
         );
     });
 
@@ -456,7 +436,7 @@ describe('summarizeCleanupResults', () => {
     it('should count skipped separately from failures', () => {
         const results: CleanupResultItem[] = [
             { type: 'github', name: 'owner/repo', success: true },
-            { type: 'backend', name: 'commerce', success: false, skipped: true },
+            { type: 'datapack', name: 'citisignal', success: false, skipped: true },
         ];
 
         const summary = summarizeCleanupResults(results);

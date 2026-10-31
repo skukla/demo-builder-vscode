@@ -556,7 +556,6 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
         githubOwner: eds.githubOwner || eds.githubAuth?.user?.login || '',
         isPrivate: eds.selectedRepo?.isPrivate,
         skipContent: eds.skipContent,
-        skipTools: !wizardState.selectedAddons?.includes('adobe-commerce-aco'),
         resetSiteContent: replacesSiteContent(wizardState),
         // The whole storefront-derived slice, from the one list (step 05 closed
         // the half-list that used to live here).
