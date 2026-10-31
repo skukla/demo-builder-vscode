@@ -209,6 +209,54 @@ describe('ensureAdobeIOAuth', () => {
         }
     });
 
+    it('still signs in when "Sign In" is pressed after the wait ended, without resuming the operation (2026-10-31)', async () => {
+        // The dialog cannot be taken down from code, so it outlives the wait. The
+        // owner pressed it seven hours on and nothing happened.
+        jest.useFakeTimers();
+        try {
+            const authManager = createMockAuthManager({
+                isAuthenticated: jest.fn().mockResolvedValue(false),
+            });
+            let answer: (choice: string) => void = () => undefined;
+            (vscode.window.showWarningMessage as jest.Mock).mockReturnValue(
+                new Promise((resolve) => { answer = resolve; })
+            );
+
+            const pending = ensureAdobeIOAuth({ authManager, logger: mockLogger });
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.LONG);
+            expect(await pending).toEqual({ authenticated: false, cancelled: true });
+            expect(authManager.loginAndRestoreProjectContext).not.toHaveBeenCalled();
+
+            answer('Sign In');
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(authManager.loginAndRestoreProjectContext).toHaveBeenCalledWith({});
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    it('a late Cancel after the wait ended signs nothing in', async () => {
+        jest.useFakeTimers();
+        try {
+            const authManager = createMockAuthManager();
+            let answer: (choice: string | undefined) => void = () => undefined;
+            (vscode.window.showWarningMessage as jest.Mock).mockReturnValue(
+                new Promise((resolve) => { answer = resolve; })
+            );
+
+            const pending = ensureAdobeIOAuth({ authManager, logger: mockLogger });
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.LONG);
+            await pending;
+            answer(undefined);
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(authManager.loginAndRestoreProjectContext).not.toHaveBeenCalled();
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
     // =========================================================================
     // Custom Options
     // =========================================================================

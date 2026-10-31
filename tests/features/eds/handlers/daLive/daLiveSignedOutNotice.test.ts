@@ -1,6 +1,6 @@
 /**
  * Where the SC is told that a forced Adobe sign-in also signed them out of DA.live:
- * the agent's result when its `sign_in` collects, otherwise a notification with the
+ * the agent's result when its `sign_in` collects, otherwise a VS Code modal with the
  * existing DA.live sign-in (plus the chat narration under an agent call).
  */
 const mockShowWarningMessage = jest.fn();
@@ -39,13 +39,17 @@ describe('tellDaLiveSignedOut', () => {
         mockShowWarningMessage.mockResolvedValue(undefined);
     });
 
-    it('at a button: a notification whose button opens the existing DA.live sign-in', async () => {
+    it('at a button: a modal whose button opens the existing DA.live sign-in', async () => {
         mockShowWarningMessage.mockResolvedValue(SIGN_IN_TO_DA_LIVE);
 
         tellDaLiveSignedOut(MESSAGE);
         await flush();
 
-        expect(mockShowWarningMessage).toHaveBeenCalledWith(MESSAGE, 'Sign in to DA.live');
+        expect(mockShowWarningMessage).toHaveBeenCalledWith(
+            'Signed out of DA.live',
+            { modal: true, detail: MESSAGE },
+            'Sign in to DA.live',
+        );
         expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.signInDaLive');
     });
 
@@ -62,14 +66,18 @@ describe('tellDaLiveSignedOut', () => {
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
     });
 
-    it('under any other agent call: said in the chat narration, and the notification too', async () => {
+    it('under any other agent call: said in the chat narration, and the modal too', async () => {
         const phases: string[] = [];
         await runWithCallTag(7, () =>
             withPhaseSinks([(line) => phases.push(line)], async () => tellDaLiveSignedOut(MESSAGE)),
         );
 
         expect(phases).toStrictEqual([MESSAGE]);
-        expect(mockShowWarningMessage).toHaveBeenCalledWith(MESSAGE, SIGN_IN_TO_DA_LIVE);
+        expect(mockShowWarningMessage).toHaveBeenCalledWith(
+            'Signed out of DA.live',
+            { modal: true, detail: MESSAGE },
+            SIGN_IN_TO_DA_LIVE,
+        );
     });
 });
 
@@ -93,7 +101,11 @@ describe('registerDaLiveForcedSignInWatch', () => {
         const after = await registered!();
         await after();
 
-        expect(mockShowWarningMessage).toHaveBeenCalledWith(MESSAGE, SIGN_IN_TO_DA_LIVE);
+        expect(mockShowWarningMessage).toHaveBeenCalledWith(
+            'Signed out of DA.live',
+            { modal: true, detail: MESSAGE },
+            SIGN_IN_TO_DA_LIVE,
+        );
         handle.dispose();
         expect(dispose).toHaveBeenCalledTimes(1);
     });

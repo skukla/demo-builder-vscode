@@ -244,8 +244,8 @@ describe('showDaLiveAuthQuickPick', () => {
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-                expect.stringContaining('token from DA.live'),
-                expect.anything(),
+                'Sign in to DA.live',
+                expect.objectContaining({ modal: true, detail: expect.stringContaining('token from DA.live') }),
                 'Open DA.live',
                 'I have my token'
             );
@@ -286,7 +286,7 @@ describe('showDaLiveAuthQuickPick', () => {
             // Two info messages total: initial choice + post-browser paste gate.
             const infoCalls = (vscode.window.showInformationMessage as jest.Mock).mock.calls;
             expect(infoCalls).toHaveLength(2);
-            expect(infoCalls[1][0]).toEqual(expect.stringContaining('bookmarklet'));
+            expect(infoCalls[1][1]).toEqual(expect.objectContaining({ detail: expect.stringContaining('bookmarklet') }));
             expect(infoCalls[1]).toContain('Continue');
         });
 

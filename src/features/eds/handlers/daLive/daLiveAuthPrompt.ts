@@ -136,13 +136,15 @@ function promptForToken(): Thenable<string | undefined> {
 /**
  * Offer the trip to da.live, and wait until the user says they hold a token.
  *
- * The second notification is load-bearing, not a courtesy. Without it the
- * input box opens the moment the browser does — but the user is away doing
- * OAuth, and when they return the dashboard webview owns the visual centre and
- * the input strip at top-of-window is easy to miss. A bottom-right notification
- * with a button is something they can actually find.
+ * Both questions are VS Code modals with a heading, like every other sign-in
+ * question (owner, 2026-10-31: the corner notifications read as the old flow).
+ * A modal blocks only the VS Code window, and the SC is in the browser while it
+ * waits, so it costs nothing and is still there, centred, when they come back.
  *
- * It now gates more than an input box: `readTokenFromClipboard` runs after this
+ * The second question is load-bearing, not a courtesy. Without it the input box
+ * opens the moment the browser does, while the user is away doing OAuth.
+ *
+ * It also gates more than an input box: `readTokenFromClipboard` runs after this
  * returns, so this click is also the user's consent to read the clipboard.
  * Nothing here or before it touches the clipboard.
  *
@@ -151,8 +153,8 @@ function promptForToken(): Thenable<string | undefined> {
  */
 async function confirmTokenReady(context: DaLiveAuthContext): Promise<boolean> {
     const openDaLiveChoice = await vscode.window.showInformationMessage(
-        'You\'ll need a token from DA.live. Click "Open DA.live" to get one, or continue if you already have it.',
-        { modal: false },
+        'Sign in to DA.live',
+        { modal: true, detail: 'You need a token from DA.live. Open DA.live to get one, or carry on if you already have it.' },
         'Open DA.live',
         'I have my token',
     );
@@ -171,8 +173,8 @@ async function confirmTokenReady(context: DaLiveAuthContext): Promise<boolean> {
     await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
 
     const pasteChoice = await vscode.window.showInformationMessage(
-        'Run the DA.live bookmarklet to copy your token, then click Continue.',
-        { modal: false },
+        'Copy your DA.live token',
+        { modal: true, detail: 'On da.live, run the bookmarklet to copy your token, then click Continue.' },
         'Continue',
     );
     if (pasteChoice !== 'Continue') {

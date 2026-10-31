@@ -5,10 +5,11 @@
  * - An agent's `sign_in` collects it into its result (`signInNotices`): the agent says
  *   it and offers the DA.live sign-in. No dialog.
  * - Any other agent call says it in the chat narration (`reportPhase`), and the window
- *   shows the notification below too, because the person is the one who signed in.
- * - A button press gets a notification with the existing DA.live sign-in
- *   (`demoBuilder.signInDaLive`). Not modal, and never awaited: the forced sign-in
- *   succeeded, and whatever it was for carries on.
+ *   shows the dialog below too, because the person is the one who signed in.
+ * - A button press gets a VS Code modal with the existing DA.live sign-in
+ *   (`demoBuilder.signInDaLive`), like every other sign-in question (owner,
+ *   2026-10-31). Never awaited: the forced sign-in succeeded, and whatever it was for
+ *   carries on behind the dialog.
  *
  * Every forced path is covered by one registration, because every forced sign-in
  * runs through `runAdobeLogin` (`AuthenticationService.watchForcedSignIns`): the
@@ -26,8 +27,11 @@ import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import type { ForcedSignInWatch } from '@/features/authentication/services/adobeSignIn';
 import { createDaLiveForcedSignInWatch } from '@/features/eds/services/daLive/daLiveForcedSignInWatch';
 
-/** The notification's button: the existing DA.live sign-in. */
+/** The dialog's button: the existing DA.live sign-in. */
 export const SIGN_IN_TO_DA_LIVE = 'Sign in to DA.live';
+
+/** The dialog's heading; the sentence sits under it. */
+const SIGNED_OUT_TITLE = 'Signed out of DA.live';
 
 /**
  * Say it to the SC, on the surface the sign-in came from.
@@ -37,7 +41,8 @@ export const SIGN_IN_TO_DA_LIVE = 'Sign in to DA.live';
 export function tellDaLiveSignedOut(message: string): void {
     if (reportSignInNotice(message)) return;
     if (currentCallTag() !== undefined) reportPhase(message);
-    void Promise.resolve(vscode.window.showWarningMessage(message, SIGN_IN_TO_DA_LIVE)).then((choice) => {
+    const asked = vscode.window.showWarningMessage(SIGNED_OUT_TITLE, { modal: true, detail: message }, SIGN_IN_TO_DA_LIVE);
+    void Promise.resolve(asked).then((choice) => {
         if (choice === SIGN_IN_TO_DA_LIVE) void vscode.commands.executeCommand('demoBuilder.signInDaLive');
     });
 }

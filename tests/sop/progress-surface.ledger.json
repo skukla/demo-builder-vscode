@@ -13,7 +13,7 @@
         "src/features/eds/commands/cleanupDaLiveSites.ts:78": "Palette command, reading the site list before anything is chosen. This is the load, not the work.",
         "src/features/eds/commands/manageGitHubRepos.ts:274": "The repository deletion itself, from the palette. One notification is the right surface.",
         "src/features/eds/commands/manageGitHubRepos.ts:185": "Palette command, loading the repository list before anything is chosen.",
-        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:271": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
+        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:273": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
         "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts:102": "Runs when a VS Code setting changes, so there is no screen and no agent \u2014 a notification is the only surface available.",
         "src/commands/commandManager.ts:467": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
     },
@@ -44,6 +44,9 @@
         "src/features/dashboard/handlers/destinationHandlers.ts:315": "Gates: move the project to another Adobe project, which removes each integration with a workspace of its own from the old one (uninstalled from Commerce, workspace deleted). An Edit asks this before anything runs.",
         "src/features/projects-dashboard/services/deletionConfirmation.ts:41": "Gates: delete a project's files and configuration from this computer. Cannot be undone.",
         "src/features/project-creation/commands/createProject.ts:426": "Gates: throw away the changes made in this Edit and open project configuration? Asked only when the Edit has changes; leaving for Configure would discard them.",
-        "src/features/dashboard/handlers/statusHandlers.ts:56": "Gates: sign in to Adobe now, which opens the browser? Asked once per expiry when the dashboard finds the sign-in expired; a no opens nothing (owner, 2026-10-17)."
+        "src/features/dashboard/handlers/statusHandlers.ts:56": "Gates: sign in to Adobe now, which opens the browser? Asked once per expiry when the dashboard finds the sign-in expired; a no opens nothing (owner, 2026-10-17).",
+        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:157": "Gates: start a DA.live sign-in the SC asked for, by getting a token from da.live or carrying on with one already copied. A modal so it sits centred while they are in the browser (owner, 2026-10-31).",
+        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:177": "Gates: read the clipboard once the SC has copied their DA.live token in the browser. Still there, centred, when they come back.",
+        "src/features/eds/handlers/daLive/daLiveSignedOutNotice.ts:44": "Gates: sign in to DA.live again, now that signing in to Adobe again signed the SC out of it. Never awaited, so the work it interrupted carries on behind it (owner, 2026-10-31)."
     }
 }

@@ -325,8 +325,8 @@ describe('ensureDaLiveAuth', () => {
         // Then: showInformationMessage should have been called (first step of QuickPick)
         // Called twice: once for ensureDaLiveAuth warning, once for QuickPick info message
         expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-            expect.stringContaining('token from DA.live'),
-            expect.anything(),
+            'Sign in to DA.live',
+            expect.objectContaining({ modal: true, detail: expect.stringContaining('token from DA.live') }),
             'Open DA.live',
             'I have my token'
         );

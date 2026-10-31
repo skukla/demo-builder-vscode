@@ -4,9 +4,9 @@
  *
  * Two of these are load-bearing in a way the copy does not show:
  *
- *   - `{ modal: false }` on both info messages. A modal blocks the whole VS
- *     Code window, and the entire point of the first one is that the SC leaves
- *     for the browser, runs the bookmarklet and comes back.
+ *   - both info messages are MODALS with a heading (owner, 2026-10-31: the
+ *     corner notifications read as the old flow). A modal blocks only the VS
+ *     Code window, and the SC is in the browser while it waits.
  *   - the second message is the consent gate for reading the clipboard.
  *     Nothing before it touches the clipboard, so backing out here must end
  *     the flow rather than fall through to a clipboard read.
@@ -15,7 +15,7 @@
  * harness records: each suite drives a different script.
  */
 
-let showInfoMessageCalls: Array<[string, { modal?: boolean }, ...string[]]> = [];
+let showInfoMessageCalls: Array<[string, { modal?: boolean; detail?: string }, ...string[]]> = [];
 let showInfoMessageResponses: Array<string | undefined> = [];
 let showInfoMessageIndex = 0;
 let withProgressOptions: Array<{ location?: number; title?: string; cancellable?: boolean }> = [];
@@ -82,12 +82,15 @@ beforeEach(() => {
 });
 
 describe('the "get a token" gate', () => {
-    it('opens non-modally, so the SC can leave for the browser', async () => {
+    it('is a modal headed "Sign in to DA.live", with the sentence under it', async () => {
         showInfoMessageResponses = [undefined];
 
         await showDaLiveAuthQuickPick(createAuthPromptContext());
 
-        expect(showInfoMessageCalls[0][1]).toEqual({ modal: false });
+        const [title, options, ...actions] = showInfoMessageCalls[0];
+        expect(title).toBe('Sign in to DA.live');
+        expect(options).toEqual({ modal: true, detail: expect.stringContaining('token from DA.live') });
+        expect(actions).toEqual(['Open DA.live', 'I have my token']);
     });
 
     it('ends the flow when the SC dismisses it, without reaching for the clipboard', async () => {
@@ -114,12 +117,14 @@ describe('the "get a token" gate', () => {
 });
 
 describe('the post-browser "Continue" gate', () => {
-    it('also opens non-modally', async () => {
+    it('is a modal too, still there when the SC comes back from the browser', async () => {
         showInfoMessageResponses = ['Open DA.live', undefined];
 
         await showDaLiveAuthQuickPick(createAuthPromptContext());
 
-        expect(showInfoMessageCalls[1][1]).toEqual({ modal: false });
+        const [title, options] = showInfoMessageCalls[1];
+        expect(title).toBe('Copy your DA.live token');
+        expect(options).toEqual({ modal: true, detail: expect.stringContaining('bookmarklet') });
     });
 
     it('ends the flow when the SC backs out after the browser trip', async () => {
