@@ -60,9 +60,11 @@ export function PackSetupStepDialog(props: PackSetupStepDialogProps): React.JSX.
     const status = statusOf(item, checking ? undefined : failure);
     return (
         <DialogContainer onDismiss={onClose}>
-            <Modal title="One step in the Admin" fitContent onClose={onClose} actionButtons={footer(props)}>
+            {/* The step's own title is the dialog's: "One step in the Admin" over it was a second
+                heading saying the same (owner, 2026-10-31). */}
+            <Modal title={item.title} fitContent onClose={onClose} actionButtons={footer(props)}>
                 <div className="setup-guide-step" data-testid="pack-setup-step-dialog">
-                    <SetupStepHeader item={item} status={status} busy={checking} />
+                    <SetupStepHeader item={item} status={status} busy={checking} hideTitle />
                     <SetupStepFacts item={item} />
                 </div>
             </Modal>

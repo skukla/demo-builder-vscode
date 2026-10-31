@@ -113,7 +113,9 @@ it('puts one quiet line in the panel, and the step itself in the dialog Show ste
 
     await press(within(panel()).getByRole('button', { name: 'Show step' }));
 
-    expect(within(dialog()).getByText("Show ZZ Root DB12's categories on the storefront")).toBeInTheDocument();
+    // The step's title IS the dialog's title, once: no "One step in the Admin" over a second heading.
+    expect(within(dialog()).getAllByText("Show ZZ Root DB12's categories on the storefront")).toHaveLength(1);
+    expect(within(dialog()).queryByText('One step in the Admin')).not.toBeInTheDocument();
     expect(within(dialog()).getByLabelText('Stores > All Stores > Justrite Test Store')).toBeInTheDocument();
     expect(within(dialog()).getByText('Root Category: ZZ Root DB12')).toBeInTheDocument();
     expect(within(dialog()).getByText(/shares its root category with another store/)).toBeInTheDocument();

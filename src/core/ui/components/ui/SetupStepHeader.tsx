@@ -101,6 +101,11 @@ export interface SetupStepHeaderProps {
      * spinner, so the place the answer will land is what visibly refreshes (owner, 2026-10-31).
      */
     busy?: boolean;
+    /**
+     * Leave the step's title out, for a dialog showing this one step, whose own title it already
+     * is: two headings in a row read as busy (owner, 2026-10-31).
+     */
+    hideTitle?: boolean;
 }
 
 /**
@@ -108,14 +113,16 @@ export interface SetupStepHeaderProps {
  * one short sentence at most (owner, 2026-10-26: "draw attention using existing banner methods
  * but keep text simple and concise").
  */
-export function SetupStepHeader({ item, status, plan, busy = false }: SetupStepHeaderProps): React.ReactElement {
+export function SetupStepHeader({ item, status, plan, busy = false, hideTitle = false }: SetupStepHeaderProps): React.ReactElement {
     return (
         <div className="setup-guide-step-head">
-            <div className="setup-guide-step-title">
-                <Heading level={3}>{item.title}</Heading>
-                {/* Only some demos need this step, so it is not counted as left to do (`isLeftToDo`). */}
-                {item.optional && <Badge variant="neutral">Optional</Badge>}
-            </div>
+            {hideTitle ? null : (
+                <div className="setup-guide-step-title">
+                    <Heading level={3}>{item.title}</Heading>
+                    {/* Only some demos need this step, so it is not counted as left to do (`isLeftToDo`). */}
+                    {item.optional && <Badge variant="neutral">Optional</Badge>}
+                </div>
+            )}
             <div className={cn('setup-guide-step-status', busy && 'is-busy')} aria-busy={busy || undefined}>
                 <InlineNotice tone={busy ? 'info' : status.tone} title={status.label} testId="setup-guide-step-status">
                     {plan ?? status.line ?? BLANK_LINE}
