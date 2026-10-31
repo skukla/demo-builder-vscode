@@ -224,6 +224,25 @@ describe('signInAdobe', () => {
         });
     });
 
+    // A modal with a heading and no Cancel of its own: VS Code adds one, and a second
+    // read as a different choice (owner, 2026-10-31).
+    it('asks in a modal, saying how long the sign-in lasts and what signing in again costs', async () => {
+        const h = harness();
+        mockGetTokenStatus.mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 90 });
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
+
+        await h.handlerFor('demoBuilder.signInAdobe')();
+
+        const [title, options, ...actions] = (vscode.window.showInformationMessage as jest.Mock).mock.calls[0];
+        expect(title).toBe('Already signed in to Adobe');
+        expect(options).toEqual({
+            modal: true,
+            detail: expect.stringMatching(/lasts about .+ more\. Signing in again can also sign you out of DA\.live\./),
+        });
+        expect(actions).toEqual(['Sign in again']);
+        expect(mockLogin).not.toHaveBeenCalled();
+    });
+
     // The expiry is only offered when the status carries one. A missing value
     // would otherwise render as the word "undefined" in a prompt.
     it('omits the expiry when the status does not report one', async () => {
@@ -233,9 +252,10 @@ describe('signInAdobe', () => {
 
         await h.handlerFor('demoBuilder.signInAdobe')();
 
-        expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]).toBe(
-            'Already signed in to Adobe.'
-        );
+        expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0][1]).toEqual({
+            modal: true,
+            detail: 'Signing in again can also sign you out of DA.live.',
+        });
     });
 });
 
@@ -503,9 +523,11 @@ describe('signInGitHub', () => {
 
         await h.handlerFor('demoBuilder.signInGitHub')();
 
-        expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]).toBe(
-            'Already signed in to GitHub as steve.'
-        );
+        expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0]).toEqual([
+            'Already signed in to GitHub',
+            { modal: true, detail: 'Signed in as steve.' },
+            'Sign in again',
+        ]);
         expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
             force: true,
         });
@@ -518,9 +540,11 @@ describe('signInGitHub', () => {
 
         await h.handlerFor('demoBuilder.signInGitHub')();
 
-        expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]).toBe(
-            'Already signed in to GitHub.'
-        );
+        expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0]).toEqual([
+            'Already signed in to GitHub',
+            { modal: true, detail: undefined },
+            'Sign in again',
+        ]);
         expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
             force: true,
         });
@@ -529,7 +553,8 @@ describe('signInGitHub', () => {
     it('does nothing when that offer is declined', async () => {
         const h = harness();
         mockValidateGitHubToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Cancel');
+        // VS Code's own Cancel on a modal answers undefined.
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
 
         await h.handlerFor('demoBuilder.signInGitHub')();
 

@@ -391,16 +391,21 @@ export class CommandManager {
             let force = false;
             if (status.isAuthenticated) {
                 const minutes = status.expiresInMinutes;
+                // A modal with a heading, like every other sign-in question, and no Cancel
+                // of our own: VS Code adds one (owner, 2026-10-31).
                 const pick = await vscode.window.showInformationMessage(
-                    `Already signed in to Adobe${
-                        // The house formatter, not raw minutes — "~487 min" made
-                        // the owner do the arithmetic (first live use, 2026-08-27).
-                        typeof minutes === 'number'
-                            ? ` (token expires in ~${formatMinutes(minutes)})`
-                            : ''
-                    }.`,
+                    'Already signed in to Adobe',
+                    {
+                        modal: true,
+                        detail: `${
+                            // The house formatter, not raw minutes — "~487 min" made
+                            // the owner do the arithmetic (first live use, 2026-08-27).
+                            typeof minutes === 'number'
+                                ? `Your sign-in lasts about ${formatMinutes(minutes)} more. `
+                                : ''
+                        }Signing in again can also sign you out of DA.live.`,
+                    },
                     'Sign in again',
-                    'Cancel',
                 );
                 if (pick !== 'Sign in again') return;
                 force = true;
@@ -457,9 +462,12 @@ export class CommandManager {
             let force = false;
             if (current.valid) {
                 const pick = await vscode.window.showInformationMessage(
-                    `Already signed in to GitHub${current.user?.login ? ` as ${current.user.login}` : ''}.`,
+                    'Already signed in to GitHub',
+                    {
+                        modal: true,
+                        detail: current.user?.login ? `Signed in as ${current.user.login}.` : undefined,
+                    },
                     'Sign in again',
-                    'Cancel',
                 );
                 if (pick !== 'Sign in again') return;
                 force = true;

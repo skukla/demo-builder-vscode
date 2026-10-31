@@ -315,7 +315,7 @@ describe('CommandManager', () => {
                 // Humanized, not raw: 420 minutes reads "7h", because "~420 min"
                 // makes the reader do the arithmetic (owner, first live use).
                 expect(
-                    (vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]
+                    (vscode.window.showInformationMessage as jest.Mock).mock.calls[0][1].detail
                 ).toContain('7h');
             });
 
