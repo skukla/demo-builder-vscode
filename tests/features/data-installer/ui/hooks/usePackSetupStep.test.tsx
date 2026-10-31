@@ -175,7 +175,7 @@ it('shows Open the Admin as busy until the Admin has opened', async () => {
     expect(screen.getByRole('button', { name: 'Open the Admin' })).not.toHaveAttribute('aria-busy');
 });
 
-it('a Check that finds it done shows the check mark in the dialog, offers no Check, and leaves a check-marked line in the panel', async () => {
+it('a Check that finds it done says so in the dialog, offers no Check, and leaves nothing in the panel', async () => {
     answering(answer(STEP), answer(DONE));
     await renderStep();
     await press(within(panel()).getByRole('button', { name: 'Show step' }));
@@ -187,9 +187,8 @@ it('a Check that finds it done shows the check mark in the dialog, offers no Che
     expect(banner()).toHaveTextContent("The store Justrite Test Store shows ZZ Root DB12's categories.");
     expect(banner()).not.toHaveTextContent('Already set up');
     expect(screen.queryByRole('button', { name: 'Check' })).not.toBeInTheDocument();
-    expect(panel()).toHaveTextContent("The store Justrite Test Store shows ZZ Root DB12's categories.");
-    expect(within(panel()).queryByRole('button', { name: 'Show step' })).not.toBeInTheDocument();
-    expect(panel().querySelector('.inline-notice')).toBeNull();
+    // Nothing in the panel once done: the dialog already said so (owner, 2026-10-31).
+    expect(panel().childElementCount).toBe(0);
 });
 
 it("says Couldn't check, with what it met, when the check could not read the store", async () => {

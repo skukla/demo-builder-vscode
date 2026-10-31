@@ -636,7 +636,7 @@
 }
 
 /* The held pack's one Admin step in the flyout (PackSetupStepLine, DI-5): one quiet line, the
-   text then Show step, or a green check mark and what the Check found. No box: the step itself
+   text then Show step, while the step is open; nothing once it is done. No box: the step itself
    is in its dialog (PackSetupStepDialog). Only this bundle renders it. */
 @layer theme {
 .datapack-setup-line {

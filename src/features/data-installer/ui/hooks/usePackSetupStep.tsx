@@ -1,7 +1,7 @@
 /**
  * The pack's one Admin step (datapack-engine step 12): its read, its Check, and the two things
- * the catalog mounts, the side panel's quiet line (`PackSetupStepLine`) and the step's dialog
- * (`PackSetupStepDialog`).
+ * the catalog mounts, the side panel's quiet line while the step is open (`PackSetupStepLine`)
+ * and the step's dialog (`PackSetupStepDialog`).
  *
  * The dialog is mounted beside the flyout, never inside it, as the catalog mounts its import
  * modal and the integrations screen its setup guide: a dialog inside the drawer is the shape this
@@ -93,7 +93,9 @@ export function usePackSetupStep(pack: DatapackId | undefined): PackSetupStepVie
     if (!item) return NONE;
     const failure = checkedFor === key ? failureText(check.failure) : undefined;
     return {
-        line: <PackSetupStepLine item={item} onShow={show} />,
+        // Nothing in the panel once the step is done: the dialog already said so, and there is
+        // nothing left to do (owner, 2026-10-31). A removal or a repeat install says what it needs.
+        line: item.state === 'done' ? null : <PackSetupStepLine onShow={show} />,
         dialog: showing ? (
             <PackSetupStepDialog
                 item={item}
