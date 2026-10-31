@@ -90,3 +90,4 @@ recorded reason it is not needed.
 ## Shipped so far
 
 - 2026-10-03  Reconciled 2026-10-03: the body's webhook/item-prices, webhook/discounts and pricing_contract_prices no longer exist on integration main; AB-26z moved contract prices into shared catalogs as tier prices. The question stands for ACO (PL-60).
+- 2026-10-31  2026-10-31: BuildRight already solved a buyer's price book after sign-in: a mesh query backed by an App Builder action maps a customer (by group, or by Commerce customer attributes aco_catalog_view_id / aco_price_book_id) to a catalog view and price book, and the storefront re-sends AC-View-Id / AC-Price-Book-Id to every dropin on sign-in, sign-out and persona change (buildright-service actions/persona, buildright-eds scripts/initializers/auth.js). With Demo Builder's books the mapping is customer group to website:group. Details: .rptc/research/aco-support/audit-2026-10-31.md
