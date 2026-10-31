@@ -23,24 +23,24 @@ tell whose a pack is.
 
 The colleague must not be asked for anything. Their name has to come for free.
 
-## Recommendation
+## Decided (owner, 2026-10-31)
 
-Record the saver's own name and email from their Adobe sign-in **when the pack is saved**.
-Demo Builder already holds the signed-in profile, so nobody types anything, and the name is only
-seen by people the saver chose to share with.
+**Kept with our packs. We ask the Data Installer team for nothing.** Demo Builder records the
+saver's name, and optionally their email, from their own Adobe sign-in, inside the pack it saves:
+a small record of its own that Demo Builder writes and reads. Nobody types anything.
 
-Where to put it is the open question, and it is the library's choice, not ours (we never change
-the Data Installer service's code):
+**It is the saver's choice**, through a setting. Recommended default: on, since only people the
+saver chose to share with can see the pack at all. With it off, the pack carries no name.
 
-1. **A field in the library** (`owner_name` or similar on `create-datapack` /
-   `update-datapack-metadata`). Cleanest: every reader gets it, including the service's own UI.
-   Needs the library team. Its `create-datapack` today takes `owner`, `description`, images,
-   `shared` and `datapack_type` only (read in the local `dsc-data-installer-api` clone,
-   `actions/database/createDatapack.js`, at `3ced647`). Whether the LIBRARY deployment uses the
-   same handler, and whether its `owner` is the permission key (so it cannot be reused for a name),
-   is unverified.
-2. **Inside the pack**, as a small record Demo Builder writes and reads. Ours alone, but only
-   Demo Builder would show it.
+What follows from keeping it in the pack:
 
-Either way, packs saved before the change keep showing no owner. Check first whether the library
-team already plans an owner name.
+- Only Demo Builder shows it. The Data Installer's own screens will not.
+- Packs saved before the change show no owner, as today, until they are saved again.
+- A colleague's pack then shows "Owner: <name>" in the panel, where today the row is left out
+  (`d770c17e0`).
+- Reversible by construction: turning the setting off, then saving again, writes a version with
+  no name.
+
+Rejected: a name field in the library itself. Its `create-datapack` takes no such field today
+(read in the local `dsc-data-installer-api` clone at `3ced647`), and the owner does not want to
+ask that team for one.
