@@ -119,8 +119,6 @@ export const SERVICE_GROUP_DEFINITIONS: ServiceGroupDef[] = [
         order: 6,
         fieldOrder: [
             'ACO_TENANT_ID',
-            'ACO_REGION',
-            'ACO_ENVIRONMENT',
             'ACO_CATALOG_VIEW_ID',
             'ACO_LOCALE',
         ],

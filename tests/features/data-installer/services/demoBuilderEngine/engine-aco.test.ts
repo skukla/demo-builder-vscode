@@ -56,6 +56,41 @@ async function settle(engine: DatapackEngine, activationId: string) {
 }
 
 describe('demoBuilderEngine with an ACO pack', () => {
+    it("refuses when Adobe's connector owns the catalog, writing nothing", async () => {
+        const { engine, aco } = engineWith({
+            aco: async () => ({ settings: ACO_SETTINGS, clientFor: () => aco, connector: async () => 'on' }),
+        });
+        const { activationId } = await engine.startImport(request());
+        await settle(engine, activationId);
+        expect((await engine.getJobFailureReason(activationId))?.error).toMatch(/connector feeds this ACO instance/u);
+        expect(aco.calls).toStrictEqual([]);
+    });
+
+    it('adds a price book for each group of shoppers, on the record so removing the pack removes them', async () => {
+        const { engine, aco, files } = engineWith({
+            aco: async () => ({
+                settings: ACO_SETTINGS,
+                clientFor: () => aco,
+                buyerBooks: async () => ({ websiteCode: 'site', groupIds: [0] }),
+            }),
+        });
+        const { activationId } = await engine.startImport(request());
+        await settle(engine, activationId);
+        const guest = { priceBookId: 'site::b6589fc6ab0dc82cf12099d1c2d40ab994e8410c', parentId: 'main', name: 'Shoppers in group 0' };
+        expect(aco.calls.find((call) => call.path === '/v1/catalog/price-books')?.rows).toContainEqual(guest);
+        const record = await readInstallRecord(files, PROJECT, PACK);
+        expect(record?.created.map((object) => object.key)).toContain(guest.priceBookId);
+    });
+
+    it('says when it could not work out the shoppers, since a pack from elsewhere may then show no prices', async () => {
+        const { engine, aco } = engineWith({
+            aco: async () => ({ settings: ACO_SETTINGS, clientFor: () => aco, buyerBooks: async () => undefined }),
+        });
+        const { activationId } = await engine.startImport(request());
+        const status = await settle(engine, activationId);
+        expect(JSON.stringify(status)).toMatch(/could not read this store's customer groups/u);
+    });
+
     it('loads it into the project\'s ACO instance with no website or store view, and never opens Commerce', async () => {
         const { engine, files, aco, commerce } = engineWith();
         const { activationId } = await engine.startImport(request());

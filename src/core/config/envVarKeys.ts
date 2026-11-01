@@ -67,8 +67,6 @@ export const PAAS_CATALOG_SERVICE_ENDPOINT = 'PAAS_CATALOG_SERVICE_ENDPOINT';
 // ==========================================================
 
 export const ACO_TENANT_ID = 'ACO_TENANT_ID';
-export const ACO_REGION = 'ACO_REGION';
-export const ACO_ENVIRONMENT = 'ACO_ENVIRONMENT';
 export const ACO_CATALOG_VIEW_ID = 'ACO_CATALOG_VIEW_ID';
 export const ACO_LOCALE = 'ACO_LOCALE';
 

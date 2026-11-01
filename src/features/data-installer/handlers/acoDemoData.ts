@@ -31,6 +31,9 @@ export interface AcoDemoDataDeps {
     others: (context: HandlerContext, project: Project) => Promise<Project[]>;
 }
 
+const CONNECTOR_ON_CLEAR =
+    "Adobe's connector feeds this ACO instance from the store, so clearing ACO would only be undone by its next sync. Clear the store instead.";
+
 /** The plans shown, by token; a few is plenty, since one is shown per question. */
 const PLANS_KEPT = 10;
 
@@ -59,6 +62,8 @@ export async function checkAco(deps: AcoDemoDataDeps, plans: Map<string, AcoWipe
     try {
         const access = await deps.aco(context, project);
         if ('refusal' in access) return { success: false, error: access.refusal };
+        // The connector would put back whatever a clear took: the catalog is the store's to change.
+        if ((await access.connector?.()) === 'on') return { success: false, error: CONNECTOR_ON_CLEAR };
         const plan = await planAcoWipe(deps.search(access.settings), access.settings, await allRecords(deps, context, project));
         keep(plans, plan);
         return { success: true, data: { choices: [], aco: plan.preview } };

@@ -10,12 +10,10 @@
 
 import {
     ACO_CATALOG_VIEW_ID,
-    ACO_ENVIRONMENT,
     ACO_LOCALE,
-    ACO_REGION,
     ACO_TENANT_ID,
 } from '@/core/config/envVarKeys';
-import type { AcoEnvironment, AcoInstance, AcoStorefrontSettings } from '@/types/aco';
+import type { AcoInstance, AcoStorefrontSettings } from '@/types/aco';
 
 /** The ACO add-on's id, in `components.json` `addons` and `stacks.json` `addonDefinitions`. */
 export const ACO_ADDON_ID = 'adobe-commerce-aco';
@@ -47,16 +45,31 @@ export function acoGraphqlUrl(instance: AcoInstance): string {
     return `${acoApiBase(instance)}/graphql`;
 }
 
+/** Where an instance URL names its region and type: `https://{region}[-sandbox].api.commerce.adobe.com/{tenant}`. */
+const API_URL = /^https?:\/\/([a-z0-9]+?)(-sandbox)?\.api\.commerce\.adobe\.com\/([A-Za-z0-9_-]+)/u;
+/** Where a Commerce Optimizer Studio URL names the tenant: `…/in:{tenant}/commerce-optimizer-studio…`. */
+const STUDIO_URL = /\/in:([A-Za-z0-9_-]+)/u;
+
+/**
+ * The instance an SC pasted: an API URL, a Studio URL, or a bare id. Only an API URL says its region
+ * and type, so the others are read as a sandbox in na1, which is the only region sandboxes exist in.
+ *
+ * @returns undefined when it names no instance
+ */
+export function parseAcoInstance(raw: string): AcoInstance | undefined {
+    const text = raw.trim();
+    const api = API_URL.exec(text);
+    if (api) return { tenantId: api[3], region: api[1], environment: api[2] ? 'sandbox' : 'production' };
+    const tenantId = STUDIO_URL.exec(text)?.[1] ?? (TENANT_ID.test(text) ? text : undefined);
+    return tenantId ? { tenantId, region: 'na1', environment: 'sandbox' } : undefined;
+}
+
 /** The project's ACO settings, or the fields still empty. */
 export type AcoSettingsRead = { settings: AcoStorefrontSettings } | { missing: string[] };
 
 /** Whether the project has the ACO add-on on. */
 export function usesAco(source: AcoSettingsSource): boolean {
     return (source.selectedAddons ?? []).includes(ACO_ADDON_ID);
-}
-
-function environmentOf(value: string): AcoEnvironment | undefined {
-    return value === 'sandbox' || value === 'production' ? value : undefined;
 }
 
 function valueOf(values: Record<string, unknown>, key: string): string {
@@ -72,16 +85,13 @@ function valueOf(values: Record<string, unknown>, key: string): string {
 export function readAcoSettings(source: AcoSettingsSource): AcoSettingsRead | undefined {
     if (!usesAco(source)) return undefined;
     const values = source.componentConfigs?.[ACO_ADDON_ID] ?? {};
-    const required = [ACO_TENANT_ID, ACO_REGION, ACO_ENVIRONMENT, ACO_CATALOG_VIEW_ID, ACO_LOCALE];
-    const missing = required.filter((key) => valueOf(values, key) === '');
-    const environment = environmentOf(valueOf(values, ACO_ENVIRONMENT));
-    if (!environment && !missing.includes(ACO_ENVIRONMENT)) missing.push(ACO_ENVIRONMENT);
-    if (missing.length > 0 || !environment) return { missing };
+    const missing = [ACO_TENANT_ID, ACO_CATALOG_VIEW_ID, ACO_LOCALE].filter((key) => valueOf(values, key) === '');
+    const instance = parseAcoInstance(valueOf(values, ACO_TENANT_ID));
+    if (!instance && !missing.includes(ACO_TENANT_ID)) missing.push(ACO_TENANT_ID);
+    if (missing.length > 0 || !instance) return { missing };
     return {
         settings: {
-            tenantId: valueOf(values, ACO_TENANT_ID),
-            region: valueOf(values, ACO_REGION),
-            environment,
+            ...instance,
             catalogViewId: valueOf(values, ACO_CATALOG_VIEW_ID),
             locale: valueOf(values, ACO_LOCALE),
         },

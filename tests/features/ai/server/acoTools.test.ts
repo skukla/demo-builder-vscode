@@ -5,7 +5,7 @@
  */
 
 import { registerAcoTools } from '@/features/ai/server/acoTools';
-import { tenantOfEndpoint } from '@/features/ai/server/acoStatus';
+import { readAcoConnector, tenantOfEndpoint } from '@/features/data-installer/services/aco/acoConnector';
 import { acoCredentialKey } from '@/features/components/services/acoCredentialStore';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
@@ -16,8 +16,6 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 const PROJECT_PATH = '/projects/demo';
 const ACO_CONFIG = {
     ACO_TENANT_ID: 'TenantAbc123',
-    ACO_REGION: 'na1',
-    ACO_ENVIRONMENT: 'sandbox',
     ACO_CATALOG_VIEW_ID: 'view-1',
     ACO_LOCALE: 'en-US',
 };
@@ -275,6 +273,38 @@ describe('get_aco_status', () => {
     it('reports the add-on off, with the backend still read', async () => {
         const { s } = setup(reply(false), { addons: [], credential: false });
         expect(JSON.parse(await s.call('get_aco_status', {}))).toMatchObject({ addon: 'off', missingSettings: [] });
+    });
+});
+
+describe('readAcoConnector on a PaaS backend, which has no tenant to ask', () => {
+    const asked = (fields: string[], companyFields: string[] = []) => {
+        const body = { data: { query: { fields: fields.map((name) => ({ name })) }, company: { fields: companyFields.map((name) => ({ name })) } } };
+        return (async () => new Response(JSON.stringify(body))) as unknown as typeof fetch;
+    };
+    const question = { backend: 'paas', url: 'https://paas.example.com/graphql', store: 'default', admin: undefined };
+
+    it('reads the connector as on when the backend declares the query it brings', async () => {
+        // Field for field what a public PaaS store on the base connector answered, 2026-11-01.
+        await expect(readAcoConnector({ ...question, fetch: asked(['commerceOptimizer'], ['name']) })).resolves.toMatchObject({
+            connector: 'on',
+            answersPriceBook: true,
+            declaresCatalogView: false,
+        });
+    });
+
+    it('sees the B2B connector by the field it adds', async () => {
+        await expect(readAcoConnector({ ...question, fetch: asked(['commerceOptimizer'], ['catalogViewContext']) })).resolves.toMatchObject({
+            declaresCatalogView: true,
+        });
+    });
+
+    it('reads it as off when the backend does not declare that query', async () => {
+        await expect(readAcoConnector({ ...question, fetch: asked(['products']) })).resolves.toMatchObject({ connector: 'off' });
+    });
+
+    it('says unknown, and why, when the schema cannot be read', async () => {
+        const failing = (async () => Promise.reject(new Error('offline'))) as unknown as typeof fetch;
+        await expect(readAcoConnector({ ...question, fetch: failing })).resolves.toMatchObject({ connector: 'unknown', because: expect.stringMatching(/could not be read/u) });
     });
 });
 

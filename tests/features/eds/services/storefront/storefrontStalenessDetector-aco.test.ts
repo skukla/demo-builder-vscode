@@ -10,7 +10,7 @@ import type { Project } from '@/types/base';
 import { createMockProject } from '../../../../helpers/projectFake';
 
 const SCOPE = { ACCS_WEBSITE_CODE: 'base' };
-const ACO_VALUES = { ACO_TENANT_ID: 'TenantAbc123', ACO_REGION: 'na1', ACO_ENVIRONMENT: 'sandbox', ACO_CATALOG_VIEW_ID: 'view-1', ACO_LOCALE: 'en-US' };
+const ACO_VALUES = { ACO_TENANT_ID: 'TenantAbc123', ACO_CATALOG_VIEW_ID: 'view-1', ACO_LOCALE: 'en-US' };
 
 function project(published: Record<string, string>, selectedAddons: string[] = []): Project {
     return createMockProject({

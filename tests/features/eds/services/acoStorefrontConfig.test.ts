@@ -50,8 +50,6 @@ function defaultBlock(params: ConfigGeneratorParams): Record<string, unknown> {
 
 const ACO_VALUES = {
     ACO_TENANT_ID: 'TenantAbc123',
-    ACO_REGION: 'na1',
-    ACO_ENVIRONMENT: 'sandbox',
     ACO_CATALOG_VIEW_ID: '00000000-0000-4000-8000-000000000001',
     ACO_LOCALE: 'en-US',
 };
@@ -135,5 +133,39 @@ describe('the params builder with ACO (creation and Regenerate)', () => {
         });
         expect(generateConfigJson(fromWizard, logger).content).toBe(generateProjectConfigJson(saved, logger).content);
         expect(generateProjectConfigJson(saved, logger).content).toContain('AC-View-ID');
+    });
+});
+
+describe('generateConfigJson with ACO on a PaaS backend', () => {
+    const PAAS: ConfigGeneratorParams = {
+        ...BASE,
+        environmentType: 'paas',
+        commerceApiKey: 'api-key',
+        commerceEnvironmentId: 'env-id',
+        catalogServiceEndpoint: 'https://catalog.example.com/graphql',
+        websiteCode: 'base',
+        storeCode: 'main',
+    };
+
+    it('reads the catalog from ACO and keeps carts and sign-in on the Commerce GraphQL', () => {
+        const block = defaultBlock({ ...PAAS, aco: ACO });
+        expect(block['commerce-endpoint']).toBe('https://na1-sandbox.api.commerce.adobe.com/TenantAbc123/graphql');
+        expect(block['commerce-core-endpoint']).toBe('https://commerce.example.com/graphql');
+    });
+
+    it("sends the store to Commerce and none of PaaS's catalog headers to ACO", () => {
+        expect(defaultBlock({ ...PAAS, aco: ACO }).headers).toEqual({
+            all: { Store: 'en_us' },
+            cs: { 'AC-View-ID': ACO.catalogViewId, 'AC-Source-Locale': 'en-US' },
+        });
+    });
+
+    it('turns on the per-buyer price book the same way', () => {
+        expect(defaultBlock({ ...PAAS, aco: ACO })['adobe-commerce-optimizer']).toBe(true);
+    });
+
+    it('leaves a PaaS project without ACO with its catalog headers', () => {
+        const { cs } = defaultBlock({ ...PAAS, selectedAddons: [] }).headers as { cs: Record<string, string> };
+        expect(cs).toMatchObject({ 'x-api-key': 'api-key', 'Magento-Environment-Id': 'env-id' });
     });
 });

@@ -220,13 +220,9 @@ describe('SERVICE_GROUP_DEFINITIONS field order', () => {
         expect(orderOf('adobe-commerce-aco', [
             'ACO_LOCALE',
             'ACO_CATALOG_VIEW_ID',
-            'ACO_ENVIRONMENT',
-            'ACO_REGION',
             'ACO_TENANT_ID',
         ])).toEqual([
             'ACO_TENANT_ID',
-            'ACO_REGION',
-            'ACO_ENVIRONMENT',
             'ACO_CATALOG_VIEW_ID',
             'ACO_LOCALE',
         ]);

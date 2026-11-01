@@ -85,6 +85,15 @@ describe('clear-demo-data with aco', () => {
         return { ...ctx, token: preview(res.data)?.token ?? '' };
     }
 
+    it("refuses to list anything when Adobe's connector owns the catalog, since its next sync would undo a clear", async () => {
+        const { handlers, context } = setUp(
+            { skus: ['S1'] },
+            { aco: async () => ({ settings: ACO_SETTINGS, clientFor: () => fakeAco(), connector: async () => 'on' }) },
+        );
+        const res = await handlers['check-demo-data'](context, { aco: true });
+        expect(res).toMatchObject({ success: false, error: expect.stringMatching(/connector feeds this ACO instance/u) });
+    });
+
     it('deletes exactly the plan shown, confirmed, and says what it removed', async () => {
         const { handlers, context, aco, token } = await checked();
 

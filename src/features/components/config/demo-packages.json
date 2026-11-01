@@ -88,7 +88,7 @@
       "featured": false,
       "requiresMesh": false,
       "addons": {
-        "adobe-commerce-aco": "excluded"
+        "adobe-commerce-aco": "optional"
       },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "base",
@@ -377,7 +377,7 @@
       "hidden": false,
       "requiresMesh": false,
       "addons": {
-        "adobe-commerce-aco": "excluded"
+        "adobe-commerce-aco": "optional"
       },
       "configDefaults": {
          "ADOBE_COMMERCE_WEBSITE_CODE": "bodea",

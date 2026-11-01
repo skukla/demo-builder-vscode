@@ -16,8 +16,10 @@
  * @module features/data-installer/services/buildDatapackEngine
  */
 
+import { createAcoAdminClient } from './aco/acoAdminClient';
 import type { BuyerBooks } from './aco/acoBuyerBooks';
 import { createAcoClient } from './aco/acoClient';
+import { type AcoConnectorState, readAcoConnector } from './aco/acoConnector';
 import type { AcoAccessSource } from './aco/acoJobs';
 import { AcoStoreReads } from './acoExport/acoStoreReads';
 import type { DataInstallerClient } from './dataInstallerClient';
@@ -36,6 +38,7 @@ import { readAcoCredential } from '@/features/components/services/acoCredentialS
 import { acoSettingsProblem, readAcoSettings } from '@/features/components/services/acoSettings';
 import { buildConfigGeneratorParams } from '@/features/eds/services/storefrontConfigParams';
 import { commerceClientForProject } from '@/features/project-creation/services/erpFillForProject';
+import type { AcoCredential, AcoStorefrontSettings } from '@/types/aco';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
@@ -130,6 +133,14 @@ export const NO_ACO_CREDENTIAL =
     'Demo Builder holds no Adobe Commerce Optimizer credential for this project. Turn ACO on for the project again so ' +
     'Demo Builder can set one up in its Adobe workspace.';
 
+/** Whether Adobe's connector feeds this project's ACO from its store. */
+async function connectorOf(project: Project, settings: AcoStorefrontSettings, credential: AcoCredential): Promise<AcoConnectorState> {
+    const { environmentType, commerceEndpoint, storeViewCode } = buildConfigGeneratorParams(project);
+    const admin = createAcoAdminClient({ instance: settings, credential });
+    const { connector } = await readAcoConnector({ backend: environmentType ?? 'paas', url: commerceEndpoint, store: storeViewCode, admin });
+    return connector;
+}
+
 /** The project's website and its store's customer groups, or undefined when they cannot be read. */
 async function readBuyerBooks(access: Pick<DatapackEngineAccess, 'project' | 'authManager' | 'secrets'>): Promise<BuyerBooks | undefined> {
     const websiteCode = buildConfigGeneratorParams(access.project).websiteCode;
@@ -162,6 +173,7 @@ export function projectAco(access: Pick<DatapackEngineAccess, 'project' | 'secre
             settings: read.settings,
             clientFor: (instance) => createAcoClient({ instance, credential }),
             ...(access.authManager ? { buyerBooks: () => readBuyerBooks({ ...access, authManager: access.authManager }) } : {}),
+            connector: () => connectorOf(access.project, read.settings, credential),
         };
     };
 }

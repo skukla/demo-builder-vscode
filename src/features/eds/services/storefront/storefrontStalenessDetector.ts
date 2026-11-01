@@ -22,9 +22,7 @@ import {
     ACCS_STORE_VIEW_CODE,
     ACCS_CUSTOMER_GROUP,
     ACO_CATALOG_VIEW_ID,
-    ACO_ENVIRONMENT,
     ACO_LOCALE,
-    ACO_REGION,
     ACO_TENANT_ID,
 } from '@/core/config/envVarKeys';
 import { getLogger } from '@/core/logging/debugLogger';
@@ -96,8 +94,6 @@ const STOREFRONT_CONFIG_ENV_VARS = [
     // Turning ACO on or off therefore changes what is compared, and prompts a
     // republish like any other change.
     ACO_TENANT_ID,
-    ACO_REGION,
-    ACO_ENVIRONMENT,
     ACO_CATALOG_VIEW_ID,
     ACO_LOCALE,
 ];
@@ -153,7 +149,7 @@ export function getStorefrontEnvVars(
 }
 
 /** The ACO keys above: what config.json reads only while the add-on is on. */
-const ACO_KEYS = [ACO_TENANT_ID, ACO_REGION, ACO_ENVIRONMENT, ACO_CATALOG_VIEW_ID, ACO_LOCALE];
+const ACO_KEYS = [ACO_TENANT_ID, ACO_CATALOG_VIEW_ID, ACO_LOCALE];
 
 /**
  * The values config.json is generated from, as the comparison and the record read them: every

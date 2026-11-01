@@ -249,8 +249,6 @@
                 "providesServices": ["catalog-service", "live-search"],
                 "requiredEnvVars": [
                     "ACO_TENANT_ID",
-                    "ACO_REGION",
-                    "ACO_ENVIRONMENT",
                     "ACO_CATALOG_VIEW_ID",
                     "ACO_LOCALE"
                 ],
@@ -551,39 +549,11 @@
             "group": "experience-platform"
         },
         "ACO_TENANT_ID": {
-            "label": "ACO Tenant ID",
+            "label": "ACO Instance",
             "type": "text",
             "required": true,
-            "placeholder": "your-tenant-id",
-            "validation": {
-                "pattern": "^[A-Za-z0-9_-]+$",
-                "message": "Letters, numbers, - and _ only: the id as it appears in the instance's URLs"
-            },
-            "description": "The Adobe Commerce Optimizer instance's id: the part after the host in its URLs (…/<tenant id>/graphql)",
-            "group": "adobe-commerce-aco"
-        },
-        "ACO_REGION": {
-            "label": "ACO Region",
-            "type": "text",
-            "required": true,
-            "default": "na1",
-            "validation": {
-                "pattern": "^[a-z0-9]+$",
-                "message": "A region code such as na1"
-            },
-            "description": "The instance's cloud region. Sandbox instances exist only in na1",
-            "group": "adobe-commerce-aco"
-        },
-        "ACO_ENVIRONMENT": {
-            "label": "ACO Instance Type",
-            "type": "select",
-            "required": true,
-            "default": "sandbox",
-            "options": [
-                { "value": "sandbox", "label": "Sandbox" },
-                { "value": "production", "label": "Production" }
-            ],
-            "description": "Sandbox instances have -sandbox in their host name",
+            "placeholder": "https://na1-sandbox.api.commerce.adobe.com/…",
+            "description": "Paste its address from your browser, or just its ID. An address with -sandbox or a region in it says which instance it is; otherwise Demo Builder reads it as a sandbox",
             "group": "adobe-commerce-aco"
         },
         "ACO_CATALOG_VIEW_ID": {
@@ -591,7 +561,7 @@
             "type": "text",
             "required": true,
             "placeholder": "00000000-0000-0000-0000-000000000000",
-            "description": "The catalog view the storefront reads. Create it in Adobe Commerce Optimizer's own screens (no API creates one) and copy its ID from there. It must allow this website's price books, or signed-in buyers see no prices",
+            "description": "The catalog view the storefront reads. Find it in Adobe Commerce Optimizer's own screens. It must allow this website's price books, or signed-in buyers see no prices",
             "group": "adobe-commerce-aco"
         },
         "ACO_LOCALE": {

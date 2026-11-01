@@ -106,8 +106,6 @@ describe('projectCommerce', () => {
 describe('projectAco', () => {
     const ACO_VALUES = {
         ACO_TENANT_ID: 'TenantAbc123',
-        ACO_REGION: 'na1',
-        ACO_ENVIRONMENT: 'sandbox',
         ACO_CATALOG_VIEW_ID: 'view-1',
         ACO_LOCALE: 'en-US',
     };

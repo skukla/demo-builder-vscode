@@ -3,12 +3,10 @@
  * packs both read them here, so they never disagree about which instance the project uses.
  */
 
-import { ACO_ADDON_ID, acoSettingsProblem, readAcoSettings, usesAco } from '@/features/components/services/acoSettings';
+import { ACO_ADDON_ID, acoSettingsProblem, parseAcoInstance, readAcoSettings, usesAco } from '@/features/components/services/acoSettings';
 
 const FULL = {
     ACO_TENANT_ID: 'TenantAbc123',
-    ACO_REGION: 'na1',
-    ACO_ENVIRONMENT: 'sandbox',
     ACO_CATALOG_VIEW_ID: 'view-1',
     ACO_LOCALE: 'en-US',
 };
@@ -28,11 +26,36 @@ describe('readAcoSettings', () => {
         });
     });
 
-    it('names every empty field, and an instance type that is neither sandbox nor production', () => {
-        const read = readAcoSettings(project({ ...FULL, ACO_CATALOG_VIEW_ID: '', ACO_ENVIRONMENT: 'staging' }));
-        expect(read).toEqual({ missing: ['ACO_CATALOG_VIEW_ID', 'ACO_ENVIRONMENT'] });
+    it('names every empty field', () => {
+        const read = readAcoSettings(project({ ...FULL, ACO_CATALOG_VIEW_ID: '', ACO_LOCALE: '' }));
+        expect(read).toEqual({ missing: ['ACO_CATALOG_VIEW_ID', 'ACO_LOCALE'] });
         expect(acoSettingsProblem(read)).toBe(
-            "The project's Adobe Commerce Optimizer settings are not complete: set ACO_CATALOG_VIEW_ID, ACO_ENVIRONMENT in Configure.",
+            "The project's Adobe Commerce Optimizer settings are not complete: set ACO_CATALOG_VIEW_ID, ACO_LOCALE in Configure.",
         );
+    });
+
+    it('names the instance when what was typed is not one', () => {
+        expect(readAcoSettings(project({ ...FULL, ACO_TENANT_ID: 'not an instance' }))).toEqual({ missing: ['ACO_TENANT_ID'] });
+    });
+
+    it('reads a pasted address as the instance it names', () => {
+        const read = readAcoSettings(project({ ...FULL, ACO_TENANT_ID: 'https://eu1.api.commerce.adobe.com/TenantAbc123/graphql' }));
+        expect(read).toMatchObject({ settings: { tenantId: 'TenantAbc123', region: 'eu1', environment: 'production' } });
+    });
+});
+
+describe('parseAcoInstance', () => {
+    it.each([
+        ['a sandbox API address', 'https://na1-sandbox.api.commerce.adobe.com/AbC-1/graphql', { tenantId: 'AbC-1', region: 'na1', environment: 'sandbox' }],
+        ['a production API address', 'https://na1.api.commerce.adobe.com/AbC-1', { tenantId: 'AbC-1', region: 'na1', environment: 'production' }],
+        ['another region', 'https://eu1.api.commerce.adobe.com/AbC-1/', { tenantId: 'AbC-1', region: 'eu1', environment: 'production' }],
+        ['a Studio address, which names no region', 'https://experience.adobe.com/#/@org/in:AbC-1/commerce-optimizer-studio/home', { tenantId: 'AbC-1', region: 'na1', environment: 'sandbox' }],
+        ['a bare id', '  AbC-1 ', { tenantId: 'AbC-1', region: 'na1', environment: 'sandbox' }],
+    ])('reads %s', (_label, raw, expected) => {
+        expect(parseAcoInstance(raw)).toEqual(expected);
+    });
+
+    it.each([[''], ['https://example.com/AbC-1'], ['two words']])('finds no instance in %j', (raw) => {
+        expect(parseAcoInstance(raw)).toBeUndefined();
     });
 });

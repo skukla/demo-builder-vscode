@@ -12,6 +12,7 @@ import { skippedLine } from '../demoBuilderEngine/refusedRows';
 import type { AcoClient } from './acoClient';
 import { ACO_KINDS, isAcoKind } from './acoKinds';
 import { type BuyerBooks, withBuyerBooks } from './acoBuyerBooks';
+import type { AcoConnectorState } from './acoConnector';
 import { type AcoPackItems, acoRowProblems, installAcoPack, removeAcoPack } from './acoPackInstall';
 import type { AcoInstance, AcoStorefrontSettings } from '@/types/aco';
 import type { DatapackId } from '@/types/datapack';
@@ -22,6 +23,8 @@ export interface AcoAccess {
     clientFor(instance: AcoInstance): AcoClient;
     /** The website and customer groups shoppers come from, for `withBuyerBooks`; undefined when they cannot be read. */
     buyerBooks?(): Promise<BuyerBooks | undefined>;
+    /** Whether Adobe's connector feeds this instance from the store (`readAcoConnector`). */
+    connector?(): Promise<AcoConnectorState>;
 }
 
 /** Where the engine gets the project's ACO access, or why there is none. */
@@ -39,6 +42,14 @@ export const NO_READ_BACK =
     'ACO cannot be read back, so Demo Builder cannot tell whether anything this pack loaded was changed in ACO since, ' +
     'or was already there before: installing again sends every row again, and removing the pack deletes exactly what ' +
     'it loaded, by its own SKUs, slugs, codes and price book ids.';
+
+/**
+ * Said when Adobe's connector is on. Commerce is then the catalog's system of record and the connector
+ * keeps ACO in step, so rows written here would be overwritten or left behind by its next sync.
+ */
+export const CONNECTOR_ON =
+    "Adobe's connector feeds this ACO instance from the store, so Demo Builder does not write to its catalog. " +
+    'Load the pack into Commerce instead, and the connector carries it to ACO.';
 
 /** Said when the shoppers' price books could not be worked out, so a pack from elsewhere may show no prices. */
 export const NO_BUYER_BOOKS =
@@ -123,6 +134,7 @@ export async function runAcoInstall(
     access: AcoAccess,
     items: AcoPackItems,
 ): Promise<string> {
+    if ((await access.connector?.()) === 'on') throw new Error(CONNECTOR_ON);
     const conflict = await acoConflict(scope, Object.keys(items), access.settings);
     if (conflict) throw new Error(conflict);
     const refused = acoRowsRefusal(items, 'was');
