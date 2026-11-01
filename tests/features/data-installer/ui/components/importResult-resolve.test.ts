@@ -21,6 +21,7 @@ import {
     jobRecord,
     sources,
     succeeded,
+    PACK_NAME,
 } from './importResult.testUtils';
 
 describe('resolveResult — no action yet', () => {
@@ -39,7 +40,7 @@ describe('resolveResult — dry run', () => {
         expect(result).toEqual({
             variant: 'success',
             title: 'Dry run passed',
-            message: 'The service says this request would be accepted. Nothing has been written.',
+            message: 'Nothing was written.',
         });
     });
 
@@ -51,7 +52,7 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toMatchObject({
             variant: 'warning',
-            title: 'The service refused this request',
+            title: 'The service would refuse this',
             message: 'Catalog is locked',
         });
     });
@@ -79,8 +80,8 @@ describe('resolveResult — dry run', () => {
 
 describe('resolveResult — start and reset', () => {
     it.each([
-        ['start', 'Import failed to start'],
-        ['reset', 'Removal failed to start'],
+        ['start', "Couldn't start the import"],
+        ['reset', "Couldn't start the removal"],
     ])('%s reports its own wording for a request that never started', (action, title) => {
         const failure = failed<{ activationId: string }>('The service is unreachable');
         const result = resolveResult(
@@ -115,7 +116,7 @@ describe('resolveResult — start and reset', () => {
             sources({ record: jobRecord(), startedActivation: ACTIVATION })
         );
 
-        expect(result).toMatchObject({ variant: 'success', title: 'Import finished' });
+        expect(result).toMatchObject({ variant: 'success', title: `Imported ${PACK_NAME}` });
     });
 
     it('shows nothing while the record is still being watched', () => {

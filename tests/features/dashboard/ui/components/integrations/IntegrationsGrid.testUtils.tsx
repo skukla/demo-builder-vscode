@@ -166,8 +166,8 @@ jest.mock('@spectrum-icons/workflow/Edit', () => ({
 }));
 
 jest.mock('@/core/ui/components/ui/Modal', () => ({
-    Modal: ({ title, actionButtons = [], onClose, closeLabel, children }: any) => (
-        <div role="dialog" aria-label={title}>
+    Modal: ({ title, status, actionButtons = [], onClose, closeLabel, children }: any) => (
+        <div role="dialog" aria-label={title} data-status={status}>
             <h2>{title}</h2>
             {children}
             <button onClick={onClose}>{closeLabel ?? 'Close'}</button>

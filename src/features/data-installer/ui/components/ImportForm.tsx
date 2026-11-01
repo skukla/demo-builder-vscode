@@ -86,15 +86,25 @@ function TargetScopeFields({
     if (websites.length === 0 && !isLoading) {
         return null;
     }
+    if (isLoading) {
+        // ONE spinner for the one wait, where the pickers will land (owner, 2026-10-31: each
+        // picker had its own, two spinners for one request). It holds the row's height, so
+        // the pickers replace it without the dialog jumping.
+        return (
+            <div className="datapack-import-scope-loading">
+                <ProgressCircle size="S" isIndeterminate aria-label="Loading the stores" />
+            </div>
+        );
+    }
     const chosen = websites.find((site) => site.code === websiteCode);
     const storeViews = chosen?.storeViews ?? [];
     const defaultSite = websites.find((site) => site.code === DEFAULT_WEBSITE_CODE);
 
     return (
         <div className="datapack-import-scope">
-            <ScopeField label="Target website" busyLabel="Loading websites" isLoading={isLoading}>
+            <ScopeField label="Website">
                 <Picker
-                    aria-label="Target website"
+                    aria-label="Website"
                     placeholder={websitePlaceholder(defaultSite?.name)}
                     selectedKey={websiteCode || null}
                     onSelectionChange={(key) => onWebsiteChange(String(key ?? ''))}
@@ -106,9 +116,9 @@ function TargetScopeFields({
                     ))}
                 </Picker>
             </ScopeField>
-            <ScopeField label="Target store view" busyLabel="Loading store views" isLoading={isLoading}>
+            <ScopeField label="Store view">
                 <Picker
-                    aria-label="Target store view"
+                    aria-label="Store view"
                     placeholder={storePlaceholder(chosen ? storeViews[0]?.name : undefined)}
                     isDisabled={!websiteCode}
                     selectedKey={storeCode || null}
@@ -126,59 +136,11 @@ function TargetScopeFields({
 }
 
 /**
- * A labelled scope field: the SPINNER STANDS IN FOR THE CONTROL while discovery
- * runs, and the control replaces it when the values arrive.
- *
- * The label is always present and always ours, so the swap happens under a
- * heading that never moves. That also fixes the styling: the label carries
- * `datapack-import-label`, the same class as "Data types", so the modal's three
- * labels cannot render differently. (Reaching Spectrum's own label through
- * `.spectrum-FieldLabel` was tried and left them at default size; the class IS
- * in the bundle, so the reason is unestablished rather than diagnosed. Owning
- * the element removes the question.) The `Picker` therefore takes `aria-label`
- * rather than a visible `label`.
- *
- * **The field holds its height across the swap.** These pickers used to appear
- * only once scopes arrived and the dialog jumped; the disabled-placeholder
- * version fixed that, and so must this — hence a min-height on the busy state
- * rather than a bare spinner that collapses.
- *
- * Earlier shapes, so they are not retried: a spinner absolutely positioned at
- * `right: 0` of the field landed ~600px from its label, because the field is
- * `flex: 1 1 0` — half the modal. Beside the label text it was correct but
- * competed with the label for the eye while the control below sat inert showing
- * an em dash for a value it did not have.
+ * A labelled scope field: our own label over the control, so every label in the form is drawn
+ * by one rule (`datapack-import-label`). The `Picker` takes `aria-label` rather than a visible
+ * `label` for that reason: Spectrum's own label rendered at a different size beside ours.
  */
-function ScopeField({
-    label,
-    busyLabel,
-    isLoading,
-    children,
-}: {
-    label: string;
-    busyLabel: string;
-    isLoading: boolean;
-    children: React.ReactNode;
-}): React.JSX.Element {
-    if (isLoading) {
-        // The label and the spinner are wrapped TOGETHER, so the wrapper shrinks
-        // to the label's width and the spinner can centre under the label's own
-        // text. Centring it in the FIELD puts it mid-column instead — far right
-        // of the words it belongs to, since the field is half the modal. A
-        // label's width is not a number anyone can write down, so the layout has
-        // to derive it rather than be told it.
-        return (
-            <div className="datapack-scope-field">
-                <span className="datapack-scope-busy">
-                    <span className="datapack-import-label">{label}</span>
-                    <span className="datapack-scope-loading">
-                        <ProgressCircle size="S" isIndeterminate aria-label={busyLabel} />
-                    </span>
-                </span>
-            </div>
-        );
-    }
-
+function ScopeField({ label, children }: { label: string; children: React.ReactNode }): React.JSX.Element {
     return (
         <div className="datapack-scope-field">
             <span className="datapack-import-label">{label}</span>
@@ -255,8 +217,11 @@ export function ImportForm({
                     modal width it sat a screen away from the heading it acts on
                     and was easy to miss entirely. */}
                 <div className="datapack-import-types-head">
-                    <span className="datapack-import-label">Data types</span>
-                    <SelectAllToggle allSelected={allSelected} onToggle={onToggleAll} />
+                    <span className="datapack-import-label">Data</span>
+                    {/* Nothing to select "all" of in a one-type pack. */}
+                    {availableTypes.length > 1 ? (
+                        <SelectAllToggle allSelected={allSelected} onToggle={onToggleAll} />
+                    ) : null}
                 </div>
                 {/* The grid is shared with the export modal — see
                     .datapack-type-grid for why they are one class. */}

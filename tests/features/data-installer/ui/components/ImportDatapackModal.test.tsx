@@ -36,7 +36,7 @@ import {
 
 // The shared Modal renders its actions as div[role="button"][aria-disabled],
 // not <button disabled> — so jest-dom's toBeDisabled() does not apply.
-const startButton = () => screen.getByRole('button', { name: /start import/i });
+const startButton = () => screen.getByRole('button', { name: /^import$/i });
 const expectStartDisabled = () => expect(startButton()).toHaveAttribute('aria-disabled', 'true');
 
 /** The payload of the start request, once one has been sent. */
@@ -81,7 +81,7 @@ describe('ImportDatapackModal', () => {
             renderModal();
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
-            await press(screen.getByRole('button', { name: /start import/i }));
+            await press(screen.getByRole('button', { name: /^import$/i }));
 
             await waitFor(() => {
                 const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');

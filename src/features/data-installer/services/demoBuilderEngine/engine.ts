@@ -16,13 +16,14 @@
  */
 
 import * as crypto from 'crypto';
-import type { DataTypeStatus, ImportStart, ValidationResult } from '../../types';
+import type { DataTypeStatus, ImportStart, KeptRootStep, ValidationResult } from '../../types';
 import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient';
 import type { DatapackEngine } from '../datapackEngine';
 import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
 import { resolveEngineTarget, sessionFor } from './installTarget';
 import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
 import { type RootStepAsker, rootStepLine } from './packRootStep';
+import { ambiguousKeysLine } from './productLookups';
 import { skippedLine } from './refusedRows';
 import { containersLine } from './removers';
 import { keptLine } from './repeatInstall';
@@ -82,6 +83,8 @@ interface Job {
     note?: string;
     /** A removal kept containers holding the SC's things, so part of the pack is still in the store. */
     leftInStore?: boolean;
+    /** The kept root's Admin step (step 12), for the result's rows. */
+    keptRoot?: KeptRootStep;
     startedAt: number;
     finishedAt?: number;
 }
@@ -150,6 +153,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         settingsLine(outcome.settings, 'Set'),
         underStoreRootLine(outcome.rootPlacement, items.categories, session.storeRoot),
         rootStepLine(outcome.rootStep),
+        ambiguousKeysLine(session.ambiguousCategoryKeys),
     ].filter(Boolean).join(' ') || undefined;
     if (current) job.perType[current] = 'success';
 }
@@ -216,6 +220,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 if (result.noRecord) throw new Error(NO_RECORD);
                 job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
                 if (result.kept.length > 0) job.leftInStore = true;
+                if (result.keptRoot) job.keptRoot = result.keptRoot;
                 for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';
             }),
         async getJobStatus(activationId) {
@@ -226,6 +231,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 hasRecord: job !== undefined,
                 ...(job?.note ? { note: job.note } : {}),
                 ...(job?.leftInStore ? { leftInStore: true } : {}),
+                ...(job?.keptRoot ? { keptRoot: job.keptRoot } : {}),
                 ...(job?.finishedAt !== undefined ? { processingTimeMs: job.finishedAt - job.startedAt } : {}),
             };
         },

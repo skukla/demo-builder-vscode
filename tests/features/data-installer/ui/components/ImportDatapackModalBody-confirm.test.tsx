@@ -1,13 +1,14 @@
 /**
- * The armed removal, in the extension's confirmation shape (owner, 2026-10-31): the question, then
- * Store and Data as label-and-value rows, then the muted "can't be undone" line. The store is named
- * as the SC picked it, never by the 22-character instance id.
+ * The armed removal, as the dialog design rules' confirm (owner, 2026-10-31): the question is the
+ * dialog's title, naming the store (`viewFrame`, tested with `importModalView`), and the body is
+ * one sentence with the warning a word in it. It was the question again, Store and Data rows and a
+ * muted "can't be undone" line, which read as machine-made.
  */
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { type BodyContext, ImportDatapackModalBody } from '@/features/data-installer/ui/components/ImportDatapackModalBody';
+import { type BodyContext, ImportDatapackModalBody, typesInSentence } from '@/features/data-installer/ui/components/ImportDatapackModalBody';
 import type { ImportScopes } from '@/features/data-installer/ui/hooks/useImportScopes';
 
 const SCOPE: ImportScopes = {
@@ -41,20 +42,36 @@ function ctx(over: Partial<BodyContext> = {}): BodyContext {
 }
 
 describe('the removal confirmation', () => {
-    it('asks, then names the store and the data in rows, then says there is no undo', () => {
+    it('says what goes in one sentence, the warning a word in it, and no rows', () => {
         render(<ImportDatapackModalBody view="confirm-reset" ctx={ctx()} />);
 
-        expect(screen.getByText(/Remove ZZ Test Root DB12.s data from this store\?/)).toBeInTheDocument();
-        expect(screen.getByText('Store')).toBeInTheDocument();
-        expect(screen.getByText('Justrite Test Store US (Justrite Test)')).toBeInTheDocument();
-        expect(screen.getByText('Data (1)')).toBeInTheDocument();
-        expect(screen.getByText(/can.t be undone/)).toBeInTheDocument();
+        expect(screen.getByText('Permanently deletes ZZ Test Root DB12’s categories.')).toBeInTheDocument();
+        expect(screen.queryByText('Store')).not.toBeInTheDocument();
+        expect(screen.queryByText(/can.t be undone/)).not.toBeInTheDocument();
         expect(screen.queryByText('UoGYsHrcxMyeoVd2zUktZi')).not.toBeInTheDocument();
     });
+});
 
-    it('falls back to the instance when no store was discovered', () => {
-        render(<ImportDatapackModalBody view="confirm-reset" ctx={ctx({ scope: { ...SCOPE, websites: [] } })} />);
+describe('typesInSentence', () => {
+    it.each([
+        [['Categories'], 'categories'],
+        [['Categories', 'Products'], 'categories and products'],
+        [['Attribute sets', 'Categories', 'Products'], 'attribute sets, categories and products'],
+    ])('joins %j as a sentence joins them', (labels, sentence) => {
+        expect(typesInSentence(labels)).toBe(sentence);
+    });
 
-        expect(screen.getByText('UoGYsHrcxMyeoVd2zUktZi')).toBeInTheDocument();
+    it('keeps the capitals of a label that starts with an acronym', () => {
+        expect(typesInSentence(['B2B companies', 'ACO catalog'])).toBe('B2B companies and ACO catalog');
+    });
+
+    it('names three and counts the rest past seven', () => {
+        const eight = ['A1', 'B1', 'C1', 'D1', 'E1', 'F1', 'G1', 'H1'].map((code) => `Type ${code}`);
+        expect(typesInSentence(eight)).toBe('type A1, type B1, type C1 and 5 more data types');
+    });
+
+    it('names all seven when there are seven — control', () => {
+        const seven = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((code) => `Kind ${code}`);
+        expect(typesInSentence(seven)).toBe('kind A, kind B, kind C, kind D, kind E, kind F and kind G');
     });
 });

@@ -31,6 +31,8 @@ import '@/core/ui/styles/interaction.css';
 import '@/core/ui/styles/inline-controls.css';
 // .modal-* — the storefront Republish is told in the shared progress modal.
 import '@/core/ui/styles/modal.css';
+// .lead-text — the progress window's question and result sentences (`LeadText`).
+import '@/core/ui/styles/modal-text.css';
 // WorkRow, that modal's rows of what a run changed, named by CheckboxRow's label and detail
 // classes (ADR-017 §6).
 import '@/core/ui/styles/work-row.css';

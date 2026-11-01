@@ -1,14 +1,15 @@
 /**
- * Ease a `SteadyHeight` from its old floor to a taller one instead of snapping (owner,
- * 2026-10-31: "can animation of modal sizes help?").
+ * Ease a `SteadyHeight` from its old height to its new one, taller or shorter, instead of
+ * snapping (owner, 2026-10-31: "can animation of modal sizes help?"; both ways since the dialog
+ * design rules the same day).
  *
- * The floor is a MINIMUM, so taller content grows the box at once and animating the minimum
- * shows nothing. So for the growth only, the box takes a real height: the old floor first, then
- * the new one on the next frame, which the stylesheet's height transition eases between
- * (`.steady-height.is-growing`, overflow hidden so the new content is revealed as it grows).
- * After `GROWTH_SETTLE`, longer than the transition, the box goes back to a plain minimum. A
- * timer rather than the transition's end event: reduced motion turns the transition off, and then
- * no end event comes. Nothing can be cut off once the growth is over.
+ * Content height changes at once, so animating nothing shows nothing. For the change only, the
+ * box takes a real height: the old one first, then the new one on the next frame, which the
+ * stylesheet's height transition eases between (`.steady-height.is-growing`, overflow hidden so
+ * content is revealed or covered as it moves). After `GROWTH_SETTLE`, longer than the
+ * transition, the box goes back to its content's own height. A timer rather than the
+ * transition's end event: reduced motion turns the transition off, and then no end event comes.
+ * Nothing can be cut off once the change is over.
  *
  * @module core/ui/components/layout/useGrowthAnimation
  */

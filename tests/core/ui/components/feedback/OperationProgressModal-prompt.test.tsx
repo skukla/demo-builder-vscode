@@ -33,11 +33,12 @@ jest.mock('@adobe/react-spectrum', () => ({
 
 
 
-// The real Modal, reduced to what these assertions read: its title, its buttons and
-// its dismiss affordance. Buttons carry their label, which is what a guard supplies.
+// The real Modal, reduced to what these assertions read: its title and the title's status,
+// its buttons and its dismiss affordance. Buttons carry their label, which is what a guard
+// supplies.
 jest.mock('@/core/ui/components/ui/Modal', () => ({
-    Modal: ({ title, actionButtons = [], closeLabel, onClose, children }: any) => (
-        <div role="dialog" aria-label={title}>
+    Modal: ({ title, status, actionButtons = [], closeLabel, onClose, children }: any) => (
+        <div role="dialog" aria-label={title} data-status={status}>
             {children}
             <button onClick={onClose}>{closeLabel}</button>
             {actionButtons.map((button: any) => (
@@ -51,15 +52,6 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
 
 jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
     LoadingDisplay: ({ message }: { message: string }) => <div data-testid="loading">{message}</div>,
-}));
-
-jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
-    StatusDisplay: ({ variant, title, message, centerMessage }: any) => (
-        <div data-testid="status" data-variant={variant} data-centred={String(Boolean(centerMessage))}>
-            <span>{title}</span>
-            <span>{message}</span>
-        </div>
-    ),
 }));
 
 const mockPostMessage = jest.fn();
@@ -99,7 +91,8 @@ beforeEach(() => {
     progress = null;
 });
 
-it('shows the question in place of the spinner', () => {
+// A question with buttons is the dialog's title, amber (dialog design rules, 2026-10-31).
+it('asks the question as the title, in place of the spinner', () => {
     progress = {
         id: OPERATION.id,
         state: 'running',
@@ -109,8 +102,7 @@ it('shows the question in place of the spinner', () => {
 
     renderModal();
 
-    expect(screen.getByTestId('status')).toHaveAttribute('data-variant', 'warning');
-    expect(screen.getByText('Your DA.live session has expired.')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Your DA.live session has expired.' })).toHaveAttribute('data-status', 'warning');
     expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
 });
 
@@ -286,9 +278,7 @@ describe('the end of a run', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         const { onClose } = renderModal();
 
-        const status = screen.getByTestId('status');
-        expect(status).toHaveAttribute('data-variant', 'success');
-        expect(screen.getByText('Bodea republished')).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Bodea republished' })).toHaveAttribute('data-status', 'success');
         expect(onClose).not.toHaveBeenCalled();
 
         await act(async () => {
@@ -298,20 +288,22 @@ describe('the end of a run', () => {
         expect(onClose).toHaveBeenCalled();
     });
 
-    // Centred under the centred tick and title (owner, 2026-10-16); a failure's reason
-    // can run to several lines, so it stays left-aligned.
-    it('centres the success message', () => {
+    // An ending is the dialog's title, with its status icon, and the body holds only what is
+    // left (dialog design rules, owner 2026-10-31).
+    it("shows a success's note as the sentence under its title", () => {
         progress = { id: OPERATION.id, state: 'succeeded', note: 'Added Demo Team Block Collection (9 blocks).' };
         renderModal();
 
-        expect(screen.getByTestId('status')).toHaveAttribute('data-centred', 'true');
+        expect(screen.getByRole('dialog', { name: 'Bodea republished' })).toHaveAttribute('data-status', 'success');
+        expect(screen.getByTestId('operation-end')).toHaveTextContent('Added Demo Team Block Collection (9 blocks).');
     });
 
-    it("leaves a failure's reason left-aligned — control", () => {
+    it("titles a failure red, with its reason under it", () => {
         progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
         renderModal();
 
-        expect(screen.getByTestId('status')).toHaveAttribute('data-centred', 'false');
+        expect(screen.getByRole('dialog', { name: "Couldn't republish Bodea" })).toHaveAttribute('data-status', 'error');
+        expect(screen.getByTestId('operation-end')).toHaveTextContent('Adobe refused this.');
     });
 
     // A failure has a reason to read and a Retry to press, so it waits.
@@ -323,7 +315,7 @@ describe('the end of a run', () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
 
-        expect(screen.getByText("Couldn't republish Bodea")).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: "Couldn't republish Bodea" })).toBeInTheDocument();
         expect(onClose).not.toHaveBeenCalled();
     });
 
@@ -362,7 +354,7 @@ describe('a next step on success', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         renderWithNext();
 
-        expect(screen.getByText('Bodea republished')).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Bodea republished' })).toBeInTheDocument();
         expect(screen.getByText(NEXT.message)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Open demo setup' })).toHaveAttribute('data-variant', 'accent');
     });

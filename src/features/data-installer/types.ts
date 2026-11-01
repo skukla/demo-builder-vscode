@@ -182,6 +182,20 @@ export interface ImportProgressMessage {
     perType: Record<string, DataTypeStatus>;
 }
 
+/**
+ * A removal kept the pack's root category because a store shows it as its root: the one Admin
+ * step that frees it, as the result shows it in the setup step's Where / Enter / Then rows (owner,
+ * 2026-10-31). Demo Builder's engine only.
+ */
+export interface KeptRootStep {
+    /** The store (store group), as the Admin names it. */
+    store: string;
+    /** The pack's root category that was kept. */
+    category: string;
+    /** The root category the store showed before the pack, to put back; absent when unreadable. */
+    restore?: string;
+}
+
 /** A snapshot of one async job's progress. */
 export interface JobStatusSnapshot {
     activationId: string;
@@ -201,6 +215,8 @@ export interface JobStatusSnapshot {
      * The project then still names the pack (`importJobWatch.ts`).
      */
     leftInStore?: boolean;
+    /** The kept root category's Admin step, when that is what the removal kept. */
+    keptRoot?: KeptRootStep;
 }
 
 /**
@@ -259,6 +275,8 @@ export interface ImportJobRecord {
     reason?: string;
     /** What it kept and why, in one line ("Kept 2 things you had changed in the Admin."). */
     note?: string;
+    /** The kept root category's Admin step (`JobStatusSnapshot.keptRoot`). */
+    keptRoot?: KeptRootStep;
     processingTimeMs?: number;
 }
 

@@ -4,7 +4,7 @@ kind: fix
 area: data-installer
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # A pack links products to categories by url key, which two categories can share
@@ -53,3 +53,7 @@ export. So no installer can fix Bodea as it is.
 
 Check before building: read the real Bodea store (if one exists) for where those 22 products sit,
 to confirm which category was meant.
+
+## Shipped so far
+
+- 2026-10-31  fix(data-installer): an install says when a category key names two categories (`515532cdb`)

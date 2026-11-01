@@ -54,7 +54,7 @@ describe('dataTypeLabel', () => {
         expect(dataTypeLabel('stock_source_links')).toBe('Stock source links');
     });
 
-    /** Sentence case, matching the surrounding labels — "Target website", "Data types". */
+    /** Sentence case, matching the surrounding labels — "Website", "Data". */
     it('uses sentence case, not title case', () => {
         expect(dataTypeLabel('customer_groups')).toBe('Customer groups');
     });

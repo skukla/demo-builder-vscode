@@ -146,7 +146,7 @@ describe('ImportDatapackModal — decisions', () => {
             await press(screen.getByRole('button', { name: /select all/i }));
 
             const before = statusCalls();
-            await press(screen.getByRole('button', { name: /start import/i }));
+            await press(screen.getByRole('button', { name: /^import$/i }));
 
             expect(statusCalls()).toBeGreaterThan(before);
         });
@@ -155,7 +155,7 @@ describe('ImportDatapackModal — decisions', () => {
     /**
      * The watching view says what the JOB is, and the job can be a removal.
      * Three strings are derived from one `operation` field — the spinner's
-     * message, the progress verb and the "continues on the server" noun — and a
+     * message, the progress verb and the "carries on without you" noun — and a
      * single test of the import path leaves all three free to say "import" for a
      * removal, which is the wording bug this surface already shipped once.
      */
@@ -180,24 +180,24 @@ describe('ImportDatapackModal — decisions', () => {
             expect(screen.getByText('0 of 2 data types: Categories')).toBeInTheDocument();
         });
 
-        it('says the REMOVAL continues on the server once watching stops', async () => {
+        it('says the REMOVAL carries on once watching stops', async () => {
             withStatus(runningRecord({ operation: 'reset' }));
             renderModal();
             await settle();
 
             await press(await screen.findByRole('button', { name: /stop watching/i }));
 
-            expect(screen.getByText('The removal continues on the server.')).toBeInTheDocument();
+            expect(screen.getByText('The removal carries on without you.')).toBeInTheDocument();
         });
 
-        it('CONTROL — says the IMPORT continues on the server once watching stops', async () => {
+        it('CONTROL — says the IMPORT carries on once watching stops', async () => {
             withStatus(runningRecord());
             renderModal();
             await settle();
 
             await press(await screen.findByRole('button', { name: /stop watching/i }));
 
-            expect(screen.getByText('The import continues on the server.')).toBeInTheDocument();
+            expect(screen.getByText('The import carries on without you.')).toBeInTheDocument();
         });
 
         it('gives the ring the measured percentage once a type has reported', async () => {
@@ -244,18 +244,19 @@ describe('ImportDatapackModal — decisions', () => {
             await press(screen.getByRole('button', { name: /^remove data/i }));
         }
 
-        // Counted as the side panel counts a pack's data (owner, 2026-10-31: the confirmation
-        // now uses the extension's label-and-value rows).
-        it('counts one type', async () => {
+        // The confirm's one sentence names what goes, the warning a word in it (dialog design
+        // rules, owner 2026-10-31).
+        it('names one type in its sentence', async () => {
             await armReset(['Categories']);
 
-            expect(screen.getByText('Data (1)')).toBeInTheDocument();
+            expect(screen.getByText(/^Permanently deletes .+’s categories\.$/)).toBeInTheDocument();
         });
 
-        it('counts several types', async () => {
+        // Products brings the type it depends on, and both are named.
+        it('names several types, joined as a sentence joins them', async () => {
             await armReset(['Products']);
 
-            expect(screen.getByText('Data (2)')).toBeInTheDocument();
+            expect(screen.getByText(/^Permanently deletes .+’s .+ and .+\.$/)).toBeInTheDocument();
         });
     });
 
@@ -277,7 +278,7 @@ describe('ImportDatapackModal — decisions', () => {
             await press(screen.getByRole('button', { name: /select all/i }));
             await press(screen.getByRole('button', { name: /^remove data/i }));
 
-            await press(screen.getByRole('button', { name: /remove the data/i }));
+            await press(screen.getByRole('button', { name: /^remove$/i }));
 
             expect(screen.getByText('Starting removal')).toBeInTheDocument();
         });
@@ -374,7 +375,7 @@ describe('ImportDatapackModal — decisions', () => {
             await settle();
             await press(await screen.findByRole('button', { name: /select all/i }));
 
-            expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
+            expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
                 'aria-disabled',
                 'true',
             );
@@ -382,11 +383,12 @@ describe('ImportDatapackModal — decisions', () => {
     });
 
     describe('select all', () => {
-        it('offers nothing to select when the pack lists no types', async () => {
-            renderModal({ availableTypes: [] });
+        // Nothing to select "all" of with fewer than two types (owner, 2026-10-31).
+        it.each([[[]], [['categories']]])('offers no Select all for a pack of %j', async (availableTypes) => {
+            renderModal({ availableTypes });
             await settle();
 
-            expect(screen.getByRole('button', { name: /select all/i })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /select all/i })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /clear all/i })).not.toBeInTheDocument();
         });
 
@@ -397,7 +399,7 @@ describe('ImportDatapackModal — decisions', () => {
 
             await press(screen.getByRole('button', { name: /clear all/i }));
 
-            expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
+            expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
                 'aria-disabled',
                 'true',
             );

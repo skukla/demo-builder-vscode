@@ -12,9 +12,11 @@
  * next step, which wait to be read. A failure
  * stays: the reason, Retry, and the Debug Logs where the full detail went.
  *
- * Not `layout/CenteredFeedbackContainer`: that RESERVES a minimum height and lets
- * taller content grow, and this modal must never change size (owner, 2026-09-19) —
- * so its body is one fixed height that scrolls instead (`.modal-progress-body`).
+ * Its body fits each state and eases between them (`layout/SteadyHeight`), and its title is
+ * the outcome or the question once there is one (`progressFrame`), by the dialog design
+ * rules (owner, 2026-10-31). It was one fixed height so it never changed size (owner,
+ * 2026-09-19); a fitted height that eases, under a dialog pinned near the top, keeps it
+ * from jumping without the dead space.
  *
  * It also carries a QUESTION the work is paused on — an expired sign-in, a missing
  * prerequisite, a merge needing a decision — because a notification asking that
@@ -32,7 +34,8 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef } from 'react';
-import { OperationProgressBody } from '@/core/ui/components/feedback/OperationProgressBody';
+import { OperationProgressBody, progressFrame } from '@/core/ui/components/feedback/OperationProgressBody';
+import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -237,12 +240,22 @@ export function OperationProgressModal({
     // this beside its own dialogs, and a container with no child still occupies
     // the dialog slot (two dismiss targets on the dashboard, 2026-09-19).
     if (!operation) return <></>;
+    const frame = progressFrame({
+        title: operation.title,
+        successTitle: operation.successTitle,
+        failureTitle: operation.failureTitle,
+        prompt,
+        failed,
+        succeeded,
+        warned: Boolean(warning),
+    });
 
     return (
         <DialogContainer onDismiss={close}>
             <Modal
                 fitContent
-                title={operation.title}
+                title={frame.title}
+                status={frame.status}
                 size="M"
                 onClose={close}
                 closeLabel={closeLabelFor(failed || succeeded, Boolean(prompt))}
@@ -252,24 +265,22 @@ export function OperationProgressModal({
                         : [...failureButtons(failed, onRetry), ...nextStepButtons(offering, onClose)]
                 }
             >
-                {operation.subject && <div className="modal-progress-subject" title={operation.subject}>{operation.subject}</div>}
-                {/* One fixed height for every state, so the modal never resizes as
-                        stages come and go or it turns into a failure. */}
-                <div className="modal-progress-body">
+                {operation.subject && <div className="modal-progress-subject">{operation.subject}</div>}
+                {/* Fits each state and eases between them (dialog design rules, 2026-10-31). It was
+                    one fixed height for every state, which left a one-line result in a box sized
+                    for a three-line failure. */}
+                <SteadyHeight>
                     <OperationProgressBody
                         prompt={prompt}
                         failed={failed}
                         succeeded={succeeded}
-                        failureTitle={operation.failureTitle}
-                        successTitle={operation.successTitle}
                         successMessage={
                             [warning, note, offering?.message].filter(Boolean).join(' ') || undefined
                         }
-                        warned={Boolean(warning)}
                         progress={progress}
                         onTyped={onTyped}
                     />
-                </div>
+                </SteadyHeight>
             </Modal>
         </DialogContainer>
     );

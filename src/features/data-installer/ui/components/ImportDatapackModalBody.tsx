@@ -9,7 +9,6 @@
  * @module features/data-installer/ui/components/ImportDatapackModalBody
  */
 
-import { Text } from '@adobe/react-spectrum';
 import React from 'react';
 import type { ImportJobRecord } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
@@ -18,10 +17,10 @@ import type { ImportScopes } from '../hooks/useImportScopes';
 import { progressLabel, progressStep, summarizeProgress } from '../importProgress';
 import { ImportForm } from './ImportForm';
 import type { ResultContent } from './importResult';
+import { ImportResultView } from './ImportResultView';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
-import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 
 /**
@@ -42,34 +41,33 @@ function NoInstanceNotice(): React.JSX.Element {
     );
 }
 
-/** The chosen target by name, "Justrite Test Store US (Justrite Test)", or the instance when unnamed. */
-function targetName(ctx: BodyContext): string {
-    const website = ctx.scope.websites.find((w) => w.code === ctx.scope.websiteCode);
-    const store = website?.storeViews.find((v) => v.code === ctx.scope.storeCode);
-    if (website && store) return `${store.name} (${website.name})`;
-    return website?.name ?? ctx.commerceInstance;
+/** A data type's label inside a sentence: "categories", but "B2B companies" keeps its capitals. */
+function inSentence(label: string): string {
+    return /^.[A-Z0-9]/.test(label) ? label : label.charAt(0).toLowerCase() + label.slice(1);
 }
 
 /**
- * The armed removal, in the extension's confirmation shape (owner, 2026-10-31: the old block, a
- * red left border, tiny capital labels and the raw instance id, read as cramped and as nothing
- * else in the extension): the question, then Store and Data as label-and-value rows, as Clear
- * demo data and the setup step's Where / Enter do, then the same muted "can't be undone" line.
- * The store by the names the SC picked, not the 22-character instance id nobody can check. The
- * data types stay listed in full: a destructive confirmation is the one place the picking should
- * be checkable, by the labels the boxes showed.
+ * The types in a sentence, by the dialog design rules: up to seven named in full, past that three
+ * and how many more.
+ */
+export function typesInSentence(labels: string[]): string {
+    const words = labels.map(inSentence);
+    if (words.length > 7) return `${words.slice(0, 3).join(', ')} and ${words.length - 3} more data types`;
+    if (words.length < 2) return words.join('');
+    return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
+}
+
+/**
+ * The armed removal, as the dialog design rules' confirm (owner, 2026-10-31): the question is the
+ * dialog's title, naming the store, and this is its one sentence, the warning a word in it. It was
+ * the question again, Store and Data rows and a muted "This can't be undone." under them, which
+ * read as machine-made.
  */
 function ResetConfirm({ ctx }: { ctx: BodyContext }): React.JSX.Element {
     return (
-        <>
-            <LeadText>Remove {ctx.displayName}&rsquo;s data from this store?</LeadText>
-            <FactList>
-                <Fact label="Store">{targetName(ctx)}</Fact>
-                {/* Counted as the side panel counts a pack's data, "Data (2)". */}
-                <Fact label={`Data (${ctx.selected.length})`}>{ctx.selected.map(dataTypeLabel).join(', ')}</Fact>
-            </FactList>
-            <Text UNSAFE_className="clear-demo-never">This can&rsquo;t be undone.</Text>
-        </>
+        <LeadText>
+            Permanently deletes {ctx.displayName}&rsquo;s {typesInSentence(ctx.selected.map(dataTypeLabel))}.
+        </LeadText>
     );
 }
 
@@ -102,13 +100,9 @@ export interface BodyContext {
  */
 export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: BodyContext }): React.JSX.Element {
     return (
-        // Six views, six natural heights. Without a floor the dialog jumps every time
-        // one replaces another — form, then spinner, then result, all different sizes
-        // in one dry run (owner, 2026-09-20). The form reads from the top; the spinner and
-        // a result sit centred. Results take only the room they need, so the form's height
-        // is the floor and Back does not leave the form floating in a taller box (owner,
-        // 2026-10-31).
-        <SteadyHeight align={view === 'form' ? 'start' : 'center'}>
+        // Six views, six natural heights: the box fits each and eases between them, so a
+        // view change is a movement rather than a jump (dialog design rules, 2026-10-31).
+        <SteadyHeight>
             <div className="datapack-import-body">
                     {view === 'busy' ? (
                         // Medium and centred, a job dialog's wait: the large spinner
@@ -125,15 +119,7 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
                         <WatchProgress record={ctx.record} watching={ctx.watching} />
                     ) : null}
 
-                    {view === 'result' && ctx.result ? (
-                        <StatusDisplay
-                            variant={ctx.result.variant}
-                            title={ctx.result.title}
-                            message={ctx.result.message}
-                            details={ctx.result.details}
-                            height="auto"
-                        />
-                    ) : null}
+                    {view === 'result' && ctx.result ? <ImportResultView result={ctx.result} /> : null}
 
                     {view === 'no-instance' ? <NoInstanceNotice /> : null}
 
@@ -192,11 +178,9 @@ function WatchProgress({
             // Determinate only once something has reported. A ring pinned at 0
             // reads as stalled, where the indeterminate spinner reads as starting.
             {...(label ? { progress: progress.percent } : {})}
-            helperText={
-                watching
-                    ? 'This can take several minutes. Closing this or stopping the watch continues on the server.'
-                    : `The ${noun} continues on the server.`
-            }
+            // Said once watching has stopped, so "stopped looking" never reads as "cancelled".
+            // Not while watching: the footer's "Run in background" and "Stop watching" say it.
+            {...(watching ? {} : { helperText: `The ${noun} carries on without you.` })}
         />
     );
 }

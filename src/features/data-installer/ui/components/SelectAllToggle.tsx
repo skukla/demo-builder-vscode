@@ -2,17 +2,16 @@
  * Select all, or Clear all once everything is ticked, over a datapack form's list of boxes: the
  * import and export forms' data types, and Create datapack's store items.
  *
- * A quiet button with an icon, like the catalog header's Create datapack and Load from file
- * (`CatalogHeaderActions`). It was the bare words, which an SC reported as hard to see beside
- * the list's heading (owner, 2026-10-31). One component because the same button was written out
- * in three forms.
+ * A text button in the accent colour beside the list's label (`inline-action-link`). It was a
+ * grey quiet button, which an SC reported as hard to see (owner, 2026-10-31), then the same
+ * with a "select box" icon, which is drawn as a ticked checkbox and so read as "everything is
+ * selected" above boxes that were not. One component because the same button was written out in
+ * three forms.
  *
  * @module features/data-installer/ui/components/SelectAllToggle
  */
 
-import { ActionButton, Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 
 export interface SelectAllToggleProps {
     /** Every box is ticked: the button offers Clear all. */
@@ -22,9 +21,8 @@ export interface SelectAllToggleProps {
 
 export function SelectAllToggle({ allSelected, onToggle }: SelectAllToggleProps): React.JSX.Element {
     return (
-        <ActionButton isQuiet onPress={onToggle}>
-            {renderMenuIcon(allSelected ? 'clearAll' : 'selectAll')}
-            <Text>{allSelected ? 'Clear all' : 'Select all'}</Text>
-        </ActionButton>
+        <button type="button" className="inline-action-link" onClick={onToggle}>
+            {allSelected ? 'Clear all' : 'Select all'}
+        </button>
     );
 }

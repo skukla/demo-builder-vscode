@@ -30,7 +30,7 @@
  * @module features/data-installer/services/importJobRunner
  */
 
-import type { DataTypeStatus, JobFailureReason, JobStatusSnapshot } from '../types';
+import type { DataTypeStatus, JobFailureReason, JobStatusSnapshot, KeptRootStep } from '../types';
 import type { PollingService } from '@/core/shell/pollingService';
 
 /**
@@ -81,6 +81,8 @@ export interface ImportJobResult {
     note?: string;
     /** A removal left part of the pack in the store on purpose (`JobStatusSnapshot.leftInStore`). */
     leftInStore?: boolean;
+    /** The kept root's Admin step (`JobStatusSnapshot.keptRoot`). */
+    keptRoot?: KeptRootStep;
     processingTimeMs?: number;
 }
 
@@ -203,10 +205,11 @@ export async function watchImportJob(args: {
 }
 
 /** The finished job's own words, each only when the engine gave it. */
-function whatTheEngineSaid(latest: JobStatusSnapshot): Pick<ImportJobResult, 'note' | 'leftInStore' | 'processingTimeMs'> {
+function whatTheEngineSaid(latest: JobStatusSnapshot): Pick<ImportJobResult, 'note' | 'leftInStore' | 'keptRoot' | 'processingTimeMs'> {
     return {
         ...(latest.note ? { note: latest.note } : {}),
         ...(latest.leftInStore ? { leftInStore: true } : {}),
+        ...(latest.keptRoot ? { keptRoot: latest.keptRoot } : {}),
         ...(latest.processingTimeMs !== undefined ? { processingTimeMs: latest.processingTimeMs } : {}),
     };
 }

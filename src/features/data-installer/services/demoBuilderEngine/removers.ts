@@ -105,6 +105,8 @@ export interface KeptContainer {
      * Commerce will not delete while the company stands, and its catalog with that catalog's group.
      */
     with?: KeptPartner[];
+    /** The pack's root, kept because this store (as the Admin names it) shows it as its root (step 12). */
+    rootOfStore?: string;
 }
 
 /** One thing kept with a container, and how its line names it ("its admin"; "its <kind>" by default). */
@@ -162,7 +164,7 @@ async function heldByOthers(get: CommerceGet, object: CreatedObject, removal: Ta
         const name = category?.name ?? object.id;
         // Step 12: a store the SC pointed at the pack's root would be left with no root at all.
         const showing = object.key === ROOT_KEY ? await storeShowingRoot(get, object.id) : undefined;
-        if (showing) return { object, kind: 'category', name, count: 0, holds: 'thing', reason: showing };
+        if (showing) return { object, kind: 'category', name, count: 0, holds: 'thing', reason: showing.reason, ...(showing.store ? { rootOfStore: showing.store } : {}) };
         const others = (category?.children ?? '').split(',').map((id) => id.trim()).filter((id) => id !== '' && !taking.has(keyOfObject('categories', id)));
         if (others.length > 0) return { object, kind: 'category', name, count: others.length, holds: 'category' };
         // Its products too: deleting the category would leave the SC's own in no category at all.

@@ -151,6 +151,8 @@ describe("a pack's root, the store's root shared", () => {
 
         const first = await removePack(await open(), files, { projectPath: PROJECT, pack: PACK });
         expect(first.kept).toEqual([expect.objectContaining({ name: 'Frescopa', reason: expect.stringContaining('the store JustRite Test Store shows it as its root category') })]);
+        // The result screen's Admin step: which store, which category, and the root to set back.
+        expect(first.keptRoot).toEqual({ store: 'JustRite Test Store', category: 'Frescopa', restore: 'Justrite' });
         expect(idsByName(store)).toHaveProperty('Frescopa', 300);
         expect(idsByName(store)).not.toHaveProperty('Coffee');
         expect((await readInstallRecord(files, PROJECT, PACK))?.created.map((o) => o.key)).toEqual(['(root)']);
@@ -158,6 +160,7 @@ describe("a pack's root, the store's root shared", () => {
         store.setRoot('justrite_test_store', 119);
         const second = await removePack(await open(), files, { projectPath: PROJECT, pack: PACK });
         expect(second).toMatchObject({ removed: 1, kept: [] });
+        expect(second.keptRoot).toBeUndefined();
         expect(store.categories).toEqual(before);
         await expect(readInstallRecord(files, PROJECT, PACK)).resolves.toBeUndefined();
     });

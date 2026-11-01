@@ -1,7 +1,9 @@
 /**
  * OperationProgressBody — the one row of the progress modal that changes: a question
  * the run is paused on, its failure, its success, or where the work has got to and
- * how long the run has been going.
+ * how long the run has been going. `progressFrame` gives the dialog around it its title
+ * and status: by the dialog design rules (`docs/development/sop/dialog-design.md`, owner
+ * 2026-10-31) an outcome or a question is the TITLE, so the body holds only what is left.
  *
  * Split out of {@link OperationProgressModal} (2026-10-16), which keeps the dialog,
  * its buttons and the state that drives them.
@@ -13,9 +15,10 @@ import { Flex, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { OperationPromptForm } from '@/core/ui/components/feedback/OperationPromptForm';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
-import { tookLine, useRunClock } from '@/core/ui/hooks/useRunClock';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
+import type { ModalStatus } from '@/core/ui/components/ui/Modal';
+import { tookValue, useRunClock } from '@/core/ui/hooks/useRunClock';
 import { expectationLine, stageLine } from '@/core/utils/stageLine';
 import type { OperationChange, OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
 
@@ -23,12 +26,8 @@ export interface OperationProgressBodyProps {
     prompt?: OperationPrompt;
     failed: boolean;
     succeeded: boolean;
-    failureTitle: string;
-    successTitle: string;
-    /** The success view's second line: the run's warning or note, then what is left to do. */
+    /** The success view's sentence: the run's warning or note, then what is left to do. */
     successMessage?: string;
-    /** The run succeeded with a warning: the view is a warning's, not a green tick. A note keeps the tick. */
-    warned: boolean;
     progress?: OperationProgressPayload | null;
     /** Every keystroke in a question's fields, for the buttons to hand back. */
     onTyped: (values: Record<string, string>) => void;
@@ -39,19 +38,13 @@ export function OperationProgressBody({
     prompt,
     failed,
     succeeded,
-    failureTitle,
-    successTitle,
     successMessage,
-    warned,
     progress,
     onTyped,
-}: OperationProgressBodyProps): React.ReactElement {
+}: OperationProgressBodyProps): React.ReactElement | null {
     // The whole run, from the start the extension stamped on every push. The only
     // thing that moves while a step waits on Adobe.
     const total = useRunClock(progress?.state === 'running' ? progress.startedAt : undefined);
-    // "Took 3 minutes, 12 seconds" on the last view, when the extension timed the run.
-    const tookText = progress?.tookMs === undefined ? undefined : tookLine(progress.tookMs);
-    const took = tookText ? [tookText] : undefined;
     if (prompt?.fields?.length) {
         // The question and what it needs typed, together: the modal owns the form
         // rather than handing off to a VS Code input box (owner, 2026-09-20).
@@ -63,19 +56,22 @@ export function OperationProgressBody({
         );
     }
     if (prompt) {
-        // The question's own heading. One with none (nothing asks that way) shows its
-        // sentence as the heading rather than a generic one.
-        return prompt.title ? (
-            <StatusDisplay variant="warning" title={prompt.title} message={prompt.message} />
-        ) : (
-            <StatusDisplay variant="warning" title={prompt.message} />
-        );
+        // The question is the dialog's title (`progressFrame`); its sentence, when it has a
+        // heading of its own, is the body.
+        return prompt.title ? <LeadText>{prompt.message}</LeadText> : null;
     }
     if (failed) {
-        return <StatusDisplay variant="error" title={failureTitle} message={progress?.error} details={took} />;
+        return <EndView message={progress?.error} took={tookWorthSaying(progress)} />;
     }
     if (succeeded) {
-        return <SuccessView title={successTitle} message={successMessage} warned={warned} progress={progress} took={took} />;
+        return (
+            <EndView
+                message={successMessage}
+                lines={progress?.details}
+                changes={progress?.changes}
+                took={tookWorthSaying(progress)}
+            />
+        );
     }
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text (ImportDatapackModal).
@@ -90,33 +86,70 @@ export function OperationProgressBody({
     );
 }
 
+/** How long the run took, when the extension timed it and it is long enough to say. */
+function tookWorthSaying(progress?: OperationProgressPayload | null): string | undefined {
+    return progress?.tookMs === undefined ? undefined : tookValue(progress.tookMs);
+}
+
 /**
- * A run that succeeded: centred under the centred tick and title (owner, 2026-10-16), the
- * lines it left to know, how long it took, then what it changed as rows, sized to them so
- * a long list scrolls in the body. A failure's message stays left-aligned: it can run to
- * several lines.
+ * How a run ended, below the title that says it: the sentence, the lines it left to know, what
+ * it changed as rows, and how long a long run took. Nothing at all for a plain success, whose
+ * title says everything. It was a status box repeating the title over the same lines, which read
+ * as machine-made (dialog design rules, owner 2026-10-31).
  */
-function SuccessView({ title, message, warned, progress, took }: {
-    title: string;
+function EndView({ message, lines, changes, took }: {
     message?: string;
-    warned: boolean;
-    progress?: OperationProgressPayload | null;
-    took?: string[];
-}): React.ReactElement {
-    const lines = [...(progress?.details ?? []), ...(took ?? [])];
-    const changes = progress?.changes ?? [];
+    lines?: string[];
+    changes?: OperationChange[];
+    took?: string;
+}): React.ReactElement | null {
+    const hasChanges = Boolean(changes && changes.length > 0);
+    if (!message && !lines?.length && !hasChanges && took === undefined) return null;
     return (
-        <StatusDisplay
-            variant={warned ? 'warning' : 'success'}
-            title={title}
-            message={message}
-            details={lines.length > 0 ? lines : undefined}
-            centerMessage
-            {...(changes.length > 0 ? { height: 'auto' } : {})}
-        >
-            {changes.length > 0 && <ChangeRows changes={changes} />}
-        </StatusDisplay>
+        <div className="dialog-stack" data-testid="operation-end">
+            {message ? <LeadText>{message}</LeadText> : null}
+            {lines?.map((line) => (
+                <p key={line} className="dialog-line">
+                    {line}
+                </p>
+            ))}
+            {changes && hasChanges ? <ChangeRows changes={changes} /> : null}
+            {took !== undefined ? <p className="dialog-note">Took {took}</p> : null}
+        </div>
     );
+}
+
+/** A question with buttons is its own heading; one with fields sits under the run's title. */
+function questionFrame(prompt: OperationPrompt, runTitle: string): ProgressFrame {
+    if (prompt.fields && prompt.fields.length > 0) return { title: runTitle };
+    return { title: prompt.title || prompt.message, status: 'warning' };
+}
+
+/** The dialog around the body: its title and the title's status. */
+export interface ProgressFrame {
+    title: string;
+    status?: ModalStatus;
+}
+
+/**
+ * The progress window's title for where the run stands: the run's own title while it works, the
+ * outcome when it ends (green, amber when it succeeded with a warning, red when it failed), and a
+ * question with buttons as its own heading with an amber icon. A question with fields sits under
+ * the run's title, as its form does.
+ */
+export function progressFrame(a: {
+    title: string;
+    successTitle: string;
+    failureTitle: string;
+    prompt?: OperationPrompt;
+    failed: boolean;
+    succeeded: boolean;
+    warned: boolean;
+}): ProgressFrame {
+    if (a.prompt) return questionFrame(a.prompt, a.title);
+    if (a.failed) return { title: a.failureTitle, status: 'error' };
+    if (a.succeeded) return { title: a.successTitle, status: a.warned ? 'warning' : 'success' };
+    return { title: a.title };
 }
 
 /**

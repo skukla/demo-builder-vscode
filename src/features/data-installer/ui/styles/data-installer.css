@@ -319,8 +319,7 @@
 }
 }
 
-/* Label above, control below — and while discovery runs the spinner IS the
-   control, in the same place, under a label that does not move. */
+/* Label above, control below. */
 @layer theme {
 .datapack-scope-field {
     display: flex;
@@ -330,31 +329,14 @@
 }
 }
 
-/* Holds the control's height so the dialog does not jump when the picker
-   replaces it. These fields used to appear only once the scopes landed, and
-   that jump is what the disabled-placeholder version was written to stop; the
-   swap must not reintroduce it. The value is the Spectrum medium field height —
-   a literal, because the token and the size prop resolve to different px in
-   this webview. */
-/* Shrinks to the LABEL, so the spinner below it has something narrow enough to
-   be centred under. `align-self: flex-start` stops the column stretching it to
-   the field's full width, which would put the centre back mid-column. */
+/* While the stores load: one spinner in the row the pickers will fill, holding the row's
+   height (a label line, 4px, a 32px field) so the pickers replace it without a jump. */
 @layer theme {
-.datapack-scope-busy {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    align-self: flex-start;
-    gap: 4px;
-}
-}
-
-@layer theme {
-.datapack-scope-loading {
+.datapack-import-scope-loading {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 32px;
+    min-height: 54px;
 }
 }
 
@@ -432,9 +414,8 @@
    live. Owning the element removes the question instead of answering it. */
 @layer theme {
 .datapack-import-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    /* Small, muted, sentence case (dialog design rules, 2026-10-31): it was small capitals. */
+    font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
 }
 }

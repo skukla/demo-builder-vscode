@@ -42,6 +42,18 @@ interface Result {
 const EMPTY_PS = path.join(os.tmpdir(), `dbv-ps-empty-${process.pid}.txt`);
 fs.writeFileSync(EMPTY_PS, '    1 /sbin/launchd\n');
 
+/**
+ * The router's own TMPDIR, made for this run and removed after it (PL-86).
+ *
+ * A once-per-session rule drops `${TMPDIR}/.dbv-<rule>-<session>` and stays quiet while it exists,
+ * and nothing deletes it. Sharing the real TMPDIR, a session named `router-test-<pid>-<n>` collided
+ * with a marker some earlier run with the same reused pid had left, and four "interrupts" cases
+ * failed at random: 4,439 such markers had piled up on the owner's machine by 2026-11-01. A private
+ * directory means no marker from any other run can be seen.
+ */
+const ROUTER_TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'dbv-router-'));
+afterAll(() => fs.rmSync(ROUTER_TMP, { recursive: true, force: true }));
+
 /** Run the router with a payload, capturing exit code and stderr. */
 function run(payload: unknown, session = 'test-session', env: NodeJS.ProcessEnv = {}): Result {
     const body =
@@ -53,7 +65,7 @@ function run(payload: unknown, session = 'test-session', env: NodeJS.ProcessEnv 
             input: body,
             encoding: 'utf-8',
             stdio: 'pipe',
-            env: { ...process.env, DBV_JEST_PS: EMPTY_PS, ...env },
+            env: { ...process.env, DBV_JEST_PS: EMPTY_PS, TMPDIR: ROUTER_TMP, ...env },
         });
         return { code: 0, stderr: '' };
     } catch (e) {
@@ -598,5 +610,23 @@ describe('every rule is reachable through the pre-filter', () => {
         // code 0 here means the pre-filter swallowed it — the rule never ran.
         expect({ id, code: r.code }).toEqual({ id, code: 2 });
         expect(r.stderr.trim().length).toBeGreaterThan(0);
+    });
+});
+
+/**
+ * PL-86's control: a marker left by ANOTHER run, in the real TMPDIR, under the session this suite
+ * is about to use, must not silence the rule. Before the private TMPDIR it did.
+ */
+describe('a marker another run left behind', () => {
+    it('does not silence a once-per-session rule', () => {
+        const session = fresh();
+        const stale = path.join(os.tmpdir(), `.dbv-reuse-first-${session}`);
+        fs.writeFileSync(stale, '');
+        try {
+            const r = run(write('/repo/src/features/x/ui/AnotherNewThing.tsx'), session);
+            expect(r.code).toBe(2);
+        } finally {
+            fs.rmSync(stale, { force: true });
+        }
     });
 });

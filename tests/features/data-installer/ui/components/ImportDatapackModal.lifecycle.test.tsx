@@ -17,7 +17,7 @@ import {
     defaultResponse,
 } from './ImportDatapackModal.testUtils';
 
-const startButton = () => screen.getByRole('button', { name: /start import/i });
+const startButton = () => screen.getByRole('button', { name: /^import$/i });
 
 /**
  * An activation id for the write calls, but the real target for the target call.
@@ -69,18 +69,18 @@ describe('ImportDatapackModal — job lifecycle', () => {
             expect(resetCalls()).toHaveLength(0);
         });
 
-        it('names where the data will be removed from, and says there is no undo', async () => {
+        // The question is the title and names where; the warning is a word in the sentence
+        // (dialog design rules, owner 2026-10-31: one removal nearly went to the real website).
+        it('asks with where the data will be removed from in the title, and says it is permanent', async () => {
             renderModal();
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
             await press(resetButton());
 
-            expect(await screen.findByText(/can.t be undone/i)).toBeInTheDocument();
-            // The store by the names the SC picked; with no websites discovered (this fixture),
-            // the instance id exactly ('inst'), never a near match in the prose.
-            expect(screen.getByText('Store')).toBeInTheDocument();
-            expect(screen.getByText('inst')).toBeInTheDocument();
+            // With no websites discovered (this fixture), the instance id names the store.
+            expect(await screen.findByRole('heading', { name: 'Remove from inst?' })).toBeInTheDocument();
+            expect(screen.getByText(/^Permanently deletes Bodea’s categories\.$/)).toBeInTheDocument();
         });
 
         /**
@@ -98,9 +98,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
             await press(resetButton());
 
-            await screen.findByText(/can.t be undone/i);
-            expect(screen.getByText('Data (1)')).toBeInTheDocument();
-            expect(screen.getByText('Categories', { selector: 'dd' })).toBeInTheDocument();
+            expect(await screen.findByText(/^Permanently deletes Bodea’s categories\.$/)).toBeInTheDocument();
             expect(screen.queryByText(/stock_source_links|b2b_shared/)).not.toBeInTheDocument();
         });
 
@@ -110,10 +108,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
             await press(resetButton());
-            await press(screen.getByRole('button', { name: /keep the data/i }));
+            await press(screen.getByRole('button', { name: 'Cancel' }));
 
             expect(resetCalls()).toHaveLength(0);
-            expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^import$/i })).toBeInTheDocument();
         });
 
         // The handler refuses anything without `confirm: true`, so the armed press
@@ -124,7 +122,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
             await press(resetButton());
-            await press(screen.getByRole('button', { name: /remove the data/i }));
+            await press(screen.getByRole('button', { name: /^remove$/i }));
 
             await waitFor(() => expect(resetCalls()).toHaveLength(1));
             expect(resetCalls()[0][1]).toMatchObject({
@@ -205,7 +203,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(screen.getByRole('button', { name: /^dry run$/i }));
             await screen.findByText(/checking with the service/i);
 
-            expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
+            expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
                 'aria-disabled',
                 'true'
             );
@@ -220,7 +218,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
      * A record OUTLIVES the modal on purpose — the watch is detached, so
      * reopening must pick a RUNNING job back up. But a TERMINAL record is
      * history, and history must not greet a fresh modal wearing a success icon:
-     * live verification opened the modal to a full-size "Import finished" for an
+     * live verification opened the modal to a full-size "Import finished" (now "Imported") for an
      * import pressed minutes earlier.
      */
     /**
@@ -303,9 +301,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
             await press(screen.getByRole('button', { name: /^remove data/i }));
-            await press(screen.getByRole('button', { name: /remove the data/i }));
+            await press(screen.getByRole('button', { name: /^remove$/i }));
 
-            expect(await screen.findByText(/removal finished/i)).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Removed Bodea' })).toBeInTheDocument();
             await press(screen.getByRole('button', { name: /back/i }));
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeInTheDocument();
         });
@@ -328,7 +326,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             );
             renderModal();
 
-            expect(await screen.findByText(/continues on the server/i)).toBeInTheDocument();
+            expect(await screen.findByRole('button', { name: /stop watching/i })).toBeInTheDocument();
         });
 
         it('does NOT show a finished record from a previous session', async () => {
@@ -413,7 +411,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
         // There is NO cancel endpoint. Both strings are pinned, because softening
         // either turns "we stopped looking" into "we cancelled your import".
-        it('offers Stop watching, and says the job continues on the server', async () => {
+        // Closing says "Run in background", never "Cancel": the footer is what says the job
+        // carries on while it is watched (dialog design rules: no hint repeating a button).
+        it('offers Stop watching, and Run in background in place of Close', async () => {
             withStatus({
                 activationId: 'act-1',
                 dataTypes: ['categories'],
@@ -425,7 +425,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             expect(
                 await screen.findByRole('button', { name: /stop watching/i })
             ).toBeInTheDocument();
-            expect(screen.getByText(/continues on the server/i)).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Run in background' })).toBeInTheDocument();
         });
 
         it('never offers a Cancel affordance — there is no such endpoint', async () => {
@@ -472,7 +472,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
         }
 
         /**
-         * A clean success says so once and shows the check.
+         * A clean success says so once, in the dialog's title, and lists nothing under it
+         * (dialog design rules, owner 2026-10-31).
          *
          * This used to list every type with "success" beside it. Measured against
          * the live modal, a fourteen-type pack overran StatusDisplay's fixed
@@ -485,7 +486,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             finished('success', { categories: 'success', products: 'success' });
             await startAJob();
 
-            expect(await screen.findByText(/All 2 data types succeeded/i)).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Imported Bodea' })).toBeInTheDocument();
             expect(screen.queryByText(/categories: success/i)).not.toBeInTheDocument();
         });
 
@@ -509,13 +510,13 @@ describe('ImportDatapackModal — job lifecycle', () => {
             finished('success', { categories: 'success' });
             await startAJob();
 
-            expect(await screen.findByText(/import finished/i)).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Imported Bodea' })).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
 
             await press(screen.getByRole('button', { name: /back/i }));
 
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
-            expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^import$/i })).toBeInTheDocument();
         });
 
         // The record knows its operation now — a reset must not call itself an
@@ -539,17 +540,17 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
             await press(screen.getByRole('button', { name: /^remove data/i }));
-            await press(screen.getByRole('button', { name: /remove the data/i }));
+            await press(screen.getByRole('button', { name: /^remove$/i }));
 
-            expect(await screen.findByText(/removal finished/i)).toBeInTheDocument();
-            expect(screen.queryByText(/import finished/i)).not.toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Removed Bodea' })).toBeInTheDocument();
+            expect(screen.queryByRole('heading', { name: 'Imported Bodea' })).not.toBeInTheDocument();
         });
 
         it('reports success', async () => {
             finished('success', { categories: 'success' });
             await startAJob();
 
-            expect(await screen.findByText(/import finished/i)).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Imported Bodea' })).toBeInTheDocument();
         });
 
         // Not a failure: a re-run legitimately skips items that already exist.

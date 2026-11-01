@@ -1,11 +1,22 @@
 import { Dialog, Heading, Content, Divider } from '@adobe/react-spectrum';
-import React, { ReactNode, useCallback } from 'react';
+import Alert from '@spectrum-icons/workflow/Alert';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React, { ReactNode, useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Spinner } from './Spinner';
 import { cn } from '@/core/ui/utils/classNames';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+
+/**
+ * How the thing the dialog is about stands, said by an icon before its title (the dialog design
+ * rules, `docs/development/sop/dialog-design.md`): green done, amber needs the SC, red failed.
+ */
+export type ModalStatus = 'success' | 'warning' | 'error';
 
 export interface ActionButton {
     label: string;
-    variant: 'primary' | 'secondary' | 'accent' | 'negative';
+    /** `quiet` is a borderless button, for the actions beside the main one; `negative` is solid red. */
+    variant: 'primary' | 'secondary' | 'accent' | 'negative' | 'quiet';
     onPress: () => void;
     isDisabled?: boolean;
     /**
@@ -18,6 +29,8 @@ export interface ActionButton {
 
 export interface ModalProps {
     title: string;
+    /** An icon before the title saying how things stand; none for a question or a form. */
+    status?: ModalStatus;
     size?: 'S' | 'M' | 'L' | 'fullscreen' | 'fullscreenTakeover';
     actionButtons?: ActionButton[];
     onClose: () => void;
@@ -66,7 +79,7 @@ export interface ModalProps {
  * Spectrum's ButtonGroup is excluded from focus trap with custom elements.
  */
 interface FocusableButtonProps {
-    variant: 'primary' | 'secondary' | 'accent' | 'negative';
+    variant: ActionButton['variant'];
     onPress: () => void;
     isDisabled?: boolean;
     isPending?: boolean;
@@ -111,7 +124,8 @@ function FocusableButton({ variant, onPress, isDisabled: disabled, isPending, pe
         primary: 'modal-button-primary',
         accent: 'modal-button-primary',
         secondary: 'modal-button-secondary',
-        negative: 'modal-button-secondary',
+        negative: 'modal-button-negative',
+        quiet: 'modal-button-quiet',
     };
     const variantClass = variantClassMap[variant];
 
@@ -126,15 +140,40 @@ function FocusableButton({ variant, onPress, isDisabled: disabled, isPending, pe
             aria-busy={isPending || undefined}
             aria-label={isPending ? pendingName : undefined}
         >
-            <ButtonFace isPending={isPending} onColour={variantClass === 'modal-button-primary'}>
+            <ButtonFace isPending={isPending} onColour={variant === 'primary' || variant === 'accent' || variant === 'negative'}>
                 {children}
             </ButtonFace>
         </div>
     );
 }
 
+const STATUS_ICONS: Record<ModalStatus, React.ReactElement> = {
+    success: <CheckmarkCircle size="S" UNSAFE_className="modal-status-icon modal-status-success" />,
+    warning: <Alert size="S" UNSAFE_className="modal-status-icon modal-status-warning" />,
+    error: <AlertCircle size="S" UNSAFE_className="modal-status-icon modal-status-error" />,
+};
+
+/**
+ * True for a moment after the dialog's width step changes: long enough for the box to ease to its
+ * new width with its content hidden, so text never visibly rewraps (dialog design rules). A layout
+ * effect, so the content is hidden before the new view is first painted.
+ */
+function useWidthStepChange(step: string): boolean {
+    const previous = useRef(step);
+    const [resizing, setResizing] = useState(false);
+    useLayoutEffect(() => {
+        if (previous.current === step) return undefined;
+        previous.current = step;
+        setResizing(true);
+        const timer = setTimeout(() => setResizing(false), FRONTEND_TIMEOUTS.GROWTH_SETTLE);
+        return () => clearTimeout(timer);
+    }, [step]);
+    return resizing;
+}
+
 export function Modal({
     title,
+    status,
     size = 'M',
     actionButtons = [],
     onClose,
@@ -148,19 +187,28 @@ export function Modal({
     // Map custom sizes to Dialog-compatible sizes
     const dialogSize: 'S' | 'M' | 'L' =
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
+    const resizing = useWidthStepChange(wide ? 'XL' : dialogSize);
 
     return (
-        // The opt-in size overrides as literals, so the stylesheet scan can read them in
-        // every bundle that renders a modal; empty → undefined keeps the default Dialog's
-        // class list clean. (A helper built this string until 2026-10-15, which the scan
-        // counted unreadable once per bundle.)
+        // Every class a literal, so the stylesheet scan can read them in every bundle that
+        // renders a modal. (A helper built this string until 2026-10-15, which the scan counted
+        // unreadable once per bundle.) `modal-dialog` pins the dialog near the top and eases
+        // its width; `is-resizing` hides the content while it does.
         <Dialog
             size={dialogSize}
-            UNSAFE_className={
-                cn(fitContent && 'modal-fit-content', wide && 'modal-wide') || undefined
-            }
+            UNSAFE_className={cn(
+                'modal-dialog',
+                fitContent && 'modal-fit-content',
+                wide && 'modal-wide',
+                resizing && 'is-resizing',
+            )}
         >
-            <Heading>{title}</Heading>
+            <Heading>
+                <span className="modal-title">
+                    {status ? STATUS_ICONS[status] : null}
+                    <span>{title}</span>
+                </span>
+            </Heading>
             <Divider />
             <Content UNSAFE_className="modal-content">
                 {/* The body GROWS so the footer is pushed to the dialog's bottom even when
