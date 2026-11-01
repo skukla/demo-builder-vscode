@@ -194,6 +194,22 @@ verbatim). An existing name and version is refused, and so are `commerceInstance
 the save. What it reads and where it differs from the service, with file:line, is
 [`.rptc/research/datapack-engine/aco-export-spec.md`](../../.rptc/research/datapack-engine/aco-export-spec.md).
 
+### Showing a signed-in buyer their own prices on ACO (PL-60)
+
+Every ACO storefront turns on `adobe-commerce-optimizer` in its `config.json`. Adobe's storefront
+template then asks Commerce `commerceOptimizer { priceBookId }` on each page load and sends the
+answer as `AC-Price-Book-ID`. Commerce answers `<website code>::<sha1(customer group id)>`, and a
+company's buyer gets the group of the company's shared catalog, so an exported pack names its
+group books that way. No fixed price book is written to `config.json`: the storefront replaces it.
+
+**What the SC does:** export the pack from the store being demonstrated, load it, and make the
+catalog view allow that website's price books. A pack made from a website has one book, so make
+that book the view's default instead.
+
+**What this is and is not:** prices differ per company, but every company sees the same products,
+and anyone who knows a book's id can read its prices. Cart and checkout prices still come from
+Commerce. Full reasoning: `.rptc/research/aco-support/customer-pricing.md`.
+
 ### Loading an ACO pack (PL-60)
 
 Demo Builder's engine loads a pack whose kinds are all ACO's (`aco_metadata`,

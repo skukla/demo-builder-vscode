@@ -1,6 +1,6 @@
 /**
  * The project's Adobe Commerce Optimizer settings, read in one place (PL-60): whether the ACO add-on
- * is on, and the instance, catalog view, locale and price book the SC picked (owner, 2026-10-31,
+ * is on, and the instance, catalog view and locale the SC picked (owner, 2026-10-31,
  * P2). The storefront config (`eds/services/configGenerator.ts`) and the engine's ACO packs
  * (`data-installer/services/buildDatapackEngine.ts`) both read it, so the two never disagree about
  * which instance the project uses.
@@ -12,7 +12,6 @@ import {
     ACO_CATALOG_VIEW_ID,
     ACO_ENVIRONMENT,
     ACO_LOCALE,
-    ACO_PRICE_BOOK_ID,
     ACO_REGION,
     ACO_TENANT_ID,
 } from '@/core/config/envVarKeys';
@@ -78,7 +77,6 @@ export function readAcoSettings(source: AcoSettingsSource): AcoSettingsRead | un
     const environment = environmentOf(valueOf(values, ACO_ENVIRONMENT));
     if (!environment && !missing.includes(ACO_ENVIRONMENT)) missing.push(ACO_ENVIRONMENT);
     if (missing.length > 0 || !environment) return { missing };
-    const priceBookId = valueOf(values, ACO_PRICE_BOOK_ID);
     return {
         settings: {
             tenantId: valueOf(values, ACO_TENANT_ID),
@@ -86,7 +84,6 @@ export function readAcoSettings(source: AcoSettingsSource): AcoSettingsRead | un
             environment,
             catalogViewId: valueOf(values, ACO_CATALOG_VIEW_ID),
             locale: valueOf(values, ACO_LOCALE),
-            ...(priceBookId ? { priceBookId } : {}),
         },
     };
 }

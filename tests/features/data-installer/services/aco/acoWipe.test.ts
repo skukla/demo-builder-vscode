@@ -179,25 +179,24 @@ describe('the storefront search', () => {
 });
 
 describe('the clearing', () => {
-    it("deletes the plan's prices, products and categories, in that order, by their delete payloads", async () => {
-        const settings = { ...ACO_SETTINGS, priceBookId: 'US-Retail' };
-        const plan = await planAcoWipe(search(['S1'], ['phones']), settings, []);
+    it("deletes the plan's products and categories, in that order, by their delete payloads", async () => {
+        const plan = await planAcoWipe(search(['S1'], ['phones']), ACO_SETTINGS, []);
         const aco = fakeAco();
 
-        await expect(runAcoWipe(plan, aco)).resolves.toEqual({ prices: 1, products: 1, categories: 1 });
+        await expect(runAcoWipe(plan, aco)).resolves.toEqual({ products: 1, categories: 1 });
         expect(aco.calls).toEqual([
-            { path: '/v1/catalog/products/prices/delete', rows: [{ sku: 'S1', priceBookId: 'US-Retail' }] },
             { path: '/v1/catalog/products/delete', rows: [{ sku: 'S1', source: { locale: 'en-US' } }] },
             { path: '/v1/catalog/categories/delete', rows: [{ slug: 'phones', source: { locale: 'en-US' } }] },
         ]);
     });
 
-    it('sends no price deletes when the view names no price book', async () => {
+    it('sends no price deletes: nothing lists price books, and the limit sentence says so', async () => {
         const plan = await planAcoWipe(search(['S1']), ACO_SETTINGS, []);
         const aco = fakeAco();
 
-        await expect(runAcoWipe(plan, aco)).resolves.toMatchObject({ prices: 0, products: 1 });
+        await runAcoWipe(plan, aco);
         expect(aco.calls.map((c) => c.path)).toEqual(['/v1/catalog/products/delete']);
+        expect(plan.preview.limit).toMatch(/Price books and their prices stay/u);
     });
 
     // A product ACO deleted between the check and the clear (its deletes are asynchronous) is gone,

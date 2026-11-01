@@ -123,7 +123,6 @@ export const SERVICE_GROUP_DEFINITIONS: ServiceGroupDef[] = [
             'ACO_ENVIRONMENT',
             'ACO_CATALOG_VIEW_ID',
             'ACO_LOCALE',
-            'ACO_PRICE_BOOK_ID',
         ],
     },
     { id: 'experience-platform', label: 'Experience Platform', order: 8 },

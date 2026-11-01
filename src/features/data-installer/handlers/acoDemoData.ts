@@ -71,26 +71,22 @@ export async function checkAco(deps: AcoDemoDataDeps, plans: Map<string, AcoWipe
 const counted = (n: number, one: string, many: string): string => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
 
 /** The sentence a clearing ends on. */
-function doneSentence(done: { products: number; prices: number; categories: number }): string {
-    const parts = [
-        counted(done.products, 'product', 'products'),
-        ...(done.prices ? [counted(done.prices, 'price', 'prices')] : []),
-        counted(done.categories, 'category', 'categories'),
-    ];
-    return `Removed ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]} from the ACO catalog.`;
+function doneSentence(done: { products: number; categories: number }): string {
+    const products = counted(done.products, 'product', 'products');
+    return `Removed ${products} and ${counted(done.categories, 'category', 'categories')} from the ACO catalog.`;
 }
 
 /** The refusal an unconfirmed or unchecked ACO clearing answers. */
 function clearRefusal(payload: DemoDataRequest | undefined): string | undefined {
     if (!payload?.token) return 'Check what would be removed first (check_demo_data with aco), and hand its token back.';
     if (payload.confirm !== true) {
-        return 'This deletes the products, prices and categories the ACO catalog view shows that Demo Builder did not install, as listed. It cannot be undone. Confirm to proceed.';
+        return 'This deletes the products and categories the ACO catalog view shows that Demo Builder did not install, as listed. It cannot be undone. Confirm to proceed.';
     }
     return undefined;
 }
 
 /**
- * Clear the plan shown: its prices, products and categories, through the project's ingestion
+ * Clear the plan shown: its products and categories, through the project's ingestion
  * client for the plan's instance.
  *
  * @param report - each stage as it starts, for the progress window

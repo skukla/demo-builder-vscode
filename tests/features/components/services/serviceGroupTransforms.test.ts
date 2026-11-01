@@ -218,7 +218,6 @@ describe('SERVICE_GROUP_DEFINITIONS field order', () => {
 
     it('puts the ACO instance first, then the catalog view and locale, then the optional price book', () => {
         expect(orderOf('adobe-commerce-aco', [
-            'ACO_PRICE_BOOK_ID',
             'ACO_LOCALE',
             'ACO_CATALOG_VIEW_ID',
             'ACO_ENVIRONMENT',
@@ -230,7 +229,6 @@ describe('SERVICE_GROUP_DEFINITIONS field order', () => {
             'ACO_ENVIRONMENT',
             'ACO_CATALOG_VIEW_ID',
             'ACO_LOCALE',
-            'ACO_PRICE_BOOK_ID',
         ]);
     });
 

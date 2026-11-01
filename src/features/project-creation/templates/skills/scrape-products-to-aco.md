@@ -110,6 +110,10 @@ values (`proposed`) and those with no price (`unpriced`). Tell the user the pack
 their datapack library to review, and that **`delete_library_datapack`** (with the same
 `datapackName` and `version`) removes it again.
 
+Tell them one more thing: for the prices to show, the catalog view must have the pack's price
+book as its default. An ACO storefront asks Commerce for each shopper's price book, and Commerce
+knows nothing of this one, so the view's default is what shoppers fall back to.
+
 If the tool refuses, its error names the products and the reason (two products stating
 one SKU, a price in another currency, an image that is not a URL). Fix those and call it
 again; do not drop products silently to make it pass.

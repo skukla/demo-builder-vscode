@@ -42,7 +42,7 @@ function setUp(shown: { skus: string[]; slugs?: string[] }, overrides: Partial<D
     });
     const aco = fakeAco();
     const search: AcoSearch = { productSkus: async () => shown.skus, categorySlugs: async () => shown.slugs ?? [] };
-    const access: AcoAccess = { settings: { ...ACO_SETTINGS, priceBookId: 'US-Retail' }, clientFor: () => aco };
+    const access: AcoAccess = { settings: ACO_SETTINGS, clientFor: () => aco };
     const deps: DemoDataDeps = {
         commerce: async () => ({ refusal: 'the Commerce path is not used here' }),
         guard: async () => undefined,
@@ -90,13 +90,12 @@ describe('clear-demo-data with aco', () => {
 
         const res = await handlers['clear-demo-data'](context, { aco: true, token, confirm: true });
 
-        expect(res).toMatchObject({ success: true, note: 'Removed 2 products, 2 prices and 1 category from the ACO catalog.' });
+        expect(res).toMatchObject({ success: true, note: 'Removed 2 products and 1 category from the ACO catalog.' });
         expect(aco.calls.map((c) => c.path)).toStrictEqual([
-            '/v1/catalog/products/prices/delete',
             '/v1/catalog/products/delete',
             '/v1/catalog/categories/delete',
         ]);
-        expect(aco.calls[1].rows).toStrictEqual([
+        expect(aco.calls[0].rows).toStrictEqual([
             { sku: 'S1', source: { locale: 'en-US' } },
             { sku: 'S2', source: { locale: 'en-US' } },
         ]);

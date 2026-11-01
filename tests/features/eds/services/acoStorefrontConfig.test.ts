@@ -63,13 +63,24 @@ describe('generateConfigJson with ACO', () => {
         expect(block['commerce-core-endpoint']).toBe('https://commerce.example.com/graphql');
     });
 
-    it('sends only the documented cs headers: view, locale, and no price book unless one is set', () => {
+    it('sends the view and locale to the catalog, and the store view to everything', () => {
         expect(defaultBlock({ ...BASE, aco: ACO }).headers).toEqual({
+            all: { Store: 'en_us' },
             cs: { 'AC-View-ID': ACO.catalogViewId, 'AC-Source-Locale': 'en-US' },
         });
-        expect(defaultBlock({ ...BASE, aco: { ...ACO, priceBookId: 'vip' } }).headers).toEqual({
-            cs: { 'AC-View-ID': ACO.catalogViewId, 'AC-Source-Locale': 'en-US', 'AC-Price-Book-ID': 'vip' },
-        });
+    });
+
+    it('never sends a Magento header or a fixed price book to ACO', () => {
+        const { cs } = defaultBlock({ ...BASE, aco: ACO }).headers as { cs: Record<string, string> };
+        expect(Object.keys(cs).filter((key) => /^magento-|price-book|x-api-key/iu.test(key))).toStrictEqual([]);
+    });
+
+    it("turns on Adobe's per-buyer price book, from the add-on's real catalog entry", () => {
+        expect(defaultBlock({ ...BASE, aco: ACO })['adobe-commerce-optimizer']).toBe(true);
+    });
+
+    it('leaves the flag off a project without the add-on', () => {
+        expect(defaultBlock({ ...BASE, selectedAddons: [] })).not.toHaveProperty('adobe-commerce-optimizer');
     });
 
     it('writes ACO\'s analytics block: tenant and view, currencies and the store URL, no store ids', () => {

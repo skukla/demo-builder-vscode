@@ -22,14 +22,12 @@ export interface AcoInstance {
     environment: AcoEnvironment;
 }
 
-/** What the storefront needs besides the instance: the catalog view, its locale, a price book. */
+/** What the storefront needs besides the instance: the catalog view and its locale. */
 export interface AcoStorefrontSettings extends AcoInstance {
     /** The catalog view the storefront reads (made in ACO's own screens; no API creates one). */
     catalogViewId: string;
     /** The catalog source locale, e.g. `en-US`. */
     locale: string;
-    /** A price book to ask for; absent, the view's default is used. */
-    priceBookId?: string;
 }
 
 /** The ingestion credential: an OAuth server-to-server client from the project's workspace. */

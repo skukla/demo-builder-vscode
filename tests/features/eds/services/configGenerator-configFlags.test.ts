@@ -118,13 +118,21 @@ describe("configGenerator — flags, escaping & params", () => {
         // pass an injector that wrote some other key.
         it.each<[string, string[]]>([
             ['an empty addons array', []],
-            ['an addon whose catalog entry declares no configFlags', ['adobe-commerce-aco']],
             ['an addon id that is in no catalog at all', ['nonexistent-addon']],
         ])('injects nothing for %s', (_label, selectedAddons) => {
             const result = generateConfigJson({ ...baseParams, selectedAddons }, mockLogger);
 
             expect(result.success).toBe(true);
             expect(result.content).toBe(noAddonsBaseline());
+        });
+
+        it("injects the flag the ACO add-on's catalog entry declares", () => {
+            const result = generateConfigJson(
+                { ...baseParams, selectedAddons: ['adobe-commerce-aco'] },
+                mockLogger,
+            );
+
+            expect(JSON.parse(result.content ?? '{}').public.default['adobe-commerce-optimizer']).toBe(true);
         });
     });
 

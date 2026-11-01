@@ -6,15 +6,25 @@
  * from the Commerce Storefront configuration reference and the ACO storefront setup page):
  * - `commerce-endpoint` is the instance's Merchandising API, `…/{tenantId}/graphql`;
  *   `commerce-core-endpoint` stays the Commerce GraphQL the project already uses (cart, sign-in);
- * - headers sit under `cs` only: `AC-View-ID` (required), `AC-Source-Locale`, and
- *   `AC-Price-Book-ID` only when one is set; no `all.Store`, no `Magento-*`, no `x-api-key`
- *   (the Merchandising API needs no credential);
+ * - catalog headers sit under `cs`: `AC-View-ID` (required) and `AC-Source-Locale`; no `Magento-*`
+ *   and no `x-api-key` (the Merchandising API needs no credential);
+ * - `all.Store` stays. It is what tells Commerce which website a cart or a sign-in belongs to, and
+ *   Adobe's own ACO reference storefront sends it. Measured 2026-11-01: without it a signed-in
+ *   buyer on another website is answered as a guest of the default website. ACO ignores it, and
+ *   its CORS rules allow it;
  * - the analytics block is ACO's: `environment-id` is the tenant, `view-id` the catalog view,
  *   with the currency codes and the store URL, and no store or website ids.
  *
+ * The add-on's `adobe-commerce-optimizer` flag (`components.json`) switches the storefront to the
+ * buyer's price book: the auth drop-in asks Commerce on every page load and the storefront sets
+ * `AC-Price-Book-ID` from the answer (`scripts/initializers/index.js` in Adobe's template). Without
+ * it the same code sends `Magento-Customer-Group`, and measured against ACO that header alone
+ * empties every price (`.rptc/research/aco-support/customer-pricing.md`).
+ *
  * Not emitted, and why: `AC-Environment-Id` (a local storefront sends it; no Adobe page lists it,
- * research §1 UNVERIFIED) and `AC-Catalog-View-Access-Token` (only a private view needs one, and it
- * must be minted server-side, never written into config).
+ * research §1 UNVERIFIED), `AC-Price-Book-ID` (the storefront replaces it on load) and
+ * `AC-Catalog-View-Access-Token` (only a private view needs one, and it must be minted
+ * server-side, never written into config).
  *
  * @module features/eds/services/acoStorefrontConfig
  */
@@ -28,7 +38,6 @@ export function acoHeaders(aco: AcoStorefrontSettings): { cs: Record<string, str
         cs: {
             'AC-View-ID': aco.catalogViewId,
             'AC-Source-Locale': aco.locale,
-            ...(aco.priceBookId ? { 'AC-Price-Book-ID': aco.priceBookId } : {}),
         },
     };
 }
@@ -47,7 +56,7 @@ export function acoAnalytics(aco: AcoStorefrontSettings, template: Record<string
 
 /**
  * Turn a generated `public.default` block into an ACO storefront's: the catalog endpoint, the
- * headers and the analytics block. Changes the block in place.
+ * catalog headers (keeping `all`) and the analytics block. Changes the block in place.
  *
  * @param block - `config.public.default`, after the template's placeholders are filled
  * @param commerceEndpoint - the project's Commerce GraphQL (mesh or direct), which carts still use
@@ -55,6 +64,7 @@ export function acoAnalytics(aco: AcoStorefrontSettings, template: Record<string
 export function applyAcoStorefront(block: Record<string, unknown>, aco: AcoStorefrontSettings, commerceEndpoint: string): void {
     block['commerce-core-endpoint'] = commerceEndpoint;
     block['commerce-endpoint'] = acoGraphqlUrl(aco);
-    block.headers = acoHeaders(aco);
+    const { all } = (block.headers ?? {}) as { all?: Record<string, string> };
+    block.headers = { ...(all ? { all } : {}), ...acoHeaders(aco) };
     block.analytics = acoAnalytics(aco, block.analytics as Record<string, unknown> | undefined);
 }

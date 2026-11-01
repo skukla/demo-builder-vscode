@@ -220,7 +220,7 @@ function clearAcoWithProgress(deps: DemoDataDeps, acoPlans: Map<string, AcoWipeP
 }
 
 /** What each ACO clearing stage is called in the progress window. */
-const ACO_STAGES: Record<string, string> = { prices: 'Removing prices', products: 'Removing products', categories: 'Removing categories' };
+const ACO_STAGES: Record<string, string> = { products: 'Removing products', categories: 'Removing categories' };
 
 /** The project's own access, the org check against the store's org, the records on disk, and every other local project. */
 export const DEFAULT_DEMO_DATA_DEPS: DemoDataDeps = {

@@ -71,7 +71,6 @@ export const ACO_REGION = 'ACO_REGION';
 export const ACO_ENVIRONMENT = 'ACO_ENVIRONMENT';
 export const ACO_CATALOG_VIEW_ID = 'ACO_CATALOG_VIEW_ID';
 export const ACO_LOCALE = 'ACO_LOCALE';
-export const ACO_PRICE_BOOK_ID = 'ACO_PRICE_BOOK_ID';
 
 // ==========================================================
 // Experience Platform

@@ -28,7 +28,7 @@ would be empty is not shown.
 **Adobe Commerce Optimizer** (PL-60) has a tab wherever the project's stack offers ACO and its
 demo package allows it (`addonOffer`; today CitiSignal on its Edge Delivery stacks). The tab
 holds one checkbox, off by default, and once ticked ACO's fields (tenant id, region, instance
-type, catalog view id, locale, optional price book id). Add-ons' fields are read like the
+type, catalog view id, locale). Add-ons' fields are read like the
 stack's own: the registry has an `addons` bucket and `useSelectedComponents` takes the project's
 `selectedAddons`. The tick is held until Save: Save first sets up the ACO credential in the
 project's Adobe workspace (turning it off removes it, refused while an ACO datapack Demo Builder

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "array",
-  "description": "Schema for aco_price_books — ACO price book hierarchy (camelCase only). Root priceBookId is the Commerce website code. Child priceBookId is websiteCode, colon, and sanitized customer group code (lowercase alphanumeric, spaces as hyphens; max 64 characters total). currency is required only on root rows (no parentId).",
+  "description": "Schema for aco_price_books — ACO price book hierarchy (camelCase only). Root priceBookId is the Commerce website code. Child priceBookId is websiteCode, two colons, and the SHA-1 of the customer group id: the id Commerce's commerceOptimizer query answers. A pack from another source may name its books differently. currency is required only on root rows (no parentId).",
   "minItems": 1,
   "items": {
     "allOf": [
@@ -10,7 +10,7 @@
         "properties": {
           "priceBookId": {
             "type": "string",
-            "description": "Root: website code. Child: websiteCode:sanitized-group-code (max 64 chars total)",
+            "description": "Root: website code. Child: websiteCode::sha1(customerGroupId)",
             "minLength": 1,
             "maxLength": 128
           },

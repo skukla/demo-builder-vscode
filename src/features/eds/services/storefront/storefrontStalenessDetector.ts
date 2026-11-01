@@ -24,7 +24,6 @@ import {
     ACO_CATALOG_VIEW_ID,
     ACO_ENVIRONMENT,
     ACO_LOCALE,
-    ACO_PRICE_BOOK_ID,
     ACO_REGION,
     ACO_TENANT_ID,
 } from '@/core/config/envVarKeys';
@@ -101,7 +100,6 @@ const STOREFRONT_CONFIG_ENV_VARS = [
     ACO_ENVIRONMENT,
     ACO_CATALOG_VIEW_ID,
     ACO_LOCALE,
-    ACO_PRICE_BOOK_ID,
 ];
 
 // ==========================================================
@@ -155,7 +153,7 @@ export function getStorefrontEnvVars(
 }
 
 /** The ACO keys above: what config.json reads only while the add-on is on. */
-const ACO_KEYS = [ACO_TENANT_ID, ACO_REGION, ACO_ENVIRONMENT, ACO_CATALOG_VIEW_ID, ACO_LOCALE, ACO_PRICE_BOOK_ID];
+const ACO_KEYS = [ACO_TENANT_ID, ACO_REGION, ACO_ENVIRONMENT, ACO_CATALOG_VIEW_ID, ACO_LOCALE];
 
 /**
  * The values config.json is generated from, as the comparison and the record read them: every

@@ -148,6 +148,11 @@ export interface RawComponentDefinition {
         requiredEnvVars?: string[];
         optionalEnvVars?: string[];
         /**
+         * ADD-ONS: flags written into the storefront's `config.json` when the add-on is on
+         * (`injectAddonConfigFlags`), e.g. `adobe-commerce-optimizer`.
+         */
+        configFlags?: Record<string, boolean>;
+        /**
          * BACKEND components only: the Commerce connection contract — which
          * env key carries the base URL (and any suffix to strip), plus the
          * App Management flavor. The registry owns these facts; consumers

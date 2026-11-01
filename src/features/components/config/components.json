@@ -254,7 +254,7 @@
                     "ACO_CATALOG_VIEW_ID",
                     "ACO_LOCALE"
                 ],
-                "optionalEnvVars": ["ACO_PRICE_BOOK_ID"]
+                "configFlags": { "adobe-commerce-optimizer": true }
             }
         }
     },
@@ -591,7 +591,7 @@
             "type": "text",
             "required": true,
             "placeholder": "00000000-0000-0000-0000-000000000000",
-            "description": "The catalog view the storefront reads. Create it in Adobe Commerce Optimizer's own screens (no API creates one) and copy its ID from there",
+            "description": "The catalog view the storefront reads. Create it in Adobe Commerce Optimizer's own screens (no API creates one) and copy its ID from there. It must allow this website's price books, or signed-in buyers see no prices",
             "group": "adobe-commerce-aco"
         },
         "ACO_LOCALE": {
@@ -600,13 +600,6 @@
             "required": true,
             "default": "en-US",
             "description": "The catalog source locale the storefront asks for. A datapack's rows load for the locale they name",
-            "group": "adobe-commerce-aco"
-        },
-        "ACO_PRICE_BOOK_ID": {
-            "label": "Price Book ID",
-            "type": "text",
-            "required": false,
-            "description": "Optional. Without one, the catalog view's default price book is used",
             "group": "adobe-commerce-aco"
         }
     },

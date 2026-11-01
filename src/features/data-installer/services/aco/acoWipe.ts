@@ -41,8 +41,10 @@ const NAMES_SHOWN = 5;
 
 /** Said on every preview: the one limit a clear through the storefront search has. */
 // Measured 2026-10-31: the price book filters nothing (an unknown one lists everything), and
-// variants are reached through their parents, so the one limit left is the view itself.
-export const ACO_WIPE_LIMIT = 'Only what this catalog view shows can be found: a product in another view stays.';
+// variants are reached through their parents, so what is left is the view itself and, because
+// nothing lists price books, the prices.
+export const ACO_WIPE_LIMIT =
+    'Only what this catalog view shows can be found: a product in another view stays. Price books and their prices stay too.';
 
 /** Why a search could not be used. */
 export class AcoSearchError extends Error {
@@ -215,7 +217,6 @@ export async function planAcoWipe(search: AcoSearch, settings: AcoStorefrontSett
 /** What a clearing deleted. */
 export interface AcoWipeDone {
     products: number;
-    prices: number;
     categories: number;
 }
 
@@ -231,22 +232,18 @@ async function deleteRows(client: AcoClient, kindName: string, rows: Record<stri
 }
 
 /**
- * Delete exactly the plan's keys: each product's price in the view's price book first (when it has
- * one), then the products, then the categories. Attribute definitions are left: other data may
- * share them.
+ * Delete exactly the plan's keys: the products, then the categories. Attribute definitions are
+ * left: other data may share them. So are prices: ACO cannot list price books, so a clear has no
+ * key for them (a pack's own prices go when that pack is reset).
  *
  * @throws AcoApiError when ACO refuses a delete; what was deleted before it stays deleted
  */
 export async function runAcoWipe(plan: AcoWipePlan, client: AcoClient, report: (stage: string) => void = () => undefined): Promise<AcoWipeDone> {
     const { skus, slugs, settings } = plan;
     const locale = { locale: settings.locale };
-    report('prices');
-    const prices = settings.priceBookId
-        ? await deleteRows(client, 'aco_prices', skus.map((sku) => ({ sku, priceBookId: settings.priceBookId })))
-        : 0;
     report('products');
     const products = await deleteRows(client, 'aco_products', skus.map((sku) => ({ sku, source: locale })));
     report('categories');
     const categories = await deleteRows(client, 'aco_categories', slugs.map((slug) => ({ slug, source: locale })));
-    return { products, prices, categories };
+    return { products, categories };
 }

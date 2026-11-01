@@ -28,10 +28,6 @@ describe('readAcoSettings', () => {
         });
     });
 
-    it('carries a price book when one is set', () => {
-        expect(readAcoSettings(project({ ...FULL, ACO_PRICE_BOOK_ID: ' vip ' }))).toMatchObject({ settings: { priceBookId: 'vip' } });
-    });
-
     it('names every empty field, and an instance type that is neither sandbox nor production', () => {
         const read = readAcoSettings(project({ ...FULL, ACO_CATALOG_VIEW_ID: '', ACO_ENVIRONMENT: 'staging' }));
         expect(read).toEqual({ missing: ['ACO_CATALOG_VIEW_ID', 'ACO_ENVIRONMENT'] });

@@ -11,7 +11,7 @@ describe('acoRowsProblem', () => {
     it("passes rows the service's schema accepts", () => {
         const rows: AcoPriceBookRow[] = [
             { priceBookId: 'base', name: 'Main Website', currency: 'USD' },
-            { priceBookId: 'base:general', parentId: 'base', name: 'General (Main Website)' },
+            { priceBookId: 'base::356a192b7913b04c54574d18c28d46e6395428ab', parentId: 'base', name: 'General (Main Website)' },
         ];
         expect(acoRowsProblem('aco_price_books', rows)).toBeUndefined();
     });

@@ -148,8 +148,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // and only a shared root leaves the one Admin step (datapack-engine step 12).
     // v48: import-datapack says an install skips (and names) a row Commerce refuses (step 14).
     // v49: the scrape-products-to-aco skill, and the ACO credential is Demo Builder's (PL-60).
-    it('is 49 (the ACO skill and credential tools reach existing projects)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(49);
+    // v50: scrape-products-to-aco says which price book the catalog view must default to (PL-60).
+    it('is 50 (the ACO skill names the price book the view needs)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(50);
     });
 });
 
