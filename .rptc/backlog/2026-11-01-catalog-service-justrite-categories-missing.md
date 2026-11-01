@@ -19,5 +19,16 @@ same store view answered 15 categories (`categoryReader.ts`).
 So a republish on that store publishes no category pages, and says the categories are not marked "Include in
 Menu", which here is not the reason. A new category on the test website did appear within minutes.
 
-Not known: when this started, and why. The Justrite Test store's root was moved on 2026-10-30, which is a lead
-and nothing more. The message should also stop claiming a cause it has not checked.
+Ruled out, 2026-11-01:
+
+- **Shared catalog grants:** each catalog grants the whole Justrite tree, so missing grants are not the cause.
+- **The customer group:** guest, General and two company groups, by their real header, all answer the same.
+- **The query:** `categoryTree` answers nothing either.
+- **Justrite alone:** CitiSignal and Bodea answer no categories at all, so the root move on the Justrite Test store
+  is a weak lead.
+
+An empty `categories` on a product is normal on ACCS, so it is no evidence here.
+
+Tried: re-saving one category with no change (Floor Marking), Adobe's guidance for forcing a resync. It had not come
+back after a while, and the guidance allows up to an hour. If it stays gone, the next step is an Adobe support request
+for a backend resync, which the owner has to raise. The message should also stop claiming a cause it has not checked.

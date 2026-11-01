@@ -13,7 +13,7 @@ Two different demos sit under "company pricing", and they are not the same work.
 | | Each company sees its own… | What it takes | State |
 |---|---|---|---|
 | **Prices** | prices | one setting and the right price book names | **Built** |
-| **Catalog** | products and prices, and nobody else can read them | a private catalog view per shared catalog, and a backend that signs a token per buyer | **Not built** (PL-87) |
+| **Catalog** | products and prices, and nobody else can read them | a private catalog view per shared catalog, and a backend that signs a token per buyer | **Waits for Adobe's connector** (PL-87 closed) |
 
 Shared catalogs do both jobs at once in Commerce. ACO splits them: a **policy** decides the
 products, a **price book** decides the prices, and a **private catalog view** decides who may ask.
@@ -87,13 +87,11 @@ commit already has them, behind the setting. No patch was needed.
 |---|---|---|
 | **A. ACCS shared catalogs, no ACO** (today's B2B demos) | The real gated catalog and prices | No ACO features |
 | **B. ACCS + ACO, public view** (built) | ACO's search and merchandising, and each company's prices after sign-in | Same products for everyone; prices readable by anyone with the id |
-| **C. ACCS + ACO, private views** (PL-87) | Each company's own catalog, gated, same headers as the connector | Our own resolver stands in for the connector; views set up by hand |
+| **C. ACCS + ACO, private views** (PL-87, not built) | Each company's own catalog, gated, same headers as the connector | Our own code stands in for the connector; proved possible and closed |
 | **D. PaaS + ACO + Adobe's B2B connector** | The real product, automatic | Needs a PaaS store and a beta extension; not something a Demo Builder project can install today |
 
-**Recommendation:** keep A as the default for B2B demos where gating is the story, use B when ACO's
-merchandising is the story, and build C only when a demo needs both. C needs no storefront code:
-Adobe's template already asks for the view and token, so only what answers changes when a connector
-arrives.
+**Decision (owner, 2026-11-01):** C is not built. Our code would be doing Commerce's job, and demos replicate the
+real product. Use A where gating is the story, B where ACO's merchandising is, and D once a connector backend exists.
 
 ## Limits to tell an SC
 
@@ -154,7 +152,7 @@ that copy expires. It reads like "the Mesh is not being used".
 | A product only in ACO | Listed, then `PRODUCT_NOT_FOUND` on Add to Cart, with nothing shown to the shopper |
 | A company's product with no granted category | `PERMISSION_DENIED` on Add to Cart, with nothing shown. Commerce's own shared catalog rule, unrelated to ACO |
 | A private view through the template's own code | **Works.** The buyer saw 2 of 3 products at their book's prices, a guest on the public view saw all 3 |
-| Can a Mesh sign the token itself | **Yes.** A resolver signed RS256 with WebCrypto at the edge, and ACO took it, so no separate action is needed. The key was inline for the test; a real one needs a secret store |
+| Can a Mesh sign the token itself | **Yes**, a resolver signed RS256 with WebCrypto at the edge and ACO took it. A test only, with the key inline: not something to ship |
 | A hidden product's direct link | **Still opens**, at the buyer's price. A private view gates listings and search, not a read by SKU |
 | A policy on a new attribute | Refused until the attribute is filterable. Ten minutes after sending the metadata it still was not, and an attribute already filterable worked at once |
 | Configure's view picker | Renders the views, sets the locale from the choice, and clears the error. Real bundle, fixture views |

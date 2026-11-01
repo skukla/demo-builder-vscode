@@ -24,3 +24,10 @@ Commerce does not change it, because the ERP's own record decides.
 
 Whether deleting a company should reach the ERP, and how to clear these records. `reset_erp_records` resets the
 whole ERP, so it is not the tool for removing a few.
+
+## Measured when removing them, 2026-11-01
+
+The deployed ERP answered 404 to `DELETE products/<sku>`. That route exists in `demo-erp`'s newer undeployed code,
+and customers have no delete route in either. Commerce's delete of those products did not reach the ERP either. So
+none of the records could be removed without a redeploy or a full reset, and the owner chose to leave them until a
+proper route exists.

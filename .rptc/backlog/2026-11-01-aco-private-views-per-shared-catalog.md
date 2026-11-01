@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: med
-status: backlog
+status: dropped
 parent: PL-60
 ---
 
@@ -50,6 +50,17 @@ demonstrated, would still need something to answer with a price book Commerce do
 
 Decide whether this is worth building at all: if ACCS + ACO arrives with shared catalogs, the window
 for it may be weeks. Licensing counts views times price books (100 by default).
+
+## Closed: not building this (owner, 2026-11-01)
+
+Demos replicate the real product as closely as possible. Every way of building this has our code doing
+Commerce's job: answering which catalog a buyer gets, and holding a key to sign their token. The browser test
+proved it can be made to work, with a Mesh signing at the edge. That is why it is recorded here and not why to
+ship it. It looks right on screen and runs on a mechanism no customer would have.
+
+Gated catalogs on ACO wait for Adobe's connector, on a PaaS backend or on an ACCS tenant that has it. Until then
+an SC who needs gating uses shared catalogs without ACO. Once a connector backend exists, run the same browser
+tests against it (`.rptc/research/aco-support/customer-pricing.md`).
 
 ## Shipped so far
 
