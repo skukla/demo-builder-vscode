@@ -104,8 +104,6 @@ arrives.
 - **A pack made from a website, or from another store, has none of the ids Commerce answers.** A
   price book that was never loaded answers an empty price, even when the view has a default
   (measured). So loading adds one per customer group, pointing at the pack's prices, on the record.
-- **After signing in**, a page already on screen keeps its old prices until the next page loads.
-  Adobe's template emits an event for this and nothing in it listens. Read in the code, not watched.
 
 ## Proved through the MCP tools, 2026-11-01
 
@@ -147,11 +145,29 @@ still listed its products for about 15. Clear demo data lists through that same 
 A browser keeps `config.json`, so a page opened before a republish goes on using the old endpoints until
 that copy expires. It reads like "the Mesh is not being used".
 
+## The open questions, tested in a browser, 2026-11-01
+
+| Question | Answer |
+|---|---|
+| Signing in from the header on a page already open | The page reloads itself and shows the buyer's prices |
+| What a cart charges | **Commerce's price.** A product at 120 in ACO and 200 in Commerce lists at 120 and sits in the cart at 200 |
+| A product only in ACO | Listed, then `PRODUCT_NOT_FOUND` on Add to Cart, with nothing shown to the shopper |
+| A company's product with no granted category | `PERMISSION_DENIED` on Add to Cart, with nothing shown. Commerce's own shared catalog rule, unrelated to ACO |
+| A private view through the template's own code | **Works.** The buyer saw 2 of 3 products at their book's prices, a guest on the public view saw all 3 |
+| Can a Mesh sign the token itself | **Yes.** A resolver signed RS256 with WebCrypto at the edge, and ACO took it, so no separate action is needed. The key was inline for the test; a real one needs a secret store |
+| A hidden product's direct link | **Still opens**, at the buyer's price. A private view gates listings and search, not a read by SKU |
+| A policy on a new attribute | Refused until the attribute is filterable. Ten minutes after sending the metadata it still was not, and an attribute already filterable worked at once |
+| Configure's view picker | Renders the views, sets the locale from the choice, and clears the error. Real bundle, fixture views |
+
+So a demo needs its prices in both Commerce and ACO, and each company's products in the shared catalog **and**
+ACO, or a shopper sees a price or a product the cart will not honour. Both are silent on screen.
+
 ## Not tested
 
-A real signing action behind the Mesh (the test answered fixed values), a cart or an order on these prices
-(the test products existed only in ACO), a sign-in on a page already on screen, and Adobe's connector itself,
-because no backend here has it on.
+An order on these prices. Checkout reached the right total, and the ERP integration on this instance refused the
+order, because a new company has no credit there (AB-84). Placing one would have meant changing credit in a live
+ERP. Also untested: Adobe's connector itself, because no backend here has it on, and whether the dashboard says
+"redeploy" after a mesh's files change. `get_project_status` still said deployed; PL-88 removes the gap.
 
 ## Sources
 
