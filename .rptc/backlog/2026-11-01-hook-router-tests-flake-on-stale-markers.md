@@ -28,3 +28,7 @@ leftover `router-test` markers (21,842 hook markers in all).
 so no marker from any other run can be seen. The rule proofs (`.claude/hooks/rules/*.proof.sh`)
 use random session ids, so they collide far less often, but they leave markers in the real TMPDIR
 every run too.
+
+## Shipped so far
+
+- 2026-10-31  fix(test): the hook router's tests no longer flake on markers old runs left (`92000b0ee`)
