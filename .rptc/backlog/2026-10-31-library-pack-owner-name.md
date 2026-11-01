@@ -44,3 +44,8 @@ What follows from keeping it in the pack:
 Rejected: a name field in the library itself. Its `create-datapack` takes no such field today
 (read in the local `dsc-data-installer-api` clone at `3ced647`), and the owner does not want to
 ask that team for one.
+
+## Shipped so far
+
+- 2026-10-31  docs(backlog): DI-10 keeps the saver's name in our own packs, as their setting (`f10750fed`)
+- 2026-10-31  docs(backlog): DI-10, a colleague's shared pack should say who made it (`8336bc228`)

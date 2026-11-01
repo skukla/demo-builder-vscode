@@ -153,3 +153,10 @@ storefront config).
 - 2026-10-31  docs(aco): record the owner's answers to P1-P5 and what DSC's scraper is reported to do (`02137bbe8`)
 - 2026-10-31  feat(ai): the home Chat gets its own Playwright browser tool (`e64d906e3`)
 - 2026-10-31  Owner 2026-10-31: ACO Clear demo data is needed before 1.0. Built on loop/2026-10-31-aco-clear: the plan and clearing service (a9f26a588) and the aco option on check/clear demo data for the screen's handlers and the agent's tools (680d12c13). Left: the Clear demo data dialog's ACO part, to be built once in the new dialog design (PL-85); the live check settles whether the storefront search answers through the project's view.
+- 2026-11-01  fix(aco): a signed-in buyer gets their own prices on an ACO storefront (`0dbfd4098`)
+- 2026-10-31  fix(aco): Clear demo data finds categories and variants, as measured live (`01e214e9f`)
+- 2026-10-31  fix(aco): an exported pack is in its store view's locale, so it shows (`dbeb564ed`)
+- 2026-10-31  fix(aco): a delete that finds nothing never stops a clear; the ACO audit (`f66abe508`)
+- 2026-10-31  docs(aco): what an ACO "Clear demo data" can and cannot do (`f85968cee`)
+- 2026-10-31  docs(aco): the live check as a checklist for the owner (`f74fa4b3e`)
+- 2026-10-31  Merge aco/aco-scrape-to-pack: ACO packs from a website (rehearsal) (`1ba2026f6`)

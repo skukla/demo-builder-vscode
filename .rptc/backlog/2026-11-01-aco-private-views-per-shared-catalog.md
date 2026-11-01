@@ -45,3 +45,7 @@ only what resolves the view should change. That is an expectation, not a promise
 
 Licensing counts views times price books (100 by default), and catalog writes need ACO ingestion
 enabled in the org, which it is not today. Without that nothing here can be proved live.
+
+## Shipped so far
+
+- 2026-11-01  docs(aco): what company pricing takes on ACCS + ACO, and what to offer now (`a3e585efb`)
