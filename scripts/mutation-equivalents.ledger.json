@@ -7892,7 +7892,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 852,
+            "line": 854,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation. Re-anchored 2026-10-19 (840 -> 841): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (841 -> 846): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (846 -> 848): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (850 -> 832): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (832 -> 837): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (837 -> 835): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56). Re-anchored 2026-10-31 (835 -> 852): unchanged code, moved when the home Chat got its own Playwright install (PL-60).",
@@ -7917,7 +7917,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 586,
+            "line": 587,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest. Re-anchored 2026-10-19 (574 -> 576): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (576 -> 579): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (580 -> 563): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (563 -> 568): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (568 -> 569): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56). Re-anchored 2026-10-31 (569 -> 586): unchanged code, moved when the home Chat got its own Playwright install (PL-60).",
@@ -7930,7 +7930,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 959,
+            "line": 961,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep. Re-anchored 2026-10-19 (947 -> 948): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (948 -> 953): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (953 -> 955): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (957 -> 939): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (939 -> 944): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (944 -> 942): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56). Re-anchored 2026-10-31 (942 -> 959): unchanged code, moved when the home Chat got its own Playwright install (PL-60).",
@@ -14812,7 +14812,7 @@
             "anchors": [
                 "const componentId = payload?.componentId;"
             ],
-            "line": 366,
+            "line": 389,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The add handler's twin of the ledgered set-handler line: the payload cannot be undefined by the time this line runs, because the handler's first act is validateSdkCodes(payload?.apis, ...), and an undefined payload yields undefined apis, which is not an array, so it returns the CONFIG_INVALID refusal before reaching here. Dropping the optional changes nothing for any input the handler accepts.",
@@ -15047,7 +15047,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 300,
+            "line": 304,
             "mutants": 1,
             "category": "block",
             "reason": "The catch block of getSubscribedServices holds a debug log line and \"return undefined\". Emptying it removes the log line and lets the async function fall off its end, which resolves undefined all the same: the caller receives the identical \"unknown\" answer, and nothing else in the block has an effect. Verified by planting an empty catch block: all four adobeOrgServices suites (66 tests) stay green, including the two that pin undefined for a failed credential read and a failed properties read.",
@@ -15270,7 +15270,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 180,
+            "line": 181,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (debugLogger.warn that the agent-trace file sink is unavailable). That the catch EXISTS is tested: extension-activationSeams 'degrades to channel-only when the storage path cannot be created' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (181 -> 183): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (183 -> 181): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (182 -> 177): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (177 -> 178): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (178 -> 179): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56). Re-anchored 2026-10-31 (179 -> 180): unchanged code, moved when the home Chat got its own Playwright install (PL-60).",
@@ -15283,7 +15283,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 291,
+            "line": 292,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.error that seeding the default AI prompts failed). That the catch EXISTS is tested: extension-activationSeams 'does not abort activation when seeding fails' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (292 -> 294): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (294 -> 292): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (293 -> 288): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (288 -> 289): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (289 -> 290): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56). Re-anchored 2026-10-31 (290 -> 291): unchanged code, moved when the home Chat got its own Playwright install (PL-60).",
@@ -15296,7 +15296,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 622,
+            "line": 623,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.warn that the global MCP entry could not be refreshed). That the catch EXISTS is tested: extension-mcpAndHome 'does not abort activation when the repair throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (610 -> 612): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (612 -> 615): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (616 -> 599): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (599 -> 604): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (604 -> 605): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56). Re-anchored 2026-10-31 (605 -> 622): unchanged code, moved when the home Chat got its own Playwright install (PL-60).",
@@ -15309,7 +15309,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 898,
+            "line": 900,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the secret sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed secret sweep stop the sweeps after it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (886 -> 887): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (887 -> 892): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (892 -> 894): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (896 -> 878): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (878 -> 883): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (883 -> 881): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56). Re-anchored 2026-10-31 (881 -> 898): unchanged code, moved when the home Chat got its own Playwright install (PL-60).",
@@ -15322,7 +15322,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 913,
+            "line": 915,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the DA.live token move was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed DA.live token move take activation down' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (901 -> 902): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (902 -> 907): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (907 -> 909): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (911 -> 893): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (893 -> 898): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (898 -> 896): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56). Re-anchored 2026-10-31 (896 -> 913): unchanged code, moved when the home Chat got its own Playwright install (PL-60).",
@@ -15335,7 +15335,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 935,
+            "line": 937,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the publish-key renewal sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failing sweep take activation down with it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (923 -> 924): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (924 -> 929): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (929 -> 931): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (933 -> 915): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (915 -> 920): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (920 -> 918): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56). Re-anchored 2026-10-31 (918 -> 935): unchanged code, moved when the home Chat got its own Playwright install (PL-60).",
@@ -15348,7 +15348,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1009,
+            "line": 1011,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the Node sweep was skipped). That the catch EXISTS is tested: extension-nodeSweep 'shows nothing, and does not fail activation, when the sweep throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (997 -> 998): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (998 -> 1003): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (1003 -> 1005): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (1007 -> 989): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (989 -> 994): unchanged code, moved when the forced-sign-in watch was wired (PL-84). Re-anchored 2026-10-30 (994 -> 992): unchanged code, moved when the agent-consent setting got one shared reader (EDS-56). Re-anchored 2026-10-31 (992 -> 1009): unchanged code, moved when the home Chat got its own Playwright install (PL-60).",

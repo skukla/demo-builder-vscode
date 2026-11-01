@@ -40,18 +40,18 @@ describe('handleSetUpAcoCredential', () => {
 
         const result = await handleSetUpAcoCredential(context, undefined);
 
-        expect(result).toEqual({ success: true, apiCode: 'AcoIngestionCode' });
+        expect(result).toEqual({ success: true, apiCode: 'ACO-Ingestion' });
         expect(subscribeRequiredApis).toHaveBeenCalledWith(
             expect.anything(),
             expect.anything(),
             expect.anything(),
             expect.anything(),
-            ['AcoIngestionCode'],
+            ['ACO-Ingestion'],
             undefined,
             [],
             expect.anything(),
         );
-        expect(project.componentApiPicks).toEqual({ 'adobe-commerce-aco': ['AcoIngestionCode'] });
+        expect(project.componentApiPicks).toEqual({ 'adobe-commerce-aco': ['ACO-Ingestion'] });
         expect(JSON.parse(store.get(acoCredentialKey('/projects/demo')) ?? '{}')).toEqual({
             clientId: 'client-1',
             clientSecret: 'fake-test-pw-not-a-secret',
@@ -74,7 +74,7 @@ describe('handleSetUpAcoCredential', () => {
 
 describe('handleRemoveAcoCredential', () => {
     it('takes the ACO API off the credential, keeps the other owners\' picks, and forgets the pair', async () => {
-        const project = consoleApiProject({ componentApiPicks: { 'adobe-commerce-aco': ['AcoIngestionCode'], __existing__: ['FireflyAPISDK'] } });
+        const project = consoleApiProject({ componentApiPicks: { 'adobe-commerce-aco': ['ACO-Ingestion'], __existing__: ['FireflyAPISDK'] } });
         const { context, store } = contextWithSecrets(project);
         store.set(acoCredentialKey('/projects/demo'), '{"clientId":"c","clientSecret":"s"}');
 
@@ -87,7 +87,7 @@ describe('handleRemoveAcoCredential', () => {
             expect.anything(),
             ['FireflyAPISDK'],
             undefined,
-            ['AcoIngestionCode'],
+            ['ACO-Ingestion'],
             expect.anything(),
         );
         expect(project.componentApiPicks).toEqual({ __existing__: ['FireflyAPISDK'] });
@@ -120,7 +120,7 @@ describe('applyAcoAddonChange (Configure turns ACO on or off)', () => {
     });
 
     it('refuses where the package does not offer ACO, touching nothing', async () => {
-        const project = acoProject({ selectedPackage: 'bodea' });
+        const project = acoProject({ selectedPackage: 'isle5' });
         const { context } = contextWithSecrets(project);
         const result = await applyAcoAddonChange(context, project, true);
         expect(result).toEqual({ success: false, error: expect.stringMatching(/does not offer Adobe Commerce Optimizer/u) });
@@ -159,7 +159,7 @@ describe('applyAcoAddonChange (Configure turns ACO on or off)', () => {
     });
 
     it('turns ACO off: the credential goes, then the add-on', async () => {
-        const project = acoProject({ selectedAddons: ['adobe-commerce-aco'], componentApiPicks: { 'adobe-commerce-aco': ['AcoIngestionCode'] } });
+        const project = acoProject({ selectedAddons: ['adobe-commerce-aco'], componentApiPicks: { 'adobe-commerce-aco': ['ACO-Ingestion'] } });
         const { context, store } = contextWithSecrets(project);
         store.set(acoCredentialKey(project.path), '{"clientId":"c","clientSecret":"s"}');
         await expect(applyAcoAddonChange(context, project, false)).resolves.toEqual({ success: true });

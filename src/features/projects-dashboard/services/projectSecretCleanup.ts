@@ -32,6 +32,7 @@ import {
     reKeyAppBuilderComponentSecrets,
     type SecretDeleter,
 } from '@/features/app-builder/services/componentSettingSecrets';
+import { forgetAcoAccessKeys, moveAcoAccessKeys } from '@/features/components/services/acoAccessKeyStore';
 import { forgetAcoCredential, moveAcoCredential } from '@/features/components/services/acoCredentialStore';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
@@ -79,6 +80,7 @@ export async function forgetProjectSecrets(
         ['Commerce REST credentials', () =>
             Promise.all(workspacesOf(project).map((id) => forgetCredential(secrets, id)))],
         ['ACO credential', () => forgetAcoCredential(secrets, projectPath)],
+        ['ACO access keys', () => forgetAcoAccessKeys(secrets, projectPath)],
     ];
     for (const [kind, forget] of kinds) {
         try {
@@ -108,5 +110,8 @@ export async function moveProjectSecrets(
     await reKeyAppBuilderComponentSecrets(componentEntries(project), oldPath, newPath, secrets, log);
     if ((await moveAcoCredential(secrets, oldPath, newPath)) === 'not-verified') {
         log('ACO credential: re-key not verified, left at the old key');
+    }
+    if (!(await moveAcoAccessKeys(secrets, oldPath, newPath))) {
+        log('ACO access keys: re-key not verified, left at the old key');
     }
 }

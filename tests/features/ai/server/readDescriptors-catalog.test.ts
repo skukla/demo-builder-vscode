@@ -116,7 +116,7 @@ const CATALOG: Row[] = [
         map: dashboardHandlers,
         type: 'listConsoleApis',
         needsAuth: ['adobe'],
-        args: ['search', 'componentId'],
+        args: ['profilesOf', 'search', 'componentId'],
     },
     {
         tool: 'list_runtime_activations',

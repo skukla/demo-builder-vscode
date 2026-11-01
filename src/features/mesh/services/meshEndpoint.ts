@@ -141,8 +141,11 @@ export async function getEndpoint(
 
 /** The two hosts Adobe serves meshes from. */
 const MESH_HOSTS = ['edge-sandbox-graph.adobe.io', 'edge-graph.adobe.io'] as const;
-/** Rounds of asking before settling for the stated address. */
-const PROBE_ROUNDS = 3;
+/**
+ * Rounds of asking before settling for the stated address: two and a half minutes. A new mesh took
+ * about two to reach the edge on 2026-11-01, and giving up sooner saved a dead address on the project.
+ */
+const PROBE_ROUNDS = 30;
 
 /** Whether a mesh answers at this address: anything but a 404 or no reply at all. */
 export async function meshAnswersAt(url: string): Promise<boolean> {
@@ -167,8 +170,8 @@ export async function meshAnswersAt(url: string): Promise<boolean> {
  * reported by `aio api-mesh:describe` on the sandbox host, which answered 404
  * "Mesh … does not exist", while `edge-graph` answered 200. That address was
  * published into the live storefront. So the stated address is tried first, then
- * the other host, for a few rounds (a new mesh can take seconds to reach the
- * edge); the first that answers wins. When neither does, the stated one stands.
+ * the other host, for a while (a new mesh can take minutes to reach the edge);
+ * the first that answers wins. When neither does, the stated one stands.
  *
  * @param endpoint - the address Adobe reported, or one built from the mesh id
  * @param ask - whether a mesh answers at a URL (injected in tests)

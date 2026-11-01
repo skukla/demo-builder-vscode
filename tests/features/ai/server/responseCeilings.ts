@@ -59,6 +59,14 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 31_000,
         why: 'ENFORCED: the tool cuts the body at 30,000 characters and declares the cut (2026-11-01).',
     },
+    create_aco_access_key: {
+        bytes: 300,
+        why: 'A key id and a title, or one refusal sentence. Never the key (2026-11-01).',
+    },
+    delete_aco_access_key: {
+        bytes: 300,
+        why: 'One boolean, or one refusal sentence (2026-11-01).',
+    },
     write_aco_rows: {
         bytes: 200,
         why: 'A fixed shape: the kind and two counts, or one refusal sentence (2026-11-01).',

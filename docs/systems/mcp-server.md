@@ -1277,3 +1277,19 @@ result. The underlying service is mocked; the test asserts the tool's gating
   Code (CLI) as the AI harness.
 - `docs/architecture/overview.md` — where the MCP server sits in the whole system.
 - `src/features/ai/README.md` — the `ai` feature (verification, inventory, server).
+
+## Adobe Commerce Optimizer (PL-60)
+
+Seven tools reach a project's ACO instance on the project's own credential (`set_up_aco_credential`), so
+none needs a sign-in. `get_aco_status` is the place to start: it says which settings are empty, whether
+the credential reaches each surface, and whether Adobe's connector is on the backend. `run_aco_query` reads
+the catalog as a shopper would, in one view, locale and price book. `run_aco_admin` and `write_aco_admin`
+read and change views, policies, access keys and price books. `write_aco_rows` writes or deletes rows
+through the ingestion API. `create_aco_access_key` and `delete_aco_access_key` make the keys a private view
+takes; the private half stays in SecretStorage, and `run_aco_query` signs with it through `signWithKey`.
+Reads carry no gate; writes need `confirm: true`.
+
+The admin API has introspection off, so a wrong field's error is the schema: read it and adjust.
+`list_console_apis` with `profilesOf` shows what Adobe answers for one API, which is what explains
+"requires selection of a product". `run_commerce_query` with `signInAs` and `storeView` reads as a
+signed-in buyer in any store view, without a token ever appearing in an answer.

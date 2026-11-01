@@ -88,6 +88,10 @@
             "reverses": "delete_adobe_workspace"
         },
         {
+            "tool": "create_aco_access_key",
+            "reverses": "delete_aco_access_key"
+        },
+        {
             "tool": "add_console_apis",
             "reverses": "set_console_apis",
             "note": "Corrected 2026-09-11: the first pass recorded this as having no reversal. set_console_apis sets the subscriptions to EXACTLY a list -- 'anything currently subscribed and not listed is REMOVED, pass an empty array to clear the extras' -- so it is the un-add. The handbook already described it as 'a delete wearing a setter's name'. Recording a gap without checking whether the capability already existed is how a ledger becomes fiction."

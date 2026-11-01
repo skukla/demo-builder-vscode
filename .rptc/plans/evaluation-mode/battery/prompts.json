@@ -1572,5 +1572,21 @@
             "write_aco_rows"
         ],
         "why": "PL-60: one row, not a pack. Writes a live instance, so the battery stops at the consent."
+    },
+    {
+        "id": "aco-create-key",
+        "prompt": "Make a restricted access key for a private catalog view on this project's Adobe Commerce Optimizer instance.",
+        "expect": [
+            "create_aco_access_key"
+        ],
+        "why": "PL-60: the private half never reaches the agent, so a private view needs this rather than openssl. Writes a live instance, so the battery stops at the consent."
+    },
+    {
+        "id": "aco-delete-key",
+        "prompt": "Delete the restricted access key key-1 from this project's Adobe Commerce Optimizer instance.",
+        "expect": [
+            "delete_aco_access_key"
+        ],
+        "why": "PL-60: the reversal of create_aco_access_key. Destructive, so the battery stops at the consent."
     }
 ]

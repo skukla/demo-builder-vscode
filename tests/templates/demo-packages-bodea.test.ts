@@ -109,10 +109,10 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
         expect(cfg.AEM_ASSETS_ENABLED).toBeUndefined();
     });
 
-    it('should exclude the adobe-commerce-aco addon', () => {
+    it('should offer the adobe-commerce-aco addon, off by default, as the other B2B template packages do', () => {
         const pkg = getBodea();
         expect(pkg.addons).toBeDefined();
-        expect(pkg.addons!['adobe-commerce-aco']).toBe('excluded');
+        expect(pkg.addons!['adobe-commerce-aco']).toBe('optional');
     });
 
     it('should have exactly the B2B configFlags pair (booleans only)', () => {

@@ -24,6 +24,10 @@ import {
     handleOpenDebugLogs,
 } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
+import { readAcoCredential } from '@/features/components/services/acoCredentialStore';
+import { readAcoSettings } from '@/features/components/services/acoSettings';
+import { createAcoAdminClient } from '@/features/data-installer/services/aco/acoAdminClient';
+import { listAcoCatalogViews } from '@/features/data-installer/services/aco/acoCatalogViews';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
 import { handleCheckStoreViewProducts } from '@/features/eds/handlers/storeViewProductsHandler';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
@@ -32,6 +36,24 @@ import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/typ
 // ==========================================================
 // Handlers
 // ==========================================================
+
+/**
+ * The catalog views Configure can offer. No credential or a refusal answers none, and the screen keeps
+ * its plain field: choosing from a list is a help, never the only way (PL-60).
+ */
+export async function handleListAcoCatalogViews(context: HandlerContext): Promise<HandlerResponse> {
+    const project = await context.stateManager.getCurrentProject();
+    const read = project ? readAcoSettings(project) : undefined;
+    const credential = project ? await readAcoCredential(context.context?.secrets, project.path) : undefined;
+    const instance = read && 'settings' in read ? read.settings : undefined;
+    if (!instance || !credential) return { success: true, data: { views: [] } };
+    try {
+        return { success: true, data: { views: await listAcoCatalogViews(createAcoAdminClient({ instance, credential })) } };
+    } catch (error) {
+        context.logger.warn(`[ACO] Could not list the catalog views: ${error instanceof Error ? error.message : String(error)}`);
+        return { success: true, data: { views: [] } };
+    }
+}
 
 /**
  * Handle cancel — dispose the panel
@@ -154,6 +176,7 @@ export async function handleDiscoverStoreStructureAndPersist(
 // shape (raw components.json, no {success,data} wrapper), which could never
 // have answered the shared hook correctly had anything ever asked.
 export const configureHandlers = defineHandlers({
+    'list-aco-catalog-views': handleListAcoCatalogViews,
     cancel: handleCancelConfigure,
     openExternal: handleOpenExternal,
     'open-eds-settings': handleOpenEdsSettings,

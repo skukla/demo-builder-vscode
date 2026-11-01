@@ -113,6 +113,36 @@ function requestHeaders(
     };
 }
 
+/**
+ * A customer's token for one query, or a sentence beginning "Error:". The one mutation this tool sends:
+ * it changes no store data, and it never appears in an answer.
+ */
+async function customerToken(
+    url: string,
+    headers: Record<string, string>,
+    who: { email: string; password: string },
+    fetchImpl: typeof fetch,
+): Promise<string> {
+    try {
+        const response = await fetchImpl(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                query: 'mutation($email: String!, $password: String!) { generateCustomerToken(email: $email, password: $password) { token } }',
+                variables: who,
+            }),
+            signal: AbortSignal.timeout(QUERY_TIMEOUT_MS),
+        });
+        const { data, errors } = (await response.json()) as {
+            data?: { generateCustomerToken?: { token?: string } };
+            errors?: Array<{ message?: string }>;
+        };
+        return data?.generateCustomerToken?.token ?? `Error: could not sign in as that customer: ${errors?.[0]?.message ?? 'no reason given'}`;
+    } catch (err) {
+        return `Error: could not sign in as that customer: ${err instanceof Error ? err.message : String(err)}`;
+    }
+}
+
 /** Where one Commerce query goes and what it carries, or the refusal to answer instead. */
 export interface CommerceRequest {
     url: string;
@@ -205,6 +235,16 @@ export function registerCommerceQueryTool(
                     .describe(
                         'Which endpoint to query. Defaults to the one the storefront itself uses, so results match the live site.',
                     ),
+                storeView: z
+                    .string()
+                    .optional()
+                    .describe("The store view code for the Store header; defaults to the project's"),
+                signInAs: z
+                    .object({ email: z.string(), password: z.string() })
+                    .optional()
+                    .describe(
+                        "Read as this signed-in customer, for what only a buyer can see: their company, price book or cart. Signs in for this one query; the token is never in the answer",
+                    ),
                 customerGroupId: z
                     .number()
                     .int()
@@ -246,7 +286,13 @@ export function registerCommerceQueryTool(
                 args?.customerGroupId,
             );
             if (typeof request === 'string') return asRawTextMarkingErrors(request);
-            const { url, headers, chosen } = request;
+            const { url, chosen } = request;
+            let headers = args?.storeView ? { ...request.headers, Store: String(args.storeView) } : request.headers;
+            if (args?.signInAs) {
+                const bearer = await customerToken(url, headers, args.signInAs, fetchImpl);
+                if (bearer.startsWith('Error:')) return asRawTextMarkingErrors(bearer);
+                headers = { ...headers, Authorization: `Bearer ${bearer}` };
+            }
 
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), QUERY_TIMEOUT_MS);

@@ -54,7 +54,7 @@ jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
             { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
             { code: 'FireflyAPISDK', name: 'Firefly Services' },
             { code: 'GraphQLServiceSDK', name: 'API Mesh' },
-            { code: 'AcoIngestionCode', name: 'Adobe Commerce Optimizer Ingestion API', type: 'entp' },
+            { code: 'ACO-Ingestion', name: 'Adobe Commerce Optimizer Ingestion API', type: 'entp' },
         ]),
     })),
 }));

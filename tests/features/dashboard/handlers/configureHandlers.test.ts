@@ -131,7 +131,8 @@ describe('configureHandlers', () => {
             // screen's progress modal, which sends all four.
             // 11 → 10: check-credential-service removed 2026-10-28 with the shared
             // credential it reported on (DI-6).
-            expect(types).toHaveLength(10);
+            // 10 → 11: list-aco-catalog-views added 2026-11-01 (PL-60), the view picker's list.
+            expect(types).toHaveLength(11);
         });
 
         it('should NOT include AI handlers (they live in aiHandlers.ts)', () => {

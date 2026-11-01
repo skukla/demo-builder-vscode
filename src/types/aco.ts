@@ -35,3 +35,11 @@ export interface AcoCredential {
     clientId: string;
     clientSecret: string;
 }
+
+/** One catalog view as a person picks it. */
+export interface AcoCatalogViewChoice {
+    id: string;
+    name: string;
+    /** The catalog source locale it reads. */
+    locale?: string;
+}

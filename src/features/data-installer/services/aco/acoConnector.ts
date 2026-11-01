@@ -82,9 +82,8 @@ async function accsConnector({ url, admin }: AcoConnectorQuestion): Promise<Pick
     if (!admin) return { connector: 'unknown', because: 'Asking the tenant service needs the ACO credential.' };
     try {
         const { acoEnabled } = await admin.tenant(tenant);
-        return typeof acoEnabled === 'boolean'
-            ? { connector: acoEnabled ? 'on' : 'off', because: `The tenant service says acoEnabled is ${acoEnabled}.` }
-            : { connector: 'unknown', because: 'The tenant service did not say.' };
+        if (typeof acoEnabled !== 'boolean') return { connector: 'unknown', because: 'The tenant service did not say.' };
+        return { connector: acoEnabled ? 'on' : 'off', because: `The tenant service says acoEnabled is ${acoEnabled}.` };
     } catch (error) {
         return { connector: 'unknown', because: errorText(error) };
     }

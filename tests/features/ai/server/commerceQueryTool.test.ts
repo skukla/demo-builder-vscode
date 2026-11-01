@@ -286,7 +286,7 @@ describe('run_commerce_query — the declaration', () => {
             { safeParse: (v: unknown) => { success: boolean } }
         >;
 
-        expect(Object.keys(shape).sort()).toStrictEqual(['customerGroupId', 'endpoint', 'query', 'variables']);
+        expect(Object.keys(shape).sort()).toStrictEqual(['customerGroupId', 'endpoint', 'query', 'signInAs', 'storeView', 'variables']);
         expect(shape.customerGroupId.safeParse(16).success).toBe(true);
         expect(shape.customerGroupId.safeParse(-1).success).toBe(false);
         expect(shape.customerGroupId.safeParse('16').success).toBe(false);
@@ -564,5 +564,44 @@ describe('run_commerce_query — asking as a customer group', () => {
         expect(text).toMatch(/customerGroupId/);
         expect(text).toMatch(/Catalog Service/);
         expect(fetchMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('reading as a signed-in customer', () => {
+    const answer = (body: unknown) => ({ ok: true, status: 200, text: async () => JSON.stringify(body), json: async () => body });
+
+    function run(args: Record<string, unknown>, ...bodies: unknown[]) {
+        const s = serve();
+        fetchMock.mockReset();
+        for (const body of bodies) fetchMock.mockResolvedValueOnce(answer(body));
+        return { calls: fetchMock, result: s.raw(args) };
+    }
+
+    it('signs in, sends the token with the query, and never answers with it', async () => {
+        const { calls, result } = run(
+            { query: '{ customer { email } }', signInAs: { email: 'a@b.c', password: 'fake-test-pw-not-a-secret' } },
+            { data: { generateCustomerToken: { token: 'the-token' } } },
+            { data: { customer: { email: 'a@b.c' } } },
+        );
+        const text = await result;
+        expect(text).toContain('a@b.c');
+        expect(text).not.toContain('the-token');
+        expect(JSON.parse(calls.mock.calls[0][1].body).variables).toEqual({ email: 'a@b.c', password: 'fake-test-pw-not-a-secret' });
+        expect(calls.mock.calls[1][1].headers.Authorization).toBe('Bearer the-token');
+    });
+
+    it('answers why when the sign-in is refused, and sends no query', async () => {
+        const { calls, result } = run(
+            { query: '{ customer { email } }', signInAs: { email: 'a@b.c', password: 'fake-test-pw-not-a-secret' } },
+            { errors: [{ message: 'The account sign-in was incorrect.' }] },
+        );
+        expect(await result).toMatch(/could not sign in as that customer: The account sign-in was incorrect/u);
+        expect(calls).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks as another store view when told to', async () => {
+        const { calls, result } = run({ query: '{ x }', storeView: 'other_us' }, { data: {} });
+        await result;
+        expect(calls.mock.calls[0][1].headers.Store).toBe('other_us');
     });
 });

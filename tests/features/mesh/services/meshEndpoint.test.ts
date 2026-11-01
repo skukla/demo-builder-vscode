@@ -524,7 +524,7 @@ describe('answeringEndpoint', () => {
         const ask = jest.fn(async () => false);
 
         await expect(answeringEndpoint(SANDBOX, ask)).resolves.toBe(SANDBOX);
-        expect(ask).toHaveBeenCalledTimes(6);
+        expect(ask).toHaveBeenCalledTimes(60);
     });
 
     it('leaves an address that is not an Adobe mesh host alone', async () => {

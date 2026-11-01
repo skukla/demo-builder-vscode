@@ -16,8 +16,12 @@
  * @module features/dashboard/ui/configure/hooks/useConfigureFieldRow
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
+import { AcoCatalogViewPicker } from '../components/AcoCatalogViewPicker';
 import type { ServiceGroup, UniqueField } from '../configureTypes';
+import { useAcoCatalogViews } from './useAcoCatalogViews';
+import { ACO_CATALOG_VIEW_ID, ACO_LOCALE } from '@/core/config/envVarKeys';
+import { ACO_ADDON_ID } from '@/features/components/services/acoSettings';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
@@ -91,8 +95,30 @@ export function useConfigureFieldRow({
         secretFlags: componentSecretFlags,
     });
 
+    // ACO's view is a choice once the credential can list them, and its locale then needs no question.
+    const acoOn = (project.selectedAddons ?? []).includes(ACO_ADDON_ID);
+    const acoViews = useAcoCatalogViews(acoOn);
+    const localeField = useRef<UniqueField | undefined>(undefined);
+
     const renderFieldRow = useCallback(
-        (field: UniqueField, group: ServiceGroup) => (
+        (field: UniqueField, group: ServiceGroup) => {
+            if (acoViews.length > 0 && field.key === ACO_LOCALE) {
+                localeField.current = field;
+                return null;
+            }
+            if (acoViews.length > 0 && field.key === ACO_CATALOG_VIEW_ID) {
+                return (
+                    <AcoCatalogViewPicker
+                        views={acoViews}
+                        selected={String(getFieldValue(field) ?? '')}
+                        onSelect={(view) => {
+                            updateField(field, view.id);
+                            if (view.locale && localeField.current) updateField(localeField.current, view.locale);
+                        }}
+                    />
+                );
+            }
+            return (
             <StoreConfigFieldRow
                 field={field}
                 group={group}
@@ -113,8 +139,10 @@ export function useConfigureFieldRow({
                 onRefresh={forceFetch}
                 accsEndpoint={accsEndpoint}
             />
-        ),
+            );
+        },
         [
+            acoViews,
             autoDetectKey,
             isFetching,
             hasStoreData,

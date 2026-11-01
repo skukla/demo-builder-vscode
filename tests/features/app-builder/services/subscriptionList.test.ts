@@ -254,7 +254,13 @@ describe('ACO APIs choose their profile by the ACO instance (measured 2026-11-01
         ).toThrow(/didn't list the product profiles for ACO Ingestion/u);
     });
 
-    it('names the profiles on offer when none names the tenant', () => {
+    it("takes the org-wide Cloud Manager profile when none names the instance, which reached ACO live", () => {
+        const profiles = [...acoProfiles, { id: 'p3', productId: 'P3', name: 'Default - Cloud Manager' }];
+        const [row] = buildSubscriptionList([{ ...service, licenseConfigs: profiles }], [], new Set(), 'AccsTenant1', { acoTenant: 'Other' });
+        expect(row.licenseConfigs).toEqual([{ op: 'add', id: 'p3', productId: 'P3' }]);
+    });
+
+    it('names the profiles on offer when none names the tenant and there is no org-wide one', () => {
         expect(() => buildSubscriptionList([service], [], new Set(), 'AccsTenant1', { acoTenant: 'Other' })).toThrow(
             /Adobe Commerce Optimizer instance Other.*The profiles: Commerce AccsTenant1, Optimizer AcoTenant1\./su,
         );

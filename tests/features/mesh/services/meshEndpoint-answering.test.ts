@@ -92,14 +92,14 @@ describe('answeringEndpoint — the wait between rounds', () => {
         mockSleep.mockClear();
     });
 
-    // Three rounds, so two waits: after the last round there is nothing left to
-    // wait for, and a third wait would only delay the answer.
+    // Thirty rounds, so twenty-nine waits: after the last round there is nothing left
+    // to wait for, and another wait would only delay the answer.
     it('waits between rounds, and not after the last one', async () => {
         const ask = jest.fn(async () => false);
 
         await answeringEndpoint(SANDBOX, ask);
 
-        expect(mockSleep).toHaveBeenCalledTimes(2);
+        expect(mockSleep).toHaveBeenCalledTimes(29);
         expect(mockSleep).toHaveBeenCalledWith(TIMEOUTS.MESH_ENDPOINT_PROBE_INTERVAL);
     });
 

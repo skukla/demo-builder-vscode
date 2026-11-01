@@ -4,7 +4,9 @@
  * on 2026-11-01; the tenant's is that answer reduced to what the code reads.
  */
 
+import * as crypto from 'crypto';
 import { registerAcoTools } from '@/features/ai/server/acoTools';
+import { acoAccessKeysKey } from '@/features/components/services/acoAccessKeyStore';
 import { readAcoConnector, tenantOfEndpoint } from '@/features/data-installer/services/aco/acoConnector';
 import { acoCredentialKey } from '@/features/components/services/acoCredentialStore';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
@@ -76,7 +78,7 @@ function setup(reply: Parameters<typeof answers>[0], options: { addons?: string[
     (ctx as unknown as { context: unknown }).context = { secrets };
     const s = server();
     const { sent, fetchMock } = answers(reply);
-    registerAcoTools(s as never, () => ctx, fetchMock);
+    registerAcoTools(s, () => ctx, fetchMock);
     return { s, sent };
 }
 
@@ -97,13 +99,12 @@ describe('run_aco_query', () => {
 
     it('asks as the view, locale, price book and token it is given', async () => {
         const { s, sent } = setup(() => ({ body: { data: {} } }));
-        await s.call('run_aco_query', { query: '{ x }', viewId: 'view-2', locale: 'de-CH', priceBookId: 'book', accessToken: 'jwt' });
+        await s.call('run_aco_query', { query: '{ x }', viewId: 'view-2', locale: 'de-CH', priceBookId: 'book' });
         expect(headersOf(sent[0])).toEqual({
             'Content-Type': 'application/json',
             'AC-View-ID': 'view-2',
             'AC-Source-Locale': 'de-CH',
             'AC-Price-Book-ID': 'book',
-            'AC-Catalog-View-Access-Token': 'jwt',
         });
     });
 
@@ -276,6 +277,86 @@ describe('get_aco_status', () => {
     });
 });
 
+describe('access keys for a private view', () => {
+    const KEY_ID = 'key-1';
+
+    function keyed(reply: Parameters<typeof answers>[0] = () => ({ body: { data: { createRestrictedAccessKey: { keyId: KEY_ID, title: 'T' } } } })) {
+        const kept = new Map<string, string>([[acoCredentialKey(PROJECT_PATH), JSON.stringify({ clientId: 'client-1', clientSecret: SECRET })]]);
+        const secrets = {
+            get: async (key: string) => kept.get(key),
+            store: async (key: string, value: string) => void kept.set(key, value),
+            delete: async (key: string) => void kept.delete(key),
+        };
+        const project = createMockProject({ name: 'demo', path: PROJECT_PATH, selectedAddons: ['adobe-commerce-aco'], componentConfigs: { 'adobe-commerce-aco': ACO_CONFIG } });
+        const ctx = createMockHandlerContext({ stateManager: createMockStateManager({ getCurrentProject: jest.fn(async () => project) }) }) as HandlerContext;
+        (ctx as unknown as { context: unknown }).context = { secrets };
+        const s = server();
+        const { sent, fetchMock } = answers(reply);
+        registerAcoTools(s, () => ctx, fetchMock);
+        return { s, sent, kept };
+    }
+
+    it('registers only the public half, keeps the private half, and never answers with it', async () => {
+        const { s, sent, kept } = keyed();
+        const answer = await s.call('create_aco_access_key', { title: 'T', confirm: true });
+
+        const { variables } = bodyOf(notToken(sent)[0]);
+        expect(variables.key.publicKey).toMatch(/^-----BEGIN PUBLIC KEY-----/u);
+        expect(answer).not.toContain('PRIVATE KEY');
+        expect(JSON.stringify(variables)).not.toContain('PRIVATE KEY');
+        expect(JSON.parse(kept.get(acoAccessKeysKey(PROJECT_PATH)) ?? '{}')[KEY_ID]).toMatch(/^-----BEGIN PRIVATE KEY-----/u);
+    });
+
+    it('signs an RS256 token with an expiry that the public half verifies, and never answers with it', async () => {
+        const { s, sent } = keyed();
+        await s.call('create_aco_access_key', { title: 'T', confirm: true });
+        const { publicKey } = bodyOf(notToken(sent)[0]).variables.key;
+
+        const answer = await s.call('run_aco_query', { query: '{ x }', signWithKey: KEY_ID });
+
+        const token = headersOf(sent[sent.length - 1])['AC-Catalog-View-Access-Token'];
+        const [head, claims, signature] = token.split('.');
+        expect(JSON.parse(Buffer.from(head, 'base64url').toString())).toEqual({ alg: 'RS256', typ: 'JWT' });
+        expect(JSON.parse(Buffer.from(claims, 'base64url').toString()).exp).toBeGreaterThan(Date.now() / 1000);
+        expect(crypto.createVerify('RSA-SHA256').update(`${head}.${claims}`).verify(publicKey, signature, 'base64url')).toBe(true);
+        expect(answer).not.toContain(token);
+    });
+
+    it('says so when asked to sign with a key this project did not make', async () => {
+        const { s } = keyed();
+        expect(await s.call('run_aco_query', { query: '{ x }', signWithKey: 'other' })).toMatch(/holds no private key for other/u);
+    });
+
+    it('deleting removes the key from ACO and forgets the private half', async () => {
+        const { s, kept } = keyed((_url, init) =>
+            String(init.body).includes('deleteRestrictedAccessKey')
+                ? { body: { data: { deleteRestrictedAccessKey: true } } }
+                : { body: { data: { createRestrictedAccessKey: { keyId: KEY_ID } } } },
+        );
+        await s.call('create_aco_access_key', { title: 'T', confirm: true });
+        await s.call('delete_aco_access_key', { keyId: KEY_ID, confirm: true });
+        expect(kept.has(acoAccessKeysKey(PROJECT_PATH))).toBe(false);
+    });
+
+    it('keeps the private half when ACO refuses the delete', async () => {
+        const { s, kept } = keyed((_url, init) =>
+            String(init.body).includes('deleteRestrictedAccessKey')
+                ? { body: { errors: [{ message: 'in use' }] } }
+                : { body: { data: { createRestrictedAccessKey: { keyId: KEY_ID } } } },
+        );
+        await s.call('create_aco_access_key', { title: 'T', confirm: true });
+        await s.call('delete_aco_access_key', { keyId: KEY_ID, confirm: true });
+        expect(kept.has(acoAccessKeysKey(PROJECT_PATH))).toBe(true);
+    });
+
+    it('does nothing without confirm', async () => {
+        const { s, sent } = keyed();
+        expect((await s.result('create_aco_access_key', { title: 'T' })).isError).toBe(true);
+        expect((await s.result('delete_aco_access_key', { keyId: KEY_ID })).isError).toBe(true);
+        expect(sent).toStrictEqual([]);
+    });
+});
+
 describe('readAcoConnector on a PaaS backend, which has no tenant to ask', () => {
     const asked = (fields: string[], companyFields: string[] = []) => {
         const body = { data: { query: { fields: fields.map((name) => ({ name })) }, company: { fields: companyFields.map((name) => ({ name })) } } };
@@ -324,7 +405,7 @@ describe('what every tool declares', () => {
         for (const name of ['get_aco_status', 'run_aco_query', 'run_aco_admin']) {
             expect(s.def(name)).toMatchObject({ needsAuth: false, annotations: { readOnlyHint: true, destructiveHint: false } });
         }
-        for (const name of ['write_aco_admin', 'write_aco_rows']) {
+        for (const name of ['write_aco_admin', 'write_aco_rows', 'delete_aco_access_key']) {
             expect(s.def(name)).toMatchObject({ needsAuth: false, annotations: { readOnlyHint: false, destructiveHint: true } });
         }
     });

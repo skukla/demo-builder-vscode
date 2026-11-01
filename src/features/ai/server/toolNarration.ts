@@ -204,6 +204,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     run_aco_admin: 'Reading the ACO setup',
     write_aco_admin: 'Changing the ACO setup',
     write_aco_rows: 'Changing ACO catalog data',
+    create_aco_access_key: 'Making an ACO access key',
+    delete_aco_access_key: 'Deleting an ACO access key',
     get_erp_status: 'Reading the ERP status',
     get_erp_settings: "Reading an ERP's settings",
     set_erp_settings: "Changing an ERP's settings",

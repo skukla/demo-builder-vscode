@@ -134,6 +134,17 @@ export interface ProfileMemory {
     onResolved?: (profile: RememberedProfile) => void;
 }
 
+/**
+ * The profile for an ACO API: the one naming the instance, else the org-wide `Default - Cloud Manager`.
+ * An org's list need not name an instance: on 2026-11-01 none of 35 named the one this was tried on.
+ */
+function acoProfile(service: ServiceInfo, tenant: string | undefined): ServiceLicenseConfig {
+    const wanted = tenant?.toLowerCase();
+    const named = wanted ? service.licenseConfigs?.find((profile) => `${profile.name ?? ''} ${profile.description ?? ''}`.toLowerCase().includes(wanted)) : undefined;
+    const general = service.licenseConfigs?.find((profile) => (profile.name ?? '').toLowerCase().includes('cloud manager'));
+    return named ?? general ?? profileForTenant(service, tenant, 'Adobe Commerce Optimizer');
+}
+
 /** Adobe's catalog goes minutes at a time without profiles (2026-09-21, 2026-09-22, and ACO's 2026-11-01). */
 const profilesNotListed = (label: string) =>
     `Adobe didn't list the product profiles for ${label} just now, so it was not added — try again. No API access was changed.`;
@@ -165,7 +176,7 @@ function profileEntryFor(
     if (service.sdkCode.startsWith(ACO_SERVICE_PREFIX)) {
         // Never the remembered one: that is a Commerce instance's profile, and would grant the wrong access.
         if (!service.licenseConfigs?.length) throw new Error(profilesNotListed(label));
-        return asLicenseConfigs([profileForTenant(service, options.acoTenant, 'Adobe Commerce Optimizer')]);
+        return asLicenseConfigs([acoProfile(service, options.acoTenant)]);
     }
     if (service.licenseConfigs?.length) {
         const chosen = profileForTenant(service, tenant);

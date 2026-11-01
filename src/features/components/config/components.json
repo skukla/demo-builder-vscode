@@ -552,7 +552,7 @@
             "label": "ACO Instance",
             "type": "text",
             "required": true,
-            "placeholder": "https://na1-sandbox.api.commerce.adobe.com/…",
+            "placeholder": "https://na1-sandbox.api.commerce.adobe.com/your-instance-id",
             "description": "Paste its address from your browser, or just its ID. An address with -sandbox or a region in it says which instance it is; otherwise Demo Builder reads it as a sandbox",
             "group": "adobe-commerce-aco"
         },

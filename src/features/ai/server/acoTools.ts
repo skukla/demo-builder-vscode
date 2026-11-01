@@ -9,6 +9,9 @@
  * - `run_aco_admin` / `write_aco_admin`: catalog views, policies, access keys, price books;
  * - `write_aco_rows`: products, prices and the rest through the ingestion API, or deleted from it.
  *
+ * `create_aco_access_key` and `delete_aco_access_key` make the keys a private view takes, and
+ * `run_aco_query` signs with them, so the private half never leaves SecretStorage.
+ *
  * All of it runs on the project's own credential (`set_up_aco_credential`) and never on the SC's
  * sign-in, so none declares `needsAuth`.
  *
@@ -23,7 +26,9 @@ import type { McpToolServer } from './mcpToolServer';
 import { readAcoStatus } from './acoStatus';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { acoGraphqlUrl, acoSettingsProblem, readAcoSettings } from '@/features/components/services/acoSettings';
+import { forgetAcoAccessKey, readAcoAccessKey, saveAcoAccessKey } from '@/features/components/services/acoAccessKeyStore';
 import { readAcoCredential } from '@/features/components/services/acoCredentialStore';
+import { generateAcoKeyPair, signAcoViewToken } from '@/features/data-installer/services/aco/acoAccessToken';
 import { createAcoAdminClient } from '@/features/data-installer/services/aco/acoAdminClient';
 import { createAcoClient } from '@/features/data-installer/services/aco/acoClient';
 import { acoKind, ACO_KINDS, deletePathOf } from '@/features/data-installer/services/aco/acoKinds';
@@ -34,6 +39,9 @@ import type { HandlerContext } from '@/types/handlers';
 
 /** The kinds' names, in the form `z.enum` takes. */
 const KIND_NAMES = ACO_KINDS.map((kind) => kind.kind) as [string, ...string[]];
+
+/** How long a new access key lasts unless told otherwise. */
+const DEFAULT_KEY_DAYS = 30;
 
 const NO_CREDENTIAL =
     'Error: Demo Builder holds no ACO credential for this project. Run set_up_aco_credential first.';
@@ -80,6 +88,86 @@ async function answering(call: () => Promise<string>) {
     }
 }
 
+/** A signed token for a key this project made, or a sentence beginning "Error:". */
+async function tokenFor(ctx: HandlerContext, keyId: string): Promise<string> {
+    const project = await ctx.stateManager.getCurrentProject();
+    const privateKey = project ? await readAcoAccessKey(ctx.context?.secrets, project.path, keyId) : undefined;
+    return privateKey ? signAcoViewToken(privateKey) : `Error: this project holds no private key for ${keyId}. create_aco_access_key makes one.`;
+}
+
+/** The date a key made today stops working, as ACO takes it. */
+const expiryAfter = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
+function registerAccessKeys(server: McpToolServer, ctxFactory: () => HandlerContext, fetchImpl: typeof fetch): void {
+    server.registerTool(
+        'create_aco_access_key',
+        {
+            needsAuth: false,
+            annotations: { readOnlyHint: false, destructiveHint: false },
+            title: 'Create ACO access key',
+            description:
+                "Make a restricted access key for a private catalog view on this project's ACO instance: an RSA key pair whose public half goes to ACO and whose " +
+                'private half stays in SecretStorage, never in an answer. Answers the keyId: assign it to a view with write_aco_admin (restrictedAccessKeyIds, protectionEnabled), ' +
+                'and read that view with run_aco_query signWithKey. delete_aco_access_key undoes it. Requires confirm:true.',
+            inputSchema: {
+                title: z.string().min(1).describe('What to call the key in ACO'),
+                expiresInDays: z.number().int().positive().optional().describe('How long it lasts; 30 days if left out'),
+                confirm: z.boolean().optional().describe('Must be true to proceed'),
+            },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (args: any) => {
+            if (args?.confirm !== true) return asRawText('create_aco_access_key requires confirm:true to proceed.', { isError: true });
+            const ctx = ctxFactory();
+            const access = await accessOf(ctx);
+            const project = await ctx.stateManager.getCurrentProject();
+            const secrets = ctx.context?.secrets;
+            if ('refusal' in access) return asRawTextMarkingErrors(access.refusal);
+            if (!project || !secrets) return asRawTextMarkingErrors('Error: SecretStorage is not available here, so the private key could not be kept.');
+            const client = createAcoAdminClient({ instance: access.settings, credential: access.credential, fetch: fetchImpl });
+            const { publicKey, privateKey } = generateAcoKeyPair();
+            return answering(async () => {
+                const answer = await client.graphql(
+                    'mutation($key: CreateRestrictedAccessKeyRequest!) { createRestrictedAccessKey(keyRequest: $key) { keyId title } }',
+                    { key: { title: args.title, publicKey, expirationDate: expiryAfter(args.expiresInDays ?? DEFAULT_KEY_DAYS) } },
+                );
+                const keyId = (JSON.parse(answer) as { data?: { createRestrictedAccessKey?: { keyId?: string } } }).data?.createRestrictedAccessKey?.keyId;
+                if (keyId) await saveAcoAccessKey(secrets, project.path, keyId, privateKey);
+                return answer;
+            });
+        },
+    );
+    server.registerTool(
+        'delete_aco_access_key',
+        {
+            needsAuth: false,
+            annotations: { readOnlyHint: false, destructiveHint: true },
+            title: 'Delete ACO access key',
+            description:
+                "Delete a restricted access key from this project's ACO instance and forget its private half. A view protected only by this key then answers nobody. Undoes create_aco_access_key. Requires confirm:true and raises a dialog.",
+            inputSchema: {
+                keyId: z.string().min(1).describe('The key id'),
+                confirm: z.boolean().optional().describe('Must be true to proceed'),
+            },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (args: any) => {
+            if (args?.confirm !== true) return asRawText('delete_aco_access_key requires confirm:true to proceed.', { isError: true });
+            const ctx = ctxFactory();
+            const access = await accessOf(ctx);
+            const project = await ctx.stateManager.getCurrentProject();
+            const secrets = ctx.context?.secrets;
+            if ('refusal' in access) return asRawTextMarkingErrors(access.refusal);
+            const client = createAcoAdminClient({ instance: access.settings, credential: access.credential, fetch: fetchImpl });
+            return answering(async () => {
+                const answer = await client.graphql('mutation($keyId: String!) { deleteRestrictedAccessKey(keyId: $keyId) }', { keyId: args.keyId });
+                if (project && secrets && !answer.includes('"errors"')) await forgetAcoAccessKey(secrets, project.path, args.keyId);
+                return answer;
+            });
+        },
+    );
+}
+
 function registerStatus(server: McpToolServer, ctxFactory: () => HandlerContext, fetchImpl: typeof fetch): void {
     server.registerTool(
         'get_aco_status',
@@ -121,7 +209,7 @@ function registerQuery(server: McpToolServer, ctxFactory: () => HandlerContext, 
                 viewId: z.string().optional().describe("A catalog view id; defaults to the project's"),
                 locale: z.string().optional().describe("The catalog source locale; defaults to the project's"),
                 priceBookId: z.string().optional().describe('The price book to ask as (sent as AC-Price-Book-ID); leave out to send none'),
-                accessToken: z.string().optional().describe('A signed token for a private view (sent as AC-Catalog-View-Access-Token)'),
+                signWithKey: z.string().optional().describe('For a private view: the key id from create_aco_access_key to sign a token with. The token is never in the answer'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -132,6 +220,8 @@ function registerQuery(server: McpToolServer, ctxFactory: () => HandlerContext, 
             const read = await settingsOf(ctxFactory());
             if ('refusal' in read) return asRawTextMarkingErrors(read.refusal);
             const { settings } = read;
+            const token = args.signWithKey ? await tokenFor(ctxFactory(), String(args.signWithKey)) : undefined;
+            if (token?.startsWith('Error:')) return asRawTextMarkingErrors(token);
             return answering(async () => {
                 const response = await fetchImpl(acoGraphqlUrl(settings), {
                     method: 'POST',
@@ -141,7 +231,7 @@ function registerQuery(server: McpToolServer, ctxFactory: () => HandlerContext, 
                         ...(args.viewId ? { 'AC-View-ID': args.viewId } : {}),
                         ...(args.locale ? { 'AC-Source-Locale': args.locale } : {}),
                         ...(args.priceBookId ? { 'AC-Price-Book-ID': args.priceBookId } : {}),
-                        ...(args.accessToken ? { 'AC-Catalog-View-Access-Token': args.accessToken } : {}),
+                        ...(token ? { 'AC-Catalog-View-Access-Token': token } : {}),
                     },
                     body: JSON.stringify({ query, ...(args.variables ? { variables: args.variables } : {}) }),
                     signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
@@ -164,7 +254,7 @@ function registerAdminRead(server: McpToolServer, ctxFactory: () => HandlerConte
             description:
                 "Read this project's ACO instance setup: catalog views, policies, restricted access keys, price books. A GraphQL " +
                 'query against the admin API, e.g. { catalogViews { viewId name allowedPriceBookIds defaultPriceBookId protectionEnabled } }, ' +
-                '{ policies { policyId name } }, { restrictedAccessKeys { keyId title } }. The API has introspection off, so a wrong field ' +
+                '{ policies { policyId name } }, { restrictedAccessKeys { keyId title } }, { priceBooks { items { id } } }. The API has introspection off, so a wrong field ' +
                 'answers an error that names the type: read it and adjust. Mutations are refused: use write_aco_admin.',
             inputSchema: {
                 query: z.string().describe('The GraphQL query'),
@@ -280,4 +370,5 @@ export function registerAcoTools(server: McpToolServer, ctxFactory: () => Handle
     registerAdminRead(server, ctxFactory, fetchImpl);
     registerAdminWrite(server, ctxFactory, fetchImpl);
     registerRows(server, ctxFactory, fetchImpl);
+    registerAccessKeys(server, ctxFactory, fetchImpl);
 }

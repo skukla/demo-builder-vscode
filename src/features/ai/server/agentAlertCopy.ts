@@ -171,6 +171,12 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['mutation'],
         sessionGrant: false,
     },
+    delete_aco_access_key: {
+        action: 'Delete an Adobe Commerce Optimizer access key',
+        consequence: 'A private catalog view protected only by this key stops answering anyone, including its storefront.',
+        target: ['keyId'],
+        sessionGrant: false,
+    },
     write_aco_rows: {
         action: 'Change data in Adobe Commerce Optimizer',
         consequence:
