@@ -70,9 +70,9 @@ company on the test website, both deleted and confirmed gone (404) afterwards.
 3. **`all.Store` was being removed.** Earlier research read "ACO routing does not use it", true for
    the catalog but not for Commerce: carts and sign-in on a non-default website would have gone to
    the wrong website. It stays now.
-4. **Sale prices would have vanished.** Shoppers now read a group's book, and ACO's docs say a
-   child book inherits a price but not its discounts. A product with a discount or tiers now has a
-   full row in each group's book.
+4. **Sale prices were wrong.** A discount's `price` is the price it comes to, not the amount off:
+   regular 50 with `price: 5` read back as 5. The service's mapping sends the amount off, and ours
+   copied it. A child book inherits discounts and tiers (measured, against what ACO's docs say).
 5. **The Price Book ID setting is removed.** The storefront replaces it on load, so it did nothing.
    Clear demo data used it for one book's prices, so that clear no longer removes prices, and says
    so on screen. ACO cannot list price books, so a clear has no key for them.
@@ -101,9 +101,9 @@ arrives.
   the wrong books.
 - **Licensing counts views times price books.** The base allocation is 100 catalog variations, so a
   store with several websites and groups can reach it quickly.
-- **A pack made from a website has one price book.** Buyers ask for a book that does not exist, so
-  the view's default has to be that book. Adobe's docs say the default is the fallback; the views
-  available to test have no default, so this is not measured.
+- **A pack made from a website, or from another store, has none of the ids Commerce answers.** A
+  price book that was never loaded answers an empty price, even when the view has a default
+  (measured). So loading adds one per customer group, pointing at the pack's prices, on the record.
 - **After signing in**, a page already on screen keeps its old prices until the next page loads.
   Adobe's template emits an event for this and nothing in it listens. Read in the code, not watched.
 

@@ -9,16 +9,17 @@
  *   quantity-1 tier becoming the price), a special price below it as a discount, and each group
  *   with tiers of its own priced in its own book.
  *
- * Two deliberate departures from the service, because a shopper reads a GROUP's book, never the
- * website's (`.rptc/research/aco-support/customer-pricing.md`):
+ * Two deliberate departures from the service, both measured on a real ACO sandbox (2026-11-01,
+ * `.rptc/research/aco-support/customer-pricing.md`):
  *
  * - A group's book is `<website code>::<sha1(group id)>`, the id Commerce's `commerceOptimizer`
- *   query answers. Measured on ACCS 2026-11-01: a guest, a customer and a company's buyer each got
- *   exactly that id for their website and group. The service's `<website>:<group slug>` is an id
- *   no storefront ever asks for.
- * - A product whose website price has a discount or tiers gets a full row in every group's book.
- *   ACO's docs say a child book inherits a price it does not set, and that discounts are not
- *   inherited, so without its own row every shopper would lose the sale price.
+ *   query answers: a guest, a customer and a company's buyer each got exactly that id for their
+ *   website and group. The service's `<website>:<group slug>` is an id no storefront ever asks for.
+ * - A discount's `price` is the FINAL price, not the amount off: regular 50 with `price: 5` read
+ *   back as 5. The service sends the amount off, which would show a $7 sale on $10 as $3.
+ *
+ * A group's book only holds a row where the group's price differs. A child book inherits the rest,
+ * discounts and tiers included (measured, against ACO's docs, which say discounts are not inherited).
  *
  * @module features/data-installer/services/acoExport/acoPriceRows
  */
@@ -45,10 +46,14 @@ export function rootBookId(website: CommerceWebsite): string {
     return (code || `w${website.id}`).slice(0, ROOT_ID_MAX);
 }
 
-/** A group's book under a website's: the id Commerce answers for that website and group. */
+/** The id Commerce answers for a shopper in this website and customer group. */
+export function buyerBookId(websiteCode: string, groupId: number): string {
+    return `${websiteCode}::${crypto.createHash('sha1').update(String(groupId)).digest('hex')}`;
+}
+
+/** A group's book under a website's. */
 export function childBookId(website: CommerceWebsite, group: CommerceCustomerGroupRow): string {
-    const digest = crypto.createHash('sha1').update(String(group.id)).digest('hex');
-    return `${rootBookId(website)}::${digest}`;
+    return buyerBookId(rootBookId(website), group.id);
 }
 
 const websiteName = (w: CommerceWebsite) =>
@@ -104,12 +109,11 @@ function split(
     return { regular: base, tierPrices: mapped };
 }
 
-/** A special price below the price, as the amount off, to the cent (L45-55). */
+/** A special price below the price, as ACO takes a discount: the price it comes to. */
 function discountsOf(regular: number, special: string | undefined): AcoPriceRow['discounts'] {
     const price = amount(special);
     if (price === undefined || price >= regular) return undefined;
-    const off = Math.round((regular - price) * 100) / 100;
-    return off > 0 ? [{ code: 'special_price', price: off }] : undefined;
+    return [{ code: 'special_price', price }];
 }
 
 /** This website's tiers, by customer group; a tier with no group is for all of them. */
@@ -143,9 +147,6 @@ function priceRow(
     };
 }
 
-/** Whether a row says anything a child book would not get by inheriting the plain price. */
-const needsOwnRow = (row: AcoPriceRow) => Boolean(row.discounts ?? row.tierPrices);
-
 /** One product's rows on one website, or none when it has no price (L114-185). */
 export function priceRows(
     product: CommerceCatalogProduct,
@@ -162,9 +163,7 @@ export function priceRows(
     const rows = [root];
     for (const group of groups.values()) {
         const own = split(byGroup.get(Number(group.id)) ?? [], base);
-        const priceBookId = childBookId(website, group);
-        if (own.tierPrices.length > 0 || own.regular !== base) rows.push(priceRow(sku, priceBookId, own, special));
-        else if (needsOwnRow(root)) rows.push({ ...root, priceBookId });
+        if (own.tierPrices.length > 0 || own.regular !== base) rows.push(priceRow(sku, childBookId(website, group), own, special));
     }
     return rows;
 }

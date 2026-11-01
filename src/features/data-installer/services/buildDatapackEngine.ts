@@ -16,8 +16,10 @@
  * @module features/data-installer/services/buildDatapackEngine
  */
 
+import type { BuyerBooks } from './aco/acoBuyerBooks';
 import { createAcoClient } from './aco/acoClient';
 import type { AcoAccessSource } from './aco/acoJobs';
+import { AcoStoreReads } from './acoExport/acoStoreReads';
 import type { DataInstallerClient } from './dataInstallerClient';
 import { type DatapackEngine, type DatapackEngineId, type ServiceEngineAccess, buildServiceEngine } from './datapackEngine';
 import { readPackFromStore } from './datapackTransfer';
@@ -32,6 +34,7 @@ import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { readAcoCredential } from '@/features/components/services/acoCredentialStore';
 import { acoSettingsProblem, readAcoSettings } from '@/features/components/services/acoSettings';
+import { buildConfigGeneratorParams } from '@/features/eds/services/storefrontConfigParams';
 import { commerceClientForProject } from '@/features/project-creation/services/erpFillForProject';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -127,19 +130,39 @@ export const NO_ACO_CREDENTIAL =
     'Demo Builder holds no Adobe Commerce Optimizer credential for this project. Turn ACO on for the project again so ' +
     'Demo Builder can set one up in its Adobe workspace.';
 
+/** The project's website and its store's customer groups, or undefined when they cannot be read. */
+async function readBuyerBooks(access: Pick<DatapackEngineAccess, 'project' | 'authManager' | 'secrets'>): Promise<BuyerBooks | undefined> {
+    const websiteCode = buildConfigGeneratorParams(access.project).websiteCode;
+    if (!websiteCode) return undefined;
+    try {
+        const read = async () => {
+            const commerce = await projectCommerce(access)();
+            return 'refusal' in commerce ? commerce : commerce.get;
+        };
+        const groups = await new AcoStoreReads(read, () => undefined).customerGroups();
+        return { websiteCode, groupIds: groups.map((group) => group.id) };
+    } catch {
+        return undefined;
+    }
+}
+
 /**
  * The project's ACO access (PL-60, owner 2026-10-31 P4), or why there is none: the instance, catalog
  * view and locale it names (`readAcoSettings`), and a client over the ingestion credential Demo
  * Builder keeps for it in SecretStorage (`readAcoCredential`). The client is built for the instance
  * asked for, so a removal reaches the instance its record names.
  */
-export function projectAco(access: Pick<DatapackEngineAccess, 'project' | 'secrets'>): AcoAccessSource {
+export function projectAco(access: Pick<DatapackEngineAccess, 'project' | 'secrets'> & Partial<Pick<DatapackEngineAccess, 'authManager'>>): AcoAccessSource {
     return async () => {
         const read = readAcoSettings(access.project);
         if (!read || 'missing' in read) return { refusal: acoSettingsProblem(read) ?? NO_ACO_CREDENTIAL };
         const credential = await readAcoCredential(access.secrets, access.project.path);
         if (!credential) return { refusal: NO_ACO_CREDENTIAL };
-        return { settings: read.settings, clientFor: (instance) => createAcoClient({ instance, credential }) };
+        return {
+            settings: read.settings,
+            clientFor: (instance) => createAcoClient({ instance, credential }),
+            ...(access.authManager ? { buyerBooks: () => readBuyerBooks({ ...access, authManager: access.authManager }) } : {}),
+        };
     };
 }
 

@@ -67,24 +67,14 @@ describe('priceRows', () => {
         ]);
     });
 
-    it('makes a special price a discount of the amount off, rounded to cents', () => {
-        const [row] = priceRows(
-            catalogProduct('A', { price: 10 }, { special_price: '7.333' }),
-            BASE,
-            GROUPS
-        );
-        expect(row.discounts).toEqual([{ code: 'special_price', price: 2.67 }]);
+    it('makes a special price a discount of the price it comes to, which is how ACO reads one', () => {
+        const [row] = priceRows(catalogProduct('A', { price: 10 }, { special_price: '7.33' }), BASE, GROUPS);
+        expect(row.discounts).toEqual([{ code: 'special_price', price: 7.33 }]);
     });
 
-    it("carries a discount into every group's book, since a child book does not inherit one", () => {
+    it("writes a sale only in the website's book, since a group's book inherits it", () => {
         const rows = priceRows(catalogProduct('A', { price: 10 }, { special_price: '8' }), BASE, GROUPS);
-        const discounts = [{ code: 'special_price', price: 2 }];
-        expect(rows).toEqual([
-            { sku: 'A', priceBookId: 'base', regular: 10, discounts },
-            { sku: 'A', priceBookId: GUEST_BOOK, regular: 10, discounts },
-            { sku: 'A', priceBookId: GENERAL_BOOK, regular: 10, discounts },
-            { sku: 'A', priceBookId: VIP_BOOK, regular: 10, discounts },
-        ]);
+        expect(rows).toEqual([{ sku: 'A', priceBookId: 'base', regular: 10, discounts: [{ code: 'special_price', price: 8 }] }]);
     });
 
     it("applies the sale price to a group's own price too, when it is below it", () => {
@@ -97,7 +87,7 @@ describe('priceRows', () => {
             sku: 'A',
             priceBookId: VIP_BOOK,
             regular: 9,
-            discounts: [{ code: 'special_price', price: 1 }],
+            discounts: [{ code: 'special_price', price: 8 }],
         });
     });
 
@@ -132,12 +122,8 @@ describe('priceRows', () => {
             ],
         });
 
-        const tierPrices = [{ qty: 5, price: 8 }];
         expect(priceRows(product, BASE, GROUPS)).toEqual([
-            { sku: 'A', priceBookId: 'base', regular: 9, tierPrices },
-            { sku: 'A', priceBookId: GUEST_BOOK, regular: 9, tierPrices },
-            { sku: 'A', priceBookId: GENERAL_BOOK, regular: 9, tierPrices },
-            { sku: 'A', priceBookId: VIP_BOOK, regular: 9, tierPrices },
+            { sku: 'A', priceBookId: 'base', regular: 9, tierPrices: [{ qty: 5, price: 8 }] },
         ]);
     });
 

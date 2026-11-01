@@ -11,6 +11,7 @@ import { type RecordFiles, openInstallRecord, readInstallRecord } from '../demoB
 import { skippedLine } from '../demoBuilderEngine/refusedRows';
 import type { AcoClient } from './acoClient';
 import { ACO_KINDS, isAcoKind } from './acoKinds';
+import { type BuyerBooks, withBuyerBooks } from './acoBuyerBooks';
 import { type AcoPackItems, acoRowProblems, installAcoPack, removeAcoPack } from './acoPackInstall';
 import type { AcoInstance, AcoStorefrontSettings } from '@/types/aco';
 import type { DatapackId } from '@/types/datapack';
@@ -19,6 +20,8 @@ import type { DatapackId } from '@/types/datapack';
 export interface AcoAccess {
     settings: AcoStorefrontSettings;
     clientFor(instance: AcoInstance): AcoClient;
+    /** The website and customer groups shoppers come from, for `withBuyerBooks`; undefined when they cannot be read. */
+    buyerBooks?(): Promise<BuyerBooks | undefined>;
 }
 
 /** Where the engine gets the project's ACO access, or why there is none. */
@@ -36,6 +39,10 @@ export const NO_READ_BACK =
     'ACO cannot be read back, so Demo Builder cannot tell whether anything this pack loaded was changed in ACO since, ' +
     'or was already there before: installing again sends every row again, and removing the pack deletes exactly what ' +
     'it loaded, by its own SKUs, slugs, codes and price book ids.';
+
+/** Said when the shoppers' price books could not be worked out, so a pack from elsewhere may show no prices. */
+export const NO_BUYER_BOOKS =
+    "Demo Builder could not read this store's customer groups, so unless this pack came from this store, shoppers may see no prices.";
 
 /** Whether every kind asked for is ACO's: such a pack goes to ACO, not Commerce. */
 export function asksForAco(kinds: readonly string[]): boolean {
@@ -123,8 +130,10 @@ export async function runAcoInstall(
     const { tenantId, region, environment } = access.settings;
     const instance = { tenantId, region, environment };
     const recorder = await openInstallRecord(scope.files, scope.projectPath, scope.pack, scope.now, { aco: instance });
-    const outcome = await installAcoPack({ client: access.clientFor(instance), recorder, log: scope.log }, items, scope.onKind);
-    return [skippedLine(outcome.skipped), localeLine(outcome.locales, access.settings.locale), NO_READ_BACK].filter(Boolean).join(' ');
+    const books = await access.buyerBooks?.();
+    const rows = books ? withBuyerBooks(items, books) : items;
+    const outcome = await installAcoPack({ client: access.clientFor(instance), recorder, log: scope.log }, rows, scope.onKind);
+    return [skippedLine(outcome.skipped), books ? undefined : NO_BUYER_BOOKS, localeLine(outcome.locales, access.settings.locale), NO_READ_BACK].filter(Boolean).join(' ');
 }
 
 /**

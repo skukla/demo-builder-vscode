@@ -202,9 +202,11 @@ answer as `AC-Price-Book-ID`. Commerce answers `<website code>::<sha1(customer g
 company's buyer gets the group of the company's shared catalog, so an exported pack names its
 group books that way. No fixed price book is written to `config.json`: the storefront replaces it.
 
-**What the SC does:** export the pack from the store being demonstrated, load it, and make the
-catalog view allow that website's price books. A pack made from a website has one book, so make
-that book the view's default instead.
+**What the SC does:** load the pack and make the catalog view allow that website's price books.
+A pack from another store, or made from a website, does not have the ids Commerce answers, so loading
+adds one for each customer group, pointing at the pack's own prices. They are on the pack's record
+and go when it is removed. A price book that was never loaded answers an empty price even when the
+view has a default, so without them nobody would see a price.
 
 **What this is and is not:** prices differ per company, but every company sees the same products,
 and anyone who knows a book's id can read its prices. Cart and checkout prices still come from

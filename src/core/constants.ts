@@ -328,9 +328,9 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // library through make_aco_pack_from_products, and the ACO credential is Demo Builder's to make
 // (set_up_aco_credential / remove_aco_credential), never typed. Existing projects would keep
 // lacking the skill and the tools' place in it.
-// v50 (2026-11-01, PL-60): scrape-products-to-aco says the catalog view's default price book must
-// be the pack's, because an ACO storefront now asks Commerce for each shopper's book. Existing
-// projects would keep leaving SCs with a pack that shows no prices.
+// v50 (2026-11-01, PL-60): scrape-products-to-aco says the catalog view must allow the store's price
+// books, because an ACO storefront now asks Commerce for each shopper's book. Existing projects would
+// keep leaving SCs with a pack that shows no prices.
 export const AI_CONTEXT_VERSION = 50;
 
 /**
