@@ -55,3 +55,4 @@ enabled in the org, which it is not today. Without that nothing here can be prov
 ## Shipped so far
 
 - 2026-11-01  docs(aco): what company pricing takes on ACCS + ACO, and what to offer now (`a3e585efb`)
+- 2026-11-01  docs(aco): private views need no storefront code, the template already asks (`255b15301`)
