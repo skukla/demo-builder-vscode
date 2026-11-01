@@ -10,7 +10,12 @@ A component declares the ref it installs from in `components.json`, and most dec
 two audiences. Moving the tag reaches projects created from then on. A project already on
 disk is offered an update only by a newer GitHub Release of the component
 (`checkAllProjectsForUpdates`), so reaching it takes a release as well, and a prerelease
-reaches only the beta channels.
+reaches only the beta channels. A mesh repository must track `mesh.json`, because the updater
+checks for it before it builds.
+
+A floating tag is not a version, so an install reads its version from `package.json`. Projects
+already on disk may have the tag's name recorded instead; the updater treats any recorded value it
+cannot compare as out of date, so they are offered the next release and record a real version.
 
 Not everything floats. At least one component pins a real version (`v1.0.0`), which
 is the right choice where a moving target would be dangerous rather than convenient.
