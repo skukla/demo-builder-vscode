@@ -35,3 +35,4 @@ test markers were deleted.
 ## Shipped so far
 
 - 2026-10-31  fix(test): the hook router's tests no longer flake on markers old runs left (`92000b0ee`)
+- 2026-10-31  fix(hooks): every rule proof and the probe keep their markers to themselves (`175976d61`)
