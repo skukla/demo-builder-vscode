@@ -88,11 +88,12 @@ function TargetScopeFields({
     }
     if (isLoading) {
         // ONE spinner for the one wait, where the pickers will land (owner, 2026-10-31: each
-        // picker had its own, two spinners for one request). It holds the row's height, so
-        // the pickers replace it without the dialog jumping.
+        // picker had its own, two spinners for one request). Medium, a job dialog's wait (owner,
+        // 2026-11-01: small was too small for the dialog). It holds the row's height, so the
+        // pickers replace it without the dialog jumping.
         return (
             <div className="datapack-import-scope-loading">
-                <ProgressCircle size="S" isIndeterminate aria-label="Loading the stores" />
+                <ProgressCircle size="M" isIndeterminate aria-label="Loading the stores" />
             </div>
         );
     }
