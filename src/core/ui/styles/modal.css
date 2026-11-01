@@ -105,6 +105,17 @@
     flex: 0 1 auto;
 }
 
+/* A wait, centred both ways between the title's rule and the buttons (dialog design rules).
+   The padding matches the 24 the footer keeps above the buttons, less the 16 the dialog's content
+   already sits under the rule, so the space above and below comes out equal. */
+.modal-wait {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 72px;
+    padding-top: 8px;
+}
+
 .modal-footer-actions {
     /* Pin to the bottom of the dialog's scroll area so the primary action stays visible while
        a tall body (e.g. the integration catalog grid) scrolls. With .modal-content's bottom

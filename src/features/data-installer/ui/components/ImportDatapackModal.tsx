@@ -44,10 +44,10 @@ import type { ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportScopes } from '../hooks/useImportScopes';
 import { deselectType, selectType, type TypeSelection } from '../importDependencies';
-import { ImportDatapackModalBody, type BodyContext } from './ImportDatapackModalBody';
+import { ImportDatapackModalBody, type BodyContext, type ModalView } from './ImportDatapackModalBody';
 import { buildActions, busyMessage, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
 import { resolveResult, type LastAction } from './importResult';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -66,6 +66,12 @@ interface ImportTarget {
      * for rather than on whatever the instance happens to call `base`.
      */
     scope?: { websiteCode: string; storeCode: string };
+}
+
+/** The dialog's wait: starting or removing, or the stores it needs before the form can show. */
+function waitOf(view: ModalView, storesLoading: boolean, message: string): ModalWait | false {
+    if (view === 'busy') return { message };
+    return view === 'form' && storesLoading ? {} : false;
 }
 
 export interface ImportDatapackModalProps {
@@ -313,7 +319,7 @@ export function ImportDatapackModal({
                 wide={frame.wide}
                 hideClose={frame.hideClose}
                 fitContent
-                waiting={view === 'form' && scope.loading ? {} : false}
+                waiting={waitOf(view, scope.loading, bodyContext.busyMessage)}
                 onClose={close}
                 closeLabel={running ? 'Run in background' : 'Close'}
                 actionButtons={buildActions({

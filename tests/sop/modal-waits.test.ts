@@ -48,6 +48,15 @@ describe('a dialog that is waiting shows nothing else', () => {
         expect(offenders()).toEqual(Object.keys(LEDGER).sort());
     });
 
+    it('centres the wait both ways, and keeps it clear of the rule and the buttons', () => {
+        const css = fs.readFileSync(path.join(SRC, 'core/ui/styles/modal.css'), 'utf8');
+        const rule = /\.modal-wait \{([^}]*)\}/.exec(css)?.[1] ?? '';
+        // Measured in a browser, 2026-11-01: 40 above and below a bare spinner, 0 off-centre.
+        expect(rule).toMatch(/align-items: center/);
+        expect(rule).toMatch(/justify-content: center/);
+        expect(rule).toMatch(/padding-top: 8px/);
+    });
+
     it('CONTROL: still finds the thing it looks for', () => {
         expect(fs.readFileSync(path.join(SRC, 'core/ui/components/ui/Modal.tsx'), 'utf8')).toMatch(/<LoadingDisplay\b/);
     });

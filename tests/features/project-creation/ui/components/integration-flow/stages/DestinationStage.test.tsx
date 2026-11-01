@@ -416,13 +416,12 @@ describe('DestinationStage', () => {
         // A phase with no message shows the spinner with an EMPTY title, not a
         // placeholder: the fallback exists to satisfy LoadingDisplay's required
         // prop, and anything it substituted would be read aloud as the status.
-        it('a running phase with no message renders an empty spinner title', () => {
+        it('a running phase with no message shows the spinner and no empty title row', () => {
             setPhases({ phase: 'creating', phaseMessage: undefined });
             renderStage('project');
-            // The medium spinner's title (a job dialog's wait, owner 2026-10-31).
-            const main = screen.getByRole('status').querySelector('.text-base');
-            expect(main).not.toBeNull();
-            expect(main?.textContent).toBe('');
+            // A blank row left the spinner sitting high (owner, 2026-11-01).
+            expect(screen.getByRole('status').querySelector('.text-base')).toBeNull();
+            expect(screen.getByRole('status').querySelector('[role="progressbar"]')).not.toBeNull();
         });
 
         // After a create failure the user retries and succeeds: the hook parks at

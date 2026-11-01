@@ -563,6 +563,18 @@ describe('Modal: a wait shows nothing else', () => {
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
 
+    it('has nothing but the spinner in the wait when there is nothing to say, so it stays centred', () => {
+        const { container } = renderWithProvider(
+            <Modal title="Import" onClose={jest.fn()} waiting={{}}>
+                <p>The form</p>
+            </Modal>,
+        );
+
+        const wait = container.ownerDocument.querySelector('.modal-wait') as HTMLElement;
+        expect(wait.querySelector('[role="progressbar"]')).not.toBeNull();
+        expect(wait.textContent?.trim()).toBe('');
+    });
+
     it('shows the content and the actions when it is not waiting', () => {
         renderWithProvider(
             <Modal title="Import" actionButtons={[action]} onClose={jest.fn()} waiting={false}>

@@ -150,9 +150,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
             );
         }
 
-        // The body shows the spinner, so the button keeps its label and stops taking presses
-        // (owner, 2026-10-31: no "-ing" label).
-        it('keeps the Dry run label, frozen, while the check is in flight', async () => {
+        // The dialog is the wait: nothing but the spinner and the way out (owner, 2026-11-01).
+        it('offers no actions while the check is in flight', async () => {
             neverResolve('validate-datapack-import');
             renderModal();
             await awaitForm();
@@ -161,11 +160,11 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(screen.getByRole('button', { name: /^dry run$/i }));
 
             await screen.findByText(/checking with the service/i);
-            expect(screen.getByRole('button', { name: /^dry run$/i })).toHaveAttribute('aria-disabled', 'true');
+            expect(screen.queryByRole('button', { name: /^dry run$/i })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^checking$/i })).not.toBeInTheDocument();
         });
 
-        it('shows a spinner while an import is starting', async () => {
+        it('shows a spinner and no actions while an import is starting', async () => {
             neverResolve('start-datapack-import');
             renderModal();
             await awaitForm();
@@ -174,7 +173,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(startButton());
 
             expect(await screen.findByText(/starting import/i)).toBeInTheDocument();
-            expect(startButton()).toHaveAttribute('aria-disabled', 'true');
+            expect(screen.queryByRole('button', { name: /^import$/i })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^starting$/i })).not.toBeInTheDocument();
         });
 
@@ -194,7 +193,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
         });
 
-        it('disables every action while one is in flight', async () => {
+        it('leaves only the way out while one is in flight', async () => {
             neverResolve('validate-datapack-import');
             renderModal();
             await awaitForm();
@@ -203,14 +202,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(screen.getByRole('button', { name: /^dry run$/i }));
             await screen.findByText(/checking with the service/i);
 
-            expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
-                'aria-disabled',
-                'true'
-            );
-            expect(screen.getByRole('button', { name: /^remove data/i })).toHaveAttribute(
-                'aria-disabled',
-                'true'
-            );
+            expect(screen.queryByRole('button', { name: /^import$/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^remove data$/i })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
         });
     });
 

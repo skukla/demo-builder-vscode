@@ -235,13 +235,15 @@ export function Modal({
                 <div className="modal-body">
                     <SteadyHeight>
                         {waiting ? (
-                            <LoadingDisplay
-                                size="M"
-                                centered
-                                message={waiting.message ?? ''}
-                                subMessage={waiting.detail}
-                                helperText={waiting.helperText}
-                            />
+                            <div className="modal-wait">
+                                <LoadingDisplay
+                                    size="M"
+                                    centered
+                                    message={waiting.message ?? ''}
+                                    subMessage={waiting.detail}
+                                    helperText={waiting.helperText}
+                                />
+                            </div>
                         ) : (
                             children
                         )}

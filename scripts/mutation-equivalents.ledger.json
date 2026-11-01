@@ -9700,7 +9700,7 @@
             "anchors": [
                 "auto: [],"
             ],
-            "line": 94,
+            "line": 100,
             "mutants": 1,
             "category": "other",
             "reason": "The 'auto' provenance set is only ever consulted as auto.has(t) for a type that is already in 'selected' and is a declared dependency of the type being unticked. A seeded entry that is not a real data type therefore matches nothing, and deselectType's final filter (auto kept only where it appears in the surviving selection) removes it on the first untick. Nothing rendered or sent reads 'auto' at all.",
@@ -9713,7 +9713,7 @@
             "anchors": [
                 "allSelected ? { selected: [], auto: [] } : { selected: [...availableTypes], auto: [] },"
             ],
-            "line": 189,
+            "line": 195,
             "mutants": 2,
             "category": "other",
             "reason": "Both survivors seed the 'auto' provenance set rather than the selection. 'auto' is read only as auto.has(t) while unticking, and only for types that are both currently selected and declared dependencies of the departing type, so an entry that is not a real data type can never match. The checkboxes, the Start guard and the request body all read 'selected'; none of them reads 'auto'.",
@@ -9738,7 +9738,7 @@
             "anchors": [
                 "}, [loadStatus]);"
             ],
-            "line": 119,
+            "line": 125,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9751,7 +9751,7 @@
             "anchors": [
                 "}, [loadTarget]);"
             ],
-            "line": 124,
+            "line": 130,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9764,7 +9764,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 212,
+            "line": 218,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves.",
@@ -9777,7 +9777,7 @@
             "anchors": [
                 "const goBack = useCallback((): void => setDismissed(true), []);"
             ],
-            "line": 234,
+            "line": 240,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function. goBack closes over nothing but a setState function, which React guarantees is stable.",
@@ -9790,7 +9790,7 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 228,
+            "line": 234,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false. watching only becomes false through the Stop watching button, which buildActions renders solely for the 'watching' view; that view requires a running record, and turning the watch off also stops the poll that could retire it. So while watching is false the modal offers no Remove data affordance to arm, and this call can only ever re-assert a value that is already true.",
@@ -9803,7 +9803,7 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 221,
+            "line": 227,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false, for the same reason as the removal's call: watching only turns false through Stop watching, which buildActions renders solely for the 'watching' view, and that view needs a running record whose poll the same press stops. So while watching is false the modal shows no Start import button, and this call can only re-assert a value that is already true.",
@@ -14199,7 +14199,7 @@
             "anchors": [
                 "{view === 'result' && ctx.result ? <ImportResultView result={ctx.result} /> : null}"
             ],
-            "line": 122,
+            "line": 113,
             "mutants": 2,
             "category": "branch",
             "reason": "Both survivors need a state the state machine cannot produce: a non-null result while the view is not 'result'. resolveView returns 'result' whenever result is truthy and none of busy, resetArmed or running outranks it; result is forced null while busy, resolveResult returns null for a record still watching, and the affordances that set lastAction or arm a reset are absent from the views that outrank it. So view === 'result' and a truthy result coincide exactly. Re-anchored 2026-10-31 (129 -> 133): unchanged code; the floor's alignment comment above it grew. Re-anchored 2026-10-31 (133 -> 128): unchanged code; the removal confirmation above it moved into its own component. Re-anchored 2026-10-31 (128 -> 129): unchanged code; the result view became ImportResultView, above it. Re-anchored 2026-10-31 (129 -> 122): the result view's props shrank to the result alone and the call fits one line, and an unused import above it went; the condition is unchanged.",

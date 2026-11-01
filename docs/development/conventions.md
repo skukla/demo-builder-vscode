@@ -115,7 +115,7 @@ it means the rule rests on somebody noticing.
 | A component generic over `<T>` earns it with size and real reuse. |  |  | `component-extraction.test.ts` |
 | A `HandlerContext` is built by a factory — `createPanelHandlerContext` or `createHeadlessHandlerContext` — never assembled as an object literal at the surface. |  |  | `handler-context-from-factory.test.ts` |
 | Modals are hosted in one place, not mounted wherever they are opened. |  |  | `modal-hosting.test.ts` |
-| A dialog that is waiting shows nothing else: the title, a medium centred spinner and the way out. `Modal`'s `waiting` prop does it. |  |  | `modal-waits.test.ts` |
+| A dialog that is waiting shows nothing else: the title, a medium spinner centred both ways in the space between the rule and the buttons, and the way out. `Modal`'s `waiting` prop does it. |  |  | `modal-waits.test.ts` |
 | A CSS class used in a bundle is styled by that bundle. |  |  | `stylesheet-bundles.test.ts` |
 | Before writing a new UI component, check whether the shared vocabulary already has it. |  |  | `30-reuse-first.rule` |
 | Before adding a file to a curated directory, read what is already in it. |  |  | `31-registry-dir.rule` |

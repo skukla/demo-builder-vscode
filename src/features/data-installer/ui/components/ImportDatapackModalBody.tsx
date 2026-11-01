@@ -104,15 +104,6 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
         // view change is a movement rather than a jump (dialog design rules, 2026-10-31).
         <SteadyHeight>
             <div className="datapack-import-body">
-                    {view === 'busy' ? (
-                        // Medium and centred, a job dialog's wait: the large spinner
-                        // dominated this short dialog (owner, 2026-10-31).
-                        <LoadingDisplay
-                            size="M" centered
-                            message={ctx.busyMessage}
-                        />
-                    ) : null}
-
                     {view === 'confirm-reset' ? <ResetConfirm ctx={ctx} /> : null}
 
                     {view === 'watching' && ctx.record ? (

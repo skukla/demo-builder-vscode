@@ -866,8 +866,9 @@ check says so and names the file.
 > *Why:* ad-hoc mounting produces stacking and focus bugs that only appear in combination.
 > Enforced by `tests/sop/modal-hosting.test.ts`.
 
-> **Convention.** A dialog that is waiting shows nothing else: the title, a medium centred spinner
-> and the way out. `Modal`'s `waiting` prop does it.
+> **Convention.** A dialog that is waiting shows nothing else: the title, a medium spinner centred
+> both ways in the space between the rule and the buttons, and the way out. `Modal`'s `waiting` prop
+> does it.
 > *Why:* half a form under a spinner invites a press that goes nowhere, and it kept coming back on
 > different surfaces (owner, 2026-11-01).
 > Enforced by `tests/sop/modal-waits.test.ts`.
