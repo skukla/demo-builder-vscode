@@ -149,7 +149,7 @@ describe('checkIntegrationUpdates', () => {
         expect(p.appBuilderComponents?.erp?.updateAvailable).toEqual(previous);
     });
 
-    it('checks systems too, and skips meshes, undeployed components and components without a folder', async () => {
+    it('checks systems and meshes too, and skips undeployed components and components without a folder', async () => {
         const p = project({
             erp: component({ kind: 'system' }),
             mesh: component({ kind: 'mesh' }),
@@ -160,8 +160,8 @@ describe('checkIntegrationUpdates', () => {
 
         const result = await checkIntegrationUpdates(p, d);
 
-        expect(result.reports.map((r) => r.id)).toEqual(['erp']);
-        expect(d.checkClone).toHaveBeenCalledTimes(1);
+        expect(result.reports.map((r) => r.id)).toEqual(['erp', 'mesh']);
+        expect(d.checkClone).toHaveBeenCalledTimes(2);
     });
 });
 

@@ -254,6 +254,51 @@ describe('fastForwardClone', () => {
     }, REAL_GIT_TIMEOUT_MS);
 });
 
+describe('a mesh on the branch, as projects on disk hold it', () => {
+    let fx: Fixture;
+
+    beforeEach(() => {
+        fx = buildFixture();
+        write(fx.upstream, 'mesh.json', '{"built":1}\n');
+        git(fx, fx.upstream, 'add', '-A');
+        git(fx, fx.upstream, 'commit', '-q', '-m', 'mesh');
+        git(fx, fx.upstream, 'tag', 'stable');
+        git(fx, fx.upstream, 'push', '-q', 'origin', 'main', 'stable');
+        publish(fx);
+        // What an install from the floating tag left: one commit, detached at the tag.
+        fs.rmSync(fx.clone, { recursive: true, force: true });
+        execFileSync('git', ['clone', '-q', '--depth', '1', '--branch', 'stable', `file://${fx.origin}`, fx.clone], {
+            env: gitEnv(fx.home),
+        });
+    });
+    afterEach(() => {
+        fs.rmSync(fx.root, { recursive: true, force: true });
+    });
+
+    it('sees that a shallow clone at the tag is behind the branch', async () => {
+        const result = await checkCloneForUpdate(fx.clone, 'main', realGit(fx));
+
+        expect(result.status).toBe('available');
+    });
+
+    it('moves that clone to the branch head', async () => {
+        const to = git(fx, fx.upstream, 'rev-parse', 'HEAD');
+
+        const result = await fastForwardClone(fx.clone, 'main', realGit(fx));
+
+        expect(result.status).toBe('updated');
+        expect(git(fx, fx.clone, 'rev-parse', 'HEAD')).toBe(to);
+    });
+
+    it('does not take a rebuilt mesh.json for the SC\'s own edit', async () => {
+        write(fx.clone, 'mesh.json', '{"built":2}\n');
+
+        const result = await fastForwardClone(fx.clone, 'main', realGit(fx));
+
+        expect(result.status).toBe('updated');
+    });
+});
+
 describe('checkCloneForUpdate', () => {
     let fx: Fixture;
 

@@ -84,6 +84,21 @@ describe('detectVersion — strategy 1, the git tag', () => {
     });
 });
 
+describe('detectVersion — a tag that is not a version', () => {
+    // A floating tag names a pointer, not a version.
+    it('reads the version from package.json when the tag is not one', async () => {
+        detectionAnswers({ code: 0, stdout: 'stable\n' });
+        mockFs.access.mockImplementation(async (p: string) =>
+            p.endsWith('package.json') ? undefined : Promise.reject(new Error('ENOENT'))
+        );
+        mockFs.readFile.mockResolvedValue(JSON.stringify({ version: '1.0.0-beta.2' }));
+
+        const result = await install();
+
+        expect(result.component?.version).toBe('1.0.0-beta.2');
+    });
+});
+
 describe('detectVersion — strategy 2, package.json', () => {
     it('falls back to the package.json version when there is no tag', async () => {
         detectionAnswers({ code: 0, stdout: '' });

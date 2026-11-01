@@ -196,7 +196,7 @@ export const handleUpdateAppBuilderComponent: MessageHandler<{
     progress?: 'modal';
 }> = narrateOutcomeToModal(
     async (context, payload): Promise<HandlerResponse> => {
-        const target = await resolveComponentRecord(context, payload?.id, (record) => record.kind !== 'mesh');
+        const target = await resolveComponentRecord(context, payload?.id);
         if (!target.ok) return target.error;
         const { id, project, state } = target;
         if (!canUpdate(state.status)) {

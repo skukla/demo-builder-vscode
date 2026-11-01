@@ -212,12 +212,6 @@ describe('ComponentUpdater — plumbing', () => {
                 })
             );
         });
-
-        it('does not ask a non-mesh component for mesh.json', async () => {
-            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
-
-            expect(fs.access).not.toHaveBeenCalledWith(expect.stringContaining('mesh.json'));
-        });
     });
 
     describe('post-update build', () => {

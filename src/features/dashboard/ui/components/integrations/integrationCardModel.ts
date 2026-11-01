@@ -268,6 +268,8 @@ function toLinkedCard(model: IntegrationCardModel): LinkedCard {
     };
 }
 
+const NEWER_VERSION_MESSAGE = 'A newer version is available. Update fetches it and deploys it.';
+
 /** What every card face shows for a component: status, label, dot and message. */
 function deriveFace(
     entry: IdentifiedAppBuilderComponent,
@@ -430,9 +432,7 @@ function resolveCardMessage(
     if (override?.message) {
         return override.message;
     }
-    if (status === 'stale' && entry.updateAvailable) {
-        return 'A newer version is available. Update fetches it and deploys it.';
-    }
+    if (status === 'stale' && entry.updateAvailable) return NEWER_VERSION_MESSAGE;
     return status === 'error' ? entry.error : undefined;
 }
 
@@ -790,6 +790,16 @@ function deriveCommerceScope(
     return parts.length > 0 ? parts : undefined;
 }
 
+/** What a mesh card says under its status: why it failed, or that newer code waits. */
+function meshMessage(
+    status: CardStatus,
+    entry: AppBuilderComponentState | undefined,
+    hasNewerCode: boolean,
+): string | undefined {
+    if (status === 'stale' && hasNewerCode) return NEWER_VERSION_MESSAGE;
+    return status === 'error' ? entry?.error : undefined;
+}
+
 /**
  * Derive the mesh peer card. The status label is ALWAYS the live
  * `statusDisplay.text` (the retired badge's vocabulary, unchanged), and every
@@ -803,7 +813,9 @@ export function deriveMeshCard(
     meshComponentId?: string,
     storeStructure?: CommerceStoreStructure,
 ): IntegrationCardModel {
-    const cardStatus = toMeshCardStatus(status);
+    const hasNewerCode = Boolean(meshEntry?.updateAvailable);
+    const settled = toMeshCardStatus(status);
+    const cardStatus = settled === 'deployed' && hasNewerCode ? 'stale' : settled;
     const shared = getStatusDisplay(cardStatus);
     const label = shared?.label ?? '';
     const dot = severityToDot(shared?.severity ?? 'neutral');
@@ -825,7 +837,8 @@ export function deriveMeshCard(
         dotVariant: dot,
         // The label is the live status text; the REASON comes off the persisted
         // entry, so an errored mesh can still explain itself after a reload.
-        message: cardStatus === 'error' ? meshEntry?.error : undefined,
+        message: meshMessage(cardStatus, meshEntry, hasNewerCode),
+        hasNewerCode,
         url: meshEntry?.endpoint,
         urlLabel: 'Endpoint',
         // The mesh has no display name to change (canRename false) and no API

@@ -5,19 +5,19 @@
         {
             "id": "eds-commerce-mesh",
             "from": "github",
-            "ref": "skukla/commerce-eds-mesh@stable",
+            "ref": "skukla/commerce-eds-mesh@main",
             "range": ">=20"
         },
         {
             "id": "eds-accs-mesh",
             "from": "github",
-            "ref": "skukla/eds-accs-mesh@stable",
+            "ref": "skukla/eds-accs-mesh@main",
             "range": ">=18"
         },
         {
             "id": "headless-commerce-mesh",
             "from": "github",
-            "ref": "skukla/headless-commerce-mesh@stable",
+            "ref": "skukla/headless-commerce-mesh@main",
             "range": ">=20"
         },
         {
@@ -54,7 +54,7 @@
             "id": "@adobe/aio-cli",
             "from": "npm",
             "ref": "@adobe/aio-cli@latest",
-            "range": ">=20"
+            "range": ">=20.17.0"
         },
         {
             "id": "@adobe/aio-cli-plugin-api-mesh",

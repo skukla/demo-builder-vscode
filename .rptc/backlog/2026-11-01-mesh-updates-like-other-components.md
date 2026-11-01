@@ -39,20 +39,18 @@ Move meshes onto the integration route: `source.branch` in the catalog, `kind: '
 from `integrationUpdateCheck.ts`, update means fetch then deploy. Delete `gitOptions.tag`, the release
 lookup in `componentInstallation.ts` and the mesh arm of the release updater, in the same change.
 
-## What must be settled first
+## What the change had to get right
 
-- **Existing projects hold `source.branch: 'stable'`**, and a redeploy clones from it
-  (`appBuilderRedeployRun.ts`). Read a mesh's branch from the catalog, or move the record.
-- **The `stable` tags must outlive the change.** Extensions already installed clone them on a dashboard add
-  and as a fallback, so deleting them breaks those. Delete them once no supported build reads them.
-- **Clones.** A mesh on disk may be a shallow clone at a tag, or have no `.git` at all after a release update,
-  and the check and the fast-forward both need a usable clone.
-- **`main` goes live on every mesh repo.** Headless is 3 commits ahead of `stable`, EDS Commerce 2, both
-  rebuilding `mesh.json`. Those two meshes need a PaaS backend to deploy and prove.
+- **Existing projects hold `source.branch: 'stable'`**: a project moves to `main` when it loads.
+- **The `stable` tags outlive the change.** Extensions already installed clone them on a dashboard add and as a
+  fallback, so deleting them breaks those. Delete them once no supported build reads them.
+- **Shallow clones** could never read as behind, so a clone gains its history on the first check. A rebuilt
+  `mesh.json` is tracked, so it had to stop reading as the SC's own edit.
+- **Branch names.** Two of the three repositories used `master`, and one also had a stale `main` holding an old Node
+  range. All three are on `main` now (owner, 2026-11-01), the stale one kept as `archive/main-2026-01`.
+- **`main` goes live on every mesh repo.** Headless and EDS Commerce need a PaaS backend to deploy and prove.
 
-## Replaces
+## Not handled
 
-`4df075ed5` on `loop/2026-10-31-aco-clear` offers a release to any project whose recorded version cannot be
-compared. For Headless and EDS Commerce that release is OLDER than `stable`, so it would offer a step
-backward. It was taken off `develop` before any push. It must not reach a release on its own: remove its
-updater half here. Its install half (a floating tag is not a version) is proved live on a dashboard add.
+A mesh folder with no `.git`, left by an earlier release update, cannot be compared with its branch. The check
+answers unknown and offers nothing. Removing and adding the mesh again puts it right.

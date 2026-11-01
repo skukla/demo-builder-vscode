@@ -14,11 +14,11 @@ describe('listNodeSources: where the ranges are read', () => {
         refs = () => listed;
     });
 
-    it('reads each mesh at the tag Demo Builder installs, not the default branch', () => {
+    it('reads each mesh at the branch Demo Builder installs', () => {
         expect(refs()).toEqual(expect.arrayContaining([
-            'skukla/commerce-eds-mesh@stable',
-            'skukla/eds-accs-mesh@stable',
-            'skukla/headless-commerce-mesh@stable',
+            'skukla/commerce-eds-mesh@main',
+            'skukla/eds-accs-mesh@main',
+            'skukla/headless-commerce-mesh@main',
         ]));
     });
 

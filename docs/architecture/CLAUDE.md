@@ -38,7 +38,7 @@
 ### Components and Updates
 
 - [`component-version-management.md`](component-version-management.md) —
-  Floating stable-tag pattern that decouples component updates from
+  How each kind of component installs and updates, independent of
   extension releases.
 
 ### Edge Delivery Services (EDS)
