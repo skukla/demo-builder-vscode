@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # A mesh is released and updated like the other components
@@ -54,3 +54,7 @@ lookup in `componentInstallation.ts` and the mesh arm of the release updater, in
 
 A mesh folder with no `.git`, left by an earlier release update, cannot be compared with its branch. The check
 answers unknown and offers nothing. Removing and adding the mesh again puts it right.
+
+## Shipped so far
+
+- 2026-11-01  fix(mesh): a mesh updates from its branch, as the other components do (`a2bea4164`)

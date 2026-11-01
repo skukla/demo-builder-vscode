@@ -572,7 +572,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-82` | fix | [The projects list shows a project an agent is building, with an honest status](2026-10-16-projects-list-creating-status.md) | — | med | built |
 | `PL-83` | fix | [The hooks resolve a shell edit's path against the wrong folder when the command starts with `cd`](2026-10-18-hook-shell-paths-ignore-cd.md) | — | low | built |
 | `PL-84` | fix | [Signing in to Adobe again also signs the SC out of DA.live, and nobody says so](2026-10-28-forced-adobe-sign-in-signs-out-of-dalive.md) | — | high | active |
-| `PL-88` | feature | [A mesh is released and updated like the other components](2026-11-01-mesh-updates-like-other-components.md) | — | high | backlog |
+| `PL-88` | feature | [A mesh is released and updated like the other components](2026-11-01-mesh-updates-like-other-components.md) | — | high | active |
 
 <!-- END GENERATED registry -->
 
