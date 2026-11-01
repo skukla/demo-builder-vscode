@@ -123,40 +123,6 @@ describe('UpdateManager - Component Updates', () => {
             expect(results[0].outdatedProjects).toHaveLength(2);
         });
 
-        describe('a recorded version that cannot be compared with a release', () => {
-            const onVersion = (version: string) => ({
-                name: 'Project 1',
-                ...createUpdateManagerProject([
-                    { id: 'eds-storefront', version, repoUrl: 'https://github.com/skukla/citisignal-eds', path: '/mock/path/eds' },
-                ]),
-            });
-
-            beforeEach(() => {
-                (global.fetch as jest.Mock).mockResolvedValue({
-                    ok: true,
-                    json: async () => createMockRelease({ version: '1.1.0', assetType: 'zipball' }),
-                });
-                mockSecurityValidationPass();
-            });
-
-            // Recorded by every install from the floating tag, on projects on disk today. It read as
-            // up to date, so those projects were never offered an update (found live, 2026-11-01).
-            it.each(['stable', 'abcdef12', 'unknown'])('offers the release to a project recorded as %s', async (version) => {
-                const results = await updateManager.checkAllProjectsForUpdates([onVersion(version)]);
-
-                expect(results).toHaveLength(1);
-                expect(results[0].outdatedProjects).toHaveLength(1);
-            });
-
-            it('offers nothing to a project already on the release', async () => {
-                expect(await updateManager.checkAllProjectsForUpdates([onVersion('1.1.0')])).toStrictEqual([]);
-            });
-
-            it('offers nothing to a project ahead of the release', async () => {
-                expect(await updateManager.checkAllProjectsForUpdates([onVersion('1.2.0')])).toStrictEqual([]);
-            });
-        });
-
         it('should skip repoUrl-only components without paths in multi-project check', async () => {
             // Given: A component with repoUrl but no path (should be skipped by resilience check)
             const project = {

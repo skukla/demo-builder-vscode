@@ -21,7 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A pack's side panel is quieter.** Import is the one button; Save as file, Save store changes to this pack, Share or Stop sharing, and Remove from library are in its ⋯ menu, with the same confirmations as before. A pack's one step in the Admin is one line, "1 step left in the Admin"; Show step opens it the way the demo setup guide shows a step, with Open the Admin and Check.
 
 ### Fixed
-- **Projects are offered API Mesh updates again.** A mesh installed from the moving `stable` tag recorded the word "stable" as its version, which the updater could not compare with a release, so the project read as up to date and was never offered one. Existing projects are now offered the next release, and new installs record a real version. The ACCS mesh's new release also forwards a signed-in shopper's sign-in to Commerce: without it, that shopper reached Commerce as a guest. Redeploy the mesh after updating.
 
 - **Check on a pack's step in the Admin shows what it found.** Pressing Check showed nothing while Demo Builder went on to record the answer, seen only after closing and opening the panel again. It now waits long enough for the store to answer, and says plainly when no answer came back.
 

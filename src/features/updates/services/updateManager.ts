@@ -154,9 +154,12 @@ export class UpdateManager {
             }
 
             // Find projects that are outdated
-            const outdatedProjects = projectVersions.filter(({ currentVersion }) =>
-                this.isOutdated(latestRelease.version, currentVersion),
-            );
+            const outdatedProjects = projectVersions.filter(({ currentVersion }) => {
+                return (
+                    currentVersion === 'unknown' ||
+                    this.isNewerVersion(latestRelease.version, currentVersion)
+                );
+            });
 
             if (outdatedProjects.length > 0) {
                 results.push({
@@ -293,15 +296,6 @@ export class UpdateManager {
             // unexpected error block the update check — fall back to beta.
             return 'beta';
         }
-    }
-
-    /**
-     * Whether a project should be offered a release. A recorded version that is not a version (the
-     * name of the floating tag it installed from, a commit hash, `unknown`) says nothing about what
-     * is installed, so the release is offered, and applying it records a real one.
-     */
-    private isOutdated(latest: string, current: string): boolean {
-        return !semver.valid(current) || this.isNewerVersion(latest, current);
     }
 
     private isNewerVersion(latest: string, current: string): boolean {

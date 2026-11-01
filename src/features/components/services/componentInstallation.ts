@@ -11,7 +11,6 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as semver from 'semver';
 import * as vscode from 'vscode';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
@@ -188,8 +187,7 @@ export class ComponentInstallation {
 
     /**
      * Detect component version using hybrid approach:
-     * 1. Try git tag, when it is a version (a floating tag such as `stable` names a pointer, and the
-     *    updater cannot compare one with a release)
+     * 1. Try git tag (most accurate for releases)
      * 2. Fallback to package.json version
      * 3. Final fallback to commit hash
      */
@@ -207,10 +205,9 @@ export class ComponentInstallation {
             shell: DEFAULT_SHELL,
         });
 
-        const tagVersion = tagResult.stdout.trim().replace(/^v/, ''); // Remove 'v' prefix
-        if (tagResult.code === 0 && semver.valid(tagVersion)) {
+        if (tagResult.code === 0 && tagResult.stdout.trim()) {
             // On a tagged commit (e.g., "v1.0.0" or "1.0.0")
-            detectedVersion = tagVersion;
+            detectedVersion = tagResult.stdout.trim().replace(/^v/, ''); // Remove 'v' prefix
             this.logger.debug(
                 `[ComponentManager] Detected version from git tag: ${detectedVersion}`,
             );
