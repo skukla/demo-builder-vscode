@@ -7,7 +7,7 @@
 
 import { buildCommerceEndpoints } from './commerceEndpointsTool';
 import { readAcoCredential } from '@/features/components/services/acoCredentialStore';
-import { readAcoSettings, usesAco } from '@/features/components/services/acoSettings';
+import { readAcoInstance, readAcoSettings, usesAco } from '@/features/components/services/acoSettings';
 import { type AcoAdminClient, type AcoTenantFacts, createAcoAdminClient } from '@/features/data-installer/services/aco/acoAdminClient';
 import { type AcoBackendStatus, readAcoConnector } from '@/features/data-installer/services/aco/acoConnector';
 import { ACO_INGESTION_SCOPES } from '@/features/data-installer/services/aco/acoClient';
@@ -75,7 +75,8 @@ export async function readAcoStatus(ctx: HandlerContext, fetchImpl: typeof fetch
     const read = readAcoSettings(project);
     const settings = read && 'settings' in read ? read.settings : undefined;
     const credential = await readAcoCredential(ctx.context?.secrets, project.path);
-    const admin = settings && credential ? createAcoAdminClient({ instance: settings, credential, fetch: fetchImpl }) : undefined;
+    const instance = readAcoInstance(project);
+    const admin = instance && credential ? createAcoAdminClient({ instance, credential, fetch: fetchImpl }) : undefined;
     return {
         addon: usesAco(project) ? 'on' : 'off',
         missingSettings: read && 'missing' in read ? read.missing : [],
@@ -85,7 +86,7 @@ export async function readAcoStatus(ctx: HandlerContext, fetchImpl: typeof fetch
             ...(credential ? { ingestion: await ingestionReach(credential, fetchImpl) } : {}),
             ...(admin ? { admin: await adminReach(admin) } : {}),
         },
-        ...(admin && settings ? { tenant: await readTenant(admin, settings.tenantId) } : {}),
+        ...(admin && instance ? { tenant: await readTenant(admin, instance.tenantId) } : {}),
         backend: await readBackend(project, admin, fetchImpl),
     };
 }

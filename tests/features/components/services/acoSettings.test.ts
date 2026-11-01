@@ -3,7 +3,7 @@
  * packs both read them here, so they never disagree about which instance the project uses.
  */
 
-import { ACO_ADDON_ID, acoSettingsProblem, parseAcoInstance, readAcoSettings, usesAco } from '@/features/components/services/acoSettings';
+import { ACO_ADDON_ID, acoSettingsProblem, parseAcoInstance, readAcoInstance, readAcoSettings, usesAco } from '@/features/components/services/acoSettings';
 
 const FULL = {
     ACO_TENANT_ID: 'TenantAbc123',
@@ -12,6 +12,22 @@ const FULL = {
 };
 
 const project = (values: Record<string, string>, addons = [ACO_ADDON_ID]) => ({ selectedAddons: addons, componentConfigs: { [ACO_ADDON_ID]: values } });
+
+describe('readAcoInstance', () => {
+    const on = (config: Record<string, string>) => ({ selectedAddons: [ACO_ADDON_ID], componentConfigs: { [ACO_ADDON_ID]: config } });
+
+    it('reads the instance with no catalog view or locale set', () => {
+        expect(readAcoInstance(on({ ACO_TENANT_ID: 'TenantAbc123' }))).toEqual({ tenantId: 'TenantAbc123', region: 'na1', environment: 'sandbox' });
+    });
+
+    it('answers nothing with the add-on off, even with an instance set', () => {
+        expect(readAcoInstance({ selectedAddons: [], componentConfigs: { [ACO_ADDON_ID]: { ACO_TENANT_ID: 'TenantAbc123' } } })).toBeUndefined();
+    });
+
+    it('answers nothing when the instance is empty', () => {
+        expect(readAcoInstance(on({}))).toBeUndefined();
+    });
+});
 
 describe('readAcoSettings', () => {
     it('reads nothing when the add-on is off, whatever values are kept', () => {

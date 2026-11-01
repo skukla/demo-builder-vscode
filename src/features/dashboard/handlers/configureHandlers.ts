@@ -25,7 +25,7 @@ import {
 } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { readAcoCredential } from '@/features/components/services/acoCredentialStore';
-import { readAcoSettings } from '@/features/components/services/acoSettings';
+import { readAcoInstance } from '@/features/components/services/acoSettings';
 import { createAcoAdminClient } from '@/features/data-installer/services/aco/acoAdminClient';
 import { listAcoCatalogViews } from '@/features/data-installer/services/aco/acoCatalogViews';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
@@ -38,14 +38,14 @@ import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/typ
 // ==========================================================
 
 /**
- * The catalog views Configure can offer. No credential or a refusal answers none, and the screen keeps
- * its plain field: choosing from a list is a help, never the only way (PL-60).
+ * The catalog views Configure can offer, before one is chosen too, since choosing is what the list is
+ * for. No credential or a refusal answers none, and the screen keeps its plain field: choosing from a
+ * list is a help, never the only way (PL-60).
  */
 export async function handleListAcoCatalogViews(context: HandlerContext): Promise<HandlerResponse> {
     const project = await context.stateManager.getCurrentProject();
-    const read = project ? readAcoSettings(project) : undefined;
+    const instance = project ? readAcoInstance(project) : undefined;
     const credential = project ? await readAcoCredential(context.context?.secrets, project.path) : undefined;
-    const instance = read && 'settings' in read ? read.settings : undefined;
     if (!instance || !credential) return { success: true, data: { views: [] } };
     try {
         return { success: true, data: { views: await listAcoCatalogViews(createAcoAdminClient({ instance, credential })) } };

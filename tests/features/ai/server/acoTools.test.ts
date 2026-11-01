@@ -55,14 +55,14 @@ function answers(reply: (url: string, init: RequestInit) => { status?: number; b
     return { sent, fetchMock };
 }
 
-function setup(reply: Parameters<typeof answers>[0], options: { addons?: string[]; credential?: boolean } = {}) {
-    const { addons = ['adobe-commerce-aco'], credential = true } = options;
+function setup(reply: Parameters<typeof answers>[0], options: { addons?: string[]; credential?: boolean; config?: Record<string, string> } = {}) {
+    const { addons = ['adobe-commerce-aco'], credential = true, config = ACO_CONFIG } = options;
     const project = createMockProject({
         name: 'demo',
         path: PROJECT_PATH,
         selectedAddons: addons,
         componentConfigs: {
-            'adobe-commerce-aco': ACO_CONFIG,
+            'adobe-commerce-aco': config,
             'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.adobe.com/AccsTenant1/graphql' },
         },
         componentSelections: { backend: 'adobe-commerce-accs' },
@@ -166,6 +166,53 @@ describe('run_aco_admin', () => {
     it('says what to run when no credential is held', async () => {
         const { s } = setup(() => undefined, { credential: false });
         expect(await s.call('run_aco_admin', { query: '{ x }' })).toMatch(/set_up_aco_credential/u);
+    });
+});
+
+describe('a project with an instance and no catalog view yet', () => {
+    const NO_VIEW = { ACO_TENANT_ID: 'TenantAbc123' };
+
+    it('can list the views, which is how it finds one to use', async () => {
+        const { s, sent } = setup(() => ({ body: { data: { catalogViews: [] } } }), { config: NO_VIEW });
+
+        expect(JSON.parse(await s.call('run_aco_admin', { query: '{ catalogViews { viewId } }' }))).toEqual({ data: { catalogViews: [] } });
+        expect(sent.at(-1)?.url).toBe('https://na1-sandbox.api.commerce.adobe.com/TenantAbc123/admin/graphql');
+    });
+
+    it('can create its first view', async () => {
+        const { s, sent } = setup(() => ({ body: { data: { createCatalogView: { viewId: 'v1' } } } }), { config: NO_VIEW });
+
+        await s.call('write_aco_admin', { mutation: 'mutation { createCatalogView(viewRequest: {}) { viewId } }', confirm: true });
+        expect(sent.at(-1)?.url).toContain('/TenantAbc123/admin/graphql');
+    });
+
+    it('can load rows, which name their own locale', async () => {
+        const { s, sent } = setup(() => ({ body: { status: 'ACCEPTED', acceptedCount: 1 } }), { config: NO_VIEW });
+
+        await s.call('write_aco_rows', { kind: 'aco_price_books', rows: [{ priceBookId: 'main', name: 'Main', currency: 'USD' }], confirm: true });
+        expect(sent.at(-1)?.url).toBe('https://na1-sandbox.api.commerce.adobe.com/TenantAbc123/v1/catalog/price-books');
+    });
+
+    it('still needs a view to read the catalog as a shopper would', async () => {
+        const { s, sent } = setup(() => undefined, { config: NO_VIEW });
+
+        expect(await s.call('run_aco_query', { query: '{ products(skus:["A"]) { sku } }' })).toContain('ACO_CATALOG_VIEW_ID');
+        expect(sent).toHaveLength(0);
+    });
+
+    it('reports its reach and instance while saying the view is missing', async () => {
+        const { s } = setup(() => ({ body: { data: { catalogViews: [] } } }), { config: NO_VIEW });
+
+        const status = JSON.parse(await s.call('get_aco_status', {}));
+        expect(status.missingSettings).toEqual(['ACO_CATALOG_VIEW_ID', 'ACO_LOCALE']);
+        expect(status.credential).toMatchObject({ held: true, admin: 'ok' });
+    });
+
+    it('asks for the instance when even that is empty', async () => {
+        const { s, sent } = setup(() => undefined, { config: {} });
+
+        expect(await s.call('run_aco_admin', { query: '{ catalogViews { viewId } }' })).toContain('ACO_TENANT_ID');
+        expect(sent).toHaveLength(0);
     });
 });
 

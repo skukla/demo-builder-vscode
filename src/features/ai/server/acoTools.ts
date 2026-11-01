@@ -25,7 +25,7 @@ import { asRawText, asRawTextMarkingErrors, asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { readAcoStatus } from './acoStatus';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { acoGraphqlUrl, acoSettingsProblem, readAcoSettings } from '@/features/components/services/acoSettings';
+import { acoGraphqlUrl, acoSettingsProblem, readAcoInstance, readAcoSettings } from '@/features/components/services/acoSettings';
 import { forgetAcoAccessKey, readAcoAccessKey, saveAcoAccessKey } from '@/features/components/services/acoAccessKeyStore';
 import { readAcoCredential } from '@/features/components/services/acoCredentialStore';
 import { generateAcoKeyPair, signAcoViewToken } from '@/features/data-installer/services/aco/acoAccessToken';
@@ -34,7 +34,7 @@ import { createAcoClient } from '@/features/data-installer/services/aco/acoClien
 import { acoKind, ACO_KINDS, deletePathOf } from '@/features/data-installer/services/aco/acoKinds';
 import { chunks } from '@/features/data-installer/services/aco/acoPackInstall';
 import { acoHeaders } from '@/features/eds/services/acoStorefrontConfig';
-import type { AcoCredential, AcoStorefrontSettings } from '@/types/aco';
+import type { AcoCredential, AcoInstance, AcoStorefrontSettings } from '@/types/aco';
 import type { HandlerContext } from '@/types/handlers';
 
 /** The kinds' names, in the form `z.enum` takes. */
@@ -46,26 +46,35 @@ const DEFAULT_KEY_DAYS = 30;
 const NO_CREDENTIAL =
     'Error: Demo Builder holds no ACO credential for this project. Run set_up_aco_credential first.';
 
+const NO_PROJECT = 'Error: no current project. Use list_projects then set the current project.';
+const NO_ADDON = 'Error: this project does not have the ACO add-on on. configure_project can turn it on.';
+
 type Settings = { settings: AcoStorefrontSettings } | { refusal: string };
-type Access = { settings: AcoStorefrontSettings; credential: AcoCredential } | { refusal: string };
+type Access = { instance: AcoInstance; credential: AcoCredential } | { refusal: string };
 
 /** The project's ACO settings, or the sentence saying why there are none. */
 async function settingsOf(ctx: HandlerContext): Promise<Settings> {
     const project = await ctx.stateManager.getCurrentProject();
-    if (!project) return { refusal: 'Error: no current project. Use list_projects then set the current project.' };
+    if (!project) return { refusal: NO_PROJECT };
     const read = readAcoSettings(project);
-    if (!read) return { refusal: 'Error: this project does not have the ACO add-on on. configure_project can turn it on.' };
+    if (!read) return { refusal: NO_ADDON };
     if ('missing' in read) return { refusal: `Error: ${acoSettingsProblem(read)}` };
     return { settings: read.settings };
 }
 
-/** The settings and the credential together, or why not. */
+/**
+ * The instance and the credential together, or why not. No catalog view is needed: listing and creating
+ * views is how a project gets its first one.
+ */
 async function accessOf(ctx: HandlerContext): Promise<Access> {
-    const read = await settingsOf(ctx);
-    if ('refusal' in read) return read;
     const project = await ctx.stateManager.getCurrentProject();
-    const credential = project ? await readAcoCredential(ctx.context?.secrets, project.path) : undefined;
-    return credential ? { settings: read.settings, credential } : { refusal: NO_CREDENTIAL };
+    if (!project) return { refusal: NO_PROJECT };
+    const read = readAcoSettings(project);
+    if (!read) return { refusal: NO_ADDON };
+    const instance = readAcoInstance(project);
+    if (!instance) return { refusal: `Error: ${acoSettingsProblem({ missing: ['ACO_TENANT_ID'] })}` };
+    const credential = await readAcoCredential(ctx.context?.secrets, project.path);
+    return credential ? { instance, credential } : { refusal: NO_CREDENTIAL };
 }
 
 /** An answer's text, cut and saying so when it is long. */
@@ -124,7 +133,7 @@ function registerAccessKeys(server: McpToolServer, ctxFactory: () => HandlerCont
             const secrets = ctx.context?.secrets;
             if ('refusal' in access) return asRawTextMarkingErrors(access.refusal);
             if (!project || !secrets) return asRawTextMarkingErrors('Error: SecretStorage is not available here, so the private key could not be kept.');
-            const client = createAcoAdminClient({ instance: access.settings, credential: access.credential, fetch: fetchImpl });
+            const client = createAcoAdminClient({ instance: access.instance, credential: access.credential, fetch: fetchImpl });
             const { publicKey, privateKey } = generateAcoKeyPair();
             return answering(async () => {
                 const answer = await client.graphql(
@@ -158,7 +167,7 @@ function registerAccessKeys(server: McpToolServer, ctxFactory: () => HandlerCont
             const project = await ctx.stateManager.getCurrentProject();
             const secrets = ctx.context?.secrets;
             if ('refusal' in access) return asRawTextMarkingErrors(access.refusal);
-            const client = createAcoAdminClient({ instance: access.settings, credential: access.credential, fetch: fetchImpl });
+            const client = createAcoAdminClient({ instance: access.instance, credential: access.credential, fetch: fetchImpl });
             return answering(async () => {
                 const answer = await client.graphql('mutation($keyId: String!) { deleteRestrictedAccessKey(keyId: $keyId) }', { keyId: args.keyId });
                 if (project && secrets && !answer.includes('"errors"')) await forgetAcoAccessKey(secrets, project.path, args.keyId);
@@ -268,7 +277,7 @@ function registerAdminRead(server: McpToolServer, ctxFactory: () => HandlerConte
             if (!isReadOnlyQuery(query)) return asRawTextMarkingErrors('Error: run_aco_admin only reads. Mutations go through write_aco_admin.');
             const access = await accessOf(ctxFactory());
             if ('refusal' in access) return asRawTextMarkingErrors(access.refusal);
-            const client = createAcoAdminClient({ instance: access.settings, credential: access.credential, fetch: fetchImpl });
+            const client = createAcoAdminClient({ instance: access.instance, credential: access.credential, fetch: fetchImpl });
             return answering(() => client.graphql(query, args.variables));
         },
     );
@@ -299,7 +308,7 @@ function registerAdminWrite(server: McpToolServer, ctxFactory: () => HandlerCont
             if (isReadOnlyQuery(mutation)) return asRawTextMarkingErrors('Error: mutation must be a GraphQL mutation. Reads go through run_aco_admin.');
             const access = await accessOf(ctxFactory());
             if ('refusal' in access) return asRawTextMarkingErrors(access.refusal);
-            const client = createAcoAdminClient({ instance: access.settings, credential: access.credential, fetch: fetchImpl });
+            const client = createAcoAdminClient({ instance: access.instance, credential: access.credential, fetch: fetchImpl });
             return answering(() => client.graphql(mutation, args.variables));
         },
     );
@@ -347,7 +356,7 @@ function registerRows(server: McpToolServer, ctxFactory: () => HandlerContext, f
             if (problem) return asRawTextMarkingErrors(problem);
             const access = await accessOf(ctxFactory());
             if ('refusal' in access) return asRawTextMarkingErrors(access.refusal);
-            const client = createAcoClient({ instance: access.settings, credential: access.credential, fetch: fetchImpl });
+            const client = createAcoClient({ instance: access.instance, credential: access.credential, fetch: fetchImpl });
             return answering(async () => {
                 let accepted = 0;
                 for (const batch of chunks(rows, kind.batch)) accepted += await client.post(remove ? deletePathOf(kind) : kind.path, batch);

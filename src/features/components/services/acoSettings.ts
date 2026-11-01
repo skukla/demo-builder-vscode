@@ -78,6 +78,17 @@ function valueOf(values: Record<string, unknown>, key: string): string {
 }
 
 /**
+ * The instance alone, for what needs no catalog view: above all listing and creating the views, which
+ * is how a project gets its first one, and loading rows, which name their own locale.
+ *
+ * @returns undefined when the add-on is off or no instance is named
+ */
+export function readAcoInstance(source: AcoSettingsSource): AcoInstance | undefined {
+    if (!usesAco(source)) return undefined;
+    return parseAcoInstance(valueOf(source.componentConfigs?.[ACO_ADDON_ID] ?? {}, ACO_TENANT_ID));
+}
+
+/**
  * The ACO settings the project names.
  *
  * @returns undefined when the add-on is off; the fields still empty when it is on but incomplete
