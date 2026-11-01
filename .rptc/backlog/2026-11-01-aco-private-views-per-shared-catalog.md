@@ -56,3 +56,4 @@ for it may be weeks. Licensing counts views times price books (100 by default).
 - 2026-11-01  docs(aco): what company pricing takes on ACCS + ACO, and what to offer now (`a3e585efb`)
 - 2026-11-01  docs(aco): private views need no storefront code, the template already asks (`255b15301`)
 - 2026-11-01  docs(aco): what was proved live, the combined plan, and the PaaS checklist (`8cfddcccf`)
+- 2026-11-01  Owner: whether November's ACCS release includes shared catalogs is unknown, so building this stays undecided. Mesh sign-in fix released on eds-accs-mesh (merged, stable moved); Console project Kukla ACO test kept for the browser test.

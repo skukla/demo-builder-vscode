@@ -6,8 +6,11 @@ installing a new VSIX.
 ## The floating stable tag
 
 A component declares the ref it installs from in `components.json`, and most declare
-`"tag": "stable"` — a tag that **moves**. Publishing a fix means moving the tag; no
-extension release is involved.
+`"tag": "stable"` — a tag that **moves**. No extension release is involved, but a fix has
+two audiences. Moving the tag reaches projects created from then on. A project already on
+disk is offered an update only by a newer GitHub Release of the component
+(`checkAllProjectsForUpdates`), so reaching it takes a release as well, and a prerelease
+reaches only the beta channels.
 
 Not everything floats. At least one component pins a real version (`v1.0.0`), which
 is the right choice where a moving target would be dangerous rather than convenient.
