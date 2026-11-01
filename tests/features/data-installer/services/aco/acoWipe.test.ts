@@ -77,47 +77,102 @@ describe('planning a clear', () => {
     });
 });
 
-/** A fetch answering each GraphQL request with the next body, recording what was sent. */
-function fakeFetch(bodies: Array<{ status?: number; body?: unknown }>) {
+/**
+ * A fake ACO storefront GraphQL that answers by query, in the shapes a real sandbox answered on
+ * 2026-10-31 (read-only): `productSearch` items carry `__typename` (`ComplexProductView` for a
+ * configurable), `variants` pages by `cursor`, and `categoryTree` lists `slug`s. Anything listed
+ * in `refuse` answers with that body instead.
+ */
+function fakeAcoSearch(store: {
+    pages: string[][];
+    parents?: Record<string, string[][]>;
+    categories?: string[];
+    refuse?: Partial<Record<'products' | 'variants' | 'categories', { status?: number; body?: unknown }>>;
+}) {
     const sent: Array<{ url: string; init: RequestInit }> = [];
     const doFetch = (async (url: string, init: RequestInit) => {
         sent.push({ url, init });
-        const next = bodies.shift() ?? { body: {} };
-        return new Response(JSON.stringify(next.body ?? {}), { status: next.status ?? 200 });
+        const { query, variables } = JSON.parse(String(init.body)) as { query: string; variables?: Record<string, unknown> };
+        const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+        const which = query.includes('productSearch') ? 'products' : query.includes('variants(') ? 'variants' : 'categories';
+        const refused = store.refuse?.[which];
+        if (refused) return reply(refused.body ?? {}, refused.status ?? 200);
+        if (which === 'products') {
+            const page = Number(variables?.page ?? 1);
+            const items = (store.pages[page - 1] ?? []).map((sku) => ({ productView: { sku, __typename: store.parents?.[sku] ? 'ComplexProductView' : 'SimpleProductView' } }));
+            return reply({ data: { productSearch: { page_info: { current_page: page, total_pages: store.pages.length }, items } } });
+        }
+        if (which === 'variants') {
+            const pages = store.parents?.[String(variables?.sku)] ?? [];
+            const at = variables?.cursor ? Number(variables.cursor) : 0;
+            const cursor = at + 1 < pages.length ? String(at + 1) : null;
+            return reply({ data: { variants: { cursor, variants: (pages[at] ?? []).map((sku) => ({ product: { sku } })) } } });
+        }
+        return reply({ data: { categoryTree: (store.categories ?? []).map((slug) => ({ slug })) } });
     }) as unknown as typeof fetch;
     return { doFetch, sent };
 }
 
-const page = (skus: string[], totalPages: number) => ({ body: { data: { productSearch: { page_info: { total_pages: totalPages }, items: skus.map((sku) => ({ productView: { sku } })) } } } });
-
 describe('the storefront search', () => {
-    it("reads every page through the storefront's endpoint and headers", async () => {
-        const { doFetch, sent } = fakeFetch([page(['A', 'B'], 2), page(['C'], 2)]);
+    it("reads every page through the storefront's endpoint and headers, with no token", async () => {
+        const { doFetch, sent } = fakeAcoSearch({ pages: [['A', 'B'], ['C']] });
 
         await expect(createAcoSearch(ACO_SETTINGS, doFetch).productSkus()).resolves.toEqual(['A', 'B', 'C']);
         expect(sent).toHaveLength(2);
         expect(sent[0].url).toBe('https://na1-sandbox.api.commerce.adobe.com/TenantAbc123/graphql');
-        expect(sent[0].init.headers).toMatchObject({ 'AC-View-ID': ACO_SETTINGS.catalogViewId, 'AC-Source-Locale': 'en-US', 'AC-Environment-Id': 'TenantAbc123' });
+        // The storefront's own headers, nothing more: no AC-Environment-Id and no token (neither is
+        // needed, measured against a real sandbox 2026-10-31).
+        expect(sent[0].init.headers).toStrictEqual({ 'Content-Type': 'application/json', 'AC-View-ID': ACO_SETTINGS.catalogViewId, 'AC-Source-Locale': 'en-US' });
         expect(JSON.parse(String(sent[1].init.body)).variables).toEqual({ page: 2, pageSize: 200 });
-        // A space, not "*" (which answers "No index found"), nor the untested empty phrase.
+        // A space; "*" answers an empty list with no error.
         expect(JSON.parse(String(sent[0].init.body)).query).toContain('productSearch(phrase: " "');
-        // No token: ACO's storefront GraphQL takes none (BuildRight, ACO-OAUTH-DISCOVERY.md).
-        expect(sent[0].init.headers).not.toHaveProperty('Authorization');
+    });
+
+    // Search lists a configurable but never its variants; they come through the parent, every page.
+    it("adds each configurable's variants, following the cursor", async () => {
+        const { doFetch } = fakeAcoSearch({ pages: [['TEE-CONFIG', 'MUG']], parents: { 'TEE-CONFIG': [['TEE-S', 'TEE-M'], ['TEE-L']] } });
+
+        await expect(createAcoSearch(ACO_SETTINGS, doFetch).productSkus()).resolves.toEqual(['TEE-CONFIG', 'MUG', 'TEE-S', 'TEE-M', 'TEE-L']);
+    });
+
+    // A live run refused 200 ("Page size exceeds the maximum allowed"); 100 is what it takes.
+    it('asks variants 100 a page, the most ACO takes', async () => {
+        const { doFetch, sent } = fakeAcoSearch({ pages: [['TEE-CONFIG']], parents: { 'TEE-CONFIG': [['TEE-S']] } });
+
+        await createAcoSearch(ACO_SETTINGS, doFetch).productSkus();
+
+        const variantsQuery = sent.map((c) => JSON.parse(String(c.init.body)).query as string).find((q) => q.includes('variants('));
+        expect(variantsQuery).toContain('pageSize: 100');
+    });
+
+    it('asks no variants of a simple product — control', async () => {
+        const { doFetch, sent } = fakeAcoSearch({ pages: [['MUG']] });
+
+        await createAcoSearch(ACO_SETTINGS, doFetch).productSkus();
+
+        expect(sent.map((c) => JSON.parse(String(c.init.body)).query).filter((q: string) => q.includes('variants('))).toStrictEqual([]);
+    });
+
+    it('lists categories from categoryTree', async () => {
+        const { doFetch } = fakeAcoSearch({ pages: [[]], categories: ['phones', 'phones/cases'] });
+
+        await expect(createAcoSearch(ACO_SETTINGS, doFetch).categorySlugs()).resolves.toEqual(['phones', 'phones/cases']);
     });
 
     // The script this follows stopped quietly and kept what it had; a clear must not.
     it.each([
-        ['a status that is not OK', { status: 403, body: {} }],
-        ['GraphQL errors', { body: { errors: [{ message: 'AC-View-ID is required' }] } }],
-        ['an answer with no product list', { body: { data: {} } }],
-    ])('refuses on %s rather than reading it as an empty catalog', async (_label, answer) => {
-        const { doFetch } = fakeFetch([answer]);
+        ['a status that is not OK', 'products', { status: 403, body: {} }],
+        ['GraphQL errors (a price book the view does not allow)', 'products', { body: { errors: [{ message: 'Price book not in the channel allowed list!' }] } }],
+        ['an answer with no product list', 'products', { body: { data: {} } }],
+        ["a parent's variants refused", 'variants', { body: { errors: [{ message: 'boom' }] } }],
+    ] as const)('refuses on %s rather than reading it as an empty catalog', async (_label, which, answer) => {
+        const { doFetch } = fakeAcoSearch({ pages: [['TEE-CONFIG']], parents: { 'TEE-CONFIG': [['TEE-S']] }, refuse: { [which]: answer } });
 
         await expect(createAcoSearch(ACO_SETTINGS, doFetch).productSkus()).rejects.toBeInstanceOf(AcoSearchError);
     });
 
-    it('answers no category list, not an error, when categorySearch refuses', async () => {
-        const { doFetch } = fakeFetch([{ body: { errors: [{ message: 'Cannot query field categorySearch' }] } }]);
+    it('answers no category list, not an error, when the category query refuses', async () => {
+        const { doFetch } = fakeAcoSearch({ pages: [[]], refuse: { categories: { status: 400, body: { errors: [{ message: 'Cannot query field' }] } } } });
 
         await expect(createAcoSearch(ACO_SETTINGS, doFetch).categorySlugs()).resolves.toBeUndefined();
     });

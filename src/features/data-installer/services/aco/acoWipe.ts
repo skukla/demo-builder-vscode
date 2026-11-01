@@ -3,16 +3,18 @@
  * what the project's catalog view shows that no installed pack holds, the ACO half of Clear demo
  * data. Research and the reasons: `.rptc/research/aco-support/clear-demo-data.md`.
  *
- * ACO's ingestion API deletes by key but cannot list, so the keys come from the STOREFRONT search
- * the project's storefront itself uses: `productSearch` page by page for SKUs, `categorySearch` for
- * category slugs. That is also the limit, said to the SC every time: a product the view does not
- * show (another view, no price in its price book) is invisible here and stays.
+ * ACO's ingestion API deletes by key but cannot list, so the keys come from the STOREFRONT GraphQL
+ * the project's storefront itself uses, with the storefront's own headers (`acoHeaders`) and no
+ * token: `productSearch` page by page for SKUs, each configurable's `variants` (search lists the
+ * parent, never its variants), and `categoryTree` for category slugs. The limit, said to the SC
+ * every time: only what the project's catalog view shows can be found.
  *
- * The query shapes are the ones `skukla/commerce-demo-ingestion` `aco/delete-everything.js` sends
- * to ACO (read 2026-10-31); the headers are the storefront's own (`acoHeaders`), plus the
- * `AC-Environment-Id` that script sends. **No live call has checked either** (the live check,
- * `.rptc/plans/aco-support/live-check.md`). Unlike that script, a search that fails or answers with
- * errors refuses the clear: "could not list" must never read as "nothing to clear".
+ * Measured against a real ACO sandbox, read-only, 2026-10-31 (`.rptc/research/aco-support/audit-2026-10-31.md`,
+ * "What a live read settled"): this exact search answers without a token or `AC-Environment-Id`;
+ * `categorySearch` does not exist (it is `categoryTree`); variants are reached only through their
+ * parent's `variants`; `"*"` answers an empty list with no error, so it must never be the phrase;
+ * a price book the view does not allow is an error. A search that fails or answers with errors
+ * refuses the clear: "could not list" must never read as "nothing to clear".
  *
  * Two steps, as Commerce's clear: `planAcoWipe` reads and names what would go, under a token; the
  * clearing (`runAcoWipe`) deletes only that plan's keys, through the ingestion client.
@@ -38,10 +40,9 @@ const PAGE_SIZE = 200;
 const NAMES_SHOWN = 5;
 
 /** Said on every preview: the one limit a clear through the storefront search has. */
-// "Hidden from search" is the ingestion tool's finding (delete-everything.js: productSearch returns
-// only visible products, so hidden variants are never found), not checked live here.
-export const ACO_WIPE_LIMIT =
-    'Only what this catalog view shows can be found: a product in another view, with no price in its price book, or hidden from search (a variant, usually) stays.';
+// Measured 2026-10-31: the price book filters nothing (an unknown one lists everything), and
+// variants are reached through their parents, so the one limit left is the view itself.
+export const ACO_WIPE_LIMIT = 'Only what this catalog view shows can be found: a product in another view stays.';
 
 /** Why a search could not be used. */
 export class AcoSearchError extends Error {
@@ -61,7 +62,7 @@ export interface AcoWipePlan {
 
 /** The storefront search, handed in so a test answers it. */
 export interface AcoSearch {
-    /** Every SKU the view shows, every page. */
+    /** Every SKU the view shows, every page, with each configurable's variants. */
     productSkus(): Promise<string[]>;
     /** Every category slug, or undefined when the search does not answer categories. */
     categorySlugs(): Promise<string[] | undefined>;
@@ -75,49 +76,95 @@ interface GraphqlAnswer<T> {
 async function ask<T>(doFetch: typeof fetch, settings: AcoStorefrontSettings, query: string, variables?: Record<string, unknown>): Promise<GraphqlAnswer<T>> {
     const response = await doFetch(acoGraphqlUrl(settings), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...acoHeaders(settings).cs, 'AC-Environment-Id': settings.tenantId },
+        headers: { 'Content-Type': 'application/json', ...acoHeaders(settings).cs },
         body: JSON.stringify({ query, ...(variables ? { variables } : {}) }),
     });
     if (!response.ok) throw new AcoSearchError(`ACO's catalog search answered ${response.status}.`);
     return (await response.json()) as GraphqlAnswer<T>;
 }
 
-// A single space lists every product; "*" answers "No index found" (BuildRight's tested finding,
-// `buildright-aco/docs/archive/ACO-CLEANUP-LESSONS-LEARNED.md` §3). The ingestion script's empty
-// phrase was never tested there.
+// A single space lists every product. "*" answers an EMPTY list with no error (measured), so a
+// clear using it would read a full catalog as empty.
 const PRODUCTS_QUERY = `query ProductSearch($page: Int!, $pageSize: Int!) {
   productSearch(phrase: " ", current_page: $page, page_size: $pageSize) {
     page_info { current_page total_pages }
-    items { productView { sku } }
+    items { productView { sku __typename } }
   }
 }`;
 
-const CATEGORIES_QUERY = 'query { categorySearch { slug } }';
+/** `variants` takes 100 a page and refuses 200 ("Page size exceeds the maximum allowed"), measured. */
+const VARIANT_PAGE_SIZE = 100;
+
+const VARIANTS_QUERY = `query Variants($sku: String!, $cursor: String) {
+  variants(sku: $sku, pageSize: ${VARIANT_PAGE_SIZE}, cursor: $cursor) { cursor variants { product { sku } } }
+}`;
+
+const CATEGORIES_QUERY = 'query { categoryTree { slug } }';
+
+/** A configurable (or bundle) product: search lists it, and its variants only through it. */
+const PARENT_TYPE = 'ComplexProductView';
+
+/** How many pages of one parent's variants are read at most; a cursor that never ends stops here. */
+const VARIANT_PAGES_MAX = 50;
 
 interface ProductPage {
-    productSearch?: { page_info?: { total_pages?: number }; items?: Array<{ productView?: { sku?: string } }> };
+    productSearch?: { page_info?: { total_pages?: number }; items?: Array<{ productView?: { sku?: string; __typename?: string } }> };
+}
+
+interface VariantPage {
+    variants?: { cursor?: string | null; variants?: Array<{ product?: { sku?: string } }> };
+}
+
+/** The answer's data, or the refusal that stops a clear. */
+function dataOf<T>(answer: GraphqlAnswer<T>, what: string): T {
+    if (answer.errors?.length) throw new AcoSearchError(`ACO's catalog search refused: ${answer.errors[0]?.message ?? 'no reason given'}`);
+    if (!answer.data) throw new AcoSearchError(`ACO's catalog search answered without ${what}.`);
+    return answer.data;
+}
+
+/** Every product the view lists, and which of them are parents with variants. */
+async function listedProducts(doFetch: typeof fetch, settings: AcoStorefrontSettings): Promise<{ skus: string[]; parents: string[] }> {
+    const skus: string[] = [];
+    const parents: string[] = [];
+    for (let page = 1, pages = 1; page <= pages; page += 1) {
+        const found = dataOf(await ask<ProductPage>(doFetch, settings, PRODUCTS_QUERY, { page, pageSize: PAGE_SIZE }), 'a product list').productSearch;
+        if (!found) throw new AcoSearchError('ACO\'s catalog search answered without a product list.');
+        for (const { productView: view } of found.items ?? []) {
+            if (!view?.sku) continue;
+            skus.push(view.sku);
+            if (view.__typename === PARENT_TYPE) parents.push(view.sku);
+        }
+        pages = found.page_info?.total_pages ?? page;
+    }
+    return { skus, parents };
+}
+
+/** One parent's variants, every page. */
+async function variantsOf(doFetch: typeof fetch, settings: AcoStorefrontSettings, parent: string): Promise<string[]> {
+    const skus: string[] = [];
+    let cursor: string | null | undefined = null;
+    for (let page = 0; page < VARIANT_PAGES_MAX; page += 1) {
+        const found: VariantPage['variants'] = dataOf(await ask<VariantPage>(doFetch, settings, VARIANTS_QUERY, { sku: parent, cursor }), 'variants').variants;
+        for (const variant of found?.variants ?? []) if (variant.product?.sku) skus.push(variant.product.sku);
+        cursor = found?.cursor;
+        if (!cursor) break;
+    }
+    return skus;
 }
 
 /** The search over the project's view. */
 export function createAcoSearch(settings: AcoStorefrontSettings, doFetch: typeof fetch = fetch): AcoSearch {
     return {
         async productSkus() {
-            const skus: string[] = [];
-            for (let page = 1, pages = 1; page <= pages; page += 1) {
-                const answer = await ask<ProductPage>(doFetch, settings, PRODUCTS_QUERY, { page, pageSize: PAGE_SIZE });
-                if (answer.errors?.length) throw new AcoSearchError(`ACO's catalog search refused: ${answer.errors[0]?.message ?? 'no reason given'}`);
-                const found = answer.data?.productSearch;
-                if (!found) throw new AcoSearchError('ACO\'s catalog search answered without a product list.');
-                for (const item of found.items ?? []) if (item.productView?.sku) skus.push(item.productView.sku);
-                pages = found.page_info?.total_pages ?? page;
-            }
+            const { skus, parents } = await listedProducts(doFetch, settings);
+            for (const parent of parents) skus.push(...(await variantsOf(doFetch, settings, parent)));
             return skus;
         },
         async categorySlugs() {
             try {
-                const answer = await ask<{ categorySearch?: Array<{ slug?: string }> }>(doFetch, settings, CATEGORIES_QUERY);
-                if (answer.errors?.length || !answer.data?.categorySearch) return undefined;
-                return answer.data.categorySearch.map((c) => c.slug).filter((s): s is string => Boolean(s));
+                const answer = await ask<{ categoryTree?: Array<{ slug?: string }> }>(doFetch, settings, CATEGORIES_QUERY);
+                if (answer.errors?.length || !answer.data?.categoryTree) return undefined;
+                return answer.data.categoryTree.map((c) => c.slug).filter((slug): slug is string => Boolean(slug));
             } catch {
                 return undefined;
             }
