@@ -44,8 +44,10 @@ form, confirm, progress, result) shows one at a time.
 medium centred spinner and the way out (Close or Cancel) appear: no fields, no text, no action
 buttons. The spinner is centred both ways between the title's rule and the buttons. `Modal`'s
 `waiting` prop does all of this, and eases to the content when the wait ends. A button doing its own
-work shows its spinner on itself (`isPending`) (owner, 2026-11-01, after this
-came up on several surfaces).
+work shows its spinner on itself (`isPending`). A re-check inside a dialog already showing
+its content, such as ticking a store in Clear demo data or pressing Check on a pack's setup step, is
+not a wait for the dialog: its spinner goes where the answer lands and the rest stays (owner,
+2026-11-01).
 
 **Status lives in the title.** A small icon before it: green done, amber needs the
 SC (including a dangerous confirm), red failed. No status boxes in the body. A
