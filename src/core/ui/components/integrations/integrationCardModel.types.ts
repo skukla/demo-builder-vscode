@@ -93,6 +93,8 @@ export interface IntegrationCardModel {
     statusLabel: string;
     dotVariant: StatusDotVariant;
     message?: string;
+    /** A mesh card: its branch has newer code, so Update fetches it rather than redeploying. */
+    hasNewerCode?: boolean;
     url?: string;
     urlLabel: 'Endpoint' | 'App URL' | 'Screen';
     apis?: string[];

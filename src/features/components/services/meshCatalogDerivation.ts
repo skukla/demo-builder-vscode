@@ -46,7 +46,7 @@ interface RegistryMeshDefinition {
     description?: string;
     source?: {
         url?: string;
-        gitOptions?: { tag?: string; branch?: string };
+        branch?: string;
     };
     configuration?: { providesEnvVars?: string[] };
 }
@@ -77,19 +77,15 @@ function parseGitHubUrl(url: string): { owner: string; repo: string } | undefine
 }
 
 /**
- * Resolve a registry mesh's clone source, preferring its pinned tag.
- *
- * `AddonSource.branch` is passed to `git clone --branch`, which accepts a tag
- * just as well as a branch — so the registry's `tag: "stable"` pin survives into
- * the dashboard path instead of being flattened to `main`.
+ * Resolve a registry mesh's clone source: the branch it follows, as every other
+ * App Builder component does, so the same update check reads it.
  */
 function resolveSource(definition: RegistryMeshDefinition): AddonSource | undefined {
     const url = definition.source?.url;
     if (!url) return undefined;
     const parsed = parseGitHubUrl(url);
     if (!parsed) return undefined;
-    const gitOptions = definition.source?.gitOptions;
-    return { ...parsed, branch: gitOptions?.tag ?? gitOptions?.branch ?? 'main' };
+    return { ...parsed, branch: definition.source?.branch ?? 'main' };
 }
 
 /** Accumulated frontend/backend ids for one mesh id. */

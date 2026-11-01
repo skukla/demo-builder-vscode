@@ -12,6 +12,7 @@ import type {
     GitHubReleaseAsset,
     UpdateChannel,
 } from './types';
+import { isMeshComponentId } from '@/core/constants';
 import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 import { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -104,6 +105,9 @@ export class UpdateManager {
 
         for (const project of projects) {
             for (const [componentId, component] of getComponentInstanceEntries(project)) {
+                // A mesh updates from its branch, by the integration update check.
+                if (isMeshComponentId(componentId)) continue;
+
                 // RESILIENCE: Skip components whose paths don't exist on filesystem
                 // This handles cases where a component was deleted but still registered in state
                 if (!component.path) {

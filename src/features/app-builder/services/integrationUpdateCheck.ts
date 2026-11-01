@@ -43,11 +43,11 @@ export interface IntegrationUpdateCheck {
 
 type UpdateAvailable = NonNullable<AppBuilderComponentState['updateAvailable']>;
 
-/** Deployed integrations and systems that have a clone to compare. */
+/** Deployed integrations, systems and meshes that have a clone to compare. */
 function candidates(project: Project): Array<{ id: string; state: AppBuilderComponentState; path: string }> {
     return Object.entries(project.appBuilderComponents ?? {}).flatMap(([id, state]) => {
         const path = project.componentInstances?.[id]?.path;
-        const eligible = state.kind !== 'mesh' && state.status === 'deployed' && Boolean(path);
+        const eligible = state.status === 'deployed' && Boolean(path);
         return eligible && path ? [{ id, state, path }] : [];
     });
 }

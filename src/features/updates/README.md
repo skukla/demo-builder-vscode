@@ -1,6 +1,7 @@
 # Updates
 
-Pulls component and extension updates from GitHub Releases.
+Pulls extension and Headless storefront updates from GitHub Releases. An API Mesh updates from its branch, by the
+integration update check.
 
 ## Check for Updates: the notification checks, the modal replaces the picker (PL-80)
 

@@ -173,6 +173,10 @@ export function IntegrationsGrid({
                 setPendingRemoveId(model.componentId ?? model.id);
                 return;
             }
+            if (model.isMesh && action === 'update' && model.hasNewerCode && model.componentId) {
+                operations.run(model.componentId, model.name, action);
+                return;
+            }
             if (model.isMesh) {
                 handleMeshAction(action);
                 return;

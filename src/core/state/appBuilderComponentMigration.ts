@@ -95,6 +95,15 @@ export function migrateLegacyToAppBuilderComponents(
 }
 
 /**
+ * A mesh installed from the floating `stable` tag recorded the tag as its branch. Meshes now
+ * follow `main` as every other component follows its branch, and a tag cannot be compared with one.
+ */
+function followsBranch(state: AppBuilderComponentState): AppBuilderComponentState {
+    if (state.kind !== 'mesh' || state.source.branch !== 'stable') return state;
+    return { ...state, source: { ...state.source, branch: 'main' } };
+}
+
+/**
  * Complete a record an add left half-written: the workspace and nothing else.
  *
  * Measured live 2026-09-22 — a second ERP's add made its workspace, deployed its
@@ -128,7 +137,7 @@ export function healPartialComponents(
             // an empty owner and the project was saved with it).
             const source = state?.source;
             const whole = state?.kind && state?.status && source?.owner && source?.repo;
-            if (whole) return [id, state];
+            if (whole) return [id, followsBranch(state)];
             return [
                 id,
                 {

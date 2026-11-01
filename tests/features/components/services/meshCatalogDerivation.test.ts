@@ -49,9 +49,9 @@ describe('deriveMeshCatalogEntries', () => {
         expect(REGISTRY_MESH[id].source.url).toContain(`/${expectedRepo}`);
     });
 
-    it('pins the registry git ref (tag "stable"), not a floating branch', () => {
+    it('follows the branch the registry names, as the other components do', () => {
         for (const entry of entries) {
-            expect(entry.source.branch).toBe('stable');
+            expect(entry.source.branch).toBe('main');
         }
     });
 
@@ -158,7 +158,7 @@ describe('deriveMeshCatalogEntries — against synthetic configs', () => {
     type Mesh = {
         name: string;
         description?: string;
-        source?: { url?: string; gitOptions?: { tag?: string; branch?: string } };
+        source?: { url?: string; branch?: string };
         configuration?: { providesEnvVars?: string[] };
     };
 
@@ -183,7 +183,7 @@ describe('deriveMeshCatalogEntries — against synthetic configs', () => {
     const GITHUB_MESH: Mesh = {
         name: 'A Mesh',
         description: 'A described mesh',
-        source: { url: 'https://github.com/acme/a-mesh', gitOptions: { tag: 'stable' } },
+        source: { url: 'https://github.com/acme/a-mesh', branch: 'develop' },
         configuration: { providesEnvVars: ['MESH_ENDPOINT'] },
     };
 
@@ -196,7 +196,7 @@ describe('deriveMeshCatalogEntries — against synthetic configs', () => {
         const derived = deriveWith([EDS_STACK], { 'a-mesh': GITHUB_MESH });
 
         expect(derived.map((e) => e.id)).toEqual(['a-mesh']);
-        expect(derived[0].source).toEqual({ owner: 'acme', repo: 'a-mesh', branch: 'stable' });
+        expect(derived[0].source).toEqual({ owner: 'acme', repo: 'a-mesh', branch: 'develop' });
         // The registry's own description, not the name standing in for it.
         expect(derived[0].description).toBe('A described mesh');
     });
@@ -252,23 +252,18 @@ describe('deriveMeshCatalogEntries — against synthetic configs', () => {
     });
 
     describe('the git ref a derived entry clones', () => {
-        function branchOf(gitOptions: { tag?: string; branch?: string } | undefined) {
+        function branchOf(branch: string | undefined) {
             const derived = deriveWith([EDS_STACK], {
-                'a-mesh': { name: 'A', source: { url: 'https://github.com/acme/a-mesh', gitOptions } },
+                'a-mesh': { name: 'A', source: { url: 'https://github.com/acme/a-mesh', branch } },
             });
             return derived[0]?.source.branch;
         }
 
-        it('prefers the pinned tag over a branch', () => {
-            expect(branchOf({ tag: 'stable', branch: 'main' })).toBe('stable');
+        it('takes the branch the registry names', () => {
+            expect(branchOf('develop')).toBe('develop');
         });
 
-        it('takes the branch when there is no tag', () => {
-            expect(branchOf({ branch: 'develop' })).toBe('develop');
-        });
-
-        it('falls back to main when the registry pins neither', () => {
-            expect(branchOf({})).toBe('main');
+        it('falls back to main when the registry names none', () => {
             expect(branchOf(undefined)).toBe('main');
         });
     });

@@ -51,6 +51,8 @@ const TOOLING_OWNED = [
     /(^|\/)\.generated\//,
     /(^|\/)ext\.config\.yaml$/,
     /(^|\/)app\.config\.yaml$/,
+    // A mesh's build output: tracked, and rewritten by every deploy.
+    /^mesh\.json$/,
 ];
 
 const MAX_NAMED_FILES = 5;
@@ -95,7 +97,11 @@ async function fetchHeads(componentPath: string, branch: string, run: GitRunner)
     if (before.code !== 0) {
         return failure('read the current version', before.stderr);
     }
-    const fetched = await run(`git fetch origin ${branch}`, componentPath);
+    // A shallow clone has no history to compare, so it could never read as behind:
+    // a mesh installed from a tag was cloned that way.
+    const shallow = await run('git rev-parse --is-shallow-repository', componentPath);
+    const unshallow = shallow.stdout.trim() === 'true' ? ' --unshallow' : '';
+    const fetched = await run(`git fetch${unshallow} origin ${branch}`, componentPath);
     if (fetched.code !== 0) {
         return failure(`fetch ${branch} from GitHub`, fetched.stderr);
     }

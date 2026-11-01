@@ -9492,7 +9492,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 170,
+            "line": 171,
             "mutants": 1,
             "category": "block",
             "reason": "The else body is a single logger.warn. Emptying it changes which log line prints and nothing else: componentInstance.version is already left unset on this path, and the install result is identical either way.",
@@ -9505,7 +9505,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 234,
+            "line": 236,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.debug. Emptying it leaves detectedVersion untouched and falls through to the commit-hash strategy exactly as before; only the log line differs.",
@@ -11915,18 +11915,6 @@
             "category": "branch",
             "reason": "Removing this guard hands the missing url straight to parseGitHubUrl, whose regex .exec coerces undefined and '' to a non-matching string, so it answers undefined and the '!parsed' guard two lines down returns undefined by the other route. Both a missing source.url and an empty one derive nothing either way \u2014 the guard only saves a regex call.",
             "decision": "none \u2014 the type requires the narrowing and the guard says what it means",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
-        },
-        {
-            "module": "src/features/components/services/meshCatalogDerivation.ts",
-            "anchors": [
-                "const gitOptions = definition.source?.gitOptions;"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "Dropping the ?. would throw only if definition.source were undefined, and this line cannot be reached in that state: three lines earlier 'const url = definition.source?.url' is undefined for a definition with no source, and '!url' returns before execution ever arrives here. The compiler still requires the ?. because source is optional on the type.",
-            "decision": "none \u2014 required by the type, unreachable in the state that would differ",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
         },

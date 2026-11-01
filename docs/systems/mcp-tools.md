@@ -22,7 +22,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `add_erp_owner_to_attribute_sets` | **confirm** | Add the erp_owner product attribute to every attribute set the store\ |
 | `add_integration` | **confirm** | Add an App Builder integration to the current project: give it an Adobe workspace |
 | `assign_erp_products` | **confirm** | Give an ERP its products ("Assign products" on its card): tag Commerce products with the |
-| `check_integration_updates` |  | Check which deployed integrations (and their ERPs) have newer code on their GitHub |
+| `check_integration_updates` |  | Check which deployed integrations, ERPs and API meshes have newer code on their GitHub |
 | `check_setup_steps` |  | Run the checks Demo Builder can do itself on an integration's demo setup checklist |
 | `delete_ai_prompt` | **confirm** | Delete a saved AI prompt by id |
 | `delete_app_github_repo` | **confirm** | Undo save_app_to_github: delete the GitHub repository Demo Builder created for an app, |
@@ -63,7 +63,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `stop_demo` |  | Stop the current project's running demo server |
 | `undo_commerce_store_preparation` |  | Undo prepare_commerce_store (a step\ |
 | `undo_erp_assignment` |  | Undo an ERP's last assign_erp_products (\ |
-| `update_integration` |  | Update an integration to the newest code on its GitHub branch: fetch it |
+| `update_integration` |  | Update an integration or API mesh to the newest code on its GitHub branch: fetch it |
 | `write_erp_rest` | **confirm** | POST, PUT, PATCH or DELETE one of the ERP's own routes — the actions a person takes |
 
 ## `src/features/ai/server/addedDemoTools.ts`

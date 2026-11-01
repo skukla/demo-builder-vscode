@@ -10,7 +10,6 @@
  */
 
 import {
-    CommandExecutor,
     ComponentUpdater,
     fs,
     vscode,
@@ -19,7 +18,6 @@ import {
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 
-import { createMockProject } from '../../../helpers/projectFake';
 
 describe('ComponentUpdater - Extended Coverage', () => {
     let updater: ComponentUpdater;
@@ -282,50 +280,6 @@ describe('ComponentUpdater - Extended Coverage', () => {
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
             expect(fs.access).toHaveBeenCalledWith(expect.stringContaining('package.json'));
-        });
-
-        it('should verify mesh.json exists for commerce-mesh component', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            const {
-                ComponentRegistryManager,
-            } = require('@/features/components/services/ComponentRegistryManager');
-            ComponentRegistryManager.mockImplementation(() => ({
-                getComponentById: jest.fn().mockResolvedValue({
-                    id: 'eds-commerce-mesh',
-                    name: 'Commerce Mesh',
-                    configuration: {},
-                }),
-            }));
-
-            const meshProject = createMockProject({
-                ...mockProject,
-                componentInstances: {
-                    'eds-commerce-mesh': {
-                        name: 'eds-commerce-mesh',
-                        status: 'ready',
-                        id: 'eds-commerce-mesh',
-                        path: '/path/to/project/components/commerce-mesh',
-                        port: 3000,
-                    },
-                },
-            });
-
-            const meshUpdater = new ComponentUpdater(
-                mockLogger,
-                '/mock/extension/path',
-                mockExecutor as unknown as CommandExecutor
-            );
-
-            await meshUpdater.updateComponent(
-                meshProject,
-                'eds-commerce-mesh',
-                downloadUrl,
-                newVersion
-            );
-
-            expect(fs.access).toHaveBeenCalledWith(expect.stringContaining('mesh.json'));
         });
 
         it('should throw when component not found in project', async () => {

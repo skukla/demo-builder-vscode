@@ -342,20 +342,16 @@ describe('handleUpdateAppBuilderComponent', () => {
         expect(mockUpdate).not.toHaveBeenCalled();
     });
 
-    it('refuses an undeployed integration, a mesh, an unknown id and a missing id', async () => {
+    it('refuses an undeployed integration, an unknown id and a missing id', async () => {
         const { mockContext } = setup({
             appBuilderComponents: {
                 broken: deployed({ status: 'not-deployed' }),
-                mesh: deployed({ kind: 'mesh' }),
             },
         });
 
         await expect(handleUpdateAppBuilderComponent(mockContext, { id: 'broken' })).resolves.toMatchObject({
             success: false,
             code: ErrorCode.INVALID_OPERATION,
-        });
-        await expect(handleUpdateAppBuilderComponent(mockContext, { id: 'mesh' })).resolves.toMatchObject({
-            code: ErrorCode.PROJECT_NOT_FOUND,
         });
         await expect(handleUpdateAppBuilderComponent(mockContext, { id: 'nope' })).resolves.toMatchObject({
             code: ErrorCode.PROJECT_NOT_FOUND,

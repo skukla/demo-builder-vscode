@@ -3,19 +3,28 @@
 Components update independently of the extension. A mesh fix ships without anyone
 installing a new VSIX.
 
-## The floating stable tag
+## How a component moves
 
-A component declares the ref it installs from in `components.json`, and most declare
-`"tag": "stable"` — a tag that **moves**. Publishing a fix means moving the tag; no
-extension release is involved.
+| Component | Installs from | Offered an update when | Applying it |
+|---|---|---|---|
+| API Mesh | A branch (`main`) | The branch has commits the clone lacks | Fetches and deploys |
+| Integration, ERP | A branch | The branch has commits the clone lacks | Fetches and deploys |
+| EDS storefront | A template repository | The tested boilerplate or template moves | Syncs the repository |
+| Headless storefront | GitHub Releases | A newer release | Replaces the folder |
 
-Not everything floats. At least one component pins a real version (`v1.0.0`), which
-is the right choice where a moving target would be dangerous rather than convenient.
-Pinning is a per-component decision made in the registry, not a global policy.
+So pushing to a mesh's `main` is what ships it. Nothing else stands between the two, which is why each mesh
+repository runs its checks on every push.
 
-The cost of floating is that "which version is installed" becomes a question about
-the checkout rather than about the extension — which is why the updater records what
-it installed rather than inferring it.
+A mesh keeps `mesh.json` under version control and rebuilds it on every deploy, so a rebuilt one is not read as
+the SC's own edit.
+
+The `stable` tags on the mesh repositories stay until no supported extension build reads them: older builds
+clone them when a mesh is added. Remove them then, not before. A project recorded on that tag moves to `main` when
+it loads, and its shallow clone gains the history it needs on the first check.
+
+Not everything floats. A component can pin a real version (`"tag": "v1.0.0"`), which is the right choice where a
+moving target would be dangerous rather than convenient. Pinning is a per-component decision made in the registry,
+not a global policy. A tag that is not a version records the version from `package.json` instead.
 
 ## Repositories are resolved from the registry
 

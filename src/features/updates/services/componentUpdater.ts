@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { flattenArchiveRoot } from './archiveRoot';
 import { ENV_VAR_RENAMES, mergeEnvContent, parseEnvFile } from './envMerge';
-import { isMeshComponentId } from '@/core/constants';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
@@ -247,11 +246,6 @@ export class ComponentUpdater {
     
         // Define required files per component type
         const requiredFiles: string[] = ['package.json'];
-    
-        // Add component-specific requirements
-        if (isMeshComponentId(componentId)) {
-            requiredFiles.push('mesh.json');
-        }
     
         // Check all required files exist
         for (const file of requiredFiles) {

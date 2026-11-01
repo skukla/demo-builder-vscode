@@ -213,6 +213,30 @@ describe('IntegrationsGrid actions', () => {
     });
 
     describe('mesh card routing (mesh callbacks, never keyed messages)', () => {
+        it('sends Update through the integration update when newer code is recorded', async () => {
+            const user = setupUser();
+            const { onDeployMesh } = renderGrid({
+                withMesh: true,
+                appBuilderComponents: {
+                    'eds-accs-mesh': {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: 'skukla', repo: 'eds-accs-mesh', branch: 'main' },
+                        updateAvailable: { commit: 'abc', checkedAt: '2026-11-01T00:00:00Z' },
+                    },
+                },
+            });
+
+            const tile = card('API Mesh', 'Update needed');
+            await user.click(within(tile).getByRole('button', { name: /^update$/i }));
+
+            expect(onDeployMesh).not.toHaveBeenCalled();
+            expect(getClient().postMessage).toHaveBeenCalledWith('updateAppBuilderComponent', {
+                progress: 'modal',
+                id: 'eds-accs-mesh',
+            });
+        });
+
         it('routes the mesh panel Redeploy to onDeployMesh', async () => {
             const user = setupUser();
             const { onDeployMesh } = renderGrid({ withMesh: true });

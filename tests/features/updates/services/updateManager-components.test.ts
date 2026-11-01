@@ -123,6 +123,23 @@ describe('UpdateManager - Component Updates', () => {
             expect(results[0].outdatedProjects).toHaveLength(2);
         });
 
+        it('never offers a mesh a release: a mesh updates from its branch, as an integration does', async () => {
+            const project = {
+                name: 'Project 1',
+                ...createUpdateManagerProject([
+                    { id: 'eds-accs-mesh', version: '1.0.0', repoUrl: 'https://github.com/skukla/eds-accs-mesh', path: '/mock/path/mesh' },
+                ]),
+            };
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => createMockRelease({ version: '9.0.0', assetType: 'zipball' }),
+            });
+            mockSecurityValidationPass();
+
+            expect(await updateManager.checkAllProjectsForUpdates([project])).toStrictEqual([]);
+            expect(global.fetch).not.toHaveBeenCalled();
+        });
+
         it('should skip repoUrl-only components without paths in multi-project check', async () => {
             // Given: A component with repoUrl but no path (should be skipped by resilience check)
             const project = {
