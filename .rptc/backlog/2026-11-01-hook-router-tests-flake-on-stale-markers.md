@@ -25,9 +25,12 @@ marker an old run left and the rule "does not fire". Measured on the owner's mac
 leftover `router-test` markers (21,842 hook markers in all).
 
 **Fix.** The suite runs the router with a private TMPDIR made for the run and removed after it,
-so no marker from any other run can be seen. The rule proofs (`.claude/hooks/rules/*.proof.sh`)
-use random session ids, so they collide far less often, but they leave markers in the real TMPDIR
-every run too.
+so no marker from any other run can be seen; a control plants one in the real TMPDIR and asserts
+the rule still fires. The 25 rule proofs (`.claude/hooks/rules/*.proof.sh`) and the written-paths
+probe now make their own temp folder the same way and remove it on exit, so a hand-run proof
+leaves nothing behind either. Measured after: a full `tests/hooks` run creates no marker in the
+shared temp folder (a deliberately planted one is found by the same count), and the 4,439 stale
+test markers were deleted.
 
 ## Shipped so far
 

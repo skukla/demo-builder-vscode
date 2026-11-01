@@ -1,4 +1,7 @@
 #!/bin/bash
+# Markers this run's router drops go to a folder of its own, removed on exit (PL-86): in the
+# shared temp folder they outlived the run, and a later session of the same name went silent.
+PROOF_TMP="$(mktemp -d)"; export TMPDIR="$PROOF_TMP"; trap 'rm -rf "$PROOF_TMP"' EXIT
 # Proves 15-jest-concurrent.rule blocks a second jest run only when one is really
 # in flight, and recognises every spelling of "start jest".
 #
@@ -23,7 +26,7 @@
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP" "$PROOF_TMP"' EXIT
 
 # Fixture pids are above 99999, which no macOS process can have: the rule skips a pid
 # that is one of its own ancestors, and a made-up 99005 once matched a real one under a

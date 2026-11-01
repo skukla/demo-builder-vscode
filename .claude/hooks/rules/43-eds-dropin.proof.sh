@@ -1,4 +1,7 @@
 #!/bin/bash
+# Markers this run's router drops go to a folder of its own, removed on exit (PL-86): in the
+# shared temp folder they outlived the run, and a later session of the same name went silent.
+PROOF_TMP="$(mktemp -d)"; export TMPDIR="$PROOF_TMP"; trap 'rm -rf "$PROOF_TMP"' EXIT
 # Proves 43-eds-dropin.rule fires on storefront config/dropin delivery.
 #
 # ATTRIBUTES BY MESSAGE, not exit code: nineteen rules share one router and any of
