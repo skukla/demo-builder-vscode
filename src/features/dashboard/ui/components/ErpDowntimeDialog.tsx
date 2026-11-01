@@ -5,7 +5,7 @@
  * offers to end it now instead. A demo control, not an ERP setting: it left the ERP's own
  * Settings screen (owner, 2026-10-02).
  *
- * The core `Modal`, `LoadingDisplay` while the ERP is read, a Spectrum `NumberField` for the
+ * The core `Modal`, with its own wait while the ERP is read, a Spectrum `NumberField` for the
  * minutes, and the refusal line `IntegrationSettingsModal` uses. Hosts its own DialogContainer,
  * the house rule for a modal (tests/sop/modal-hosting.test.ts).
  *
@@ -14,7 +14,6 @@
 
 import { DialogContainer, Flex, NumberField, Text } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import {
     useErpDemoControls,
@@ -81,6 +80,7 @@ function DowntimeModal({ target, onClose }: {
             fitContent
             onClose={onClose}
             actionButtons={[action]}
+            waiting={!state && busy ? { message: `Reading ${target.name}` } : false}
         >
             <Flex direction="column" gap="size-200">
                 <Text>
@@ -88,7 +88,6 @@ function DowntimeModal({ target, onClose }: {
                     is down for maintenance, so orders wait and go through once it is back. It
                     comes back by itself when the time is up.
                 </Text>
-                {!state && busy && <LoadingDisplay size="M" centered message={`Reading ${target.name}`} />}
                 {running && <Text>{running.message}</Text>}
                 {running && <Text>End it now to bring {target.name} back.</Text>}
                 {state && !running && (

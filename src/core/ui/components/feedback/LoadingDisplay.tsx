@@ -13,8 +13,6 @@ export interface LoadingDisplayProps {
     helperText?: string;
     /** Optional progress percentage (0-100). When provided, shows determinate progress circle */
     progress?: number;
-    /** Additional CSS class for the container */
-    className?: string;
     /**
      * Hold each of the three rows to exactly one line, so nothing moves as the
      * lines change: text that does not fit ends in an ellipsis (the full text is
@@ -72,7 +70,6 @@ export function LoadingDisplay({
     subMessage,
     helperText,
     progress,
-    className,
     steady = false,
     centered = false,
 }: LoadingDisplayProps) {
@@ -84,7 +81,6 @@ export function LoadingDisplay({
     // Text size by circle size. Written as literals AT each use below rather
     // than assigned here: a className the bundle scan cannot read is a class it
     // cannot check a stylesheet for (ADR-017 §6).
-    const textSizeClass = { L: 'text-lg', M: 'text-base', S: '' }[size];
 
     // Container props based on centering
     const containerProps = shouldCenter
@@ -100,9 +96,9 @@ export function LoadingDisplay({
     // For small size with no sub-message, use horizontal layout
     if (size === 'S' && !subMessage) {
         return (
-            <Flex gap="size-200" alignItems="center" UNSAFE_className={className}>
+            <Flex gap="size-200" alignItems="center">
                 <ProgressCircle size={size} isIndeterminate={true} aria-label={message} />
-                <Text UNSAFE_className={cn(textSizeClass, 'font-medium')}>{message}</Text>
+                <Text UNSAFE_className="font-medium">{message}</Text>
             </Flex>
         );
     }
@@ -114,7 +110,6 @@ export function LoadingDisplay({
                 direction="column"
                 gap="size-200"
                 {...containerProps}
-                UNSAFE_className={className}
             >
                 <ProgressCircle
                     size={size}
@@ -128,7 +123,7 @@ export function LoadingDisplay({
                     alignItems={shouldCenter ? 'center' : 'start'}
                     UNSAFE_className={steady ? 'w-full' : undefined}
                 >
-                    <Text UNSAFE_className={cn(textSizeClass, 'font-medium', steady && 'loading-display-row')}>
+                    <Text UNSAFE_className={cn(size === 'L' && 'text-lg', size === 'M' && 'text-base', 'font-medium', steady && 'loading-display-row')}>
                         {rowText(message, steady)}
                     </Text>
                     {/* Always render sub-message row to prevent layout shift */}

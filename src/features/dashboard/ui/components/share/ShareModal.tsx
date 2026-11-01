@@ -21,8 +21,6 @@ import { SHARE_COPY } from './shareCopy';
 import { ShareFileForm } from './ShareFileForm';
 import { ShareLinkForm } from './ShareLinkForm';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { DemoPackagePreview } from '@/types/webviewRequests';
@@ -122,17 +120,18 @@ function Journey({ isEds, onClose }: Omit<ShareModalProps, 'isOpen'>): React.Rea
     const [form, setForm] = useState<ShareForm>('link');
     const storefront = useStorefrontState(isEds);
     return (
-        <Modal title={SHARE_COPY.title} size="L" fitContent onClose={onClose} closeLabel="Close">
-            {storefront.status === 'loading' ? (
-                <CenteredFeedbackContainer height="280px">
-                    <LoadingDisplay size="M" centered message={SHARE_COPY.looking} helperText={SHARE_COPY.lookingFor} />
-                </CenteredFeedbackContainer>
-            ) : (
-                <div className="intflow-stage-body export-body">
-                    <FormChoice form={form} onChange={setForm} />
-                    {form === 'link' ? <LinkForm state={storefront} /> : <ShareFileForm isEds={isEds} />}
-                </div>
-            )}
+        <Modal
+            title={SHARE_COPY.title}
+            size="L"
+            fitContent
+            onClose={onClose}
+            closeLabel="Close"
+            waiting={storefront.status === 'loading' ? { message: SHARE_COPY.looking, helperText: SHARE_COPY.lookingFor } : false}
+        >
+            <div className="intflow-stage-body export-body">
+                <FormChoice form={form} onChange={setForm} />
+                {form === 'link' ? <LinkForm state={storefront} /> : <ShareFileForm isEds={isEds} />}
+            </div>
         </Modal>
     );
 }

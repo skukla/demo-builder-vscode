@@ -22,11 +22,10 @@
 
 import { DialogContainer, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
-import { renderApiCatalogFeedback } from '@/core/ui/components/feedback/ApiCatalogFeedback';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { ADOBE_APIS_WAIT, renderApiCatalogFeedback } from '@/core/ui/components/feedback/ApiCatalogFeedback';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import {
     useElapsedStage,
     ORG_SERVICES_LOADING_STAGES,
@@ -96,8 +95,6 @@ function toMessage(err: unknown): string {
 
 /** Compact fetch states (inline, not tall-centered) around the shared picker. */
 function ManageApisBody({
-    loadingStage,
-    isLoading,
     loadError,
     needsSignIn,
     onSignIn,
@@ -106,8 +103,6 @@ function ManageApisBody({
     selected,
     onToggle,
 }: {
-    loadingStage?: string;
-    isLoading: boolean;
     loadError: string | null;
     /** Render the sign-in view rather than the retryable-error view. */
     needsSignIn?: boolean;
@@ -118,12 +113,11 @@ function ManageApisBody({
     selected: string[];
     onToggle: (code: string) => void;
 }): React.ReactElement {
-    // The three non-picker views are shared with the wizard's picker stage
-    // (renderApiCatalogFeedback) — same fetch, same states. Only the wrapper differs:
-    // the reserved height stops this dialog resizing when the list lands.
+    // The non-picker views are shared with the wizard's picker stage
+    // (renderApiCatalogFeedback), same fetch, same states. The wait is the Modal's own. The
+    // reserved height stops this dialog resizing when the list lands.
     const feedback = renderApiCatalogFeedback({
-        loading: isLoading,
-        loadingStage,
+        loading: false,
         needsSignIn,
         error: loadError,
         onSignIn,
@@ -143,6 +137,21 @@ function ManageApisBody({
             onToggle={onToggle}
         />
     );
+}
+
+/**
+ * The dialog's wait. While applying, the subscribe's own lines: it reads the workspace's credentials
+ * and can wait on Adobe for a minute, where this said "Applying…" on a button and nothing else
+ * (PL-59 slice 6).
+ */
+function waitOf(
+    isApplying: boolean,
+    applying: { stage?: string; step?: string } | null | undefined,
+    isLoading: boolean,
+    loadingStage: string | undefined,
+): ModalWait | false {
+    if (isApplying) return { message: applying?.stage ?? 'Applying', detail: applying?.step };
+    return isLoading ? { ...ADOBE_APIS_WAIT, detail: loadingStage } : false;
 }
 
 /**
@@ -276,6 +285,7 @@ export function ManageApisModal({
                     size="L"
                     onClose={onClose}
                     closeLabel="Cancel"
+                    waiting={waitOf(isApplying, applying, isLoading, loadingStage)}
                     actionButtons={[
                         {
                             label: 'Apply',
@@ -294,24 +304,11 @@ export function ManageApisModal({
                         its own container and the modal grew a horizontal
                         scrollbar. */}
                     <div className="manage-apis-body">
-                        {/* While applying, the subscribe's own lines — it reads
-                            the workspace's credentials and can wait on Adobe for
-                            a minute, where this said "Applying…" on a button and
-                            nothing else (PL-59 slice 6). */}
-                        {isApplying ? (
-                            <LoadingDisplay
-                                size="M" centered
-                                message={applying?.stage ?? 'Applying'}
-                                subMessage={applying?.step}
-                            />
-                        ) : null}
                         <Text>
                             Manage Adobe API access for <strong>{componentName}</strong>.
                         </Text>
                         <ManageApisBody
                             onRetry={retry}
-                            loadingStage={loadingStage}
-                            isLoading={isLoading}
                             loadError={loadError}
                             needsSignIn={needsSignIn}
                             onSignIn={signIn}

@@ -240,23 +240,15 @@ describe('AddErpDialog — the name', () => {
 });
 
 describe('AddErpDialog — before and without the store', () => {
-    it('while the store is read, ONE loading view says so, whichever choice is showing, and Add works', async () => {
+    it('while the store is read, the dialog is the wait: one spinner, no form, no Add', async () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));
-        const { onAdd } = await open();
-        typeName('Brand B ERP');
+        await open();
 
-        // One wait, shown once (the 2026-10-18 audit: two spinners showed at once).
         expect(screen.getAllByText(/Reading/)).toHaveLength(1);
         expect(screen.getByText(ADD_ERP_COPY.readingStore)).toBeInTheDocument();
-        fireEvent.click(websitesRadio());
-        expect(screen.getAllByText(/Reading/)).toHaveLength(1);
-        expect(screen.queryByText(PICKER_COPY.noWebsites)).toBeNull();
-
-        fireEvent.click(attributeRadio());
-        expect(addDisabled()).toBe(false);
-        fireEvent.click(addButton());
-        // Nothing about the add waits on the read (AB-72).
-        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' });
+        expect(screen.queryByLabelText(/^ERP name/)).toBeNull();
+        expect(screen.queryByRole('button', { name: ADD_ERP_COPY.add })).toBeNull();
+        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
 
     it('says "no websites" only when the store answered with none', async () => {

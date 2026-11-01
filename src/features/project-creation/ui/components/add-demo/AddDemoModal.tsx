@@ -13,10 +13,8 @@ import { COPY } from './addDemoFlow';
 import { FoundStage } from './FoundStage';
 import { LinkStage } from './LinkStage';
 import { useAddDemoFlow, type UseAddDemoFlowArgs } from './useAddDemoFlow';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import type { AddedDemo } from '@/types/projectFile';
 
 export interface AddDemoModalProps extends UseAddDemoFlowArgs {
@@ -30,29 +28,8 @@ type BodyProps = Omit<AddDemoModalProps, 'isOpen'> & {
     mode: NonNullable<AddDemoModalProps['mode']>;
 };
 
-/** One view at a time: the push, the commit, the first stage, or what was found. */
+/** One view at a time: the first stage, or what was found. The waits are the Modal's own. */
 function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
-    if (flow.importing) {
-        // Shown for the whole push, whichever stage the dialog is on: the import
-        // starts from the first stage and can take a minute.
-        return (
-            <CenteredFeedbackContainer height="280px">
-                <LoadingDisplay
-                    size="M" centered
-                    message={flow.importStep?.message ?? COPY.importing}
-                    subMessage={flow.importStep?.detail}
-                />
-            </CenteredFeedbackContainer>
-        );
-    }
-    if (flow.adding) {
-        // A form that sits unchanged while the commit runs reads as a press that did nothing.
-        return (
-            <CenteredFeedbackContainer height="280px">
-                <LoadingDisplay size="M" centered message={mode === 'change' ? COPY.change.changing : COPY.adding} />
-            </CenteredFeedbackContainer>
-        );
-    }
     if (flow.zipError) {
         // The house error view, as the probe's refusals use; Back returns to the form.
         // A name the account already uses is a choice, not a failure: warning words
@@ -103,6 +80,17 @@ function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
     );
 }
 
+/**
+ * The dialog's wait: the push, shown whichever stage the dialog is on, since the import starts from
+ * the first stage and can take a minute; or the commit, because a form that sits unchanged while it
+ * runs reads as a press that did nothing.
+ */
+function waitOf(flow: BodyProps['flow'], mode: BodyProps['mode']): ModalWait | false {
+    if (flow.importing) return { message: flow.importStep?.message ?? COPY.importing, detail: flow.importStep?.detail };
+    if (flow.adding) return { message: mode === 'change' ? COPY.change.changing : COPY.adding };
+    return false;
+}
+
 function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
     const flow = useAddDemoFlow(props);
     const mode = props.mode ?? 'add';
@@ -111,6 +99,7 @@ function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
             title={mode === 'change' ? COPY.change.title : COPY.title}
             size="L"
             fitContent
+            waiting={waitOf(flow, mode)}
             onClose={props.onClose}
             closeLabel="Cancel"
             actionButtons={[

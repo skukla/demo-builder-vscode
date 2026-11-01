@@ -180,10 +180,10 @@ describe('ServiceExportModal — choosing types', () => {
      * render falls past a loading-only guard — which is why the guard reads
      * `!settled` too. Deliberately NOT `renderModal()`: that settles.
      */
-    it('says it is still finding out, before anything has come back', async () => {
+    it('shows only the wait, before anything has come back', async () => {
         render(<ServiceExportModal onClose={jest.fn()} packType="commerce" />);
 
-        expect(screen.getByText(/loading what can be exported/i)).toBeInTheDocument();
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
 
         await settle();

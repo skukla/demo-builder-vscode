@@ -332,12 +332,6 @@
 /* While the stores load: one spinner in the row the pickers will fill, holding the row's
    height (a label line, 4px, a 32px field) so the pickers replace it without a jump. */
 @layer theme {
-.datapack-import-scope-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 54px;
-}
 }
 
 /* The products/customer_groups dependency. Warning colour, not error: the import

@@ -4,6 +4,8 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { ReactNode, useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Spinner } from './Spinner';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { cn } from '@/core/ui/utils/classNames';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
@@ -70,7 +72,21 @@ export interface ModalProps {
      * Opt-in — every existing modal keeps its proportions.
      */
     wide?: boolean;
+    /**
+     * The dialog is waiting for what it will show. Only the title, a medium centred spinner and
+     * the way out appear: no fields, no text, no action buttons (dialog design rules, owner
+     * 2026-11-01). A button doing its own work uses `isPending` instead. `false` or absent shows
+     * the content. The height eases from the wait to the content.
+     */
+    waiting?: ModalWait | false;
     children: ReactNode;
+}
+
+/** What a wait may say beside its spinner. Most say nothing. */
+export interface ModalWait {
+    message?: string;
+    detail?: string;
+    helperText?: string;
 }
 
 /**
@@ -182,6 +198,7 @@ export function Modal({
     hideClose = false,
     fitContent = false,
     wide = false,
+    waiting = false,
     children,
 }: ModalProps) {
     // Map custom sizes to Dialog-compatible sizes
@@ -215,7 +232,21 @@ export function Modal({
                     the content is short. `position: sticky` alone only pins against an
                     OVERFLOWING container, so a short body (a spinner, a two-row list) left
                     the footer floating mid-dialog with dead space beneath it. */}
-                <div className="modal-body">{children}</div>
+                <div className="modal-body">
+                    <SteadyHeight>
+                        {waiting ? (
+                            <LoadingDisplay
+                                size="M"
+                                centered
+                                message={waiting.message ?? ''}
+                                subMessage={waiting.detail}
+                                helperText={waiting.helperText}
+                            />
+                        ) : (
+                            children
+                        )}
+                    </SteadyHeight>
+                </div>
                 <div className="modal-footer-actions">
                     {/* Close/Cancel on left, primary actions on right (per Spectrum design guidelines) */}
                     {!hideClose && (
@@ -223,7 +254,7 @@ export function Modal({
                             {closeLabel}
                         </FocusableButton>
                     )}
-                    {actionButtons.map((button, index) => (
+                    {(waiting ? [] : actionButtons).map((button, index) => (
                         <FocusableButton
                             key={index}
                             variant={button.variant}

@@ -53,17 +53,16 @@ beforeEach(() => {
 describe('ServiceExportModal — before the type list arrives', () => {
     // Neither in flight nor answered. Loading alone would say "no", and the grid
     // would render over an empty list.
-    it('says it is finding out when nothing has been sent yet', () => {
-        renderWithTypes({ loading: false, settled: false });
+    it.each([
+        ['nothing has been sent yet', { loading: false, settled: false }],
+        ['the request is in flight', { loading: true, settled: false }],
+    ])('shows only the wait while %s', (_when, types) => {
+        renderWithTypes(types);
 
-        expect(screen.getByText(/loading what can be exported/i)).toBeInTheDocument();
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-    });
-
-    it('still says so while the request is in flight', () => {
-        renderWithTypes({ loading: true, settled: false });
-
-        expect(screen.getByText(/loading what can be exported/i)).toBeInTheDocument();
+        expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
     });
 
     // The control: once an answer is in, the note goes and the grid takes over.

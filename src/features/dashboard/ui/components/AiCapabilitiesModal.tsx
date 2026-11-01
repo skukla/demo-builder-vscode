@@ -140,16 +140,14 @@ export function AiCapabilitiesModal({
             size="L"
             onClose={close}
             closeLabel={isBusy ? 'Run in background' : undefined}
-            actionButtons={[
+            // While busy the body is the wait, so the action is not offered (dialog design rules).
+            actionButtons={isBusy ? [] : [
                 {
-                    // The body shows the spinner while busy (below), so the button only stops taking
-                    // presses: one spinner per wait, and no "-ing" label (owner, 2026-10-31).
                     label: 'Regenerate AI files',
                     variant: 'secondary',
                     onPress: () => {
                         void onRegenerate();
                     },
-                    isDisabled: isBusy,
                 },
             ]}
         >

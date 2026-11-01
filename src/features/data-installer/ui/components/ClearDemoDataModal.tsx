@@ -8,7 +8,7 @@
  * Built from the house pieces: `ui/Modal` in a `DialogContainer` (as `AssignErpProductsModal` and
  * `LoadDatapackFileModal`), `LeadText` and `SectionLabel` for its text, `FactList` for the list
  * (one labelled line a kind, as the setup guide lists its facts), `InlineNotice` for a store another
- * project claims, `StatusDisplay` for a check that failed and `LoadingDisplay` while the choices are
+ * project claims, `StatusDisplay` for a check that failed and the Modal's own wait while the choices are
  * read. The VS Code reset modal (`edsResetOtherData.ts`) asks the same question for the project's
  * own store; it is a native dialog, so it has no list and no ticks.
  *
@@ -21,7 +21,6 @@ import { choicesOfTicks, clearLabel, previewLines } from '../clearDemoDataWords'
 import { useDemoDataCheck } from '../hooks/useDemoDataCheck';
 import { StorePickList } from './StorePickList';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
@@ -99,11 +98,11 @@ function ClearForm({ onClose, onClear }: ClearDemoDataModalProps) {
             title={CLEAR_COPY.title}
             size="L"
             fitContent
+            waiting={!failed && !check.ready ? { message: CLEAR_COPY.checking } : false}
             onClose={onClose}
             actionButtons={failed ? [] : [{ label: total > 0 ? clearLabel(total) : 'Clear', variant: 'negative', onPress: clear, isDisabled: total === 0 }]}
         >
             {failed && <StatusDisplay variant="error" title={CLEAR_COPY.readFailed} message={check.failure?.message ?? ''} />}
-            {!failed && !check.ready && <LoadingDisplay size="M" centered message={CLEAR_COPY.checking} />}
             {check.ready && (
                 <div className="clear-demo-body">
                     <LeadText>{CLEAR_COPY.lead}</LeadText>

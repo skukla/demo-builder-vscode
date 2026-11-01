@@ -408,14 +408,14 @@ describe('ImportDatapackModal — decisions', () => {
 
     describe('the type list can change under the modal', () => {
         it('pulls in a dependency the pack only gained on a later render', async () => {
-            const view = renderModal({ availableTypes: ['products'] });
+            const view = renderModal({ availableTypes: ['products', 'customers'] });
             await settle();
             await screen.findByRole('checkbox', { name: 'Products' });
 
             view.rerender(
                 <ImportDatapackModal
                     {...DEFAULTS}
-                    availableTypes={['categories', 'products']}
+                    availableTypes={['categories', 'products', 'customers']}
                 />,
             );
             await settle();

@@ -325,7 +325,7 @@
     min-width: 0;
 }
 
-.dashboard-tile-status--inline {
+.dashboard-tile-title .dashboard-tile-status {
     position: static;
     flex: none;
 }

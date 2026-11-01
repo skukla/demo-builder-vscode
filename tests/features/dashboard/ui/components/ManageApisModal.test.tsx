@@ -237,10 +237,11 @@ describe('ManageApisModal', () => {
             fireEvent.click(applyButton());
             await flush();
 
-            // A spinner in the button's place, not a "-ing" label (owner, 2026-10-31).
-            const busy = screen.getByRole('button', { name: 'Apply' });
-            expect(busy).toHaveAttribute('aria-disabled', 'true');
-            expect(busy).toHaveAttribute('aria-busy', 'true');
+            // The dialog is the wait: nothing but the spinner and the way out (owner, 2026-11-01).
+            expect(screen.getByRole('progressbar')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Apply' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         });
 
         it("shows the subscribe's own stage and step once it reports them, and a plain Applying before", async () => {

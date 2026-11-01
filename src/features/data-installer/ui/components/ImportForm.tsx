@@ -12,7 +12,7 @@
  * @module features/data-installer/ui/components/ImportForm
  */
 
-import { Checkbox, Item, Picker, ProgressCircle } from '@adobe/react-spectrum';
+import { Checkbox, Item, Picker } from '@adobe/react-spectrum';
 import React from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { TargetWebsite } from '../hooks/useImportScopes';
@@ -73,29 +73,16 @@ function TargetScopeFields({
     storeCode,
     onWebsiteChange,
     onStoreChange,
-    isLoading,
 }: {
     websites: TargetWebsite[];
     websiteCode: string;
     storeCode: string;
     onWebsiteChange: (code: string) => void;
     onStoreChange: (code: string) => void;
-    isLoading: boolean;
 }): React.JSX.Element | null {
-    // Nothing discovered and nothing pending: this instance offers no choice.
-    if (websites.length === 0 && !isLoading) {
+    // Nothing discovered: this instance offers no choice. The dialog waits for the answer.
+    if (websites.length === 0) {
         return null;
-    }
-    if (isLoading) {
-        // ONE spinner for the one wait, where the pickers will land (owner, 2026-10-31: each
-        // picker had its own, two spinners for one request). Medium, a job dialog's wait (owner,
-        // 2026-11-01: small was too small for the dialog). It holds the row's height, so the
-        // pickers replace it without the dialog jumping.
-        return (
-            <div className="datapack-import-scope-loading">
-                <ProgressCircle size="M" isIndeterminate aria-label="Loading the stores" />
-            </div>
-        );
     }
     const chosen = websites.find((site) => site.code === websiteCode);
     const storeViews = chosen?.storeViews ?? [];
@@ -178,7 +165,6 @@ export function ImportForm({
     storeCode,
     onWebsiteChange,
     onStoreChange,
-    scopesLoading,
 }: {
     availableTypes: string[];
     selected: string[];
@@ -190,7 +176,6 @@ export function ImportForm({
     storeCode: string;
     onWebsiteChange: (code: string) => void;
     onStoreChange: (code: string) => void;
-    scopesLoading: boolean;
 }): React.JSX.Element {
     return (
         <>
@@ -211,7 +196,6 @@ export function ImportForm({
                 storeCode={storeCode}
                 onWebsiteChange={onWebsiteChange}
                 onStoreChange={onStoreChange}
-                isLoading={scopesLoading}
             />
             <div className="datapack-import-types">
                 {/* Beside the label, not pushed to the far right: at the wide

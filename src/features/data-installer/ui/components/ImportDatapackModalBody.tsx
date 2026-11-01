@@ -135,7 +135,6 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
                             storeCode={ctx.scope.storeCode}
                             onWebsiteChange={ctx.scope.chooseWebsite}
                             onStoreChange={ctx.scope.chooseStore}
-                            scopesLoading={ctx.scope.loading}
                         />
                     ) : null}
         </div>

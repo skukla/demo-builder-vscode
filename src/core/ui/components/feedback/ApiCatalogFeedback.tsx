@@ -52,6 +52,12 @@ export interface ApiCatalogFeedbackState {
     signInPurpose: string;
 }
 
+/** What the wait for the API list says, here and where a dialog does the waiting itself. */
+export const ADOBE_APIS_WAIT = {
+    message: 'Loading Adobe APIs',
+    helperText: 'The first load can take a few minutes',
+};
+
 /**
  * The view for the current fetch state, or null when the picker should render.
  *
@@ -71,9 +77,9 @@ export function renderApiCatalogFeedback(
         return (
             <LoadingDisplay
                 size="M" centered
-                message="Loading Adobe APIs"
+                message={ADOBE_APIS_WAIT.message}
                 subMessage={loadingStage}
-                helperText="The first load can take a few minutes"
+                helperText={ADOBE_APIS_WAIT.helperText}
             />
         );
     }

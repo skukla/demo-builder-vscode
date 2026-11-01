@@ -135,7 +135,7 @@ describe('DashboardTile', () => {
         );
 
         const corner = container.querySelector('.dashboard-tile-status') as HTMLElement;
-        expect(corner).not.toHaveClass('dashboard-tile-status--inline');
+        expect(corner.closest('.dashboard-tile-title')).toBeNull();
         expect(within(corner).getByTestId('dot')).toHaveAttribute('data-variant', 'warning');
     });
 

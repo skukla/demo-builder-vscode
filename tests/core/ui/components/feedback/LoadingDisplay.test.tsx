@@ -210,18 +210,6 @@ describe('LoadingDisplay', () => {
         });
     });
 
-    describe('Custom ClassName', () => {
-        it('applies custom className', () => {
-            const { container: _container } = renderWithProviders(
-                <LoadingDisplay message="Loading" className="custom-class" />
-            );
-            // The className is applied to the Flex element inside the status div
-            const statusDiv = screen.getByRole('status');
-            const flexElement = statusDiv.querySelector('.custom-class');
-            expect(flexElement).toBeInTheDocument();
-        });
-    });
-
     /**
      * THE THREE-ROW CONTRACT, asserted rather than assumed.
      *

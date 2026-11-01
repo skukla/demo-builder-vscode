@@ -88,7 +88,11 @@ export function ImportDatapackModal({
     // One state, not two: the provenance record only means anything alongside
     // the selection it describes, and splitting them invites an update that
     // moves one without the other.
-    const [selection, setSelection] = useState<TypeSelection>({ selected: [], auto: [] });
+    // A pack with one type has nothing to choose, so it starts ticked; a larger one is opt-in.
+    const [selection, setSelection] = useState<TypeSelection>(() => ({
+        selected: availableTypes.length === 1 ? availableTypes : [],
+        auto: [],
+    }));
     const selected = selection.selected as string[];
     const [watching, setWatching] = useState(true);
     const [resetArmed, setResetArmed] = useState(false);
@@ -309,6 +313,7 @@ export function ImportDatapackModal({
                 wide={frame.wide}
                 hideClose={frame.hideClose}
                 fitContent
+                waiting={view === 'form' && scope.loading ? {} : false}
                 onClose={close}
                 closeLabel={running ? 'Run in background' : 'Close'}
                 actionButtons={buildActions({

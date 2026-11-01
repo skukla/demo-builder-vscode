@@ -40,6 +40,12 @@ form, confirm, progress, result) shows one at a time.
 
 ## Rules
 
+**A wait shows nothing else.** While a dialog waits for what it will show, only the title, a
+medium centred spinner and the way out (Close or Cancel) appear: no fields, no text, no action
+buttons. `Modal`'s `waiting` prop does this, and eases to the content when the wait ends. A
+button doing its own work shows its spinner on itself (`isPending`) (owner, 2026-11-01, after this
+came up on several surfaces).
+
 **Status lives in the title.** A small icon before it: green done, amber needs the
 SC (including a dangerous confirm), red failed. No status boxes in the body. A
 done result with nothing else to say is just its title. Where nothing follows from

@@ -145,6 +145,13 @@ describe('ImportDatapackModal', () => {
             expect(screen.getByRole('checkbox', { name: 'Products' })).not.toBeChecked();
         });
 
+        it('starts a pack with one type ticked: there is nothing to choose', async () => {
+            renderModal({ availableTypes: ['categories'] });
+            await awaitForm();
+
+            expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
+        });
+
         it('will not start with none selected', async () => {
             renderModal();
             await awaitForm();

@@ -544,3 +544,34 @@ describe('Modal', () => {
         });
     });
 });
+
+describe('Modal: a wait shows nothing else', () => {
+    const action: ActionButton = { label: 'Import', variant: 'accent', onPress: jest.fn() };
+
+    it('shows the title, the spinner and the way out, and neither the content nor the actions', () => {
+        renderWithProvider(
+            <Modal title="Import" actionButtons={[action]} onClose={jest.fn()} waiting={{ message: 'Reading the store' }}>
+                <p>The form</p>
+            </Modal>,
+        );
+
+        expect(screen.getByRole('heading', { name: 'Import' })).toBeInTheDocument();
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.getByText('Reading the store')).toBeInTheDocument();
+        expect(screen.queryByText('The form')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    });
+
+    it('shows the content and the actions when it is not waiting', () => {
+        renderWithProvider(
+            <Modal title="Import" actionButtons={[action]} onClose={jest.fn()} waiting={false}>
+                <p>The form</p>
+            </Modal>,
+        );
+
+        expect(screen.getByText('The form')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+});

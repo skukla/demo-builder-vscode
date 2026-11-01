@@ -97,7 +97,7 @@ export function DashboardTile({
     // descendant backgrounds on hover" rule, which would otherwise blank it under the
     // pointer.
     const dot = status ? (
-        <span className={cn('dashboard-tile-status', description && 'dashboard-tile-status--inline')}>
+        <span className="dashboard-tile-status">
             <StatusDot variant={status.variant} className="tile-status-dot" testId={status.testId} />
         </span>
     ) : null;

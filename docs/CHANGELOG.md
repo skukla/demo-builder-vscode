@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **A dialog that is waiting shows only its spinner.** Import, Export, Manage APIs, Add ERP, Simulate downtime and Clear demo data no longer show part of their form, or disabled buttons, while they load. A pack with one data type starts ticked.
 - **The dashboard shows a status as a dot alone.** The word that sat beside it ("Needed", "Deploy failed") is now the hover text, and a card keeps its description with the dot beside its title.
 
 - **One Create datapack on the Data Installer screen.** "Export from this instance" and "Save from this store" are now one button, Create datapack. It asks first whether you are making a Commerce pack or an ACO pack, names the project it reads from, then opens the screen that makes that pack. The header's actions are quiet buttons with icons, and Clear demo data sits apart at the end.

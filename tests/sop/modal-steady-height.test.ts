@@ -35,7 +35,8 @@ const BRANCH = /(view === |phase === |state === |stage === |step === |mode === |
  * they are USED. Matching the bare names would match the import line too — which the
  * first version did, so deleting the floor and leaving the import passed the check.
  */
-const HOLDS = [/<SteadyHeight[\s>]/, /<CenteredFeedbackContainer[\s>]/];
+// `waiting=` counts because the shared Modal holds its own SteadyHeight around the wait.
+const HOLDS = [/<SteadyHeight[\s>]/, /<CenteredFeedbackContainer[\s>]/, /\bwaiting=\{/];
 
 const COMPONENTS = workingTreeFiles('src')
     .filter((f) => f.endsWith('.tsx'));

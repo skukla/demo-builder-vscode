@@ -322,12 +322,17 @@ describe('the redesigned target section', () => {
      * dialog jumped — but presented a control that could not be used, showing a
      * value it did not have.
      */
-    it('shows one spinner in place of both pickers while the stores load', async () => {
+    it('shows nothing but the spinner and the way out while the stores load', async () => {
         stallScopes();
-        renderModal();
+        renderModal({ availableTypes: ['categories'] });
 
-        expect(await screen.findAllByLabelText('Loading the stores')).toHaveLength(1);
+        expect(await screen.findAllByRole('progressbar')).toHaveLength(1);
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
         expect(screen.queryAllByTestId('spectrum-picker-select')).toHaveLength(0);
+        expect(screen.queryByRole('button', { name: /^import$/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^dry run$/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^remove data$/i })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
     });
 
     /** CONTROL — the swap goes both ways: pickers in, spinner out, under sentence-case labels. */
@@ -343,15 +348,6 @@ describe('the redesigned target section', () => {
     });
 
     /** The spinner carries "busy"; no field repeats it as static text. */
-    it('does not repeat the word Loading in the fields', async () => {
-        stallScopes();
-        renderModal();
-
-        await screen.findByLabelText('Loading the stores');
-
-        expect(screen.queryByText(/loading the stores/i)).not.toBeInTheDocument();
-        expect(screen.queryByText(/^loading…$/i)).not.toBeInTheDocument();
-    });
 
     /**
      * Start must not fire into an unresolved target.
@@ -361,22 +357,6 @@ describe('the redesigned target section', () => {
      * the service default (`base`/`default`) rather than the target about to
      * arrive, silently, because the request simply omits the pair.
      */
-    it('disables Start import while the target is still resolving', async () => {
-        stallScopes();
-        renderModal({ availableTypes: ['categories'] });
-
-        await screen.findByLabelText('Loading the stores');
-        await press(screen.getByRole('checkbox', { name: 'Categories' }));
-
-        // The shared Modal renders actions as div[role="button"][aria-disabled],
-        // not <button disabled>, so jest-dom's toBeDisabled() does not apply —
-        // and worse, `.not.toBeDisabled()` passes vacuously on a div. Assert the
-        // attribute, as the sibling suites do.
-        expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
-            'aria-disabled',
-            'true'
-        );
-    });
 
     /**
      * CONTROL, and the reason gating is safe at all. Targeting is OPTIONAL — an
@@ -396,7 +376,7 @@ describe('the redesigned target section', () => {
         });
         renderModal({ availableTypes: ['categories'] });
 
-        await press(await screen.findByRole('checkbox', { name: 'Categories' }));
+        await screen.findByRole('checkbox', { name: 'Categories' });
 
         await waitFor(() =>
             expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(

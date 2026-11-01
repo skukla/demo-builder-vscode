@@ -25,12 +25,10 @@
  * @module features/dashboard/ui/components/AddErpDialog
  */
 
-import { DialogContainer, Flex, Text, TextField, View } from '@adobe/react-spectrum';
+import { DialogContainer, Flex, Text, TextField } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { ErpOwnershipPicker, ruleOf, type OwnershipChoice, type StoreReadState } from './ErpOwnershipPicker';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
@@ -101,15 +99,9 @@ export function AddErpDialog({ target, takenNames, onAdd, onClose, onAssign }: A
 }
 
 /**
- * The space the wait holds: about the preview for two ERPs, the usual case, with a little room
- * above the spinner so it does not sit against the heading (owner, 2026-10-18).
- */
-const PREVIEW_SPACE = '112px';
-
-/**
  * "Products each ERP will own": one line per ERP, or where the read is. Until a name is typed
  * it shows the ERPs as they stand, not a nameless new one (owner, 2026-10-18). Shaped like its
- * siblings (the 2026-10-18 audit): one loading view, a failed read in an InlineNotice as
+ * siblings (the 2026-10-18 audit): a failed read in an InlineNotice as
  * Assign products has, the preview as lines of text as Assign products has, and the section
  * label in the house class Export uses.
  */
@@ -127,20 +119,7 @@ function AfterAdding({ store, options, added, onAssign }: {
         return previewLines(preview, rules, options.websites);
     }, [options, added]);
     let body: React.ReactNode;
-    if (store.status === 'reading') {
-        // Centred in a space about the preview's size, not pinned to the top of it
-        // (owner, 2026-10-18), so the preview arriving barely moves the dialog. The display
-        // keeps an empty line under its label, so centring alone leaves it looking high: the
-        // padding sets it lower, between the heading and the buttons.
-        body = (
-            <CenteredFeedbackContainer height={PREVIEW_SPACE}>
-                <View paddingTop="size-300">
-                    <LoadingDisplay size="M" centered message={ADD_ERP_COPY.readingStore} />
-                </View>
-            </CenteredFeedbackContainer>
-        );
-    }
-    else if (store.status === 'failed' || !lines) {
+    if (store.status === 'failed' || !lines) {
         const reason = store.status === 'failed' ? store.error : undefined;
         body = (
             <InlineNotice title={ADD_ERP_COPY.readFailed} hint={ADD_ERP_COPY.stillAdd} testId="add-erp-read-failed">
@@ -231,6 +210,7 @@ function AddErpForm({ target, takenNames, onAdd, onClose, onAssign }: AddErpDial
             title={ADD_ERP_COPY.title}
             size="M"
             fitContent
+            waiting={store.status === 'reading' ? { message: ADD_ERP_COPY.readingStore } : false}
             onClose={onClose}
             actionButtons={[{ label: ADD_ERP_COPY.add, variant: 'accent', onPress: add, isDisabled: !ready }]}
         >

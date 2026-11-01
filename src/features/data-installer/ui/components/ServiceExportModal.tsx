@@ -61,9 +61,6 @@ interface TypeChoices {
     available: string[];
     selected: string[];
     allSelected: boolean;
-    loading: boolean;
-    /** Something has actually come back — see the `!settled` guard below. */
-    settled: boolean;
     error?: string;
     onToggle: (dataType: string, isSelected: boolean) => void;
     onToggleAll: () => void;
@@ -168,6 +165,9 @@ export function ServiceExportDialog({ onClose, packType, title = 'Export a datap
                 title={title}
                 onClose={onClose}
                 closeLabel="Close"
+                // `!settled` too: `loading` starts false and the fetch runs from a useEffect, so
+                // frame 1 would otherwise draw an empty type grid.
+                waiting={!showingResult && !types.failure && (types.loading || !types.settled) ? {} : false}
                 actionButtons={
                     showingResult
                         ? [{ label: 'Back', variant: 'secondary', onPress: goBack }]
@@ -204,8 +204,6 @@ export function ServiceExportDialog({ onClose, packType, title = 'Export a datap
                                 available,
                                 selected,
                                 allSelected,
-                                loading: types.loading,
-                                settled: types.settled,
                                 error: types.failure?.message,
                                 onToggle: toggle,
                                 onToggleAll: toggleAll,
@@ -293,8 +291,6 @@ function ExportForm({
  */
 function renderTypeChoices({
     error,
-    loading,
-    settled,
     available,
     selected,
     onToggle,
@@ -305,12 +301,6 @@ function renderTypeChoices({
                 The exportable data types could not be loaded — {error}
             </p>
         );
-    }
-    // `!settled` too: `loading` starts false and the fetch runs from a useEffect,
-    // so frame 1 fell past this and drew an empty type grid before the note
-    // appeared.
-    if (loading || !settled) {
-        return <p className="datapack-export-note">Loading what can be exported</p>;
     }
     return (
         <div className="datapack-type-grid">
