@@ -300,22 +300,16 @@
     width: auto;
 }
 
-/* A tile's status: a corner dot on cards, where there is no room for words... */
+/* A tile's status is a dot, with its words on hover: a corner dot on a square tile... */
 .dashboard-tile-status {
     position: absolute;
     top: 8px;
     right: 8px;
     display: flex;
     align-items: center;
-    gap: 6px;
 }
 
-.dashboard-tile-status-text {
-    display: none;
-}
-
-/* ...and in a compact list, the dot and its word right after the label, so the
-   row says what is wrong without a hover. */
+/* ...right after the label in a compact list... */
 .dashboard-compact-list .dashboard-tile-status {
     position: static;
     margin-left: 2px;
@@ -323,43 +317,17 @@
     order: 3;
 }
 
-.dashboard-compact-list .dashboard-tile-status-text {
-    display: inline;
-    font-size: 11px;
-    white-space: nowrap;
-    /* The house status treatment, as the project and integration cards draw it
-       (owner, 2026-10-26: the dashboard's sentence case read as another font). */
-    color: var(--spectrum-global-color-gray-600);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+/* ...and beside the title on a card. */
+.dashboard-tile-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
 }
 
-/* ...and on a card, the dot and its word as the second line, in place of the
-   description. */
 .dashboard-tile-status--inline {
     position: static;
-    font-size: 11px;
-    line-height: 1.2;
-}
-
-.dashboard-tile-status--inline .dashboard-tile-status-text {
-    display: inline;
-    white-space: nowrap;
-    color: var(--spectrum-global-color-gray-600);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.dashboard-tile-status-text[data-variant='error'] {
-    color: var(--spectrum-global-color-red-600);
-}
-
-.dashboard-tile-status-text[data-variant='warning'] {
-    color: var(--spectrum-global-color-orange-600);
-}
-
-.dashboard-tile-status-text[data-variant='info'] {
-    color: var(--spectrum-global-color-blue-600);
+    flex: none;
 }
 
 /* Reset and Delete: the foot of Build, a gap above them so the two destructive

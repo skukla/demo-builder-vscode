@@ -105,62 +105,51 @@ describe('DashboardTile', () => {
         expect(screen.getByRole('button')).toBeDisabled();
     });
 
-    it('on a card, shows the dot and its word in place of the description, not in a corner', () => {
+    // Owner, 2026-11-01: a status is the dot alone, its words on hover.
+    it('on a card, keeps the description and puts the dot beside the title', () => {
         const { container } = render(
             <DashboardTile
                 label="Integrations"
                 description="Connected systems"
                 icon={icon}
                 onPress={jest.fn()}
-                status={{ variant: 'warning', tooltip: 'Needs sign-in', label: 'Needs sign-in', testId: 'dot' }}
-            />
-        );
-
-        expect(screen.queryByText('Connected systems')).not.toBeInTheDocument();
-        const line = container.querySelector('.dashboard-tile-text .dashboard-tile-status--inline');
-        expect(line).not.toBeNull();
-        expect(within(line as HTMLElement).getByTestId('dot')).toBeInTheDocument();
-        expect(within(line as HTMLElement).getByText('Needs sign-in')).toBeInTheDocument();
-        expect(screen.getAllByTestId('dot')).toHaveLength(1);
-    });
-
-    // The second line belongs to cards. A tile with no description has no second
-    // line to put the word on, so its dot and word stay in the corner overlay.
-    it('on a tile with no description, keeps a worded status in the corner', () => {
-        const { container } = render(
-            <DashboardTile
-                label="Integrations"
-                icon={icon}
-                onPress={jest.fn()}
-                status={{ variant: 'warning', tooltip: 'Needs sign-in', label: 'Needs sign-in', testId: 'dot' }}
-            />
-        );
-
-        const corner = container.querySelector('.dashboard-tile-status') as HTMLElement;
-        expect(corner).not.toBeNull();
-        expect(corner).not.toHaveClass('dashboard-tile-status--inline');
-        expect(within(corner).getByTestId('dot')).toHaveAttribute('data-variant', 'warning');
-        expect(within(corner).getByText('Needs sign-in')).toHaveAttribute('data-variant', 'warning');
-    });
-
-    // A card whose status has no word has nothing to say on its second line, so
-    // the description stays and the dot goes to the corner.
-    it('on a card, keeps the description when the status carries no word', () => {
-        const { container } = render(
-            <DashboardTile
-                label="Integrations"
-                description="Connected systems"
-                icon={icon}
-                onPress={jest.fn()}
-                status={{ variant: 'error', tooltip: 'Deploy failed', testId: 'dot' }}
+                status={{ variant: 'warning', tooltip: 'Needs sign-in', testId: 'dot' }}
             />
         );
 
         expect(screen.getByText('Connected systems')).toBeInTheDocument();
-        expect(container.querySelector('.dashboard-tile-status--inline')).toBeNull();
+        const title = container.querySelector('.dashboard-tile-title') as HTMLElement;
+        expect(within(title).getByText('Integrations')).toBeInTheDocument();
+        expect(within(title).getByTestId('dot')).toHaveAttribute('data-variant', 'warning');
+        expect(screen.getAllByTestId('dot')).toHaveLength(1);
+    });
+
+    it('on a tile with no description, keeps the dot in the corner slot', () => {
+        const { container } = render(
+            <DashboardTile
+                label="Integrations"
+                icon={icon}
+                onPress={jest.fn()}
+                status={{ variant: 'warning', tooltip: 'Needs sign-in', testId: 'dot' }}
+            />
+        );
+
         const corner = container.querySelector('.dashboard-tile-status') as HTMLElement;
-        expect(within(corner).getByTestId('dot')).toHaveAttribute('data-variant', 'error');
-        expect(corner.querySelector('.dashboard-tile-status-text')).toBeNull();
+        expect(corner).not.toHaveClass('dashboard-tile-status--inline');
+        expect(within(corner).getByTestId('dot')).toHaveAttribute('data-variant', 'warning');
+    });
+
+    it("gives a screen reader the dot's words in the tile's name, since it cannot hover", () => {
+        render(
+            <DashboardTile
+                label="Republish"
+                icon={icon}
+                onPress={jest.fn()}
+                status={{ variant: 'warning', tooltip: 'Republish needed', testId: 'dot' }}
+            />
+        );
+
+        expect(screen.getByRole('button', { name: 'Republish, Republish needed' })).toBeInTheDocument();
     });
 
     it('on a card with nothing to report, keeps the description', () => {

@@ -31,10 +31,9 @@
  * the dashboard link reached only the project's main one — so it left the
  * dashboard.
  *
- * Storefront, Build and Share are compact lists, where a status dot sits
- * beside the label with its word ("Needed", "Error") rather than in a corner.
- * An Open card with a status shows the dot and word as its second line, in
- * place of its description.
+ * A status is a dot and nothing else on the surface, and its words are on hover
+ * (owner, 2026-11-01). Storefront, Build and Share are compact lists, where the dot
+ * sits right after the label; on an Open card it sits beside the title.
  *
  * (Logs moved to the sidebar Logs utility; Rename is inline on the dashboard
  * title / project card name. Deploy Mesh retired in ADR-011 D3 Step 08 — the

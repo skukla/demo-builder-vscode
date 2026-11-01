@@ -68,12 +68,12 @@ describe('Storefront zone — the Republish tile', () => {
         expect(screen.getByTestId('republish-tile-dot')).toHaveAttribute('data-variant', 'warning');
     });
 
-    it('says "Needed" beside the label, so the dot is not left to explain itself', () => {
+    it('shows the dot and no word, the words being on hover and for a screen reader', () => {
         const { container } = render(<ActionGrid {...edsProps} demoStatus={stale} />);
 
-        const status = within(getZone(container, 'storefront')).getByText('Needed');
-        expect(status).toHaveClass('dashboard-tile-status-text');
-        expect(status).toHaveAttribute('data-variant', 'warning');
+        const zone = within(getZone(container, 'storefront'));
+        expect(zone.queryByText('Needed')).not.toBeInTheDocument();
+        expect(zone.getByRole('button', { name: /^Republish, Republish needed/ })).toBeInTheDocument();
     });
 
     it('wears NO dot when the storefront is current', () => {

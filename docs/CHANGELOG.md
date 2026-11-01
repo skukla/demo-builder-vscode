@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **The dashboard shows a status as a dot alone.** The word that sat beside it ("Needed", "Deploy failed") is now the hover text, and a card keeps its description with the dot beside its title.
 
 - **One Create datapack on the Data Installer screen.** "Export from this instance" and "Save from this store" are now one button, Create datapack. It asks first whether you are making a Commerce pack or an ACO pack, names the project it reads from, then opens the screen that makes that pack. The header's actions are quiet buttons with icons, and Clear demo data sits apart at the end.
 - **A pack's side panel is quieter.** Import is the one button; Save as file, Save store changes to this pack, Share or Stop sharing, and Remove from library are in its ⋯ menu, with the same confirmations as before. A pack's one step in the Admin is one line, "1 step left in the Admin"; Show step opens it the way the demo setup guide shows a step, with Open the Admin and Check.
