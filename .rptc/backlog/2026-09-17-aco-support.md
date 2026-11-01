@@ -160,3 +160,7 @@ storefront config).
 - 2026-10-31  docs(aco): what an ACO "Clear demo data" can and cannot do (`f85968cee`)
 - 2026-10-31  docs(aco): the live check as a checklist for the owner (`f74fa4b3e`)
 - 2026-10-31  Merge aco/aco-scrape-to-pack: ACO packs from a website (rehearsal) (`1ba2026f6`)
+- 2026-11-01  feat(aco): private view tools, Configure's view picker, and a mesh that waits to be reachable (`28b8100d2`)
+- 2026-11-01  feat(aco): the connector decides who owns the catalog, and one field names the instance (`865cb832b`)
+- 2026-11-01  fix(aco): sale prices are the price they come to, and every pack has shoppers' books (`fad12e0fb`)
+- 2026-11-01  feat(aco): MCP tools for a project's ACO instance (`75d6630b2`)
