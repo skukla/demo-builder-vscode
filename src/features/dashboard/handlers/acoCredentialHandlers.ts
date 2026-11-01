@@ -35,7 +35,7 @@ export function credentialDeps(context: HandlerContext, project: Project): AcoCr
     const { organization, projectId, workspace } = adobe;
     const authService = ServiceLocator.getAuthenticationService();
     return {
-        listOrgServices: () => createApiSubscriberClient(authService).getServicesForOrg(organization),
+        listOrgServices: (codes) => createApiSubscriberClient(authService).getServicesForOrg(organization, codes),
         setAcoApis: (codes) => reconcileExtras(context, project, codes, ACO_ADDON_ID),
         readCredential: async () => {
             const s2s = await (await authService.getEntityServices()).credentials.getS2SDeployCredentials(organization, projectId, workspace);

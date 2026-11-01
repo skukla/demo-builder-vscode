@@ -455,10 +455,13 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             'add_console_apis to find the right code — pass search to narrow it (e.g. "firefly"). ' +
             "Pass componentId for ONE integration's view: `added` becomes its own picks, and each " +
             'row carries `ownership` (baseline / mine-required / other-required / mine-optional) ' +
-            'and `requiredBy` (the integrations that need it).',
+            'and `requiredBy` (the integrations that need it). Pass profilesOf with one code to see what ' +
+            'Adobe answers for it instead: its rows and the product profiles a subscribe could choose, ' +
+            'which explains "requires selection of a product".',
         map: dashboardHandlers,
         type: 'listConsoleApis',
         inputSchema: {
+            profilesOf: z.string().min(1).optional().describe('One sdk code, to read its rows and product profiles'),
             search: z
                 .string()
                 .optional()

@@ -17,12 +17,12 @@
  * @module features/data-installer/services/aco/acoClient
  */
 
+import { AcoApiError, createAcoTokenSource, readText, sendAco, theirWords } from './acoToken';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { acoApiBase } from '@/features/components/services/acoSettings';
 import type { AcoCredential, AcoInstance } from '@/types/aco';
 
-/** Adobe IMS's token endpoint, as the ingestion docs name it. */
-export const ACO_IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v3';
+export { ACO_IMS_TOKEN_URL, AcoApiError, type AcoCallStage } from './acoToken';
 
 /** The scopes the ingestion docs' token request asks for. */
 export const ACO_INGESTION_SCOPES = 'openid,AdobeID,profile,email,commerce.aco.ingestion';
@@ -32,35 +32,14 @@ export const ACO_INGESTION_SCOPES = 'openid,AdobeID,profile,email,commerce.aco.i
  * part of `TIMEOUTS` can still import a module that imports this one.
  */
 const TIMEOUT = {
-    /** How long a token request may take. */
-    token: () => TIMEOUTS.NORMAL,
     /** How long one ingestion write may take: a batch of 100 products, sent and accepted. */
     write: () => TIMEOUTS.LONG,
     /** The wait before a retry when ACO's 429 names none. */
     rateLimit: () => TIMEOUTS.POLL.MAX,
 };
 
-/** A token this close to expiring is renewed first (the SDK's own margin, five minutes). */
-const TOKEN_MARGIN_MS = 5 * 60 * 1000;
-
 /** How many times a write refused with 429 is tried again before the 429 stands. */
 const RATE_LIMIT_RETRIES = 3;
-
-/** Which call failed: the token, or the write. */
-export type AcoCallStage = 'token' | 'ingestion';
-
-/** ACO or IMS refused a call, or never answered it. */
-export class AcoApiError extends Error {
-    constructor(
-        message: string,
-        readonly stage: AcoCallStage,
-        /** The HTTP status; undefined when nothing answered. */
-        readonly status?: number,
-    ) {
-        super(message);
-        this.name = 'AcoApiError';
-    }
-}
 
 /** A Data Ingestion API path, under the instance. */
 export type AcoIngestionPath = `/v1/catalog/${string}`;
@@ -92,40 +71,6 @@ export interface AcoClientDeps {
     sleep?: (ms: number) => Promise<void>;
 }
 
-interface Token {
-    value: string;
-    expiresAt: number;
-}
-
-async function readText(response: Response): Promise<string> {
-    try {
-        return await response.text();
-    } catch {
-        return '';
-    }
-}
-
-/** ACO's own words from a refusal: a JSON `message` or `error`, else the body as sent. */
-function theirWords(text: string): string {
-    try {
-        const body = JSON.parse(text) as { message?: unknown; error?: unknown; error_description?: unknown };
-        const said = body.message ?? body.error_description ?? body.error;
-        if (typeof said === 'string' && said !== '') return said;
-    } catch {
-        // not JSON: the text is the answer
-    }
-    return text.trim() || 'no reason given';
-}
-
-async function send(doFetch: typeof fetch, url: string, init: RequestInit, stage: AcoCallStage, what: string): Promise<Response> {
-    try {
-        return await doFetch(url, init);
-    } catch (error) {
-        const why = error instanceof Error ? error.message : String(error);
-        throw new AcoApiError(`ACO did not answer ${what}: ${why}`, stage);
-    }
-}
-
 function retryWait(response: Response): number {
     const seconds = Number(response.headers.get('retry-after'));
     return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : TIMEOUT.rateLimit();
@@ -137,47 +82,20 @@ function retryWait(response: Response): number {
  */
 export function createAcoClient(deps: AcoClientDeps): AcoClient {
     const doFetch = deps.fetch ?? fetch;
-    const now = deps.now ?? Date.now;
     const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
     const base = acoApiBase(deps.instance);
-    let token: Token | undefined;
-
-    async function bearer(): Promise<string> {
-        if (token && token.expiresAt - TOKEN_MARGIN_MS > now()) return token.value;
-        const body = new URLSearchParams({
-            grant_type: 'client_credentials',
-            client_id: deps.credential.clientId,
-            client_secret: deps.credential.clientSecret,
-            scope: ACO_INGESTION_SCOPES,
-        });
-        const init: RequestInit = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: body.toString(),
-            signal: AbortSignal.timeout(TIMEOUT.token()),
-        };
-        const response = await send(doFetch, ACO_IMS_TOKEN_URL, init, 'token', 'the token request');
-        const text = await readText(response);
-        if (!response.ok) {
-            throw new AcoApiError(`Adobe IMS refused the ACO credential (${response.status}): ${theirWords(text)}`, 'token', response.status);
-        }
-        const answer = JSON.parse(text) as { access_token?: unknown; expires_in?: unknown };
-        if (typeof answer.access_token !== 'string') throw new AcoApiError('Adobe IMS answered without a token.', 'token', response.status);
-        const life = typeof answer.expires_in === 'number' ? answer.expires_in * 1000 : 0;
-        token = { value: answer.access_token, expiresAt: now() + life };
-        return token.value;
-    }
+    const token = createAcoTokenSource({ credential: deps.credential, scopes: ACO_INGESTION_SCOPES, fetch: doFetch, now: deps.now });
 
     async function write(path: AcoIngestionPath, rows: readonly unknown[]): Promise<Response> {
         const what = `POST ${path}`;
         for (let attempt = 0; ; attempt++) {
             const init: RequestInit = {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await bearer()}` },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await token.bearer()}` },
                 body: JSON.stringify(rows),
                 signal: AbortSignal.timeout(TIMEOUT.write()),
             };
-            const response = await send(doFetch, `${base}${path}`, init, 'ingestion', what);
+            const response = await sendAco(doFetch, `${base}${path}`, init, 'ingestion', what);
             if (response.status !== 429 || attempt >= RATE_LIMIT_RETRIES) return response;
             await sleep(retryWait(response));
         }
@@ -185,7 +103,7 @@ export function createAcoClient(deps: AcoClientDeps): AcoClient {
 
     return {
         async authenticate() {
-            await bearer();
+            await token.bearer();
         },
         async post(path, rows) {
             const response = await write(path, rows);

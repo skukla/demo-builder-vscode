@@ -163,6 +163,21 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['erp', 'minutes'],
         sessionGrant: false,
     },
+    write_aco_admin: {
+        action: "Change this project's Adobe Commerce Optimizer setup",
+        consequence:
+            'Creates, changes or deletes catalog views, policies or access keys in the live instance. A storefront reading a deleted view stops working.',
+        // The mutation IS the decision; it is short, and it names what it touches.
+        target: ['mutation'],
+        sessionGrant: false,
+    },
+    write_aco_rows: {
+        action: 'Change data in Adobe Commerce Optimizer',
+        consequence:
+            "Writes these rows to the project's live instance, or deletes them. Nothing records them, so nothing but another call removes them.",
+        target: ['kind', 'remove'],
+        sessionGrant: false,
+    },
     write_commerce_rest: {
         action: 'Change data in the Commerce store',
         consequence:

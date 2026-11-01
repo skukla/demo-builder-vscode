@@ -51,6 +51,26 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'must raise this with it.',
     },
 
+    get_aco_status: {
+        bytes: 2_000,
+        why: 'A fixed shape: settings, reach and connector, each a line. 389 live with no credential (2026-11-01).',
+    },
+    write_aco_admin: {
+        bytes: 31_000,
+        why: 'ENFORCED: the tool cuts the body at 30,000 characters and declares the cut (2026-11-01).',
+    },
+    write_aco_rows: {
+        bytes: 200,
+        why: 'A fixed shape: the kind and two counts, or one refusal sentence (2026-11-01).',
+    },
+    run_aco_query: {
+        bytes: 31_000,
+        why: 'ENFORCED: the tool cuts the body at 30,000 characters and declares the cut (2026-11-01).',
+    },
+    run_aco_admin: {
+        bytes: 31_000,
+        why: 'ENFORCED: the tool cuts the body at 30,000 characters and declares the cut (2026-11-01).',
+    },
     write_commerce_rest: {
         bytes: 31_000,
         why:

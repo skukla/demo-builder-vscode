@@ -61,7 +61,7 @@ const QUERY_TIMEOUT_MS = 30_000;
  * `query`-prefixed ones both read; anything declaring `mutation` or
  * `subscription` does not.
  */
-function isReadOnlyQuery(query: string): boolean {
+export function isReadOnlyQuery(query: string): boolean {
     const stripped = query.replace(/#[^\n]*/g, '').trim();
     return !/^\s*(mutation|subscription)\b/i.test(stripped);
 }

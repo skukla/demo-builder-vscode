@@ -234,3 +234,34 @@ describe('alreadySubscribed', () => {
         expect(alreadySubscribed([{ sdkCode: 'A' }], current, new Set(['B']))).toBe(false);
     });
 });
+
+describe('ACO APIs choose their profile by the ACO instance (measured 2026-11-01)', () => {
+    const acoProfiles = [
+        { id: 'p1', productId: 'P1', name: 'Commerce AccsTenant1' },
+        { id: 'p2', productId: 'P2', name: 'Optimizer AcoTenant1' },
+    ];
+    const service = { sdkCode: 'ACO-Ingestion', name: 'ACO Ingestion', platformList: [], domainMandatory: false, licenseConfigs: acoProfiles };
+
+    it('takes the profile naming the ACO tenant, not the Commerce one', () => {
+        const [row] = buildSubscriptionList([service], [], new Set(), 'AccsTenant1', { acoTenant: 'AcoTenant1' });
+        expect(row.licenseConfigs).toEqual([{ op: 'add', id: 'p2', productId: 'P2' }]);
+    });
+
+    it('never answers with the remembered profile, which is a Commerce instance\'s', () => {
+        const remembered = { tenant: 'AccsTenant1', id: 'p1', productId: 'P1' };
+        expect(() =>
+            buildSubscriptionList([{ ...service, licenseConfigs: undefined }], [], new Set(), 'AccsTenant1', { remembered, acoTenant: 'AcoTenant1' }),
+        ).toThrow(/didn't list the product profiles for ACO Ingestion/u);
+    });
+
+    it('names the profiles on offer when none names the tenant', () => {
+        expect(() => buildSubscriptionList([service], [], new Set(), 'AccsTenant1', { acoTenant: 'Other' })).toThrow(
+            /Adobe Commerce Optimizer instance Other.*The profiles: Commerce AccsTenant1, Optimizer AcoTenant1\./su,
+        );
+    });
+
+    it('leaves a Commerce API choosing by the Commerce tenant', () => {
+        const [row] = buildSubscriptionList([{ ...service, sdkCode: 'ACCS-REST-API' }], [], new Set(), 'AccsTenant1', { acoTenant: 'AcoTenant1' });
+        expect(row.licenseConfigs).toEqual([{ op: 'add', id: 'p1', productId: 'P1' }]);
+    });
+});

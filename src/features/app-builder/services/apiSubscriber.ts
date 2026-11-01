@@ -80,6 +80,8 @@ export interface OrgTarget {
      * service that needs one (ACCS-REST-API); without it such a service is refused.
      */
     commerceTenant?: string;
+    /** The project's ACO tenant, which picks the profile for ACO's own APIs. */
+    acoTenant?: string;
     /**
      * The Commerce product profile this project already uses, for the days Adobe's
      * catalog does not list profiles at all. Only ever applied when its tenant

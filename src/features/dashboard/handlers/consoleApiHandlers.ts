@@ -67,11 +67,32 @@ function resolveProjectCatalog(project: Project): AppBuilderComponentCatalogEntr
 }
 
 /**
+ * What Adobe answers for one API code, row by row: which access kinds it offers, whether the org may
+ * use each, and the product profiles a subscribe could choose. "Requires selection of a product" means
+ * nothing without this, because the picker's list hides what it filters (found on ACO's, 2026-11-01).
+ */
+async function answerProfilesOf(orgId: string, code: string) {
+    const rows = await createApiSubscriberClient(ServiceLocator.getAuthenticationService()).getServicesForOrg(orgId, [code]);
+    return {
+        success: true,
+        data: {
+            code,
+            rows: rows.map((row) => ({
+                type: row.type,
+                enabled: row.enabled,
+                disabledReasons: row.disabledReasons,
+                profiles: (row.properties?.licenseConfigs ?? []).map((profile) => ({ name: profile.name, description: profile.description })),
+            })),
+        },
+    };
+}
+
+/**
  * Handle 'listConsoleApis' — the org's subscribable Adobe services, each
  * flagged `managed: true` when Demo Builder's reconcile union already covers
  * it (catalog requiredApis + baseline + runtime-added extras).
  */
-export const handleListConsoleApis: MessageHandler<{ componentId?: string }> = async (
+export const handleListConsoleApis: MessageHandler<{ componentId?: string; profilesOf?: string }> = async (
     context,
     payload,
 ) => {
@@ -91,6 +112,8 @@ export const handleListConsoleApis: MessageHandler<{ componentId?: string }> = a
     if (guardError) {
         return { success: false, error: guardError.error, code: guardError.code };
     }
+
+    if (payload?.profilesOf) return answerProfilesOf(orgId, payload.profilesOf);
 
     try {
         // `managed` = ALWAYS-ON only (baseline + catalog required, NO extras) — these

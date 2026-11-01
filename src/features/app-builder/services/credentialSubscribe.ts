@@ -63,6 +63,7 @@ async function reconcileCredential(
     await put(
         buildSubscriptionList(services, current, removing, target.commerceTenant, {
             remembered: target.commerceProfile,
+            acoTenant: target.acoTenant,
             onResolved: onProfileResolved,
         }),
     );

@@ -67,6 +67,7 @@ function asLicenseConfigs(profiles: ServiceLicenseConfig[]): ServiceSubscription
 export function profileForTenant(
     service: Pick<ServiceInfo, 'sdkCode' | 'name' | 'licenseConfigs'>,
     tenant: string | undefined,
+    instanceKind = 'Commerce',
 ): ServiceLicenseConfig {
     const label = service.name ?? service.sdkCode;
     const profiles = service.licenseConfigs ?? [];
@@ -74,7 +75,7 @@ export function profileForTenant(
     if (profiles.length === 1) return profiles[0];
     if (!tenant) {
         throw new Error(
-            `${label} needs a product profile, and this project has no Commerce instance ` +
+            `${label} needs a product profile, and this project has no ${instanceKind} instance ` +
                 'configured to choose one for. No API access was changed.',
         );
     }
@@ -84,9 +85,9 @@ export function profileForTenant(
     );
     if (matches.length !== 1) {
         throw new Error(
-            `${label} needs the product profile for Commerce instance ${tenant}, and ` +
+            `${label} needs the product profile for ${instanceKind} instance ${tenant}, and ` +
                 `${matches.length} of the org's ${profiles.length} profiles name it. ` +
-                'No API access was changed.',
+                `No API access was changed. The profiles: ${profiles.map((profile) => profile.name).join(', ')}.`,
         );
     }
     return matches[0];
@@ -106,6 +107,9 @@ export function profileForTenant(
  */
 const NEEDS_PROFILE = new Set(['ACCS-REST-API']);
 
+/** ACO's Console APIs (`ACO-Ingestion`, `ACO-Admin`): their profiles belong to an ACO instance. */
+const ACO_SERVICE_PREFIX = 'ACO-';
+
 /**
  * The product profile a project uses for its Commerce instance, kept on the project
  * so a later workspace does not depend on Adobe listing it again.
@@ -124,9 +128,15 @@ export interface RememberedProfile {
 export interface ProfileMemory {
     /** The profile this project already uses, when it has one. */
     remembered?: RememberedProfile;
+    /** The project's ACO tenant: a profile for ACO's APIs names it, not the Commerce one. */
+    acoTenant?: string;
     /** Called with each profile chosen from the catalog, for the caller to keep. */
     onResolved?: (profile: RememberedProfile) => void;
 }
+
+/** Adobe's catalog goes minutes at a time without profiles (2026-09-21, 2026-09-22, and ACO's 2026-11-01). */
+const profilesNotListed = (label: string) =>
+    `Adobe didn't list the product profiles for ${label} just now, so it was not added — try again. No API access was changed.`;
 
 /**
  * The profile entry for a service being ADDED — or a refusal naming why not.
@@ -152,6 +162,11 @@ function profileEntryFor(
                 'admin for your org can give you one. No API access was changed.',
         );
     }
+    if (service.sdkCode.startsWith(ACO_SERVICE_PREFIX)) {
+        // Never the remembered one: that is a Commerce instance's profile, and would grant the wrong access.
+        if (!service.licenseConfigs?.length) throw new Error(profilesNotListed(label));
+        return asLicenseConfigs([profileForTenant(service, options.acoTenant, 'Adobe Commerce Optimizer')]);
+    }
     if (service.licenseConfigs?.length) {
         const chosen = profileForTenant(service, tenant);
         // Remembered only with the tenant it was chosen for, so it can never be
@@ -168,10 +183,7 @@ function profileEntryFor(
         if (remembered && tenant && remembered.tenant === tenant) {
             return asLicenseConfigs([{ id: remembered.id, productId: remembered.productId }]);
         }
-        throw new Error(
-            `Adobe didn't list the product profiles for ${label} just now, so it was not ` +
-                'added — try again. No API access was changed.',
-        );
+        throw new Error(profilesNotListed(label));
     }
     return null;
 }

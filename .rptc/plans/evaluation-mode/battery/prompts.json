@@ -1532,5 +1532,45 @@
         ],
         "cwd": "project",
         "why": "PL-60 slice A (owner, 2026-10-31): 'From a website' turns a public listing page into an ACO pack in the SC's library. The agent reads the page with the Playwright browser (scrape-products-to-aco skill), marks every value the page did not state, and saves through the one tool; without it, it would hand-build the five ACO kinds and page them into the library over curl. Judges findability and that proposed values are named. Writes to the library, so the battery stops at the consent."
+    },
+    {
+        "id": "aco-status",
+        "prompt": "Where does this project stand with Adobe Commerce Optimizer? Is the credential working, and is Adobe's connector on?",
+        "expect": [
+            "get_aco_status"
+        ],
+        "why": "PL-60: one read that says what is set, what reaches what, and which mode the project is in, so an agent does not probe each surface."
+    },
+    {
+        "id": "aco-read-as-buyer",
+        "prompt": "What price does SKU ABC-1 show in Adobe Commerce Optimizer for the price book justrite::abc?",
+        "expect": [
+            "run_aco_query"
+        ],
+        "why": "PL-60: judges that the agent reads the catalog as a shopper would, naming the price book, rather than through Commerce."
+    },
+    {
+        "id": "aco-list-views",
+        "prompt": "List the catalog views on this project's Adobe Commerce Optimizer instance and which price books each allows.",
+        "expect": [
+            "run_aco_admin"
+        ],
+        "why": "PL-60: views can be read, so an agent never has to ask the SC to look in Studio."
+    },
+    {
+        "id": "aco-create-view",
+        "prompt": "Create a catalog view on this project's Adobe Commerce Optimizer instance called spring-sale that allows the price book main.",
+        "expect": [
+            "write_aco_admin"
+        ],
+        "why": "PL-60: writes a live instance, so the battery stops at the consent."
+    },
+    {
+        "id": "aco-write-prices",
+        "prompt": "Set the price of SKU ABC-1 to 25 in the price book main on this project's Adobe Commerce Optimizer instance.",
+        "expect": [
+            "write_aco_rows"
+        ],
+        "why": "PL-60: one row, not a pack. Writes a live instance, so the battery stops at the consent."
     }
 ]

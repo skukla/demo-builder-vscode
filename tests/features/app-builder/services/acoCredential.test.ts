@@ -1,12 +1,12 @@
 /**
- * Demo Builder makes the project's ACO ingestion credential itself (PL-60 P2): the ACO ingestion API
- * found by name in the org's own service list, subscribed on the workspace credential through the
- * one spine, the pair kept in SecretStorage; and removed in reverse, refused while an ACO pack it
+ * Demo Builder makes the project's ACO credential itself (PL-60 P2): ACO's two APIs asked for by
+ * code, subscribed on the workspace credential through the one spine, the pair kept in SecretStorage; and removed in reverse, refused while an ACO pack it
  * loaded is still in the instance.
  */
 
 import {
-    findAcoIngestionApi,
+    ACO_ADMIN_API,
+    ACO_INGESTION_API,
     removeAcoCredential,
     setUpAcoCredential,
     type AcoCredentialDeps,
@@ -15,15 +15,15 @@ import type { OrgServiceInfo } from '@/features/authentication/services/types';
 import { acoCredentialKey } from '@/features/components/services/acoCredentialStore';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
-const ACO_ROW: OrgServiceInfo = { code: 'AcoIngestionCode', name: 'Adobe Commerce Optimizer Ingestion API', type: 'entp', enabled: true };
-const OTHER: OrgServiceInfo = { code: 'GraphQLServiceSDK', name: 'API Mesh', enabled: true };
+const ACO_ROW: OrgServiceInfo = { code: 'ACO-Ingestion', name: 'Adobe Commerce Optimizer Ingestion', type: 'entp' };
+const ADMIN_ROW: OrgServiceInfo = { code: 'ACO-Admin', name: 'Adobe Commerce Optimizer Admin', type: 'entp' };
 const CREDENTIAL = { clientId: 'client-1', clientSecret: 'fake-test-pw-not-a-secret' };
 
 function deps(overrides: Partial<AcoCredentialDeps> = {}) {
     const { secrets, store } = createMockSecretStorage();
     const setAcoApis = jest.fn(async (_codes: string[]) => ({ success: true }));
     const all: AcoCredentialDeps = {
-        listOrgServices: async () => [OTHER, ACO_ROW],
+        listOrgServices: async () => [ACO_ROW, ADMIN_ROW],
         setAcoApis,
         readCredential: async () => CREDENTIAL,
         secrets,
@@ -33,34 +33,28 @@ function deps(overrides: Partial<AcoCredentialDeps> = {}) {
     return { deps: all, store, setAcoApis: all.setAcoApis as jest.Mock };
 }
 
-describe('findAcoIngestionApi', () => {
-    it('finds the API by its documented name, preferring the server-to-server row', () => {
-        const adobeId = { ...ACO_ROW, type: 'adobeid' };
-        expect(findAcoIngestionApi([OTHER, adobeId, ACO_ROW])).toBe(ACO_ROW);
-        expect(findAcoIngestionApi([adobeId])).toBe(adobeId);
-    });
-
-    it('matches the name loosely, but not a disabled row or another API', () => {
-        expect(findAcoIngestionApi([{ code: 'x', name: 'Commerce Optimizer Ingestion' }])?.code).toBe('x');
-        expect(findAcoIngestionApi([{ ...ACO_ROW, enabled: false }, OTHER])).toBeUndefined();
-        expect(findAcoIngestionApi([{ code: 'y', name: 'Adobe Commerce Optimizer Merchandising' }])).toBeUndefined();
-    });
-});
-
 describe('setUpAcoCredential', () => {
-    it('subscribes the API it found, then keeps the credential\'s pair in SecretStorage', async () => {
-        const { deps: d, store, setAcoApis } = deps();
-        await expect(setUpAcoCredential(d)).resolves.toEqual({ success: true, apiCode: 'AcoIngestionCode' });
-        expect(setAcoApis).toHaveBeenCalledWith(['AcoIngestionCode']);
+    it('asks for both APIs by code, subscribes them, then keeps the pair in SecretStorage', async () => {
+        const listOrgServices = jest.fn(async () => [ACO_ROW, ADMIN_ROW]);
+        const { deps: d, store, setAcoApis } = deps({ listOrgServices });
+        await expect(setUpAcoCredential(d)).resolves.toEqual({ success: true, apiCode: 'ACO-Ingestion', adminApiCode: 'ACO-Admin' });
+        expect(listOrgServices).toHaveBeenCalledWith([ACO_INGESTION_API, ACO_ADMIN_API]);
+        expect(setAcoApis).toHaveBeenCalledWith(['ACO-Ingestion', 'ACO-Admin']);
         expect(JSON.parse(store.get(acoCredentialKey('/projects/a')) ?? '{}')).toEqual(CREDENTIAL);
     });
 
     it('says the org offers no ACO API, and subscribes nothing', async () => {
-        const { deps: d, setAcoApis, store } = deps({ listOrgServices: async () => [OTHER] });
+        const { deps: d, setAcoApis, store } = deps({ listOrgServices: async () => [] });
         const result = await setUpAcoCredential(d);
-        expect(result).toEqual({ success: false, error: expect.stringMatching(/offers no "Adobe Commerce Optimizer Ingestion API"/u) });
+        expect(result).toEqual({ success: false, error: expect.stringMatching(/offers no Adobe Commerce Optimizer Ingestion API/u) });
         expect(setAcoApis).not.toHaveBeenCalled();
         expect(store.size).toBe(0);
+    });
+
+    it('still subscribes ingestion when the org does not offer the admin API', async () => {
+        const { deps: d, setAcoApis } = deps({ listOrgServices: async () => [ACO_ROW] });
+        await expect(setUpAcoCredential(d)).resolves.toEqual({ success: true, apiCode: 'ACO-Ingestion' });
+        expect(setAcoApis).toHaveBeenCalledWith(['ACO-Ingestion']);
     });
 
     it('keeps nothing when the subscribe is refused', async () => {

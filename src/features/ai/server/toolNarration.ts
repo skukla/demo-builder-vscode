@@ -199,6 +199,11 @@ export const TOOL_NARRATION: Record<string, string> = {
     // The ERP integration's pair (plan step 05).
     run_commerce_rest: 'Reading Commerce records',
     write_commerce_rest: 'Changing Commerce records',
+    get_aco_status: 'Checking the ACO connection',
+    run_aco_query: 'Reading the ACO catalog',
+    run_aco_admin: 'Reading the ACO setup',
+    write_aco_admin: 'Changing the ACO setup',
+    write_aco_rows: 'Changing ACO catalog data',
     get_erp_status: 'Reading the ERP status',
     get_erp_settings: "Reading an ERP's settings",
     set_erp_settings: "Changing an ERP's settings",

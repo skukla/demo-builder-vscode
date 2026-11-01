@@ -24,7 +24,7 @@ import {
     type SubscribeProgressListener,
 } from './apiSubscriber';
 import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
-import { ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
+import { ACCS_GRAPHQL_ENDPOINT, ACO_TENANT_ID } from '@/core/config/envVarKeys';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
@@ -74,11 +74,13 @@ export function subscriberTarget(
         lookupComponentConfigValue(project.componentConfigs ?? {}, ACCS_GRAPHQL_ENDPOINT),
     );
     const remembered = project.adobe?.commerceProfile;
+    const acoTenant = lookupComponentConfigValue(project.componentConfigs ?? {}, ACO_TENANT_ID);
     return {
         orgId: project.adobe?.organization ?? '',
         projectId: project.adobe?.projectId ?? '',
         workspaceId: own ?? project.adobe?.workspace ?? '',
         commerceTenant: tenant,
+        ...(acoTenant ? { acoTenant } : {}),
         // Only for the SAME Commerce instance: a project moved to another tenant must
         // not be handed the old one's profile, which would succeed and grant the wrong
         // access (see `RememberedProfile`).

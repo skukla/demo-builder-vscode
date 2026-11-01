@@ -130,7 +130,11 @@ export class AdobeOrgServices {
                     this.debugLogger.debug('[Entity Fetcher] Background org services refresh failed');
                 });
             }
-            return sdkCodes ? cached.services.filter((s) => sdkCodes.includes(s.code)) : cached.services;
+            if (!sdkCodes) return cached.services;
+            const known = cached.services.filter((s) => sdkCodes.includes(s.code));
+            // A saved list can lack a code it had minutes ago (measured with ACO's, 2026-11-01), and a
+            // subscribe that believed it would refuse an API the org has. Ask for what is missing.
+            return sdkCodes.every((code) => known.some((s) => s.code === code)) ? known : this.fetchServicesForOrg(orgId, sdkCodes);
         }
         // Only the named codes: warm, three took 1.3s where the full catalog hit Adobe's 60s
         // limit. Never cached as the full list (the picker would show 4 APIs). A full load
