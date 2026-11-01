@@ -51,7 +51,7 @@ Worth knowing for a demo: a policy filters search and listings, not a read by SK
 Left to decide or prove:
 
 1. **Whether November's ACCS release carries shared catalogs.** If it does, build only the price source.
-2. A real signing action behind the Mesh, and a buyer's page in a browser.
+2. A real signing action behind the Mesh. A buyer's own price on a real page is proved, with and without a Mesh, on a public view (`.rptc/research/aco-support/customer-pricing.md`); a private view in a browser is not.
 
 ## Not started
 

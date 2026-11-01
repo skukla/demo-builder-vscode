@@ -125,13 +125,33 @@ Run on a project's own credential, all test data then removed through the same t
 | The eds-accs-mesh as it stood | Did not forward `Authorization`, so a signed-in buyer reached Commerce as a guest |
 | The Console's ACO APIs | `ACO-Ingestion` and `ACO-Admin`. They need a product profile, the list goes minutes without any (`enabled: false`, `EXCEPTION`), and none of 35 profiles named the instance. `Default - Cloud Manager` reached it |
 
+## Proved in a browser, 2026-11-01
+
+A published storefront (Adobe's B2B template at our verified commit) on the ACCS test website, a public
+catalog view, and a pack loaded through Demo Builder. The buyer was a real customer in a company on a
+shared catalog, signed in through the storefront's own form. One test book held its own prices, the rest
+came from the pack through the book Demo Builder adds per customer group.
+
+| Who, and how the storefront reaches Commerce | Search page | Product page |
+|---|---|---|
+| Guest, direct | $100, $200 | not opened |
+| Company buyer, direct | **$60, $120** (the price filter moved too) | **$60** |
+| Company buyer, through the API Mesh with the sign-in fix | **$60, $120** | not opened |
+
+The Mesh run was checked by the page's own calls: 16 of its GraphQL calls went through the Mesh. Through the
+Mesh, a guest answers the guest book with an empty `Authorization` header, so forwarding it does not hurt guests.
+
+Removal outlasts writing here: after a pack was removed, a read by SKU was empty within two minutes and search
+still listed its products for about 15. Clear demo data lists through that same search.
+
+A browser keeps `config.json`, so a page opened before a republish goes on using the old endpoints until
+that copy expires. It reads like "the Mesh is not being used".
+
 ## Not tested
 
-**A shopper's page in a browser.** Everything above is the API a storefront calls. Nobody has watched a
-signed-in buyer's price appear on a real page.
-
-Also untested: a real signing action behind the Mesh (the test answered fixed values), and Adobe's connector
-itself, because no backend here has it on.
+A real signing action behind the Mesh (the test answered fixed values), a cart or an order on these prices
+(the test products existed only in ACO), a sign-in on a page already on screen, and Adobe's connector itself,
+because no backend here has it on.
 
 ## Sources
 
