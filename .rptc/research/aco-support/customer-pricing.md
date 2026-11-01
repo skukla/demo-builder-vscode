@@ -3,7 +3,7 @@
 Research, 2026-10-31 and 2026-11-01 (owner: "what it really takes", then "a public view alone is
 not enough for a demo"). Sources: Adobe's public docs (listed at the end), Adobe's storefront
 template at the commit we build from, and live calls to an ACO sandbox and to our own ACCS test
-store. Internal Adobe sources were read too and are deliberately not quoted here, because this
+store, the later ones through Demo Builder's own tools. Internal Adobe sources were read too and are deliberately not quoted here, because this
 repo is public; the owner has them separately. Tenant ids are left out for the same reason.
 
 ## The answer
@@ -107,14 +107,31 @@ arrives.
 - **After signing in**, a page already on screen keeps its old prices until the next page loads.
   Adobe's template emits an event for this and nothing in it listens. Read in the code, not watched.
 
+## Proved through the MCP tools, 2026-11-01
+
+Run on a project's own credential, all test data then removed through the same tools.
+
+| What | Result |
+|---|---|
+| Price books under Commerce's id format, with `::` | ACO takes them, and a view allows them |
+| A child book with no rows of its own | Inherits the parent's price, discount and tiers |
+| Discount `price: 5` on regular 50 | Reads back as a final price of 5 |
+| A company's buyer asking `catalogViewContext` on ACCS, connector off | `null`. The field exists and holds nothing, and the template reads null as "stay on the public view" |
+| A private view with no token | Refused at once: "Access key validation failed: Missing access token" |
+| The same view with an RS256 token whose only claim is `exp` | Answers |
+| A policy filtering on a product attribute | **Search honours it (1 of 3 products). A read by SKU does not (3 of 3).** So a private view gates listings and search; a holder of a valid token can still read a SKU they know |
+| A deployed API Mesh | Passes `commerceOptimizer` through and forwards the store header |
+| The same Mesh answering `Company.catalogViewContext` | **Overrides Commerce's field**, sees the real company id, leaves the price book alone. So C needs no storefront code and no change to Commerce |
+| The eds-accs-mesh as it stood | Did not forward `Authorization`, so a signed-in buyer reached Commerce as a guest |
+| The Console's ACO APIs | `ACO-Ingestion` and `ACO-Admin`. They need a product profile, the list goes minutes without any (`enabled: false`, `EXCEPTION`), and none of 35 profiles named the instance. `Default - Cloud Manager` reached it |
+
 ## Not tested
 
-**The whole loop has not run in a browser.** It needs a pack written to ACO, and the Adobe Demo
-System org does not have ACO ingestion enabled. Each link is measured separately: what Commerce
-answers, what ACO does with each header, what the template does with the setting. The price book
-names with `::` have not been written to ACO by us; Adobe's connector uses them.
+**A shopper's page in a browser.** Everything above is the API a storefront calls. Nobody has watched a
+signed-in buyer's price appear on a real page.
 
-Also untested: `commerceOptimizer` through an API Mesh, because the test project has none.
+Also untested: a real signing action behind the Mesh (the test answered fixed values), and Adobe's connector
+itself, because no backend here has it on.
 
 ## Sources
 

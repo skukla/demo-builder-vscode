@@ -25,8 +25,8 @@ would have to stand in for it. Reasoning and measurements:
    catalogs a product is in (`sharedCatalog/{id}/products` has the SKUs), so a policy can filter on
    it. Adobe's connector does the same with its own attribute.
 2. **A private view per shared catalog and store view.** Policy, one price book (a private view
-   takes exactly one) and a restricted access key. By hand in ACO Studio today. Decide whether the
-   ACO admin API is usable first: it needs a product profile the org does not have.
+   takes exactly one) and a restricted access key, all through the ACO admin API, which the project's
+   credential reaches (proved 2026-11-01).
 3. **A resolver holding the private keys.** An App Builder action reads the buyer's company,
    maps it to a view and signs an RS256 token. Keys stay in the action, never in `config.json`.
 4. **Answering the question the storefront already asks.** No storefront code is needed (corrected
@@ -34,11 +34,11 @@ would have to stand in for it. Reasoning and measurements:
    Commerce `company { catalogViewContext { catalogViewId accessToken } }` for a signed-in buyer
    and sets `AC-View-Id` and `AC-Catalog-View-Access-Token` from the answer
    (`scripts/initializers/company-switcher.js`, on when `commerce-companies-enabled` is true, which
-   CitiSignal sets). Our ACCS test store already declares that field and a public PaaS store
-   without the B2B connector does not; what it answers for a buyer is not measured. The likely
-   route is API Mesh answering that field from the action. Unproven: whether Mesh can override a
-   field Commerce already declares.
+   CitiSignal sets). On ACCS with the connector off it answers null. An API Mesh can answer it
+   instead, proved live 2026-11-01, so that is the route. A project without a mesh needs one added.
 5. **Undo.** Every view, policy, key and action has a way back, or says plainly why not.
+
+Design, including the custom pricing service as one part of it: `.rptc/plans/aco-company-catalogs/overview.md`.
 
 ## When Adobe's connector is on
 
@@ -49,8 +49,7 @@ demonstrated, would still need something to answer with a price book Commerce do
 ## Before starting
 
 Decide whether this is worth building at all: if ACCS + ACO arrives with shared catalogs, the window
-for it may be weeks. Licensing counts views times price books (100 by default), and catalog writes need ACO ingestion
-enabled in the org, which it is not today. Without that nothing here can be proved live.
+for it may be weeks. Licensing counts views times price books (100 by default).
 
 ## Shipped so far
 
