@@ -48,6 +48,8 @@ company on the test website, both deleted and confirmed gone (404) afterwards.
 | Question | Answer |
 |---|---|
 | Does ACCS answer `commerceOptimizer { priceBookId }`, despite no connector? | **Yes**, and it is the only field that type has: no view id, no token |
+| Where the storefront gets a view and token | `company { catalogViewContext { catalogViewId accessToken } }`, read in Adobe's B2B template at our verified commit. Our ACCS test store declares that field. What it answers for a buyer is not measured |
+| A public PaaS store with the base connector (Adobe's reference storefront's backend) | Same `commerceOptimizer` answer, `base::sha1("0")` for a guest. Does not declare `catalogViewContext` |
 | A guest, with the store header | `<website>::sha1("0")` |
 | A customer in group 20 | `<website>::sha1("20")` exactly |
 | **A buyer in a company on a shared catalog (group 21)** | `<website>::sha1("21")`: company to shared catalog to price book already works on ACCS |
@@ -89,8 +91,9 @@ commit already has them, behind the setting. No patch was needed.
 | **D. PaaS + ACO + Adobe's B2B connector** | The real product, automatic | Needs a PaaS store and a beta extension; not something a Demo Builder project can install today |
 
 **Recommendation:** keep A as the default for B2B demos where gating is the story, use B when ACO's
-merchandising is the story, and build C only when a demo needs both. C's storefront side would
-survive the connector arriving, because only what resolves the view changes.
+merchandising is the story, and build C only when a demo needs both. C needs no storefront code:
+Adobe's template already asks for the view and token, so only what answers changes when a connector
+arrives.
 
 ## Limits to tell an SC
 
