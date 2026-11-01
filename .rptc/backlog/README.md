@@ -479,7 +479,7 @@ each item's own file; what has already landed against an item is in its
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 | `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | active |
 
-### platform  (89)
+### platform  (90)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -549,6 +549,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-56h` | feature | └ [An imported or copied project gets its own storefront and its own Adobe project, already named](2026-10-07-import-copy-gets-its-own-everything.md) | — | med | backlog |
 | `PL-59` | feature | [A long operation should say what it is doing, not just spin](2026-09-16-progress-surface-for-long-operations.md) | — | high | built |
 | `PL-60` | feature | [Finish Adobe Commerce Optimizer (ACO) support](2026-09-17-aco-support.md) | — | high | active |
+| `PL-87` | feature | └ [Each company sees its own catalog on ACCS + ACO: private views per shared catalog](2026-11-01-aco-private-views-per-shared-catalog.md) | — | med | backlog |
 | `PL-61` | question | [What does a product profile per Commerce instance change for each SC?](2026-09-17-per-instance-commerce-profiles.md) | — | high | dropped |
 | `PL-62` | feature | [Adding something is a card, everywhere](2026-09-21-add-is-a-card.md) | — | low | built |
 | `PL-63` | fix | [The CSS baseline check refuses every push that MERGES a stylesheet change](2026-09-23-css-baseline-cannot-accept-a-merged-capture.md) | — | med | built |
@@ -720,7 +721,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*320 item(s) sit outside the A–G chain.*
+*321 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

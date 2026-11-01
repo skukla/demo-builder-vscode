@@ -42,8 +42,9 @@ group (never rendered). Live: `selectedAddons` persistence, the `configure_proje
 4. **Ingestion has delete endpoints but no list.** Reversal must be driven by what the extension
    recorded when it loaded, the same shape as `reset_datapack` walking its own files.
 5. **AB-14 (ERP prices on ACO):** per-customer prices are price books; the storefront must send
-   the buyer's price-book id after sign-in, which static `config.json` cannot do. That is a
-   storefront-block change, not a config change.
+   the buyer's price-book id after sign-in. Corrected 2026-11-01: this IS a config change. Adobe's
+   template does it when `adobe-commerce-optimizer` is true
+   (`.rptc/research/aco-support/customer-pricing.md`).
 
 ## Design gate
 
@@ -65,7 +66,7 @@ group (never rendered). Live: `selectedAddons` persistence, the `configure_proje
 | # | Decision | Recommendation |
 |---|---|---|
 | P1 | Is ACO offered in the wizard (Commerce → Catalog), or agent-only for now? | Offer it in the Catalog step, off by default, only where the package allows it — the prototypes' design |
-| P2 | What does the SC type? | Tenant id, region, sandbox/production, catalog view id, locale; price book id optional. Drop `ACO_API_KEY`, `ACO_ENVIRONMENT_ID`, `ACO_API_URL` as inputs (no soft deprecation: delete them in the same change) |
+| P2 | What does the SC type? | Tenant id, region, sandbox/production, catalog view id, locale (the optional price book id was removed 2026-11-01: the storefront replaces it with the buyer's). Drop `ACO_API_KEY`, `ACO_ENVIRONMENT_ID`, `ACO_API_URL` as inputs (no soft deprecation: delete them in the same change) |
 | P3 | Where does ACO data come from? | The Data Installer's ACO datapack family (it already exists there, and import/reset/export are built), not the bundled `commerce-demo-ingestion` tool (the local `buildright-aco` loader that used Adobe's ACO TypeScript SDK was itself archived on 2025-12-16, per its `DEPRECATED-NOTICE.md`; that is our repo, not Adobe's SDK). Then delete `ToolManager`'s ACO paths and the dead `executeCommerceCleanup` |
 | P4 | Does the extension load data itself (needs an ingestion client id + secret) or only point the storefront at ACO? | Point only, first. Loading is P3's datapack; a client secret is one more SecretStorage value to manage for no demo gain yet |
 | P5 | AB-14 per-customer prices | Separate item: a storefront block change (send the buyer's price-book id after sign-in) plus an ERP price-book writer |
