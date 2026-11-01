@@ -57,3 +57,5 @@ for it may be weeks. Licensing counts views times price books (100 by default).
 - 2026-11-01  docs(aco): private views need no storefront code, the template already asks (`255b15301`)
 - 2026-11-01  docs(aco): what was proved live, the combined plan, and the PaaS checklist (`8cfddcccf`)
 - 2026-11-01  Owner: whether November's ACCS release includes shared catalogs is unknown, so building this stays undecided. Mesh sign-in fix released on eds-accs-mesh (merged, stable moved); Console project Kukla ACO test kept for the browser test.
+- 2026-11-01  docs(aco): a buyer's own price proved on a real page, with and without a mesh (`a61d3bf9b`)
+- 2026-11-01  docs(updates): a moved tag reaches new projects, a release reaches existing ones (`11b4d24aa`)

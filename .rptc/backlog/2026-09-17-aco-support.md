@@ -164,3 +164,4 @@ storefront config).
 - 2026-11-01  feat(aco): the connector decides who owns the catalog, and one field names the instance (`865cb832b`)
 - 2026-11-01  fix(aco): sale prices are the price they come to, and every pack has shoppers' books (`fad12e0fb`)
 - 2026-11-01  feat(aco): MCP tools for a project's ACO instance (`75d6630b2`)
+- 2026-11-01  fix(aco): a project can reach its instance before it has a catalog view (`4c30298e0`)
