@@ -49,3 +49,5 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  fix(ui): a flyout waits as a dialog does, with a medium spinner and no words (`bdf9cf77f`)
 - 2026-11-02  feat(ui): a dialog's change of view is one move (`58ff89c10`)
 - 2026-11-02  fix(ui): the running import's spinner sits level in its dialog (`af9d6bf68`)
+- 2026-11-02  fix(data-installer): the pack root's note reads as a sentence (`2269591bb`)
+- 2026-11-02  feat(ui): one status icon everywhere, the wizard's set (`4cb8207e5`)
