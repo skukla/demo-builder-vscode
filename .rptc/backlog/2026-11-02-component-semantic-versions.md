@@ -29,3 +29,4 @@ carrying the fix is out.
 
 - 2026-11-02  fix(updates): one reader of releases, and no release row a component cannot apply (`a2ab6be57`)
 - 2026-11-02  docs(plans): every owned component ships as a semantic-version release (`4782e0645`)
+- 2026-11-02  feat(updates): a collaborator on early access can try a component's alpha (`87865325f`)
