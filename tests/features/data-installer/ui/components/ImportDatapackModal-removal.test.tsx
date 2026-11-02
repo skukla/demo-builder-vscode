@@ -135,7 +135,8 @@ describe('a pack Demo Builder installed: its record decides what goes', () => {
         await press(removeAll());
         await settle();
 
-        expect(screen.getByText(`${RECORDED} The ticked boxes only choose what Import installs.`)).toBeInTheDocument();
+        expect(screen.getByText(RECORDED)).toBeInTheDocument();
+        expect(screen.getByText('The ticked boxes only choose what Import installs.')).toBeInTheDocument();
     });
 
     it('needs a tick and says Remove data when there is no record: the service removes what it is sent', async () => {

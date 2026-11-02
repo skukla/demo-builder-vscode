@@ -31,7 +31,7 @@ export function StoreKindItems({ kind, page, failure, loading, picked, onChange 
             </div>
         );
     }
-    if (failure || !page) return <p className="datapack-export-note">The store&apos;s {many} could not be listed: {failure}</p>;
+    if (failure || !page) return <p className="dialog-problem text-negative">The store&apos;s {many} could not be listed: {failure}</p>;
     return (
         <>
             <StoreItemChecklist items={page.items} nouns={[one, many]} picked={picked} onChange={onChange} />

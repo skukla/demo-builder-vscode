@@ -76,7 +76,7 @@ function renderSaveNote(
     error: string | undefined,
 ): React.JSX.Element | null {
     if (error) {
-        return <p className="datapack-export-note">The file could not be saved: {error}</p>;
+        return <p className="dialog-problem text-negative">The file could not be saved: {error}</p>;
     }
     if (value?.path) {
         return (

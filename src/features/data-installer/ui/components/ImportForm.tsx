@@ -43,7 +43,7 @@ function MissingDependencies({
         // A problem note: one short line in the warning colour. This can fail a whole type, so it
         // is not a muted footnote (dialog design rules).
         <p className="dialog-problem text-notice">
-            Not in this datapack: {missing.map(dataTypeLabel).join(', ')}. One failed lookup fails a whole type.
+            Other data may need these, and this datapack has none: {missing.map(dataTypeLabel).join(', ')}.
         </p>
     );
 }

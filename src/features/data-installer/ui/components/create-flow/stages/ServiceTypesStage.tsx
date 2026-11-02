@@ -14,7 +14,7 @@ import { ToggleCards, typeCardOptions } from './ToggleCards';
 export function ServiceTypesStage({ types }: { types: TypeChoices }): React.ReactElement {
     const options = useMemo(() => typeCardOptions(types.available), [types.available]);
     if (types.error) {
-        return <p className="datapack-export-note">The exportable data types could not be loaded: {types.error}</p>;
+        return <p className="dialog-problem text-negative">The exportable data types could not be loaded: {types.error}</p>;
     }
     return (
         <>

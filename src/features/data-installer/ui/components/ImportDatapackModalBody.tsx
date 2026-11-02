@@ -19,7 +19,7 @@ import { hasMeasurableProgress, progressLabel, progressStep, summarizeProgress }
 import { DatapackResultBody } from './DatapackResultBody';
 import { ImportForm } from './ImportForm';
 import type { ResultContent } from './importResult';
-import { recordedRemovalWords } from './removalConfirm';
+import { recordedRemovalLines } from './removalConfirm';
 import { RemovalConfirmBody } from './RemovalConfirmBody';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
@@ -69,8 +69,8 @@ export function typesInSentence(labels: string[]): string {
 function ResetConfirm({ ctx }: { ctx: BodyContext }): React.JSX.Element {
     // Demo Builder's engine takes what its record lists; the service takes what is ticked.
     const deletes = ctx.recordedKinds
-        ? recordedRemovalWords(ctx.displayName, ctx.recordedKinds, ctx.selected, (kinds) => typesInSentence(kinds.map(dataTypeLabel)))
-        : `Permanently deletes ${ctx.displayName}\u2019s ${typesInSentence(ctx.selected.map(dataTypeLabel))}.`;
+        ? recordedRemovalLines(ctx.displayName, ctx.recordedKinds, ctx.selected, (kinds) => typesInSentence(kinds.map(dataTypeLabel)))
+        : [`Permanently deletes ${ctx.displayName}\u2019s ${typesInSentence(ctx.selected.map(dataTypeLabel))}.`];
     return <RemovalConfirmBody deletes={deletes} view={ctx.removal} />;
 }
 

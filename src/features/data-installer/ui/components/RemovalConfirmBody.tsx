@@ -13,11 +13,11 @@ import type { RemovalConfirmView } from '../hooks/useRemovalConfirm';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 
-export function RemovalConfirmBody({ deletes, view }: { deletes: string; view: RemovalConfirmView }): React.JSX.Element {
+export function RemovalConfirmBody({ deletes, view }: { deletes: readonly string[]; view: RemovalConfirmView }): React.JSX.Element {
     const { content, choice } = view;
     return (
         <div className="dialog-stack">
-            <LeadText>{deletes}</LeadText>
+            {deletes.map((line) => <LeadText key={line}>{line}</LeadText>)}
             {content.kind === 'read-failed' ? (
                 <LeadText>
                     Couldn&rsquo;t check whether you changed anything in it since it was installed, so any changes would be lost. {content.reason}

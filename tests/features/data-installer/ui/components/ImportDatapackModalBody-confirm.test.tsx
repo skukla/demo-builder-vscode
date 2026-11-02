@@ -66,11 +66,10 @@ describe('the removal confirmation for a pack Demo Builder installed', () => {
     it('names what its record lists in words, whichever types are ticked', () => {
         render(<ImportDatapackModalBody view="confirm-reset" ctx={ctx({ selected: ['categories'], recordedKinds: ['attribute_sets', 'categories', 'products', 'store_config'] })} />);
 
-        expect(
-            screen.getByText(
-                'Permanently deletes what ZZ Test Root DB12 installed: attribute sets, categories and products. Puts back the store settings it changed. The ticked boxes only choose what Import installs.',
-            ),
-        ).toBeInTheDocument();
+        // One consequence per line (dialog design rules), so each is its own element.
+        expect(screen.getByText('Permanently deletes what ZZ Test Root DB12 installed: attribute sets, categories and products.')).toBeInTheDocument();
+        expect(screen.getByText('Puts back the store settings it changed.')).toBeInTheDocument();
+        expect(screen.getByText('The ticked boxes only choose what Import installs.')).toBeInTheDocument();
     });
 
     it('CONTROL: names the ticks when there is no record, as the service removes those', () => {

@@ -23,7 +23,7 @@ import { screen, within } from '@testing-library/react';
 import { awaitForm, press, renderModal, resetModalMocks } from './ImportDatapackModal.testUtils';
 
 const box = (name: string) => screen.getByRole('checkbox', { name });
-const notice = () => screen.queryByText(/not in this datapack/i);
+const notice = () => screen.queryByText(/this datapack has none/i);
 
 beforeEach(() => {
     resetModalMocks();
@@ -138,7 +138,7 @@ describe('dependencies the pack does not contain', () => {
         expect(within(warning!).getByText(/customer groups/i)).toBeInTheDocument();
         // A problem note: small, orange, one short line, with the consequence kept.
         expect(warning).toHaveClass('dialog-problem', 'text-notice');
-        expect(warning).toHaveTextContent('One failed lookup fails a whole type.');
+        expect(warning).toHaveTextContent('Other data may need these, and this datapack has none:');
     });
 
     it('warns without gating — the import stays startable', async () => {

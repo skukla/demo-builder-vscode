@@ -31,7 +31,7 @@ export type ConfirmContent =
  * @param selected - what is ticked on the form
  * @param typesInWords - the record's other kinds, as the dialog design rules put them in a sentence
  */
-export function recordedRemovalWords(displayName: string, recordedKinds: readonly string[], selected: readonly string[], typesInWords: (kinds: string[]) => string): string {
+export function recordedRemovalLines(displayName: string, recordedKinds: readonly string[], selected: readonly string[], typesInWords: (kinds: string[]) => string): string[] {
     const kinds = recordedKinds.filter((kind) => kind !== STORE_CONFIG_KIND);
     const sentences = [
         kinds.length > 0 ? `Permanently deletes what ${displayName} installed: ${typesInWords(kinds)}.` : undefined,
@@ -39,7 +39,7 @@ export function recordedRemovalWords(displayName: string, recordedKinds: readonl
         recordedKinds.length === 0 ? `${displayName} has nothing left in the store to delete.` : undefined,
         selected.length > 0 && recordedKinds.some((kind) => !selected.includes(kind)) ? 'The ticked boxes only choose what Import installs.' : undefined,
     ];
-    return sentences.filter(Boolean).join(' ');
+    return sentences.filter((line): line is string => line !== undefined);
 }
 
 /** The two boxes. */

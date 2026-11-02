@@ -49,7 +49,7 @@ export function useLibraryRemoval(id: DatapackId, onRemoved?: () => void): Libra
 
     let note: React.JSX.Element | null = null;
     if (removed) note = <p className="datapack-export-note">Removed from the library.</p>;
-    else if (remove.failure) note = <p className="datapack-export-note">It could not be removed: {remove.failure.message}</p>;
+    else if (remove.failure) note = <p className="dialog-problem text-negative">It could not be removed: {remove.failure.message}</p>;
     return { start, removing: remove.loading, removed, note };
 }
 

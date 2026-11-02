@@ -18,7 +18,7 @@ export function AcoViewsStage({ aco }: { aco: AcoExportChoice }): React.ReactEle
         <>
             <span className="datapack-import-label">Store views</span>
             {options.length === 0 ? (
-                <p className="datapack-export-note">The store views could not be listed, so the pack is made for every one.</p>
+                <p className="dialog-problem text-notice">The store views could not be listed, so the pack is made for every one.</p>
             ) : (
                 <ToggleCards options={options} picked={aco.pickedViews} onToggle={aco.toggleView} />
             )}

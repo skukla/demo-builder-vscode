@@ -53,7 +53,7 @@ export function CopyToInstallerButton({
                 Copy to the Data Installer
             </Button>
             {copy.failure ? (
-                <p className="datapack-export-note">It was not copied: {copy.failure.message}</p>
+                <p className="dialog-problem text-negative">It was not copied: {copy.failure.message}</p>
             ) : null}
         </div>
     );

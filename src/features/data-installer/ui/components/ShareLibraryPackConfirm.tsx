@@ -52,7 +52,7 @@ export function ShareLibraryPackConfirm({ id, shared, onChanged, onDone }: Share
             <Button variant="secondary" onPress={onDone} isDisabled={request.loading}>
                 Cancel
             </Button>
-            {request.failure ? <p className="datapack-export-note">It could not be changed: {request.failure.message}</p> : null}
+            {request.failure ? <p className="dialog-problem text-negative">It could not be changed: {request.failure.message}</p> : null}
         </div>
     );
 }

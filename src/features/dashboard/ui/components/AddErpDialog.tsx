@@ -44,7 +44,7 @@ export const ADD_ERP_COPY = {
     title: 'Add another ERP',
     nameLabel: 'ERP name',
     afterAdding: 'Products each ERP will own',
-    readFailed: (reason?: string) => `Couldn't read the store.${reason ? ` ${reason}` : ''} You can still add the ERP.`,
+    readFailed: "Couldn't read the store. You can still add the ERP.",
     add: 'Add',
     assign: 'Assign products',
 };
@@ -119,8 +119,7 @@ function AfterAdding({ store, options, added, onAssign }: {
     }, [options, added]);
     let body: React.ReactNode;
     if (store.status === 'failed' || !lines) {
-        const reason = store.status === 'failed' ? store.error : undefined;
-        body = <p className="dialog-problem text-negative" data-testid="add-erp-read-failed">{ADD_ERP_COPY.readFailed(reason)}</p>;
+        body = <p className="dialog-problem text-negative" data-testid="add-erp-read-failed">{ADD_ERP_COPY.readFailed}</p>;
     } else {
         // Name and count on one line, so both line up down the list; the meaning on its own
         // line in the help-text size, so it never wraps mid-thought (owner, 2026-10-18).

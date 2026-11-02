@@ -259,18 +259,17 @@ describe('AddErpDialog — before and without the store', () => {
         expect(screen.getByText(PICKER_COPY.noWebsites)).toBeInTheDocument();
     });
 
-    // A note line under the preview's label, not a box, with the reason in it ONCE (the 2026-10-18
-    // audit: the reason twice with websites chosen).
-    it("a store that could not be read says why, once, in a note line; Add still works", async () => {
+    // A note line under the preview's label, not a box, and one short line: Commerce's reason stays out.
+    it("a store that could not be read says so, once, in a note line; Add still works", async () => {
         mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
         const { onAdd } = await open();
         typeName('Brand B ERP');
 
         const note = screen.getByTestId('add-erp-read-failed');
-        expect(note).toHaveTextContent("Couldn't read the store. Adobe sign-in required. You can still add the ERP.");
+        expect(note).toHaveTextContent("Couldn't read the store. You can still add the ERP.");
         expect(note).toHaveClass('dialog-problem', 'text-negative');
         fireEvent.click(websitesRadio());
-        expect(screen.getAllByText(/Adobe sign-in required\./)).toHaveLength(1);
+        expect(screen.getAllByText(/Couldn't read the store\./)).toHaveLength(1);
         fireEvent.click(attributeRadio());
         fireEvent.click(addButton());
         expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' });
