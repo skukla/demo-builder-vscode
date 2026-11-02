@@ -65,3 +65,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  feat(data-installer): Create a datapack is a guided point-and-click flow (`9c7fac877`)
 - 2026-11-02  fix(ui): the second round of dialog rules, and Create's empty cards grey up front (`56dc68ff4`)
 - 2026-11-02  fix(data-installer): Create's kinds fit without scrolling (`e1554c14d`)
+- 2026-11-02  fix(dialogs): problem lines keep their colour and fit one line (`6304d3922`)
