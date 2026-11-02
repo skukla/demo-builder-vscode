@@ -32,3 +32,4 @@ carrying the fix is out.
 - 2026-11-02  feat(updates): a collaborator on early access can try a component's alpha (`87865325f`)
 - 2026-11-02  feat(updates): meshes and App Builder components ship by release (`7a136fb7c`)
 - 2026-11-02  docs(updates): state that components ship by release (`5aa0376d5`)
+- 2026-11-02  fix(updates): a mesh folder with no git history is cloned again at its release (`8247f13be`)
