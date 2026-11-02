@@ -62,7 +62,6 @@ const REBUILT_FRESH = [
     // Only valid while the demo runs, and the rebuild stops it.
     'frontendEnvState',
     // Installed into the old component folders, which the rebuild replaces.
-    'installedInspectorSdk',
     // Statuses of what the rebuild deploys and publishes again.
     'meshStatusSummary',
     'appStatusSummary',

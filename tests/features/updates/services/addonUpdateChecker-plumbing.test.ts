@@ -3,8 +3,7 @@
  *
  * The sibling suite drives the REAL githubApiClient through a fetch fake and pins
  * the results. This one mocks the client so the ARGUMENTS are the subject: which
- * branch is asked for per library and for the Inspector SDK (the real SDK_SOURCE),
- * which libraries are refused before any request and which still get checked after
+ * branch is asked for per library, which libraries are refused before any request and which still get checked after
  * a sibling fails, what a failed or empty comparison turns into, and that a
  * throwing lookup costs only its own item.
  */
@@ -15,7 +14,6 @@ jest.mock('@/features/updates/services/githubApiClient', () => ({
 }));
 
 import { makeCheckerSecrets, makeLibrary, makeProject } from './addonUpdateChecker.testUtils';
-import { SDK_SOURCE } from '@/features/eds/services/inspectorHelpers';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { compareCommits, getLatestBranchCommit } from '@/features/updates/services/githubApiClient';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
@@ -146,87 +144,5 @@ describe('checkBlockLibraries', () => {
 
         expect(results).toEqual([{ library: fine, latestCommit: NEW, commitsBehind: 3 }]);
         expect(logger.warn).toHaveBeenCalledTimes(1);
-    });
-});
-
-describe('checkInspectorSdk', () => {
-    const installed = {
-        installedInspectorSdk: { commitSha: OLD, installedAt: '2025-01-01T00:00:00Z' },
-    };
-
-    it('asks for the SDK source branch and compares the installed SHA against it', async () => {
-        const result = await checker.checkInspectorSdk(makeProject(installed));
-
-        expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(
-            secrets,
-            SDK_SOURCE.owner,
-            SDK_SOURCE.repo,
-            SDK_SOURCE.branch
-        );
-        expect(mockCompareCommits).toHaveBeenCalledWith(
-            secrets,
-            SDK_SOURCE.owner,
-            SDK_SOURCE.repo,
-            OLD,
-            NEW
-        );
-        expect(result).toEqual({
-            hasUpdate: true,
-            currentCommit: OLD,
-            latestCommit: NEW,
-            commitsBehind: 3,
-        });
-    });
-
-    it('no SDK installed asks nothing', async () => {
-        await expect(
-            checker.checkInspectorSdk(makeProject({ installedInspectorSdk: undefined }))
-        ).resolves.toBeNull();
-
-        expect(mockGetLatestBranchCommit).not.toHaveBeenCalled();
-    });
-
-    it('a branch that cannot be read is null: a warning, no error, no comparison made', async () => {
-        mockGetLatestBranchCommit.mockResolvedValue(null);
-
-        await expect(checker.checkInspectorSdk(makeProject(installed))).resolves.toBeNull();
-
-        expect(mockCompareCommits).not.toHaveBeenCalled();
-        expect(logger.warn).toHaveBeenCalledTimes(1);
-        expect(logger.error).not.toHaveBeenCalled();
-    });
-
-    it('already at the branch head: no update, with no comparison made', async () => {
-        mockGetLatestBranchCommit.mockResolvedValue(OLD);
-
-        const result = await checker.checkInspectorSdk(makeProject(installed));
-
-        expect(result).toEqual({
-            hasUpdate: false,
-            currentCommit: OLD,
-            latestCommit: OLD,
-            commitsBehind: 0,
-        });
-        expect(mockCompareCommits).not.toHaveBeenCalled();
-    });
-
-    it('behind, but the comparison fails: still an update, zero commits behind', async () => {
-        mockCompareCommits.mockResolvedValue(null);
-
-        const result = await checker.checkInspectorSdk(makeProject(installed));
-
-        expect(result).toEqual({
-            hasUpdate: true,
-            currentCommit: OLD,
-            latestCommit: NEW,
-            commitsBehind: 0,
-        });
-    });
-
-    it('a throwing lookup answers null rather than rejecting', async () => {
-        mockGetLatestBranchCommit.mockRejectedValue(new Error('boom'));
-
-        await expect(checker.checkInspectorSdk(makeProject(installed))).resolves.toBeNull();
-        expect(logger.error).toHaveBeenCalledTimes(1);
     });
 });

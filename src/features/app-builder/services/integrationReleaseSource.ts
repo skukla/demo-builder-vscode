@@ -20,13 +20,8 @@ import {
     type SourceUpdateResult,
     type UpdateCheckResult,
 } from './integrationSourceUpdate';
+import type { ComponentRelease } from '@/core/releases/componentRelease';
 import { releasedRepoOf } from '@/core/releases/releasedRepos';
-
-/** A published release of a component. */
-export interface ComponentRelease {
-    tag: string;
-    version: string;
-}
 
 /** The newest release of `owner/repo` this user's channel accepts, or null. */
 export type ComponentReleaseReader = (repo: string) => Promise<ComponentRelease | null>;

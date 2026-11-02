@@ -57,7 +57,7 @@ function applyResult(overrides: Partial<ApplyUpdatesResult> = {}): ApplyUpdatesR
     };
 }
 
-const EMPTY = { forkSync: [], template: [], boilerplate: [], finish: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [], integration: [] };
+const EMPTY = { forkSync: [], template: [], boilerplate: [], finish: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], integration: [] };
 
 function fakeServer() {
 
@@ -183,10 +183,9 @@ describe('apply_updates', () => {
             adobeMcp: [{ packageName: '@adobe/aem-mcp', latestVersion: '3.1.0' }],
             blockLibrary: [{ library: { name: 'Bodea blocks' } }],
             blockLibraryInstall: [{ library: { name: 'Demo Builder Blocks' } }],
-            inspector: [{ y: 1 }],
             integration: [{ label: 'ERP Integration and Justrite ERP', otherOrg: false }],
         });
-        countMock.mockReturnValueOnce(9);
+        countMock.mockReturnValueOnce(8);
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -204,7 +203,6 @@ describe('apply_updates', () => {
             blockLibrary: ['Bodea blocks'],
             // Reads as an INSTALL, not an update (EDS-28).
             blockLibraryInstall: ['Demo Builder Blocks: install'],
-            inspector: 1,
             // The pair by name (AB-73); an other-org pair carries the open-the-project note.
             integration: ['ERP Integration and Justrite ERP'],
         });

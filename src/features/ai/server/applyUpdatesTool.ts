@@ -1,7 +1,7 @@
 /**
  * apply_updates (Phase 4) — check and apply available updates for the current
  * project across all categories (fork sync, template, components, Adobe MCP,
- * block libraries, inspector SDK, integration pairs): updateSelections finds
+ * block libraries, integration pairs): updateSelections finds
  * them and the headless updateApplyService applies them. It also installs a
  * block library the project has selected but never received (EDS-28). An
  * integration pair (an integration and its ERPs) with newer code is applied
@@ -55,7 +55,6 @@ function summarize(selections: UpdateSelections): Record<string, unknown> {
         blockLibraryInstall: selections.blockLibraryInstall.map((b) =>
             describePendingInstall(b.library),
         ),
-        inspector: selections.inspector.length,
         integration: selections.integration.map(describeIntegrationUpdate),
     };
 }

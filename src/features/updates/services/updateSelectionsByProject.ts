@@ -28,7 +28,6 @@ export const PROJECT_SELECTION_KINDS: readonly ProjectSelectionKind[] = [
     'component',
     'adobeMcp',
     'blockLibrary',
-    'inspector',
     'blockLibraryInstall',
     'integration',
 ];
@@ -68,7 +67,6 @@ export function selectionsWhere(selections: UpdateSelections, keep: (project: Pr
         adobeMcp: only(selections.adobeMcp),
         blockLibrary: only(selections.blockLibrary),
         blockLibraryInstall: only(selections.blockLibraryInstall),
-        inspector: only(selections.inspector),
         integration: only(selections.integration),
     };
 }

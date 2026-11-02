@@ -69,10 +69,10 @@ export interface UpdateSelections {
         project: Project;
         library: InstalledBlockLibrary;
         latestCommit: string;
+        version?: string;
     }>;
     /** Selected but not yet in the storefront (EDS-28) — an install, not an update. */
     blockLibraryInstall: BlockLibraryInstallTarget[];
-    inspector: Array<{ project: Project; latestCommit: string }>;
     /** Deployed integration pairs (an integration and its ERPs) with newer code (AB-73). */
     integration: IntegrationPairUpdate[];
 }
@@ -139,7 +139,6 @@ export async function computeUpdateSelections(
         blockLibraryInstall: projects.flatMap((project) =>
             findUninstalledBlockLibraries(project).map((library) => ({ project, library })),
         ),
-        inspector: addons.inspector,
         integration: await integration,
     };
 }
@@ -275,14 +274,13 @@ async function checkAdobeMcp(
     return found;
 }
 
-/** Block libraries and the inspector SDK: one checker, one failure per project costs both. */
+/** Block libraries: one checker, one failure per project costs both. */
 async function checkAddons(
     projects: Project[],
     { secrets, logger }: Check,
-): Promise<Pick<UpdateSelections, 'blockLibrary' | 'inspector'>> {
-    const found: Pick<UpdateSelections, 'blockLibrary' | 'inspector'> = {
+): Promise<Pick<UpdateSelections, 'blockLibrary'>> {
+    const found: Pick<UpdateSelections, 'blockLibrary'> = {
         blockLibrary: [],
-        inspector: [],
     };
     const checker = projects.length > 0 ? new AddonUpdateChecker(secrets, logger) : undefined;
     for (const project of projects) {
@@ -292,12 +290,9 @@ async function checkAddons(
                 project,
                 library: u.library,
                 latestCommit: u.latestCommit,
+                ...(u.version ? { version: u.version } : {}),
             }));
-            const insp = await checker.checkInspectorSdk(project);
             found.blockLibrary.push(...libraries);
-            if (insp?.hasUpdate) {
-                found.inspector.push({ project, latestCommit: insp.latestCommit });
-            }
         } catch (error) {
             warnFailed(logger, 'Add-on', error);
         }
@@ -333,7 +328,6 @@ export function countSelections(selections: UpdateSelections): number {
         selections.adobeMcp.length +
         selections.blockLibrary.length +
         selections.blockLibraryInstall.length +
-        selections.inspector.length +
         selections.integration.length
     );
 }

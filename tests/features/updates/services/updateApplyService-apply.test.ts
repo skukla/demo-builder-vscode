@@ -22,7 +22,6 @@ import {
     mockApplyBlockLibraryUpdateResolved,
     mockSyncFork,
     mockSyncWithTemplate,
-    mockUpdateCommitShaWithRollback,
     mockUpdateComponent,
     mockUpdateLastSyncedCommit,
     resetFakes,
@@ -501,55 +500,12 @@ describe('add-ons', () => {
         expect(ctx.logger.error).toHaveBeenCalledTimes(1);
     });
 
-    it('moves the Inspector SDK commit through the rollback-guarded helper, saving the project', async () => {
-        const ctx = makeCtx();
-        const project = edsProject();
-        const onProgress = jest.fn();
-        mockUpdateCommitShaWithRollback.mockImplementation(
-            async (_t: unknown, _s: string, save: () => Promise<void>) => save()
-        );
-
-        const res = await applyUpdatesHeadless(
-            { ...emptySelections(), inspector: [{ project, latestCommit: 'newsha' }] },
-            ctx,
-            onProgress
-        );
-
-        expect(mockUpdateCommitShaWithRollback).toHaveBeenCalledWith(
-            project.installedInspectorSdk,
-            'newsha',
-            expect.any(Function)
-        );
-        expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
-        expect(onProgress).toHaveBeenCalledWith(S.updatingAddOns.label, 'Inspector SDK in demo');
-        expect(res.addon.successCount).toBe(1);
-    });
-
-    it('a failed Inspector SDK update is recorded by project', async () => {
-        const ctx = makeCtx();
-        mockUpdateCommitShaWithRollback.mockRejectedValue(new Error('disk full'));
-
-        const res = await applyUpdatesHeadless(
-            {
-                ...emptySelections(),
-                inspector: [{ project: edsProject(), latestCommit: 'newsha' }],
-            },
-            ctx
-        );
-
-        expect(res.addon).toEqual({
-            successCount: 0,
-            failCount: 1,
-            errors: ['Inspector SDK in demo: disk full'],
-        });
-        expect(ctx.logger.error).toHaveBeenCalledTimes(1);
-    });
 });
 
 describe('totals', () => {
     it('sums successes and failures across every category', async () => {
         mockSyncFork.mockResolvedValue({ success: false, message: 'x' });
-        mockUpdateCommitShaWithRollback.mockRejectedValue(new Error('y'));
+        mockUpdateComponent.mockRejectedValue(new Error('y'));
         const project = edsProject();
 
         const res = await applyUpdatesHeadless(
@@ -564,13 +520,12 @@ describe('totals', () => {
                     { project, library: installedLibrary('Lib A'), latestCommit: 'bbb' },
                 ],
                 blockLibraryInstall: [],
-                inspector: [{ project, latestCommit: 'z' }],
                 integration: [],
             },
             makeCtx()
         );
 
-        expect(res.totalApplied).toBe(4);
+        expect(res.totalApplied).toBe(3);
         expect(res.totalFailed).toBe(2);
     });
 });

@@ -19,6 +19,8 @@ import {
     getLatestBranchCommit,
 } from './githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
+import { refOfSource } from '@/core/releases/componentRelease';
+import { releasedRepoOf } from '@/core/releases/releasedRepos';
 import { readLatestPatchesRelease, readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { isLkgSource } from '@/features/updates/services/thinLayerUpdate';
 import type { Project } from '@/types/base';
@@ -204,9 +206,22 @@ export class TemplateUpdateChecker {
         lastSyncedCommit: string,
         templateBranch = 'main',
     ): Promise<TemplateUpdateResult | null> {
-        const latestCommit = await getLatestBranchCommit(
-            this.secrets, templateOwner, templateRepo, templateBranch,
+        // A template the builder owns offers its newest release, and nothing until it has one.
+        const { ref, version } = await refOfSource(
+            { owner: templateOwner, repo: templateRepo, branch: templateBranch },
+            this.logger,
         );
+        if (!version && releasedRepoOf(`https://github.com/${templateOwner}/${templateRepo}`)) {
+            return {
+                hasUpdates: false,
+                currentCommit: lastSyncedCommit,
+                latestCommit: lastSyncedCommit,
+                commitsBehind: 0,
+                templateOwner,
+                templateRepo,
+            };
+        }
+        const latestCommit = await getLatestBranchCommit(this.secrets, templateOwner, templateRepo, ref);
         if (!latestCommit) {
             this.logger.warn(`[TemplateUpdates] Could not fetch latest commit for ${templateOwner}/${templateRepo}`);
             return null;
@@ -223,7 +238,8 @@ export class TemplateUpdateChecker {
             };
         }
 
-        return this.compareTo(templateOwner, templateRepo, lastSyncedCommit, latestCommit);
+        const compared = await this.compareTo(templateOwner, templateRepo, lastSyncedCommit, latestCommit);
+        return compared && (version ? { ...compared, release: version } : compared);
     }
 
     /**

@@ -45,6 +45,7 @@ import {
 } from './blockLibraryComponentMerge';
 import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTreeInput } from './types';
+import { refOfSource } from '@/core/releases/componentRelease';
 import type { AddedComponentEntries, LibraryVersionInfo } from '@/types/blockLibraries';
 import type { AddonSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -88,6 +89,9 @@ interface LibraryDiscoveryResult {
     files: Array<{ path: string; sha: string }>;
     /** Source repo commit SHA (for version tracking) */
     sourceCommitSha: string;
+    /** The release it was read at, for a repository that ships by release. */
+    version?: string;
+    ref?: string;
 }
 
 /** What discovery carries from one library to the next within a run. */
@@ -110,14 +114,14 @@ async function discoverAndDeduplicateLibraryBlocks(
     lib: BlockLibraryEntry,
     { seenBlocks, allBlockIds, tracker }: DiscoveryState,
 ): Promise<LibraryDiscoveryResult> {
-    const sourceFiles = await githubFileOps.listRepoFiles(
-        lib.source.owner, lib.source.repo, lib.source.branch,
-    );
+    // A library in a repository the builder owns is read at its newest release.
+    const { ref, version } = await refOfSource(lib.source);
+    const sourceFiles = await githubFileOps.listRepoFiles(lib.source.owner, lib.source.repo, ref);
 
     // Capture source repo commit SHA for version tracking
-    const { commitSha: sourceCommitSha } = await githubFileOps.getBranchInfo(
-        lib.source.owner, lib.source.repo, lib.source.branch,
-    );
+    const sourceCommitSha = version
+        ? await githubFileOps.getRefCommit(lib.source.owner, lib.source.repo, ref)
+        : (await githubFileOps.getBranchInfo(lib.source.owner, lib.source.repo, ref)).commitSha;
 
     // Discover block IDs under blocks/
     const discoveredBlocks = new Set<string>();
@@ -151,6 +155,7 @@ async function discoverAndDeduplicateLibraryBlocks(
         uniqueBlockIds,
         files: blockFiles.map(f => ({ path: f.path, sha: f.sha })),
         sourceCommitSha,
+        ...(version ? { version, ref } : {}),
     };
 }
 
@@ -217,6 +222,7 @@ export async function installBlockCollections(
             if (discovered.uniqueBlockIds.length > 0) {
                 libraryBlockFiles.push({
                     source: lib.source,
+                    ...(discovered.ref ? { ref: discovered.ref } : {}),
                     blockIds: discovered.uniqueBlockIds,
                     files: discovered.files,
                     origin: toOrigin(lib),
@@ -227,6 +233,7 @@ export async function installBlockCollections(
                     source: lib.source,
                     name: lib.name,
                     commitSha: discovered.sourceCommitSha,
+                    ...(discovered.version ? { version: discovered.version } : {}),
                     blockIds: discovered.uniqueBlockIds,
                 });
             }

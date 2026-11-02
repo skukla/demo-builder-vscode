@@ -58,7 +58,6 @@ const FOUND: FoundUpdates = {
         adobeMcp: [],
         blockLibrary: [],
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     },
     currentProjectPath: OPEN_PROJECT.path,

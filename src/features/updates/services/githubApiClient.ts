@@ -104,7 +104,7 @@ export async function fetchWithTimeout(url: string, options: RequestInit = {}): 
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch the latest commit SHA for a branch.
+ * Fetch the commit a branch or tag names.
  * Returns null on any error (graceful degradation).
  */
 export async function getLatestBranchCommit(
@@ -116,7 +116,7 @@ export async function getLatestBranchCommit(
     try {
         const headers = await buildGitHubHeaders(secrets);
         const response = await fetchWithTimeout(
-            `${GITHUB_API_BASE}/repos/${owner}/${repo}/branches/${branch}`,
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${branch}`,
             { headers },
         );
 
@@ -125,7 +125,7 @@ export async function getLatestBranchCommit(
         }
 
         const data = await response.json();
-        return data.commit?.sha ?? null;
+        return data.sha ?? null;
     } catch {
         return null;
     }

@@ -145,13 +145,6 @@ export interface Project {
     customBlockLibraries?: CustomBlockLibrary[];
     /** Installed block library snapshot — source commit SHA captured at install time */
     installedBlockLibraries?: InstalledBlockLibrary[];
-    /** Installed Demo Inspector SDK version tracking */
-    installedInspectorSdk?: {
-        /** Commit SHA of the SDK repo at install time */
-        commitSha: string;
-        /** ISO date string when SDK was installed */
-        installedAt: string;
-    };
     // Mesh staleness summary for card grid display
     meshStatusSummary?:
         | 'deployed'

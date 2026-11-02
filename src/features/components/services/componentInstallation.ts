@@ -12,8 +12,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as semver from 'semver';
-import * as vscode from 'vscode';
-import { readNewestRelease } from '@/core/releases/readNewestRelease';
+import { readComponentRelease } from '@/core/releases/componentRelease';
 import { releasedRepoOf } from '@/core/releases/releasedRepos';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
@@ -26,7 +25,6 @@ import type {
 import { ComponentInstance } from '@/types/base';
 import { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
-import type { UpdateChannel } from '@/types/releases';
 
 /**
  * Handles Git-based component installation
@@ -270,15 +268,7 @@ export class ComponentInstallation {
         }
 
         const [, owner, repo] = match;
-        const configured = vscode.workspace
-            .getConfiguration('demoBuilder')
-            .get<UpdateChannel>('updateChannel', 'stable');
-        // Who may have early access is not known here, so it stays closed.
-        const channel = configured === 'early-access' ? 'beta' : configured;
-
-        const release = await readNewestRelease(`${owner}/${repo}`, channel, {
-            logger: this.logger,
-        });
-        return release?.tag_name ?? null;
+        const release = await readComponentRelease(`${owner}/${repo}`, this.logger);
+        return release?.tag ?? null;
     }
 }

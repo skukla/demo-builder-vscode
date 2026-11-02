@@ -24,6 +24,11 @@ jest.mock('@/features/eds/services/patches/lkgReader', () => ({
     ...jest.requireActual('@/features/eds/services/patches/lkgReader'),
     readLkgSha: () => TESTED(),
 }));
+const mockRef = jest.fn();
+jest.mock('@/core/releases/componentRelease', () => ({
+    ...jest.requireActual('@/core/releases/componentRelease'),
+    refOfSource: (...args: unknown[]) => mockRef(...args),
+}));
 jest.mock('@/features/updates/services/thinLayerUpdate', () => ({
     ...jest.requireActual('@/features/updates/services/thinLayerUpdate'),
     reapplyPatchesInCheckout: jest.fn(),
@@ -93,6 +98,7 @@ beforeEach(() => {
     fs.mkdirSync(home);
     jest.clearAllMocks();
     reapply.mockResolvedValue([]);
+    mockRef.mockImplementation(async (source: { branch: string }) => ({ ref: source.branch }));
 });
 afterEach(() => {
     fs.rmSync(root, { recursive: true, force: true });
@@ -141,5 +147,42 @@ describe('a release that only changes patches', () => {
         expect(result.notes).toEqual(
             expect.arrayContaining([expect.stringContaining('a-fix')]),
         );
+    }, REAL_GIT_TIMEOUT_MS);
+});
+
+describe('a template the builder owns', () => {
+    it('merges to its newest release, not past it to what was pushed since', async () => {
+        const work = path.join(root, 'work', 'skukla/buildright-eds');
+        const base = repoWith('skukla/buildright-eds', { 'scripts/scripts.js': 'const a = 1;\n' });
+        repoWith(SC_REPO, { 'scripts/scripts.js': 'const a = 1;\n' });
+        const commitTemplate = (text: string) => {
+            fs.writeFileSync(path.join(work, 'scripts/scripts.js'), text);
+            git(work, 'commit', '-q', '-am', text);
+            git(work, 'push', '-q', bareOf('skukla/buildright-eds'), 'main');
+            return git(work, 'rev-parse', 'HEAD');
+        };
+        const released = commitTemplate('const a = 2;\n');
+        commitTemplate('const a = 3;\n');
+        mockRef.mockResolvedValue({ ref: 'v1.1.0', version: '1.1.0' });
+        const svc = service();
+        jest.spyOn(svc['github'].fileOperations, 'getRefCommit').mockResolvedValue(released);
+        const metadata = {
+            githubRepo: SC_REPO,
+            templateOwner: 'skukla',
+            templateRepo: 'buildright-eds',
+            lastSyncedCommit: base,
+        };
+        const target = createMockProject({
+            name: 'demo',
+            componentInstances: {
+                'eds-storefront': { id: 'eds-storefront', name: 'EDS', status: 'ready', metadata },
+            },
+        });
+
+        const result = await svc.syncWithTemplate(target, { strategy: 'merge' });
+
+        expect(result).toMatchObject({ success: true, syncedCommit: released });
+        expect(git(bareOf(SC_REPO), 'show', 'main:scripts/scripts.js')).toBe('const a = 2;');
+        expect(reapply).not.toHaveBeenCalled();
     }, REAL_GIT_TIMEOUT_MS);
 });

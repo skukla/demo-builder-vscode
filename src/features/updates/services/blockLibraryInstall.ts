@@ -24,6 +24,7 @@
 import { getLatestBranchCommit } from './githubApiClient';
 import { installBlockLibraryFiles, type UpdateContext } from './updateCore';
 import { COMPONENT_IDS } from '@/core/constants';
+import { refOfSource } from '@/core/releases/componentRelease';
 import {
     getBlockLibraryName,
     getBlockLibrarySource,
@@ -33,6 +34,7 @@ import {
 import type { BlockLibraryEntry } from '@/features/eds/services/blockCollectionHelpers';
 import { toInstalledBlockLibrary } from '@/features/eds/services/installedBlockLibraryRecord';
 import type { Project } from '@/types/base';
+import type { LibraryVersionInfo } from '@/types/blockLibraries';
 import type { AddonSource } from '@/types/demoPackages';
 
 /** One library to install into one project's storefront. */
@@ -173,11 +175,12 @@ export async function applyBlockLibraryInstall(
 async function versionWithNoBlocks(
     library: BlockLibraryEntry,
     ctx: UpdateContext,
-): Promise<{ name: string; source: AddonSource; commitSha: string; blockIds: string[] }> {
-    const { owner, repo, branch } = library.source;
-    const commitSha = await getLatestBranchCommit(ctx.secrets, owner, repo, branch);
+): Promise<LibraryVersionInfo> {
+    const { owner, repo } = library.source;
+    const { ref, version } = await refOfSource(library.source, ctx.logger);
+    const commitSha = await getLatestBranchCommit(ctx.secrets, owner, repo, ref);
     if (!commitSha) {
         throw new Error(`Could not read the latest commit of ${owner}/${repo}`);
     }
-    return { name: library.name, source: library.source, commitSha, blockIds: [] };
+    return { name: library.name, source: library.source, commitSha, blockIds: [], ...(version ? { version } : {}) };
 }

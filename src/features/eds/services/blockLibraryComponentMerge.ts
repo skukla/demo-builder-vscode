@@ -38,10 +38,20 @@ export type FileContentReader = Pick<GitHubFileOperations, 'getFileContent'>;
 /** Per-library block discovery result used by the merge builders */
 export interface LibraryBlockData {
     source: AddonSource;
+    /** The release its blocks were read at, so its authoring files come from the same version. */
+    ref?: string;
     blockIds: string[];
     files: Array<{ path: string; sha: string }>;
     /** The library's name and its record, for deciding missing entries */
     origin: EntryOrigin;
+}
+
+/** One of a library's authoring files, from the version its blocks came from. */
+function readLibraryFile(reader: FileContentReader, library: LibraryBlockData, name: string) {
+    const { owner, repo } = library.source;
+    return library.ref
+        ? reader.getFileContent(owner, repo, name, library.ref)
+        : reader.getFileContent(owner, repo, name);
 }
 
 /** Where the merged authoring files go, and the run's record of what was added. */
@@ -71,9 +81,7 @@ export async function buildMergedComponentDefinitionMultiSource(
     const sourceDefinitions: Array<{ def: SourceDefinition; origin: EntryOrigin }> = [];
 
     for (const libData of libraryBlockFiles) {
-        const sourceFile = await githubFileOps.getFileContent(
-            libData.source.owner, libData.source.repo, 'component-definition.json',
-        );
+        const sourceFile = await readLibraryFile(githubFileOps, libData, 'component-definition.json');
         if (!sourceFile?.content) continue;
 
         const sourceDef = JSON.parse(sourceFile.content);
@@ -234,9 +242,7 @@ export async function buildMergedComponentFiltersMultiSource(
     const collectedSubFilterIds = new Set<string>();
 
     for (const libData of libraryBlockFiles) {
-        const sourceFile = await githubFileOps.getFileContent(
-            libData.source.owner, libData.source.repo, 'component-filters.json',
-        );
+        const sourceFile = await readLibraryFile(githubFileOps, libData, 'component-filters.json');
         if (!sourceFile?.content) continue;
 
         const sourceFilters: Array<{ id: string; components: string[] }> =
@@ -318,9 +324,7 @@ export async function buildMergedComponentModelsMultiSource(
     const collectedIds = new Set<string>();
 
     for (const libData of libraryBlockFiles) {
-        const sourceFile = await githubFileOps.getFileContent(
-            libData.source.owner, libData.source.repo, 'component-models.json',
-        );
+        const sourceFile = await readLibraryFile(githubFileOps, libData, 'component-models.json');
         if (!sourceFile?.content) continue;
 
         const sourceModels: Array<{ id: string; [key: string]: unknown }> =

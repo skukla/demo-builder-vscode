@@ -68,7 +68,6 @@ export function selections(): UpdateSelections {
             latestCommit: 'b',
         })),
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     };
 }

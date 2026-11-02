@@ -42,7 +42,6 @@ const oneTemplate = (project: ReturnType<typeof createMockProject>): UpdateSelec
     adobeMcp: [],
     blockLibrary: [],
     blockLibraryInstall: [],
-    inspector: [],
     integration: [],
 });
 

@@ -48,6 +48,8 @@ export interface LibraryVersionInfo {
     source: AddonSource;
     /** Commit SHA of the source repo at installation time */
     commitSha: string;
+    /** The release it is at, for a repository that ships by release. Commit SHA stays: removal compares at it. */
+    version?: string;
     /**
      * Block IDs whose folders this library copied into the storefront (at
      * install, and by an update that copies a new one). A block in here whose

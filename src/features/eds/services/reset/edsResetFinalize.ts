@@ -14,9 +14,8 @@ import { redeployApiMesh, type MeshRedeployDeps } from './edsResetMeshHelper';
 import type { EdsResetParams, EdsResetResult } from './edsResetParams';
 import { COMPONENT_IDS } from '@/core/constants';
 import { RESET_STEP } from '@/core/utils/resetStages';
-import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import { writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
-import { lkgSourceOf } from '@/features/updates/services/thinLayerUpdate';
+import { recordPatchesReleaseOn } from '@/features/updates/services/templateSyncRelease';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -47,10 +46,7 @@ export function recordSyncedCommit(project: Project, commitSha: string | undefin
  */
 export async function recordPatchesRelease(project: Project, logger: Logger): Promise<void> {
     const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
-    const lkgSource = metadata && lkgSourceOf(metadata);
-    if (!metadata || !lkgSource) return;
-    const release = await readPatchesRelease(lkgSource, logger);
-    if (release) metadata.patchesRelease = release;
+    if (metadata) await recordPatchesReleaseOn(metadata, logger);
 }
 
 /**

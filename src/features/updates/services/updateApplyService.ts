@@ -54,7 +54,6 @@ import {
 } from '@/features/updates/services/updateApplyTemplate';
 import {
     applyBlockLibraryUpdateResolved,
-    updateCommitShaWithRollback,
     type UpdateContext,
 } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
@@ -199,7 +198,6 @@ async function applyAdobeMcp(
 
 async function applyAddons(
     blockLibraries: UpdateSelections['blockLibrary'],
-    inspector: UpdateSelections['inspector'],
     succeededTemplatePaths: Set<string>,
     ctx: UpdateContext,
     onProgress?: OnProgress,
@@ -241,28 +239,6 @@ async function applyAddons(
             result.errors.push(`${item.library.name}: ${sanitizeErrorForLogging(error as Error)}`);
             ctx.logger.error(
                 `[Updates] Failed to update block library "${item.library.name}"`,
-                error as Error,
-            );
-        }
-    }
-
-    for (const item of inspector) {
-        onProgress?.(S.updatingAddOns.label, `Inspector SDK in ${item.project.name}`);
-        try {
-            await updateCommitShaWithRollback(
-                item.project.installedInspectorSdk,
-                item.latestCommit,
-                () => ctx.stateManager.saveProject(item.project),
-            );
-            result.successCount++;
-            ctx.logger.info(`[Updates] Updated Inspector SDK in ${item.project.name}`);
-        } catch (error) {
-            result.failCount++;
-            result.errors.push(
-                `Inspector SDK in ${item.project.name}: ${sanitizeErrorForLogging(error as Error)}`,
-            );
-            ctx.logger.error(
-                `[Updates] Failed to update Inspector SDK in ${item.project.name}`,
                 error as Error,
             );
         }
@@ -340,11 +316,8 @@ async function applyProject(s: UpdateSelections, run: ApplyRun, into: Record<Cat
         applyBoilerplate(some, ctx, onProgress, policy, questions), onItem, answered));
     add('component', await eachItem('component', s.component, (some) => applyComponents(some, ctx, onProgress), onItem));
     add('adobeMcp', await eachItem('adobeMcp', s.adobeMcp, (some) => applyAdobeMcp(some, ctx, onProgress), onItem));
-    // Libraries first, then the Inspector SDK: one category, as the agent reads it.
     add('addon', await eachItem('blockLibrary', s.blockLibrary, (some) =>
-        applyAddons(some, [], succeededPaths, ctx, onProgress, questions), onItem, KEPT_BLOCKS));
-    add('addon', await eachItem('inspector', s.inspector, (some) =>
-        applyAddons([], some, succeededPaths, ctx, onProgress, questions), onItem));
+        applyAddons(some, succeededPaths, ctx, onProgress, questions), onItem, KEPT_BLOCKS));
     add('blockLibraryInstall', await eachItem('blockLibraryInstall', s.blockLibraryInstall, (some) =>
         applyBlockLibraryInstalls(some, ctx, onProgress), onItem));
     add('integration', await eachItem('integration', s.integration, (some) =>

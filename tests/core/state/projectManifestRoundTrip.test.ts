@@ -67,7 +67,6 @@ const FIELDS: { [K in keyof Required<Project>]: Decision<Project[K]> } = {
     selectedBlockLibraries: { roundTrips: ['isle5'] },
     customBlockLibraries: { roundTrips: [{ name: 'Mine', source: { owner: 'me', repo: 'blocks', branch: 'main' } }] },
     installedBlockLibraries: { ownSuite: 'projectFileLoader.test.ts' },
-    installedInspectorSdk: { notWritten: 'nothing in src/ sets it' },
     meshStatusSummary: { notWritten: 'recomputed from the keyed components on load' },
     appStatusSummary: { notWritten: 'recomputed from the keyed components on load' },
     edsStorefrontState: { roundTrips: { envVars: { A: '1' }, lastPublished: '2026-10-29T10:00:00.000Z' } },

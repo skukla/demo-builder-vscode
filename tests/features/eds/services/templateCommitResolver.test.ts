@@ -13,6 +13,7 @@ jest.mock('@/features/eds/services/patches/lkgReader', () => ({
     readLkgSha: jest.fn(),
 }));
 
+import * as vscode from 'vscode';
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
@@ -31,11 +32,11 @@ const LKG_SHA = 'abcdef0123456789abcdef0123456789abcdef01';
 const HEAD_SHA = '0123456789abcdef0123456789abcdef01234567';
 
 function githubWithHead(head: () => Promise<string | null>): {
-    github: Pick<GitHubFileOperations, 'getLatestCommitSha'>;
+    github: Pick<GitHubFileOperations, 'getLatestCommitSha' | 'getRefCommit'>;
     getLatestCommitSha: jest.Mock;
 } {
     const getLatestCommitSha = jest.fn(head);
-    return { github: { getLatestCommitSha }, getLatestCommitSha };
+    return { github: { getLatestCommitSha, getRefCommit: jest.fn() }, getLatestCommitSha };
 }
 
 beforeEach(() => {
@@ -142,5 +143,31 @@ describe('resolveTemplateCommitSha', () => {
         expect(sha).toBeUndefined();
         expect(mockReadLkgSha).not.toHaveBeenCalled();
         expect(getLatestCommitSha).not.toHaveBeenCalled();
+    });
+});
+
+describe('a template the builder owns', () => {
+    const OWNED = { templateOwner: 'skukla', templateRepo: 'buildright-eds' };
+
+    beforeEach(() => {
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: () => 'stable' });
+    });
+
+    it('is at the commit of its newest release, not its branch head', async () => {
+        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ tag_name: 'v1.1.0' }) });
+        const files = { getRefCommit: jest.fn().mockResolvedValue('released'), getLatestCommitSha: jest.fn() };
+
+        const sha = await resolveTemplateCommitSha(OWNED, files, createMockLogger());
+
+        expect(sha).toBe('released');
+        expect(files.getRefCommit).toHaveBeenCalledWith('skukla', 'buildright-eds', 'v1.1.0');
+        expect(files.getLatestCommitSha).not.toHaveBeenCalled();
+    });
+
+    it('is at its branch head until it has a first release', async () => {
+        global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
+        const files = { getRefCommit: jest.fn(), getLatestCommitSha: jest.fn().mockResolvedValue('head') };
+
+        expect(await resolveTemplateCommitSha(OWNED, files, createMockLogger())).toBe('head');
     });
 });

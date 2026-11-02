@@ -83,10 +83,13 @@ releases and the same merge.
 
 A recorded version names the base a repository last merged from, not everything in it. The SC's repository is theirs.
 
-**Block libraries, inspector, brand assets.** Ours get releases. Installing a library stays add-only. The commit is resolved
-from the tag and still recorded. Inspector: nothing writes `installedInspectorSdk`, and applying it changes no files, so
-that row is dead. Install it at a release and give it a working update, or delete the row. Bodea brand assets take the
-release of `bodea-source`.
+**Block libraries, inspector, brand assets.** Ours are read at the newest release, through one lookup (`refOfSource`,
+`src/core/releases/componentRelease.ts`). Installing a library stays add-only, and the commit is still recorded, because removal
+compares against it. The inspector's update row is removed: nothing ever wrote its record and applying it changed no files, so it
+never worked. A storefront gets the newest inspector when it is created or reset. Bodea brand assets take the release of `bodea-source`.
+
+**`buildright-eds`.** Its update check and merge use the newest release, and a reset is pinned to it. Creating a storefront from it
+still copies the template's default branch, because GitHub's template copy takes no version. The first update then reconciles it. It is hidden.
 
 **The ingestion tool** has two sources that disagree and nothing calls it. PL-60 already tracks it, and the ACO branch deletes
 the old one. Not part of this.
@@ -144,7 +147,7 @@ Each repository passes all of these before beta.153:
    components, merged on a throwaway site for storefronts, and installed for libraries and the inspector.
 4. The alpha is removed, and the project returns to where it was.
 
-The result is one table, one row per repository, kept in `.rptc/plans/component-semantic-versions/validation.md`.
+The result is one table, one row per repository: `validation.md`, beside this plan. The dry run is done; the live rows wait for the owner's go.
 
 ## Stages
 
@@ -155,13 +158,15 @@ All before beta.153. Develop keeps PL-88's commits until stage 2 replaces them.
 2. **Meshes and App Builder components move to releases,** keeping PL-88's one-step deploy, shallow clone and `mesh.json` handling.
 3. **Headless and EDS storefronts.**
 4. **Our libraries, inspector, brand assets.**
-5. **The release step and its skill,** the component counterpart of `cut-release`, with the contract check for the ERP pair. Tests to
-   run where a repository has none: `demo-inspector-sdk`, `buildright-eds`, `bodea-source`.
+5. **The release step and its skill,** `component-release`, the counterpart of `cut-release`, with the contract check for the ERP
+   pair. It takes CI's answer when a repository has one and runs local checks when it does not, so no repository needed new tests.
 6. **Validation on every repository,** as above.
 7. **Docs:** `component-version-management.md` states the opposite rule today, `src/features/updates/README.md`, and each repository's `CLAUDE.md` or `AGENTS.md`.
 
+**Early access** reaches a collaborator on every path, through one shared lookup set up at activation (`configureReleaseAccess`).
+
 **At the cut:** beta.153 ships, then the first normal release of each repository through the release step, starting with the meshes,
-then the ERP pair, then the rest. Then the fallback to `main` for our repositories is deleted.
+then the ERP pair, then the rest. Then the fallback to a branch for our repositories is deleted: `refOfSource` and the installer read a branch only while a repository has no release, and they cannot yet tell "no release" from "could not ask". Once all have one, a failed lookup must refuse instead.
 
 ## Surfaces
 

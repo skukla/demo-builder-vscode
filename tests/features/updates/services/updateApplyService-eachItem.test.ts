@@ -35,7 +35,6 @@ function mixed(): UpdateSelections {
         forkSync: [forkA, forkB],
         component: [{ project, componentId: 'eds-storefront', currentVersion: '1.0.0', latestVersion: '1.1.0', tag: 'v1.1.0' }],
         blockLibrary: [{ project, library: installedLibrary('Lib A'), latestCommit: 'bbb' }],
-        inspector: [{ project, latestCommit: 'newsha' }],
     } as UpdateSelections;
 }
 
@@ -69,7 +68,7 @@ describe('applyUpdatesHeadless, told each item', () => {
 
         expect(told).toEqual(untold);
         expect(told.totalFailed).toBe(1);
-        expect(told.totalApplied).toBe(4);
+        expect(told.totalApplied).toBe(3);
     });
 
     // One project at a time, in the order the Updates modal lists them (owner,

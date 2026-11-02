@@ -13,8 +13,8 @@ import {
     checkComponentSource,
     moveCloneToRelease,
     updateComponentSource,
-    type ComponentRelease,
 } from '@/features/app-builder/services/integrationReleaseSource';
+import type { ComponentRelease } from '@/core/releases/componentRelease';
 import type { GitRunner } from '@/features/app-builder/services/integrationSourceUpdate';
 
 /** The pre-push gate runs jest with GIT_DIR set; a test's git must not inherit it. */

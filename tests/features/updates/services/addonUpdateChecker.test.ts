@@ -1,25 +1,16 @@
 /**
  * Unit tests for AddonUpdateChecker
- * Tests block library and Inspector SDK update detection via GitHub API
+ * Tests block library update detection via GitHub API
  */
 
+import * as vscode from 'vscode';
 import {
     AddonUpdateChecker,
     BlockLibraryUpdateResult,
-    InspectorSdkUpdateResult,
 } from '@/features/updates/services/addonUpdateChecker';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { makeCheckerSecrets, makeLibrary, makeProject } from './addonUpdateChecker.testUtils';
-jest.mock('@/features/eds/services/inspectorHelpers', () => ({
-    SDK_SOURCE: {
-        owner: 'skukla',
-        repo: 'demo-inspector-sdk',
-        branch: 'main',
-        srcDir: 'src',
-        destDir: 'scripts/demo-inspector-sdk',
-    },
-}));
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -46,14 +37,14 @@ describe('AddonUpdateChecker', () => {
         branchStatus: number = 200
     ): void {
         (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
-            if (url.includes('/branches/')) {
+            if (url.includes('/commits/')) {
                 if (branchStatus !== 200) {
                     return { ok: false, status: branchStatus, json: async () => ({}) };
                 }
                 return {
                     ok: true,
                     status: 200,
-                    json: async () => ({ commit: { sha: branchSha } }),
+                    json: async () => ({ sha: branchSha }),
                 };
             }
             if (url.includes('/compare/')) {
@@ -128,68 +119,71 @@ describe('AddonUpdateChecker', () => {
     });
 
     // =========================================================================
-    // checkInspectorSdk
+    // A repository the builder owns ships by release; anything else follows its branch
     // =========================================================================
 
-    describe('checkInspectorSdk', () => {
-        it('should detect outdated SDK when SHA differs', async () => {
-            const project = makeProject({
-                installedInspectorSdk: {
-                    commitSha: 'old111',
-                    installedAt: '2025-01-01T00:00:00Z',
-                },
-            });
-            mockGitHubApi('new222', 3);
+    describe('where a library is read', () => {
+        const OWNED = { owner: 'skukla', repo: 'demo-builder-block-library', branch: 'main' };
+        const OWNED_API = 'https://api.github.com/repos/skukla/demo-builder-block-library';
 
-            const result = await checker.checkInspectorSdk(project);
-
-            expect(result).toEqual<InspectorSdkUpdateResult>({
-                hasUpdate: true,
-                currentCommit: 'old111',
-                latestCommit: 'new222',
-                commitsBehind: 3,
+        /** Answers every commit asked for, so only the code's choice of ref can decide the outcome. */
+        function mockReleaseApi(latestRelease: { status: number; body: unknown }): void {
+            (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
+                if (url.includes('/releases/latest')) {
+                    const { status, body } = latestRelease;
+                    return { ok: status === 200, status, json: async () => body };
+                }
+                if (url.includes('/commits/')) {
+                    return { ok: true, status: 200, json: async () => ({ sha: 'bbb222' }) };
+                }
+                if (url.includes('/compare/')) {
+                    return { ok: true, status: 200, json: async () => ({ ahead_by: 2 }) };
+                }
+                return { ok: false, status: 404, json: async () => ({}) };
             });
+        }
+
+        const askedFor = (): string[] => (global.fetch as jest.Mock).mock.calls.map(([url]) => String(url));
+
+        beforeEach(() => {
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: jest.fn(() => 'stable') });
         });
 
-        it('should report up-to-date SDK when SHA matches', async () => {
-            const project = makeProject({
-                installedInspectorSdk: {
-                    commitSha: 'same111',
-                    installedAt: '2025-01-01T00:00:00Z',
-                },
-            });
-            mockGitHubApi('same111');
+        it('checks an owned library at its newest release, and says which', async () => {
+            const lib = makeLibrary({ source: OWNED, commitSha: 'aaa111' });
+            mockReleaseApi({ status: 200, body: { tag_name: 'v0.2.0' } });
 
-            const result = await checker.checkInspectorSdk(project);
+            const results = await checker.checkBlockLibraries(makeProject({ installedBlockLibraries: [lib] }));
 
-            expect(result).toEqual<InspectorSdkUpdateResult>({
-                hasUpdate: false,
-                currentCommit: 'same111',
-                latestCommit: 'same111',
-                commitsBehind: 0,
-            });
+            expect(results).toStrictEqual<BlockLibraryUpdateResult[]>([
+                { library: lib, latestCommit: 'bbb222', commitsBehind: 2, version: '0.2.0' },
+            ]);
+            expect(askedFor()).toContain(`${OWNED_API}/commits/v0.2.0`);
+            expect(askedFor()).not.toContain(`${OWNED_API}/commits/main`);
         });
 
-        it('should return null when project has no SDK installed', async () => {
-            const project = makeProject({ installedInspectorSdk: undefined });
+        it('offers nothing for an owned library with no release, and reads no commit', async () => {
+            const lib = makeLibrary({ source: OWNED, commitSha: 'aaa111' });
+            mockReleaseApi({ status: 404, body: {} });
 
-            const result = await checker.checkInspectorSdk(project);
+            const results = await checker.checkBlockLibraries(makeProject({ installedBlockLibraries: [lib] }));
 
-            expect(result).toBeNull();
+            expect(results).toStrictEqual([]);
+            expect(askedFor()).toContain(`${OWNED_API}/releases/latest`);
+            expect(askedFor().filter((url) => url.includes('/commits/'))).toStrictEqual([]);
         });
 
-        it('should return null on 403 rate limit', async () => {
-            const project = makeProject({
-                installedInspectorSdk: {
-                    commitSha: 'old111',
-                    installedAt: '2025-01-01T00:00:00Z',
-                },
-            });
-            mockGitHubApi(null, 0, 403);
+        it('follows the branch of a library the builder does not own, and looks up no release', async () => {
+            const lib = makeLibrary({ commitSha: 'aaa111' });
+            mockReleaseApi({ status: 200, body: { tag_name: 'v9.9.9' } });
 
-            const result = await checker.checkInspectorSdk(project);
+            const results = await checker.checkBlockLibraries(makeProject({ installedBlockLibraries: [lib] }));
 
-            expect(result).toBeNull();
+            expect(results).toStrictEqual<BlockLibraryUpdateResult[]>([
+                { library: lib, latestCommit: 'bbb222', commitsBehind: 2 },
+            ]);
+            expect(askedFor()).toContain('https://api.github.com/repos/acme/blocks/commits/main');
+            expect(askedFor().filter((url) => url.includes('/releases'))).toStrictEqual([]);
         });
     });
 
@@ -203,8 +197,8 @@ describe('AddonUpdateChecker', () => {
         /** The compare answer's `files`, as GitHub lists them (filename, and the old name of a rename). */
         function mockCompareFiles(files: Array<{ filename: string; previous_filename?: string }> | undefined): void {
             (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
-                if (url.includes('/branches/')) {
-                    return { ok: true, status: 200, json: async () => ({ commit: { sha: 'bbb222' } }) };
+                if (url.includes('/commits/')) {
+                    return { ok: true, status: 200, json: async () => ({ sha: 'bbb222' }) };
                 }
                 if (url.includes('/compare/')) {
                     return { ok: true, status: 200, json: async () => ({ ahead_by: 1, ...(files ? { files } : {}) }) };
@@ -214,8 +208,6 @@ describe('AddonUpdateChecker', () => {
         }
 
         const libraryProject = () => makeProject({ installedBlockLibraries: [makeLibrary({ commitSha: 'aaa111' })] });
-        const sdkProject = () =>
-            makeProject({ installedInspectorSdk: { commitSha: 'aaa111', installedAt: '2025-01-01T00:00:00Z' } });
 
         it('is not a library update when only CI and package.json changed', async () => {
             mockCompareFiles([{ filename: '.github/workflows/ci.yml' }, { filename: 'package.json' }]);
@@ -246,18 +238,6 @@ describe('AddonUpdateChecker', () => {
 
             mockCompareFiles(Array.from({ length: 300 }, (_, i) => ({ filename: `docs/page-${i}.md` })));
             expect(await checker.checkBlockLibraries(libraryProject())).toHaveLength(1);
-        });
-
-        it('is not an SDK update when only files outside src/ changed', async () => {
-            mockCompareFiles([{ filename: '.github/workflows/ci.yml' }, { filename: 'src/README.md' }]);
-
-            expect(await checker.checkInspectorSdk(sdkProject())).toMatchObject({ hasUpdate: false });
-        });
-
-        it('is an SDK update when a src/ script changed', async () => {
-            mockCompareFiles([{ filename: 'src/inspector.js' }]);
-
-            expect(await checker.checkInspectorSdk(sdkProject())).toMatchObject({ hasUpdate: true, commitsBehind: 1 });
         });
     });
 });

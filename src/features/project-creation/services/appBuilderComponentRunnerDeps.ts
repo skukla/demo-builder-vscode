@@ -7,6 +7,7 @@
  */
 
 import * as vscode from 'vscode';
+import { readComponentRelease } from '@/core/releases/componentRelease';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
@@ -54,7 +55,6 @@ import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/
 import { erpRunnerDeps } from '@/features/project-creation/services/erpRunnerDeps';
 import { refreshStorefront } from '@/features/project-creation/services/storefrontRefresh';
 import { buildWorkspaceRegistryDeps } from '@/features/project-creation/services/workspaceRegistryDeps';
-import { componentReleaseReader } from '@/features/updates/services/componentReleaseReader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { ComponentRegistry } from '@/types/components';
@@ -152,7 +152,7 @@ export function buildDefaultRunnerDeps(
             shell: DEFAULT_SHELL,
             timeout: TIMEOUTS.LONG,
         });
-    const readRelease = componentReleaseReader(ctx.secrets, ctx.logger);
+    const readRelease = (repo: string) => readComponentRelease(repo, ctx.logger);
     // The signed-in identity every per-app API call carries (five callers below).
     const authFor = (project: Project) => () => resolveAppManagementAuth(project, ctx.authManager);
     return {

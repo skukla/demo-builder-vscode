@@ -3,14 +3,12 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ENV_VAR_RENAMES, mergeEnvContent, parseEnvFile } from './envMerge';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
+import type { ComponentRelease } from '@/core/releases/componentRelease';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { nodeForInstall } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import {
-    moveCloneToRelease,
-    type ComponentRelease,
-} from '@/features/app-builder/services/integrationReleaseSource';
+import { moveCloneToRelease } from '@/features/app-builder/services/integrationReleaseSource';
 import type { SourceUpdateResult } from '@/features/app-builder/services/integrationSourceUpdate';
 import type { ComponentInstance, Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';

@@ -204,6 +204,7 @@ without producing a signal.
 **Skills are invoked, not transcribed.** A backticked skill name in a plan, doc, or step (e.g. "run `gate`") is an instruction to INVOKE that skill — not a shell command to reproduce from memory. Reproducing the steps by hand silently skips the rules in the skill's body; the 2026-07-30 dream run found a whole feature delivered this way, hand-running a scoped lint and missing `gate` §6's whole-repo lint that CI enforces.
 
 - `gate` — inner-loop quality gate (scoped jest + tsc + eslint) · `cut-release` — VSIX beta release
+- `component-release` — publish a version of a component the builder owns: a push reaches no SC, a release does. Refuses a bad version, empty notes, an unpushed HEAD, failing checks, and an ERP pair that disagrees on its contract; dry by default
 - `worktree-setup` — create/relocate a worktree correctly + copy the one still-ignored .claude file (settings.local.json — permissions; hooks/skills/settings.json now travel via git) + start the preview loop
 - `adobe-org-context` — canonical IMS org/auth model; use for ANY org guard or org-mismatch work
 - `eds-publish-and-config` — Helix/DA.live/Config Service auth+scoping traps · `eds-dropin-vendoring` — dropin delivery / import map / B2B template rules

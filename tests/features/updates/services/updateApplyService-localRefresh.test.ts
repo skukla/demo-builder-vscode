@@ -105,6 +105,9 @@ describe('local storefront refresh after an apply', () => {
             blockLibraryInstall: [{ project, library: { name: 'Demo Team Blocks', source: { owner: 'acme', repo: 'blocks', branch: 'main' } } }],
         };
 
+        // Installing no block records the source's current commit, which is read from GitHub.
+        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ sha: 'abc' }) });
+
         await applyUpdatesHeadless(selections, makeCtx());
 
         expect(mockRefreshLocalStorefronts).toHaveBeenCalledWith([project], expect.anything(), undefined, undefined);

@@ -23,6 +23,7 @@ import {
     mockReadLatestPatchesRelease,
     mockReadLkgSha,
 } from './templateUpdateChecker.testUtils';
+import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -317,5 +318,37 @@ describe('the patches release', () => {
 
         expect(result?.hasUpdates).toBe(false);
         expect(result).not.toHaveProperty('release');
+    });
+});
+
+/** A template the builder owns ships by release, as buildright does. A push to it reaches nobody. */
+describe('a forked storefront whose template the builder owns', () => {
+    const owned = () =>
+        makeProject({ templateOwner: 'skukla', templateRepo: 'buildright-eds', lastSyncedCommit: OLD_SHA });
+    const checker = () => new TemplateUpdateChecker(createMockSecretStorage().secrets, mockLogger);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: () => 'stable' });
+    });
+
+    it('offers nothing while it has no release, whatever its branch holds', async () => {
+        global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
+
+        const result = await checker().checkForUpdates(owned());
+
+        expect(result?.hasUpdates).toBe(false);
+        expect(mockGetLatestBranchCommit).not.toHaveBeenCalled();
+    });
+
+    it('compares against the commit of its newest release, and names it', async () => {
+        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ tag_name: 'v1.1.0' }) });
+        mockGetLatestBranchCommit.mockResolvedValue(NEW_SHA);
+        mockCompareCommits.mockResolvedValue({ ahead_by: 2 });
+
+        const result = await checker().checkForUpdates(owned());
+
+        expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(expect.anything(), 'skukla', 'buildright-eds', 'v1.1.0');
+        expect(result).toMatchObject({ hasUpdates: true, release: '1.1.0', commitsBehind: 2 });
     });
 });

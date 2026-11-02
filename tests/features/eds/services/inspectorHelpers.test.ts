@@ -8,7 +8,12 @@
  * (`storefrontCodeBlocks.ts`), which every install path runs after this.
  */
 
-import { generateInspectorTreeEntries, installInspectorTagging } from '@/features/eds/services/inspectorHelpers';
+import * as vscode from 'vscode';
+import {
+    generateInspectorTreeEntries,
+    installInspectorTagging,
+    SDK_SOURCE,
+} from '@/features/eds/services/inspectorHelpers';
 import { createMockGithub } from '../../../helpers/githubFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -27,7 +32,34 @@ function github(files: Record<string, string>) {
     );
 }
 
+// SDK_SOURCE is a repository the builder owns, so vendoring it asks GitHub for its newest release.
+function latestRelease(status: number, body: unknown = {}): void {
+    global.fetch = jest.fn().mockResolvedValue({ ok: status === 200, status, json: async () => body });
+}
+
+beforeEach(() => {
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: jest.fn(() => 'stable') });
+    latestRelease(404);
+});
+
 describe('generateInspectorTreeEntries', () => {
+    it('vendors the SDK at its newest release', async () => {
+        latestRelease(200, { tag_name: 'v1.2.0' });
+        const gh = github({});
+
+        await generateInspectorTreeEntries(gh, 'me', 'store', undefined, createMockLogger());
+
+        expect(gh.listRepoFiles).toHaveBeenCalledWith(SDK_SOURCE.owner, SDK_SOURCE.repo, 'v1.2.0');
+    });
+
+    it('vendors its branch while it has no release', async () => {
+        const gh = github({});
+
+        await generateInspectorTreeEntries(gh, 'me', 'store', undefined, createMockLogger());
+
+        expect(gh.listRepoFiles).toHaveBeenCalledWith(SDK_SOURCE.owner, SDK_SOURCE.repo, SDK_SOURCE.branch);
+    });
+
     it('vendors the SDK and writes the init script, and never reads or writes delayed.js', async () => {
         const gh = github({ 'scripts/delayed.js': '// add delayed functionality here\n', '.eslintignore': '' });
 

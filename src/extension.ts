@@ -8,6 +8,7 @@ import { describeBuildInfo, readBuildInfo } from '@/core/build/buildInfo';
 import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
+import { configureReleaseAccess } from '@/core/releases/componentRelease';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
@@ -108,6 +109,8 @@ import {
 } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener';
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
+import { isRepoCollaborator } from '@/features/updates/services/collaboratorGate';
+import { buildGitHubHeaders } from '@/features/updates/services/githubApiClient';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Project } from '@/types/base';
 import type { AgentWorkingProject } from '@/types/handlers';
@@ -212,6 +215,13 @@ export async function activate(context: vscode.ExtensionContext) {
             .getConfiguration('demoBuilder')
             .get<boolean>('ai.enableThirdPartyTools', true),
     );
+
+    // Who may have a component's early release, and the token its lookups carry: code reading a
+    // component's release holds neither, and without this they stay closed and anonymous.
+    configureReleaseAccess({
+        earlyAccessAllowed: () => isRepoCollaborator(context.secrets, logger),
+        headers: () => buildGitHubHeaders(context.secrets),
+    });
 
     // Name the build BEFORE anything else can fail: with several checkouts on one
     // machine, F5 binds to whichever window had focus, and "which dist/ is this?"

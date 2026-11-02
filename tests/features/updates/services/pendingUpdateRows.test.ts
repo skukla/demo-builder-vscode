@@ -41,7 +41,6 @@ function empty(): UpdateSelections {
         adobeMcp: [],
         blockLibrary: [],
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     };
 }
@@ -115,7 +114,6 @@ describe('toPendingUpdateRows', () => {
             blockLibraryInstall: [
                 { project: bodea, library: { name: 'Bodea Blocks', source: library.source } },
             ],
-            inspector: [{ project: bodea, latestCommit: 'y' }],
             integration: [pair(bodea, false)],
         };
 
@@ -126,7 +124,6 @@ describe('toPendingUpdateRows', () => {
             ['Bodea', 'eds-storefront', '6.0.0 → 6.1.0', true],
             ['Bodea', 'Adobe MCP', '1.0.0 → 1.1.0', true],
             ['Bodea', 'Demo Builder Blocks', LIVE, true],
-            ['Bodea', 'Demo Inspector SDK', 'Newer version', true],
             ['Bodea', 'Bodea Blocks', 'install, updates the live site', true],
             ['Bodea', 'ERP Integration and Justrite ERP', 'Newer version, redeploys to Adobe', false],
         ]);
@@ -135,6 +132,19 @@ describe('toPendingUpdateRows', () => {
     // Applying a pair deploys it to the live Adobe workspace, and nothing asks first: the
     // tick IS the confirmation, so the SC gives it rather than finds it given (owner,
     // 2026-10-20). Unticked is not locked: it can be ticked.
+    it('says which version a block library moves to, for one that ships by release', () => {
+        const [row] = toPendingUpdateRows(
+            {
+                ...empty(),
+                blockLibrary: [{ project: bodea, library, latestCommit: 'x', version: '0.2.0' }],
+            },
+            undefined,
+            undefined,
+        );
+
+        expect(row.detail).toBe('version 0.2.0, updates the live site');
+    });
+
     it('says which version a storefront moves to, when the release can be read', () => {
         const [row] = toPendingUpdateRows(
             { ...empty(), template: [{ project: bodea, version: '1.2.0' }] },
@@ -252,7 +262,6 @@ describe('toPendingUpdateRows', () => {
                 library,
                 latestCommit: 'x',
             })),
-            inspector: [{ project: justrite, latestCommit: 'y' }],
         };
 
         const ids = toPendingUpdateRows(sel, { current: '1', latest: '2' }, undefined).map(

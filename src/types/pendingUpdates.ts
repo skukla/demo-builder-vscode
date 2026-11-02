@@ -24,7 +24,6 @@ export type PendingUpdateKind =
     | 'adobeMcp'
     | 'blockLibrary'
     | 'blockLibraryInstall'
-    | 'inspector'
     | 'integration';
 
 /** One update the SC can tick. */

@@ -71,6 +71,8 @@ export interface BlockLibraryUpdateTarget {
     project: Project;
     library: InstalledBlockLibrary;
     latestCommit: string;
+    /** The release it moves to, for a repository that ships by release. */
+    version?: string;
 }
 
 /**
@@ -148,6 +150,7 @@ export async function applyBlockLibraryUpdateResolved(
     // A block this update copied is the library's from now on, so deleting its
     // folder later stays deleted too.
     lib.blockIds = [...new Set([...lib.blockIds, ...(version?.blockIds ?? [])])];
+    if (item.version) lib.version = item.version;
     await updateCommitShaWithRollback(lib, item.latestCommit, () =>
         ctx.stateManager.saveProject(item.project),
     );

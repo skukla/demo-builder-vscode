@@ -27,7 +27,6 @@ function selections(): UpdateSelections {
         adobeMcp: [],
         blockLibrary: [],
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     };
 }

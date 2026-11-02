@@ -1773,6 +1773,10 @@
           "type": "string",
           "description": "Commit SHA of the source repo at installation time"
         },
+        "version": {
+          "type": "string",
+          "description": "The release it is at, for a repository that ships by release. Commit SHA stays: removal compares at it."
+        },
         "blockIds": {
           "type": "array",
           "items": {

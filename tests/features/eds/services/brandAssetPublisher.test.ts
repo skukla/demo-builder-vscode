@@ -13,6 +13,7 @@
  * `brandAssetPublisher.testUtils.ts`.
  */
 
+import * as vscode from 'vscode';
 import {
     publishBrandAssets,
     BRAND_ASSETS_MARKER_START,
@@ -33,7 +34,7 @@ import {
 } from './brandAssetPublisher.testUtils';
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { PREREQUISITE_CHECK: 15000, NORMAL: 15000 },
+    TIMEOUTS: { PREREQUISITE_CHECK: 15000, NORMAL: 15000, QUICK: 5000 },
 }));
 
 describe('publishBrandAssets', () => {
@@ -54,10 +55,34 @@ describe('publishBrandAssets', () => {
 
             const urls = fetchMock.mock.calls.map((c) => String(c[0]));
             expect(urls).toContain(
-                'https://raw.githubusercontent.com/skukla/bodea-source/main/styles/bodea-theme.css'
+                'https://raw.githubusercontent.com/acme/brand-source/main/styles/bodea-theme.css'
             );
             expect(urls).toContain(
-                'https://raw.githubusercontent.com/skukla/bodea-source/main/scripts/bodea-customer-group.js'
+                'https://raw.githubusercontent.com/acme/brand-source/main/scripts/bodea-customer-group.js'
+            );
+            expect(urls.filter((url) => url.includes('/releases'))).toStrictEqual([]);
+        });
+
+        it('fetches from a repository the builder owns at its newest release', async () => {
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: jest.fn(() => 'stable') });
+            const fetchMock = mockSourceFetch();
+            const sourceFile = fetchMock.getMockImplementation() as (url: string) => Promise<unknown>;
+            fetchMock.mockImplementation(async (url: string) =>
+                url.endsWith('/releases/latest')
+                    ? { ok: true, status: 200, json: async () => ({ tag_name: 'v1.0.0' }) }
+                    : sourceFile(url)
+            );
+
+            await publishBrandAssets(
+                { ...CONFIG, source: { owner: 'skukla', repo: 'bodea-source', branch: 'main' } },
+                asOps(makeBrandAssetGithub()),
+                repoOwner,
+                repoName,
+                logger
+            );
+
+            expect(fetchMock.mock.calls.map((c) => String(c[0]))).toContain(
+                'https://raw.githubusercontent.com/skukla/bodea-source/v1.0.0/styles/bodea-theme.css'
             );
         });
 

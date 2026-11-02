@@ -121,14 +121,14 @@ describe('githubApiClient', () => {
         it('should return commit SHA on success', async () => {
             mockFetch.mockResolvedValueOnce({
                 ok: true,
-                json: async () => ({ commit: { sha: 'abc123' } }),
+                json: async () => ({ sha: 'abc123' }),
             });
 
             const sha = await getLatestBranchCommit(mockSecrets, 'owner', 'repo', 'main');
 
             expect(sha).toBe('abc123');
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.github.com/repos/owner/repo/branches/main',
+                'https://api.github.com/repos/owner/repo/commits/main',
                 expect.objectContaining({ headers: expect.any(Object) })
             );
         });

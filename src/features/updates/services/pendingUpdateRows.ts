@@ -91,9 +91,11 @@ const PROJECT_KINDS: { [K in ProjectSelectionKind]: (entry: UpdateSelections[K][
             ? `${a.currentVersion} → ${a.latestVersion}`
             : `version ${a.latestVersion}`,
     }),
-    blockLibrary: (b) => ({ label: b.library.name, detail: LIVE_SITE_DETAIL }),
+    blockLibrary: (b) => ({
+        label: b.library.name,
+        detail: b.version ? `version ${b.version}, ${LIVE_SITE}` : LIVE_SITE_DETAIL,
+    }),
     blockLibraryInstall: (b) => ({ label: b.library.name, detail: `install, ${LIVE_SITE}` }),
-    inspector: () => ({ label: 'Demo Inspector SDK', detail: NEWER }),
     integration: (p) => ({
         label: p.label,
         detail: `${pairVersions(p.releases) ?? NEWER}, redeploys to Adobe`,
@@ -235,7 +237,6 @@ export function selectionsForIds(
             adobeMcp: pick('adobeMcp', selections.adobeMcp),
             blockLibrary: pick('blockLibrary', selections.blockLibrary),
             blockLibraryInstall: pick('blockLibraryInstall', selections.blockLibraryInstall),
-            inspector: pick('inspector', selections.inspector),
             integration: pick('integration', selections.integration, (p) => !p.otherOrg),
         },
     };

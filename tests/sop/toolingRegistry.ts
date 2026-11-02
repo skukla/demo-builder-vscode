@@ -508,6 +508,7 @@ const AUTHORING: readonly Instrument[] = (
     [
         ['gate', 'the inner-loop quality gate: scoped jest + tsc + eslint'],
         ['cut-release', 'the VSIX beta release process'],
+        ['component-release', 'publish a version of a component the builder owns, after every check'],
         ['worktree-setup', 'create/relocate a worktree and start the preview loop'],
         ['adobe-org-context', 'the canonical IMS org/auth model for any org guard'],
         ['eds-publish-and-config', 'Helix/DA.live/Config Service auth and scoping traps'],

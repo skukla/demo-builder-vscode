@@ -186,3 +186,42 @@ describe('applyBlockLibraryUpdateResolved — hand deletions (EDS-36)', () => {
         expect(fileOps.commitTreeToBranch).not.toHaveBeenCalled();
     });
 });
+
+describe('applyBlockLibraryUpdateResolved: the release a library moved to', () => {
+    const toRelease = (project: Project, lib: InstalledBlockLibrary) => ({
+        project,
+        library: lib,
+        latestCommit: 'new',
+        version: '0.2.0',
+    });
+
+    it('records it on the library when the update runs', async () => {
+        const lib = record();
+        const project = edsProject(lib);
+        const ctx = makeCtx();
+
+        await applyBlockLibraryUpdateResolved(toRelease(project, lib), 'enabled', ctx);
+
+        expect(project.installedBlockLibraries?.[0]).toMatchObject({ version: '0.2.0', commitSha: 'new' });
+        expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
+    });
+
+    it('does not record it when sync is disabled: the library\'s files did not move', async () => {
+        const lib = record();
+        const project = edsProject(lib);
+
+        await applyBlockLibraryUpdateResolved(toRelease(project, lib), 'disabled', makeCtx());
+
+        expect(project.installedBlockLibraries?.[0]).not.toHaveProperty('version');
+        expect(project.installedBlockLibraries?.[0].syncDisabledMarker).toBeDefined();
+    });
+
+    it('records none for a library that follows its branch', async () => {
+        const lib = record();
+        const project = edsProject(lib);
+
+        await applyBlockLibraryUpdateResolved({ project, library: lib, latestCommit: 'new' }, 'enabled', makeCtx());
+
+        expect(project.installedBlockLibraries?.[0]).not.toHaveProperty('version');
+    });
+});
