@@ -467,7 +467,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Update an integration or API mesh to the newest code on its GitHub branch: fetch it ' +
+            'Update an integration or API mesh to its newest release (or, for a repository the ' +
+            'builder does not own, its GitHub branch): fetch it ' +
             '(fast-forward only), install its dependencies, redeploy, and upgrade the app in ' +
             'Commerce. An integration and its ERP update as a pair from either id: each with ' +
             'newer code is updated, the ERP first. Also works on one whose last deploy failed, and ' +
@@ -489,8 +490,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         // so it is not a pure read.
         readOnly: false,
         description:
-            'Check which deployed integrations, ERPs and API meshes have newer code on their GitHub ' +
-            'branch, code an earlier update fetched but never deployed, or a version Commerce ' +
+            'Check which deployed integrations, ERPs and API meshes have a newer release (or, for a ' +
+            'repository the builder does not own, newer code on its GitHub branch), code an earlier ' +
+            'update fetched but never deployed, or a version Commerce ' +
             'does not have installed. Records the answer where the ' +
             'integration cards read it. Changes no files and deploys nothing.',
         map: dashboardHandlers,

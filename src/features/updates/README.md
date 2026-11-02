@@ -1,7 +1,7 @@
 # Updates
 
-Pulls extension and Headless storefront updates from GitHub Releases. An API Mesh updates from its branch, by the
-integration update check.
+Pulls extension and Headless storefront updates from GitHub Releases. A mesh, ERP or integration in a repository the
+builder owns updates to its newest release, by the integration update check.
 
 ## Check for Updates: the notification checks, the modal replaces the picker (PL-80)
 
@@ -238,7 +238,7 @@ so nothing under `updates/services` reaches into the dashboard's handlers.
 ## Related
 
 - [component-version-management.md](../../../docs/architecture/component-version-management.md)
-  — the floating stable-tag model that decouples component updates from extension releases
+  — how each component ships by release, independently of extension releases
 
 ## Conventions that bind this
 

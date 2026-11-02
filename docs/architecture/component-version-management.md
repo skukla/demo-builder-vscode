@@ -1,30 +1,37 @@
 # Component version management
 
-Components update independently of the extension. A mesh fix ships without anyone
-installing a new VSIX.
+Components update independently of the extension, and in the same way: **a push reaches no SC until
+it is released.** Every repository the builder owns ships as a GitHub Release with a semantic version
+(`RELEASED_REPOS`, `src/core/releases/releasedRepos.ts`, checked against the catalogs by a test).
+Repositories it does not own are not ours to release, so they keep following their branch.
+
+The plan this is being built to, with what is still to move: `.rptc/plans/component-semantic-versions/overview.md`.
 
 ## How a component moves
 
 | Component | Installs from | Offered an update when | Applying it |
 |---|---|---|---|
-| API Mesh | A branch (`main`) | The branch has commits the clone lacks | Fetches and deploys |
-| Integration, ERP | A branch | The branch has commits the clone lacks | Fetches and deploys |
+| API Mesh, ERP, our integrations | Its newest release | A newer release has commits the clone lacks | Fetches the tag and deploys |
+| Adobe's starter kit, custom integrations | A branch | The branch has commits the clone lacks | Fetches and deploys |
 | EDS storefront | A template repository | The tested boilerplate or template moves | Syncs the repository |
 | Headless storefront | GitHub Releases | A newer release | Replaces the folder |
 
-So pushing to a mesh's `main` is what ships it. Nothing else stands between the two, which is why each mesh
-repository runs its checks on every push.
+`readNewestRelease` is the one reader of releases: the highest version the channel accepts. A tag that is not a
+version never qualifies. Early access reads every track for a component, and is honoured only for a collaborator.
+
+A clone's own remote says which route it takes, so a project holds nothing to migrate. A clone ahead of the release
+is never moved back. An owned repository with no release yet offers nothing, and installs from its branch until it
+has one.
 
 A mesh keeps `mesh.json` under version control and rebuilds it on every deploy, so a rebuilt one is not read as
 the SC's own edit.
 
 The `stable` tags on the mesh repositories stay until no supported extension build reads them: older builds
-clone them when a mesh is added. Remove them then, not before. A project recorded on that tag moves to `main` when
-it loads, and its shallow clone gains the history it needs on the first check.
+clone them when a mesh is added. Remove them then, not before.
 
 Not everything floats. A component can pin a real version (`"tag": "v1.0.0"`), which is the right choice where a
-moving target would be dangerous rather than convenient. Pinning is a per-component decision made in the registry,
-not a global policy. A tag that is not a version records the version from `package.json` instead.
+moving target would be dangerous rather than convenient. A tag that is not a version records the version from
+`package.json` instead.
 
 ## Repositories are resolved from the registry
 

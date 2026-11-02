@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A pack's side panel is quieter.** Import is the one button; Save as file, Save store changes to this pack, Share or Stop sharing, and Remove from library are in its ⋯ menu, with the same confirmations as before. A pack's one step in the Admin is one line, "1 step left in the Admin"; Show step opens it the way the demo setup guide shows a step, with Open the Admin and Check.
 
 ### Fixed
-- **An API Mesh updates the way an integration does.** A mesh follows its branch, is offered an update when the branch has newer code, and updating fetches it and deploys it, so the live mesh cannot be left behind. Until now a mesh's version depended on how it was installed and on the update channel, and many projects were never offered a mesh update at all. Existing projects move over when they load. (PL-88)
+- **Meshes, ERPs and integrations update from releases.** Code reaches an SC when a version of it is released, as with the extension, not when it is pushed. The update row names the version it moves to, and updating fetches it and deploys it, so the live mesh cannot be left behind. Until now a mesh's version depended on how it was installed and on the update channel, and many projects were never offered a mesh update at all. Nothing to do for an existing project. (PL-88, PL-89)
 
 - **Check on a pack's step in the Admin shows what it found.** Pressing Check showed nothing while Demo Builder went on to record the answer, seen only after closing and opening the panel again. It now waits long enough for the store to answer, and says plainly when no answer came back.
 
