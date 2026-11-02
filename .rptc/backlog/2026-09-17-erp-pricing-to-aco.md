@@ -3,7 +3,7 @@ id: AB-14
 kind: question
 area: app-builder
 parent: AB-9
-needs: [PL-60]
+needs: [PL-87]
 value: low
 status: gated
 ---
@@ -21,9 +21,9 @@ Commerce is the only destination:
 - A base price changed in the ERP arrives as an ERP product event and is saved to the
   Commerce product as a sparse save of name and price (the integration's
   `product/external/updated` action; its `transformer.js`).
-- Contract prices are not stored in Commerce. The `webhook/item-prices` webhook applies
-  them in the cart (setting `pricing_contract_prices`), and `webhook/discounts` caps
-  discounts on top of them (setting `pricing_discount_ceiling`); both settings are AB-10's.
+- Contract prices are written to Commerce as tier prices for the customer group of each company's custom shared
+  catalog (`src/lib/publish-prices.js`, `src/lib/commerce-tier-prices.js`). The two cart webhooks this item first
+  described were taken off in 0.9.1.
 
 A storefront backed by ACO reads its catalog, and so its prices, from ACO (price books
 and catalog views; the multisite item notes ACO as a catalog layer over PaaS or ACCS).
@@ -81,6 +81,22 @@ ACO.
    apply, or ACO pricing makes them redundant.
 6. **Reversal:** the ERP reset undoes the Commerce writes it ledgered; ACO writes need the
    same treatment.
+
+## Answers so far (2026-11-01, from the integration's code, Adobe's docs and live ACO tests)
+
+No ERP change has been run on an ACO project yet; PL-87's proof list has that test.
+
+1. **No, not without the connector.** With it, Commerce is the system of record and it copies prices to ACO. Without
+   it nothing does: this tenant reads `acoEnabled: false`.
+2. **A price book per website and customer group**, `<website>::<sha1(group id)>`. Each shared catalog's group
+   already maps to one, and a private view takes exactly one.
+3. **ACO's ingestion API**, on the ACO credential, added to the integration's workspace.
+4. **Decide from the project:** it has ACO and the connector is off. No setting for the SC.
+5. **The cart stays Commerce's.** It charges Commerce's price, so listings must match it (measured: 120 listed, 200
+   in the cart). Placement and order events read Commerce, so they do not change.
+6. **Ledger the ACO writes** with the others, so a reset undoes them.
+
+Built under PL-87, step 4 of `.rptc/plans/aco-company-catalogs/overview.md`. Stock is still to measure.
 
 ## Done when
 

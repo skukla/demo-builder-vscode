@@ -87,11 +87,13 @@ commit already has them, behind the setting. No patch was needed.
 |---|---|---|
 | **A. ACCS shared catalogs, no ACO** (today's B2B demos) | The real gated catalog and prices | No ACO features |
 | **B. ACCS + ACO, public view** (built) | ACO's search and merchandising, and each company's prices after sign-in | Same products for everyone; prices readable by anyone with the id |
-| **C. ACCS + ACO, private views** (PL-87, not built) | Each company's own catalog, gated, same headers as the connector | Our own code stands in for the connector; proved possible and closed |
+| **C. ACCS + ACO, private views** (PL-87, planned) | Each company's own catalog, gated, same headers as the connector | Our own code stands in for the connector, labelled as such, and comes off when it arrives |
 | **D. PaaS + ACO + Adobe's B2B connector** | The real product, automatic | Needs a PaaS store and a beta extension; not something a Demo Builder project can install today |
 
-**Decision (owner, 2026-11-01):** C is not built. Our code would be doing Commerce's job, and demos replicate the
-real product. Use A where gating is the story, B where ACO's merchandising is, and D once a connector backend exists.
+**Decision (owner, 2026-11-01):** C was closed, then reopened the same day: make it available, as a labelled stand-in
+that comes off when the connector reaches ACCS, following Adobe's patterns. Plan: `.rptc/plans/aco-company-catalogs/overview.md`.
+Use A where gating is the story and no ACO is needed, B where ACO's merchandising is, C for both on ACCS, and D once
+a connector backend exists.
 
 ## Limits to tell an SC
 
@@ -183,3 +185,19 @@ Merchandising API authentication
 https://developer.adobe.com/commerce/services/optimizer/merchandising-services/using-the-api .
 Adobe's reference config: `main--boilerplate-aco--adobe-commerce.aem.live/config.json`. Template:
 `adobe-commerce/boilerplate-b2b-template` `scripts/initializers/index.js` and `auth.js`.
+
+## Option C tests, 2026-11-01
+
+On the test website's project, with ACO-only products so nothing reached the ERP. All of it removed afterwards and
+confirmed by reading back, apart from a few empty guest carts.
+
+| Question | Answer |
+|---|---|
+| Does ACO filter on the connector's tag, `ac-shared-catalogs`? | **Yes, within about 6 minutes.** Control: a public view found all 3 products, the filtered view 2 |
+| Can a deployed mesh sign with a key held only in its secrets? | **Yes.** ACO: no token 401, bad token 403, the mesh's token 200 |
+| With that token on a protected view? | Search shows the 2 products at the book's prices. The third still reads by SKU |
+| Can the tag be removed again? | Yes. It left the filterable list and SKU reads emptied within 80 seconds |
+| Can Commerce list a shared catalog's products? | Yes, `V1/sharedCatalog/{id}/products` |
+| Do guest cart calls behave the same through the mesh as direct? | Yes: store, email, a bad SKU and a bad sign-in token all answer the same |
+| Does a refused order read the same? | **No.** `placeOrder.errors` matches, but the mesh replaces Commerce's top-level error with "Cannot return null for non-nullable field CustomerOrder.number". Adobe's order drop-in reads top-level errors first. What the shopper reads is not checked |
+| A finished order through the mesh | Not run: it leaves ERP records (AB-84). Approved for the build |

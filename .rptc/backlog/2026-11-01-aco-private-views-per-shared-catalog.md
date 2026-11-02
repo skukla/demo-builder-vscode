@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: med
-status: dropped
+status: planned
 parent: PL-60
 ---
 
@@ -27,8 +27,9 @@ would have to stand in for it. Reasoning and measurements:
 2. **A private view per shared catalog and store view.** Policy, one price book (a private view
    takes exactly one) and a restricted access key, all through the ACO admin API, which the project's
    credential reaches (proved 2026-11-01).
-3. **A resolver holding the private keys.** An App Builder action reads the buyer's company,
-   maps it to a view and signs an RS256 token. Keys stay in the action, never in `config.json`.
+3. **A resolver holding the private keys.** The mesh reads the buyer's company from Commerce, maps it to a view and
+   signs an RS256 token, with the keys in its encrypted secrets (proved live 2026-11-01). Keys never reach
+   `config.json` or the browser.
 4. **Answering the question the storefront already asks.** No storefront code is needed (corrected
    2026-11-01; this step used to be a patch). Adobe's B2B template at our verified commit asks
    Commerce `company { catalogViewContext { catalogViewId accessToken } }` for a signed-in buyer
@@ -42,25 +43,15 @@ Design, including the custom pricing service as one part of it: `.rptc/plans/aco
 
 ## When Adobe's connector is on
 
-Commerce answers the same field itself, so the Mesh piece and the action come off and the storefront
+Commerce answers the same field itself, so the Mesh piece comes off and the storefront
 does not change. Keep the view lookup replaceable: a custom pricing service, if it is ever
 demonstrated, would still need something to answer with a price book Commerce does not know.
 
-## Before starting
+## Reopened (owner, 2026-11-01)
 
-Decide whether this is worth building at all: if ACCS + ACO arrives with shared catalogs, the window
-for it may be weeks. Licensing counts views times price books (100 by default).
-
-## Closed: not building this (owner, 2026-11-01)
-
-Demos replicate the real product as closely as possible. Every way of building this has our code doing
-Commerce's job: answering which catalog a buyer gets, and holding a key to sign their token. The browser test
-proved it can be made to work, with a Mesh signing at the edge. That is why it is recorded here and not why to
-ship it. It looks right on screen and runs on a mechanism no customer would have.
-
-Gated catalogs on ACO wait for Adobe's connector, on a PaaS backend or on an ACCS tenant that has it. Until then
-an SC who needs gating uses shared catalogs without ACO. Once a connector backend exists, run the same browser
-tests against it (`.rptc/research/aco-support/customer-pricing.md`).
+Closed earlier the same day because our code would be doing Commerce's job. Reopened by the owner: make it
+available, build it to come off when the connector reaches ACCS, and follow Adobe's patterns as closely as possible.
+It carries a stand-in label on screen. The closed decision's reasoning stands as the reason for the label.
 
 ## Shipped so far
 
@@ -71,3 +62,4 @@ tests against it (`.rptc/research/aco-support/customer-pricing.md`).
 - 2026-11-01  docs(aco): a buyer's own price proved on a real page, with and without a mesh (`a61d3bf9b`)
 - 2026-11-01  docs(updates): a moved tag reaches new projects, a release reaches existing ones (`11b4d24aa`)
 - 2026-11-01  docs(aco): the open questions tested in a browser, and three findings filed (`35aa9c286`)
+- 2026-11-02  Reopened by the owner: a labelled stand-in that comes off at GA. Live tests passed for the tag, mesh signing and shared catalog reads; a real order is approved for the build
