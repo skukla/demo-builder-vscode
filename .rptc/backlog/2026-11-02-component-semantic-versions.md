@@ -44,3 +44,4 @@ carrying the fix is out.
 - 2026-11-02  feat(releases): every component is on the beta track until the extension reaches 1.x (`b1883f1c8`)
 - 2026-11-02  feat(releases): the release process is a convention, checked across every repository (`c48221ada`)
 - 2026-11-02  fix(patches): the release watchdog ignores commits no storefront reads (`f28266132`)
+- 2026-11-02  feat(components): the watchdog fails a workflow that holds back a check tool (`a3a3aae8c`)

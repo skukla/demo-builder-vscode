@@ -73,3 +73,10 @@ build, on the early-access channel, against `scratch-1028`, and for the ERP pair
 ## The `stable` tags
 
 Deleted from the three mesh repositories on the owner's go, 2026-11-02, after this test. Commits, to recreate one: `commerce-eds-mesh` 596d916e08c6, `eds-accs-mesh` c0aa9f4a99cb, `headless-commerce-mesh` f35b082a2f4c.
+
+## The check tools, 2026-11-02
+
+The patch canary failed when GitHub moved `ubuntu-latest` to 26.04, because Playwright was held at 1.56.1. Playwright had
+supported 26.04 since 1.61.0, June 2026. The same canary, on the real workflow, passed on 26.04 with 1.64.1, patch checks
+and their controls both. Both Playwright versions gave identical output locally. It now runs on `ubuntu-latest` with
+`playwright@latest`, and `npm run components:ci` fails a workflow that holds either back. Security alerts: PL-90.

@@ -479,7 +479,7 @@ each item's own file; what has already landed against an item is in its
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 | `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | active |
 
-### platform  (93)
+### platform  (94)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -576,6 +576,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-86` | fix | [The hook router's tests flake: old once-per-session markers survive and collide](2026-11-01-hook-router-tests-flake-on-stale-markers.md) | — | med | active |
 | `PL-88` | feature | [A mesh is released and updated like the other components](2026-11-01-mesh-updates-like-other-components.md) | — | high | active |
 | `PL-89` | feature | [Every component ships as a semantic-version release](2026-11-02-component-semantic-versions.md) | — | high | active |
+| `PL-90` | fix | [Work through the dependency security alerts on the repositories we own](2026-11-02-dependency-security-alerts.md) | — | high | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -724,7 +725,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*324 item(s) sit outside the A–G chain.*
+*325 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
