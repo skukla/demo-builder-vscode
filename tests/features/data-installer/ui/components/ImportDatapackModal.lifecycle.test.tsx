@@ -275,6 +275,57 @@ describe('ImportDatapackModal — job lifecycle', () => {
             expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
         });
 
+        // The job is accepted before its first status read answers. Nothing to show yet is still a
+        // wait: this fell through to the import form, at the form's width, mid-removal (2026-11-02).
+        it('stays on the wait, not the form, until the accepted job\'s status answers', async () => {
+            let statusCalls = 0;
+            let answerStatus: (value: unknown) => void = () => undefined;
+            mockRequest.mockImplementation(async (type: string) => {
+                if (type !== 'get-datapack-import-status') return activationOrTarget(type);
+                statusCalls += 1;
+                if (statusCalls === 1) return { success: true, data: null };
+                return new Promise((resolve) => {
+                    answerStatus = resolve;
+                });
+            });
+            renderModal();
+            await awaitForm();
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('button', { name: /^remove data/i }));
+            await press(screen.getByRole('button', { name: /^remove$/i }));
+
+            await waitFor(() => expect(statusCalls).toBe(2));
+            expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Remove Bodea' })).toBeInTheDocument();
+            expect(screen.getByText('Starting removal')).toBeInTheDocument();
+
+            answerStatus({
+                success: true,
+                data: {
+                    activationId: 'act-1',
+                    dataTypes: ['categories'],
+                    outcome: 'watching',
+                    perType: {},
+                    operation: 'reset',
+                },
+            });
+            expect(await screen.findByRole('button', { name: /stop watching/i })).toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
+        });
+
+        it('CONTROL: still lets go of the wait if the status read finds no record', async () => {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'get-datapack-import-status' ? { success: true, data: null } : activationOrTarget(type),
+            );
+            renderModal();
+            await awaitForm();
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('button', { name: /^remove data/i }));
+            await press(screen.getByRole('button', { name: /^remove$/i }));
+
+            expect(await screen.findByRole('checkbox', { name: 'Categories' })).toBeInTheDocument();
+        });
+
         it('a terminal outcome is a result view with Back', async () => {
             mockRequest.mockImplementation(async (type: string) => {
                 if (type === 'get-datapack-import-status') {

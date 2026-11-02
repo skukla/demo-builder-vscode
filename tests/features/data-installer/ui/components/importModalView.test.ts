@@ -31,6 +31,7 @@ import {
     busyMessage,
     resolveView,
     targetName,
+    isPickingUp,
     viewFrame,
     watchedActivation,
 } from '@/features/data-installer/ui/components/importModalView';
@@ -259,6 +260,19 @@ describe('targetName', () => {
  * as wide as its types need, everything after it small; the confirm asks with the store in its
  * title; a result's title is its outcome.
  */
+describe('isPickingUp', () => {
+    it.each([
+        ['no job accepted', undefined, null, undefined, false, false],
+        ['accepted, not asked about yet', 'a', null, undefined, false, true],
+        ['accepted, the read is out', 'a', null, 'a', true, true],
+        ['the read answered with no record', 'a', null, 'a', false, false],
+        ['the read answered with this job', 'a', { activationId: 'a' }, 'a', false, false],
+        ['an older job on screen, the read is out', 'b', { activationId: 'a' }, 'b', true, true],
+    ])('%s', (_label, activation, record, asked, reading, expected) => {
+        expect(isPickingUp(activation, record, asked, reading)).toBe(expected);
+    });
+});
+
 describe('viewFrame', () => {
     const base = { displayName: 'Frescopa', removing: false, store: 'Justrite Test Store US (Justrite Test)', typeCount: 1, result: null };
 

@@ -43,6 +43,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type { ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportScopes } from '../hooks/useImportScopes';
+import { useJobPickup } from '../hooks/useJobPickup';
 import { deselectType, selectType, type TypeSelection } from '../importDependencies';
 import { ImportDatapackModalBody, type BodyContext, type ModalView } from './ImportDatapackModalBody';
 import { buildActions, busyMessage, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
@@ -165,11 +166,7 @@ export function ImportDatapackModal({
         start.value?.activationId,
         reset.value?.activationId,
     );
-    useEffect(() => {
-        if (startedActivation) {
-            loadStatus({});
-        }
-    }, [startedActivation, loadStatus]);
+    const pickingUp = useJobPickup(startedActivation, record, status.loading, loadStatus);
 
     const toggle = useCallback(
         (type: string, isSelected: boolean): void => {
@@ -239,7 +236,7 @@ export function ImportDatapackModal({
 
     const goBack = useCallback((): void => setDismissed(true), []);
 
-    const busy = dryRun.loading || start.loading || reset.loading;
+    const busy = dryRun.loading || start.loading || reset.loading || pickingUp;
     const result =
         !dismissed && !busy
             ? resolveResult(lastAction, { name: displayName, dryRun, start, reset, record, startedActivation })
@@ -266,7 +263,10 @@ export function ImportDatapackModal({
         record,
         watching,
         result,
-        busyMessage: busyMessage(start.loading, reset.loading),
+        busyMessage: busyMessage(
+            start.loading || (pickingUp && lastAction === 'start'),
+            reset.loading || (pickingUp && lastAction === 'reset'),
+        ),
         scope,
         toggle,
         toggleAll,

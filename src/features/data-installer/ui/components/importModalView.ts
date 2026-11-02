@@ -46,6 +46,21 @@ export function watchedActivation(
     return startId ?? resetId;
 }
 
+/**
+ * The job was accepted and its first status read has not answered. Having nothing to show yet is
+ * still a wait: this fell through to the import form, at the form's width, mid-removal. A read that
+ * answers with no record lets go, so the dialog cannot hang on a spinner.
+ */
+export function isPickingUp(
+    activation: string | undefined,
+    record: { activationId?: string } | null,
+    askedAbout: string | undefined,
+    reading: boolean,
+): boolean {
+    if (!activation || record?.activationId === activation) return false;
+    return askedAbout !== activation || reading;
+}
+
 /** One view at a time; this precedence IS the state machine. */
 export function resolveView(state: {
     busy: boolean;
