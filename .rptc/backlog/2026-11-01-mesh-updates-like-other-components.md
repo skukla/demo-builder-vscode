@@ -12,6 +12,12 @@ status: active
 Owner, 2026-11-01: "A mesh is a demo component. It's release and update process should be consistent
 with other components."
 
+## Reworked by PL-89
+
+Owner, 2026-11-02: every component the builder owns moves to semantic-version releases before beta.153. Following `main` is not
+the model. PL-89 (`.rptc/plans/component-semantic-versions/overview.md`) moves meshes to releases, keeping the one-step deploy,
+shallow clone and `mesh.json` handling. The branch renames stay.
+
 ## What is inconsistent, measured 2026-11-01
 
 Only the three meshes use the moving `stable` tag. Integrations follow a branch: the update check compares
