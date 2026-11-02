@@ -86,7 +86,7 @@ A recorded version names the base a repository last merged from, not everything 
 **Block libraries, inspector, brand assets.** Ours are read at the newest release, through one lookup (`refOfSource`,
 `src/core/releases/componentRelease.ts`). Installing a library stays add-only, and the commit is still recorded, because removal
 compares against it. The inspector's update row is removed: nothing ever wrote its record and applying it changed no files, so it
-never worked. A storefront gets the newest inspector when it is created or reset. Bodea brand assets take the release of `bodea-source`.
+never worked. A storefront gets the newest inspector when it is created or reset (owner agreed, 2026-11-02). Bodea brand assets take the release of `bodea-source`.
 
 **`buildright-eds`.** Its update check and merge use the newest release, and a reset is pinned to it. Creating a storefront from it
 still copies the template's default branch, because GitHub's template copy takes no version. The first update then reconciles it. It is hidden.
@@ -147,7 +147,7 @@ Each repository passes all of these before beta.153:
    components, merged on a throwaway site for storefronts, and installed for libraries and the inspector.
 4. The alpha is removed, and the project returns to where it was.
 
-The result is one table, one row per repository: `validation.md`, beside this plan. The dry run is done; the live rows wait for the owner's go.
+The result is one table, one row per repository: `validation.md`, beside this plan. It holds the dry run and the live test.
 
 ## Stages
 

@@ -63,6 +63,8 @@ export function withoutComponent(
         // bug. `stripOrphanedComponentConfigs` (loader) sweeps entries older
         // removals already stranded.
         ...(project.componentConfigs ? { componentConfigs: { ...project.componentConfigs } } : {}),
+        // Its version record goes too, or a project keeps naming a version of something it no longer has.
+        ...(project.componentVersions ? { componentVersions: { ...project.componentVersions } } : {}),
     };
     delete cleared.appBuilderComponents[id];
     // A system leaves its integration's `systems` list in the same save (AB-70).
@@ -72,6 +74,9 @@ export function withoutComponent(
     }
     if (cleared.componentConfigs) {
         delete cleared.componentConfigs[id];
+    }
+    if (cleared.componentVersions) {
+        delete cleared.componentVersions[id];
     }
     // Sync the caller's reference too — a later save from a stale reference
     // would otherwise RESURRECT the removed integration (see persistOutcome).
@@ -83,6 +88,9 @@ export function withoutComponent(
     }
     if (cleared.componentConfigs) {
         project.componentConfigs = cleared.componentConfigs;
+    }
+    if (cleared.componentVersions) {
+        project.componentVersions = cleared.componentVersions;
     }
     return cleared;
 }
