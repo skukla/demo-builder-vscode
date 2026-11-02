@@ -41,3 +41,4 @@ carrying the fix is out.
 - 2026-11-02  refactor(updates): one early-access rule, and the archive helper is gone (`0e8fd6432`)
 - 2026-11-02  fix(mesh): a mesh deploy records the commit it shipped (`cd17f8ad3`)
 - 2026-11-02  fix(updates): removing a component drops its version record, and the live test results (`d8705f51d`)
+- 2026-11-02  feat(releases): every component is on the beta track until the extension reaches 1.x (`b1883f1c8`)
