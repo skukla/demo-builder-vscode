@@ -23,6 +23,7 @@ import {
     succeeded,
     PACK_NAME,
 } from './importResult.testUtils';
+import { ErrorCode } from '@/types/errorCodes';
 
 describe('resolveResult — no action yet', () => {
     it.each([
@@ -141,5 +142,59 @@ describe('resolveResult — start and reset', () => {
         const result = resolveResult('start', sources({ startedActivation: ACTIVATION }));
 
         expect(result).toBeNull();
+    });
+});
+
+describe('resolveResult — a removal that was to save the changes first (step 05)', () => {
+    const SAVED_NOTE = 'Saved to the Acme Demo pack. Bodea is unchanged.';
+
+    it('says nothing was removed when the save failed, with a way back to the confirm', () => {
+        const reset = { ...failed<{ activationId: string }>('The library is not answering.') };
+        reset.failure = { message: 'The library is not answering.', code: ErrorCode.CHANGES_NOT_SAVED };
+
+        expect(resolveResult('reset', sources({ reset }))).toEqual({
+            variant: 'error',
+            title: "Couldn't save your changes, so nothing was removed",
+            message: 'The library is not answering.',
+            backToConfirm: true,
+        });
+    });
+
+    it('CONTROL: any other failure to start is the plain one, back to the form', () => {
+        const result = resolveResult('reset', sources({ reset: failed('The service said no.') }));
+
+        expect(result?.title).toBe("Couldn't start the removal");
+        expect(result).not.toHaveProperty('backToConfirm');
+    });
+
+    it('says where the changes went on a removal that finished', () => {
+        const result = resolveResult('reset', sources({
+            reset: succeeded({ activationId: ACTIVATION, savedNote: SAVED_NOTE }),
+            record: jobRecord({ operation: 'reset', outcome: 'success', activationId: ACTIVATION }),
+            startedActivation: ACTIVATION,
+        }));
+
+        expect(result).toMatchObject({ variant: 'success', message: SAVED_NOTE });
+    });
+
+    it('keeps what the removal itself had to say, then adds it, on one that failed too', () => {
+        const result = resolveResult('reset', sources({
+            reset: succeeded({ activationId: ACTIVATION, savedNote: SAVED_NOTE }),
+            record: jobRecord({ operation: 'reset', outcome: 'error', reason: 'Commerce refused a product.', activationId: ACTIVATION }),
+            startedActivation: ACTIVATION,
+        }));
+
+        expect(result).toMatchObject({ variant: 'error', message: `Commerce refused a product. ${SAVED_NOTE}` });
+    });
+
+    it('CONTROL: an import says nothing of it, whatever an earlier removal left', () => {
+        const result = resolveResult('start', sources({
+            start: succeeded({ activationId: ACTIVATION }),
+            reset: succeeded({ activationId: 'older', savedNote: SAVED_NOTE }),
+            record: jobRecord({ outcome: 'success', activationId: ACTIVATION }),
+            startedActivation: ACTIVATION,
+        }));
+
+        expect(result).not.toHaveProperty('message');
     });
 });

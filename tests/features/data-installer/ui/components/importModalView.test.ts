@@ -29,6 +29,8 @@
 import {
     buildActions,
     busyMessage,
+    closeLabel,
+    isRemoving,
     resolveView,
     targetName,
     isPickingUp,
@@ -344,5 +346,51 @@ describe('viewFrame', () => {
     ] as const)('takes a %s result’s title and gives it the %s icon', (variant, status) => {
         const result: ResultContent = { variant, title: 'Removed Frescopa' };
         expect(viewFrame({ ...base, view: 'result', result })).toEqual({ title: 'Removed Frescopa', status, size: 'S', wide: false, hideClose: false });
+    });
+});
+
+describe('the removal confirm (step 05)', () => {
+    const FRAME = { displayName: 'Bodea', removing: false, store: 'Justrite Test', typeCount: 2, result: null };
+
+    it('shows the read before the confirm, and a busy removal before either', () => {
+        expect(resolveView({ ...IDLE, readingChanges: true })).toBe('reading-changes');
+        expect(resolveView({ ...IDLE, readingChanges: true, resetArmed: true })).toBe('reading-changes');
+        expect(resolveView({ ...IDLE, busy: true, readingChanges: true })).toBe('busy');
+    });
+
+    it('asks the same question while it reads, so the wait does not retitle the dialog, and keeps a way out', () => {
+        const reading = viewFrame({ ...FRAME, view: 'reading-changes' });
+        const confirm = viewFrame({ ...FRAME, view: 'confirm-reset' });
+
+        expect(reading.title).toBe(confirm.title);
+        expect(reading.status).toBe('warning');
+        expect(reading.hideClose).toBe(false);
+        expect(confirm.hideClose).toBe(true);
+    });
+
+    it('calls the way out Cancel while it reads', () => {
+        expect(closeLabel('reading-changes')).toBe('Cancel');
+    });
+
+    it('offers the background only once a save is under way', () => {
+        expect(closeLabel('busy', true)).toBe('Run in background');
+        expect(closeLabel('busy')).toBe('Close');
+        expect(closeLabel('watching')).toBe('Run in background');
+    });
+
+    it('says the save\'s stage over the removal\'s, and the removal\'s once there is none', () => {
+        expect(busyMessage(false, true, 'Saving to the library')).toBe('Saving to the library');
+        expect(busyMessage(false, true, undefined)).toBe('Starting removal');
+    });
+
+    it.each([
+        [{ armed: true, lastAction: null, view: 'confirm-reset' as const }, true],
+        [{ armed: false, lastAction: 'reset' as const, view: 'busy' as const }, true],
+        [{ armed: false, lastAction: 'reset' as const, view: 'form' as const }, false],
+        [{ armed: false, lastAction: null, view: 'watching' as const, operation: 'reset' as const }, true],
+        [{ armed: false, lastAction: null, view: 'watching' as const, operation: 'import' as const }, false],
+        [{ armed: false, lastAction: 'start' as const, view: 'busy' as const }, false],
+    ])('isRemoving %j is %s', (state, expected) => {
+        expect(isRemoving(state)).toBe(expected);
     });
 });

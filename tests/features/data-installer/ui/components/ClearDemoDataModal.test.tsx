@@ -37,7 +37,8 @@ const named = (names: string[]) => ({ count: names.length, names });
 
 const PREVIEW: WipePreview = {
     stores: [{ websiteCode: 'bodea', websiteName: 'Bodea', storeCode: 'bodea_store', storeName: 'Bodea Store' }],
-    remove: { products: named(['BD-RACK', 'BD-CHAIR']), categories: named(['Racks']), customers: named(['bd.store@example.com']), cartRules: named([]) },
+    remove: { products: named(['BD-RACK', 'BD-CHAIR']), categories: named(['Racks']), customers: named(['bd.store@example.com']), cartRules: named([]), companies: named([]), catalogs: named([]), customerGroups: named([]), attributeSets: named([]), attributes: named([]) },
+    settings: named([]),
     takenOff: named(['BD-ALSO-ON-MAIN']),
     rulesTakenOff: named([]),
     orders: { cancel: named(['000000701']), refund: named(['000000702', '000000703']), leftOpen: named(['000000706']), returns: named(['R40']) },
@@ -100,13 +101,13 @@ it('asks about the ticked store, and lists what clearing it would do, orders inc
     expect(checks()[1]).toEqual({ stores: [{ websiteCode: 'bodea', storeCode: 'bodea_store' }] });
     expect(screen.getByText('2 to remove, 1 taken off the chosen websites')).toBeInTheDocument();
     expect(screen.getByText('1 to cancel, 2 to refund, 1 to leave open with a note, 1 return to close')).toBeInTheDocument();
-    expect(screen.getByText("1 product: which demo they belong to can't be told")).toBeInTheDocument();
+    expect(screen.getByText("1 product (BD-NO-CATEGORY): which demo they belong to can't be told")).toBeInTheDocument();
 });
 
 it("says it is permanent in the opening sentence, not in a footnote under the list", async () => {
     await openModal();
 
-    expect(screen.getByText(/Clearing permanently removes what they hold/)).toBeInTheDocument();
+    expect(screen.getByText(/Clearing permanently removes what only they use/)).toBeInTheDocument();
 
     await tick(/Bodea Store/);
 
@@ -120,6 +121,89 @@ it('puts no label over the list: the list says what it is', async () => {
 
     expect(screen.getByText('Stores')).toBeInTheDocument();
     expect(screen.queryByText('What clearing does')).not.toBeInTheDocument();
+});
+
+describe('previewLines, the kinds only the chosen stores use', () => {
+    const preview: WipePreview = {
+        ...PREVIEW,
+        remove: {
+            ...PREVIEW.remove,
+            companies: named(['Altura', 'Bravo']),
+            catalogs: named(['Gold']),
+            customerGroups: named(['Loose', 'Looser']),
+            attributeSets: named(['Wipers']),
+            attributes: named(['wiper_size', 'wiper_kind']),
+        },
+        settings: { ...named([]), count: 1012 },
+        left: [
+            { kind: 'shared catalogs', count: 5, names: ['Silver', 'Bronze', 'Tin'], why: 'a customer that stays uses them' },
+            { kind: 'companies', ...named(['Altura', 'Bravo']), why: 'a customer in them is on a website not chosen' },
+            { kind: 'attributes', ...named(['cs_format']), why: 'an attribute set that stays holds them' },
+            { kind: 'settings', count: 1, names: [], why: 'they have no default value to go back to' },
+        ],
+    };
+
+    it('says what goes, each kind on its own line, a catalog with its group', () => {
+        const lines = previewLines(preview);
+
+        expect(lines).toContainEqual({ label: 'Companies', value: '2 to remove, with their customers' });
+        expect(lines).toContainEqual({ label: 'Shared catalogs', value: '1 to remove, with its customer group' });
+        expect(lines).toContainEqual({ label: 'Customer groups', value: '2 to remove' });
+        expect(lines).toContainEqual({ label: 'Attribute sets', value: '1 to remove' });
+        expect(lines).toContainEqual({ label: 'Attributes', value: '2 to remove' });
+    });
+
+    it('says plainly what Commerce cannot do about a website setting, digits with separators', () => {
+        expect(previewLines(preview)).toContainEqual({
+            label: 'Website settings',
+            value: "1,012 set to the default's value. Commerce can't clear a website's own value, so a later change to the default won't reach them.",
+        });
+    });
+
+    it('names what stays and why, beside each kind', () => {
+        const lines = previewLines(preview).filter((l) => l.label === 'Stays').map((l) => l.value);
+
+        expect(lines).toEqual([
+            '5 shared catalogs (Silver, Bronze, Tin and 2 more): a customer that stays uses them',
+            '2 companies (Altura and Bravo): a customer in them is on a website not chosen',
+            '1 attribute (cs_format): an attribute set that stays holds them',
+            '1 setting: they have no default value to go back to',
+        ]);
+    });
+
+    it('uses no middle dot anywhere it says these', () => {
+        expect(previewLines(preview).every((l) => !l.value.includes('\u00B7'))).toBe(true);
+    });
+
+    it('lists none of them when none goes', () => {
+        const labels = previewLines({ ...PREVIEW, left: [] }).map((l) => l.label);
+
+        expect(labels).not.toContain('Companies');
+        expect(labels).not.toContain('Website settings');
+    });
+});
+
+it('says what stays when nothing goes, rather than that the stores hold nothing, and offers no clearing', async () => {
+    const left = [{ kind: 'companies' as const, ...named(['Altura']), why: 'a customer in them is on a website not chosen' }];
+    const nothingGoes = { ...PREVIEW, total: 0, left, installed: {} };
+    withStore((stores) => (stores.length ? { choices: CHOICES, preview: nothingGoes } : { choices: CHOICES }));
+    await openModal();
+
+    await tick(/Bodea Store/);
+
+    expect(screen.getByText('1 company (Altura): a customer in them is on a website not chosen')).toBeInTheDocument();
+    expect(screen.queryByText('These stores hold nothing Demo Builder did not install.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear' })).toHaveAttribute('aria-disabled', 'true');
+});
+
+it('says the stores hold nothing only when nothing goes and nothing stays', async () => {
+    const empty = { ...PREVIEW, total: 0, left: [], installed: {} };
+    withStore((stores) => (stores.length ? { choices: CHOICES, preview: empty } : { choices: CHOICES }));
+    await openModal();
+
+    await tick(/Bodea Store/);
+
+    expect(screen.getByText('These stores hold nothing Demo Builder did not install.')).toBeInTheDocument();
 });
 
 it('writes large counts with separators, in the list and on the button', async () => {
@@ -142,7 +226,7 @@ it('writes large counts with separators, in the list and on the button', async (
         { label: 'Customers', value: '2,500 to remove' },
         { label: 'Cart rules', value: '3,000 to remove, with their coupons, 4,000 taken off the chosen websites' },
         { label: 'Orders', value: '5,000 to cancel, 6,000 to refund, 7,000 to leave open with a note, 8,000 returns to close' },
-        { label: 'Left', value: '9,000 products: x' },
+        { label: 'Stays', value: '9,000 products: x' },
         { label: 'Installed', value: '1,500 products, which removing its datapack takes' },
     ]);
     await openModal();
@@ -212,7 +296,7 @@ it('offers no clearing when a ticked store is refused, and says why', async () =
     await tick(/Bodea Store/);
 
     const line = screen.getByText("The store bodea_store is also Bodea Demo's own store.");
-    expect(line).toHaveClass('text-orange-600');
+    expect(line).toHaveClass('text-notice');
     // A line where the list would land, not a box: the rule's own example.
     expect(line.closest('.inline-notice')).toBeNull();
     expect(screen.queryByText(/is another project's/)).not.toBeInTheDocument();

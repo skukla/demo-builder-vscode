@@ -204,3 +204,32 @@ describe('Remove from library keeps its confirmation', () => {
         expect(await screen.findByText('It could not be removed: Only the owner can delete this pack.')).toBeInTheDocument();
     });
 });
+
+describe('a pack with a settings layer (datapack-engine step 09)', () => {
+    const LAYER = { id: { name: 'bodea-settings', version: '2' }, mine: true, settings: [{ path: 'catalog/frontend/grid_per_page', value: '24' }] };
+
+    it("offers to remove the SC's own layer from a pack in the Data Installer, the only place it can be reached", async () => {
+        const onSharingChanged = jest.fn();
+        mockRequest.mockResolvedValue({ success: true, data: { deleted: true } });
+        renderActions({ settingsLayer: LAYER, onSharingChanged });
+
+        expect(menuLabels()).toEqual(['Save as file', 'Remove its store settings']);
+        await press(row('Remove its store settings'));
+
+        expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'bodea-settings', version: '2', confirm: true }, undefined);
+        expect(await screen.findByText('Removed from the library.')).toBeInTheDocument();
+        expect(onSharingChanged).toHaveBeenCalled();
+    });
+
+    it("offers it beside the SC's own pack's Remove, after it", () => {
+        renderActions({ detail: OWN, settingsLayer: LAYER });
+
+        expect(menuLabels().slice(-2)).toEqual(['Remove from library', 'Remove its store settings']);
+    });
+
+    it("does not offer a colleague's layer, which only its owner can remove", () => {
+        renderActions({ settingsLayer: { ...LAYER, mine: false } });
+
+        expect(menuLabels()).toEqual(['Save as file']);
+    });
+});

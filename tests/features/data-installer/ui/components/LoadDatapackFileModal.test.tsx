@@ -88,7 +88,7 @@ it('loads into the library by default, private, without replacing anything', asy
 
     expect(loadCall()).toEqual({ path: OPENED.path, target: 'library', update: false });
     const heading = screen.getByRole('heading', { name: /Loaded 2 of 2 data types into the datapack library/ });
-    expect(heading.querySelector('.text-green-600')).not.toBeNull();
+    expect(heading.querySelector('.text-positive')).not.toBeNull();
 });
 
 it('makes the outcome the title, and offers one way out rather than Close and Done', async () => {
@@ -170,7 +170,7 @@ it('lists each refused type with its reason when only part of the file landed', 
     await settle();
 
     const heading = screen.getByRole('heading', { name: /Loaded 1 of 2 data types into the datapack library/ });
-    expect(heading.querySelector('.text-orange-600')).not.toBeNull();
+    expect(heading.querySelector('.text-notice')).not.toBeNull();
     expect(screen.getByText(/too large to send in one request/)).toBeInTheDocument();
 });
 
@@ -242,4 +242,60 @@ it('does not offer the undo when the load updated a pack that was already there'
     expect(
         screen.queryByRole('button', { name: 'Remove it from the library' })
     ).not.toBeInTheDocument();
+});
+
+describe('a file that carries a settings layer (datapack-engine step 09)', () => {
+    const LAYERED = { ...OPENED, settingsLayer: { paths: ['catalog/frontend/grid_per_page'] } };
+    const loaded = (settingsLayer: Record<string, unknown>, over: Record<string, unknown> = {}) => ({
+        success: true,
+        data: { datapackName: 'justrite', version: 'v1', target: 'library', pack: 'created', stored: OPENED.dataTypes, failed: [], settingsLayer, ...over },
+    });
+    const opened = { success: true, data: LAYERED };
+
+    it('says, before anything is written, that its settings go to the library, by path', async () => {
+        withService({ 'open-datapack-zip': opened });
+
+        await openModal();
+
+        expect(screen.getByText('It also carries store settings, which go into the datapack library: catalog/frontend/grid_per_page.')).toBeInTheDocument();
+    });
+
+    it('says nothing of the kind for a file with none', async () => {
+        await openModal();
+
+        expect(screen.queryByText(/store settings/)).not.toBeInTheDocument();
+    });
+
+    it('offers one undo when removing the pack takes the layer: the same version', async () => {
+        withService({ 'open-datapack-zip': opened, 'load-datapack-zip': loaded({ datapackName: 'justrite-settings', version: 'v1', outcome: 'created' }) });
+        await openModal();
+
+        await press(screen.getByRole('button', { name: 'Load' }));
+
+        expect(screen.getByText(/and its store settings into the datapack library/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Remove it from the library' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Remove its store settings from the library' })).not.toBeInTheDocument();
+    });
+
+    it('offers the layer its own undo at another version, or when the data went to the Data Installer', async () => {
+        withService({ 'open-datapack-zip': opened, 'load-datapack-zip': loaded({ datapackName: 'justrite-settings', version: '3', outcome: 'created' }, { target: 'installer' }) });
+        await openModal();
+
+        await press(screen.getByRole('button', { name: 'Load' }));
+        await press(screen.getByRole('button', { name: 'Remove its store settings from the library' }));
+
+        expect(screen.queryByRole('button', { name: 'Remove it from the library' })).not.toBeInTheDocument();
+        expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'justrite-settings', version: '3', confirm: true }, undefined);
+    });
+
+    it('says why a layer did not land, and offers no undo for it', async () => {
+        withService({ 'open-datapack-zip': opened, 'load-datapack-zip': loaded({ datapackName: 'justrite-settings', version: '3', outcome: 'left', reason: 'The library already holds justrite-settings@3, so it was left as it is.' }) });
+        await openModal();
+
+        await press(screen.getByRole('button', { name: 'Load' }));
+
+        expect(screen.getByText(/Store settings: The library already holds justrite-settings@3/)).toBeInTheDocument();
+        expect(screen.getByText('Loaded 2 of 2 data types into the datapack library')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Remove its store settings from the library' })).not.toBeInTheDocument();
+    });
 });

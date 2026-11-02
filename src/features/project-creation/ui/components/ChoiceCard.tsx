@@ -15,14 +15,18 @@
 
 import React from 'react';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
+import { cn } from '@/core/ui/utils/classNames';
 
 export interface ChoiceCardProps {
     /** Card title (the prominent line). */
     name: string;
     /** Optional one/two-line description under the name. */
     description?: React.ReactNode;
-    /** `row` (default, wide) or `tile` (square — for a grid of many choices). */
-    variant?: 'row' | 'tile';
+    /**
+     * `row` (default, wide), `tile` (square, for a gallery of many choices), or `compact` (as tall
+     * as its words and as wide as its grid cell, for a screen of a dozen or more short choices).
+     */
+    variant?: 'row' | 'tile' | 'compact';
     /** Selected pick: blue border/tint + a corner ✓. */
     selected?: boolean;
     /** Disabled pick: muted, not clickable. */
@@ -67,7 +71,7 @@ export function ChoiceCard({
     return (
         <button
             type="button"
-            className={variant === 'tile' ? 'choice-card choice-card--tile' : 'choice-card'}
+            className={cn('choice-card', variant === 'tile' && 'choice-card--tile', variant === 'compact' && 'choice-card--compact')}
             data-selected={selected ? 'true' : 'false'}
             aria-pressed={pressed}
             data-testid={testId}

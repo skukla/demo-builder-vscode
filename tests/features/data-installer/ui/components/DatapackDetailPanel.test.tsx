@@ -422,3 +422,20 @@ describe('DatapackDetailPanel — actions', () => {
         expect(screen.queryByRole('button', { name: 'More actions for Bodea' })).not.toBeInTheDocument();
     });
 });
+
+describe('DatapackDetailPanel and a settings layer (datapack-engine step 09)', () => {
+    const LAYER = { id: { name: 'bodea-settings', version: '2' }, mine: true, settings: [{ path: 'catalog/frontend/grid_per_page', value: '24' }] };
+
+    it('says what Import will also set, by path and value', () => {
+        renderPanel({ settingsLayer: LAYER });
+
+        expect(screen.getByText('Also sets')).toBeInTheDocument();
+        expect(screen.getByText('catalog/frontend/grid_per_page: 24')).toBeInTheDocument();
+    });
+
+    it('has no such row for a pack with no layer', () => {
+        renderPanel();
+
+        expect(screen.queryByText('Also sets')).not.toBeInTheDocument();
+    });
+});

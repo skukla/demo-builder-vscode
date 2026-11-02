@@ -1,28 +1,16 @@
 /**
- * "Create datapack" (owner, 2026-10-30), as ONE dialog (owner, 2026-10-31, the multi-dialog
- * audit): the pack type as two plain options at the top and the chosen option's form right under
- * it, as the Share dialog does:
- *
- * - Commerce, with Demo Builder's engine: the pick list, whose Save starts the catalog's save
- *   (`onSaveFromStore`) into this demo's own library pack.
- * - Commerce, with the service's engine: the service's export, into the shared catalog.
- * - ACO, with either engine: the ACO export, into the SC's library.
- *
- * No Continue and no second dialog: switching the choice swaps the form in the same window.
+ * "Create a datapack": one window, one question per screen (owner, 2026-11-02). The first screen,
+ * which route each engine and pack type takes, and Demo Builder's engine through to the save. The
+ * export routes have their own suites; the screens that pick from the store are also pinned by
+ * SaveFromStoreModal.test.tsx, which starts on them.
  */
 
-import '../../../../helpers/webviewClientMock';
-import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import React from 'react';
 import { press, settle } from '../../../../helpers/reactSettle';
-
-// Below the mocks on purpose: they hoist above these imports.
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { button, card, CreateDatapackModal, isOff, mockRequest, renderCreate, SCOPES, withService } from './CreateDatapackModal.testUtils';
 import type { StoreItemPage } from '@/features/data-installer/pickableKinds';
-import { CreateDatapackModal } from '@/features/data-installer/ui/components/CreateDatapackModal';
-
-const mockRequest = webviewClient.request as jest.Mock;
 
 const PRODUCTS: StoreItemPage = {
     items: [{ id: 'VR-Rack', displayName: 'VR Rack', detail: 'VR-Rack', key: 'VR-Rack' }],
@@ -33,78 +21,153 @@ const PRODUCTS: StoreItemPage = {
 
 beforeEach(() => {
     mockRequest.mockReset();
-    mockRequest.mockImplementation(async (type: string, payload?: Record<string, unknown>) => {
-        if (type === 'get-datapack-import-target') return { success: true, data: { instance: 'inst-1', projectName: 'demo-1' } };
-        if (type === 'list-datapack-data-types' && payload?.operationMode === 'export') {
-            return { success: true, data: { mode: 'export', dataTypes: ['attribute_sets', 'categories'] } };
-        }
-        if (type === 'list-datapack-import-scopes') {
-            return { success: true, data: { websites: [{ code: 'base', name: 'Main Website', storeViews: [{ code: 'default', name: 'Default Store View' }] }] } };
-        }
-        if (type === 'list-datapack-export-items') return { success: true, data: PRODUCTS };
-        return { success: true, data: null };
+    withService({ ...SCOPES, 'list-datapack-export-items': { success: true, data: PRODUCTS } });
+});
+
+describe('the first screen', () => {
+    it('asks one question, with two cards in one window', async () => {
+        await renderCreate('demo-builder');
+
+        expect(screen.getAllByRole('dialog')).toHaveLength(1);
+        expect(screen.getByRole('heading', { name: 'Create a datapack' })).toBeInTheDocument();
+        expect(card('Commerce datapack')).toBeInTheDocument();
+        expect(card('ACO datapack')).toBeInTheDocument();
+        expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+        expect(screen.queryByText(/as a new version/)).not.toBeInTheDocument();
+    });
+
+    it('reads nothing until a pack type is chosen and Continue pressed', async () => {
+        await renderCreate('demo-builder');
+        await press(card('ACO datapack'));
+
+        expect(mockRequest).not.toHaveBeenCalled();
+    });
+
+    it('draws Close first, Back off, and Continue off until a card is clicked', async () => {
+        await renderCreate('demo-builder');
+
+        const footer = screen.getAllByRole('button').filter((b) => ['Close', 'Back', 'Continue'].includes(b.textContent ?? ''));
+        expect(footer.map((b) => b.textContent)).toEqual(['Close', 'Back', 'Continue']);
+        expect(isOff('Back')).toBe(true);
+        expect(isOff('Continue')).toBe(true);
+
+        await press(card('Commerce datapack'));
+
+        expect(isOff('Continue')).toBe(false);
+    });
+
+    it('marks the card clicked, and only that one', async () => {
+        await renderCreate('demo-builder');
+
+        await press(card('Commerce datapack'));
+        expect(card('Commerce datapack')).toHaveAttribute('data-selected', 'true');
+        expect(card('ACO datapack')).toHaveAttribute('data-selected', 'false');
+
+        await press(card('ACO datapack'));
+        expect(card('Commerce datapack')).toHaveAttribute('data-selected', 'false');
+        expect(card('ACO datapack')).toHaveAttribute('data-selected', 'true');
+    });
+
+    it.each([
+        ['demo-builder', "Pick what to save from this store into this demo's own pack."],
+        ['service', 'Export data types from this store into the shared catalog.'],
+        [undefined, 'Export data types from this store into the shared catalog.'],
+    ] as const)('with the %s engine, says where a Commerce pack goes', async (engine, line) => {
+        await renderCreate(engine);
+
+        expect(screen.getByText(line)).toBeInTheDocument();
     });
 });
 
-async function renderCreate(engine: 'service' | 'demo-builder' | undefined) {
-    const props = { onClose: jest.fn(), onSaveFromStore: jest.fn() };
-    render(<CreateDatapackModal engine={engine} {...props} />);
-    await settle();
-    return props;
-}
+describe('which route each engine and pack type takes', () => {
+    it("Commerce with Demo Builder's engine goes to the kinds, reading nothing yet", async () => {
+        await renderCreate('demo-builder');
+        await press(card('Commerce datapack'));
+        await press(button('Continue'));
 
-it('shows the pack type on top, Commerce chosen, with its form under it in the same window', async () => {
-    await renderCreate('demo-builder');
+        expect(card('Products')).toBeInTheDocument();
+        expect(card('Attribute sets')).toBeInTheDocument();
+        expect(mockRequest).not.toHaveBeenCalled();
+    });
 
-    expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    expect(screen.getByText('Create a datapack')).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Commerce datapack' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'ACO datapack' })).not.toBeChecked();
-    // The pick list's own opening sentence says where the pack goes; nothing repeats it.
-    expect(screen.getAllByText(/this demo's own pack/)).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+    it.each([['service'], [undefined]] as const)("Commerce with the %s engine goes to the service's data types", async (engine) => {
+        const { onSaveFromStore } = await renderCreate(engine);
+        await press(card('Commerce datapack'));
+        await press(button('Continue'));
+
+        expect(mockRequest.mock.calls.some((c) => c[0] === 'list-datapack-data-types')).toBe(true);
+        expect(card('Attribute sets')).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.queryByRole('button', { name: /^Products/ })).not.toBeInTheDocument();
+        expect(onSaveFromStore).not.toHaveBeenCalled();
+    });
+
+    it.each([['service'], ['demo-builder']] as const)('ACO with the %s engine goes to the store views', async (engine) => {
+        const { onSaveFromStore } = await renderCreate(engine);
+        await press(card('ACO datapack'));
+        await press(button('Continue'));
+
+        expect(card('Default Store View')).toHaveAttribute('aria-pressed', 'true');
+        expect(mockRequest.mock.calls.some((c) => c[0] === 'list-datapack-export-items')).toBe(false);
+        expect(onSaveFromStore).not.toHaveBeenCalled();
+    });
 });
 
-it("with Demo Builder's engine, Commerce's Save starts the save with the picks, then closes", async () => {
-    const props = await renderCreate('demo-builder');
+describe("Commerce with Demo Builder's engine", () => {
+    it('Save starts the save with the picks, then closes', async () => {
+        const { onClose, onSaveFromStore } = await renderCreate('demo-builder');
+        await press(card('Commerce datapack'));
+        await press(button('Continue'));
+        expect(isOff('Save')).toBe(true);
 
-    await press(await screen.findByRole('checkbox', { name: /VR Rack/ }));
-    await press(screen.getByRole('button', { name: /^Save/ }));
+        await press(card('Products'));
+        await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
+        await press(button('Save with 1 picked'));
 
-    expect(props.onSaveFromStore).toHaveBeenCalledWith({ products: ['VR-Rack'] });
-    expect(props.onClose).toHaveBeenCalledTimes(1);
+        expect(onSaveFromStore).toHaveBeenCalledWith({ products: ['VR-Rack'] });
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('goes back from the kinds to the first screen, keeping the choice', async () => {
+        await renderCreate('demo-builder');
+        await press(card('Commerce datapack'));
+        await press(button('Continue'));
+
+        await press(button('Back'));
+
+        expect(card('Commerce datapack')).toHaveAttribute('data-selected', 'true');
+        expect(isOff('Back')).toBe(true);
+    });
 });
 
-it.each([['service'], [undefined]] as const)(
-    "with the %s engine, Commerce shows the service's export under the choice",
-    async (engine) => {
-        const props = await renderCreate(engine);
+describe('closing and reopening', () => {
+    it('closes without making anything', async () => {
+        const { onClose, onSaveFromStore } = await renderCreate('demo-builder');
 
-        expect(screen.getAllByText(/shared catalog/)).toHaveLength(1);
-        expect(await screen.findByRole('checkbox', { name: 'Attribute sets' })).toBeInTheDocument();
-        expect(screen.getByRole('radio', { name: 'Commerce datapack' })).toBeChecked();
-        expect(props.onSaveFromStore).not.toHaveBeenCalled();
-    },
-);
+        await press(button('Close'));
 
-it.each([['service'], ['demo-builder']] as const)('with the %s engine, choosing ACO swaps in the ACO export, in the same window', async (engine) => {
-    const props = await renderCreate(engine);
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(onSaveFromStore).not.toHaveBeenCalled();
+        expect(mockRequest).not.toHaveBeenCalled();
+    });
 
-    await press(screen.getByRole('radio', { name: 'ACO datapack' }));
+    it('starts at the first screen when reopened', async () => {
+        const { unmount } = await renderCreate('demo-builder');
+        await press(card('Commerce datapack'));
+        await press(button('Continue'));
+        unmount();
 
-    expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    expect(await screen.findByRole('checkbox', { name: 'Default Store View (Main Website)' })).toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: 'Attribute sets' })).not.toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'ACO datapack' })).toBeChecked();
-    expect(props.onSaveFromStore).not.toHaveBeenCalled();
-});
+        render(<CreateDatapackModal engine="demo-builder" onClose={jest.fn()} onSaveFromStore={jest.fn()} />);
+        await settle();
 
-it('closes without making anything', async () => {
-    const props = await renderCreate('demo-builder');
+        expect(card('Commerce datapack')).toHaveAttribute('data-selected', 'false');
+        expect(isOff('Continue')).toBe(true);
+    });
 
-    await press(screen.getByRole('button', { name: 'Close' }));
-
-    expect(props.onClose).toHaveBeenCalledTimes(1);
-    expect(props.onSaveFromStore).not.toHaveBeenCalled();
-    expect(mockRequest).not.toHaveBeenCalledWith('start-datapack-export', expect.anything(), undefined);
+    it('stays on one dialog through every screen', async () => {
+        await renderCreate('service');
+        fireEvent.click(card('ACO datapack'));
+        fireEvent.click(button('Continue'));
+        await settle();
+        expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    });
 });
