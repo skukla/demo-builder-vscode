@@ -6,12 +6,11 @@
  */
 
 import React from 'react';
-import { act, render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { Modal, ActionButton } from '@/core/ui/components/ui/Modal';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 // Helper to render with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {
@@ -351,30 +350,6 @@ describe('Modal', () => {
             renderWithProvider(<Modal {...defaultProps} />);
 
             expect(screen.getByRole('heading').querySelector('.modal-status-icon')).toBeNull();
-        });
-    });
-
-    // A change of width step hides the content while the box eases, then shows it.
-    describe('a change of width', () => {
-        it('hides the content while the dialog eases to its new width, then shows it', () => {
-            const { rerender } = renderWithProvider(<Modal {...defaultProps} size="M" />);
-            expect(screen.getByRole('dialog')).not.toHaveClass('is-resizing');
-
-            rerender(<Provider theme={defaultTheme}><Modal {...defaultProps} size="S" /></Provider>);
-            expect(screen.getByRole('dialog')).toHaveClass('is-resizing');
-
-            act(() => {
-                jest.advanceTimersByTime(FRONTEND_TIMEOUTS.GROWTH_SETTLE);
-            });
-            expect(screen.getByRole('dialog')).not.toHaveClass('is-resizing');
-        });
-
-        it('does not hide the content when the width stays the same — control', () => {
-            const { rerender } = renderWithProvider(<Modal {...defaultProps} size="M" />);
-
-            rerender(<Provider theme={defaultTheme}><Modal {...defaultProps} size="M" title="Another title" /></Provider>);
-
-            expect(screen.getByRole('dialog')).not.toHaveClass('is-resizing');
         });
     });
 

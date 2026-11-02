@@ -97,6 +97,28 @@ it('centres content shorter than its floor by default, and pins it to the top wh
  * real height for the change only: the old one, then the new one a frame later (the stylesheet
  * eases between them), then its content's own height again so nothing can be cut off.
  */
+it('does not read the content while its dialog moves to a new view: the text is between widths', () => {
+    const measure = measuringAt(400);
+    const { rerender } = render(
+        <div className="is-resizing">
+            <SteadyHeight>
+                <div data-testid="content">the form</div>
+            </SteadyHeight>
+        </div>,
+    );
+
+    measure(560);
+    rerender(
+        <div className="is-resizing">
+            <SteadyHeight>
+                <div data-testid="content">the next state</div>
+            </SteadyHeight>
+        </div>,
+    );
+
+    expect(reservedBox()).not.toHaveClass('is-growing');
+});
+
 describe('easing between states', () => {
     function changed(from: number, to: number) {
         const measure = measuringAt(from);

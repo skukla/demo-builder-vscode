@@ -595,7 +595,10 @@ meant.
 > hold the tallest state and never shrink, which stopped the jumps and left short states
 > in dead space; the dialog design rules (owner, 2026-10-31,
 > `docs/development/sop/dialog-design.md`) settled on fit-and-ease, with dialogs pinned
-> near the top so a change moves only the bottom edge.
+> near the top so a change moves only the bottom edge. A change of whole view is one move
+> (owner, 2026-11-02, after a confirm folded in and out "like an accordion"): the content
+> hides, the box eases once to its final size, and the new content fades in
+> (`useDialogViewChange`).
 >
 > What no check can see is whether the change LOOKS right; the ledger is where
 > a body the scan reads as multi-view says it has only one. Enforced by

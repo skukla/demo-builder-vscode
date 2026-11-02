@@ -10,7 +10,8 @@
  * form-sized box. The dialog design rules (owner, 2026-10-31,
  * `docs/development/sop/dialog-design.md`) settled it the other way: the height fits the
  * content, and the change eases, growing or shrinking. The dialog is pinned near the top,
- * so a change moves only its bottom edge.
+ * so a change moves only its bottom edge. This is for a change inside a view; a dialog's change
+ * of view is one move of the whole box (`useDialogViewChange`).
  *
  * @module core/ui/components/layout/SteadyHeight
  */
@@ -58,6 +59,9 @@ export function SteadyHeight({
     // measures the same content height and stops.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useLayoutEffect(() => {
+        // A dialog moving to a new view: the box is between widths and the text with it, so this
+        // reading would be neither size, and would ease once the content had faded back in.
+        if (content.current?.closest('.is-resizing')) return;
         const needed = content.current?.scrollHeight ?? 0;
         if (needed !== measured) {
             // Ease from the old height; the first measure has nothing to ease from.

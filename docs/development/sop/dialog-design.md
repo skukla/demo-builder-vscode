@@ -91,12 +91,15 @@ step.
 
 - **Pinned near the top**, not centred, so content that grows pushes only the
   bottom edge down and nothing above it moves under the pointer.
-- **Height fits the content** and eases when it changes, growing or shrinking.
+- **Height fits the content.** A small change inside a view, such as a line appearing,
+  eases the bottom edge.
 - **Width is a step**, chosen by the view, never measured from text: small 400,
   medium 480, large 640 (Spectrum's own), extra-wide 980. A longer store name wraps;
-  it does not widen the dialog. When a view changes step, its content is hidden
-  while the box eases to the new width, then fades in, so text never visibly
-  rewraps.
+  it does not widen the dialog.
+- **A change of view is one move** (owner, 2026-11-02). When the width step, the title or
+  a wait changes, the content hides, the box eases once to its final size, and the new
+  content fades in. The title stays when only a wait ended. The box never takes two
+  motions for one change, and text never visibly rewraps.
 
 ## Long content
 
@@ -109,5 +112,5 @@ step.
 ## Where it is built
 
 `core/ui/components/ui/Modal.tsx` (the title's status icon, the width steps and
-their easing, the button styles), `core/ui/components/layout/SteadyHeight.tsx` (the
-height), `core/ui/styles/modal.css` (pinning, text kinds, spacing).
+their easing, the button styles), `core/ui/components/layout/SteadyHeight.tsx` (a
+change inside a view), `core/ui/components/ui/useDialogViewChange.ts` (a change of view), `core/ui/styles/modal.css` (pinning, text kinds, spacing).

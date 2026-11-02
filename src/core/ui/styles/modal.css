@@ -179,18 +179,20 @@
     max-height: calc(var(--spectrum-visual-viewport-height) * 0.84);
 }
 
-/* Width is a step (Spectrum's small, medium, large; `modal-wide` past them). A change of step
-   eases, with the content hidden until the box has its new width, so text never visibly
-   rewraps; then the content fades in. */
-.modal-dialog {
-    transition: width var(--spectrum-global-animation-duration-200) ease-out;
-}
-
-.modal-dialog .modal-content {
+/* A change of view is one move (`useDialogViewChange`): the content hides, the box eases to its
+   final size, and the content fades in, so text never visibly rewraps. The title hides with it
+   when it reads differently or would rewrap, and stays when only a wait ended. */
+.modal-dialog .modal-content,
+.modal-dialog .modal-title {
     transition: opacity var(--spectrum-global-animation-duration-200) ease-in;
 }
 
-.modal-dialog.is-resizing .modal-content {
+.modal-dialog.is-resizing {
+    overflow: hidden;
+}
+
+.modal-dialog.is-resizing .modal-content,
+.modal-dialog.is-retitling .modal-title {
     opacity: 0;
     transition: none;
 }

@@ -2,12 +2,12 @@ import { Dialog, Heading, Content, Divider } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { ReactNode, useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { ReactNode, useCallback } from 'react';
 import { Spinner } from './Spinner';
+import { useDialogViewChange } from './useDialogViewChange';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { cn } from '@/core/ui/utils/classNames';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 /**
  * How the thing the dialog is about stands, said by an icon before its title (the dialog design
@@ -76,7 +76,7 @@ export interface ModalProps {
      * The dialog is waiting for what it will show. Only the title, a medium centred spinner and
      * the way out appear: no fields, no text, no action buttons (dialog design rules, owner
      * 2026-11-01). A button doing its own work uses `isPending` instead. `false` or absent shows
-     * the content. The height eases from the wait to the content.
+     * the content. The end of a wait is a change of view: see `useDialogViewChange`.
      */
     waiting?: ModalWait | false;
     children: ReactNode;
@@ -169,24 +169,6 @@ const STATUS_ICONS: Record<ModalStatus, React.ReactElement> = {
     error: <AlertCircle size="S" UNSAFE_className="modal-status-icon modal-status-error" />,
 };
 
-/**
- * True for a moment after the dialog's width step changes: long enough for the box to ease to its
- * new width with its content hidden, so text never visibly rewraps (dialog design rules). A layout
- * effect, so the content is hidden before the new view is first painted.
- */
-function useWidthStepChange(step: string): boolean {
-    const previous = useRef(step);
-    const [resizing, setResizing] = useState(false);
-    useLayoutEffect(() => {
-        if (previous.current === step) return undefined;
-        previous.current = step;
-        setResizing(true);
-        const timer = setTimeout(() => setResizing(false), FRONTEND_TIMEOUTS.GROWTH_SETTLE);
-        return () => clearTimeout(timer);
-    }, [step]);
-    return resizing;
-}
-
 export function Modal({
     title,
     status,
@@ -204,13 +186,17 @@ export function Modal({
     // Map custom sizes to Dialog-compatible sizes
     const dialogSize: 'S' | 'M' | 'L' =
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
-    const resizing = useWidthStepChange(wide ? 'XL' : dialogSize);
+    const { bodyRef, resizing, retitling } = useDialogViewChange({
+        widthStep: wide ? 'XL' : dialogSize,
+        waiting: Boolean(waiting),
+        title,
+    });
 
     return (
         // Every class a literal, so the stylesheet scan can read them in every bundle that
         // renders a modal. (A helper built this string until 2026-10-15, which the scan counted
-        // unreadable once per bundle.) `modal-dialog` pins the dialog near the top and eases
-        // its width; `is-resizing` hides the content while it does.
+        // unreadable once per bundle.) `modal-dialog` pins the dialog near the top; `is-resizing`
+        // hides the content while the box moves to a new view, and `is-retitling` the title too.
         <Dialog
             size={dialogSize}
             UNSAFE_className={cn(
@@ -218,6 +204,7 @@ export function Modal({
                 fitContent && 'modal-fit-content',
                 wide && 'modal-wide',
                 resizing && 'is-resizing',
+                retitling && 'is-retitling',
             )}
         >
             <Heading>
@@ -232,7 +219,7 @@ export function Modal({
                     the content is short. `position: sticky` alone only pins against an
                     OVERFLOWING container, so a short body (a spinner, a two-row list) left
                     the footer floating mid-dialog with dead space beneath it. */}
-                <div className="modal-body">
+                <div className="modal-body" ref={bodyRef}>
                     <SteadyHeight>
                         {waiting ? (
                             <div className="modal-wait">
