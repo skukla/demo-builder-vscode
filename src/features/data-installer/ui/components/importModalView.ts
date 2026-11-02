@@ -12,7 +12,7 @@
 
 import type { ImportScopes } from '../hooks/useImportScopes';
 import type { ModalView } from './ImportDatapackModalBody';
-import type { LastAction, ResultContent } from './importResult';
+import { type LastAction, type ResultContent, resultStatus } from './importResult';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 
 /**
@@ -66,6 +66,8 @@ export function resolveView(state: {
     busy: boolean;
     resetArmed: boolean;
     running: boolean;
+    /** The SC is still following the running job; false once they press Stop watching. */
+    watching: boolean;
     result: ResultContent | null;
     /** The project named no Commerce instance, and the target request settled. */
     noInstance: boolean;
@@ -77,7 +79,7 @@ export function resolveView(state: {
         return 'confirm-reset';
     }
     if (state.running) {
-        return 'watching';
+        return state.watching ? 'watching' : 'stopped-watching';
     }
     if (state.result) {
         return 'result';
@@ -138,6 +140,11 @@ export function buildActions(a: {
     if (a.view === 'result') {
         return [{ label: 'Back', variant: 'secondary', onPress: a.goBack }];
     }
+    // Nothing left to press but the way out: the job goes on by itself, or there is no instance
+    // to import to.
+    if (a.view === 'stopped-watching' || a.view === 'no-instance') {
+        return [];
+    }
     // form and busy share the row. While busy the body shows the spinner, so every button keeps
     // its label and stops taking presses: one spinner per wait, and no "-ing" label (owner,
     // 2026-10-31).
@@ -176,6 +183,11 @@ export interface ViewFrame {
     hideClose: boolean;
 }
 
+/** The way out: closing a job still being followed hands it to a progress notification. */
+export function closeLabel(view: ModalView): string {
+    return view === 'watching' ? 'Run in background' : 'Close';
+}
+
 /**
  * The form's width, from how many data types it lists: one column at medium, two at large, three
  * extra-wide (`.datapack-type-grid` takes columns of at least 260px). Decided by the pack, so it is
@@ -187,13 +199,6 @@ function formWidth(typeCount: number): Pick<ViewFrame, 'size' | 'wide'> {
     if (typeCount <= 12) return { size: 'L', wide: false };
     return { size: 'L', wide: true };
 }
-
-const RESULT_STATUS: Record<ResultContent['variant'], ModalStatus | undefined> = {
-    success: 'success',
-    warning: 'warning',
-    error: 'error',
-    info: undefined,
-};
 
 /**
  * Each view's frame, by the dialog design rules (`docs/development/sop/dialog-design.md`): the
@@ -211,6 +216,9 @@ export function viewFrame(a: {
     result: ResultContent | null;
 }): ViewFrame {
     const small = { size: 'S' as const, wide: false, hideClose: false };
+    // Amber: nothing failed, and the next move is the SC's.
+    if (a.view === 'no-instance') return { ...small, title: 'This project has no Commerce instance', status: 'warning' };
+    if (a.view === 'stopped-watching') return { ...small, title: 'Stopped watching' };
     switch (a.view) {
         case 'confirm-reset':
             return { ...small, title: `Remove from ${a.store}?`, status: 'warning', hideClose: true };
@@ -221,7 +229,7 @@ export function viewFrame(a: {
                       // The Admin path reads as one line at medium, not as several steps.
                       size: a.result.keptRoot ? ('M' as const) : small.size,
                       title: a.result.title,
-                      status: RESULT_STATUS[a.result.variant],
+                      status: resultStatus(a.result),
                   }
                 : { ...small, title: `Import ${a.displayName}` };
         case 'busy':

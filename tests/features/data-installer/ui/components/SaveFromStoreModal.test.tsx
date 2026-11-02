@@ -104,6 +104,31 @@ describe('SaveFromStoreModal', () => {
         expect(onSave).toHaveBeenCalledWith({});
     });
 
+    it('waits with no words and nothing else while it first reads the store', async () => {
+        mockRequest.mockImplementation(() => new Promise(() => undefined));
+        await open();
+
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
+        expect(screen.queryByTestId('spectrum-picker-select')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    });
+
+    it('re-reads another kind with a spinner where the list lands, and keeps the rest', async () => {
+        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) =>
+            payload?.dataType === 'products' ? Promise.resolve({ success: true, data: PRODUCTS }) : new Promise(() => undefined),
+        );
+        await open();
+
+        await change(kindPicker(), 'cart_rules');
+
+        expect(screen.getByRole('progressbar', { name: /Loading the store's/ })).toBeInTheDocument();
+        expect(screen.queryByText(/Loading the store's/)).not.toBeInTheDocument();
+        expect(kindPicker()).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+    });
+
     it('says why a kind has nothing to pick, and why a list could not be read', async () => {
         mockRequest.mockImplementation(async (type: string, payload?: { dataType?: string }) =>
             payload?.dataType === 'products' ? { success: false, error: 'The install target names no website.' } : { success: true, data: NONE },

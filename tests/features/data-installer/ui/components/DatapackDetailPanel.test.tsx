@@ -150,14 +150,16 @@ describe('DatapackDetailPanel', () => {
             expect(screen.queryByText('Description')).not.toBeInTheDocument();
         });
 
-        // The count on the Data row counts what the service HOLDS. The pack here
-        // declares three types and the service stores two, so a count of three
-        // would be the same lie the flyout exists to avoid.
-        it('counts the stored types, not the declared ones', () => {
-            renderPanel();
+        // The Data row lists what the service HOLDS. The pack here declares three types and the
+        // service stores two, so listing three would be the same lie the flyout exists to avoid.
+        // No count on its label: "Data (5)" counted a list the SC can see (dialog design rules).
+        it('lists the stored types under a plain label, not the declared ones', () => {
+            const { container } = renderPanel();
 
-            expect(screen.getByText('Data (2)')).toBeInTheDocument();
-            expect(screen.queryByText('Data (3)')).not.toBeInTheDocument();
+            expect(screen.getByText('Data')).toBeInTheDocument();
+            expect(screen.queryByText(/^Data \(/)).not.toBeInTheDocument();
+            const stored = container.querySelectorAll('.datapack-panel-type:not(.is-missing)');
+            expect(Array.from(stored).map((chip) => chip.textContent)).toEqual(['Categories', 'Products']);
         });
 
         // "Visible to", in plain words: it replaced a Curation row reading "Library, only you"
@@ -245,9 +247,9 @@ describe('DatapackDetailPanel', () => {
          * missing until something has actually looked.
          */
         it('falls back to the declared types when no inventory has arrived', () => {
-            renderPanel({ inventory: null });
+            const { container } = renderPanel({ inventory: null });
 
-            expect(screen.getByText('Data (3)')).toBeInTheDocument();
+            expect(container.querySelectorAll('.datapack-panel-type')).toHaveLength(3);
             expect(screen.getByText('Giftcards')).toBeInTheDocument();
             expect(screen.queryByTestId('datapack-detail-missing')).not.toBeInTheDocument();
         });

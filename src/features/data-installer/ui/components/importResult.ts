@@ -18,6 +18,7 @@
 import type { ImportJobRecord, KeptRootStep } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 
 /**
  * One line per data type: its human name and what the service says it did.
@@ -54,6 +55,18 @@ export interface ResultContent {
     tookMs?: number;
     /** The kept root's Admin step, shown as the setup step's Where / Set / Then. */
     keptRoot?: KeptRootStep;
+}
+
+const RESULT_STATUS: Record<ResultContent['variant'], ModalStatus | undefined> = {
+    success: 'success',
+    warning: 'warning',
+    error: 'error',
+    info: undefined,
+};
+
+/** The icon before a result's title. */
+export function resultStatus(result: ResultContent): ModalStatus | undefined {
+    return RESULT_STATUS[result.variant];
 }
 
 /** Which operation, in the words each place needs. */

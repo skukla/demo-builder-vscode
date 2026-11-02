@@ -23,8 +23,9 @@ import { Checkbox, DialogContainer, Radio, RadioGroup } from '@adobe/react-spect
 import React, { useCallback, useEffect, useState } from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { DatapackResultBody } from './DatapackResultBody';
+import { type ResultContent, resultStatus } from './importResult';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import type { DatapackStoreName } from '@/types/datapack';
 
@@ -84,36 +85,37 @@ export function LoadDatapackFileModal({
     }, [runLoad, file, target, update]);
 
     if (!opened.settled || opened.value?.cancelled) return null;
-    const done = Boolean(loading.value ?? loading.failure);
+    const outcome = loading.value;
+    const result = loadResult({ openError: opened.failure?.message, file, outcome, loadError: loading.failure?.message });
+    // Only an exact undo is offered: a pack this load CREATED in the library.
+    const undoable = !loading.failure && outcome?.target === 'library' && outcome.pack === 'created';
 
     return (
         <DialogContainer onDismiss={onClose}>
             <Modal
-                title="Load a datapack file"
+                title={result?.title ?? 'Load a datapack file'}
+                status={result ? resultStatus(result) : undefined}
+                size={result ? 'S' : 'M'}
+                fitContent
                 onClose={onClose}
                 closeLabel="Close"
                 actionButtons={
-                    done || !file
-                        ? [{ label: 'Done', variant: 'secondary', onPress: onClose }]
-                        : [
-                              {
-                                  label: 'Load',
-                                  variant: 'accent',
-                                  onPress: load,
-                                  isPending: loading.loading,
-                              },
-                          ]
+                    file && !result
+                        ? [{ label: 'Load', variant: 'accent', onPress: load, isPending: loading.loading }]
+                        : []
                 }
             >
                 <div className="datapack-export-body">
-                    {renderBody({
-                        openError: opened.failure?.message,
-                        file,
-                        done,
-                        outcome: loading.value,
-                        loadError: loading.failure?.message,
-                        choice: { target, update, onTarget: setTarget, onUpdate: setUpdate },
-                    })}
+                    {file && !result ? (
+                        <LoadForm
+                            file={file}
+                            choice={{ target, update, onTarget: setTarget, onUpdate: setUpdate }}
+                        />
+                    ) : null}
+                    {result ? <DatapackResultBody result={result} /> : null}
+                    {result && undoable ? (
+                        <RemoveFromLibraryButton id={{ name: outcome.datapackName, version: outcome.version }} />
+                    ) : null}
                 </div>
             </Modal>
         </DialogContainer>
@@ -127,29 +129,32 @@ interface TargetChoice {
     onUpdate: (update: boolean) => void;
 }
 
-/** The one state to show: why the file would not open, the choice, or what happened. */
-function renderBody(args: {
+/**
+ * The outcome, once there is one: why the file would not open, or what was stored and each type
+ * that was refused with its reason. Nothing while the form is still the thing to show.
+ */
+function loadResult(args: {
     openError?: string;
     file: OpenedFile | null;
-    done: boolean;
     outcome: LoadOutcome | null;
     loadError?: string;
-    choice: TargetChoice;
-}): React.JSX.Element {
-    const { openError, file, done, outcome, loadError, choice } = args;
+}): ResultContent | null {
+    const { openError, file, outcome, loadError } = args;
     if (openError || !file) {
-        return (
-            <StatusDisplay
-                variant="error"
-                title="This file cannot be loaded"
-                message={openError ?? 'No file was opened.'}
-            />
-        );
+        return { variant: 'error', title: 'This file cannot be loaded', message: openError ?? 'No file was opened.' };
     }
-    if (done) {
-        return <LoadResult outcome={outcome} error={loadError} />;
+    if (!outcome && !loadError) return null;
+    const details = (outcome?.failed ?? []).map((f) => `${dataTypeLabel(f.dataType)}: ${f.reason}`);
+    if (loadError) {
+        return { variant: 'error', title: 'The file was not loaded', message: loadError, details };
     }
-    return <LoadForm file={file} choice={choice} />;
+    const where = outcome?.target === 'installer' ? 'the Data Installer' : 'the datapack library';
+    const stored = outcome?.stored.length ?? 0;
+    return {
+        variant: details.length === 0 ? 'success' : 'warning',
+        title: `Loaded ${stored} of ${stored + details.length} data types into ${where}`,
+        details,
+    };
 }
 
 /** What is in the file, and where it should go. */
@@ -180,45 +185,6 @@ function LoadForm({ file, choice }: { file: OpenedFile; choice: TargetChoice }):
                     version already exist there, nothing is changed.
                 </p>
             )}
-        </>
-    );
-}
-
-/** What was stored, and each type that was refused with its reason. */
-function LoadResult({
-    outcome,
-    error,
-}: {
-    outcome: LoadOutcome | null;
-    error?: string;
-}): React.JSX.Element {
-    const failed = (outcome?.failed ?? []).map((f) => `${dataTypeLabel(f.dataType)}: ${f.reason}`);
-    if (error) {
-        return (
-            <StatusDisplay
-                variant="error"
-                title="The file was not loaded"
-                message={error}
-                details={failed}
-            />
-        );
-    }
-    const where = outcome?.target === 'installer' ? 'the Data Installer' : 'the datapack library';
-    const total = (outcome?.stored.length ?? 0) + failed.length;
-    // Only an exact undo is offered: a pack this load CREATED in the library.
-    const undoable = outcome?.target === 'library' && outcome.pack === 'created';
-    return (
-        <>
-            <StatusDisplay
-                variant={failed.length === 0 ? 'success' : 'warning'}
-                title={`Loaded ${outcome?.stored.length ?? 0} of ${total} data types into ${where}`}
-                details={failed}
-            />
-            {undoable ? (
-                <RemoveFromLibraryButton
-                    id={{ name: outcome.datapackName, version: outcome.version }}
-                />
-            ) : null}
         </>
     );
 }

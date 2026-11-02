@@ -154,11 +154,16 @@ describe('import targeting', () => {
 
     /** Discovery is optional: its failure must not block an untargeted import. */
     it('still allows an import when no scopes could be discovered', async () => {
-        mockRequest.mockImplementation(async (type: string) =>
-            type === 'list-datapack-import-scopes'
-                ? { success: false, error: 'Connection timed out.' }
-                : { success: true, data: null }
-        );
+        // The project names its instance: with no target at all, this is the no-instance view.
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'list-datapack-import-scopes') {
+                return { success: false, error: 'Connection timed out.' };
+            }
+            if (type === 'get-datapack-import-target') {
+                return { success: true, data: { instance: 'inst-1', projectName: 'demo' } };
+            }
+            return { success: true, data: null };
+        });
         renderModal();
 
         await waitFor(() =>
@@ -430,7 +435,10 @@ describe('the redesigned target section', () => {
         );
         renderModal();
 
-        expect(await screen.findByText(/no commerce instance/i)).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'This project has no Commerce instance' })).toBeInTheDocument();
+        expect(screen.getByText(/Connect a Commerce backend/)).toBeInTheDocument();
+        // Nothing here can be started, so nothing offers to: Close is the only button.
+        expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Close']);
     });
 });
 

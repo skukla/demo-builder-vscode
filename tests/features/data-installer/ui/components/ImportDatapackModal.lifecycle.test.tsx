@@ -423,7 +423,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
          * component's own place for it, not a parallel row list.
          *
          * The WORDING changed deliberately. This used to dump every type and its
-         * raw state ("categories: success · products: processing"), a line that
+         * raw state ("categories: success, products: processing"), a line that
          * grew as the job ran and answered neither "how far along" nor "what is
          * happening now". It is a count and the type in hand instead, in the words
          * every datapack surface uses (progress vocabulary slice 5, 2026-10-16).

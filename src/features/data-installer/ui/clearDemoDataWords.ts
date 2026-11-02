@@ -54,14 +54,17 @@ export function viewsLine(views: readonly string[]): string {
     return `${views.length === 1 ? 'View' : 'Views'}: ${views.join(', ')}`;
 }
 
-const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
+/** A count as the SC reads it: 1,284. */
+const digits = (count: number): string => count.toLocaleString('en-US');
+
+const plural = (count: number, one: string, many: string): string => `${digits(count)} ${count === 1 ? one : many}`;
 
 /** Each kind's word for one of it. */
 const ONE: Record<WipeKind, string> = { products: 'product', categories: 'category', customers: 'customer', orders: 'order', 'cart rules': 'cart rule' };
 
 /** "3 to remove", or nothing for none. */
 function countOf(count: number, what: string): string {
-    return count > 0 ? `${count} ${what}` : '';
+    return count > 0 ? `${digits(count)} ${what}` : '';
 }
 
 /** One labelled line of the list. */
@@ -73,9 +76,9 @@ export interface PreviewLine {
 /** "12 to cancel, 4 to refund, 1 to leave open with a note, 2 returns to close", or nothing. */
 function ordersValue(orders: WipePreview['orders']): string {
     const parts = [
-        orders.cancel.count > 0 ? `${orders.cancel.count} to cancel` : '',
-        orders.refund.count > 0 ? `${orders.refund.count} to refund` : '',
-        orders.leftOpen.count > 0 ? `${orders.leftOpen.count} to leave open with a note` : '',
+        countOf(orders.cancel.count, 'to cancel'),
+        countOf(orders.refund.count, 'to refund'),
+        countOf(orders.leftOpen.count, 'to leave open with a note'),
         orders.returns.count > 0 ? `${plural(orders.returns.count, 'return', 'returns')} to close` : '',
     ].filter(Boolean);
     return parts.join(', ');
@@ -88,20 +91,20 @@ export function previewLines(preview: WipePreview): PreviewLine[] {
     const rules = [countOf(remove.cartRules.count, 'to remove, with their coupons'), countOf(rulesTakenOff.count, 'taken off the chosen websites')].filter(Boolean).join(', ');
     const lines: PreviewLine[] = [
         { label: 'Products', value: products },
-        { label: 'Categories', value: remove.categories.count > 0 ? `${remove.categories.count} to remove` : '' },
-        { label: 'Customers', value: remove.customers.count > 0 ? `${remove.customers.count} to remove` : '' },
+        { label: 'Categories', value: countOf(remove.categories.count, 'to remove') },
+        { label: 'Customers', value: countOf(remove.customers.count, 'to remove') },
         { label: 'Cart rules', value: rules },
         { label: 'Orders', value: ordersValue(orders) },
         // The orders an ERP integration closes, or why it leaves them: its own one line.
         { label: 'ERP', value: preview.erp?.line ?? '' },
         ...preview.left.map((l) => ({ label: 'Left', value: `${plural(l.count, ONE[l.kind], l.kind)}: ${l.why}` })),
     ];
-    const made = Object.entries(installed).map(([kind, count]) => `${count} ${kind.replace(/_/gu, ' ')}`);
+    const made = Object.entries(installed).map(([kind, count]) => `${digits(count)} ${kind.replace(/_/gu, ' ')}`);
     if (made.length > 0) lines.push({ label: 'Installed', value: `${made.join(', ')}, which removing its datapack takes` });
     return lines.filter((l) => l.value !== '');
 }
 
 /** The clear button: how many things, or nothing to clear. */
 export function clearLabel(total: number): string {
-    return total === 1 ? 'Clear 1 thing' : `Clear ${total} things`;
+    return total === 1 ? 'Clear 1 thing' : `Clear ${digits(total)} things`;
 }

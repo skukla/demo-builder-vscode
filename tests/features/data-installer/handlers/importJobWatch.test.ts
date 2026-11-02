@@ -198,7 +198,7 @@ describe('the shared progress channel', () => {
         onProgress({ categories: 'success', products: 'error' });
         await settleWatch();
 
-        expect(pushes()).toContainEqual(expect.objectContaining({ step: '2 of 2 data types' }));
+        expect(pushes()).toContainEqual(expect.objectContaining({ step: 'Finishing up' }));
     });
 
     it('never shows a count of types as the position of the step', async () => {

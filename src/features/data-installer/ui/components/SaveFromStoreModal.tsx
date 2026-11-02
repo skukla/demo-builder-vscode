@@ -6,8 +6,9 @@
  * the Admin.
  *
  * One kind at a time, chosen from a `Picker` (as the import form chooses a website), its items
- * listed by `list-datapack-export-items` less what the pack holds already. Picks are kept across
- * kinds; Save hands them to `onSave`, which starts the save in the screen's progress window
+ * listed by `list-datapack-export-items` less what the pack holds already. The first read is the
+ * dialog's wait; choosing another kind is a re-read, so only its list waits (`StoreKindItems`). Picks
+ * are kept across kinds; Save hands them to `onSave`, which starts the save in the screen's progress window
  * (`useSaveStoreChanges`), so this modal closes rather than showing a result.
  *
  * What a picked thing brings with it (a product's categories, set, attributes and quantities; a
@@ -18,10 +19,10 @@
 
 import { DialogContainer, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
-import { KIND_NOUNS, PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StorePicks, isPickableKind, pickCount } from '../../pickableKinds';
+import { PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StorePicks, isPickableKind, pickCount } from '../../pickableKinds';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
-import { StoreItemChecklist } from './StoreItemChecklist';
+import { StoreKindItems } from './StoreKindItems';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
@@ -51,23 +52,6 @@ function intro(pack: PackBeingSaved | undefined): string {
         return `Saves this store's copy of ${pack.displayName} as a new version of this demo's own pack. Also pick anything you added in the Admin that it does not hold yet.`;
     }
     return "Saves what you pick from this store as a new version of this demo's own pack. A picked product brings its categories, attribute set, attributes and quantities; a cart rule its coupons; a company its admin.";
-}
-
-/** The list of one kind, or why there is none to show. */
-function KindItems({ kind, page, failure, loading, picked, onChange }: { kind: PickableKind; page: StoreItemPage | null; failure?: string; loading: boolean; picked: string[]; onChange: (ids: string[]) => void }): React.ReactElement {
-    const [one, many] = KIND_NOUNS[kind];
-    if (failure) return <p className="datapack-export-note">The store&apos;s {many} could not be listed: {failure}</p>;
-    if (loading || !page) return <p className="datapack-export-note">Loading the store&apos;s {many}</p>;
-    const held = page.inPackCount > 0 ? <p className="datapack-export-note">{page.inPackCount} more are in the pack already and are saved with it.</p> : null;
-    if (page.items.length === 0) {
-        return <>{held ?? <p className="datapack-export-note">This store has no {many} of its own to pick.</p>}</>;
-    }
-    return (
-        <>
-            <StoreItemChecklist items={page.items} nouns={[one, many]} picked={picked} onChange={onChange} />
-            {held}
-        </>
-    );
 }
 
 /** The pick screen in its own dialog ("Save store changes to this pack"). */
@@ -104,7 +88,10 @@ export function SaveFromStoreDialog({ onClose, onSave, pack, title = 'Choose wha
                 title={title}
                 onClose={onClose}
                 closeLabel="Close"
-                actionButtons={[{ label: count > 0 ? `Save with ${count} picked` : 'Save', variant: 'accent', onPress: save, isDisabled: !pack && count === 0 }]}
+                // `settled`, not `loading`: the read is sent from an effect, so `loading` is still
+                // false on the first frame, and a form drawn there would set the box the wait keeps.
+                waiting={list.settled ? false : {}}
+                actionButtons={[{ label: count > 0 ? `Save with ${count.toLocaleString('en-US')} picked` : 'Save', variant: 'accent', onPress: save, isDisabled: !pack && count === 0 }]}
             >
                 <div className="datapack-export-body">
                     {lead}
@@ -112,11 +99,11 @@ export function SaveFromStoreDialog({ onClose, onSave, pack, title = 'Choose wha
                     <Picker label="Pick from" selectedKey={kind} onSelectionChange={choose}>
                         {PICKABLE_KINDS.map((each) => {
                             const n = picks[each]?.length ?? 0;
-                            const label = n > 0 ? `${dataTypeLabel(each)} (${n} picked)` : dataTypeLabel(each);
+                            const label = n > 0 ? `${dataTypeLabel(each)} (${n.toLocaleString('en-US')} picked)` : dataTypeLabel(each);
                             return <Item key={each} textValue={label}>{label}</Item>;
                         })}
                     </Picker>
-                    <KindItems kind={kind} page={list.value} failure={list.failure?.message} loading={list.loading || !list.settled} picked={picks[kind] ?? []} onChange={pickKind} />
+                    <StoreKindItems kind={kind} page={list.value} failure={list.failure?.message} loading={list.loading} picked={picks[kind] ?? []} onChange={pickKind} />
                 </div>
             </Modal>
     );

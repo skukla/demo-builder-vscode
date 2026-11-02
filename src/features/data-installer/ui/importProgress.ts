@@ -28,6 +28,10 @@ export interface ImportProgress {
     total: number;
     /** The types being worked on right now, in request order (often one). */
     processing: string[];
+    /** The types the job asked for, in request order. */
+    requested: string[];
+    /** The requested types not yet finished or in flight, in request order. */
+    waiting: string[];
     /** 0–100, never beyond. */
     percent: number;
 }
@@ -53,6 +57,8 @@ export function summarizeProgress(
         done,
         total,
         processing,
+        requested: requestedTypes,
+        waiting: requestedTypes.filter((type) => !TERMINAL.includes(perType[type]) && perType[type] !== 'processing'),
         percent: total === 0 ? 0 : Math.min(100, Math.round((done / total) * 100)),
     };
 }
@@ -72,17 +78,32 @@ export function progressStep(operation: 'import' | 'reset' = 'import'): string {
 }
 
 /**
- * The line under the step, or nothing when there is nothing honest to say: the types
- * finished and the ones in flight ("5 of 14 data types: Customer groups"), worded as
- * every datapack surface words it (`datapackTypesLine`).
+ * The line under the step, or nothing when there is nothing honest to say. It always names what is
+ * being worked on, because a bare count says nothing (owner, 2026-11-02: "1 of 1 data type").
  *
- * Before the first poll lands, no type has reported and no count is meaningful;
- * "0 of 14" beside a spinner reads as stalled rather than starting.
+ * - One type: just its name, "Categories", from the start to the end of the job.
+ * - Several: the count and the current type, "5 of 14 data types: Customer groups", worded as every
+ *   datapack surface words it (`datapackTypesLine`). Between polls, nothing is in flight, so it
+ *   names the next one.
+ * - Every type finished and the job not yet closed: "Finishing up".
+ *
+ * Before the first poll of a job with several types, no count is meaningful: "0 of 14" beside a
+ * spinner reads as stalled rather than starting.
  */
 export function progressLabel(progress: ImportProgress): string | undefined {
-    const { done, total, processing } = progress;
-    if (done === 0 && processing.length === 0) {
-        return undefined;
-    }
-    return typesLine(done, total, processing.map(dataTypeLabel));
+    const { done, total, processing, requested, waiting } = progress;
+    if (total === 1) return dataTypeLabel(requested[0]);
+    if (done === 0 && processing.length === 0) return undefined;
+    if (done === total) return 'Finishing up';
+    const current = processing.length > 0 ? processing : waiting.slice(0, 1);
+    return typesLine(done, total, current.map(dataTypeLabel));
+}
+
+/**
+ * Whether a ring can show real progress. It needs several types and at least one finished: a ring
+ * pinned at 0 reads as stalled where the plain spinner reads as working, and a job of one type has
+ * no fraction to show until it is over.
+ */
+export function hasMeasurableProgress(progress: ImportProgress): boolean {
+    return progress.total > 1 && progress.done > 0;
 }

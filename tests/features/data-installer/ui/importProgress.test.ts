@@ -21,7 +21,7 @@
  */
 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { summarizeProgress, progressLabel, progressStep } from '@/features/data-installer/ui/importProgress';
+import { hasMeasurableProgress, summarizeProgress, progressLabel, progressStep } from '@/features/data-installer/ui/importProgress';
 import type { DataTypeStatus } from '@/features/data-installer/types';
 
 const REQUESTED = ['attribute_sets', 'categories', 'products', 'customers'];
@@ -137,22 +137,44 @@ describe('summarizeProgress', () => {
 // The line under the step, in the words every datapack surface uses (progress
 // vocabulary slice 5, owner 2026-10-16): the count of types, then the ones in flight.
 describe('progressLabel', () => {
-    it('counts the types and names the ones in flight, in human words', () => {
-        const label = progressLabel({ done: 5, total: 14, processing: ['customer_groups'], percent: 36 });
+    const line = (perType: Record<string, DataTypeStatus>, requested: string[]) =>
+        progressLabel(summarizeProgress(perType, requested));
+    const FOURTEEN = Array.from({ length: 14 }, (_, n) => (n === 5 ? 'customer_groups' : `type_${n}`));
+    const firstFive = Object.fromEntries(FOURTEEN.slice(0, 5).map((type): [string, DataTypeStatus] => [type, 'success']));
 
-        expect(label).toBe('5 of 14 data types: Customer groups');
+    it('counts the types and names the one in flight, in human words', () => {
+        expect(line({ ...firstFive, customer_groups: 'processing' }, FOURTEEN)).toBe('5 of 14 data types: Customer groups');
     });
 
-    /** Between types there is nothing being processed, but a count still holds. */
-    it('falls back to the count alone when nothing is processing', () => {
-        const label = progressLabel({ done: 5, total: 14, processing: [], percent: 36 });
-
-        expect(label).toBe('5 of 14 data types');
+    it('names the next type between polls, never a bare count', () => {
+        expect(line(firstFive, FOURTEEN)).toBe('5 of 14 data types: Customer groups');
     });
 
-    /** Before the first poll lands there is nothing honest to say. */
+    it('says only the name of a single type, whatever state it is in', () => {
+        expect(line({}, ['categories'])).toBe('Categories');
+        expect(line({ categories: 'processing' }, ['categories'])).toBe('Categories');
+        expect(line({ categories: 'success' }, ['categories'])).toBe('Categories');
+    });
+
+    it('says the job is finishing when every type is done and it has not closed', () => {
+        const all = Object.fromEntries(FOURTEEN.map((type): [string, DataTypeStatus] => [type, 'success']));
+
+        expect(line(all, FOURTEEN)).toBe('Finishing up');
+    });
+
     it('says nothing at all before the job reports anything', () => {
-        expect(progressLabel({ done: 0, total: 14, processing: [], percent: 0 })).toBeUndefined();
+        expect(line({}, FOURTEEN)).toBeUndefined();
+    });
+});
+
+describe('hasMeasurableProgress', () => {
+    it.each([
+        ['one type, running', { categories: 'processing' as const }, ['categories'], false],
+        ['one type, finished', { categories: 'success' as const }, ['categories'], false],
+        ['several types, none finished', { a: 'processing' as const }, ['a', 'b'], false],
+        ['several types, one finished', { a: 'success' as const }, ['a', 'b'], true],
+    ])('%s', (_label, perType, requested, expected) => {
+        expect(hasMeasurableProgress(summarizeProgress(perType, requested))).toBe(expected);
     });
 });
 

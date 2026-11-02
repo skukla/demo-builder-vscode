@@ -97,7 +97,19 @@ describe('ImportDatapackModal — decisions', () => {
             await tick(6000);
 
             expect(statusCalls()).toBe(before);
-            expect(screen.getByText('Stopped watching.')).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Stopped watching' })).toBeInTheDocument();
+        });
+
+        it('shows no spinner and no Stop watching once stopped, and Close is the way out', async () => {
+            withStatus(runningRecord());
+            renderModal();
+            await settle();
+            await press(await screen.findByRole('button', { name: /stop watching/i }));
+
+            expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /stop watching/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Run in background' })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
 
         it('never starts a poll for a job that is not running', async () => {
@@ -365,7 +377,10 @@ describe('ImportDatapackModal — decisions', () => {
     });
 
     describe('what makes an import startable', () => {
-        it('stays disabled while the project has named no instance yet', async () => {
+        // Reading the project is part of what the form needs, so nothing can be started until it
+        // has answered. It also sets the first box: a form drawn before the answer set the height
+        // the wait then kept (407px), even when the stores answered first.
+        it('waits, with no form, while the project has named no instance yet', async () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'get-datapack-import-target'
                     ? new Promise(() => undefined)
@@ -373,12 +388,11 @@ describe('ImportDatapackModal — decisions', () => {
             );
             renderModal();
             await settle();
-            await press(await screen.findByRole('button', { name: /select all/i }));
 
-            expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
-                'aria-disabled',
-                'true',
-            );
+            expect(screen.getByRole('progressbar')).toBeInTheDocument();
+            expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^import$/i })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
     });
 

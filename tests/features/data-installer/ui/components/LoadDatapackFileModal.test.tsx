@@ -87,9 +87,21 @@ it('loads into the library by default, private, without replacing anything', asy
     await settle();
 
     expect(loadCall()).toEqual({ path: OPENED.path, target: 'library', update: false });
-    expect(
-        screen.getByText('Loaded 2 of 2 data types into the datapack library')
-    ).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: /Loaded 2 of 2 data types into the datapack library/ });
+    expect(heading.querySelector('.text-green-600')).not.toBeNull();
+});
+
+it('makes the outcome the title, and offers one way out rather than Close and Done', async () => {
+    const onClose = await openModal();
+
+    await press(screen.getByRole('button', { name: 'Load' }));
+    await settle();
+
+    expect(screen.queryByRole('heading', { name: 'Load a datapack file' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Load' })).not.toBeInTheDocument();
+    await press(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 it('sends update only when the SC ticks replace, for the library', async () => {
@@ -157,10 +169,23 @@ it('lists each refused type with its reason when only part of the file landed', 
     await press(screen.getByRole('button', { name: 'Load' }));
     await settle();
 
-    expect(
-        screen.getByText('Loaded 1 of 2 data types into the datapack library')
-    ).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: /Loaded 1 of 2 data types into the datapack library/ });
+    expect(heading.querySelector('.text-orange-600')).not.toBeNull();
     expect(screen.getByText(/too large to send in one request/)).toBeInTheDocument();
+});
+
+it('titles a load the service refused, with its reason in the body', async () => {
+    withService({ 'load-datapack-zip': { success: false, error: 'The library is not reachable.' } });
+    await openModal();
+
+    await press(screen.getByRole('button', { name: 'Load' }));
+    await settle();
+
+    const heading = screen.getByRole('heading', { name: /The file was not loaded/ });
+    expect(heading.querySelector('.text-negative')).not.toBeNull();
+    expect(screen.getByText('The library is not reachable.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove it from the library' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
 });
 
 it('explains a file that cannot be opened, in the handler words', async () => {
@@ -173,8 +198,11 @@ it('explains a file that cannot be opened, in the handler words', async () => {
 
     await openModal();
 
+    const heading = screen.getByRole('heading', { name: /This file cannot be loaded/ });
+    expect(heading.querySelector('.text-negative')).not.toBeNull();
     expect(screen.getByText('This zip is not a Demo Builder datapack file.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
 });
 
 it('offers the undo after a load that created a library pack, and removes it on press', async () => {

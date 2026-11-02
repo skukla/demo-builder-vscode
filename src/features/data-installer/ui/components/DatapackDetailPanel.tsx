@@ -224,7 +224,7 @@ function DetailRows({
             {detail.updatedAt ? (
                 <PanelRow label="Updated">{formatDate(detail.updatedAt)}</PanelRow>
             ) : null}
-            <PanelRow label={`Data (${present.length})`}>
+            <PanelRow label="Data">
                 <span className="datapack-panel-types">
                     {present.map((dataType) => (
                         <span key={dataType} className="datapack-panel-type">

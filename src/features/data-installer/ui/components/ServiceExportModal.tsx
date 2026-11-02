@@ -27,7 +27,8 @@
  * **Or an ACO pack** (datapack-engine step 14 item 19, `AcoExportChoices`): made by Demo
  * Builder into the SC's library, so offered with any engine; the Commerce pack only with the
  * service's. Which one is `packType`, asked once by `CreateDatapackModal`, never again here.
- * The result view is `ExportDatapackResult`.
+ * The result is `ExportDatapackResult`: its outcome is the dialog's title, at the small width a
+ * result takes, and that component is the body under it.
  *
  * @module features/data-installer/ui/components/ServiceExportModal
  */
@@ -38,11 +39,11 @@ import { dataTypeLabel } from '../dataTypeLabel';
 import { type AcoExportChoice, useAcoExportChoice } from '../hooks/useAcoExportChoice';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { AcoExportChoices } from './AcoExportChoices';
-import { type ExportOutcome, ExportDatapackResult } from './ExportDatapackResult';
-import { SaveDatapackFileButton } from './SaveDatapackFileButton';
+import { type ExportOutcome, ExportDatapackResult, exportResult } from './ExportDatapackResult';
+import { type ResultContent, resultStatus } from './importResult';
 import { SelectAllToggle } from './SelectAllToggle';
 import { FormField } from '@/core/ui/components/forms/FormField';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { Modal, type ModalProps } from '@/core/ui/components/ui/Modal';
 
 /** What the project implies about where to export FROM. */
 interface ProjectTarget {
@@ -77,6 +78,16 @@ export interface ServiceExportModalProps {
      * pack-type choice, so the choice and its form are one window (owner, 2026-10-31).
      */
     lead?: React.ReactNode;
+}
+
+/**
+ * The form is L, not the default M: there are 18 exportable types and the longest
+ * (b2b_shared_catalog_company_assignments) is 38 characters. At M they either wrap mid-name or
+ * scroll. A result is small whatever the form needed, with its outcome as the title.
+ */
+function frameOf(result: ResultContent | null, title: string): Pick<ModalProps, 'size' | 'wide' | 'title' | 'status'> {
+    if (result) return { size: 'S', wide: false, title: result.title, status: resultStatus(result) };
+    return { size: 'L', wide: true, title };
 }
 
 /** The export in its own dialog. */
@@ -152,17 +163,14 @@ export function ServiceExportDialog({ onClose, packType, title = 'Export a datap
     const outcome = dismissed ? null : run.value;
     const failure = dismissed ? null : run.failure;
     const showingResult = Boolean(outcome ?? failure);
+    const result = showingResult ? exportResult(outcome, failure?.message) : null;
     const captured = outcome?.perType?.some((row) => row.success);
     const savable = captured ? { name: name.trim(), version: version.trim() } : null;
 
     return (
             <Modal
-                // L, not the default M: there are 18 exportable types and the
-                // longest (b2b_shared_catalog_company_assignments) is 38
-                // characters. At M they either wrap mid-name or scroll.
-                size="L"
-                wide
-                title={title}
+                {...frameOf(result, title)}
+                fitContent
                 onClose={onClose}
                 closeLabel="Close"
                 // `!settled` too: `loading` starts false and the fetch runs from a useEffect, so
@@ -183,13 +191,8 @@ export function ServiceExportDialog({ onClose, packType, title = 'Export a datap
                 }
             >
                 <div className="datapack-export-body">
-                    {showingResult ? (
-                        <>
-                            <ExportDatapackResult outcome={outcome} error={failure?.message} />
-                            {savable ? (
-                                <SaveDatapackFileButton id={savable} source={aco.isAco ? 'library' : 'installer'} />
-                            ) : null}
-                        </>
+                    {result ? (
+                        <ExportDatapackResult result={result} savable={savable} source={aco.isAco ? 'library' : 'installer'} />
                     ) : (
                         <>
                         {lead}

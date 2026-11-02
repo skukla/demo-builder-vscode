@@ -90,7 +90,7 @@ describe('watchedActivation', () => {
 const RESULT: ResultContent = { variant: 'success', title: 'Dry run passed' };
 
 /** Nothing set: the state a fresh modal with an instance is in. */
-const IDLE = { busy: false, resetArmed: false, running: false, result: null, noInstance: false };
+const IDLE = { busy: false, resetArmed: false, running: false, watching: true, result: null, noInstance: false };
 
 describe('resolveView', () => {
     it('shows the form when nothing is happening', () => {
@@ -101,13 +101,14 @@ describe('resolveView', () => {
         expect(resolveView({ ...IDLE, busy: true })).toBe('busy');
         expect(resolveView({ ...IDLE, resetArmed: true })).toBe('confirm-reset');
         expect(resolveView({ ...IDLE, running: true })).toBe('watching');
+        expect(resolveView({ ...IDLE, running: true, watching: false })).toBe('stopped-watching');
         expect(resolveView({ ...IDLE, result: RESULT })).toBe('result');
         expect(resolveView({ ...IDLE, noInstance: true })).toBe('no-instance');
     });
 
     /** The precedence IS the state machine: each condition outranks the next. */
     it('lets a request in flight outrank everything', () => {
-        const all = { busy: true, resetArmed: true, running: true, result: RESULT, noInstance: true };
+        const all = { busy: true, resetArmed: true, running: true, watching: false, result: RESULT, noInstance: true };
         expect(resolveView(all)).toBe('busy');
     });
 
@@ -194,6 +195,11 @@ describe('buildActions', () => {
         ]);
         expect(actions[0].onPress).toBe(args.disarmReset);
         expect(actions[1].onPress).toBe(args.confirmReset);
+    });
+
+    // Nothing left but the way out, which the frame's Close already is: three dead buttons before.
+    it.each(['stopped-watching', 'no-instance'] as const)('offers nothing beside Close on %s', (view) => {
+        expect(rows(actionArgs({ view }))).toStrictEqual([]);
     });
 
     it('offers only Back on a result', () => {
@@ -291,6 +297,23 @@ describe('viewFrame', () => {
         const result = { variant: 'warning' as const, title: 'One step left to remove Frescopa', keptRoot };
 
         expect(viewFrame({ ...base, view: 'result', result })).toMatchObject({ size: 'M', status: 'warning' });
+    });
+
+    it('titles a project with no instance by its outcome, amber, at the small width', () => {
+        expect(viewFrame({ ...base, view: 'no-instance' })).toMatchObject({
+            title: 'This project has no Commerce instance',
+            status: 'warning',
+            size: 'S',
+            wide: false,
+            hideClose: false,
+        });
+    });
+
+    it('titles a watch the SC stopped, with no status: it is neither good nor bad', () => {
+        const frame = viewFrame({ ...base, view: 'stopped-watching' });
+
+        expect(frame).toMatchObject({ title: 'Stopped watching', size: 'S', hideClose: false });
+        expect(frame.status).toBeUndefined();
     });
 
     it('CONTROL: any other result stays small', () => {

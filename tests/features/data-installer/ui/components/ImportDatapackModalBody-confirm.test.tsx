@@ -32,7 +32,6 @@ function ctx(over: Partial<BodyContext> = {}): BodyContext {
         selected: ['categories'],
         allSelected: true,
         record: null,
-        watching: false,
         result: null,
         busyMessage: '',
         scope: SCOPE,
@@ -41,6 +40,15 @@ function ctx(over: Partial<BodyContext> = {}): BodyContext {
         ...over,
     };
 }
+
+describe('a project with no instance', () => {
+    it('says what to do, and draws no status icon or heading of its own: the title has them', () => {
+        render(<ImportDatapackModalBody view="no-instance" ctx={ctx()} />);
+
+        expect(screen.getByText('Connect a Commerce backend on the project dashboard, then import from here.')).toBeInTheDocument();
+        expect(screen.queryByText(/no commerce instance/i)).not.toBeInTheDocument();
+    });
+});
 
 describe('the removal confirmation', () => {
     it('says what goes in one sentence, the warning a word in it, and no rows', () => {
@@ -91,16 +99,24 @@ describe('the running view', () => {
 
     it('uses the dialog wait spacing, and holds no blank row under its two lines', () => {
         const { container } = render(
-            <ImportDatapackModalBody view="watching" ctx={ctx({ record: RECORD, watching: true })} />,
+            <ImportDatapackModalBody view="watching" ctx={ctx({ record: RECORD })} />,
         );
 
         expect(container.querySelector('.modal-wait [role="status"]')).not.toBeNull();
         expect(container.querySelector('.text-xs')).toBeNull();
     });
 
-    it('says the import carries on once watching has stopped', () => {
-        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: RECORD, watching: false })} />);
+    it('says the import carries on once watching has stopped, with nothing still spinning', () => {
+        render(<ImportDatapackModalBody view="stopped-watching" ctx={ctx({ record: RECORD })} />);
 
         expect(screen.getByText('The import carries on without you.')).toBeInTheDocument();
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('CONTROL: a running watch does spin', () => {
+        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: RECORD })} />);
+
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
     });
 });

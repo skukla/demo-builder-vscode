@@ -1,8 +1,8 @@
 /**
  * Configure, start and watch one import — as an explicit state machine.
  *
- * The modal shows ONE view at a time: `form`, `busy`, `confirm-reset`,
- * `watching`, or `result`, with the footer narrating each. An earlier shape let
+ * The modal shows ONE view at a time: `form`, `busy`, `confirm-reset`, `watching`,
+ * `stopped-watching`, `result` or `no-instance`, with the footer narrating each. An earlier shape let
  * the form, dry-run verdicts, three failure displays and a credentials notice
  * coexist as conditional fragments — and that produced a live bug nobody could
  * localize (a bare error icon whose words were lost somewhere in the pile).
@@ -46,7 +46,7 @@ import { useImportScopes } from '../hooks/useImportScopes';
 import { useJobPickup } from '../hooks/useJobPickup';
 import { deselectType, selectType, type TypeSelection } from '../importDependencies';
 import { ImportDatapackModalBody, type BodyContext, type ModalView } from './ImportDatapackModalBody';
-import { buildActions, busyMessage, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
+import { buildActions, busyMessage, closeLabel, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
 import { resolveResult, type LastAction } from './importResult';
 import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -69,10 +69,14 @@ interface ImportTarget {
     scope?: { websiteCode: string; storeCode: string };
 }
 
-/** The dialog's wait: starting or removing, or the stores it needs before the form can show. */
-function waitOf(view: ModalView, storesLoading: boolean, message: string): ModalWait | false {
+/**
+ * The dialog's wait: starting or removing, or what it needs before the form can show. `reading` has
+ * to cover the first frame, before any request has been sent: a form drawn there set the box the
+ * wait then kept (407px).
+ */
+function waitOf(view: ModalView, reading: boolean, message: string): ModalWait | false {
     if (view === 'busy') return { message };
-    return view === 'form' && storesLoading ? {} : false;
+    return view === 'form' && reading ? {} : false;
 }
 
 export interface ImportDatapackModalProps {
@@ -135,7 +139,6 @@ export function ImportDatapackModal({
     // typed. The field is gone — the project decides the instance — so the guard,
     // the state and the effect went with it.
     const commerceInstance = target.value?.instance ?? '';
-
 
     const record = status.value ?? null;
     const running = record?.outcome === 'watching';
@@ -261,7 +264,6 @@ export function ImportDatapackModal({
         selected,
         allSelected,
         record,
-        watching,
         result,
         busyMessage: busyMessage(
             start.loading || (pickingUp && lastAction === 'start'),
@@ -276,6 +278,7 @@ export function ImportDatapackModal({
         busy,
         resetArmed,
         running,
+        watching,
         result,
         noInstance: !commerceInstance && target.settled,
     });
@@ -319,10 +322,10 @@ export function ImportDatapackModal({
                 wide={frame.wide}
                 hideClose={frame.hideClose}
                 fitContent
-                waiting={waitOf(view, scope.loading, bodyContext.busyMessage)}
+                waiting={waitOf(view, scope.loading || !target.settled, bodyContext.busyMessage)}
                 holdSize={view === 'watching'}
                 onClose={close}
-                closeLabel={running ? 'Run in background' : 'Close'}
+                closeLabel={closeLabel(view)}
                 actionButtons={buildActions({
                     view,
                     canStart,

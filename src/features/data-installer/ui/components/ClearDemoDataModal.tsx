@@ -3,13 +3,14 @@
  * clean for the next customer. The SC ticks the STORES that are the demo's (`StorePickList`), and
  * the modal lists what clearing them would do, read-only, as `check-demo-data` answers it; the red
  * button hands the stores and the list's token to the screen, which runs the clearing in its
- * progress window. Nothing is cleared until that button, and the list says it cannot be undone.
+ * progress window. Nothing is cleared until that button, and the opening sentence says it is
+ * permanent.
  *
  * Built from the house pieces: `ui/Modal` in a `DialogContainer` (as `AssignErpProductsModal` and
  * `LoadDatapackFileModal`), `LeadText` and `SectionLabel` for its text, `FactList` for the list
- * (one labelled line a kind, as the setup guide lists its facts), `InlineNotice` for a store another
- * project claims, `StatusDisplay` for a check that failed and the Modal's own wait while the choices are
- * read. The VS Code reset modal (`edsResetOtherData.ts`) asks the same question for the project's
+ * (one labelled line a kind, as the setup guide lists its facts), and the Modal's own wait while the
+ * choices are read. Whatever a check could not do is a line where the list would land; if the
+ * choices could not be read at all, that is the dialog's title. The VS Code reset modal (`edsResetOtherData.ts`) asks the same question for the project's
  * own store; it is a native dialog, so it has no list and no ticks.
  *
  * @module features/data-installer/ui/components/ClearDemoDataModal
@@ -20,8 +21,6 @@ import React, { useState } from 'react';
 import { choicesOfTicks, clearLabel, previewLines } from '../clearDemoDataWords';
 import { useDemoDataCheck } from '../hooks/useDemoDataCheck';
 import { StorePickList } from './StorePickList';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -32,14 +31,11 @@ import type { DemoDataCheck, WipePreview, WipeStoreChoice } from '@/types/demoDa
 /** Every string the modal shows that is not the extension's own. */
 export const CLEAR_COPY = {
     title: 'Clear demo data',
-    lead: "Choose the stores that are this demo's. Clearing removes what they hold that Demo Builder didn't install, and closes their orders.",
+    lead: "Choose the stores that are this demo's. Clearing permanently removes what they hold that Demo Builder didn't install, and closes their orders.",
     stores: 'Stores',
-    list: 'What clearing does',
     pick: 'Tick a store to see what clearing it would do.',
     checking: 'Checking the stores',
     nothing: 'These stores hold nothing Demo Builder did not install.',
-    claimed: 'A chosen store is another project\'s',
-    undo: "This can't be undone.",
     readFailed: "Couldn't read the stores",
 };
 
@@ -55,22 +51,30 @@ const NONE: ReadonlySet<string> = new Set();
 /** Orders an ERP integration leaves open still need saying, nothing else to clear or not: the SC acts on that line. */
 const leavesErpOrders = (preview: WipePreview): boolean => preview.erp?.held !== undefined && preview.erp.orders.count > 0;
 
+/** What stopped the list, where the list would land. On a span, so the line's own colour cannot win. */
+function ProblemLine({ failed, children }: { failed?: boolean; children: React.ReactNode }) {
+    return (
+        <p className="dialog-line">
+            <span className={failed ? 'text-negative' : 'text-orange-600'}>{children}</span>
+        </p>
+    );
+}
+
 function PreviewView({ answer, loading, hasTicks }: { answer: DemoDataCheck | null; loading: boolean; hasTicks: boolean }) {
     if (loading && hasTicks) {
         return (
             <div className="clear-demo-checking">
                 <Spinner size="S" aria-label={CLEAR_COPY.checking} />
-                <Text>{CLEAR_COPY.checking}</Text>
             </div>
         );
     }
     if (!answer) return <Text>{CLEAR_COPY.pick}</Text>;
-    if (answer.refused) return <InlineNotice title={CLEAR_COPY.claimed}>{answer.refused}</InlineNotice>;
+    if (answer.refused) return <ProblemLine>{answer.refused}</ProblemLine>;
     const preview = answer.preview;
     if (!preview) return null;
     if (preview.total === 0 && !leavesErpOrders(preview)) return <Text>{CLEAR_COPY.nothing}</Text>;
     return (
-        <>
+        <div className="dialog-stack">
             <FactList>
                 {previewLines(preview).map((line, index) => (
                     <Fact key={`${line.label}-${index}`} label={line.label}>
@@ -78,8 +82,8 @@ function PreviewView({ answer, loading, hasTicks }: { answer: DemoDataCheck | nu
                     </Fact>
                 ))}
             </FactList>
-            <Text UNSAFE_className="clear-demo-never">{preview.never} {CLEAR_COPY.undo}</Text>
-        </>
+            <p className="dialog-note">{preview.never}</p>
+        </div>
     );
 }
 
@@ -95,22 +99,24 @@ function ClearForm({ onClose, onClear }: ClearDemoDataModalProps) {
     const failed = check.failure !== null && !check.ready;
     return (
         <Modal
-            title={CLEAR_COPY.title}
-            size="L"
+            title={failed ? CLEAR_COPY.readFailed : CLEAR_COPY.title}
+            status={failed ? 'error' : undefined}
+            size={failed ? 'S' : 'L'}
             fitContent
-            waiting={!failed && !check.ready ? { message: CLEAR_COPY.checking } : false}
+            waiting={!failed && !check.ready ? {} : false}
             onClose={onClose}
             actionButtons={failed ? [] : [{ label: total > 0 ? clearLabel(total) : 'Clear', variant: 'negative', onPress: clear, isDisabled: total === 0 }]}
         >
-            {failed && <StatusDisplay variant="error" title={CLEAR_COPY.readFailed} message={check.failure?.message ?? ''} />}
+            {failed && <LeadText>{check.failure?.message ?? ''}</LeadText>}
             {check.ready && (
                 <div className="clear-demo-body">
                     <LeadText>{CLEAR_COPY.lead}</LeadText>
-                    <SectionLabel>{CLEAR_COPY.stores}</SectionLabel>
-                    <StorePickList choices={check.choices} ticks={ticks} onChange={setTicks} />
-                    <SectionLabel>{CLEAR_COPY.list}</SectionLabel>
+                    <div>
+                        <SectionLabel>{CLEAR_COPY.stores}</SectionLabel>
+                        <StorePickList choices={check.choices} ticks={ticks} onChange={setTicks} />
+                    </div>
                     {check.failure ? (
-                        <StatusDisplay variant="error" title={CLEAR_COPY.readFailed} message={check.failure.message} />
+                        <ProblemLine failed>{CLEAR_COPY.readFailed}: {check.failure.message}</ProblemLine>
                     ) : (
                         <PreviewView answer={check.answer} loading={check.loading} hasTicks={ticks.size > 0} />
                     )}

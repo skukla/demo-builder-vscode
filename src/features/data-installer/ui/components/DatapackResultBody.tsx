@@ -1,14 +1,14 @@
 /**
- * The Import dialog's result body, by the dialog design rules
- * (`docs/development/sop/dialog-design.md`, owner 2026-10-31): the outcome and its status are the
- * dialog's title (`viewFrame`), so this holds only what is left to know or do. A plain success
- * has nothing here at all. Otherwise: the sentence, the troubled types, the Admin step a removal
- * left (Where / Set / Then, drawn as the setup guide draws a step), and how long a long job took.
+ * A datapack dialog's result body (Import, Export and Load a datapack file), by the dialog design
+ * rules (`docs/development/sop/dialog-design.md`, owner 2026-10-31): the outcome and its status are
+ * the dialog's title, so this holds only what is left to know or do. A plain success has nothing
+ * here at all. Otherwise: the sentence, the per-type lines, the Admin step a removal left (Where /
+ * Set / Then, drawn as the setup guide draws a step), and how long a long job took.
  *
  * It was a status box over Store, Data and Took rows, which repeated what the SC had picked
  * seconds before and read as machine-made.
  *
- * @module features/data-installer/ui/components/ImportResultView
+ * @module features/data-installer/ui/components/DatapackResultBody
  */
 
 import React from 'react';
@@ -35,7 +35,7 @@ function keptRootItem(step: KeptRootStep): SetupChecklistItem {
     };
 }
 
-export function ImportResultView({ result }: { result: ResultContent }): React.JSX.Element | null {
+export function DatapackResultBody({ result }: { result: ResultContent }): React.JSX.Element | null {
     const took = result.tookMs === undefined ? undefined : tookValue(result.tookMs);
     const hasBody = result.message || result.details?.length || result.keptRoot || took;
     if (!hasBody) return null;

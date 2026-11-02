@@ -101,7 +101,79 @@ it('asks about the ticked store, and lists what clearing it would do, orders inc
     expect(screen.getByText('2 to remove, 1 taken off the chosen websites')).toBeInTheDocument();
     expect(screen.getByText('1 to cancel, 2 to refund, 1 to leave open with a note, 1 return to close')).toBeInTheDocument();
     expect(screen.getByText("1 product: which demo they belong to can't be told")).toBeInTheDocument();
-    expect(screen.getByText(/This can't be undone\./)).toBeInTheDocument();
+});
+
+it("says it is permanent in the opening sentence, not in a footnote under the list", async () => {
+    await openModal();
+
+    expect(screen.getByText(/Clearing permanently removes what they hold/)).toBeInTheDocument();
+
+    await tick(/Bodea Store/);
+
+    expect(screen.queryByText(/can't be undone/)).not.toBeInTheDocument();
+    expect(screen.getByText('Never touched: what Demo Builder installed.')).toBeInTheDocument();
+});
+
+it('puts no label over the list: the list says what it is', async () => {
+    await openModal();
+    await tick(/Bodea Store/);
+
+    expect(screen.getByText('Stores')).toBeInTheDocument();
+    expect(screen.queryByText('What clearing does')).not.toBeInTheDocument();
+});
+
+it('writes large counts with separators, in the list and on the button', async () => {
+    const big = { ...named([]), count: 1284 };
+    const preview = {
+        ...PREVIEW,
+        remove: { ...PREVIEW.remove, products: big, categories: { ...named([]), count: 1012 }, customers: { ...named([]), count: 2500 }, cartRules: { ...named([]), count: 3000 } },
+        takenOff: { ...named([]), count: 1100 },
+        rulesTakenOff: { ...named([]), count: 4000 },
+        orders: { cancel: { ...named([]), count: 5000 }, refund: { ...named([]), count: 6000 }, leftOpen: { ...named([]), count: 7000 }, returns: { ...named([]), count: 8000 } },
+        left: [{ kind: 'products' as const, ...named([]), count: 9000, why: 'x' }],
+        installed: { products: 1500 },
+        total: 1311,
+    };
+    withStore((stores) => (stores.length ? { choices: CHOICES, preview } : { choices: CHOICES }));
+
+    expect(previewLines(preview)).toEqual([
+        { label: 'Products', value: '1,284 to remove, 1,100 taken off the chosen websites' },
+        { label: 'Categories', value: '1,012 to remove' },
+        { label: 'Customers', value: '2,500 to remove' },
+        { label: 'Cart rules', value: '3,000 to remove, with their coupons, 4,000 taken off the chosen websites' },
+        { label: 'Orders', value: '5,000 to cancel, 6,000 to refund, 7,000 to leave open with a note, 8,000 returns to close' },
+        { label: 'Left', value: '9,000 products: x' },
+        { label: 'Installed', value: '1,500 products, which removing its datapack takes' },
+    ]);
+    await openModal();
+    await tick(/Bodea Store/);
+    expect(screen.getByRole('button', { name: 'Clear 1,311 things' })).toBeInTheDocument();
+});
+
+it('shows a re-check as a spinner where the answer lands, with no words, and keeps the stores', async () => {
+    await openModal();
+
+    await press(screen.getByRole('checkbox', { name: /Bodea Store/ }));
+
+    expect(screen.getByRole('progressbar', { name: 'Checking the stores' })).toBeInTheDocument();
+    expect(screen.queryByText('Checking the stores')).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Bodea Store/ })).toBeInTheDocument();
+    await act(async () => {
+        jest.advanceTimersByTime(FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
+    });
+    await settle();
+});
+
+it('waits with no words while it reads the stores', async () => {
+    mockRequest.mockReset();
+    mockRequest.mockImplementation(() => new Promise(() => undefined));
+
+    await openModal();
+
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    expect(screen.queryByText('Checking the stores')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
 });
 
 it('lists the cart rules it would clear on their own line, with what is only taken off (step 11)', () => {
@@ -139,8 +211,26 @@ it('offers no clearing when a ticked store is refused, and says why', async () =
 
     await tick(/Bodea Store/);
 
-    expect(screen.getByText("The store bodea_store is also Bodea Demo's own store.")).toBeInTheDocument();
+    const line = screen.getByText("The store bodea_store is also Bodea Demo's own store.");
+    expect(line).toHaveClass('text-orange-600');
+    // A line where the list would land, not a box: the rule's own example.
+    expect(line.closest('.inline-notice')).toBeNull();
+    expect(screen.queryByText(/is another project's/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clear' })).toHaveAttribute('aria-disabled', 'true');
+});
+
+it('says a failed check where the list would land, and keeps the stores on screen', async () => {
+    mockRequest.mockReset();
+    mockRequest.mockImplementation(async (_type: string, payload: { stores: unknown[] }) =>
+        payload.stores.length ? { success: false, error: 'The store did not answer.' } : { success: true, data: { choices: CHOICES } },
+    );
+    await openModal();
+
+    await tick(/Bodea Store/);
+
+    expect(screen.getByText("Couldn't read the stores: The store did not answer.")).toHaveClass('text-negative');
+    expect(screen.getByRole('checkbox', { name: /Bodea Store/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Clear demo data' })).toBeInTheDocument();
 });
 
 it('says the stores could not be read when the first check is refused', async () => {
@@ -149,8 +239,11 @@ it('says the stores could not be read when the first check is refused', async ()
 
     await openModal();
 
-    expect(screen.getByText("Couldn't read the stores")).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: /Couldn't read the stores/ });
+    expect(heading.querySelector('.text-negative')).not.toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Clear demo data' })).not.toBeInTheDocument();
     expect(screen.getByText('Sign in to Adobe first.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
 });
 
 it('lists the orders an ERP integration closes as their own line', async () => {

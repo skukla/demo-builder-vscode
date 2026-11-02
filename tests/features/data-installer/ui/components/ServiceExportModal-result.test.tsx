@@ -11,6 +11,7 @@
 
 import { screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { press } from '../../../../helpers/reactSettle';
 
 import {
     exportAs,
@@ -19,6 +20,7 @@ import {
     renderModal,
     withService,
 } from './ServiceExportModal.testUtils';
+import { exportResult as exportResultContent } from '@/features/data-installer/ui/components/ExportDatapackResult';
 
 const CAPTURED = { dataType: 'attribute_sets', success: true, exported: 8, excluded: 0 };
 const REFUSED = {
@@ -71,7 +73,54 @@ describe('ServiceExportModal — the headline count', () => {
     });
 });
 
+describe('ServiceExportModal — the outcome is the title', () => {
+    it('titles the result, with the status icon before it, in place of the form title', async () => {
+        await runExport(exportResult([CAPTURED]));
+
+        const heading = await screen.findByRole('heading', { name: /Exported 1 of 1 data types/ });
+        expect(heading.querySelector('.text-green-600')).not.toBeNull();
+        expect(screen.queryByRole('heading', { name: 'Export a datapack' })).not.toBeInTheDocument();
+    });
+
+    it.each([
+        ['every type went in', [CAPTURED], true, 'success'],
+        ['some types did not', [CAPTURED, REFUSED], true, 'warning'],
+        ['the export did not complete', [REFUSED], false, 'error'],
+    ])('gives %s its status', (_when, rows, success, variant) => {
+        expect(exportResultContent({ success, perType: rows }).variant).toBe(variant);
+    });
+
+    it('titles an export that could not run, with why in the body', async () => {
+        withService({ 'start-datapack-export': { success: false, error: 'Open a project first.' } });
+        await renderModal();
+        await screen.findByRole('checkbox', { name: 'Attribute sets' });
+        await exportAs('captured-pack', 'v1');
+
+        expect(await screen.findByRole('heading', { name: 'The export could not run' })).toBeInTheDocument();
+        expect(screen.getByText('Open a project first.')).toBeInTheDocument();
+    });
+
+    it('goes Back to the form, with the form title', async () => {
+        await runExport(exportResult([CAPTURED]));
+        await press(await screen.findByRole('button', { name: 'Back' }));
+
+        expect(screen.getByRole('heading', { name: 'Export a datapack' })).toBeInTheDocument();
+    });
+});
+
 describe('ServiceExportModal — the per-type lines', () => {
+    it('writes large counts with separators', async () => {
+        await runExport(exportResult([{ ...CAPTURED, exported: 1284, excluded: 1012 }]));
+
+        expect(await screen.findByText('Attribute sets: 1,284 exported (1,012 left out)')).toBeInTheDocument();
+    });
+
+    it('says which type failed and why', async () => {
+        await runExport(exportResult([CAPTURED, REFUSED]));
+
+        expect(await screen.findByText('Categories failed: the target was unreachable')).toBeInTheDocument();
+    });
+
     it('names what the service excluded, when it excluded anything', async () => {
         await runExport(exportResult([{ ...CAPTURED, exported: 8, excluded: 3 }]));
 
