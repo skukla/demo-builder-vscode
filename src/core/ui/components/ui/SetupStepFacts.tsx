@@ -1,5 +1,5 @@
 /**
- * One manual setup step's Where / Enter / Then / Why, as the demo setup guide draws it: the Admin
+ * One manual setup step's Where / Set / Then / Why, as the demo setup guide draws it: the Admin
  * menu path as breadcrumbs, each value to enter as a copyable pill, then what to do next and why.
  *
  * Extracted 2026-10-30 (datapack-engine step 12) from the setup guide's `SetupGuideStep.tsx`
@@ -35,7 +35,7 @@ function WhereLine({ item }: { item: SetupChecklistItem }): React.ReactElement {
     );
 }
 
-/** Where / Enter / Then / Why: labelled lines that scan as one small table. */
+/** Where / Set / Then / Why: labelled lines that scan as one small table. */
 export function SetupStepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
     return (
         <FactList>
@@ -43,7 +43,7 @@ export function SetupStepFacts({ item }: { item: SetupChecklistItem }): React.Re
                 <WhereLine item={item} />
             </Fact>
             {item.enter && (
-                <Fact label="Enter">
+                <Fact label="Set">
                     <div className="setup-guide-pills">
                         {item.enter.map((value) => (
                             <CopyableText key={value}>{value}</CopyableText>

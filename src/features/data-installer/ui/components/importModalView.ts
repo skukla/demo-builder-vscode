@@ -201,7 +201,13 @@ export function viewFrame(a: {
             return { ...small, title: `Remove from ${a.store}?`, status: 'warning', hideClose: true };
         case 'result':
             return a.result
-                ? { ...small, title: a.result.title, status: RESULT_STATUS[a.result.variant] }
+                ? {
+                      ...small,
+                      // The Admin path reads as one line at medium, not as several steps.
+                      size: a.result.keptRoot ? ('M' as const) : small.size,
+                      title: a.result.title,
+                      status: RESULT_STATUS[a.result.variant],
+                  }
                 : { ...small, title: `Import ${a.displayName}` };
         case 'busy':
         case 'watching':

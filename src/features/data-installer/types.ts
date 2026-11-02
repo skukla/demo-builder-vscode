@@ -184,7 +184,7 @@ export interface ImportProgressMessage {
 
 /**
  * A removal kept the pack's root category because a store shows it as its root: the one Admin
- * step that frees it, as the result shows it in the setup step's Where / Enter / Then rows (owner,
+ * step that frees it, as the result shows it in the setup step's Where / Set / Then rows (owner,
  * 2026-10-31). Demo Builder's engine only.
  */
 export interface KeptRootStep {

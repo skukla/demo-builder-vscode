@@ -3,7 +3,7 @@
  * open: one quiet line, "1 step left in the Admin", with Show step, which opens the step in the
  * setup guide's own shape (`PackSetupStepDialog`) (owner, 2026-10-30).
  *
- * It replaced an amber `InlineNotice` with the whole Where / Enter / Then / Why table and two
+ * It replaced an amber `InlineNotice` with the whole Where / Set / Then / Why table and two
  * buttons under it, which the owner read as too noisy for a side panel. A done step shows nothing
  * here: the dialog already said it was done, and nothing is left to do (owner, 2026-10-31; the
  * green check-mark line it had was removed).

@@ -3,7 +3,7 @@
  * (`docs/development/sop/dialog-design.md`, owner 2026-10-31): the outcome and its status are the
  * dialog's title (`viewFrame`), so this holds only what is left to know or do. A plain success
  * has nothing here at all. Otherwise: the sentence, the troubled types, the Admin step a removal
- * left (Where / Enter / Then, drawn as the setup guide draws a step), and how long a long job took.
+ * left (Where / Set / Then, drawn as the setup guide draws a step), and how long a long job took.
  *
  * It was a status box over Store, Data and Took rows, which repeated what the SC had picked
  * seconds before and read as machine-made.

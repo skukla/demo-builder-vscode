@@ -272,6 +272,19 @@ describe('viewFrame', () => {
         expect(viewFrame({ ...base, view: 'form', typeCount })).toMatchObject({ size, wide, title: 'Import Frescopa', hideClose: false });
     });
 
+    it('gives the removal that kept a root the medium width, so its Admin path reads as one line', () => {
+        const keptRoot = { store: 'Justrite Test Store', category: 'ZZ Root DB12', restore: 'Justrite Catalog' };
+        const result = { variant: 'warning' as const, title: 'One step left to remove Frescopa', keptRoot };
+
+        expect(viewFrame({ ...base, view: 'result', result })).toMatchObject({ size: 'M', status: 'warning' });
+    });
+
+    it('CONTROL: any other result stays small', () => {
+        const result = { variant: 'success' as const, title: 'Imported Frescopa' };
+
+        expect(viewFrame({ ...base, view: 'result', result })).toMatchObject({ size: 'S' });
+    });
+
     it('asks the removal as the title, naming the store, amber, with Close hidden for Cancel', () => {
         expect(viewFrame({ ...base, view: 'confirm-reset' })).toEqual({
             title: 'Remove from Justrite Test Store US (Justrite Test)?',

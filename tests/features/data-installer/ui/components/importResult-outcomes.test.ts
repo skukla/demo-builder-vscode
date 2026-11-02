@@ -67,8 +67,8 @@ describe('a finished job that succeeded', () => {
 
         expect(outcomeOf({ outcome: 'success', operation: 'reset', keptRoot, note: 'Kept the category ZZ Root DB12: ...' })).toEqual({
             variant: 'warning',
-            title: `Removed ${PACK_NAME}, except 1 category`,
-            message: 'Justrite Test Store uses ZZ Root DB12 as its root category, so it stayed.',
+            title: `One step left to remove ${PACK_NAME}`,
+            message: "Justrite Test Store still uses the pack's root category, ZZ Root DB12, so it stayed.",
             keptRoot,
         });
     });

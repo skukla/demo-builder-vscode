@@ -52,7 +52,7 @@ export interface ResultContent {
     details?: string[];
     /** How long the job ran, when it reported it. */
     tookMs?: number;
-    /** The kept root's Admin step, shown as the setup step's Where / Enter / Then. */
+    /** The kept root's Admin step, shown as the setup step's Where / Set / Then. */
     keptRoot?: KeptRootStep;
 }
 
@@ -145,8 +145,8 @@ function successResult(record: ImportJobRecord, name: string, words: OperationWo
     if (record.keptRoot) {
         return {
             variant: 'warning',
-            title: `${words.done} ${name}, except 1 category`,
-            message: `${record.keptRoot.store} uses ${record.keptRoot.category} as its root category, so it stayed.`,
+            title: `One step left to remove ${name}`,
+            message: `${record.keptRoot.store} still uses the pack's root category, ${record.keptRoot.category}, so it stayed.`,
             keptRoot: record.keptRoot,
         };
     }
