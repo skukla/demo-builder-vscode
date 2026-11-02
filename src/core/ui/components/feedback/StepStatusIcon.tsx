@@ -22,7 +22,7 @@ export function StepStatusIcon({ status }: { status: StepStatus }): React.ReactE
         case 'success':
             return <StatusIcon status="success" />;
         case 'error':
-            return <StatusIcon status="row-error" />;
+            return <StatusIcon status="error" />;
         case 'warning':
             return <StatusIcon status="warning" />;
         case 'checking':

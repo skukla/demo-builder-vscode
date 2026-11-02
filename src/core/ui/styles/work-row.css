@@ -45,7 +45,7 @@
     }
 
     .work-row-why {
-        color: var(--spectrum-global-color-red-600);
+        color: var(--spectrum-semantic-negative-color-icon);
     }
 
     .work-row-note {

@@ -101,7 +101,7 @@ function DowntimeModal({ target, onClose }: {
                         width="size-1600"
                     />
                 )}
-                {error && <Text UNSAFE_className="text-sm text-red-600">{error}</Text>}
+                {error && <Text UNSAFE_className="text-sm text-negative">{error}</Text>}
             </Flex>
         </Modal>
     );

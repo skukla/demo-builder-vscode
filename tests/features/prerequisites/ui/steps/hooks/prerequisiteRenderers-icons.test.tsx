@@ -34,11 +34,11 @@ describe('renderPluginStatusIcon', () => {
     });
 
     it('shows the red cross once a running check reports the plugin missing', () => {
-        expect(markup(renderPluginStatusIcon('checking', false))).toContain('class="text-red-600"');
+        expect(markup(renderPluginStatusIcon('checking', false))).toContain('class="text-negative"');
     });
 
     it('shows the red cross for an unknown verdict once the check is no longer running', () => {
-        expect(markup(renderPluginStatusIcon('success', undefined))).toContain('class="text-red-600"');
+        expect(markup(renderPluginStatusIcon('success', undefined))).toContain('class="text-negative"');
     });
 
     it('shows the green tick for an installed plugin on a finished check', () => {
@@ -46,7 +46,7 @@ describe('renderPluginStatusIcon', () => {
     });
 
     it('shows the red cross for a missing plugin on a failed check', () => {
-        expect(markup(renderPluginStatusIcon('error', false))).toContain('class="text-red-600"');
+        expect(markup(renderPluginStatusIcon('error', false))).toContain('class="text-negative"');
     });
 });
 

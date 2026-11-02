@@ -17,7 +17,7 @@ describe('StepStatusIcon', () => {
     });
 
     it('marks error with the red cross', () => {
-        expect(markup(<StepStatusIcon status="error" />)).toContain('class="text-red-600"');
+        expect(markup(<StepStatusIcon status="error" />)).toContain('class="text-negative"');
     });
 
     it('marks warning with the orange alert', () => {

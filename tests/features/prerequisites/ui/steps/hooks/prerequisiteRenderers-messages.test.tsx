@@ -77,7 +77,7 @@ describe('renderAioCliErrorVersions', () => {
 
     it('gives every row a red cross', () => {
         const rows = renderAioCliErrorVersions('missing in Node 20') as React.ReactNode[];
-        expect(html(rows[0])).toContain('class="text-red-600"');
+        expect(html(rows[0])).toContain('class="text-negative"');
     });
 
     it('reads a major that is separated from the word Node by more than one space', () => {
@@ -107,7 +107,7 @@ describe('renderPrerequisiteMessage', () => {
         expect(text(rendered)).toBe('Node 20 – @adobe/aio-cliNode 22');
         const markup = html(rendered);
         expect(markup).toContain('class="text-green-600"');
-        expect(markup).toContain('class="text-red-600"');
+        expect(markup).toContain('class="text-negative"');
     });
 
     it('prefers the version list over the Node.js comma-separated presentation', () => {

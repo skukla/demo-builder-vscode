@@ -137,7 +137,7 @@
  * else can carry it. A small negative-500 dot after the label, plus a red-600 label so
  * the signal is not colour-on-a-dot alone. */
 .vsteplist-step.has-error .vsteplist-title {
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-icon);
 }
 
 .vsteplist-error {
@@ -145,7 +145,7 @@
     width: var(--spectrum-global-dimension-size-75);
     height: var(--spectrum-global-dimension-size-75);
     border-radius: 50%;
-    background: var(--spectrum-global-color-red-600);
+    background: var(--spectrum-semantic-negative-color-icon);
 }
 
 /* Visually-hidden lock reason (the mark/title stay visible; SR reads the reason). */

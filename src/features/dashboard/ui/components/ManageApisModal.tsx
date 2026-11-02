@@ -317,7 +317,7 @@ export function ManageApisModal({
                             onToggle={handleToggle}
                         />
                         {applyError && (
-                            <Text UNSAFE_className="text-sm text-red-600">{applyError}</Text>
+                            <Text UNSAFE_className="text-sm text-negative">{applyError}</Text>
                         )}
                     </div>
                 </Modal>

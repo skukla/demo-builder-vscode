@@ -70,7 +70,7 @@ const VENDOR_PREFIX = /^spectrum-/;
  *
  * Three components do this (TimelineNav, VerifiedField, WizardContainer),
  * defining 6 classes between them — including
- * `.text-red-500`, which `AdobeAuthStep` also uses. Those classes exist only
+ * `.text-negative`, which `AdobeAuthStep` also uses. Those classes exist only
  * while the defining component is MOUNTED, which is a stranger dependency than
  * the one this file was written to catch, but they are not undefined and
  * reporting them as such would be a false positive.
@@ -98,7 +98,7 @@ export interface UsageReport {
      *
      * A different defect from `crossBundle`, and it needs a different fix. Some
      * are dead markup left after a redesign; some are elements nobody ever
-     * styled, which renders as a real visual bug — `.text-red-500` on an error
+     * styled, which renders as a real visual bug — `.text-negative` on an error
      * icon means the icon is not red.
      *
      * Reported separately rather than merged, because the fix for one is "load

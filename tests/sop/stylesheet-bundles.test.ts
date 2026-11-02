@@ -266,7 +266,7 @@ describe('ADR-018 §1: one cascade order, declared, and every bundle carries it'
         // The old one banned LEAKING — a block could define classes as long as no
         // other component used them — and left the hazard that made leaking bad:
         // a class defined in a block exists only while its component is MOUNTED.
-        // `.text-red-500` was exactly that, and an error icon rendered colourless
+        // `.text-negative` was exactly that, and an error icon rendered colourless
         // on every surface VerifiedField did not happen to be on.
         //
         // Six rules remained on 2026-09-09, in two components, and FIVE were

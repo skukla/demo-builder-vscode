@@ -250,6 +250,6 @@ describe('when the apply write goes wrong', () => {
     it('shows no error line at all until something fails', async () => {
         const { container } = await readyToApply(() => Promise.resolve({ success: true }));
 
-        expect(container.querySelector('.text-red-600')).toBeNull();
+        expect(container.querySelector('.text-negative')).toBeNull();
     });
 });

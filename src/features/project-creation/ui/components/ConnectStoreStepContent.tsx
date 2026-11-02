@@ -196,7 +196,7 @@ export function ConnectStoreStepContent({
     if (loadError) {
         return (
             <CenteredFeedbackContainer>
-                <Text UNSAFE_className="text-red-700">{loadError}</Text>
+                <Text UNSAFE_className="text-negative">{loadError}</Text>
             </CenteredFeedbackContainer>
         );
     }

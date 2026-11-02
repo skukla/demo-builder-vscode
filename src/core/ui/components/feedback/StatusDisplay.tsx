@@ -74,7 +74,7 @@ export interface StatusDisplayProps {
 const variantConfig: Record<StatusVariant, { icon: React.ReactNode; colorClass: string }> = {
     error: {
         icon: <StatusIcon status="error" size="L" />,
-        colorClass: 'text-red-600',
+        colorClass: 'text-negative',
     },
     success: {
         icon: <StatusIcon status="success" size="L" />,

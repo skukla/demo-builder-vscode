@@ -337,7 +337,7 @@ describe('Modal', () => {
         it.each([
             ['success', 'text-green-600'],
             ['warning', 'text-orange-600'],
-            ['error', 'text-red-600'],
+            ['error', 'text-negative'],
         ] as const)('puts the %s icon before the title, the wizard\'s own', (status, iconClass) => {
             renderWithProvider(<Modal {...defaultProps} status={status} />);
 

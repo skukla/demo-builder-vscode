@@ -92,7 +92,7 @@
         gap: 8px;
         margin: 6px 0 4px;
         padding: 2px 0 2px 12px;
-        border-left: 2px solid var(--spectrum-global-color-yellow-600);
+        border-left: 2px solid var(--spectrum-global-color-orange-600);
     }
 
     /* A question may put each choice on its own line. */

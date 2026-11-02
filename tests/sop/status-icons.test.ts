@@ -57,16 +57,21 @@ describe('one status icon on every surface', () => {
         expect({
             warning: iconFor('warning'),
             error: iconFor('error'),
-            rowError: iconFor('row-error'),
             success: iconFor('success'),
             info: iconFor('info'),
         }).toEqual({
             warning: 'AlertCircle',
-            error: 'AlertCircle',
-            rowError: 'CloseCircle',
+            error: 'CloseCircle',
             success: 'CheckmarkCircle',
             info: 'InfoOutline',
         });
+    });
+
+    it('a warning and an error are different shapes: colour alone is not enough', () => {
+        const source = fs.readFileSync(path.join(SRC, 'core/ui/components/feedback/StatusIcon.tsx'), 'utf8');
+        const iconFor = (status: string) => new RegExp(`case '${status}':\\s+return <(\\w+)`).exec(source)?.[1];
+
+        expect(iconFor('warning')).not.toBe(iconFor('error'));
     });
 
     it('CONTROL: the check still finds what it looks for', () => {

@@ -5,8 +5,7 @@ import { StatusIcon, type StatusIconStatus } from '@/core/ui/components/feedback
 
 const COLOURS: [StatusIconStatus, string][] = [
     ['warning', 'text-orange-600'],
-    ['error', 'text-red-600'],
-    ['row-error', 'text-red-600'],
+    ['error', 'text-negative'],
     ['success', 'text-green-600'],
     ['info', 'text-blue-600'],
 ];

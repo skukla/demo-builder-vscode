@@ -122,7 +122,7 @@ export function StoreConfigFieldRow({
         if (fetchError) {
             return (
                 <div>
-                    <Text UNSAFE_className="text-red-700" marginBottom="size-200">
+                    <Text UNSAFE_className="text-negative" marginBottom="size-200">
                         {fetchError}
                     </Text>
                     <ConfigFieldRenderer {...fieldProps} />

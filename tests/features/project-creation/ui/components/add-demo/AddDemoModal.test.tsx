@@ -91,7 +91,7 @@ describe('AddDemoModal', () => {
         expect(screen.getByTestId('zip-error')).toHaveTextContent('A repository with this name already exists');
         expect(screen.getByTestId('zip-error')).not.toHaveTextContent("We couldn't add this zip");
         expect(screen.getByTestId('zip-error').innerHTML).toContain('text-orange-600');
-        expect(screen.getByTestId('zip-error').innerHTML).not.toContain('text-red-600');
+        expect(screen.getByTestId('zip-error').innerHTML).not.toContain('text-negative');
 
         mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/citisignal-b2b-summit' } });
         await click('Add it from that repository');

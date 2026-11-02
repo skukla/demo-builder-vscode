@@ -130,7 +130,7 @@
     }
 
     body [color="negative"] {
-        color: var(--spectrum-semantic-negative-color-text-small);
+        color: var(--spectrum-semantic-negative-color-icon);
     }
 
     body [color="notice"] {

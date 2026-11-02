@@ -151,7 +151,7 @@
 }
 
 .integration-card-status--error {
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-icon);
 }
 
 /* A system card's type ("ERP") beside its name; never squeezed by a long name. */
@@ -439,7 +439,7 @@
 
 .integration-panel-action.is-danger,
 .integration-panel-action.is-danger .integration-panel-action-icon {
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-icon);
 }
 
 .integration-panel-actions-divider {

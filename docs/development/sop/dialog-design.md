@@ -42,7 +42,8 @@ form, confirm, progress, result) shows one at a time.
 
 **A wait shows nothing else.** While a dialog waits for what it will show, only the title, a
 medium centred spinner and the way out (Close or Cancel) appear: no fields, no text, no action
-buttons. The spinner is centred both ways between the title's rule and the buttons. `Modal`'s
+buttons. Work the SC started is the Progress layout, so it may say what is happening beside the
+spinner ("Starting removal"); a dialog reading what it will show says nothing. The spinner is centred both ways between the title's rule and the buttons. `Modal`'s
 `waiting` prop does all of this, and eases to the content when the wait ends. A button doing its own
 work shows its spinner on itself (`isPending`). A re-check inside a dialog already showing
 its content, such as ticking a store in Clear demo data or pressing Check on a pack's setup step, is
@@ -52,7 +53,9 @@ A flyout waits the same way: its title and a medium centred spinner, with no wor
 2026-11-02).
 
 **Status lives in the title.** A small icon before it: green done, amber needs the
-SC (including a dangerous confirm), red failed. No status boxes in the body. A
+SC (including a dangerous confirm), red failed. No status boxes in the body. The one
+exception is a setup step's banner (`SetupStepHeader`): a Check needs one place to show
+its answer and its spinner (owner, 2026-11-02). A
 done result with nothing else to say is just its title. Where nothing follows from
 it, it closes itself (the progress window); a dialog whose result offers Back to its
 form (Import) stays until closed.
@@ -82,7 +85,7 @@ dangerous main action is solid red. Never two buttons that do the same thing.
 **Problems sit next to the thing they are about**, as a note line: a store another
 project claims gets its note on its own row, not a box above the list.
 
-**An Admin step is drawn one way everywhere**: Where (the menu path), Enter (each
+**An Admin step is drawn one way everywhere**: Where (the menu path), Set (each
 value copyable), Then. In the setup guide, in a pack's setup step, and in a result
 that leaves one to do. Numbered lists only for instructions that are not an Admin
 step.

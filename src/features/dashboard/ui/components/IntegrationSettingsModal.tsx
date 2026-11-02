@@ -190,7 +190,7 @@ export function IntegrationSettingsModal({
                             can close this window.
                         </Text>
                     )}
-                    {saveError && <Text UNSAFE_className="text-sm text-red-600">{saveError}</Text>}
+                    {saveError && <Text UNSAFE_className="text-sm text-negative">{saveError}</Text>}
                 </Modal>
             )}
         </DialogContainer>

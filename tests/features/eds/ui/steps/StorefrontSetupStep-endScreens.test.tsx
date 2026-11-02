@@ -48,7 +48,7 @@ describe('StorefrontSetupStep — failed screen', () => {
         pushError({ message: 'Pipeline stopped', error: 'HTTP 502' });
 
         expect(screen.getByText('Storefront Setup Failed')).toBeInTheDocument();
-        expect(iconClass(container)).toBe('text-red-600');
+        expect(iconClass(container)).toBe('text-negative');
     });
 
     it('shows the error detail instead of the message, centred', () => {

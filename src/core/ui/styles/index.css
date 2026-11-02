@@ -155,7 +155,7 @@
 
 @layer theme {
 .status-indicator.error {
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-icon);
 }
 }
 

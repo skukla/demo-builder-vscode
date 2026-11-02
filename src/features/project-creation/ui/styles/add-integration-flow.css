@@ -249,7 +249,7 @@
 }
 
 .intflow-api-summary-remove:hover {
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-icon);
 }
 
 /* The API name takes the rest of the row after the status icon. */
@@ -310,7 +310,7 @@
     margin: 12px 0 0;
     font-size: var(--spectrum-global-dimension-font-size-75);
     line-height: 1.5;
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-icon);
 }
 
 .intflow-api-picker {
@@ -422,7 +422,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    border: 1px solid var(--spectrum-global-color-red-400);
+    border: 1px solid var(--spectrum-semantic-negative-color-icon);
     border-radius: 8px;
 }
 
@@ -430,7 +430,7 @@
     flex: 1 1 auto;
     font-size: 12px;
     line-height: 1.4;
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-icon);
     overflow-wrap: anywhere;
 }
 }

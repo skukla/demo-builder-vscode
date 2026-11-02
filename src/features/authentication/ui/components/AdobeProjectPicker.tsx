@@ -343,7 +343,7 @@ export function AdobeProjectPicker({
                     ) : null
                 }
             />
-            {deleteError ? <Text UNSAFE_className="text-red-600">{deleteError}</Text> : null}
+            {deleteError ? <Text UNSAFE_className="text-negative">{deleteError}</Text> : null}
         </>
     );
 }

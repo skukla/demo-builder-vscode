@@ -341,7 +341,7 @@
 
 .dashboard-action-button--danger svg,
 .dashboard-action-button--danger .icon-label {
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-icon);
 }
 
 /* ===========================================

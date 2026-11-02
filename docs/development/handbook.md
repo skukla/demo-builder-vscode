@@ -882,8 +882,9 @@ check says so and names the file.
 > Enforced by `tests/sop/modal-hosting.test.ts`.
 
 > **Convention.** How something stands is drawn by one icon everywhere: `StatusIcon`, the wizard's
-> set. Warning is an orange circle, error a red circle, a failed row a red circle with an X, done a
-> green check, info a blue info icon.
+> set. Warning is an orange circle with a `!`, error a red circle with an `X`, done a green check,
+> info a blue info icon. One red and one orange everywhere, with warning and error different shapes
+> so colour is not the only thing telling them apart (owner, 2026-11-02).
 > *Why:* a triangle meant "needs you" in a dialog and "failed" on the sign-in step, chosen file by
 > file (owner, 2026-11-02: the wizard's iconography, "standardized across the wizard and all of the
 > modals").

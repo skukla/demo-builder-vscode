@@ -32,7 +32,7 @@ export function renderPluginStatusIcon(
     if (pluginInstalled) {
         return <StatusIcon status="success" size="XS" marginStart="size-50" />;
     }
-    return <StatusIcon status="row-error" size="XS" marginStart="size-50" />;
+    return <StatusIcon status="error" size="XS" marginStart="size-50" />;
 }
 
 /**
@@ -78,7 +78,7 @@ export function renderAioCliErrorVersions(message: string): React.ReactNode {
         return nodes.map((n, idx) => (
             <Flex key={idx} alignItems="center" marginBottom="size-50">
                 <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>{n}</Text>
-                <StatusIcon status="row-error" size="XS" marginStart="size-50" />
+                <StatusIcon status="error" size="XS" marginStart="size-50" />
             </Flex>
         ));
     }
@@ -102,7 +102,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
                         {item.installed ? (
                             <StatusIcon status="success" size="XS" marginStart="size-50" />
                         ) : (
-                            <StatusIcon status="row-error" size="XS" marginStart="size-50" />
+                            <StatusIcon status="error" size="XS" marginStart="size-50" />
                         )}
                     </Flex>
                 ))}
