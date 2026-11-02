@@ -96,7 +96,7 @@ No ERP change has been run on an ACO project yet; PL-87's proof list has that te
    in the cart). Placement and order events read Commerce, so they do not change.
 6. **Ledger the ACO writes** with the others, so a reset undoes them.
 
-Built under PL-87, step 4 of `.rptc/plans/aco-company-catalogs/overview.md`. Stock is still to measure.
+Built under PL-87, step 5 of `.rptc/plans/aco-company-catalogs/overview.md`. Commerce stays the authority and PL-87's sync copies from it, so the integration may need no ACO code; answers 3 and 6 apply only if its writes raise no event. Stock is still to measure.
 
 ## Done when
 

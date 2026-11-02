@@ -49,8 +49,9 @@ integration carries a stand-in label on screen.
 |---|---|---|
 | Who answers | Code inside Commerce | The mesh resolver |
 | Private key | Encrypted in Commerce | Encrypted in mesh secrets |
-| Company to view | An attribute on the company | A small table in the resolver, written at setup |
-| Keeping in step | Automatic | At setup, plus a Refresh action |
+| Company to view | A link table in Commerce | A table the sync keeps, which the mesh reads |
+| Keeping in step | Change tracking inside Commerce, plus a periodic reconcile | Commerce events to an App Builder action, plus a scheduled reconcile. No manual step (owner, 2026-11-01) |
+| Keys | One per view | One per project, assigned to every view, so a new view needs no mesh deploy |
 | Sign-in, cart, checkout | Straight to Commerce | Through the mesh |
 
 ## Proved live, 2026-11-01
@@ -77,18 +78,27 @@ add it and it sets up, remove it and all of it goes.
 2. **Catalog setup.** For each custom shared catalog and store view: key pair, restricted access key, policy,
    private view with one price book. Tag each product through the ACO rows. Read-back reports when filtering has
    started. Removal deletes views, then policies, then keys, then rows and the tag, and confirms by reading back.
-3. **The catalog answer.** An optional resolver in `eds-accs-mesh`, generated from the setup: company to view,
-   plus the store view. A project without a mesh gets one, and the storefront's Commerce endpoint moves to it.
-   Removal points the endpoint back, republishes, and takes the mesh off if it was added for this.
-4. **ERP prices and names reach ACO.** In `commerce-erp-integration`, after a contract price or a base price and
-   name reach Commerce, the same values go to ACO on a project with ACO and no connector. Each shared catalog's
-   customer group already maps to one price book. It needs the ACO credential on the integration's workspace, and
-   the writes go in its ledger so a reset undoes them. Measure stock first: the ERP writes it to Commerce only, and
-   what an ACO storefront shows is not known. See AB-14.
-5. **Stepping aside.** `acoEnabled` already says whether the connector is on. Offered only when it is off and the
+3. **The catalog answer.** An optional resolver in `eds-accs-mesh`. It reads which view a company gets from the
+   sync's table, and signs with the project's key. A project without a mesh gets one, and the storefront's Commerce
+   endpoint moves to it. Removal points the endpoint back, republishes, and takes the mesh off if it was added for
+   this. To prove: a mesh reading the table from an action.
+4. **Staying in step, with no manual step.** The integration's App Builder action subscribes to Commerce events with
+   `priority: true`, as the ERP integration does, and applies each change to ACO:
+   `plugin.shared_catalog.api.shared_catalog_repository.save` and `.delete`,
+   `plugin.shared_catalog.api.company_management.assign_companies`, `.unassign_companies` and
+   `.unassign_all_companies`, `observer.shared_catalog_assign_categories` and `_unassign_categories`,
+   `observer.company_save_commit_after`, `observer.catalog_product_save_commit_after` and `_delete_commit_after`
+   (read from a live instance's `V1/eventing/supportedList`, 2026-11-01). A scheduled action reconciles Commerce
+   against ACO, because that list has no event for assigning a product to a shared catalog and events can be missed.
+   Adobe's connector also pairs change tracking with a reconcile.
+5. **ERP prices and names reach ACO.** Commerce stays the authority and the sync copies from it, so
+   `commerce-erp-integration` may need no ACO code at all. Test first whether its base price and tier price writes
+   raise an event. If not, the reconcile carries them, or the integration tells the sync to run. Measure stock too:
+   the ERP writes it to Commerce only, and what an ACO storefront shows is not known. See AB-14.
+6. **Stepping aside.** `acoEnabled` already says whether the connector is on. Offered only when it is off and the
    project has ACO, a B2B package and custom shared catalogs. A project that has it when the connector arrives is
    prompted to remove it. The ERP's ACO writes stop too. Then the connector does the copying.
-6. **Surfaces.** The stand-in label on the card, an MCP tool for what the button does, and the docs. Walk "Hit
+7. **Surfaces.** The stand-in label on the card, an MCP tool for what the button does, and the docs. Walk "Hit
    every surface" in `CLAUDE.md`.
 
 ## Proof before calling it done
@@ -103,6 +113,7 @@ Run on the test website, then back to zero, except as noted.
   field CustomerOrder.number", while `placeOrder.errors` still arrives. See what the shopper reads, and fix it in
   the mesh if it is worse than going direct.
 - An ERP price change reaching the listing and the cart with the same number.
+- A new shared catalog, a new company and a moved company each taking effect with nobody pressing anything.
 - Removal back to zero, including the storefront endpoint.
 
 ## Limits to tell an SC
@@ -110,7 +121,7 @@ Run on the test website, then back to zero, except as noted.
 - A hidden product still opens from a direct link: a policy filters search and listings, not a read by SKU. That
   is how ACO's API behaves, and the connector uses the same API, so we match it. The cart is Commerce's to refuse.
 - Products and prices have to exist in Commerce too, or Add to Cart fails or disagrees with the listing.
-- A new shared catalog or company needs Refresh. The connector would do this on its own.
+- Changes reach ACO a little later than Commerce, and a product added to a shared catalog waits for the scheduled reconcile.
 - Each view counts towards the ACO license's catalog variations.
 
 ## Not started

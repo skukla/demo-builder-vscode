@@ -124,6 +124,14 @@ Three slices run in parallel: A `aco/aco-scrape-to-pack` (website → pack), B
 `aco/aco-loader-and-config` (ACO client, loading, Console credential), C (wizard, Configure,
 storefront config).
 
+## Open: a new project has to finish ACO in the wizard (owner, 2026-11-01)
+
+The wizard's Catalog step offers only the ACO tick box. The credential is made during creation, and the catalog view
+picker is on Configure only, so a new project is finished after creation. A new project needs the instance and view
+in the wizard. `aco-support/live-check.md` says no API makes catalog views; that is out of date, because
+`createCatalogView` works through the admin API, so the wizard could also offer to make one. To trace: what the
+Catalog form shows for these fields today, and when the credential can be made given the workspace choice.
+
 ## Shipped so far
 
 - 2026-09-17  docs(backlog): PL-60 finishes ACO support; AB-14 asks where ERP prices go on an ACO storefront (`599c3d9de`)
