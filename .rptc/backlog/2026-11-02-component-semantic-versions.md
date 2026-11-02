@@ -24,3 +24,8 @@ Plan: `.rptc/plans/component-semantic-versions/overview.md`. It replaces PL-88's
 Order matters. The release updater looks up every component instance with a `repoUrl`, and applying its row deletes the
 clone and deploys nothing. No App Builder repository gets a first release until that stops and the extension release
 carrying the fix is out.
+
+## Shipped so far
+
+- 2026-11-02  fix(updates): one reader of releases, and no release row a component cannot apply (`a2ab6be57`)
+- 2026-11-02  docs(plans): every owned component ships as a semantic-version release (`4782e0645`)

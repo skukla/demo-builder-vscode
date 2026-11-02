@@ -41,3 +41,8 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 
 - 2026-10-31  feat(ui): dialogs follow one design for content, size and motion (`9698ac5fa`)
 - 2026-10-31  fix(ui): pin dialogs, red that reads red, and the 24px gap, as measured (`e651eb2bf`)
+- 2026-11-01  docs(dialogs): a re-check inside an open dialog hides nothing (`962c03ef3`)
+- 2026-11-01  fix(ui): a dialog's spinner is centred between the rule and the buttons (`63c8283b2`)
+- 2026-11-01  feat(ui): a dialog that is waiting shows nothing else (`c2efd97cb`)
+- 2026-11-01  fix(data-installer): the Import dialog's store wait uses a medium spinner (`dabd62734`)
+- 2026-11-01  Merge the dialog design work into develop for review (`343e85e43`)
