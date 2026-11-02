@@ -343,6 +343,9 @@ check says so and names the file.
 > Enforced by `tests/sop/component-releases.test.ts`. Those repositories cannot be read from an
 > offline test, so `npm run components:ci` checks each one, daily by
 > `.github/workflows/component-ci.yml` (a failed run emails the owner) and in the periodic sweep.
+> It also fails a workflow that holds back the tools that only run the checks: `ubuntu-latest` and
+> the newest Playwright, never a number. Those reach no SC, and a held-back one breaks by itself
+> (the patch canary, 2026-11-02).
 
 > **Convention.** The boilerplate storefronts are built from moves forward when Adobe moves
 > it, not when someone remembers. The patches repo's daily drift gate verifies each new

@@ -41,6 +41,29 @@ for (const [name, change, words] of FALLS_SHORT) {
     });
 }
 
+const HELD_BACK = [
+    ['a numbered runner', 'jobs:\n  x:\n    runs-on: ubuntu-24.04\n', 'ubuntu-24.04'],
+    ['a quoted numbered runner', "jobs:\n  x:\n    runs-on: 'ubuntu-24.04'\n", 'ubuntu-24.04'],
+    ['a pinned browser tool', 'run: npm install playwright@1.56.1\n', 'playwright@1.56.1'],
+];
+for (const [name, workflow, words] of HELD_BACK) {
+    it(`fails on ${name}, on the patches repository too`, () => {
+        const workflows = { 'ci.yml': CI, 'x.yml': workflow };
+        for (const repo of [REPO, 'skukla/eds-demo-patches']) {
+            const problems = repoProblems(repo, { ...GOOD, workflows });
+
+            assert.equal(problems.length, 1, problems.join('; '));
+            assert.ok(problems[0].includes(`x.yml holds back ${words}`), problems[0]);
+        }
+    });
+}
+
+it('CONTROL: the moving names are not held back', () => {
+    const workflow = 'runs-on: ubuntu-latest\nrun: npm install playwright@latest\n';
+
+    assert.deepEqual(repoProblems(REPO, { ...GOOD, workflows: { 'ci.yml': CI, 'x.yml': workflow } }), []);
+});
+
 it('the patches repository needs only its RELEASING.md: its gate publishes for it', () => {
     const facts = { workflows: { 'gate.yml': 'run: gh release create v1\n' }, hasReleasing: true, checksRuns: [] };
 

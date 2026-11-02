@@ -9,6 +9,21 @@ const PUBLISHES_A_RELEASE = /gh release create|^\s+release:\s*$/m;
 /** It publishes its own release when its daily gate passes (owner, 2026-11-02). */
 export const PUBLISHES_ITSELF = 'skukla/eds-demo-patches';
 
+/**
+ * A tool that only runs the checks moves by itself. Holding one back is what broke the patch canary
+ * on 2026-11-02: GitHub moved `ubuntu-latest` to a release a year-old Playwright refused, though
+ * Playwright had supported it for four months. What reaches an SC is what gets a version, not this.
+ */
+const HELD_BACK = [/^\s*runs-on:\s*['"]?([a-z]+-\d[\w.]*)/m, /(playwright@\d[\w.-]*)/];
+
+function heldBackTools(workflows) {
+    return Object.entries(workflows).flatMap(([name, text]) =>
+        HELD_BACK.map((pin) => text.match(pin)?.[1])
+            .filter(Boolean)
+            .map((tool) => `${name} holds back ${tool}: let it move`),
+    );
+}
+
 function triggersOnEveryPush(workflow) {
     return /^\s+push:/m.test(workflow) && /^\s+pull_request:/m.test(workflow);
 }
@@ -22,7 +37,7 @@ function triggersOnEveryPush(workflow) {
  * @param facts.checksRuns - `{ conclusion }` for runs named `checks` on the default branch's head
  */
 export function repoProblems(repo, { workflows, hasReleasing, checksRuns }) {
-    const problems = hasReleasing ? [] : ['no RELEASING.md'];
+    const problems = [...(hasReleasing ? [] : ['no RELEASING.md']), ...heldBackTools(workflows)];
     if (repo === PUBLISHES_ITSELF) return problems;
 
     const entries = Object.entries(workflows);
