@@ -3,19 +3,14 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { isRepoCollaborator } from './collaboratorGate';
 import { ComponentRepositoryResolver } from './componentRepositoryResolver';
-import { GITHUB_API_BASE, buildGitHubHeaders, fetchWithTimeout } from './githubApiClient';
-import { selectLatestForChannel } from './releaseTrack';
-import type {
-    ReleaseInfo,
-    UpdateCheckResult,
-    GitHubRelease,
-    GitHubReleaseAsset,
-    UpdateChannel,
-} from './types';
-import { isMeshComponentId } from '@/core/constants';
+import { buildGitHubHeaders } from './githubApiClient';
+import type { ReleaseInfo, UpdateCheckResult } from './types';
+import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
+import { readNewestRelease } from '@/core/releases/readNewestRelease';
 import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
-import { Project } from '@/types/base';
+import { ComponentInstance, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import type { GitHubReleaseAsset, UpdateChannel } from '@/types/releases';
 import { getComponentInstanceEntries, getComponentVersion } from '@/types/typeGuards';
 
 export type { UpdateCheckResult };
@@ -35,6 +30,19 @@ export interface MultiProjectUpdateResult {
         project: Project;
         currentVersion: string;
     }>;
+}
+
+/**
+ * Whether a release archive can update this component. Applying one replaces the
+ * folder and deploys nothing, so it only suits a Headless storefront, which runs
+ * from that folder. A mesh or App Builder component would lose its git history and
+ * leave the live app as it was, and an EDS storefront's repoUrl is the SC's own
+ * repository. A project old enough to record no type still gets its update.
+ */
+function takesReleaseArchive(componentId: string, instance: ComponentInstance): boolean {
+    if (isMeshComponentId(componentId)) return false;
+    if (componentId === COMPONENT_IDS.EDS_STOREFRONT) return false;
+    return instance.type === undefined || instance.type === 'frontend';
 }
 
 export class UpdateManager {
@@ -105,8 +113,7 @@ export class UpdateManager {
 
         for (const project of projects) {
             for (const [componentId, component] of getComponentInstanceEntries(project)) {
-                // A mesh updates from its branch, by the integration update check.
-                if (isMeshComponentId(componentId)) continue;
+                if (!takesReleaseArchive(componentId, component)) continue;
 
                 // RESILIENCE: Skip components whose paths don't exist on filesystem
                 // This handles cases where a component was deleted but still registered in state
@@ -188,39 +195,13 @@ export class UpdateManager {
         channel: UpdateChannel,
     ): Promise<ReleaseInfo | null> {
         try {
-            // For stable: use /releases/latest (non-prereleases only)
-            // For beta: use /releases?per_page=20 (includes prereleases, need to sort)
-            const url =
-                channel === 'stable'
-                    ? `${GITHUB_API_BASE}/repos/${repo}/releases/latest`
-                    : `${GITHUB_API_BASE}/repos/${repo}/releases?per_page=20`;
-
             const headers = await buildGitHubHeaders(this.context.secrets);
+            const release = await readNewestRelease(repo, channel, {
+                headers,
+                logger: this.logger,
+            });
 
-            const response = await fetchWithTimeout(url, { headers });
-
-            // HTTP status validation
-            if (!response.ok) {
-                if (response.status === 404) {
-                    return null;
-                }
-                if (response.status === 403) {
-                    throw new Error('GitHub rate limit exceeded. Try again later.');
-                }
-                if (response.status >= 500) {
-                    throw new Error(`GitHub server error: HTTP ${response.status}`);
-                }
-                throw new Error(`GitHub API error: HTTP ${response.status}`);
-            }
-
-            const data: GitHubRelease | GitHubRelease[] = await response.json();
-
-            // Stable returns a single object; beta/early-access return an array.
-            // For arrays, pick the highest release the channel ACCEPTS by track
-            // (beta excludes -alpha.*, early-access takes -alpha.* only).
-            const release = Array.isArray(data) ? selectLatestForChannel(data, channel) : data;
-
-            if (!release || release.message === 'Not Found') {
+            if (!release) {
                 return null;
             }
 

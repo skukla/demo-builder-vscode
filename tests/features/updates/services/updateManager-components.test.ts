@@ -7,7 +7,6 @@
  * - Resilience checks for missing paths
  * - Mixed resolver-known and repoUrl-only components
  *
- * Total tests: 3
  */
 
 // Mock fs/promises for checkAllProjectsForUpdates (which checks component paths)
@@ -82,10 +81,11 @@ describe('UpdateManager - Component Updates', () => {
                 name: 'Project 1',
                 ...createUpdateManagerProject([
                     {
-                        id: 'eds-storefront',
+                        id: 'demo-package-frontend',
+                        type: 'frontend',
                         version: '1.0.0',
-                        repoUrl: 'https://github.com/skukla/citisignal-eds',
-                        path: '/mock/path/eds',
+                        repoUrl: 'https://github.com/skukla/citisignal-nextjs',
+                        path: '/mock/path/frontend',
                     },
                 ]),
             };
@@ -93,10 +93,11 @@ describe('UpdateManager - Component Updates', () => {
                 name: 'Project 2',
                 ...createUpdateManagerProject([
                     {
-                        id: 'eds-storefront',
+                        id: 'demo-package-frontend',
+                        type: 'frontend',
                         version: '0.9.0',
-                        repoUrl: 'https://github.com/skukla/citisignal-eds',
-                        path: '/mock/path/eds2',
+                        repoUrl: 'https://github.com/skukla/citisignal-nextjs',
+                        path: '/mock/path/frontend2',
                     },
                 ]),
             };
@@ -118,7 +119,7 @@ describe('UpdateManager - Component Updates', () => {
 
             // Then: should detect update for the repoUrl-only component
             expect(results).toHaveLength(1);
-            expect(results[0].componentId).toBe('eds-storefront');
+            expect(results[0].componentId).toBe('demo-package-frontend');
             expect(results[0].latestVersion).toBe('1.1.0');
             expect(results[0].outdatedProjects).toHaveLength(2);
         });
@@ -138,6 +139,52 @@ describe('UpdateManager - Component Updates', () => {
 
             expect(await updateManager.checkAllProjectsForUpdates([project])).toStrictEqual([]);
             expect(global.fetch).not.toHaveBeenCalled();
+        });
+
+        // Applying a release replaces the folder with the archive and deploys
+        // nothing. For these that would remove the clone's git history and leave
+        // the live app or site as it was, and for a storefront repoUrl is the
+        // SC's own repository. Shapes as read from real project files, 2026-11-02.
+        it.each([
+            ['an App Builder app', 'demo-erp', 'app-builder', 'https://github.com/skukla/demo-erp.git'],
+            ['a second copy of one', 'demo-erp-2', 'app-builder', 'https://github.com/skukla/demo-erp.git'],
+            ['an integration', 'erp-integration', 'app-builder', 'https://github.com/skukla/commerce-erp-integration.git'],
+            ['an EDS storefront', 'eds-storefront', 'frontend', 'https://github.com/an-sc/their-storefront'],
+        ])('never looks up a release for %s', async (_name, id, type, repoUrl) => {
+            const project = {
+                name: 'Project 1',
+                ...createUpdateManagerProject([
+                    { id, type, version: '0.1.0', repoUrl, path: '/mock/path/component' },
+                ]),
+            };
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => createMockRelease({ version: '9.0.0', assetType: 'zipball' }),
+            });
+            mockSecurityValidationPass();
+
+            expect(await updateManager.checkAllProjectsForUpdates([project])).toStrictEqual([]);
+            expect(global.fetch).not.toHaveBeenCalled();
+        });
+
+        // A project from before instances recorded their type still gets its
+        // Headless updates.
+        it('still offers a release to a frontend with no recorded type', async () => {
+            const project = {
+                name: 'Project 1',
+                ...createUpdateManagerProject([
+                    { id: 'headless', version: '1.0.0', path: '/mock/path/headless' },
+                ]),
+            };
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => createMockRelease({ version: '1.1.0', assetType: 'zipball' }),
+            });
+            mockSecurityValidationPass();
+
+            const results = await updateManager.checkAllProjectsForUpdates([project]);
+
+            expect(results.map((r) => r.componentId)).toStrictEqual(['headless']);
         });
 
         it('should skip repoUrl-only components without paths in multi-project check', async () => {
@@ -166,10 +213,11 @@ describe('UpdateManager - Component Updates', () => {
                 ...createUpdateManagerProject([
                     { id: 'commerce-mesh', version: '1.0.0', path: '/mock/path/mesh' },
                     {
-                        id: 'eds-storefront',
+                        id: 'demo-package-frontend',
+                        type: 'frontend',
                         version: '1.0.0',
-                        repoUrl: 'https://github.com/skukla/citisignal-eds',
-                        path: '/mock/path/eds',
+                        repoUrl: 'https://github.com/skukla/citisignal-nextjs',
+                        path: '/mock/path/frontend',
                     },
                 ]),
             };
@@ -192,7 +240,7 @@ describe('UpdateManager - Component Updates', () => {
             expect(results).toHaveLength(2);
             const componentIds = results.map((r) => r.componentId);
             expect(componentIds).toContain('commerce-mesh');
-            expect(componentIds).toContain('eds-storefront');
+            expect(componentIds).toContain('demo-package-frontend');
         });
     });
 });

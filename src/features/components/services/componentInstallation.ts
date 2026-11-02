@@ -13,6 +13,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
+import { readNewestRelease } from '@/core/releases/readNewestRelease';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { nodeForInstall } from '@/core/shell/demoBuilderNode';
@@ -24,6 +25,7 @@ import type {
 import { ComponentInstance } from '@/types/base';
 import { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
+import type { UpdateChannel } from '@/types/releases';
 
 /**
  * Handles Git-based component installation
@@ -277,52 +279,11 @@ export class ComponentInstallation {
         const [, owner, repo] = match;
         const channel = vscode.workspace
             .getConfiguration('demoBuilder')
-            .get<string>('updateChannel', 'beta');
+            .get<UpdateChannel>('updateChannel', 'stable');
 
-        try {
-            // For stable: use /releases/latest (non-prereleases only)
-            // For beta: use /releases?per_page=10 (includes prereleases)
-            const apiUrl =
-                channel === 'stable'
-                    ? `https://api.github.com/repos/${owner}/${repo}/releases/latest`
-                    : `https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`;
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), TIMEOUTS.QUICK);
-
-            try {
-                const response = await fetch(apiUrl, { signal: controller.signal });
-                clearTimeout(timeout);
-
-                if (!response.ok) {
-                    this.logger.debug(
-                        `[ComponentManager] GitHub API returned ${response.status} for ${owner}/${repo}`,
-                    );
-                    return null;
-                }
-
-                const data = await response.json();
-
-                if (channel === 'stable') {
-                    // /releases/latest returns a single release object
-                    return data.tag_name || null;
-                } else {
-                    // /releases returns an array, find the latest (first) one
-                    const releases = Array.isArray(data) ? data : [];
-                    if (releases.length === 0) {
-                        return null;
-                    }
-                    return releases[0].tag_name || null;
-                }
-            } finally {
-                clearTimeout(timeout);
-            }
-        } catch (error) {
-            // Network error, timeout, or other failure - fall back to config tag
-            this.logger.debug(
-                `[ComponentManager] Failed to fetch latest release for ${owner}/${repo}: ${(error as Error).message}`,
-            );
-            return null;
-        }
+        const release = await readNewestRelease(`${owner}/${repo}`, channel, {
+            logger: this.logger,
+        });
+        return release?.tag_name ?? null;
     }
 }

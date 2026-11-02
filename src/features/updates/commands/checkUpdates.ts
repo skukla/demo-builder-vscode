@@ -25,13 +25,13 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
+import { shouldOfferGraduation } from '@/core/releases/releaseTrack';
 import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { integrationUpdateProbe } from '@/features/dashboard/handlers/integrationUpdateHandlers';
 import { presentUpdates } from '@/features/updates/handlers/updatesModalHandlers';
 import { findAllUpdates, type FoundUpdates } from '@/features/updates/services/allUpdates';
-import { shouldOfferGraduation } from '@/features/updates/services/releaseTrack';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 
 const REVIEW = 'Review';

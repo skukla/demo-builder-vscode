@@ -154,12 +154,15 @@ describe('UpdateManager - Update Checking', () => {
 
         it('should handle beta version comparison', async () => {
             mockContext.extension.packageJSON.version = '1.0.0-beta.5';
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(
+                createMockWorkspaceConfig('beta'),
+            );
 
             const mockRelease = createMockRelease({
                 version: '1.0.0-beta.6',
                 prerelease: true,
             });
-            mockFetchSuccess(mockRelease);
+            mockFetchSuccess([mockRelease]);
             mockSecurityValidationPass();
 
             const result = await updateManager.checkExtensionUpdate();

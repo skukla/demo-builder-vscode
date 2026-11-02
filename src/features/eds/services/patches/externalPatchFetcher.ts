@@ -15,6 +15,7 @@
  * @module features/eds/services/patches/externalPatchFetcher
  */
 
+import { readNewestRelease } from '@/core/releases/readNewestRelease';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -76,23 +77,10 @@ export async function resolvePatchRef(
     const cached = refCache.get(key);
     if (cached) return cached;
 
-    const pending = (async () => {
-        try {
-            const response = await fetch(
-                `https://api.github.com/repos/${owner}/${repo}/releases/latest`,
-                { signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK) },
-            );
-            if (response.ok) {
-                const data = (await response.json()) as { tag_name?: string };
-                if (data?.tag_name) return data.tag_name;
-            }
-        } catch {
-            // Fall through to the unpinned path — reported below.
-        }
-        return '';
-    })();
-
-    const tag = await pending;
+    const release = await readNewestRelease(key, 'stable', {
+        timeoutMs: TIMEOUTS.PREREQUISITE_CHECK,
+    });
+    const tag = release?.tag_name;
     if (tag) {
         refCache.set(key, Promise.resolve(tag));
         logger.info(`[Patch] Pinned ${key} to release ${tag}`);

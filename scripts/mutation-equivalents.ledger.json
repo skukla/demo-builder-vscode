@@ -133,21 +133,6 @@
             "source": "reports/mutation/focus.json run of 2026-09-03 (updateManager, 96.03%)"
         },
         {
-            "module": "src/features/updates/services/updateManager.ts",
-            "anchors": [
-                "if (response.status === 404) {",
-                "if (response.status === 403) {",
-                "if (response.status >= 500) {",
-                "} catch (error) {"
-            ],
-            "mutants": 11,
-            "category": "branch",
-            "reason": "The 403, 5xx and catch-all throws are all caught by the same deliberate catch-all a few lines down, which logs at debug level and returns null, so every one of them produces the identical outcome (hasUpdate: false) and the only thing that differs is the wording of one debug line. The 404 branch differs from them only by staying silent, and that silence IS asserted; what is left of it (`true`: every non-OK status goes silent) again differs by the log line alone. Killing these means asserting log strings, which the ratchet exists to refuse to reward \u2014 the same triage as 2026-09-02, when the tests were deliberately not written. What IS pinned: a non-OK body is never read as a release, whatever the status.",
-            "decision": "OPEN product question, not a test question \u2014 graceful degradation means a rate-limited SC sees \"no update\" indefinitely, identically to being current, with only a debug line to say why. If the extension should ever say \"I could not check\", this is where that decision lives.",
-            "recorded": "2026-09-03",
-            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md \u2014 \"Measured, and deliberately NOT tested: updateManager's HTTP branches\""
-        },
-        {
             "module": "src/features/updates/services/addonUpdateChecker.ts",
             "anchors": [
                 "if (!lib.source?.owner || !lib.source?.repo || !lib.source?.branch) {"
@@ -207,7 +192,7 @@
             "decision": "none \u2014 required by the type and correct as written",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (collaboratorGate); moved from collaboratorGate.ts to githubApiClient.ts readGitHubToken 2026-10-16",
-            "line": 64
+            "line": 56
         },
         {
             "module": "src/features/updates/services/githubApiClient.ts",
@@ -222,7 +207,7 @@
             "source": "reports/mutation/focus.json run of 2026-09-03 (githubApiClient)"
         },
         {
-            "module": "src/features/updates/services/releaseTrack.ts",
+            "module": "src/core/releases/releaseTrack.ts",
             "anchors": [
                 "if (!latestFinalVersion) return false;"
             ],
@@ -9492,7 +9477,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 171,
+            "line": 173,
             "mutants": 1,
             "category": "block",
             "reason": "The else body is a single logger.warn. Emptying it changes which log line prints and nothing else: componentInstance.version is already left unset on this path, and the install result is identical either way.",
@@ -9505,47 +9490,11 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 236,
+            "line": 238,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.debug. Emptying it leaves detectedVersion untouched and falls through to the commit-hash strategy exactly as before; only the log line differs.",
             "decision": "none \u2014 the debug line explains a fallback that is otherwise silent",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
-            "module": "src/features/components/services/componentInstallation.ts",
-            "anchors": [
-                "const releases = Array.isArray(data) ? data : [];"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Both arms end at the same answer. The non-array fallback exists so the next line can index safely; whatever placeholder replaces the empty array, releases[0].tag_name is undefined for it and '|| null' returns null, which is what the empty array reaches through the length check. A non-array response therefore falls back to the configured tag either way \u2014 pinned by 'a beta response that is not a list at all falls back'.",
-            "decision": "none \u2014 the empty-array default is the honest neutral value",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
-            "module": "src/features/components/services/componentInstallation.ts",
-            "anchors": [
-                "if (releases.length === 0) {"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Deleting this guard, or making it never fire, reaches the same answer by a worse route: releases[0] is undefined, reading .tag_name off it throws a TypeError, and the enclosing try/catch turns that into the same 'return null' the guard performs. The caller falls back to the configured tag in both cases. Only a debug log line differs.",
-            "decision": "none \u2014 the explicit empty check keeps a normal response off the exception path",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
-            "module": "src/features/components/services/componentInstallation.ts",
-            "anchors": [
-                "} catch (error) {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying the catch makes fetchLatestReleaseTag resolve undefined instead of null. Its single caller tests the result with 'if (latestTag)', so both values take the same branch and the configured fallback tag is used either way. No caller can tell them apart.",
-            "decision": "none \u2014 returning null states the contract the signature declares",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
         },
@@ -13139,18 +13088,6 @@
             "category": "block",
             "reason": "Emptying pathExists's catch makes it resolve undefined instead of false. Both call sites are `if (await pathExists(...))` \u2014 steps 4a and 4b of resolveProxyTarget \u2014 and undefined and false are both falsy there, so no caller can tell the two apart. The function is module-private, so no test can call it directly either. Planted and confirmed: the suite passes unchanged with the body removed.",
             "decision": "none \u2014 the explicit `return false` is right for the declared Promise<boolean>, and nothing observable depends on it",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
-            "module": "src/features/eds/services/patches/externalPatchFetcher.ts",
-            "anchors": [
-                "if (data?.tag_name) return data.tag_name;"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Both mutants on this line end in the same place. Forcing the condition true returns `data.tag_name` \u2014 undefined when the release body has no tag \u2014 and the caller treats a falsy tag exactly as the `return ''` below does: warn, fall back to main. Dropping the `?.` throws only when the parsed body is null, and that throw is caught by this function's own try, which also returns '' and falls back to main. Planted both and ran the whole patches directory: unchanged.",
-            "decision": "none \u2014 the guard is correct and the fallback path makes every outcome identical",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
         },

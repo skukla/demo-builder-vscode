@@ -14,8 +14,8 @@ import {
     channelAcceptsTrack,
     selectLatestForChannel,
     shouldOfferGraduation,
-} from '@/features/updates/services/releaseTrack';
-import type { GitHubRelease } from '@/features/updates/services/types';
+} from '@/core/releases/releaseTrack';
+import type { GitHubRelease } from '@/types/releases';
 
 /** Minimal GitHubRelease factory for these pure tests. */
 function release(tag_name: string, draft = false): GitHubRelease {

@@ -1,5 +1,5 @@
 import * as semver from 'semver';
-import type { GitHubRelease, UpdateChannel } from './types';
+import type { GitHubRelease, UpdateChannel } from '@/types/releases';
 
 /** A release's track, derived from its semver prerelease identifier. */
 export type ReleaseTrack = 'stable' | 'beta' | 'early-access' | 'other';

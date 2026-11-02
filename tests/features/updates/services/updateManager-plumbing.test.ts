@@ -467,19 +467,20 @@ describe('how a release is read', () => {
     });
 
     it('strips only a LEADING v from the tag', async () => {
-        respond(vsixRelease('1.1.0', { tag_name: '2.0.0-dev.1' }));
+        setChannel('beta');
+        respond([vsixRelease('1.1.0', { tag_name: '2.0.0-beta.v1' })]);
 
         const result = await manager.checkExtensionUpdate();
 
-        expect(result.latest).toBe('2.0.0-dev.1');
+        expect(result.latest).toBe('2.0.0-beta.v1');
     });
 
-    it('a tag that is not semver is no update, and says which tag', async () => {
+    it('a tag that is not a version is no update', async () => {
         respond(vsixRelease('1.1.0', { tag_name: 'nightly' }));
 
         const result = await manager.checkExtensionUpdate();
 
-        expect(result).toEqual({ hasUpdate: false, current: '1.0.0', latest: 'nightly' });
+        expect(result).toEqual({ hasUpdate: false, current: '1.0.0', latest: '1.0.0' });
     });
 
     it('a release list with nothing the channel accepts is a quiet no-update', async () => {
