@@ -41,6 +41,8 @@ export interface IntegrationPairUpdate {
     members: string[];
     /** The pair by name, integration first: "ERP Integration and Justrite ERP". */
     label: string;
+    /** The releases this update moves to. Absent for code that has none. */
+    releases?: Array<{ name: string; version: string }>;
     /**
      * True when the project's Adobe org is not the one the token reaches (the
      * org step of the guard chain): listed, but not deployed from this org.
@@ -80,6 +82,19 @@ function pairLabel(project: Project, integrationId: string, catalog: Integration
         .join(' and ');
 }
 
+/** The release each member moves to, for the members that ship by release. */
+function releasesOf(project: Project, newer: string[]): Array<{ name: string; version: string }> {
+    return newer.flatMap((id) => {
+        const version = getAppBuilderComponent(project, id)?.updateAvailable?.release;
+        return version ? [{ name: componentNameOf(project, id), version }] : [];
+    });
+}
+
+function releasesField(project: Project, newer: string[]): Pick<IntegrationPairUpdate, 'releases'> {
+    const releases = releasesOf(project, newer);
+    return releases.length > 0 ? { releases } : {};
+}
+
 /** One pair per integration whose members have newer code, in report order. */
 function pairsOf(project: Project, availableIds: string[], probe: IntegrationUpdateProbe, otherOrg: boolean): IntegrationPairUpdate[] {
     const newerByIntegration = new Map<string, string[]>();
@@ -94,6 +109,7 @@ function pairsOf(project: Project, availableIds: string[], probe: IntegrationUpd
             componentId,
             members: pairUpdateOrder(project, componentId, probe.catalog),
             label: pairLabel(project, integrationId, probe.catalog),
+            ...releasesField(project, newer),
             otherOrg,
         };
     });

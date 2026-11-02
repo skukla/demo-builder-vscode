@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { isRepoCollaborator } from './collaboratorGate';
 import { ComponentRepositoryResolver } from './componentRepositoryResolver';
+import { resolveEffectiveChannel } from './effectiveChannel';
 import { buildGitHubHeaders } from './githubApiClient';
 import type { ReleaseInfo, UpdateCheckResult } from './types';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
@@ -64,7 +64,11 @@ export class UpdateManager {
      */
     async checkExtensionUpdate(): Promise<UpdateCheckResult> {
         const currentVersion = this.context.extension.packageJSON.version;
-        const channel = await this.resolveEffectiveChannel(this.getUpdateChannel());
+        const channel = await resolveEffectiveChannel(
+            this.getUpdateChannel(),
+            this.context.secrets,
+            this.logger,
+        );
 
         const latestRelease = await this.fetchLatestRelease(this.EXTENSION_REPO, channel);
 
@@ -99,7 +103,11 @@ export class UpdateManager {
      * @returns Array of components with updates, each containing list of affected projects
      */
     async checkAllProjectsForUpdates(projects: Project[]): Promise<MultiProjectUpdateResult[]> {
-        const channel = await this.resolveEffectiveChannel(this.getUpdateChannel());
+        const channel = await resolveEffectiveChannel(
+            this.getUpdateChannel(),
+            this.context.secrets,
+            this.logger,
+        );
 
         // Collect all unique component IDs across all projects
         const componentProjectMap = new Map<
@@ -257,23 +265,6 @@ export class UpdateManager {
         return vscode.workspace
             .getConfiguration('demoBuilder')
             .get<UpdateChannel>('updateChannel', 'stable');
-    }
-
-    /**
-     * Resolve the channel actually used for fetching. early-access is honored
-     * only for verified repo collaborators; otherwise it falls back to beta.
-     * Never throws (the gate itself fails closed).
-     */
-    private async resolveEffectiveChannel(configured: UpdateChannel): Promise<UpdateChannel> {
-        if (configured !== 'early-access') return configured;
-        try {
-            const allowed = await isRepoCollaborator(this.context.secrets, this.logger);
-            return allowed ? 'early-access' : 'beta';
-        } catch {
-            // Defensive: the gate fails closed internally, but never let an
-            // unexpected error block the update check — fall back to beta.
-            return 'beta';
-        }
     }
 
     private isNewerVersion(latest: string, current: string): boolean {

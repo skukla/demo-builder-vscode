@@ -14,6 +14,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { readNewestRelease } from '@/core/releases/readNewestRelease';
+import { releasedRepoOf } from '@/core/releases/releasedRepos';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { nodeForInstall } from '@/core/shell/demoBuilderNode';
@@ -84,24 +85,16 @@ export class ComponentInstallation {
         // Build git clone command with options
         const cloneFlags: string[] = [];
 
-        // Determine which tag to clone:
-        // 1. Try to fetch latest release from GitHub (always up-to-date)
-        // 2. Fall back to components.json tag if GitHub API fails
+        // A repository the builder owns ships by release, so it clones its newest one. So does
+        // anything with a tag in its catalog entry, which falls back to that tag. Everything else,
+        // and an owned repository with no release yet, clones its branch.
         const fallbackTag = componentDef.source.gitOptions?.tag;
-        let cloneTag: string | undefined;
+        let cloneTag: string | undefined = fallbackTag;
 
-        if (fallbackTag) {
-            // Only fetch latest if there's a tag configured (indicates versioned component)
+        if (fallbackTag || releasedRepoOf(componentDef.source.url)) {
             const latestTag = await this.fetchLatestReleaseTag(componentDef.source.url);
-            if (latestTag) {
-                cloneTag = latestTag;
-                this.logger.debug(`[ComponentManager] Using latest release tag: ${latestTag}`);
-            } else {
-                cloneTag = fallbackTag;
-                this.logger.debug(
-                    `[ComponentManager] Using fallback tag from config: ${fallbackTag}`,
-                );
-            }
+            cloneTag = latestTag ?? fallbackTag;
+            this.logger.debug(`[ComponentManager] Cloning at tag: ${cloneTag ?? 'none, using branch'}`);
         }
 
         // SECURITY: refs and the URL are interpolated into a shell-executed

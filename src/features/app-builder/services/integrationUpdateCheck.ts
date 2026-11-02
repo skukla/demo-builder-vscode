@@ -2,8 +2,8 @@
  * Which deployed integrations (and their bound systems) have newer code.
  *
  * Three signals, any one is enough:
- * - the source branch on GitHub has commits the clone lacks (a fetch, which
- *   changes nothing the SC can see);
+ * - the newest release has commits the clone lacks, or for a repository the builder
+ *   does not own, its branch has (a fetch, which changes nothing the SC can see);
  * - the clone is at a commit the last good deploy did not ship
  *   (`deployedCommit`): an update moved it and its deploy failed (AB-71), so the
  *   badge stays on until the new code is live. Update reads the same rule;
@@ -65,7 +65,12 @@ async function versionAhead(
 }
 
 function sameAnswer(a: UpdateAvailable | undefined, b: UpdateAvailable | undefined): boolean {
-    return a?.commit === b?.commit && a?.version === b?.version && Boolean(a) === Boolean(b);
+    return (
+        a?.commit === b?.commit &&
+        a?.version === b?.version &&
+        a?.release === b?.release &&
+        Boolean(a) === Boolean(b)
+    );
 }
 
 async function checkOne(
@@ -87,6 +92,7 @@ async function checkOne(
             ? {
                   ...(commit ? { commit } : {}),
                   ...(version ? { version } : {}),
+                  ...(clone.status === 'available' && clone.version ? { release: clone.version } : {}),
                   checkedAt: (deps.now ?? (() => new Date().toISOString()))(),
               }
             : undefined;

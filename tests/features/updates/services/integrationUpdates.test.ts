@@ -246,3 +246,42 @@ describe('applyIntegrationUpdates', () => {
         expect(await applyIntegrationUpdates([], makeCtx())).toEqual({ successCount: 0, failCount: 0, errors: [] });
     });
 });
+
+describe('the versions a pair moves to', () => {
+    const probeFor = (ids: string[]): IntegrationUpdateProbe => ({
+        check: jest.fn(async () => ({
+            reports: ids.map((id) => ({ id, available: true })),
+            changed: false,
+        })),
+        inOtherOrg: jest.fn(async () => false),
+        catalog: [],
+    });
+
+    it('names each release, by member', async () => {
+        const project = pairProject(
+            'Justrite',
+            { updateAvailable: { ...NEWER, release: '0.3.0' } },
+            { updateAvailable: { ...NEWER, release: '0.2.0' } },
+        );
+
+        const [pair] = await findIntegrationPairUpdates(
+            [project],
+            probeFor(['erp-integration', 'demo-erp']),
+        );
+
+        expect(pair.releases).toEqual(
+            expect.arrayContaining([
+                { name: 'ERP Integration', version: '0.2.0' },
+                { name: 'Justrite ERP', version: '0.3.0' },
+            ]),
+        );
+    });
+
+    it('names none for code that has no release', async () => {
+        const project = pairProject('Justrite', {}, { updateAvailable: NEWER });
+
+        const [pair] = await findIntegrationPairUpdates([project], probeFor(['erp-integration']));
+
+        expect(pair.releases).toBeUndefined();
+    });
+});

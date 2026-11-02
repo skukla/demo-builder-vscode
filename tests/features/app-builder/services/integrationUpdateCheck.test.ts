@@ -174,3 +174,42 @@ describe('clearUpdateAvailable', () => {
         expect(state).not.toHaveProperty('updateAvailable');
     });
 });
+
+describe('a release', () => {
+    it('is recorded by version, so the update row can say what it moves to', async () => {
+        const p = project({ erp: component() });
+        const d = deps({
+            '/p/components/erp': { status: 'available', from: 'a', to: 'b', version: '1.2.0' },
+        });
+
+        await checkIntegrationUpdates(p, d);
+
+        expect(p.appBuilderComponents?.erp?.updateAvailable).toEqual({
+            commit: 'b',
+            release: '1.2.0',
+            checkedAt: NOW,
+        });
+    });
+
+    it('is not named when the clone already has it', async () => {
+        const p = project({ erp: component() });
+        const d = deps({
+            '/p/components/erp': { status: 'current', from: 'a', to: 'a', version: '1.2.0' },
+        });
+
+        await checkIntegrationUpdates(p, d);
+
+        expect(p.appBuilderComponents?.erp?.updateAvailable).toBeUndefined();
+    });
+
+    it('counts as a change when only the release differs', async () => {
+        const p = project({
+            erp: component({ updateAvailable: { commit: 'b', release: '1.1.0', checkedAt: 'earlier' } }),
+        });
+        const d = deps({
+            '/p/components/erp': { status: 'available', from: 'a', to: 'b', version: '1.2.0' },
+        });
+
+        expect((await checkIntegrationUpdates(p, d)).changed).toBe(true);
+    });
+});

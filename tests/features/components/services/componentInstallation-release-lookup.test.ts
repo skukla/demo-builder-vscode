@@ -88,6 +88,38 @@ describe('which GitHub endpoint the channel selects', () => {
     });
 });
 
+describe('a repository the builder owns', () => {
+    const OWNED = () =>
+        makeDef({ source: { url: 'https://github.com/skukla/demo-erp.git', branch: 'main' } });
+    const FOREIGN = () =>
+        makeDef({ source: { url: 'https://github.com/adobe/starter.git', branch: 'main' } });
+
+    it('clones its newest release, with no tag in the catalog', async () => {
+        setUpdateChannel('stable');
+        respondWith({ tag_name: 'v1.2.0' });
+
+        await install(OWNED());
+
+        expect(cloneCall()[0]).toContain('--branch "v1.2.0"');
+    });
+
+    it('clones its branch until it has a first release', async () => {
+        setUpdateChannel('stable');
+        respondWith({}, { ok: false, status: 404 });
+
+        await install(OWNED());
+
+        expect(cloneCall()[0]).toContain('-b "main"');
+    });
+
+    it("someone else's repository clones its branch, and is not looked up", async () => {
+        await install(FOREIGN());
+
+        expect(global.fetch).not.toHaveBeenCalled();
+        expect(cloneCall()[0]).toContain('-b "main"');
+    });
+});
+
 describe('every failure ends at the configured fallback tag', () => {
     it('a non-GitHub URL is never looked up at all', async () => {
         const gitlab = makeDef({

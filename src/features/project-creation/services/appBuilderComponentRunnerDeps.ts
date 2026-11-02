@@ -35,9 +35,8 @@ import { githubRepoTextReader, customIntegrationNodeResolver } from '@/features/
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { displayNameInProject } from '@/features/app-builder/services/deployInputs';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import { checkComponentSource, updateComponentSource } from '@/features/app-builder/services/integrationReleaseSource';
 import {
-    checkCloneForUpdate,
-    fastForwardClone,
     readCloneCommit,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
@@ -55,6 +54,7 @@ import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/
 import { erpRunnerDeps } from '@/features/project-creation/services/erpRunnerDeps';
 import { refreshStorefront } from '@/features/project-creation/services/storefrontRefresh';
 import { buildWorkspaceRegistryDeps } from '@/features/project-creation/services/workspaceRegistryDeps';
+import { componentReleaseReader } from '@/features/updates/services/componentReleaseReader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { ComponentRegistry } from '@/types/components';
@@ -152,6 +152,7 @@ export function buildDefaultRunnerDeps(
             shell: DEFAULT_SHELL,
             timeout: TIMEOUTS.LONG,
         });
+    const readRelease = componentReleaseReader(ctx.secrets, ctx.logger);
     // The signed-in identity every per-app API call carries (five callers below).
     const authFor = (project: Project) => () => resolveAppManagementAuth(project, ctx.authManager);
     return {
@@ -215,9 +216,9 @@ export function buildDefaultRunnerDeps(
         // The commit every successful deploy records as shipped (AB-71).
         readCloneCommit: (componentPath) => readCloneCommit(componentPath, gitIn),
         fetchComponentSource: (componentPath, branch) =>
-            fastForwardClone(componentPath, branch, gitIn),
+            updateComponentSource(componentPath, branch, gitIn, readRelease),
         checkComponentSource: (componentPath, branch) =>
-            checkCloneForUpdate(componentPath, branch, gitIn),
+            checkComponentSource(componentPath, branch, gitIn, readRelease),
         installComponentDependencies: (componentPath, definition, nodeVersion) =>
             ctx.componentManager.installNpmDependencies(componentPath, definition, nodeVersion),
         // The app's own uninstall API ahead of a remove (the ERP undo and wipe: erpRunnerDeps):

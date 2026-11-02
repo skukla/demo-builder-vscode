@@ -9477,7 +9477,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 173,
+            "line": 166,
             "mutants": 1,
             "category": "block",
             "reason": "The else body is a single logger.warn. Emptying it changes which log line prints and nothing else: componentInstance.version is already left unset on this path, and the install result is identical either way.",
@@ -9490,7 +9490,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 238,
+            "line": 231,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.debug. Emptying it leaves detectedVersion untouched and falls through to the commit-hash strategy exactly as before; only the log line differs.",

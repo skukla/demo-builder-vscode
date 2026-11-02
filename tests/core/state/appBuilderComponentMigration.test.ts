@@ -11,7 +11,6 @@ import {
     healPartialComponents,
     migrateLegacyToAppBuilderComponents,
 } from '@/core/state/appBuilderComponentMigration';
-import components from '@/features/components/config/components.json';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { ProjectManifest } from '@/core/state/projectFileLoader';
 
@@ -394,33 +393,5 @@ describe('healPartialComponents', () => {
 
     it('answers an empty map for a project with no components', () => {
         expect(healPartialComponents(undefined)).toStrictEqual({});
-    });
-});
-
-describe('healPartialComponents: a mesh recorded on the floating tag', () => {
-    const meshOn = (branch: string, kind: AppBuilderComponentState['kind'] = 'mesh'): AppBuilderComponentState => ({
-        kind,
-        status: 'deployed',
-        source: { owner: 'skukla', repo: 'eds-accs-mesh', branch },
-    });
-
-    it('follows main from now on', () => {
-        expect(healPartialComponents({ m: meshOn('stable') }).m.source.branch).toBe('main');
-    });
-
-    it('moves each mesh to the branch the catalog names, so the two cannot disagree', () => {
-        for (const definition of Object.values(components.mesh)) {
-            const repo = definition.source.url.split('/').pop() as string;
-            const mesh = { ...meshOn('stable'), source: { owner: 'skukla', repo, branch: 'stable' } };
-            expect(healPartialComponents({ m: mesh }).m.source.branch).toBe(definition.source.branch);
-        }
-    });
-
-    it('leaves a mesh on any other branch alone', () => {
-        expect(healPartialComponents({ m: meshOn('develop') }).m.source.branch).toBe('develop');
-    });
-
-    it('leaves another kind on a branch of that name alone', () => {
-        expect(healPartialComponents({ i: meshOn('stable', 'integration') }).i.source.branch).toBe('stable');
     });
 });

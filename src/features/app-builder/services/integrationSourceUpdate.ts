@@ -26,6 +26,8 @@ export interface SourceUpdateResult {
     /** The commit before and after, when known. */
     from?: string;
     to?: string;
+    /** The release moved to, for a repository that ships by release. */
+    version?: string;
 }
 
 /**
@@ -105,7 +107,8 @@ async function fetchHeads(componentPath: string, branch: string, run: GitRunner)
     if (fetched.code !== 0) {
         return failure(`fetch ${branch} from GitHub`, fetched.stderr);
     }
-    const after = await run('git rev-parse FETCH_HEAD', componentPath);
+    // Peeled to the commit: an annotated tag names a tag object, which never equals HEAD.
+    const after = await run('git rev-parse "FETCH_HEAD^{commit}"', componentPath);
     if (after.code !== 0) {
         return failure('read the fetched version', after.stderr);
     }
@@ -124,8 +127,10 @@ export interface UpdateCheckResult {
     detail?: string;
     /** The clone's own commit (what a deploy from it ships), when known. */
     from?: string;
-    /** The branch head on GitHub, when known. */
+    /** The branch head or release commit on GitHub, when known. */
     to?: string;
+    /** The newest release, for a repository that ships by release. */
+    version?: string;
 }
 
 /**
@@ -221,7 +226,7 @@ export async function fastForwardClone(
     if (merged.code !== 0) {
         return {
             status: 'refused',
-            detail: `The integration folder has commits that ${branch} on GitHub does not, so it cannot be updated in place.`,
+            detail: `The integration folder has commits that ${branch.replace('refs/tags/', '')} on GitHub does not, so it cannot be updated in place.`,
             from,
             to,
         };

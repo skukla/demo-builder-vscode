@@ -427,7 +427,8 @@ export interface AppBuilderComponentState {
         needsReinstall?: boolean;
     };
     /**
-     * Newer code is available: the source branch on GitHub has commits the
+     * Newer code is available: the newest release (or, for a repository the builder
+     * does not own, the source branch) has commits the
      * clone lacks, the clone is at a commit the last good deploy did not ship
      * (`deployedCommit`), or the clone's app version differs from the one
      * installed in Commerce. Set by the integrations screen's check, removed by a
@@ -438,6 +439,8 @@ export interface AppBuilderComponentState {
         commit?: string;
         /** The version in the clone, when it differs from the installed one. */
         version?: string;
+        /** The release an update would move to, for a repository that ships by release. */
+        release?: string;
         /** ISO date string of the check. */
         checkedAt: string;
     };

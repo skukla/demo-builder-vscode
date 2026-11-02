@@ -196,6 +196,9 @@ export async function updateAppBuilderComponent(
     if (!deployed.success) {
         return deployed;
     }
+    if (fetched.status === 'updated' && fetched.version) {
+        recordComponentVersion(project, id, fetched.version);
+    }
     await forgetUpdate(project, id, deps);
     const detail =
         fetched.status === 'current' ? redeployedDetail(fetched.to, fetchedEarlier) : fetched.detail;
@@ -233,6 +236,19 @@ async function rememberRunningCommit(
     await deps.saveProject(project);
 }
 
+/**
+ * The release a component is now running. Written only after its deploy succeeds, and saved by
+ * the `forgetUpdate` that follows, since a successful update always clears an offer it answered.
+ */
+function recordComponentVersion(project: Project, id: string, version: string): void {
+    project.componentVersions = {
+        ...project.componentVersions,
+        [id]: { version, lastUpdated: new Date().toISOString() },
+    };
+    const instance = project.componentInstances?.[id];
+    if (instance) instance.version = version;
+}
+
 /** A finished update leaves nothing to offer; drop the recorded one. */
 async function forgetUpdate(
     project: Project,
@@ -241,7 +257,6 @@ async function forgetUpdate(
 ): Promise<void> {
     // Read afresh: the deploy may have replaced the record.
     const state = project.appBuilderComponents?.[id];
-    if (!state?.updateAvailable) return;
-    clearUpdateAvailable(state);
+    if (state?.updateAvailable) clearUpdateAvailable(state);
     await deps.saveProject(project);
 }

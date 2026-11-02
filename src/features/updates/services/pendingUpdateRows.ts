@@ -52,6 +52,14 @@ const NEWER = 'Newer version';
  * row does not say it: its apply only records the new version.
  */
 const LIVE_SITE = 'updates the live site';
+
+/** A pair's new versions. One release needs no name: the row's label already says what it is. */
+function pairVersions(releases?: Array<{ name: string; version: string }>): string | undefined {
+    if (!releases?.length) return undefined;
+    if (releases.length === 1) return `version ${releases[0].version}`;
+    return releases.map((r) => `${r.name} ${r.version}`).join(', ');
+}
+
 /** "Newer version" dropped where it is said: it tells the SC nothing (owner, 2026-10-20). */
 const LIVE_SITE_DETAIL = 'Updates the live site';
 
@@ -85,7 +93,7 @@ const PROJECT_KINDS: { [K in ProjectSelectionKind]: (entry: UpdateSelections[K][
     inspector: () => ({ label: 'Demo Inspector SDK', detail: NEWER }),
     integration: (p) => ({
         label: p.label,
-        detail: `${NEWER}, redeploys to Adobe`,
+        detail: `${pairVersions(p.releases) ?? NEWER}, redeploys to Adobe`,
         ticked: false,
         ...(p.otherOrg ? { lockedReason: LOCKED_OTHER_ORG } : {}),
     }),

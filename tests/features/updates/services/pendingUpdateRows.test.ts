@@ -135,6 +135,23 @@ describe('toPendingUpdateRows', () => {
     // Applying a pair deploys it to the live Adobe workspace, and nothing asks first: the
     // tick IS the confirmation, so the SC gives it rather than finds it given (owner,
     // 2026-10-20). Unticked is not locked: it can be ticked.
+    it('says which version a released component moves to', () => {
+        const one = { ...pair(bodea, false), releases: [{ name: 'ERP Integration', version: '0.2.0' }] };
+        const two = {
+            ...pair(bodea, false),
+            releases: [
+                { name: 'ERP Integration', version: '0.2.0' },
+                { name: 'Justrite ERP', version: '0.3.0' },
+            ],
+        };
+
+        const [oneRow] = toPendingUpdateRows({ ...empty(), integration: [one] }, undefined, undefined);
+        const [twoRow] = toPendingUpdateRows({ ...empty(), integration: [two] }, undefined, undefined);
+
+        expect(oneRow.detail).toBe('version 0.2.0, redeploys to Adobe');
+        expect(twoRow.detail).toBe('ERP Integration 0.2.0, Justrite ERP 0.3.0, redeploys to Adobe');
+    });
+
     it('starts an integration pair unticked, saying it redeploys, and leaves it tickable', () => {
         const [row] = toPendingUpdateRows({ ...empty(), integration: [pair(bodea, false)] }, undefined, undefined);
 
