@@ -31,3 +31,4 @@ carrying the fix is out.
 - 2026-11-02  docs(plans): every owned component ships as a semantic-version release (`4782e0645`)
 - 2026-11-02  feat(updates): a collaborator on early access can try a component's alpha (`87865325f`)
 - 2026-11-02  feat(updates): meshes and App Builder components ship by release (`7a136fb7c`)
+- 2026-11-02  docs(updates): state that components ship by release (`5aa0376d5`)
