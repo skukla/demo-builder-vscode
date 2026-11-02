@@ -38,3 +38,4 @@ carrying the fix is out.
 - 2026-11-02  fix(eds): a failed patches lookup never hands a storefront an unreleased commit (`453794065`)
 - 2026-11-02  feat(eds): a storefront has a version, and a release of fixes alone reaches it (`701a938a1`)
 - 2026-11-02  feat(releases): libraries, brand assets and buildright ship by release, with one lookup (`3e0c0dd9c`)
+- 2026-11-02  refactor(updates): one early-access rule, and the archive helper is gone (`0e8fd6432`)
