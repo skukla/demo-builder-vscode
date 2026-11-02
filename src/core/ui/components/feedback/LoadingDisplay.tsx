@@ -21,11 +21,10 @@ export interface LoadingDisplayProps {
      */
     steady?: boolean;
     /**
-     * With `steady`, hold only the first two rows: row 3 appears when there is helper text. For a
-     * dialog's wait that says nothing there while it runs, where a blank row left the spinner
-     * sitting high (owner, 2026-11-02).
+     * With `steady`, hold no blank rows: rows 2 and 3 appear when they have something on them. For
+     * a dialog's wait, where a blank row left the spinner sitting high (owner, 2026-11-02).
      */
-    noHelperRow?: boolean;
+    noBlankRows?: boolean;
     /**
      * Centre the spinner and its message, at any size. Large is always centred; medium is
      * left-aligned for a loading row unless this is set. A job dialog's wait is medium and
@@ -77,7 +76,7 @@ export function LoadingDisplay({
     helperText,
     progress,
     steady = false,
-    noHelperRow = false,
+    noBlankRows = false,
     centered = false,
 }: LoadingDisplayProps) {
     // Centred for the large size, or when asked (a job dialog's medium wait); a loading row
@@ -140,7 +139,7 @@ export function LoadingDisplay({
                                 {rowText(message, steady)}
                             </Text>
                         )}
-                        {(subMessage || steady) && (
+                        {(subMessage || (steady && !noBlankRows)) && (
                             <Text
                                 UNSAFE_className={cn('text-sm', 'text-gray-600', steady && 'loading-display-row')}
                                 minHeight="size-200"
@@ -148,7 +147,7 @@ export function LoadingDisplay({
                                 {subMessage ? rowText(subMessage, steady) : '\u00A0'}
                             </Text>
                         )}
-                        {(helperText || (steady && !noHelperRow)) && (
+                        {(helperText || (steady && !noBlankRows)) && (
                             <Text
                                 // No 'italic': that class is defined in no
                                 // stylesheet, so this line has never rendered

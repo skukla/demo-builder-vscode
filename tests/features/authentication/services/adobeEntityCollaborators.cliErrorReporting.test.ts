@@ -10,7 +10,7 @@
  * The real mechanism, reproduced against the live CLI on 2026-08-17:
  *
  *     $ AIO_CONSOLE_ORG_ID=<stale> aio console project list --json
- *     exit 2 · stdout 0 bytes · stderr 446 bytes ("403 Forbidden … NOT_ALLOWED")
+ *     exit 2, stdout 0 bytes, stderr 446 bytes ("403 Forbidden … NOT_ALLOWED")
  *
  * `validateCLIResult` returns TRUE for exit code 2 — deliberately, because some CLI
  * versions put valid JSON on stderr with that code. So a CLI FAILURE is handed to

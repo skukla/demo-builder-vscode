@@ -196,7 +196,7 @@ describe('the tooling registry matches what is on disk', () => {
         // routing bullet was deleted and one sibling bullet's cross-reference kept the
         // name present, so the check read as green over exactly the rot it exists for.
         // An entry is the name plus its em-dash description, WHEREVER it sits — several
-        // skills legitimately share one bullet (`gate` — … · `cut-release` — …), so
+        // skills legitimately share one bullet (`gate` — …, `cut-release` — …), so
         // anchoring to the start of a line wrongly flagged three real entries.
         const claudeMd = readFileSync(join(REPO_ROOT, 'CLAUDE.md'), 'utf-8');
         const routed = new Set([...claudeMd.matchAll(/`([a-z0-9-]+)` +—/g)].map((m) => m[1]));

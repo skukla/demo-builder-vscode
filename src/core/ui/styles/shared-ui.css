@@ -498,18 +498,15 @@
    the outer one it won, so the row list would not move while the whole body did,
    carrying the search box and chips away with it.
 
-   The fix is a CONSTANT height here, and a flex chain that hands every spare
-   pixel down to the row area: body → picker → rows, each `min-height: 0` so a
+   The fix is a MAXIMUM height here, and a flex chain that shrinks the row area when
+   the list is longer than that: body → picker → rows, each `min-height: 0` so a
    flex item is actually allowed to shrink below its content (the default `auto`
    refuses, and the overflow would silently move back up to .modal-body).
 
-   Why an explicit height rather than `height: 100%`: 100% only resolves against a
-   parent with a definite height, which depends on whether Spectrum's modal wrapper
-   stretches the dialog — behaviour this codebase has already been surprised by once
-   (see .modal-fit-content). Setting it here makes the dialog's size independent of
-   that question: `fitContent` collapses the dialog to its content, and its content
-   is this. Filtering to four APIs cannot resize anything; only the row area's
-   scrollback changes.
+   A maximum rather than a fixed height, so a list of six rows does not sit in a box
+   for ninety: height fits the content (dialog design rules). Filtering still cannot
+   resize anything, because the dialog holds the height the list arrived at as a floor
+   (`useListFloor` in ManageApisModal); only the row area's scrollback changes.
 
    Why it is VIEWPORT-CAPPED and not a bare 480px: a flat 480 was taller than a
    short window could give. The dialog hit its max-height, `.modal-content` shrank
@@ -520,9 +517,7 @@
    had nothing to scroll while `overscroll-behavior: contain` blocked the gesture
    reaching the body, nothing moved at all.
 
-   `min()` keeps it stable where it matters: the viewport does not change while you
-   type in the filter, so this is constant across filtering — which is the actual
-   requirement — while still fitting a short window.
+   `min()` keeps it fitting a short window.
 
    The subtraction is the dialog's own chrome — heading, footer, backdrop margins.
    A bare `Nvh` ignores it, and the dialog can only absorb the difference while it
@@ -539,10 +534,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    height: min(560px, calc(100vh - 260px));
-    /* The body no longer scrolls, so overrunning it would CLIP rather than
-       scroll. This yields to the parent whenever the calc guesses high. */
-    max-height: 100%;
+    max-height: min(560px, calc(100vh - 260px));
     min-height: 0;
     min-width: 0; /* a flex child defaults to min-width:auto and refuses to shrink */
 }

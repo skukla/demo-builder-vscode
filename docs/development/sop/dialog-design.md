@@ -33,7 +33,7 @@ form, confirm, progress, result) shows one at a time.
 | Layout | Holds | Usual width |
 |---|---|---|
 | **Form** | Fields, then the actions | medium; large or extra-wide when a list needs columns |
-| **Confirm** | A question as the title, one sentence, Cancel and the action | small |
+| **Confirm** | A question as the title, as few short sentences as it takes, Cancel and the action | small |
 | **Progress** | A spinner, what is happening, how far | small |
 | **Result** | The outcome as the title, then only what is left to know or do | small |
 | **Guide** | Steps with their state, one step open (the demo setup guide; a pack's setup step is a guide of one) | large |
@@ -43,7 +43,9 @@ form, confirm, progress, result) shows one at a time.
 **A wait shows nothing else.** While a dialog waits for what it will show, only the title, a
 medium centred spinner and the way out (Close or Cancel) appear: no fields, no text, no action
 buttons. Work the SC started is the Progress layout, so it may say what is happening beside the
-spinner ("Starting removal"); a dialog reading what it will show says nothing. The spinner is centred both ways between the title's rule and the buttons. `Modal`'s
+spinner ("Starting removal"); a dialog reading what it will show says nothing. The one exception
+is the wait for Adobe's API catalog, which says "The first load can take a few minutes": a silent
+spinner that long looks stuck (owner, 2026-11-02). The spinner is centred both ways between the title's rule and the buttons. `Modal`'s
 `waiting` prop does all of this, and eases to the content when the wait ends. A button doing its own
 work shows its spinner on itself (`isPending`). A re-check inside a dialog already showing
 its content, such as ticking a store in Clear demo data or pressing Check on a pack's setup step, is
@@ -51,6 +53,11 @@ not a wait for the dialog: its spinner goes where the answer lands and the rest 
 2026-11-01).
 A flyout waits the same way: its title and a medium centred spinner, with no words (owner,
 2026-11-02).
+
+**A dialog and a whole wizard screen draw an outcome differently, on purpose** (owner, 2026-11-02).
+A dialog has a title bar, so the outcome sits in it, with a small icon. A whole wizard screen has
+none, so it uses `StatusDisplay`: the large centred icon with the message beneath. Same icons, same
+colours. Neither borrows the other's layout.
 
 **Status lives in the title.** A small icon before it: green done, amber needs the
 SC (including a dangerous confirm), red failed. No status boxes in the body. The one
@@ -77,7 +84,8 @@ dangerous main action is solid red. Never two buttons that do the same thing.
 - Facts, not commentary. Digits for numbers, with separators (1,284).
 - A warning is a word in the main sentence ("Permanently removes…"), never a
   muted footnote under it.
-- No bullet lists. A list of consequences is one sentence, or sits on the row it
+- No bullet lists. A list of consequences is a few short sentences, every one a real
+  consequence (owner, 2026-11-02: one long sentence read worse), or sits on the row it
   belongs to.
 - A sentence names up to seven kinds in full; past that, three and "and 9 more
   data types".

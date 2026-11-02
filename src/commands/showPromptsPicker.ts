@@ -39,7 +39,7 @@ export class ShowPromptsPickerCommand extends BaseCommand {
 
         const prompts = readMergedAiPrompts(this.handlerContext(), project);
         const selected = await showWebviewQuickPick<PromptPickerItem>(this.buildItems(prompts), {
-            title: `Prompts · ${project?.name ?? 'No project'}`,
+            title: `Prompts: ${project?.name ?? 'No project'}`,
             placeholder: PICKER_PLACEHOLDER,
             matchOnDescription: true,
         });

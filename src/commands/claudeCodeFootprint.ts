@@ -189,7 +189,7 @@ export function claudeFootprintLines(footprint: ClaudeCodeFootprint): string[] {
     lines.push(`  Total: ${formatBytes(footprint.totalBytes ?? 0)}`);
     const top = (footprint.subdirs ?? []).slice(0, 3);
     if (top.length) {
-        lines.push(`  Largest: ${top.map((d) => `${d.name} ${formatBytes(d.bytes)}`).join(' · ')}`);
+        lines.push(`  Largest: ${top.map((d) => `${d.name} ${formatBytes(d.bytes)}`).join(', ')}`);
     }
     const t = footprint.transcripts;
     if (t && t.count > 0) {

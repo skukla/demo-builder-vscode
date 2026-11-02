@@ -122,7 +122,7 @@ describe('inspectAllServers', () => {
         }
 
         // The pin lives in a file on disk and cannot heal itself. When the socket
-        // it names is gone, probing it anyway reports `demo-builder · error` on
+        // it names is gone, probing it anyway reports `demo-builder, error` on
         // the AI badge while a live server sits in the discovery sweep. Resolution
         // is delegated to resolveProxyTarget so this path and the proxy's cannot
         // disagree about which socket is current.

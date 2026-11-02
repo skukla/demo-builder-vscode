@@ -9,7 +9,7 @@
  * the CSS god file and has nothing to do with TypeScript source size.
  *
  * The thresholds are `/sop-scan` Agent 11's, which CLAUDE.md also states:
- *   service >400 · component >350 · handler >500 · util/helper >300
+ *   service >400, component >350, handler >500, util/helper >300
  * with Agent 11's exclusions: tests, type-definition files, barrels, config.
  *
  * WHY IT DID NOT EXIST UNTIL 2026-09-10. `godFile` appeared in `tests/sop/` only as

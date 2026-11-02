@@ -313,11 +313,20 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-/* The muted tail of the health line — "· installed in Commerce" after DEPLOYED. Deploy
+/* The muted tail of the health line: "(installed in Commerce)" after Deployed. Deploy
    and install are one answer to "is it working?" (owner, 2026-10-01). */
 .integration-panel-status-aside {
     font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
+}
+
+/* The status inside the flyout is a label like the others there: small, muted, sentence case,
+   never capitals (dialog design rules). The card keeps the house capitals it shares with the
+   project card. */
+.integration-panel-health .integration-card-status {
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
 /* The flyout, second redesign (owner, 2026-10-01, from three mockup passes): the health
@@ -363,10 +372,7 @@
 }
 
 .integration-panel-section-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
 }
 

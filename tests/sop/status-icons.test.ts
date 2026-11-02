@@ -74,6 +74,18 @@ describe('one status icon on every surface', () => {
         expect(iconFor('warning')).not.toBe(iconFor('error'));
     });
 
+    it('a dialog puts its outcome in its title: the large centred icon is for a whole screen', () => {
+        const big = sources(SRC)
+            .filter((file) => {
+                const text = fs.readFileSync(file, 'utf8');
+                return /<Modal\b/.test(text) && /<(StatusDisplay|SuccessStateDisplay)\b/.test(text);
+            })
+            .map(relative)
+            .sort();
+
+        expect(big).toStrictEqual([]);
+    });
+
     it('CONTROL: the check still finds what it looks for', () => {
         expect(drawn).toContain('core/ui/components/feedback/StatusIcon.tsx');
         expect(STATUS_ICONS.test("import Alert from '@spectrum-icons/workflow/Alert';")).toBe(true);

@@ -75,14 +75,19 @@ export function OperationProgressBody({
     }
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text (ImportDatapackModal).
+    // The room for all three lines is kept and what is there sits level in it, so the spinner does
+    // not ride high over a blank line, and the box does not move when the third line arrives.
     return (
-        <LoadingDisplay
-            size="L"
-            steady
-            message={progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting'}
-            subMessage={progress?.step}
-            helperText={expectationLine(progress?.expectation, total)}
-        />
+        <div className="modal-wait modal-wait-progress">
+            <LoadingDisplay
+                size="L"
+                steady
+                noBlankRows
+                message={progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting'}
+                subMessage={progress?.step}
+                helperText={expectationLine(progress?.expectation, total)}
+            />
+        </div>
     );
 }
 

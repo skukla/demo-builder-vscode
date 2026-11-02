@@ -37,7 +37,7 @@ export interface DestinationContextProps {
 }
 
 /**
- * Render `{project} · {workspace}` with an optional `Change` action.
+ * Render `{project}, {workspace}` with an optional `Change` action.
  *
  * @param props - the destination parts and the optional change action
  * @returns the line, or null when either half is missing (a half-known
@@ -68,7 +68,7 @@ export function DestinationContext({
     return (
         <span className={cn('dest-context', className)}>
             <span className="dest-context-value">
-                {projectOnly ? project : `${project} · ${workspace}`}
+                {projectOnly ? project : `${project}, ${workspace}`}
             </span>
             {onChange ? (
                 /* `.inline-action-link` (utilities.css), NOT EDS's

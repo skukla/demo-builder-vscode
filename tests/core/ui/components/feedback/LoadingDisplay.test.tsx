@@ -359,14 +359,20 @@ describe('LoadingDisplay', () => {
      * move the spinner (owner, 2026-10-16: "make it so that the lines don't jump").
      */
     describe('steady', () => {
-        it('holds no third row with noHelperRow until there is something to say on it', () => {
+        it('holds no second row with noBlankRows until there is something on it', () => {
+            const { container } = renderWithProviders(<LoadingDisplay steady noBlankRows message="Starting" />);
+
+            expect(container.querySelector('.text-sm')).toBeNull();
+        });
+
+        it('holds no third row with noBlankRows until there is something to say on it', () => {
             const { container, rerender } = renderWithProviders(
-                <LoadingDisplay steady noHelperRow message="Installing" subMessage="0 of 1" />,
+                <LoadingDisplay steady noBlankRows message="Installing" subMessage="0 of 1" />,
             );
             expect(container.querySelector('.text-xs')).toBeNull();
 
             rerender(
-                <LoadingDisplay steady noHelperRow message="Stopped" subMessage="0 of 1" helperText="Carries on" />,
+                <LoadingDisplay steady noBlankRows message="Stopped" subMessage="0 of 1" helperText="Carries on" />,
             );
             expect(screen.getByText('Carries on')).toBeInTheDocument();
         });

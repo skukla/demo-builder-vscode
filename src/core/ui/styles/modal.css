@@ -180,6 +180,12 @@
     align-items: center;
 }
 
+/* The progress window's wait: room for its large spinner and all three lines, measured in Chromium
+   (2026-11-02), so a third line arriving moves neither the box nor much else. */
+.modal-wait-progress {
+    min-height: 176px;
+}
+
 /* A dialog body's parts, 16px apart, each without margins of its own. */
 .dialog-stack {
     display: flex;

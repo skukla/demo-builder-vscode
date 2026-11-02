@@ -140,6 +140,19 @@ it('shows one Cancel when the question offers its own', () => {
     expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument();
 });
 
+it('draws the answer that continues the work last, as every main button is', () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { message: 'Your DA.live session has expired.', actions: ['Sign In', 'Open DA.live'] },
+    };
+
+    renderModal();
+
+    const labels = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(labels).toEqual(['Cancel', 'Open DA.live', 'Sign In']);
+});
+
 it('hands the chosen answer back to the work waiting on it', async () => {
     progress = {
         id: OPERATION.id,
@@ -197,14 +210,14 @@ it('still offers Run in background when nothing is being asked', async () => {
 
 // The target under a short title, not inside a long one that wrapped (2026-10-28).
 describe('an operation with a subject', () => {
-    const WITH_SUBJECT = { ...OPERATION, title: 'Changing destination', subject: 'Kukla Test App 2 · Production' };
+    const WITH_SUBJECT = { ...OPERATION, title: 'Changing destination', subject: 'Kukla Test App 2, Production' };
 
     it('titles the modal short and shows the subject on its own line', () => {
         progress = { id: OPERATION.id, state: 'running', stage: 'Redeploying' };
         render(<OperationProgressModal operation={WITH_SUBJECT} onRetry={jest.fn()} onClose={jest.fn()} />);
 
         expect(screen.getByRole('dialog', { name: 'Changing destination' })).toBeInTheDocument();
-        expect(screen.getByText('Kukla Test App 2 · Production')).toBeInTheDocument();
+        expect(screen.getByText('Kukla Test App 2, Production')).toBeInTheDocument();
     });
 
     it('names the subject in the background notification', async () => {
@@ -215,7 +228,7 @@ describe('an operation with a subject', () => {
 
         expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
             id: OPERATION.id,
-            title: 'Changing destination: Kukla Test App 2 · Production',
+            title: 'Changing destination: Kukla Test App 2, Production',
         });
     });
 });

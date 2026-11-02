@@ -22,7 +22,7 @@ import type { OperationPosition } from '@/types/webviewPayloads';
  */
 export function stageLine(stage: string, position?: OperationPosition): string {
     if (!position) return stage;
-    return position.name ? `${stage} · ${position.name}` : `${stage} (${position.index} of ${position.total})`;
+    return position.name ? `${stage}: ${position.name}` : `${stage} (${position.index} of ${position.total})`;
 }
 
 /**

@@ -3577,54 +3577,6 @@
             "source": "MUT-05 batch, 2026-09-04"
         },
         {
-            "module": "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx",
-            "anchors": [
-                "const [loading, setLoading] = useState(true);"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The mount effect calls setLoading(true) unconditionally, so the initial value is superseded before any render a test can observe: React Testing Library's render() flushes effects inside act, and the first commit is never queried. The initial true still matters in a real browser (useEffect runs after paint, so a false initial would flash an empty picker), which is why it is correct as written \u2014 but no assertion can reach that frame.",
-            "decision": "none \u2014 the initial value prevents a first-paint flash the test environment cannot render",
-            "recorded": "2026-09-04",
-            "source": "MUT-05 batch, 2026-09-04"
-        },
-        {
-            "module": "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx",
-            "anchors": [
-                "const [needsSignIn, setNeedsSignIn] = useState(false);"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Same shape as the loading initial value: the mount effect calls setNeedsSignIn(false) unconditionally, so the initial value is overwritten before the first observable render. Only the response's AUTH_REQUIRED code ever puts the stage into the signed-out view, and that path is covered.",
-            "decision": "none \u2014 the initial value is the correct default and is immediately re-asserted by the effect",
-            "recorded": "2026-09-04",
-            "source": "MUT-05 batch, 2026-09-04"
-        },
-        {
-            "module": "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx",
-            "anchors": [
-                "const [apis, setApis] = useState<ApiAccessOption[]>([]);"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The picker renders only when loading is false and there is no error or sign-in prompt \u2014 which cannot happen before the request resolves and replaces this value via setApis. Every earlier render shows a feedback view instead, so the initial array is never handed to ApiAccessPicker.",
-            "decision": "none \u2014 an empty initial list is correct and unobservable",
-            "recorded": "2026-09-04",
-            "source": "MUT-05 batch, 2026-09-04"
-        },
-        {
-            "module": "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx",
-            "anchors": [
-                "const retry = useCallback(() => setReloadKey((key) => key + 1), []);"
-            ],
-            "mutants": 2,
-            "category": "other",
-            "reason": "Two mutants on this line have no observable effect. Turning + into - still produces a DIFFERENT key on every press, which is the only property the effect dependency needs \u2014 the value itself is never read or displayed. Filling the useCallback dependency array with a junk string element compares equal to itself on every render, so the callback identity is as stable as with []. (The third mutant on this line, replacing the updater with () => undefined, IS killed \u2014 it makes the second retry a no-op.)",
-            "decision": "none \u2014 the key is an opaque change token and the dependency list is genuinely empty",
-            "recorded": "2026-09-04",
-            "source": "MUT-05 batch, 2026-09-04"
-        },
-        {
             "module": "src/features/project-creation/ui/steps/commerceSections.ts",
             "anchors": [
                 "return { stackId: null, candidates, ambiguous: candidates.length > 1 };"
@@ -9503,7 +9455,7 @@
             "anchors": [
                 "default:"
             ],
-            "line": 181,
+            "line": 194,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable through the only route into unfinishedResult. Its switch names six outcomes; the record type declares eight. The two it omits cannot arrive: terminalResult hands 'success' to successResult before this call, and resolveResult only reaches terminalResult when record.outcome !== 'watching'. So no ImportJobRecord a caller can build lands in the default arm, and no test can distinguish it from the arms above. Re-anchored 2026-10-31 (202 -> 181): describeOutcome and the per-outcome variant table became one switch, unfinishedResult, when results moved to the dialog design rules; the default arm and the argument are unchanged.",
@@ -9649,7 +9601,7 @@
             "anchors": [
                 "auto: [],"
             ],
-            "line": 101,
+            "line": 105,
             "mutants": 1,
             "category": "other",
             "reason": "The 'auto' provenance set is only ever consulted as auto.has(t) for a type that is already in 'selected' and is a declared dependency of the type being unticked. A seeded entry that is not a real data type therefore matches nothing, and deselectType's final filter (auto kept only where it appears in the surviving selection) removes it on the first untick. Nothing rendered or sent reads 'auto' at all.",
@@ -9662,7 +9614,7 @@
             "anchors": [
                 "allSelected ? { selected: [], auto: [] } : { selected: [...availableTypes], auto: [] },"
             ],
-            "line": 192,
+            "line": 195,
             "mutants": 2,
             "category": "other",
             "reason": "Both survivors seed the 'auto' provenance set rather than the selection. 'auto' is read only as auto.has(t) while unticking, and only for types that are both currently selected and declared dependencies of the departing type, so an entry that is not a real data type can never match. The checkboxes, the Start guard and the request body all read 'selected'; none of them reads 'auto'.",
@@ -9681,14 +9633,14 @@
             "decision": "none \u2014 starting undismissed is what 'the user has seen nothing yet' means",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05",
-            "line": 109
+            "line": 113
         },
         {
             "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
             "anchors": [
                 "}, [loadStatus]);"
             ],
-            "line": 126,
+            "line": 130,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9701,7 +9653,7 @@
             "anchors": [
                 "}, [loadTarget]);"
             ],
-            "line": 131,
+            "line": 135,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9714,7 +9666,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 215,
+            "line": 218,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves.",
@@ -9727,7 +9679,7 @@
             "anchors": [
                 "const goBack = useCallback((): void => setDismissed(true), []);"
             ],
-            "line": 237,
+            "line": 240,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function. goBack closes over nothing but a setState function, which React guarantees is stable.",
@@ -9740,7 +9692,7 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 231,
+            "line": 234,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false. watching only becomes false through the Stop watching button, which buildActions renders solely for the 'watching' view; that view requires a running record, and turning the watch off also stops the poll that could retire it. So while watching is false the modal offers no Remove data affordance to arm, and this call can only ever re-assert a value that is already true.",
@@ -9753,7 +9705,7 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 224,
+            "line": 227,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false, for the same reason as the removal's call: watching only turns false through Stop watching, which buildActions renders solely for the 'watching' view, and that view needs a running record whose poll the same press stops. So while watching is false the modal shows no Start import button, and this call can only re-assert a value that is already true.",
@@ -9772,7 +9724,7 @@
             "decision": "none \u2014 the chain mirrors how record is read everywhere else in the component",
             "recorded": "2026-10-09",
             "source": "EDS-8 ImportDatapackModal split, 2026-10-09",
-            "line": 290
+            "line": 293
         },
         {
             "module": "src/features/projects-dashboard/utils/projectStatusUtils.ts",
@@ -10414,7 +10366,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 130,
+            "line": 141,
             "mutants": 1,
             "category": "other",
             "reason": "The toggle callback closes over nothing \u2014 it updates selection through the functional form of setSelected \u2014 so a dependency array of constants invalidates the memo exactly as often as an empty one does, which is never. Verified by planting. Re-anchored 2026-10-30 (113 -> 115): unchanged code, moved by two docstring lines above it (\"Create datapack\" asks the pack type, DI-5). Re-anchored 2026-10-31 (115 -> 116): unchanged code; the shared Select all button's import was added above it. Re-anchored 2026-10-31 (116 -> 133): unchanged code; the export split into a standalone dialog and one Create datapack hosts.",
@@ -10443,20 +10395,6 @@
             "category": "branch",
             "reason": "The length guard only changes the answer when there are NO types, and with no types nothing reads it: allSelected reaches the Select all / Clear all label and the toggleAll handler, and both live inside the head block that renders only when available.length > 0. So an empty list has no reader to tell the difference. Verified by planting true in its place.",
             "decision": "none \u2014 the guard is what stops an empty list reading as fully selected if the label ever moves outside that block",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/data-installer/ui/components/ExportDatapackResult.tsx",
-            "anchors": [
-                "const perType = outcome?.perType ?? [];",
-                "variant={outcome?.success ? 'success' : 'error'}",
-                "outcome?.success"
-            ],
-            "mutants": 3,
-            "category": "optionalChain",
-            "reason": "outcome is never null at these three reads. useDataInstallerRequest makes value and failure mutually exclusive \u2014 value is null exactly when the envelope reports failure, and failure then carries a message that is never empty (data.error ?? UNSTATED_FAILURE). ExportResult returns on that message before reaching any of these lines, and the view renders at all only when one of the two is truthy. So the ?. is required by the type and unreachable in fact. Verified by planting a non-null assertion at all three.",
-            "decision": "none \u2014 the type makes outcome nullable and the compiler requires the chain",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
         },
@@ -11019,58 +10957,6 @@
             "category": "optionalChain",
             "reason": "The only input is the statically imported components.json bundled in this repo, whose 30 envVars entries are all objects. A null or undefined def cannot arrive from anywhere else, and killing this would mean jest.mocking the catalog into a shape the shipped file cannot hold. Planted and re-run: all 42 tests pass.",
             "decision": "none \u2014 the JSON is untyped at the import boundary and the guard costs nothing",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
-            "module": "src/features/dashboard/ui/components/ManageApisModal.tsx",
-            "anchors": [
-                "const [isLoading, setIsLoading] = useState(false);",
-                "const [needsSignIn, setNeedsSignIn] = useState(false);",
-                "const [selected, setSelected] = useState<string[]>([]);",
-                "const [initial, setInitial] = useState<string[]>([]);"
-            ],
-            "mutants": 4,
-            "category": "other",
-            "reason": "Nothing renders while the modal is closed (DialogContainer holds no Modal), and the open effect's first act is to reset all four to exactly these values before any response can arrive. So no initial value these four are given is ever observable: React commits the effect before an assertion can run, and the closed state has no DOM. Each planted individually: all 35 tests pass.",
-            "decision": "none \u2014 useState needs an initial value and these are the ones the effect restores",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
-            "module": "src/features/dashboard/ui/components/ManageApisModal.tsx",
-            "anchors": [
-                "setApis([]);"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The picker is rendered only when renderApiCatalogFeedback returns nothing \u2014 no loading, no error, no sign-in \u2014 and every route to that state passes through the success branch, which sets apis from the response. The reset value is therefore never rendered: while it holds, a feedback view is on screen instead. Planted: all 35 tests pass.",
-            "decision": "none \u2014 it keeps one row's list from flashing under the next row's spinner",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
-            "module": "src/features/dashboard/ui/components/ManageApisModal.tsx",
-            "anchors": [
-                "[],"
-            ],
-            "line": 192,
-            "mutants": 1,
-            "category": "other",
-            "reason": "The sign-in callback's dependency array is empty and constant. Replacing it with a different constant array changes nothing: React compares the arrays element by element between renders, and two renders both produce the same one, so the callback is memoised identically. Planted: all 35 tests pass.",
-            "decision": "none \u2014 the deps array is required and correct as written",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
-            "module": "src/features/dashboard/ui/components/ManageApisModal.tsx",
-            "anchors": [
-                "const retry = useCallback(() => setReloadKey((key) => key + 1), []);"
-            ],
-            "mutants": 2,
-            "category": "other",
-            "reason": "reloadKey is never read \u2014 it exists only as an effect dependency, so any function returning a value different from the last one re-fires the fetch identically, and counting DOWN works exactly as well as counting up. Its dependency array is empty and constant, so replacing it with another constant array leaves useCallback memoising the same function across every render. Both planted: all 35 tests pass. The third mutant on this line, which makes the updater return undefined, DOES stop the second retry and is killed.",
-            "decision": "none \u2014 counting up is what a reload key means, and the deps array is required",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
         },
@@ -14132,19 +14018,6 @@
             "decision": "none \u2014 the check is a cheap early-out that avoids a call per non-object leaf, and the duplicated condition is what makes flattenUrls safe to call from anywhere; narrowing either copy to remove the redundancy would trade the guarantee for the mutant.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
-        },
-        {
-            "module": "src/features/data-installer/ui/components/ImportDatapackModalBody.tsx",
-            "anchors": [
-                "{view === 'result' && ctx.result ? <ImportResultView result={ctx.result} /> : null}"
-            ],
-            "line": 113,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Both survivors need a state the state machine cannot produce: a non-null result while the view is not 'result'. resolveView returns 'result' whenever result is truthy and none of busy, resetArmed or running outranks it; result is forced null while busy, resolveResult returns null for a record still watching, and the affordances that set lastAction or arm a reset are absent from the views that outrank it. So view === 'result' and a truthy result coincide exactly. Re-anchored 2026-10-31 (129 -> 133): unchanged code; the floor's alignment comment above it grew. Re-anchored 2026-10-31 (133 -> 128): unchanged code; the removal confirmation above it moved into its own component. Re-anchored 2026-10-31 (128 -> 129): unchanged code; the result view became ImportResultView, above it. Re-anchored 2026-10-31 (129 -> 122): the result view's props shrank to the result alone and the call fits one line, and an unused import above it went; the condition is unchanged.",
-            "decision": "none \u2014 the view check keeps this body consistent with the five beside it",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
         },
         {
             "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",

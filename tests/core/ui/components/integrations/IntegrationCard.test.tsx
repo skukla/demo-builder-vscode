@@ -101,7 +101,7 @@ describe('IntegrationCard', () => {
     it('names itself by name alone when there is no status', () => {
         const { card } = renderCard(
             makeModel({ statusLabel: '' }),
-            <span>Custom integration · built with AI · 2 APIs</span>
+            <span>Custom integration, built with AI, 2 APIs</span>
         );
 
         expect(card).toHaveAttribute('aria-label', 'ERP Sync');
@@ -280,15 +280,15 @@ describe('IntegrationCard', () => {
     // being empty, which nothing guarantees.
     describe('subline slot', () => {
         it('renders the subline in place of the status line', () => {
-            renderCard(makeModel(), <span>Custom integration · built with AI · 2 APIs</span>);
+            renderCard(makeModel(), <span>Custom integration, built with AI, 2 APIs</span>);
 
             expect(
-                screen.getByText('Custom integration · built with AI · 2 APIs')
+                screen.getByText('Custom integration, built with AI, 2 APIs')
             ).toBeInTheDocument();
         });
 
         it('suppresses the status dot and label while a subline is shown', () => {
-            renderCard(makeModel(), <span>Pre-built · 1 API</span>);
+            renderCard(makeModel(), <span>Pre-built, 1 API</span>);
 
             expect(screen.queryByTestId('status-dot')).not.toBeInTheDocument();
             expect(screen.queryByText('Deployed')).not.toBeInTheDocument();
@@ -302,7 +302,7 @@ describe('IntegrationCard', () => {
         });
 
         it('keeps the name and kebab regardless of which line is shown', () => {
-            renderCard(makeModel(), <span>Pre-built · 1 API</span>);
+            renderCard(makeModel(), <span>Pre-built, 1 API</span>);
 
             expect(screen.getByText('ERP Sync')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
@@ -381,7 +381,7 @@ describe('IntegrationCard', () => {
                     model={model}
                     onAction={onAction}
                     onRename={onRename}
-                    subline={<span>Pre-built · 1 API</span>}
+                    subline={<span>Pre-built, 1 API</span>}
                 />
             );
             return {
@@ -406,7 +406,7 @@ describe('IntegrationCard', () => {
             renderInert(makeModel());
 
             expect(screen.getByText('ERP Sync')).toBeInTheDocument();
-            expect(screen.getByText('Pre-built · 1 API')).toBeInTheDocument();
+            expect(screen.getByText('Pre-built, 1 API')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
         });
 

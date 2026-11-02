@@ -16,8 +16,6 @@ const SRC = path.join(__dirname, '..', '..', 'src');
 
 /** Files that render a Modal and draw a wait in its body, each with why that is right. */
 const LEDGER: Record<string, string> = {
-    'features/dashboard/ui/components/AiCapabilitiesModal.tsx':
-        'Its whole body is the wait, with a determinate progress ring the shared wait does not carry.',
     'features/data-installer/ui/components/ClearDemoDataModal.tsx':
         'A re-check after a tick shows its spinner where the answer lands (owner, 2026-10-31). The first read uses `waiting`.',
     'features/eds/ui/siteAccess/SiteAccessScreen.tsx': "The screen's own wait, not one inside its dialog.",

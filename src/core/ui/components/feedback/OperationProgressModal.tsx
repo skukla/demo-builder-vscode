@@ -113,16 +113,18 @@ function closeLabelFor(ended: boolean, asking: boolean): string {
 }
 
 /**
- * The answers, as the guard gave them: the one that continues the work is first. A
- * "Cancel" among them is left out: the dismiss button already says Cancel and answers
- * the same way, as nothing chosen (two Cancels side by side, 2026-10-23).
+ * The answers. The guard gives the one that continues the work first, and it is drawn last, as
+ * the dialog rules have every main button. A "Cancel" among them is left out: the dismiss button
+ * already says Cancel and answers the same way, as nothing chosen (two Cancels side by side,
+ * 2026-10-23).
  */
 function answerButtons(actions: string[], answer: (chosen: string) => void): ActionButton[] {
-    return actions.filter((label) => label !== CANCEL).map((label, index) => ({
+    const buttons = actions.filter((label) => label !== CANCEL).map((label, index): ActionButton => ({
         label,
         variant: index === 0 ? 'accent' : 'secondary',
         onPress: () => answer(label),
     }));
+    return buttons.reverse();
 }
 
 /** A success's next step, as its one button: the modal closes, then the step starts. */
@@ -259,6 +261,7 @@ export function OperationProgressModal({
                 size="M"
                 onClose={close}
                 closeLabel={closeLabelFor(failed || succeeded, Boolean(prompt))}
+                holdSize={!prompt && !failed && !succeeded}
                 actionButtons={
                     prompt
                         ? answerButtons(prompt.actions, answer)
@@ -266,9 +269,9 @@ export function OperationProgressModal({
                 }
             >
                 {operation.subject && <div className="modal-progress-subject">{operation.subject}</div>}
-                {/* Fits each state and eases between them (dialog design rules, 2026-10-31). It was
-                    one fixed height for every state, which left a one-line result in a box sized
-                    for a three-line failure. */}
+                {/* Fits each state (dialog design rules, 2026-10-31). It was one fixed height for
+                    every state, which left a one-line result in a box sized for a three-line
+                    failure. */}
                 <SteadyHeight>
                     <OperationProgressBody
                         prompt={prompt}
