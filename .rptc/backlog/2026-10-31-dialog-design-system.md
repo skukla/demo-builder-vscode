@@ -57,3 +57,7 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  feat(ui): a dialog's size no longer animates (`1d89359aa`)
 - 2026-11-02  fix(data-installer): the dialog stays on its wait until the job's status answers (`8da911eb1`)
 - 2026-11-02  feat(ui): one red, one orange, and warning and error differ in shape (`ceb5336d1`)
+- 2026-11-02  fix(ui): the progress window, the long wait and the last dots (`f70dc77b3`)
+- 2026-11-02  fix(ui): project creation, Updates and Site access follow the design rules (`5dac0e7de`)
+- 2026-11-02  fix(dashboard): its dialogs follow the design rules (`8b09a336b`)
+- 2026-11-02  fix(data-installer): its dialogs follow the design rules (`6fe18d55d`)
