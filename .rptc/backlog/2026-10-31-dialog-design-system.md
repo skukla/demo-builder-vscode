@@ -66,3 +66,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  fix(ui): the second round of dialog rules, and Create's empty cards grey up front (`56dc68ff4`)
 - 2026-11-02  fix(data-installer): Create's kinds fit without scrolling (`e1554c14d`)
 - 2026-11-02  fix(dialogs): problem lines keep their colour and fit one line (`6304d3922`)
+- 2026-11-02  feat(data-installer): select a pack's data in one two-pane screen (`278aef169`)
