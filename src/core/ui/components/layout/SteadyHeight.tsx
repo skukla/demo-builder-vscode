@@ -1,25 +1,13 @@
 /**
- * A box as tall as its content, easing to each new height instead of jumping.
- *
- * A modal that walks through states resizes at every step. The import modal was three
- * different heights in one run (the form, then the spinner, then "Dry run passed") and
- * the whole dialog jumped twice while the SC watched (owner, 2026-09-20: "this is bad UX").
- *
- * It used to hold the tallest height it had shown and never shrink, which stopped the
- * jumps and left every short state floating in dead space: a one-line result in a
- * form-sized box. The dialog design rules (owner, 2026-10-31,
- * `docs/development/sop/dialog-design.md`) settled it the other way: the height fits the
- * content, and the change eases, growing or shrinking. The dialog is pinned near the top,
- * so a change moves only its bottom edge. This is for a change inside a view; a dialog's change
- * of view is one move of the whole box (`useDialogViewChange`).
+ * A box as tall as its content, with a floor the caller can name and a say in where short content
+ * sits. It used to ease each change of height; a dialog's size no longer animates at all (owner,
+ * 2026-11-02, `useDialogViewChange`).
  *
  * @module core/ui/components/layout/SteadyHeight
  */
 
 import { Flex } from '@adobe/react-spectrum';
-import React, { useLayoutEffect, useRef, useState } from 'react';
-import { useGrowthAnimation } from './useGrowthAnimation';
-import { cn } from '@/core/ui/utils/classNames';
+import React from 'react';
 
 export interface SteadyHeightProps {
     children: React.ReactNode;
@@ -40,57 +28,12 @@ export interface SteadyHeightProps {
  * the check reads it as a literal (ADR-017 §6).
  */
 
-/** Fit the content's height, easing each change. */
-export function SteadyHeight({
-    children,
-    minHeight = 0,
-    align = 'center',
-}: SteadyHeightProps): React.ReactElement {
-    const content = useRef<HTMLDivElement>(null);
-    const [measured, setMeasured] = useState(0);
-    const growth = useGrowthAnimation();
-    const changingView = useRef(false);
-
-    // After every render, with no dependency list: what changes is the CONTENT, and
-    // a parent re-rendering with different children is exactly the case to measure.
-    // `scrollHeight` of the INNER box reads what the content needs whatever height the
-    // outer one is held at while it eases.
-    //
-    // The lint rule's infinite-update warning does not apply: the render this causes
-    // measures the same content height and stops.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useLayoutEffect(() => {
-        // A dialog's change of view has its own one move, or none (`useDialogViewChange`). Take the
-        // new height once, as the view first lays out at its final width, and ease nothing: later
-        // readings would catch the box between widths.
-        if (content.current?.closest('[data-view-change]')) {
-            if (!changingView.current) setMeasured(content.current.scrollHeight);
-            changingView.current = true;
-            return;
-        }
-        changingView.current = false;
-        const needed = content.current?.scrollHeight ?? 0;
-        if (needed !== measured) {
-            // Ease from the old height; the first measure has nothing to ease from.
-            if (measured > 0) growth.grow(measured, needed);
-            setMeasured(needed);
-        }
-    });
-
-    // Spectrum's own layout props rather than a style attribute: the inline-style
-    // ledger is empty on purpose and a measured number is not worth re-opening it.
+export function SteadyHeight({ children, minHeight = 0, align = 'center' }: SteadyHeightProps): React.ReactElement {
     return (
         // `width="100%"` is not decoration: Spectrum's Flex constrains width at 450px
         // (root CLAUDE.md).
-        <Flex
-            direction="column"
-            justifyContent={align}
-            minHeight={minHeight || undefined}
-            height={growth.height}
-            width="100%"
-            UNSAFE_className={cn('steady-height', growth.growing && 'is-growing')}
-        >
-            <div ref={content}>{children}</div>
+        <Flex direction="column" justifyContent={align} minHeight={minHeight || undefined} width="100%">
+            <div>{children}</div>
         </Flex>
     );
 }

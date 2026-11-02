@@ -19,17 +19,8 @@ export const FRONTEND_TIMEOUTS = {
      */
     SCROLL_ANIMATION: 150,
 
-    /**
-     * When a growing `SteadyHeight` goes back to a plain minimum height: longer than the growth
-     * itself (Spectrum's 200-step animation duration, about 160ms).
-     */
-    GROWTH_SETTLE: 400,
-
-    /**
-     * How long a dialog's box takes to ease to a new view, with its body hidden. The body fades in
-     * when it ends (`useDialogViewChange`).
-     */
-    DIALOG_VIEW_CHANGE: 150,
+    /** How long a dialog's new body takes to fade in when its view changes (`useDialogViewChange`). */
+    DIALOG_BODY_FADE: 130,
 
     /**
      * Delay for UI state updates to settle before DOM operations.

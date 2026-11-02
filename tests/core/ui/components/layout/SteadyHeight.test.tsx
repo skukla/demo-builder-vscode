@@ -1,35 +1,11 @@
 /**
- * SteadyHeight — a modal that walks through states must not jump between them
- * (owner, 2026-09-20), and must not leave a short state in dead space either: the box
- * fits its content and eases each change, growing or shrinking (dialog design rules,
- * owner 2026-10-31).
- *
- * jsdom lays nothing out, so `scrollHeight` is 0 for everything unless it is told
- * otherwise. Each test therefore says what the content measures, the same way the
- * browser would, and asserts the height the box takes while it eases.
+ * SteadyHeight: a floor the caller can name, and where short content sits under it. It does not
+ * ease: a dialog's size no longer animates (owner, 2026-11-02).
  */
 
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
-
-/**
- * Make every element report `height` for `scrollHeight`, as a laid-out browser
- * would. Returns a setter so a test can change what the content measures next.
- */
-function measuringAt(height: number): (next: number) => void {
-    let current = height;
-    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
-        configurable: true,
-        get() {
-            return current;
-        },
-    });
-    return (next: number) => {
-        current = next;
-    };
-}
 
 /** The box holding the floor: the parent of the element carrying the class. */
 function reservedBox(): HTMLElement {
@@ -38,14 +14,7 @@ function reservedBox(): HTMLElement {
     return content.parentElement;
 }
 
-afterEach(() => {
-    // @ts-expect-error — putting jsdom's own (absent) implementation back.
-    delete HTMLElement.prototype.scrollHeight;
-});
-
 it('starts from a floor the caller names', () => {
-    measuringAt(0);
-
     render(
         <SteadyHeight minHeight={240}>
             <div data-testid="content">nothing measured yet</div>
@@ -59,8 +28,6 @@ it('starts from a floor the caller names', () => {
 // class the cross-bundle check cannot read, counted once per bundle. The caller's own
 // element goes inside instead, and its layout still applies to its own children.
 it('leaves the caller element, and its class, untouched inside', () => {
-    measuringAt(300);
-
     render(
         <SteadyHeight>
             <div className="datapack-import-body">
@@ -75,7 +42,6 @@ it('leaves the caller element, and its class, untouched inside', () => {
 // Content shorter than a named floor: centred by default (a spinner), from the top when
 // asked (a form reads from the top).
 it('centres content shorter than its floor by default, and pins it to the top when asked', () => {
-    measuringAt(100);
     const { unmount } = render(
         <SteadyHeight minHeight={240}>
             <div data-testid="content">a spinner</div>
@@ -92,101 +58,18 @@ it('centres content shorter than its floor by default, and pins it to the top wh
     expect(reservedBox()).not.toHaveStyle({ justifyContent: 'center' });
 });
 
-/**
- * Each change eases instead of snapping, taller or shorter (owner, 2026-10-31). The box takes a
- * real height for the change only: the old one, then the new one a frame later (the stylesheet
- * eases between them), then its content's own height again so nothing can be cut off.
- */
-it("eases nothing of a dialog's change of view, and starts easing again from the new height", () => {
-    const measure = measuringAt(400);
-    const inDialog = (changing: boolean, label: string) => (
-        <div data-view-change={changing ? '' : undefined}>
-            <SteadyHeight>
-                <div data-testid="content">{label}</div>
-            </SteadyHeight>
-        </div>
+it('never takes a height of its own: a dialog\'s size does not animate', () => {
+    const { rerender } = render(
+        <SteadyHeight>
+            <div data-testid="content">the form</div>
+        </SteadyHeight>,
     );
-    const { rerender } = render(inDialog(false, 'the form'));
 
-    measure(560);
-    rerender(inDialog(true, 'the next view'));
-    expect(reservedBox()).not.toHaveClass('is-growing');
+    rerender(
+        <SteadyHeight>
+            <div data-testid="content">the next state</div>
+        </SteadyHeight>,
+    );
 
-    // The box is between widths now, so this reading must not count.
-    measure(610);
-    rerender(inDialog(true, 'still moving'));
-    measure(560);
-    rerender(inDialog(false, 'settled'));
-    expect(reservedBox()).not.toHaveClass('is-growing');
-
-    measure(600);
-    rerender(inDialog(false, 'a line appeared'));
-    expect(reservedBox()).toHaveClass('is-growing');
-});
-
-describe('easing between states', () => {
-    function changed(from: number, to: number) {
-        const measure = measuringAt(from);
-        const { rerender } = render(
-            <SteadyHeight>
-                <div data-testid="content">the form</div>
-            </SteadyHeight>,
-        );
-        measure(to);
-        rerender(
-            <SteadyHeight>
-                <div data-testid="content">the next state</div>
-            </SteadyHeight>,
-        );
-    }
-
-    it.each([
-        ['a taller state', 400, 560],
-        ['a shorter state', 400, 120],
-    ])('eases into %s: the old height, then the new one on the next frame', (_label, from, to) => {
-        changed(from, to);
-        expect(reservedBox()).toHaveClass('steady-height', 'is-growing');
-        expect(reservedBox()).toHaveStyle({ height: `${from}px` });
-
-        act(() => { jest.advanceTimersToNextFrame(); });
-        expect(reservedBox()).toHaveStyle({ height: `${to}px` });
-    });
-
-    // It used to hold the tallest height for good, which left a one-line result in a
-    // form-sized box.
-    it('lets go of the height once the change is over, so the box fits the content', () => {
-        changed(400, 120);
-        act(() => { jest.advanceTimersToNextFrame(); });
-        act(() => { jest.advanceTimersByTime(FRONTEND_TIMEOUTS.GROWTH_SETTLE); });
-
-        expect(reservedBox()).not.toHaveClass('is-growing');
-        expect(reservedBox().style.height).toBe('');
-        expect(reservedBox().style.minHeight).toBe('');
-    });
-
-    it('does not animate the first measure, which has nothing to ease from', () => {
-        measuringAt(400);
-        render(
-            <SteadyHeight>
-                <div data-testid="content">the form</div>
-            </SteadyHeight>,
-        );
-        expect(reservedBox()).not.toHaveClass('is-growing');
-    });
-
-    it('does not animate a re-render whose content kept its height — control', () => {
-        const measure = measuringAt(400);
-        const { rerender } = render(
-            <SteadyHeight>
-                <div data-testid="content">the form</div>
-            </SteadyHeight>,
-        );
-        measure(400);
-        rerender(
-            <SteadyHeight>
-                <div data-testid="content">the form, ticked</div>
-            </SteadyHeight>,
-        );
-        expect(reservedBox()).not.toHaveClass('is-growing');
-    });
+    expect(reservedBox().style.height).toBe('');
 });

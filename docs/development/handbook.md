@@ -589,17 +589,12 @@ meant.
 > *Why:* a body that renders a form, then a spinner, then a result is three different
 > amounts of content, and with nothing managing the change the whole dialog jumps at
 > every step. The Data Installer's import modal did it twice in one dry run before
-> anyone measured it (owner, 2026-09-20: "this is bad UX"). Two things manage it:
-> `SteadyHeight` fits each state and eases between them, growing or shrinking, and
-> `CenteredFeedbackContainer` reserves a height the caller names. `SteadyHeight` used to
-> hold the tallest state and never shrink, which stopped the jumps and left short states
-> in dead space; the dialog design rules (owner, 2026-10-31,
-> `docs/development/sop/dialog-design.md`) settled on fit-and-ease, with dialogs pinned
-> near the top so a change moves only the bottom edge. A change of whole view is one move
-> (owner, 2026-11-02, after a confirm folded in and out "like an accordion"): the body
-> hides under a title that stays, the box eases once to its final size, and the new body fades in. Under 40px it
-> just swaps, and a wait keeps the box it found, because a removal had moved four times with
-> three of them a few pixels (`useDialogViewChange`).
+> anyone measured it (owner, 2026-09-20: "this is bad UX"). What manages it now: a wait keeps the
+> box it found, so a run has one change of size, when the real content arrives, and that change
+> takes effect at once with the body fading in (`useDialogViewChange`). Easing the size was tried
+> four ways on 2026-10-31 and 2026-11-02 and dropped: it folded, worked like an accordion, moved on
+> every small change, and sat empty while it expanded. `CenteredFeedbackContainer` reserves a
+> height the caller names. Dialogs are pinned near the top, so a change moves only the bottom edge.
 >
 > What no check can see is whether the change LOOKS right; the ledger is where
 > a body the scan reads as multi-view says it has only one. Enforced by

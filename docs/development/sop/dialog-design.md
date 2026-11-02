@@ -91,21 +91,18 @@ step.
 
 - **Pinned near the top**, not centred, so content that grows pushes only the
   bottom edge down and nothing above it moves under the pointer.
-- **Height fits the content.** A small change inside a view, such as a line appearing,
-  eases the bottom edge.
+- **Height fits the content.**
 - **Width is a step**, chosen by the view, never measured from text: small 400,
   medium 480, large 640 (Spectrum's own), extra-wide 980. A longer store name wraps;
   it does not widen the dialog.
-- **A change of view is one move, or none** (owner, 2026-11-02). When the width step, the
-  title or a wait changes and the size changes by 40px or more, the body hides, the box
-  eases once to its final size in about 150ms, and the new body fades in. The title stays
-  on screen throughout, already reading its new words, so the dialog never goes blank. The
-  box never takes two motions for one change, and text never visibly rewraps. Under 40px
-  each way, the content just swaps.
+- **A dialog's size never animates** (owner, 2026-11-02, after four tries at easing it). A
+  change of view takes its size at once. The title stays, and the new body fades in quickly
+  to soften the swap.
 - **A wait keeps the box it found.** The width stays, and the height stays as a floor, with
-  the spinner level between the rule and the buttons. Only the real content that follows
-  moves the box. A first open has no earlier box, so it starts at the wait's own size. A
-  body that is a wait with its own buttons says so with `holdSize`.
+  the spinner level between the rule and the buttons. So a run has one change of size, when
+  the real content arrives. One wait following another changes nothing but its words. A
+  first open has no earlier box, so it starts at the wait's own size. A body that is a wait
+  with its own buttons says so with `holdSize`.
 
 ## Long content
 
@@ -118,5 +115,5 @@ step.
 ## Where it is built
 
 `core/ui/components/ui/Modal.tsx` (the title's status icon, the width steps and
-their easing, the button styles), `core/ui/components/layout/SteadyHeight.tsx` (a
-change inside a view), `core/ui/components/ui/useDialogViewChange.ts` (a change of view), `core/ui/styles/modal.css` (pinning, text kinds, spacing).
+their easing, the button styles), `core/ui/components/ui/useDialogViewChange.ts` (a
+change of view), `core/ui/styles/modal.css` (pinning, text kinds, spacing).

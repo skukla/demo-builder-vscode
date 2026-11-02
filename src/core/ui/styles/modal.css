@@ -168,16 +168,6 @@
     max-height: calc(var(--spectrum-visual-viewport-height) * 0.84);
 }
 
-/* A change of view is one move (`useDialogViewChange`): the body hides, the box eases to its final
-   size, and the body fades in, so text never visibly rewraps. The title stays throughout. */
-.modal-dialog .modal-content {
-    transition: opacity var(--spectrum-global-animation-duration-100) ease-in;
-}
-
-.modal-dialog.is-resizing {
-    overflow: hidden;
-}
-
 /* A wait in the box it found, which is taller than it needs: level between the rule and the
    buttons. */
 .modal-dialog.is-holding .modal-content,
@@ -188,11 +178,6 @@
 .modal-dialog.is-holding .modal-body {
     display: flex;
     align-items: center;
-}
-
-.modal-dialog.is-resizing .modal-content {
-    opacity: 0;
-    transition: none;
 }
 
 /* A dialog body's parts, 16px apart, each without margins of its own. */
