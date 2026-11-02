@@ -226,6 +226,30 @@ describe('previewChanges, counted the way a save counts', () => {
         });
     });
 
+    // Live 2026-11-02: an attribute's options are made with it and never recorded on their own, so
+    // the preview of every installed pack said it would add options the store already held.
+    it('counts an option the store already has as already in the store, however it was made', async () => {
+        const inStore = { attribute_code: 'color', frontend_input: 'select', options: [{ label: ' ', value: '' }, { label: 'Blue', value: '273' }] };
+        const row = { attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: 'blue ' }, { label: 'Black' }] } };
+        const { d } = await deps(true, { 'products/attributes/color': inStore }, { product_attributes: [row] });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'attribute_options')).toMatchObject({
+            add: { count: 1, names: ['color/Black'] },
+            inStore: { count: 1, names: ['color/blue'] },
+        });
+    });
+
+    it('CONTROL: counts every option as new when the store lacks the attribute', async () => {
+        const row = { attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: 'Blue' }] } };
+        const { d } = await deps(true, {}, { product_attributes: [row] });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'attribute_options')).toMatchObject({ add: { count: 1, names: ['color/Blue'] }, inStore: { count: 0 } });
+    });
+
     it('counts a cart rule or code the store already has by that name as already in the store (step 11)', async () => {
         const { d } = await deps(true, {
             [page('salesRules/search', filterBy('name', '10% Coupon'))]: { items: [{ rule_id: 3, name: '10% Coupon' }], total_count: 1 },

@@ -12,6 +12,7 @@
 import { layerNotAskedLine } from '../settingsLayer';
 import { askedRows } from './askedKinds';
 import { loadStoreSets } from './attributeSetsKind';
+import { sameText } from './b2bReads';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import { COUPON_KIND, couponByCode } from './couponsKind';
 import { type CreatedObject, nodeRecordFiles, readInstallRecord } from './installRecord';
@@ -42,7 +43,7 @@ export interface KindChanges {
     add: Named;
     /**
      * Rows the store already has that this engine did not make: installing leaves them as they
-     * are. Told apart for products, gift cards, attributes and sets (which a save then takes into
+     * are. Told apart for products, gift cards, attributes, their options and sets (which a save then takes into
      * the new version, as it reads them by the pack's own names), for cart rules and coupons (by
      * name and code, step 11) and for sources, stocks and their links
      * (which install uses as they are, `stockKinds.ts`; a switched-off source is switched on, so it
@@ -98,6 +99,23 @@ async function inventoryInStore(inventory: () => Promise<Inventory>, kind: strin
 
 const INVENTORY_KINDS = new Set([SOURCE_KIND, STOCK_KIND, LINK_KIND]);
 
+/**
+ * Which of these options (`<attribute code>/<label>`) their attribute already has, matched the way
+ * install matches them (`addMissingOptions`). An attribute's options are made with it and are not
+ * recorded on their own, so nothing else says so.
+ */
+async function optionsInStore(ctx: KindContext, keys: string[]): Promise<Set<string>> {
+    const lk = productLookups(ctx);
+    const present = await Promise.all(
+        keys.map(async (key) => {
+            const slash = key.indexOf('/');
+            const attribute = await lk.attribute(key.slice(0, slash)).catch(() => undefined);
+            return attribute?.options?.some((option) => sameText(option.label, key.slice(slash + 1))) ?? false;
+        }),
+    );
+    return new Set(keys.filter((_key, i) => present[i]));
+}
+
 /** Which of these pack rows the store already has, for the kinds told apart (see `inStore`). */
 async function alreadyInStore(ctx: KindContext, kind: string, keys: string[], inventory: () => Promise<Inventory>): Promise<Set<string>> {
     if (keys.length === 0) return new Set();
@@ -117,6 +135,7 @@ async function alreadyInStore(ctx: KindContext, kind: string, keys: string[], in
         const present = await Promise.all(keys.map((code) => lk.attribute(code).then(() => true, () => false)));
         return new Set(keys.filter((_code, i) => present[i]));
     }
+    if (kind === 'attribute_options') return optionsInStore(ctx, keys);
     if (kind === 'attribute_sets') {
         await loadStoreSets(ctx);
         return new Set(keys.filter((name) => ctx.session.setIds.has(name)));
