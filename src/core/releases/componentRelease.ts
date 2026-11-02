@@ -36,13 +36,28 @@ export interface ComponentRelease {
     version: string;
 }
 
-/** The channel this user's lookups use. Early access is only for those it has been opened to. */
-async function effectiveChannel(): Promise<UpdateChannel> {
+/**
+ * The channel a lookup actually uses: early access only for those it has been opened to, and
+ * beta for anyone else asking for it. The one rule, for the extension's own lookups too.
+ * Never throws: a check that fails is a closed door.
+ */
+export async function channelFor(
+    configured: UpdateChannel,
+    earlyAccessAllowed: () => Promise<boolean>,
+): Promise<UpdateChannel> {
+    if (configured !== 'early-access') return configured;
+    try {
+        return (await earlyAccessAllowed()) ? 'early-access' : 'beta';
+    } catch {
+        return 'beta';
+    }
+}
+
+function effectiveChannel(): Promise<UpdateChannel> {
     const configured = vscode.workspace
         .getConfiguration('demoBuilder')
         .get<UpdateChannel>('updateChannel', 'stable');
-    if (configured !== 'early-access') return configured;
-    return (await access.earlyAccessAllowed()) ? 'early-access' : 'beta';
+    return channelFor(configured, access.earlyAccessAllowed);
 }
 
 /**

@@ -5,6 +5,7 @@
 
 import * as vscode from 'vscode';
 import {
+    channelFor,
     configureReleaseAccess,
     readComponentRelease,
     refOfSource,
@@ -98,6 +99,29 @@ describe('readComponentRelease', () => {
         });
 
         expect(await readComponentRelease('skukla/demo-erp')).toBeNull();
+    });
+});
+
+describe('channelFor', () => {
+    it('leaves every other channel alone, and never asks who the user is', async () => {
+        const allowed = jest.fn();
+
+        expect(await channelFor('stable', allowed)).toBe('stable');
+        expect(await channelFor('beta', allowed)).toBe('beta');
+        expect(allowed).not.toHaveBeenCalled();
+    });
+
+    it('opens early access only when it is allowed', async () => {
+        expect(await channelFor('early-access', async () => true)).toBe('early-access');
+        expect(await channelFor('early-access', async () => false)).toBe('beta');
+    });
+
+    it('a check that fails is a closed door', async () => {
+        const failing = async () => {
+            throw new Error('network');
+        };
+
+        expect(await channelFor('early-access', failing)).toBe('beta');
     });
 });
 

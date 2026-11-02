@@ -2,10 +2,11 @@ import * as fs from 'fs/promises';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { ComponentRepositoryResolver } from './componentRepositoryResolver';
-import { resolveEffectiveChannel } from './effectiveChannel';
+import { isRepoCollaborator } from './collaboratorGate';
 import { buildGitHubHeaders } from './githubApiClient';
 import type { ReleaseInfo, UpdateCheckResult } from './types';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
+import { channelFor } from '@/core/releases/componentRelease';
 import { readNewestComponentRelease, readNewestRelease } from '@/core/releases/readNewestRelease';
 import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 import { ComponentInstance, Project } from '@/types/base';
@@ -64,10 +65,8 @@ export class UpdateManager {
      */
     async checkExtensionUpdate(): Promise<UpdateCheckResult> {
         const currentVersion = this.context.extension.packageJSON.version;
-        const channel = await resolveEffectiveChannel(
-            this.getUpdateChannel(),
-            this.context.secrets,
-            this.logger,
+        const channel = await channelFor(this.getUpdateChannel(), () =>
+            isRepoCollaborator(this.context.secrets, this.logger),
         );
 
         const latestRelease = await this.fetchLatestRelease(this.EXTENSION_REPO, channel);
@@ -103,10 +102,8 @@ export class UpdateManager {
      * @returns Array of components with updates, each containing list of affected projects
      */
     async checkAllProjectsForUpdates(projects: Project[]): Promise<MultiProjectUpdateResult[]> {
-        const channel = await resolveEffectiveChannel(
-            this.getUpdateChannel(),
-            this.context.secrets,
-            this.logger,
+        const channel = await channelFor(this.getUpdateChannel(), () =>
+            isRepoCollaborator(this.context.secrets, this.logger),
         );
 
         // Collect all unique component IDs across all projects
