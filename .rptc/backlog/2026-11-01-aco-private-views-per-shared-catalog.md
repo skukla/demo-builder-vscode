@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: med
-status: planned
+status: active
 parent: PL-60
 ---
 
@@ -63,3 +63,5 @@ It carries a stand-in label on screen. The closed decision's reasoning stands as
 - 2026-11-01  docs(updates): a moved tag reaches new projects, a release reaches existing ones (`11b4d24aa`)
 - 2026-11-01  docs(aco): the open questions tested in a browser, and three findings filed (`35aa9c286`)
 - 2026-11-02  Reopened by the owner: a labelled stand-in that comes off at GA. Live tests passed for the tag, mesh signing and shared catalog reads; a real order is approved for the build
+- 2026-11-01  feat(mesh): a deploy sends the mesh's secrets file when it has one (`9deea68b4`)
+- 2026-11-01  docs(aco): reopen private company catalogs as a stand-in that comes off (`d13dbeead`)
