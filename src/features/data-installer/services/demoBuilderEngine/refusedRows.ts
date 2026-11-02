@@ -18,6 +18,7 @@
  * @module features/data-installer/services/demoBuilderEngine/refusedRows
  */
 
+import { dataTypeLabel } from '../../ui/dataTypeLabel';
 import { type CatalogSession, type KindContext, MissingNameError, type SkippedRow } from './kindContext';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 
@@ -115,7 +116,7 @@ export async function tryRow<T>(
 /** The one line an install says about what it skipped, naming each row, or nothing. */
 export function skippedLine(skipped: readonly SkippedRow[] | undefined): string | undefined {
     if (!skipped || skipped.length === 0) return undefined;
-    const rows = skipped.map((row) => `${row.kind} ${row.key} (${row.reason.replace(/\.$/u, '')})`);
+    const rows = skipped.map((row) => `${dataTypeLabel(row.kind).toLowerCase()} ${row.key} (${row.reason.replace(/\.$/u, '')})`);
     const count = skipped.length === 1 ? '1 row' : `${skipped.length} rows`;
     return `Skipped ${count}, and installed the rest: ${rows.join('; ')}.`;
 }

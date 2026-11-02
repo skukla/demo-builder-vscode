@@ -174,7 +174,7 @@ describe('a settings layer the install cannot use', () => {
 
         expect(sent[0]).toEqual(CATEGORY_POST);
         expect(status.perType.categories).toBe('success');
-        expect(status.note).toContain(`store_config ${LIST}@default`);
+        expect(status.note).toContain(`store config ${LIST}@default`);
         expect((await readInstallRecord(files, PROJECT, PACK))?.created.map((o) => o.id)).toEqual(['40', `${GRID}@default`]);
 
         const removal = await engine.startDelete(request());

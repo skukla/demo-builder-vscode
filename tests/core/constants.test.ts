@@ -146,8 +146,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // v46: AGENTS.md says the smart-404 recovery script lives in 404.html, not delayed.js.
     // v47: import-datapack and diagnose-demo say a pack's root goes under the store's own root,
     // and only a shared root leaves the one Admin step (datapack-engine step 12).
-    it("is 47 (the skills say only a shared store root leaves a pack's root by hand)", () => {
-        expect(AI_CONTEXT_VERSION).toBe(48);
+    // 49: import-datapack says an import installs what is ticked, and a removal takes the whole record.
+    it('is 49 (the import skill says ticks choose what goes in, and a removal takes the record)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(49);
     });
 });
 

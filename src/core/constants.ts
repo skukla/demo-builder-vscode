@@ -323,7 +323,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // record points to Clear demo data; a pack can be saved from any store with the items picked;
 // and an ACO pack can be made from the store. Existing projects would keep telling the agent one
 // bad row stops everything and that only a pack the engine installed can be saved.
-export const AI_CONTEXT_VERSION = 48;
+// v49 (2026-11-02, datapack ticks): import-datapack says Demo Builder's engine installs only the
+// dataTypes named and what they need, and that its removal takes all the record lists, whichever
+// are sent. Existing projects would keep telling the agent removal scope follows dataTypes.
+export const AI_CONTEXT_VERSION = 49;
 
 /**
  * Component IDs for standardized component instance access

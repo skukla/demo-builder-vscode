@@ -5,7 +5,7 @@
  */
 
 import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
-import { rebaseRecord } from '@/features/data-installer/services/demoBuilderEngine/recordFingerprints';
+import { rebaseRecord, recordFingerprints } from '@/features/data-installer/services/demoBuilderEngine/recordFingerprints';
 import { packedFingerprint } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
 import { fakeContext } from './demoBuilderEngine.testUtils';
 
@@ -50,5 +50,20 @@ describe('rebaseRecord', () => {
         });
 
         expect(source).toMatchObject({ kind: 'sources', id: 'east', key: 'east', previous: { enabled: false } });
+    });
+});
+
+describe('recordFingerprints', () => {
+    const RACK = { id: 41, name: 'Racks', path: '1/2/41', is_active: true };
+    const stored = { 'categories/41': RACK, 'categories/2': { id: 2, name: 'Default Category', path: '1/2' } };
+    const items = { categories: { categories: [{ category: { name: 'Racks', path: 'Default Category', is_active: true } }] } };
+
+    it('hashes an unhashed object of a kind this install ran', async () => {
+        const ctx = await fakeContext(stored);
+        await ctx.recorder.record({ kind: 'categories', id: '41' });
+
+        await recordFingerprints(ctx, items);
+
+        expect(ctx.recorder.created[0].fingerprint).toEqual(expect.any(String));
     });
 });

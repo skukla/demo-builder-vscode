@@ -13,12 +13,14 @@
  * | a setting Commerce refuses, or one with no value anywhere | the data stays; the note names it by path |
  * | the library cannot be asked | the data goes in; the note says so; a recorded setting is left alone |
  * | no layer, and the record lists settings | they are put back, as for a pack that drops a setting |
+ * | the install is of part of the pack (`settingsAsked`) | settings are left alone, set or not, and the note says a layer was not applied |
  *
  * @module features/data-installer/services/demoBuilderEngine/layerStep
  */
 
 import { STORE_CONFIG_KIND } from '../datapackCatalog';
 import { type SettingsLayer, layerNotAskedLine } from '../settingsLayer';
+import { settingsAsked } from './askedKinds';
 import type { CreatedObject } from './installRecord';
 import type { KindContext } from './kindContext';
 import type { KeptThing } from './repeatInstall';
@@ -32,8 +34,10 @@ export type FindLayer = (pack: DatapackId) => Promise<SettingsLayer | undefined>
 
 /** What a pack's layer turned out to be, for this install. */
 export type LayerLookup =
-    /** Nothing looks here: the service's engine, or the kinds asked about leave settings out. */
+    /** Nothing looks here: the service's engine, or part of a pack that holds settings itself or has no layer. */
     | { state: 'off' }
+    /** The pack has a layer, and this install is of part of the pack: left alone, set or not. */
+    | { state: 'left-out'; layer: SettingsLayer }
     /** The pack holds `store_config`, and wins. */
     | { state: 'own' }
     | { state: 'none' }
@@ -54,6 +58,20 @@ export async function lookUpLayer(find: FindLayer | undefined, pack: DatapackId,
     } catch {
         return { state: 'unasked', pack };
     }
+}
+
+/**
+ * The layer as this request sees it: settings a request does not touch are neither set nor put back,
+ * whatever the record lists (`settingsAsked`). A library that cannot be asked then costs nothing.
+ *
+ * @param all - every row the pack holds, not only the kinds asked for: a pack's own settings win
+ *   over its layer whether or not they are asked for
+ * @param dataTypes - the kinds asked for; all the pack holds when absent
+ */
+export async function lookUpAskedLayer(find: FindLayer | undefined, pack: DatapackId, all: Record<string, unknown>, dataTypes: readonly string[] | undefined): Promise<LayerLookup> {
+    const lookup = await lookUpLayer(find, pack, all);
+    if (settingsAsked(all, dataTypes)) return lookup;
+    return lookup.state === 'found' ? { state: 'left-out', layer: lookup.layer } : { state: 'off' };
 }
 
 /** The pack's rows with the layer's beside them, for a check that names what a pack holds. */
@@ -113,8 +131,14 @@ export function settingsDoneLine(lookup: LayerLookup, ctx: Pick<KindContext, 'se
     return line && lookup.state === 'found' ? `From ${labelPack(lookup.layer.id)}: ${line}` : line;
 }
 
-/** The note's line when the layer could not be looked at, or stopped. */
+/** Why a layer was not applied to an install of part of its pack. */
+export function layerLeftOutLine(layer: Pick<SettingsLayer, 'id'>): string {
+    return `The store settings in ${labelPack(layer.id)} were left as they are: they go in when every data type is imported.`;
+}
+
+/** The note's line when the layer was left out, could not be looked at, or stopped. */
 export function layerTroubleLine(lookup: LayerLookup, stopped: string | undefined): string | undefined {
+    if (lookup.state === 'left-out') return layerLeftOutLine(lookup.layer);
     if (lookup.state === 'unasked') return layerNotAskedLine(lookup.pack.name, 'were not applied');
     if (stopped === undefined) return undefined;
     const whose = lookup.state === 'found' ? labelPack(lookup.layer.id) : 'the settings layer';

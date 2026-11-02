@@ -28,6 +28,7 @@ import { installCompanies, parseCompanyRows } from './companiesKind';
 import { COUPON_KIND, installCoupons, parseCouponRows } from './couponsKind';
 import { installCustomerGroups, installCustomers, parseCustomerGroupRows, parseCustomerRows } from './customerKinds';
 import {
+    type InstallRecord,
     type RecordFiles,
     forgetInstallRecord,
     openInstallRecord,
@@ -53,6 +54,7 @@ import {
     parseStocks,
 } from './stockKinds';
 import { STORE_CONFIG_KIND, installStoreConfig, packSettings, putBackSettings } from './storeConfigKind';
+import { packKindOf } from './storeCopies';
 import { UrlKeyClashError, placedClashes } from './urlKeyClashes';
 import type { DatapackId } from '@/types/datapack';
 
@@ -178,9 +180,11 @@ export interface InstallOutcome {
 }
 
 /**
- * Install every kind the pack holds, in order. Installing again brings what this engine made up
- * to the pack, takes out what the pack no longer has, and keeps the SC's own edits
- * (`repeatInstall.ts`); then everything made or changed is read back and hashed.
+ * Install every kind in `packItems`, in order. A caller installing part of a pack hands in only
+ * those kinds (`askedRows`), so nothing here sees the rest: not installed, not compared, and still on
+ * the record. Installing again brings what this engine made of these kinds up to the pack, takes out
+ * rows the pack no longer has, and keeps the SC's own edits (`repeatInstall.ts`); then what was made
+ * or changed is read back and hashed.
  *
  * @param onKind - called as each kind starts, for progress
  * @throws UnsupportedKindsError before any write, when the pack holds a kind not listed above
@@ -245,6 +249,16 @@ export interface RemovalResult {
     settings?: SettingsDone;
     /** The kept root's Admin step, when a store shows the pack's root (step 12). */
     keptRoot?: KeptRootStep;
+}
+
+/**
+ * What a removal of this record takes, by pack kind in install order: what it lists, and what it is
+ * waiting to hear about, since a create that landed unanswered goes too. Read by the confirm and by
+ * the removal's own job, so a removal says what it does whatever an install was asked for.
+ */
+export function kindsOnRecord(record: Pick<InstallRecord, 'created' | 'pending'>): string[] {
+    const kinds = new Set([...record.created, ...(record.pending ?? [])].map((object) => packKindOf(object.kind)));
+    return [...INSTALLABLE_KINDS.filter((kind) => kinds.has(kind)), ...[...kinds].filter((kind) => !INSTALLABLE_KINDS.includes(kind))];
 }
 
 /**

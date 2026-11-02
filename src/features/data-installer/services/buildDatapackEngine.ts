@@ -85,7 +85,7 @@ export function buildDatapackEngine(id: DatapackEngineId, access: DatapackEngine
     });
     return demoBuilderEngine({
         commerce: projectCommerce(access),
-        readPack: (pack, _dataTypes, source) => readPackItems(access, pack, source),
+        readPack: (pack, source) => readPackItems(access, pack, source),
         projectPath: access.project.path,
         log,
         onJobEnd: (end) => void writeActivity(end),

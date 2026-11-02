@@ -7,11 +7,12 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import type { DatapackRemovalChanges } from '../../removalChanges';
+import type { DatapackRemovalChanges, DatapackRemovalScope } from '../../removalChanges';
 import { type ConfirmContent, FRESH_CHOICE, type RemovalAnswer, type RemovalChoice, confirmContent, removalAnswer, toggleAlways, toggleSave } from '../components/removalConfirm';
 import { useDataInstallerRequest } from './useDataInstallerRequest';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import type { DatapackId } from '@/types/datapack';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 /** What the confirm's body needs. */
@@ -83,4 +84,29 @@ export function useRemovalConfirm(): RemovalConfirm {
         onToggleSave: useCallback(() => setChoice(toggleSave), []),
         onToggleAlways: useCallback(() => setChoice(toggleAlways), []),
     };
+}
+
+/** What a removal of this pack takes, as the form and the confirm need it. */
+export interface RemovalScope {
+    /** The kinds on its install record; null with no record, or one that cannot be read. */
+    recordedKinds: string[] | null;
+    /** A removal takes all the record lists, so nothing has to be ticked first. */
+    removesAll: boolean;
+    /** The read has answered at least once. */
+    settled: boolean;
+}
+
+/**
+ * Whether Demo Builder's engine installed this pack, and so what a removal of it would take. Without
+ * a record the service removes the types it is sent. Read each time the form shows: an import or a
+ * removal since the last look moved the record.
+ */
+export function useRemovalScope(pack: DatapackId, showingForm: boolean): RemovalScope {
+    const { load, value, settled } = useDataInstallerRequest<DatapackRemovalScope>('get-datapack-removal-scope');
+    const { name, version } = pack;
+    useEffect(() => {
+        if (showingForm) load({ datapackName: name, version });
+    }, [showingForm, load, name, version]);
+    const recordedKinds = value?.recordedKinds ?? null;
+    return { recordedKinds, removesAll: (recordedKinds?.length ?? 0) > 0, settled };
 }

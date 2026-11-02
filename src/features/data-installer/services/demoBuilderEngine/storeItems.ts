@@ -23,12 +23,31 @@
  * | product_attributes | `GET products/attributes`, every page; `is_user_defined` | the item yes; the list **no** |
  * | attribute_sets | `GET products/attribute-sets/sets/list` | yes (`loadStoreSets`) |
  *
+ * `countStoreItems` answers how many without reading them (`searchCriteria[pageSize]=1`, read back
+ * as `total_count`), every filter sent to Commerce so a count is the list's own scope. Filters read
+ * live on the shared sandbox, 2026-11-02, each against the whole list:
+ *
+ * | Kind | Filters | Agrees with the list? |
+ * |---|---|---|
+ * | products, giftcards | `website_id` eq, `type_id` neq or eq `giftcard` | yes |
+ * | categories | `path` like `1/<root>/%` (1 is Commerce's tree root) | yes |
+ * | customers | `website_id` eq | yes; it also confirms the list's filter |
+ * | customer_groups | `customer_group_code` nin Commerce's own (`code` answers 400 in a filter) | yes |
+ * | b2b_shared_catalogs | `type` neq the public catalog's | yes |
+ * | product_attributes | `is_user_defined` eq 1 | yes |
+ * | attribute_sets | `entity_type_id` eq 4, `attribute_set_name` neq `Default` | yes |
+ * | cart_rules | none: `website_ids` answers 400 "can't be used in filter" | the whole store's rules |
+ * | b2b_companies | none: scoped by who works there, read from each customer | the whole store's companies |
+ *
+ * So a count of cart rules or companies is a ceiling. Zero still means none; anything above zero
+ * says nothing until the list has answered.
+ *
  * Reads only.
  *
  * @module features/data-installer/services/demoBuilderEngine/storeItems
  */
 
-import { LEFT_OUT_KINDS, type LeftOut, type PickableKind, type StoreItem, type StorePicks, PICKABLE_KINDS } from '../../pickableKinds';
+import { LEFT_OUT_KINDS, type LeftOut, type PickableKind, type StoreItem, type StoreKindCounts, type StorePicks, PICKABLE_KINDS } from '../../pickableKinds';
 import { readCategoryTree, readWebsiteCustomers, readWebsiteProducts, type WipeCategory } from '../demoDataWipe/wipeReads';
 import { CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
 import { PUBLIC_CATALOG_TYPE, readCatalogs } from './b2bReads';
@@ -39,7 +58,7 @@ import type { KindContext } from './kindContext';
 import { keyOf } from './packForm';
 import { GIFT_CARD_KIND } from './productsKind';
 import { named } from './saveOutcome';
-import { absentAsEmpty, readAllPages } from '@/features/app-builder/services/erpFillReaders';
+import { absentAsEmpty, CommerceReadError, readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceSalesRule } from '@/types/commerceSalesRule';
 import type { CommerceCompanyRow, CommerceCustomer, CommerceCustomerGroup, CommerceProduct, CommerceProductAttribute } from '@/types/commerceWire';
 
@@ -166,6 +185,75 @@ const LISTERS: Record<PickableKind, Lister> = {
  */
 export function listStoreItems(ctx: KindContext, kind: PickableKind): Promise<KindItems> {
     return LISTERS[kind](ctx);
+}
+
+/** One filter of a count, as Commerce's search criteria name it. */
+type CountFilter = readonly [field: string, condition: 'eq' | 'neq' | 'like' | 'nin', value: string | number];
+
+/** One kind's count: the route its list reads, and the filters that make it the list's scope. */
+interface KindCount {
+    path: string;
+    filters?: (ctx: KindContext) => CountFilter[];
+    /** A store without B2B answers this route 404, which the list reads as none. */
+    absentIsNone?: boolean;
+}
+
+const websiteFilter = (ctx: KindContext): CountFilter => ['website_id', 'eq', websiteOf(ctx)];
+
+const COUNTS: Record<PickableKind, KindCount> = {
+    products: { path: 'products', filters: (ctx) => [websiteFilter(ctx), ['type_id', 'neq', GIFT_CARD_TYPE]] },
+    [GIFT_CARD_KIND]: { path: 'products', filters: (ctx) => [websiteFilter(ctx), ['type_id', 'eq', GIFT_CARD_TYPE]] },
+    categories: { path: 'categories/list', filters: (ctx) => [['path', 'like', `1/${ctx.session.rootCategory.id}/%`]] },
+    [CART_RULE_KIND]: { path: 'salesRules/search' },
+    [CUSTOMER_KIND]: { path: 'customers/search', filters: (ctx) => [websiteFilter(ctx)] },
+    [COMPANY_KIND]: { path: 'company', absentIsNone: true },
+    [CUSTOMER_GROUP_KIND]: { path: 'customerGroups/search', filters: () => [['customer_group_code', 'nin', [...COMMERCE_GROUPS].join(',')]] },
+    [CATALOG_KIND]: { path: 'sharedCatalog', filters: () => [['type', 'neq', PUBLIC_CATALOG_TYPE]], absentIsNone: true },
+    product_attributes: { path: 'products/attributes', filters: () => [['is_user_defined', 'eq', 1]] },
+    attribute_sets: { path: 'products/attribute-sets/sets/list', filters: () => [['entity_type_id', 'eq', PRODUCT_ENTITY_TYPE], ['attribute_set_name', 'neq', DEFAULT_SET]] },
+};
+
+/** Each filter its own group, so a read must pass them all. */
+function criteriaOf(filters: readonly CountFilter[]): string {
+    return filters
+        .map(([field, condition, value], group) => {
+            const at = `&searchCriteria[filterGroups][${group}][filters][0]`;
+            return `${at}[field]=${field}${at}[value]=${encodeURIComponent(String(value))}${at}[conditionType]=${condition}`;
+        })
+        .join('');
+}
+
+/** One kind's `total_count`. An answer without one throws: it must never read as none. */
+async function countOf(ctx: KindContext, { path, filters, absentIsNone }: KindCount): Promise<number> {
+    try {
+        const criteria = criteriaOf(filters?.(ctx) ?? []);
+        const answer = (await ctx.get(`${path}?searchCriteria[currentPage]=1&searchCriteria[pageSize]=1&fields=total_count${criteria}`)) as { total_count?: unknown };
+        if (typeof answer.total_count !== 'number') throw new Error(`${path} answered no total_count.`);
+        return answer.total_count;
+    } catch (error) {
+        if (absentIsNone && error instanceof CommerceReadError && error.status === 404) return 0;
+        throw error;
+    }
+}
+
+/**
+ * How many of each kind the store has, all read at once, none of them in full. A kind whose read
+ * fails is logged and left out, so its card stays as it was and its list reports the failure.
+ *
+ * @param ctx - read access; `session` is the install target's
+ */
+export async function countStoreItems(ctx: KindContext): Promise<StoreKindCounts> {
+    const answers = await Promise.all(
+        PICKABLE_KINDS.map(async (kind): Promise<[PickableKind, number] | undefined> => {
+            try {
+                return [kind, await countOf(ctx, COUNTS[kind])];
+            } catch (error) {
+                ctx.log(`could not count the store's ${kind}: ${error instanceof Error ? error.message : String(error)}`);
+                return undefined;
+            }
+        }),
+    );
+    return Object.fromEntries(answers.filter((answer) => answer !== undefined));
 }
 
 /**

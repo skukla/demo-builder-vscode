@@ -44,7 +44,7 @@ import type { ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportScopes } from '../hooks/useImportScopes';
 import { useJobPickup } from '../hooks/useJobPickup';
-import { useRemovalConfirm } from '../hooks/useRemovalConfirm';
+import { useRemovalConfirm, useRemovalScope } from '../hooks/useRemovalConfirm';
 import { useTypeSelection } from '../hooks/useTypeSelection';
 import { ImportDatapackModalBody, type BodyContext, type ModalView } from './ImportDatapackModalBody';
 import { buildActions, busyMessage, closeLabel, isRemoving, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
@@ -208,7 +208,7 @@ export function ImportDatapackModal({
         reset.load({ ...requestBody(), confirm: true, ...answer });
     };
 
-    /** The read names only the pack: a removal takes all it made, whichever types are ticked. */
+    /** The read names only the pack: what a removal would lose does not depend on the ticks. */
     const armReset = (): void => {
         removal.arm({ datapackName: id.name, version: id.version, ...(source === 'library' ? { source } : {}) });
     };
@@ -232,8 +232,18 @@ export function ImportDatapackModal({
     // as on success, so a discovery that FAILS re-enables Start rather than
     // stranding it. That matters because targeting is optional — an import with
     // no target is legitimate, and must stay possible when discovery cannot run.
-    const canStart =
-        commerceInstance.length > 0 && selected.length > 0 && !busy && !scope.loading;
+    const ready = commerceInstance.length > 0 && !busy && !scope.loading;
+    const canStart = ready && selected.length > 0;
+    const view = resolveView({
+        busy,
+        readingChanges: removal.reading,
+        resetArmed: removal.armed,
+        running,
+        watching,
+        result,
+        noInstance: !commerceInstance && target.settled,
+    });
+    const { recordedKinds, removesAll, settled: scopeSettled } = useRemovalScope(id, view === 'form');
 
     const bodyContext: BodyContext = {
         displayName,
@@ -241,6 +251,7 @@ export function ImportDatapackModal({
         availableTypes,
         selected,
         allSelected,
+        recordedKinds,
         record,
         result,
         // Saving first has stages of its own (step 05), in the same wait, before the removal's.
@@ -254,16 +265,6 @@ export function ImportDatapackModal({
         toggle,
         toggleAll,
     };
-
-    const view = resolveView({
-        busy,
-        readingChanges: removal.reading,
-        resetArmed: removal.armed,
-        running,
-        watching,
-        result,
-        noInstance: !commerceInstance && target.settled,
-    });
 
     // Closing a job that is still RUNNING hands it to a progress notification,
     // so the SC keeps seeing where it is — the same handover every progress
@@ -298,13 +299,15 @@ export function ImportDatapackModal({
                 wide={frame.wide}
                 hideClose={frame.hideClose}
                 fitContent
-                waiting={waitOf(view, scope.loading || !target.settled, bodyContext.busyMessage)}
+                waiting={waitOf(view, scope.loading || !target.settled || !scopeSettled, bodyContext.busyMessage)}
                 holdSize={view === 'watching'}
                 onClose={view === 'reading-changes' ? removal.disarm : close}
                 closeLabel={closeLabel(view, savingFirst)}
                 actionButtons={buildActions({
                     view,
                     canStart,
+                    canRemove: ready && (removesAll || selected.length > 0),
+                    removesAll,
                     checking: dryRun.loading,
                     starting: start.loading,
                     resetting: reset.loading,

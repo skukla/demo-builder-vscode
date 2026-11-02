@@ -22,12 +22,12 @@
  * which ids it kept because the store could not name them (`saveOutcome.ts`).
  *
  * `listPickable` is the save's pick list: one kind of the store's items, less what the pack being
- * saved holds already.
+ * saved holds already. `countPickable` is what its cards are greyed by: how many of each kind.
  *
  * @module features/data-installer/services/demoBuilderEngine/saveStore
  */
 
-import { type LeftOut, type PickableKind, type StoreItemPage, type StorePicks, pickCount } from '../../pickableKinds';
+import { type LeftOut, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../pickableKinds';
 import { STORE_CONFIG_KIND, settingsLayerName } from '../datapackCatalog';
 import type { PackWriteOutcome } from '../datapackTransfer';
 import type { DatapackFile } from '../datapackZip';
@@ -38,7 +38,7 @@ import { rebaseRecord } from './recordFingerprints';
 import { packRowRefusals } from './runPack';
 import { layerLine, leftOutLine, savedSentence, saveSentence, unnamedLine } from './saveOutcome';
 import { type StoreChangesDeps, StoreChangesError, labelPack, openStore } from './storeAccess';
-import { holdsOf, leftOutOf, listStoreItems, seedsOf } from './storeItems';
+import { countStoreItems, holdsOf, leftOutOf, listStoreItems, seedsOf } from './storeItems';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
@@ -245,4 +245,15 @@ export async function listPickable(deps: StoreChangesDeps, kind: PickableKind, p
     const holds = holdsOf(kind, record?.created ?? [], rows);
     const offered = items.filter((item) => !holds(item));
     return { items: offered, totalCount: items.length, excludedCount: excluded, inPackCount: items.length - offered.length };
+}
+
+/**
+ * How many of each kind the store has, pointed where `listPickable` reads, so a count is of the
+ * list's own website and root. Reads only.
+ *
+ * @param pack - the pack being saved, when there is one
+ */
+export async function countPickable(deps: StoreChangesDeps, pack?: DatapackId): Promise<StoreKindCounts> {
+    const record = pack ? await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack) : undefined;
+    return countStoreItems(await openStore(deps, pack, record));
 }

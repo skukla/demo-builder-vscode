@@ -12,16 +12,21 @@
  * The request's Commerce credentials are not used: this engine signs with the project's own
  * access, as the ERP work does.
  *
+ * An install honours the request's kinds (`askedKinds.ts`). A removal does not take any: it takes
+ * what the install record lists, so its checks ask nothing of the pack, which may be long gone.
+ *
  * @module features/data-installer/services/demoBuilderEngine/engine
  */
 
 import * as crypto from 'crypto';
 import type { DataTypeStatus, ImportStart, KeptRootStep, ValidationResult } from '../../types';
+import { dataTypeLabel } from '../../ui/dataTypeLabel';
 import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient';
 import type { DatapackEngine } from '../datapackEngine';
+import { askedRows, kindsAddedFor } from './askedKinds';
 import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
 import { resolveEngineTarget, sessionFor } from './installTarget';
-import { type FindLayer, type LayerLookup, applySettingsLayer, layerKept, layerProblems, layerTroubleLine, lookUpLayer, settingsDoneLine, withLayerRows } from './layerStep';
+import { type FindLayer, type LayerLookup, applySettingsLayer, layerKept, layerProblems, layerTroubleLine, lookUpAskedLayer, settingsDoneLine, withLayerRows } from './layerStep';
 import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
 import { type RootStepAsker, rootStepLine } from './packRootStep';
 import { ambiguousKeysLine } from './productLookups';
@@ -30,6 +35,7 @@ import { containersLine } from './removers';
 import { keptLine } from './repeatInstall';
 import { type PackItems, PackRowsError, installPack, packRowProblems, removePack, unsupportedKinds } from './runPack';
 import { STORE_CONFIG_KIND, settingsLine, settingsWebsite } from './storeConfigKind';
+import { andList } from '@/core/utils/andList';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -38,8 +44,8 @@ import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 export interface DemoBuilderEngineDeps {
     /** The project's signed Commerce access, or why there is none. */
     commerce: () => Promise<{ get: CommerceGet; send: CommerceSend } | { refusal: string }>;
-    /** The pack's rows for the kinds asked, from the store that holds it. */
-    readPack: (id: DatapackId, dataTypes: string[], source: DatapackStoreName) => Promise<PackItems>;
+    /** Every row the pack holds, from the store that holds it. What a request installs is decided here. */
+    readPack: (id: DatapackId, source: DatapackStoreName) => Promise<PackItems>;
     projectPath: string;
     log: (line: string) => void;
     files?: RecordFiles;
@@ -111,7 +117,7 @@ async function access(deps: DemoBuilderEngineDeps): Promise<{ get: CommerceGet; 
  * a repeat install compares what it made where it made it, and one record spans one website. A
  * record made before the target was kept says it by the website its settings went to.
  */
-async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, target: TargetCodes): Promise<string | undefined> {
+async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, target: TargetCodes, ask = 'Remove it first, or install it there.'): Promise<string | undefined> {
     const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id);
     if (!record) return undefined;
     const website = record.target?.websiteCode ?? settingsWebsite(record.created);
@@ -119,13 +125,19 @@ async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, ta
     const otherView = record.target !== undefined && record.target.storeCode !== target.storeCode;
     if (!moved && !otherView) return undefined;
     const where = moved ? `the website ${website}` : `the store view ${record.target?.storeCode}`;
-    return `${request.id.name}@${request.id.version} is installed on ${where}. Remove it first, or install it there.`;
+    return `${request.id.name}@${request.id.version} is installed on ${where}. ${ask}`;
 }
 
 /** Why the pack cannot answer the request, when it lacks a kind the request asks for. */
 function missingKinds(request: ImportRequest, items: PackItems): string | undefined {
     const missing = request.dataTypes.filter((kind) => !(kind in items));
     return missing.length > 0 ? `The pack holds no ${missing.join(', ')}.` : undefined;
+}
+
+/** The note's line for what an install added because the kinds asked for need it; the form ticks these itself. */
+function addedKindsLine(all: PackItems, dataTypes: readonly string[]): string | undefined {
+    const added = kindsAddedFor(all, dataTypes);
+    return added.length > 0 ? `Also installed ${andList(added.map((kind) => dataTypeLabel(kind).toLowerCase()))}: the data types asked for need them.` : undefined;
 }
 
 /** Every reason the pack's and its layer's rows cannot be installed, before the first write. */
@@ -138,9 +150,10 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     if (!request.target) throw new Error(NO_TARGET);
     const conflict = await elsewhere(deps, request, request.target);
     if (conflict) throw new Error(conflict);
-    const items = await deps.readPack(request.id, request.dataTypes, request.source ?? 'installer');
-    const lookup = await lookUpLayer(deps.findLayer, request.id, items);
-    const missing = missingKinds(request, withLayerRows(items, lookup));
+    const all = await deps.readPack(request.id, request.source ?? 'installer');
+    const items = askedRows(all, request.dataTypes);
+    const lookup = await lookUpAskedLayer(deps.findLayer, request.id, all, request.dataTypes);
+    const missing = missingKinds(request, withLayerRows(all, lookup));
     if (missing) throw new Error(missing);
     const refused = layerProblems(lookup, request.target.websiteCode);
     if (refused.length > 0) throw new PackRowsError(rowProblems(items, lookup, request.target.websiteCode));
@@ -164,6 +177,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     if (STORE_CONFIG_KIND in job.perType && lookup.state === 'found') job.perType[STORE_CONFIG_KIND] = layerStopped ? 'error' : 'success';
     if (layerStopped) job.reason = layerStopped;
     job.note = [
+        addedKindsLine(all, request.dataTypes),
         skippedLine(session.skipped),
         keptLine([...outcome.kept, ...layerKept(lookup, ctx)]),
         containersLine(outcome.containers),
@@ -220,13 +234,25 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 const conflict = await elsewhere(deps, request, request.target);
                 if (conflict) return { valid: false, reason: conflict };
                 // Step 14 item 2: the pack's rows, every kind's, as the install checks them before its first write.
-                const items = await deps.readPack(request.id, request.dataTypes, request.source ?? 'installer');
-                const lookup = await lookUpLayer(deps.findLayer, request.id, items);
-                const missing = missingKinds(request, withLayerRows(items, lookup));
+                const all = await deps.readPack(request.id, request.source ?? 'installer');
+                const items = askedRows(all, request.dataTypes);
+                const lookup = await lookUpAskedLayer(deps.findLayer, request.id, all, request.dataTypes);
+                const missing = missingKinds(request, withLayerRows(all, lookup));
                 if (missing) return { valid: false, reason: missing };
                 const problems = rowProblems(items, lookup, request.target.websiteCode);
                 if (problems.length > 0) return { valid: false, reason: new PackRowsError(problems, 'would be').message };
                 await resolveEngineTarget((await access(deps)).get, request.target);
+                return { valid: true };
+            } catch (error) {
+                return { valid: false, reason: errorText(error) };
+            }
+        },
+        async validateRemoval(request): Promise<ValidationResult> {
+            try {
+                // The one thing a removal needs of the request: that the store it names is where the record says.
+                const conflict = request.target ? await elsewhere(deps, request, request.target, 'Choose that one to remove it.') : undefined;
+                if (conflict) return { valid: false, reason: conflict };
+                await access(deps);
                 return { valid: true };
             } catch (error) {
                 return { valid: false, reason: errorText(error) };

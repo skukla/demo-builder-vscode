@@ -26,6 +26,8 @@ import { buildDatapackEngine, engineThatInstalled } from '../services/buildDatap
 import { selectedDatapackEngine } from '../services/dataInstallerConfig';
 import type { ImportRequest, ImportTarget } from '../services/dataInstallerWriteClient';
 import type { DatapackEngine } from '../services/datapackEngine';
+import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
+import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { ImportJobRecord } from '../types';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
@@ -105,6 +107,7 @@ export const importHandlers = defineHandlers({
         // malformed. A 202 from the async entry point would not.
         return runAndWatch(context, engine, request, {
             operation: 'import',
+            validate: () => engine.validateImport(request),
             begin: () => engine.startImport(request),
             rejected: 'The Data Installer rejected this import request.',
             failed: 'The import could not be started.',
@@ -165,6 +168,10 @@ export const importHandlers = defineHandlers({
      * watching the same kind of activation id. That the runner needs no changes
      * is the seam working as designed.
      *
+     * **What it takes depends on who installed it.** The service removes the types
+     * it is sent. Demo Builder's engine removes what its install record lists, so
+     * the types sent are not asked for and the job reports the record's kinds.
+     *
      * **Confirm-gated.** A reset is destructive and the service has no undo, so it
      * takes the same explicit opt-in the destructive MCP tools use rather than
      * trusting a caller not to send it by accident.
@@ -197,6 +204,7 @@ export const importHandlers = defineHandlers({
         return withSavedNote(
             await runAndWatch(context, engine, request, {
                 operation: 'reset',
+                validate: () => engine.validateRemoval(request),
                 begin: () => engine.startDelete(request),
                 rejected: 'The Data Installer rejected this reset request.',
                 failed: 'The reset could not be started.',
@@ -220,7 +228,7 @@ async function settleBeforeReset(
     context: HandlerContext,
     payload: StartImportPayload | undefined,
 ): Promise<{ saved?: SavedFirst } | { response: HandlerResponse }> {
-    const input = readInput(payload);
+    const input = readInput(payload, 'remove');
     if ('error' in input) {
         return { response: { success: false, error: input.error } };
     }
@@ -284,7 +292,7 @@ async function prepareImport(
 ): Promise<
     { engine: DatapackEngine; request: ImportRequest } | { response: HandlerResponse }
 > {
-    const input = readInput(payload);
+    const input = readInput(payload, write);
     if ('error' in input) {
         return { response: { success: false, error: input.error } };
     }
@@ -299,13 +307,17 @@ async function prepareImport(
     if ('response' in engine) {
         return engine;
     }
+    const dataTypes = write === 'remove' ? await typesToRemove(engine.engine, gate.project.path, pack, input.dataTypes) : input.dataTypes;
+    if (dataTypes.length === 0) {
+        return { response: { success: false, error: 'Select at least one data type to remove.' } };
+    }
     return {
         engine: engine.engine,
         request: {
             id: pack,
             source: input.source,
             commerceInstance: input.commerceInstance,
-            dataTypes: input.dataTypes,
+            dataTypes,
             // A caller that names a scope means it. One that names NONE gets the
             // project's, because the alternative is the SERVICE's `base`/`default`
             // — a scope nobody chose. The modal always sends a pair (its pickers
@@ -322,6 +334,19 @@ async function prepareImport(
     };
 }
 
+
+/**
+ * What a removal reports on. Demo Builder's engine takes what its record lists, whatever was ticked;
+ * a record with nothing left on it still has a job to run, over the types sent.
+ */
+async function typesToRemove(engine: DatapackEngine, projectPath: string, pack: DatapackId, sent: string[]): Promise<string[]> {
+    if (engine.id !== 'demo-builder') {
+        return sent;
+    }
+    const record = await readInstallRecord(nodeRecordFiles, projectPath, pack);
+    const kinds = record ? kindsOnRecord(record) : [];
+    return kinds.length > 0 ? kinds : sent;
+}
 
 /**
  * The engine for one write: for a removal the one that installed the pack, otherwise the one
@@ -370,6 +395,8 @@ async function engineFor(
 /** Validate the payload, returning either usable input or the reason it is not. */
 function readInput(
     payload: StartImportPayload | undefined,
+    // A removal's types are settled once its engine is known (`typesToRemove`).
+    write: 'install' | 'remove' = 'install',
 ):
     | {
           datapackName: string;
@@ -393,7 +420,7 @@ function readInput(
         return { error: 'A Commerce instance is required — it is where the data will be written.' };
     }
     const dataTypes = payload?.dataTypes ?? [];
-    if (dataTypes.length === 0) {
+    if (write === 'install' && dataTypes.length === 0) {
         return { error: 'Select at least one data type to import.' };
     }
     const target = readTarget(payload);

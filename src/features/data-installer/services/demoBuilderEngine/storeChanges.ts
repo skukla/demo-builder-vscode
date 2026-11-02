@@ -10,12 +10,13 @@
  */
 
 import { layerNotAskedLine } from '../settingsLayer';
+import { askedRows } from './askedKinds';
 import { loadStoreSets } from './attributeSetsKind';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import { COUPON_KIND, couponByCode } from './couponsKind';
 import { type CreatedObject, nodeRecordFiles, readInstallRecord } from './installRecord';
 import type { KindContext } from './kindContext';
-import { type LayerLookup, layerProblems, layerRowsToApply, lookUpLayer } from './layerStep';
+import { type LayerLookup, layerLeftOutLine, layerProblems, layerRowsToApply, lookUpAskedLayer } from './layerStep';
 import { placeCategories, rootPlacement } from './packRoot';
 import { rootPreview } from './packRootStep';
 import { productLookups } from './productLookups';
@@ -164,6 +165,7 @@ function settingRows(items: Record<string, unknown>, lookup: LayerLookup, create
 
 /** What the preview says of the layer: nothing when there is none to speak of. */
 async function layerSettings(ctx: KindContext, items: Record<string, unknown>, lookup: LayerLookup, created: readonly CreatedObject[]): Promise<{ counts?: KindChanges; preview?: SettingsPreview }> {
+    if (lookup.state === 'left-out') return { preview: { layer: lookup.layer.id, changes: [], note: layerLeftOutLine(lookup.layer) } };
     if (lookup.state === 'unasked') return { preview: { changes: [], note: layerNotAskedLine(lookup.pack.name, 'are not counted here') } };
     const rows = settingRows(items, lookup, created);
     if (rows === undefined) return {};
@@ -172,15 +174,16 @@ async function layerSettings(ctx: KindContext, items: Record<string, unknown>, l
 }
 
 /**
- * What installing the pack again would do, by kind. Writes nothing to the store or the record.
+ * What installing the pack again would do, by kind, as the install decides it (`askedKinds.ts`).
+ * Writes nothing to the store or the record.
  *
- * @param dataTypes - the kinds to look at; all the pack holds when absent
+ * @param dataTypes - the kinds asked for; all the pack holds when absent
  */
 export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, source: DatapackStoreName, dataTypes?: string[]): Promise<ChangePreview> {
     const all = await deps.readPack(pack, source);
-    const asked = dataTypes ? Object.fromEntries(Object.entries(all).filter(([kind]) => dataTypes.includes(kind))) : all;
+    const asked = askedRows(all, dataTypes);
     const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack);
-    const lookup: LayerLookup = dataTypes && !dataTypes.includes(STORE_CONFIG_KIND) ? { state: 'off' } : await lookUpLayer(deps.findLayer, pack, all);
+    const lookup = await lookUpAskedLayer(deps.findLayer, pack, all, dataTypes);
     const refused = layerProblems(lookup, 'website');
     if (refused.length > 0) throw new StoreChangesError(refused.join(' '));
     const ctx = await openStore(deps, pack, record, asked.categories);

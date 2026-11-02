@@ -27,14 +27,21 @@ describe('previewing a pack with a settings layer', () => {
         expect(preview.kinds.find((k) => k.kind === 'store_config')).toMatchObject({ add: { count: 1, names: [`${GRID}@default`] }, inStore: { count: 1 } });
     });
 
-    it('leaves the layer out when the kinds asked about leave out store_config', async () => {
-        const { d } = await deps(false, {}, ITEMS);
-        const findLayer = jest.fn(async () => foundLayer());
+    it('counts no setting when part of the pack is asked about, and says the layer is left out', async () => {
+        const { d } = await deps(false, {}, { ...ITEMS, products: [] });
 
-        const preview = await previewChanges({ ...d, findLayer }, PACK, 'installer', ['categories']);
+        const preview = await previewChanges({ ...d, findLayer: async () => foundLayer() }, PACK, 'installer', ['categories']);
 
-        expect(findLayer).not.toHaveBeenCalled();
-        expect(preview).not.toHaveProperty('settings');
+        expect(preview.settings).toEqual({ layer: foundLayer().id, changes: [], note: expect.stringContaining('left as they are') });
+        expect(preview.kinds.map((k) => k.kind)).not.toContain('store_config');
+    });
+
+    it('applies the rule to the kinds the pack holds: naming all of them is the whole pack', async () => {
+        const { d } = await deps(false, stored({ [GRID]: '12' }), ITEMS);
+
+        const preview = await previewChanges({ ...d, findLayer: async () => foundLayer() }, PACK, 'installer', ['categories']);
+
+        expect(preview.settings?.changes).toEqual([`${GRID}: 12 → 24`]);
     });
 
     it('says the setting it cannot put back would not be set', async () => {

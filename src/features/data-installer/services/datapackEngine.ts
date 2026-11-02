@@ -37,6 +37,8 @@ export interface DatapackEngine extends JobStatusSource {
     checkCredentials(request: ImportRequest): Promise<CredentialCheck>;
     /** The dry run: whether the request would be accepted. Writes nothing. */
     validateImport(request: ImportRequest): Promise<ValidationResult>;
+    /** Whether a removal of the request's pack would be accepted. Writes nothing. */
+    validateRemoval(request: ImportRequest): Promise<ValidationResult>;
     /** Start installing the pack's data types into the instance. */
     startImport(request: ImportRequest): Promise<ImportStart>;
     /** Start removing what an install of this pack put there. */
@@ -59,6 +61,8 @@ export function serviceEngine(writes: ServiceWrites, jobs: JobStatusSource): Dat
         id: 'service',
         checkCredentials: (request) => writes.checkCredentials(request),
         validateImport: (request) => writes.validateImport(request),
+        // The service has one check, for a removal as for an install.
+        validateRemoval: (request) => writes.validateImport(request),
         startImport: (request) => writes.startImport(request),
         startDelete: (request) => writes.startDelete(request),
         getJobStatus: (activationId) => jobs.getJobStatus(activationId),

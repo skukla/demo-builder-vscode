@@ -53,12 +53,14 @@ async function copiesByKind(ctx: KindContext, objects: readonly CreatedObject[])
 }
 
 /**
- * Read back and hash every recorded object that has no store hash yet.
+ * Read back and hash every recorded object of the kinds this install ran that has no store hash yet.
+ * A kind left out keeps what it has: hashing it now, after an earlier install stopped part way, would
+ * take an edit made since for what the pack wrote.
  *
  * @param items - the pack's rows, by kind, for the hash of the row each object was made from
  */
 export async function recordFingerprints(ctx: KindContext, items: Record<string, unknown>): Promise<void> {
-    const pending = ctx.recorder.created.filter((o) => o.fingerprint === undefined);
+    const pending = ctx.recorder.created.filter((o) => o.fingerprint === undefined && packKindOf(o.kind) in items);
     const copies = await copiesByKind(ctx, pending);
     for (const object of pending) {
         const copy = copies.get(object.kind)?.get(object.id);

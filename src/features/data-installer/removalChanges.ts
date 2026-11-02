@@ -32,6 +32,15 @@ export interface DatapackRemovalChanges {
     alwaysSave: boolean;
 }
 
+/**
+ * What a removal of a pack takes, as the import form is told it (`get-datapack-removal-scope`): the
+ * kinds on its install record, in install order, whatever is ticked. Null when there is no record,
+ * so the service's engine removes it, by the types it is sent.
+ */
+export interface DatapackRemovalScope {
+    recordedKinds: string[] | null;
+}
+
 /** The nouns for the kinds an SC cannot pick but a pack can make. */
 const OTHER_NOUNS: Readonly<Record<string, readonly [string, string]>> = {
     attribute_options: ['attribute option', 'attribute options'],

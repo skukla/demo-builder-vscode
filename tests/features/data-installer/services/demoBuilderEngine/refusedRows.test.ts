@@ -49,6 +49,7 @@ describe('what is the row\'s fault', () => {
         expect(skippedLine([{ kind: 'products', key: 'p2', reason: 'Invalid SKU.' }, { kind: 'categories', key: 'Default Category/Racks/Wall', reason: 'its parent category Racks was skipped' }])).toBe(
             'Skipped 2 rows, and installed the rest: products p2 (Invalid SKU); categories Default Category/Racks/Wall (its parent category Racks was skipped).',
         );
+        expect(skippedLine([{ kind: 'giftcards', key: 'ZZ-GIFT', reason: 'Invalid SKU.' }])).toBe('Skipped 1 row, and installed the rest: gift cards ZZ-GIFT (Invalid SKU).');
         expect(skippedLine([])).toBeUndefined();
     });
 });

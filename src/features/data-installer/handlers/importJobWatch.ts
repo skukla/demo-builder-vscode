@@ -17,13 +17,14 @@
 import type { ImportRequest } from '../services/dataInstallerWriteClient';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { watchImportJob } from '../services/importJobRunner';
-import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
+import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord, type ValidationResult } from '../types';
 import { progressLabel, progressStep, summarizeProgress } from '../ui/importProgress';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import { pushOperationProgress } from '@/core/vscode/operationProgress';
+import type { DatapackId } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -118,7 +119,7 @@ async function watchAndRecord(
                 : {}),
         });
         if (resetOf !== undefined && result.outcome === 'success' && !result.leftInStore) {
-            await clearDatapackOnProject(context, resetOf);
+            await clearDatapackOnProject(context, resetOf, { name: record.datapackName, version: record.version });
         }
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
@@ -164,6 +165,8 @@ export async function runAndWatch(
     spec: {
         operation: ImportJobRecord['operation'];
         begin: () => Promise<{ activationId: string }>;
+        /** What is checked before it begins: an import's rows, a removal's record. */
+        validate: () => Promise<ValidationResult>;
         /** Wording when the service refuses the request shape. */
         rejected: string;
         /** Wording when the call itself fails. */
@@ -171,7 +174,7 @@ export async function runAndWatch(
     },
 ): Promise<HandlerResponse> {
     try {
-        const verdict = await engine.validateImport(request);
+        const verdict = await spec.validate();
         if (!verdict.valid) {
             return { success: false, error: verdict.reason ?? spec.rejected };
         }
@@ -261,15 +264,22 @@ async function recordDatapackOnProject(context: HandlerContext, request: ImportR
  * (`leftInStore`) leaves it too: those stay on the install record, and the next removal is what
  * takes them once they are empty.
  *
- * Only the project the reset was started from: the SC may have opened another in the meantime.
+ * Only the project the reset was started from: the SC may have opened another in the meantime. And
+ * only when the pack removed is the one the project names: a project installs one pack, then
+ * another, and names the last, so removing the first must leave the second named or project reset
+ * stops offering to remove it.
  * The manifest is rebuilt from the project on every write (`projectConfigWriter`, "no merging
  * needed"), so `undefined` genuinely removes the field. Never fatal: the job has ended either way.
  */
-async function clearDatapackOnProject(context: HandlerContext, projectPath: string): Promise<void> {
+async function clearDatapackOnProject(context: HandlerContext, projectPath: string, removed: DatapackId): Promise<void> {
     try {
         const project = await context.stateManager.getCurrentProject();
         if (!project || projectPath === '' || project.path !== projectPath) {
             context.debugLogger.debug('[Data Installer] project datapack left as it was: the reset\'s project is no longer open');
+            return;
+        }
+        if (project.datapack?.name !== removed.name || project.datapack.version !== removed.version) {
+            context.debugLogger.debug(`[Data Installer] project datapack left as it was: ${removed.name}@${removed.version} is not the pack it names`);
             return;
         }
         project.datapack = undefined;

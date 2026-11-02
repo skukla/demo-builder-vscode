@@ -161,13 +161,13 @@ describe('demoBuilderEngine install', () => {
     });
 
     it('reads the pack from the store the request names, the Data Installer when it names none', async () => {
-        const readPack = jest.fn(async (_id: unknown, _kinds: unknown, _source: string) => ITEMS);
+        const readPack = jest.fn(async (_id: unknown, _source: string) => ITEMS);
         const { engine } = await engineWith({}, () => ({}), { readPack });
 
         await settle(engine, (await engine.startImport(request({ source: 'library' }))).activationId);
         await settle(engine, (await engine.startImport(request())).activationId);
 
-        expect(readPack.mock.calls.map((call) => call[2])).toEqual(['library', 'installer']);
+        expect(readPack.mock.calls.map((call) => call[1])).toEqual(['library', 'installer']);
     });
 
     it('fails when the pack does not hold a kind it was asked for', async () => {
@@ -319,17 +319,12 @@ describe('demoBuilderEngine reads', () => {
 
     // Step 14 item 2: the dry run reads the pack's rows, as the service's validate mode does.
     it("dry run reads the pack's rows and names each kind whose rows Commerce could not take", async () => {
-        const asked: string[][] = [];
         const { engine, ctx } = await engineWith({}, () => ({}), {
-            readPack: async (_id, kinds) => {
-                asked.push(kinds);
-                return { attribute_sets: [], categories: { categories: [{ category: { name: 'Sale' } }] } };
-            },
+            readPack: async () => ({ attribute_sets: [], categories: { categories: [{ category: { name: 'Sale' } }] } }),
         });
 
         const verdict = await engine.validateImport(request());
 
-        expect(asked).toEqual([['attribute_sets', 'categories']]);
         expect(verdict.valid).toBe(false);
         expect(verdict.reason).toMatch(/^Nothing would be installed: The pack's categories are not in the shape Commerce takes/u);
         expect(ctx.sent).toStrictEqual([]);

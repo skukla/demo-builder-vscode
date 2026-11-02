@@ -14,9 +14,10 @@
  * @module features/data-installer/handlers/removalChanges
  */
 
-import { type ChangesAnswer, type DatapackRemovalChanges, changesFromPreview, changesSentence } from '../removalChanges';
+import { type ChangesAnswer, type DatapackRemovalChanges, type DatapackRemovalScope, changesFromPreview, changesSentence } from '../removalChanges';
 import { alwaysSaveChangesOnRemoval, changesOnRemoval } from '../services/dataInstallerConfig';
-import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
+import { InstallRecordError, nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
+import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
 import { demoPackSaveFor } from '../services/demoPack';
 import { failure, openProjectStore, openSave, readPayload, saveToOwnPack, type StoreChangesPayload } from './storeChangesHandlers';
@@ -199,8 +200,24 @@ export function contextForProject(context: HandlerContext, project: Project): Ha
     return { ...context, stateManager };
 }
 
-/** The confirm's read: what a removal of this pack would lose. Writes nothing. */
+/** What a removal of this pack takes, when Demo Builder's engine installed it: read from the record alone. */
+async function removalScope(project: Project | undefined, pack: DatapackId): Promise<DatapackRemovalScope> {
+    const record = project ? await readInstallRecord(nodeRecordFiles, project.path, pack) : undefined;
+    return { recordedKinds: record ? kindsOnRecord(record) : null };
+}
+
+/** The form's and the confirm's reads: what a removal of this pack would take, and would lose. Write nothing. */
 export const removalChangesHandlers = defineHandlers({
+    'get-datapack-removal-scope': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
+        const input = readPayload(payload);
+        if ('error' in input) return { success: false, error: input.error };
+        try {
+            return { success: true, data: await removalScope(await context.stateManager.getCurrentProject(), input.pack) };
+        } catch (error) {
+            if (error instanceof InstallRecordError) return { success: false, error: error.message };
+            throw error;
+        }
+    },
     'get-datapack-removal-changes': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
         const input = readPayload(payload);
         if ('error' in input) return { success: false, error: input.error };

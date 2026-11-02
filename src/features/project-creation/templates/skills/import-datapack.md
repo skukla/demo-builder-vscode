@@ -94,7 +94,9 @@ All four, on every write call:
 - `version` — e.g. `main`. There is **no "latest"**; omitting it fails
 - `commerceInstance` — see trap 2
 - `dataTypes` — at least one, from `list_datapack_data_types`. Omitting it does not mean
-  "all"; it fails
+  "all"; it fails. With Demo Builder's own engine (the default) an import writes only these and
+  what they need, and leaves the rest of the pack alone: not installed, not removed. `reset_datapack`
+  is the one exception: with that engine it ignores them, as the next section says
 
 ## Removing data — scoped, not a wipe
 
@@ -106,8 +108,9 @@ It is confirm-gated and **cannot be undone** — the service has no undo — but
 undone" and "unbounded" are different claims, and only the first is true here. Say the
 scope when you ask the user, rather than implying the instance is at risk.
 
-With Demo Builder's own engine (the default), removal takes back only what the project's
-install record lists. A pack this project's engine never installed (the service did, or
+With Demo Builder's own engine (the default), removal takes back everything the project's
+install record lists and nothing else, whichever `dataTypes` you send, so say that to the user
+rather than naming the kinds you sent. A pack this project's engine never installed (the service did, or
 another project did) is refused and nothing is removed by name; to clear what an earlier
 install left, use `check_demo_data` and then `clear_demo_data` (the screen's "Clear demo
 data").

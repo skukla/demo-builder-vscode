@@ -142,6 +142,10 @@ export function buildActions(a: {
     goBack: () => void;
     /** The confirm's main button: `removeLabel`. */
     removeLabel?: string;
+    /** A removal takes all the record lists, whatever is ticked, so the form's button says all. */
+    removesAll?: boolean;
+    /** Whether the form's removal may be pressed; as `canStart` when it does not say. */
+    canRemove?: boolean;
 }): {
     label: string;
     variant: 'secondary' | 'accent' | 'negative' | 'quiet';
@@ -178,7 +182,10 @@ export function buildActions(a: {
         // deletes it and imports the same one again — so the same word meant
         // opposite things one menu apart, and this modal's own confirm text
         // ("cannot be undone") was true here and false there.
-        { label: 'Remove data', variant: 'quiet', onPress: a.armReset, isDisabled: !a.canStart },
+        //
+        // "Remove all data" when Demo Builder's engine installed it: the removal takes what its
+        // record lists, so the button must not read as acting on the ticks above it.
+        { label: a.removesAll ? 'Remove all data' : 'Remove data', variant: 'quiet', onPress: a.armReset, isDisabled: !(a.canRemove ?? a.canStart) },
         { label: 'Dry run', variant: 'quiet', onPress: a.validate, isDisabled: !a.canStart },
         {
             label: 'Import',

@@ -8,7 +8,8 @@
  * id 1) whose store shows root category 2, the Default attribute set (4), the `default` source,
  * and the attributes named in `ATTRIBUTES`. Like Commerce it gives a new category its id and
  * path, and a new product's custom options and their values their own ids, so a capture that
- * kept them would carry this store's ids. Any other route answers 404.
+ * kept them would carry this store's ids. It takes a product or category back out when told to, so
+ * a removal can be read from the store. Any other route answers 404.
  */
 
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
@@ -37,7 +38,7 @@ export interface MemoryStore {
     categories: Map<number, StoreCategory>;
     products: Map<string, CommerceProduct>;
     sourceItems: SourceItem[];
-    sent: Array<{ method: string; path: string }>;
+    sent: Array<{ method: string; path: string; body?: unknown }>;
 }
 
 /** Every `field=value` filter of a search, by field, and its condition. */
@@ -71,7 +72,7 @@ export function memoryStore(): MemoryStore {
     const categories = new Map<number, StoreCategory>([[ROOT.id, ROOT]]);
     const products = new Map<string, CommerceProduct>();
     const sourceItems: SourceItem[] = [];
-    const sent: Array<{ method: string; path: string }> = [];
+    const sent: MemoryStore['sent'] = [];
     let nextId = 100;
 
     const categoryList = (path: string) => {
@@ -81,7 +82,9 @@ export function memoryStore(): MemoryStore {
     const productList = (path: string) => {
         const f = filtersOf(path);
         const website = f.get('website_id');
-        return page([...products.values()].filter((p) => matches(f.get('sku'), p.sku) && matches(f.get('entity_id'), p.id) && (!website || (p.extension_attributes?.website_ids ?? []).map(String).includes(website.value))));
+        const category = f.get('category_id');
+        const inCategory = (p: CommerceProduct) => !category || (p.extension_attributes?.category_links ?? []).some((l) => String(l.category_id) === category.value);
+        return page([...products.values()].filter((p) => matches(f.get('sku'), p.sku) && matches(f.get('entity_id'), p.id) && inCategory(p) && (!website || (p.extension_attributes?.website_ids ?? []).map(String).includes(website.value))));
     };
     const reads: Array<[RegExp, (path: string, match: RegExpExecArray) => unknown]> = [
         [/^store\/websites$/u, () => [{ id: 1, code: 'base', name: 'Main Website', default_group_id: 1 }]],
@@ -109,7 +112,7 @@ export function memoryStore(): MemoryStore {
     };
 
     const send: CommerceSend = async (method, path, body) => {
-        sent.push({ method, path });
+        sent.push({ method, path, body });
         if (method === 'POST' && path === 'categories') {
             const { category } = body as { category: StoreCategory & { parent_id: number } };
             const id = nextId++;
@@ -127,6 +130,14 @@ export function memoryStore(): MemoryStore {
         if (method === 'POST' && path === 'inventory/source-items') {
             sourceItems.push(...(body as { sourceItems: SourceItem[] }).sourceItems);
             return [];
+        }
+        if (method === 'DELETE' && path.startsWith('products/')) {
+            products.delete(decodeURIComponent(path.slice('products/'.length)));
+            return true;
+        }
+        if (method === 'DELETE' && path.startsWith('categories/')) {
+            categories.delete(Number(path.slice('categories/'.length)));
+            return true;
         }
         return {};
     };
