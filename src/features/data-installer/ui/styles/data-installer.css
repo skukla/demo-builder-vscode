@@ -489,12 +489,17 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-/* What goes in it: every row one height, with room for a name and two lines however the cards fill
-   in, so a card losing its description to a grey never moves the grid. Tall enough for that and no
-   taller: ten cards then fit an 800px window with no scrolling. */
+/* What goes in it: every row one height, a name and one line, however the counts come in, so a card
+   losing its description to a grey never moves the grid. Ten cards fit with no scrolling. The note
+   sits on the name's line, because the description has the line below it. */
 .datapack-flow-cards--kinds {
-    grid-auto-rows: minmax(84px, 1fr);
+    grid-auto-rows: 62px;
     row-gap: 8px;
+}
+
+.datapack-flow-cards--kinds .choice-card-note {
+    top: var(--spectrum-global-dimension-size-125);
+    bottom: auto;
 }
 }
 

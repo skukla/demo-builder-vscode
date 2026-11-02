@@ -67,7 +67,7 @@ describe('what goes in it', () => {
     it('says what a picked thing brings on the card it is about, and on no other', async () => {
         await open();
 
-        expect(card('Products')).toHaveTextContent('Brings its categories, attribute set, attributes and quantities.');
+        expect(card('Products')).toHaveTextContent('Brings its categories, attributes and stock.');
         expect(card('Cart rules')).toHaveTextContent('Brings its coupons.');
         expect(card('B2B companies')).toHaveTextContent('Brings its admin.');
         expect(screen.getAllByText(/^Brings/)).toHaveLength(3);

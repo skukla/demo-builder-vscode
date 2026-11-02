@@ -21,7 +21,7 @@ import { ChoiceCard } from '@/features/project-creation/ui/components/ChoiceCard
 
 /** What a picked thing brings with it, on the cards where the SC needs to know. */
 const BRINGS: Partial<Record<PickableKind, string>> = {
-    products: 'Brings its categories, attribute set, attributes and quantities.',
+    products: 'Brings its categories, attributes and stock.',
     cart_rules: 'Brings its coupons.',
     b2b_companies: 'Brings its admin.',
 };
