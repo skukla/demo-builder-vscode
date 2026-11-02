@@ -43,7 +43,30 @@ function offenders(): string[] {
         .sort();
 }
 
+/** A wait with its own words, or the large spinner that belongs to a whole screen. */
+const FLYOUT_WAIT_TOO_MUCH = /<LoadingDisplay\b[^>]*(size="L"|message="[^"]+")/;
+
+function flyoutOffenders(): string[] {
+    return sources(SRC)
+        .filter((file) => {
+            const text = fs.readFileSync(file, 'utf8');
+            return /<Drawer\b/.test(text) && FLYOUT_WAIT_TOO_MUCH.test(text);
+        })
+        .map(relative)
+        .sort();
+}
+
 describe('a dialog that is waiting shows nothing else', () => {
+    it('a flyout waits the same way: its title and a medium spinner, with no words', () => {
+        expect(flyoutOffenders()).toStrictEqual([]);
+    });
+
+    it('CONTROL: the flyout check finds both ways of getting it wrong, and passes the right one', () => {
+        expect(FLYOUT_WAIT_TOO_MUCH.test('<LoadingDisplay size="L" message="" />')).toBe(true);
+        expect(FLYOUT_WAIT_TOO_MUCH.test('<LoadingDisplay size="M" message="Loading datapack" />')).toBe(true);
+        expect(FLYOUT_WAIT_TOO_MUCH.test('<LoadingDisplay size="M" centered message="" />')).toBe(false);
+    });
+
     it('draws no wait of its own in a Modal: Modal takes `waiting`', () => {
         expect(offenders()).toEqual(Object.keys(LEDGER).sort());
     });

@@ -884,7 +884,8 @@ check says so and names the file.
 
 > **Convention.** A dialog that is waiting shows nothing else: the title, a medium spinner centred
 > both ways in the space between the rule and the buttons, and the way out. `Modal`'s `waiting` prop
-> does it.
+> does it. A flyout waits the same way: its title and a medium centred spinner, with no words
+> (owner, 2026-11-02).
 > *Why:* half a form under a spinner invites a press that goes nowhere, and it kept coming back on
 > different surfaces (owner, 2026-11-01).
 > Enforced by `tests/sop/modal-waits.test.ts`.

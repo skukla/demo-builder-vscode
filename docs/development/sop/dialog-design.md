@@ -48,6 +48,8 @@ work shows its spinner on itself (`isPending`). A re-check inside a dialog alrea
 its content, such as ticking a store in Clear demo data or pressing Check on a pack's setup step, is
 not a wait for the dialog: its spinner goes where the answer lands and the rest stays (owner,
 2026-11-01).
+A flyout waits the same way: its title and a medium centred spinner, with no words (owner,
+2026-11-02).
 
 **Status lives in the title.** A small icon before it: green done, amber needs the
 SC (including a dangerous confirm), red failed. No status boxes in the body. A

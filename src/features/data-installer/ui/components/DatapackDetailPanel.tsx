@@ -191,9 +191,10 @@ function renderPanelBody(args: {
         // its height is a fixed DimensionValue (no percentages — the same limit
         // IntegrationsScreen records), and this needs flex-fill of whatever space
         // the drawer body has. db-drawer-body is a flex column, so flex:1 centers.
+        // Medium and wordless, as a waiting dialog is: the title already names the pack.
         return (
             <div className="datapack-panel-loading">
-                <LoadingDisplay size="L" message="Loading datapack" />
+                <LoadingDisplay size="M" centered message="" />
             </div>
         );
     }

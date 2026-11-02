@@ -357,10 +357,11 @@ describe('DatapackDetailPanel', () => {
     });
 
     describe('states', () => {
-        it('shows a loading message while the detail is in flight', () => {
+        it('shows only a spinner under the title while the detail is in flight', () => {
             renderPanel({ detail: null, inventory: null, loading: true });
 
-            expect(screen.getByText(/loading/i)).toBeInTheDocument();
+            expect(screen.getByRole('status')).toBeInTheDocument();
+            expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
         });
 
         /**
@@ -373,7 +374,7 @@ describe('DatapackDetailPanel', () => {
         it('shows the spinner over a stale detail, not the stale rows', () => {
             renderPanel({ loading: true });
 
-            expect(screen.getByText(/loading/i)).toBeInTheDocument();
+            expect(screen.getByRole('status')).toBeInTheDocument();
             expect(screen.queryByText('Visible to')).not.toBeInTheDocument();
         });
 
