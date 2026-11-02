@@ -42,3 +42,4 @@ under the MCP SDK. The name `proxy-addr` does not appear in the built extension,
 ## Shipped so far
 
 - 2026-11-02  citisignal-nextjs moved to Next.js 15.5.28 on main (844c896), which reaches no SC until its first beta. Its checks job passed, GitHub marked all 37 Next.js alerts fixed, and no critical alert remains there. Lint, typecheck, format, build, pages and a remote image through the optimizer passed locally; nothing ran against a live Commerce backend. It still has high runtime alerts on other packages, including sharp. Whether to keep the dev server open to the network is still the owner's to say.
+- 2026-11-02  Owner, 2026-11-02: SCs could open a Headless demo from another device, so the dev server stays open to the network. Limiting it to the SC's own machine would break that. So keeping Next.js current is what protects it.
