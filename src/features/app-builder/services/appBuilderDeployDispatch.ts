@@ -67,6 +67,7 @@ export async function dispatchDeploy(
         }
         // The mesh tail picks create-vs-update internally (its own verification
         // resolves the existing mesh); D1 persists no separate meshId to pass.
+        const shipped = await commitToShip(componentPath, deps);
         const result = await deps.deployMesh(
             componentPath,
             deps.commandManager,
@@ -90,7 +91,10 @@ export async function dispatchDeploy(
         }
         return {
             ok: true,
-            outcome: await meshOutcome(entry, result.data, componentPath, deps.captureMeshBaseline),
+            outcome: {
+                ...(await meshOutcome(entry, result.data, componentPath, deps.captureMeshBaseline)),
+                deployedCommit: shipped,
+            },
         };
     }
     const owPackage = deriveOwPackage(entry.id);
