@@ -22,6 +22,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Ambient status badge (dot + label + value) | `feedback/StatusCard` (`action` for remediation) | an inline colored span |
 | Warning/context banner ABOVE content the user can still use | `feedback/InlineNotice` (`tone`, `hint`, `action`) | a full-pane `StatusDisplay`, which reads as a wall |
 | Just the status dot | `ui/StatusDot` | a styled `<span>` |
+| How something stands, as an icon: warning, error, done, info | `feedback/StatusIcon` (the wizard's set, everywhere; `tests/sop/status-icons.test.ts`) | importing a Spectrum status icon and picking a colour |
 | One item's progress in a list of work (waiting, running, done, failed, warning) | `feedback/StepStatusIcon` (Prerequisites, the Updates modal's run) | a per-screen icon switch |
 | A row in a list of work: status icon, name, quieter detail, a note or failure under it | `feedback/WorkRow` (the Updates modal's run, the demo setup; a host bundle imports `work-row.css` and `checkbox-row.css` in its entry) | bare text with the state run into the note |
 | Centering any of the above at a fixed height | `layout/CenteredFeedbackContainer` | ad-hoc flex + height |

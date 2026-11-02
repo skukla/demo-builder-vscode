@@ -1,5 +1,3 @@
-import Alert from '@spectrum-icons/workflow/Alert';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
@@ -59,7 +57,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             {isTokenExpiringSoon(adobeAuth) && (
                 <StatusDisplay
                     variant="warning"
-                    icon={<Alert UNSAFE_className="text-orange-500" size="L" />}
                     title="Session Expiring Soon"
                     message={`Your Adobe session expires in ${adobeAuth.tokenExpiresIn || 0} ${adobeAuth.tokenExpiresIn === 1 ? 'minute' : 'minutes'}. Please re-authenticate to avoid interruption during project setup.`}
                     centerMessage
@@ -86,7 +83,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             {needsOrgSelection(adobeAuth, adobeOrg) && (
                 <StatusDisplay
                     variant="warning"
-                    icon={<AlertCircle UNSAFE_className="text-orange-500" size="L" />}
                     title="Select Your Organization"
                     message={getOrgSelectionMessage(adobeAuth)}
                     centerMessage
@@ -116,10 +112,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             {hasAuthError(adobeAuth, authTimeout) && (
                 <StatusDisplay
                     variant={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? 'warning' : 'error'}
-                    icon={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
-                        ? <AlertCircle UNSAFE_className="text-orange-500" size="L" />
-                        : <Alert UNSAFE_className="text-red-500" size="L" />
-                    }
                     title={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? 'Insufficient Privileges' : 'Connection Issue'}
                     message={authSubMessage || (adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
                         ? 'You need Developer or System Admin role in an Adobe organization with App Builder access.'
@@ -140,7 +132,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             {hasAuthTimeout(adobeAuth, authTimeout) && (
                 <StatusDisplay
                     variant="error"
-                    icon={<Alert UNSAFE_className="text-red-500" size="L" />}
                     title="Authentication Timed Out"
                     message="The browser authentication window may have been closed or the session expired."
                     centerMessage

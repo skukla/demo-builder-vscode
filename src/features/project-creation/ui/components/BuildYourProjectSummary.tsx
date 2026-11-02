@@ -13,8 +13,8 @@
  * @module features/project-creation/ui/components/BuildYourProjectSummary
  */
 
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { cn } from '@/core/ui/utils/classNames';
 
 /** A single summary row: a label, an optional value, and a done flag. */
@@ -71,11 +71,7 @@ export function SummaryRowItem({
         <div className={cn('sum-row', isDone && 'done')} data-testid={testId}>
             <span className="sum-rowlabel">
                 {isDone && (
-                    <CheckmarkCircle
-                        size="XS"
-                        UNSAFE_className="text-green-600 sum-check"
-                        aria-hidden="true"
-                    />
+                    <span className="sum-check" aria-hidden="true"><StatusIcon status="success" size="XS" /></span>
                 )}
                 <span className="sum-label">{row.label}</span>
             </span>

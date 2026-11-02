@@ -119,18 +119,6 @@
 }
 
 @layer theme {
-.status-icon-success {
-    color: var(--spectrum-semantic-positive-color-icon);
-}
-}
-
-@layer theme {
-.status-icon-error {
-    color: var(--spectrum-semantic-negative-color-icon);
-}
-}
-
-@layer theme {
 .service-action-button {
     background: var(--spectrum-global-color-blue-400);
     color: white;

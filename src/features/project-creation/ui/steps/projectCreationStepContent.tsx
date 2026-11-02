@@ -11,12 +11,11 @@
  */
 
 import { Text, Flex } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import type { StepPhase } from '../hooks/useCreationProgressPhase';
 import type { GitHubAppInstallData } from '../hooks/useGitHubAppPreflight';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { expectationFor } from '@/core/utils/operationStages';
@@ -40,7 +39,7 @@ function SuccessContent({ isOpeningProject, isEdit, note }: { isOpeningProject: 
     return (
         <CenteredFeedbackContainer>
             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
-                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                <StatusIcon status="success" size="L" />
                 <Flex direction="column" gap="size-100" alignItems="center">
                     <Text UNSAFE_className="text-xl font-medium">
                         {isEdit ? 'Changes Saved' : 'Project Created Successfully'}
@@ -74,7 +73,7 @@ function ErrorContent({
     return (
         <CenteredFeedbackContainer>
             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
-                <AlertCircle size="L" UNSAFE_className="text-red-600" />
+                <StatusIcon status="error" size="L" />
                 <Flex direction="column" gap="size-100" alignItems="center">
                     <Text UNSAFE_className="text-xl font-medium">
                         {isCancelled ? `${action} Cancelled` : `${action} Failed`}

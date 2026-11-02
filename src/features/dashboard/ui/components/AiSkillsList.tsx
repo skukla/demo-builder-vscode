@@ -29,9 +29,9 @@
  */
 
 import { Flex, Text } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React, { useMemo } from 'react';
 import { BUNDLE_LABELS } from './aiSurfaceNames';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { SkillInventoryEntry, SkillSource } from '@/types/ai';
 
@@ -240,7 +240,7 @@ export function AiSkillsList({
     if (hasError) {
         return (
             <Flex gap="size-100" alignItems="center" data-testid="ai-skills-error">
-                <AlertCircle size="S" UNSAFE_className="text-yellow-600" />
+                <StatusIcon status="warning" />
                 <Text UNSAFE_className="text-gray-700">
                     Couldn&apos;t read the project&apos;s skills. Try Regenerate AI files.
                 </Text>

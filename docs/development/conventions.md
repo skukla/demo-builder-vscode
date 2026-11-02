@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **133** conventions, **131** enforced
+- **134** conventions, **132** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -116,6 +116,7 @@ it means the rule rests on somebody noticing.
 | A component generic over `<T>` earns it with size and real reuse. |  |  | `component-extraction.test.ts` |
 | A `HandlerContext` is built by a factory — `createPanelHandlerContext` or `createHeadlessHandlerContext` — never assembled as an object literal at the surface. |  |  | `handler-context-from-factory.test.ts` |
 | Modals are hosted in one place, not mounted wherever they are opened. |  |  | `modal-hosting.test.ts` |
+| How something stands is drawn by one icon everywhere: `StatusIcon`, the wizard's set. Warning is an orange circle, error a red circle, a failed row a red circle with an X, done a green check, info a blue info icon. |  |  | `status-icons.test.ts` |
 | A dialog that is waiting shows nothing else: the title, a medium spinner centred both ways in the space between the rule and the buttons, and the way out. `Modal`'s `waiting` prop does it. A flyout waits the same way: its title and a medium centred spinner, with no words (owner, 2026-11-02). |  |  | `modal-waits.test.ts` |
 | A CSS class used in a bundle is styled by that bundle. |  |  | `stylesheet-bundles.test.ts` |
 | Before writing a new UI component, check whether the shared vocabulary already has it. |  |  | `30-reuse-first.rule` |

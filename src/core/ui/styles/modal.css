@@ -151,20 +151,9 @@
 }
 
 .modal-status-icon {
+    display: inline-flex;
     flex-shrink: 0;
     margin-top: 3px;
-}
-
-.modal-status-success {
-    color: var(--spectrum-global-color-green-600);
-}
-
-.modal-status-warning {
-    color: var(--spectrum-global-color-orange-600);
-}
-
-.modal-status-error {
-    color: var(--spectrum-global-color-red-600);
 }
 
 /* Pinned near the top, not centred: content that grows pushes only the bottom edge down, so

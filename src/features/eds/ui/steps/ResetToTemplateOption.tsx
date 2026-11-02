@@ -9,9 +9,9 @@
  */
 
 import { Checkbox, Flex, Text, View } from '@adobe/react-spectrum';
-import Alert from '@spectrum-icons/workflow/Alert';
 import React from 'react';
 import { describeResetOption, type RepoReadinessState } from './repoSelectionInline.helpers';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 
 /**
  * ResetToTemplateOption - reset control, presented by what the repo contains.
@@ -65,14 +65,9 @@ export function ResetToTemplateOption({
                         tone === 'none' ? 'reset-warning-hidden' : 'reset-warning-visible'
                     }
                 >
-                    <Alert
-                        size="S"
-                        UNSAFE_className={
-                            tone === 'info'
-                                ? 'text-blue-500 flex-shrink-0'
-                                : 'text-orange-500 flex-shrink-0'
-                        }
-                    />
+                    <span className="flex-shrink-0">
+                        <StatusIcon status={tone === 'info' ? 'info' : 'warning'} />
+                    </span>
                     <Text
                         UNSAFE_className={
                             tone === 'info' ? 'text-xs text-blue-600' : 'text-xs text-orange-600'

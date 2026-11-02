@@ -8,11 +8,9 @@
  * @module core/ui/components/feedback/StepStatusIcon
  */
 
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React from 'react';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 
 /** Where an item has got to. */
@@ -22,11 +20,11 @@ export type StepStatus = 'pending' | 'checking' | 'success' | 'error' | 'warning
 export function StepStatusIcon({ status }: { status: StepStatus }): React.ReactElement {
     switch (status) {
         case 'success':
-            return <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />;
+            return <StatusIcon status="success" />;
         case 'error':
-            return <CloseCircle size="S" UNSAFE_className="text-red-600" />;
+            return <StatusIcon status="row-error" />;
         case 'warning':
-            return <AlertCircle size="S" UNSAFE_className="text-yellow-600" />;
+            return <StatusIcon status="warning" />;
         case 'checking':
             return <Spinner size="S" />;
         case 'pending':

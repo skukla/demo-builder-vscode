@@ -335,14 +335,14 @@ describe('Modal', () => {
     // The dialog design rules (2026-10-31): how things stand is an icon before the title.
     describe('the title status', () => {
         it.each([
-            ['success', 'modal-status-success'],
-            ['warning', 'modal-status-warning'],
-            ['error', 'modal-status-error'],
-        ] as const)('puts the %s icon before the title', (status, iconClass) => {
+            ['success', 'text-green-600'],
+            ['warning', 'text-orange-600'],
+            ['error', 'text-red-600'],
+        ] as const)('puts the %s icon before the title, the wizard\'s own', (status, iconClass) => {
             renderWithProvider(<Modal {...defaultProps} status={status} />);
 
             const heading = screen.getByRole('heading');
-            expect(heading.querySelector(`.${iconClass}`)).not.toBeNull();
+            expect(heading.querySelector(`.modal-status-icon .${iconClass}`)).not.toBeNull();
             expect(heading).toHaveTextContent(defaultProps.title);
         });
 

@@ -1,11 +1,9 @@
 import { Dialog, Heading, Content, Divider } from '@adobe/react-spectrum';
-import Alert from '@spectrum-icons/workflow/Alert';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { ReactNode, useCallback } from 'react';
 import { Spinner } from './Spinner';
 import { useDialogViewChange } from './useDialogViewChange';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { cn } from '@/core/ui/utils/classNames';
 
@@ -163,12 +161,6 @@ function FocusableButton({ variant, onPress, isDisabled: disabled, isPending, pe
     );
 }
 
-const STATUS_ICONS: Record<ModalStatus, React.ReactElement> = {
-    success: <CheckmarkCircle size="S" UNSAFE_className="modal-status-icon modal-status-success" />,
-    warning: <Alert size="S" UNSAFE_className="modal-status-icon modal-status-warning" />,
-    error: <AlertCircle size="S" UNSAFE_className="modal-status-icon modal-status-error" />,
-};
-
 export function Modal({
     title,
     status,
@@ -209,7 +201,11 @@ export function Modal({
         >
             <Heading>
                 <span className="modal-title">
-                    {status ? STATUS_ICONS[status] : null}
+                    {status ? (
+                        <span className="modal-status-icon">
+                            <StatusIcon status={status} />
+                        </span>
+                    ) : null}
                     <span>{title}</span>
                 </span>
             </Heading>

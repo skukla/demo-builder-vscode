@@ -23,9 +23,8 @@
  */
 
 import { Flex, Text } from '@adobe/react-spectrum';
-import Alert from '@spectrum-icons/workflow/Alert';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { cn } from '@/core/ui/utils/classNames';
 /** Props for the card frame. */
@@ -111,7 +110,7 @@ export function ServiceCardStatus({
         if (compact) {
             return (
                 <Flex alignItems="center" gap="size-100">
-                    <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                    <StatusIcon status="success" />
                     <Text UNSAFE_className="status-text">Connected</Text>
                 </Flex>
             );
@@ -119,7 +118,7 @@ export function ServiceCardStatus({
         return (
             <Flex alignItems="center" justifyContent="space-between">
                 <Flex alignItems="center" gap="size-100">
-                    <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                    <StatusIcon status="success" />
                     <Text UNSAFE_className="status-text">{connectedLabel}</Text>
                 </Flex>
                 {onChange && (
@@ -134,7 +133,7 @@ export function ServiceCardStatus({
         return (
             <Flex direction="column" gap="size-100">
                 <Flex alignItems="center" gap="size-100">
-                    <Alert size="S" UNSAFE_className="status-icon-error" />
+                    <StatusIcon status="error" />
                     <Text UNSAFE_className="status-text-error">{error}</Text>
                 </Flex>
                 <button className="service-action-button" onClick={onAction}>

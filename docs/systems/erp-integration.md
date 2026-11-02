@@ -487,7 +487,7 @@ runner's add. What it will change is confirmed first, because some steps change 
 every website on a shared Commerce shares (`fixReach.ts`: a settings item at the default
 scope, the attributes, the shared catalogs; the warehouse is the project's website's only):
 the Integrations screen's add opens a confirm that reads the store
-(`PrepareOnAddDialog.tsx`), `add_integration` for the ERP integration answers that preview
+(`PrepareOnAddConfirm.tsx`), `add_integration` for the ERP integration answers that preview
 without `confirm: true` and adds nothing, and the wizard's Review names the steps from the
 catalog (no store can be read before the project exists). A preparation that stops never
 stops the add or the fill; the progress says why and that Apply all in the demo setup runs it

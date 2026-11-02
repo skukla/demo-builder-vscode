@@ -23,13 +23,12 @@
  */
 
 import { Link, ProgressCircle } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Circle from '@spectrum-icons/workflow/Circle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React from 'react';
 import { StepHeader } from './StepHeader';
 import type { GuideRun } from './useGuideRun';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import { SetupStepFacts } from '@/core/ui/components/ui/SetupStepFacts';
 import { cn } from '@/core/ui/utils/classNames';
@@ -91,9 +90,9 @@ function markOf(item: SetupChecklistItem): MarkKind {
  * to the SC is a muted hollow Circle.
  */
 const MARK_ICON: Partial<Record<MarkKind, React.ReactElement>> = {
-    done: <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" />,
+    done: <StatusIcon status="success" size="XS" />,
     ready: <Pending size="XS" UNSAFE_className="text-gray-600" />,
-    unknown: <AlertCircle size="XS" UNSAFE_className="text-yellow-600" />,
+    unknown: <StatusIcon status="warning" size="XS" />,
     open: <Circle size="XS" UNSAFE_className="text-gray-500" />,
 };
 

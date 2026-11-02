@@ -16,13 +16,13 @@
  */
 
 import { Flex, Heading, Text, View } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React from 'react';
 import { regenerateKeepsSentence } from './aiEditedNote';
 import { buildIntegrationSections } from './aiIntegrations';
 import { AiMcpsList } from './AiMcpsList';
 import { AiSkillsList } from './AiSkillsList';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -219,7 +219,7 @@ export function AiCapabilitiesModal({
                                     alignItems="center"
                                     data-testid="ai-regen-error"
                                 >
-                                    <AlertCircle size="S" UNSAFE_className="text-red-600" />
+                                    <StatusIcon status="error" />
                                     <Text UNSAFE_className="text-gray-700">{errorMessage}</Text>
                                 </Flex>
                             )}

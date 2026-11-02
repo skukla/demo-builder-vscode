@@ -86,10 +86,7 @@ describe('ResetToTemplateOption — the tick', () => {
         const line = screen.getByText(/This repository is empty/);
         expect(line).toHaveClass('text-blue-600');
         expect(line.parentElement).toHaveClass('reset-warning-visible');
-        expect(line.parentElement?.querySelector('svg')).toHaveClass(
-            'text-blue-500',
-            'flex-shrink-0',
-        );
+        expect(line.parentElement?.querySelector('.flex-shrink-0 svg')).toHaveClass('text-blue-600');
     });
 
     it('keeps the notice row rendered but hidden when there is nothing to say', () => {
@@ -120,10 +117,7 @@ describe('ResetToTemplateOption — the tick', () => {
 
         const line = screen.getByText(/delete and recreate the repository/);
         expect(line).toHaveClass('text-orange-600');
-        expect(line.parentElement?.querySelector('svg')).toHaveClass(
-            'text-orange-500',
-            'flex-shrink-0',
-        );
+        expect(line.parentElement?.querySelector('.flex-shrink-0 svg')).toHaveClass('text-orange-600');
     });
 });
 

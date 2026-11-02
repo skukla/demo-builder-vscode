@@ -20,8 +20,8 @@ describe('StepStatusIcon', () => {
         expect(markup(<StepStatusIcon status="error" />)).toContain('class="text-red-600"');
     });
 
-    it('marks warning with the yellow alert', () => {
-        expect(markup(<StepStatusIcon status="warning" />)).toContain('class="text-yellow-600"');
+    it('marks warning with the orange alert', () => {
+        expect(markup(<StepStatusIcon status="warning" />)).toContain('class="text-orange-600"');
     });
 
     it('shows a spinner, not an icon, while a check is running', () => {

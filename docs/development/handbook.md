@@ -885,6 +885,14 @@ check says so and names the file.
 > *Why:* ad-hoc mounting produces stacking and focus bugs that only appear in combination.
 > Enforced by `tests/sop/modal-hosting.test.ts`.
 
+> **Convention.** How something stands is drawn by one icon everywhere: `StatusIcon`, the wizard's
+> set. Warning is an orange circle, error a red circle, a failed row a red circle with an X, done a
+> green check, info a blue info icon.
+> *Why:* a triangle meant "needs you" in a dialog and "failed" on the sign-in step, chosen file by
+> file (owner, 2026-11-02: the wizard's iconography, "standardized across the wizard and all of the
+> modals").
+> Enforced by `tests/sop/status-icons.test.ts`.
+
 > **Convention.** A dialog that is waiting shows nothing else: the title, a medium spinner centred
 > both ways in the space between the rule and the buttons, and the way out. `Modal`'s `waiting` prop
 > does it. A flyout waits the same way: its title and a medium centred spinner, with no words
@@ -1864,11 +1872,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 64 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 65 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 133 conventions. 131 of them are enforced; 2 are not.**
+**This handbook states 134 conventions. 132 of them are enforced; 2 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

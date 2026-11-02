@@ -37,23 +37,11 @@ describe('EmptyState', () => {
     });
 
     describe('Icon Color', () => {
-        it('uses default yellow color', () => {
+        it('uses the warning icon every surface uses', () => {
             const { container } = renderWithProviders(
                 <EmptyState title="Empty" description="No data" />
             );
-            const icon = container.querySelector('.text-yellow-600');
-            expect(icon).toBeInTheDocument();
-        });
-
-        it('applies custom icon color', () => {
-            const { container } = renderWithProviders(
-                <EmptyState
-                    title="Empty"
-                    description="No data"
-                    iconColor="text-blue-600"
-                />
-            );
-            const icon = container.querySelector('.text-blue-600');
+            const icon = container.querySelector('.text-orange-600');
             expect(icon).toBeInTheDocument();
         });
     });
@@ -182,7 +170,6 @@ describe('EmptyState', () => {
                     title="Custom Empty State"
                     description="This is a custom empty state with all options"
                     icon={<MockCustomIcon />}
-                    iconColor="text-blue-500"
                     centered={false}
                 />
             );

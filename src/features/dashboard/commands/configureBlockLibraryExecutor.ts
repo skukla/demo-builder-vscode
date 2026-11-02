@@ -1,7 +1,7 @@
 /**
  * The Configure shell around pending block library work (EDS-39) — the
- * counterpart of `updates/commands/blockLibraryInstallExecutor.ts`, which is
- * the Check for Updates shell around the same installer.
+ * counterpart of the Check for Updates path in `updates/services/updateApplyService.ts`,
+ * around the same installer.
  *
  * The work itself is `services/configureBlockLibraryWork.ts`. This file is the
  * boundary: it fetches the collaborators that work needs, asks for the DA.live

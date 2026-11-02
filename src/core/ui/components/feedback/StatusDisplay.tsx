@@ -29,11 +29,9 @@
  * ```
  */
 import { Flex, Text, Button } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
-import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import React from 'react';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 import { cn } from '@/core/ui/utils/classNames';
 
@@ -75,19 +73,19 @@ export interface StatusDisplayProps {
 
 const variantConfig: Record<StatusVariant, { icon: React.ReactNode; colorClass: string }> = {
     error: {
-        icon: <AlertCircle size="L" UNSAFE_className="text-red-600" />,
+        icon: <StatusIcon status="error" size="L" />,
         colorClass: 'text-red-600',
     },
     success: {
-        icon: <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />,
+        icon: <StatusIcon status="success" size="L" />,
         colorClass: 'text-green-600',
     },
     warning: {
-        icon: <AlertCircle size="L" UNSAFE_className="text-orange-600" />,
+        icon: <StatusIcon status="warning" size="L" />,
         colorClass: 'text-orange-600',
     },
     info: {
-        icon: <InfoOutline size="L" UNSAFE_className="text-blue-600" />,
+        icon: <StatusIcon status="info" size="L" />,
         colorClass: 'text-blue-600',
     },
     pending: {

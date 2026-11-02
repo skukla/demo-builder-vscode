@@ -41,11 +41,6 @@ describe('AdobeAuthStep - what the error state hands StatusDisplay', () => {
         return last[0];
     }
 
-    function iconOf(props: StatusDisplayProps): React.ReactElement {
-        if (!React.isValidElement(props.icon)) throw new Error('no icon element handed over');
-        return props.icon;
-    }
-
     beforeEach(() => {
         resetMocks();
     });
@@ -58,8 +53,8 @@ describe('AdobeAuthStep - what the error state hands StatusDisplay', () => {
         const props = displayProps(undefined);
         expect(props.variant).toBe('error');
         expect(props.title).toBe('Connection Issue');
-        const icon = iconOf(props);
-        expect(icon.props).toMatchObject({ UNSAFE_className: 'text-red-500' });
+        // No icon of its own: StatusDisplay draws the one every surface draws for this variant.
+        expect(props.icon).toBeUndefined();
         expect(props.actions?.map((a) => a.label)).toEqual(['Try Again', 'Sign In Again']);
     });
 
@@ -67,8 +62,7 @@ describe('AdobeAuthStep - what the error state hands StatusDisplay', () => {
         const props = displayProps(ErrorCode.AUTH_NO_APP_BUILDER);
         expect(props.variant).toBe('warning');
         expect(props.title).toBe('Insufficient Privileges');
-        const icon = iconOf(props);
-        expect(icon.props).toMatchObject({ UNSAFE_className: 'text-orange-500' });
+        expect(props.icon).toBeUndefined();
         expect(props.actions?.map((a) => a.label)).toEqual(['Sign in with a different account']);
     });
 });
