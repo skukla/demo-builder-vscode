@@ -36,3 +36,4 @@ carrying the fix is out.
 - 2026-11-02  refactor(updates): a plain guard in the update check's candidates (`dd6d5eed4`)
 - 2026-11-02  fix(updates): a Headless update moves the clone, and keeps the SC's edits (`677d6a1e2`)
 - 2026-11-02  fix(eds): a failed patches lookup never hands a storefront an unreleased commit (`453794065`)
+- 2026-11-02  feat(eds): a storefront has a version, and a release of fixes alone reaches it (`701a938a1`)
