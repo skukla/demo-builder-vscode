@@ -79,10 +79,10 @@ export async function checkPackRoot(get: CommerceGet, step: PackRootStep): Promi
         return { note: `Could not read the stores: ${error instanceof Error ? error.message : String(error)}` };
     }
     const group = groups.find((g) => g.code === step.storeCode);
-    if (!group) return { note: `The store ${step.storeName} is not in Commerce any more.` };
-    if (Number(group.root_category_id) === step.rootId) return { done: true, note: `The store ${step.storeName} shows ${step.rootName}'s categories.` };
+    if (!group) return { note: `${step.storeName} is not in Commerce any more.` };
+    if (Number(group.root_category_id) === step.rootId) return { done: true, note: `${step.storeName} now shows the categories under ${step.rootName}.` };
     const now = await rootLabel(get, Number(group.root_category_id));
-    return { done: false, note: `The store ${step.storeName} still uses the root category ${now}, not ${step.rootName}.` };
+    return { done: false, note: `${step.storeName} still uses the root category ${now}, not ${step.rootName}.` };
 }
 
 /**
@@ -195,7 +195,7 @@ export async function settlePackRoot(ctx: KindContext, storeRoot: StoreRoot, ask
 /** The one line an install ends with about the step: what is left, or that it is done. */
 export function rootStepLine(step: PackRootStep | undefined): string | undefined {
     if (!step) return undefined;
-    if (step.state === 'done') return `The store ${step.storeName} shows ${step.rootName}'s categories.`;
+    if (step.state === 'done') return `${step.storeName} now shows the categories under ${step.rootName}.`;
     return `One step is left in the Admin: ${packRootGuideStep(step).where}, Root Category: ${step.rootName}, then Save Store. Until then the storefront does not show ${step.rootName}'s categories.`;
 }
 

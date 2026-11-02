@@ -36,8 +36,8 @@ const STEP: PackRootStep = {
     storeRootId: 119,
     sharedWith: 'the store justrite_store (website justrite)',
 };
-const NOTE = 'The store Justrite Test Store still uses the root category Justrite Catalog, not ZZ Root DB12.';
-const DONE: PackRootStep = { ...STEP, state: 'done', note: "The store Justrite Test Store shows ZZ Root DB12's categories.", lastCheck: 'passed' };
+const NOTE = 'Justrite Test Store still uses the root category Justrite Catalog, not ZZ Root DB12.';
+const DONE: PackRootStep = { ...STEP, state: 'done', note: "Justrite Test Store now shows the categories under ZZ Root DB12.", lastCheck: 'passed' };
 
 /** The handler's envelope, as `setupStepAnswer` builds it. */
 function answer(step: PackRootStep | null, pack: DatapackId = ID): HandlerResponse {
@@ -184,7 +184,7 @@ it('a Check that finds it done says so in the dialog, offers no Check, and leave
 
     expect(banner()).toHaveTextContent('Done');
     // What the Check found, as the panel says it, not the guide's "Already set up in the store."
-    expect(banner()).toHaveTextContent("The store Justrite Test Store shows ZZ Root DB12's categories.");
+    expect(banner()).toHaveTextContent("Justrite Test Store now shows the categories under ZZ Root DB12.");
     expect(banner()).not.toHaveTextContent('Already set up');
     expect(screen.queryByRole('button', { name: 'Check' })).not.toBeInTheDocument();
     // Nothing in the panel once done: the dialog already said so (owner, 2026-10-31).

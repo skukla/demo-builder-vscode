@@ -92,7 +92,7 @@ describe('get-datapack-setup-step', () => {
 
 describe('check-datapack-setup-step', () => {
     it("checks the step for the open project's pack and answers it as it now stands", async () => {
-        mockedCheck.mockResolvedValue({ ...STEP, state: 'done', note: "The store JustRite Test Store shows Frescopa's categories." });
+        mockedCheck.mockResolvedValue({ ...STEP, state: 'done', note: "JustRite Test Store now shows the categories under Frescopa." });
 
         const result = await storeChangesHandlers['check-datapack-setup-step'](harness(), ID);
 

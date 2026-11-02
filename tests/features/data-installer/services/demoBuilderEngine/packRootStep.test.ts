@@ -81,7 +81,7 @@ describe('checkPackRoot', () => {
         const { store, ctx } = await settling();
         store.setRoot('justrite_test_store', 300);
 
-        await expect(checkPackRoot(ctx.get, STEP)).resolves.toEqual({ done: true, note: "The store JustRite Test Store shows Frescopa's categories." });
+        await expect(checkPackRoot(ctx.get, STEP)).resolves.toEqual({ done: true, note: "JustRite Test Store now shows the categories under Frescopa." });
         expect(store.sent).toStrictEqual([]);
     });
 
@@ -90,14 +90,14 @@ describe('checkPackRoot', () => {
 
         await expect(checkPackRoot(ctx.get, STEP)).resolves.toEqual({
             done: false,
-            note: 'The store JustRite Test Store still uses the root category Justrite, not Frescopa.',
+            note: 'JustRite Test Store still uses the root category Justrite, not Frescopa.',
         });
     });
 
     it('cannot tell when the store is gone or the stores cannot be read', async () => {
         const { ctx } = await settling();
 
-        await expect(checkPackRoot(ctx.get, { ...STEP, storeCode: 'gone' })).resolves.toEqual({ note: 'The store JustRite Test Store is not in Commerce any more.' });
+        await expect(checkPackRoot(ctx.get, { ...STEP, storeCode: 'gone' })).resolves.toEqual({ note: 'JustRite Test Store is not in Commerce any more.' });
         await expect(checkPackRoot(async () => Promise.reject(new Error('Commerce answered 500')), STEP)).resolves.toEqual({ note: 'Could not read the stores: Commerce answered 500' });
     });
 });
@@ -148,9 +148,9 @@ describe('settlePackRoot', () => {
         const step = await settlePackRoot(ctx, STORE_ROOT, run.asker);
 
         expect(run.asked).toHaveLength(2);
-        expect(run.asked[1].message).toMatch(/^The store JustRite Test Store still uses the root category Justrite, not Frescopa\. In Stores > All Stores/u);
+        expect(run.asked[1].message).toMatch(/^JustRite Test Store still uses the root category Justrite, not Frescopa\. In Stores > All Stores/u);
         expect(run.asked[1].message).not.toMatch(/id \d|justrite_store/u);
-        expect(step).toMatchObject({ state: 'done', note: "The store JustRite Test Store shows Frescopa's categories." });
+        expect(step).toMatchObject({ state: 'done', note: "JustRite Test Store now shows the categories under Frescopa." });
         expect(store.sent).toStrictEqual([]);
     });
 
@@ -235,7 +235,7 @@ describe('the lines', () => {
         expect(rootStepLine(STEP)).toBe(
             "One step is left in the Admin: Stores > All Stores > JustRite Test Store, Root Category: Frescopa, then Save Store. Until then the storefront does not show Frescopa's categories.",
         );
-        expect(rootStepLine({ ...STEP, state: 'done' })).toBe("The store JustRite Test Store shows Frescopa's categories.");
+        expect(rootStepLine({ ...STEP, state: 'done' })).toBe("JustRite Test Store now shows the categories under Frescopa.");
         expect(rootStepLine(undefined)).toBeUndefined();
     });
 

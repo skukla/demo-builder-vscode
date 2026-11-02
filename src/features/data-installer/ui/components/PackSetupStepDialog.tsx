@@ -41,7 +41,7 @@ export interface PackSetupStepDialogProps {
 
 /**
  * Where the step stands: a Check that could not answer says so; otherwise the saved step decides.
- * Done says what the Check found ("The store … shows ZZ Root DB12's categories."), as the side
+ * Done says what the Check found ("… now shows the categories under ZZ Root DB12."), as the side
  * panel does, not the guide's "Already set up in the store.", which read oddly right after the SC
  * did it (owner, 2026-10-31).
  */
