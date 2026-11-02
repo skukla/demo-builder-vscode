@@ -15,7 +15,8 @@
  * @module features/eds/services/patches/externalPatchFetcher
  */
 
-import { readNewestRelease } from '@/core/releases/readNewestRelease';
+import { readLatestTagFromWeb, readNewestRelease } from '@/core/releases/readNewestRelease';
+import { releasedRepoOf } from '@/core/releases/releasedRepos';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -47,26 +48,25 @@ const sharedCache = new Map<string, Promise<ExternalLedger<unknown, unknown>>>()
  *  cached — see {@link resolveRef}. */
 const refCache = new Map<string, Promise<string>>();
 
-/** Branch used when a patches repo has no published release yet. */
+/** Branch used when a patches repo someone else owns has no published release. */
 const UNPINNED_REF = 'main';
 
 /**
- * Resolve which git ref to read patches from.
+ * Resolve which git ref to read patches from: the repo's latest published release, so shipping a
+ * patch is a deliberate act with a record and a rollback target.
  *
- * Prefers the repo's latest published release, so shipping a patch is a
- * deliberate act with a record and a rollback target. Falls back to `main` when
- * no release exists — without that fallback this change would take every
- * storefront build down until the first release is cut, since no patches repo
- * has one today.
+ * A repository the builder owns never falls back to `main`: a push reaches nobody until it is
+ * released, and a failed lookup must not hand a storefront an unreleased commit. If neither the
+ * API nor the web address can say, this throws, and the caller treats the patches as unreadable.
+ * Someone else's repository may have no releases at all, so it does read `main`, and says so.
  *
  * A fallback is never cached: a transient failure on the release lookup must
  * not leave the channel unpinned for the rest of the session.
  *
  * Exported as the ONE ref authority for the patches repo: `readLkgSha`
  * (lkgReader) resolves through this too, so the ledger and the LKG pointer
- * always come from the same snapshot — a release freezes both together, and
- * the main fallback tracks both together. Split refs meant release-day
- * ledgers applied against a daily-advancing canonical.
+ * always come from the same snapshot, which a release freezes together.
+ * Split refs meant release-day ledgers applied against a daily-advancing canonical.
  */
 export async function resolvePatchRef(
     owner: string,
@@ -80,11 +80,15 @@ export async function resolvePatchRef(
     const release = await readNewestRelease(key, 'stable', {
         timeoutMs: TIMEOUTS.PREREQUISITE_CHECK,
     });
-    const tag = release?.tag_name;
+    const tag = release?.tag_name ?? (await readLatestTagFromWeb(key));
     if (tag) {
         refCache.set(key, Promise.resolve(tag));
         logger.info(`[Patch] Pinned ${key} to release ${tag}`);
         return tag;
+    }
+
+    if (releasedRepoOf(`https://github.com/${key}`)) {
+        throw new Error(`Could not read the newest release of ${key}.`);
     }
 
     logger.warn(

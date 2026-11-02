@@ -17,8 +17,8 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 
 /** The external patch ledger both suites read from. */
 export const SOURCE: CodePatchSource = {
-    owner: 'skukla',
-    repo: 'eds-demo-patches',
+    owner: 'patch-owner',
+    repo: 'patches',
     path: 'citisignal',
 };
 

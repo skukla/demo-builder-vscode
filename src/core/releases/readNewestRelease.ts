@@ -92,3 +92,23 @@ export async function readNewestComponentRelease(
             : selectLatestForChannel(releases, channel),
     );
 }
+
+const RELEASE_TAG_IN_REDIRECT = /\/releases\/tag\/([^/?#]+)$/;
+
+/**
+ * The latest normal release's tag, read from where GitHub's web address redirects. It is not under
+ * the API's limit of 60 anonymous calls an hour, which everyone in an office shares, so it is
+ * what to ask when the API has refused. Null for no release, and for any failure.
+ */
+export async function readLatestTagFromWeb(repo: string): Promise<string | null> {
+    try {
+        const response = await fetch(`https://github.com/${repo}/releases/latest`, {
+            redirect: 'manual',
+            signal: AbortSignal.timeout(TIMEOUTS.QUICK),
+        });
+        const tag = response.headers.get('location')?.match(RELEASE_TAG_IN_REDIRECT)?.[1];
+        return tag ? decodeURIComponent(tag) : null;
+    } catch {
+        return null;
+    }
+}

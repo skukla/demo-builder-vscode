@@ -4,7 +4,11 @@
  * lookup. It answers null rather than throwing, so a failed lookup never stops an install.
  */
 
-import { readNewestComponentRelease, readNewestRelease } from '@/core/releases/readNewestRelease';
+import {
+    readLatestTagFromWeb,
+    readNewestComponentRelease,
+    readNewestRelease,
+} from '@/core/releases/readNewestRelease';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 function respondWith(body: unknown, init: { ok?: boolean; status?: number } = {}) {
@@ -179,5 +183,45 @@ describe('readNewestComponentRelease', () => {
         expect((await readNewestComponentRelease('skukla/demo-erp', 'stable'))?.tag_name).toBe(
             'v1.1.0',
         );
+    });
+});
+
+/**
+ * GitHub's web address for a repository's latest release redirects to its tag, and is not under
+ * the API's limit of 60 anonymous calls an hour, which a whole office shares.
+ * Measured 2026-11-02: HTTP 302 to /skukla/eds-demo-patches/releases/tag/v1.1.5.
+ */
+describe('readLatestTagFromWeb', () => {
+    function redirectsTo(location: string | null, status = 302) {
+        global.fetch = jest.fn().mockResolvedValue({
+            status,
+            headers: { get: () => location },
+        });
+    }
+
+    it('reads the tag from the redirect, without following it', async () => {
+        redirectsTo('https://github.com/skukla/eds-demo-patches/releases/tag/v1.1.5');
+
+        expect(await readLatestTagFromWeb('skukla/eds-demo-patches')).toBe('v1.1.5');
+        expect(fetchedUrl()).toBe('https://github.com/skukla/eds-demo-patches/releases/latest');
+        expect(fetchedOptions().redirect).toBe('manual');
+    });
+
+    it('answers nothing for a repository with no releases, which redirects elsewhere', async () => {
+        redirectsTo('https://github.com/skukla/demo-erp/releases');
+
+        expect(await readLatestTagFromWeb('skukla/demo-erp')).toBeNull();
+    });
+
+    it('answers nothing with no redirect at all', async () => {
+        redirectsTo(null, 404);
+
+        expect(await readLatestTagFromWeb('skukla/demo-erp')).toBeNull();
+    });
+
+    it('answers nothing, rather than throwing, when GitHub cannot be reached', async () => {
+        global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+
+        expect(await readLatestTagFromWeb('skukla/demo-erp')).toBeNull();
     });
 });

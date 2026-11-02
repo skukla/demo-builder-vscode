@@ -55,8 +55,8 @@ function mockExternalLedger(patches: CodePatch[]): jest.Mock {
 }
 
 const SOURCE: CodePatchSource = {
-    owner: 'skukla',
-    repo: 'eds-demo-patches',
+    owner: 'patch-owner',
+    repo: 'patches',
     path: 'citisignal-b2b',
 };
 
@@ -140,7 +140,7 @@ describe('getCodePatches', () => {
         await getCodePatches(['anything'], SOURCE, mockLogger);
 
         expect(fetchMock).toHaveBeenCalledWith(
-            'https://raw.githubusercontent.com/skukla/eds-demo-patches/main/citisignal-b2b/code-patches.json',
+            'https://raw.githubusercontent.com/patch-owner/patches/main/citisignal-b2b/code-patches.json',
             expect.any(Object)
         );
     });
