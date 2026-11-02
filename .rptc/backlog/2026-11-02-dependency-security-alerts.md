@@ -38,3 +38,7 @@ under the MCP SDK. The name `proxy-addr` does not appear in the built extension,
   `overrides` entry.
 - **Zero is not always clean.** `app-builder-shell` has a `package.json` and no lockfile, so its zero may only mean
   the scan had nothing exact to read. `eds-demo-patches` has no package file at its top level.
+
+## Shipped so far
+
+- 2026-11-02  citisignal-nextjs moved to Next.js 15.5.28 on main (844c896), which reaches no SC until its first beta. Its checks job passed, GitHub marked all 37 Next.js alerts fixed, and no critical alert remains there. Lint, typecheck, format, build, pages and a remote image through the optimizer passed locally; nothing ran against a live Commerce backend. It still has high runtime alerts on other packages, including sharp. Whether to keep the dev server open to the network is still the owner's to say.
