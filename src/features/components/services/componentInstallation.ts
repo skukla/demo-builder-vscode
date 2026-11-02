@@ -277,9 +277,11 @@ export class ComponentInstallation {
         }
 
         const [, owner, repo] = match;
-        const channel = vscode.workspace
+        const configured = vscode.workspace
             .getConfiguration('demoBuilder')
             .get<UpdateChannel>('updateChannel', 'stable');
+        // Who may have early access is not known here, so it stays closed.
+        const channel = configured === 'early-access' ? 'beta' : configured;
 
         const release = await readNewestRelease(`${owner}/${repo}`, channel, {
             logger: this.logger,

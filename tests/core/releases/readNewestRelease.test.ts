@@ -4,7 +4,7 @@
  * lookup. It answers null rather than throwing, so a failed lookup never stops an install.
  */
 
-import { readNewestRelease } from '@/core/releases/readNewestRelease';
+import { readNewestComponentRelease, readNewestRelease } from '@/core/releases/readNewestRelease';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 function respondWith(body: unknown, init: { ok?: boolean; status?: number } = {}) {
@@ -127,5 +127,57 @@ describe('what it sends', () => {
         await readNewestRelease('skukla/demo-erp', 'stable', { timeoutMs: TIMEOUTS.QUICK });
 
         expect(fetchedOptions()).not.toHaveProperty('headers');
+    });
+});
+
+/**
+ * A component has no graduation step, so early access sees every track: an alpha to try, and
+ * the normal and beta releases everyone else gets. It must not leave anyone behind.
+ */
+describe('readNewestComponentRelease', () => {
+    const LIST = [
+        { tag_name: 'v1.1.0' },
+        { tag_name: 'v1.2.0-beta.1' },
+        { tag_name: 'v2.0.0-alpha.1' },
+    ];
+
+    it('early access takes an alpha that is the highest', async () => {
+        respondWith(LIST);
+
+        const release = await readNewestComponentRelease('skukla/demo-erp', 'early-access');
+
+        expect(release?.tag_name).toBe('v2.0.0-alpha.1');
+    });
+
+    it('early access still takes a normal release that is newer than any alpha', async () => {
+        respondWith([{ tag_name: 'v3.0.0' }, { tag_name: 'v2.0.0-alpha.1' }]);
+
+        const release = await readNewestComponentRelease('skukla/demo-erp', 'early-access');
+
+        expect(release?.tag_name).toBe('v3.0.0');
+    });
+
+    it('early access skips drafts and tags that are not versions', async () => {
+        respondWith([
+            { tag_name: 'v9.0.0', draft: true },
+            { tag_name: 'legacy' },
+            { tag_name: 'v1.0.0' },
+        ]);
+
+        const release = await readNewestComponentRelease('skukla/demo-erp', 'early-access');
+
+        expect(release?.tag_name).toBe('v1.0.0');
+    });
+
+    it('beta and stable behave as they do everywhere else', async () => {
+        respondWith(LIST);
+        expect((await readNewestComponentRelease('skukla/demo-erp', 'beta'))?.tag_name).toBe(
+            'v1.2.0-beta.1',
+        );
+
+        respondWith({ tag_name: 'v1.1.0' });
+        expect((await readNewestComponentRelease('skukla/demo-erp', 'stable'))?.tag_name).toBe(
+            'v1.1.0',
+        );
     });
 });

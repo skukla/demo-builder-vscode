@@ -34,6 +34,15 @@ export function channelAcceptsTrack(channel: UpdateChannel, track: ReleaseTrack)
     return track === 'early-access';
 }
 
+/** The highest non-draft release on any track. Tags that are not versions never qualify. */
+export function selectNewestOfAnyTrack(releases: GitHubRelease[]): GitHubRelease | null {
+    const eligible = releases.filter((r) => !r.draft && classifyTrack(r.tag_name) !== 'other');
+    if (eligible.length === 0) return null;
+
+    eligible.sort((a, b) => semver.rcompare(cleanTag(a.tag_name), cleanTag(b.tag_name)));
+    return eligible[0];
+}
+
 /**
  * True when the installed version is an -alpha.* whose base (major.minor.patch)
  * is met or exceeded by a final release — i.e. the feature has graduated and the

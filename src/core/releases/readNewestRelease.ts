@@ -4,7 +4,7 @@
  * on what "the newest release" means: the highest version the channel accepts.
  */
 
-import { selectLatestForChannel } from './releaseTrack';
+import { selectLatestForChannel, selectNewestOfAnyTrack } from './releaseTrack';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { GitHubRelease, UpdateChannel } from '@/types/releases';
 
@@ -32,16 +32,11 @@ function toReleaseList(body: unknown, channel: UpdateChannel): GitHubRelease[] {
     return list.filter((entry: GitHubRelease) => typeof entry?.tag_name === 'string');
 }
 
-/**
- * Read the newest release of `owner/repo` that the channel accepts.
- *
- * @returns The release, or null for no such release and for any failure, so a failed lookup
- *          never stops an install or an update check. The reason goes to `logger`.
- */
-export async function readNewestRelease(
+async function readWith(
     repo: string,
     channel: UpdateChannel,
-    options: ReadReleaseOptions = {},
+    options: ReadReleaseOptions,
+    select: (releases: GitHubRelease[]) => GitHubRelease | null,
 ): Promise<GitHubRelease | null> {
     const { headers, timeoutMs = TIMEOUTS.QUICK, logger } = options;
     try {
@@ -56,9 +51,44 @@ export async function readNewestRelease(
             }
             return null;
         }
-        return selectLatestForChannel(toReleaseList(await response.json(), channel), channel);
+        return select(toReleaseList(await response.json(), channel));
     } catch (error) {
         logger?.debug(`[Releases] Could not read ${repo}: ${(error as Error).message}`);
         return null;
     }
+}
+
+/**
+ * Read the newest release of `owner/repo` that the channel accepts.
+ *
+ * @returns The release, or null for no such release and for any failure, so a failed lookup
+ *          never stops an install or an update check. The reason goes to `logger`.
+ */
+export async function readNewestRelease(
+    repo: string,
+    channel: UpdateChannel,
+    options: ReadReleaseOptions = {},
+): Promise<GitHubRelease | null> {
+    return readWith(repo, channel, options, (releases) =>
+        selectLatestForChannel(releases, channel),
+    );
+}
+
+/**
+ * The same read for a component. The extension's early-access channel holds only alphas, because
+ * a build graduates from one. A component has no such step, so early access takes the highest of
+ * every track, and a collaborator trying an alpha still gets every normal release.
+ *
+ * The caller decides who may ask for early access.
+ */
+export async function readNewestComponentRelease(
+    repo: string,
+    channel: UpdateChannel,
+    options: ReadReleaseOptions = {},
+): Promise<GitHubRelease | null> {
+    return readWith(repo, channel, options, (releases) =>
+        channel === 'early-access'
+            ? selectNewestOfAnyTrack(releases)
+            : selectLatestForChannel(releases, channel),
+    );
 }

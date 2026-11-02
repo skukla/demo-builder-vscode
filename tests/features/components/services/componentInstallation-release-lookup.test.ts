@@ -68,6 +68,17 @@ describe('which GitHub endpoint the channel selects', () => {
         expect(cloneCall()[0]).toContain('--branch "v9.9.9"');
     });
 
+    // The installer cannot yet tell who may have early access, so it stays closed: the
+    // channel installs what beta installs, and never drops to the fallback tag.
+    it('early access installs what beta installs, not an alpha', async () => {
+        setUpdateChannel('early-access');
+        respondWith([{ tag_name: 'v9.9.9-alpha.1' }, { tag_name: 'v8.0.0' }]);
+
+        await install(VERSIONED());
+
+        expect(cloneCall()[0]).toContain('--branch "v8.0.0"');
+    });
+
     it('an alpha is not installed on the beta channel', async () => {
         respondWith([{ tag_name: 'v9.9.9-alpha.1' }, { tag_name: 'v8.0.0' }]);
 

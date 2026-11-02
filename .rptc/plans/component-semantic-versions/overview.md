@@ -129,9 +129,9 @@ offer installed builds the row that deletes the clone. So validation uses prerel
 ignore on update: the stable channel reads only normal releases, and the beta channel skips alpha. Only the early-access
 channel sees them, and only the owner's account qualifies.
 
-**This needs code first.** `checkAllProjectsForUpdates` turns early-access into beta for components, so a component's alpha is never
-offered today. Components have to honour early-access for the owner's account, without early-access SCs missing normal and beta
-component updates, which is why it collapses today.
+The update check honours this for components: a collaborator on early access gets the highest release of any track, and anyone else
+on that channel gets what beta gets. The installer still has to: it has no way to ask who the user is, so on early access it installs
+what beta installs. Validating a fresh install needs the check passed in where a `ComponentManager` is built (four places).
 
 One exception: for the three meshes, beta.152's install lookup takes the newest release of any kind on the beta channel. A
 new project on that channel during a mesh rehearsal would get the alpha. So each mesh's alpha is removed as soon as it is proved.

@@ -192,17 +192,17 @@ describe('component channel', () => {
         expect(results.map((r) => r.latestVersion)).toEqual(['1.1.0']);
     });
 
-    it('early-access collapses to beta: the list endpoint, the beta picked, the gate unasked', async () => {
-        setChannel('early-access');
-        const withZipball = createMockReleasesArray({
-            final: '1.1.0',
-            beta: '1.2.0-beta.1',
-            alpha: '2.0.0-alpha.1',
-        }).map((r) => ({
+    const withZipball = (releases: ReturnType<typeof createMockReleasesArray>) =>
+        releases.map((r) => ({
             ...r,
             zipball_url: `https://api.github.com/repos/acme/widget/zipball/${r.tag_name}`,
         }));
-        respond(withZipball);
+    const ALL_TRACKS = { final: '1.1.0', beta: '1.2.0-beta.1', alpha: '2.0.0-alpha.1' };
+
+    it('early access: a collaborator is offered the alpha, which is how a release is tried', async () => {
+        setChannel('early-access');
+        gateMock.mockResolvedValue(true);
+        respond(withZipball(createMockReleasesArray(ALL_TRACKS)));
 
         const results = await manager.checkAllProjectsForUpdates([project()]);
 
@@ -210,7 +210,24 @@ describe('component channel', () => {
             'https://api.github.com/repos/acme/widget/releases?per_page=20',
             expect.anything()
         );
+        expect(results.map((r) => r.latestVersion)).toEqual(['2.0.0-alpha.1']);
+    });
+
+    it('early access: anyone else gets what the beta channel gets, and never an alpha', async () => {
+        setChannel('early-access');
+        gateMock.mockResolvedValue(false);
+        respond(withZipball(createMockReleasesArray(ALL_TRACKS)));
+
+        const results = await manager.checkAllProjectsForUpdates([project()]);
+
         expect(results.map((r) => r.latestVersion)).toEqual(['1.2.0-beta.1']);
+    });
+
+    it('the stable and beta channels never ask who the user is', async () => {
+        respond(zipRelease('1.1.0'));
+
+        await manager.checkAllProjectsForUpdates([project()]);
+
         expect(gateMock).not.toHaveBeenCalled();
     });
 });

@@ -6,7 +6,7 @@ import { ComponentRepositoryResolver } from './componentRepositoryResolver';
 import { buildGitHubHeaders } from './githubApiClient';
 import type { ReleaseInfo, UpdateCheckResult } from './types';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
-import { readNewestRelease } from '@/core/releases/readNewestRelease';
+import { readNewestComponentRelease, readNewestRelease } from '@/core/releases/readNewestRelease';
 import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 import { ComponentInstance, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -99,11 +99,7 @@ export class UpdateManager {
      * @returns Array of components with updates, each containing list of affected projects
      */
     async checkAllProjectsForUpdates(projects: Project[]): Promise<MultiProjectUpdateResult[]> {
-        // Components ship no -alpha.* builds; early-access collapses to beta for
-        // component checks so EA users don't silently skip component updates.
-        const configuredChannel = this.getUpdateChannel();
-        const channel: UpdateChannel =
-            configuredChannel === 'early-access' ? 'beta' : configuredChannel;
+        const channel = await this.resolveEffectiveChannel(this.getUpdateChannel());
 
         // Collect all unique component IDs across all projects
         const componentProjectMap = new Map<
@@ -186,27 +182,24 @@ export class UpdateManager {
     }
 
     /**
-     * Fetch latest release from GitHub based on channel
-     * Stable: Latest non-prerelease
-     * Beta: Latest release (including prereleases)
+     * Fetch the newest release the channel accepts. A component reads every track on early
+     * access; the extension reads only alphas there, because a build graduates from one.
      */
     private async fetchLatestRelease(
         repo: string,
         channel: UpdateChannel,
     ): Promise<ReleaseInfo | null> {
         try {
+            const isExtension = repo === this.EXTENSION_REPO;
+            const read = isExtension ? readNewestRelease : readNewestComponentRelease;
             const headers = await buildGitHubHeaders(this.context.secrets);
-            const release = await readNewestRelease(repo, channel, {
-                headers,
-                logger: this.logger,
-            });
+            const release = await read(repo, channel, { headers, logger: this.logger });
 
             if (!release) {
                 return null;
             }
 
             // Find VSIX asset for extension, or source archive for components
-            const isExtension = repo === this.EXTENSION_REPO;
             const downloadUrl = isExtension
                 ? release.assets.find((a: GitHubReleaseAsset) => a.name.endsWith('.vsix'))
                       ?.browser_download_url
