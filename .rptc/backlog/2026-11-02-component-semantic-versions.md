@@ -43,3 +43,4 @@ carrying the fix is out.
 - 2026-11-02  fix(updates): removing a component drops its version record, and the live test results (`d8705f51d`)
 - 2026-11-02  feat(releases): every component is on the beta track until the extension reaches 1.x (`b1883f1c8`)
 - 2026-11-02  feat(releases): the release process is a convention, checked across every repository (`c48221ada`)
+- 2026-11-02  fix(patches): the release watchdog ignores commits no storefront reads (`f28266132`)
