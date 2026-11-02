@@ -99,6 +99,31 @@ describe('MeshDeployment — the commands and options it issues', () => {
             enhancePath: true,
         });
     });
+
+    // Adobe overwrites a mesh's secrets with their literal references on any update that leaves
+    // the file out, so a mesh holding one has to send it on every deploy.
+    it('sends the secrets file when the mesh has one', async () => {
+        mockSuccessfulFileRead();
+        mockSuccessfulDeployment(mockCommandManager);
+        mockSuccessfulVerification();
+
+        await deployMeshComponent('/path/to/mesh', mockCommandManager, mockLogger);
+
+        expect(callsMatching('api-mesh:')[0][0]).toContain('--secrets "/path/to/mesh/secrets.yaml"');
+    });
+
+    it('sends no secrets flag when the mesh has no file', async () => {
+        mockSuccessfulFileRead();
+        mockFs.access.mockImplementation(async (target: unknown) => {
+            if (String(target).endsWith('secrets.yaml')) throw new Error('ENOENT');
+        });
+        mockSuccessfulDeployment(mockCommandManager);
+        mockSuccessfulVerification();
+
+        await deployMeshComponent('/path/to/mesh', mockCommandManager, mockLogger);
+
+        expect(callsMatching('api-mesh:')[0][0]).not.toContain('--secrets');
+    });
 });
 
 describe('MeshDeployment — translating CLI output into progress', () => {

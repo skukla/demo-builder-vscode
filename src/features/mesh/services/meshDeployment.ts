@@ -6,9 +6,9 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { Logger } from '@/types/logger';
 import { parseJSON, toError } from '@/types/typeGuards';
@@ -116,6 +116,21 @@ async function handleDeployFailure(
 }
 
 /**
+ * The `--secrets` argument for a mesh that holds secrets, read from `secrets.yaml` beside its
+ * mesh.json. Sent on every deploy: Adobe replaces a mesh's secrets with their literal references on
+ * any update that leaves the file out.
+ */
+async function secretsArgument(componentPath: string): Promise<string> {
+    const secretsPath = path.join(componentPath, 'secrets.yaml');
+    try {
+        await fsPromises.access(secretsPath);
+        return ` --secrets "${secretsPath}"`;
+    } catch {
+        return '';
+    }
+}
+
+/**
  * Deploy mesh component from cloned repository
  * Builds mesh.json (if needed), then deploys it to Adobe I/O
  *
@@ -155,9 +170,10 @@ export async function deployMeshComponent(
             existingMeshId ? 'Updating the existing mesh' : 'Creating the mesh',
         );
 
+        const secrets = await secretsArgument(componentPath);
         const runMeshCommand = (command: 'create' | 'update') =>
             commandManager.execute(
-                `aio api-mesh:${command} "${meshConfigPath}" --autoConfirmAction`,
+                `aio api-mesh:${command} "${meshConfigPath}"${secrets} --autoConfirmAction`,
                 {
                     cwd: componentPath,
                     streaming: true,
