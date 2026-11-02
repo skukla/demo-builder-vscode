@@ -12,7 +12,7 @@ check passed: version, notes, clean tree, pushed tip of `main`, CI or local chec
 | `app-builder-shell` | Passes | CI | 1.0.0 | `1.0.0-beta.1`, after a bump |
 | `bodea-source` | Passes | Local lint (its only CI job is skipped here) | 6.0.0 | `6.0.0-beta.1`, after a bump. 6.0.0 looks inherited from Adobe's template |
 | `buildright-eds` | Passes | CI | 1.0.0 | `1.0.0-beta.1`, after a bump |
-| `citisignal-nextjs` | Passes | CI | 1.0.0-beta.5 | `1.0.0-beta.6`, after a bump |
+| `citisignal-nextjs` | Passes | CI | 1.0.0-beta.5 | `1.0.0-beta.6`, after a bump. Merge its `fix/dev-server-local-only` first, and only once beta.153 is out |
 | `commerce-eds-mesh` | Passes | CI | 1.0.0-beta.2 | `1.0.0-beta.6`, after a bump. Its tags reach beta.5, so its `package.json` already disagrees |
 | `commerce-erp-integration` | Passes | CI | 0.1.0 | `0.1.0-beta.1`, after a bump, after `demo-erp` |
 | `demo-builder-block-library` | Passes | CI | 0.1.0 | `0.1.0-beta.1`, after a bump |
