@@ -50,7 +50,7 @@ integration carries a stand-in label on screen.
 | Who answers | Code inside Commerce | The mesh resolver |
 | Private key | Encrypted in Commerce | Encrypted in mesh secrets |
 | Company to view | A link table in Commerce | A table the sync keeps, which the mesh reads |
-| Keeping in step | Change tracking inside Commerce, plus a periodic reconcile | Commerce events to an App Builder action, plus a scheduled reconcile. No manual step (owner, 2026-11-01) |
+| Keeping in step | A one-minute cron inside Commerce reading a change log, plus a periodic reconcile | A one-minute App Builder alarm comparing through the API. No manual step (owner, 2026-11-01) |
 | Keys | One per view | One per project, assigned to every view, so a new view needs no mesh deploy |
 | Sign-in, cart, checkout | Straight to Commerce | Through the mesh |
 
@@ -82,18 +82,18 @@ add it and it sets up, remove it and all of it goes.
    sync's table, and signs with the project's key. A project without a mesh gets one, and the storefront's Commerce
    endpoint moves to it. Removal points the endpoint back, republishes, and takes the mesh off if it was added for
    this. To prove: a mesh reading the table from an action.
-4. **Staying in step, with no manual step.** The integration's App Builder action subscribes to Commerce events with
-   `priority: true`, as the ERP integration does, and applies each change to ACO:
-   `plugin.shared_catalog.api.shared_catalog_repository.save` and `.delete`,
-   `plugin.shared_catalog.api.company_management.assign_companies`, `.unassign_companies` and
-   `.unassign_all_companies`, `observer.shared_catalog_assign_categories` and `_unassign_categories`,
-   `observer.company_save_commit_after`, `observer.catalog_product_save_commit_after` and `_delete_commit_after`
-   (read from a live instance's `V1/eventing/supportedList`, 2026-11-01). A scheduled action reconciles Commerce
-   against ACO, because that list has no event for assigning a product to a shared catalog and events can be missed.
-   Adobe's connector also pairs change tracking with a reconcile.
+4. **Staying in step, with no manual step.** An App Builder alarm runs on the connector's documented schedule: every
+   minute for changes (`* * * * *`), with failed items retried every 5 minutes. It reads the shared catalogs, their
+   products and companies from Commerce, compares them with what it last sent, and sends only the differences. ACO's
+   admin API lists views and policies; products and prices cannot be read back, so the action keeps its own record.
+   A run that overlaps the one before it stops. To measure: whether a full compare fits inside a minute on a real
+   catalog, or needs a cheap changed-since check first, and what a run per minute costs against Commerce and Runtime.
+   Events are an optional later layer for changes that feel slow in a demo; the live list
+   (`V1/eventing/supportedList`, 2026-11-01) has shared catalog and company events and none for assigning a product
+   to a shared catalog.
 5. **ERP prices and names reach ACO.** Commerce stays the authority and the sync copies from it, so
-   `commerce-erp-integration` may need no ACO code at all. Test first whether its base price and tier price writes
-   raise an event. If not, the reconcile carries them, or the integration tells the sync to run. Measure stock too:
+   `commerce-erp-integration` may need no ACO code at all. The alarm picks up its base price and tier price
+   writes like any other change. Measure stock too:
    the ERP writes it to Commerce only, and what an ACO storefront shows is not known. See AB-14.
 6. **Stepping aside.** `acoEnabled` already says whether the connector is on. Offered only when it is off and the
    project has ACO, a B2B package and custom shared catalogs. A project that has it when the connector arrives is
@@ -121,7 +121,7 @@ Run on the test website, then back to zero, except as noted.
 - A hidden product still opens from a direct link: a policy filters search and listings, not a read by SKU. That
   is how ACO's API behaves, and the connector uses the same API, so we match it. The cart is Commerce's to refuse.
 - Products and prices have to exist in Commerce too, or Add to Cart fails or disagrees with the listing.
-- Changes reach ACO a little later than Commerce, and a product added to a shared catalog waits for the scheduled reconcile.
+- Changes reach ACO a little later than Commerce, and by about a minute plus ACO's own processing.
 - Each view counts towards the ACO license's catalog variations.
 
 ## Not started
