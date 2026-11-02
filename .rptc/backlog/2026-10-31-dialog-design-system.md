@@ -63,3 +63,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  fix(data-installer): its dialogs follow the design rules (`6fe18d55d`)
 - 2026-11-02  feat(data-installer): a pack's settings layer, Save my changes first, one colour set (`50365ceae`)
 - 2026-11-02  feat(data-installer): Create a datapack is a guided point-and-click flow (`9c7fac877`)
+- 2026-11-02  fix(ui): the second round of dialog rules, and Create's empty cards grey up front (`56dc68ff4`)

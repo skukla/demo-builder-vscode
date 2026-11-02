@@ -111,3 +111,5 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-30  feat(data-installer): a pack's Admin step is one quiet line that opens the setup guide's own step (`b368b5062`)
 - 2026-10-30  fix(data-installer): a pack step's Check waits long enough to show its answer (`ed65b0af2`)
 - 2026-10-30  fix(data-installer): the root-category question leads with the step, and a missing pack file names the project (`76b1e57bc`)
+- 2026-11-02  fix(data-installer): an import honours its ticks, and a removal says what goes (`280ad4f81`)
+- 2026-11-02  Clear demo data leaves nothing only the chosen stores use (c8556c19f; its commit names AB-83 by mistake). Settings layer and Save my changes first (50365ceae). Not yet proved live.
