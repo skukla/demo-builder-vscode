@@ -651,7 +651,8 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             'per (name, version) pair — the same pack appears once per version. Curated packs ' +
             'only unless includeCommunity is set. store:"library" lists the team datapack ' +
             'library instead (shared packs plus your own, mine:true on yours); includeLibrary ' +
-            'adds those rows after the Data Installer ones, each tagged store:"library". This ' +
+            'adds those rows after the Data Installer ones, each tagged store:"library". A library pack ' +
+            'named <pack>-settings holding only store_config is that pack\'s settings layer, not a demo. This ' +
             'endpoint reports no total, so count === limit means there may be more — page with skip.',
         map: dataInstallerHandlers,
         type: 'find-datapacks',
@@ -678,7 +679,8 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: true,
         description:
             "One datapack's metadata plus which of its declared data types the service actually " +
-            'stores. Use before installing: a pack can declare a type it holds no item for.',
+            'stores. Use before installing: a pack can declare a type it holds no item for. settingsLayer ' +
+            'names the store settings an install would also apply, with the demo-builder engine.',
         map: dataInstallerHandlers,
         type: 'get-datapack-detail',
         inputSchema: {

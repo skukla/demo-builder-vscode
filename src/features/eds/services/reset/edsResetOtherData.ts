@@ -43,6 +43,7 @@ import { type WipePlan, planWipe } from '@/features/data-installer/services/demo
 import { readWipeStructure } from '@/features/data-installer/services/demoDataWipe/wipeReads';
 import { clearShown } from '@/features/data-installer/services/demoDataWipe/wipeRun';
 import { resolveWipeScope } from '@/features/data-installer/services/demoDataWipe/wipeScope';
+import { rememberWipeUnfinished } from '@/features/data-installer/services/demoDataWipe/wipeUnfinished';
 import type { Project } from '@/types/base';
 import type { WipeStoreChoice } from '@/types/demoDataWipe';
 import type { HandlerContext } from '@/types/handlers';
@@ -92,7 +93,7 @@ export async function beginOtherDataCheck(project: Project, context: HandlerCont
             context.logger.info(`${LOG_PREFIX} Not offering to clear the store: ${read.claims.refusal}`);
             return undefined;
         }
-        return await planWipe(commerce.get, read.structure, read.scope, { records: read.claims.records, erp: read.erp });
+        return await planWipe(commerce.get, read.structure, read.scope, { ...read.claims, erp: read.erp });
     } catch (error) {
         context.logger.debug(`${LOG_PREFIX} What else the store holds could not be read: ${error instanceof Error ? error.message : String(error)}`);
         return undefined;
@@ -104,15 +105,26 @@ const counted = (count: number, one: string, many: string): string => `${count} 
 /** "18 products, 13 categories, 2 customers and 1 cart rule", the kinds with anything in them. */
 function kindsLine(plan: WipePlan): string {
     const { remove, takenOff, rulesTakenOff } = plan.preview;
-    const rules = remove.cartRules.count + rulesTakenOff.count;
+    const kind = (count: number, one: string, many: string): string => (count > 0 ? counted(count, one, many) : '');
     return andList(
         [
-            remove.products.count + takenOff.count > 0 ? counted(remove.products.count + takenOff.count, 'product', 'products') : '',
-            remove.categories.count > 0 ? counted(remove.categories.count, 'category', 'categories') : '',
-            remove.customers.count > 0 ? counted(remove.customers.count, 'customer', 'customers') : '',
-            rules > 0 ? counted(rules, 'cart rule', 'cart rules') : '',
+            kind(remove.products.count + takenOff.count, 'product', 'products'),
+            kind(remove.categories.count, 'category', 'categories'),
+            kind(remove.customers.count, 'customer', 'customers'),
+            kind(remove.cartRules.count + rulesTakenOff.count, 'cart rule', 'cart rules'),
+            kind(remove.companies.count, 'company', 'companies'),
+            kind(remove.catalogs.count, 'shared catalog', 'shared catalogs'),
+            kind(remove.customerGroups.count, 'customer group', 'customer groups'),
+            kind(remove.attributeSets.count, 'attribute set', 'attribute sets'),
+            kind(remove.attributes.count, 'attribute', 'attributes'),
         ].filter(Boolean),
     );
+}
+
+/** " 3 website settings will be set to the default's value." when there are any. */
+function settingsLine(plan: WipePlan): string {
+    const { count } = plan.preview.settings;
+    return count > 0 ? ` ${counted(count, 'website setting', 'website settings')} will be set to the default's value.` : '';
 }
 
 /** " Its orders will be closed, never deleted: 12 canceled, 4 refunded and 2 returns closed." when there are any. */
@@ -137,14 +149,14 @@ export async function confirmClearOtherData(vscode: typeof import('vscode'), pla
     const store = stores.map((s) => `${s.storeName} (${s.storeCode}, website ${s.websiteCode})`).join(', ');
     const clearButton: import('vscode').MessageItem = { title: 'Remove Those Too' };
     const keepButton: import('vscode').MessageItem = { title: 'Keep Them', isCloseAffordance: true };
-    const holds = kindsLine(plan) ? `also holds ${kindsLine(plan)} Demo Builder didn't install.` : "holds orders Demo Builder didn't place.";
+    const holds = kindsLine(plan) ? `also holds ${kindsLine(plan)} Demo Builder didn't install.` : "holds orders or settings Demo Builder didn't place.";
     const shared =
         (takenOff.count > 0 ? ` ${counted(takenOff.count, 'product', 'products')} another website also sells will only be taken off this one.` : '') +
         (rulesTakenOff.count > 0 ? ` ${counted(rulesTakenOff.count, 'cart rule', 'cart rules')} another website also uses will only be taken off this one.` : '');
     const leftLine = left.length > 0 ? ` Some things are left: ${left.map((l) => `${l.count} ${l.kind} (${l.why})`).join('; ')}.` : '';
     const erpLine = plan.preview.erp ? ` ${plan.preview.erp.line}` : '';
     const answer = await vscode.window.showWarningMessage(
-        `This demo's store, ${store}, ${holds}${ordersLine(plan)}${erpLine}${shared}${leftLine} ` +
+        `This demo's store, ${store}, ${holds}${settingsLine(plan)}${ordersLine(plan)}${erpLine}${shared}${leftLine} ` +
             "Also remove those, to leave this demo's store empty? This can't be undone.",
         { modal: true },
         clearButton,
@@ -177,7 +189,8 @@ export async function clearProjectOtherData(
         const read = await claimsOf(project, context, deps, commerce, plan.choices);
         if (!read) return notCleared(context, 'the project names no store');
         if ('refusal' in read.claims) return notCleared(context, read.claims.refusal);
-        const outcome = await clearShown(commerce, plan, read.claims.records, { report: (stage, step) => report(stage, step), erp: read.erp });
+        const outcome = await clearShown(commerce, plan, { ...read.claims, erp: read.erp }, (stage, step) => report(stage, step));
+        await rememberWipeUnfinished(deps.files, project.path, outcome.unfinished);
         const log = outcome.failed.length > 0 ? context.logger.warn : context.logger.info;
         log.call(context.logger, `${LOG_PREFIX} ${outcome.sentence}`);
         return { cleared: true, sentence: outcome.sentence };

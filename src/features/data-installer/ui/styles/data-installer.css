@@ -474,9 +474,24 @@
 }
 }
 
-/* "Save from this store" (SaveFromStoreModal, StoreItemChecklist; datapack-engine step 14): one
-   kind's items, searchable, in a list that scrolls inside the modal rather than growing it. Only
-   this bundle renders it. */
+/* Create a datapack's card screens (create-flow): two across, as Add Integration's kind screen has
+   them, or three for the service's many short data types. Equal heights by row. */
+@layer theme {
+.datapack-flow-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+    overflow-wrap: anywhere;
+}
+
+.datapack-flow-cards--dense {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+}
+
+/* A kind's items (StoreKindItems, StoreItemChecklist; datapack-engine step 14), searchable, in a
+   list that scrolls inside the modal rather than growing it. Only this bundle renders it. */
 @layer theme {
 .datapack-pick-list {
     display: flex;
@@ -489,11 +504,6 @@
 .datapack-pick-rows {
     max-height: 320px;
     overflow-y: auto;
-}
-
-/* The spinner where the list lands, while another kind is read (StoreKindItems). */
-.datapack-pick-wait {
-    display: flex;
 }
 }
 

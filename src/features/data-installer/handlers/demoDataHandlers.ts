@@ -16,7 +16,8 @@
  * Both read every other project on this machine (`readWipeClaims`): a chosen store another project
  * records as its own is refused, naming it, before any product, customer or order is read (the check
  * answers that as a normal answer, `refused`, so an agent explains it, and the picker locks the
- * store); and what any project's install records list on the chosen websites is left.
+ * store); what any project's install records list on the chosen websites is left, and so is any
+ * company, catalog, group, attribute set or attribute a record of any website lists.
  *
  * Both find the ERP integration serving the instance, from any local project (`findWipeErp`): the
  * orders of chosen stores whose website it sends to an ERP are closed by it, not here, and its ERP
@@ -29,15 +30,16 @@
  */
 
 import { projectCommerce } from '../services/buildDatapackEngine';
-import { type InstallRecord, type RecordFiles, nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
+import { type RecordFiles, nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
 import type { RemovalAccess } from '../services/demoBuilderEngine/removers';
-import { claimedStores, projectStoreChoice, readWipeClaims } from '../services/demoDataWipe/wipeClaims';
+import { type WipeRespects, claimedStores, projectStoreChoice, readWipeClaims } from '../services/demoDataWipe/wipeClaims';
 import type { WipeErp } from '../services/demoDataWipe/wipeErp';
 import { findWipeErp } from '../services/demoDataWipe/wipeErpDeps';
 import { type WipePlan, planWipe, planWipeFor } from '../services/demoDataWipe/wipePlan';
 import { WipeScopeError, readWipeStructure } from '../services/demoDataWipe/wipeReads';
 import { WipeChangedError, clearShown, storesInWords } from '../services/demoDataWipe/wipeRun';
 import { choicesOf, resolveWipeScope } from '../services/demoDataWipe/wipeScope';
+import { rememberWipeUnfinished } from '../services/demoDataWipe/wipeUnfinished';
 import { loadOtherProjects } from '@/core/state/otherProjects';
 import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
 import { DEMO_DATA_CLEAR_OPERATION_ID } from '@/core/utils/operationIds';
@@ -114,7 +116,7 @@ async function checkIn(deps: DemoDataDeps, plans: Map<string, WipePlan>, opened:
     const choices = choicesOf(structure, scope, claims);
     const wiped = await readWipeClaims(deps.files, project, others, structure, scope);
     if ('refusal' in wiped) return answer({ choices, refused: wiped.refusal });
-    const plan = await planWipe(opened.commerce.get, structure, scope, { records: wiped.records, erp: opened.erp });
+    const plan = await planWipe(opened.commerce.get, structure, scope, { ...wiped, erp: opened.erp });
     keep(plans, plan);
     return answer({ choices, preview: plan.preview });
 }
@@ -136,17 +138,18 @@ function clearRefusal(payload: DemoDataRequest | undefined): string | undefined 
     if (payload.confirm !== true) {
         const named = payload.stores.map((s) => (s.storeCode ? `${s.storeCode} (${s.websiteCode})` : `every store of ${s.websiteCode}`)).join(', ');
         return (
-            `This removes everything in the stores ${named} that Demo Builder did not install, as listed, ` +
-            'cancels or refunds their orders and closes their returns (through the ERP integration where one serves the store, ' +
-            'then refreshing its ERP from Commerce). It cannot be undone. Confirm to proceed.'
+            `This removes everything in the stores ${named} that Demo Builder did not install and only they use, as listed: products, ` +
+            'categories, customers, cart rules, companies, shared catalogs, customer groups, attribute sets and attributes. It sets ' +
+            "those websites' settings to the default's value, cancels or refunds their orders and closes their returns (through the " +
+            'ERP integration where one serves the store, then refreshing its ERP from Commerce). It cannot be undone. Confirm to proceed.'
         );
     }
     return undefined;
 }
 
 /** The store would now clear more than was shown: the new list is offered, never acted on. */
-async function offerAgain(plans: Map<string, WipePlan>, opened: Opened, shown: WipePlan, records: InstallRecord[], error: WipeChangedError): Promise<HandlerResponse> {
-    const fresh = await planWipeFor(opened.commerce.get, shown.choices, records, opened.erp);
+async function offerAgain(plans: Map<string, WipePlan>, opened: Opened, shown: WipePlan, respects: WipeRespects, error: WipeChangedError): Promise<HandlerResponse> {
+    const fresh = await planWipeFor(opened.commerce.get, shown.choices, { ...respects, erp: opened.erp });
     keep(plans, fresh);
     return { success: false, error: error.message, data: { preview: fresh.preview } };
 }
@@ -162,12 +165,13 @@ async function clearIn(deps: DemoDataDeps, plans: Map<string, WipePlan>, context
     if ('refusal' in claims) return { success: false, error: claims.refusal, code: ErrorCode.INVALID_OPERATION };
     try {
         report(DATAPACK_STAGES.checkingStores.label);
-        const outcome = await clearShown(opened.commerce, shown, claims.records, { report, erp: opened.erp });
+        const outcome = await clearShown(opened.commerce, shown, { ...claims, erp: opened.erp }, report);
+        await rememberWipeUnfinished(deps.files, opened.project.path, outcome.unfinished).catch((error: unknown) => context.logger.warn(`${LOG_PREFIX} What was left to do could not be noted: ${String(error)}`));
         context.logger.info(`${LOG_PREFIX} ${outcome.sentence}`);
         return { success: true, note: outcome.sentence, data: outcome };
     } catch (error) {
         if (!(error instanceof WipeChangedError)) throw error;
-        return offerAgain(plans, opened, shown, claims.records, error);
+        return offerAgain(plans, opened, shown, claims, error);
     }
 }
 

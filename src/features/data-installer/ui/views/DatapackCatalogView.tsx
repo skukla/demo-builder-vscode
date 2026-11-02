@@ -40,8 +40,8 @@
 
 import { Flex, Switch } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { groupDatapacks, type DatapackGroup } from '../../services/datapackCatalog';
-import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack, Page } from '../../types';
+import { groupDatapacks, withoutLayerCards, type DatapackGroup } from '../../services/datapackCatalog';
+import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack, PackDetailLayer, Page } from '../../types';
 import { CatalogHeaderActions } from '../components/CatalogHeaderActions';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
@@ -74,6 +74,8 @@ interface DatapackDetailResponse {
     inventory: DataItemInventory;
     /** The warning a delete carries when this SC shared the pack in a project file (step 07). */
     sharedInFile?: string;
+    /** The settings layer Import will apply after the pack's data (step 09). */
+    settingsLayer?: PackDetailLayer;
 }
 
 /**
@@ -169,7 +171,8 @@ export function DatapackCatalogView(): React.JSX.Element {
         return names;
     }, [installed.value, projectContext.value]);
 
-    const groups = useMemo(() => groupDatapacks(value?.items ?? []), [value]);
+    // A settings layer is reached from its pack's flyout, not as a demo of its own (step 09).
+    const groups = useMemo(() => groupDatapacks(withoutLayerCards(value?.items ?? [], installedPacks)), [value, installedPacks]);
     const filtered = useMemo(
         () => groups.filter((group) => matchesSearchFields(group, SEARCH_FIELDS, query)),
         [groups, query],
@@ -374,6 +377,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onRename={renamePack}
                 sharedInFile={detail.value?.sharedInFile}
                 onSharingChanged={sharingChanged}
+                settingsLayer={detail.value?.settingsLayer}
             />
             {heldPack.windows}
 

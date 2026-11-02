@@ -22,6 +22,8 @@ import type { ErpAttributesStepRecord, StorePreparationStepRecord } from '@/type
 
 const BRAND_CODE = 'brand';
 const CODES = [OWNER_CODE, BRAND_CODE] as const;
+/** The attributes this fix makes: an ERP integration's, whatever else uses them. */
+export const ERP_ATTRIBUTE_CODES: readonly string[] = CODES;
 const LABELS: Record<(typeof CODES)[number], string> = { erp_owner: 'ERP Owner', brand: 'Brand' };
 const TEXT_FIELD = 'text';
 

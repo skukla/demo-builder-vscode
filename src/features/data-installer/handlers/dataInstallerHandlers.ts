@@ -26,6 +26,7 @@ import {
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
 import { orgNumberOf } from '../services/dataInstallerSignIn';
 import { packReadsVia } from '../services/recordedPack';
+import { layerForDetail } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import type { CatalogPage, DatapackSummary, OperationMode, Page } from '../types';
 import { activityFromBoth, installedFromBoth } from './engineHistoryReads';
@@ -424,7 +425,12 @@ export const dataInstallerHandlers = defineHandlers({
                 store === 'library'
                     ? await sharedInFileWarningFor(context.context.globalState, id, packReadsVia((s) => resolveDataInstallerAccess(context, s)))
                     : undefined;
-            return { detail, inventory, ...(shared ? { sharedInFile: shared } : {}) };
+            const settingsLayer = await layerForDetail(detail, selectedDatapackEngine(), async () => {
+                const library = await resolveDataInstallerAccess(context, 'library');
+                if (!library.ok) throw new Error('The datapack library is not reachable.');
+                return library.client;
+            });
+            return { detail, inventory, ...(shared ? { sharedInFile: shared } : {}), ...(settingsLayer ? { settingsLayer } : {}) };
         }, store);
     },
 

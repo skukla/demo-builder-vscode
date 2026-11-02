@@ -23,6 +23,7 @@ import { type RecordFiles, nodeRecordFiles, readInstallRecord } from './demoBuil
 import type { PackItems } from './demoBuilderEngine/runPack';
 import { nodeActivityFiles, recordJobEnd } from './engineActivityLog';
 import { deriveImportInstance } from './importInstance';
+import { type LayerReads, findSettingsLayer } from './settingsLayer';
 import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
@@ -36,8 +37,8 @@ export interface DatapackEngineAccess extends ServiceEngineAccess {
     project: Project;
     /** The service catalog's reads, where Demo Builder's engine reads a pack's rows from. */
     catalog: Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'>;
-    /** The datapack library's reads, opened only when a pack is read from it. */
-    libraryCatalog?: () => Promise<Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'>>;
+    /** The datapack library's reads, opened only when a pack or its settings layer is read from it. */
+    libraryCatalog?: () => Promise<Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'> & LayerReads>;
     authManager: AuthenticationService | undefined;
     secrets: CredentialStore | undefined;
 }
@@ -55,6 +56,15 @@ export async function readPackItems(
     const catalog = source === 'library' && access.libraryCatalog ? await access.libraryCatalog() : access.catalog;
     const file = await readPackFromStore(catalog, id, source);
     return Object.fromEntries(file.items.map((item) => [item.dataType, item.records]));
+}
+
+/**
+ * How Demo Builder's engine, its preview and a save find a pack's settings layer (step 09): in the
+ * library, whichever store holds the pack.
+ */
+export function layerFinder(access: Pick<DatapackEngineAccess, 'libraryCatalog'>): Pick<DemoBuilderEngineDeps, 'findLayer'> {
+    const { libraryCatalog } = access;
+    return libraryCatalog ? { findLayer: async (pack) => findSettingsLayer(await libraryCatalog(), pack.name) } : {};
 }
 
 /**
@@ -79,6 +89,7 @@ export function buildDatapackEngine(id: DatapackEngineId, access: DatapackEngine
         projectPath: access.project.path,
         log,
         onJobEnd: (end) => void writeActivity(end),
+        ...layerFinder(access),
         // Step 12: the one Admin step a pack can leave is asked where the SC is looking (PL-59).
         asker: {
             ask: (question, ...actions) => askDuringOperation(question, ...actions),

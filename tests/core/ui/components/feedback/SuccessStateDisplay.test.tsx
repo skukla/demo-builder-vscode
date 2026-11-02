@@ -31,7 +31,7 @@ describe('SuccessStateDisplay', () => {
                 <SuccessStateDisplay title="Success" />
             );
             // CheckmarkCircle icon from StatusDisplay variant="success" renders with green color
-            const icon = container.querySelector('.text-green-600');
+            const icon = container.querySelector('.text-positive');
             expect(icon).toBeInTheDocument();
         });
 
@@ -40,7 +40,7 @@ describe('SuccessStateDisplay', () => {
                 <SuccessStateDisplay title="Complete" />
             );
             // Verify the success variant's green icon class
-            expect(container.querySelector('.text-green-600')).toBeInTheDocument();
+            expect(container.querySelector('.text-positive')).toBeInTheDocument();
         });
     });
 

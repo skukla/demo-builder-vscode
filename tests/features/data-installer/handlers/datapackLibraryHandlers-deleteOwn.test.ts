@@ -72,7 +72,7 @@ it("asks nothing more when the pack deleted is not this demo's own", async () =>
 
     await remove(context, { datapackName: 'someone-else', version: 'v1', confirm: true });
 
-    expect(library.findDatapacks).not.toHaveBeenCalled();
+    expect(library.findDatapacks).not.toHaveBeenCalledWith({ datapackName: 'someone-else' });
     expect(context.stateManager.saveProject).not.toHaveBeenCalled();
 });
 
@@ -84,4 +84,47 @@ it('still answers deleted when the library cannot be asked afterwards, and leave
 
     expect(result).toMatchObject({ success: true, data: { deleted: true } });
     expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+});
+
+describe("the pack's settings layer (datapack-engine step 09): a version takes its layer of the same version with it", () => {
+    const deletes = () =>
+        (global.fetch as jest.Mock).mock.calls
+            .filter(([, init]) => (init as RequestInit).method === 'DELETE')
+            .map(([url]) => new URL(String(url)).searchParams.toString());
+    const layerRow = (version: string, extra: Partial<DatapackSummary> = {}): DatapackSummary => ({
+        ...row('bodea-settings', version, true),
+        dataTypes: ['store_config'],
+        ...extra,
+    });
+
+    it('deletes the layer at the same version, after the pack, and says so', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [layerRow('v1'), layerRow('v2')], count: 2 });
+
+        const result = await remove(contextFor(null), { datapackName: 'bodea', version: 'v1', confirm: true });
+
+        expect(library.findDatapacks).toHaveBeenCalledWith({ datapackName: 'bodea-settings' });
+        expect(deletes()).toEqual(['datapack_name=bodea&version=v1', 'datapack_name=bodea-settings&version=v1']);
+        expect(result).toMatchObject({ success: true, data: { deleted: true, settingsLayerDeleted: true } });
+    });
+
+    it.each([
+        ['another version', layerRow('v2')],
+        ['a colleague', layerRow('v1', { mine: undefined })],
+        ['a demo of that name, not a layer', layerRow('v1', { dataTypes: ['products'] })],
+    ])('leaves a pack of that name that is %s', async (_what, item) => {
+        library.findDatapacks.mockResolvedValue({ items: [item], count: 1 });
+
+        const result = await remove(contextFor(null), { datapackName: 'bodea', version: 'v1', confirm: true });
+
+        expect(deletes()).toEqual(['datapack_name=bodea&version=v1']);
+        expect(result.data).not.toHaveProperty('settingsLayerDeleted');
+    });
+
+    it('still answers deleted when the library cannot be asked about the layer, and says it may be there', async () => {
+        library.findDatapacks.mockRejectedValue(new Error('unreachable'));
+
+        const result = await remove(contextFor(null), { datapackName: 'bodea', version: 'v1', confirm: true });
+
+        expect(result).toMatchObject({ success: true, data: { deleted: true, settingsLayerLeft: expect.stringContaining('bodea-settings') } });
+    });
 });

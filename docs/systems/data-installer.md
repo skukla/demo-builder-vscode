@@ -84,11 +84,29 @@ Demo Builder's own engine (`services/demoBuilderEngine/`, the default) removes a
 from its install record, `<project>/.demo-builder/datapacks/<name>@<version>.json`,
 which lists every object the install made. It never removes by name.
 
+- **Anything the SC changed since the install is settled first** (step 05,
+  `handlers/removalChanges.ts`). The confirm reads it (`get-datapack-removal-changes`, the
+  preview's own read) and, when there is something to lose, says what and offers "Save my changes
+  to the Acme Demo pack first", ticked, and "Always do this, and stop asking", which sets
+  `demoBuilder.dataInstaller.changesOnRemoval` to `save`. Saving is "Save store changes" itself: a
+  new version of the demo's own pack, the previous one kept. The removal is then of that version,
+  since the install record moved onto it. A save that fails removes nothing. A read that fails says
+  so and offers Remove anyway. A project reset or an Edit that removes the pack saves first without
+  a second question; `reset_datapack` names the changes and refuses until `changes` is `keep` or
+  `drop`, unless the setting answers.
 - **A pack it has no record of** (one the service installed, or one installed from
   another project) is refused, and nothing is removed (owner, 2026-10-30, step 14
   item 20). The refusal points the SC at **Clear demo data** on the Data Installer
   screen (agents: `check_demo_data`, then `clear_demo_data`), which clears what Demo
-  Builder did not install from the stores the SC picks (`demoDataWipe/wipePlan.ts`).
+  Builder did not install from the stores the SC picks (`demoDataWipe/wipePlan.ts`):
+  products, categories, customers and cart rules; companies with their customers,
+  shared catalogs with their customer groups, customer groups, attribute sets and
+  attributes, each only when nothing else on the instance uses it; and the wholly
+  chosen websites' settings, set to the default's value (Commerce cannot make a
+  value inherited again, so "Use Default Value" in the Admin stays the one way to
+  do that). Orders are closed, never deleted. What another demo also uses stays, and
+  the dialog names it. Rules, write order and live proof:
+  `.rptc/plans/datapack-engine/step-10-wipe.md`.
 
 When an install hits trouble (step 14 items 1 to 3):
 
@@ -137,14 +155,17 @@ judgement in this feature:
 ## Saving a store into a pack, with Demo Builder's engine (datapack-engine step 14)
 
 The export door is Demo Builder's own with its engine chosen (the default). "Create datapack" in
-the catalog's header, with its Commerce choice (`CreateDatapackModal`), and "Save store changes to
-this pack" in the flyout's menu for the pack the project holds, open one pick screen
-(`SaveFromStoreModal`): one kind at a time (products, gift
-cards, categories, cart rules, customers, companies, customer groups, shared catalogs, attributes,
-attribute sets), listed from the project's store with its own credential
-(`list-datapack-export-items`, `storeItems.ts`), scoped to its website where Commerce scopes the
-thing, Commerce's own left out. In the flyout the list leaves off what the pack holds already, so
-what is left is what the SC made by hand. Save writes a new version of this demo's own library pack
+the catalog's header, with its Commerce card (`CreateDatapackModal`), and "Save store changes to
+this pack" in the flyout's menu for the pack the project holds (`SaveFromStoreModal`), walk the same
+screens (`create-flow/DatapackFlowDialog`): a card per kind (products, gift cards, categories, cart
+rules, customers, companies, customer groups, shared catalogs, attributes, attribute sets), and
+clicking one opens that kind's checklist. Each kind is listed when first opened, from the project's
+store with its own credential (`list-datapack-export-items`, `storeItems.ts`), scoped to its website
+where Commerce scopes the thing, Commerce's own left out. A kind whose read leaves nothing to pick is
+greyed out on its card from then on; until its read has answered, a card stays clickable, because
+the handler lists one kind whole at a time, so knowing all ten up front would cost ten full reads
+(products and customers twice each) on every open. In the flyout the list leaves off what the pack
+holds already, so what is left is what the SC made by hand. Save writes a new version of this demo's own library pack
 (`saveStore.ts`): the pack Demo Builder installed here when there is one, plus what was picked; with
 none, a store Demo Builder did not fill, what was picked alone. A pick brings what it needs (a
 product its categories, set, attributes and quantities; a rule its coupons; a company its admin),
@@ -163,8 +184,9 @@ trip (install a pack into an empty store, save it back, compare) is pinned by
 
 Implemented (`handlers/exportHandlers.ts`, `services/dataInstallerExportClient.ts`). "Create
 datapack" in the catalog's header asks the pack type first (`CreateDatapackModal`). With the
-service engine chosen, its Commerce choice opens `ServiceExportModal` for the Commerce export; its
-ACO choice opens the same screen for an ACO pack (below), with either engine. A
+service engine chosen, its Commerce card goes on to cards for the data types, then the name and
+version; its ACO card, with either engine, to cards for the store views and the ACO data types (below),
+then the name and version. A
 probe on 2026-08-14 found it authenticating and connecting but storing nothing
 ("MongoDB connection URI required"). That investigation is in
 [`.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md`](../../.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md),
@@ -194,6 +216,48 @@ verbatim). An existing name and version is refused, and so are `commerceInstance
 the save. What it reads and where it differs from the service, with file:line, is
 [`.rptc/research/datapack-engine/aco-export-spec.md`](../../.rptc/research/datapack-engine/aco-export-spec.md).
 Installing an ACO pack is not built: Demo Builder's engine refuses ACO kinds, and PL-60 owns it.
+
+## A pack's settings layer (datapack-engine step 09)
+
+The service cannot set Commerce configuration, so settings live **beside** a pack, in the library: a
+**settings layer** is a library pack named `<pack name>-settings` that holds only `store_config`
+rows. It is ordinary pack rows, moved like any pack. Only Demo Builder's engine applies one.
+
+| When | What happens |
+|---|---|
+| Install | the pack's data, then the newest version of its layer, on the pack's own install record. A pack holding `store_config` itself wins: the layer is not looked for, so nothing applies twice |
+| Remove | one removal takes both: the record's settings go back first, by the settings fix's "changed since" rule, then the data. No library is needed |
+| Install again | a setting still as Demo Builder left it follows the layer; one the SC changed is kept and counted; one the layer dropped, or every one when the library says the layer is gone, is put back |
+| Refused | a path outside `catalog/`, `sales/`, `checkout/`, `customer/`, `btob/`, `cataloginventory/`, under `web/` or `admin/`, or ending in password, secret, token or key, and a store-view row, stop the whole install before any write, by path, in the dry run too. So does the same path in a file's layer at Open and Load |
+| Trouble after the data | a setting Commerce refuses, one with no value anywhere, or a write with no answer: the data stays, and the note names it. Removal takes the data out and puts back what was applied |
+| Library cannot be asked | the data installs and the note says so. A recorded setting is left alone, since "cannot ask" is not "gone" |
+
+**Where a person sees it.** The pack's flyout has an "Also sets" row (path and value) before Import
+is pressed. The install's note says "From bodea-settings@2: Set catalog/frontend/grid_per_page: 12 →
+24." `preview_datapack_changes` answers `settings` (`layer` and `changes`, by path, old and new value).
+
+**The catalog offers no card for a layer while its pack is listed** (`withoutLayerCards`, the Data
+Installer screen and the wizard's Datapacks step). That would strand one an SC could otherwise not
+remove, so it keeps its card when no pack of its name is listed or when it was installed on its own;
+and the pack's flyout offers "Remove its store settings" on a layer that is yours. `find_datapacks`
+still lists every row: an agent can tell a layer by its name and `get_datapack`'s `settingsLayer`.
+
+**Saving.** "Save store changes" never writes a layer's settings into the new version, which would
+make that version hold settings and win over its layer for good, and never onto the layer installed,
+which may be a colleague's. They go to a new layer beside the new version, named for the demo's own
+pack at the same version, read at their values now. A pack holding its own settings keeps them.
+Deleting a version takes your layer of the same version with it, so the save is still undone in one
+step. Sharing a pack shares its layer.
+
+**Files.** A pack's file carries its layer as a second section, and the format version stays 1, so
+an older extension loads the data and ignores the rest. Loading puts the data where the SC chose and
+the layer in the library; a version already there is left unless the SC asked to replace. An older
+file, with no section, loads as it always did. The layer's reversal is on the load result ("Remove
+its store settings from the library", unless removing the pack takes it).
+
+**Putting a value back leaves a website row explicit.** The API has no delete route, so a removal
+writes the value the website had inherited, and the website then holds it as its own. This work does
+not change that; "Use Default Value" in the Admin restores inheritance (plan's decision 5).
 
 ## The library in the catalog
 
@@ -258,6 +322,7 @@ read in the extension (`services/datapackZip.ts`) and works the same for both st
   datapack.json            name, version, display name, description, data types,
                            which store it came from, when; plus a format marker
   data/<data_type>.json    one per data type: the rows, as the store holds them
+  settings/store_config.json   its settings layer, when it has one (below)
 ```
 
 A zip whose files sit under one root folder reads the same.

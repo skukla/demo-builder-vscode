@@ -943,4 +943,6 @@ export interface SaveStoreChangesResult {
     unnamed: string[];
     /** What the store has, of the kinds an SC adds by hand, that the new version does not hold (step 14). */
     leftOut: LeftOut[];
+    /** The settings layer written beside the new version (step 09), when the pack's settings are a layer's. */
+    settingsLayer?: { datapackName: string; version: string; settings: number };
 }

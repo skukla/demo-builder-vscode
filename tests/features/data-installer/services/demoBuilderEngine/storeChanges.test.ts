@@ -23,7 +23,10 @@ describe('previewChanges', () => {
     it("counts a pack's store settings by what installing would do to each, writing nothing (step 09)", async () => {
         const GRID = 'catalog/frontend/grid_per_page';
         const LIST = 'catalog/frontend/list_per_page';
-        const reads = { [configListPath([GRID, LIST], 'default')]: { items: [{ path: GRID, value: '12', scope: 'default' }, { path: LIST, value: '20', scope: 'default' }] } };
+        const reads = {
+            [configListPath([GRID, LIST], 'default')]: { items: [{ path: GRID, value: '12', scope: 'default' }, { path: LIST, value: '20', scope: 'default' }] },
+            [configListPath([GRID], 'default')]: { items: [{ path: GRID, value: '12', scope: 'default' }] },
+        };
         const settings = [{ path: GRID, value: '24', scope: 'default' }, { path: LIST, value: '20', scope: 'default' }];
         const { d, ctx } = await deps(false, reads, { store_config: settings });
 
@@ -38,6 +41,7 @@ describe('previewChanges', () => {
             remove: { count: 0, names: [] },
             keep: { count: 0, names: [] },
         });
+        expect(preview.settings).toEqual({ changes: [`${GRID}: 12 → 24`] });
     });
 
     it('counts what installing again would do, by kind, with a few names each, and writes nothing', async () => {

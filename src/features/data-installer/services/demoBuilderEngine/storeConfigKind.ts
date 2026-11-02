@@ -14,7 +14,7 @@
  * | `scope` `default` | written store-wide |
  * | `scope` `website`/`websites` | written for the install target's website, whatever code the row names (as the service maps website codes for its own kinds) |
  * | `scope` `store`/`stores` | refused before anything is written: the settings fix reads and writes the default and website scopes only |
- * | a path a pack may not change (base URLs, cookies, the Admin, a credential) | refused before anything is written |
+ * | a path outside the allowed sections, under `web/` or `admin/`, or ending in a credential's name | refused before anything is written |
  * | a path with no value anywhere now | refused before anything is written: the fix would put back Commerce's "0" for it, not what it held |
  *
  * Each setting written is recorded with what its scope held before (`previous`, the fix's own
@@ -30,6 +30,7 @@
  */
 
 import { z } from 'zod';
+import { STORE_CONFIG_KIND } from '../datapackCatalog';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, type SettingsDone, parseRows } from './kindContext';
 import { certainlyNotMade } from './pendingCreates';
@@ -43,7 +44,7 @@ import type { SetupConfigFixItem } from '@/types/appBuilderComponents';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { CommerceConfigPrevious } from '@/types/storePreparation';
 
-export const STORE_CONFIG_KIND = 'store_config';
+export { STORE_CONFIG_KIND };
 
 const rowsSchema = z.array(
     z.object({
@@ -55,12 +56,19 @@ const rowsSchema = z.array(
 );
 
 /**
- * Paths a pack may not set, whoever made it: Adobe's "System configuration API" page warns that
- * copying base URLs or credentials between environments "can break the production store", and the
- * Admin's own settings decide who can sign in to fix it.
+ * The sections a pack may set (step 09, decision 3, owner 2026-11-02): a pack is untrusted input,
+ * since any path the Admin role can reach is writable through this API, so a section is refused
+ * until someone chooses to allow it.
  */
-const REFUSED_PREFIXES = ['web/unsecure/', 'web/secure/', 'web/cookie/', 'admin/'];
-const CREDENTIAL = /(password|secret|token|(^|_)key)$/u;
+const ALLOWED_SECTIONS = ['catalog', 'sales', 'checkout', 'customer', 'btob', 'cataloginventory'];
+
+/**
+ * Refused whatever the allowed list says, were it ever to grow: Adobe's "System configuration API"
+ * page warns that copying base URLs or credentials between environments "can break the production
+ * store", and the Admin's own settings decide who can sign in to fix it.
+ */
+const NEVER_SECTIONS = ['web', 'admin'];
+const CREDENTIAL = /(password|secret|token|key)$/u;
 
 /** One pack setting, as the settings fix takes it, and the record's name for it. */
 interface PackSetting {
@@ -70,11 +78,15 @@ interface PackSetting {
 
 const keyOf = (item: Pick<SetupConfigFixItem, 'path' | 'scope'>): string => `${item.path}@${item.scope}`;
 
+/** A setting nothing here writes, whoever asks: anything under `web/` or `admin/`, or a credential. */
+export function isOffLimitsSetting(path: string): boolean {
+    return NEVER_SECTIONS.includes(path.split('/')[0]) || CREDENTIAL.test(path);
+}
+
 function refusal(path: string, scope: string): string | undefined {
     if (scope === 'store' || scope === 'stores') return `${path} is set for one store view, and Demo Builder sets store settings store-wide or for the install's website only`;
-    if (REFUSED_PREFIXES.some((prefix) => path.startsWith(prefix)) || CREDENTIAL.test(path.split('/').pop() ?? '')) {
-        return `${path} is a setting a pack may not change`;
-    }
+    if (isOffLimitsSetting(path)) return `${path} is a setting a pack may not change`;
+    if (!ALLOWED_SECTIONS.includes(path.split('/')[0])) return `${path} is outside what a pack may set (${andList(ALLOWED_SECTIONS)})`;
     return undefined;
 }
 
@@ -88,6 +100,11 @@ export function packSettings(records: unknown, websiteCode: string | undefined):
     const rows = parseRows(rowsSchema, records, 'store settings');
     const refused = rows.flatMap((row) => refusal(row.path, row.scope) ?? []);
     if (refused.length > 0) throw new Error(`The pack's store settings cannot be installed: ${andList(refused)}. Nothing of this kind was written.`);
+    return settingsOf(rows, websiteCode);
+}
+
+/** The rows as the settings fix takes them, the last row for a path and scope winning. */
+function settingsOf(rows: ReadonlyArray<z.infer<typeof rowsSchema>[number]>, websiteCode: string | undefined): PackSetting[] {
     const settings = new Map<string, PackSetting>();
     for (const row of rows) {
         const scope = row.scope === 'default' ? 'default' : 'website';
@@ -329,7 +346,9 @@ export async function captureSettings(
         if (previous) named.set(keyOf(previous), { path: previous.path, scope: previous.scope, ...(previous.scopeCode ? { scopeCode: previous.scopeCode } : {}) });
     }
     if (installed[STORE_CONFIG_KIND] !== undefined) {
-        for (const { key, item } of packSettings(installed[STORE_CONFIG_KIND], websiteCode)) if (!named.has(key)) named.set(key, { path: item.path, scope: item.scope });
+        // The rows' shape only: a path the install would refuse is the save's to refuse, by name (`saveStore.ts`).
+        const rows = parseRows(rowsSchema, installed[STORE_CONFIG_KIND], 'store settings').filter((row) => row.scope !== 'store' && row.scope !== 'stores');
+        for (const { key, item } of settingsOf(rows, websiteCode)) if (!named.has(key)) named.set(key, { path: item.path, scope: item.scope });
     }
     const wanted = [...named.values()];
     if (wanted.length === 0) return {};
@@ -341,4 +360,20 @@ export async function captureSettings(
         ...(item.scope === 'website' ? { scope_code: now[i].scopeCode } : {}),
     }));
     return { [STORE_CONFIG_KIND]: rows };
+}
+
+/**
+ * A recorded setting moved onto a version just saved (`rebaseRecord`): still what it held before
+ * the first install, now against the value that version carries, so a removal puts it back while
+ * it still holds that. One the version does not carry, or whose record does not say what it held,
+ * is left as it is.
+ *
+ * @param saved - the saved version's rows of this kind
+ */
+export function rebasedSetting(object: CreatedObject, saved: unknown): CreatedObject {
+    const previous = recordedPrevious(object);
+    const rows = rowsSchema.safeParse(saved);
+    if (!previous || !rows.success) return object;
+    const row = rows.data.find((each) => each.path === previous.path && (each.scope === 'default' ? 'default' : 'website') === previous.scope);
+    return row ? { ...object, previous: { ...previous, wrote: row.value } } : object;
 }

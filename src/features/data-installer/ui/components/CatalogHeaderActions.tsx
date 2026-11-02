@@ -8,9 +8,9 @@
  *
  * Create datapack replaced "Export from this instance" and "Save from this store", which
  * overlapped, and named a store where they read an instance. Its dialog asks the pack type and
- * routes (`CreateDatapackModal`): a Commerce pack with Demo Builder's engine goes to the pick
- * screen, which the view hosts with the save's progress window (`useHeldPack`), so it is raised
- * as `onSaveFromStore`. Clear demo data clears the stores the SC ticks of what Demo Builder did
+ * walks that pack's screens (`CreateDatapackModal`): a Commerce pack with Demo Builder's engine ends
+ * in a save, which the view hosts with its progress window (`useHeldPack`), so it is raised as
+ * `onSaveFromStore`. Clear demo data clears the stores the SC ticks of what Demo Builder did
  * not install (datapack-engine step 10), after its own confirmation, in the screen's progress
  * window.
  *
@@ -34,7 +34,7 @@ export interface CatalogHeaderActionsProps {
     onCatalogChanged: () => void;
     /** The engine chosen, which decides where a Commerce pack is made (`CreateDatapackModal`). */
     engine?: 'service' | 'demo-builder';
-    /** Demo Builder's engine, a Commerce pack: open the pick screen with no pack. Stable. */
+    /** Demo Builder's engine, a Commerce pack: start the save with these picks. Stable. */
     onSaveFromStore: (picks: StorePicks) => void;
 }
 

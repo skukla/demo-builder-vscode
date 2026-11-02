@@ -42,7 +42,7 @@ export interface HeldPackInput {
 export interface HeldPack {
     /** "Save store changes to this pack", for the held pack only. */
     offerSave?: (id: DatapackId) => void;
-    /** Create datapack, Commerce: save the picks made in its pick list, into this demo's own pack. */
+    /** Create datapack, Commerce: save the picks made on its screens, into this demo's own pack. */
     saveFromStore: (picks: StorePicks) => void;
     /** The held pack's Admin step, as one line for the flyout. */
     setupStepLine: React.JSX.Element | null;

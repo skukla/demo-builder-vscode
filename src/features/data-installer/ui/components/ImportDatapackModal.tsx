@@ -1,7 +1,7 @@
 /**
  * Configure, start and watch one import — as an explicit state machine.
  *
- * The modal shows ONE view at a time: `form`, `busy`, `confirm-reset`, `watching`,
+ * The modal shows ONE view at a time: `form`, `busy`, `reading-changes`, `confirm-reset`, `watching`,
  * `stopped-watching`, `result` or `no-instance`, with the footer narrating each. An earlier shape let
  * the form, dry-run verdicts, three failure displays and a credentials notice
  * coexist as conditional fragments — and that produced a live bug nobody could
@@ -44,10 +44,12 @@ import type { ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportScopes } from '../hooks/useImportScopes';
 import { useJobPickup } from '../hooks/useJobPickup';
-import { deselectType, selectType, type TypeSelection } from '../importDependencies';
+import { useRemovalConfirm } from '../hooks/useRemovalConfirm';
+import { useTypeSelection } from '../hooks/useTypeSelection';
 import { ImportDatapackModalBody, type BodyContext, type ModalView } from './ImportDatapackModalBody';
-import { buildActions, busyMessage, closeLabel, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
+import { buildActions, busyMessage, closeLabel, isRemoving, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
 import { resolveResult, type LastAction } from './importResult';
+import { removeLabel } from './removalConfirm';
 import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
@@ -76,6 +78,7 @@ interface ImportTarget {
  */
 function waitOf(view: ModalView, reading: boolean, message: string): ModalWait | false {
     if (view === 'busy') return { message };
+    if (view === 'reading-changes') return {};
     return view === 'form' && reading ? {} : false;
 }
 
@@ -96,24 +99,17 @@ export function ImportDatapackModal({
     source,
     onClose,
 }: ImportDatapackModalProps): React.JSX.Element {
-    // One state, not two: the provenance record only means anything alongside
-    // the selection it describes, and splitting them invites an update that
-    // moves one without the other.
-    // A pack with one type has nothing to choose, so it starts ticked; a larger one is opt-in.
-    const [selection, setSelection] = useState<TypeSelection>(() => ({
-        selected: availableTypes.length === 1 ? availableTypes : [],
-        auto: [],
-    }));
-    const selected = selection.selected as string[];
+    const { selected, allSelected, toggle, toggleAll } = useTypeSelection(availableTypes);
     const [watching, setWatching] = useState(true);
-    const [resetArmed, setResetArmed] = useState(false);
+    // The removal's confirm, and what the SC changed that it asks about (step 05).
+    const removal = useRemovalConfirm();
     /** Which operation's outcome the result view shows. */
     const [lastAction, setLastAction] = useState<LastAction | null>(null);
     /** Back was pressed — the outcome was seen; show the form again. */
     const [dismissed, setDismissed] = useState(false);
 
     const start = useDataInstallerRequest<{ activationId: string }>('start-datapack-import');
-    const reset = useDataInstallerRequest<{ activationId: string }>('reset-datapack');
+    const reset = useDataInstallerRequest<{ activationId: string; savedNote?: string }>('reset-datapack');
     const dryRun = useDataInstallerRequest<{ valid: boolean; reason?: string }>(
         'validate-datapack-import',
     );
@@ -171,31 +167,6 @@ export function ImportDatapackModal({
     );
     const pickingUp = useJobPickup(startedActivation, record, status.loading, loadStatus);
 
-    const toggle = useCallback(
-        (type: string, isSelected: boolean): void => {
-            // Both transitions are pure and live in `importDependencies` — the
-            // provenance rule they implement is the whole reason this is not a
-            // one-line filter, and it is worth testing without React.
-            setSelection((current) =>
-                isSelected
-                    ? selectType(current, type, availableTypes)
-                    : deselectType(current, type),
-            );
-        },
-        [availableTypes],
-    );
-
-    // A pack ships up to 14 types (Bodea does), so ticking them one at a time
-    // is a chore for what is usually "all of it".
-    const allSelected = availableTypes.length > 0 && selected.length === availableTypes.length;
-    const toggleAll = useCallback((): void => {
-        // Everything or nothing, and either way the user chose all of it — so
-        // nothing is `auto` and Clear all genuinely clears.
-        setSelection(
-            allSelected ? { selected: [], auto: [] } : { selected: [...availableTypes], auto: [] },
-        );
-    }, [allSelected, availableTypes]);
-
     /** The one body both paths send, so a dry run checks what a start would do. */
     const requestBody = useCallback(
         () => ({
@@ -228,22 +199,29 @@ export function ImportDatapackModal({
         start.load(requestBody());
     }, [act, start, requestBody]);
 
-    const confirmReset = useCallback((): void => {
-        setResetArmed(false);
+    const confirmReset = (): void => {
+        const answer = removal.press();
         act('reset');
         setWatching(true);
         // `confirm` is added HERE and nowhere else. The handler refuses
         // without it, so the armed press is the only path that can remove data.
-        reset.load({ ...requestBody(), confirm: true });
-    }, [act, reset, requestBody]);
+        reset.load({ ...requestBody(), confirm: true, ...answer });
+    };
 
-    const goBack = useCallback((): void => setDismissed(true), []);
+    /** The read names only the pack: a removal takes all it made, whichever types are ticked. */
+    const armReset = (): void => {
+        removal.arm({ datapackName: id.name, version: id.version, ...(source === 'library' ? { source } : {}) });
+    };
 
     const busy = dryRun.loading || start.loading || reset.loading || pickingUp;
     const result =
         !dismissed && !busy
             ? resolveResult(lastAction, { name: displayName, dryRun, start, reset, record, startedActivation })
             : null;
+    const goBack = (): void => {
+        if (result?.backToConfirm) removal.reopen();
+        setDismissed(true);
+    };
     // `scopes.loading` is in here because the target is still resolving while it
     // is true. Without it the user can tick types and press Start during the
     // second or two the pickers show a spinner, and the import lands on the
@@ -265,18 +243,22 @@ export function ImportDatapackModal({
         allSelected,
         record,
         result,
+        // Saving first has stages of its own (step 05), in the same wait, before the removal's.
         busyMessage: busyMessage(
             start.loading || (pickingUp && lastAction === 'start'),
             reset.loading || (pickingUp && lastAction === 'reset'),
+            reset.loading ? removal.stage : undefined,
         ),
         scope,
+        removal,
         toggle,
         toggleAll,
     };
 
     const view = resolveView({
         busy,
-        resetArmed,
+        readingChanges: removal.reading,
+        resetArmed: removal.armed,
         running,
         watching,
         result,
@@ -285,29 +267,23 @@ export function ImportDatapackModal({
 
     // Closing a job that is still RUNNING hands it to a progress notification,
     // so the SC keeps seeing where it is — the same handover every progress
-    // modal offers (PL-59 R8). Nothing is cancelled: the watcher carries on.
+    // modal offers (PL-59 R8). Nothing is cancelled: the watcher carries on. A
+    // removal saving the SC's changes first is already going the same way.
+    const savingFirst = reset.loading && removal.stage !== undefined;
     const close = (): void => {
-        if (running) {
+        if (running || savingFirst) {
             webviewClient.postMessage('backgroundOperation', {
                 id: DATAPACK_OPERATION_ID,
-                title: `${record?.operation === 'reset' ? 'Removing' : 'Importing'} ${displayName}`,
+                title: `${record?.operation === 'reset' || savingFirst ? 'Removing' : 'Importing'} ${displayName}`,
             });
         }
         onClose();
     };
 
-    // "Remove …" while a removal starts or runs, so the wait's title says what the window is doing
-    // (owner, 2026-10-31), including a reopened watch of one. The confirm asks its own question
-    // and a result's title is its outcome (`viewFrame`); the form is always the import's.
-    const removing =
-        resetArmed ||
-        (lastAction === 'reset' && view !== 'form') ||
-        (view === 'watching' && record?.operation === 'reset');
-
     const frame = viewFrame({
         view,
         displayName,
-        removing,
+        removing: isRemoving({ armed: removal.armed, lastAction, view, operation: record?.operation }),
         store: targetName(scope, commerceInstance),
         typeCount: availableTypes.length,
         result,
@@ -324,8 +300,8 @@ export function ImportDatapackModal({
                 fitContent
                 waiting={waitOf(view, scope.loading || !target.settled, bodyContext.busyMessage)}
                 holdSize={view === 'watching'}
-                onClose={close}
-                closeLabel={closeLabel(view)}
+                onClose={view === 'reading-changes' ? removal.disarm : close}
+                closeLabel={closeLabel(view, savingFirst)}
                 actionButtons={buildActions({
                     view,
                     canStart,
@@ -334,9 +310,10 @@ export function ImportDatapackModal({
                     resetting: reset.loading,
                     stopWatching: () => setWatching(false),
                     validate,
-                    armReset: () => setResetArmed(true),
-                    disarmReset: () => setResetArmed(false),
+                    armReset,
+                    disarmReset: removal.disarm,
                     confirmReset,
+                    removeLabel: removeLabel(removal.content),
                     startImport,
                     goBack,
                 })}

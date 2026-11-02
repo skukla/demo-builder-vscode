@@ -7,6 +7,7 @@
 import {
     buildDatapackEngine,
     engineThatInstalled,
+    layerFinder,
     projectCommerce,
     type DatapackEngineAccess,
 } from '@/features/data-installer/services/buildDatapackEngine';
@@ -56,6 +57,37 @@ describe('buildDatapackEngine', () => {
                 dataTypes: ['categories'],
             }),
         ).resolves.toEqual({ usable: false, reason: "Adobe sign-in is required to write to this project's store." });
+    });
+});
+
+describe('buildDatapackEngine and a settings layer (step 09)', () => {
+    it('finds a layer in the library, whichever store holds the pack', async () => {
+        const library = {
+            getDatapackDetail: jest.fn(),
+            getDataItem: jest.fn(async () => ({ dataType: 'store_config', records: [] })),
+            findDatapacks: jest.fn(async () => ({
+                items: [{ id: { name: 'frescopa-settings', version: 'v1' }, displayName: 'Frescopa settings', shared: false, dataTypes: ['store_config'], art: {} }],
+                count: 1,
+            })),
+        };
+
+        const found = await layerFinder({ libraryCatalog: async () => library }).findLayer?.({ name: 'frescopa', version: 'main' });
+
+        expect(library.findDatapacks).toHaveBeenCalledWith({ datapackName: 'frescopa-settings' });
+        expect(found?.id).toEqual({ name: 'frescopa-settings', version: 'v1' });
+    });
+
+    it('looks nowhere without a library', () => {
+        expect(layerFinder({})).toStrictEqual({});
+    });
+
+    it("leaves the service's engine alone: only Demo Builder's applies a layer", async () => {
+        const libraryCatalog = jest.fn();
+
+        const engine = buildDatapackEngine('service', access({ libraryCatalog }), jest.fn());
+
+        expect(engine.id).toBe('service');
+        expect(libraryCatalog).not.toHaveBeenCalled();
     });
 });
 

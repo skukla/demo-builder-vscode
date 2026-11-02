@@ -54,6 +54,7 @@ beforeEach(() => {
         dataType,
         records: ROWS[dataType],
     }));
+    library.findDatapacks.mockResolvedValue({ items: [], count: 0 });
     mockAccess.mockImplementation(async (_context: unknown, store: string) =>
         store === 'library'
             ? { ok: true, client: library, baseUrl: STORE, getToken: async () => 'tok' }

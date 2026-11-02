@@ -21,8 +21,11 @@ import {
     resetDataInstallerHandlerMocks,
     resolveDataInstallerAccess,
 } from './dataInstallerHandlers.testUtils';
+import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
 import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
 import { ErrorCode } from '@/types/errorCodes';
+
+const mockedEngine = selectedDatapackEngine as jest.Mock;
 
 beforeEach(() => {
     resetDataInstallerHandlerMocks();
@@ -127,6 +130,58 @@ describe('the library store', () => {
 
         expect(MockedClient).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: LIBRARY }));
         expect(res).toMatchObject({ success: true, data: { detail: { store: 'library' } } });
+    });
+
+    // Step 09: what Import will also set, and whose it is, before the SC presses it.
+    describe('get-datapack-detail and a settings layer', () => {
+        const LAYER_ROW = { id: { name: 'bodea-settings', version: '2' }, displayName: 'Bodea settings', shared: false, dataTypes: ['store_config'], art: {}, mine: true };
+
+        function withPack(dataTypes: string[]): void {
+            setupLibrary(LIBRARY);
+            MockedClient.prototype.getDatapackDetail = jest.fn().mockResolvedValue({ id: { name: 'bodea', version: 'main' }, dataTypes });
+            MockedClient.prototype.batchGetDataItems = jest.fn().mockResolvedValue({ present: dataTypes, missing: [], presentCount: 1, missingCount: 0, requestedCount: 1 });
+            MockedClient.prototype.findDatapacks = jest.fn().mockResolvedValue({ items: [LAYER_ROW], count: 1 });
+            MockedClient.prototype.getDataItem = jest.fn().mockResolvedValue({ dataType: 'store_config', records: [{ path: 'catalog/frontend/grid_per_page', value: '24', scope: 'default' }] });
+            mockedEngine.mockReturnValue('demo-builder');
+        }
+        const ask = () => dataInstallerHandlers['get-datapack-detail'](makeHeadlessContext(), { datapackName: 'bodea', version: 'main' });
+
+        afterEach(() => mockedEngine.mockReturnValue('service'));
+
+        it('names it, with each path and value, with Demo Builder\'s engine', async () => {
+            withPack(['products']);
+
+            expect(await ask()).toMatchObject({
+                success: true,
+                data: { settingsLayer: { id: { name: 'bodea-settings', version: '2' }, mine: true, settings: [{ path: 'catalog/frontend/grid_per_page', value: '24' }] } },
+            });
+        });
+
+        it('says nothing with the service engine, which never applies one', async () => {
+            withPack(['products']);
+            mockedEngine.mockReturnValue('service');
+
+            const res = await ask();
+
+            expect(res.data).not.toHaveProperty('settingsLayer');
+            expect(MockedClient.prototype.findDatapacks).not.toHaveBeenCalled();
+        });
+
+        it('does not look for a pack that holds settings of its own', async () => {
+            withPack(['products', 'store_config']);
+
+            const res = await ask();
+
+            expect(res.data).not.toHaveProperty('settingsLayer');
+            expect(MockedClient.prototype.findDatapacks).not.toHaveBeenCalled();
+        });
+
+        it('still answers when the library cannot be asked', async () => {
+            withPack(['products']);
+            MockedClient.prototype.findDatapacks = jest.fn().mockRejectedValue(new Error('down'));
+
+            expect(await ask()).toMatchObject({ success: true, data: { detail: { id: { name: 'bodea' } } } });
+        });
     });
 
     // Step 07: the flyout shows, beside Remove, that this SC shared the pack in a project file.

@@ -40,8 +40,8 @@ describe('renderNodeVersionSuccess', () => {
 
     it('gives every row a green tick', () => {
         const rows = renderNodeVersionSuccess('20.11.0, 22.1.0') as React.ReactNode[];
-        expect(html(rows[0])).toContain('class="text-green-600"');
-        expect(html(rows[1])).toContain('class="text-green-600"');
+        expect(html(rows[0])).toContain('class="text-positive"');
+        expect(html(rows[1])).toContain('class="text-positive"');
     });
 
     it('normalises the spacing between a version and its component', () => {
@@ -106,7 +106,7 @@ describe('renderPrerequisiteMessage', () => {
 
         expect(text(rendered)).toBe('Node 20 – @adobe/aio-cliNode 22');
         const markup = html(rendered);
-        expect(markup).toContain('class="text-green-600"');
+        expect(markup).toContain('class="text-positive"');
         expect(markup).toContain('class="text-negative"');
     });
 

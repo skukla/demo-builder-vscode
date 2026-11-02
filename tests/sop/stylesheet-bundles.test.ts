@@ -55,7 +55,7 @@ describe('ADR-017 §6: a class used in a bundle is styled by that bundle', () =>
         // parser that silently stopped matching compound or plain selectors
         // fails here rather than reporting a clean repo.
         expect(defined.has('page-header-section')).toBe(true); // utilities.css (global)
-        expect(defined.has('text-orange-600')).toBe(true); // eds-steps.css (feature)
+        expect(defined.has('text-notice')).toBe(true); // eds-steps.css (feature)
     });
 
     it('POSITIVE CONTROL: the scan reads compound selectors', () => {
@@ -271,7 +271,7 @@ describe('ADR-018 §1: one cascade order, declared, and every bundle carries it'
         //
         // Six rules remained on 2026-09-09, in two components, and FIVE were
         // byte-identical to copies already in a sheet. The sixth,
-        // `.text-green-500`, had no sheet home and got one. Both blocks deleted.
+        // `.text-positive`, had no sheet home and got one. Both blocks deleted.
         //
         // Standalone `<!DOCTYPE html>` pages are out of scope: they load none of
         // our sheets, so a block is the only way they can be styled at all.

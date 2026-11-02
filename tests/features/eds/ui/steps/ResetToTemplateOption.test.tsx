@@ -84,9 +84,9 @@ describe('ResetToTemplateOption — the tick', () => {
         expect(screen.getByRole('checkbox')).toBeChecked();
         expect(screen.getByRole('checkbox')).toBeDisabled();
         const line = screen.getByText(/This repository is empty/);
-        expect(line).toHaveClass('text-blue-600');
+        expect(line).toHaveClass('text-informative');
         expect(line.parentElement).toHaveClass('reset-warning-visible');
-        expect(line.parentElement?.querySelector('.flex-shrink-0 svg')).toHaveClass('text-blue-600');
+        expect(line.parentElement?.querySelector('.flex-shrink-0 svg')).toHaveClass('text-informative');
     });
 
     it('keeps the notice row rendered but hidden when there is nothing to say', () => {
@@ -116,8 +116,8 @@ describe('ResetToTemplateOption — the tick', () => {
         );
 
         const line = screen.getByText(/delete and recreate the repository/);
-        expect(line).toHaveClass('text-orange-600');
-        expect(line.parentElement?.querySelector('.flex-shrink-0 svg')).toHaveClass('text-orange-600');
+        expect(line).toHaveClass('text-notice');
+        expect(line.parentElement?.querySelector('.flex-shrink-0 svg')).toHaveClass('text-notice');
     });
 });
 

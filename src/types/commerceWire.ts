@@ -141,9 +141,15 @@ export interface CommerceSystemConfigRow {
     scope_code?: string | null;
 }
 
-/** `GET /V1/system/config?…`: the rows at the asked scope. */
+/**
+ * `GET /V1/system/config?…`: the rows at the asked scope. With no path filter it answers every path
+ * the caller may see, in pages, each with the value IN FORCE at that scope, so it cannot tell a value
+ * set on a website from one inherited (live on `justrite_test_website`, 2026-11-02: 943 rows).
+ */
 export interface CommerceSystemConfigList {
-    items?: CommerceSystemConfigRow[];
+    items?: CommerceSystemConfigRow[] | null;
+    total_count?: number;
+    search_criteria?: { filter_groups?: unknown[]; page_size?: number; current_page?: number };
 }
 
 /** One item of the `PUT /V1/system/config` body. */

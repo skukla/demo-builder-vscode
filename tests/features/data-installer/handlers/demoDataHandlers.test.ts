@@ -6,7 +6,7 @@
  */
 
 import { type DemoDataDeps, createDemoDataHandlers } from '@/features/data-installer/handlers/demoDataHandlers';
-import { installRecordPath } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import { type InstallRecord, installRecordPath } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { WipeOutcome } from '@/features/data-installer/services/demoDataWipe/wipeRun';
 import type { DemoDataCheck } from '@/types/demoDataWipe';
 import { ErrorCode } from '@/types/errorCodes';
@@ -18,6 +18,7 @@ import { memoryFiles } from '../services/demoBuilderEngine/demoBuilderEngine.tes
 import { PROJECT_RECORDS, sandbox } from '../services/demoDataWipe/wipe.testUtils';
 import { fakeErp } from '../services/demoDataWipe/wipeErp.testUtils';
 import { RESET_RULE_CASES } from '../../../helpers/resetRuleOrders';
+import { ADMIN_64, BUYER_65, CATALOG_20, COMPANY_28, b2bInstance } from '../../../helpers/commerceWipeInstanceFixtures';
 
 /** scratch-1028's shape: the project names JustRite's website and view; the test website is another. */
 const PROJECT = createMockProject({
@@ -179,6 +180,53 @@ describe('clear-demo-data', () => {
         expect(store.sent).toStrictEqual([]);
     });
 
+    it('names every kind it removes in the sentence an unconfirmed clearing answers', async () => {
+        const { handlers, context, store } = setUp();
+
+        const res = await handlers['clear-demo-data'](context, { stores: TEST_STORE, token: 'x' });
+
+        expect(res.error).toMatch(/companies, shared catalogs, customer groups, attribute sets and attributes/);
+        expect(res.error).toMatch(/settings to the default's value/);
+        expect(res.error).toMatch(/It cannot be undone/);
+        expect(store.sent).toStrictEqual([]);
+    });
+
+    it('clears a company, its customers, its catalog and group through the same handlers', async () => {
+        const store = sandbox({ products: [], orders: [], customers: [ADMIN_64, BUYER_65], instance: b2bInstance() });
+        const { handlers, context, token } = await shown(setUp({}, store));
+
+        const res = await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true });
+
+        expect(res.success).toBe(true);
+        expect(store.sent.map((w) => w.path)).toEqual(['company/28', 'customers/64', 'customers/65', 'sharedCatalog/20', 'customerGroups/25']);
+        expect(store.data.instance?.movedToGeneral).toStrictEqual([]);
+    });
+
+    it("leaves a company another project's record lists, whatever website that record is for, and says so", async () => {
+        const store = sandbox({ products: [], orders: [], customers: [ADMIN_64, BUYER_65], instance: b2bInstance() });
+        const theirs: InstallRecord = { format: 1, pack: { name: 'theirs', version: '1' }, engine: 'demo-builder', startedAt: '2026-10-30T10:00:00.000Z', target: { websiteCode: 'bodea', storeCode: 'bodea_en' }, created: [{ kind: 'b2b_companies', id: '28' }] };
+        const files = memoryFiles({ [installRecordPath(JUSTRITE_ELSEWHERE.path, theirs.pack)]: JSON.stringify(theirs) });
+        const { handlers, context } = setUp({ files, others: async () => [JUSTRITE_ELSEWHERE] }, store);
+
+        const res = await handlers['check-demo-data'](context, { stores: TEST_STORE });
+
+        const { preview } = checked(res.data);
+        expect(preview?.remove.companies.count).toBe(0);
+        expect(preview?.left).toContainEqual(expect.objectContaining({ kind: 'companies', names: [COMPANY_28.company_name] }));
+    });
+
+    it('notes what a refused catalog delete left, so the next check of the same stores finds it again', async () => {
+        const store = sandbox({ products: [], orders: [], customers: [ADMIN_64, BUYER_65], instance: b2bInstance() }, (path) => path === 'sharedCatalog/20');
+        const { handlers, context, token } = await shown(setUp({}, store));
+
+        const res = await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true });
+
+        expect(res.success).toBe(true);
+        expect(res.note).toContain('Could not remove 1 of the shared catalogs');
+        const again = await handlers['check-demo-data'](context, { stores: TEST_STORE });
+        expect(checked(again.data).preview?.remove.catalogs).toEqual({ count: 1, names: [CATALOG_20.name] });
+    });
+
     it('takes the website named alone as all its stores, the same list', async () => {
         const { handlers, context, token } = await shown();
 
@@ -193,7 +241,7 @@ describe('clear-demo-data', () => {
         const res = await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true });
 
         expect(res.success).toBe(true);
-        expect((res.data as WipeOutcome).removed).toEqual({ customers: 1, products: 3, takenOff: 1, cartRules: 0, rulesTakenOff: 0, categories: 0 });
+        expect((res.data as WipeOutcome).removed).toMatchObject({ customers: 1, products: 3, takenOff: 1, cartRules: 0, rulesTakenOff: 0, categories: 0 });
         expect(res.note).toMatch(/^Removed 3 products and 1 customer from the store justrite_test_store\./);
         expect(store.sent).toHaveLength(5);
         expect((await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true })).error).toMatch(/no longer known/);

@@ -43,6 +43,15 @@ export interface DatapackSummary {
     mine?: boolean;
 }
 
+/** A pack's settings layer, as its flyout and `get_datapack` name it (datapack-engine step 09). */
+export interface PackDetailLayer {
+    id: DatapackId;
+    /** True when the signed-in SC owns it, and so can remove it. */
+    mine: boolean;
+    /** What installing the pack sets: the path, and the value the layer holds for it. */
+    settings: Array<{ path: string; value: string }>;
+}
+
 /** A single datapack's full metadata. Same shape plus timing. */
 export interface DatapackDetail extends DatapackSummary {
     durationMs?: number;
@@ -129,6 +138,9 @@ export interface ActivityEntry {
  */
 /** Which engine installs and removes datapacks (`demoBuilder.dataInstaller.engine`, DI-5). */
 export type DatapackEngineId = 'service' | 'demo-builder';
+
+/** `demoBuilder.dataInstaller.changesOnRemoval`: ask each time, or always save them first. */
+export type ChangesOnRemoval = 'ask' | 'save';
 
 /**
  * The catalog with the library's rows. `engine` says which engine will install, so the screen

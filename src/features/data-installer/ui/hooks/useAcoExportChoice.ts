@@ -1,10 +1,9 @@
 /**
- * The export screen's ACO choices (datapack-engine step 14 item 19): for an Adobe Commerce
- * Optimizer pack, which store views and which ACO kinds. Whether the pack is one is asked once,
- * before this screen, by "Create datapack" (`CreateDatapackModal`).
+ * An ACO pack's choices (datapack-engine step 14 item 19): for an Adobe Commerce Optimizer pack,
+ * which store views and which ACO kinds, on Create a datapack's own screens (`ExportChoiceStages`).
  *
  * The store views come from the same discovery the import's target picker reads
- * (`list-datapack-import-scopes`), asked only once the ACO choice is made. Every store view and
+ * (`list-datapack-import-scopes`), read once, when the SC first reaches them. Every store view and
  * every kind start ticked; all of them ticked is sent as "every one" (no list), which is exactly
  * what the Data Installer's own ACO export makes. A store that cannot be discovered shows no
  * store views and makes the pack for every one.
@@ -32,8 +31,6 @@ export interface AcoExportFields {
 }
 
 export interface AcoExportChoice {
-    /** The pack made is an ACO pack. */
-    isAco: boolean;
     storeViews: AcoStoreViewChoice[];
     loadingViews: boolean;
     pickedViews: string[];
@@ -41,8 +38,8 @@ export interface AcoExportChoice {
     kinds: readonly string[];
     pickedKinds: string[];
     toggleKind: (kind: string, on: boolean) => void;
-    /** At least one store view (when there are any) and one kind ticked. */
-    ready: boolean;
+    /** The store views are read, and at least one is ticked when there are any. */
+    viewsChosen: boolean;
     /** The request fields; every one ticked is sent as none named. */
     fields: () => AcoExportFields;
 }
@@ -53,20 +50,20 @@ const toggled = (list: string[], item: string, on: boolean) =>
     on ? [...new Set([...list, item])] : list.filter((x) => x !== item);
 
 /**
- * @param isAco - the pack made is an ACO pack, as the SC chose in "Create datapack"
- *   (`CreateDatapackModal`); the store views are read only then
+ * @param wanted - the SC has reached an ACO pack's screens; the store views are read only then
  */
-export function useAcoExportChoice(isAco: boolean): AcoExportChoice {
+export function useAcoExportChoice(wanted: boolean): AcoExportChoice {
     const [pickedViews, setPickedViews] = useState<string[]>([]);
     const [pickedKinds, setPickedKinds] = useState<string[]>([...ACO_EXPORT_KINDS]);
     const scopes = useDataInstallerRequest<{ websites: TargetWebsite[] }>(
         'list-datapack-import-scopes',
     );
 
-    const loadScopes = scopes.load;
+    const { load: loadScopes, settled } = scopes;
     useEffect(() => {
-        if (isAco) loadScopes({});
-    }, [isAco, loadScopes]);
+        // Once: Back and forward must keep what was ticked, and a new list would tick them all again.
+        if (wanted && !settled) loadScopes({});
+    }, [wanted, settled, loadScopes]);
 
     const websites = useMemo(() => scopes.value?.websites ?? EMPTY_WEBSITES, [scopes.value]);
     const storeViews = useMemo(
@@ -107,21 +104,19 @@ export function useAcoExportChoice(isAco: boolean): AcoExportChoice {
         };
     }, [pickedViews, pickedKinds, storeViews.length]);
 
-    const ready =
-        pickedKinds.length > 0 &&
-        (storeViews.length === 0 || pickedViews.length > 0) &&
-        !scopes.loading;
+    // `!settled`: the read runs from an effect, so `loading` is still false on the first frame.
+    const loadingViews = wanted && !settled;
+    const viewsChosen = !loadingViews && (storeViews.length === 0 || pickedViews.length > 0);
 
     return {
-        isAco,
         storeViews,
-        loadingViews: scopes.loading,
+        loadingViews,
         pickedViews,
         toggleView,
         kinds: ACO_EXPORT_KINDS,
         pickedKinds,
         toggleKind,
-        ready,
+        viewsChosen,
         fields,
     };
 }

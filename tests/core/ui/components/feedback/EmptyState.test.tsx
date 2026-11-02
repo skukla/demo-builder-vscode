@@ -41,7 +41,7 @@ describe('EmptyState', () => {
             const { container } = renderWithProviders(
                 <EmptyState title="Empty" description="No data" />
             );
-            const icon = container.querySelector('.text-orange-600');
+            const icon = container.querySelector('.text-notice');
             expect(icon).toBeInTheDocument();
         });
     });

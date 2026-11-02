@@ -64,6 +64,13 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     addConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + union subscribe PUT
     setConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + reconcile subscribe PUT
 
+    // A datapack removal's confirm reads the store's copy of everything the pack made, and a removal
+    // told to save those changes first does that, writes a new version into the library, and only
+    // then starts. Unbudgeted, the window gave up at 30s while the save went on and the removal
+    // followed it, unseen.
+    'get-datapack-removal-changes': TIMEOUTS.VERY_LONG, // 300s - reads every object the pack made
+    'reset-datapack': TIMEOUTS.EXTENDED, // 600s - that read, then the library write, then the start
+
     // Project/workspace selection (validate reachability + ack; no global aio mutation)
     'select-project': TIMEOUTS.NORMAL, // 30s - validate project reachable, then ack
     'select-workspace': TIMEOUTS.NORMAL, // 30s - validate workspace, then ack

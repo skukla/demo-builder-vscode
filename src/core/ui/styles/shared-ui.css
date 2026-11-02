@@ -298,7 +298,7 @@
 .copyable-icon-copied {
     margin-left: 6px;
     font-size: 1em;
-    color: var(--spectrum-global-color-green-600);
+    color: var(--spectrum-semantic-positive-color-icon);
     opacity: 1;
 }
 
@@ -706,7 +706,7 @@ div[class*="spectrum"] input[type="search"] {
 /* VerifiedField's two status messages. Constant colours — nothing dynamic
    about them at all. */
 .text-positive {
-    color: var(--spectrum-semantic-positive-color-text-small);
+    color: var(--spectrum-semantic-positive-color-icon);
 }
 }
 

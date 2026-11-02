@@ -16,6 +16,10 @@
  * Loading writes a pack into a store; it installs nothing into Commerce. That is
  * still the catalog's Import.
  *
+ * A file can carry the pack's settings layer as a second section (datapack-engine step 09). The
+ * form says so, since the layer goes to the library whichever store the SC chooses, and the result
+ * offers its own undo unless removing the pack takes it (a layer of the same version does).
+ *
  * @module features/data-installer/ui/components/LoadDatapackFileModal
  */
 
@@ -37,6 +41,15 @@ interface OpenedFile {
     version?: string;
     displayName?: string;
     dataTypes?: string[];
+    settingsLayer?: { paths: string[] };
+}
+
+/** What loading the file's settings layer did. */
+interface LoadedLayer {
+    datapackName: string;
+    version: string;
+    outcome: 'created' | 'updated' | 'left' | 'failed';
+    reason?: string;
 }
 
 /** What `load-datapack-zip` did. */
@@ -47,6 +60,14 @@ interface LoadOutcome {
     pack: 'created' | 'updated';
     stored: string[];
     failed: Array<{ dataType: string; reason: string }>;
+    settingsLayer?: LoadedLayer;
+}
+
+/** The undo for a layer this load created, unless removing the pack takes it. */
+function layerToUndo(outcome: LoadOutcome | null, packUndoable: boolean): LoadedLayer | undefined {
+    const layer = outcome?.settingsLayer;
+    if (layer?.outcome !== 'created') return undefined;
+    return packUndoable && layer.version === outcome?.version ? undefined : layer;
 }
 
 export interface LoadDatapackFileModalProps {
@@ -89,6 +110,7 @@ export function LoadDatapackFileModal({
     const result = loadResult({ openError: opened.failure?.message, file, outcome, loadError: loading.failure?.message });
     // Only an exact undo is offered: a pack this load CREATED in the library.
     const undoable = !loading.failure && outcome?.target === 'library' && outcome.pack === 'created';
+    const undoLayer = layerToUndo(outcome, undoable);
 
     return (
         <DialogContainer onDismiss={onClose}>
@@ -115,6 +137,9 @@ export function LoadDatapackFileModal({
                     {result ? <DatapackResultBody result={result} /> : null}
                     {result && undoable ? (
                         <RemoveFromLibraryButton id={{ name: outcome.datapackName, version: outcome.version }} />
+                    ) : null}
+                    {result && undoLayer ? (
+                        <RemoveFromLibraryButton id={{ name: undoLayer.datapackName, version: undoLayer.version }} label="Remove its store settings from the library" />
                     ) : null}
                 </div>
             </Modal>
@@ -144,17 +169,24 @@ function loadResult(args: {
         return { variant: 'error', title: 'This file cannot be loaded', message: openError ?? 'No file was opened.' };
     }
     if (!outcome && !loadError) return null;
-    const details = (outcome?.failed ?? []).map((f) => `${dataTypeLabel(f.dataType)}: ${f.reason}`);
+    const layer = outcome?.settingsLayer;
+    const details = [
+        ...(outcome?.failed ?? []).map((f) => `${dataTypeLabel(f.dataType)}: ${f.reason}`),
+        ...(layer?.reason ? [`Store settings: ${layer.reason}`] : []),
+    ];
     if (loadError) {
         return { variant: 'error', title: 'The file was not loaded', message: loadError, details };
     }
-    const where = outcome?.target === 'installer' ? 'the Data Installer' : 'the datapack library';
     const stored = outcome?.stored.length ?? 0;
-    return {
-        variant: details.length === 0 ? 'success' : 'warning',
-        title: `Loaded ${stored} of ${stored + details.length} data types into ${where}`,
-        details,
-    };
+    const count = `${stored} of ${stored + (outcome?.failed.length ?? 0)} data types`;
+    const landed = layer?.outcome === 'created' || layer?.outcome === 'updated';
+    return { variant: details.length === 0 ? 'success' : 'warning', title: loadTitle(count, outcome?.target === 'installer', landed), details };
+}
+
+/** Where the file's parts went: the settings go to the library wherever the data goes. */
+function loadTitle(count: string, intoInstaller: boolean, settingsLanded: boolean): string {
+    if (intoInstaller) return `Loaded ${count} into the Data Installer${settingsLanded ? ', and its store settings into the datapack library' : ''}`;
+    return `Loaded ${count}${settingsLanded ? ' and its store settings' : ''} into the datapack library`;
 }
 
 /** What is in the file, and where it should go. */
@@ -165,6 +197,11 @@ function LoadForm({ file, choice }: { file: OpenedFile; choice: TargetChoice }):
             <p className="datapack-export-intro">
                 {file.displayName} ({file.datapackName}, version {file.version}) holds: {types}.
             </p>
+            {file.settingsLayer ? (
+                <p className="datapack-export-note">
+                    It also carries store settings, which go into the datapack library: {file.settingsLayer.paths.join(', ')}.
+                </p>
+            ) : null}
             <RadioGroup
                 label="Load it into"
                 value={choice.target}

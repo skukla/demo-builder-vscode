@@ -86,6 +86,26 @@ describe('one status icon on every surface', () => {
         expect(big).toStrictEqual([]);
     });
 
+    // Owner, 2026-11-02: "I just want all colors to be consistent". One set, Spectrum's own status
+    // colours, so a colour scale value cannot drift in beside them.
+    it('status colours come from Spectrum\'s status tokens, never its colour scale', () => {
+        const css = (dir: string): string[] =>
+            fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+                const full = path.join(dir, entry.name);
+                if (entry.isDirectory()) return css(full);
+                return entry.name.endsWith('.css') ? [full] : [];
+            });
+        const scale = /--spectrum-global-color-(red|orange|yellow|green)-\d+/;
+        const classes = /\btext-(red|orange|yellow|green)-\d+\b/;
+
+        const offenders = [
+            ...css(SRC).filter((file) => scale.test(fs.readFileSync(file, 'utf8'))),
+            ...sources(SRC).filter((file) => classes.test(fs.readFileSync(file, 'utf8'))),
+        ].map(relative);
+
+        expect(offenders).toStrictEqual([]);
+    });
+
     it('CONTROL: the check still finds what it looks for', () => {
         expect(drawn).toContain('core/ui/components/feedback/StatusIcon.tsx');
         expect(STATUS_ICONS.test("import Alert from '@spectrum-icons/workflow/Alert';")).toBe(true);

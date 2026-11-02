@@ -335,8 +335,8 @@ describe('Modal', () => {
     // The dialog design rules (2026-10-31): how things stand is an icon before the title.
     describe('the title status', () => {
         it.each([
-            ['success', 'text-green-600'],
-            ['warning', 'text-orange-600'],
+            ['success', 'text-positive'],
+            ['warning', 'text-notice'],
             ['error', 'text-negative'],
         ] as const)('puts the %s icon before the title, the wizard\'s own', (status, iconClass) => {
             renderWithProvider(<Modal {...defaultProps} status={status} />);

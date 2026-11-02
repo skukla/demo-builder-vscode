@@ -13,6 +13,7 @@ import {
     type DatapackFile,
 } from '@/features/data-installer/services/datapackZip';
 import { BODEA_CUSTOMER_ROWS, TEST_PASSWORD } from '../../../helpers/commerceB2bFixtures';
+import { GRID, fileLayer, settingRow } from '../../../helpers/settingsLayerFixtures';
 
 const PACK: DatapackFile = {
     id: { name: 'justrite', version: 'v1' },
@@ -192,5 +193,75 @@ describe('datapackZipName', () => {
             'justrite-v1.datapack.zip'
         );
         expect(datapackZipName({ name: 'a/b c', version: '1:2' })).toBe('a_b_c-1_2.datapack.zip');
+    });
+});
+
+describe('a pack file with its settings layer (datapack-engine step 09)', () => {
+    const LAYERED: DatapackFile = { ...PACK, settingsLayer: fileLayer() };
+
+    it('writes the layer as a second section, its rows out of the data folder', () => {
+        const files = entries(buildDatapackZip(LAYERED));
+
+        expect(Object.keys(files).sort()).toEqual(['data/categories.json', 'data/customer_groups.json', 'datapack.json', 'settings/store_config.json']);
+        expect(JSON.parse(files['settings/store_config.json'])).toEqual([settingRow(GRID, '24')]);
+    });
+
+    it('stays format version 1 and leaves the layer out of data_types, so an older extension loads the data as it always did', () => {
+        const manifest = JSON.parse(entries(buildDatapackZip(LAYERED))['datapack.json']);
+
+        expect(manifest.formatVersion).toBe(1);
+        expect(manifest.data_types).toEqual(['categories', 'customer_groups']);
+        expect(manifest.settings_layer).toEqual({ datapack_name: 'justrite-settings', version: '3', display_name: 'Justrite settings' });
+    });
+
+    it('reads back the same pack and the same layer', () => {
+        const read = readDatapackZip(buildDatapackZip(LAYERED));
+
+        expect(read.items).toEqual(PACK.items);
+        expect(read.settingsLayer).toEqual(fileLayer());
+    });
+
+    it('reads a section inside one root folder, as macOS Compress leaves it', () => {
+        const files = entries(buildDatapackZip(LAYERED));
+        const nested = zipOf(Object.fromEntries(Object.entries(files).map(([name, text]) => [`justrite/${name}`, text])));
+
+        expect(readDatapackZip(nested).settingsLayer).toEqual(fileLayer());
+    });
+
+    it('has no section and no key for a pack with no layer', () => {
+        const bytes = buildDatapackZip(PACK);
+
+        expect(JSON.parse(entries(bytes)['datapack.json'])).not.toHaveProperty('settings_layer');
+        expect(readDatapackZip(bytes)).not.toHaveProperty('settingsLayer');
+    });
+
+    it('reads an older file, written before the section existed, as it always did', () => {
+        const older = zipOf({
+            'datapack.json': JSON.stringify({ format: 'demo-builder-datapack', formatVersion: 1, datapack_name: 'justrite', version: 'v1', data_types: ['categories'] }),
+            'data/categories.json': '[{"category":{"name":"Signs"}}]',
+        });
+
+        const read = readDatapackZip(older);
+
+        expect(read.items).toEqual([{ dataType: 'categories', records: [{ category: { name: 'Signs' } }] }]);
+        expect(read).not.toHaveProperty('settingsLayer');
+    });
+
+    const manifestWith = (settings_layer: unknown) =>
+        JSON.stringify({ format: 'demo-builder-datapack', formatVersion: 1, datapack_name: 'justrite', version: 'v1', data_types: [], settings_layer });
+
+    it("refuses a section naming another pack's layer", () => {
+        const file = zipOf({ 'datapack.json': manifestWith({ datapack_name: 'evil', version: '1' }), 'settings/store_config.json': '[]' });
+
+        expect(() => readDatapackZip(file)).toThrow(DatapackZipError);
+        expect(() => readDatapackZip(file)).toThrow('justrite-settings');
+    });
+
+    it('refuses a section that names no version, or whose rows are missing or not JSON', () => {
+        const named = { datapack_name: 'justrite-settings', version: '1' };
+
+        expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith({ datapack_name: 'justrite-settings' }), 'settings/store_config.json': '[]' }))).toThrow(DatapackZipError);
+        expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith(named) }))).toThrow('store settings');
+        expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith(named), 'settings/store_config.json': '{' }))).toThrow('store settings');
     });
 });

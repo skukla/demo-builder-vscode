@@ -9,11 +9,13 @@
  * @module features/data-installer/services/demoBuilderEngine/storeChanges
  */
 
+import { layerNotAskedLine } from '../settingsLayer';
 import { loadStoreSets } from './attributeSetsKind';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import { COUPON_KIND, couponByCode } from './couponsKind';
 import { type CreatedObject, nodeRecordFiles, readInstallRecord } from './installRecord';
 import type { KindContext } from './kindContext';
+import { type LayerLookup, layerProblems, layerRowsToApply, lookUpLayer } from './layerStep';
 import { placeCategories, rootPlacement } from './packRoot';
 import { rootPreview } from './packRootStep';
 import { productLookups } from './productLookups';
@@ -22,10 +24,12 @@ import { containersLine, decideRemovals } from './removers';
 import { type KindPlan, type PlannedObject, keptLine, keptOf, ownedFrom, planRepeat, removalsOf } from './repeatInstall';
 import { type Named, named } from './saveOutcome';
 import { LINK_KIND, SOURCE_KIND, STOCK_KIND } from './stockKinds';
-import { type StoreChangesDeps, openStore } from './storeAccess';
+import { type StoreChangesDeps, StoreChangesError, openStore } from './storeAccess';
 import { STORE_CONFIG_KIND, type SettingOutcome, packSettings, planSettings } from './storeConfigKind';
 import { onceInventory, readProducts } from './storeCopies';
 import { clashLine, placedClashes } from './urlKeyClashes';
+import { andList } from '@/core/utils/andList';
+import { configFix } from '@/features/app-builder/services/storePreparation/configFix';
 import type { Inventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
@@ -60,6 +64,18 @@ export interface ChangePreview {
      * root of its own with the one Admin step it leaves.
      */
     root?: string;
+    /** What installing would do to store settings (step 09), when the pack or its layer has any. */
+    settings?: SettingsPreview;
+}
+
+/** The store settings an install would change, by path with old and new value. */
+export interface SettingsPreview {
+    /** The settings layer they come from; absent when the pack holds them itself. */
+    layer?: DatapackId;
+    /** Each in the settings fix's words: "catalog/frontend/grid_per_page: 12 → 24". */
+    changes: string[];
+    /** Why some are not there: a layer the library could not be asked for, or a setting that would not be set. */
+    note?: string;
 }
 
 /**
@@ -130,10 +146,29 @@ async function summarize(ctx: KindContext, plans: readonly KindPlan[], taken: re
 }
 
 /** What installing would do to the pack's store settings (step 09), planned as the install plans them. */
-async function settingsChanges(ctx: KindContext, records: unknown, created: readonly CreatedObject[]): Promise<KindChanges> {
+async function settingsChanges(ctx: KindContext, records: unknown, created: readonly CreatedObject[]): Promise<{ counts: KindChanges; preview: Omit<SettingsPreview, 'layer'> }> {
     const plan = await planSettings(ctx.get, packSettings(records, ctx.session.websiteCode), created, ctx.session.websiteCode);
     const keys = (...outcomes: SettingOutcome[]) => named(plan.filter((p) => outcomes.includes(p.outcome)).map((p) => p.key));
-    return { kind: STORE_CONFIG_KIND, update: keys('update'), add: keys('set', 'unknown-before'), inStore: keys('already'), remove: keys('remove'), keep: keys('kept') };
+    const counts = { kind: STORE_CONFIG_KIND, update: keys('update'), add: keys('set', 'unknown-before'), inStore: keys('already'), remove: keys('remove'), keep: keys('kept') };
+    // The fix's own preview words each one, as the install's note will.
+    const writing = plan.flatMap((p) => (p.item && (p.outcome === 'set' || p.outcome === 'update') ? [p.item] : []));
+    const { changes } = writing.length > 0 ? await configFix({ kind: 'config', items: writing }).preview({ commerce: ctx, websiteCode: ctx.session.websiteCode, erpNames: [] }) : { changes: [] };
+    const unknown = plan.filter((p) => p.outcome === 'unknown-before').map((p) => p.key);
+    return { counts, preview: { changes, ...(unknown.length > 0 ? { note: `Demo Builder cannot read what ${andList(unknown)} holds now, so it would not set it.` } : {}) } };
+}
+
+/** The preview's rows of store settings, its own or its layer's; none when neither has any. */
+function settingRows(items: Record<string, unknown>, lookup: LayerLookup, created: readonly CreatedObject[]): unknown {
+    return STORE_CONFIG_KIND in items ? items[STORE_CONFIG_KIND] : layerRowsToApply(lookup, created);
+}
+
+/** What the preview says of the layer: nothing when there is none to speak of. */
+async function layerSettings(ctx: KindContext, items: Record<string, unknown>, lookup: LayerLookup, created: readonly CreatedObject[]): Promise<{ counts?: KindChanges; preview?: SettingsPreview }> {
+    if (lookup.state === 'unasked') return { preview: { changes: [], note: layerNotAskedLine(lookup.pack.name, 'are not counted here') } };
+    const rows = settingRows(items, lookup, created);
+    if (rows === undefined) return {};
+    const { counts, preview } = await settingsChanges(ctx, rows, created);
+    return { counts, preview: { ...(lookup.state === 'found' ? { layer: lookup.layer.id } : {}), ...preview } };
 }
 
 /**
@@ -145,6 +180,9 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     const all = await deps.readPack(pack, source);
     const asked = dataTypes ? Object.fromEntries(Object.entries(all).filter(([kind]) => dataTypes.includes(kind))) : all;
     const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack);
+    const lookup: LayerLookup = dataTypes && !dataTypes.includes(STORE_CONFIG_KIND) ? { state: 'off' } : await lookUpLayer(deps.findLayer, pack, all);
+    const refused = layerProblems(lookup, 'website');
+    if (refused.length > 0) throw new StoreChangesError(refused.join(' '));
     const ctx = await openStore(deps, pack, record, asked.categories);
     const placement = rootPlacement(asked.categories, record?.created ?? [], ctx.session.storeRoot);
     const items = placeCategories(asked, placement);
@@ -154,9 +192,9 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     const root = [rootPreview(placement, asked.categories, ctx.session.storeRoot, record?.rootStep), clash].filter(Boolean).join(' ');
     // The containers an install would keep, decided the way it decides them, read-only.
     const { take, kept: containers } = await decideRemovals(ctx.get, removalsOf(plans));
-    const settings = STORE_CONFIG_KIND in items ? await settingsChanges(ctx, items[STORE_CONFIG_KIND], record?.created ?? []) : undefined;
+    const { counts: settings, preview: settingsPreview } = await layerSettings(ctx, items, lookup, record?.created ?? []);
     const keptThings = [...keptOf(plans), ...(settings?.keep.names ?? []).map((key) => ({ kind: STORE_CONFIG_KIND, key }))];
     const kept = [keptLine(keptThings), containersLine(containers)].filter(Boolean).join(' ');
     const kinds = [...(await summarize(ctx, plans, take)), ...(settings ? [settings] : [])];
-    return { installed: record !== undefined, kinds, ...(kept ? { kept } : {}), ...(root ? { root } : {}) };
+    return { installed: record !== undefined, kinds, ...(kept ? { kept } : {}), ...(root ? { root } : {}), ...(settingsPreview ? { settings: settingsPreview } : {}) };
 }

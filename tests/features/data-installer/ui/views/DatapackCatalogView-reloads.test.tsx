@@ -204,8 +204,8 @@ describe('the two doors out of the catalog', () => {
         },
     );
 
-    // One dialog (owner, 2026-10-31): the pick list sits under Create datapack's own choice.
-    it("shows the pick list inside Create datapack with Demo Builder's engine, with no pack", async () => {
+    // One dialog (owner, 2026-10-31): the pick screens are Create datapack's own.
+    it("walks to the pick screens inside Create datapack with Demo Builder's engine, with no pack", async () => {
         mockRequest.mockImplementation(async (type: string) =>
             type === 'list-datapack-export-items'
                 ? { success: true, data: { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 } }
@@ -218,7 +218,10 @@ describe('the two doors out of the catalog', () => {
         await press(screen.getByRole('button', { name: 'Create datapack' }));
 
         expect(screen.getByText('Create a datapack')).toBeInTheDocument();
-        expect(await screen.findByText(/^Saves what you pick from this store/u)).toBeInTheDocument();
+        await press(screen.getByRole('button', { name: /^Commerce datapack/ }));
+        await press(screen.getByRole('button', { name: 'Continue' }));
+
+        expect(screen.getByRole('button', { name: /^Products/ })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
         expect(screen.queryByText('Choose what goes in the pack')).not.toBeInTheDocument();
     });
@@ -233,8 +236,10 @@ describe('the two doors out of the catalog', () => {
         await screen.findAllByTestId('datapack-card');
 
         await press(screen.getByRole('button', { name: 'Create datapack' }));
-        // The export form sits under the choice, in Create datapack's own window.
-        expect(await screen.findByRole('button', { name: 'Export' })).toBeInTheDocument();
+        // The export's screens are Create datapack's own window.
+        await press(screen.getByRole('button', { name: /^Commerce datapack/ }));
+        await press(screen.getByRole('button', { name: 'Continue' }));
+        expect(screen.getByText('Data types')).toBeInTheDocument();
         expect(screen.getByText('Create a datapack')).toBeInTheDocument();
 
         await press(screen.getByRole('button', { name: /^close$/i }));

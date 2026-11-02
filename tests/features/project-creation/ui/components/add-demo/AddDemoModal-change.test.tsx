@@ -73,7 +73,7 @@ describe('AddDemoModal — change mode', () => {
             result: { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'adobe-commerce/boilerplate-b2b-template' },
         });
 
-        expect(title('This is the demo behind Starter (B2B + B2C)').innerHTML).toContain('text-orange-600');
+        expect(title('This is the demo behind Starter (B2B + B2C)').innerHTML).toContain('text-notice');
         expect(screen.getByTestId('shipped-notice')).toHaveTextContent("A project can't be pointed at a demo we ship");
         expect(footerButtons()).toEqual(['Close', 'Back']);
     });

@@ -15,7 +15,7 @@
  */
 
 import * as vscode from 'vscode';
-import type { DatapackEngineId } from '../types';
+import type { ChangesOnRemoval, DatapackEngineId } from '../types';
 import { validateURL } from '@/core/validation/URLValidator';
 
 /** Longest base URL we will accept from settings. */
@@ -46,6 +46,22 @@ export function isDataInstallerEnabled(): boolean {
 export function selectedDatapackEngine(): DatapackEngineId {
     const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('engine', 'demo-builder');
     return raw === 'service' ? 'service' : 'demo-builder';
+}
+
+/**
+ * What a removal does about the SC's changes when nothing answers
+ * (`demoBuilder.dataInstaller.changesOnRemoval`, step 05). Anything unrecognised reads as asking:
+ * a broken settings.json must not stop anyone being asked before their work is lost or saved.
+ */
+export function changesOnRemoval(): ChangesOnRemoval {
+    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('changesOnRemoval', 'ask');
+    return raw === 'save' ? 'save' : 'ask';
+}
+
+/** "Always do this, and stop asking": for this user, everywhere. Settings turns it back off. */
+export async function alwaysSaveChangesOnRemoval(): Promise<void> {
+    const save: ChangesOnRemoval = 'save';
+    await vscode.workspace.getConfiguration(SETTINGS_SECTION).update('changesOnRemoval', save, vscode.ConfigurationTarget.Global);
 }
 
 /**

@@ -760,7 +760,13 @@ included, keeps a category or set the pack made that holds something it did not,
 outcome's `note` says so ("Kept the set Racks: it holds 2 products you added."). A `reset_datapack`
 clears the project's datapack only when the removal finishes having taken everything out: one that
 stops, or keeps a container holding the SC's things, leaves the project naming the pack, so the
-next removal can finish the job (live, 2026-10-30). Both read the store with the project's own
+next removal can finish the job (live, 2026-10-30). If the SC changed anything the pack made,
+`reset_datapack` names the changes and removes nothing until `changes` answers: `keep` saves them to
+the demo's own pack first (the new version is what is then removed; a failed save, code
+`CHANGES_NOT_SAVED`, removes nothing), `drop` loses them. With `changes` omitted and
+`demoBuilder.dataInstaller.changesOnRemoval` on `save`, it saves without asking; otherwise it refuses
+with `CHANGES_NEED_ANSWER`. A pack the service installed has no record of changes, and is removed as
+before. Both read the store with the project's own
 credential, behind the same org guard as the import. Plan:
 `.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
 
@@ -809,8 +815,8 @@ still refused before anything is written. Plan: `.rptc/plans/datapack-engine/ste
 
 No new tool. `start_datapack_import` installs a pack's `store_config` rows (`{path, value, scope,
 scope_code}`) last, through the setup guide's settings fix: store-wide (`default`) or for the
-install target's website, whatever website the row names; a store-view row, a base URL, cookie,
-Admin or credential path, or a path that holds no value anywhere is refused before anything is
+install target's website, whatever website the row names; a store-view row, a path outside the
+allowed sections (below), or a path that holds no value anywhere is refused before anything is
 written. The outcome's `note` names each setting set ("Set catalog/frontend/grid_per_page: 12 →
 24."). `reset_datapack` puts each back first, keeping one the SC changed since ("Kept
 catalog/frontend/grid_per_page as it is: it was changed after Demo Builder set it."), and the
@@ -824,6 +830,21 @@ JustRite's and called "changed in the Admin" (live, 2026-10-30). A record from b
 `target`; its settings are still read at the website each one names (`scopeCode`). Installing a
 pack again into another website than its record names is refused ("… is installed on the website
 justrite_test_website. Remove it first, or install it there."), by `validate_datapack_import` too.
+
+### A pack's settings layer (datapack-engine step 09, 2026-11-02)
+
+No new tool. With Demo Builder's engine, `start_datapack_import` on a pack holding no `store_config`
+also applies its settings layer: the newest library pack named `<pack>-settings` that holds only
+`store_config`, written after the pack's data, on the pack's own record. `reset_datapack` takes both.
+`validate_datapack_import` refuses a layer's path a pack may not set, as the install does before any
+write; the allowed sections are `catalog/`, `sales/`, `checkout/`, `customer/`, `btob/` and
+`cataloginventory/`, and `web/`, `admin/` and any path ending in password, secret, token or key stay
+refused. `preview_datapack_changes` answers `settings`: `changes` by path with old and new value, and
+`layer` naming where they come from. `get_datapack` answers `settingsLayer`. `save_datapack_zip`,
+`open_datapack_zip` and `load_datapack_zip` carry it as the file's second section (`settingsLayer`
+says what became of it); `save_store_changes_to_pack` writes settings to a layer beside the new
+version (`settingsLayer`), and `delete_library_datapack` on that version takes it too. `find_datapacks`
+lists layers as rows: only the screens hide them. Details: `docs/systems/data-installer.md`.
 
 ### A pack's own root category (datapack-engine step 12, 2026-10-30)
 
@@ -857,8 +878,11 @@ answers `data.preview`: what the install records list, by kind; what clearing wo
 a wholly chosen website or made in a chosen store, cart rules on wholly chosen websites only, their
 coupons with them) and take off the chosen websites (products other websites also sell, cart rules
 other websites also use); the orders it would cancel or refund and the returns it would close;
-what it would leave and why (a root a store not chosen shares, a product whose demo can't be told,
-a customer in a B2B company, an order Commerce can neither cancel nor refund, a cart rule on a
+the companies, shared catalogs (each with its customer group), customer groups, attribute sets and
+attributes only the chosen stores use (`data.preview.remove`), the website settings it would set to
+the default's value (`data.preview.settings`); what it would leave and why, in `data.preview.left`
+(a root a store not chosen shares, a product whose demo can't be told, a company with a customer
+elsewhere, a catalog, group or attribute something that stays uses, an order Commerce can neither cancel nor refund, a cart rule on a
 website a store not chosen also sells on or holding a coupon Demo Builder installed); and a `token`. What
 a chosen store owns is judged against the whole chosen set.
 

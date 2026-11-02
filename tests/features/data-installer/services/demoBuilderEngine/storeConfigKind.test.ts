@@ -65,6 +65,34 @@ describe('installing a pack’s store settings', () => {
         expect(ctx.sent).toStrictEqual([]);
     });
 
+    // Decision 3: an allowed list of sections, and what stays refused whatever the list says.
+    it.each(['catalog/frontend/grid_per_page', 'sales/totals_sort/tax', 'checkout/options/guest_checkout', 'customer/create_account/confirm', 'btob/website_configuration/company_active', 'cataloginventory/options/show_out_of_stock'])(
+        'takes %s: its section is on the allowed list',
+        (path) => {
+            expect(packSettings([row(path, '1')], WEBSITE).map((s) => s.item.path)).toEqual([path]);
+        },
+    );
+
+    it.each(['design/head/default_title', 'payment/checkmo/active', 'carriers/flatrate/active', 'general/locale/code', 'sales_email/order/enabled', 'catalogue/frontend/x'])(
+        'refuses %s by path: its section is not on the allowed list',
+        (path) => {
+            expect(() => packSettings([row(path, '1')], WEBSITE)).toThrow(`${path} is outside what a pack may set`);
+        },
+    );
+
+    it.each(['web/unsecure/base_url', 'web/seo/use_rewrites', 'admin/security/session_lifetime', 'catalog/search/api_key', 'sales/gateway/apikey', 'customer/captcha/secret', 'checkout/hook/token', 'btob/service/password', 'catalog/search/API_KEY'.toLowerCase()])(
+        'refuses %s whatever the list says',
+        (path) => {
+            expect(() => packSettings([row(path, '1')], WEBSITE)).toThrow(`${path} is a setting a pack may not change`);
+        },
+    );
+
+    it('names every path it refuses in one sentence, and refuses a malformed path before that', () => {
+        expect(() => packSettings([row('design/a/b', '1'), row('web/a/b', '1')], WEBSITE)).toThrow(/design\/a\/b.*web\/a\/b/u);
+        expect(() => packSettings([row('catalog', '1')], WEBSITE)).toThrow('a setting path is section/group/field');
+        expect(() => packSettings([row('../admin/x', '1')], WEBSITE)).toThrow('a setting path is section/group/field');
+    });
+
     it('refuses, writing nothing, a setting that holds no value anywhere: it could not be put back', async () => {
         const ctx = await storeContext(configStore({ default: { [LIST]: '10' } }));
 
@@ -219,6 +247,14 @@ describe('a recorded website setting is read at the website the record names', (
 });
 
 describe('saving the store’s settings into a new version', () => {
+    it('reads a row the allowed list now refuses, rather than failing the read: the save refuses it in plain words', async () => {
+        const store = configStore({ default: { 'design/head/title': 'Hi' } });
+
+        const rows = await captureSettings(store.get, [], { store_config: [row('design/head/title', 'Hello')] }, WEBSITE);
+
+        expect(rows).toEqual({ store_config: [{ path: 'design/head/title', value: 'Hi', scope: 'default' }] });
+    });
+
     it('reads each recorded setting at its own scope, as it is in the store now', async () => {
         const ctx = await storeContext(configStore({ default: { [GRID]: '30' }, website: { [LIST]: '15' } }));
         const created: CreatedObject[] = [

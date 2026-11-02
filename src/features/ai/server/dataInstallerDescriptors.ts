@@ -266,7 +266,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'things Demo Builder made would be updated to the pack, added, removed, or kept because they were ' +
             'changed in the Admin, with a few names each. Writes nothing. installed:false means Demo Builder ' +
             'never installed the pack here, so every row would be new. root (a pack with a root category of its ' +
-            "own) says where it would go: under the store's own root, or a root of its own with one Admin step.",
+            "own) says where it would go: under the store's own root, or a root of its own with one Admin step. " +
+            'settings names what an install would change in store settings, by path with old and new value, and ' +
+            'settings.layer the settings layer they come from (a library pack named <pack>-settings).',
         map: importHandlers,
         type: 'preview-datapack-changes',
         inputSchema: {
@@ -286,7 +288,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'too when picked in selections (list_datapack_export_items lists them). No pack named: the project\'s own ' +
             'when Demo Builder installed it, else none, and the version holds only what is picked (a store Demo ' +
             'Builder did not fill). The pack installed is never changed, and nothing picked is ever removed with it; ' +
-            'undo by deleting the new version with delete_library_datapack. Answers the demo\'s pack and its new ' +
+            'undo by deleting the new version with delete_library_datapack. Store settings a pack does not hold ' +
+            'itself go to a settings layer beside the new version, not into it (settingsLayer). Answers the demo\'s pack and its new ' +
             'version, unnamed (ids kept because the store could not name them) and leftOut (what the store has, of ' +
             'products, gift cards, categories, cart rules, customers and companies, that the version does not ' +
             'hold); its message says both. A version the install would refuse is not saved, and the message says ' +
@@ -308,14 +311,16 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'check_demo_data',
         needsAuth: ['adobe'],
-        readOnly: true, // reads the store structure, the chosen stores' products, categories, customers, cart rules, orders and returns, the records, and the ERP integration's erp/status and erp/settings (GETs)
+        readOnly: true, // reads the store structure, the chosen stores' products, categories, customers, cart rules, orders and returns, the companies, catalogs, groups, attribute sets, attributes and settings they use, the records, and the ERP integration's erp/status and erp/settings (GETs)
         description:
             "What some STORES of this project's Commerce instance hold that Demo Builder did not install, and what clearing them would do. " +
             'Answers data.choices: every website and its stores (store views listed under each, never chosen alone; a store another ' +
             'local project records as its own carries claimedBy and cannot be chosen). With stores chosen, also data.preview: ' +
-            'products, categories, customers and cart rules (with their coupons) it would remove, products and cart rules other websites ' +
-            "also sell or use that would only be taken off the chosen websites, orders it would cancel or refund (never delete) and returns it would close, what it would leave and why " +
-            "(a root category a store not chosen shares, a product whose demo can't be told, a B2B company, a cart rule on a website a " +
+            'products, categories, customers, cart rules (with their coupons), companies, shared catalogs (with their customer groups), ' +
+            'customer groups, attribute sets and attributes it would remove, website settings it would set to the default value (data.preview.settings), ' +
+            'products and cart rules other websites ' +
+            "also sell or use that would only be taken off the chosen websites, orders it would cancel or refund (never delete) and returns it would close, what it would leave and why in data.preview.left " +
+            "(a root category a store not chosen shares, a product whose demo can't be told, a company with a customer elsewhere, a catalog, group or attribute something that stays uses, a cart rule on a website a " +
             'store not chosen also sells on), and a token clear_demo_data needs. ' +
             'When an ERP integration on this instance (in any local project) sends a chosen store\'s orders to an ERP, those orders ' +
             'are in data.preview.erp instead (its line says so): that integration closes them and its ERP is refreshed from Commerce ' +
@@ -332,14 +337,15 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Clear the chosen stores of everything check_demo_data listed: deletes those products, categories, customers and cart rules ' +
-            '(their coupons with them), takes the shared products and cart rules off the chosen websites, cancels or refunds their orders (closing them, never deleting) and closes their ' +
+            'Clear the chosen stores of everything check_demo_data listed: deletes those products, categories, customers, cart rules ' +
+            "(their coupons with them), companies, shared catalogs (their customer groups with them), customer groups, attribute sets and attributes, sets those wholly chosen websites' settings to the default value, " +
+            'takes the shared products and cart rules off the chosen websites, cancels or refunds their orders (closing them, never deleting) and closes their ' +
             "returns; orders an ERP integration handles are closed by it first, and its ERP is refreshed from Commerce last, in the " +
             "same call (the note merges its counts). Cannot be undone. Show the user check_demo_data's list and ask first. Needs the stores named exactly as checked " +
             'and the token from that check; if the store would now clear anything the list did not hold, nothing is written and the ' +
             'new list comes back. Refused when another project on this machine records a chosen store as its own. ' +
-            "Never touches what any project's install records list, other stores' things, attributes, customer groups, companies, " +
-            'shared catalogs, stocks or settings.',
+            "Never touches what any project's install records list, anything a store not chosen also uses, Commerce's own customer groups and attributes, " +
+            "the public catalog, the Default attribute set, stocks, the default settings or another website's. A partial failure says what finished; running it again picks up what is left.",
         map: importHandlers,
         type: 'clear-demo-data',
         confirm: true, // gated twice, as reset_datapack is: the row, then the handler's own check
@@ -360,7 +366,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'Installing a pack again updates and removes what it made before and keeps what was ' +
             'changed in the Admin; the outcome\'s note says what it kept, and preview_datapack_changes ' +
             'says it beforehand. A pack\'s store_config rows are written last, and the note names each ' +
-            'setting set, by path, with its old and new value. A pack\'s own root category goes under the ' +
+            'setting set, by path, with its old and new value. With the demo-builder engine, a pack holding no ' +
+            'store_config also gets its settings layer, the newest library pack named <pack>-settings, written after ' +
+            'its data and removed with it; a path a pack may not set stops the install before any write, by path, ' +
+            'and a setting Commerce refuses leaves the data installed and is named in the note. A pack\'s own root category goes under the ' +
             "store's root when no other store shares it; when one does, the install asks the user for the one " +
             'Admin step (no API can change a store\'s root), and the note names it if skipped. Running it ' +
             'again re-checks that step and marks it done once set. Under the store\'s root, a pack category ' +
@@ -383,11 +392,17 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'Cannot be undone. Returns an activationId; poll get_datapack_import_status. With the ' +
             'demo-builder engine, a category, set, company, shared catalog or customer group the pack made ' +
             "that holds things it did not make is kept (a kept company with its admin and its catalog), and " +
-            "the outcome's note says which; store settings it set are put back first, unless changed since, " +
-            "and the note names each by path. The project stops naming the pack only once a removal " +
+            "the outcome's note says which; store settings it set, its settings layer's included, are put back " +
+            "first, unless changed since, and the note names each by path. The project stops naming the pack only once a removal " +
             'finishes having taken everything out. A pack the demo-builder engine has no install record of ' +
             'is refused and nothing is removed by name; check_demo_data then clear_demo_data clears what an ' +
-            'earlier install left.',
+            'earlier install left. With the demo-builder engine, if the user changed anything the pack made ' +
+            'since it was installed, this names the changes and removes nothing until changes answers: keep ' +
+            "saves them to the demo's own pack first (a new version; the previous one is kept; if the save " +
+            'fails nothing is removed), drop loses them. When changes is omitted and the setting ' +
+            'demoBuilder.dataInstaller.changesOnRemoval is save, it saves without asking. Ask the user; ' +
+            'preview_datapack_changes shows them beforehand (keep). Packs the service installed have no ' +
+            'record of changes, so none of this applies to them.',
         map: importHandlers,
         type: 'reset-datapack',
         // Gated TWICE, and that is not redundant. The handler has always required
@@ -395,7 +410,11 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         // and the same flag satisfies the handler's own check, so the two agree
         // rather than compete. If either were removed the other would still hold.
         confirm: true,
-        inputSchema: { ...DATAPACK_ID, ...IMPORT_TARGET },
+        inputSchema: {
+            ...DATAPACK_ID,
+            ...IMPORT_TARGET,
+            changes: z.enum(['keep', 'drop']).optional().describe("The user's changes since install: keep saves them to the demo's own pack first, drop loses them"),
+        },
     },
     {
         tool: 'start_datapack_export',
@@ -465,7 +484,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Save a datapack from the Data Installer or the datapack library as a zip file in the ' +
-            'project — one file to keep, send, or load into a store later.',
+            'project — one file to keep, send, or load into a store later. A pack holding no store_config ' +
+            'carries its settings layer (the library pack named <pack>-settings) as a second section; ' +
+            'settingsLayer says so, and settingsLayerNote when the library could not be asked.',
         map: importHandlers,
         type: 'save-datapack-zip',
         inputSchema: {
@@ -484,8 +505,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: [],
         readOnly: true,
         description:
-            'Say what a datapack zip file holds — name, version, data types — without writing anything. ' +
-            'Run before load_datapack_zip.',
+            'Say what a datapack zip file holds — name, version, data types, and any settings layer by path — ' +
+            'without writing anything. Run before load_datapack_zip.',
         map: importHandlers,
         type: 'open-datapack-zip',
         inputSchema: { path: z.string().describe('The datapack file, inside the project') },
@@ -497,7 +518,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Write the pack in a datapack zip file into the datapack library (default) or the Data Installer. ' +
             'Into the Data Installer, which other teams share, it needs confirmName equal to the pack ' +
-            'name and never updates an existing pack. This does not install anything into Commerce.',
+            'name and never updates an existing pack. A settings layer in the file goes into the datapack library, ' +
+            'wherever the data goes; settingsLayer says what became of it. A file whose layer holds a path a pack may ' +
+            'not set is refused before any write. This does not install anything into Commerce.',
         map: importHandlers,
         type: 'load-datapack-zip',
         confirm: true,
@@ -525,7 +548,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'in a project file, the answer carries `warning` (without confirm, `sharedInFile`): ' +
             "anyone who has not created that project yet gets the pack it was made from instead. " +
             "Deleting the last version of this demo's own pack also stops the project naming it " +
-            '(`ownPackCleared: true`); its next save makes the pack again.',
+            '(`ownPackCleared: true`); its next save makes the pack again. A version takes your settings layer of ' +
+            'the same version with it (`settingsLayerDeleted: true`).',
         map: importHandlers,
         type: 'delete-library-datapack',
         // Gated twice, as reset_datapack is: the row refuses before dispatch, and the
@@ -558,7 +582,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Share one of your own datapack library packs with your team, or stop sharing it: every version. ' +
             'Shared, everyone with access to the datapack library can see and install it, and a colleague can ' +
-            'create a project from a file that names it; stopped, only you can. Answers how many versions changed. ' +
+            'create a project from a file that names it; stopped, only you can. Its settings layer goes with it. Answers how many versions changed. ' +
             "Ask the user first. export_project_settings's packNote says when the project's pack is private.",
         map: importHandlers,
         type: 'share-library-datapack',

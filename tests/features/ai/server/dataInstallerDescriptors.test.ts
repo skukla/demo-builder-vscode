@@ -256,9 +256,29 @@ describe('what each row accepts', () => {
             'websiteCode',
         ].sort();
 
-        for (const tool of ['validate_datapack_import', 'start_datapack_import', 'reset_datapack']) {
+        for (const tool of ['validate_datapack_import', 'start_datapack_import']) {
             expect(keys(tool)).toEqual(expected);
         }
+        // Its one addition: the answer to the changes it names (step 05).
+        expect(keys('reset_datapack')).toEqual([...expected, 'changes'].sort());
+    });
+
+    it('lets reset_datapack answer keep or drop, and gives an agent no way to turn on "always"', () => {
+        const schema = row('reset_datapack')!.inputSchema!;
+
+        expect(schema.changes.parse('keep')).toBe('keep');
+        expect(schema.changes.parse('drop')).toBe('drop');
+        expect(schema.changes.parse(undefined)).toBeUndefined();
+        expect(() => schema.changes.parse('maybe')).toThrow();
+        // The handler reads `alwaysSave` from the confirm's box. A setting is the SC's to change.
+        expect(schema).not.toHaveProperty('alwaysSave');
+    });
+
+    it('says what reset_datapack does about changes, including what the setting does', () => {
+        const { description } = row('reset_datapack')!;
+
+        expect(description).toContain('removes nothing until changes answers');
+        expect(description).toContain('demoBuilder.dataInstaller.changesOnRemoval');
     });
 
     it('gives the export item list a single data type to enumerate, and a limit', () => {

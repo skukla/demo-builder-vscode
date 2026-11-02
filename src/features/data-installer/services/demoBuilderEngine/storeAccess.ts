@@ -10,6 +10,7 @@
 import { type InstallRecord, type InstallRecorder, type RecordFiles, nodeRecordFiles, openInstallRecord } from './installRecord';
 import { type TargetCodes, resolveEngineTarget, sessionFor } from './installTarget';
 import type { KindContext } from './kindContext';
+import type { FindLayer } from './layerStep';
 import { packRootOf, readStoreRoot } from './packRoot';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -28,6 +29,8 @@ export interface StoreChangesDeps {
     log: (line: string) => void;
     files?: RecordFiles;
     now?: () => Date;
+    /** The pack's settings layer from the library, with Demo Builder's engine (step 09). */
+    findLayer?: FindLayer;
 }
 
 /** A save or preview that cannot go ahead, in words an SC can act on. */

@@ -252,13 +252,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         action: 'Remove sample data',
         consequence:
             "Deletes this data pack's products and categories from the Commerce instance. This can't be undone.",
-        target: ['datapackName', 'version'],
+        target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
     clear_demo_data: {
         action: "Clear these stores' demo data",
         consequence:
-            "Deletes the products, categories and customers these stores own that Demo Builder did not install, as listed, takes products other websites sell off them, and cancels or refunds their orders and closes their returns (through the ERP integration where one serves the store, then refreshing its ERP). This can't be undone.",
+            "Deletes what only these stores use and Demo Builder did not install, as listed: products, categories, customers, cart rules, companies, shared catalogs, customer groups, attribute sets and attributes. Sets the website settings to the default's value, takes products other websites sell off them, cancels or refunds their orders and closes their returns (through the ERP integration where one serves the store, then refreshing its ERP). This can't be undone.",
         target: ['stores'],
         sessionGrant: false,
     },
@@ -434,7 +434,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_import: {
         action: 'Import sample data',
         consequence:
-            'Writes products and categories into the live Commerce instance, and installing again updates or removes what the pack made earlier, keeping anything changed in the Admin. Takes several minutes and cannot be paused.',
+            'Writes products and categories into the live Commerce instance, then any store settings the pack or its settings layer holds, and installing again updates or removes what the pack made earlier, keeping anything changed in the Admin. Takes several minutes and cannot be paused.',
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
@@ -484,7 +484,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     load_datapack_zip: {
         action: 'Load a datapack file into a store',
         consequence:
-            'Adds the pack in this file to the datapack library, or to the Data Installer catalogue other teams share.',
+            'Adds the pack in this file to the datapack library, or to the Data Installer catalogue other teams share. Store settings the file carries go into the datapack library.',
         target: ['path', 'target'],
         sessionGrant: false,
     },

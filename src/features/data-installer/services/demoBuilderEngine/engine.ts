@@ -21,6 +21,7 @@ import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient
 import type { DatapackEngine } from '../datapackEngine';
 import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
 import { resolveEngineTarget, sessionFor } from './installTarget';
+import { type FindLayer, type LayerLookup, applySettingsLayer, layerKept, layerProblems, layerTroubleLine, lookUpLayer, settingsDoneLine, withLayerRows } from './layerStep';
 import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
 import { type RootStepAsker, rootStepLine } from './packRootStep';
 import { ambiguousKeysLine } from './productLookups';
@@ -28,7 +29,7 @@ import { skippedLine } from './refusedRows';
 import { containersLine } from './removers';
 import { keptLine } from './repeatInstall';
 import { type PackItems, PackRowsError, installPack, packRowProblems, removePack, unsupportedKinds } from './runPack';
-import { settingsLine, settingsWebsite } from './storeConfigKind';
+import { STORE_CONFIG_KIND, settingsLine, settingsWebsite } from './storeConfigKind';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -51,6 +52,8 @@ export interface DemoBuilderEngineDeps {
     asker?: RootStepAsker;
     /** Told once when a job ends, however it ends: the activity log's writer (step 14). */
     onJobEnd?: (end: JobEnd) => void;
+    /** The pack's settings layer from the library (step 09). Absent, a pack has none. */
+    findLayer?: FindLayer;
 }
 
 /** How one job ended, for the activity log (`engineActivityLog.ts`). */
@@ -125,14 +128,22 @@ function missingKinds(request: ImportRequest, items: PackItems): string | undefi
     return missing.length > 0 ? `The pack holds no ${missing.join(', ')}.` : undefined;
 }
 
+/** Every reason the pack's and its layer's rows cannot be installed, before the first write. */
+function rowProblems(items: PackItems, lookup: LayerLookup, websiteCode: string): string[] {
+    return [...packRowProblems(items, websiteCode), ...layerProblems(lookup, websiteCode)];
+}
+
 /** Install: the target, the rows, then each kind in order, its status moving as it runs. */
 async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, job: Job): Promise<void> {
     if (!request.target) throw new Error(NO_TARGET);
     const conflict = await elsewhere(deps, request, request.target);
     if (conflict) throw new Error(conflict);
     const items = await deps.readPack(request.id, request.dataTypes, request.source ?? 'installer');
-    const missing = missingKinds(request, items);
+    const lookup = await lookUpLayer(deps.findLayer, request.id, items);
+    const missing = missingKinds(request, withLayerRows(items, lookup));
     if (missing) throw new Error(missing);
+    const refused = layerProblems(lookup, request.target.websiteCode);
+    if (refused.length > 0) throw new PackRowsError(rowProblems(items, lookup, request.target.websiteCode));
     const commerce = await access(deps);
     const target = await resolveEngineTarget(commerce.get, request.target);
     const session = sessionFor(target);
@@ -141,16 +152,23 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     const now = deps.now ?? (() => new Date());
     const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString(), request.target);
     let current: string | undefined;
-    const outcome = await installPack({ ...commerce, recorder, session, log: deps.log, asker: deps.asker }, items, (kind) => {
+    const ctx = { ...commerce, recorder, session, log: deps.log, asker: deps.asker };
+    const outcome = await installPack(ctx, items, (kind) => {
         if (current) job.perType[current] = 'success';
         current = kind;
         job.perType[kind] = 'processing';
     });
+    // The last kind stays in progress through the layer: the watcher ends when every kind asked for
+    // has, and the note says what the layer did (step 09).
+    const layerStopped = await applySettingsLayer(ctx, lookup);
+    if (STORE_CONFIG_KIND in job.perType && lookup.state === 'found') job.perType[STORE_CONFIG_KIND] = layerStopped ? 'error' : 'success';
+    if (layerStopped) job.reason = layerStopped;
     job.note = [
-        skippedLine(outcome.skipped),
-        keptLine(outcome.kept),
+        skippedLine(session.skipped),
+        keptLine([...outcome.kept, ...layerKept(lookup, ctx)]),
         containersLine(outcome.containers),
-        settingsLine(outcome.settings, 'Set'),
+        settingsDoneLine(lookup, ctx),
+        layerTroubleLine(lookup, layerStopped),
         underStoreRootLine(outcome.rootPlacement, items.categories, session.storeRoot),
         rootStepLine(outcome.rootStep),
         ambiguousKeysLine(session.ambiguousCategoryKeys),
@@ -203,9 +221,10 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 if (conflict) return { valid: false, reason: conflict };
                 // Step 14 item 2: the pack's rows, every kind's, as the install checks them before its first write.
                 const items = await deps.readPack(request.id, request.dataTypes, request.source ?? 'installer');
-                const missing = missingKinds(request, items);
+                const lookup = await lookUpLayer(deps.findLayer, request.id, items);
+                const missing = missingKinds(request, withLayerRows(items, lookup));
                 if (missing) return { valid: false, reason: missing };
-                const problems = packRowProblems(items, request.target.websiteCode);
+                const problems = rowProblems(items, lookup, request.target.websiteCode);
                 if (problems.length > 0) return { valid: false, reason: new PackRowsError(problems, 'would be').message };
                 await resolveEngineTarget((await access(deps)).get, request.target);
                 return { valid: true };

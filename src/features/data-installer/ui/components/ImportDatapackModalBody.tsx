@@ -14,10 +14,12 @@ import type { ImportJobRecord } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useImportProgress } from '../hooks/useImportProgress';
 import type { ImportScopes } from '../hooks/useImportScopes';
+import type { RemovalConfirmView } from '../hooks/useRemovalConfirm';
 import { hasMeasurableProgress, progressLabel, progressStep, summarizeProgress } from '../importProgress';
 import { DatapackResultBody } from './DatapackResultBody';
 import { ImportForm } from './ImportForm';
 import type { ResultContent } from './importResult';
+import { RemovalConfirmBody } from './RemovalConfirmBody';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
@@ -61,18 +63,19 @@ export function typesInSentence(labels: string[]): string {
  * The armed removal, as the dialog design rules' confirm (owner, 2026-10-31): the question is the
  * dialog's title, naming the store, and this is its one sentence, the warning a word in it. It was
  * the question again, Store and Data rows and a muted "This can't be undone." under them, which
- * read as machine-made.
+ * read as machine-made. What the SC changed since it was installed follows it (step 05).
  */
 function ResetConfirm({ ctx }: { ctx: BodyContext }): React.JSX.Element {
     return (
-        <LeadText>
-            Permanently deletes {ctx.displayName}&rsquo;s {typesInSentence(ctx.selected.map(dataTypeLabel))}.
-        </LeadText>
+        <RemovalConfirmBody
+            deletes={`Permanently deletes ${ctx.displayName}\u2019s ${typesInSentence(ctx.selected.map(dataTypeLabel))}.`}
+            view={ctx.removal}
+        />
     );
 }
 
 /** Which view the modal is showing. */
-export type ModalView = 'form' | 'busy' | 'confirm-reset' | 'watching' | 'stopped-watching' | 'result' | 'no-instance';
+export type ModalView = 'form' | 'busy' | 'reading-changes' | 'confirm-reset' | 'watching' | 'stopped-watching' | 'result' | 'no-instance';
 
 /** Everything the one visible view needs, gathered once. */
 export interface BodyContext {
@@ -85,6 +88,7 @@ export interface BodyContext {
     result: ResultContent | null;
     busyMessage: string;
     scope: ImportScopes;
+    removal: RemovalConfirmView;
     toggle: (type: string, isSelected: boolean) => void;
     toggleAll: () => void;
 }

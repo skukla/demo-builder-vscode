@@ -75,10 +75,42 @@ export const DATAPACK_STAGES = {
         expectation: 'Usually a second each',
         detail: 'Rules other websites also use',
     },
+    // A demo's B2B data, attribute sets and settings (step 10, 2026-11-02). Companies before their
+    // customers: Commerce refuses to delete a company's admin while the company stands.
+    removingCompanies: {
+        label: 'Removing companies',
+        expectation: 'A few seconds each',
+        detail: 'The customers in them go next',
+    },
+    removingCatalogs: {
+        label: 'Removing shared catalogs',
+        expectation: 'A few seconds each',
+        detail: 'Each with its customer group',
+    },
+    removingCustomerGroups: {
+        label: 'Removing customer groups',
+        expectation: 'Usually a second each',
+        detail: 'Groups no catalog uses',
+    },
     removingCategories: {
         label: 'Removing categories',
         expectation: 'Usually a second each',
         detail: 'Deepest first, roots kept',
+    },
+    removingAttributeSets: {
+        label: 'Removing attribute sets',
+        expectation: 'Usually a second each',
+        detail: 'Sets nothing else uses',
+    },
+    removingAttributes: {
+        label: 'Removing attributes',
+        expectation: 'Usually a second each',
+        detail: 'Attributes nothing else uses',
+    },
+    resettingSettings: {
+        label: 'Resetting site settings',
+        expectation: 'Usually under a minute',
+        detail: "The website's, back to the default",
     },
     refreshingErp: {
         label: 'Refreshing the ERP',

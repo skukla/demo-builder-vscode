@@ -21,6 +21,10 @@ import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 interface SaveResult {
     path?: string;
     cancelled?: boolean;
+    /** The pack's settings layer went in the file too (step 09). */
+    settingsLayer?: { settings: number };
+    /** Why the file may lack one: the library could not be asked. */
+    settingsLayerNote?: string;
 }
 
 export interface SaveDatapackFileButtonProps {
@@ -75,7 +79,13 @@ function renderSaveNote(
         return <p className="datapack-export-note">The file could not be saved: {error}</p>;
     }
     if (value?.path) {
-        return <p className="datapack-export-note">Saved to {value.path}</p>;
+        return (
+            <p className="datapack-export-note">
+                Saved to {value.path}
+                {value.settingsLayer ? ', with its store settings' : ''}
+                {value.settingsLayerNote ? `. ${value.settingsLayerNote}` : ''}
+            </p>
+        );
     }
     return null;
 }

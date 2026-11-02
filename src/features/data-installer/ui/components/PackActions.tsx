@@ -5,6 +5,8 @@
  * on three rows. In the menu, in order: Save as file; Save store changes to this pack, for the
  * pack the open project holds by Demo Builder's engine; Share or Stop sharing, on the SC's own
  * library pack; and Remove from library, the same pack only, in its own section at the bottom.
+ * A pack whose settings layer is the SC's own also offers "Remove its store settings" there, since a
+ * layer has no card of its own to remove it from (datapack-engine step 09).
  *
  * Every action keeps the condition and confirmation it had as a button. Share and Stop sharing
  * ask before they change anything (`ShareLibraryPackConfirm`); Remove asks only when the pack was
@@ -21,7 +23,7 @@
 
 import { Button, Item, Section, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
-import type { DatapackDetail } from '../../types';
+import type { DatapackDetail, PackDetailLayer } from '../../types';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
 import { useSaveDatapackFile } from './SaveDatapackFileButton';
@@ -41,8 +43,10 @@ export interface PackActionsProps {
     onSaveStoreChanges?: (id: DatapackId) => void;
     /** The warning a delete carries when this SC shared the pack in a project file. */
     sharedInFile?: string;
-    /** The SC's own pack was shared or stopped being shared. Stable. */
+    /** The SC's own pack was shared or stopped being shared, or its settings layer was removed. Stable. */
     onSharingChanged?: () => void;
+    /** The settings layer Import will apply after the pack's data (step 09). */
+    settingsLayer?: PackDetailLayer;
 }
 
 /** One menu row: its icon and label. */
@@ -62,6 +66,14 @@ function packRows(detail: DatapackDetail, saveStore: boolean): Row[] {
     return rows;
 }
 
+/** The menu's lower section: what removes something from the library. */
+function removeRows(ownPack: boolean, ownLayer: boolean): Row[] {
+    return [
+        ...(ownPack ? [{ key: 'remove', label: 'Remove from library', icon: 'delete' }] : []),
+        ...(ownLayer ? [{ key: 'remove-settings', label: 'Remove its store settings', icon: 'delete' }] : []),
+    ];
+}
+
 /** The inline confirm open under the actions, if any. */
 type Asking = 'share' | 'remove' | null;
 
@@ -73,17 +85,20 @@ export function PackActions({
     onSaveStoreChanges,
     sharedInFile,
     onSharingChanged,
+    settingsLayer,
 }: PackActionsProps): React.JSX.Element {
     const library = detail.store === 'library';
     const [asking, setAsking] = useState<Asking>(null);
     const saveFile = useSaveDatapackFile(detail.id, library ? 'library' : 'installer');
     const removal = useLibraryRemoval(detail.id, onRemoved);
+    const layerRemoval = useLibraryRemoval(settingsLayer?.id ?? detail.id, onSharingChanged);
     const doneAsking = useCallback((): void => setAsking(null), []);
 
     const onAction = (key: React.Key): void => {
         if (key === 'save-file') saveFile.start();
         else if (key === 'save-store') onSaveStoreChanges?.(detail.id);
         else if (key === 'share') setAsking('share');
+        else if (key === 'remove-settings') layerRemoval.start();
         else if (key === 'remove') {
             if (sharedInFile) setAsking('remove');
             else removal.start();
@@ -102,6 +117,7 @@ export function PackActions({
         </Item>
     );
     const showImport = !library || installsFromLibrary;
+    const removing = removeRows(library && detail.mine === true, settingsLayer?.mine === true);
     return (
         <>
             {library && !installsFromLibrary ? <CopyToInstallerButton id={detail.id} onImport={onImport} /> : null}
@@ -113,14 +129,7 @@ export function PackActions({
                 ) : null}
                 <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
                     <Section key="pack">{packRows(detail, onSaveStoreChanges !== undefined).map(renderRow)}</Section>
-                    {library && detail.mine ? (
-                        <Section key="remove">
-                            <Item key="remove" textValue="Remove from library">
-                                {renderMenuIcon('delete')}
-                                <Text>Remove from library</Text>
-                            </Item>
-                        </Section>
-                    ) : null}
+                    {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
                 </CardActionsMenu>
             </div>
             <PackActionNotes>
@@ -132,6 +141,7 @@ export function PackActions({
                     <RemoveConfirm warning={sharedInFile} onRemove={confirmRemove} onCancel={doneAsking} />
                 ) : null}
                 {removal.note}
+                {layerRemoval.note}
             </PackActionNotes>
         </>
     );

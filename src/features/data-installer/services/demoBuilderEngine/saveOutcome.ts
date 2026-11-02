@@ -55,5 +55,12 @@ export function unnamedLine(unnamed: readonly string[]): string | undefined {
     );
 }
 
+/** Where the settings went, when they went beside the pack (step 09); nothing when none did. */
+export function layerLine(layer: { datapackName: string; settings: number } | undefined): string | undefined {
+    if (!layer) return undefined;
+    const many = layer.settings !== 1;
+    return `Its ${layer.settings} store setting${many ? 's are' : ' is'} saved beside it, in ${layer.datapackName}.`;
+}
+
 /** The save's whole sentence: its parts that have something to say, in order. */
 export const saveSentence = (...parts: Array<string | undefined>): string => parts.filter(Boolean).join(' ');

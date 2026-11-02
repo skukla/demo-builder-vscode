@@ -36,9 +36,11 @@ import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
 import { SERVICE_INSTALLS_ONLY_ITS_OWN, libraryReads } from './libraryReads';
+import { STARTING_REMOVAL_STAGE, type SavedFirst, removalChangesHandlers, removalStageReporter, settleChangesBeforeRemoval } from './removalChanges';
 import { storeChangesHandlers } from './storeChangesHandlers';
 import { TransientStateManager } from '@/core/state/transientStateManager';
-import { handleBackgroundOperation } from '@/core/vscode/operationProgress';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { handleBackgroundOperation, pushOperationProgress } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -61,6 +63,10 @@ interface StartImportPayload {
     confirm?: boolean;
     /** Which store holds the pack: `installer` (absent) or `library` (DI-5). */
     source?: string;
+    /** Reset only: save the SC's changes to the demo's own pack first, or lose them. */
+    changes?: string;
+    /** Reset only, and only ever the confirm's box: turn on "always save" once a save has worked. */
+    alwaysSave?: boolean;
 }
 
 export const importHandlers = defineHandlers({
@@ -81,6 +87,8 @@ export const importHandlers = defineHandlers({
     ...datapackLibraryHandlers,
     // What installing again would change, and saving the store's copy as a new version (step 05).
     ...storeChangesHandlers,
+    // What a removal would lose, for its confirm (step 05).
+    ...removalChangesHandlers,
     // What a website holds that Demo Builder did not install, and clearing it (step 10).
     ...demoDataHandlers,
     'start-datapack-import': async (
@@ -173,18 +181,28 @@ export const importHandlers = defineHandlers({
             };
         }
 
-        const prepared = await prepareImport(context, payload, 'remove');
+        const settled = await settleBeforeReset(context, payload);
+        if ('response' in settled) {
+            return settled.response;
+        }
+        const { saved } = settled;
+
+        // Saving moved the install record onto the new version, so that is what gets removed.
+        const prepared = await prepareImport(context, saved ? removalOfSaved(payload, saved) : payload, 'remove');
         if ('response' in prepared) {
-            return prepared.response;
+            return withSavedNote(prepared.response, saved);
         }
         const { engine, request } = prepared;
 
-        return runAndWatch(context, engine, request, {
-            operation: 'reset',
-            begin: () => engine.startDelete(request),
-            rejected: 'The Data Installer rejected this reset request.',
-            failed: 'The reset could not be started.',
-        });
+        return withSavedNote(
+            await runAndWatch(context, engine, request, {
+                operation: 'reset',
+                begin: () => engine.startDelete(request),
+                rejected: 'The Data Installer rejected this reset request.',
+                failed: 'The reset could not be started.',
+            }),
+            saved,
+        );
     },
 
     'get-datapack-import-status': async (context: HandlerContext): Promise<HandlerResponse> => {
@@ -193,6 +211,61 @@ export const importHandlers = defineHandlers({
         return { success: true, data: record };
     },
 });
+
+/**
+ * The SC's changes, before anything is removed (step 05), once the request itself is known to be
+ * good: a save must never land for a removal that was always going to be refused.
+ */
+async function settleBeforeReset(
+    context: HandlerContext,
+    payload: StartImportPayload | undefined,
+): Promise<{ saved?: SavedFirst } | { response: HandlerResponse }> {
+    const input = readInput(payload);
+    if ('error' in input) {
+        return { response: { success: false, error: input.error } };
+    }
+    const answer = payload?.changes;
+    if (answer !== undefined && answer !== 'keep' && answer !== 'drop') {
+        return { response: { success: false, error: `changes is keep or drop, not ${answer}.` } };
+    }
+    const stage = removalStageReporter(context);
+    const settled = await settleChangesBeforeRemoval(
+        context,
+        {
+            pack: { name: input.datapackName, version: input.version },
+            // As it was sent: with none named, a save looks in the library and then the Data Installer.
+            ...(payload?.source ? { source: input.source } : {}),
+            ...(answer ? { answer } : {}),
+            unanswered: 'refuse',
+            ...(payload?.alwaysSave === true ? { rememberAlways: true } : {}),
+        },
+        stage,
+    );
+    if ('saved' in settled && settled.saved) {
+        stage(STARTING_REMOVAL_STAGE);
+    }
+    if ('response' in settled && settled.response.code === ErrorCode.CHANGES_NOT_SAVED) {
+        // A window closed during the save handed it to a notification, which has to hear the end.
+        void pushOperationProgress({ id: DATAPACK_OPERATION_ID, state: 'failed', error: settled.response.error ?? 'Your changes could not be saved.' });
+    }
+    return settled;
+}
+
+/** The removal of the version a save just made. */
+function removalOfSaved(payload: StartImportPayload | undefined, saved: SavedFirst): StartImportPayload {
+    return { ...payload, datapackName: saved.id.name, version: saved.id.version, source: 'library', dataTypes: saved.dataTypes };
+}
+
+/** What a removal answers carries where the changes went, whichever way the start went. */
+function withSavedNote(response: HandlerResponse, saved: SavedFirst | undefined): HandlerResponse {
+    if (!saved) {
+        return response;
+    }
+    if (!response.success) {
+        return { ...response, error: `${response.error ?? 'The removal could not be started.'} Your changes are safe: ${saved.note}` };
+    }
+    return { ...response, data: { ...(response.data as object), savedNote: saved.note, saved: saved.id } };
+}
 
 /**
  * Everything both write handlers need, or the response to return instead.

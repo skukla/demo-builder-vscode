@@ -147,7 +147,7 @@
     height: 18px;
     flex: 0 0 auto;
     border-radius: 50%;
-    background: var(--spectrum-global-color-green-500);
+    background: var(--spectrum-semantic-positive-color-icon);
     color: #fff;
     font-size: 11px;
     font-weight: 700;

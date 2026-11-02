@@ -1,0 +1,335 @@
+/**
+ * The removal confirm through the real modal (datapack-engine step 05): what the SC sees for what
+ * the read found, what Remove sends, and that a wait shows only its spinner.
+ */
+
+import { act, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import { mockRequest, press, renderModal, resetModalMocks, settle, awaitForm, defaultResponse, mockPostMessage } from './ImportDatapackModal.testUtils';
+import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
+import type { DatapackRemovalChanges } from '@/features/data-installer/removalChanges';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { ErrorCode } from '@/types/errorCodes';
+import type { HandlerResponse } from '@/types/handlers';
+
+const SENTENCE = 'You changed 3 things since it was installed: the category Critical Power, and 2 products.';
+const CHANGED: DatapackRemovalChanges = { count: 3, kinds: [{ kind: 'categories', count: 1, names: ['Critical Power'] }, { kind: 'products', count: 2, names: ['A', 'B'] }], sentence: SENTENCE, ownPackName: 'Acme Demo', alwaysSave: false };
+const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], ownPackName: 'Acme Demo', alwaysSave: false };
+const SAVE_BOX = 'Save my changes to the Acme Demo pack first';
+const ALWAYS_BOX = 'Always do this, and stop asking';
+const DELETES = 'Permanently deletes Bodea’s categories.';
+
+const removeData = () => screen.getByRole('button', { name: 'Remove data' });
+const footerRemove = () => screen.getByRole('button', { name: /^Remove( anyway)?$/ });
+const resetCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'reset-datapack');
+const readCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'get-datapack-removal-changes');
+
+/** The read answers this; `reset` answers the removal, by default accepting it. */
+function answers(read: HandlerResponse | (() => Promise<HandlerResponse>), reset: HandlerResponse = { success: true, data: { activationId: 'act-1' } }): void {
+    mockRequest.mockImplementation(async (type: string) => {
+        if (type === 'get-datapack-removal-changes') return typeof read === 'function' ? read() : read;
+        if (type === 'reset-datapack') return reset;
+        return defaultResponse(type);
+    });
+}
+
+async function openConfirm(): Promise<void> {
+    renderModal({ availableTypes: ['categories'] });
+    await awaitForm();
+    await press(removeData());
+    await settle();
+}
+
+beforeEach(() => resetModalMocks());
+
+describe('pressing Remove data', () => {
+    it('asks the store what changed, for the pack, and shows only a spinner and Cancel while it does', async () => {
+        let answer: (value: HandlerResponse) => void = () => undefined;
+        answers(() => new Promise((resolve) => (answer = resolve)));
+        renderModal({ availableTypes: ['categories'] });
+        await awaitForm();
+
+        await press(removeData());
+
+        expect(readCalls()[0][1]).toEqual({ datapackName: 'bodea', version: 'main' });
+        expect(screen.getByRole('heading', { name: 'Remove from inst?' })).toBeInTheDocument();
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByText(DELETES)).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+
+        await act(async () => answer({ success: true, data: NOTHING }));
+        await settle();
+        expect(screen.getByText(DELETES)).toBeInTheDocument();
+    });
+
+    it('names a library pack\'s store in the read', async () => {
+        answers({ success: true, data: NOTHING });
+        renderModal({ availableTypes: ['categories'], source: 'library' });
+        await awaitForm();
+
+        await press(removeData());
+
+        expect(readCalls()[0][1]).toEqual({ datapackName: 'bodea', version: 'main', source: 'library' });
+    });
+
+    it('Cancel during the read goes back to the form and nothing is sent', async () => {
+        answers(() => new Promise(() => undefined));
+        const onClose = jest.fn();
+        renderModal({ availableTypes: ['categories'], onClose });
+        await awaitForm();
+        await press(removeData());
+
+        await press(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(removeData()).toBeInTheDocument();
+        expect(onClose).not.toHaveBeenCalled();
+        expect(resetCalls()).toHaveLength(0);
+    });
+});
+
+describe('nothing changed', () => {
+    beforeEach(() => answers({ success: true, data: NOTHING }));
+
+    it('is the confirm exactly as it was: the sentence and no boxes', async () => {
+        await openConfirm();
+
+        expect(screen.getByText(DELETES)).toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: SAVE_BOX })).not.toBeInTheDocument();
+        expect(screen.queryByText(/You changed/)).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
+    });
+
+    it('removes with nothing to keep', async () => {
+        await openConfirm();
+
+        await press(footerRemove());
+
+        expect(resetCalls()[0][1]).toMatchObject({ datapackName: 'bodea', version: 'main', confirm: true, changes: 'drop' });
+        expect(resetCalls()[0][1]).not.toHaveProperty('alwaysSave');
+    });
+});
+
+describe('something changed', () => {
+    beforeEach(() => answers({ success: true, data: CHANGED }));
+
+    it('keeps the question and the sentence, then says what changed, with the save ticked', async () => {
+        await openConfirm();
+
+        expect(screen.getByRole('heading', { name: 'Remove from inst?' })).toBeInTheDocument();
+        expect(screen.getByText(DELETES)).toBeInTheDocument();
+        expect(screen.getByText(SENTENCE)).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: SAVE_BOX })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).not.toBeChecked();
+    });
+
+    it('with the box ticked, Remove keeps them', async () => {
+        await openConfirm();
+
+        await press(footerRemove());
+
+        expect(resetCalls()[0][1]).toMatchObject({ confirm: true, changes: 'keep' });
+        expect(resetCalls()[0][1]).not.toHaveProperty('alwaysSave');
+    });
+
+    it('with the box unticked, Remove drops them', async () => {
+        await openConfirm();
+
+        await press(screen.getByRole('checkbox', { name: SAVE_BOX }));
+        await press(footerRemove());
+
+        expect(resetCalls()[0][1]).toMatchObject({ confirm: true, changes: 'drop' });
+    });
+
+    it('with always ticked, Remove also asks for the setting', async () => {
+        await openConfirm();
+
+        await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
+        await press(footerRemove());
+
+        expect(resetCalls()[0][1]).toMatchObject({ changes: 'keep', alwaysSave: true });
+    });
+
+    it('unticking the save unticks and locks always', async () => {
+        await openConfirm();
+        await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
+
+        await press(screen.getByRole('checkbox', { name: SAVE_BOX }));
+
+        expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).not.toBeChecked();
+        expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).toBeDisabled();
+    });
+
+    it('Cancel removes nothing, and the next press starts afresh', async () => {
+        await openConfirm();
+        await press(screen.getByRole('checkbox', { name: SAVE_BOX }));
+
+        await press(screen.getByRole('button', { name: 'Cancel' }));
+        expect(resetCalls()).toHaveLength(0);
+
+        await press(removeData());
+        await settle();
+        expect(readCalls()).toHaveLength(2);
+        expect(screen.getByRole('checkbox', { name: SAVE_BOX })).toBeChecked();
+    });
+});
+
+describe('the setting answers', () => {
+    beforeEach(() => answers({ success: true, data: { ...CHANGED, alwaysSave: true } }));
+
+    it('shows the ordinary confirm with one line, and no list or boxes', async () => {
+        await openConfirm();
+
+        expect(screen.getByText(DELETES)).toBeInTheDocument();
+        expect(screen.getByText('Your changes will be saved to the Acme Demo pack first.')).toBeInTheDocument();
+        expect(screen.queryByText(SENTENCE)).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    });
+
+    it('keeps them', async () => {
+        await openConfirm();
+
+        await press(footerRemove());
+
+        expect(resetCalls()[0][1]).toMatchObject({ changes: 'keep' });
+    });
+
+    it('with nothing changed, is the plain confirm: it does not say a save is coming', async () => {
+        answers({ success: true, data: { ...NOTHING, alwaysSave: true } });
+        await openConfirm();
+
+        expect(screen.queryByText(/will be saved/)).not.toBeInTheDocument();
+    });
+});
+
+describe('a read that fails', () => {
+    beforeEach(() => answers({ success: false, error: 'The store could not be read.' }));
+
+    it('says so, and offers removing anyway', async () => {
+        await openConfirm();
+
+        expect(screen.getByText(/Couldn.t check whether you changed anything in it since it was installed, so any changes would be lost\. The store could not be read\./)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Remove anyway' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    });
+
+    it('Remove anyway removes, losing any changes', async () => {
+        await openConfirm();
+
+        await press(footerRemove());
+
+        expect(resetCalls()[0][1]).toMatchObject({ confirm: true, changes: 'drop' });
+    });
+});
+
+describe('a save that fails', () => {
+    const REASON = 'The library did not take all of it. Delete that version and try again.';
+    beforeEach(() => answers({ success: true, data: CHANGED }, { success: false, error: REASON, code: ErrorCode.CHANGES_NOT_SAVED }));
+
+    it('says nothing was removed as a red title, and why', async () => {
+        await openConfirm();
+
+        await press(footerRemove());
+        await settle();
+
+        expect(screen.getByRole('heading', { name: "Couldn't save your changes, so nothing was removed" })).toBeInTheDocument();
+        expect(screen.getByText(REASON)).toBeInTheDocument();
+        expect(screen.getByRole('heading').querySelector('.text-negative')).not.toBeNull();
+    });
+
+    it('Back returns to the same confirm, boxes as they were, without reading again', async () => {
+        await openConfirm();
+        await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
+        await press(footerRemove());
+        await settle();
+
+        await press(screen.getByRole('button', { name: 'Back' }));
+
+        expect(screen.getByText(SENTENCE)).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).toBeChecked();
+        expect(readCalls()).toHaveLength(1);
+    });
+
+    it('CONTROL: any other failure to start goes Back to the form', async () => {
+        answers({ success: true, data: NOTHING }, { success: false, error: 'The service said no.' });
+        await openConfirm();
+        await press(footerRemove());
+        await settle();
+
+        expect(screen.getByRole('heading', { name: "Couldn't start the removal" })).toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Back' }));
+        expect(removeData()).toBeInTheDocument();
+    });
+});
+
+describe('while it saves first', () => {
+    function pushStage(stage: string): void {
+        act(() => {
+            webviewClientHandlers.get('operationProgress')?.({ id: DATAPACK_OPERATION_ID, state: 'running', stage });
+        });
+    }
+
+    beforeEach(() => {
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'get-datapack-removal-changes') return { success: true, data: CHANGED };
+            if (type === 'reset-datapack') return new Promise(() => undefined);
+            return defaultResponse(type);
+        });
+    });
+
+    it('says each stage in the same wait, with the dialog titled for the removal', async () => {
+        await openConfirm();
+        await press(footerRemove());
+
+        pushStage('Saving to the library');
+
+        expect(screen.getByRole('heading', { name: 'Remove Bodea' })).toBeInTheDocument();
+        expect(screen.getByText('Saving to the library')).toBeInTheDocument();
+    });
+
+    it('ignores another operation\'s progress', async () => {
+        await openConfirm();
+        await press(footerRemove());
+
+        act(() => {
+            webviewClientHandlers.get('operationProgress')?.({ id: 'something-else', state: 'running', stage: 'Deploying the mesh' });
+        });
+
+        expect(screen.queryByText('Deploying the mesh')).not.toBeInTheDocument();
+        expect(screen.getByText('Starting removal')).toBeInTheDocument();
+    });
+
+    it('closing hands it to a notification rather than stopping it', async () => {
+        const onClose = jest.fn();
+        renderModal({ availableTypes: ['categories'], onClose });
+        await awaitForm();
+        await press(removeData());
+        await settle();
+        await press(footerRemove());
+        pushStage('Saving to the library');
+
+        await press(screen.getByRole('button', { name: 'Run in background' }));
+
+        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Removing Bodea' });
+        expect(onClose).toHaveBeenCalled();
+    });
+});
+
+describe('after a removal that saved first', () => {
+    it('says where the changes went on the result', async () => {
+        const record = { activationId: 'act-1', datapackName: 'acme-1a2b3c', operation: 'reset', version: 'v', commerceInstance: 'inst', dataTypes: ['categories'], startedAt: '2026-11-02T00:00:00.000Z', outcome: 'success', perType: { categories: 'success' } };
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'get-datapack-removal-changes') return { success: true, data: CHANGED };
+            if (type === 'reset-datapack') return { success: true, data: { activationId: 'act-1', savedNote: 'Saved to the Acme Demo pack. Bodea is unchanged.' } };
+            if (type === 'get-datapack-import-status') return { success: true, data: record };
+            return defaultResponse(type);
+        });
+        await openConfirm();
+
+        await press(footerRemove());
+        await settle();
+
+        expect(await screen.findByRole('heading', { name: 'Removed Bodea' })).toBeInTheDocument();
+        expect(screen.getByText('Saved to the Acme Demo pack. Bodea is unchanged.')).toBeInTheDocument();
+    });
+});

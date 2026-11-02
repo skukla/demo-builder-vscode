@@ -37,6 +37,12 @@ describe('ChoiceCard', () => {
         expect(container.querySelector('.choice-card')).toHaveClass('choice-card--tile');
     });
 
+    it('compact variant adds the compact class, and not the tile one', () => {
+        const { container } = renderCard(<ChoiceCard name="A" variant="compact" />);
+        expect(container.querySelector('.choice-card')).toHaveClass('choice-card--compact');
+        expect(container.querySelector('.choice-card')).not.toHaveClass('choice-card--tile');
+    });
+
     it('when selected: sets data-selected and renders the check', () => {
         const { container } = renderCard(
             <ChoiceCard name="A" selected checkTestId="a-check" />,

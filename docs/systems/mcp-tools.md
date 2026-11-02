@@ -202,7 +202,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | Tool | | What it does |
 |---|---|---|
 | `check_demo_data` | read | What some STORES of this project's Commerce instance hold that Demo Builder did not install, and what clearing them would do. |
-| `clear_demo_data` | **confirm** | Clear the chosen stores of everything check_demo_data listed: deletes those products, categories, customers and cart rules |
+| `clear_demo_data` | **confirm** | Clear the chosen stores of everything check_demo_data listed: deletes those products, categories, customers, cart rules |
 | `copy_library_datapack_to_installer` | **confirm** | Copy a datapack library pack into the Data Installer's catalog, for the Data Installer |
 | `delete_library_datapack` | **confirm** | Delete one of your own packs from the datapack library — the undo of |
 | `get_datapack_import_status` | read | Progress of the running or most recent datapack import/reset. Poll this after |
@@ -210,7 +210,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `list_datapack_export_items` | read | What this Commerce instance holds for one data type, to choose from before exporting. |
 | `list_datapack_import_scopes` | read | The websites and store views an import can be scoped to on this project's instance. |
 | `load_datapack_zip` | **confirm** | Write the pack in a datapack zip file into the datapack library (default) or the Data Installer. |
-| `open_datapack_zip` | read | Say what a datapack zip file holds — name, version, data types — without writing anything. |
+| `open_datapack_zip` | read | Say what a datapack zip file holds — name, version, data types, and any settings layer by path — |
 | `preview_datapack_changes` | read | What installing a datapack again would change in this project\ |
 | `rename_datapack` | **confirm** | Rename one of your own datapack library packs: every version takes the new display |
 | `reset_datapack` | **confirm** | Remove a datapack's data from the Commerce instance so the project can be reused. |

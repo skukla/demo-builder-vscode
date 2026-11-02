@@ -11,6 +11,7 @@
 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
+import { engineThatInstalled } from '@/features/data-installer/services/buildDatapackEngine';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import type { Project } from '@/types/base';
@@ -84,10 +85,14 @@ export async function confirmSampleDataRemoval(
     // Data Installer service owner 2026-08-22 — a removal takes only what the
     // pack imported, so the reassurance is a fact, not a guess (backlog item
     // 2026-08-17-what-does-a-datapack-removal-actually-delete, now archived).
+    // Only Demo Builder's engine keeps a record of what changed, so only it can say the next part.
+    const engine = await engineThatInstalled(project.path, { name: datapack.name, version: datapack.version });
+    const saved = engine === 'demo-builder' ? "Anything you changed in it goes to this demo's own pack first. " : '';
     const answer = await vscode.window.showWarningMessage(
         `Also remove the datapack this project imported (${datapack.name}@${datapack.version})? ` +
             'This deletes the data this pack imported from the Commerce instance — ' +
             'anything you added by hand stays — and can take several minutes. ' +
+            saved +
             closing,
         { modal: true },
         removeButton,
@@ -115,6 +120,28 @@ export async function removeProjectSampleData(
     report: ReportStage,
 ): Promise<void> {
     try {
+        // The SC's changes first: this door's question was already asked, and keeping the work is the
+        // likely intent, so they go to the demo's own pack (datapack-engine step 05). Reported, as
+        // everything here is: a save that fails removes nothing and the reset stands.
+        const { contextForProject, settleChangesBeforeRemoval } = await import(
+            '@/features/data-installer/handlers/removalChanges'
+        );
+        if (project.datapack) {
+            const settled = await settleChangesBeforeRemoval(
+                contextForProject(context, project),
+                {
+                    pack: { name: project.datapack.name, version: project.datapack.version },
+                    ...(project.datapack.store ? { source: project.datapack.store } : {}),
+                    unanswered: 'keep',
+                },
+                (stage) => report(stage),
+            );
+            if ('response' in settled) {
+                context.logger.error(`[EdsReset] Sample data was NOT removed: ${settled.response.error ?? 'no reason given'}`);
+                return;
+            }
+        }
+
         report(OPERATION_STAGES.removingDatapack.label);
 
         const { removeSampleData } = await import(

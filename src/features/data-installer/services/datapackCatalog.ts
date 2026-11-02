@@ -44,6 +44,51 @@ export interface DatapackGroup {
 
 const MAIN = 'main';
 
+/** The data kind of one store setting per row (datapack-engine step 09). */
+export const STORE_CONFIG_KIND = 'store_config';
+
+const LAYER_SUFFIX = '-settings';
+
+/** The library pack that holds a pack's settings layer (step 09, decision 1). */
+export function settingsLayerName(packName: string): string {
+    return `${packName}${LAYER_SUFFIX}`;
+}
+
+/**
+ * Whether a row is a settings layer: named as one, AND holding nothing but store settings. A demo
+ * whose name happens to end in `-settings` holds data, and stays a demo.
+ */
+export function isSettingsLayer(row: Pick<DatapackSummary, 'id' | 'dataTypes'>): boolean {
+    const named = row.id.name.endsWith(LAYER_SUFFIX) && row.id.name.length > LAYER_SUFFIX.length;
+    return named && row.dataTypes.length > 0 && row.dataTypes.every((kind) => kind === STORE_CONFIG_KIND);
+}
+
+/**
+ * The rows a catalog offers as cards: all but the settings layers whose pack is listed too, which
+ * are reached from that pack's flyout (its "Store settings" row, and "Remove its store settings"
+ * on the SC's own). A layer keeps its card when hiding it would strand it: no pack of its name is
+ * listed, so no flyout reaches it, or it was installed on its own, and a card is where a pack is
+ * removed from the store.
+ *
+ * @param installed - the names of the packs on this store
+ */
+export function withoutLayerCards<T extends Pick<DatapackSummary, 'id' | 'dataTypes'>>(rows: T[], installed: ReadonlySet<string> = new Set()): T[] {
+    const names = new Set(rows.map((row) => row.id.name));
+    return rows.filter((row) => {
+        if (!isSettingsLayer(row) || installed.has(row.id.name)) return true;
+        return !names.has(row.id.name.slice(0, -LAYER_SUFFIX.length));
+    });
+}
+
+/**
+ * The newest version by its date, which `main` does not outrank here (the default a card opens on
+ * is `pickDefaultVersion`'s question, not this one). Archived versions only when nothing else is left.
+ */
+export function newestVersion<T extends Pick<DatapackSummary, 'id' | 'updatedAt'>>(versions: readonly T[]): T | undefined {
+    const live = versions.filter((version) => !ARCHIVED.test(version.id.version));
+    return [...(live.length > 0 ? live : versions)].sort(byRecency)[0];
+}
+
 /** Matches both archived spellings seen live: `main-archived-…` and `archive_…`. */
 const ARCHIVED = /archiv/i;
 
@@ -112,7 +157,7 @@ function rank(version: DatapackSummary): number {
 }
 
 /** Newest first, treating a missing timestamp as equal so the sort stays stable. */
-function byRecency(a: DatapackSummary, b: DatapackSummary): number {
+function byRecency(a: Pick<DatapackSummary, 'updatedAt'>, b: Pick<DatapackSummary, 'updatedAt'>): number {
     if (!a.updatedAt || !b.updatedAt) {
         return 0;
     }

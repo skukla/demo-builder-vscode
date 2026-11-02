@@ -346,6 +346,19 @@
                         "default": "demo-builder",
                         "description": "What installs and removes datapacks. Demo Builder's own by default; the Data Installer service still provides the catalog either way. A pack is always removed by the one that installed it."
                     },
+                    "demoBuilder.dataInstaller.changesOnRemoval": {
+                        "type": "string",
+                        "enum": [
+                            "ask",
+                            "save"
+                        ],
+                        "enumDescriptions": [
+                            "Ask each time a removal finds changes.",
+                            "Save them to the demo's own pack first, without asking."
+                        ],
+                        "default": "ask",
+                        "description": "What removing a datapack does with anything you changed in it since it was installed. Saving makes a new version of the demo's own pack in the datapack library, and the previous version is kept. \"Always do this, and stop asking\" on the removal's confirmation sets this to save; set it back to ask here."
+                    },
                     "demoBuilder.dataInstaller.apiBaseUrl": {
                         "scope": "machine",
                         "type": "string",

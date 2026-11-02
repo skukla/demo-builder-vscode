@@ -28,6 +28,10 @@ export enum ErrorCode {
     RATE_LIMITED = 'RATE_LIMITED',
     /** Operation not applicable in the current context (e.g. EDS-only action on a headless project) */
     INVALID_OPERATION = 'INVALID_OPERATION',
+    /** A datapack removal found the SC's changes and nothing has said keep or drop them. */
+    CHANGES_NEED_ANSWER = 'CHANGES_NEED_ANSWER',
+    /** A datapack removal was told to save the SC's changes first, and could not: nothing was removed. */
+    CHANGES_NOT_SAVED = 'CHANGES_NOT_SAVED',
 
     // ===== Authentication Errors =====
     /** User not authenticated - login required */
@@ -175,6 +179,8 @@ export function getErrorTitle(code: ErrorCode): string {
         [ErrorCode.CANCELLED]: 'Operation cancelled',
         [ErrorCode.RATE_LIMITED]: 'Too many requests',
         [ErrorCode.INVALID_OPERATION]: 'Operation not applicable',
+        [ErrorCode.CHANGES_NEED_ANSWER]: 'Keep or drop your changes',
+        [ErrorCode.CHANGES_NOT_SAVED]: 'Your changes were not saved',
 
         // Auth
         [ErrorCode.AUTH_REQUIRED]: 'Sign in required',

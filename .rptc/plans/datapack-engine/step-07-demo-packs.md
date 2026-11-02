@@ -155,8 +155,8 @@ Battery prompts `rename-demo-pack` and `create-from-colleagues-file` added, not 
 - **Sharing a pack**: decided by the owner 2026-10-30 and built; see "Sharing a library pack" below.
 - **The library's "unlisted"**: a library-service change (below). Until it lands, a colleague's
   own demo pack is unreadable, so the copy on arrival never triggers and the fallback always does.
-- **Step 05's removal box** ("Save my changes to the Acme Demo pack first", "Always") now has
-  its pack; not built here.
+- **Step 05's removal box** ("Save my changes to the Acme Demo pack first", "Always"): built in
+  step 05, 2026-11-02.
 
 ### What the library service needs ("unlisted")
 

@@ -1,0 +1,212 @@
+/**
+ * What a removal does about the SC's changes (datapack-engine step 05). One path for every door:
+ * the import window's confirm, `reset_datapack`, and a project reset or Edit that removes the pack.
+ *
+ * It finds changes with the preview's own read (`previewChanges`) and saves them with "Save store
+ * changes" itself (`openSave`, `saveToOwnPack`): a new version of the demo's own pack, made at its
+ * first save, the previous version kept. Saving moves the install record onto that version, so the
+ * removal that follows has to be of the saved version; the caller is told which it is.
+ *
+ * A pack with no install record (the service's engine installed it) has no record of changes, so
+ * nothing here applies to it and it is removed as it always was. Objects recorded before hashes
+ * were kept are not counted as changed: nothing can tell.
+ *
+ * @module features/data-installer/handlers/removalChanges
+ */
+
+import { type ChangesAnswer, type DatapackRemovalChanges, changesFromPreview, changesSentence } from '../removalChanges';
+import { alwaysSaveChangesOnRemoval, changesOnRemoval } from '../services/dataInstallerConfig';
+import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
+import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
+import { demoPackSaveFor } from '../services/demoPack';
+import { failure, openProjectStore, openSave, readPayload, saveToOwnPack, type StoreChangesPayload } from './storeChangesHandlers';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { pushOperationProgress, startModalRun } from '@/core/vscode/operationProgress';
+import type { Project } from '@/types/base';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
+import { ErrorCode } from '@/types/errorCodes';
+import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
+import type { SaveStoreChangesResult } from '@/types/webviewRequests';
+
+/** What a removal is asked to do about changes. */
+export interface RemovalChangesRequest {
+    pack: DatapackId;
+    source?: DatapackStoreName;
+    /** The caller's answer. Absent: read, and let the setting or `unanswered` decide. */
+    answer?: ChangesAnswer;
+    /** With changes found and no answer: ask (an agent) or save (a door whose question was already asked). */
+    unanswered: 'refuse' | 'keep';
+    /** Turn on "always save" once a save has worked: the confirm's box. */
+    rememberAlways?: boolean;
+}
+
+/** The version a save made: what the removal has to be of, and the sentence it ended on. */
+export interface SavedFirst {
+    id: DatapackId;
+    dataTypes: string[];
+    note: string;
+}
+
+const isSamePack = (a: DatapackId, b: DatapackId): boolean => a.name === b.name && a.version === b.version;
+
+/** The store to read the installed version from: the one named, else the one the project records. */
+function installedIn(project: Project, pack: DatapackId, named: DatapackStoreName | undefined): DatapackStoreName {
+    if (named) return named;
+    return project.datapack && isSamePack(project.datapack, pack) && project.datapack.store ? project.datapack.store : 'installer';
+}
+
+/** Whether Demo Builder's engine installed this pack in this project: only then is anything known. */
+const hasRecord = async (project: Project, pack: DatapackId): Promise<boolean> =>
+    (await readInstallRecord(nodeRecordFiles, project.path, pack)) !== undefined;
+
+/** What a removal of this pack would lose, or the response to answer instead. Writes nothing. */
+async function readChanges(context: HandlerContext, project: Project, pack: DatapackId, source: DatapackStoreName | undefined): Promise<DatapackRemovalChanges | { response: HandlerResponse }> {
+    const answer = { ownPackName: demoPackSaveFor(project, undefined, new Date()).displayName, alwaysSave: changesOnRemoval() === 'save' };
+    if (!(await hasRecord(project, pack))) return { count: 0, kinds: [], ...answer };
+    const store = await openProjectStore(context);
+    if ('response' in store) return store;
+    try {
+        const changes = changesFromPreview(await previewChanges(store.deps, pack, installedIn(project, pack, source)));
+        return { ...changes, ...(changes.count > 0 ? { sentence: changesSentence(changes.kinds) } : {}), ...answer };
+    } catch (error) {
+        return { response: failure(context, error, 'The store could not be read.') };
+    }
+}
+
+/**
+ * The record has moved on: an earlier save made the demo's own pack from this one, so the data is
+ * that version's now. Sending the old name on would ask the service to delete by name.
+ */
+async function movedOn(project: Project, pack: DatapackId): Promise<HandlerResponse | undefined> {
+    const held = project.datapack;
+    if (!held || isSamePack(held, pack) || (await hasRecord(project, pack))) return undefined;
+    const madeFromIt = held.origin !== undefined && isSamePack(held.origin, pack);
+    const ownOlderVersion = held.name === pack.name && project.ownDatapack?.name === pack.name;
+    if (!madeFromIt && !ownOlderVersion) return undefined;
+    if (!(await hasRecord(project, held))) return undefined;
+    const name = project.ownDatapack?.displayName ?? held.name;
+    return {
+        success: false,
+        error: `What this pack put in the store was saved to the ${name} pack, so it is removed from there. Nothing was removed.`,
+        code: ErrorCode.INVALID_OPERATION,
+    };
+}
+
+/** Save the store's copy now, reporting its stages; or the response saying why nothing was removed. */
+async function saveFirst(context: HandlerContext, request: RemovalChangesRequest, report: (stage: string) => void): Promise<{ saved: SavedFirst } | { response: HandlerResponse }> {
+    const payload: StoreChangesPayload = { datapackName: request.pack.name, version: request.pack.version, ...(request.source ? { source: request.source } : {}) };
+    const opened = await openSave(context, payload);
+    if ('response' in opened) return { response: notSaved(opened.response) };
+    const result = await saveToOwnPack(context, opened, report);
+    if (!result.success) return { response: notSaved(result) };
+    const data = result.data as SaveStoreChangesResult;
+    if (request.rememberAlways) await rememberAlways(context);
+    return { saved: { id: { name: data.datapackName, version: data.version }, dataTypes: Object.keys(data.counts), note: data.message } };
+}
+
+/** A save that stopped: nothing is removed, and the confirm can say why. */
+function notSaved(response: HandlerResponse): HandlerResponse {
+    return { ...response, success: false, code: ErrorCode.CHANGES_NOT_SAVED };
+}
+
+/** A setting that will not write is not worth stopping a save that worked. */
+async function rememberAlways(context: HandlerContext): Promise<void> {
+    try {
+        await alwaysSaveChangesOnRemoval();
+    } catch (error) {
+        context.logger.warn(`[Data Installer] Could not turn on saving changes before a removal: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/** No answer, and something to lose: name it, and remove nothing. */
+function askFor(changes: DatapackRemovalChanges): HandlerResponse {
+    return {
+        success: false,
+        error:
+            `${changes.sentence} Nothing was removed. Tell the user, then call again with changes:"keep" to save them to the ` +
+            `${changes.ownPackName} pack first, or changes:"drop" to lose them.`,
+        code: ErrorCode.CHANGES_NEED_ANSWER,
+        data: { changes: changes.kinds, ownPackName: changes.ownPackName },
+    };
+}
+
+/** A read that failed is never "nothing changed". */
+function couldNotCheck(response: HandlerResponse): HandlerResponse {
+    return {
+        ...response,
+        error:
+            `Could not check what changed since this pack was installed: ${response.error ?? 'no reason given.'} Nothing was removed. ` +
+            'Call again with changes:"drop" to remove it anyway, losing any changes.',
+    };
+}
+
+/**
+ * Settle the SC's changes before a removal: save them, ask, or find nothing to do.
+ *
+ * @param context - the handler context; its current project is the one removed from
+ * @param request - the pack and what the caller answered
+ * @param report - told each stage of a save
+ * @returns the version saved, if one was (the removal must be of it), or the response to answer
+ *   instead, in which case nothing has been removed
+ */
+export async function settleChangesBeforeRemoval(
+    context: HandlerContext,
+    request: RemovalChangesRequest,
+    report: (stage: string) => void,
+): Promise<{ saved?: SavedFirst } | { response: HandlerResponse }> {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) return {};
+    const moved = await movedOn(project, request.pack);
+    if (moved) return { response: moved };
+    if (!(await hasRecord(project, request.pack)) || request.answer === 'drop') return {};
+    if (request.answer === 'keep') return saveFirst(context, request, report);
+    const changes = await readChanges(context, project, request.pack, request.source);
+    if ('response' in changes) return { response: couldNotCheck(changes.response) };
+    if (changes.count === 0) return {};
+    if (request.unanswered === 'keep' || changes.alwaysSave) return saveFirst(context, request, report);
+    return { response: askFor(changes) };
+}
+
+/**
+ * Where a save's stages go while a removal waits on it: the shared progress channel, which reaches
+ * the window and the notification that takes over if the SC closes it, and the agent's chat. The
+ * window is named at the first stage, so a removal with nothing to save sends it nothing.
+ */
+export function removalStageReporter(context: HandlerContext): (stage: string) => void {
+    let named = false;
+    return (stage) => {
+        if (!named) startModalRun(DATAPACK_OPERATION_ID, context.sendMessage);
+        named = true;
+        reportPhase(stage);
+        void pushOperationProgress({ id: DATAPACK_OPERATION_ID, state: 'running', stage });
+    };
+}
+
+/** The stage a removal is on once the save has finished. */
+export const STARTING_REMOVAL_STAGE = OPERATION_STAGES.removingDatapack.label;
+
+/**
+ * This context, with `project` as its current project. A project reset can be started from the
+ * projects list, for a project other than the one the pointer on disk names, and everything a save
+ * opens asks for the current one. A save's record lands on this same object, so the removal that
+ * follows reads the version saved.
+ */
+export function contextForProject(context: HandlerContext, project: Project): HandlerContext {
+    const stateManager = Object.create(context.stateManager) as HandlerContext['stateManager'];
+    stateManager.getCurrentProject = async () => project;
+    return { ...context, stateManager };
+}
+
+/** The confirm's read: what a removal of this pack would lose. Writes nothing. */
+export const removalChangesHandlers = defineHandlers({
+    'get-datapack-removal-changes': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
+        const input = readPayload(payload);
+        if ('error' in input) return { success: false, error: input.error };
+        const project = await context.stateManager.getCurrentProject();
+        if (!project) return { success: false, error: 'Open a project before removing a datapack.' };
+        const changes = await readChanges(context, project, input.pack, input.source);
+        return 'response' in changes ? changes.response : { success: true, data: changes };
+    },
+});

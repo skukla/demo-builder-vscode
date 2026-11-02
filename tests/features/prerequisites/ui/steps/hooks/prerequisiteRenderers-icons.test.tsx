@@ -30,7 +30,7 @@ describe('renderPluginStatusIcon', () => {
     });
 
     it('shows the green tick once a running check reports the plugin installed', () => {
-        expect(markup(renderPluginStatusIcon('checking', true))).toContain('class="text-green-600"');
+        expect(markup(renderPluginStatusIcon('checking', true))).toContain('class="text-positive"');
     });
 
     it('shows the red cross once a running check reports the plugin missing', () => {
@@ -42,7 +42,7 @@ describe('renderPluginStatusIcon', () => {
     });
 
     it('shows the green tick for an installed plugin on a finished check', () => {
-        expect(markup(renderPluginStatusIcon('success', true))).toContain('class="text-green-600"');
+        expect(markup(renderPluginStatusIcon('success', true))).toContain('class="text-positive"');
     });
 
     it('shows the red cross for a missing plugin on a failed check', () => {

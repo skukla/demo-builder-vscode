@@ -57,16 +57,18 @@ export interface RemoveFromLibraryButtonProps {
     id: DatapackId;
     /** Called once the pack is gone. Must be stable — an effect depends on it. */
     onRemoved?: () => void;
+    /** What the button says, when it is not the pack itself it removes. */
+    label?: string;
 }
 
-export function RemoveFromLibraryButton({ id, onRemoved }: RemoveFromLibraryButtonProps): React.JSX.Element {
+export function RemoveFromLibraryButton({ id, onRemoved, label = 'Remove it from the library' }: RemoveFromLibraryButtonProps): React.JSX.Element {
     const { start, removing, removed, note } = useLibraryRemoval(id, onRemoved);
     if (removed) return <>{note}</>;
     return (
         <div className="datapack-save-file">
             {/* Spectrum's busy button, not a "-ing" label (owner, 2026-10-31). */}
             <Button variant="secondary" onPress={start} isPending={removing}>
-                Remove it from the library
+                {label}
             </Button>
             {note}
         </div>

@@ -30,7 +30,8 @@
  */
 
 import { PICKABLE_KINDS, type Selections, type StorePicks, isPickableKind, picksOf } from '../pickableKinds';
-import { projectCommerce, readPackItems } from '../services/buildDatapackEngine';
+import { layerFinder, projectCommerce, readPackItems } from '../services/buildDatapackEngine';
+import { selectedDatapackEngine } from '../services/dataInstallerConfig';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { writePackToStore } from '../services/datapackTransfer';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
@@ -84,7 +85,7 @@ interface OpenedStore extends ProjectStore {
     source?: DatapackStoreName;
 }
 
-function readPayload(payload: StoreChangesPayload | undefined): { pack: DatapackId; source?: DatapackStoreName } | { error: string } {
+export function readPayload(payload: StoreChangesPayload | undefined): { pack: DatapackId; source?: DatapackStoreName } | { error: string } {
     if (!payload?.datapackName || !payload.version) return { error: 'A datapack name and version are required.' };
     const { source } = payload;
     if (source !== undefined && source !== 'installer' && source !== 'library') {
@@ -131,6 +132,8 @@ export async function openProjectStore(context: HandlerContext): Promise<Project
         projectPath: gate.project.path,
         target: resolveInstallTarget(gate.project) ?? undefined,
         log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
+        // Only Demo Builder's engine applies a settings layer (step 09), so only it previews or saves one.
+        ...(selectedDatapackEngine() === 'demo-builder' ? layerFinder({ libraryCatalog }) : {}),
     };
     return { project: gate.project, deps };
 }
@@ -156,7 +159,7 @@ export async function packToSave(project: Project, payload: StoreChangesPayload 
 }
 
 /** A save's store, its pack if it has one, and its picks; or the response to answer instead. */
-async function openSave(context: HandlerContext, payload: StoreChangesPayload): Promise<SaveOpened | { response: HandlerResponse }> {
+export async function openSave(context: HandlerContext, payload: StoreChangesPayload): Promise<SaveOpened | { response: HandlerResponse }> {
     const read = picksOf(payload.selections);
     if ('error' in read) return { response: { success: false, error: read.error } };
     const store = await openProjectStore(context);
@@ -166,13 +169,13 @@ async function openSave(context: HandlerContext, payload: StoreChangesPayload): 
     return { ...store, ...target, picks: read.picks };
 }
 
-interface SaveOpened extends ProjectStore {
+export interface SaveOpened extends ProjectStore {
     pack?: DatapackId;
     source?: DatapackStoreName;
     picks: StorePicks;
 }
 
-function failure(context: HandlerContext, error: unknown, fallback: string): HandlerResponse {
+export function failure(context: HandlerContext, error: unknown, fallback: string): HandlerResponse {
     if (error instanceof StoreChangesError) return { success: false, error: error.message };
     context.logger.warn(`${LOG_PREFIX} ${fallback} ${error instanceof Error ? error.message : String(error)}`);
     return { success: false, error: `${fallback} Details are in Debug Logs.`, code: ErrorCode.UNKNOWN };
@@ -192,7 +195,7 @@ async function recordOnProject(context: HandlerContext, save: DemoPackSave, hold
 }
 
 /** Capture, write the new version into the library, and record it on the project. */
-async function save(context: HandlerContext, opened: SaveOpened, report: (stage: string) => void): Promise<HandlerResponse & OperationOutcome> {
+export async function saveToOwnPack(context: HandlerContext, opened: SaveOpened, report: (stage: string) => void): Promise<HandlerResponse & OperationOutcome> {
     const library = await resolveDataInstallerAccess(context, 'library');
     if (!library.ok) return library.response;
     const writer = new DatapackStoreWriter({
@@ -222,6 +225,7 @@ async function save(context: HandlerContext, opened: SaveOpened, report: (stage:
             message: result.sentence,
             unnamed: result.unnamed,
             leftOut: result.leftOut,
+            ...(result.settingsLayer ? { settingsLayer: result.settingsLayer } : {}),
         };
         return { success: true, note: result.sentence, data };
     } catch (error) {
@@ -334,7 +338,7 @@ export const storeChangesHandlers = defineHandlers({
             const opened = await openSave(context, payload);
             if ('response' in opened) return opened.response;
             const options = { id: DATAPACK_SAVE_OPERATION_ID, title: 'Saving store changes', inModal: payload.progress === 'modal' };
-            return withOperationProgress(options, (report) => save(context, opened, (stage) => report(stage)));
+            return withOperationProgress(options, (report) => saveToOwnPack(context, opened, (stage) => report(stage)));
         },
         () => DATAPACK_SAVE_OPERATION_ID,
     ),

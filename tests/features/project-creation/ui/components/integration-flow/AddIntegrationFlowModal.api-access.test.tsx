@@ -128,7 +128,7 @@ describe('AddIntegrationFlowModal — signed out when it reads the APIs', () => 
         renderEdit(jest.fn().mockResolvedValue(undefined));
 
         const title = await screen.findByRole('heading', { name: 'Sign in to Adobe' });
-        expect(title.innerHTML).toContain('text-orange-600');
+        expect(title.innerHTML).toContain('text-notice');
         expect(screen.getByText(/Your Adobe session has ended/)).toBeInTheDocument();
         expect(screen.getByText('Adobe sign-in will open in your browser.')).toBeInTheDocument();
         expect(footerButtons()).toEqual(['Cancel', 'Back', 'Sign In with Adobe']);

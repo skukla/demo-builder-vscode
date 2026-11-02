@@ -1,9 +1,9 @@
 /**
  * .choice-* styles — the choice cards used to pick between options in a stage.
  *
- * FEATURE-SCOPED (ADR-017 §6 and §7). The component belongs to project-creation
- * and no other feature uses these classes, so the sheet lives here — even though
- * TWO entries render it, `wizard` and `integrations`, and both import it. §7 asks
+ * FEATURE-SCOPED (ADR-017 §6 and §7). The component belongs to project-creation,
+ * so the sheet lives here, even though five entries render it and import it:
+ * `wizard`, `integrations`, `dashboard`, `configure` and `dataInstaller`. §7 asks
  * who OWNS a family, not how many bundles reach it.
  *
  * Its `prefers-reduced-motion` block was moved BY HAND, whole, and placed AFTER
@@ -107,6 +107,18 @@
     margin-top: var(--spectrum-global-dimension-size-100);
     font-size: var(--spectrum-global-dimension-font-size-75);
     color: var(--spectrum-global-color-gray-500);
+}
+
+/* A screen of a dozen or more short choices: as tall as its words, as wide as its grid cell. */
+.choice-card--compact {
+    min-width: 0;
+    min-height: 0;
+    padding: var(--spectrum-global-dimension-size-150);
+}
+
+/* A long name wraps before the corner check rather than running under it. */
+.choice-card--compact .choice-card-name {
+    padding-right: var(--spectrum-global-dimension-size-300);
 }
 
 /* Catalog entries render as square tiles in the wrapping row (not full-width rows). */

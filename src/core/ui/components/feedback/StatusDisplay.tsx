@@ -78,19 +78,19 @@ const variantConfig: Record<StatusVariant, { icon: React.ReactNode; colorClass: 
     },
     success: {
         icon: <StatusIcon status="success" size="L" />,
-        colorClass: 'text-green-600',
+        colorClass: 'text-positive',
     },
     warning: {
         icon: <StatusIcon status="warning" size="L" />,
-        colorClass: 'text-orange-600',
+        colorClass: 'text-notice',
     },
     info: {
         icon: <StatusIcon status="info" size="L" />,
-        colorClass: 'text-blue-600',
+        colorClass: 'text-informative',
     },
     pending: {
-        icon: <Clock size="L" UNSAFE_className="text-blue-600" />,
-        colorClass: 'text-blue-600',
+        icon: <Clock size="L" UNSAFE_className="text-informative" />,
+        colorClass: 'text-informative',
     },
 };
 

@@ -17,6 +17,8 @@ import { createMockHandlerContext } from '../../../../helpers/handlerContextTest
 import { createMockProject } from '../../../../helpers/projectFake';
 import { memoryFiles } from '../../../data-installer/services/demoBuilderEngine/demoBuilderEngine.testUtils';
 import { PROJECT_RECORDS, sandbox } from '../../../data-installer/services/demoDataWipe/wipe.testUtils';
+import { HIERARCHY_28_DB08 } from '../../../../helpers/commerceB2bFixtures';
+import { ADMIN_64, BUYER_65, CATALOG_20, COMPANY_28, GROUP_25, WIPER_1, attributeInstance, b2bInstance, settingsInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { fakeErp } from '../../../data-installer/services/demoDataWipe/wipeErp.testUtils';
 import { RESET_RULE_CASES } from '../../../../helpers/resetRuleOrders';
 
@@ -97,6 +99,22 @@ describe('beginOtherDataCheck', () => {
 });
 
 describe('confirmClearOtherData', () => {
+    it('names companies, catalogs, sets and website settings when they go', async () => {
+        const instance = attributeInstance({ companies: [COMPANY_28], hierarchies: { 28: HIERARCHY_28_DB08 }, catalogs: [CATALOG_20], groups: [GROUP_25], settings: settingsInstance().settings });
+        const { deps, context } = setUp(sandbox({ products: [WIPER_1], orders: [], customers: [ADMIN_64, BUYER_65], instance }));
+        const plan = await beginOtherDataCheck(PROJECT, context, deps);
+        ask.mockResolvedValue(undefined);
+
+        await confirmClearOtherData(vscode, plan);
+
+        const question = String(ask.mock.calls[ask.mock.calls.length - 1][0]);
+        expect(question).toContain('1 company');
+        expect(question).toContain('1 shared catalog');
+        expect(question).toContain('1 attribute set');
+        expect(question).toContain("website settings will be set to the default's value.");
+        expect(question).toContain("This can't be undone.");
+    });
+
     it('names the store, what it holds, what is only taken off, and that it cannot be undone', async () => {
         const { deps, context } = setUp();
         const plan = await beginOtherDataCheck(PROJECT, context, deps);
@@ -178,7 +196,12 @@ describe('clearProjectOtherData', () => {
         expect(store.sent).toHaveLength(7);
         expect(done).toEqual({
             cleared: true,
-            sentence: 'Removed 4 products and 2 customers from the store justrite_test_store. Took 1 product other websites also sell off the chosen websites.',
+            sentence:
+                'Removed 4 products and 2 customers from the store justrite_test_store. Took 1 product other websites also sell off the chosen websites. ' +
+                'Left 1 of the products (ZZ-LONE-VARIANT): shown only as part of another product, which may be one another website sells. ' +
+                'Left 1 of the categories (Safety Cans): under root category 119, which the store justrite_store (website justrite) also shows. ' +
+                'Left 1 of the customers (zz.admin@example.com): they are in a company that stays. ' +
+                'Left 1 of the companies (company 28): who is in them could not be read.',
         });
     });
 
@@ -193,6 +216,17 @@ describe('clearProjectOtherData', () => {
         expect(others).toHaveBeenLastCalledWith(PROJECT, context);
         expect(store.sent).toStrictEqual([]);
         expect(done).toEqual({ cleared: false, sentence: `The store was not cleared: ${CLAIMED}` });
+    });
+
+    it('leaves the note for what it could not finish, as the Data Installer does', async () => {
+        const store = sandbox({ products: [], orders: [], customers: [ADMIN_64, BUYER_65], instance: b2bInstance() }, (path) => path === 'sharedCatalog/20');
+        const { deps, context } = setUp(store);
+        const plan = await beginOtherDataCheck(PROJECT, context, deps);
+
+        const done = await clearProjectOtherData(PROJECT, context, jest.fn(), plan!, deps);
+
+        expect(done.cleared).toBe(true);
+        expect(await deps.files.read(`${PROJECT.path}/.demo-builder/wipe-unfinished.json`)).toContain('"groups": [\n    25\n  ]');
     });
 
     it('never throws, and writes nothing, when the store would now clear more than was shown', async () => {

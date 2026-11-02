@@ -149,7 +149,7 @@
 
 @layer theme {
 .status-indicator.success {
-    color: var(--spectrum-global-color-green-600);
+    color: var(--spectrum-semantic-positive-color-icon);
 }
 }
 
@@ -161,7 +161,7 @@
 
 @layer theme {
 .status-indicator.warning {
-    color: var(--spectrum-global-color-orange-600);
+    color: var(--spectrum-semantic-notice-color-icon);
 }
 }
 

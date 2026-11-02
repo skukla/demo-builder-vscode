@@ -281,7 +281,7 @@ describe('an entry that cannot be added here', () => {
 
         const note = screen.getByTestId('catalog-unavailable');
         expect(note).toHaveTextContent(MESSAGE);
-        expect(note).toHaveClass('intflow-catalog-note', 'text-orange-600');
+        expect(note).toHaveClass('intflow-catalog-note', 'text-notice');
         expect(note).not.toHaveClass('inline-notice');
         expect(note.parentElement?.firstElementChild).toBe(note);
         expect(screen.getByRole('button', { name: /Widget A/ })).not.toHaveTextContent(MESSAGE);

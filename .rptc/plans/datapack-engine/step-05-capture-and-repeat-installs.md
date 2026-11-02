@@ -1,7 +1,6 @@
 # Step 05: capture and repeat installs
 
-Status: **built 2026-10-29, not yet committed or run live**, except the two parts left out
-below. Specification of the service's export:
+Status: **built 2026-10-29, the removal's "Save my changes first" 2026-11-02; not yet run live**. Specification of the service's export:
 [export-spec.md](../../research/datapack-engine/export-spec.md).
 
 Two ways an SC or an agent works, and the one design that serves both:
@@ -68,11 +67,12 @@ The confirmation when a removed pack holds the SC's changes:
 > [Remove] [Cancel]
 
 - The box starts ticked: keeping the work is the likely intent, and unticking is the one choice.
-- "Always do this, and stop asking" (owner, 2026-10-27) turns on a user setting. After that, a
-  removal that finds changes shows the ordinary confirmation with one line, "Your changes will be
-  saved to the Acme Demo pack first", and the setting turns it back off. The setting is named when it
-  is built, in `package.json`, its schema and its type together. The agent's removal tool follows
-  it too: with it on, the tool saves without asking for a keep-or-drop answer.
+- "Always do this, and stop asking" (owner, 2026-10-27) turns on a user setting,
+  `demoBuilder.dataInstaller.changesOnRemoval` (`ask`, the default, or `save`; `package.json`,
+  `ChangesOnRemoval`, `changesOnRemoval()`). After that, a removal that finds changes shows the
+  ordinary confirmation with one line, "Your changes will be saved to the Acme Demo pack first", and
+  the setting turns it back off. The agent's removal tool follows it too: with it on, the tool saves
+  without asking for a keep-or-drop answer.
 - The changes go to the demo's own pack ([step 07](step-07-demo-packs.md)). If saving fails, nothing is removed and the
   screen says why.
 - A container the pack made that now holds the SC's own things (a category with a product they
@@ -84,14 +84,12 @@ The confirmation when a removed pack holds the SC's changes:
 
 ## Agent surface
 
-Names are proposed; fixed when built.
-
 | Tool | New or changed | Read or write | Chat wording | Dialog |
 |---|---|---|---|---|
 | `preview_datapack_changes` | new: what installing a pack again would update, add, remove and keep, by kind, with counts and names | read | "Checking what installing Frescopa would change" | none |
 | `save_store_changes_to_pack` | new: the screen's "Save store changes to this pack" | write | "Saving the store's changes to the Acme Demo pack" | yes: makes the pack match the store; the previous version is kept. Names the pack |
 | `start_datapack_import` | its answer says what it kept ("Kept 2 things you had changed") | write | unchanged | unchanged |
-| `reset_datapack` | names the changes it found, and needs a keep-or-drop answer unless the "always" setting answers it | write | unchanged | unchanged, plus the changes |
+| `reset_datapack` | names the changes it found, and needs a keep-or-drop answer (`changes`) unless the "always" setting answers it | write | unchanged | unchanged, plus the answer ("Your changes: keep") |
 
 **Lean answers:** `preview_datapack_changes` answers counts per kind and at most a few names per
 kind, never rows; its ceiling is set from Frescopa and Bodea measured live. **Battery prompts:**
@@ -224,10 +222,57 @@ registers the whole Data Installer table (it had registered none of it).
 
 ### Left out this run (owner-approved scope, 2026-10-29)
 
-- **The removal confirmation's "Save my changes to the Acme Demo pack first" box, and "Always do
-  this, and stop asking"** with its setting. Both save to the demo's own pack, which is step 07's.
-  Removal today removes everything the record lists, as before, edited or not.
 - **Images and `product_export`**, as "Later" above says.
+
+### Save my changes first (built 2026-11-02, not yet run live)
+
+**One path** (`handlers/removalChanges.ts`, `settleChangesBeforeRemoval`), for the import window,
+`reset_datapack`, and a project reset or an Edit that removes the pack. It finds changes with the
+preview's read (`previewChanges`; the changes are its `keep`) and saves with "Save store changes"
+itself (`openSave`, `saveToOwnPack`). There is no second way to do either.
+
+**Saving moves the install record** onto the new version, so the removal that follows is of that
+version: its id, `source: library`, and only the kinds it holds, since the engine refuses a kind the
+pack lacks. Getting this wrong removes nothing and asks the service to delete by name. A removal
+named for a pack whose record has already moved is refused and points at the demo's own pack.
+
+**A new read, `get-datapack-removal-changes`**, feeds the confirm: the count and the sentence, the
+demo's own pack by name (`ownPackName`, the first save's name when it has not been made: the same
+choice Save store changes makes), and how the setting stands. It reads only the record for a pack
+with none, and never opens the store for it.
+
+**`reset-datapack` takes `changes`** (`keep` or `drop`). No answer: read, then the setting answers or
+it refuses with `CHANGES_NEED_ANSWER`, naming them. A read that fails also refuses and says how to
+go on. An explicit answer wins over the setting: the consent dialog shows it, and the setting is what
+answers when nobody says. `alwaysSave` turns the setting on once a save has worked; it is the confirm's
+box alone, not in the tool's schema.
+
+**The window** (`useRemovalConfirm`, `removalConfirm.ts`, `RemovalConfirmBody`): Remove data reads
+under the dialog's silent wait, with Cancel; then the confirm. A save that fails answers
+`CHANGES_NOT_SAVED`, shown as the red title "Couldn't save your changes, so nothing was removed", with
+Back to the same confirm. The save's stages come over the shared progress channel (`DATAPACK_OPERATION_ID`) into the same wait.
+Closing during them hands over to a notification, as a running job does.
+
+**The other doors.** `reset_project` removes no datapack, and `delete_project` removes none from the
+store, so neither changes. The projects list's and dashboard's Reset, and an Edit that drops the
+pack, ask their own question ("Remove Datapack" or "Keep Data") and then call
+`removeProjectSampleData`. They now say "Anything you changed in it goes to this demo's own pack
+first." for a pack Demo Builder installed, and save first with no second question: keeping the work
+is the likely intent. If that fails, nothing is removed, the reason goes to the logs, and the reset
+stands.
+
+**What the sentence cannot say.** The fingerprint knows that a row changed, not which field, so it
+reads "2 products" where the design said "2 product prices". Objects recorded before hashes were kept
+do not count as changed.
+
+**Live test** (owner's call; `justrite_test_website`, never JustRite's own site): install a small pack
+with Demo Builder's engine; change one product's price and rename one category it made. Remove data:
+expect the sentence and both boxes. Cancel: nothing changes. Remove with the box ticked: expect a new
+version of the demo's own pack in the library, the old pack untouched, the store's copies gone, the
+record file gone, and the result naming the pack. Install that saved version: the price and the name
+are back. Remove with the box unticked, and with Always ticked (check Settings, then set it back to
+`ask`). `reset_datapack` with no answer, expect the refusal listing them. Back to zero: remove the
+pack with `changes:"drop"`, delete the saved versions from the library, and set the setting to `ask`.
 
 ### Open, found while building
 

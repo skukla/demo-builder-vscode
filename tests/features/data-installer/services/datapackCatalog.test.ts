@@ -16,8 +16,12 @@ import * as path from 'path';
 
 import {
     groupDatapacks,
+    isSettingsLayer,
+    newestVersion,
     orderVersions,
     pickDefaultVersion,
+    settingsLayerName,
+    withoutLayerCards,
 } from '@/features/data-installer/services/datapackCatalog';
 import type { DatapackGroup } from '@/features/data-installer/services/datapackCatalog';
 import { parseDatapackList } from '@/features/data-installer/services/dataInstallerParsers';
@@ -264,3 +268,62 @@ describe('groupDatapacks across two stores', () => {
     });
 });
 
+describe('settings layers in the catalog (datapack-engine step 09)', () => {
+    const row = (name: string, version: string, extra: Partial<DatapackSummary> = {}): DatapackSummary => ({
+        id: { name, version },
+        displayName: name,
+        shared: true,
+        dataTypes: ['products'],
+        art: {},
+        ...extra,
+    });
+    const layer = (name: string, version = 'v1') => row(name, version, { store: 'library', dataTypes: ['store_config'] });
+
+    it('names a layer for its pack', () => {
+        expect(settingsLayerName('bodea')).toBe('bodea-settings');
+    });
+
+    it('calls a pack a layer only by its name AND by holding nothing but store settings', () => {
+        expect(isSettingsLayer(layer('bodea-settings'))).toBe(true);
+        expect(isSettingsLayer(row('bodea-settings', 'v1', { dataTypes: ['products', 'store_config'] }))).toBe(false);
+        expect(isSettingsLayer(row('bodea-settings', 'v1', { dataTypes: [] }))).toBe(false);
+        expect(isSettingsLayer(layer('bodea'))).toBe(false);
+        expect(isSettingsLayer(layer('-settings'))).toBe(false);
+    });
+
+    it('offers no card for a layer whose pack is listed, from either store', () => {
+        const items = [row('bodea', 'main'), layer('bodea-settings'), row('acme', 'v1', { store: 'library' }), layer('acme-settings')];
+
+        expect(withoutLayerCards(items).map((item) => item.id.name)).toEqual(['bodea', 'acme']);
+    });
+
+    it('keeps the card of a layer with no pack listed: it is the only way to remove it', () => {
+        const items = [layer('gone-settings')];
+
+        expect(withoutLayerCards(items)).toEqual(items);
+    });
+
+    it('keeps the card of a layer installed on its own: its card is where it is removed', () => {
+        const items = [row('bodea', 'main'), layer('bodea-settings')];
+
+        expect(withoutLayerCards(items, new Set(['bodea-settings']))).toEqual(items);
+    });
+
+    it('leaves a demo whose name happens to end in -settings alone', () => {
+        const items = [row('store', 'main'), row('store-settings', 'v1', { dataTypes: ['products'] })];
+
+        expect(withoutLayerCards(items)).toEqual(items);
+    });
+
+    it('takes the newest version by its date, over main, passing over archived ones', () => {
+        const versions = [
+            row('x', 'main', { updatedAt: '2026-10-01T00:00:00Z' }),
+            row('x', 'v2', { updatedAt: '2026-11-01T00:00:00Z' }),
+            row('x', 'main-archived-1', { updatedAt: '2026-11-02T00:00:00Z' }),
+        ];
+
+        expect(newestVersion(versions)?.id.version).toBe('v2');
+        expect(newestVersion([versions[2]])?.id.version).toBe('main-archived-1');
+        expect(newestVersion([])).toBeUndefined();
+    });
+});

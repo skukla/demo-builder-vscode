@@ -52,8 +52,8 @@
 .text-gray-600 { color: var(--spectrum-global-color-gray-600); }
 .text-gray-700 { color: var(--spectrum-global-color-gray-700); }
 .text-negative { color: var(--spectrum-semantic-negative-color-icon); }
-.text-green-600 { color: var(--spectrum-global-color-green-600); }
-.text-blue-600 { color: var(--spectrum-global-color-blue-600); }
+.text-positive { color: var(--spectrum-semantic-positive-color-icon); }
+.text-informative { color: var(--spectrum-semantic-informative-color-icon); }
 
 .bg-gray-75 { background-color: var(--spectrum-global-color-gray-75); }
 
@@ -373,7 +373,7 @@ button[class*="spectrum-Button"][disabled],
    in a layer here would preserve the text but change the cascade, which is a
    different kind of bug from the one being fixed. */
 @layer theme {
-.text-orange-600 {
-    color: var(--spectrum-global-color-orange-600);
+.text-notice {
+    color: var(--spectrum-semantic-notice-color-icon);
 }
 }

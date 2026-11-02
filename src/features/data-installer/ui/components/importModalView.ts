@@ -64,6 +64,8 @@ export function isPickingUp(
 /** One view at a time; this precedence IS the state machine. */
 export function resolveView(state: {
     busy: boolean;
+    /** The SC pressed Remove and the read of what they changed is out. */
+    readingChanges?: boolean;
     resetArmed: boolean;
     running: boolean;
     /** The SC is still following the running job; false once they press Stop watching. */
@@ -74,6 +76,9 @@ export function resolveView(state: {
 }): ModalView {
     if (state.busy) {
         return 'busy';
+    }
+    if (state.readingChanges) {
+        return 'reading-changes';
     }
     if (state.resetArmed) {
         return 'confirm-reset';
@@ -93,8 +98,24 @@ export function resolveView(state: {
     return 'form';
 }
 
-/** Which in-flight operation the one busy spinner is narrating. */
-export function busyMessage(starting: boolean, resetting: boolean): string {
+/**
+ * "Remove …" while a removal starts or runs, so the wait's title says what the window is doing
+ * (owner, 2026-10-31), including a reopened watch of one. The confirm asks its own question and a
+ * result's title is its outcome (`viewFrame`); the form is always the import's.
+ */
+export function isRemoving(a: { armed: boolean; lastAction: LastAction | null; view: ModalView; operation?: 'import' | 'reset' }): boolean {
+    return a.armed || (a.lastAction === 'reset' && a.view !== 'form') || (a.view === 'watching' && a.operation === 'reset');
+}
+
+/**
+ * Which in-flight operation the one busy spinner is narrating.
+ *
+ * @param savingStage - the stage of saving the SC's changes first, while a removal waits on it
+ */
+export function busyMessage(starting: boolean, resetting: boolean, savingStage?: string): string {
+    if (savingStage) {
+        return savingStage;
+    }
     if (starting) {
         return 'Starting import';
     }
@@ -119,6 +140,8 @@ export function buildActions(a: {
     confirmReset: () => void;
     startImport: () => void;
     goBack: () => void;
+    /** The confirm's main button: `removeLabel`. */
+    removeLabel?: string;
 }): {
     label: string;
     variant: 'secondary' | 'accent' | 'negative' | 'quiet';
@@ -134,7 +157,7 @@ export function buildActions(a: {
         // backed out was one too many (dialog design rules).
         return [
             { label: 'Cancel', variant: 'secondary', onPress: a.disarmReset },
-            { label: 'Remove', variant: 'negative', onPress: a.confirmReset },
+            { label: a.removeLabel ?? 'Remove', variant: 'negative', onPress: a.confirmReset },
         ];
     }
     if (a.view === 'result') {
@@ -183,9 +206,14 @@ export interface ViewFrame {
     hideClose: boolean;
 }
 
-/** The way out: closing a job still being followed hands it to a progress notification. */
-export function closeLabel(view: ModalView): string {
-    return view === 'watching' ? 'Run in background' : 'Close';
+/**
+ * The way out: closing a job still being followed hands it to a progress notification, and so does
+ * closing a removal that is saving the SC's changes first (`handsOver`). While the confirm's read
+ * is out it is the Cancel the confirm is about to show.
+ */
+export function closeLabel(view: ModalView, handsOver = false): string {
+    if (view === 'reading-changes') return 'Cancel';
+    return view === 'watching' || (view === 'busy' && handsOver) ? 'Run in background' : 'Close';
 }
 
 /**
@@ -220,6 +248,9 @@ export function viewFrame(a: {
     if (a.view === 'no-instance') return { ...small, title: 'This project has no Commerce instance', status: 'warning' };
     if (a.view === 'stopped-watching') return { ...small, title: 'Stopped watching' };
     switch (a.view) {
+        // One title for the read and the confirm it leads to, so the wait does not retitle the dialog.
+        case 'reading-changes':
+            return { ...small, title: `Remove from ${a.store}?`, status: 'warning' };
         case 'confirm-reset':
             return { ...small, title: `Remove from ${a.store}?`, status: 'warning', hideClose: true };
         case 'result':

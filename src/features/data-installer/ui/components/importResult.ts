@@ -19,6 +19,7 @@ import type { ImportJobRecord, KeptRootStep } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
+import { ErrorCode } from '@/types/errorCodes';
 
 /**
  * One line per data type: its human name and what the service says it did.
@@ -55,6 +56,8 @@ export interface ResultContent {
     tookMs?: number;
     /** The kept root's Admin step, shown as the setup step's Where / Set / Then. */
     keptRoot?: KeptRootStep;
+    /** Back goes to the confirm it came from, not the form: saving failed and nothing was removed. */
+    backToConfirm?: true;
 }
 
 const RESULT_STATUS: Record<ResultContent['variant'], ModalStatus | undefined> = {
@@ -99,7 +102,7 @@ export function resolveResult(
         name: string;
         dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>;
         start: DataInstallerRequest<{ activationId: string }>;
-        reset: DataInstallerRequest<{ activationId: string }>;
+        reset: DataInstallerRequest<{ activationId: string; savedNote?: string }>;
         record: ImportJobRecord | null;
         startedActivation: string | undefined;
     },
@@ -113,6 +116,9 @@ export function resolveResult(
         case 'reset': {
             const request = lastAction === 'start' ? start : reset;
             const words = wordsFor(lastAction);
+            if (request.failure?.code === ErrorCode.CHANGES_NOT_SAVED) {
+                return { variant: 'error', title: "Couldn't save your changes, so nothing was removed", message: request.failure.message, backToConfirm: true };
+            }
             if (request.failure) {
                 return { variant: 'error', title: `Couldn't start the ${words.noun}`, message: request.failure.message };
             }
@@ -123,13 +129,19 @@ export function resolveResult(
                 record.outcome !== 'watching' &&
                 record.activationId === startedActivation
             ) {
-                return terminalResult(record, name);
+                return withSavedNote(terminalResult(record, name), lastAction === 'reset' ? reset.value?.savedNote : undefined);
             }
             return null;
         }
         default:
             return null;
     }
+}
+
+/** Where the changes went: what a removal that saved them first has left to say, however it ended. */
+function withSavedNote(result: ResultContent, savedNote: string | undefined): ResultContent {
+    if (!savedNote) return result;
+    return { ...result, message: [result.message, savedNote].filter(Boolean).join(' ') };
 }
 
 /** A dry run's answer. A refusal is an ANSWER the button exists to fetch: amber, not red. */

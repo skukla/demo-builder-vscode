@@ -44,6 +44,7 @@ import { cn } from '@/core/ui/utils/classNames';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
     groupDatapacks,
+    withoutLayerCards,
     pickDefaultVersion,
     type DatapackGroup,
 } from '@/features/data-installer/services/datapackCatalog';
@@ -88,7 +89,8 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
         load({ includeCommunity, ...(includeLibrary ? { includeLibrary } : {}) });
     }, [load, includeCommunity, includeLibrary]);
 
-    const groups = useMemo(() => groupDatapacks(value?.items ?? []), [value]);
+    // A settings layer is applied with its pack, never chosen as a demo (datapack-engine step 09).
+    const groups = useMemo(() => groupDatapacks(withoutLayerCards(value?.items ?? [], new Set(arrived ? [arrived.name] : []))), [value, arrived]);
     const arrivedListed = useMemo(() => arrived !== undefined && isListed(groups, arrived), [groups, arrived]);
     const askedGroup = useMemo(
         () => (asked ? groups.find((group) => group.name === asked.name && group.store === storeOf(asked)) : undefined),

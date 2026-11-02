@@ -47,7 +47,7 @@
 }
 
 .prerequisite-message-warning {
-    color: var(--spectrum-global-color-orange-600);
+    color: var(--spectrum-semantic-notice-color-icon);
 }
 
 .prerequisite-message-default {

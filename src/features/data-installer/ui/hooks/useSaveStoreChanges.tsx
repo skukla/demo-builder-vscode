@@ -15,7 +15,8 @@
 
 import React, { useCallback, useState } from 'react';
 import { type StorePicks, pickCount, selectionsOf } from '../../pickableKinds';
-import { type PackBeingSaved, SaveFromStoreModal } from '../components/SaveFromStoreModal';
+import type { PackBeingSaved } from '../components/create-flow/datapackFlowStages';
+import { SaveFromStoreModal } from '../components/SaveFromStoreModal';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { DATAPACK_SAVE_OPERATION_ID } from '@/core/utils/operationIds';
@@ -26,8 +27,8 @@ export interface SaveStoreChanges {
     /** Open the pick screen for the pack the project holds ("Save store changes to this pack"). */
     offer: (pack?: PackBeingSaved) => void;
     /**
-     * Start a save from the store alone with picks already made: Create datapack's pick list, which
-     * is its own dialog's step rather than a second dialog (owner, 2026-10-31).
+     * Start a save from the store alone with picks already made: Create datapack's pick screens, which
+     * are its own dialog's steps rather than a second dialog (owner, 2026-10-31).
      */
     saveNew: (picks: StorePicks) => void;
     /** The pick screen and the progress window; mount once, beside the flyout. */

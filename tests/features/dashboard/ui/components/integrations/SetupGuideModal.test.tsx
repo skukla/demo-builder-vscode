@@ -142,7 +142,7 @@ describe('SetupGuideModal', () => {
         // The extension's done mark on the done step, a dash on the skipped one, nothing on an open one.
         const part = (tab: HTMLElement, cls: string) => tab.querySelector(cls)?.textContent;
         expect(tabs.map((tab) => part(tab, '.setup-guide-rail-title'))).toStrictEqual(['A', 'B', 'Step C', 'Step D']);
-        const done = (tab: HTMLElement) => tab.querySelector('.setup-guide-rail-mark .text-green-600') !== null;
+        const done = (tab: HTMLElement) => tab.querySelector('.setup-guide-rail-mark .text-positive') !== null;
         expect(tabs.map(done)).toStrictEqual([true, false, false, false]);
         expect(part(tabs[3], '.setup-guide-rail-mark')).toBe('–');
         expect(tabs[1]).toHaveAttribute('aria-selected', 'true');
@@ -456,7 +456,7 @@ describe('SetupGuideModal', () => {
         );
         expect(within(shown()).getByRole('heading', { name: 'Step B' })).toBeInTheDocument();
         // The list now checks it off (the mark is decoration, so it is outside the tab's name).
-        expect(screen.getByRole('tab', { name: 'B' }).querySelector('.text-green-600')).not.toBeNull();
+        expect(screen.getByRole('tab', { name: 'B' }).querySelector('.text-positive')).not.toBeNull();
     });
 
     it('says why when the extension refuses', async () => {

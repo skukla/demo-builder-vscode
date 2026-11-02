@@ -43,7 +43,7 @@ describe('ConfirmActionDialog', () => {
         renderConfirm();
 
         expect(screen.getByText('Remove the thing?')).toBeInTheDocument();
-        expect(document.querySelector('.modal-status-icon .text-orange-600')).not.toBeNull();
+        expect(document.querySelector('.modal-status-icon .text-notice')).not.toBeNull();
         expect(screen.getByText('Removes the thing.')).toBeInTheDocument();
     });
 

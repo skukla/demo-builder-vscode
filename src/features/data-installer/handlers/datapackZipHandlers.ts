@@ -11,6 +11,9 @@
  *   how the SC sees name, version and types before choosing where it goes.
  * - `load-datapack-zip` — write the file's pack into `target`.
  *
+ * A pack's settings layer travels with it (step 09, `settingsLayerFile.ts`): the save carries it as
+ * the file's second section, and the load puts it in the library, wherever the data goes.
+ *
  * Removing a library pack (the undo of a load) and copying one into the Data
  * Installer act on packs, not files: `datapackLibraryHandlers.ts`.
  *
@@ -42,6 +45,7 @@ import {
     readDatapackZip,
 } from '../services/datapackZip';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { fileLayerFacts, loadFileLayer, withFileLayer } from './settingsLayerFile';
 import { assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
 import type { DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
@@ -272,9 +276,12 @@ export const datapackZipHandlers = defineHandlers({
         const access = await resolveDataInstallerAccess(context, source);
         if (!access.ok) return access.response;
         try {
-            const pack = await readPackFromStore(access.client, id, source);
+            const read = await readPackFromStore(access.client, id, source);
             const target = await saveTarget(context, payload.path, datapackZipName(id));
             if (!target) return { success: true, data: { cancelled: true } };
+            const { pack, note } = await withFileLayer(context, read);
+            // Before the file is written: a layer the load would refuse makes a file nobody can load.
+            const layer = pack.settingsLayer ? fileLayerFacts(pack.settingsLayer) : undefined;
             const bytes = buildDatapackZip(pack);
             await writeZip(target, bytes);
             context.logger.info(
@@ -286,6 +293,8 @@ export const datapackZipHandlers = defineHandlers({
                     path: target,
                     bytes: bytes.length,
                     dataTypes: pack.items.map((i) => i.dataType),
+                    ...(layer ? { settingsLayer: layer } : {}),
+                    ...(note ? { settingsLayerNote: note } : {}),
                 },
             };
         } catch (error) {
@@ -301,6 +310,7 @@ export const datapackZipHandlers = defineHandlers({
             const file = await openSource(context, payload?.path);
             if (!file) return { success: true, data: { cancelled: true } };
             const pack = readDatapackZip(await readPackFile(context, file));
+            const layer = pack.settingsLayer ? fileLayerFacts(pack.settingsLayer) : undefined;
             return {
                 success: true,
                 data: {
@@ -312,6 +322,7 @@ export const datapackZipHandlers = defineHandlers({
                     dataTypes: pack.items.map((i) => i.dataType),
                     ...(pack.source ? { savedFrom: pack.source } : {}),
                     ...(pack.exportedAt ? { savedAt: pack.exportedAt } : {}),
+                    ...(layer ? { settingsLayer: layer } : {}),
                 },
             };
         } catch (error) {
@@ -338,6 +349,7 @@ export const datapackZipHandlers = defineHandlers({
             const file = await openSource(context, payload.path);
             if (!file) return { success: false, error: 'Open a datapack file first.' };
             const pack = readDatapackZip(await readPackFile(context, file));
+            if (pack.settingsLayer) fileLayerFacts(pack.settingsLayer);
             if (target === 'installer' && payload.confirmName !== pack.id.name) {
                 return {
                     success: false,
@@ -364,10 +376,11 @@ export const datapackZipHandlers = defineHandlers({
             outcome.failed.forEach((f) =>
                 context.logger.warn(`${LOG_PREFIX} ${label}: ${f.reason}`),
             );
+            const settingsLayer = pack.settingsLayer && outcome.stored.length > 0 ? await loadFileLayer(context, pack.settingsLayer, payload.update === true) : undefined;
             return {
                 success: outcome.stored.length > 0,
                 ...(outcome.stored.length === 0 ? { error: 'No data type could be stored.' } : {}),
-                data: { datapackName: pack.id.name, version: pack.id.version, target, ...outcome },
+                data: { datapackName: pack.id.name, version: pack.id.version, target, ...outcome, ...(settingsLayer ? { settingsLayer } : {}) },
             };
         } catch (error) {
             return failure(context, error, 'The datapack file could not be loaded.');

@@ -29,7 +29,7 @@
 import { ActionButton } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
-import type { DataItemInventory, DatapackDetail } from '../../types';
+import type { DataItemInventory, DatapackDetail, PackDetailLayer } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
@@ -84,6 +84,8 @@ export interface DatapackDetailPanelProps {
     sharedInFile?: string;
     /** The SC's own pack was shared or stopped being shared (owner, 2026-10-30). Stable. */
     onSharingChanged?: () => void;
+    /** The settings layer Import will apply after the pack's data (step 09). */
+    settingsLayer?: PackDetailLayer;
 }
 
 export function DatapackDetailPanel({
@@ -102,6 +104,7 @@ export function DatapackDetailPanel({
     onRename,
     sharedInFile,
     onSharingChanged,
+    settingsLayer,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selected?.name ?? 'Datapack';
 
@@ -126,7 +129,7 @@ export function DatapackDetailPanel({
                         </ActionButton>
                     </div>
                     <div className="db-drawer-body">
-                        {renderPanelBody({ detail, inventory, loading, failure, onRetry })}
+                        {renderPanelBody({ detail, inventory, loading, failure, onRetry, settingsLayer })}
                         {detail && !loading ? setupStep : null}
                         {canImport({ importable, loading, failure }) && detail ? (
                             <PackActions
@@ -137,6 +140,7 @@ export function DatapackDetailPanel({
                                 onSaveStoreChanges={onSaveStoreChanges}
                                 sharedInFile={sharedInFile}
                                 onSharingChanged={onSharingChanged}
+                                settingsLayer={settingsLayer}
                             />
                         ) : null}
                     </div>
@@ -180,8 +184,9 @@ function renderPanelBody(args: {
     loading: boolean;
     failure: DataInstallerFailure | null;
     onRetry: () => void;
+    settingsLayer?: PackDetailLayer;
 }): React.JSX.Element | null {
-    const { detail, inventory, loading, failure, onRetry } = args;
+    const { detail, inventory, loading, failure, onRetry, settingsLayer } = args;
 
     if (failure) {
         return renderDataInstallerFailure(failure, onRetry);
@@ -198,16 +203,18 @@ function renderPanelBody(args: {
             </div>
         );
     }
-    return <DetailRows detail={detail} inventory={inventory} />;
+    return <DetailRows detail={detail} inventory={inventory} settingsLayer={settingsLayer} />;
 }
 
 /** The loaded detail, as key/value rows. */
 function DetailRows({
     detail,
     inventory,
+    settingsLayer,
 }: {
     detail: DatapackDetail;
     inventory: DataItemInventory | null;
+    settingsLayer?: PackDetailLayer;
 }): React.JSX.Element {
     // Present types come from the INVENTORY, not from `detail.dataTypes`: the
     // second is what the pack claims, the first is what is there to install.
@@ -239,6 +246,17 @@ function DetailRows({
                         {missing.map((dataType) => (
                             <span key={dataType} className="datapack-panel-type is-missing">
                                 {dataTypeLabel(dataType)}
+                            </span>
+                        ))}
+                    </span>
+                </PanelRow>
+            ) : null}
+            {settingsLayer && settingsLayer.settings.length > 0 ? (
+                <PanelRow label="Also sets">
+                    <span className="datapack-panel-types" data-testid="datapack-detail-settings">
+                        {settingsLayer.settings.map((setting) => (
+                            <span key={setting.path} className="datapack-panel-type">
+                                {setting.path}: {setting.value}
                             </span>
                         ))}
                     </span>

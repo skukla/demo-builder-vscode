@@ -34,7 +34,7 @@
     gap: 12px;
     padding: 12px 16px;
     background-color: var(--spectrum-global-color-gray-75);
-    border: 1px solid var(--spectrum-global-color-orange-600);
+    border: 1px solid var(--spectrum-semantic-notice-color-icon);
     border-left-width: 3px;
     border-radius: 8px;
     animation: inline-notice-fade-in var(--spectrum-global-animation-duration-300) ease-out;
@@ -55,15 +55,15 @@
 /* Green for something that finished and worked (2026-10-28), drawn the way info is:
    the border and the icon, all the way round. */
 .inline-notice--success {
-    border-color: var(--spectrum-global-color-green-500);
+    border-color: var(--spectrum-semantic-positive-color-icon);
 }
 
 .inline-notice--success .inline-notice-icon {
-    color: var(--spectrum-global-color-green-600);
+    color: var(--spectrum-semantic-positive-color-icon);
 }
 
 .inline-notice-icon {
-    color: var(--spectrum-global-color-orange-600);
+    color: var(--spectrum-semantic-notice-color-icon);
     flex-shrink: 0;
     align-self: flex-start;
     margin-top: 2px;

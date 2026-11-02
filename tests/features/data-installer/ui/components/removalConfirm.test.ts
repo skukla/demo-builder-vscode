@@ -1,0 +1,108 @@
+/**
+ * The removal confirm's decisions, without React: what it shows for what the read found, what the
+ * boxes do, and what the Remove press sends.
+ */
+
+import type { DatapackRemovalChanges } from '@/features/data-installer/removalChanges';
+import {
+    FRESH_CHOICE,
+    confirmContent,
+    removalAnswer,
+    removeLabel,
+    toggleAlways,
+    toggleSave,
+} from '@/features/data-installer/ui/components/removalConfirm';
+import type { DataInstallerFailure } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
+
+const CHANGED: DatapackRemovalChanges = {
+    count: 3,
+    kinds: [],
+    sentence: 'You changed 3 things since it was installed: the category Critical Power, and 2 products.',
+    ownPackName: 'Acme Demo',
+    alwaysSave: false,
+};
+const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], ownPackName: 'Acme Demo', alwaysSave: false };
+const FAILED: DataInstallerFailure = { message: 'The store could not be read.' };
+
+describe('confirmContent', () => {
+    it('is the plain confirm when nothing changed', () => {
+        expect(confirmContent(NOTHING, null)).toEqual({ kind: 'plain' });
+    });
+
+    it('is the plain confirm when the setting is on and nothing changed', () => {
+        expect(confirmContent({ ...NOTHING, alwaysSave: true }, null)).toEqual({ kind: 'plain' });
+    });
+
+    it('offers the box when something changed', () => {
+        expect(confirmContent(CHANGED, null)).toEqual({ kind: 'changes', sentence: CHANGED.sentence, packName: 'Acme Demo' });
+    });
+
+    it('says only that they will be saved when the setting answers', () => {
+        expect(confirmContent({ ...CHANGED, alwaysSave: true }, null)).toEqual({ kind: 'will-save', packName: 'Acme Demo' });
+    });
+
+    it('never reads a failed read as nothing changed', () => {
+        expect(confirmContent(null, FAILED)).toEqual({ kind: 'read-failed', reason: FAILED.message });
+    });
+
+    it('does not show transport text when no answer came back', () => {
+        expect(confirmContent(null, { message: 'Request timeout: get-datapack-removal-changes', unanswered: true })).toEqual({ kind: 'read-failed', reason: 'The check took too long to answer.' });
+    });
+
+    it('believes the failure over an answer left by an earlier read', () => {
+        expect(confirmContent(CHANGED, FAILED).kind).toBe('read-failed');
+    });
+});
+
+describe('the boxes', () => {
+    it('start with the save ticked and the always not', () => {
+        expect(FRESH_CHOICE).toEqual({ saveFirst: true, always: false });
+    });
+
+    it('unticking the save takes the always with it: it cannot always do what it is not doing', () => {
+        const ticked = toggleAlways(FRESH_CHOICE);
+
+        expect(ticked).toEqual({ saveFirst: true, always: true });
+        expect(toggleSave(ticked)).toEqual({ saveFirst: false, always: false });
+    });
+
+    it('ticking the save again leaves the always off', () => {
+        expect(toggleSave({ saveFirst: false, always: false })).toEqual({ saveFirst: true, always: false });
+    });
+});
+
+describe('removalAnswer', () => {
+    const changes = confirmContent(CHANGED, null);
+
+    it('keeps with the box ticked', () => {
+        expect(removalAnswer(changes, FRESH_CHOICE)).toEqual({ changes: 'keep' });
+    });
+
+    it('drops with the box unticked', () => {
+        expect(removalAnswer(changes, { saveFirst: false, always: false })).toEqual({ changes: 'drop' });
+    });
+
+    it('asks for the setting only when always is ticked', () => {
+        expect(removalAnswer(changes, { saveFirst: true, always: true })).toEqual({ changes: 'keep', alwaysSave: true });
+    });
+
+    it('keeps when the setting already answers, whatever the boxes hold', () => {
+        expect(removalAnswer({ kind: 'will-save', packName: 'Acme Demo' }, { saveFirst: false, always: false })).toEqual({ changes: 'keep' });
+    });
+
+    it('has nothing to keep with nothing changed', () => {
+        expect(removalAnswer({ kind: 'plain' }, FRESH_CHOICE)).toEqual({ changes: 'drop' });
+    });
+
+    it('drops after a failed read: Remove anyway is that choice', () => {
+        expect(removalAnswer({ kind: 'read-failed', reason: 'x' }, FRESH_CHOICE)).toEqual({ changes: 'drop' });
+    });
+});
+
+describe('removeLabel', () => {
+    it('says Remove anyway only after a failed read', () => {
+        expect(removeLabel({ kind: 'read-failed', reason: 'x' })).toBe('Remove anyway');
+        expect(removeLabel({ kind: 'plain' })).toBe('Remove');
+        expect(removeLabel({ kind: 'changes', sentence: 's', packName: 'p' })).toBe('Remove');
+    });
+});

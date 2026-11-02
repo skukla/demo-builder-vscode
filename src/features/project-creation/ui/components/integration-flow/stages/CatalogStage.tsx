@@ -120,7 +120,7 @@ export function CatalogStage({
     return (
         <div className="intflow-catalog">
             {unavailable && greyed.length > 0 && (
-                <p className="intflow-catalog-note text-orange-600" data-testid="catalog-unavailable">
+                <p className="intflow-catalog-note text-notice" data-testid="catalog-unavailable">
                     {unavailable.message}
                 </p>
             )}

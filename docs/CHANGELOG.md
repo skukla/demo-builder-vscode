@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Clear demo data leaves nothing behind that only the chosen stores use.** It now also removes their companies and the customers in them, shared catalogs with their customer groups, customer groups, attribute sets and attributes, and sets their websites' settings to the default's value. Anything another demo also uses stays, and the dialog names it and says why. Not yet proved on a live store.
 - **A dialog that is waiting shows only its spinner.** Import, Export, Manage APIs, Add ERP, Simulate downtime and Clear demo data no longer show part of their form, or disabled buttons, while they load. A pack with one data type starts ticked.
 - **The dashboard shows a status as a dot alone.** The word that sat beside it ("Needed", "Deploy failed") is now the hover text, and a card keeps its description with the dot beside its title.
 

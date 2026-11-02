@@ -19,6 +19,7 @@ import type { CreatedObject } from './installRecord';
 import type { KindContext } from './kindContext';
 import { keyOf } from './packForm';
 import { productLookups } from './productLookups';
+import { STORE_CONFIG_KIND, rebasedSetting } from './storeConfigKind';
 import { READABLE_KINDS, onceInventory, packKindOf, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
 
 /** One object, hashed from its copy now and against the row it matches, if any. */
@@ -71,7 +72,8 @@ export async function recordFingerprints(ctx: KindContext, items: Record<string,
 /**
  * The record for a version just saved from the store: every object hashed afresh from the
  * store now, keyed by what the saved rows call it, against the row the version holds for it.
- * An object the store no longer has is left off: the version does not hold it either.
+ * An object the store no longer has is left off: the version does not hold it either. A setting
+ * has no copy to hash: it stays, or removal would never put it back (step 09).
  *
  * @param saved - the saved version's rows, by kind
  */
@@ -79,6 +81,10 @@ export async function rebaseRecord(ctx: KindContext, created: readonly CreatedOb
     const copies = await copiesByKind(ctx, created);
     const rebased: CreatedObject[] = [];
     for (const object of created) {
+        if (object.kind === STORE_CONFIG_KIND) {
+            rebased.push(rebasedSetting(object, saved[STORE_CONFIG_KIND]));
+            continue;
+        }
         const copy = copies.get(object.kind)?.get(object.id);
         if (copy === undefined) continue;
         const rows = rowsByKey(object.kind, saved[packKindOf(object.kind)]);

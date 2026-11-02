@@ -9,14 +9,20 @@
  *   <name>-<version>.datapack.zip
  *     datapack.json            what the pack is, in the stores' own field names
  *     data/<data_type>.json    one per data type: the rows, as the store holds them
+ *     settings/store_config.json   the pack's settings layer, when it has one (step 09)
  *
  * A zip whose files sit under one root folder (what macOS "Compress" makes of a
  * folder) reads the same. Saving and opening are the handler's.
+ *
+ * The layer is a second section, not one more data type, and the format version stays 1: an older
+ * extension reads `data_types` and the `data/` folder, so it loads such a file's data as it always
+ * did and leaves the section alone. A file with no section reads as before.
  *
  * @module features/data-installer/services/datapackZip
  */
 
 import AdmZip from 'adm-zip';
+import { STORE_CONFIG_KIND, settingsLayerName } from './datapackCatalog';
 import { withoutCredentials } from './packCredentials';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
@@ -24,10 +30,20 @@ export const DATAPACK_ZIP_FORMAT = 'demo-builder-datapack';
 export const DATAPACK_ZIP_FORMAT_VERSION = 1;
 const MANIFEST = 'datapack.json';
 const DATA_DIR = 'data/';
+const LAYER_FILE = `settings/${STORE_CONFIG_KIND}.json`;
 /** A data type names a file, so it must be a plain name. The stores' codes all are. */
 const DATA_TYPE_PATTERN = /^[a-z0-9_]+$/;
 /** Unpacked size a file may claim before it is refused, checked before anything is unpacked. */
 const DEFAULT_MAX_UNPACKED_BYTES = 256 * 1024 * 1024;
+
+/** A pack's settings layer, as its file carries it: a library pack of store settings. */
+export interface PackSettingsLayer {
+    id: DatapackId;
+    displayName: string;
+    description?: string;
+    /** The layer's `store_config` rows. */
+    records: unknown;
+}
 
 /** A whole pack, as the file carries it. */
 export interface DatapackFile {
@@ -40,6 +56,8 @@ export interface DatapackFile {
     source?: DatapackStoreName;
     /** When it was saved (ISO 8601). */
     exportedAt?: string;
+    /** Its settings layer, the file's second section, when it has one. */
+    settingsLayer?: PackSettingsLayer;
 }
 
 /** A file that is not a datapack file, explained in words an SC can act on. */
@@ -61,6 +79,8 @@ interface Manifest {
     data_types: string[];
     source?: DatapackStoreName;
     exported_at?: string;
+    /** What the file's second section is; absent on a file with none. */
+    settings_layer?: { datapack_name?: unknown; version?: unknown; display_name?: unknown; description?: unknown };
 }
 
 function checkDataType(dataType: string): void {
@@ -71,6 +91,15 @@ function checkDataType(dataType: string): void {
 
 function json(value: unknown): Buffer {
     return Buffer.from(`${JSON.stringify(value, null, 2)}\n`, 'utf-8');
+}
+
+function layerManifest(layer: PackSettingsLayer): NonNullable<Manifest['settings_layer']> {
+    return {
+        datapack_name: layer.id.name,
+        version: layer.id.version,
+        display_name: layer.displayName,
+        ...(layer.description ? { description: layer.description } : {}),
+    };
 }
 
 /**
@@ -92,6 +121,7 @@ export function buildDatapackZip(pack: DatapackFile): Buffer {
         data_types: pack.items.map((item) => item.dataType),
         ...(pack.source ? { source: pack.source } : {}),
         ...(pack.exportedAt ? { exported_at: pack.exportedAt } : {}),
+        ...(pack.settingsLayer ? { settings_layer: layerManifest(pack.settingsLayer) } : {}),
     };
     const zip = new AdmZip();
     zip.addFile(MANIFEST, json(manifest));
@@ -99,6 +129,7 @@ export function buildDatapackZip(pack: DatapackFile): Buffer {
         // A file can go to anyone: no customer password goes in one (step 08).
         zip.addFile(`${DATA_DIR}${item.dataType}.json`, json(withoutCredentials(item.dataType, item.records)));
     }
+    if (pack.settingsLayer) zip.addFile(LAYER_FILE, json(pack.settingsLayer.records));
     return zip.toBuffer();
 }
 
@@ -184,6 +215,31 @@ function readItems(zip: AdmZip, root: string, dataTypes: string[]): DatapackFile
 }
 
 /**
+ * The file's second section, when its manifest names one. A file can come from anyone, so the
+ * layer must be this pack's by name: it reaches the library under that name.
+ */
+function readLayer(zip: AdmZip, root: string, manifest: Manifest): PackSettingsLayer | undefined {
+    const section = manifest.settings_layer;
+    if (section === undefined) return undefined;
+    const expected = settingsLayerName(manifest.datapack_name);
+    if (section.datapack_name !== expected || typeof section.version !== 'string' || section.version === '') {
+        throw new DatapackZipError(`This datapack file's settings layer must be named ${expected} and say its version.`);
+    }
+    let records: unknown;
+    try {
+        records = JSON.parse(zip.readAsText(`${root}${LAYER_FILE}`)) as unknown;
+    } catch {
+        throw new DatapackZipError("This datapack file's store settings are missing or not valid JSON.");
+    }
+    return {
+        id: { name: expected, version: section.version },
+        displayName: typeof section.display_name === 'string' && section.display_name !== '' ? section.display_name : expected,
+        ...(typeof section.description === 'string' && section.description !== '' ? { description: section.description } : {}),
+        records,
+    };
+}
+
+/**
  * Read a file back into a pack.
  *
  * @param bytes - The zip's bytes
@@ -198,6 +254,7 @@ export function readDatapackZip(
     const zip = openZip(bytes, opts.maxUnpackedBytes ?? DEFAULT_MAX_UNPACKED_BYTES);
     const root = findRoot(zip);
     const manifest = readManifest(zip, root);
+    const settingsLayer = readLayer(zip, root, manifest);
     return {
         id: { name: manifest.datapack_name, version: manifest.version },
         displayName: manifest.display_name || manifest.datapack_name,
@@ -205,6 +262,7 @@ export function readDatapackZip(
         items: readItems(zip, root, manifest.data_types),
         ...(manifest.source ? { source: manifest.source } : {}),
         ...(manifest.exported_at ? { exportedAt: manifest.exported_at } : {}),
+        ...(settingsLayer ? { settingsLayer } : {}),
     };
 }
 

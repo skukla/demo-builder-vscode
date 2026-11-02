@@ -91,7 +91,7 @@ describe('AddDemoModal', () => {
         await click('Choose a zip file');
         expect(screen.getByTestId('zip-error')).toHaveTextContent('already has a repository named citisignal-b2b-summit');
         // A choice, not a failure (owner, 2026-09-15): warning icon and words, not error.
-        expect(title('A repository with this name already exists').innerHTML).toContain('text-orange-600');
+        expect(title('A repository with this name already exists').innerHTML).toContain('text-notice');
         expect(title('A repository with this name already exists').innerHTML).not.toContain('text-negative');
         expect(screen.queryByRole('heading', { name: "We couldn't add this zip" })).not.toBeInTheDocument();
         // The way forward is the footer's main button, last.
@@ -182,7 +182,7 @@ describe('AddDemoModal', () => {
     it('says to sign in to GitHub first, not that the link is not a demo, when there is no session', async () => {
         renderModal();
         await probeWith({ success: false, error: 'Sign in to GitHub to read this demo.', needsAuth: 'github' });
-        expect(title('Sign in to GitHub first').innerHTML).toContain('text-orange-600');
+        expect(title('Sign in to GitHub first').innerHTML).toContain('text-notice');
         expect(screen.getByText(/Sign in to GitHub in VS Code/)).toBeInTheDocument();
         expect(screen.queryByText("This doesn't look like a demo we can build on")).not.toBeInTheDocument();
         expect(footerButtons()).toEqual(['Close', 'Back']);
@@ -234,7 +234,7 @@ describe('AddDemoModal', () => {
             success: true,
             result: { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'adobe-commerce/boilerplate-b2b-template' },
         });
-        expect(title('This is the demo behind Starter (B2B + B2C)').innerHTML).toContain('text-orange-600');
+        expect(title('This is the demo behind Starter (B2B + B2C)').innerHTML).toContain('text-notice');
         expect(screen.getByTestId('shipped-notice')).toHaveTextContent('Use the Starter (B2B + B2C) card instead');
         expect(screen.getByTestId('shipped-notice').querySelector('.inline-notice')).toBeNull();
         expect(footerButtons()).toEqual(['Cancel', 'Back', 'Use Starter (B2B + B2C)']);

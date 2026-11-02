@@ -26,12 +26,12 @@ export interface StatusIconProps {
 export function StatusIcon({ status, size = 'S', marginStart }: StatusIconProps): React.ReactElement {
     switch (status) {
         case 'warning':
-            return <AlertCircle size={size} marginStart={marginStart} UNSAFE_className="text-orange-600" />;
+            return <AlertCircle size={size} marginStart={marginStart} UNSAFE_className="text-notice" />;
         case 'error':
             return <CloseCircle size={size} marginStart={marginStart} UNSAFE_className="text-negative" />;
         case 'success':
-            return <CheckmarkCircle size={size} marginStart={marginStart} UNSAFE_className="text-green-600" />;
+            return <CheckmarkCircle size={size} marginStart={marginStart} UNSAFE_className="text-positive" />;
         case 'info':
-            return <InfoOutline size={size} marginStart={marginStart} UNSAFE_className="text-blue-600" />;
+            return <InfoOutline size={size} marginStart={marginStart} UNSAFE_className="text-informative" />;
     }
 }

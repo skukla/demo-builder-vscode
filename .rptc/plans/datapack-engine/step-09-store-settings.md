@@ -1,8 +1,7 @@
 # Step 09: store settings, as a layer beside a pack
 
-Status: **the `store_config` kind built 2026-10-30, not yet live; the layer beside a pack (finding
-it, applying it after the pack, the zip's second section) waits on decision 1 below.** Owner's ask
-2026-10-27; shape decided 2026-10-28.
+Status: **the `store_config` kind built 2026-10-30, the layer beside a pack built 2026-11-02
+(decisions 1 and 3, owner approved); neither live.** Owner's ask 2026-10-27; shape decided 2026-10-28.
 
 ## What it is
 
@@ -56,8 +55,10 @@ the old values back. If it does not, its removal is weaker than ours.
 
 ## Capture
 
-An SC makes a layer from a configured store by choosing which settings to keep: capture reads
-those paths' current values into `store_config` rows (step 05 owns capture; this adds the kind).
+A pack installed with a layer keeps its settings in a layer when saved: capture reads what the record
+lists and the layer names at their values now, and "Save store changes" writes them to a new layer
+beside the new version, not into it (below, "What was built (2026-11-02)"). There is no way yet to
+start a layer by choosing settings from a configured store with no pack installed.
 
 ## Zip files
 
@@ -89,10 +90,10 @@ engine last, after every data kind (`runPack.ts`), and put back first on removal
 target's website, whatever code the row names. `store`/`stores` is refused before anything is
 written (decision 2).
 
-**Refused before any write** (a pack is untrusted input): a store-view row; a path under
-`web/unsecure/`, `web/secure/`, `web/cookie/` or `admin/`, or whose last part ends in `password`,
-`secret`, `token` or `key` (Adobe's "System configuration API" page warns that copying base URLs or
-credentials "can break the production store"; decision 3); a path that holds no value at its scope
+**Refused before any write** (a pack is untrusted input): a store-view row; a path outside the allowed
+sections, under `web/` or `admin/`, or ending in `password`, `secret`, `token` or `key` (decision 3,
+built 2026-11-02; Adobe's "System configuration API" page warns that copying base URLs or
+credentials "can break the production store"); a path that holds no value at its scope
 or store-wide, because the fix's undo would then write Commerce's `"0"` rather than what it held
 (decision 4); a path that is not `section/group/field` (`SETTING_PATH`, now exported by
 `configFix.ts` and shared with `set_commerce_config`).
@@ -133,25 +134,123 @@ No response ceiling re-measured: the note grows by one short line per setting.
 | what a write refused | `PUT /V1/system/config`, `errors[].path`, `errors[].scope`, `errors[].message` | **no**: Adobe's page only |
 | whether a path with nothing stored answers its `config.xml` default or `null` | the same `GET` | **no**: the page says "a path that exists in system.xml but has no stored value returns null", and its own example answers `sales/totals_sort/tax` `"40"`, which is that path's default. Live test step 0 settles it |
 
+## What was built (2026-11-02): the layer beside a pack
+
+**Finding it** (`services/settingsLayer.ts`). `find-datapacks` in the library by the name
+`<pack>-settings`, exact; rows holding only `store_config` (a demo whose name happens to end that way
+holds data, and stays a demo); the newest by `updatedAt`, which `main` does not outrank, passing over
+archived versions; then `get-data-item` for its rows. A pack with no layer costs one library read and
+changes nothing else: its Commerce requests are asserted identical.
+
+**Applying it** (`demoBuilderEngine/layerStep.ts`). `installPack` runs on the pack's own rows, unchanged,
+then the kind's own `installStoreConfig` runs on the layer's rows with the same context and recorder.
+No second reader or writer, and one record, so `removePack` takes both. The last data kind stays
+`processing` until the layer is done: `watchImportJob` ends when every kind asked for has, and would
+otherwise end before the settings and lose the note.
+
+| The layer | What happens |
+|---|---|
+| a path a pack may not set | nothing at all is written; the dry run and the install name it: "Nothing was installed: bodea-settings@2: The pack's store settings cannot be installed: design/head/title is outside what a pack may set (catalog, sales, checkout, customer, btob and cataloginventory). Nothing of this kind was written." |
+| a setting Commerce refuses | the data stays; skipped and named by path in the note; the rest of the layer lands (the kind's own handling) |
+| a setting with no value anywhere, or a write with no answer | the data stays; the note says "The store settings in bodea-settings@2 were not all applied. … The pack's data is installed. Removing the pack takes it out, and puts back any setting that was applied." |
+| the library cannot be asked | the data installs; the note says "The datapack library could not be asked for bodea-settings, so any store settings it holds were not applied."; a recorded setting is left alone |
+| no layer, and the record lists settings | they are put back ("One the pack no longer has is put back", now for a layer that has gone too) |
+
+The kinds a request names do not narrow a layer: the engine reads a pack's whole rows whichever kinds
+are ticked (`buildDatapackEngine`, `readPack` ignores `_dataTypes`), which was already so. **Seen, not
+changed.**
+
+**What the SC sees.** Before Import, the pack's flyout has an "Also sets" row of path and value. After
+it, the note: "From bodea-settings@2: Set catalog/frontend/grid_per_page: 12 → 24." On removal: "Put
+back catalog/frontend/grid_per_page: 24 → 12." `preview_datapack_changes` answers `settings: { layer,
+changes, note }`, each change in the fix's own words (`configFix(...).preview`).
+
+**The catalog.** `withoutLayerCards`, on the Data Installer screen and the wizard's Datapacks step: no
+card for a layer while its pack is listed. Hiding it would strand one an SC could otherwise not reach,
+so it keeps its card when no pack of its name is listed, or when it is installed on its own (a card is
+where a pack is removed from the store), and the pack's flyout offers "Remove its store settings" on
+a layer that is the SC's own. `find_datapacks` still lists every row.
+
+**Capture.** `captureSettings` reads what the record lists and what the installed version names, and
+a layer's rows are named as the installed version's, so a setting already at its value (on no record)
+is kept. `saveStore.ts` then splits them off when the pack holds no `store_config`: they go to
+`<own pack>-settings` at the new version's own version, after the version itself; never into the version,
+which would then hold settings of its own and win over any layer for good; never onto the layer
+installed, which may be a colleague's. A pack holding its own settings keeps them there.
+
+**A defect found on the way, fixed.** `rebaseRecord` dropped every `store_config` object from the
+record at each save, since settings have no store copy to hash: after a save, removal could never
+put a setting back, on any pack. It now keeps them, against the value saved (`rebasedSetting`), still
+remembering what they held before the first install.
+
+**Reversal.** A save is undone by deleting the new version, which now takes your layer of the same
+version with it. Sharing a pack shares its layer (a colleague would otherwise install it without the
+settings). A file's load offers "Remove its store settings from the library" unless removing the pack
+takes it.
+
+**Files** (`datapackZip.ts`, `handlers/settingsLayerFile.ts`). A second section,
+`settings/store_config.json`, named in the manifest's `settings_layer`, and **the format version stays
+1**, so an older extension reads `data_types` and `data/` and loads the data as it always did. The
+section must be named `<pack>-settings`. A file whose layer holds a refused path is refused at Open and
+Load before any write: in the library it would stop every install of the pack. A version already in
+the library is left unless the SC asked to replace it, and the load says so. A file with no section
+loads with exactly its old requests.
+
+**Existing projects.** A record is the same format; nothing migrates. A setting recorded before the
+allowed list is still put back. A pack whose own rows hold a path now refused cannot be installed
+again or saved, and says why by path; removal still works.
+
+**What this does not change.** Putting a value back leaves a website row explicit (decision 5 below).
+
+**Agent surface.** No new tool; descriptions updated on `start_datapack_import`, `reset_datapack`,
+`preview_datapack_changes`, `save_store_changes_to_pack`, `save_datapack_zip`, `open_datapack_zip`,
+`load_datapack_zip`, `delete_library_datapack`, `share_datapack`, `find_datapacks`, `get_datapack`.
+
+**Tests.** `engine-settingsLayer.test.ts` (order of writes, the pack wins, one removal, a refused path,
+no layer, the note), `settingsLayer.test.ts`, `saveStore-settingsLayer.test.ts`,
+`storeChanges-settingsLayer.test.ts`, `datapackZipHandlers-layer.test.ts`, `datapackZip.test.ts`,
+`datapackCatalog.test.ts`, `DatapackCatalogView-layers.test.tsx`, over the fakes in
+`storeConfig.testUtils.ts`; shapes typed in `tests/helpers/settingsLayerFixtures.ts`.
+
+### Live test of the layer (owner's call; project `scratch-1028`, website `justrite_test_website`)
+
+Zero first, zero last. One pack and one layer, both named for this test.
+
+0. Read-only: `run_commerce_rest` `GET system/config?scope=default&` with a path filter `in`
+   `catalog/frontend/grid_per_page`, and write the value down; record the answer as a typed fixture.
+1. Build two zips under the project: `zz-layer-db09` holding one category, and carrying a second
+   section `zz-layer-db09-settings` with `catalog/frontend/grid_per_page` = `24` at `default`.
+   `open_datapack_zip` names the layer by path. `load_datapack_zip` into the library: the answer's
+   `settingsLayer.outcome` is `created`. `find_datapacks` `store:"library"` lists both; the Data
+   Installer screen shows one card, whose flyout says "Also sets".
+2. `preview_datapack_changes`: `settings.changes` is `catalog/frontend/grid_per_page: <before> → 24`,
+   `settings.layer` the layer.
+3. `validate_datapack_import`, then `start_datapack_import`. `get_datapack_import_status`'s note: "From
+   zz-layer-db09-settings@…: Set catalog/frontend/grid_per_page: <before> → 24." Debug Logs: the
+   category's write before the `PUT system/config`. The record lists the category, then the setting.
+4. `reset_datapack` once. The note says "Put back …". The record file is gone. Step 0's read equals
+   what it was; the category is gone.
+5. Back to zero: `delete_library_datapack` on `zz-layer-db09` (it takes a layer of the same version;
+   delete the layer itself if its version differs). `find_datapacks` shows neither.
+
+Worth one more pass, once that holds: install again, "Save store changes", and check the new version
+holds no `store_config` and `<own pack>-settings` sits beside it; delete the new version and check both
+go.
+
 ### Not built, and why
 
-- **The layer beside a pack**: finding a pack's settings layer in the library, applying it after the
-  pack's data, "the pack wins", and the zip's second section. All need decision 1. Until then a
-  settings pack is installed on its own, like any pack, and is removed on its own.
 - **Store-view settings** (decision 2).
+- **Starting a layer from a configured store with no pack installed.** A layer is made by a save, or
+  by hand with a zip. Nothing has asked for more.
 
 ### Decisions for the owner
 
-1. **How a pack finds its layer.** Recommended: a library pack named `<pack name>-settings`,
-   newest version, applied after the pack's data, only when the pack itself holds no
-   `store_config` (the precedence rule above), and recorded in the pack's own install record so one
-   removal takes both.
+1. **How a pack finds its layer.** Decided and built 2026-11-02: as above.
 2. **Store-view settings.** Recommended: refuse, as built, until a pack needs one; then extend
    `configFix`'s read to the store scope (store, then website, then default), not a second reader.
-3. **Which settings a pack may carry.** Built: a short refused list. Recommended: replace it with an
-   allowed list of sections (`catalog/`, `sales/`, `checkout/`, `customer/`, `btob/`, `cataloginventory/`)
-   before packs from outside the team are loaded, since any path the Admin role can reach is
-   writable.
+3. **Which settings a pack may carry.** Decided and built 2026-11-02: an allowed list of sections
+   (`catalog/`, `sales/`, `checkout/`, `customer/`, `btob/`, `cataloginventory/`), with `web/`,
+   `admin/` and any path ending in password, secret, token or key refused whatever the list says.
 4. **A setting with no value anywhere.** Built: refused, since putting it back would write `"0"`.
    Recommended: keep, unless live step 0 shows the API answers `config.xml` defaults, in which case
    the refusal only meets paths with no default, which is still right.
@@ -182,7 +281,7 @@ test website's (15). Removal was right, since it reads each setting at its recor
   `installRecord.test.ts` (3), each asserting the read addresses. A control that put the old read back
   turned the live-case tests red.
 
-### Live test (owner's call; project `scratch-1028`, website `justrite_test_website`, never JustRite's own)
+### Live test of the kind (owner's call; project `scratch-1028`, website `justrite_test_website`, never JustRite's own)
 
 One setting is written **store-wide**: `catalog/frontend/grid_per_page` (Products per Page on Grid
 Default Value), which changes how many products a category page shows on every website of the

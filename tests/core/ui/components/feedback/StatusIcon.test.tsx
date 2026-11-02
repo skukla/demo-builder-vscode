@@ -4,10 +4,10 @@ import '@testing-library/jest-dom';
 import { StatusIcon, type StatusIconStatus } from '@/core/ui/components/feedback/StatusIcon';
 
 const COLOURS: [StatusIconStatus, string][] = [
-    ['warning', 'text-orange-600'],
+    ['warning', 'text-notice'],
     ['error', 'text-negative'],
-    ['success', 'text-green-600'],
-    ['info', 'text-blue-600'],
+    ['success', 'text-positive'],
+    ['info', 'text-informative'],
 ];
 
 it.each(COLOURS)('%s is drawn in %s', (status, colour) => {

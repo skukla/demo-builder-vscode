@@ -32,6 +32,8 @@ const CONSENT_DETAIL_VALUE_MAX = 60;
  */
 const CONSENT_KEY_LABELS: Record<string, string> = {
     projectName: 'Project',
+    // reset_datapack: "keep" or "drop" alone would not say whose changes.
+    changes: 'Your changes',
 };
 
 /** `blockId` / `block_id` → "Block id". A label, not an identifier. */

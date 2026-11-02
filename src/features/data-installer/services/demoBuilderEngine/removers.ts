@@ -125,7 +125,7 @@ export function keptObjects(kept: readonly KeptContainer[]): CreatedObject[] {
 const keyOfObject = (kind: string, id: string) => `${kind}\u0000${id}`;
 
 /** The products in a set or a category, by SKU; none when the store has no such search. */
-async function productsWhere(get: CommerceGet, field: 'attribute_set_id' | 'category_id', id: string): Promise<string[]> {
+export async function productsWhere(get: CommerceGet, field: 'attribute_set_id' | 'category_id', id: string): Promise<string[]> {
     const criteria = `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${segment(id)}`;
     try {
         return (await readAllPages<{ sku: string }>(get, 'products', criteria)).map((p) => p.sku);

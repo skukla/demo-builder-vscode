@@ -7,14 +7,17 @@
  *   library lets only a pack's owner delete it, and the Data Installer has no such
  *   check, so deleting there is offered nowhere in the extension. A pack this SC shared
  *   in a project file says so, without confirm and with it (`sharedInFiles.ts`). Deleting the
- *   last version of this demo's own pack clears `project.ownDatapack` (`ownPackCleared`).
+ *   last version of this demo's own pack clears `project.ownDatapack` (`ownPackCleared`). A
+ *   version takes its settings layer of the same version with it (step 09): "save store changes"
+ *   writes the two together, and is undone by deleting the version.
  * - `rename-library-datapack` — change the display name of every version of one of the
  *   caller's own packs (the name in the library cannot change). When it is this demo's
  *   own pack, the project records that the SC named it (datapack-engine step 07).
  * - `share-library-datapack` — share every version of one of the caller's own packs with everyone
  *   the library admits, or stop sharing it (owner, 2026-10-30): the library's owner-only
  *   `update-datapack-metadata`, its `shared` field. Confirm-gated, since a shared pack is seen and
- *   installed by the whole team.
+ *   installed by the whole team. Its settings layer goes with it (step 09), or a colleague would
+ *   install the pack without the settings its owner gets.
  * - `copy-library-datapack-to-installer` — make a library pack installable. Install
  *   runs through the Data Installer, which does not hold library packs, so this
  *   reads the whole pack from the library and writes it into the Data Installer;
@@ -28,9 +31,11 @@
  * @module features/data-installer/handlers/datapackLibraryHandlers
  */
 
+import { settingsLayerName } from '../services/datapackCatalog';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { readPackFromStore, writePackToStore } from '../services/datapackTransfer';
 import { myVersions } from '../services/demoPack';
+import { myLayerVersions } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import { SHARE_CONSENT } from '../shareWording';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
@@ -155,6 +160,26 @@ function writerFor(
     });
 }
 
+/**
+ * After a delete: the SC's own settings layer of the same version goes too. A library that cannot
+ * be asked leaves it; the delete itself already happened, and the answer says so.
+ */
+async function deleteLayerOf(
+    context: HandlerContext,
+    access: Parameters<typeof writerFor>[1] & { client: Parameters<typeof myLayerVersions>[0] },
+    id: DatapackId,
+): Promise<{ settingsLayerDeleted?: true; settingsLayerLeft?: string }> {
+    try {
+        const same = (await myLayerVersions(access.client, id.name)).find((row) => row.id.version === id.version);
+        if (!same) return {};
+        await writerFor(context, access).deleteDatapack(same.id);
+        return { settingsLayerDeleted: true };
+    } catch (error) {
+        context.debugLogger.debug(`${LOG_PREFIX} Could not delete the settings layer of ${id.name}@${id.version}: ${String(error)}`);
+        return { settingsLayerLeft: `${settingsLayerName(id.name)}@${id.version} may still be in the library: it could not be checked.` };
+    }
+}
+
 export const datapackLibraryHandlers = defineHandlers({
     'delete-library-datapack': async (
         context: HandlerContext,
@@ -191,6 +216,7 @@ export const datapackLibraryHandlers = defineHandlers({
                 `${LOG_PREFIX} Deleted ${id.name}@${id.version} from the datapack library`,
             );
             const ownPackCleared = await clearOwnPackIfGone(context, access.client, id.name);
+            const layer = await deleteLayerOf(context, access, id);
             return {
                 success: true,
                 data: {
@@ -199,6 +225,7 @@ export const datapackLibraryHandlers = defineHandlers({
                     deleted: true,
                     ...(warning ? { warning } : {}),
                     ...(ownPackCleared ? { ownPackCleared } : {}),
+                    ...layer,
                 },
             };
         } catch (error) {
@@ -248,8 +275,10 @@ export const datapackLibraryHandlers = defineHandlers({
             }
             const writer = writerFor(context, access);
             for (const version of versions) await writer.updateShared(version, input.shared);
+            const layers = await myLayerVersions(access.client, input.name);
+            for (const layer of layers) await writer.updateShared(layer.id, input.shared);
             context.logger.info(`${LOG_PREFIX} ${input.shared ? 'Shared' : 'Stopped sharing'} ${input.name} (${versions.length} versions) in the datapack library`);
-            return { success: true, data: { datapackName: input.name, shared: input.shared, versions: versions.length } };
+            return { success: true, data: { datapackName: input.name, shared: input.shared, versions: versions.length, ...(layers.length > 0 ? { settingsLayerVersions: layers.length } : {}) } };
         } catch (error) {
             return failure(context, error, input.shared ? 'The library datapack could not be shared.' : 'The library datapack could not stop being shared.');
         }

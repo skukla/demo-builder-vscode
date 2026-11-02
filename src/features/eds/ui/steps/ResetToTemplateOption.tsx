@@ -70,7 +70,7 @@ export function ResetToTemplateOption({
                     </span>
                     <Text
                         UNSAFE_className={
-                            tone === 'info' ? 'text-xs text-blue-600' : 'text-xs text-orange-600'
+                            tone === 'info' ? 'text-xs text-informative' : 'text-xs text-notice'
                         }
                     >
                         {message}

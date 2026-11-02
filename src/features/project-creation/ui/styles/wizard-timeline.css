@@ -236,7 +236,7 @@
 }
 
 .timeline-step-dot-completed {
-    background: var(--spectrum-global-color-green-600); /* Green - Completed steps */
+    background: var(--spectrum-semantic-positive-color-icon); /* Green - Completed steps */
 }
 
 .timeline-step-dot-review {

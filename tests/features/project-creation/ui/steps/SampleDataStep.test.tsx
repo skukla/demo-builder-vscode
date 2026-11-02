@@ -17,6 +17,7 @@ import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 import {
     mockExecute,
     mockPostMessage,
+    envelope,
     mockTypes,
     pending,
     notYetAsked,
@@ -38,6 +39,21 @@ describe('SampleDataStep', () => {
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(2));
         // Three rows, two names — the second bodea version must not add a card.
         expect(screen.getAllByRole('radio')).toHaveLength(3); // None + 2 names
+    });
+
+    // Datapack-engine step 09: a settings layer is applied with its pack, never chosen as a demo.
+    it('offers no card for a settings layer while its pack is listed', async () => {
+        setMockState(envelope({
+            items: [
+                { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', shared: true, dataTypes: ['products'], art: {} },
+                { id: { name: 'bodea-settings', version: 'v1' }, displayName: 'Bodea settings', shared: true, dataTypes: ['store_config'], art: {} },
+            ],
+            count: 2,
+        }));
+
+        renderStep();
+
+        await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
     });
 
     /** The redesign's point: a pack is SHOWN, not named in a list. */
