@@ -219,13 +219,17 @@ export function phaseLine(message: string): string {
 }
 
 /**
- * Land a returned call's outcome in the window. Only a clean finish is quiet: a
- * hand-back and a failed answer are both things the user must not miss, and
- * both used to read as "— done" because neither throws (see `agentOutcome`).
+ * Land a returned call's outcome in the window. A clean finish is quiet, and so is
+ * a question to the agent, since nothing happened and the agent will ask if it needs
+ * the user: a hand-back and a failed answer are both things the user must not miss,
+ * and both used to read as "— done" because neither throws (see `agentOutcome`).
  */
 function landOutcome(title: string, toolName: string, outcome: AgentOutcome, logger: Logger): void {
     if (outcome.kind === 'done') {
         vscode.window.setStatusBarMessage(`$(check) ${title} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
+        return;
+    }
+    if (outcome.kind === 'askedAgent') {
         return;
     }
     if (outcome.kind === 'needsUser') {

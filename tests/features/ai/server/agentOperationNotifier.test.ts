@@ -55,7 +55,7 @@ import {
     phaseLine,
 } from '@/features/ai/server/agentOperationNotifier';
 import { alertCopyFor } from '@/features/ai/server/agentAlertCopy';
-import { asText } from '@/features/ai/server/mcpToolResult';
+import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
 import { reportHandBack } from '@/core/utils/agentPhaseChannel';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -214,6 +214,16 @@ describe('createAgentOperationNotifier', () => {
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
             'Agent · Republishing the storefront is waiting on you: Sign in to GitHub.'
         );
+        expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
+    });
+
+    it('says nothing when the call only asked the agent something', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('reset_datapack', async () => ({ ...asText({ error: 'You changed 1 thing.', code: 'CHANGES_NEED_ANSWER' }), isError: true }));
+        await notifier('reset_datapack', async () => ({ ...asRawText('reset_datapack requires confirm:true to proceed.'), isError: true }));
+
+        expect(mockShowWarningMessage).not.toHaveBeenCalled();
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
 

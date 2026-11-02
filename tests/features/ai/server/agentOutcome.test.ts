@@ -35,6 +35,28 @@ describe('outcomeOf', () => {
         expect(outcomeOf(result)).toEqual({ kind: 'needsUser', text: 'Install the AEM Code Sync app' });
     });
 
+    // Live 2026-11-02: both reached the SC as "Resetting … failed", the second with the sentence
+    // meant for the agent in it. Nothing had happened: the agent was being asked something.
+    it('reads a request for confirmation as a question to the agent, not a failure', () => {
+        const prose = asRawText('reset_datapack requires confirm:true to proceed.', { isError: true });
+        const json = asText({ success: false, error: 'create_project requires confirm:true — it installs dependencies.' });
+
+        expect(outcomeOf({ ...prose, isError: true })).toEqual({ kind: 'askedAgent' });
+        expect(outcomeOf({ ...json, isError: true })).toEqual({ kind: 'askedAgent' });
+    });
+
+    it('reads a removal waiting on what to do about changes as a question to the agent', () => {
+        const result = asText({ error: 'You changed 1 thing. Nothing was removed.', code: 'CHANGES_NEED_ANSWER' });
+
+        expect(outcomeOf({ ...result, isError: true })).toEqual({ kind: 'askedAgent' });
+    });
+
+    it('CONTROL: a failure that merely mentions confirming is still a failure', () => {
+        const result = asText({ error: 'Commerce refused the order confirmation' });
+
+        expect(outcomeOf({ ...result, isError: true })).toEqual({ kind: 'failed', text: 'Commerce refused the order confirmation' });
+    });
+
     it('reads a failed answer as a failure, with its own reason', () => {
         const result = asText({ success: false, error: 'Mesh ID mismatch' });
 
