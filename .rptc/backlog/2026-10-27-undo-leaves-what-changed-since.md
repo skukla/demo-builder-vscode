@@ -63,3 +63,4 @@ repo (detach). Closes when both have landed.
 ## Shipped so far
 
 - 2026-10-29  feat(app-builder): setup-guide undos keep what the SC changed since (datapack step 06) (`4cadd9184`)
+- 2026-11-02  feat(data-installer): Clear demo data leaves nothing only the chosen stores use (`c8556c19f`)
