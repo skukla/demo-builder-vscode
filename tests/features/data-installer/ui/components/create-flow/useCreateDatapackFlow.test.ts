@@ -106,11 +106,14 @@ describe('the store route', () => {
         expect(result.current.packType).toBe('commerce');
     });
 
-    it('never waits the whole dialog on a kind', async () => {
+    it('waits for the first kind, and never again for another', async () => {
         const { result, step } = await onThePicks();
+        expect(result.current.waiting).toBe(true);
 
-        await step(() => result.current.store.open('products'));
+        await step(() => result.current.store.answered('products', PAGE));
+        expect(result.current.waiting).toBe(false);
 
+        await step(() => result.current.store.open('cart_rules'));
         expect(result.current.waiting).toBe(false);
     });
 

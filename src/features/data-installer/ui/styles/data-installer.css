@@ -342,17 +342,6 @@
 }
 }
 
-/* Label and bulk toggle sit TOGETHER on the left. They used to be pushed apart
-   by space-between, which at the wide modal width left the toggle a screen away
-   from the heading it acts on — easy to miss entirely. */
-@layer theme {
-.datapack-import-types-head {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-}
-
 /* The data-type checkbox list, shared by BOTH modals — import and export.
 
    It was two classes. The export copy set minmax(420px, 1fr), sized back when a

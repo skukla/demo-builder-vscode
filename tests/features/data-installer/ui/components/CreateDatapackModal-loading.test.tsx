@@ -51,7 +51,7 @@ describe('before the type list arrives', () => {
         renderToTheTypes(types);
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Select all' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: 'Select all' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
     });
 

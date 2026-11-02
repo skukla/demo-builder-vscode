@@ -45,14 +45,48 @@ async function open(props: Partial<React.ComponentProps<typeof SaveFromStoreModa
 
 beforeEach(() => mockRequest.mockReset());
 
-describe('while the counts are being read', () => {
-    it('shows every row at once, clickable, with only the items pane waiting', async () => {
+describe('before both columns are ready', () => {
+    const noRows = () => screen.getAllByRole('button').filter((b) => b.classList.contains('datapack-picks-kind'));
+
+    it('shows only the wait while the counts are read, and reads no list yet', async () => {
         mockRequest.mockImplementation(() => new Promise(() => undefined));
         await open();
 
+        expect(noRows()).toHaveLength(0);
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        expect(callsOf(LIST)).toHaveLength(0);
+    });
+
+    it('keeps waiting for the first list once the counts are in', async () => {
+        mockRequest.mockImplementation((type: string) => (type === COUNT ? Promise.resolve(counted({ products: 2 })) : new Promise(() => undefined)));
+        await open();
+
+        expect(noRows()).toHaveLength(0);
+        expect(callsOf(LIST).map((c) => c[1])).toEqual([{ dataType: 'products' }]);
+    });
+
+    it('shows both columns together, every row in its final state', async () => {
+        answer(counted({ products: 2, giftcards: 0 }));
+        await open();
+
         expect(rows()).toHaveLength(PICKABLE_KINDS.length);
-        rows().forEach((r) => expect(r).toBeEnabled());
-        expect(screen.getByRole('progressbar', { name: /Loading the store's products/ })).toBeInTheDocument();
+        expect(row('Gift cards')).toBeDisabled();
+        expect(screen.getByRole('checkbox', { name: /VR Rack/ })).toBeInTheDocument();
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+
+    it('never goes back to waiting the whole dialog when another kind is opened', async () => {
+        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
+            if (type === COUNT) return Promise.resolve(counted({ products: 2 }));
+            return payload?.dataType === 'products' ? Promise.resolve({ success: true, data: PRODUCTS }) : new Promise(() => undefined);
+        });
+        await open();
+
+        await press(row('Customers'));
+
+        expect(rows()).toHaveLength(PICKABLE_KINDS.length);
+        expect(screen.getByRole('progressbar', { name: /Loading the store's customers/ })).toBeInTheDocument();
     });
 });
 

@@ -147,11 +147,13 @@ describe('selecting the items', () => {
         expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'], cart_rules: ['7'] });
     });
 
-    it('ticks every item the filter shows with Select all', async () => {
+    it('ticks every item the filter shows with Select all, showing a dash for some', async () => {
         answer({ products: PRODUCTS });
         const onSave = await open();
+        await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
+        expect(screen.getByRole('checkbox', { name: 'Select all' })).toBePartiallyChecked();
 
-        await press(button('Select all'));
+        await press(screen.getByRole('checkbox', { name: 'Select all' }));
         await press(button('Save'));
 
         expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'] });
@@ -162,15 +164,16 @@ describe('selecting the items', () => {
         answer({ products: { items, totalCount: 1284, excludedCount: 0, inPackCount: 0 } });
         await open();
 
-        await press(button('Select all'));
+        await press(screen.getByRole('checkbox', { name: 'Select all' }));
 
         expect(row('Products')).toHaveTextContent('1,284 selected');
     });
 
     it('reads with a silent spinner, keeping the rows and Save, so a slow read costs nothing', async () => {
-        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) =>
-            payload?.dataType === 'products' ? Promise.resolve({ success: true, data: PRODUCTS }) : new Promise(() => undefined),
-        );
+        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
+            if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: {} });
+            return payload?.dataType === 'products' ? Promise.resolve({ success: true, data: PRODUCTS }) : new Promise(() => undefined);
+        });
         await open();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
 
@@ -187,12 +190,13 @@ describe('selecting the items', () => {
 
     it("does not take a late answer for another kind's", async () => {
         const late: { resolve?: (value: unknown) => void } = {};
-        mockRequest.mockImplementation((_type: string, payload?: { dataType?: string }) =>
-            payload?.dataType === 'products'
-                ? new Promise((resolve) => { late.resolve = resolve; })
-                : Promise.resolve({ success: true, data: RULES }),
-        );
+        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
+            if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: {} });
+            if (payload?.dataType === 'giftcards') return new Promise((resolve) => { late.resolve = resolve; });
+            return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : RULES });
+        });
         await open();
+        await press(row('Gift cards'));
         await press(row('Cart rules'));
 
         late.resolve?.({ success: true, data: PRODUCTS });
@@ -230,20 +234,20 @@ describe('a kind with nothing to select', () => {
 });
 
 describe('a read that fails', () => {
-    /** The first list read is refused; the counts, read before it, are not. */
-    function refuseFirst() {
+    /** The products list is refused until `recovered` is set; the counts and other lists are not. */
+    function refuseProducts() {
         const answering = mockRequest.getMockImplementation();
-        let refused = false;
+        const state = { recovered: false };
         mockRequest.mockImplementation(async (type: string, payload?: { dataType?: string }) => {
-            if (type !== 'list-datapack-export-items' || refused) return answering?.(type, payload);
-            refused = true;
+            if (type !== 'list-datapack-export-items' || payload?.dataType !== 'products' || state.recovered) return answering?.(type, payload);
             return { success: false, error: 'The install target names no website.' };
         });
+        return state;
     }
 
     it('says why, in the colour of a failure, and leaves the row clickable', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
-        refuseFirst();
+        refuseProducts();
         await open();
 
         const line = screen.getByText("Couldn't load products: The install target names no website.");
@@ -253,14 +257,14 @@ describe('a read that fails', () => {
 
     it('reads again when the SC comes back to it', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
-        refuseFirst();
+        const products = refuseProducts();
         await open();
 
         await press(row('Cart rules'));
+        products.recovered = true;
         await press(row('Products'));
 
         expect(screen.getByRole('checkbox', { name: /VR Rack/ })).toBeInTheDocument();
-        expect(listCalls().filter((c) => c.dataType === 'products')).toHaveLength(2);
     });
 });
 

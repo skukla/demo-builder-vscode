@@ -11,7 +11,7 @@
 
 import React, { useMemo, useState } from 'react';
 import type { StoreItem } from '../../pickableKinds';
-import { SelectAllToggle } from './SelectAllToggle';
+import { SelectAllRow } from './SelectAllRow';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 
@@ -29,7 +29,7 @@ export interface StoreItemChecklistProps {
     onChange: (picked: string[]) => void;
 }
 
-/** The items, searchable, each a checkbox; Select all ticks what the search shows. */
+/** The items, searchable, each a checkbox; Select all stays above them and ticks what the search shows. */
 export function StoreItemChecklist({ items, nouns, picked, onChange }: StoreItemChecklistProps): React.ReactElement {
     const [query, setQuery] = useState('');
     const shown = useMemo(() => items.filter((item) => matches(item, query)), [items, query]);
@@ -52,12 +52,8 @@ export function StoreItemChecklist({ items, nouns, picked, onChange }: StoreItem
                 itemNounPlural={nouns[1]}
                 hasLoadedOnce
                 alwaysShowCount
-                countTrailing={
-                    shown.length > 0 ? (
-                        <SelectAllToggle allSelected={allShown} onToggle={toggleShown} />
-                    ) : null
-                }
             />
+            {shown.length > 0 ? <SelectAllRow all={allShown} some={shown.some((item) => ticked.has(item.id))} onToggle={toggleShown} /> : null}
             <div className="datapack-pick-rows">
                 {shown.map((item) => (
                     <CheckboxRow key={item.id} label={item.displayName} detail={item.detail} isSelected={ticked.has(item.id)} onChange={() => toggle(item.id)} />

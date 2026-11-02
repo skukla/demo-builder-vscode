@@ -166,7 +166,7 @@ describe('choosing types', () => {
 
     it('drops a type again when it is taken away', async () => {
         await renderExport();
-        await press(button('Select all'));
+        await press(screen.getByRole('checkbox', { name: 'Select all' }));
         await press(check('Categories'));
         await press(button('Continue'));
         await fillIdentity('captured-pack', 'v1');
@@ -176,15 +176,15 @@ describe('choosing types', () => {
         expect(exportCall()).toMatchObject({ dataTypes: ['attribute_sets'] });
     });
 
-    it('Select all ticks every data type, and becomes Clear all', async () => {
+    it('Select all ticks every data type, and unticks them again', async () => {
         await renderExport();
-        await press(button('Select all'));
+        await press(screen.getByRole('checkbox', { name: 'Select all' }));
 
         expect(check('Attribute sets')).toBeChecked();
         expect(check('Categories')).toBeChecked();
         expect(isOff('Continue')).toBe(false);
 
-        await press(button('Clear all'));
+        await press(screen.getByRole('checkbox', { name: 'Select all' }));
 
         expect(check('Attribute sets')).not.toBeChecked();
         expect(check('Categories')).not.toBeChecked();
@@ -195,7 +195,7 @@ describe('choosing types', () => {
     /** Selecting all must send CODES: the labels are presentation only. */
     it('sends the codes it selected, never the names it showed', async () => {
         await renderExport();
-        await press(button('Select all'));
+        await press(screen.getByRole('checkbox', { name: 'Select all' }));
         await press(button('Continue'));
         await fillIdentity('captured-pack', 'v1');
         await press(button('Export'));
@@ -209,7 +209,8 @@ describe('choosing types', () => {
         withService({ 'list-datapack-data-types': { success: true, data: { mode: 'export', dataTypes: ['attribute_sets', '', 'categories'] } } });
         await renderExport();
 
-        expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+        // The two real types, and Select all.
+        expect(screen.getAllByRole('checkbox')).toHaveLength(3);
     });
 
     it('keeps what was chosen through Back and forward, and reads the list once', async () => {
@@ -238,7 +239,7 @@ describe('before the list arrives, and when it cannot', () => {
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
         expect(screen.queryByText(/Reading|Loading/)).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Select all' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: 'Select all' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
         expect(button('Cancel')).toBeInTheDocument();
     });

@@ -1,8 +1,11 @@
 /**
- * One kind's items to pick, read when first opened (`list-datapack-export-items`, less what the pack
- * being saved holds). The read belongs to this screen: the dialog keys it by kind, so an answer
- * arriving after the SC has left is dropped rather than taken for another kind's. Its answer goes up
- * to the flow, which keeps it, so the kind's row can say what it found.
+ * One kind's items to select, read when first opened (`list-datapack-export-items`, less what the
+ * pack being saved holds). The read belongs to whoever shows the kind: each is keyed by kind, so an
+ * answer arriving after the SC has moved on is dropped rather than taken for another kind's. Its
+ * answer goes up to the flow, which keeps it, so the kind's row can say what it found.
+ *
+ * `FirstKindRead` is the same read with nothing on screen: the dialog waits for the first kind's
+ * list, so both columns appear together, and `Modal`'s wait does not mount the body.
  *
  * @module features/data-installer/ui/components/create-flow/stages/StoreItemsStage
  */
@@ -24,7 +27,9 @@ export interface StoreItemsStageProps {
     onAnswered: (kind: PickableKind, page: StoreItemPage | null) => void;
 }
 
-export function StoreItemsStage({ kind, pack, answered, picked, onChange, onAnswered }: StoreItemsStageProps): React.ReactElement {
+type KindReadArgs = Pick<StoreItemsStageProps, 'kind' | 'pack' | 'answered' | 'onAnswered'>;
+
+function useKindRead({ kind, pack, answered, onAnswered }: KindReadArgs) {
     const { load, value, failure, settled } = useDataInstallerRequest<StoreItemPage>('list-datapack-export-items');
     const needsRead = answered === undefined;
 
@@ -36,12 +41,23 @@ export function StoreItemsStage({ kind, pack, answered, picked, onChange, onAnsw
         if (settled) onAnswered(kind, value);
     }, [settled, value, kind, onAnswered]);
 
+    return { value, failure, loading: needsRead && !settled };
+}
+
+/** The first kind's read while the dialog waits for it. Draws nothing. */
+export function FirstKindRead(props: Omit<KindReadArgs, 'answered'>): null {
+    useKindRead(props);
+    return null;
+}
+
+export function StoreItemsStage({ kind, pack, answered, picked, onChange, onAnswered }: StoreItemsStageProps): React.ReactElement {
+    const { value, failure, loading } = useKindRead({ kind, pack, answered, onAnswered });
     return (
         <StoreKindItems
             kind={kind}
             page={answered ?? value}
             failure={failure?.message}
-            loading={needsRead && !settled}
+            loading={loading}
             picked={picked}
             onChange={onChange}
         />

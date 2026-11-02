@@ -7,7 +7,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { SelectAllToggle } from '../../SelectAllToggle';
+import { SelectAllRow } from '../../SelectAllRow';
 import type { TypeChoices } from '../useExportAnswers';
 import { CheckRows, typeOptions } from './CheckRows';
 
@@ -18,10 +18,8 @@ export function ServiceTypesStage({ types }: { types: TypeChoices }): React.Reac
     }
     return (
         <>
-            <div className="datapack-import-types-head">
-                <span className="datapack-import-label">Data types</span>
-                {options.length > 0 ? <SelectAllToggle allSelected={types.allSelected} onToggle={types.onToggleAll} /> : null}
-            </div>
+            <span className="datapack-import-label">Data types</span>
+            {options.length > 0 ? <SelectAllRow all={types.allSelected} some={types.selected.length > 0} onToggle={types.onToggleAll} /> : null}
             <CheckRows options={options} picked={types.selected} onToggle={types.onToggle} />
         </>
     );

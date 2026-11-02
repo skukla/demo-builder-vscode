@@ -155,7 +155,7 @@ describe('ImportDatapackModal — decisions', () => {
             );
             renderModal();
             await awaitForm();
-            await press(screen.getByRole('button', { name: /select all/i }));
+            await press(screen.getByRole('checkbox', { name: 'Select all' }));
 
             const before = statusCalls();
             await press(screen.getByRole('button', { name: /^import$/i }));
@@ -287,7 +287,7 @@ describe('ImportDatapackModal — decisions', () => {
             hang('reset-datapack');
             renderModal();
             await awaitForm();
-            await press(screen.getByRole('button', { name: /select all/i }));
+            await press(screen.getByRole('checkbox', { name: 'Select all' }));
             await press(screen.getByRole('button', { name: /^remove data/i }));
 
             await press(screen.getByRole('button', { name: /^remove$/i }));
@@ -402,16 +402,15 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal({ availableTypes });
             await settle();
 
-            expect(screen.queryByRole('button', { name: /select all/i })).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /clear all/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Select all' })).not.toBeInTheDocument();
         });
 
         it('clearing everything leaves the import unstartable', async () => {
             renderModal();
             await awaitForm();
-            await press(screen.getByRole('button', { name: /select all/i }));
+            await press(screen.getByRole('checkbox', { name: 'Select all' }));
 
-            await press(screen.getByRole('button', { name: /clear all/i }));
+            await press(screen.getByRole('checkbox', { name: 'Select all' }));
 
             expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
                 'aria-disabled',

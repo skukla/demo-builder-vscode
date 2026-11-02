@@ -62,7 +62,8 @@ export interface CreateDatapackFlow {
 }
 
 /** What the dialog waits for on a stage. */
-function isWaiting(stage: DatapackFlowStage, answers: ExportAnswers): boolean {
+function isWaiting(stage: DatapackFlowStage, answers: ExportAnswers, store: StorePicksState): boolean {
+    if (stage === 'store-picks') return !store.ready;
     if (stage === 'service-types') return answers.types.loading;
     return stage === 'aco-views' && answers.aco.loadingViews;
 }
@@ -108,6 +109,6 @@ export function useCreateDatapackFlow({ engine, startsAtPicks = false, pack, onS
         },
         store,
         answers,
-        waiting: isWaiting(stage, answers),
+        waiting: isWaiting(stage, answers, store),
     };
 }

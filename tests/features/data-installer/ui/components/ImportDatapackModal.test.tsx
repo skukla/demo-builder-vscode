@@ -99,25 +99,25 @@ describe('ImportDatapackModal', () => {
             renderModal();
             await awaitForm();
 
-            expect(screen.getByRole('button', { name: /select all/i })).toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: 'Select all' })).toBeInTheDocument();
         });
 
         it('selects every available type at once', async () => {
             renderModal();
             await awaitForm();
 
-            await press(screen.getByRole('button', { name: /select all/i }));
+            await press(screen.getByRole('checkbox', { name: 'Select all' }));
 
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
             expect(screen.getByRole('checkbox', { name: 'Products' })).toBeChecked();
         });
 
-        it('turns into a clear-all once everything is selected', async () => {
+        it('unticks everything when pressed again', async () => {
             renderModal();
             await awaitForm();
 
-            await press(screen.getByRole('button', { name: /select all/i }));
-            await press(screen.getByRole('button', { name: /clear all/i }));
+            await press(screen.getByRole('checkbox', { name: 'Select all' }));
+            await press(screen.getByRole('checkbox', { name: 'Select all' }));
 
             expect(screen.getByRole('checkbox', { name: 'Categories' })).not.toBeChecked();
             expect(screen.getByRole('checkbox', { name: 'Products' })).not.toBeChecked();
@@ -127,7 +127,7 @@ describe('ImportDatapackModal', () => {
             renderModal();
             await awaitForm();
 
-            await press(screen.getByRole('button', { name: /select all/i }));
+            await press(screen.getByRole('checkbox', { name: 'Select all' }));
             await press(startButton());
 
             await waitFor(() =>

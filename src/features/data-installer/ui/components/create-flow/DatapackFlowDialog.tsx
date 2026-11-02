@@ -7,7 +7,8 @@
  *
  * A dialog's size never animates, so every form screen has the one width, and a result takes the
  * small one with its outcome as the title. The first read of a list the screen is made of is
- * `Modal`'s wait. A kind's items read inside their own pane, with the kinds and the buttons still
+ * `Modal`'s wait, the store's counts and first kind's list included, so the two columns appear
+ * together. A later kind's items read inside their own pane, with the kinds and the buttons still
  * on, since a slow read must not cost what is already selected.
  *
  * @module features/data-installer/ui/components/create-flow/DatapackFlowDialog
@@ -24,6 +25,7 @@ import { AcoViewsStage } from './stages/AcoViewsStage';
 import { PackNameStage } from './stages/PackNameStage';
 import { PackTypeStage } from './stages/PackTypeStage';
 import { ServiceTypesStage } from './stages/ServiceTypesStage';
+import { FirstKindRead } from './stages/StoreItemsStage';
 import { StorePicksStage } from './stages/StorePicksStage';
 import { type CreateDatapackFlow, useCreateDatapackFlow } from './useCreateDatapackFlow';
 import { type ActionButton, Modal, type ModalProps, type ModalWait } from '@/core/ui/components/ui/Modal';
@@ -69,7 +71,10 @@ function StageBody({ flow, engine, pack }: Pick<DatapackFlowDialogProps, 'engine
 export function DatapackFlowDialog({ title, engine, startsAtPicks, pack, onClose, onSave }: DatapackFlowDialogProps): React.ReactElement {
     const flow = useCreateDatapackFlow({ engine, startsAtPicks, pack, onSave });
     const { result, savable } = flow.answers;
+    const { firstRead } = flow.store;
     return (
+        <>
+        {firstRead ? <FirstKindRead key={firstRead} kind={firstRead} pack={pack} onAnswered={flow.store.answered} /> : null}
         <DialogContainer onDismiss={onClose}>
             <Modal
                 {...frameOf(result, title)}
@@ -88,5 +93,6 @@ export function DatapackFlowDialog({ title, engine, startsAtPicks, pack, onClose
                 </div>
             </Modal>
         </DialogContainer>
+        </>
     );
 }

@@ -17,7 +17,7 @@ import React from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { TargetWebsite } from '../hooks/useImportScopes';
 import { blockedBy, missingDependencies } from '../importDependencies';
-import { SelectAllToggle } from './SelectAllToggle';
+import { SelectAllRow } from './SelectAllRow';
 
 /**
  * Dependencies the selected types need that this datapack does not contain.
@@ -199,16 +199,11 @@ export function ImportForm({
                 onStoreChange={onStoreChange}
             />
             <div className="datapack-import-types">
-                {/* Beside the label, not pushed to the far right: at the wide
-                    modal width it sat a screen away from the heading it acts on
-                    and was easy to miss entirely. */}
-                <div className="datapack-import-types-head">
-                    <span className="datapack-import-label">Data</span>
-                    {/* Nothing to select "all" of in a one-type pack. */}
-                    {availableTypes.length > 1 ? (
-                        <SelectAllToggle allSelected={allSelected} onToggle={onToggleAll} />
-                    ) : null}
-                </div>
+                <span className="datapack-import-label">Data</span>
+                {/* Nothing to select "all" of in a one-type pack. */}
+                {availableTypes.length > 1 ? (
+                    <SelectAllRow all={allSelected} some={selected.length > 0} onToggle={onToggleAll} />
+                ) : null}
                 {/* The grid is shared with the export modal — see
                     .datapack-type-grid for why they are one class. */}
                 <div className="datapack-type-grid">
