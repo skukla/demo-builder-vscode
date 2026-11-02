@@ -125,7 +125,7 @@ describe('IntegrationsGrid — Add another ERP', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: 'Remove Brand B ERP' });
-        expect(dialog).toHaveTextContent('Its records will be deleted, and Acme ERP Integration stops sending it orders.');
+        const dialog = screen.getByRole('dialog', { name: 'Remove Brand B ERP?' });
+        expect(dialog).toHaveTextContent('deletes its records, and Acme ERP Integration stops sending it orders');
     });
 });

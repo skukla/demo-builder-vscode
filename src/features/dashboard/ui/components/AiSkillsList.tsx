@@ -32,19 +32,12 @@ import { Flex, Text } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
 import { BUNDLE_LABELS } from './aiSurfaceNames';
 import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
-import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { SkillInventoryEntry, SkillSource } from '@/types/ai';
 
 export interface AiSkillsListProps {
     skills: SkillInventoryEntry[];
     /** True when the skill inspector errored — list is replaced by a warning row. */
     hasError?: boolean;
-    /**
-     * The verify has not produced a result yet. Distinct from an empty list:
-     * without it, \"not asked yet\" rendered as \"none exist\" and told the user to
-     * regenerate files nothing had looked at.
-     */
-    isLoading?: boolean;
     /**
      * Tool-driving skills this project qualifies for but does not have, with
      * why. Rendered as muted rows AFTER the installed groups — an absence with
@@ -204,7 +197,6 @@ function groupLabelOf(skill: SkillInventoryEntry): string {
 export function AiSkillsList({
     skills,
     hasError = false,
-    isLoading = false,
     gatedSkills,
     flat = false,
 }: AiSkillsListProps): React.ReactElement {
@@ -244,17 +236,6 @@ export function AiSkillsList({
                 <Text UNSAFE_className="text-gray-700">
                     Couldn&apos;t read the project&apos;s skills. Try Regenerate AI files.
                 </Text>
-            </Flex>
-        );
-    }
-
-    // Error first: an inspector failure is a settled answer, so "checking" would
-    // be a lie. Loading second: only claim emptiness once something has looked.
-    if (isLoading) {
-        return (
-            <Flex gap="size-100" alignItems="center" data-testid="ai-skills-loading">
-                <Spinner size="S" aria-label="Checking" />
-                <Text UNSAFE_className="text-gray-700">Checking the project's skills</Text>
             </Flex>
         );
     }

@@ -341,7 +341,7 @@ describe('handleSetProjectDestination — telegraph and guards', () => {
     });
 
     // The destination NAMES itself in the title ("Changing destination to New
-    // Project · Stage"), which is fixed for the whole run; the step says what is
+    // Project, Stage"), which is fixed for the whole run; the step says what is
     // happening now. It used to be repeated in both (PL-59 wording).
     it('names the destination in its title, and the work in its step', async () => {
         const { context } = makeDestinationContext();

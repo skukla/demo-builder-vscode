@@ -13,19 +13,12 @@ import { Flex, Text } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
 import { SERVER_LABELS } from './aiSurfaceNames';
 import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
-import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { McpInventoryEntry } from '@/types/ai';
 
 export interface AiMcpsListProps {
     mcps: McpInventoryEntry[];
     /** True when the MCP inspector errored — list is replaced by a warning row. */
     hasError?: boolean;
-    /**
-     * The verify has not produced a result yet. Distinct from an empty list:
-     * without it, \"not asked yet\" rendered as \"none exist\" and told the user to
-     * regenerate files nothing had looked at.
-     */
-    isLoading?: boolean;
 }
 
 /**
@@ -51,7 +44,6 @@ function summarize(entry: McpInventoryEntry): string {
 export function AiMcpsList({
     mcps,
     hasError = false,
-    isLoading = false,
 }: AiMcpsListProps): React.ReactElement {
     // Sort by the DISPLAYED label, not the id — the list renders labels.
     const sorted = useMemo(
@@ -66,17 +58,6 @@ export function AiMcpsList({
                 <Text UNSAFE_className="text-gray-700">
                     Couldn&apos;t read the project&apos;s MCP servers. Try Regenerate AI files.
                 </Text>
-            </Flex>
-        );
-    }
-
-    // Error first: an inspector failure is a settled answer, so "checking" would
-    // be a lie. Loading second: only claim emptiness once something has looked.
-    if (isLoading) {
-        return (
-            <Flex gap="size-100" alignItems="center" data-testid="ai-mcps-loading">
-                <Spinner size="S" aria-label="Checking" />
-                <Text UNSAFE_className="text-gray-700">Checking the project's MCP servers</Text>
             </Flex>
         );
     }

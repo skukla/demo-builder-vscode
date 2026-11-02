@@ -1,12 +1,11 @@
 /**
- * removalConsequence — the Remove dialog's second line for the mesh: plain
- * "loses its endpoint" by default, and, when the project's demo needs the mesh,
- * that its storefront stops working until the mesh is added again.
+ * removalConsequence — what the Remove dialog adds after its first sentence: for the mesh, plain "loses
+ * its endpoint" by default, and, when the project's demo needs the mesh, that its storefront
+ * stops working; for the ERP integration and its ERPs, what goes with them.
  */
 
 import { deriveMeshCard } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
 import { removalConsequence } from '@/features/dashboard/ui/components/integrations/removalConsequence';
-import { MESH_NEEDED_NOTE } from '@/features/components/services/demoPackageLoader';
 
 const meshCard = deriveMeshCard({ color: 'green', text: 'Deployed' }, 'deployed', undefined, false, 'eds-commerce-mesh');
 
@@ -16,7 +15,9 @@ describe('removalConsequence — the mesh', () => {
     });
 
     it("says the demo stops working when the project's demo needs the mesh", () => {
-        expect(removalConsequence({ ...meshCard, neededByDemo: true })).toBe(MESH_NEEDED_NOTE);
+        expect(removalConsequence({ ...meshCard, neededByDemo: true })).toBe(
+            "This demo needs the API Mesh, and without it the storefront won't work.",
+        );
     });
 });
 
@@ -28,12 +29,20 @@ describe('removalConsequence — the ERP integration and its ERPs', () => {
 
     it('says the integration undoes its store setup in Commerce first', () => {
         expect(removalConsequence(base)).toContain(
-            'Its store setup is undone in Commerce first: the ERP tags on products, erp_owner on the attribute sets Demo Builder added it to, and what the demo setup applied.',
+            'It first undoes its store setup in Commerce: the ERP tags on products, erp_owner on the attribute sets Demo Builder added it to, and what the demo setup applied.',
         );
     });
 
     it("says an ERP clears its products' tags", () => {
-        expect(removalConsequence({ ...base, isSystem: true })).toContain("Its products' ERP tags are cleared in Commerce first.");
+        expect(removalConsequence({ ...base, isSystem: true })).toContain("It first clears its products' ERP tags in Commerce.");
+    });
+
+    it('says each consequence as a short sentence of its own', () => {
+        const sentences = removalConsequence({ ...base, installation: { label: 'Installed', failed: false } }) ?? '';
+        expect(sentences).toMatch(/^[A-Z]/);
+        expect(sentences).not.toMatch(/; /);
+        expect(sentences).toContain('It also removes Justrite ERP, with its records.');
+        expect(sentences).toContain('It does not clear a listing under Apps > App Management in Commerce Admin. If you associated it there, unassociate it first.');
     });
 
     it('CONTROL: says nothing of it for an integration with no ERP', () => {

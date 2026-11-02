@@ -57,19 +57,19 @@ it('renders its table, headings and rows, through the real Spectrum package', ()
     warn.mockRestore();
 });
 
-// While the products are read the table has no rows and says so where they will be, through
-// Spectrum's renderEmptyState, which the mock draws however it is used.
-it('renders the reading frame through the real Spectrum package', () => {
+// No row matches: the table says so where they would be, through Spectrum's renderEmptyState,
+// which the mock draws however it is used.
+it('renders its empty table through the real Spectrum package', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     const empty: ErpAssignOptions = { ...STORE, categories: [], setsWithoutOwner: [], products: [], owners: {}, names: {} };
 
     render(
         <Provider theme={defaultTheme}>
-            <AssignProductList options={empty} value="" selected={new Set()} onChange={() => undefined} loading />
+            <AssignProductList options={empty} value="" selected={new Set()} onChange={() => undefined} />
         </Provider>,
     );
 
     expect(screen.getByRole('grid', { name: 'Products' })).toBeInTheDocument();
-    expect(screen.getByText(LIST_COPY.reading)).toBeInTheDocument();
+    expect(screen.getByText(LIST_COPY.nothing)).toBeInTheDocument();
     warn.mockRestore();
 });

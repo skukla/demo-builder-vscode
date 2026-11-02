@@ -92,11 +92,25 @@ describe('ManageApisModal', () => {
     });
 
     describe('list fetch states', () => {
-        it('shows a compact loading state while the fetch is pending', () => {
+        // From the first frame: the state mounts per opening, so nothing is drawn before the wait
+        // and the wait keeps no bigger box (the first frame used to set it, 672px).
+        it('is the wait, with no words, while the fetch is pending', () => {
             mockRequest(() => new Promise(() => {}));
             renderModal();
 
-            expect(screen.getByText(/loading adobe apis/i)).toBeInTheDocument();
+            expect(screen.getByRole('progressbar')).toBeInTheDocument();
+            expect(screen.queryByText(/loading adobe apis/i)).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^apply/i })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        });
+
+        it('names the integration in the title, not in a line under it', async () => {
+            mockRequest(() => Promise.resolve({ success: true, data: { apis: ORG_APIS } }));
+            renderModal();
+            await flush();
+
+            expect(screen.getByText('Manage APIs for erp-sync')).toBeInTheDocument();
+            expect(screen.queryByText(/Manage Adobe API access/)).not.toBeInTheDocument();
         });
 
         it('shows an inline error when the fetch reports failure — modal stays open', async () => {
@@ -315,30 +329,25 @@ describe('ManageApisModal', () => {
             fireEvent.click(applyButton());
             await flush();
 
-            expect(screen.getByText(/needs a product profile/i)).toBeInTheDocument();
+            // The title is the outcome, in red; the reason is plain body text over the list.
+            expect(screen.getByText("Couldn't update API access")).toBeInTheDocument();
+            expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+            expect(screen.getByText(/needs a product profile/i)).not.toHaveClass('text-negative');
+            expect(screen.getByRole('checkbox', { name: /firefly/i })).toBeInTheDocument();
             expect(onClose).not.toHaveBeenCalled();
         });
     });
 
-    // The loading/error views use the house centered treatment (LoadingDisplay /
-    // StatusDisplay in a CenteredFeedbackContainer) rather than a small inline
-    // spinner, which collapsed this size-L modal to a sliver (reported 2026-07-31).
-    describe('loading and failure use the standard centered views', () => {
-        it('shows the centered loading view with the time expectation', async () => {
-            getClient().request.mockReturnValue(new Promise(() => {}));
-            renderModal();
-            await flush();
-
-            expect(screen.getByText('Loading Adobe APIs')).toBeInTheDocument();
-            expect(screen.getByText('The first load can take a few minutes')).toBeInTheDocument();
-        });
-
+    // A failed read is the title's outcome (dialog design rules), not a big icon in the body.
+    describe('a failed read', () => {
         it('offers a Retry on failure that re-fires the fetch', async () => {
             getClient().request.mockResolvedValue({ success: false, error: 'boom' });
             renderModal();
             await flush();
 
             expect(screen.getByText("Couldn't load Adobe APIs")).toBeInTheDocument();
+            expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+            expect(screen.getByText('boom')).toBeInTheDocument();
             const callsBefore = getClient().request.mock.calls.length;
 
             fireEvent.click(screen.getByRole('button', { name: /^retry$/i }));
@@ -363,6 +372,8 @@ describe('ManageApisModal', () => {
             await flush();
 
             expect(screen.getByText('Sign in to Adobe')).toBeInTheDocument();
+            expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+            expect(screen.getByText(/Adobe sign-in will open in your browser/)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument();
         });

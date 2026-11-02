@@ -9,8 +9,9 @@
  * the chosen one (owner, 2026-10-22: two described cards, an eyebrow and a
  * green checklist read as "too busy"). A link (`ShareLinkForm`), when the
  * colleague can reach your GitHub; a file (`ShareFileForm`), when they cannot.
- * The storefront is read once on open, behind the house spinner, before either
- * form shows.
+ * The storefront is read once on open, behind the Modal's wait, with no words,
+ * before either form shows. A storefront that could not be read is a note line
+ * where the link would be: the file still works.
  *
  * @module features/dashboard/ui/components/share/ShareModal
  */
@@ -20,12 +21,14 @@ import React, { useEffect, useState } from 'react';
 import { SHARE_COPY } from './shareCopy';
 import { ShareFileForm } from './ShareFileForm';
 import { ShareLinkForm } from './ShareLinkForm';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { DemoPackagePreview } from '@/types/webviewRequests';
 
 type ShareForm = 'link' | 'file';
+
+/** A dialog reading what it will show says nothing while it does. */
+const READING: ModalWait = {};
 
 /** A handler's answer: branch on `success` before reading anything else (webview-command-handler). */
 interface Answer<D> {
@@ -101,11 +104,7 @@ function LinkForm({ state }: { state: StorefrontState }): React.ReactElement {
     if (state.status === 'ready') {
         body = <ShareLinkForm preview={state.preview} />;
     } else if (state.status === 'failed') {
-        body = (
-            <InlineNotice tone="warning" title={SHARE_COPY.storefront} testId="share-link-failed">
-                {state.error}
-            </InlineNotice>
-        );
+        body = <p className="dialog-note" data-testid="share-link-failed">{SHARE_COPY.storefrontFailed} {state.error}</p>;
     } else {
         body = <p className="export-section-text">{SHARE_COPY.linkHeadless}</p>;
     }
@@ -126,7 +125,7 @@ function Journey({ isEds, onClose }: Omit<ShareModalProps, 'isOpen'>): React.Rea
             fitContent
             onClose={onClose}
             closeLabel="Close"
-            waiting={storefront.status === 'loading' ? { message: SHARE_COPY.looking, helperText: SHARE_COPY.lookingFor } : false}
+            waiting={storefront.status === 'loading' ? READING : false}
         >
             <div className="intflow-stage-body export-body">
                 <FormChoice form={form} onChange={setForm} />

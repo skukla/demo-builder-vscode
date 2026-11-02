@@ -174,8 +174,8 @@ export function ProjectDashboardScreen({
         handleRepublishContent,
     } = useDashboardOperations(displayName);
 
-    // Build subtitle from package/stack (e.g., "CitiSignal · Headless + PaaS")
-    const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(' · ') || undefined;
+    // Build subtitle from package/stack (e.g., "CitiSignal, Headless + PaaS")
+    const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(', ') || undefined;
 
     const isStartDisabled = isStartActionDisabled(isTransitioning, meshStatus, status || 'ready');
     // Only consulted while `isRunning` — the Stop tile is the Start tile

@@ -5,25 +5,30 @@
  * offers to end it now instead. A demo control, not an ERP setting: it left the ERP's own
  * Settings screen (owner, 2026-10-02).
  *
- * The core `Modal`, with its own wait while the ERP is read, a Spectrum `NumberField` for the
- * minutes, and the refusal line `IntegrationSettingsModal` uses. Hosts its own DialogContainer,
- * the house rule for a modal (tests/sop/modal-hosting.test.ts).
+ * The core `Modal`, with its wait while the ERP is read and a Spectrum `NumberField` for the
+ * minutes. A read or a control that did not go through is the title's outcome, in red, with the
+ * ERP's words under it. Hosts its own DialogContainer, the house rule for a modal
+ * (tests/sop/modal-hosting.test.ts).
  *
  * @module features/dashboard/ui/components/ErpDowntimeDialog
  */
 
-import { DialogContainer, Flex, NumberField, Text } from '@adobe/react-spectrum';
+import { DialogContainer, NumberField } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
-import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
+import { Modal, type ActionButton, type ModalWait } from '@/core/ui/components/ui/Modal';
 import {
     useErpDemoControls,
     type ErpDemoControlTarget,
+    type ErpDemoState,
 } from '@/features/dashboard/ui/hooks/useErpDemoControls';
 import { ERP_DOWNTIME_MINUTES } from '@/types/erpDemoControls';
 
 export type { ErpDemoControlTarget };
 
 const { min: MIN, max: MAX } = ERP_DOWNTIME_MINUTES;
+
+/** A dialog reading what it will show says nothing while it does. */
+const READING: ModalWait = {};
 
 function isWindowLength(minutes: number): boolean {
     return Number.isInteger(minutes) && minutes >= MIN && minutes <= MAX;
@@ -44,6 +49,13 @@ export function ErpDowntimeDialog({ target, onClose }: {
             {target && <DowntimeModal target={target} onClose={onClose} />}
         </DialogContainer>
     );
+}
+
+/** The title: the question it is open on, or what did not go through. */
+function titleOf(name: string, state: ErpDemoState | null, error: string | null): string {
+    if (!error) return `${name}: simulate downtime`;
+    if (!state) return `Couldn't read ${name}`;
+    return state.maintenance ? `Couldn't end downtime on ${name}` : `Couldn't start downtime on ${name}`;
 }
 
 /** How long, and start; or, while the ERP is down, end it. Mounted per opening. */
@@ -75,34 +87,35 @@ function DowntimeModal({ target, onClose }: {
 
     return (
         <Modal
-            title={`${target.name}: simulate downtime`}
+            title={titleOf(target.name, state, error)}
+            status={error ? 'error' : undefined}
             size="S"
             fitContent
             onClose={onClose}
-            actionButtons={[action]}
-            waiting={!state && busy ? { message: `Reading ${target.name}` } : false}
+            actionButtons={state ? [action] : []}
+            waiting={!state && busy ? READING : false}
         >
-            <Flex direction="column" gap="size-200">
-                <Text>
-                    A demo control: {target.name} answers every call as a real ERP does while it
-                    is down for maintenance, so orders wait and go through once it is back. It
-                    comes back by itself when the time is up.
-                </Text>
-                {running && <Text>{running.message}</Text>}
-                {running && <Text>End it now to bring {target.name} back.</Text>}
+            <div className="dialog-stack">
+                {error && <p className="dialog-line">{error}</p>}
+                {running && <p className="dialog-line">{running.message}</p>}
                 {state && !running && (
-                    <NumberField
-                        label="Minutes"
-                        value={minutes}
-                        onChange={setMinutes}
-                        minValue={MIN}
-                        maxValue={MAX}
-                        step={1}
-                        width="size-1600"
-                    />
+                    <>
+                        <p className="dialog-line">
+                            {target.name} answers every call as down for maintenance until the time
+                            is up, so orders wait and go through once it is back.
+                        </p>
+                        <NumberField
+                            label="Minutes"
+                            value={minutes}
+                            onChange={setMinutes}
+                            minValue={MIN}
+                            maxValue={MAX}
+                            step={1}
+                            width="size-1600"
+                        />
+                    </>
                 )}
-                {error && <Text UNSAFE_className="text-sm text-negative">{error}</Text>}
-            </Flex>
+            </div>
         </Modal>
     );
 }

@@ -3,54 +3,21 @@
  * release test, 2026-10-22: a confirm said only that Demo Builder checks first; AB-82 moved it
  * from that confirm into the guide). Read from the demo setup's preview for that step as it is
  * shown.
- * The wait for the confirm in front of adding the integration lives here too.
  *
  * @module features/dashboard/ui/components/integrations/StepPlan
  */
 
 import React from 'react';
 import { usePreparationPreview } from './usePreparationPreview';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import type { PreparationStepReport } from '@/types/storePreparation';
 
 /** The words this file shows, in one place. */
 export const STEP_PREVIEW_COPY = {
     // "Checking …", as every other wait that reads before it acts says (owner, 2026-10-26).
     loading: 'Checking the store',
-    // Row 2 of the add's wait, which reads every step, as every house wait says what it is
-    // doing under its label (owner, 2026-10-26).
-    loadingAll: 'Reading each setup step from Commerce',
     nothing: 'Already done in the store: nothing to change.',
     willDo: 'Apply will',
-    noAnswer: "Couldn't read the store",
 };
-
-/**
- * While the preview is read, or why it could not be: the add's confirm shows it too.
- *
- * @param props.error - why the store could not be read, if it could not
- */
-export function PreviewWait({ error }: { error?: string }): React.ReactElement {
-    if (error) {
-        return (
-            <InlineNotice title={STEP_PREVIEW_COPY.noAnswer} testId="prepare-store-notice">
-                {error}
-            </InlineNotice>
-        );
-    }
-    // The house wait, centred, as every other modal waits (owner, 2026-10-26: a small
-    // spinner beside the words read as a different extension).
-    return (
-        <div data-testid="prepare-store-loading">
-            <LoadingDisplay
-                size="M" centered
-                message={STEP_PREVIEW_COPY.loading}
-                subMessage={STEP_PREVIEW_COPY.loadingAll}
-            />
-        </div>
-    );
-}
 
 /** "Add Test Warehouse" as it reads after "Apply will": lower-case first letter. */
 const lowerFirst = (text: string): string => text.charAt(0).toLowerCase() + text.slice(1);

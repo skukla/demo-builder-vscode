@@ -56,7 +56,9 @@ describe('ShareModal', () => {
 
     it('while the storefront is being read, the spinner is the whole body', () => {
         renderSharePending();
-        expect(screen.getByText('Checking the storefront')).toBeInTheDocument();
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        // A dialog reading what it will show says nothing (dialog design rules).
+        expect(screen.queryByText('Checking the storefront')).not.toBeInTheDocument();
         expect(screen.queryByTestId('share-form')).not.toBeInTheDocument();
         expect(screen.queryByTestId('share-link-form')).not.toBeInTheDocument();
     });
@@ -135,7 +137,9 @@ describe('ShareModal', () => {
             await click(SAVE_AND_COPY);
 
             expect(mockWriteText).not.toHaveBeenCalled();
-            expect(screen.getByTestId('share-error')).toHaveTextContent('GitHub refused the write.');
+            // A note line beside the button, not a box.
+            expect(screen.getByTestId('share-error')).toHaveTextContent("Couldn't prepare the link. GitHub refused the write.");
+            expect(screen.getByTestId('share-error')).toHaveClass('dialog-note');
             expect(button(SAVE_AND_COPY)).toBeInTheDocument();
         });
 
@@ -158,6 +162,8 @@ describe('ShareModal', () => {
             expect(screen.getByTestId('share-link-form')).toHaveTextContent('Before you send it');
             expect(screen.getByTestId('package-check-index')).toHaveTextContent('Republish, then save again.');
             expect(screen.queryByTestId('package-check-repository')).not.toBeInTheDocument();
+            // Sentences, not a list with dots.
+            expect(screen.getByTestId('share-link-form').querySelector('ul, li')).toBeNull();
         });
 
         it('says nothing when every check passes', async () => {
@@ -254,6 +260,7 @@ describe('ShareModal', () => {
             expect(screen.getByTestId('share-removed')).toHaveTextContent(
                 'The details are out of your repository and the card is off your Welcome step.',
             );
+            expect(screen.getByTestId('share-removed')).toHaveClass('dialog-note');
             expect(button(SAVE_AND_COPY)).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: 'Remove the details from my repository' })).not.toBeInTheDocument();
         });
@@ -281,6 +288,7 @@ describe('ShareModal', () => {
             expect(screen.getByTestId('export-saved')).toHaveTextContent(
                 'Saved setup and storefront (813 files) to /Users/steve/bodea-demo-bundle.zip',
             );
+            expect(screen.getByTestId('export-saved')).toHaveClass('dialog-note');
         });
 
         it('sends only the ticked parts and refuses none', async () => {

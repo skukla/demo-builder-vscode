@@ -110,6 +110,12 @@
     gap: 4px 24px;
 }
 
+/* Why the last regenerate failed, over the lists, with the title saying that it did. Two classes:
+   `.dialog-line` zeroes its margins in the same layer. */
+.dialog-line.ai-regen-error {
+    margin-bottom: 16px;
+}
+
 /* The one sentence saying which edited files Regenerate keeps (ADR-013). It
    sits under the scrolling lists, just above the footer's Regenerate button,
    because that is the only action it is about. */

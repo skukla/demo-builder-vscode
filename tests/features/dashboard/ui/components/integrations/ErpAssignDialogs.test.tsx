@@ -65,7 +65,8 @@ describe('ErpAssignDialogs', () => {
     it('confirms the undo, then starts it for the ERP with confirm', () => {
         const ops = renderDialogs();
         act(() => controls.confirmUndoAssignment(TARGET));
-        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.undoBody('Accuform ERP'))).toBeInTheDocument();
+        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.undoTitle('Accuform ERP'))).toBeInTheDocument();
+        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.undoBody)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: ERP_ASSIGN_DIALOG_COPY.undoAction }));
         expect(ops.start).toHaveBeenCalledWith({
             id: 'erp-integration',
@@ -89,6 +90,26 @@ describe('ErpAssignDialogs', () => {
             ['erp-integration', 'addErpOwnerToAttributeSets', { confirm: true }],
             ['erp-integration', 'removeErpOwnerFromAttributeSets', { confirm: true }],
         ]);
+    });
+
+    // Red is for a dangerous action: neither of these is one, and it was fixed in the component.
+    it('draws each as a question with Cancel, and the action blue, not red', () => {
+        renderDialogs();
+        act(() => controls.confirmUndoAssignment(TARGET));
+        const undo = screen.getByRole('button', { name: ERP_ASSIGN_DIALOG_COPY.undoAction });
+        expect(undo.className).toContain('modal-button-primary');
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        act(() => controls.changeSets('erp-integration', 'add'));
+        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.addSetsTitle)).toBeInTheDocument();
+        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.addSetsBody)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: ERP_ASSIGN_DIALOG_COPY.addSetsAction }).className).toContain('modal-button-primary');
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        act(() => controls.changeSets('erp-integration', 'remove'));
+        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.removeSetsTitle)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: ERP_ASSIGN_DIALOG_COPY.removeSetsAction }).className).toContain('modal-button-primary');
     });
 
     it("turns the add's offer into a button that opens the modal for the ERP it names", async () => {

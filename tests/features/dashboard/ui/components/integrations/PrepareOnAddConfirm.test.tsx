@@ -74,6 +74,28 @@ describe('the confirm in front of adding the ERP integration', () => {
         );
     });
 
+    it('asks in the title, amber, with Cancel, and says what it changes once', async () => {
+        renderDialog();
+        await act(async () => controls.confirmAdd(TARGET));
+        await screen.findByTestId('prepare-on-add-steps');
+
+        expect(screen.getByText(PREPARE_ON_ADD_COPY.title('ERP Integration'))).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+        expect(screen.getByText(PREPARE_ON_ADD_COPY.intro('ERP Integration'))).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    });
+
+    it('while the store is read, the dialog is the wait: no words, no sentences, no action', async () => {
+        mockRequest.mockReturnValue(new Promise(() => undefined));
+        renderDialog();
+        await act(async () => controls.confirmAdd(TARGET));
+
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByText(/Checking|Reading/)).toBeNull();
+        expect(screen.queryByText(PREPARE_ON_ADD_COPY.intro('ERP Integration'))).toBeNull();
+        expect(screen.queryByRole('button', { name: PREPARE_ON_ADD_COPY.action })).toBeNull();
+    });
+
     it('adds WITH confirm and opens its progress, carrying the confirm so Retry re-sends it', async () => {
         const started = renderDialog();
         await act(async () => controls.confirmAdd(TARGET));
@@ -99,12 +121,14 @@ describe('the confirm in front of adding the ERP integration', () => {
         expect(started).toHaveBeenCalled();
     });
 
-    it('shows a refusal from the add itself (already added) and offers no add', async () => {
+    it('a refusal from the add itself (already added) is the title, in red, and offers no add', async () => {
         mockRequest.mockResolvedValue({ success: false, error: '"ERP Integration" is already added to this project.' });
         renderDialog();
         await act(async () => controls.confirmAdd(TARGET));
 
-        expect(await screen.findByTestId('prepare-store-notice')).toHaveTextContent('is already added to this project.');
-        expect(screen.getByRole('button', { name: PREPARE_ON_ADD_COPY.action })).toHaveAttribute('aria-disabled', 'true');
+        expect(await screen.findByTestId('prepare-store-refused')).toHaveTextContent('is already added to this project.');
+        expect(screen.getByText(PREPARE_ON_ADD_COPY.refusedTitle('ERP Integration'))).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+        expect(screen.queryByRole('button', { name: PREPARE_ON_ADD_COPY.action })).toBeNull();
     });
 });

@@ -20,9 +20,8 @@
  *
  * Kept quiet (owner, 2026-10-19: "still feels busy"): the filters carry no labels, since each
  * one's value says what it is ("All categories"); Subcategory appears only once a category
- * has some; Show selected and Clear only once something is selected. While the products are
- * read the whole frame is already there, the filters off and the reading said where the rows
- * will be, so nothing moves when they land.
+ * has some; Show selected and Clear only once something is selected. It is drawn once the
+ * products are read: until then the dialog around it is its wait (dialog design rules).
  *
  * @module features/dashboard/ui/components/AssignProductList
  */
@@ -30,7 +29,6 @@
 import { ActionButton, Cell, Column, Item, Picker, Row, SearchField, TableBody, TableHeader, TableView, Text } from '@adobe/react-spectrum';
 import type { Selection, SortDescriptor } from '@react-types/shared';
 import React, { useMemo, useState } from 'react';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import type { ErpAssignOptions, ErpAssignProduct } from '@/types/erpAssign';
 
 /** The filter value meaning "no filter". */
@@ -47,9 +45,11 @@ export const LIST_COPY = {
     anyCategory: 'All categories',
     anyOwner: 'Any owner',
     noErp: 'No ERP',
-    shown: (shown: number, total: number, website?: string) =>
-        `${shown === total ? total : `${shown} of ${total}`} products${website ? ` on ${website}` : ''}`,
-    reading: 'Reading the products in Commerce',
+    shown: (shown: number, total: number, website?: string) => {
+        const all = total.toLocaleString('en-US');
+        const count = shown === total ? all : `${shown.toLocaleString('en-US')} of ${all}`;
+        return `${count} products${website ? ` on ${website}` : ''}`;
+    },
     columns: { sku: 'SKU', name: 'Name', category: 'Category', owner: 'Owner' },
     selectedOnly: 'Show selected',
     showAll: 'Show all',
@@ -169,12 +169,11 @@ function categoryGroups(options: ErpAssignOptions): CategoryGroup[] {
  * stopped the whole modal answering clicks when opened in the webview (2026-10-19), so the
  * category tree is two pickers, the top level and then its subcategories.
  */
-function FilterPicker({ label, value, choices, onChange, isDisabled }: {
+function FilterPicker({ label, value, choices, onChange }: {
     label: string;
     value: string;
     choices: Array<{ value: string; label: string }>;
     onChange: (next: string) => void;
-    isDisabled?: boolean;
 }): React.ReactElement {
     return (
         // The menu wider than its box, so a long category name stays on one line (owner, 2026-10-19).
@@ -184,7 +183,6 @@ function FilterPicker({ label, value, choices, onChange, isDisabled }: {
             onSelectionChange={(key) => onChange(String(key))}
             width="size-3000"
             menuWidth="size-4600"
-            isDisabled={isDisabled}
         >
             {choices.map((choice) => <Item key={choice.value}>{choice.label}</Item>)}
         </Picker>
@@ -224,8 +222,6 @@ export interface AssignProductListProps {
     onChange: (next: Set<string>) => void;
     /** Under the table: what the selection would do, in sentences. */
     summary?: React.ReactNode;
-    /** The products are still being read: the frame, with the controls off. */
-    loading?: boolean;
 }
 
 /**
@@ -234,7 +230,7 @@ export interface AssignProductListProps {
  * @param props - the store's products, the value written, the selection, its setter, a summary
  * @returns the table with its controls
  */
-export function AssignProductList({ options, value, selected, onChange, summary, loading }: AssignProductListProps): React.ReactElement {
+export function AssignProductList({ options, value, selected, onChange, summary }: AssignProductListProps): React.ReactElement {
     const [filters, setFilters] = useState<Filters>({ query: '', category: ANY, subcategory: ANY, owner: ANY, selectedOnly: false });
     const [sort, setSort] = useState<SortDescriptor>({ column: 'sku', direction: 'ascending' });
     const set = (patch: Partial<Filters>): void => setFilters({ ...filters, ...patch });
@@ -259,7 +255,6 @@ export function AssignProductList({ options, value, selected, onChange, summary,
                 value={filters.query}
                 onChange={(query) => set({ query })}
                 width="100%"
-                isDisabled={loading}
             />
             <div className="assign-filters">
                 <FilterPicker
@@ -267,7 +262,6 @@ export function AssignProductList({ options, value, selected, onChange, summary,
                     value={filters.category}
                     choices={[{ value: ANY, label: LIST_COPY.anyCategory }, ...groups.map((group) => ({ value: group.name, label: group.name }))]}
                     onChange={(category) => set({ category, subcategory: ANY })}
-                    isDisabled={loading}
                 />
                 {subcategories.length > 0 && (
                     <FilterPicker
@@ -277,8 +271,8 @@ export function AssignProductList({ options, value, selected, onChange, summary,
                         onChange={(subcategory) => set({ subcategory })}
                     />
                 )}
-                <FilterPicker label={LIST_COPY.owner} value={filters.owner} choices={owners} onChange={(owner) => set({ owner })} isDisabled={loading} />
-                {!loading && <span className="assign-count">{LIST_COPY.shown(shown.length, rows.length, options.website)}</span>}
+                <FilterPicker label={LIST_COPY.owner} value={filters.owner} choices={owners} onChange={(owner) => set({ owner })} />
+                <span className="assign-count">{LIST_COPY.shown(shown.length, rows.length, options.website)}</span>
             </div>
             <div className="assign-list">
                 <TableView
@@ -292,10 +286,8 @@ export function AssignProductList({ options, value, selected, onChange, summary,
                     density="compact"
                     overflowMode="truncate"
                     height="100%"
-                    // The reading and "none match" sit where the rows will be, under the headings.
-                    renderEmptyState={() => (loading
-                        ? <LoadingDisplay size="M" centered message={LIST_COPY.reading} />
-                        : <div className="assign-list-empty">{LIST_COPY.nothing}</div>)}
+                    // "None match" sits where the rows would be, under the headings.
+                    renderEmptyState={() => <div className="assign-list-empty">{LIST_COPY.nothing}</div>}
                 >
                     {/* Each column and cell written out: Spectrum's table throws ("reading
                         'getReusableView'") on columns and cells made by a .map (2026-10-19). */}

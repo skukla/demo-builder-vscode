@@ -26,7 +26,7 @@ function erpCard(needsReinstall: boolean): IntegrationCardModel {
     };
 }
 
-const reinstallDialog = () => screen.queryByRole('dialog', { name: /reinstall in commerce/i });
+const reinstallDialog = () => screen.queryByRole('dialog', { name: /^reinstall .* in commerce\?$/i });
 
 beforeEach(() => {
     resetGridMocks();
@@ -41,7 +41,10 @@ describe('IntegrationsGrid — reinstall', () => {
 
         const dialog = reinstallDialog();
         expect(dialog).not.toBeNull();
-        expect(dialog).toHaveTextContent('Commerce would not upgrade ERP integration in place.');
+        expect(dialog).toHaveAttribute('data-status', 'warning');
+        expect(dialog).toHaveTextContent('Commerce would not upgrade ERP integration in place, so this removes it from Commerce and installs the version already deployed.');
+        expect(dialog).toHaveTextContent('may reset its saved settings to their defaults.');
+        expect(within(dialog!).getByRole('button', { name: /^reinstall$/i })).toHaveAttribute('data-variant', 'negative');
         expect(getClient().postMessage).not.toHaveBeenCalledWith('reinstallAppBuilderComponent', expect.anything());
     });
 
@@ -73,7 +76,7 @@ describe('IntegrationsGrid — reinstall', () => {
         const { setCards } = renderCards([erpCard(false)]);
         act(() => setCards([erpCard(true)]));
 
-        await user.click(within(reinstallDialog()!).getByRole('button', { name: /^close$/i }));
+        await user.click(within(reinstallDialog()!).getByRole('button', { name: /^cancel$/i }));
 
         expect(getClient().postMessage).not.toHaveBeenCalledWith('reinstallAppBuilderComponent', expect.anything());
     });
@@ -98,7 +101,7 @@ function stoppedCard(reason?: string): IntegrationCardModel {
 }
 
 const REASON = 'Nothing was removed. ERP integration could not be uninstalled from Commerce (timed out).';
-const removeAnywayDialog = () => screen.queryByRole('dialog', { name: /removal stopped/i });
+const removeAnywayDialog = () => screen.queryByRole('dialog', { name: /^remove .* anyway\?$/i });
 
 describe('IntegrationsGrid — remove anyway', () => {
     it('opens the confirm by itself when a removal stops, with its reason', () => {
@@ -107,6 +110,7 @@ describe('IntegrationsGrid — remove anyway', () => {
         act(() => setCards([stoppedCard(REASON)]));
 
         expect(removeAnywayDialog()).toHaveTextContent(REASON);
+        expect(removeAnywayDialog()).toHaveTextContent('Removing ERP integration anyway undeploys it now and leaves that behind.');
         expect(getClient().postMessage).not.toHaveBeenCalled();
     });
 
@@ -133,7 +137,7 @@ describe('IntegrationsGrid — remove anyway', () => {
         const panel = await openPanel(user, 'ERP integration', 'Removal stopped');
 
         await user.click(within(panel).getByRole('button', { name: /^remove anyway$/i }));
-        await user.click(within(removeAnywayDialog()!).getByRole('button', { name: /^close$/i }));
+        await user.click(within(removeAnywayDialog()!).getByRole('button', { name: /^cancel$/i }));
 
         expect(removeAnywayDialog()).toBeNull();
         expect(getClient().postMessage).not.toHaveBeenCalled();

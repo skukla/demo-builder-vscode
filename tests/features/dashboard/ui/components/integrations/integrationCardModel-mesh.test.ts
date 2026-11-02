@@ -207,7 +207,7 @@ describe('deriveMeshCard — identity + propagation', () => {
         expect(model.canRename).toBe(false);
     });
 
-    // The slot used to hold 'GraphQL bridge · Adobe I/O': a constant, identical on
+    // The slot used to hold 'GraphQL bridge, Adobe I/O': a constant, identical on
     // every project in every state, typeset in the mono reserved for `owner/repo`
     // identifiers you can go look up. The mesh has no source repo, so it carries
     // no line rather than a placeholder standing in for one.

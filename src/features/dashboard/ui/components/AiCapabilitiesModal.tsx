@@ -13,27 +13,27 @@
  * sets: regenerating refreshes the modal's lists in place. The one sentence
  * about edited files sits just above it, because Regenerate is the only thing
  * that fact is about (owner, 2026-10-22). No middle dots anywhere.
+ *
+ * While the verify reads what the dialog will show, and while a regenerate runs, the dialog is
+ * the Modal's wait: nothing else on screen, no words for the read, the step's own words for the
+ * regenerate (dialog design rules). A regenerate that failed is the title's outcome, in red.
  */
 
-import { Flex, Heading, Text, View } from '@adobe/react-spectrum';
+import { Flex, Heading } from '@adobe/react-spectrum';
 import React from 'react';
 import { regenerateKeepsSentence } from './aiEditedNote';
 import { buildIntegrationSections } from './aiIntegrations';
 import { AiMcpsList } from './AiMcpsList';
 import { AiSkillsList } from './AiSkillsList';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
-import { Modal } from '@/core/ui/components/ui/Modal';
-import { Spinner } from '@/core/ui/components/ui/Spinner';
+import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AI_FILES_OPERATION_ID } from '@/core/utils/operationIds';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 
 /**
  * Live regenerate-step shape, mirrored from the wizard's `creationProgress`
- * payload. `currentOperation` is the step name (bold), `message` is the
- * sub-text (gray), `progress` is the optional 0–100 percentage that drives
- * the determinate `ProgressCircle` inside `LoadingDisplay`.
+ * payload. `currentOperation` is the step name, `message` the line under it,
+ * `progress` the optional 0–100 percentage, said in words under them.
  */
 export interface AiRegenerateProgress {
     currentOperation: string;
@@ -49,9 +49,9 @@ export interface AiCapabilitiesModalProps {
     /** True when the MCP inspector errored — MCP section shows a warning row. */
     hasMcpsError?: boolean;
     /**
-     * The verify has not answered yet. Both sections show "checking" rather than
-     * claiming emptiness — the modal used to tell users to regenerate AI files it
-     * had never looked at.
+     * The verify has not answered yet. The dialog is its wait rather than claiming
+     * emptiness — the modal used to tell users to regenerate AI files it had never
+     * looked at.
      */
     isLoading?: boolean;
     onClose: () => void;
@@ -62,8 +62,7 @@ export interface AiCapabilitiesModalProps {
     /**
      * Live regenerate progress (step name + optional detail). Forwarded from
      * the dashboard hook, which subscribes to the wizard's `creationProgress`
-     * channel. When present, the busy state renders `LoadingDisplay` with the
-     * live step instead of the static "Reinstalling…" fallback.
+     * channel. When present, the wait says the live step.
      */
     progress?: AiRegenerateProgress;
     /**
@@ -82,14 +81,30 @@ export interface AiCapabilitiesModalProps {
     /**
      * Error from the last regenerate (forwarded from the hook's
      * `aiRegenError`) — the handler's failure message or a rejected request.
-     * Renders as a compact inline line above the lists; absent when the last
-     * regenerate succeeded.
+     * The title says it failed and this sits under it, above the lists; absent
+     * when the last regenerate succeeded.
      */
     errorMessage?: string | null;
 }
 
 /** Stable empty array — a fresh `[]` prop would rerender the gated-only list. */
 const EMPTY_SKILLS: SkillInventoryEntry[] = [];
+
+/** A dialog reading what it will show says nothing while it does. */
+const READING: ModalWait = {};
+
+/**
+ * The dialog's wait. Busy with no `progress` is either the verify (on every dashboard mount and
+ * modal open: file checks and MCP inspection, no writes) or the moment before a regenerate's
+ * first step arrives, and neither has anything to say.
+ */
+function waitOf(isBusy: boolean, isLoading: boolean, progress?: AiRegenerateProgress): ModalWait | false {
+    if (isBusy && progress) {
+        const percent = progress.progress === undefined ? '' : `${progress.progress}%`;
+        return { message: progress.currentOperation, detail: [progress.message, percent].filter(Boolean).join(', ') };
+    }
+    return isBusy || isLoading ? READING : false;
+}
 
 export function AiCapabilitiesModal({
     skills,
@@ -110,17 +125,18 @@ export function AiCapabilitiesModal({
     // missing half reads as a gap. See `aiIntegrations`.
     const sections = React.useMemo(() => buildIntegrationSections(mcps, skills), [mcps, skills]);
     // Pairs are for the populated, healthy case. Whenever a half is missing or
-    // errored, fall back to the flat two-list body — it owns the "checking…",
-    // "none wired" and inspector-error copy, and a sectioned view would hide
-    // all three: a section renders its MCP list only when it HAS an MCP, so an
-    // empty or failed inspector produced no row to carry the message.
+    // errored, fall back to the flat two-list body — it owns the "none wired" and
+    // inspector-error copy, and a sectioned view would hide both: a section renders
+    // its MCP list only when it HAS an MCP, so an empty or failed inspector produced
+    // no row to carry the message.
     const useSections =
-        !isLoading &&
         !hasMcpsError &&
         !hasSkillsError &&
         mcps.length > 0 &&
         skills.length > 0 &&
         sections.length > 0;
+    // A regenerate running again is not the one that failed.
+    const regenFailed = Boolean(errorMessage) && !isBusy;
     // Closing a regenerate that is still RUNNING hands it to a progress
     // notification rather than leaving it to finish unseen — the same handover
     // every progress modal offers (PL-59 R8). Nothing is cancelled.
@@ -136,12 +152,14 @@ export function AiCapabilitiesModal({
 
     return (
         <Modal
-            title="AI Capabilities"
+            title={regenFailed ? "Couldn't regenerate AI files" : 'AI Capabilities'}
+            status={regenFailed ? 'error' : undefined}
             size="L"
+            fitContent
             onClose={close}
             closeLabel={isBusy ? 'Run in background' : undefined}
-            // While busy the body is the wait, so the action is not offered (dialog design rules).
-            actionButtons={isBusy ? [] : [
+            waiting={waitOf(isBusy, isLoading, progress)}
+            actionButtons={[
                 {
                     label: 'Regenerate AI files',
                     variant: 'secondary',
@@ -151,164 +169,89 @@ export function AiCapabilitiesModal({
                 },
             ]}
         >
-            {/* Body content is replaced — not overlaid — when busy. Two reasons:
-                (a) the shared LoadingOverlay's opaque backdrop assumes a lighter
-                app surface and collides with Spectrum Dialog's own background,
-                producing a visibly stuck rectangle in dark mode; (b) the
-                semi-transparent variant lets the underlying text bleed through.
-                Swapping content on the modal's own surface gives the spinner
-                natural contrast and avoids both issues. The wrapper holds a
-                minHeight so the modal doesn't shrink during the busy → idle
-                transition. */}
-            <View minHeight="size-3600">
-                {isBusy ? (
-                    <Flex
-                        data-testid="ai-capabilities-loading"
-                        direction="column"
-                        alignItems="center"
-                        justifyContent="center"
-                        gap="size-200"
-                        height="size-3600"
-                    >
-                        {progress ? (
-                            // Live progress arrived — render LoadingDisplay so the user
-                            // sees each step (install → AGENTS.md → MCP → skills → finalize)
-                            // and the determinate progress ring when a percentage is set.
-                            <LoadingDisplay
-                                size="M" centered
-                                message={progress.currentOperation}
-                                subMessage={progress.message}
-                                progress={progress.progress}
-                            />
-                        ) : (
-                            // Busy without a `progress` payload. This branch fires for
-                            // TWO distinct operations:
-                            //   1. verify-ai-setup (runs on every dashboard mount and
-                            //      every modal open) — file checks + MCP inspection, no
-                            //      install, no file writes.
-                            //   2. regenerate-ai-files (only on explicit button click) —
-                            //      BUT only for the brief window before the first
-                            //      creationProgress payload arrives; once it does, the
-                            //      modal switches to the per-step LoadingDisplay above.
-                            // Earlier copy ("Reinstalling storefront dependencies and
-                            // rewriting AI files. This can take up to a minute.") only
-                            // fit operation 2, and misled users during the much more
-                            // common case 1. Use neutral copy that fits both.
-                            <>
-                                <Spinner size="L" aria-label="Checking AI setup" />
-                                <Text UNSAFE_className="text-gray-700">Checking AI setup</Text>
-                            </>
-                        )}
-                    </Flex>
-                ) : (
-                    /* ONE scroll region for everything beneath the modal heading —
-                       MCP servers and skills scroll together; the frame stays put.
-                       A plain div, not Spectrum Flex, for the columns: Flex caps
-                       width at ~450px (see the spectrum-webview-ui skill). The
-                       Regenerate sentence sits OUTSIDE it, so it stays put just
-                       above the footer button it is about. */
-                    <>
-                        <div className="ai-capabilities-body">
-                            {/* The last regenerate failed — say so inline (the
-                            handler's message, or the rejection). Without this
-                            the modal returned to idle with no signal. Cleared
-                            by the next successful regenerate. */}
-                            {errorMessage && (
-                                <Flex
-                                    gap="size-100"
-                                    alignItems="center"
-                                    data-testid="ai-regen-error"
+            {/* ONE scroll region for everything beneath the modal heading —
+                MCP servers and skills scroll together; the frame stays put.
+                A plain div, not Spectrum Flex, for the columns: Flex caps
+                width at ~450px (see the spectrum-webview-ui skill). The
+                Regenerate sentence sits OUTSIDE it, so it stays put just
+                above the footer button it is about. */}
+            <div className="ai-capabilities-body">
+                {/* The last regenerate failed: the title says so, and this is
+                    why (the handler's message, or the rejection). Cleared by
+                    the next successful regenerate. */}
+                {errorMessage && <p className="dialog-line ai-regen-error" data-testid="ai-regen-error">{errorMessage}</p>}
+                <div
+                    className="ai-capabilities-columns"
+                    data-testid="ai-capabilities-columns"
+                >
+                    {!useSections ? (
+                        // Errored, or one half empty — see `useSections`.
+                        <>
+                            <Flex direction="column" gap="size-150">
+                                <Heading
+                                    level={4}
+                                    UNSAFE_className="ai-section-heading"
+                                    data-testid="ai-mcps-heading"
                                 >
-                                    <StatusIcon status="error" />
-                                    <Text UNSAFE_className="text-gray-700">{errorMessage}</Text>
-                                </Flex>
-                            )}
-                            <div
-                                className="ai-capabilities-columns"
-                                data-testid="ai-capabilities-columns"
+                                    MCP servers ({mcps.length})
+                                </Heading>
+                                <AiMcpsList mcps={mcps} hasError={hasMcpsError} />
+                            </Flex>
+                            <AiSkillsList
+                                skills={skills}
+                                hasError={hasSkillsError}
+                                gatedSkills={gatedSkills}
+                            />
+                        </>
+                    ) : (
+                        sections.map((section) => (
+                            <Flex
+                                key={section.key}
+                                direction="column"
+                                gap="size-150"
+                                data-testid={`ai-integration-${section.key}`}
                             >
-                                {!useSections ? (
-                                    // Loading, errored, or one half empty — see
-                                    // `useSections`.
-                                    <>
-                                        <Flex direction="column" gap="size-150">
-                                            <Heading
-                                                level={4}
-                                                UNSAFE_className="ai-section-heading"
-                                                data-testid="ai-mcps-heading"
-                                            >
-                                                MCP servers ({mcps.length})
-                                            </Heading>
-                                            <AiMcpsList
-                                                mcps={mcps}
-                                                hasError={hasMcpsError}
-                                                isLoading={isLoading}
-                                            />
-                                        </Flex>
-                                        <AiSkillsList
-                                            skills={skills}
-                                            hasError={hasSkillsError}
-                                            isLoading={isLoading}
-                                            gatedSkills={gatedSkills}
-                                        />
-                                    </>
-                                ) : (
-                                    sections.map((section) => (
-                                        <Flex
-                                            key={section.key}
-                                            direction="column"
-                                            gap="size-150"
-                                            data-testid={`ai-integration-${section.key}`}
-                                        >
-                                            <Heading
-                                                level={4}
-                                                UNSAFE_className="ai-section-heading"
-                                                data-testid="ai-integration-heading"
-                                            >
-                                                {section.label}
-                                            </Heading>
-                                            {section.mcps.length > 0 && (
-                                                <AiMcpsList
-                                                    mcps={section.mcps}
-                                                    hasError={hasMcpsError}
-                                                />
-                                            )}
-                                            {section.skills.length > 0 && (
-                                                <AiSkillsList
-                                                    skills={section.skills}
-                                                    hasError={hasSkillsError}
-                                                    flat
-                                                />
-                                            )}
-                                        </Flex>
-                                    ))
+                                <Heading
+                                    level={4}
+                                    UNSAFE_className="ai-section-heading"
+                                    data-testid="ai-integration-heading"
+                                >
+                                    {section.label}
+                                </Heading>
+                                {section.mcps.length > 0 && (
+                                    <AiMcpsList mcps={section.mcps} hasError={hasMcpsError} />
                                 )}
-                                {/* Gated skills are a project-wide absence, not one
-                                pair's — render them once, under everything. */}
-                                {useSections && (
+                                {section.skills.length > 0 && (
                                     <AiSkillsList
-                                        skills={EMPTY_SKILLS}
-                                        gatedSkills={gatedSkills}
+                                        skills={section.skills}
+                                        hasError={hasSkillsError}
                                         flat
                                     />
                                 )}
-                            </div>
-                        </div>
-                        {/* ADR-013: which edited files Regenerate leaves alone.
-                            Absent when nothing is edited. A plain <p>: its margin
-                            is ours to set, where Spectrum Text's own rule would
-                            win a tie on specificity. */}
-                        {keepsSentence && (
-                            <p
-                                data-testid="ai-edited-files-note"
-                                className="ai-regenerate-note text-gray-700"
-                            >
-                                {keepsSentence}
-                            </p>
-                        )}
-                    </>
-                )}
-            </View>
+                            </Flex>
+                        ))
+                    )}
+                    {/* Gated skills are a project-wide absence, not one
+                        pair's — render them once, under everything. Only when
+                        there are some: with none, an empty list says "No skills
+                        yet" under sections that are listing the project's skills. */}
+                    {useSections && (gatedSkills?.length ?? 0) > 0 && (
+                        <AiSkillsList skills={EMPTY_SKILLS} gatedSkills={gatedSkills} flat />
+                    )}
+                </div>
+            </div>
+            {/* ADR-013: which edited files Regenerate leaves alone.
+                Absent when nothing is edited. A plain <p>: its margin
+                is ours to set, where Spectrum Text's own rule would
+                win a tie on specificity. */}
+            {keepsSentence && (
+                <p
+                    data-testid="ai-edited-files-note"
+                    className="ai-regenerate-note text-gray-700"
+                >
+                    {keepsSentence}
+                </p>
+            )}
         </Modal>
     );
 }

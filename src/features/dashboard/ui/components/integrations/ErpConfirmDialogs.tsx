@@ -13,7 +13,6 @@
  * @module features/dashboard/ui/components/integrations/ErpConfirmDialogs
  */
 
-import { Text } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
 import type { ComponentOperationControls } from '../../hooks/useComponentOperation';
 import { ConfirmActionDialog } from '../ConfirmActionDialog';
@@ -94,19 +93,15 @@ export function ErpConfirmDialogs(props: ErpConfirmDialogsProps): React.ReactEle
             />
             <ConfirmActionDialog
                 isOpen={fill !== null}
-                title="Fill from Commerce"
+                title={`Fill ${fill?.erpName} from Commerce?`}
                 actionLabel="Fill"
+                actionVariant="accent"
                 onConfirm={confirmFill}
                 onClose={closeFill}
             >
-                <Text>
-                    Copies Commerce&apos;s products, companies and websites into {fill?.erpName}, as they
-                    stand now.
-                </Text>
-                <Text>
-                    Records are added or updated, and nothing is removed. A value changed by hand in the
-                    ERP is set back to Commerce&apos;s.
-                </Text>
+                Copies Commerce&apos;s products, companies and websites into {fill?.erpName} as they
+                stand now, adding or updating records and removing nothing. Any value changed by
+                hand in the ERP goes back to Commerce&apos;s.
             </ConfirmActionDialog>
         </>
     );

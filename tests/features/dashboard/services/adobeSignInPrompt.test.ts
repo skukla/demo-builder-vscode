@@ -3,7 +3,7 @@
  * the SC says so (owner, 2026-10-17).
  *
  * It replaces the 2026-09-20 rule that opening a dashboard never asks: the badge
- * alone ("Signed out · Sign in") was missed. It asks once per expiry, so a declined
+ * alone ("Signed out, Sign in") was missed. It asks once per expiry, so a declined
  * prompt does not come back on every refresh, and asks again after the next expiry.
  */
 

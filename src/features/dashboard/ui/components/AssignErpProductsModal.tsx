@@ -13,40 +13,40 @@
  * it writes, so the count the SC confirms is the count written. Attribute sets without
  * `erp_owner` are named at the top with the fix, since their products cannot be written.
  *
- * Built like `AddErpDialog`: the core Modal in a DialogContainer, one accent action. Every state
- * holds the list's space, so the dialog does not change size as the read lands (owner,
- * 2026-10-19: the spinner sat high in a short dialog). While reading, the list's frame is
- * already there with the reading where the rows will be; a read that failed and nothing to
- * assign are centred in the space, as Manage APIs shows its own (`StatusDisplay`), with Close
- * alone. No intro under the title (owner, 2026-10-19: "still feels busy"): the title says what
- * it does, and the website is in the count. The attribute-set notice is the house `InlineNotice`.
+ * Built like `AddErpDialog`: the core Modal in a DialogContainer, one accent action. While reading
+ * the dialog is the Modal's wait, with no words and nothing else on screen (dialog design rules,
+ * owner 2026-11-01). A read that failed and nothing to assign are the title's outcome, with what
+ * is left to know under it, in a small dialog with Close alone. No intro under the title (owner,
+ * 2026-10-19: "still feels busy"): the title says what it does, and the website is in the count.
+ * The attribute-set warning is a note line over the list, with its fix beside it.
  *
  * @module features/dashboard/ui/components/AssignErpProductsModal
  */
 
-import { Button, DialogContainer } from '@adobe/react-spectrum';
+import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { AssignProductList } from './AssignProductList';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { Modal, type ModalStatus, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { previewAssignment } from '@/features/app-builder/services/erpAssignSelection';
 import { setsInWords } from '@/features/app-builder/services/erpOwnerAttributeSets';
 import { useErpAssignOptions } from '@/features/dashboard/ui/hooks/useErpAssignOptions';
 import type { ErpDemoControlTarget } from '@/features/dashboard/ui/hooks/useErpDemoControls';
 import type { ErpAssignOptions, ErpAssignPreview, ErpProductSelection } from '@/types/erpAssign';
 
+/** A count as the SC reads it: digits with separators. */
+function digits(count: number): string {
+    return count.toLocaleString('en-US');
+}
+
 /** Every string the modal shows, in one place. */
 export const ASSIGN_COPY = {
     title: (name: string) => `Assign products to ${name}`,
     readFailed: "Couldn't read Commerce",
     nothingToAssign: (name: string) => `Nothing to assign to ${name}`,
-    setsTitle: 'Some products cannot be tagged yet',
     setsBody: (sets: string) =>
-        `erp_owner is not in the attribute sets ${sets}. Commerce drops a tag written to their products.`,
+        `Some products cannot be tagged yet: erp_owner is not in the attribute sets ${sets}, and Commerce drops a tag written to their products.`,
     setsAction: 'Add erp_owner to those sets',
-    action: (count: number) => (count === 1 ? 'Assign 1 product' : `Assign ${count} products`),
+    action: (count: number) => (count === 1 ? 'Assign 1 product' : `Assign ${digits(count)} products`),
     actionIdle: 'Assign',
 };
 
@@ -57,14 +57,14 @@ export const ASSIGN_COPY = {
 export function selectionLine(preview: ErpAssignPreview): string {
     const count = preview.toWrite;
     if (count === 0) return '';
-    const parts = preview.movedFrom.map((moved) => `${moved.count} from ${moved.name}`);
+    const parts = preview.movedFrom.map((moved) => `${digits(moved.count)} from ${moved.name}`);
     const fromNobody = count - preview.movedFrom.reduce((sum, moved) => sum + moved.count, 0);
-    if (fromNobody > 0) parts.push(`${fromNobody} from no ERP`);
+    if (fromNobody > 0) parts.push(`${digits(fromNobody)} from no ERP`);
     if (parts.length === 1) {
         const from = parts[0].slice(parts[0].indexOf(' from ') + 1);
-        return count === 1 ? `1 selected, ${from}.` : `${count} selected, all ${from}.`;
+        return count === 1 ? `1 selected, ${from}.` : `${digits(count)} selected, all ${from}.`;
     }
-    return `${count} selected: ${parts.join(', ')}.`;
+    return `${digits(count)} selected: ${parts.join(', ')}.`;
 }
 
 export interface AssignErpProductsModalProps {
@@ -93,21 +93,20 @@ export function AssignErpProductsModal({ target, onClose, onAssign, onAddSets }:
     );
 }
 
-/** What the list stands on while the products are read: the frame, empty. */
-const READING: ErpAssignOptions = {
-    erp: { id: '', name: '', listId: '' },
-    categories: [],
-    setsWithoutOwner: [],
-    products: [],
-    owners: {},
-    names: {},
-};
+/** A dialog reading what it will show says nothing while it does. */
+const READING: ModalWait = {};
 
-/** What the modal shows instead of the list: a read that failed, or why nothing can be assigned. */
-function feedbackOf(state: { options: ErpAssignOptions | null; error: string | null }, name: string): React.ReactElement | null {
-    if (state.error) return <StatusDisplay variant="error" height="100%" title={ASSIGN_COPY.readFailed} message={state.error} />;
+/** The dialog's outcome when there is no list to show: a read that failed, or why nothing can be assigned. */
+interface NoList {
+    title: string;
+    status: ModalStatus;
+    body?: string;
+}
+
+function noListOf(state: { options: ErpAssignOptions | null; error: string | null }, name: string): NoList | null {
+    if (state.error) return { title: ASSIGN_COPY.readFailed, status: 'error', body: state.error };
     if (state.options && state.options.ownerValue === undefined) {
-        return <StatusDisplay variant="info" height="100%" title={ASSIGN_COPY.nothingToAssign(name)} message={state.options.refusal} />;
+        return { title: ASSIGN_COPY.nothingToAssign(name), status: 'warning', body: state.options.refusal };
     }
     return null;
 }
@@ -116,9 +115,7 @@ function feedbackOf(state: { options: ErpAssignOptions | null; error: string | n
 function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsModalProps & { target: ErpDemoControlTarget }) {
     const read = useErpAssignOptions(target.id, target.erp);
     const { options } = read;
-    const feedback = feedbackOf(read, target.name);
-    /** The options the list shows: the empty frame while reading, none for a failure or a refusal. */
-    const listed = feedback ? null : (options ?? READING);
+    const noList = noListOf(read, target.name);
     const [selected, setSelected] = useState<Set<string>>(() => new Set());
     const selection = useMemo<ErpProductSelection | undefined>(
         () => (selected.size > 0 ? { by: 'skus', skus: [...selected] } : undefined),
@@ -141,34 +138,36 @@ function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsM
     const assign = (): void => {
         if (selection && count > 0) onAssign(target, selection);
     };
+    if (noList) {
+        return (
+            <Modal title={noList.title} status={noList.status} size="S" fitContent onClose={onClose}>
+                <p className="dialog-line">{noList.body}</p>
+            </Modal>
+        );
+    }
     return (
         <Modal
             title={ASSIGN_COPY.title(target.name)}
             size="L"
             wide
+            fitContent
+            waiting={options ? false : READING}
             onClose={onClose}
-            actionButtons={feedback ? [] : [{ label: count > 0 ? ASSIGN_COPY.action(count) : ASSIGN_COPY.actionIdle, variant: 'accent', onPress: assign, isDisabled: count === 0 }]}
+            actionButtons={[{ label: count > 0 ? ASSIGN_COPY.action(count) : ASSIGN_COPY.actionIdle, variant: 'accent', onPress: assign, isDisabled: count === 0 }]}
         >
-            {feedback && (
+            {options && (
                 <div className="assign-products-body">
-                    <CenteredFeedbackContainer fill>{feedback}</CenteredFeedbackContainer>
-                </div>
-            )}
-            {listed && (
-                <div className="assign-products-body">
-                    {listed.setsWithoutOwner.length > 0 && (
-                        <InlineNotice
-                            title={ASSIGN_COPY.setsTitle}
-                            actionBelow
-                            action={<Button variant="secondary" onPress={() => onAddSets(target.id)}>{ASSIGN_COPY.setsAction}</Button>}
-                        >
-                            {ASSIGN_COPY.setsBody(setsInWords(listed.setsWithoutOwner))}
-                        </InlineNotice>
+                    {options.setsWithoutOwner.length > 0 && (
+                        <div className="assign-sets-note">
+                            <p className="dialog-note" data-testid="assign-sets-note">{ASSIGN_COPY.setsBody(setsInWords(options.setsWithoutOwner))}</p>
+                            <button type="button" className="inline-action-link" onClick={() => onAddSets(target.id)}>
+                                {ASSIGN_COPY.setsAction}
+                            </button>
+                        </div>
                     )}
                     <AssignProductList
-                        options={listed}
+                        options={options}
                         value={value ?? ''}
-                        loading={read.loading}
                         selected={selected}
                         onChange={setSelected}
                         summary={preview && (

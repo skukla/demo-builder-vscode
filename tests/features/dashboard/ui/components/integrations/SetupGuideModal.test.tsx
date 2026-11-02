@@ -426,8 +426,11 @@ describe('SetupGuideModal', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Check all steps' }));
         });
         expect(await screen.findByTestId('setup-guide-notice')).toHaveTextContent(
-            "Couldn't check Step AAdobe sign-in required.",
+            "Couldn't check Step A. Adobe sign-in required.",
         );
+        // A note line under the list and the buttons that act on it, not a box above the guide.
+        expect(screen.getByTestId('setup-guide-notice')).toHaveClass('dialog-note');
+        expect(screen.getByTestId('setup-guide-notice').closest('.setup-guide-side')).not.toBeNull();
     });
 
     // Busy until the extension answers, once Chrome's private window is likely up (owner, 2026-10-31).

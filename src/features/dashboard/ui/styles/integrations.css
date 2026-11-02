@@ -222,6 +222,18 @@
     min-width: 0;
 }
 
+/* The attribute-set warning over the list, with its fix beside it: the words wrap, the fix does not. */
+.assign-sets-note {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.assign-sets-note .inline-action-link {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
 .assign-products-list {
     display: flex;
     flex-direction: column;

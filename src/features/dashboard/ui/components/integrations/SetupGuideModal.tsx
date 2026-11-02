@@ -31,7 +31,6 @@ import { FIX_COPY, applyAllIds, checkableIds, footerButtons } from './setupGuide
 import { SetupGuideStep, StepList } from './SetupGuideStep';
 import { useGuideRun } from './useGuideRun';
 import { type CheckFailure, useSetupChecklist } from './useSetupChecklist';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -71,11 +70,11 @@ function firstOpen(items: SetupChecklistItem[], startAt?: string): number {
 }
 
 /**
- * What went wrong, in the house notice (`InlineNotice`), above the steps: the steps the last
- * run could not check, by name, with why; or why a step could not be saved. Never the raw
+ * What went wrong, as a note line under the list and the buttons that act on it: the steps the
+ * last run could not check, by name, with why; or why a step could not be saved. Never the raw
  * transport text (`useSetupChecklist` words it).
  */
-function GuideNotice({
+function GuideNote({
     items,
     failures,
     error,
@@ -84,26 +83,18 @@ function GuideNotice({
     failures: CheckFailure[];
     error?: string;
 }): React.ReactElement | null {
+    let note: string | undefined;
     if (failures.length > 0) {
         const name = (id: string): string => {
             const step = items.find((candidate) => candidate.id === id);
             return step?.label ?? step?.title ?? id;
         };
         const reasons = [...new Set(failures.map((failure) => failure.reason))];
-        return (
-            <InlineNotice title={`Couldn't check ${failures.map((f) => name(f.stepId)).join(', ')}`} testId="setup-guide-notice">
-                {reasons.join(' ')}
-            </InlineNotice>
-        );
+        note = `Couldn't check ${failures.map((f) => name(f.stepId)).join(', ')}. ${reasons.join(' ')}`;
+    } else if (error) {
+        note = `Couldn't save the step. ${error}`;
     }
-    if (error) {
-        return (
-            <InlineNotice title="Couldn't save the step" testId="setup-guide-notice">
-                {error}
-            </InlineNotice>
-        );
-    }
-    return null;
+    return note ? <p className="dialog-note" data-testid="setup-guide-notice">{note}</p> : null;
 }
 
 /** The guide's body for one integration; mounted only while its guide is open. */
@@ -196,7 +187,6 @@ function Guide({
             onClose={onClose}
             actionButtons={buttons}
         >
-            <GuideNotice items={items} failures={actions.failures} error={actions.error} />
             <div className="setup-guide-layout">
                 {/* The list, and under it what acts on the list as a whole (AB-82, 2026-10-28). */}
                 <div className="setup-guide-side">
@@ -229,6 +219,7 @@ function Guide({
                             </Button>
                         )}
                     </div>
+                    <GuideNote items={items} failures={actions.failures} error={actions.error} />
                 </div>
                 {/* Steps differ in length. Every step is laid in the same cell and only the
                     shown one is visible, so the pane is as tall as the TALLEST step from the

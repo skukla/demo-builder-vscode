@@ -258,7 +258,9 @@ describe('AssignErpProductsModal', () => {
 
     it('names the attribute sets without erp_owner and offers the fix', async () => {
         const { onAddSets } = await open();
-        expect(screen.getByText(ASSIGN_COPY.setsBody('Gear (1 product)'))).toBeInTheDocument();
+        // A note line over the list, not a box, with its fix beside it.
+        expect(screen.getByTestId('assign-sets-note')).toHaveTextContent(ASSIGN_COPY.setsBody('Gear (1 product)'));
+        expect(screen.getByTestId('assign-sets-note')).toHaveClass('dialog-note');
         fireEvent.click(screen.getByRole('button', { name: ASSIGN_COPY.setsAction }));
         expect(onAddSets).toHaveBeenCalledWith('erp-integration');
     });
@@ -267,6 +269,7 @@ describe('AssignErpProductsModal', () => {
         const refusal = 'Justrite ERP owns every product no other ERP claims, not the products tagged with erp_owner.';
         await open({ ...STORE, ownerValue: undefined, refusal });
         expect(screen.getByText(ASSIGN_COPY.nothingToAssign('Accuform ERP'))).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
         expect(screen.getByText(refusal)).toBeInTheDocument();
         expect(screen.queryByRole('grid', { name: 'Products' })).toBeNull();
         // Nothing to do here but close.
@@ -283,12 +286,13 @@ describe('AssignErpProductsModal', () => {
         await flush();
         expect(screen.getByText('Adobe sign-in required to assign products.')).toBeInTheDocument();
         expect(screen.getByText(ASSIGN_COPY.readFailed)).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
         expect(screen.queryByRole('button', { name: ASSIGN_COPY.actionIdle })).toBeNull();
     });
 
-    // The frame is there from the first moment, so nothing moves as the read lands (owner,
-    // 2026-10-19): the controls off, the reading where the rows will be.
-    it('opens on the whole frame while reading, the controls off and the reading under the headings', async () => {
+    // A wait shows nothing else (dialog design rules, owner 2026-11-01): no search, no filters, no
+    // table, no Assign, and no words, with the way out.
+    it('opens on the wait while reading, with nothing else on screen', async () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));
         render(
             <Provider theme={defaultTheme}>
@@ -296,14 +300,18 @@ describe('AssignErpProductsModal', () => {
             </Provider>,
         );
         await flush();
-        const table = screen.getByRole('grid', { name: 'Products' });
-        expect(within(table).getByText(LIST_COPY.reading)).toBeInTheDocument();
-        expect(within(table).getAllByRole('columnheader').map((heading) => heading.textContent).filter(Boolean)).toStrictEqual(['SKU', 'Name', 'Category', 'Owner']);
-        expect(screen.getByTestId('spectrum-searchfield')).toBeDisabled();
-        expect(screen.getByRole('button', { name: LIST_COPY.category })).toBeDisabled();
-        expect(screen.getByRole('button', { name: LIST_COPY.owner })).toBeDisabled();
-        expect(screen.queryByText(/products on/)).toBeNull();
-        expect(screen.getByRole('button', { name: ASSIGN_COPY.actionIdle })).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByRole('grid', { name: 'Products' })).toBeNull();
+        expect(screen.queryByTestId('spectrum-searchfield')).toBeNull();
+        expect(screen.queryByText(/Reading/)).toBeNull();
+        expect(screen.queryByRole('button', { name: ASSIGN_COPY.actionIdle })).toBeNull();
+        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    });
+
+    it('writes counts with separators, in the button and the list', () => {
+        expect(ASSIGN_COPY.action(1284)).toBe('Assign 1,284 products');
+        expect(LIST_COPY.shown(1284, 1284)).toBe('1,284 products');
+        expect(LIST_COPY.shown(12, 1284, 'Justrite Website')).toBe('12 of 1,284 products on Justrite Website');
     });
 });
 

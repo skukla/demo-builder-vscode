@@ -71,7 +71,7 @@ describe('handleSetProjectDestination — what it names the destination', () => 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
         expect(mockWithProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Changing destination to New Project · Production' }),
+            expect.objectContaining({ title: 'Changing destination to New Project, Production' }),
             expect.any(Function)
         );
     });
@@ -87,7 +87,7 @@ describe('handleSetProjectDestination — what it names the destination', () => 
         });
 
         expect(mockWithProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Changing destination to NewProject · Production' }),
+            expect.objectContaining({ title: 'Changing destination to NewProject, Production' }),
             expect.any(Function)
         );
     });
@@ -182,7 +182,7 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(reported()).toContain('Moving the integrations · erp-sync');
+        expect(reported()).toContain('Moving the integrations: erp-sync');
     });
 
     it('names the first of several, not a count', async () => {
@@ -190,7 +190,7 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(reported()).toContain('Moving the integrations · erp-sync');
+        expect(reported()).toContain('Moving the integrations: erp-sync');
         expect(reported().some((line: string) => / of \d\)$/.test(line))).toBe(false);
     });
 

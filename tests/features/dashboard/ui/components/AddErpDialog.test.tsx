@@ -14,7 +14,7 @@ import { mockRequest } from '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
 
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 
 // Below the mock on purpose: jest.mock hoists within its own module only.
@@ -244,8 +244,9 @@ describe('AddErpDialog — before and without the store', () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));
         await open();
 
-        expect(screen.getAllByText(/Reading/)).toHaveLength(1);
-        expect(screen.getByText(ADD_ERP_COPY.readingStore)).toBeInTheDocument();
+        expect(screen.getAllByRole('progressbar')).toHaveLength(1);
+        // A dialog reading what it will show says nothing (dialog design rules).
+        expect(screen.queryByText(/Reading/)).toBeNull();
         expect(screen.queryByLabelText(/^ERP name/)).toBeNull();
         expect(screen.queryByRole('button', { name: ADD_ERP_COPY.add })).toBeNull();
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
@@ -258,19 +259,18 @@ describe('AddErpDialog — before and without the store', () => {
         expect(screen.getByText(PICKER_COPY.noWebsites)).toBeInTheDocument();
     });
 
-    // A notice box, as Assign products shows a failed read, with the reason inside, ONCE
-    // (the 2026-10-18 audit: a plain sentence, and the reason twice with websites chosen).
-    it("a store that could not be read says why, once, in a notice; Add still works", async () => {
+    // A note line under the preview's label, not a box, with the reason in it ONCE (the 2026-10-18
+    // audit: the reason twice with websites chosen).
+    it("a store that could not be read says why, once, in a note line; Add still works", async () => {
         mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
         const { onAdd } = await open();
         typeName('Brand B ERP');
 
-        const notice = within(screen.getByTestId('add-erp-read-failed'));
-        expect(notice.getByText(ADD_ERP_COPY.readFailed)).toBeInTheDocument();
-        expect(notice.getByText('Adobe sign-in required.')).toBeInTheDocument();
-        expect(notice.getByText(ADD_ERP_COPY.stillAdd)).toBeInTheDocument();
+        const note = screen.getByTestId('add-erp-read-failed');
+        expect(note).toHaveTextContent("Couldn't read the store. Adobe sign-in required. You can still add the ERP.");
+        expect(note).toHaveClass('dialog-note');
         fireEvent.click(websitesRadio());
-        expect(screen.getAllByText('Adobe sign-in required.')).toHaveLength(1);
+        expect(screen.getAllByText(/Adobe sign-in required\./)).toHaveLength(1);
         fireEvent.click(attributeRadio());
         fireEvent.click(addButton());
         expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' });

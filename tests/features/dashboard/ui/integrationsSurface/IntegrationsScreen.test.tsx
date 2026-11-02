@@ -46,7 +46,7 @@ describe('IntegrationsScreen', () => {
         });
 
         // LIVE 2026-08-04: removing the last integration dropped the user onto a
-        // full-screen takeover with no title, no project · destination subtitle,
+        // full-screen takeover with no title, no project, destination subtitle,
         // and no Project Dashboard button — no context and no way back. The empty
         // state belongs INSIDE the page chrome, not instead of it.
         it('keeps the project context and the way back in the empty state', () => {
@@ -156,7 +156,7 @@ describe('IntegrationsScreen', () => {
              * The destination moved OUT of the header and INTO the band.
              *
              * It used to ride in the subtitle as a third crumb —
-             * "demo-builder-test · Kukla Mesh · Stage" — on the reasoning that
+             * "demo-builder-test, Kukla Mesh, Stage" — on the reasoning that
              * the band was "otherwise about acting on the list". The band's left
              * side is not actions: it holds the count, with most of its width
              * empty. It is context-left / actions-right, exactly like the project

@@ -125,11 +125,11 @@ describe('useIntegrationsScreenActions', () => {
             [
                 {
                     id: 'destination',
-                    name: 'Kukla Mesh · Stage',
+                    name: 'Kukla Mesh, Stage',
                     message: 'setProjectDestination',
                     payload: { project, workspace },
                     title: 'Changing destination',
-                    subject: 'Kukla Mesh · Stage',
+                    subject: 'Kukla Mesh, Stage',
                     failureTitle: "Couldn't change the destination",
                     successTitle: 'Destination changed',
                 },

@@ -11,9 +11,9 @@
  * (`previewErpAdd`, the one resolver, the catch-all included), with a few SKUs each, what
  * nobody will own and what two rules will both claim. It follows the name (the attribute is
  * derived from it) and the rule as the SC changes them. The one narrowing the add does is
- * DONE by the handler from the store, so Add hands back only the name and the rule and nothing
- * about it waits on the read: while the store is still being read the preview says so and Add
- * still works (AB-72).
+ * DONE by the handler from the store, so Add hands back only the name and the rule (AB-72).
+ * While the store is read the dialog is its wait, with no words (dialog design rules); a read
+ * that failed is a note line under the preview's label, and Add still works.
  *
  * Every string is in `ADD_ERP_COPY` or the picker's `PICKER_COPY`, in plain short sentences
  * (owner, 2026-10-09: the old dialog was cramped and spoke in riddles). The sections sit on
@@ -28,9 +28,8 @@
 import { DialogContainer, Flex, Text, TextField } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { ErpOwnershipPicker, ruleOf, type OwnershipChoice, type StoreReadState } from './ErpOwnershipPicker';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { previewAsItStands, previewErpAdd, previewLines } from '@/features/app-builder/services/erpAddPreview';
 import { erpListIdFor } from '@/features/app-builder/services/erpListId';
@@ -45,9 +44,7 @@ export const ADD_ERP_COPY = {
     title: 'Add another ERP',
     nameLabel: 'ERP name',
     afterAdding: 'Products each ERP will own',
-    readingStore: 'Reading the store',
-    readFailed: "Couldn't read the store",
-    stillAdd: 'You can still add the ERP.',
+    readFailed: (reason?: string) => `Couldn't read the store.${reason ? ` ${reason}` : ''} You can still add the ERP.`,
     add: 'Add',
     assign: 'Assign products',
 };
@@ -75,6 +72,9 @@ export interface AddErpDialogProps {
 /** The attribute: the default, and the one rule that needs nothing from the store. */
 const ATTRIBUTE_FIRST: OwnershipChoice = { mode: 'attribute', websites: [] };
 
+/** A dialog reading what it will show says nothing while it does. */
+const READING: ModalWait = {};
+
 /** One empty list for every render, so the picker's effects do not see a new reference each time. */
 const NONE: never[] = [];
 
@@ -99,11 +99,10 @@ export function AddErpDialog({ target, takenNames, onAdd, onClose, onAssign }: A
 }
 
 /**
- * "Products each ERP will own": one line per ERP, or where the read is. Until a name is typed
- * it shows the ERPs as they stand, not a nameless new one (owner, 2026-10-18). Shaped like its
- * siblings (the 2026-10-18 audit): a failed read in an InlineNotice as
- * Assign products has, the preview as lines of text as Assign products has, and the section
- * label in the house class Export uses.
+ * "Products each ERP will own": one line per ERP, or why the store was not read, as a note line
+ * under the label. Until a name is typed it shows the ERPs as they stand, not a nameless new one
+ * (owner, 2026-10-18). The preview is lines of text as Assign products has, and the section label
+ * the house `SectionLabel`.
  */
 function AfterAdding({ store, options, added, onAssign }: {
     store: StoreReadState;
@@ -121,11 +120,7 @@ function AfterAdding({ store, options, added, onAssign }: {
     let body: React.ReactNode;
     if (store.status === 'failed' || !lines) {
         const reason = store.status === 'failed' ? store.error : undefined;
-        body = (
-            <InlineNotice title={ADD_ERP_COPY.readFailed} hint={ADD_ERP_COPY.stillAdd} testId="add-erp-read-failed">
-                {reason}
-            </InlineNotice>
-        );
+        body = <p className="dialog-note" data-testid="add-erp-read-failed">{ADD_ERP_COPY.readFailed(reason)}</p>;
     } else {
         // Name and count on one line, so both line up down the list; the meaning on its own
         // line in the help-text size, so it never wraps mid-thought (owner, 2026-10-18).
@@ -210,7 +205,7 @@ function AddErpForm({ target, takenNames, onAdd, onClose, onAssign }: AddErpDial
             title={ADD_ERP_COPY.title}
             size="M"
             fitContent
-            waiting={store.status === 'reading' ? { message: ADD_ERP_COPY.readingStore } : false}
+            waiting={store.status === 'reading' ? READING : false}
             onClose={onClose}
             actionButtons={[{ label: ADD_ERP_COPY.add, variant: 'accent', onPress: add, isDisabled: !ready }]}
         >

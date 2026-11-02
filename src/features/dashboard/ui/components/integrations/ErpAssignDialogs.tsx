@@ -13,7 +13,6 @@
  * @module features/dashboard/ui/components/integrations/ErpAssignDialogs
  */
 
-import { Text } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
 import type { ComponentOperationControls } from '../../hooks/useComponentOperation';
 import { AssignErpProductsModal } from '../AssignErpProductsModal';
@@ -25,16 +24,15 @@ import type { OperationOffer } from '@/types/webviewPayloads';
 
 /** Every string the confirms show, in one place. */
 export const ERP_ASSIGN_DIALOG_COPY = {
-    undoTitle: 'Undo last assignment',
+    undoTitle: (name: string) => `Undo ${name}'s last assignment?`,
     undoAction: 'Undo',
-    undoBody: (name: string) =>
-        `Puts back the erp_owner each product had before ${name}'s last assignment. A product whose erp_owner has changed since is left as it is.`,
-    undoAfter: 'Then every ERP is filled again with what it owns.',
-    addSetsTitle: 'Add erp_owner to the attribute sets',
+    undoBody:
+        'Puts back the erp_owner each product had before that assignment, leaving any product whose erp_owner has changed since. Then fills every ERP again with what it owns.',
+    addSetsTitle: 'Add erp_owner to the attribute sets?',
     addSetsAction: 'Add',
     addSetsBody:
-        'Adds erp_owner to every attribute set your products use that does not have it. Demo Builder records which sets, so it can take it out again.',
-    removeSetsTitle: 'Take erp_owner out of the attribute sets',
+        'Adds erp_owner to every attribute set your products use that does not have it. It records which sets, so Demo Builder can take it out again.',
+    removeSetsTitle: 'Take erp_owner out of the attribute sets?',
     removeSetsAction: 'Take it out',
     removeSetsBody:
         'Takes erp_owner out of the attribute sets Demo Builder added it to. It refuses while a product in those sets is tagged.',
@@ -195,13 +193,13 @@ export function ErpAssignDialogs(props: ErpAssignDialogsProps): React.ReactEleme
             {props.undoing !== null && (
                 <ConfirmActionDialog
                     isOpen
-                    title={copy.undoTitle}
+                    title={copy.undoTitle(props.undoing.name)}
                     actionLabel={copy.undoAction}
+                    actionVariant="accent"
                     onConfirm={props.onUndo}
                     onClose={props.closeUndo}
                 >
-                    <Text>{copy.undoBody(props.undoing.name)}</Text>
-                    <Text>{copy.undoAfter}</Text>
+                    {copy.undoBody}
                 </ConfirmActionDialog>
             )}
             {props.sets !== null && (
@@ -209,10 +207,11 @@ export function ErpAssignDialogs(props: ErpAssignDialogsProps): React.ReactEleme
                     isOpen
                     title={adding ? copy.addSetsTitle : copy.removeSetsTitle}
                     actionLabel={adding ? copy.addSetsAction : copy.removeSetsAction}
+                    actionVariant="accent"
                     onConfirm={props.onChangeSets}
                     onClose={props.closeSets}
                 >
-                    <Text>{adding ? copy.addSetsBody : copy.removeSetsBody}</Text>
+                    {adding ? copy.addSetsBody : copy.removeSetsBody}
                 </ConfirmActionDialog>
             )}
         </>

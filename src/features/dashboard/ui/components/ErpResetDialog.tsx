@@ -3,16 +3,13 @@
  * `ErpConfirmDialogs`. Offered on the integration's card, since a reset always covers every
  * ERP it serves.
  *
- * Through {@link ConfirmActionDialog}: one negative action, Close does
- * nothing. The words
- * are the decision: Commerce is the master, the ERP is transitory, and the
- * reset is the one act that reaches back into Commerce (the ledgered company
- * writes and the ERP order numbers are undone).
+ * Through {@link ConfirmActionDialog}: solid red, Cancel does nothing. The words are the
+ * decision: Commerce is the master, the ERP is transitory, and the reset is the one act that
+ * reaches back into Commerce (the ledgered company writes and the ERP order numbers are undone).
  *
  * @module features/dashboard/ui/components/ErpResetDialog
  */
 
-import { Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { ConfirmActionDialog } from './ConfirmActionDialog';
 import { andList } from '@/core/utils/andList';
@@ -23,6 +20,12 @@ export interface ErpResetDialogProps {
     erpNames: string[];
     onConfirm: () => void;
     onClose: () => void;
+}
+
+/** The question: the ERP by name when there is one, else how many. */
+function resetTitle(erpNames: string[]): string {
+    if (erpNames.length === 1) return `Reset ${erpNames[0]}?`;
+    return erpNames.length > 1 ? `Reset ${erpNames.length} ERPs?` : 'Reset every ERP?';
 }
 
 /**
@@ -37,20 +40,15 @@ export function ErpResetDialog({ isOpen, erpNames, onConfirm, onClose }: ErpRese
     return (
         <ConfirmActionDialog
             isOpen={isOpen}
-            title="Reset ERPs"
+            title={resetTitle(erpNames)}
             actionLabel="Reset"
+            actionVariant="negative"
             onConfirm={onConfirm}
             onClose={onClose}
         >
-            <Text>Clears {which} and reloads {them} from Commerce.</Text>
-            <Text>
-                Open orders in the ERPs are cancelled. Orders already invoiced or shipped get a note
-                instead. Cancelled orders can't be reopened.
-            </Text>
-            <Text>
-                Credit limits and company blocks the ERPs set in Commerce are removed. Nothing else in
-                Commerce changes.
-            </Text>
+            Clears {which} and reloads {them} from Commerce. Permanently cancels open orders in the
+            ERPs; orders already invoiced or shipped get a note instead. Removes the credit limits
+            and company blocks the ERPs set in Commerce. Nothing else in Commerce changes.
         </ConfirmActionDialog>
     );
 }

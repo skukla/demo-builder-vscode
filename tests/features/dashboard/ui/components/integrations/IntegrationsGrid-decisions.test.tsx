@@ -175,7 +175,7 @@ describe('IntegrationsGrid — the remove confirm', () => {
         const panel = await openPanel(user, 'API Mesh', 'Deployed');
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-        const confirm = screen.getByRole('dialog', { name: 'Remove API Mesh' });
+        const confirm = screen.getByRole('dialog', { name: 'Remove API Mesh?' });
         await user.click(within(confirm).getByRole('button', { name: /^remove$/i }));
 
         expect(screen.getByRole('dialog', { name: 'Removing API Mesh' })).toBeInTheDocument();
@@ -190,7 +190,7 @@ describe('IntegrationsGrid — the remove confirm', () => {
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
         setCards([]);
-        const confirm = screen.getByRole('dialog', { name: 'Remove custom-app' });
+        const confirm = screen.getByRole('dialog', { name: 'Remove custom-app?' });
         await user.click(within(confirm).getByRole('button', { name: /^remove$/i }));
 
         expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
@@ -201,16 +201,16 @@ describe('IntegrationsGrid — the remove confirm', () => {
 });
 
 describe('IntegrationsGrid — the ERP dialogs close', () => {
-    it('closes the reset confirm on Close', async () => {
+    it('closes the reset confirm on Cancel', async () => {
         const user = setupUser();
         renderCards([integrationCard(), systemCard()]);
         const panel = await openPanel(user, 'ERP integration', 'Deployed');
         await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /reset erps/i });
-        await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
+        const dialog = screen.getByRole('dialog', { name: 'Reset Nordwind?' });
+        await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
-        expect(screen.queryByRole('dialog', { name: /reset erps/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: 'Reset Nordwind?' })).not.toBeInTheDocument();
     });
 
     it('closes the Add another ERP prompt on Close', async () => {

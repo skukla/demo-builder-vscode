@@ -301,32 +301,11 @@ describe('AiSkillsList', () => {
  * Telling someone to regenerate healthy files is worse than saying nothing: it is a
  * confident wrong instruction pointing at the one remedy they should not reach for.
  */
-describe('loading vs empty (2026-08-06)', () => {
-    it('says it is still checking rather than claiming there are none', () => {
-        renderList({ skills: [], isLoading: true });
-
-        expect(screen.getByTestId('ai-skills-loading')).toBeInTheDocument();
-        expect(screen.queryByTestId('ai-skills-empty')).not.toBeInTheDocument();
-    });
-
-    it('never tells you to regenerate files it has not looked at', () => {
-        renderList({ skills: [], isLoading: true });
-
-        expect(screen.queryByText(/Regenerate AI files/i)).not.toBeInTheDocument();
-    });
-
-    it('still reports genuine emptiness once loaded', () => {
-        renderList({ skills: [], isLoading: false });
+describe('empty (2026-08-06)', () => {
+    it('reports genuine emptiness', () => {
+        renderList({ skills: [] });
 
         expect(screen.getByTestId('ai-skills-empty')).toBeInTheDocument();
-    });
-
-    it('prefers the error row over the loading row', () => {
-        // An inspector error is a settled answer; "checking" would be a lie.
-        renderList({ skills: [], isLoading: true, hasError: true });
-
-        expect(screen.getByTestId('ai-skills-error')).toBeInTheDocument();
-        expect(screen.queryByTestId('ai-skills-loading')).not.toBeInTheDocument();
     });
 
     describe('Gated skills are not "no skills"', () => {

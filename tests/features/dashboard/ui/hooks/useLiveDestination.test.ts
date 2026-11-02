@@ -1,7 +1,7 @@
 /**
  * useLiveDestination Hook Tests
  *
- * The Integrations header's "project · workspace" crumb. Seeded from the init
+ * The Integrations header's "project, workspace" crumb. Seeded from the init
  * payload — which is delivered ONCE — so before this hook existed a destination
  * change left the header naming the OLD target for the rest of the session while
  * every card deployed to the new one (reported live 2026-08-07).

@@ -125,12 +125,35 @@ describe('IntegrationSettingsModal', () => {
         fireEvent.click(saveButton());
         await flush();
 
-        expect(screen.getByText('Settings saved, but redeploying ERP failed: aio said no')).toBeInTheDocument();
+        // The values went in; it is the redeploy that did not go through, and the title says so.
+        expect(screen.getByText("Couldn't redeploy ERP integration")).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+        expect(screen.getByText('Settings saved, but redeploying ERP failed: aio said no')).not.toHaveClass('text-negative');
         expect(onSaved).toHaveBeenCalledWith('erp-integration', SETTINGS);
         expect(onClose).not.toHaveBeenCalled();
     });
 
-    it('while saving, says the redeploy can take a while and that the window can be closed', async () => {
+    it('a save refused before anything was stored says the save failed, and keeps the form', async () => {
+        getClient().request.mockResolvedValue({ success: false, error: 'Region is not one of the choices.' });
+        renderModal();
+
+        fireEvent.change(field('ERP name'), { target: { value: 'Nordwind' } });
+        fireEvent.click(saveButton());
+        await flush();
+
+        expect(screen.getByText("Couldn't save ERP integration settings")).toBeInTheDocument();
+        expect(screen.getByText('Region is not one of the choices.')).toBeInTheDocument();
+        expect(field('ERP name').value).toBe('Nordwind');
+    });
+
+    it('says nothing above the fields: the button already says saving redeploys', () => {
+        renderModal();
+
+        expect(screen.queryByText(/takes effect when the app is redeployed/)).not.toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).toBeNull();
+    });
+
+    it('while saving, the button is its own spinner and the way out says the work carries on', async () => {
         getClient().request.mockReturnValue(new Promise(() => undefined));
         renderModal();
 
@@ -142,7 +165,7 @@ describe('IntegrationSettingsModal', () => {
         const busy = screen.getByRole('button', { name: 'Save and redeploy' });
         expect(busy).toHaveAttribute('aria-disabled', 'true');
         expect(busy).toHaveAttribute('aria-busy', 'true');
-        expect(screen.getByText(/you\s+can close this window/)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Run in background' })).toBeInTheDocument();
+        expect(screen.queryByText(/close this window/)).not.toBeInTheDocument();
     });
 });

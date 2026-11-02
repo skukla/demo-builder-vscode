@@ -110,9 +110,8 @@ describe('a response that arrives after the modal has moved on', () => {
     });
 
     it('stays loading when the stale request finishes and the live one has not', async () => {
-        // The `finally` is guarded for its own reason: clearing the flag on the
-        // stale request drops the loading view while the real one is still out,
-        // and an empty picker reads as "this org has no APIs".
+        // The stale request belongs to the old row's state, which is gone: it cannot drop the
+        // wait while the real one is still out, and an empty picker reads as "this org has no APIs".
         const { first } = twoListsInFlight();
         const { rerender, onClose } = renderModal({ componentId: 'erp-sync' });
         await flush();
@@ -124,7 +123,8 @@ describe('a response that arrives after the modal has moved on', () => {
             await Promise.resolve();
         });
 
-        expect(screen.getByText('Loading Adobe APIs')).toBeInTheDocument();
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
 });
 
@@ -152,12 +152,12 @@ describe('a response that is not the shape the handler promises', () => {
         expect(screen.queryByText('AEM Assets')).toBeNull();
     });
 
-    it('leaves Apply inert when the list never arrived', async () => {
+    it('offers no Apply when the list never arrived', async () => {
         getClient().request.mockResolvedValue({ success: false, error: 'org unavailable' });
         renderModal();
         await flush();
 
-        expect(applyButton()).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.queryByRole('button', { name: /^apply/i })).not.toBeInTheDocument();
     });
 
     it('retries again after a retry that also failed', async () => {

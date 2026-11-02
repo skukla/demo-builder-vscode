@@ -15,7 +15,6 @@
  * @module features/dashboard/ui/components/integrations/FlaggedCardDialogs
  */
 
-import { Text } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
 import { ConfirmActionDialog } from '../ConfirmActionDialog';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
@@ -42,55 +41,57 @@ function useConfirm(dialog: FlaggedCardDialog, action: CardAction, onRun: RunFla
     }, [pending, close, action, onRun]);
 }
 
+/** What every reinstall does, ending the dialog's one sentence. */
+const REINSTALL_TAIL =
+    'That sets up its webhooks and event subscriptions again and may reset its saved settings to their defaults.';
+
 /** Reinstall in Commerce, confirmed. */
 function ReinstallDialog({ dialog, onRun }: { dialog: FlaggedCardDialog; onRun: RunFlaggedAction }): React.ReactElement {
     const confirm = useConfirm(dialog, 'reinstall', onRun);
+    const name = dialog.pending?.name;
     return (
         <ConfirmActionDialog
             isOpen={dialog.pending !== null}
-            title="Reinstall in Commerce"
+            title={`Reinstall ${name} in Commerce?`}
             actionLabel="Reinstall"
+            actionVariant="negative"
             onConfirm={confirm}
             onClose={dialog.close}
         >
-            <Text>
-                {dialog.pending?.installation?.needsReinstall ? (
-                    <>
-                        Commerce would not upgrade <strong>{dialog.pending?.name}</strong> in place.
-                        Reinstalling removes it from Commerce, then installs the version already deployed.
-                    </>
-                ) : (
-                    <>
-                        Reinstalling removes <strong>{dialog.pending?.name}</strong> from Commerce, then
-                        installs the version already deployed. Use it when Commerce has lost what the app
-                        set up and the app still says it is installed.
-                    </>
-                )}
-            </Text>
-            <Text>
-                Its webhooks and event subscriptions are set up again. Its saved settings may be reset to
-                their defaults.
-            </Text>
+            {dialog.pending?.installation?.needsReinstall ? (
+                <>
+                    Commerce would not upgrade <strong>{name}</strong> in place, so this removes it
+                    from Commerce and installs the version already deployed. {REINSTALL_TAIL}
+                </>
+            ) : (
+                <>
+                    For when Commerce has lost what the app set up and the app still says it is
+                    installed. Removes <strong>{name}</strong> from Commerce and installs the version
+                    already deployed. {REINSTALL_TAIL}
+                </>
+            )}
         </ConfirmActionDialog>
     );
 }
 
-/** Remove anyway, confirmed; the reason is the one the removal recorded. */
+/**
+ * Remove anyway, confirmed. The reason is the one the removal recorded, in the extension's words
+ * (the card shows it too, and the agent reads it), so it stays a sentence of its own.
+ */
 function RemoveAnywayDialog({ dialog, onRun }: { dialog: FlaggedCardDialog; onRun: RunFlaggedAction }): React.ReactElement {
     const confirm = useConfirm(dialog, 'remove-anyway', onRun);
+    const name = dialog.pending?.name;
     return (
         <ConfirmActionDialog
             isOpen={dialog.pending !== null}
-            title="Removal stopped"
+            title={`Remove ${name} anyway?`}
             actionLabel="Remove anyway"
+            actionVariant="negative"
             onConfirm={confirm}
             onClose={dialog.close}
         >
-            <Text>{dialog.pending?.removalStopped}</Text>
-            <Text>
-                Removing <strong>{dialog.pending?.name}</strong> anyway undeploys it now and leaves that
-                behind. Close this to keep it and try Remove again later.
-            </Text>
+            {dialog.pending?.removalStopped} Removing <strong>{name}</strong> anyway undeploys it now
+            and leaves that behind.
         </ConfirmActionDialog>
     );
 }

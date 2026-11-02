@@ -14,7 +14,6 @@
  * @module features/dashboard/ui/components/AppBuilderComponentRemoveDialog
  */
 
-import { Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { ConfirmActionDialog } from './ConfirmActionDialog';
 
@@ -24,9 +23,9 @@ export interface AppBuilderComponentRemoveDialogProps {
     /** The name the card shows — what the person recognises, never the id. */
     componentName: string;
     /**
-     * One extra consequence sentence, when the component's teardown reaches past
-     * itself. The mesh is the case that needs it: removing it also strips
-     * MESH_ENDPOINT from the storefront config.
+     * What the teardown reaches past the component itself, as sentences of its own
+     * (`removalConsequence`). The mesh is the plain case:
+     * removing it also strips MESH_ENDPOINT from the storefront config.
      */
     consequence?: string;
     /** Called when the user confirms the destructive remove. */
@@ -37,7 +36,7 @@ export interface AppBuilderComponentRemoveDialogProps {
 
 /**
  * Hosts the destructive remove-confirm in a DialogContainer; presents it when
- * open. The negative-styled "Remove" action calls `onConfirm`; Close (and the
+ * open. The solid red "Remove" action calls `onConfirm`; Cancel (and the
  * escape/click-outside path via `onDismiss`) calls `onClose` without tearing
  * anything down.
  */
@@ -51,16 +50,14 @@ export function AppBuilderComponentRemoveDialog({
     return (
         <ConfirmActionDialog
             isOpen={isOpen}
-            title={`Remove ${componentName}`}
+            title={`Remove ${componentName}?`}
             actionLabel="Remove"
+            actionVariant="negative"
             onConfirm={onConfirm}
             onClose={onClose}
         >
-            <Text>
-                <strong>{componentName}</strong> will be undeployed from Adobe and removed from
-                this project.
-            </Text>
-            {consequence && <Text>{consequence}</Text>}
+            Undeploys <strong>{componentName}</strong> from Adobe and removes it from this project.
+            {consequence ? ` ${consequence}` : ''}
         </ConfirmActionDialog>
     );
 }

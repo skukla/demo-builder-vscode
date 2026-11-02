@@ -89,7 +89,7 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
                 };
             }
 
-            const target = `${nextProject.title ?? nextProject.name} \u00b7 ${nextWorkspace.title ?? nextWorkspace.name}`;
+            const target = `${nextProject.title ?? nextProject.name}, ${nextWorkspace.title ?? nextWorkspace.name}`;
             return withOperationProgress(
                 {
                     // No card options: the destination is PROJECT-scoped, so no single card

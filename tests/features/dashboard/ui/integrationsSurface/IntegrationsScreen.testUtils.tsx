@@ -143,7 +143,7 @@ jest.mock('@/features/dashboard/ui/components/integrations/IntegrationsGrid', ()
                     data-testid={`card-${c.id}`}
                     data-actions={(c.menuActions ?? []).join(',')}
                 >
-                    {c.name} · {c.statusLabel}
+                    {c.name}, {c.statusLabel}
                 </div>
             ))}
             {onAdd && <button onClick={onAdd}>grid-add</button>}

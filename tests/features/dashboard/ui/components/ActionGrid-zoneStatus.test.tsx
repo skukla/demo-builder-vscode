@@ -2,8 +2,8 @@
  * Remedy tiles: the fix is a BUTTON in the zone, and its dot says whether you
  * need it.
  *
- * First attempt put a StatusCard row inside the zone ("Storefront · Republish
- * needed · Republish"). It dangled off the end of the tile row and broke the
+ * First attempt put a StatusCard row inside the zone ("Storefront, Republish
+ * needed, Republish"). It dangled off the end of the tile row and broke the
  * grid. The tile dot was already the established answer — IntegrationsSummaryTile
  * does exactly this — but there was no tile to hang a dot on, because both
  * remedies lived elsewhere: Republish Content in the More overflow, Restart

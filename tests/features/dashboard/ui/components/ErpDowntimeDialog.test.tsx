@@ -68,8 +68,22 @@ describe('ErpDowntimeDialog', () => {
 
         await open();
 
+        // The title is the outcome, with nothing to start.
+        expect(screen.getByText("Couldn't read Nordwind")).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
         expect(screen.getByText('Adobe sign-in required.')).toBeInTheDocument();
-        expect(disabled(/^start downtime$/i)).toBe(true);
+        expect(screen.queryByRole('button', { name: /^start downtime$/i })).toBeNull();
+    });
+
+    it('while the ERP is read, the dialog is the wait, with no words', async () => {
+        mockRequest.mockReturnValue(new Promise(() => undefined));
+
+        await open();
+
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByText(/Reading/)).toBeNull();
+        expect(screen.queryByLabelText('Minutes')).toBeNull();
+        expect(screen.queryByRole('button', { name: /^start downtime$/i })).toBeNull();
     });
 
     it('a request with no answer says so in plain words, not the transport\'s', async () => {
@@ -98,6 +112,35 @@ describe('ErpDowntimeDialog — the window', () => {
         expect(screen.getByText(WINDOW.message)).toBeInTheDocument();
         expect(disabled(/^end downtime$/i)).toBe(false);
         expect(screen.queryByRole('button', { name: /^start downtime$/i })).toBeNull();
+    });
+
+    it('a refused start is the title, in red, with the ERP\'s words and the form still there', async () => {
+        mockRequest.mockResolvedValueOnce(answer({ maintenance: null }));
+        mockRequest.mockResolvedValueOnce({ success: false, error: 'The ERP is not deployed.' });
+        await open();
+
+        // A plain line of what it does, above the one field.
+        expect(screen.getByText(/answers every call as down for maintenance until the time is up/)).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).toBeNull();
+        fireEvent.click(button(/^start downtime$/i));
+        await flush();
+
+        expect(screen.getByText("Couldn't start downtime on Nordwind")).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+        expect(screen.getByText('The ERP is not deployed.')).not.toHaveClass('text-negative');
+        expect(screen.getByLabelText('Minutes')).toHaveValue(30);
+    });
+
+    it('a refused end says it was the end that failed', async () => {
+        mockRequest.mockResolvedValueOnce(answer({ maintenance: WINDOW }));
+        mockRequest.mockResolvedValueOnce({ success: false, error: 'The ERP is not deployed.' });
+        await open();
+
+        fireEvent.click(button(/^end downtime$/i));
+        await flush();
+
+        expect(screen.getByText("Couldn't end downtime on Nordwind")).toBeInTheDocument();
+        expect(screen.getByText(WINDOW.message)).toBeInTheDocument();
     });
 
     it('sends the minutes typed, and refuses none or more than a day', async () => {

@@ -106,7 +106,7 @@ export function useIntegrationsScreenActions(
                 chosen.workspace.title ?? chosen.workspace.name,
             ]
                 .filter(Boolean)
-                .join(' · ');
+                .join(', ');
             startOperation({
                 id: DESTINATION_OPERATION_ID,
                 name: target,

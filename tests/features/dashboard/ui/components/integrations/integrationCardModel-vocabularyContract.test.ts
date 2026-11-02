@@ -9,7 +9,7 @@
  *   (core/ui/utils, via `useDashboardStatus`), keyed by the PERSISTED status.
  *
  * This used to be driven through `getMeshStatusText`, the projects-list card's
- * accessor, which added a `Mesh · ` prefix. That card no longer names the mesh —
+ * accessor, which added a `Mesh, ` prefix. That card no longer names the mesh —
  * it carries one consolidated deployment line — so the test drives the shared
  * table directly. The contract is between the two TABLES; the accessor was only
  * ever how one of them was reached.

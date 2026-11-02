@@ -32,9 +32,9 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
         // no producer sends — so the brand half of the subtitle never rendered.
         // The mismatch lived in the untypechecked entry (index.tsx shadowed by
         // index.ts) where `data?.brandName` read undefined forever.
-        it('renders the package · stack subtitle from the wire field names', () => {
+        it('renders the package, stack subtitle from the wire field names', () => {
             renderDashboard({ packageName: 'CitiSignal', stackName: 'Headless + PaaS' });
-            expect(screen.getByText('CitiSignal · Headless + PaaS')).toBeInTheDocument();
+            expect(screen.getByText('CitiSignal, Headless + PaaS')).toBeInTheDocument();
         });
 
         it('should request status on mount', () => {

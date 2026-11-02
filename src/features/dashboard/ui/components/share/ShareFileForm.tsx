@@ -9,7 +9,6 @@
 
 import { Button, Checkbox } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { ExportDemoBundleRequest, ExportDemoBundleResult } from '@/types/webviewRequests';
@@ -22,9 +21,8 @@ const FILE_COPY = {
     storefrontWhat: "The storefront's code and content site.",
     storefrontHeadless: 'This project has no storefront of its own.',
     saveFile: 'Save file',
-    saving: 'Saving',
     nothingTicked: 'Tick at least one part.',
-    fileFailed: "Couldn't save the file",
+    fileFailed: "Couldn't save the file.",
 } as const;
 
 /** A handler's answer: branch on `success` before reading anything else (webview-command-handler). */
@@ -36,7 +34,8 @@ interface Answer<D> {
 
 function savedLine(saved: ExportDemoBundleResult): string {
     const what = (saved.parts ?? []).join(' and ');
-    return `Saved ${what} (${saved.fileCount ?? 0} files) to ${saved.path ?? ''}`;
+    const count = saved.fileCount ?? 0;
+    return `Saved ${what} (${count.toLocaleString('en-US')} ${count === 1 ? 'file' : 'files'}) to ${saved.path ?? ''}`;
 }
 
 /**
@@ -84,20 +83,12 @@ export function ShareFileForm({ isEds }: { isEds: boolean }): React.ReactElement
                     <span className="export-part-note">{isEds ? FILE_COPY.storefrontWhat : FILE_COPY.storefrontHeadless}</span>
                 </li>
             </ul>
-            <Button variant="accent" onPress={save} isDisabled={busy || nothing}>
-                {busy ? FILE_COPY.saving : FILE_COPY.saveFile}
+            <Button variant="accent" onPress={save} isDisabled={nothing} isPending={busy}>
+                {FILE_COPY.saveFile}
             </Button>
             {nothing ? <p className="export-part-note">{FILE_COPY.nothingTicked}</p> : null}
-            {saved ? (
-                <InlineNotice tone="info" title={savedLine(saved)} testId="export-saved">
-                    {''}
-                </InlineNotice>
-            ) : null}
-            {error ? (
-                <InlineNotice tone="warning" title={FILE_COPY.fileFailed} testId="export-error">
-                    {error}
-                </InlineNotice>
-            ) : null}
+            {saved ? <p className="dialog-note" data-testid="export-saved">{savedLine(saved)}</p> : null}
+            {error ? <p className="dialog-note" data-testid="export-error">{FILE_COPY.fileFailed} {error}</p> : null}
         </div>
     );
 }
