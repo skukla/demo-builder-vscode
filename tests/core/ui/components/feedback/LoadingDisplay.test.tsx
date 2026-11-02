@@ -359,6 +359,18 @@ describe('LoadingDisplay', () => {
      * move the spinner (owner, 2026-10-16: "make it so that the lines don't jump").
      */
     describe('steady', () => {
+        it('holds no third row with noHelperRow until there is something to say on it', () => {
+            const { container, rerender } = renderWithProviders(
+                <LoadingDisplay steady noHelperRow message="Installing" subMessage="0 of 1" />,
+            );
+            expect(container.querySelector('.text-xs')).toBeNull();
+
+            rerender(
+                <LoadingDisplay steady noHelperRow message="Stopped" subMessage="0 of 1" helperText="Carries on" />,
+            );
+            expect(screen.getByText('Carries on')).toBeInTheDocument();
+        });
+
         const LONG =
             'Publishing the pages: /products/outdoor/very-long-category-name/a-product-page-with-a-long-name';
 

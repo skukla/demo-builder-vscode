@@ -159,18 +159,22 @@ function WatchProgress({
     const progress = summarizeProgress(live?.perType ?? record.perType, record.dataTypes);
     const label = progressLabel(progress);
 
+    // The dialog's own wait spacing, so the spinner sits level between the rule and the buttons.
     return (
-        <LoadingDisplay
-            size="M" centered
-            steady
-            message={watching ? progressStep(op) : 'Stopped watching.'}
-            subMessage={label}
-            // Determinate only once something has reported. A ring pinned at 0
-            // reads as stalled, where the indeterminate spinner reads as starting.
-            {...(label ? { progress: progress.percent } : {})}
-            // Said once watching has stopped, so "stopped looking" never reads as "cancelled".
-            // Not while watching: the footer's "Run in background" and "Stop watching" say it.
-            {...(watching ? {} : { helperText: `The ${noun} carries on without you.` })}
-        />
+        <div className="modal-wait">
+            <LoadingDisplay
+                size="M" centered
+                steady
+                noHelperRow
+                message={watching ? progressStep(op) : 'Stopped watching.'}
+                subMessage={label}
+                // Determinate only once something has reported. A ring pinned at 0
+                // reads as stalled, where the indeterminate spinner reads as starting.
+                {...(label ? { progress: progress.percent } : {})}
+                // Said once watching has stopped, so "stopped looking" never reads as "cancelled".
+                // Not while watching: the footer's "Run in background" and "Stop watching" say it.
+                {...(watching ? {} : { helperText: `The ${noun} carries on without you.` })}
+            />
+        </div>
     );
 }

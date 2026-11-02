@@ -9,6 +9,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { type BodyContext, ImportDatapackModalBody, typesInSentence } from '@/features/data-installer/ui/components/ImportDatapackModalBody';
+import type { ImportJobRecord } from '@/features/data-installer/types';
 import type { ImportScopes } from '@/features/data-installer/ui/hooks/useImportScopes';
 
 const SCOPE: ImportScopes = {
@@ -73,5 +74,33 @@ describe('typesInSentence', () => {
     it('names all seven when there are seven — control', () => {
         const seven = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((code) => `Kind ${code}`);
         expect(typesInSentence(seven)).toBe('kind A, kind B, kind C, kind D, kind E, kind F and kind G');
+    });
+});
+
+describe('the running view', () => {
+    const RECORD: ImportJobRecord = {
+        activationId: 'a-1',
+        datapackName: 'zz-test-root-db12',
+        version: '1',
+        commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi',
+        dataTypes: ['categories'],
+        startedAt: '2026-11-02T00:00:00.000Z',
+        outcome: 'watching',
+        perType: {},
+    };
+
+    it('uses the dialog wait spacing, and holds no blank row under its two lines', () => {
+        const { container } = render(
+            <ImportDatapackModalBody view="watching" ctx={ctx({ record: RECORD, watching: true })} />,
+        );
+
+        expect(container.querySelector('.modal-wait [role="status"]')).not.toBeNull();
+        expect(container.querySelector('.text-xs')).toBeNull();
+    });
+
+    it('says the import carries on once watching has stopped', () => {
+        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: RECORD, watching: false })} />);
+
+        expect(screen.getByText('The import carries on without you.')).toBeInTheDocument();
     });
 });

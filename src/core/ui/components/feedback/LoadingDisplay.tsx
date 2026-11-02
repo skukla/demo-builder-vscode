@@ -21,6 +21,12 @@ export interface LoadingDisplayProps {
      */
     steady?: boolean;
     /**
+     * With `steady`, hold only the first two rows: row 3 appears when there is helper text. For a
+     * dialog's wait that says nothing there while it runs, where a blank row left the spinner
+     * sitting high (owner, 2026-11-02).
+     */
+    noHelperRow?: boolean;
+    /**
      * Centre the spinner and its message, at any size. Large is always centred; medium is
      * left-aligned for a loading row unless this is set. A job dialog's wait is medium and
      * centred: the large spinner is for a whole page, panel or the progress window, and
@@ -71,6 +77,7 @@ export function LoadingDisplay({
     helperText,
     progress,
     steady = false,
+    noHelperRow = false,
     centered = false,
 }: LoadingDisplayProps) {
     // Centred for the large size, or when asked (a job dialog's medium wait); a loading row
@@ -141,7 +148,7 @@ export function LoadingDisplay({
                                 {subMessage ? rowText(subMessage, steady) : '\u00A0'}
                             </Text>
                         )}
-                        {(helperText || steady) && (
+                        {(helperText || (steady && !noHelperRow)) && (
                             <Text
                                 // No 'italic': that class is defined in no
                                 // stylesheet, so this line has never rendered
