@@ -68,3 +68,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  fix(dialogs): problem lines keep their colour and fit one line (`6304d3922`)
 - 2026-11-02  feat(data-installer): select a pack's data in one two-pane screen (`278aef169`)
 - 2026-11-02  fix(data-installer): an export's several choices are checkboxes, not cards (`b8a3d6e8d`)
+- 2026-11-02  fix(data-installer): one wait until both columns are ready, and a Select all checkbox (`ff65bd915`)
