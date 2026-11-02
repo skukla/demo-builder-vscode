@@ -22,6 +22,7 @@ interface Facts {
     release: { tag: string; sha: string } | null;
     mainSha: string;
     unreleased: Array<{ sha: string; date: string }>;
+    unreleasedFiles?: string[];
     gateConclusion: string | null;
     gateState?: string;
     gateLastRun?: string | null;
@@ -80,6 +81,45 @@ describe('patchesReleased', () => {
 
         expect(code).toBe(0);
         expect(out).toBe('OK   skukla/eds-demo-patches: main is released as v1.1.0\n');
+    });
+
+    describe('commits past the release, days old', () => {
+        const stale = (unreleasedFiles?: string[]): Facts => ({
+            ...released('aaa'),
+            mainSha: 'bbb',
+            unreleased: [{ sha: 'bbb', date: '2026-10-01T00:00:00Z' }],
+            ...(unreleasedFiles ? { unreleasedFiles } : {}),
+        });
+
+        it.each([
+            ['the docs', ['README.md', 'RELEASING.md']],
+            ['a workflow', ['.github/workflows/lkg-gate.yml']],
+            ['the gate and its tests', ['scripts/lkg-gate.sh', 'tests/lkg-gate.test.sh']],
+            ['the canary record', ['canary/b2b.last-synced']],
+        ])('pass when they only touch %s: the gate publishes nothing for those', (_name, files) => {
+            expect(check([stale(files)]).code).toBe(0);
+        });
+
+        it.each([
+            ['a ledger', ['b2b/code-patches.json']],
+            ['the tested commit', ['b2b/last-known-good']],
+            ['the runtime surfaces', ['b2b/runtime-surfaces.json']],
+            ['a ledger among docs', ['README.md', 'b2b/code-patches.json']],
+            ['a file nobody has listed', ['something/new.json']],
+            ['no files in the answer', []],
+        ])('fail when they touch %s', (_name, files) => {
+            expect(check([stale(files)]).code).toBe(1);
+        });
+
+        it('fail when GitHub says nothing about the files', () => {
+            expect(check([stale()]).code).toBe(1);
+        });
+
+        it('fail when GitHub may have left a file out of its list', () => {
+            const files = Array.from({ length: 300 }, (_, i) => `docs/${i}.md`);
+
+            expect(check([stale(files)]).code).toBe(1);
+        });
     });
 
     it('passes while unreleased work is younger than two days: the next daily run releases it', () => {

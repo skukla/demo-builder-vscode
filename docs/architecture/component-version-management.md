@@ -29,7 +29,7 @@ A thin-layer storefront's version is the `eds-demo-patches` release it was last 
 (`metadata.patchesRelease`). It names the base the repository last merged from, not everything in it: the repository
 is the SC's. One from before this was recorded compares by commit alone until its next update or reset. The patches
 repository's lookup never falls back to `main`: if neither the API nor GitHub's web address can say, the patches read
-as unreachable. `lkg-gate.yml` publishes that repository's release itself when its checks pass (owner, 2026-11-02).
+as unreachable. `lkg-gate.yml` publishes that repository's release itself when its checks pass and something a storefront reads has changed (owner, 2026-11-02).
 
 A mesh keeps `mesh.json` under version control and rebuilds it on every deploy, so a rebuilt one is not read as
 the SC's own edit.

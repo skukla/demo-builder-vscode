@@ -38,6 +38,24 @@ const HOUR_MS = 60 * 60 * 1000;
 const API = 'https://api.github.com';
 
 /**
+ * Files no storefront reads. Keep in step with the patches repo's scripts/release-needed.sh: its gate
+ * publishes nothing for these, so they must not read as verified work left unreleased.
+ */
+const CANNOT_MATTER = /^(.*\.md|\.gitignore|\.github\/.*|scripts\/.*|tests\/.*|canary\/.*)$/;
+/** GitHub lists at most this many changed files, so a list this long may have left one out. */
+const COMPARE_FILE_CAP = 300;
+
+/**
+ * Whether what main holds past the release is nothing a storefront reads. No answer means it may be.
+ *
+ * @param {string[] | undefined} files - the files changed since the release
+ */
+function nothingStorefrontsRead(files) {
+    if (!files || files.length === 0 || files.length >= COMPARE_FILE_CAP) return false;
+    return files.every((file) => CANNOT_MATTER.test(file));
+}
+
+/**
  * The verdict for one patches repo.
  *
  * @param {object} facts - what GitHub said
@@ -45,6 +63,7 @@ const API = 'https://api.github.com';
  * @param {{tag: string, sha: string} | null} facts.release - the latest release, or null
  * @param {string} facts.mainSha - main's head
  * @param {{sha: string, date: string}[]} facts.unreleased - commits on main the release lacks
+ * @param {string[]} [facts.unreleasedFiles] - the files those commits changed
  * @param {string | null} facts.gateConclusion - the drift gate's latest scheduled run
  * @param {number} now - ms since the epoch
  * @returns {{ok: boolean, line: string}}
@@ -58,6 +77,9 @@ function releaseVerdict(facts, now) {
     }
     if (release.sha === mainSha || unreleased.length === 0) {
         return { ok: true, line: `${repo}: main is released as ${release.tag}` };
+    }
+    if (nothingStorefrontsRead(facts.unreleasedFiles)) {
+        return { ok: true, line: `${repo}: released as ${release.tag}; main has moved only in files no storefront reads` };
     }
     const oldest = Math.min(...unreleased.map((c) => Date.parse(c.date)));
     const hours = Math.floor((now - oldest) / HOUR_MS);
@@ -151,6 +173,7 @@ async function factsFor(repo) {
         release: { tag: latest.tag_name, sha: released ? released.sha : '' },
         mainSha: main.sha,
         unreleased,
+        unreleasedFiles: ((compare && compare.files) || []).map((f) => f.filename),
         ...gate,
     };
 }
