@@ -7,8 +7,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-    checksToRun,
-    ciVerdict,
+    checksProblem,
     compareVersions,
     contractProblem,
     highestVersion,
@@ -24,7 +23,7 @@ const GOOD = {
     notes: 'What changed.',
     onPublishedMain: true,
     clean: true,
-    checksFound: 1,
+    checksRuns: [{ conclusion: 'success' }],
 };
 
 describe('releaseProblems', () => {
@@ -42,7 +41,9 @@ describe('releaseProblems', () => {
         ['empty notes', { notes: '  \n' }, 'notes are empty'],
         ['uncommitted changes', { clean: false }, 'uncommitted'],
         ['an unpushed HEAD', { onPublishedMain: false }, 'pushed tip'],
-        ['no checks at all', { checksFound: 0 }, 'no checks'],
+        ['no `checks` job on this commit', { checksRuns: [] }, 'No job named'],
+        ['a red `checks` job', { checksRuns: [{ conclusion: 'failure' }] }, 'has not passed'],
+        ['a `checks` job still running', { checksRuns: [{ conclusion: null }] }, 'has not passed'],
     ];
     for (const [name, change, words] of REFUSALS) {
         it(`refuses ${name}`, () => {
@@ -105,49 +106,17 @@ describe('versions', () => {
     }
 });
 
-describe('checksToRun', () => {
-    it('runs whichever the repository declares, tests first', () => {
-        assert.deepEqual(checksToRun({ build: 'x', lint: 'y', test: 'z', dev: 'w' }), ['test', 'lint', 'build']);
+describe('checksProblem', () => {
+    it('passes when the job passed', () => {
+        assert.equal(checksProblem([{ conclusion: 'success' }]), null);
     });
 
-    it('has nothing to run for a repository with no scripts', () => {
-        assert.deepEqual(checksToRun(undefined), []);
-    });
-});
-
-describe('ciVerdict', () => {
-    it('is none when no job ran', () => {
-        assert.equal(ciVerdict([]), 'none');
-        assert.equal(ciVerdict(undefined), 'none');
+    it('a re-run that failed fails it', () => {
+        assert.ok(checksProblem([{ conclusion: 'success' }, { conclusion: 'failure' }]));
     });
 
-    it('a job that was skipped says nothing', () => {
-        assert.equal(ciVerdict([{ name: 'sync', conclusion: 'skipped' }]), 'none');
-    });
-
-    it('passes when everything that ran passed', () => {
-        const runs = [
-            { name: 'checks', conclusion: 'success' },
-            { name: 'sync', conclusion: 'skipped' },
-        ];
-
-        assert.equal(ciVerdict(runs), 'passed');
-    });
-
-    it('names what failed, and what has not finished', () => {
-        const runs = [
-            { name: 'checks', conclusion: 'failure' },
-            { name: 'deploy', conclusion: null },
-            { name: 'lint', conclusion: 'success' },
-        ];
-
-        assert.deepEqual(ciVerdict(runs), ['checks', 'deploy']);
-    });
-
-    it('a red CI refuses the release', () => {
-        const problems = releaseProblems({ ...GOOD, ci: ['checks'] });
-
-        assert.ok(problems[0].includes('CI has not passed'));
+    it('a missing answer is no answer', () => {
+        assert.ok(checksProblem(undefined));
     });
 });
 

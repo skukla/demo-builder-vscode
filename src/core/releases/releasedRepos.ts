@@ -3,7 +3,7 @@
  * released, as with the extension (owner, 2026-11-02). Anything else keeps following its branch,
  * because a release there is not ours to publish.
  *
- * `tests/core/releases/releasedRepos.test.ts` cross-checks this list against the catalogs.
+ * `tests/sop/component-releases.test.ts` cross-checks this list against the catalogs.
  */
 
 export const RELEASED_REPOS = [

@@ -1,0 +1,43 @@
+name: Component release process watchdog
+
+# Daily: does every repository the builder owns still carry the release process? Runs
+# `scripts/componentCi.mjs` (npm run components:ci), which fails when one has lost its `checks`
+# job or RELEASING.md, gained a workflow that publishes a release, or has a red `checks` on its
+# default branch. A failed scheduled run emails the repo owner: that is the alarm.
+#
+# Why it exists: those files live in other repositories and the test suite runs offline, so a
+# repository could lose its CI with nothing saying so until its next release.
+#
+# Lives here for the reason patches-released.yml does: GitHub switches off a public repository's
+# scheduled workflows after 60 days with no commit, and this repository is committed to daily.
+#
+# Scheduled workflows run from the DEFAULT branch only (master here), so this starts
+# running once it reaches master.
+
+on:
+  schedule:
+    # 09:53 UTC, off the top of the hour.
+    - cron: '53 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  watchdog:
+    name: Components carry the release process
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # No npm install: the script uses Node's own fetch and fs only.
+      - name: Check every owned repository
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/componentCi.mjs

@@ -56,24 +56,17 @@ export function highestVersion(tags) {
         .pop();
 }
 
-/** The repository's own checks to run, in order: whichever of these it declares. */
-export function checksToRun(scripts = {}) {
-    return ['test', 'lint', 'build'].filter((name) => Boolean(scripts[name]));
-}
-
 /**
- * What CI said about a commit. CI is the answer when it has one: it sets up what a repository's
- * checks need, which a bare checkout does not (citisignal-nextjs's build needs a Commerce URL, and
- * demo-erp's tests a generated file). A job that was skipped says nothing either way.
+ * Whether the job every owned repository runs on every push passed on this commit. It is named `checks`
+ * in all of them, so a deploy or a skipped sync job can never pass for it.
  *
- * @param runs - `{ name, conclusion }` for each check run on the commit
- * @returns 'none' when no job actually ran, 'passed', or the names of the jobs that did not pass
+ * @param runs - `{ conclusion }` for each check run named `checks` on the commit
+ * @returns the reason it did not, or null
  */
-export function ciVerdict(runs = []) {
-    const decisive = runs.filter((run) => run.conclusion !== 'skipped');
-    if (decisive.length === 0) return 'none';
-    const unpassed = decisive.filter((run) => run.conclusion !== 'success').map((run) => run.name);
-    return unpassed.length === 0 ? 'passed' : unpassed;
+export function checksProblem(runs = []) {
+    if (runs.length === 0) return 'No job named `checks` has run on this commit.';
+    const passed = runs.every((run) => run.conclusion === 'success');
+    return passed ? null : 'The `checks` job has not passed on this commit.';
 }
 
 /**
@@ -85,11 +78,10 @@ export function ciVerdict(runs = []) {
  * @param facts.notes - the release notes
  * @param facts.onPublishedMain - whether HEAD is the pushed tip of the default branch
  * @param facts.clean - whether the working tree has no changes
- * @param facts.checksFound - how many checks the repository has: its scripts plus its CI runs
- * @param facts.ci - the commit's {@link ciVerdict}
+ * @param facts.checksRuns - the commit's check runs named `checks`
  */
 export function releaseProblems(facts) {
-    const { version, tags, packageVersion, notes, onPublishedMain, clean, checksFound, ci } = facts;
+    const { version, tags, packageVersion, notes, onPublishedMain, clean, checksRuns } = facts;
     const problems = [];
     const track = trackOf(version);
     if (!track) {
@@ -110,10 +102,8 @@ export function releaseProblems(facts) {
     if (!notes?.trim()) problems.push('The release notes are empty.');
     if (!clean) problems.push('The working tree has uncommitted changes.');
     if (!onPublishedMain) problems.push('HEAD is not the pushed tip of the default branch.');
-    if (checksFound === 0) {
-        problems.push('The repository has no checks to run: no test, lint or build script, and no CI runs.');
-    }
-    if (Array.isArray(ci)) problems.push(`CI has not passed on this commit: ${ci.join(', ')}.`);
+    const checks = checksProblem(checksRuns);
+    if (checks) problems.push(checks);
     return problems;
 }
 

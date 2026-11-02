@@ -7,11 +7,11 @@
  * See SKILL.md. Exit 0 means every check passed; 1 means a check refused; 2 means it could not run.
  */
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checksToRun, ciVerdict, contractProblem, releaseArgs, releaseProblems, trackOf } from './releaseChecks.mjs';
+import { contractProblem, releaseArgs, releaseProblems, trackOf } from './releaseChecks.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_LIST = join(HERE, '../../../src/core/releases/releasedRepos.ts');
@@ -81,13 +81,11 @@ function gatherFacts(args, repo) {
     git(repoPath, 'fetch', '--quiet', 'origin');
     const branch = gh('api', `repos/${repo}`, '--jq', '.default_branch');
     const head = git(repoPath, 'rev-parse', 'HEAD');
-    const runs = JSON.parse(tryGh('api', `repos/${repo}/commits/${head}/check-runs`, '--jq', '.check_runs') ?? '[]');
-    const ci = ciVerdict(runs);
-    const scripts = checksToRun(pkg.scripts);
+    const checksRuns = JSON.parse(
+        tryGh('api', `repos/${repo}/commits/${head}/check-runs?check_name=checks`, '--jq', '.check_runs') ?? '[]',
+    );
     return {
         head,
-        // CI is the answer when it has one. Local checks are for a repository with none.
-        scripts: ci === 'none' ? scripts : [],
         facts: {
             version: args.version,
             tags: gh('api', `repos/${repo}/tags?per_page=100`, '--jq', '.[].name').split('\n').filter(Boolean),
@@ -95,30 +93,20 @@ function gatherFacts(args, repo) {
             notes: existsSync(args.notes) ? readFileSync(args.notes, 'utf8') : '',
             onPublishedMain: head === git(repoPath, 'rev-parse', `origin/${branch}`),
             clean: git(repoPath, 'status', '--porcelain') === '',
-            checksFound: scripts.length + runs.filter((run) => run.conclusion !== 'skipped').length,
-            ci,
+            checksRuns,
         },
     };
-}
-
-function runChecks(repoPath, scripts) {
-    return scripts.flatMap((name) => {
-        console.log(`Running npm run ${name}`);
-        const run = spawnSync('npm', ['run', name], { cwd: repoPath, stdio: 'inherit' });
-        return run.status === 0 ? [] : [`npm run ${name} failed.`];
-    });
 }
 
 function main() {
     const args = parseArgs(process.argv.slice(2));
     const repo = repoOf(args.repoPath);
-    const { head, scripts, facts } = gatherFacts(args, repo);
+    const { head, facts } = gatherFacts(args, repo);
     const contract = erpProblem(repo, args.repoPath, args.version);
     const problems = [
         ...releaseProblems(facts),
         ...(contract ? [contract] : []),
     ];
-    if (problems.length === 0) problems.push(...runChecks(args.repoPath, scripts));
     if (problems.length > 0) {
         console.error(`${repo} ${args.version} may not be released:`);
         for (const problem of problems) console.error(`  - ${problem}`);

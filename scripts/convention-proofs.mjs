@@ -963,6 +963,20 @@ const PROOFS = [
         },
     },
     {
+        id: 'one-reader-of-releases',
+        convention: 'A component the builder owns ships by release',
+        enforcer: 'tests/sop/component-releases.test.ts',
+        expects: /only one module reads GitHub's releases/,
+        plant: {
+            path: 'src/core/utils/zzProofReleaseReader.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs - a second reader of GitHub releases. */',
+                "export const zzProofUrl = 'https://api.github.com/repos/skukla/demo-erp/releases/latest';",
+                '',
+            ].join('\n'),
+        },
+    },
+    {
         id: 'tool-confirm-gate-published',
         convention: 'The generated tool catalog states every confirm gate',
         enforcer: 'tests/sop/tool-catalog-gating.test.ts',

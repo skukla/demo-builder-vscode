@@ -149,6 +149,14 @@ const PERIODIC: readonly Instrument[] = [
         runs: 'npm run patches:released',
     },
     {
+        id: 'components:ci',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        resultKind: 'gate',
+        what: 'every repository the builder owns still carries the release process: a checks job on every push, RELEASING.md, nothing else publishing',
+        runs: 'npm run components:ci',
+    },
+    {
         id: 'health',
         kind: 'npm-script',
         cadence: 'periodic',

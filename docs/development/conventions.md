@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **132** conventions, **130** enforced
+- **133** conventions, **131** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -68,6 +68,7 @@ it means the rule rests on somebody noticing.
 | A setting that receives credentials is scoped to the user, never the workspace. |  |  | `credential-sink-settings-scoped.test.ts` |
 | Whoever names a content site names its index path. The catalog, the project row and a description file all state where a site lists its pages; every reader (the copy step, the import path, the reset door) takes the stated path from `contentIndex.ts` and none guesses one. Only the Add a demo package probe looks a path up, for a repository that names a site with no path, and it records what it found. |  |  | `content-index-path.test.ts` |
 | Demo Builder states no Node version of its own. Each component declares the Node it accepts in its own repo (`engines.node`); `npm run node:resolve` reads them all at a release cut and writes the one Node they accept to `node-version.generated.json`, and every reader asks `core/shell/demoBuilderNode.ts`. The only other Node is one a custom integration needs, worked out when it is added. |  |  | `node-versions-from-components.test.ts` |
+| A component the builder owns ships by release, as the extension does: a push reaches no SC, a published release does. `RELEASED_REPOS` lists those repositories, and only `readNewestRelease` reads GitHub's releases. Each carries a CI job named `checks` and a `RELEASING.md`, and a release goes through the `component-release` skill, which refuses a release unless that job passed on that commit. Everything is on the extension's beta track until it reaches 1.x, except `eds-demo-patches`, whose nightly gate publishes normal releases. |  |  | `component-releases.test.ts` |
 | The boilerplate storefronts are built from moves forward when Adobe moves it, not when someone remembers. The patches repo's daily drift gate verifies each new boilerplate against our patches and, when every patch holds, publishes the release Demo Builder reads (ADR-006). No step waits on a release cut by hand. |  |  | *named in prose* |
 
 ## 5. What survives between calls

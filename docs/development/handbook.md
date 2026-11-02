@@ -331,6 +331,19 @@ check says so and names the file.
 > cannot drift from the components it describes.
 > Enforced by `tests/sop/node-versions-from-components.test.ts`.
 
+> **Convention.** A component the builder owns ships by release, as the extension does: a push
+> reaches no SC, a published release does. `RELEASED_REPOS` lists those repositories, and only
+> `readNewestRelease` reads GitHub's releases. Each carries a CI job named `checks` and a
+> `RELEASING.md`, and a release goes through the `component-release` skill, which refuses a release
+> unless that job passed on that commit. Everything is on the extension's beta track until it
+> reaches 1.x, except `eds-demo-patches`, whose nightly gate publishes normal releases.
+> *Why:* following a branch meant merging to `main` shipped straight to every SC, with no
+> version, notes or hold. Three copies of the release lookup disagreed about which release was
+> newest, and one could hand a beta-channel install an alpha.
+> Enforced by `tests/sop/component-releases.test.ts`. Those repositories cannot be read from an
+> offline test, so `npm run components:ci` checks each one, daily by
+> `.github/workflows/component-ci.yml` (a failed run emails the owner) and in the periodic sweep.
+
 > **Convention.** The boilerplate storefronts are built from moves forward when Adobe moves
 > it, not when someone remembers. The patches repo's daily drift gate verifies each new
 > boilerplate against our patches and, when every patch holds, publishes the release Demo
@@ -1844,11 +1857,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 63 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 64 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 132 conventions. 130 of them are enforced; 2 are not.**
+**This handbook states 133 conventions. 131 of them are enforced; 2 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

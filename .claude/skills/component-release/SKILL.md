@@ -35,13 +35,17 @@ It refuses, and says why, for each of these:
 - `package.json` disagreeing with the version
 - empty notes
 - uncommitted changes, or a HEAD that is not the pushed tip of the default branch
-- CI that has not passed on this commit. CI is the answer when it has one, because it sets up what a repository's
-  checks need and a bare checkout does not
-- with no CI result, a failing `test`, `lint` or `build`, run locally
-- a repository with no checks at all: none of those scripts, and no CI that ran
+- the `checks` job missing, or not passed, on this commit. Every owned repository has a CI job with that name, so a deploy or a skipped job can never pass for it
 - the ERP pair disagreeing on `contract/erp-contract.json`
 
 `skukla/eds-demo-patches` is refused too: `lkg-gate.yml` publishes its release itself when its daily gate passes.
+
+## Every repository carries
+
+- A CI job named `checks`, on every push and pull request, that validates the `package.json` version and runs the repository's own checks
+- A `RELEASING.md` saying a push reaches no SC, and how a release happens
+
+`npm run components:ci` checks all of that across every repository, daily and in the sweep. Run it after changing a repository's CI.
 
 ## The ERP pair
 
