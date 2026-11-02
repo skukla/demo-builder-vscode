@@ -485,8 +485,10 @@
     overflow-wrap: anywhere;
 }
 
-.datapack-flow-cards--dense {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+/* Checkboxes for what an export can take several of (CheckRows): a long list scrolls in the dialog. */
+.datapack-check-rows {
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 /* The kinds beside the shown kind's items (StorePicksStage): one height whatever is read, so nothing

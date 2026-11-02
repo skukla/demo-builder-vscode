@@ -56,10 +56,10 @@ describe('before the type list arrives', () => {
     });
 
     // The control: once an answer is in, the wait goes and the cards take over.
-    it('hands over to the cards once an answer is in', () => {
+    it('hands over to the list once an answer is in', () => {
         renderToTheTypes({ loading: false, settled: true, value: { dataTypes: ['attribute_sets'] } });
 
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /^Attribute sets/ })).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: /^Attribute sets/ })).toBeInTheDocument();
     });
 });

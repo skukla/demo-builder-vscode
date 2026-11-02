@@ -6,7 +6,7 @@
 import { screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { press } from '../../../../helpers/reactSettle';
-import { button, card, isOff, exportCall, fillIdentity, mockRequest, renderExport, SCOPES, withService } from './CreateDatapackModal.testUtils';
+import { button, check, isOff, exportCall, fillIdentity, mockRequest, renderExport, SCOPES, withService } from './CreateDatapackModal.testUtils';
 
 const VIEWS = ['Default Store View', 'French', 'CitiSignal US'];
 const KINDS = ['ACO metadata', 'ACO categories', 'ACO products', 'ACO price books', 'ACO prices'];
@@ -30,19 +30,19 @@ describe('an ACO pack', () => {
         expect(mockRequest.mock.calls.some((c) => c[0] === 'list-datapack-data-types')).toBe(false);
     });
 
-    it('offers every store view as a card with its website, all on', async () => {
+    it('offers every store view as a checkbox with its website, all on', async () => {
         await renderExport('aco');
 
-        for (const view of VIEWS) expect(card(view)).toHaveAttribute('aria-pressed', 'true');
-        expect(screen.getByRole('button', { name: /^Default Store View.*Main Website/ })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /^CitiSignal US.*CitiSignal Website/ })).toBeInTheDocument();
+        for (const view of VIEWS) expect(check(view)).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: /^Default Store View.*Main Website/ })).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: /^CitiSignal US.*CitiSignal Website/ })).toBeInTheDocument();
     });
 
     it('then the five ACO kinds as cards, all on', async () => {
         await renderExport('aco');
         await press(button('Continue'));
 
-        for (const kind of KINDS) expect(card(kind)).toHaveAttribute('aria-pressed', 'true');
+        for (const kind of KINDS) expect(check(kind)).toBeChecked();
         expect(screen.queryByRole('button', { name: /^Attribute sets/ })).not.toBeInTheDocument();
     });
 
@@ -57,9 +57,9 @@ describe('an ACO pack', () => {
 
     it('sends the store views and kinds still on when some are off', async () => {
         await renderExport('aco');
-        await press(card('CitiSignal US'));
+        await press(check('CitiSignal US'));
         await press(button('Continue'));
-        await press(card('ACO prices'));
+        await press(check('ACO prices'));
         await press(button('Continue'));
         await fillIdentity('aco_acme', 'main');
         await press(button('Export'));
@@ -75,7 +75,7 @@ describe('an ACO pack', () => {
 
     it('cannot go on with no store view on', async () => {
         await renderExport('aco');
-        for (const view of VIEWS) await press(card(view));
+        for (const view of VIEWS) await press(check(view));
 
         expect(isOff('Continue')).toBe(true);
     });
@@ -83,7 +83,7 @@ describe('an ACO pack', () => {
     it('cannot go on with no kind on, and the store views stay answerable behind it', async () => {
         await renderExport('aco');
         await press(button('Continue'));
-        for (const kind of KINDS) await press(card(kind));
+        for (const kind of KINDS) await press(check(kind));
         expect(isOff('Continue')).toBe(true);
 
         await press(button('Back'));
@@ -93,14 +93,14 @@ describe('an ACO pack', () => {
 
     it('keeps what was turned off through Back and forward, and reads the store views once', async () => {
         await renderExport('aco');
-        await press(card('French'));
+        await press(check('French'));
         await press(button('Continue'));
         await press(button('Back'));
         await press(button('Back'));
         await press(button('Continue'));
 
-        expect(card('French')).toHaveAttribute('aria-pressed', 'false');
-        expect(card('Default Store View')).toHaveAttribute('aria-pressed', 'true');
+        expect(check('French')).not.toBeChecked();
+        expect(check('Default Store View')).toBeChecked();
         expect(mockRequest.mock.calls.filter((c) => c[0] === 'list-datapack-import-scopes')).toHaveLength(1);
     });
 

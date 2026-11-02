@@ -1,6 +1,6 @@
 /**
  * Shared harness for the `CreateDatapackModal` suite family: the export routes, reached the way the
- * SC reaches them, by the cards.
+ * SC reaches them, by the cards and checkboxes.
  *
  * THIS FILE OWNS THE MOCK WALL AND THE SUT IMPORT: `jest.mock` hoists above the imports of the module
  * it appears in, not across modules, so a spec that imported the modal itself could bind to an
@@ -65,6 +65,7 @@ export function withService(over: Record<string, unknown> = {}) {
 
 /** A card, by the name it starts with: its accessible name runs on into its line and note. */
 export const card = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}`) });
+export const check = (name: string) => screen.getByRole('checkbox', { name: new RegExp(`^${name}`) });
 export const button = (name: string) => screen.getByRole('button', { name });
 
 /** The first screen, with nothing pressed. */
@@ -98,7 +99,7 @@ export async function fillIdentity(name: string, version: string): Promise<void>
 
 /** From the data types: tick one, name the pack, and press Export. */
 export async function exportAs(name: string, version: string) {
-    await press(card('Attribute sets'));
+    await press(check('Attribute sets'));
     await press(button('Continue'));
     await fillIdentity(name, version);
     await press(button('Export'));

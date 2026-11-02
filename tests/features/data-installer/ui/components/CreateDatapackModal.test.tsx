@@ -9,7 +9,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React from 'react';
 import { press, settle } from '../../../../helpers/reactSettle';
-import { button, card, CreateDatapackModal, isOff, mockRequest, renderCreate, SCOPES, withService } from './CreateDatapackModal.testUtils';
+import { button, card, check, CreateDatapackModal, isOff, mockRequest, renderCreate, SCOPES, withService } from './CreateDatapackModal.testUtils';
 import type { StoreItemPage } from '@/features/data-installer/pickableKinds';
 
 const PRODUCTS: StoreItemPage = {
@@ -96,7 +96,7 @@ describe('which route each engine and pack type takes', () => {
         await press(button('Continue'));
 
         expect(mockRequest.mock.calls.some((c) => c[0] === 'list-datapack-data-types')).toBe(true);
-        expect(card('Attribute sets')).toHaveAttribute('aria-pressed', 'false');
+        expect(check('Attribute sets')).not.toBeChecked();
         expect(screen.queryByRole('button', { name: /^Products/ })).not.toBeInTheDocument();
         expect(onSaveFromStore).not.toHaveBeenCalled();
     });
@@ -106,7 +106,7 @@ describe('which route each engine and pack type takes', () => {
         await press(card('ACO datapack'));
         await press(button('Continue'));
 
-        expect(card('Default Store View')).toHaveAttribute('aria-pressed', 'true');
+        expect(check('Default Store View')).toBeChecked();
         expect(mockRequest.mock.calls.some((c) => c[0] === 'list-datapack-export-items')).toBe(false);
         expect(onSaveFromStore).not.toHaveBeenCalled();
     });

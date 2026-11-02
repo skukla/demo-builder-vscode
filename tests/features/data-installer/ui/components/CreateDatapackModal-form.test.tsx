@@ -14,6 +14,7 @@ import { press, settle } from '../../../../helpers/reactSettle';
 import {
     button,
     card,
+    check,
     CreateDatapackModal,
     isOff,
     exportCall,
@@ -24,7 +25,7 @@ import {
 } from './CreateDatapackModal.testUtils';
 
 async function toTheName(): Promise<void> {
-    await press(card('Attribute sets'));
+    await press(check('Attribute sets'));
     await press(button('Continue'));
 }
 
@@ -38,15 +39,15 @@ describe('what Continue waits for on the data types', () => {
         await renderExport();
         expect(isOff('Continue')).toBe(true);
 
-        await press(card('Attribute sets'));
+        await press(check('Attribute sets'));
 
         expect(isOff('Continue')).toBe(false);
     });
 
     it('is off again when the last type is taken away', async () => {
         await renderExport();
-        await press(card('Attribute sets'));
-        await press(card('Attribute sets'));
+        await press(check('Attribute sets'));
+        await press(check('Attribute sets'));
 
         expect(isOff('Continue')).toBe(true);
     });
@@ -153,21 +154,20 @@ describe('choosing types', () => {
         expect(call?.[1]).toEqual({ operationMode: 'export' });
     });
 
-    it('turns a card on and off with a check', async () => {
+    it('turns a data type on and off with its checkbox', async () => {
         await renderExport();
-        await press(card('Categories'));
-        expect(card('Categories')).toHaveAttribute('aria-pressed', 'true');
-        expect(card('Categories')).toHaveAttribute('data-selected', 'true');
+        await press(check('Categories'));
+        expect(check('Categories')).toBeChecked();
 
-        await press(card('Categories'));
+        await press(check('Categories'));
 
-        expect(card('Categories')).toHaveAttribute('aria-pressed', 'false');
+        expect(check('Categories')).not.toBeChecked();
     });
 
     it('drops a type again when it is taken away', async () => {
         await renderExport();
         await press(button('Select all'));
-        await press(card('Categories'));
+        await press(check('Categories'));
         await press(button('Continue'));
         await fillIdentity('captured-pack', 'v1');
         await press(button('Export'));
@@ -176,18 +176,18 @@ describe('choosing types', () => {
         expect(exportCall()).toMatchObject({ dataTypes: ['attribute_sets'] });
     });
 
-    it('Select all turns every card on, and becomes Clear all', async () => {
+    it('Select all ticks every data type, and becomes Clear all', async () => {
         await renderExport();
         await press(button('Select all'));
 
-        expect(card('Attribute sets')).toHaveAttribute('aria-pressed', 'true');
-        expect(card('Categories')).toHaveAttribute('aria-pressed', 'true');
+        expect(check('Attribute sets')).toBeChecked();
+        expect(check('Categories')).toBeChecked();
         expect(isOff('Continue')).toBe(false);
 
         await press(button('Clear all'));
 
-        expect(card('Attribute sets')).toHaveAttribute('aria-pressed', 'false');
-        expect(card('Categories')).toHaveAttribute('aria-pressed', 'false');
+        expect(check('Attribute sets')).not.toBeChecked();
+        expect(check('Categories')).not.toBeChecked();
         // Not merely unmarked: the selection has to be genuinely EMPTY, which only the off button can show.
         expect(isOff('Continue')).toBe(true);
     });
@@ -209,20 +209,20 @@ describe('choosing types', () => {
         withService({ 'list-datapack-data-types': { success: true, data: { mode: 'export', dataTypes: ['attribute_sets', '', 'categories'] } } });
         await renderExport();
 
-        expect(screen.getAllByRole('button').filter((b) => b.hasAttribute('aria-pressed'))).toHaveLength(2);
+        expect(screen.getAllByRole('checkbox')).toHaveLength(2);
     });
 
     it('keeps what was chosen through Back and forward, and reads the list once', async () => {
         await renderExport();
-        await press(card('Categories'));
+        await press(check('Categories'));
         await press(button('Continue'));
         await press(button('Back'));
-        expect(card('Categories')).toHaveAttribute('aria-pressed', 'true');
+        expect(check('Categories')).toBeChecked();
 
         await press(button('Back'));
         await press(button('Continue'));
 
-        expect(card('Categories')).toHaveAttribute('aria-pressed', 'true');
+        expect(check('Categories')).toBeChecked();
         expect(mockRequest.mock.calls.filter((c) => c[0] === 'list-datapack-data-types')).toHaveLength(1);
     });
 });

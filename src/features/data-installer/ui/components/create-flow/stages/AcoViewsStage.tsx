@@ -7,11 +7,11 @@
 
 import React, { useMemo } from 'react';
 import type { AcoExportChoice } from '../../../hooks/useAcoExportChoice';
-import { ToggleCards } from './ToggleCards';
+import { CheckRows } from './CheckRows';
 
 export function AcoViewsStage({ aco }: { aco: AcoExportChoice }): React.ReactElement {
     const options = useMemo(
-        () => aco.storeViews.map((view) => ({ id: view.code, name: view.name, description: view.websiteName })),
+        () => aco.storeViews.map((view) => ({ id: view.code, name: view.name, detail: view.websiteName })),
         [aco.storeViews],
     );
     return (
@@ -20,7 +20,7 @@ export function AcoViewsStage({ aco }: { aco: AcoExportChoice }): React.ReactEle
             {options.length === 0 ? (
                 <p className="dialog-problem text-notice">Couldn&apos;t load store views. The datapack will include all of them.</p>
             ) : (
-                <ToggleCards options={options} picked={aco.pickedViews} onToggle={aco.toggleView} />
+                <CheckRows options={options} picked={aco.pickedViews} onToggle={aco.toggleView} />
             )}
         </>
     );

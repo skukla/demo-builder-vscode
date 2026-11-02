@@ -7,14 +7,14 @@
 
 import React, { useMemo } from 'react';
 import type { AcoExportChoice } from '../../../hooks/useAcoExportChoice';
-import { ToggleCards, typeCardOptions } from './ToggleCards';
+import { CheckRows, typeOptions } from './CheckRows';
 
 export function AcoKindsStage({ aco }: { aco: AcoExportChoice }): React.ReactElement {
-    const options = useMemo(() => typeCardOptions(aco.kinds), [aco.kinds]);
+    const options = useMemo(() => typeOptions(aco.kinds), [aco.kinds]);
     return (
         <>
             <span className="datapack-import-label">ACO data types</span>
-            <ToggleCards options={options} picked={aco.pickedKinds} onToggle={aco.toggleKind} />
+            <CheckRows options={options} picked={aco.pickedKinds} onToggle={aco.toggleKind} />
         </>
     );
 }
