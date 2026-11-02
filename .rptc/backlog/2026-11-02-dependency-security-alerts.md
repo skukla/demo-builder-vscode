@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Work through the dependency security alerts on the repositories we own
@@ -46,3 +46,4 @@ under the MCP SDK. The name `proxy-addr` does not appear in the built extension,
 - 2026-11-02  Correction to the line above: the owner was not sure, so that is not a decision. The code says the Headless demo is built for the SC's own machine: every URL the extension builds for it is localhost, nothing sets or offers a network address, and neither repository's docs mention another device. The network access is only Next's default. Open: limit the dev server to the SC's machine.
 - 2026-11-02  Correction: the line saying the Next.js upgrade reaches no SC until a first beta was wrong. Beta.152 installs this storefront from main, so a fresh Headless install on it already gets 15.5.28.
 - 2026-11-02  Owner, 2026-11-02: limit the Headless dev server to the SC's machine. Measured against next dev -H: the extension's port check read the held port as free, so Start would report a timeout. The check is fixed on this branch. The one-line storefront change waits on its branch fix/dev-server-local-only until beta.153 is out, because beta.152 still has the old check. With it, the LAN address is refused, localhost serves the same page as before in a real browser, and Stop's lookup finds the process. Lead, not proved: nothing appears to pass a project's port to next dev, so any port but 3000 may also time out.
+- 2026-11-02  fix(lifecycle): the port check sees a server limited to one address (`c7439fc41`)
