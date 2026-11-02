@@ -53,8 +53,8 @@ function candidates(project: Project): Array<{
     return Object.entries(project.appBuilderComponents ?? {}).flatMap(([id, state]) => {
         const instance = project.componentInstances?.[id];
         const path = instance?.path;
-        const eligible = state.status === 'deployed' && Boolean(path);
-        return eligible && path ? [{ id, state, path, repoUrl: instance?.repoUrl }] : [];
+        if (state.status !== 'deployed' || !path) return [];
+        return [{ id, state, path, repoUrl: instance.repoUrl }];
     });
 }
 
