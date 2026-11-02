@@ -184,7 +184,7 @@ export function Modal({
     // Map custom sizes to Dialog-compatible sizes
     const dialogSize: 'S' | 'M' | 'L' =
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
-    const { bodyRef, resizing, retitling, holding } = useDialogViewChange({
+    const { bodyRef, resizing, holding } = useDialogViewChange({
         widthStep: wide ? 'XL' : dialogSize,
         holding: Boolean(waiting) || holdSize,
         waiting: Boolean(waiting),
@@ -195,7 +195,7 @@ export function Modal({
         // Every class a literal, so the stylesheet scan can read them in every bundle that
         // renders a modal. (A helper built this string until 2026-10-15, which the scan counted
         // unreadable once per bundle.) `modal-dialog` pins the dialog near the top; `is-resizing`
-        // hides the content while the box moves to a new view, and `is-retitling` the title too.
+        // hides the body while the box moves to a new view.
         <Dialog
             size={dialogSize}
             UNSAFE_className={cn(
@@ -203,7 +203,6 @@ export function Modal({
                 fitContent && 'modal-fit-content',
                 wide && 'modal-wide',
                 resizing && 'is-resizing',
-                retitling && 'is-retitling',
                 holding && 'is-holding',
             )}
         >

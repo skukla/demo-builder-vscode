@@ -50,33 +50,34 @@ afterEach(() => {
 });
 
 describe('a big change of view: one move', () => {
-    it('hides the content and the title, eases the box once, then shows them', () => {
+    it('hides the body but never the title, eases the box once, then shows the body', () => {
         const { rerender } = render(wrap(<Modal {...defaultProps} size="M" />));
         boxGoes(FORM, CONFIRM);
 
         rerender(wrap(<Modal {...defaultProps} size="S" />));
 
-        expect(dialog()).toHaveClass('is-resizing', 'is-retitling');
-        expect(animate).toHaveBeenCalledTimes(1);
-        expect(animate.mock.calls[0][0]).toEqual([
+        expect(dialog()).toHaveClass('is-resizing');
+        expect(animate).toHaveBeenCalledTimes(2);
+        const box = animate.mock.calls.find(([frames]) => 'height' in frames[0]);
+        expect(box?.[0]).toEqual([
             { width: '480px', height: '290px' },
             { width: '400px', height: '234px' },
         ]);
-        expect(animate.mock.calls[0][1].duration).toBe(FRONTEND_TIMEOUTS.DIALOG_VIEW_CHANGE);
+        expect(box?.[1].duration).toBe(FRONTEND_TIMEOUTS.DIALOG_VIEW_CHANGE);
 
         settle();
         expect(dialog()).not.toHaveClass('is-resizing');
-        expect(dialog()).not.toHaveClass('is-retitling');
     });
 
-    it('keeps the title showing when only a wait ended on its first open', () => {
-        const { rerender } = render(wrap(<Modal {...defaultProps} waiting={{}} />));
-        boxGoes(CONFIRM, FORM);
+    it('holds the title at its final width for the move, so it does not rewrap', () => {
+        const { rerender } = render(wrap(<Modal {...defaultProps} size="M" />));
+        boxGoes(FORM, CONFIRM);
 
-        rerender(wrap(<Modal {...defaultProps} waiting={false} />));
+        rerender(wrap(<Modal {...defaultProps} size="S" />));
 
-        expect(dialog()).toHaveClass('is-resizing');
-        expect(dialog()).not.toHaveClass('is-retitling');
+        const title = animate.mock.calls.find(([frames]) => !('height' in frames[0]));
+        expect(title?.[0]).toEqual([{ width: '400px' }, { width: '400px' }]);
+        expect(title?.[1].duration).toBe(FRONTEND_TIMEOUTS.DIALOG_VIEW_CHANGE);
     });
 
     it('stops the move if the dialog closes during it', () => {
@@ -88,7 +89,8 @@ describe('a big change of view: one move', () => {
 
         unmount();
 
-        expect(cancel).toHaveBeenCalledTimes(1);
+        // The box's move and the title's hold.
+        expect(cancel).toHaveBeenCalledTimes(2);
     });
 });
 
@@ -162,7 +164,7 @@ describe('a wait keeps the box it found', () => {
         rerender(wrap(<Modal {...defaultProps} size="S" title="Removed" />));
 
         expect(cancel).toHaveBeenCalledTimes(1);
-        expect(animate).toHaveBeenCalledTimes(1);
+        expect(animate.mock.calls.filter(([frames]) => 'height' in frames[0])).toHaveLength(1);
         expect(dialog()).not.toHaveClass('is-holding');
         expect(dialog()).toHaveClass('is-resizing');
     });

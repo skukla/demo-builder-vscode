@@ -26,10 +26,10 @@ export const FRONTEND_TIMEOUTS = {
     GROWTH_SETTLE: 400,
 
     /**
-     * How long a dialog's box takes to ease to a new view, with its content hidden. The content
-     * fades in when it ends (`useDialogViewChange`).
+     * How long a dialog's box takes to ease to a new view, with its body hidden. The body fades in
+     * when it ends (`useDialogViewChange`).
      */
-    DIALOG_VIEW_CHANGE: 200,
+    DIALOG_VIEW_CHANGE: 150,
 
     /**
      * Delay for UI state updates to settle before DOM operations.

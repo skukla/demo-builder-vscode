@@ -596,8 +596,8 @@ meant.
 > in dead space; the dialog design rules (owner, 2026-10-31,
 > `docs/development/sop/dialog-design.md`) settled on fit-and-ease, with dialogs pinned
 > near the top so a change moves only the bottom edge. A change of whole view is one move
-> (owner, 2026-11-02, after a confirm folded in and out "like an accordion"): the content
-> hides, the box eases once to its final size, and the new content fades in. Under 40px it
+> (owner, 2026-11-02, after a confirm folded in and out "like an accordion"): the body
+> hides under a title that stays, the box eases once to its final size, and the new body fades in. Under 40px it
 > just swaps, and a wait keeps the box it found, because a removal had moved four times with
 > three of them a few pixels (`useDialogViewChange`).
 >

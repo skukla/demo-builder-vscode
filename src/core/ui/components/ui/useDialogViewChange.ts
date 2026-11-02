@@ -2,8 +2,9 @@
  * A change of view in a dialog is one move, or none (dialog design rules, owner 2026-11-02).
  * A view is a width step, whether it is holding for a wait, and a title.
  *
- * - A big change: the content hides, the box eases once from the size it had to the size it ends
- *   at, and the new content fades in. Two motions used to run on one change: the height followed
+ * - A big change: the body hides, the box eases once from the size it had to the size it ends at,
+ *   and the new body fades in. The title stays, already reading its new words, so the dialog never
+ *   goes blank (owner, 2026-11-02). Two motions used to run on one change: the height followed
  *   the content while the width eased, and text wrapping at the narrower width pushed the height
  *   back out, so a confirm folded in and then out "like an accordion".
  * - A small change, under `SMALL_CHANGE` each way: the content swaps. A removal moved four times,
@@ -39,10 +40,8 @@ export interface DialogView {
 export interface DialogViewChange {
     /** On a plain element inside the dialog: the box is found from it, not by a ref on Spectrum. */
     bodyRef: RefObject<HTMLDivElement | null>;
-    /** The content is hidden while the box moves. */
+    /** The body is hidden while the box moves. */
     resizing: boolean;
-    /** The title is hidden too: it reads differently, or would rewrap as the width moves. */
-    retitling: boolean;
     /** A wait is sitting in a box bigger than it needs, so it centres itself. */
     holding: boolean;
 }
@@ -70,6 +69,14 @@ function easeBox(box: HTMLElement, from: DOMRect, to: DOMRect): Animation | unde
     );
 }
 
+/** The title at its final width for the move, so it stays on screen without rewrapping. */
+function holdTitle(box: HTMLElement): Animation | undefined {
+    const title = box.querySelector<HTMLElement>('.modal-title');
+    if (!title) return undefined;
+    const width = `${title.getBoundingClientRect().width}px`;
+    return title.animate?.([{ width }, { width }], { duration: FRONTEND_TIMEOUTS.DIALOG_VIEW_CHANGE });
+}
+
 /** The width it had, and its height as a floor: a wait that needs more room still gets it. */
 function holdBox(box: HTMLElement, size: DOMRect): Animation | undefined {
     const held = { width: `${size.width}px`, minHeight: `${size.height}px` };
@@ -85,7 +92,7 @@ export function useDialogViewChange(view: DialogView): DialogViewChange {
     const shown = useRef(view);
     const startSize = useRef<DOMRect | null>(null);
     const held = useRef<Animation | undefined>(undefined);
-    const [change, setChange] = useState<{ retitling: boolean } | null>(null);
+    const [resizing, setResizing] = useState(false);
     const [holding, setHolding] = useState(false);
 
     // While rendering, because this is the last moment the DOM still holds the old view. A read
@@ -101,9 +108,8 @@ export function useDialogViewChange(view: DialogView): DialogViewChange {
 
     const { widthStep, holding: wantsHold, waiting, title } = view;
     useLayoutEffect(() => {
-        const previous = shown.current;
         const current = { widthStep, holding: wantsHold, waiting, title };
-        if (sameView(previous, current)) return undefined;
+        if (sameView(shown.current, current)) return undefined;
         shown.current = current;
 
         const box = boxOf(bodyRef.current);
@@ -128,19 +134,21 @@ export function useDialogViewChange(view: DialogView): DialogViewChange {
             return undefined;
         }
 
+        const heldTitle = holdTitle(box);
         const move = easeBox(box, from, to);
-        setChange({ retitling: previous.title !== title || previous.widthStep !== widthStep });
+        setResizing(true);
         const timer = setTimeout(() => {
             settled();
-            setChange(null);
+            setResizing(false);
         }, FRONTEND_TIMEOUTS.DIALOG_VIEW_CHANGE);
         return () => {
             clearTimeout(timer);
             move?.cancel();
+            heldTitle?.cancel();
         };
     }, [widthStep, wantsHold, waiting, title]);
 
     useEffect(() => () => held.current?.cancel(), []);
 
-    return { bodyRef, resizing: change !== null, retitling: change?.retitling ?? false, holding };
+    return { bodyRef, resizing, holding };
 }

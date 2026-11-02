@@ -168,12 +168,10 @@
     max-height: calc(var(--spectrum-visual-viewport-height) * 0.84);
 }
 
-/* A change of view is one move (`useDialogViewChange`): the content hides, the box eases to its
-   final size, and the content fades in, so text never visibly rewraps. The title hides with it
-   when it reads differently or would rewrap, and stays when only a wait ended. */
-.modal-dialog .modal-content,
-.modal-dialog .modal-title {
-    transition: opacity var(--spectrum-global-animation-duration-200) ease-in;
+/* A change of view is one move (`useDialogViewChange`): the body hides, the box eases to its final
+   size, and the body fades in, so text never visibly rewraps. The title stays throughout. */
+.modal-dialog .modal-content {
+    transition: opacity var(--spectrum-global-animation-duration-100) ease-in;
 }
 
 .modal-dialog.is-resizing {
@@ -192,8 +190,7 @@
     align-items: center;
 }
 
-.modal-dialog.is-resizing .modal-content,
-.modal-dialog.is-retitling .modal-title {
+.modal-dialog.is-resizing .modal-content {
     opacity: 0;
     transition: none;
 }
