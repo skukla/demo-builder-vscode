@@ -347,26 +347,23 @@ describe('applyCodePatches — failure cases', () => {
      * triaging one.
      */
     it('says nothing about unknown IDs when every requested ID resolved', async () => {
-        mockExternalLedger([
-            {
-                id: 'known',
-                target: 'scripts/a.js',
-                description: 'D',
-                precondition: 'foo',
-                replacement: 'bar',
-            },
-        ]);
-        // Warm the per-source ledger cache first. The fetcher warns once that the
-        // patches repo has no published release; that warning belongs to the
-        // fetcher, not to this gate, and a warm cache keeps it out of the way
-        // instead of loosening the assertion to tolerate it.
-        await applyCodePatches(
-            new Map<string, string>([['scripts/a.js', 'foo']]),
-            ['known'],
-            SOURCE,
-            mockLogger
-        );
-        (mockLogger.warn as jest.Mock).mockClear();
+        // The ledger answers with a release too, so the fetcher has no missing release to warn about:
+        // that warning belongs to the fetcher, not to this gate.
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                tag_name: 'v1.0.0',
+                patches: [
+                    {
+                        id: 'known',
+                        target: 'scripts/a.js',
+                        description: 'D',
+                        precondition: 'foo',
+                        replacement: 'bar',
+                    },
+                ],
+            }),
+        });
         const files = new Map<string, string>([['scripts/a.js', 'foo']]);
 
         const results = await applyCodePatches(files, ['known'], SOURCE, mockLogger);
@@ -374,6 +371,7 @@ describe('applyCodePatches — failure cases', () => {
         expect(results).toEqual([expect.objectContaining({ patchId: 'known', applied: true })]);
         expect(mockLogger.warn).not.toHaveBeenCalled();
     });
+
 });
 
 // ==========================================================================

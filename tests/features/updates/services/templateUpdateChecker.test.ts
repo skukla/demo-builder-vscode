@@ -20,6 +20,7 @@ import {
     edsProject as makeProject,
     mockCompareCommits,
     mockGetLatestBranchCommit,
+    mockReadLatestPatchesRelease,
     mockReadLkgSha,
 } from './templateUpdateChecker.testUtils';
 import type { Logger } from '@/types/logger';
@@ -243,5 +244,78 @@ describe('checkForUpdates — preconditions', () => {
             templateRepo: 'b',
         }));
         expect(result).toBeNull();
+    });
+});
+
+/**
+ * A storefront's version is the eds-demo-patches release it last merged from. A release that only
+ * changes patches leaves the tested commit where it was, so comparing commits alone offered nothing.
+ */
+describe('the patches release', () => {
+    const LKG_SOURCE = { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' };
+    const thinLayer = (extra: Record<string, unknown> = {}) =>
+        makeProject({
+            templateOwner: 'adobe-commerce',
+            templateRepo: 'boilerplate-b2b-template',
+            lastSyncedCommit: OLD_SHA,
+            lkgSource: LKG_SOURCE,
+            ...extra,
+        });
+    const checker = () => new TemplateUpdateChecker(createMockSecretStorage().secrets, mockLogger);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockReadLkgSha.mockResolvedValue(OLD_SHA);
+    });
+
+    it('offers a newer release that only changes patches', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.2.0');
+
+        const result = await checker().checkForUpdates(thinLayer({ patchesRelease: 'v1.1.5' }));
+
+        expect(result).toMatchObject({ hasUpdates: true, release: '1.2.0', commitsBehind: 0 });
+    });
+
+    it('offers nothing when the storefront is on the newest release', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.1.5');
+
+        const result = await checker().checkForUpdates(thinLayer({ patchesRelease: 'v1.1.5' }));
+
+        expect(result?.hasUpdates).toBe(false);
+    });
+
+    it('never offers an older release', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.1.4');
+
+        const result = await checker().checkForUpdates(thinLayer({ patchesRelease: 'v1.1.5' }));
+
+        expect(result?.hasUpdates).toBe(false);
+    });
+
+    it('a storefront from before versions were recorded compares by commit, and is not offered one', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.2.0');
+
+        const result = await checker().checkForUpdates(thinLayer());
+
+        expect(result?.hasUpdates).toBe(false);
+    });
+
+    it('names the release when the tested commit moved too', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.2.0');
+        mockReadLkgSha.mockResolvedValue(NEW_SHA);
+        mockCompareCommits.mockResolvedValue({ ahead_by: 3 });
+
+        const result = await checker().checkForUpdates(thinLayer({ patchesRelease: 'v1.1.5' }));
+
+        expect(result).toMatchObject({ hasUpdates: true, release: '1.2.0', commitsBehind: 3 });
+    });
+
+    it('a release it cannot read still answers by commit', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue(undefined);
+
+        const result = await checker().checkForUpdates(thinLayer({ patchesRelease: 'v1.1.5' }));
+
+        expect(result?.hasUpdates).toBe(false);
+        expect(result).not.toHaveProperty('release');
     });
 });

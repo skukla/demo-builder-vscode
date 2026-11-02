@@ -135,6 +135,16 @@ describe('toPendingUpdateRows', () => {
     // Applying a pair deploys it to the live Adobe workspace, and nothing asks first: the
     // tick IS the confirmation, so the SC gives it rather than finds it given (owner,
     // 2026-10-20). Unticked is not locked: it can be ticked.
+    it('says which version a storefront moves to, when the release can be read', () => {
+        const [row] = toPendingUpdateRows(
+            { ...empty(), template: [{ project: bodea, version: '1.2.0' }] },
+            undefined,
+            undefined,
+        );
+
+        expect(row.detail).toBe('version 1.2.0, updates the live site');
+    });
+
     it('says which version a released component moves to', () => {
         const one = { ...pair(bodea, false), releases: [{ name: 'ERP Integration', version: '0.2.0' }] };
         const two = {

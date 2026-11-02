@@ -31,7 +31,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
+import { readLkgSha, readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import { prepareForAdobeChange, repairInCheckout, type AdobeChangePrep } from '@/features/updates/services/adobeChangePrep';
 import type { BoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import { copiedDemoOf, stoppedOnClash, type CopiedDemoAt } from '@/features/updates/services/clashAttribution';
@@ -287,8 +287,13 @@ export class TemplateSyncService {
                 const token = versions.copiedFrom ? (await this.github.tokenService.getToken())?.token : undefined;
                 return stoppedOnClash(git, conflicts, clash, versions.copiedFrom, token);
             }
-            case 'unchanged':
-                return this.repairLabelsOnly(checkout, git, outcome.templateHead, versions.message, prep);
+            case 'unchanged': {
+                // The tested commit has not moved, but a release can carry new fixes on its own.
+                const patched = fixes ? await reapplyPatchesInCheckout(repoDir, project, this.logger) : [];
+                return this.repairLabelsOnly(
+                    checkout, git, outcome.templateHead, versions.message, prep, patchesNotPutBack(patched),
+                );
+            }
         }
 
         await restorePreservedFiles(repoDir, checkout.backups, this.logger);
@@ -322,17 +327,18 @@ export class TemplateSyncService {
         templateHead: string,
         message = TEMPLATE_COMMIT,
         prep?: AdobeChangePrep,
+        fixNotes: string[] = [],
     ): Promise<TemplateSyncResult> {
         const putBack = prep ? await putBackOwnPieces(checkout.repoDir, prep.aside) : [];
         const labels = await repairStubbedLabelFiles(checkoutLabelAccess(checkout.repoDir, git, templateHead));
         if (labels.length === 0 && !(prep && (await this.anythingToCommit(git)))) {
             this.logger.info(`[TemplateSync] No template change to apply`);
-            const lines = [...putBack, ...(prep?.lines ?? [])];
+            const lines = [...putBack, ...fixNotes, ...(prep?.lines ?? [])];
             return { success: true, strategy: 'merge', syncedCommit: templateHead, ...(lines.length ? { notes: lines } : {}) };
         }
         await commitAndPush(this.deps, checkout.repoDir, message, `git push origin ${checkout.branch}`);
         this.logger.info(`[TemplateSync] No template change to apply; pushed: ${labels.join(', ') || "Demo Builder's repairs"}`);
-        const notes = [...labelsPutBack(labels), ...putBack, ...(prep?.lines ?? [])];
+        const notes = [...labelsPutBack(labels), ...putBack, ...fixNotes, ...(prep?.lines ?? [])];
         return { success: true, strategy: 'merge', syncedCommit: templateHead, ...(notes.length ? { notes } : {}) };
     }
 
@@ -383,6 +389,9 @@ export class TemplateSyncService {
 
         const metadata = edsInstance.metadata as Record<string, unknown>;
         metadata.lastSyncedCommit = commitSha;
+        const lkgSource = lkgSourceOf(metadata);
+        const release = lkgSource ? await readPatchesRelease(lkgSource, this.logger) : undefined;
+        if (release) metadata.patchesRelease = release;
 
         await stateManager.saveProject(project);
         this.logger.info(`[TemplateSync] Updated lastSyncedCommit to ${commitSha.substring(0, 7)}`);

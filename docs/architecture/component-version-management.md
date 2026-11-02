@@ -13,7 +13,8 @@ The plan this is being built to, with what is still to move: `.rptc/plans/compon
 |---|---|---|---|
 | API Mesh, ERP, our integrations | Its newest release | A newer release has commits the clone lacks | Fetches the tag and deploys |
 | Adobe's starter kit, custom integrations | A branch | The branch has commits the clone lacks | Fetches and deploys |
-| EDS storefront | A template repository | The tested boilerplate or template moves | Syncs the repository |
+| Thin-layer EDS storefront | Adobe's template at the commit the newest `eds-demo-patches` release names | A newer release of `eds-demo-patches`, or a moved tested commit | Merges to that commit and re-applies the patches, even when only the patches changed |
+| Other EDS storefronts | A template repository | The template moves | Syncs the repository |
 | Headless storefront | Its newest release | A newer release | Moves the clone to the tag, then installs and builds |
 
 `readNewestRelease` is the one reader of releases: the highest version the channel accepts. A tag that is not a
@@ -23,6 +24,12 @@ A clone's own remote says which route it takes, so a project holds nothing to mi
 is never moved back. An SC's edit refuses the move and names the file. A folder with no git history, which the old
 updater left behind, is cloned again at the release, and the old folder is kept under `component-backups`. An owned repository with no release yet offers nothing, and installs from its branch until it
 has one.
+
+A thin-layer storefront's version is the `eds-demo-patches` release it was last built or updated from
+(`metadata.patchesRelease`). It names the base the repository last merged from, not everything in it: the repository
+is the SC's. One from before this was recorded compares by commit alone until its next update or reset. The patches
+repository's lookup never falls back to `main`: if neither the API nor GitHub's web address can say, the patches read
+as unreachable. `lkg-gate.yml` publishes that repository's release itself when its checks pass (owner, 2026-11-02).
 
 A mesh keeps `mesh.json` under version control and rebuilds it on every deploy, so a rebuilt one is not read as
 the SC's own edit.

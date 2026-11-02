@@ -21,6 +21,7 @@ import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { authoredSheetRefresh } from '@/features/eds/services/catalogMenu/authoredSheetRefresh';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
+import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import { writeBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
 import { recordStorefrontBuilt } from '@/features/eds/services/storefront/storefrontChanges';
 import { readRepoBoilerplate } from '@/features/eds/services/storefront/storefrontOrigin';
@@ -140,6 +141,8 @@ export async function populateEdsMetadata(
           }
         : undefined;
 
+    const patchesRelease = lkgSource ? await readPatchesRelease(lkgSource, context.logger) : undefined;
+
     edsInstance.metadata = {
         ...edsInstance.metadata,
         repoUrl: typedConfig.edsConfig.repoUrl,
@@ -151,6 +154,7 @@ export async function populateEdsMetadata(
         ...(templateBranch ? { templateBranch } : {}),
         lastSyncedCommit,
         ...(lkgSource ? { lkgSource } : {}),
+        ...(patchesRelease ? { patchesRelease } : {}),
         ...(boilerplate ? { boilerplate } : {}),
     };
     recordWhatSetupFound(project, typedConfig.edsConfig);

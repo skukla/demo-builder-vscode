@@ -12,6 +12,11 @@
  * `edsResetService-orchestration.test.ts`.
  */
 
+jest.mock('@/features/eds/services/patches/lkgReader', () => ({
+    ...jest.requireActual('@/features/eds/services/patches/lkgReader'),
+    readPatchesRelease: jest.fn(),
+}));
+
 import {
     REPO_RESULT,
     mockExecuteEdsPipeline,
@@ -24,6 +29,7 @@ import {
 } from './edsResetService.orchestrationHarness';
 
 import { PAAS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
+import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import { STOREFRONT_CHANGES } from '@/features/eds/services/storefront/storefrontChanges';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import type { Project } from '@/types/base';
@@ -305,6 +311,36 @@ describe('executeEdsReset - the synced commit record', () => {
 
         expect(result.success).toBe(true);
         expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, ...BUILT }]);
+    });
+
+    describe('the patches release, a thin-layer storefront\'s version', () => {
+        const LKG_SOURCE = { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' };
+
+        function thinLayerProject(extra: Record<string, unknown> = {}): Project {
+            const project = storefrontProject();
+            Object.assign(storefrontMetadata(project) as Record<string, unknown>, { lkgSource: LKG_SOURCE, ...extra });
+            return project;
+        }
+
+        it('is recorded by the save the reset already makes', async () => {
+            mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+            (readPatchesRelease as jest.Mock).mockResolvedValue('v1.2.0');
+            const { context, saved } = contextCapturingSaves();
+
+            await runReset({ project: thinLayerProject({ patchesRelease: 'v1.1.5' }) }, context);
+
+            expect(saved).toEqual([expect.objectContaining({ patchesRelease: 'v1.2.0' })]);
+        });
+
+        it('stays as it was when the release cannot be read', async () => {
+            mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+            (readPatchesRelease as jest.Mock).mockResolvedValue(undefined);
+            const { context, saved } = contextCapturingSaves();
+
+            await runReset({ project: thinLayerProject({ patchesRelease: 'v1.1.5' }) }, context);
+
+            expect(saved).toEqual([expect.objectContaining({ patchesRelease: 'v1.1.5' })]);
+        });
     });
 
     it('records what the repository is built on now, read back after the reset (EDS-13f)', async () => {

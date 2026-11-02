@@ -49,7 +49,12 @@ const sharedCache = new Map<string, Promise<ExternalLedger<unknown, unknown>>>()
 const refCache = new Map<string, Promise<string>>();
 
 /** Branch used when a patches repo someone else owns has no published release. */
-const UNPINNED_REF = 'main';
+export const UNPINNED_REF = 'main';
+
+/** Forget the resolved release of a repo, so the next read asks GitHub again. */
+export function forgetPatchRef(owner: string, repo: string): void {
+    refCache.delete(`${owner}/${repo}`);
+}
 
 /**
  * Resolve which git ref to read patches from: the repo's latest published release, so shipping a
@@ -109,19 +114,20 @@ export async function resolvePatchRef(
  * @param fileName - File name within `path`, e.g. `'patches.json'` or `'code-patches.json'`
  * @param logger - Logger for `[Patch]` info/warn lines
  */
-export function fetchExternalLedger<T, R = never>(
+export async function fetchExternalLedger<T, R = never>(
     source: PatchSourceLike,
     fileName: string,
     logger: Logger,
 ): Promise<ExternalLedger<T, R>> {
-    const cacheKey = `${source.owner}/${source.repo}/${source.path}/${fileName}`;
+    // Keyed by release: a window left open past a new release must read the new ledger.
+    const ref = await resolvePatchRef(source.owner, source.repo, logger);
+    const cacheKey = `${source.owner}/${source.repo}/${ref}/${source.path}/${fileName}`;
     const cached = sharedCache.get(cacheKey);
     if (cached) return cached as Promise<ExternalLedger<T, R>>;
 
-    logger.info(`[Patch] Fetching ${fileName} from ${source.owner}/${source.repo}`);
+    logger.info(`[Patch] Fetching ${fileName} from ${source.owner}/${source.repo} at ${ref}`);
 
     const promise = (async (): Promise<ExternalLedger<T, R>> => {
-        const ref = await resolvePatchRef(source.owner, source.repo, logger);
         const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${ref}/${source.path}/${fileName}`;
         const response = await fetch(url, {
             signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),

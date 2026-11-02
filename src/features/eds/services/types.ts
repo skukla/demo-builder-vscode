@@ -671,6 +671,10 @@ export interface EdsMetadata {
          *  ledgers sharing the default root LKG. */
         lkgFile?: string;
     };
+    /** The `eds-demo-patches` release a thin-layer storefront was last built or updated from: its
+     *  version. Absent on a storefront from before it was recorded, which then compares by commit
+     *  alone until its next update or reset records one. */
+    patchesRelease?: string;
     /** The `package.json` name and version the repository was built on, read at
      *  creation and after each reset (EDS-13f). Absent when it could not be read. */
     boilerplate?: StorefrontBoilerplate;

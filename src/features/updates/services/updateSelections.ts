@@ -41,7 +41,7 @@ export interface UpdateSelections {
         branch: string;
         parentFullName?: string;
     }>;
-    template: Array<{ project: Project }>;
+    template: Array<{ project: Project; version?: string }>;
     /**
      * A colleague's storefront whose Adobe half can move to our tested version (EDS-56),
      * beside its `template` entry, which follows the colleague's own repository.
@@ -213,7 +213,7 @@ async function checkTemplates(
     for (const project of projects) {
         try {
             const t = await checker?.checkForUpdates(project);
-            if (t?.hasUpdates) found.push({ project });
+            if (t?.hasUpdates) found.push({ project, ...(t.release ? { version: t.release } : {}) });
         } catch (error) {
             warnFailed(logger, 'Template', error);
         }

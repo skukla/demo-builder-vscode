@@ -6,6 +6,7 @@
 
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { STOREFRONT_CHANGES, storefrontNeedsReset } from '@/features/eds/services/storefront/storefrontChanges';
+import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { populateEdsMetadata } from '@/features/project-creation/handlers/executorEdsPhase';
 import type { Project } from '@/types/base';
@@ -17,6 +18,7 @@ import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({ getGitHubServices: jest.fn() }));
+jest.mock('@/features/eds/services/patches/lkgReader', () => ({ readPatchesRelease: jest.fn() }));
 jest.mock('@/features/eds/services/templateCommitResolver', () => ({ resolveTemplateCommitSha: jest.fn() }));
 
 const getFileContent = jest.fn();
@@ -53,6 +55,42 @@ beforeEach(() => {
     jest.clearAllMocks();
     (getGitHubServices as jest.Mock).mockReturnValue({ fileOperations: { getFileContent } });
     (resolveTemplateCommitSha as jest.Mock).mockResolvedValue('a'.repeat(40));
+});
+
+describe('populateEdsMetadata: the patches release is the storefront\'s version', () => {
+    const THIN_LAYER: ProjectCreationConfig = {
+        ...CONFIG,
+        edsConfig: {
+            ...CONFIG.edsConfig!,
+            codePatchSource: { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b', lkgFile: 'b2b/last-known-good' },
+        } as ProjectCreationConfig['edsConfig'],
+    };
+
+    it('records the release a thin-layer storefront was built from', async () => {
+        getFileContent.mockRejectedValue(new Error('not needed'));
+        (readPatchesRelease as jest.Mock).mockResolvedValue('v1.1.5');
+        const target = project();
+
+        await populateEdsMetadata(context(), target, THIN_LAYER, true);
+
+        expect(readPatchesRelease).toHaveBeenCalledWith(
+            expect.objectContaining({ owner: 'skukla', repo: 'eds-demo-patches' }),
+            expect.anything(),
+        );
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({
+            patchesRelease: 'v1.1.5',
+        });
+    });
+
+    it('records none for a storefront that is not thin-layer', async () => {
+        getFileContent.mockRejectedValue(new Error('not needed'));
+        const target = project();
+
+        await populateEdsMetadata(context(), target, CONFIG, true);
+
+        expect(readPatchesRelease).not.toHaveBeenCalled();
+        expect(target.componentInstances?.['eds-storefront']?.metadata).not.toHaveProperty('patchesRelease');
+    });
 });
 
 describe('populateEdsMetadata — the boilerplate (EDS-13f)', () => {

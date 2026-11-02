@@ -44,7 +44,7 @@ import {
     type ConfigStepServices,
 } from './edsResetConfigStep';
 import { runContentPipeline } from './edsResetContentStep';
-import { finalizeReset, recordBoilerplate, recordSyncedCommit } from './edsResetFinalize';
+import { finalizeReset, recordBoilerplate, recordPatchesRelease, recordSyncedCommit } from './edsResetFinalize';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import type { EdsResetParams, EdsResetProgress, EdsResetResult } from './edsResetParams';
 import { takeOutProductPages, withLeftoverPages, withPageSentences } from './edsResetProductPages';
@@ -200,6 +200,7 @@ export async function executeEdsReset(
             report,
         );
         recordSyncedCommit(params.project, repoResetResult.templateCommitSha, context.logger);
+        await recordPatchesRelease(params.project, context.logger);
         recordBoilerplate(params.project, repoResetResult.boilerplate);
         // Built the way Demo Builder builds storefronts now: no "Needs reset" (saved below).
         // Code the site does not serve is not built, whatever the repository says.

@@ -8,6 +8,7 @@
  * URL, the temp-dir cleanup, the metadata guards, and what each result carries.
  */
 
+import { _clearExternalPatchCacheForTests } from '@/features/eds/services/patches/externalPatchFetcher';
 import {
     BASE_SHA,
     PATCH_FILE,
@@ -538,6 +539,42 @@ describe('temp dir and preserved-file plumbing', () => {
 });
 
 describe('updateLastSyncedCommit', () => {
+    afterEach(() => _clearExternalPatchCacheForTests());
+
+    function thinLayerProject() {
+        const project = edsProject();
+        const instance = project.componentInstances!['eds-storefront'];
+        instance.metadata = {
+            ...instance.metadata,
+            lkgSource: { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' },
+        };
+        return project;
+    }
+
+    it('records the patches release a thin-layer storefront moved to, as its version', async () => {
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ tag_name: 'v1.2.0' }),
+        });
+        const project = thinLayerProject();
+
+        await service().updateLastSyncedCommit(project, 'abc1234567', { saveProject: jest.fn() });
+
+        expect(project.componentInstances!['eds-storefront'].metadata).toMatchObject({
+            patchesRelease: 'v1.2.0',
+        });
+    });
+
+    it('leaves the version alone when the release cannot be read', async () => {
+        global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+        const project = thinLayerProject();
+
+        await service().updateLastSyncedCommit(project, 'abc1234567', { saveProject: jest.fn() });
+
+        expect(project.componentInstances!['eds-storefront'].metadata).not.toHaveProperty('patchesRelease');
+    });
+
     it('writes the commit onto the EDS metadata and saves the project', async () => {
         const project = edsProject();
         const saveProject = jest.fn().mockResolvedValue(undefined);

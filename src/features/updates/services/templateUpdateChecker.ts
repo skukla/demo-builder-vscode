@@ -12,13 +12,14 @@
  *   - Forked (legacy / pre-ADR-006): compare against template main HEAD.
  */
 
+import * as semver from 'semver';
 import * as vscode from 'vscode';
 import {
     compareCommits,
     getLatestBranchCommit,
 } from './githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
-import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
+import { readLatestPatchesRelease, readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { isLkgSource } from '@/features/updates/services/thinLayerUpdate';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -39,6 +40,14 @@ export interface TemplateUpdateResult {
     templateOwner: string;
     /** Template repository name */
     templateRepo: string;
+    /** The patches release a thin-layer storefront would move to, when it can be read. */
+    release?: string;
+}
+
+/** Whether `latest` is a higher version than `recorded`. A tag that is not a version never is. */
+function isNewerRelease(latest: string | undefined, recorded: string | undefined): boolean {
+    const [next, current] = [semver.valid(latest), semver.valid(recorded)];
+    return Boolean(next && current && semver.gt(next, current));
 }
 
 /**
@@ -75,7 +84,7 @@ export class TemplateUpdateChecker {
         try {
             if (lkgSource) {
                 return await this.checkThinLayerUpdates(
-                    lkgSource, lastSyncedCommit, templateOwner, templateRepo,
+                    lkgSource, lastSyncedCommit, templateOwner, templateRepo, metadata.patchesRelease,
                 );
             }
             return await this.checkForkedUpdates(
@@ -101,6 +110,7 @@ export class TemplateUpdateChecker {
         lkgSource?: { owner: string; repo: string; lkgFile?: string };
         /** An added demo's branch, recorded at creation; absent for a shipped template. */
         templateBranch?: string;
+        patchesRelease?: string;
     } | null {
         const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
         if (!edsInstance?.metadata) {
@@ -136,6 +146,7 @@ export class TemplateUpdateChecker {
             lastSyncedCommit,
             lkgSource,
             ...(typeof templateBranch === 'string' ? { templateBranch } : {}),
+            ...(typeof metadata.patchesRelease === 'string' ? { patchesRelease: metadata.patchesRelease } : {}),
         };
     }
 
@@ -154,7 +165,10 @@ export class TemplateUpdateChecker {
         lastSyncedCommit: string,
         templateOwner: string,
         templateRepo: string,
+        recordedRelease?: string,
     ): Promise<TemplateUpdateResult | null> {
+        const latestRelease = await readLatestPatchesRelease(lkgSource, this.logger);
+        const release = latestRelease ? { release: latestRelease.replace(/^v/, '') } : {};
         const currentLkg = await readLkgSha(lkgSource, this.logger);
         if (!currentLkg) {
             this.logger.warn(`[TemplateUpdates] LKG unreachable for ${lkgSource.owner}/${lkgSource.repo} — skipping update check`);
@@ -162,19 +176,22 @@ export class TemplateUpdateChecker {
         }
 
         if (currentLkg === lastSyncedCommit) {
+            // The tested commit has not moved, but a newer release may still carry new patches.
             return {
-                hasUpdates: false,
+                hasUpdates: isNewerRelease(latestRelease, recordedRelease),
                 currentCommit: lastSyncedCommit,
                 latestCommit: currentLkg,
                 commitsBehind: 0,
                 templateOwner,
                 templateRepo,
+                ...release,
             };
         }
 
         // LKG advanced. Use canonical commit comparison for the
         // commits-behind count (same N-commits-behind UX as forked).
-        return this.compareTo(templateOwner, templateRepo, lastSyncedCommit, currentLkg);
+        const compared = await this.compareTo(templateOwner, templateRepo, lastSyncedCommit, currentLkg);
+        return compared && { ...compared, ...release };
     }
 
     /**

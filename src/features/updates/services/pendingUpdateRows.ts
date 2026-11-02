@@ -68,7 +68,10 @@ type RowText = Pick<PendingUpdateRow, 'label' | 'detail'> & { lockedReason?: str
 
 /** Each project kind's words for one of its entries. */
 const PROJECT_KINDS: { [K in ProjectSelectionKind]: (entry: UpdateSelections[K][number]) => RowText } = {
-    template: (t) => ({ label: templateLabel(t.project), detail: LIVE_SITE_DETAIL }),
+    template: (t) => ({
+        label: templateLabel(t.project),
+        detail: t.version ? `version ${t.version}, ${LIVE_SITE}` : LIVE_SITE_DETAIL,
+    }),
     // Adobe's half of a colleague's storefront, to the version our daily gate tested (EDS-56).
     boilerplate: () => ({ label: 'Adobe boilerplate', detail: `Tested version, ${LIVE_SITE}` }),
     // A clash kept to fix with AI (EDS-57): applying it checks the fix and pushes it.
