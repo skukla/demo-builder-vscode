@@ -49,6 +49,25 @@ beforeEach(() => {
 });
 
 describe('requestRest retries', () => {
+    // Commerce's words, read from the live install of wknd (2026-11-02). It answers this as a row
+    // refusal, not a 5xx, so without this the row is skipped for a passing hiccup.
+    const DEADLOCK = JSON.stringify({ message: 'Database deadlock found when trying to get lock' });
+
+    it('sends a write again when the database deadlocked: it was rolled back', async () => {
+        const fetchImpl = fetchAnswering({ status: 400, body: DEADLOCK }, { status: 200, body: '{"sku":"ABC"}' });
+
+        expect(await send('POST', fetchImpl)).toStrictEqual({ ok: true, status: 200, text: '{"sku":"ABC"}' });
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it('CONTROL: a write refused for any other reason is sent once', async () => {
+        const fetchImpl = fetchAnswering({ status: 400, body: JSON.stringify({ message: 'URL key already exists' }) });
+
+        await send('POST', fetchImpl);
+
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
     it('sends a read again after a 5xx, and answers what the retry got', async () => {
         const fetchImpl = fetchAnswering({ status: 503, body: 'busy' }, { status: 200, body: '{"sku":"ABC"}' });
 

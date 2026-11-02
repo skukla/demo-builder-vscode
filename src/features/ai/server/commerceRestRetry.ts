@@ -9,6 +9,9 @@
  * - A read (GET) is sent again on a network failure, a 5xx or a 429. Reading twice changes
  *   nothing.
  * - Any method is sent again on a 429: Commerce answers it before processing the request.
+ * - Any method is sent again when Commerce says the database deadlocked: the database rolled
+ *   the write back, so nothing landed. It answers that as a plain refusal, so on the install's
+ *   first real pack (`wknd`, live 2026-11-02) one passing deadlock cost a product and its parent.
  * - Every other write is sent once. A write that failed on the wire or answered 5xx may still
  *   have landed, and sending it again could make a second order, product or company.
  * - A read that ran out its own wait (TIMEOUTS.LONG) is not sent again: it has already waited
@@ -29,11 +32,16 @@ const TOO_MANY_REQUESTS = 429;
 const RETRYABLE_READ_STATUSES: readonly number[] = [500, 502, 503, 504];
 
 /** How one attempt ended, as far as the retry decision needs to know. */
-export type RestAttempt = { status: number } | { failed: true; timedOut: boolean };
+export type RestAttempt = { status: number; deadlocked?: boolean } | { failed: true; timedOut: boolean };
+
+/** Whether Commerce's answer says the database deadlocked ("Database deadlock found when trying to get lock"). */
+export function saysDeadlock(text: string): boolean {
+    return /deadlock found/iu.test(text);
+}
 
 function worthSendingAgain(method: string, attempt: RestAttempt): boolean {
     if ('status' in attempt) {
-        if (attempt.status === TOO_MANY_REQUESTS) return true;
+        if (attempt.status === TOO_MANY_REQUESTS || attempt.deadlocked === true) return true;
         return method === 'GET' && RETRYABLE_READ_STATUSES.includes(attempt.status);
     }
     return method === 'GET' && !attempt.timedOut;
