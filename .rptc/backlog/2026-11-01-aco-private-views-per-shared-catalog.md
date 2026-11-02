@@ -68,3 +68,4 @@ It carries a stand-in label on screen. The closed decision's reasoning stands as
 - 2026-11-02  docs(aco): private catalogs stay in step through events, with no manual step (`ebcf7c4b6`)
 - 2026-11-02  docs(aco): private catalogs stay in step on the connector's one-minute schedule (`e621d3e71`)
 - 2026-11-02  Owner: not asking for Adobe's beta. Build this, and adopt the connector when it arrives
+- 2026-11-02  docs(aco): the mesh can read from an action, and a one-minute alarm holds (`703acb7ef`)
