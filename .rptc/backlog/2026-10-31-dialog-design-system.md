@@ -54,3 +54,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  feat(ui): a wait keeps the dialog's box, and a small change does not animate (`d7244a4f4`)
 - 2026-11-02  fix(data-installer): a removal that kept a root says one step is left (`cd80a5acd`)
 - 2026-11-02  fix(ui): a dialog's title stays on screen through a change of view (`50dc162e3`)
+- 2026-11-02  feat(ui): a dialog's size no longer animates (`1d89359aa`)
