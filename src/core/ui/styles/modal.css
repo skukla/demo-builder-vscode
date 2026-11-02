@@ -180,6 +180,18 @@
     overflow: hidden;
 }
 
+/* A wait in the box it found, which is taller than it needs: level between the rule and the
+   buttons. */
+.modal-dialog.is-holding .modal-content,
+.modal-dialog.is-holding .modal-body {
+    flex: 1 1 auto;
+}
+
+.modal-dialog.is-holding .modal-body {
+    display: flex;
+    align-items: center;
+}
+
 .modal-dialog.is-resizing .modal-content,
 .modal-dialog.is-retitling .modal-title {
     opacity: 0;

@@ -77,6 +77,11 @@ export interface ModalProps {
      * the content. The end of a wait is a change of view: see `useDialogViewChange`.
      */
     waiting?: ModalWait | false;
+    /**
+     * The body is a wait of its own that keeps its buttons (a running job with Stop watching), so it
+     * keeps the box it found, as `waiting` does.
+     */
+    holdSize?: boolean;
     children: ReactNode;
 }
 
@@ -173,13 +178,15 @@ export function Modal({
     fitContent = false,
     wide = false,
     waiting = false,
+    holdSize = false,
     children,
 }: ModalProps) {
     // Map custom sizes to Dialog-compatible sizes
     const dialogSize: 'S' | 'M' | 'L' =
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
-    const { bodyRef, resizing, retitling } = useDialogViewChange({
+    const { bodyRef, resizing, retitling, holding } = useDialogViewChange({
         widthStep: wide ? 'XL' : dialogSize,
+        holding: Boolean(waiting) || holdSize,
         waiting: Boolean(waiting),
         title,
     });
@@ -197,6 +204,7 @@ export function Modal({
                 wide && 'modal-wide',
                 resizing && 'is-resizing',
                 retitling && 'is-retitling',
+                holding && 'is-holding',
             )}
         >
             <Heading>

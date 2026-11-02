@@ -320,6 +320,7 @@ export function ImportDatapackModal({
                 hideClose={frame.hideClose}
                 fitContent
                 waiting={waitOf(view, scope.loading, bodyContext.busyMessage)}
+                holdSize={view === 'watching'}
                 onClose={close}
                 closeLabel={running ? 'Run in background' : 'Close'}
                 actionButtons={buildActions({

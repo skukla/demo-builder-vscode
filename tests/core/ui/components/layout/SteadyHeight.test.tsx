@@ -97,26 +97,31 @@ it('centres content shorter than its floor by default, and pins it to the top wh
  * real height for the change only: the old one, then the new one a frame later (the stylesheet
  * eases between them), then its content's own height again so nothing can be cut off.
  */
-it('does not read the content while its dialog moves to a new view: the text is between widths', () => {
+it("eases nothing of a dialog's change of view, and starts easing again from the new height", () => {
     const measure = measuringAt(400);
-    const { rerender } = render(
-        <div className="is-resizing">
+    const inDialog = (changing: boolean, label: string) => (
+        <div data-view-change={changing ? '' : undefined}>
             <SteadyHeight>
-                <div data-testid="content">the form</div>
+                <div data-testid="content">{label}</div>
             </SteadyHeight>
-        </div>,
+        </div>
     );
+    const { rerender } = render(inDialog(false, 'the form'));
 
     measure(560);
-    rerender(
-        <div className="is-resizing">
-            <SteadyHeight>
-                <div data-testid="content">the next state</div>
-            </SteadyHeight>
-        </div>,
-    );
-
+    rerender(inDialog(true, 'the next view'));
     expect(reservedBox()).not.toHaveClass('is-growing');
+
+    // The box is between widths now, so this reading must not count.
+    measure(610);
+    rerender(inDialog(true, 'still moving'));
+    measure(560);
+    rerender(inDialog(false, 'settled'));
+    expect(reservedBox()).not.toHaveClass('is-growing');
+
+    measure(600);
+    rerender(inDialog(false, 'a line appeared'));
+    expect(reservedBox()).toHaveClass('is-growing');
 });
 
 describe('easing between states', () => {

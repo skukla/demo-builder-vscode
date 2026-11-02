@@ -597,8 +597,9 @@ meant.
 > `docs/development/sop/dialog-design.md`) settled on fit-and-ease, with dialogs pinned
 > near the top so a change moves only the bottom edge. A change of whole view is one move
 > (owner, 2026-11-02, after a confirm folded in and out "like an accordion"): the content
-> hides, the box eases once to its final size, and the new content fades in
-> (`useDialogViewChange`).
+> hides, the box eases once to its final size, and the new content fades in. Under 40px it
+> just swaps, and a wait keeps the box it found, because a removal had moved four times with
+> three of them a few pixels (`useDialogViewChange`).
 >
 > What no check can see is whether the change LOOKS right; the ledger is where
 > a body the scan reads as multi-view says it has only one. Enforced by

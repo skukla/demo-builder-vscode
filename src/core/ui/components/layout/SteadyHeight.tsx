@@ -49,6 +49,7 @@ export function SteadyHeight({
     const content = useRef<HTMLDivElement>(null);
     const [measured, setMeasured] = useState(0);
     const growth = useGrowthAnimation();
+    const changingView = useRef(false);
 
     // After every render, with no dependency list: what changes is the CONTENT, and
     // a parent re-rendering with different children is exactly the case to measure.
@@ -59,9 +60,15 @@ export function SteadyHeight({
     // measures the same content height and stops.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useLayoutEffect(() => {
-        // A dialog moving to a new view: the box is between widths and the text with it, so this
-        // reading would be neither size, and would ease once the content had faded back in.
-        if (content.current?.closest('.is-resizing')) return;
+        // A dialog's change of view has its own one move, or none (`useDialogViewChange`). Take the
+        // new height once, as the view first lays out at its final width, and ease nothing: later
+        // readings would catch the box between widths.
+        if (content.current?.closest('[data-view-change]')) {
+            if (!changingView.current) setMeasured(content.current.scrollHeight);
+            changingView.current = true;
+            return;
+        }
+        changingView.current = false;
         const needed = content.current?.scrollHeight ?? 0;
         if (needed !== measured) {
             // Ease from the old height; the first measure has nothing to ease from.

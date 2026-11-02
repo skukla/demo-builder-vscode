@@ -96,10 +96,15 @@ step.
 - **Width is a step**, chosen by the view, never measured from text: small 400,
   medium 480, large 640 (Spectrum's own), extra-wide 980. A longer store name wraps;
   it does not widen the dialog.
-- **A change of view is one move** (owner, 2026-11-02). When the width step, the title or
-  a wait changes, the content hides, the box eases once to its final size, and the new
-  content fades in. The title stays when only a wait ended. The box never takes two
-  motions for one change, and text never visibly rewraps.
+- **A change of view is one move, or none** (owner, 2026-11-02). When the width step, the
+  title or a wait changes and the size changes by 40px or more, the content hides, the box
+  eases once to its final size, and the new content fades in. The title stays when only a
+  wait ended. The box never takes two motions for one change, and text never visibly
+  rewraps. Under 40px each way, the content just swaps.
+- **A wait keeps the box it found.** The width stays, and the height stays as a floor, with
+  the spinner level between the rule and the buttons. Only the real content that follows
+  moves the box. A first open has no earlier box, so it starts at the wait's own size. A
+  body that is a wait with its own buttons says so with `holdSize`.
 
 ## Long content
 
