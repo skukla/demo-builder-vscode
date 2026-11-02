@@ -48,14 +48,14 @@ describe('which GitHub endpoint the channel selects', () => {
         expect(cloneCall()[0]).toContain('--branch "v9.9.9"');
     });
 
-    it('stable reads /releases/latest, which excludes prereleases', async () => {
+    it('stable reads the release LIST too: a component is on the beta track until 1.x', async () => {
         setUpdateChannel('stable');
-        respondWith({ tag_name: 'v3.0.0' });
+        respondWith([{ tag_name: 'v3.0.0' }]);
 
         await install(VERSIONED());
 
         expect(global.fetch).toHaveBeenCalledWith(
-            'https://api.github.com/repos/skukla/kukla-bodea/releases/latest',
+            'https://api.github.com/repos/skukla/kukla-bodea/releases?per_page=20',
             { signal: expect.anything() }
         );
         expect(cloneCall()[0]).toContain('--branch "v3.0.0"');
@@ -106,16 +106,29 @@ describe('a repository the builder owns', () => {
 
     it('clones its newest release, with no tag in the catalog', async () => {
         setUpdateChannel('stable');
-        respondWith({ tag_name: 'v1.2.0' });
+        respondWith([{ tag_name: 'v1.2.0' }]);
 
         await install(OWNED());
 
         expect(cloneCall()[0]).toContain('--branch "v1.2.0"');
     });
 
+    it('a stable-channel install clones its newest beta, and skips a higher alpha', async () => {
+        setUpdateChannel('stable');
+        respondWith([
+            { tag_name: 'v1.1.0' },
+            { tag_name: 'v1.2.0-beta.1' },
+            { tag_name: 'v2.0.0-alpha.1' },
+        ]);
+
+        await install(OWNED());
+
+        expect(cloneCall()[0]).toContain('--branch "v1.2.0-beta.1"');
+    });
+
     it('clones its branch until it has a first release', async () => {
         setUpdateChannel('stable');
-        respondWith({}, { ok: false, status: 404 });
+        respondWith([]);
 
         await install(OWNED());
 
@@ -168,7 +181,7 @@ describe('every failure ends at the configured fallback tag', () => {
 
     it('a stable release with no tag_name falls back', async () => {
         setUpdateChannel('stable');
-        respondWith({});
+        respondWith([{}]);
 
         await install(VERSIONED());
 

@@ -68,8 +68,8 @@ describe('publishBrandAssets', () => {
             const fetchMock = mockSourceFetch();
             const sourceFile = fetchMock.getMockImplementation() as (url: string) => Promise<unknown>;
             fetchMock.mockImplementation(async (url: string) =>
-                url.endsWith('/releases/latest')
-                    ? { ok: true, status: 200, json: async () => ({ tag_name: 'v1.0.0' }) }
+                url.includes('/releases?')
+                    ? { ok: true, status: 200, json: async () => [{ tag_name: 'v1.0.0' }] }
                     : sourceFile(url)
             );
 

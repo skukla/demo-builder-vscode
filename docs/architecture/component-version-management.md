@@ -34,9 +34,6 @@ as unreachable. `lkg-gate.yml` publishes that repository's release itself when i
 A mesh keeps `mesh.json` under version control and rebuilds it on every deploy, so a rebuilt one is not read as
 the SC's own edit.
 
-The `stable` tags on the mesh repositories stay until no supported extension build reads them: older builds
-clone them when a mesh is added. Remove them then, not before.
-
 Not everything floats. A component can pin a real version (`"tag": "v1.0.0"`), which is the right choice where a
 moving target would be dangerous rather than convenient. A tag that is not a version records the version from
 `package.json` instead.

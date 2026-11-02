@@ -33,18 +33,19 @@ function github(files: Record<string, string>) {
 }
 
 // SDK_SOURCE is a repository the builder owns, so vendoring it asks GitHub for its newest release.
-function latestRelease(status: number, body: unknown = {}): void {
-    global.fetch = jest.fn().mockResolvedValue({ ok: status === 200, status, json: async () => body });
+function releasesListed(...tags: string[]): void {
+    const releases = tags.map((tag_name) => ({ tag_name }));
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => releases });
 }
 
 beforeEach(() => {
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: jest.fn(() => 'stable') });
-    latestRelease(404);
+    releasesListed();
 });
 
 describe('generateInspectorTreeEntries', () => {
     it('vendors the SDK at its newest release', async () => {
-        latestRelease(200, { tag_name: 'v1.2.0' });
+        releasesListed('v1.2.0');
         const gh = github({});
 
         await generateInspectorTreeEntries(gh, 'me', 'store', undefined, createMockLogger());

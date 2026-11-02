@@ -36,13 +36,13 @@ afterAll(() => configureReleaseAccess(undefined));
 
 describe('readComponentRelease', () => {
     it('answers the tag, and the version without its v', async () => {
-        answers({ tag_name: 'v1.2.0' });
+        answers([{ tag_name: 'v1.2.0' }]);
 
         expect(await readComponentRelease('skukla/demo-erp')).toStrictEqual({ tag: 'v1.2.0', version: '1.2.0' });
     });
 
     it('answers null when there is no release', async () => {
-        answers({}, { ok: false, status: 404 });
+        answers([]);
 
         expect(await readComponentRelease('skukla/demo-erp')).toBeNull();
     });
@@ -52,7 +52,7 @@ describe('readComponentRelease', () => {
             earlyAccessAllowed: async () => false,
             headers: async () => ({ Authorization: 'token a-token' }),
         });
-        answers({ tag_name: 'v1.2.0' });
+        answers([{ tag_name: 'v1.2.0' }]);
 
         await readComponentRelease('skukla/demo-erp');
 
@@ -60,7 +60,7 @@ describe('readComponentRelease', () => {
     });
 
     it('asks anonymously until it has been given access', async () => {
-        answers({ tag_name: 'v1.2.0' });
+        answers([{ tag_name: 'v1.2.0' }]);
 
         await readComponentRelease('skukla/demo-erp');
 
@@ -129,13 +129,13 @@ describe('refOfSource', () => {
     const OWNED = { owner: 'skukla', repo: 'demo-builder-block-library', branch: 'main' };
 
     it('an owned repository reads at its newest release', async () => {
-        answers({ tag_name: 'v0.2.0' });
+        answers([{ tag_name: 'v0.2.0' }]);
 
         expect(await refOfSource(OWNED)).toStrictEqual({ ref: 'v0.2.0', version: '0.2.0' });
     });
 
     it('an owned repository with no release yet reads its branch', async () => {
-        answers({}, { ok: false, status: 404 });
+        answers([]);
 
         expect(await refOfSource(OWNED)).toStrictEqual({ ref: 'main' });
     });

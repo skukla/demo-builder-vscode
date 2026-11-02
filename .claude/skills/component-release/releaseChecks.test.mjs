@@ -18,9 +18,9 @@ import {
 } from './releaseChecks.mjs';
 
 const GOOD = {
-    version: '1.2.0',
+    version: '1.2.0-beta.1',
     tags: ['v1.1.0', 'stable', 'v1.1.0-beta.1'],
-    packageVersion: '1.2.0',
+    packageVersion: '1.2.0-beta.1',
     notes: 'What changed.',
     onPublishedMain: true,
     clean: true,
@@ -35,8 +35,9 @@ describe('releaseProblems', () => {
     const REFUSALS = [
         ['a version no channel accepts', { version: '1.2' }, 'not a version'],
         ['a prerelease name no channel accepts', { version: '1.2.0-rc.1' }, 'not a version'],
-        ['the newest version again', { version: '1.1.0', packageVersion: '1.1.0' }, 'not above'],
-        ['an older version', { version: '1.0.0', packageVersion: '1.0.0' }, 'not above'],
+        ['a normal release, until the extension reaches 1.x', { version: '1.2.0', packageVersion: '1.2.0' }, 'Until the extension'],
+        ['the newest version again', { version: '1.1.0-beta.9', packageVersion: '1.1.0-beta.9', tags: ['v1.1.0-beta.9'] }, 'not above'],
+        ['an older version', { version: '1.0.0-beta.1', packageVersion: '1.0.0-beta.1' }, 'not above'],
         ['package.json disagreeing', { packageVersion: '1.1.9' }, 'package.json says 1.1.9'],
         ['empty notes', { notes: '  \n' }, 'notes are empty'],
         ['uncommitted changes', { clean: false }, 'uncommitted'],
@@ -70,8 +71,8 @@ describe('releaseProblems', () => {
         assert.deepEqual(releaseProblems({ ...GOOD, tags: [] }), []);
     });
 
-    it('a normal release sits above its own beta', () => {
-        assert.deepEqual(releaseProblems({ ...GOOD, tags: ['v1.2.0-beta.5'] }), []);
+    it('a beta sits above the one before it, by number', () => {
+        assert.deepEqual(releaseProblems({ ...GOOD, version: '1.2.0-beta.10', packageVersion: '1.2.0-beta.10', tags: ['v1.2.0-beta.9'] }), []);
     });
 });
 
@@ -169,14 +170,9 @@ describe('the ERP pair', () => {
 });
 
 describe('releaseArgs', () => {
-    it('a normal release is the latest, so it reaches SCs', () => {
-        assert.deepEqual(releaseArgs('1.2.0', 'abc', 'n.md'), [
-            'release', 'create', 'v1.2.0', '--target', 'abc', '--title', 'v1.2.0', '--notes-file', 'n.md', '--latest',
+    it('every release is a prerelease until the extension reaches 1.x', () => {
+        assert.deepEqual(releaseArgs('1.2.0-beta.1', 'abc', 'n.md'), [
+            'release', 'create', 'v1.2.0-beta.1', '--target', 'abc', '--title', 'v1.2.0-beta.1', '--notes-file', 'n.md', '--prerelease',
         ]);
-    });
-
-    it('an alpha or a beta is a prerelease, which GitHub never calls the latest', () => {
-        assert.ok(releaseArgs('1.2.0-alpha.1', 'abc', 'n.md').includes('--prerelease'));
-        assert.ok(releaseArgs('1.2.0-beta.1', 'abc', 'n.md').includes('--prerelease'));
     });
 });

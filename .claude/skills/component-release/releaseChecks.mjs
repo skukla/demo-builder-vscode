@@ -95,6 +95,10 @@ export function releaseProblems(facts) {
     if (!track) {
         return [`"${version}" is not a version a channel accepts: use 1.2.3, 1.2.3-beta.1 or 1.2.3-alpha.1.`];
     }
+    // Every component is on the extension's beta track until it reaches 1.x (owner, 2026-11-02).
+    if (track === 'normal') {
+        problems.push(`${version} is a normal release. Until the extension reaches 1.x, use ${version}-beta.1 or higher.`);
+    }
     const highest = highestVersion(tags);
     if (highest && compareVersions(version, highest) <= 0) {
         problems.push(`${version} is not above the newest version, ${highest}.`);
@@ -129,9 +133,8 @@ export function contractProblem(repo, ownContract, partnerContract) {
     return `This repository is on contract ${ownContract}, and ${partner} is on ${partnerContract}.`;
 }
 
-/** The `gh release create` arguments for a version. A normal release is what reaches SCs. */
+/** The `gh release create` arguments for a version. */
 export function releaseArgs(version, commit, notesFile) {
     const tag = `v${version}`;
-    const reach = trackOf(version) === 'normal' ? '--latest' : '--prerelease';
-    return ['release', 'create', tag, '--target', commit, '--title', tag, '--notes-file', notesFile, reach];
+    return ['release', 'create', tag, '--target', commit, '--title', tag, '--notes-file', notesFile, '--prerelease'];
 }

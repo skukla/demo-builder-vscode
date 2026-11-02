@@ -154,7 +154,7 @@ describe('a template the builder owns', () => {
     });
 
     it('is at the commit of its newest release, not its branch head', async () => {
-        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ tag_name: 'v1.1.0' }) });
+        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [{ tag_name: 'v1.1.0' }] });
         const files = { getRefCommit: jest.fn().mockResolvedValue('released'), getLatestCommitSha: jest.fn() };
 
         const sha = await resolveTemplateCommitSha(OWNED, files, createMockLogger());
@@ -165,7 +165,7 @@ describe('a template the builder owns', () => {
     });
 
     it('is at its branch head until it has a first release', async () => {
-        global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
+        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
         const files = { getRefCommit: jest.fn(), getLatestCommitSha: jest.fn().mockResolvedValue('head') };
 
         expect(await resolveTemplateCommitSha(OWNED, files, createMockLogger())).toBe('head');

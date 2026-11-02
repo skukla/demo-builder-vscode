@@ -45,7 +45,7 @@ async function readWith(
             signal: AbortSignal.timeout(timeoutMs),
         });
         if (!response.ok) {
-            // A repository with no releases answers 404. That is normal, so it says nothing.
+            // The latest-release endpoint answers 404 for a repository with none. That is normal.
             if (response.status !== HTTP_NOT_FOUND) {
                 logger?.debug(`[Releases] ${repo} answered HTTP ${response.status}`);
             }
@@ -86,10 +86,13 @@ export async function readNewestComponentRelease(
     channel: UpdateChannel,
     options: ReadReleaseOptions = {},
 ): Promise<GitHubRelease | null> {
-    return readWith(repo, channel, options, (releases) =>
-        channel === 'early-access'
+    // Components are on the extension's beta track until it reaches 1.x (owner, 2026-11-02), so there
+    // is no normal release yet for the stable channel to take, and it takes the betas. At 1.x, delete this.
+    const track: UpdateChannel = channel === 'stable' ? 'beta' : channel;
+    return readWith(repo, track, options, (releases) =>
+        track === 'early-access'
             ? selectNewestOfAnyTrack(releases)
-            : selectLatestForChannel(releases, channel),
+            : selectLatestForChannel(releases, track),
     );
 }
 

@@ -18,6 +18,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { realGitExecutor, runGit } from '../../../helpers/realGit';
 import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
+import { installSiteFetch } from '../../../helpers/siteFetchFake';
 
 const TESTED = jest.fn<Promise<string | undefined>, []>();
 jest.mock('@/features/eds/services/patches/lkgReader', () => ({
@@ -97,6 +98,8 @@ beforeEach(() => {
     home = path.join(root, 'home');
     fs.mkdirSync(home);
     jest.clearAllMocks();
+    // The ledger of shipped patches reads the patches release. Without this, that goes to GitHub.
+    installSiteFetch([]);
     reapply.mockResolvedValue([]);
     mockRef.mockImplementation(async (source: { branch: string }) => ({ ref: source.branch }));
 });

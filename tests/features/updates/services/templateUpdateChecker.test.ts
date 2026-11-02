@@ -333,7 +333,7 @@ describe('a forked storefront whose template the builder owns', () => {
     });
 
     it('offers nothing while it has no release, whatever its branch holds', async () => {
-        global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
+        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
 
         const result = await checker().checkForUpdates(owned());
 
@@ -342,7 +342,7 @@ describe('a forked storefront whose template the builder owns', () => {
     });
 
     it('compares against the commit of its newest release, and names it', async () => {
-        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ tag_name: 'v1.1.0' }) });
+        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [{ tag_name: 'v1.1.0' }] });
         mockGetLatestBranchCommit.mockResolvedValue(NEW_SHA);
         mockCompareCommits.mockResolvedValue({ ahead_by: 2 });
 

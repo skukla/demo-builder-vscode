@@ -19,7 +19,10 @@ colleagues' repositories are out of scope.
   their branch, so the branch route stays for them.
 - **Adobe's npm tools** already have versions from npm. Nothing changes.
 
-A normal release reaches everyone. A prerelease reaches the beta channel only, for trying something first.
+**Every component is on the extension's beta track until the extension reaches 1.x** (owner, 2026-11-02: "all of the components
+should be on the same track as the extension"). A beta reaches every SC, on the stable channel too, because components have no normal
+release for it to take. An alpha reaches a collaborator on early access, for trying something first. At 1.x, the component lookup and
+the release step each lose one rule.
 
 ## Where each component stands, measured 2026-11-02
 
@@ -112,7 +115,7 @@ Nothing is asked of the SC, and nothing is rewritten on load until the next save
 | A hash or `unknown` as a Headless version | Offered once, as `unknown` is today. A hash is never offered today, so it would be stuck: treat it as `unknown` |
 | A project file exported with `source.branch` | Accepted on import |
 
-The `stable` tags stay until no supported build clones them. Older builds use them on a dashboard add.
+The mesh repositories' `stable` tags were deleted on the owner's go, 2026-11-02 (commerce-eds-mesh 596d916e08c6, eds-accs-mesh c0aa9f4a99cb, headless-commerce-mesh f35b082a2f4c). Beta.152 on the stable channel can no longer add a mesh, because it falls back to that tag. Recreate one at those commits if that bites before beta.153 ships.
 
 Project files are read by builds from before and after the change. Both shapes get a test.
 
@@ -165,7 +168,7 @@ All before beta.153. Develop keeps PL-88's commits until stage 2 replaces them.
 
 **Early access** reaches a collaborator on every path, through one shared lookup set up at activation (`configureReleaseAccess`).
 
-**At the cut:** beta.153 ships, then the first normal release of each repository through the release step, starting with the meshes,
+**At the cut:** beta.153 ships, then the first beta of each repository through the release step, starting with the meshes,
 then the ERP pair, then the rest. Then the fallback to a branch for our repositories is deleted: `refOfSource` and the installer read a branch only while a repository has no release, and they cannot yet tell "no release" from "could not ask". Once all have one, a failed lookup must refuse instead.
 
 ## Surfaces
@@ -177,6 +180,8 @@ then the ERP pair, then the rest. Then the fallback to a branch for our reposito
 
 ## Decided by the owner, 2026-11-02
 
+- `eds-demo-patches` stays on normal releases, the one exception to the beta track until 1.x. Beta.152 and every older build read
+  only its normal releases, so betas would freeze them at v1.1.5.
 - `eds-demo-patches/lkg-gate.yml` keeps publishing its own release each night when its checks pass. It is how tested Adobe template
   commits reach storefronts, and the one route where a release needs no person.
 - `buildright-eds` goes through the process now, though it is hidden: "this process should still be followed", and the repository

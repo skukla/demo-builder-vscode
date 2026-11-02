@@ -137,6 +137,9 @@ describe('what it sends', () => {
 /**
  * A component has no graduation step, so early access sees every track: an alpha to try, and
  * the normal and beta releases everyone else gets. It must not leave anyone behind.
+ *
+ * Every component stays on the beta track until the extension reaches 1.x (owner, 2026-11-02),
+ * so stable reads what beta reads.
  */
 describe('readNewestComponentRelease', () => {
     const LIST = [
@@ -173,16 +176,53 @@ describe('readNewestComponentRelease', () => {
         expect(release?.tag_name).toBe('v1.0.0');
     });
 
-    it('beta and stable behave as they do everywhere else', async () => {
+    it('beta behaves as it does everywhere else', async () => {
         respondWith(LIST);
-        expect((await readNewestComponentRelease('skukla/demo-erp', 'beta'))?.tag_name).toBe(
-            'v1.2.0-beta.1',
-        );
 
-        respondWith({ tag_name: 'v1.1.0' });
-        expect((await readNewestComponentRelease('skukla/demo-erp', 'stable'))?.tag_name).toBe(
-            'v1.1.0',
+        const release = await readNewestComponentRelease('skukla/demo-erp', 'beta');
+
+        expect(release?.tag_name).toBe('v1.2.0-beta.1');
+    });
+
+    it('stable reads the release list, never the latest-release endpoint', async () => {
+        respondWith(LIST);
+
+        await readNewestComponentRelease('skukla/demo-erp', 'stable');
+
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(fetchedUrl()).toBe(
+            'https://api.github.com/repos/skukla/demo-erp/releases?per_page=20',
         );
+    });
+
+    it('stable takes a beta when it is the highest', async () => {
+        respondWith([{ tag_name: 'v1.1.0' }, { tag_name: 'v1.2.0-beta.1' }]);
+
+        const release = await readNewestComponentRelease('skukla/demo-erp', 'stable');
+
+        expect(release?.tag_name).toBe('v1.2.0-beta.1');
+    });
+
+    it('stable skips an alpha, however high it is', async () => {
+        respondWith(LIST);
+
+        const release = await readNewestComponentRelease('skukla/demo-erp', 'stable');
+
+        expect(release?.tag_name).toBe('v1.2.0-beta.1');
+    });
+
+    it('stable still takes a normal release above a beta', async () => {
+        respondWith([{ tag_name: 'v1.2.0-beta.1' }, { tag_name: 'v1.3.0' }]);
+
+        const release = await readNewestComponentRelease('skukla/demo-erp', 'stable');
+
+        expect(release?.tag_name).toBe('v1.3.0');
+    });
+
+    it('stable answers nothing for a repository with no releases', async () => {
+        respondWith([]);
+
+        expect(await readNewestComponentRelease('skukla/demo-erp', 'stable')).toBeNull();
     });
 });
 

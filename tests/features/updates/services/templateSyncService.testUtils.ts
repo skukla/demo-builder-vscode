@@ -16,6 +16,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { githubAccessFor } from '../../../helpers/githubAccessFake';
 import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
+import { installSiteFetch } from '../../../helpers/siteFetchFake';
 
 export const mockExecute = jest.fn();
 export const mockReadFile = jest.fn();
@@ -132,6 +133,8 @@ export const pushed = (): boolean => gitCalls().some((c) => /git push/.test(c));
 /** The fakes' resting state: a token, a temp dir, both preserved files present. */
 export function resetFakes(): void {
     jest.clearAllMocks();
+    // A sync reads the patches release. Without this, that goes to GitHub.
+    installSiteFetch([]);
     mockGetToken.mockResolvedValue({ token: 'gh-token' });
     mockMkdtemp.mockResolvedValue(TEMP_DIR);
     mockMkdir.mockResolvedValue(undefined);

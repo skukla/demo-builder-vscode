@@ -9,26 +9,28 @@ The extension's rule, applied to everything the builder owns (owner, 2026-11-02)
 A published release does.** `RELEASED_REPOS` (`src/core/releases/releasedRepos.ts`) lists them, and a test
 checks that list against the catalogs.
 
-## Before anything: a normal release is user-facing distribution
+## Before anything: a beta is user-facing distribution
 
-A normal release is offered to every SC with that component on the next check. Publish one only when the
-owner has said to, for that release. An `-alpha` reaches only a collaborator on the early-access channel, which is
-how a release is tried. A `-beta` reaches SCs on the beta channel. Say which you are about to publish.
+**Every component is on the extension's beta track until the extension reaches 1.x (owner, 2026-11-02)**, so the step
+refuses a normal version. Every SC gets a component's betas, on the stable channel as well as the beta channel, so publish
+one only when the owner has said to, for that release. An `-alpha` reaches only a collaborator on the early-access
+channel, which is how a release is tried. Say which you are about to publish.
 
 ## Do it
 
 ```bash
 R=.claude/skills/component-release/release.mjs
 
-node $R ../demo-erp --version 0.2.0 --notes /tmp/notes.md            # dry run: every check, publishes nothing
-node $R ../demo-erp --version 0.2.0 --notes /tmp/notes.md --publish  # with the owner's go
+node $R ../demo-erp --version 1.0.0-beta.1 --notes /tmp/notes.md     # dry run: every check, publishes nothing
+node $R ../demo-erp --version 1.0.0-beta.1 --notes /tmp/notes.md --publish  # with the owner's go
 ```
 
-Bump `package.json` and push first: a normal or beta version must match it. An alpha need not, because it is
+Bump `package.json` and push first: a beta must match it. An alpha need not, because it is
 a rehearsal that changes nothing in the repository.
 
 It refuses, and says why, for each of these:
 
+- a normal version, until the extension reaches 1.x
 - a version no channel accepts, or one not above the newest tag
 - `package.json` disagreeing with the version
 - empty notes

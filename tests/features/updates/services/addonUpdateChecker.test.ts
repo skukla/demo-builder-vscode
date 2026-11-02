@@ -127,11 +127,10 @@ describe('AddonUpdateChecker', () => {
         const OWNED_API = 'https://api.github.com/repos/skukla/demo-builder-block-library';
 
         /** Answers every commit asked for, so only the code's choice of ref can decide the outcome. */
-        function mockReleaseApi(latestRelease: { status: number; body: unknown }): void {
+        function mockReleaseApi(releases: Array<{ tag_name: string }>): void {
             (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
-                if (url.includes('/releases/latest')) {
-                    const { status, body } = latestRelease;
-                    return { ok: status === 200, status, json: async () => body };
+                if (url.includes('/releases?')) {
+                    return { ok: true, status: 200, json: async () => releases };
                 }
                 if (url.includes('/commits/')) {
                     return { ok: true, status: 200, json: async () => ({ sha: 'bbb222' }) };
@@ -151,7 +150,7 @@ describe('AddonUpdateChecker', () => {
 
         it('checks an owned library at its newest release, and says which', async () => {
             const lib = makeLibrary({ source: OWNED, commitSha: 'aaa111' });
-            mockReleaseApi({ status: 200, body: { tag_name: 'v0.2.0' } });
+            mockReleaseApi([{ tag_name: 'v0.2.0' }]);
 
             const results = await checker.checkBlockLibraries(makeProject({ installedBlockLibraries: [lib] }));
 
@@ -164,18 +163,18 @@ describe('AddonUpdateChecker', () => {
 
         it('offers nothing for an owned library with no release, and reads no commit', async () => {
             const lib = makeLibrary({ source: OWNED, commitSha: 'aaa111' });
-            mockReleaseApi({ status: 404, body: {} });
+            mockReleaseApi([]);
 
             const results = await checker.checkBlockLibraries(makeProject({ installedBlockLibraries: [lib] }));
 
             expect(results).toStrictEqual([]);
-            expect(askedFor()).toContain(`${OWNED_API}/releases/latest`);
+            expect(askedFor()).toContain(`${OWNED_API}/releases?per_page=20`);
             expect(askedFor().filter((url) => url.includes('/commits/'))).toStrictEqual([]);
         });
 
         it('follows the branch of a library the builder does not own, and looks up no release', async () => {
             const lib = makeLibrary({ commitSha: 'aaa111' });
-            mockReleaseApi({ status: 200, body: { tag_name: 'v9.9.9' } });
+            mockReleaseApi([{ tag_name: 'v9.9.9' }]);
 
             const results = await checker.checkBlockLibraries(makeProject({ installedBlockLibraries: [lib] }));
 

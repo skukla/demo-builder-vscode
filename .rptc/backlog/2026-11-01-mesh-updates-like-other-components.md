@@ -48,8 +48,7 @@ lookup in `componentInstallation.ts` and the mesh arm of the release updater, in
 ## What the change had to get right
 
 - **Existing projects hold `source.branch: 'stable'`**: a project moves to `main` when it loads.
-- **The `stable` tags outlive the change.** Extensions already installed clone them on a dashboard add and as a
-  fallback, so deleting them breaks those. Delete them once no supported build reads them.
+- **The `stable` tags** were deleted on the owner's go, 2026-11-02 (PL-89 records the commits).
 - **Shallow clones** could never read as behind, so a clone gains its history on the first check. A rebuilt
   `mesh.json` is tracked, so it had to stop reading as the SC's own edit.
 - **Branch names.** Two of the three repositories used `master`, and one also had a stale `main` holding an old Node

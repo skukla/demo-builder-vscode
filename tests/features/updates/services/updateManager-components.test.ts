@@ -109,7 +109,7 @@ describe('UpdateManager - Component Updates', () => {
 
             (global.fetch as jest.Mock).mockResolvedValue({
                 ok: true,
-                json: async () => mockRelease,
+                json: async () => [mockRelease],
             });
 
             mockSecurityValidationPass();
@@ -133,7 +133,7 @@ describe('UpdateManager - Component Updates', () => {
             };
             (global.fetch as jest.Mock).mockResolvedValue({
                 ok: true,
-                json: async () => createMockRelease({ version: '9.0.0', assetType: 'zipball' }),
+                json: async () => [createMockRelease({ version: '9.0.0', assetType: 'zipball' })],
             });
             mockSecurityValidationPass();
 
@@ -159,7 +159,7 @@ describe('UpdateManager - Component Updates', () => {
             };
             (global.fetch as jest.Mock).mockResolvedValue({
                 ok: true,
-                json: async () => createMockRelease({ version: '9.0.0', assetType: 'zipball' }),
+                json: async () => [createMockRelease({ version: '9.0.0', assetType: 'zipball' })],
             });
             mockSecurityValidationPass();
 
@@ -178,7 +178,7 @@ describe('UpdateManager - Component Updates', () => {
             };
             (global.fetch as jest.Mock).mockResolvedValue({
                 ok: true,
-                json: async () => createMockRelease({ version: '1.1.0', assetType: 'zipball' }),
+                json: async () => [createMockRelease({ version: '1.1.0', assetType: 'zipball' })],
             });
             mockSecurityValidationPass();
 
@@ -229,7 +229,7 @@ describe('UpdateManager - Component Updates', () => {
 
             (global.fetch as jest.Mock).mockResolvedValue({
                 ok: true,
-                json: async () => mockRelease,
+                json: async () => [mockRelease],
             });
 
             mockSecurityValidationPass();
