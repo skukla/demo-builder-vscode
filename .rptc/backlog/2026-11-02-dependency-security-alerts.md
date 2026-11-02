@@ -14,15 +14,19 @@ the extension. Done that day, each read back as on. Version-update pull requests
 steady upkeep across 13 repositories, and a merge reaches no SC until a release anyway.
 
 Read the live numbers from each repository's Security tab. The first scan was still filling when this was
-written: 233 open alerts at the first read and 600 about ten minutes later, so neither is a total.
+written: 233 open alerts at the first read, then 600, then 846, so none of those is a total.
 
 ## What to do first
 
-**`citisignal-nextjs`.** It is the only repository with critical alerts on code that runs rather than on test
-tools. It locks Next.js 15.4.2 and the advisories' fixes reach 15.5.28. `next dev` listens on every network
+**`citisignal-nextjs`.** GitHub lists critical `runtime` alerts on three repositories, and this is the one that
+needs no second look. It locks Next.js 15.4.2 and the advisories' fixes reach 15.5.28. `next dev` listens on every network
 interface by default (read from Next's own command help, 15.4.2), and the extension starts it with
 `npm run dev` on the SC's laptop (`startDemo.ts`). So other machines on the same network can reach it. Whether
 each advisory can be used against this storefront has not been tested. Its first beta should carry the upgrade.
+
+The other two need a read before anyone acts on the label. `bodea-source`'s are `vitest` and `tinypool`, which are test
+tools by name, yet its lockfile does not mark them as development. `demo-builder-vscode`'s is `proxy-addr`, under `express`
+under the MCP SDK. The name `proxy-addr` does not appear in the built extension, which does not prove it is absent.
 
 ## Then
 
