@@ -26,16 +26,22 @@ import type { OperationOffer } from '@/types/webviewPayloads';
 export const ERP_ASSIGN_DIALOG_COPY = {
     undoTitle: (name: string) => `Undo ${name}'s last assignment?`,
     undoAction: 'Undo',
-    undoBody:
-        'Puts back the erp_owner each product had before that assignment, leaving any product whose erp_owner has changed since. Then fills every ERP again with what it owns.',
+    undoBody: [
+        'Puts back the erp_owner each product had before that assignment, leaving any product whose erp_owner has changed since.',
+        'Then fills every ERP again with what it owns.',
+    ],
     addSetsTitle: 'Add erp_owner to the attribute sets?',
     addSetsAction: 'Add',
-    addSetsBody:
-        'Adds erp_owner to every attribute set your products use that does not have it. It records which sets, so Demo Builder can take it out again.',
+    addSetsBody: [
+        'Adds erp_owner to every attribute set your products use that does not have it.',
+        'It records which sets, so Demo Builder can take it out again.',
+    ],
     removeSetsTitle: 'Take erp_owner out of the attribute sets?',
     removeSetsAction: 'Take it out',
-    removeSetsBody:
-        'Takes erp_owner out of the attribute sets Demo Builder added it to. It refuses while a product in those sets is tagged.',
+    removeSetsBody: [
+        'Takes erp_owner out of the attribute sets Demo Builder added it to.',
+        'It refuses while a product in those sets is tagged.',
+    ],
     offerAction: 'Assign products',
 };
 

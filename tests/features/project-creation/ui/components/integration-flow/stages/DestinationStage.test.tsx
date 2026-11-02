@@ -30,43 +30,11 @@ jest.mock('@/features/project-creation/ui/hooks/useProjectCreationPhases', () =>
 }));
 
 jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
-    AdobeAuthStep: () => <div data-testid="adobe-auth-step">Adobe Auth Step</div>,
-}));
-
-// StatusDisplay is a sentinel, not the real component: the shared Spectrum mock
-// FILTERS `variant` out before it reaches the DOM (SPECTRUM_PROPS), so a Retry
-// button rendered as accent and one rendered as the secondary fallback are the
-// same markup. Reading the action objects is the only way to see which one this
-// stage asked for. The sentinel still renders a real button wired to onPress, so
-// the click-through assertions below are unchanged.
-jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
-    StatusDisplay: ({
-        title,
-        message,
-        height,
-        actions,
-    }: {
-        title?: string;
-        message?: string;
-        height?: string;
-        actions?: { label: string; variant?: string; onPress?: () => void }[];
-    }) => (
-        <div data-testid="status-display" data-height={height ?? ''}>
-            <span>{title}</span>
-            <span>{message}</span>
-            {actions?.map((action) => (
-                <button
-                    key={action.label}
-                    type="button"
-                    data-variant={action.variant ?? ''}
-                    onClick={action.onPress}
-                >
-                    {action.label}
-                </button>
-            ))}
-        </div>
+    AdobeAuthStep: ({ onOutcome }: { onOutcome?: unknown }) => (
+        <div data-testid="adobe-auth-step" data-reports={String(typeof onOutcome === 'function')}>Adobe Auth Step</div>
     ),
 }));
+
 jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
     AdobeProjectField: ({
         onCreateFlow,
@@ -74,7 +42,9 @@ jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
         initialCreateName,
         selectedProjectId,
         onProjectSelect,
+        dialogHost,
     }: {
+        dialogHost?: { onOutcome: unknown; onSignIn?: unknown };
         onCreateFlow?: (name: string) => void;
         createError?: string;
         initialCreateName?: string;
@@ -83,6 +53,8 @@ jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
     }) => (
         <div
             data-testid="project-field"
+            data-reports={String(typeof dialogHost?.onOutcome === 'function')}
+            data-signs-in={String(typeof dialogHost?.onSignIn === 'function')}
             data-selected={selectedProjectId ?? ''}
             data-create-error={createError ?? ''}
             data-initial-name={initialCreateName ?? ''}
@@ -103,11 +75,17 @@ jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
     AdobeWorkspaceField: ({
         selectedWorkspaceId,
         onWorkspaceSelect,
+        dialogHost,
     }: {
+        dialogHost?: { onOutcome: unknown };
         selectedWorkspaceId?: string;
         onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;
     }) => (
-        <div data-testid="workspace-field" data-selected={selectedWorkspaceId ?? ''}>
+        <div
+            data-testid="workspace-field"
+            data-reports={String(typeof dialogHost?.onOutcome === 'function')}
+            data-selected={selectedWorkspaceId ?? ''}
+        >
             <button
                 type="button"
                 onClick={() =>
@@ -168,6 +146,8 @@ function renderStage(view: View, overrides: StageOverrides = {}) {
     const onPendingProject = jest.fn();
     const onPendingWorkspace = jest.fn();
     const onPhaseRunningChange = jest.fn();
+    const onOutcome = jest.fn();
+    const onSignIn = jest.fn(async () => undefined);
     render(
         <Provider theme={defaultTheme} colorScheme="light">
             <DestinationStage
@@ -179,6 +159,9 @@ function renderStage(view: View, overrides: StageOverrides = {}) {
                 onPendingProject={onPendingProject}
                 onPendingWorkspace={onPendingWorkspace}
                 onPhaseRunningChange={onPhaseRunningChange}
+                onOutcome={onOutcome}
+                onWaiting={jest.fn()}
+                onSignIn={onSignIn}
             />
         </Provider>
     );
@@ -187,6 +170,7 @@ function renderStage(view: View, overrides: StageOverrides = {}) {
         onPendingProject,
         onPendingWorkspace,
         onPhaseRunningChange,
+        onOutcome,
     };
 }
 
@@ -205,6 +189,8 @@ describe('DestinationStage', () => {
         it('renders the inline auth gate and no pickers', () => {
             renderStage('signin');
             expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+            // Its outcome is the dialog's title, not the whole-screen view the wizard draws.
+            expect(screen.getByTestId('adobe-auth-step')).toHaveAttribute('data-reports', 'true');
             expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
             expect(screen.queryByTestId('workspace-field')).not.toBeInTheDocument();
         });
@@ -267,12 +253,26 @@ describe('DestinationStage', () => {
             expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
         });
 
-        it('non-creating failure: shows an error with a Retry that calls phases.retry', () => {
+        it('non-creating failure: is the dialog\'s red title, with a Retry that calls phases.retry', () => {
             const value = setPhases({ phase: 'failed', failedPhase: 'workspace', error: 'boom' });
-            renderStage('project');
+            const { onOutcome } = renderStage('project');
             expect(screen.getByText('boom')).toBeInTheDocument();
-            fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+            expect(onOutcome).toHaveBeenLastCalledWith(expect.objectContaining({
+                title: 'Project setup failed',
+                status: 'error',
+                lines: ['boom'],
+                actions: [{ label: 'Retry', onPress: expect.any(Function) }],
+            }));
+            // No big icon in the body, and the Retry is the footer's now.
+            expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+            onOutcome.mock.lastCall[0].actions[0].onPress();
             expect(value.retry).toHaveBeenCalled();
+        });
+
+        it('tells the field which dialog it sits in, so its own outcomes reach the title', () => {
+            renderStage('project');
+            expect(screen.getByTestId('project-field')).toHaveAttribute('data-reports', 'true');
+            expect(screen.getByTestId('project-field')).toHaveAttribute('data-signs-in', 'true');
         });
     });
 
@@ -305,12 +305,17 @@ describe('DestinationStage', () => {
             expect(screen.queryByTestId('workspace-field')).not.toBeInTheDocument();
         });
 
-        it('non-creating failure: shows the Retry view', () => {
+        it('non-creating failure: is the dialog\'s title, with its Retry', () => {
             const value = setPhases({ phase: 'failed', failedPhase: 'workspace', error: 'nope' });
-            renderStage('workspace');
+            const { onOutcome } = renderStage('workspace');
             expect(screen.getByText('nope')).toBeInTheDocument();
-            fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+            onOutcome.mock.lastCall[0].actions[0].onPress();
             expect(value.retry).toHaveBeenCalled();
+        });
+
+        it('tells the field which dialog it sits in', () => {
+            renderStage('workspace');
+            expect(screen.getByTestId('workspace-field')).toHaveAttribute('data-reports', 'true');
         });
     });
 
@@ -341,6 +346,8 @@ describe('DestinationStage', () => {
                         onPendingProject={jest.fn()}
                         onPendingWorkspace={jest.fn()}
                         onPhaseRunningChange={onPhaseRunningChange}
+                        onOutcome={jest.fn()}
+                        onWaiting={jest.fn()}
                     />
                 </Provider>
             );
@@ -368,6 +375,8 @@ describe('DestinationStage', () => {
                         view="project"
                         onPendingProject={jest.fn()}
                         onPendingWorkspace={jest.fn()}
+                        onOutcome={jest.fn()}
+                        onWaiting={jest.fn()}
                     />
                 </Provider>
             );
@@ -396,21 +405,12 @@ describe('DestinationStage', () => {
             expect(reserved).toHaveStyle({ minHeight: '220px' });
         });
 
-        it('the failure view reserves the same height', () => {
-            setPhases({ phase: 'failed', failedPhase: 'workspace', error: 'boom' });
-            renderStage('project');
-            expect(screen.getByTestId('status-display')).toHaveAttribute('data-height', '220px');
-        });
-
-        // Retry is the one action on the failure view, so it carries the accent
-        // emphasis; StatusDisplay silently falls back to 'secondary' otherwise.
-        it('Retry is the accent action on the failure view', () => {
-            setPhases({ phase: 'failed', failedPhase: 'workspace', error: 'boom' });
-            renderStage('project');
-            expect(screen.getByRole('button', { name: 'Retry' })).toHaveAttribute(
-                'data-variant',
-                'accent'
-            );
+        // A result's height fits its content (dialog design rules): the failure holds no room.
+        it('the failure view reserves no height, and says nothing with no reason to give', () => {
+            setPhases({ phase: 'failed', failedPhase: 'workspace' });
+            const { onOutcome } = renderStage('project');
+            expect(screen.getByTestId('destination-stage')).toBeEmptyDOMElement();
+            expect(onOutcome).toHaveBeenLastCalledWith(expect.objectContaining({ lines: [] }));
         });
 
         // A phase with no message shows the spinner with an EMPTY title, not a

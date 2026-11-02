@@ -82,7 +82,7 @@ export function useCreateDatapackFlow({ engine, startsAtPicks = false, pack, onS
 
     const route = packType && routeOf(packType, engine);
     const order = stageOrder(route, startsAtPicks);
-    const store = useStorePicks();
+    const store = useStorePicks(stage === 'store-kinds', pack);
     const answers = useExportAnswers(route, stage !== 'pack-type');
     const { open, answered } = store;
 

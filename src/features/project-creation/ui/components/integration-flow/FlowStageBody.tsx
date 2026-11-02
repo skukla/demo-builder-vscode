@@ -19,6 +19,7 @@ import { DestinationStage } from './stages/DestinationStage';
 import { KindStage } from './stages/KindStage';
 import type { UseIntegrationFlowReturn } from './useIntegrationFlow';
 import type { ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
+import type { ReportOutcome } from '@/core/ui/components/ui/DialogOutcome';
 import {
     isPrebuiltIntegration,
     isSeedIntegration,
@@ -45,6 +46,8 @@ interface StageBodyInputs {
     catalog: AppBuilderComponentCatalogEntry[];
     /** Catalog entries that cannot be added here, and what to do instead. */
     unavailable?: UnavailableEntries;
+    /** Starts a user-initiated Adobe sign-in, for a destination read refused for want of one. */
+    onSignIn?: () => Promise<unknown>;
 }
 
 /**
@@ -57,14 +60,20 @@ export function FlowStageBody({
     flow,
     props,
     apis,
+    onOutcome,
+    onWaiting,
 }: {
     flow: UseIntegrationFlowReturn;
     props: StageBodyInputs;
     /** The org's APIs, read by the dialog: the api-access stage's list. */
     apis: ApiAccessOption[];
+    /** The dialog's title and footer, which take a destination stage's outcomes. */
+    onOutcome: ReportOutcome;
+    /** Tells the dialog a destination list's silent wait is on. */
+    onWaiting: (waiting: boolean) => void;
 }): React.ReactElement {
     const { stage, draft } = flow;
-    const { state, updateState, meshComponent, catalog, unavailable } = props;
+    const { state, updateState, meshComponent, catalog, unavailable, onSignIn } = props;
 
     // The catalog prop is the stack-filtered MIXED list: derived meshes, authored
     // integrations, the blank shell, and SEEDS. Only finished integrations belong
@@ -165,6 +174,9 @@ export function FlowStageBody({
             onPendingProject={flow.setPendingProject}
             onPendingWorkspace={flow.setPendingWorkspace}
             onPhaseRunningChange={flow.setPhaseRunning}
+            onOutcome={onOutcome}
+            onWaiting={onWaiting}
+            onSignIn={onSignIn}
         />
     );
 }

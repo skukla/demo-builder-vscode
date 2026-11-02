@@ -102,6 +102,15 @@ export interface StoreItemPage {
     inPackCount: number;
 }
 
+/**
+ * How many of each kind the store has, as `count-datapack-export-items` answers. A kind whose read
+ * failed is absent, so absent never means none. Each count is a ceiling on what its list offers,
+ * and only zero is relied on: the list then leaves off what the pack being saved holds, and cart
+ * rules and companies are scoped in code after their read, so theirs count the whole store
+ * (`storeItems.ts`).
+ */
+export type StoreKindCounts = Partial<Record<PickableKind, number>>;
+
 /** The picks as `selections`, for the request. */
 export function selectionsOf(picks: StorePicks): Selections {
     const out: Selections = {};

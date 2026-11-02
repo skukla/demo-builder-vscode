@@ -62,7 +62,7 @@ function footerOf(flow: CreateDatapackFlow): ActionButton[] {
 function StageBody({ flow, engine, pack }: Pick<DatapackFlowDialogProps, 'engine' | 'pack'> & { flow: CreateDatapackFlow }): React.ReactElement {
     const { stage, store, answers } = flow;
     if (stage === 'pack-type') return <PackTypeStage engine={engine} packType={flow.packType} onPick={flow.pickPackType} />;
-    if (stage === 'store-kinds') return <StoreKindsStage pack={pack} picks={store.picks} reads={store.reads} onOpen={flow.openKind} />;
+    if (stage === 'store-kinds') return <StoreKindsStage pack={pack} picks={store.picks} reads={store.reads} counts={store.counts} onOpen={flow.openKind} />;
     if (stage === 'store-items') {
         return (
             <StoreItemsStage

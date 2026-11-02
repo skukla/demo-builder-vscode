@@ -20,6 +20,7 @@
 
 import { Text } from '@adobe/react-spectrum';
 import React from 'react';
+import type { SelectionDialogHost } from '@/core/ui/components/selection/selectionDialogHost';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import type { WizardSessionState, Workspace, WizardState } from '@/types/webview';
@@ -53,6 +54,8 @@ export interface AdobeWorkspacePickerProps {
      * `state.adobeWorkspace`. Omitted on the mesh path → byte-identical default behavior.
      */
     onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;
+    /** The dialog this picker sits in, whose title takes its error and empty states. */
+    dialogHost?: SelectionDialogHost;
 }
 
 /**
@@ -68,6 +71,7 @@ export function AdobeWorkspacePicker({
     suppressAutoSelect = false,
     selectedWorkspaceId,
     onWorkspaceSelect,
+    dialogHost,
 }: AdobeWorkspacePickerProps): React.ReactElement {
     const {
         items: workspaces,
@@ -77,6 +81,7 @@ export function AdobeWorkspacePicker({
         isRefreshing,
         hasLoadedOnce,
         error,
+        errorCode,
         searchQuery,
         setSearchQuery,
         load: loadWorkspaces,
@@ -139,6 +144,8 @@ export function AdobeWorkspacePicker({
             isRefreshing={isRefreshing}
             hasLoadedOnce={hasLoadedOnce}
             error={error}
+            errorCode={errorCode}
+            dialogHost={dialogHost}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onLoad={loadWorkspaces}

@@ -370,7 +370,6 @@ describe('what is refused before anything is saved', () => {
     it.each([
         ['no Commerce instance', { commerceInstance: undefined }],
         ['half a target', { storeCode: undefined }],
-        ['no data types', { dataTypes: [] }],
         ['an answer that is neither', { changes: 'maybe' }],
     ])('%s', async (_name, over) => {
         const result = await reset({ changes: 'keep', ...over });

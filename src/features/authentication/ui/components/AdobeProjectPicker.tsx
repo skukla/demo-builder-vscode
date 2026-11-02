@@ -30,10 +30,8 @@
  * path. After any delete, single-item auto-select is suppressed so the last
  * remaining project isn't silently re-selected.
  *
- * Unlike the step, this component does NOT own a Continue gate — it never calls
- * `setCanProceed`. The owning tile/step decides whether the selection blocks
- * Continue (see `isIntegrationsComplete`). Mirrors the inline pattern used by
- * {@link RepoSelectionInline} (no `ContentWithSidebar` / `ConfigurationSummary`).
+ * It owns no Continue gate and never calls `setCanProceed`: the owning tile/step decides
+ * (see `isIntegrationsComplete`). Mirrors the inline {@link RepoSelectionInline}.
  *
  * @module features/authentication/ui/components/AdobeProjectPicker
  */
@@ -42,16 +40,17 @@ import { ActionButton, Text } from '@adobe/react-spectrum';
 import Delete from '@spectrum-icons/workflow/Delete';
 import React, { useCallback, useEffect, useState } from 'react';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
+import type { SelectionDialogHost } from '@/core/ui/components/selection/selectionDialogHost';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { WizardSessionState, AdobeProject, WizardState } from '@/types/webview';
 
-/** The delete handler's response envelope (`webviewClient.request` resolves with this). */
 /** Constant per call site, so it lives at module level — an inline array is a new
  *  reference every render, and this one is named by the filter memo's deps. */
 const PROJECT_SEARCH_FIELDS: ReadonlyArray<keyof AdobeProject> = ['title', 'name', 'description'];
 
+/** The delete handler's response envelope (`webviewClient.request` resolves with this). */
 interface DeleteProjectResult {
     success: boolean;
     cancelled?: boolean;
@@ -64,8 +63,7 @@ const DELETE_FALLBACK_ERROR = 'Could not delete the project.';
 /** Fallback when the rename handler answers a failure with no message. */
 const RENAME_FALLBACK_ERROR = 'Could not rename the project.';
 
-// Stable reference for the "no delete in flight" case — an inline `[]` here
-// would create a new reference every render (infinite-loop gotcha).
+// Stable reference for the "no delete in flight" case (infinite-loop gotcha).
 const NO_DISABLED_IDS: string[] = [];
 
 export interface AdobeProjectPickerProps {
@@ -84,11 +82,12 @@ export interface AdobeProjectPickerProps {
      * pending model wants a deliberate click.
      */
     onProjectSelect?: (project: AdobeProject) => void;
+    /** The dialog this picker sits in, whose title takes its error and empty states. */
+    dialogHost?: SelectionDialogHost;
 }
 
 /**
  * Inline Adobe I/O project selector. Writes `adobeProject` to wizard state.
- *
  * @param props - Wizard state + updater
  * @returns The searchable project list
  */
@@ -98,9 +97,9 @@ export function AdobeProjectPicker({
     headerAction,
     selectedProjectId,
     onProjectSelect,
+    dialogHost,
 }: AdobeProjectPickerProps): React.ReactElement {
-    // Delete affordance state: the in-flight row, an inline failure message,
-    // and whether ANY delete has happened (suppresses single-item auto-select).
+    // The in-flight row, an inline failure, and whether ANY delete has happened (auto-select off).
     const [deletingId, setDeletingId] = useState<string | undefined>();
     const [deleteError, setDeleteError] = useState<string | undefined>();
     const [hasDeleted, setHasDeleted] = useState(false);
@@ -312,6 +311,7 @@ export function AdobeProjectPicker({
                 // A FORCED sign-in is the only way to land in another (the model's
                 // rule 3), and the extension re-checks the landed org afterwards.
                 onSwitchOrg={switchOrg}
+                dialogHost={dialogHost}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 onLoad={loadProjects}

@@ -193,7 +193,7 @@ export function AiCapabilitiesModal({
                                     UNSAFE_className="ai-section-heading"
                                     data-testid="ai-mcps-heading"
                                 >
-                                    MCP servers ({mcps.length})
+                                    MCP servers
                                 </Heading>
                                 <AiMcpsList mcps={mcps} hasError={hasMcpsError} />
                             </Flex>

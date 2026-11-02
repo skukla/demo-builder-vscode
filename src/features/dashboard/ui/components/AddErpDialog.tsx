@@ -120,7 +120,7 @@ function AfterAdding({ store, options, added, onAssign }: {
     let body: React.ReactNode;
     if (store.status === 'failed' || !lines) {
         const reason = store.status === 'failed' ? store.error : undefined;
-        body = <p className="dialog-note" data-testid="add-erp-read-failed">{ADD_ERP_COPY.readFailed(reason)}</p>;
+        body = <p className="dialog-problem text-negative" data-testid="add-erp-read-failed">{ADD_ERP_COPY.readFailed(reason)}</p>;
     } else {
         // Name and count on one line, so both line up down the list; the meaning on its own
         // line in the help-text size, so it never wraps mid-thought (owner, 2026-10-18).

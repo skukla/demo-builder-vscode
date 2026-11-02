@@ -84,6 +84,17 @@ Demo Builder's own engine (`services/demoBuilderEngine/`, the default) removes a
 from its install record, `<project>/.demo-builder/datapacks/<name>@<version>.json`,
 which lists every object the install made. It never removes by name.
 
+- **An import honours the ticks; a removal does not take any** (`demoBuilderEngine/askedKinds.ts`).
+  An import installs the kinds asked for and what they need (`ui/importDependencies.ts`), and nothing
+  else. A kind left out is left alone: not installed, not compared, not removed, not put back, and
+  still on the record. The dry run and `preview_datapack_changes` decide it the same way. A removal
+  takes what the record lists, whatever is ticked, so with a record the form's button reads "Remove
+  all data" and needs nothing ticked (`get-datapack-removal-scope`), and the confirm names the kinds
+  on the record: "Permanently deletes what Bodea installed: categories and products. Puts back the
+  store settings it changed." It adds "The ticked boxes only choose what Import installs." when fewer
+  are ticked than go. A removal's check asks nothing of the pack, so a pack deleted from its store
+  can still be removed (`validateRemoval`); it refuses only a store other than the one on the record.
+  With no record the service removes the types it is sent, and the form and confirm stay as they were.
 - **Anything the SC changed since the install is settled first** (step 05,
   `handlers/removalChanges.ts`). The confirm reads it (`get-datapack-removal-changes`, the
   preview's own read) and, when there is something to lose, says what and offers "Save my changes
@@ -161,10 +172,13 @@ screens (`create-flow/DatapackFlowDialog`): a card per kind (products, gift card
 rules, customers, companies, customer groups, shared catalogs, attributes, attribute sets), and
 clicking one opens that kind's checklist. Each kind is listed when first opened, from the project's
 store with its own credential (`list-datapack-export-items`, `storeItems.ts`), scoped to its website
-where Commerce scopes the thing, Commerce's own left out. A kind whose read leaves nothing to pick is
-greyed out on its card from then on; until its read has answered, a card stays clickable, because
-the handler lists one kind whole at a time, so knowing all ten up front would cost ten full reads
-(products and customers twice each) on every open. In the flyout the list leaves off what the pack
+where Commerce scopes the thing, Commerce's own left out. The cards show at once, and a kind with none
+is greyed out without a click: `count-datapack-export-items` reads all ten kinds' `total_count` at once
+(`pageSize=1`, `storeItems.ts`), reads only, with no agent tool since `list_datapack_export_items`
+answers per kind. Only a count of none is shown or acted on. Cart rules and companies are scoped in
+code after their read, so theirs count the whole store and grey only when the whole store has none; a
+failed count says nothing. Any other card stays clickable until its list answers, and greys then if
+nothing was left to pick. In the flyout the list leaves off what the pack
 holds already, so what is left is what the SC made by hand. Save writes a new version of this demo's own library pack
 (`saveStore.ts`): the pack Demo Builder installed here when there is one, plus what was picked; with
 none, a store Demo Builder did not fill, what was picked alone. A pick brings what it needs (a
@@ -225,7 +239,8 @@ rows. It is ordinary pack rows, moved like any pack. Only Demo Builder's engine 
 
 | When | What happens |
 |---|---|
-| Install | the pack's data, then the newest version of its layer, on the pack's own install record. A pack holding `store_config` itself wins: the layer is not looked for, so nothing applies twice |
+| Install | the pack's data, then the newest version of its layer, on the pack's own install record. A pack holding `store_config` itself wins, so nothing applies twice |
+| Install of part of the pack | the layer goes in only when every kind the pack holds is asked for, or `store_config` by name. Otherwise settings are left as they are, set or not, on the record or not, and the note says "The store settings in bodea-settings@2 were left as they are: they go in when every data type is imported." The preview says the same |
 | Remove | one removal takes both: the record's settings go back first, by the settings fix's "changed since" rule, then the data. No library is needed |
 | Install again | a setting still as Demo Builder left it follows the layer; one the SC changed is kept and counted; one the layer dropped, or every one when the library says the layer is gone, is put back |
 | Refused | a path outside `catalog/`, `sales/`, `checkout/`, `customer/`, `btob/`, `cataloginventory/`, under `web/` or `admin/`, or ending in password, secret, token or key, and a store-view row, stop the whole install before any write, by path, in the dry run too. So does the same path in a file's layer at Open and Load |

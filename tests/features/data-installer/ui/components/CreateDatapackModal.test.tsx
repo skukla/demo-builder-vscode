@@ -80,14 +80,14 @@ describe('the first screen', () => {
 });
 
 describe('which route each engine and pack type takes', () => {
-    it("Commerce with Demo Builder's engine goes to the kinds, reading nothing yet", async () => {
+    it("Commerce with Demo Builder's engine goes to the kinds, reading only how many of each", async () => {
         await renderCreate('demo-builder');
         await press(card('Commerce datapack'));
         await press(button('Continue'));
 
         expect(card('Products')).toBeInTheDocument();
         expect(card('Attribute sets')).toBeInTheDocument();
-        expect(mockRequest).not.toHaveBeenCalled();
+        expect(mockRequest.mock.calls.map((c) => c[0])).toEqual(['count-datapack-export-items']);
     });
 
     it.each([['service'], [undefined]] as const)("Commerce with the %s engine goes to the service's data types", async (engine) => {

@@ -7,11 +7,17 @@
  * showing it (`StoreItemsStage`), so an answer arriving after the SC has left can never be taken for
  * another kind's.
  *
+ * How many of each kind the store has is read once, when the cards first show, without reading any
+ * of them (`count-datapack-export-items`). It only ever adds a grey: a count of none. A failed count
+ * says nothing and the card stays clickable, and a kind's list, once it has answered, decides.
+ *
  * @module features/data-installer/ui/components/create-flow/useStorePicks
  */
 
-import { useCallback, useState } from 'react';
-import { type PickableKind, type StoreItemPage, type StorePicks, pickCount } from '../../../pickableKinds';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../../pickableKinds';
+import { useDataInstallerRequest } from '../../hooks/useDataInstallerRequest';
+import type { PackBeingSaved } from './datapackFlowStages';
 
 /** One kind's answer: its page, or null when the read failed. Absent until a read answers. */
 export type KindReads = Partial<Record<PickableKind, StoreItemPage | null>>;
@@ -22,6 +28,8 @@ export interface StorePicksState {
     picks: StorePicks;
     count: number;
     reads: KindReads;
+    /** How many of each kind the store has; empty until the counts answer. */
+    counts: StoreKindCounts;
     open: (kind: PickableKind) => void;
     setPicked: (ids: string[]) => void;
     answered: (kind: PickableKind, page: StoreItemPage | null) => void;
@@ -32,10 +40,29 @@ export function hasNothingToPick(page: StoreItemPage | null | undefined): boolea
     return page?.items.length === 0;
 }
 
-export function useStorePicks(): StorePicksState {
+/** Whether a kind has nothing to pick, as far as is known: its list's answer, else a count of none. */
+export function isKnownEmpty(read: StoreItemPage | null | undefined, count: number | undefined): boolean {
+    return read === undefined ? count === 0 : hasNothingToPick(read);
+}
+
+const NO_COUNTS: StoreKindCounts = {};
+
+/**
+ * @param countsWanted - the cards are on screen, so the counts are wanted
+ * @param pack - the pack being saved, when there is one
+ */
+export function useStorePicks(countsWanted: boolean, pack?: PackBeingSaved): StorePicksState {
     const [kind, setKind] = useState<PickableKind>('products');
     const [picks, setPicks] = useState<StorePicks>({});
     const [reads, setReads] = useState<KindReads>({});
+
+    const { load: loadCounts, value: counts } = useDataInstallerRequest<StoreKindCounts>('count-datapack-export-items');
+    const countsAsked = useRef(false);
+    useEffect(() => {
+        if (!countsWanted || countsAsked.current) return;
+        countsAsked.current = true;
+        loadCounts(pack ? { datapackName: pack.id.name, version: pack.id.version, source: pack.source } : {});
+    }, [countsWanted, loadCounts, pack]);
 
     const open = useCallback((next: PickableKind): void => {
         setKind(next);
@@ -49,5 +76,5 @@ export function useStorePicks(): StorePicksState {
         setReads((current) => ({ ...current, [of]: page }));
     }, []);
 
-    return { kind, picks, count: pickCount(picks), reads, open, setPicked, answered };
+    return { kind, picks, count: pickCount(picks), reads, counts: counts ?? NO_COUNTS, open, setPicked, answered };
 }

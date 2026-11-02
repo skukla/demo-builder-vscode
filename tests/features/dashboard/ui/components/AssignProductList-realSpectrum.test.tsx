@@ -57,6 +57,18 @@ it('renders its table, headings and rows, through the real Spectrum package', ()
     warn.mockRestore();
 });
 
+// As tall as its rows, up to what the window holds, from every row and not the ones a filter shows.
+it('takes its height from the store\'s rows, capped by the window', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    render(
+        <Provider theme={defaultTheme}>
+            <AssignProductList options={STORE} value="accuform" selected={new Set()} onChange={() => undefined} />
+        </Provider>,
+    );
+    expect(screen.getByRole('grid', { name: 'Products' }).style.height).toBe('min(135px, var(--assign-list-cap))');
+    warn.mockRestore();
+});
+
 // No row matches: the table says so where they would be, through Spectrum's renderEmptyState,
 // which the mock draws however it is used.
 it('renders its empty table through the real Spectrum package', () => {

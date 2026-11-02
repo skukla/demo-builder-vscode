@@ -163,3 +163,48 @@ describe('AddIntegrationFlowModal — signed out when it reads the APIs', () => 
         expect(footerButtons()).toEqual(['Cancel', 'Back', 'Sign In with Adobe', 'Add Integration']);
     });
 });
+
+// A destination stage's outcome reaches the dialog the same way, from a stage that has to stay
+// mounted: the title and its status, what is left to read, Back and the stage's own action.
+describe('AddIntegrationFlowModal — a destination stage that failed', () => {
+    it('titles it in red and offers Retry in the footer, with no Continue', async () => {
+        const retry = jest.fn();
+        setPhases({ phase: 'failed', failedPhase: 'workspace', error: 'Adobe did not answer.', retry });
+        renderFlowModal({ mode: 'destination', initial: SIGNED_IN, reservedIds: RESERVED_IDS });
+        await act(async () => {});
+
+        const title = screen.getByRole('heading', { name: 'Project setup failed' });
+        expect(title.querySelector('.modal-status-icon .text-negative')).not.toBeNull();
+        expect(screen.getByText('Adobe did not answer.')).toHaveClass('dialog-line');
+        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Retry']);
+
+        await click('Retry');
+        expect(retry).toHaveBeenCalledTimes(1);
+    });
+
+    it('CONTROL: goes back to the title and the journey\'s buttons once it passes', async () => {
+        setPhases();
+        renderFlowModal({ mode: 'destination', initial: SIGNED_IN, reservedIds: RESERVED_IDS });
+        await act(async () => {});
+
+        expect(screen.getByRole('heading', { name: 'Deployment Destination' })).toBeInTheDocument();
+        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Continue']);
+    });
+});
+
+// The picker holds the read, so it stays mounted: the dialog takes the box it found and leaves only
+// Cancel, as `Modal`'s own `waiting` would.
+describe('AddIntegrationFlowModal — a destination list reading what it will show', () => {
+    it('leaves only Cancel in the footer while it waits, and the journey\'s buttons after', async () => {
+        setPhases();
+        renderFlowModal({ mode: 'destination', initial: SIGNED_IN, reservedIds: RESERVED_IDS });
+        await act(async () => {});
+
+        await click('list-starts-waiting');
+        expect(footerButtons()).toEqual(['Cancel']);
+        expect(screen.getByRole('heading', { name: 'Deployment Destination' })).toBeInTheDocument();
+
+        await click('list-stops-waiting');
+        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Continue']);
+    });
+});

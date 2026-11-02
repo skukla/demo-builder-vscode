@@ -25,6 +25,48 @@ describe('SearchHeader', () => {
         jest.clearAllMocks();
     });
 
+    // A dialog cuts a count of what the SC can see (dialog design rules). The buttons have to stay.
+    describe('hideCount', () => {
+        it('says no count, and keeps the row its buttons live on when there is no search field', () => {
+            renderWithProvider(
+                <SearchHeader
+                    {...defaultProps}
+                    totalCount={2}
+                    filteredCount={2}
+                    itemNoun="project"
+                    alwaysShowCount
+                    hideCount
+                    action={<button type="button">New</button>}
+                />
+            );
+
+            expect(screen.queryByText(/2 projects/)).toBeNull();
+            expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
+        });
+
+        it('draws no empty row under a search field, and no count while filtering', () => {
+            const { container } = renderWithProvider(
+                <SearchHeader
+                    {...defaultProps}
+                    searchQuery="a"
+                    filteredCount={3}
+                    itemNoun="project"
+                    alwaysShowCount
+                    hideCount
+                />
+            );
+
+            expect(container.querySelector('.search-header-count-row')).toBeNull();
+            expect(screen.queryByText(/3 of 10/)).toBeNull();
+        });
+
+        it('CONTROL: without it the count is there', () => {
+            renderWithProvider(<SearchHeader {...defaultProps} totalCount={2} filteredCount={2} itemNoun="project" alwaysShowCount />);
+
+            expect(screen.getByText('2 projects')).toBeInTheDocument();
+        });
+    });
+
     describe('search field visibility', () => {
         it('should show search field when totalCount > threshold', () => {
             renderWithProvider(

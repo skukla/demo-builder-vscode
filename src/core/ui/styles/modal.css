@@ -181,9 +181,38 @@
 }
 
 /* The progress window's wait: room for its large spinner and all three lines, measured in Chromium
-   (2026-11-02), so a third line arriving moves neither the box nor much else. */
+   (2026-11-02), so a line arriving does not move the box. The spinner and its words sit in the
+   middle row, level between the rule and the buttons whatever else is there. */
 .modal-wait-progress {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 1fr auto 1fr;
     min-height: 176px;
+}
+
+.modal-wait-progress > [role="status"] {
+    grid-row: 2;
+}
+
+/* With what the run acts on as a line under the title, in the room above the spinner and matched
+   by the same below: room for all three lines and it. The margin brings the line back to the 16
+   under the title that `.modal-wait`'s padding takes it past. */
+.modal-wait-progress-subject {
+    min-height: 200px;
+}
+
+.modal-wait-progress > .modal-progress-subject {
+    grid-row: 1;
+    margin-top: -8px;
+    margin-bottom: 4px;
+    text-align: left;
+}
+
+/* A dialog body's rows, 8px apart (dialog design rules): a confirm's consequences, a line each. */
+.dialog-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 /* A dialog body's parts, 16px apart, each without margins of its own. */
@@ -213,6 +242,15 @@
     line-height: 1.5;
     /* The labels' grey: gray-700 read nearly as bright as body text in the dark theme. */
     color: var(--spectrum-global-color-gray-600);
+}
+
+/* A note about a problem: small, but it keeps its colour. No colour of its own, so `.text-notice`
+   (a warning) or `.text-negative` (a failure) sets it. */
+.dialog-problem {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
 /* Modal step crossfade transition (architecture ↔ block libraries) */

@@ -104,7 +104,7 @@ function LinkForm({ state }: { state: StorefrontState }): React.ReactElement {
     if (state.status === 'ready') {
         body = <ShareLinkForm preview={state.preview} />;
     } else if (state.status === 'failed') {
-        body = <p className="dialog-note" data-testid="share-link-failed">{SHARE_COPY.storefrontFailed} {state.error}</p>;
+        body = <p className="dialog-problem text-negative" data-testid="share-link-failed">{SHARE_COPY.storefrontFailed} {state.error}</p>;
     } else {
         body = <p className="export-section-text">{SHARE_COPY.linkHeadless}</p>;
     }

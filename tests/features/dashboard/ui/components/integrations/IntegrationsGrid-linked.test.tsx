@@ -172,7 +172,8 @@ describe("IntegrationsGrid — the integration's ERP verbs", () => {
         await user.click(within(panel).getByRole('button', { name: /^fill erps from commerce$/i }));
         const dialog = screen.getByRole('dialog', { name: 'Fill Nordwind from Commerce?' });
         expect(dialog).toHaveAttribute('data-status', 'warning');
-        expect(dialog).toHaveTextContent("adding or updating records and removing nothing. Any value changed by hand in the ERP goes back to Commerce's.");
+        expect(dialog).toHaveTextContent('Adds or updates records and removes nothing.');
+        expect(dialog).toHaveTextContent("Any value changed by hand in the ERP goes back to Commerce's.");
         expect(getClient().postMessage).not.toHaveBeenCalledWith('loadErpDemoData', expect.anything());
         // It overwrites a hand edit, but removes nothing: the main action, not the red one.
         expect(within(dialog).getByRole('button', { name: /^fill$/i })).toHaveAttribute('data-variant', 'accent');
@@ -201,7 +202,12 @@ describe("IntegrationsGrid — the integration's ERP verbs", () => {
 
         const dialog = screen.getByRole('dialog', { name: 'Reset Nordwind?' });
         expect(dialog).toHaveAttribute('data-status', 'warning');
-        expect(dialog).toHaveTextContent('Clears Nordwind and reloads it from Commerce. Permanently cancels open orders in the ERPs; orders already invoiced or shipped get a note instead. Removes the credit limits and company blocks the ERPs set in Commerce. Nothing else in Commerce changes.');
+        for (const line of [
+            'Clears Nordwind and reloads it from Commerce.',
+            'Permanently cancels open orders in the ERPs; orders already invoiced or shipped get a note instead.',
+            'Removes the credit limits and company blocks the ERPs set in Commerce.',
+            'Nothing else in Commerce changes.',
+        ]) expect(within(dialog).getByText(line)).toHaveClass('dialog-line');
         expect(within(dialog).getByRole('button', { name: /^reset$/i })).toHaveAttribute('data-variant', 'negative');
         expect(getClient().postMessage).not.toHaveBeenCalledWith(
             'resetErpRecords',

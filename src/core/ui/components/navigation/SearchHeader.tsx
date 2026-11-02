@@ -86,6 +86,11 @@ export interface SearchHeaderProps {
     hasLoadedOnce: boolean;
     /** Always show count even below threshold (default: false) */
     alwaysShowCount?: boolean;
+    /**
+     * Say no count at all: in a dialog, a count of what the SC can see is cut (dialog design
+     * rules). With no search field the row stays, since the action buttons live on it.
+     */
+    hideCount?: boolean;
 
     /** Optional action element to show inline (e.g., "+ New" button) */
     action?: React.ReactNode;
@@ -255,6 +260,9 @@ export function SearchHeader(props: SearchHeaderProps) {
     const { showSearch, showCount, nounPlural, displayNoun, isFiltering } =
         computeDisplayValues(props);
 
+    // With a search field the action buttons live on its row, so a hidden count leaves nothing here.
+    const showCountRow = showCount && !(props.hideCount && showSearch);
+
     const ActionButtons = renderActionButtons(
         renderViewToggle(viewMode, onViewModeChange),
         renderRefreshButton(onRefresh, isRefreshing, refreshAriaLabel),
@@ -278,18 +286,21 @@ export function SearchHeader(props: SearchHeaderProps) {
                 </Flex>
             )}
 
-            {showCount && (
+            {showCountRow && (
                 <div className="search-header-count-row">
-                    <span
-                        className="search-header-count"
-                        data-longest={longestCountText(totalCount, displayNoun, props.countText)}
-                    >
-                        <Text UNSAFE_className="text-sm text-gray-600">
-                            {!isFiltering && props.countText
-                                ? props.countText
-                                : buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
-                        </Text>
-                    </span>
+                    {/* The row is space-between: an empty span keeps the actions at its end. */}
+                    {props.hideCount ? <span /> : (
+                        <span
+                            className="search-header-count"
+                            data-longest={longestCountText(totalCount, displayNoun, props.countText)}
+                        >
+                            <Text UNSAFE_className="text-sm text-gray-600">
+                                {!isFiltering && props.countText
+                                    ? props.countText
+                                    : buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
+                            </Text>
+                        </span>
+                    )}
                     {!showSearch && ActionButtons}
                     {countTrailing}
                 </div>

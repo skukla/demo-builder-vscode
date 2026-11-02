@@ -17,7 +17,9 @@
  * PROVISIONS NOTHING; every kind commits + closes immediately on Add.
  *
  * The dialog itself answers for that stage's read of the org's APIs: a wait with nothing else on
- * screen, or a failed read as its title and status icon.
+ * screen, or a failed read as its title and status icon. A destination stage's outcome (signed
+ * out, a list it could not read, an empty list, a failed setup) arrives the same way, reported up
+ * by the stage (`DialogOutcome`), because the stage holds the state and has to stay mounted.
  *
  * On open (signed in) the host fires ONE fire-and-forget `list-org-console-apis`
  * to warm the extension-side org-services cache, so the custom/import picker's
@@ -39,6 +41,7 @@ import { useOrgApis } from './useOrgApis';
 import { ADOBE_APIS_WAIT } from '@/core/ui/components/feedback/adobeApisWait';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
+import type { DialogOutcome } from '@/core/ui/components/ui/DialogOutcome';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -174,6 +177,30 @@ function footerOf(flow: UseIntegrationFlowReturn, mode: FlowMode, problem: ApiAc
     return fix ? [back, { ...fix, variant: 'accent' }] : [back];
 }
 
+/** A destination stage's outcome has nowhere to continue to: Cancel, Back and what it offers, the main one last. */
+function outcomeFooter(flow: UseIntegrationFlowReturn, outcome: DialogOutcome): ActionButton[] {
+    const { actions } = outcome;
+    return [
+        { label: 'Back', variant: 'secondary', onPress: flow.onBack, isDisabled: !flow.canGoBack },
+        ...actions.map(({ label, onPress }, index): ActionButton => ({
+            label,
+            onPress,
+            variant: index === actions.length - 1 ? 'accent' : 'secondary',
+        })),
+    ];
+}
+
+/** The buttons beside Cancel: none in a stage's silent wait, an outcome's own, else the journey's. */
+function journeyFooter(
+    flow: UseIntegrationFlowReturn,
+    mode: FlowMode,
+    problem: ApiAccessProblem | undefined,
+    stage: { waiting: boolean; outcome: DialogOutcome | null },
+): ActionButton[] {
+    if (stage.waiting) return [];
+    return stage.outcome ? outcomeFooter(flow, stage.outcome) : footerOf(flow, mode, problem);
+}
+
 /** The mounted-while-open journey: the hook + Modal shell (switch + footer only). */
 function FlowJourney(props: JourneyProps): React.ReactElement {
     // JourneyProps is structurally UseIntegrationFlowArgs — the hook takes it whole.
@@ -181,10 +208,13 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
     const onApiStage = flow.stage === 'api-access';
     const orgApis = useOrgApis(onApiStage, props.state.selectedAppBuilderComponents ?? NO_COMPONENT_IDS);
     const problem = onApiStage ? apiAccessProblemOf(orgApis, props.onSignIn) : undefined;
+    const [outcome, setOutcome] = React.useState<DialogOutcome | null>(null);
+    const [stageWaiting, setStageWaiting] = React.useState(false);
+    const heading = problem ?? outcome;
     return (
         <Modal
-            title={problem?.title ?? TITLES[props.mode]}
-            status={problem?.status}
+            title={heading?.title ?? TITLES[props.mode]}
+            status={heading?.status}
             size="L"
             // Every stage sizes to ITS content: the kind/name/destination stages are
             // short, the api-access list is long and still scrolls at max-height.
@@ -193,7 +223,9 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
             waiting={onApiStage && orgApis.loading ? ADOBE_APIS_WAIT : false}
             onClose={props.onClose}
             closeLabel="Cancel"
-            actionButtons={footerOf(flow, props.mode, problem)}
+            // A stage's wait keeps the box it found, and stays mounted: it holds the read.
+            holdSize={stageWaiting}
+            actionButtons={journeyFooter(flow, props.mode, problem, { waiting: stageWaiting, outcome })}
         >
             {/* Five stages, five natural heights. The dialog jumped at every step
                 without a floor under them (owner, 2026-09-20). Pinned to the top: a
@@ -215,7 +247,7 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
                             stage={flow.stage}
                             onChange={flow.changeDestination}
                         />
-                        <FlowStageBody flow={flow} props={props} apis={orgApis.apis} />
+                        <FlowStageBody flow={flow} props={props} apis={orgApis.apis} onOutcome={setOutcome} onWaiting={setStageWaiting} />
                     </>
                 )}
             </div>

@@ -23,11 +23,11 @@ export interface AppBuilderComponentRemoveDialogProps {
     /** The name the card shows — what the person recognises, never the id. */
     componentName: string;
     /**
-     * What the teardown reaches past the component itself, as sentences of its own
+     * What the teardown reaches past the component itself, a line each
      * (`removalConsequence`). The mesh is the plain case:
      * removing it also strips MESH_ENDPOINT from the storefront config.
      */
-    consequence?: string;
+    consequences?: string[];
     /** Called when the user confirms the destructive remove. */
     onConfirm: () => void;
     /** Called when the dialog is cancelled or dismissed (no teardown). */
@@ -43,7 +43,7 @@ export interface AppBuilderComponentRemoveDialogProps {
 export function AppBuilderComponentRemoveDialog({
     isOpen,
     componentName,
-    consequence,
+    consequences,
     onConfirm,
     onClose,
 }: AppBuilderComponentRemoveDialogProps): React.ReactElement {
@@ -56,8 +56,8 @@ export function AppBuilderComponentRemoveDialog({
             onConfirm={onConfirm}
             onClose={onClose}
         >
-            Undeploys <strong>{componentName}</strong> from Adobe and removes it from this project.
-            {consequence ? ` ${consequence}` : ''}
+            <>Undeploys <strong>{componentName}</strong> from Adobe and removes it from this project.</>
+            {consequences}
         </ConfirmActionDialog>
     );
 }

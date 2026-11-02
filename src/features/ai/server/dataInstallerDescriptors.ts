@@ -104,7 +104,10 @@ const IMPORT_TARGET = {
     dataTypes: z
         .array(z.string())
         .min(1)
-        .describe('Data types to include, from list_datapack_data_types. At least one'),
+        .describe(
+            'Data types to include, from list_datapack_data_types. At least one. With the demo-builder engine an ' +
+                'install writes only these and what they need, and leaves the rest of the pack alone',
+        ),
     // Optional, and safe to omit: the handler falls back to the scope the
     // PROJECT recorded. Omitting them used to mean the SERVICE's base/default —
     // a scope nobody chose — which is how an agent could import, and reset,
@@ -274,7 +277,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         inputSchema: {
             ...DATAPACK_ID,
             source: PACK_SOURCE,
-            dataTypes: z.array(z.string()).optional().describe('Only these data kinds; all the pack holds when omitted'),
+            dataTypes: z.array(z.string()).optional().describe('The kinds an install would be asked for; the answer then covers these and what they need, as the install does. All the pack holds when omitted'),
         },
     },
     {
@@ -363,12 +366,15 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Import a datapack into a live Commerce instance. Returns an activationId as soon as ' +
             'the job starts — poll get_datapack_import_status for the outcome. Validate first. ' +
-            'Installing a pack again updates and removes what it made before and keeps what was ' +
+            'With the demo-builder engine only the dataTypes named install, with what they need. ' +
+            'A kind left out is left alone: not installed, not removed, not put back. ' +
+            'Installing a pack again updates and removes what it made before, of the kinds named, and keeps what was ' +
             'changed in the Admin; the outcome\'s note says what it kept, and preview_datapack_changes ' +
             'says it beforehand. A pack\'s store_config rows are written last, and the note names each ' +
             'setting set, by path, with its old and new value. With the demo-builder engine, a pack holding no ' +
             'store_config also gets its settings layer, the newest library pack named <pack>-settings, written after ' +
-            'its data and removed with it; a path a pack may not set stops the install before any write, by path, ' +
+            'its data and removed with it, if dataTypes names all the pack holds or store_config; the note says when not. ' +
+            'A path a pack may not set stops the install before any write, by path, ' +
             'and a setting Commerce refuses leaves the data installed and is named in the note. A pack\'s own root category goes under the ' +
             "store's root when no other store shares it; when one does, the install asks the user for the one " +
             'Admin step (no API can change a store\'s root), and the note names it if skipped. Running it ' +
@@ -390,7 +396,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Remove a datapack's data from the Commerce instance so the project can be reused. " +
             'Cannot be undone. Returns an activationId; poll get_datapack_import_status. With the ' +
-            'demo-builder engine, a category, set, company, shared catalog or customer group the pack made ' +
+            'demo-builder engine it takes everything the install record lists, whatever dataTypes names (it may be ' +
+            'omitted; the service needs it). A category, set, company, shared catalog or customer group the pack made ' +
             "that holds things it did not make is kept (a kept company with its admin and its catalog), and " +
             "the outcome's note says which; store settings it set, its settings layer's included, are put back " +
             "first, unless changed since, and the note names each by path. The project stops naming the pack only once a removal " +
@@ -413,6 +420,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         inputSchema: {
             ...DATAPACK_ID,
             ...IMPORT_TARGET,
+            dataTypes: z.array(z.string()).min(1).optional().describe('Only for a pack the service installed: the data types to remove, from list_datapack_data_types'),
             changes: z.enum(['keep', 'drop']).optional().describe("The user's changes since install: keep saves them to the demo's own pack first, drop loses them"),
         },
     },

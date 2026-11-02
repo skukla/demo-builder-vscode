@@ -156,9 +156,12 @@ otherwise end before the settings and lose the note.
 | the library cannot be asked | the data installs; the note says "The datapack library could not be asked for bodea-settings, so any store settings it holds were not applied."; a recorded setting is left alone |
 | no layer, and the record lists settings | they are put back ("One the pack no longer has is put back", now for a layer that has gone too) |
 
-The kinds a request names do not narrow a layer: the engine reads a pack's whole rows whichever kinds
-are ticked (`buildDatapackEngine`, `readPack` ignores `_dataTypes`), which was already so. **Seen, not
-changed.**
+**Changed 2026-11-02.** This said the kinds a request names do not narrow a layer, because the engine
+read a pack's whole rows whichever kinds were ticked. That was the defect: unticking Products still
+installed products. An import now installs what is asked for and what it needs (`askedKinds.ts`). A
+layer goes in when every kind the pack holds is asked for, or `store_config` by name; for part of a
+pack, settings are left as they are, neither set nor put back, and the note says so. The layer has no
+box on the form, so "the whole pack" is what its flyout's "Also sets" promises.
 
 **What the SC sees.** Before Import, the pack's flyout has an "Also sets" row of path and value. After
 it, the note: "From bodea-settings@2: Set catalog/frontend/grid_per_page: 12 → 24." On removal: "Put

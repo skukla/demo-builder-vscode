@@ -50,6 +50,8 @@ export interface SearchableListProps<T extends SearchableListItem> {
     refreshAriaLabel?: string;
     /** Optional action element to show inline (e.g., "+ New" button) */
     action?: React.ReactNode;
+    /** Say no count of the list: in a dialog, a count of what the SC can see is cut. */
+    hideCount?: boolean;
 }
 
 /**
@@ -101,6 +103,7 @@ export function SearchableList<T extends SearchableListItem>({
     searchPlaceholder = 'Type to filter',
     refreshAriaLabel = 'Refresh list',
     action,
+    hideCount,
 }: SearchableListProps<T>) {
     // Use provided plural or default to simple +s
     const nounPlural = itemNounPlural || `${itemNoun}s`;
@@ -152,6 +155,7 @@ export function SearchableList<T extends SearchableListItem>({
                 hasLoadedOnce={hasLoadedOnce}
                 alwaysShowCount={true}
                 action={action}
+                hideCount={hideCount}
             />
 
             {/* List Container (with refresh opacity) */}

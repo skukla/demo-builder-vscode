@@ -88,7 +88,7 @@ export function ShareFileForm({ isEds }: { isEds: boolean }): React.ReactElement
             </Button>
             {nothing ? <p className="export-part-note">{FILE_COPY.nothingTicked}</p> : null}
             {saved ? <p className="dialog-note" data-testid="export-saved">{savedLine(saved)}</p> : null}
-            {error ? <p className="dialog-note" data-testid="export-error">{FILE_COPY.fileFailed} {error}</p> : null}
+            {error ? <p className="dialog-problem text-negative" data-testid="export-error">{FILE_COPY.fileFailed} {error}</p> : null}
         </div>
     );
 }

@@ -251,7 +251,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     reset_datapack: {
         action: 'Remove sample data',
         consequence:
-            "Deletes this data pack's products and categories from the Commerce instance. This can't be undone.",
+            "Deletes what this data pack put in the Commerce instance and puts back any store settings it changed. This can't be undone.",
         target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
@@ -434,7 +434,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_import: {
         action: 'Import sample data',
         consequence:
-            'Writes products and categories into the live Commerce instance, then any store settings the pack or its settings layer holds, and installing again updates or removes what the pack made earlier, keeping anything changed in the Admin. Takes several minutes and cannot be paused.',
+            'Writes the chosen data types and what they need into the live Commerce instance, then any store settings the pack or its settings layer holds when all of it is chosen, and installing again updates or removes what the pack made earlier of those types, keeping anything changed in the Admin. Takes several minutes and cannot be paused.',
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },

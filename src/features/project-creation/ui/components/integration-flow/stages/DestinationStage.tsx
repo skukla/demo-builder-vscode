@@ -5,8 +5,8 @@
  * ({@link module:features/project-creation/ui/components/integration-flow/flowStages})
  * decides WHICH destination view is active and passes it down — this component only
  * renders that view:
- *   - `signin`    → the inline sign-in gate (the reused {@link AdobeAuthStep}, with a
- *                   no-op setCanProceed — the modal footer owns the real gate);
+ *   - `signin`    → the sign-in gate (the reused {@link AdobeAuthStep}, with a no-op
+ *                   setCanProceed — the modal footer owns the real gate);
  *   - `project`   → {@link AdobeProjectField} wired to the MODAL-LOCAL DRAFT pending
  *                   (`pendingProject` / `onPendingProject`) — the flow's Continue
  *                   commits it to wizard state, never this component;
@@ -18,17 +18,23 @@
  *
  * The project/workspace views reuse the mesh card's create→workspace phase flow
  * ({@link useProjectCreationPhases} with `skipEnabling: true` — no mesh API-enable
- * step): a running phase shows a centered spinner, a non-create failure a Retry view,
- * and a create failure returns to the project form with the inline error.
+ * step): a running phase shows a centered spinner, a non-create failure is the dialog's
+ * title with a Retry, and a create failure returns to the project form with the inline
+ * error.
+ *
+ * A failure, a signed-out view and an empty list are outcomes, so each goes to the dialog's
+ * title and footer through `dialogHost` (the dialog design rules), and the body keeps only
+ * the words left to read.
  *
  * @module features/project-creation/ui/components/integration-flow/stages/DestinationStage
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useProjectCreationPhases } from '../../../hooks/useProjectCreationPhases';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import type { SelectionDialogFrame } from '@/core/ui/components/selection/selectionDialogHost';
+import { DialogOutcomeBody, type ReportOutcome } from '@/core/ui/components/ui/DialogOutcome';
 import {
     AdobeProjectField,
     AdobeWorkspaceField,
@@ -36,7 +42,7 @@ import {
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { AdobeProject, WizardState, Workspace , AdobeAuthSessionState } from '@/types/webview';
 
-/** The centered phase/error views share this height. */
+/** The centered phase view's height. */
 const PHASE_VIEW_HEIGHT = '220px';
 
 /** No-op setter for the inline AdobeAuthStep (the modal footer owns the real gate). */
@@ -70,6 +76,12 @@ export interface DestinationStageProps {
      * the modal bridges this to the flow hook's `setPhaseRunning` gate.
      */
     onPhaseRunningChange?: (running: boolean) => void;
+    /** The dialog's title and footer, which take this stage's outcomes. */
+    onOutcome: ReportOutcome;
+    /** Tells the dialog a list's silent wait is on, so it leaves only Cancel. */
+    onWaiting: (waiting: boolean) => void;
+    /** Starts a user-initiated Adobe sign-in, for a read refused for want of one. */
+    onSignIn?: () => Promise<unknown>;
 }
 
 /** The centered running-phase spinner (create → workspace flow). */
@@ -86,21 +98,24 @@ function PhaseSpinner({ phases }: { phases: Phases }): React.ReactElement {
     );
 }
 
-/** The non-create failure view: centered error with a Retry re-entering the phase. */
-function PhaseFailed({ phases }: { phases: Phases }): React.ReactElement {
+/** The non-create failure: the dialog's title, and a Retry re-entering the phase. */
+function PhaseFailed({ phases, onOutcome }: { phases: Phases; onOutcome: ReportOutcome }): React.ReactElement {
     return (
-        <StatusDisplay
-            variant="error"
-            height={PHASE_VIEW_HEIGHT}
-            title="Project setup failed"
-            message={phases.error}
-            actions={[{ label: 'Retry', variant: 'accent', onPress: phases.retry }]}
+        <DialogOutcomeBody
+            onOutcome={onOutcome}
+            outcome={{
+                title: 'Project setup failed',
+                status: 'error',
+                lines: phases.error ? [phases.error] : [],
+                actions: [{ label: 'Retry', onPress: phases.retry }],
+            }}
         />
     );
 }
 
 interface BodyProps extends DestinationStageProps {
     phases: Phases;
+    dialogHost: SelectionDialogFrame;
 }
 
 /** The project picker wired to the DRAFT pending (create failures reopen inline). */
@@ -110,6 +125,7 @@ function ProjectView({
     phases,
     pendingProject,
     onPendingProject,
+    dialogHost,
 }: BodyProps): React.ReactElement {
     const createFailure = phases.phase === 'failed' && phases.failedPhase === 'creating';
     return (
@@ -121,6 +137,7 @@ function ProjectView({
             initialCreateName={createFailure ? phases.projectName : undefined}
             selectedProjectId={pendingProject?.id}
             onProjectSelect={onPendingProject}
+            dialogHost={dialogHost}
         />
     );
 }
@@ -129,13 +146,13 @@ function ProjectView({
 function DestinationBody(props: BodyProps): React.ReactElement {
     const { view, state, updateState, phases } = props;
     if (view === 'signin') {
-        return <AdobeAuthStep state={state} updateState={updateState} setCanProceed={NOOP} />;
+        return <AdobeAuthStep state={state} updateState={updateState} setCanProceed={NOOP} onOutcome={props.onOutcome} />;
     }
     if (isPhaseRunning(phases.phase)) {
         return <PhaseSpinner phases={phases} />;
     }
     if (phases.phase === 'failed' && phases.failedPhase !== 'creating') {
-        return <PhaseFailed phases={phases} />;
+        return <PhaseFailed phases={phases} onOutcome={props.onOutcome} />;
     }
     if (view === 'project') {
         return <ProjectView {...props} />;
@@ -146,6 +163,7 @@ function DestinationBody(props: BodyProps): React.ReactElement {
             updateState={updateState}
             selectedWorkspaceId={props.pendingWorkspace?.id}
             onWorkspaceSelect={props.onPendingWorkspace}
+            dialogHost={props.dialogHost}
         />
     );
 }
@@ -164,14 +182,15 @@ export function DestinationStage(props: DestinationStageProps): React.ReactEleme
         updateState: props.updateState,
         skipEnabling: true,
     });
-    const { onPhaseRunningChange } = props;
+    const { onPhaseRunningChange, onOutcome, onWaiting, onSignIn } = props;
+    const dialogHost = useMemo(() => ({ onOutcome, onWaiting, onSignIn }), [onOutcome, onWaiting, onSignIn]);
     const running = isPhaseRunning(phases.phase);
     useEffect(() => {
         onPhaseRunningChange?.(running);
     }, [running, onPhaseRunningChange]);
     return (
         <div className="intflow-destination" data-testid="destination-stage">
-            <DestinationBody {...props} phases={phases} />
+            <DestinationBody {...props} phases={phases} dialogHost={dialogHost} />
         </div>
     );
 }

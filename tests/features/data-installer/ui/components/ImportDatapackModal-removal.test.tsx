@@ -88,6 +88,110 @@ describe('pressing Remove data', () => {
     });
 });
 
+describe('a pack Demo Builder installed: its record decides what goes', () => {
+    const RECORDED = 'Permanently deletes what Bodea installed: categories and products.';
+    const scopeCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'get-datapack-removal-scope');
+
+    function recorded(recordedKinds: string[] | null): void {
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'get-datapack-removal-scope') return { success: true, data: { recordedKinds } };
+            if (type === 'get-datapack-removal-changes') return { success: true, data: NOTHING };
+            if (type === 'reset-datapack') return { success: true, data: { activationId: 'act-1' } };
+            return defaultResponse(type);
+        });
+    }
+
+    const removeAll = () => screen.getByRole('button', { name: 'Remove all data' });
+
+    it('asks for the pack and offers Remove all data with nothing ticked', async () => {
+        recorded(['categories', 'products']);
+        renderModal();
+        await awaitForm();
+
+        expect(scopeCalls()[0][1]).toEqual({ datapackName: 'bodea', version: 'main' });
+        expect(removeAll()).not.toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByRole('button', { name: 'Import' })).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('names the kinds on the record in the confirm, and sends the removal with nothing ticked', async () => {
+        recorded(['categories', 'products']);
+        renderModal();
+        await awaitForm();
+
+        await press(removeAll());
+        await settle();
+        expect(screen.getByText(RECORDED)).toBeInTheDocument();
+
+        await press(footerRemove());
+        expect(resetCalls()[0][1]).toMatchObject({ datapackName: 'bodea', version: 'main', confirm: true, dataTypes: [] });
+    });
+
+    it('says the ticks do not limit it when fewer are ticked than go', async () => {
+        recorded(['categories', 'products']);
+        renderModal();
+        await awaitForm();
+
+        await press(screen.getByRole('checkbox', { name: 'Categories' }));
+        await press(removeAll());
+        await settle();
+
+        expect(screen.getByText(`${RECORDED} The ticked boxes only choose what Import installs.`)).toBeInTheDocument();
+    });
+
+    it('needs a tick and says Remove data when there is no record: the service removes what it is sent', async () => {
+        recorded(null);
+        renderModal();
+        await awaitForm();
+
+        expect(removeData()).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.queryByRole('button', { name: 'Remove all data' })).not.toBeInTheDocument();
+    });
+
+    it('needs a tick when the record lists nothing: a job still has to report on something', async () => {
+        recorded([]);
+        renderModal();
+        await awaitForm();
+
+        expect(removeData()).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('falls back to the ticks when the record cannot be read', async () => {
+        mockRequest.mockImplementation(async (type: string) => (type === 'get-datapack-removal-scope' ? { success: false, error: 'The install record could not be read.' } : defaultResponse(type)));
+        renderModal();
+        await awaitForm();
+
+        expect(removeData()).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('shows only the wait until the record has answered, so the button does not change under the pointer', async () => {
+        let answer: (value: HandlerResponse) => void = () => undefined;
+        mockRequest.mockImplementation(async (type: string) => (type === 'get-datapack-removal-scope' ? new Promise((resolve) => (answer = resolve)) : defaultResponse(type)));
+        renderModal();
+        await settle();
+
+        expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+
+        await act(async () => answer({ success: true, data: { recordedKinds: ['categories'] } }));
+        await settle();
+        expect(removeAll()).not.toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('reads the record again when the form comes back after a cancelled confirm', async () => {
+        recorded(['categories']);
+        renderModal();
+        await awaitForm();
+        const before = scopeCalls().length;
+
+        await press(removeAll());
+        await settle();
+        await press(screen.getByRole('button', { name: 'Cancel' }));
+        await settle();
+
+        expect(scopeCalls()).toHaveLength(before + 1);
+    });
+});
+
 describe('nothing changed', () => {
     beforeEach(() => answers({ success: true, data: NOTHING }));
 

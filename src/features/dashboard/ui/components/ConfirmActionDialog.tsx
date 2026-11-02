@@ -1,7 +1,7 @@
 /**
  * The confirm in front of a consequential integration action, drawn the one way the dialog design
  * rules draw a confirm (`docs/development/sop/dialog-design.md`): the question as the title with
- * the amber icon before it, one sentence saying what changes, Cancel and the action. A dangerous
+ * the amber icon before it, what changes as a few short lines, Cancel and the action. A dangerous
  * action is solid red; each caller says which it is, so a new one has to decide.
  *
  * The core Modal in a DialogContainer. The container stays mounted; the Modal renders only while
@@ -14,7 +14,7 @@
  * @module features/dashboard/ui/components/ConfirmActionDialog
  */
 
-import { DialogContainer, Text } from '@adobe/react-spectrum';
+import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import { Modal } from '@/core/ui/components/ui/Modal';
 
@@ -26,7 +26,10 @@ export interface ConfirmActionDialogProps {
     actionLabel: string;
     /** `negative` (solid red) for a dangerous action, `accent` for one that is not. */
     actionVariant: 'negative' | 'accent';
-    /** What changes, in one sentence. A warning is a word in it, never a line under it. */
+    /**
+     * What changes. Each child is a line of its own: pass the consequences as an array, or wrap a
+     * line holding `<strong>` in a fragment. A warning is a word in a line, never a line under it.
+     */
     children: React.ReactNode;
     onConfirm: () => void;
     onClose: () => void;
@@ -35,8 +38,8 @@ export interface ConfirmActionDialogProps {
 /**
  * Host a confirm; present it when open.
  *
- * @param props - open state, the question, the verb and how it is drawn, the sentence, and the
- *   two callbacks
+ * @param props - open state, the question, the verb and how it is drawn, the lines, and the two
+ *   callbacks
  * @returns the dialog container
  */
 export function ConfirmActionDialog({
@@ -60,7 +63,13 @@ export function ConfirmActionDialog({
                     closeLabel="Cancel"
                     actionButtons={[{ label: actionLabel, variant: actionVariant, onPress: onConfirm }]}
                 >
-                    <Text>{children}</Text>
+                    {/* No bullets and no box, 8 between rows (dialog design rules, owner 2026-11-02:
+                        a block of ten lines read worse than the sentences it held). */}
+                    <div className="dialog-rows">
+                        {React.Children.toArray(children).map((line, index) => (
+                            <p key={index} className="dialog-line">{line}</p>
+                        ))}
+                    </div>
                 </Modal>
             )}
         </DialogContainer>

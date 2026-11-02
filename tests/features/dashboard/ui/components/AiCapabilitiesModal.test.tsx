@@ -147,13 +147,14 @@ describe('AiCapabilitiesModal', () => {
     it('says each half of a pair in one plain line, with no middle dot', () => {
         // Owner, 2026-10-22: "Demo Builder MCP, 168 tools" over "Demo Builder
         // skills, 16" was noise. The server is one line saying what the number
-        // means; the skills are a "Skills (N)" heading over their names.
+        // means; the skills are a "Skills" heading over their names, with no count of a list the
+        // SC can see (the dialog design rules' cut list).
         renderModal({ skills: SKILLS, mcps: MCPS });
 
         const section = screen.getByTestId('ai-integration-demo-builder');
         expect(section).toHaveTextContent('Demo Builder MCP: 2 tools your AI can call');
         expect(within(section).getByTestId('ai-skills-group-demo-builder')).toHaveTextContent(
-            /^Skills \(2\)$/
+            /^Skills$/
         );
     });
 
@@ -174,7 +175,7 @@ describe('AiCapabilitiesModal', () => {
     it('prints no middle dot in the flat body either', () => {
         renderModal({ skills: SKILLS, mcps: [] });
 
-        expect(screen.getByTestId('ai-mcps-heading')).toHaveTextContent(/^MCP servers \(0\)$/);
+        expect(screen.getByTestId('ai-mcps-heading')).toHaveTextContent(/^MCP servers$/);
         expect(screen.getByTestId('ai-capabilities-columns').textContent).not.toContain('·');
     });
 
@@ -193,7 +194,7 @@ describe('AiCapabilitiesModal', () => {
         // …in the FLAT body, which is the only place that copy can be reached
         // from. A sectioned view renders its skills list only inside a section
         // that HAS skills, so with none it would show no empty state at all —
-        // the "MCP servers, N" heading is what says which body is on screen.
+        // the "MCP servers" heading is what says which body is on screen.
         expect(screen.getByTestId('ai-mcps-heading')).toBeInTheDocument();
     });
 

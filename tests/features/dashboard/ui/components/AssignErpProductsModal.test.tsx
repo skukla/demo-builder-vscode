@@ -258,9 +258,10 @@ describe('AssignErpProductsModal', () => {
 
     it('names the attribute sets without erp_owner and offers the fix', async () => {
         const { onAddSets } = await open();
-        // A note line over the list, not a box, with its fix beside it.
+        // A warning note over the list, not a box, with its fix beside it. Orange, so it is not
+        // missed, and one short line, so the colour stays simple (owner, 2026-11-02).
         expect(screen.getByTestId('assign-sets-note')).toHaveTextContent(ASSIGN_COPY.setsBody('Gear (1 product)'));
-        expect(screen.getByTestId('assign-sets-note')).toHaveClass('dialog-note');
+        expect(screen.getByTestId('assign-sets-note')).toHaveClass('dialog-problem', 'text-notice');
         fireEvent.click(screen.getByRole('button', { name: ASSIGN_COPY.setsAction }));
         expect(onAddSets).toHaveBeenCalledWith('erp-integration');
     });

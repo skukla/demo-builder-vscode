@@ -4,17 +4,17 @@
  * Skills are infrastructure (Claude auto-discovers them from descriptions),
  * but the user still wants to confirm what's installed. Layout:
  *
- *   Skills (N)                                 ← static summary
+ *   Skills                                     ← static summary
  *   ┌─────────────────────────────┐
- *   │ Demo Builder skills (13)    │            ← sticky group header
+ *   │ Demo Builder skills         │            ← sticky group header
  *   │   Add component             │
  *   │   …                         │            ← every skill visible; the
- *   │ Adobe … skills (7)          │              LIST scrolls, the modal
+ *   │ Adobe … skills              │              LIST scrolls, the modal
  *   │   …                         │              never resizes
  *   └─────────────────────────────┘
  *
  * Inside an integration section (`flat`) a section holds one set, so its header
- * is just "Skills (N)" and the NAMES run in two columns (owner, 2026-10-22: "it
+ * is just "Skills" and the NAMES run in two columns (owner, 2026-10-22: "it
  * feels noisy"). A row is the title alone; the on-disk name is its tooltip.
  * No middle dots anywhere. Which files the user edited is not this list's job:
  * the modal says it once, beside Regenerate.
@@ -52,8 +52,8 @@ export interface AiSkillsListProps {
     /**
      * Rendered INSIDE an integration section (see `aiIntegrations`), where the
      * section already carries the heading and the modal body already scrolls.
-     * Drops this list's own "Skills (N)" summary and its fixed-height scroll
-     * region. The group header stays: "Skills (N)" when the section holds one
+     * Drops this list's own "Skills" summary and its fixed-height scroll
+     * region. The group header stays: "Skills" when the section holds one
      * set, the set's own name when it holds several (the Other section can).
      * The names run in two columns here (`.ai-skill-names`); outside a section
      * the GROUPS already do (`.ai-skills-scroll`), so the names stay in one.
@@ -171,7 +171,7 @@ const SOURCE_ORDER: Readonly<Record<SkillSource, number>> = {
 
 /*
  * "…skills", so a group reads as a SET outside a section, where nothing else
- * names it. Inside a section with one set the header is just "Skills (N)".
+ * names it. Inside a section with one set the header is just "Skills".
  */
 const SOURCE_LABELS: Readonly<Record<SkillSource, string>> = {
     'demo-builder': 'Demo Builder skills',
@@ -262,7 +262,7 @@ export function AiSkillsList({
         <Flex direction="column" gap="size-100" data-testid="ai-skills-list">
             {!flat && (
                 <Text data-testid="ai-skills-summary" UNSAFE_className="ai-section-heading">
-                    Skills ({skills.length})
+                    Skills
                 </Text>
             )}
             {/* Fixed-height scroll region — the modal frame never resizes.
@@ -275,7 +275,7 @@ export function AiSkillsList({
                             className="ai-skills-group-header"
                             data-testid={`ai-skills-group-${key}`}
                         >
-                            {soleSetInSection ? 'Skills' : label} ({items.length})
+                            {soleSetInSection ? 'Skills' : label}
                         </div>
                         {/* Flush with the group header, matching the MCP list.
                             The skills were indented and the MCP rows were not,
@@ -292,7 +292,7 @@ export function AiSkillsList({
                 {gatedSkills && gatedSkills.length > 0 && (
                     <div>
                         <div className="ai-skills-group-header" data-testid="ai-skills-group-gated">
-                            Not available ({gatedSkills.length})
+                            Not available
                         </div>
                         <Flex direction="column" gap="size-50">
                             {gatedSkills.map((g) => (

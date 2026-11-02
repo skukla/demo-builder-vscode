@@ -46,9 +46,12 @@ export function ErpResetDialog({ isOpen, erpNames, onConfirm, onClose }: ErpRese
             onConfirm={onConfirm}
             onClose={onClose}
         >
-            Clears {which} and reloads {them} from Commerce. Permanently cancels open orders in the
-            ERPs; orders already invoiced or shipped get a note instead. Removes the credit limits
-            and company blocks the ERPs set in Commerce. Nothing else in Commerce changes.
+            {[
+                `Clears ${which} and reloads ${them} from Commerce.`,
+                'Permanently cancels open orders in the ERPs; orders already invoiced or shipped get a note instead.',
+                'Removes the credit limits and company blocks the ERPs set in Commerce.',
+                'Nothing else in Commerce changes.',
+            ]}
         </ConfirmActionDialog>
     );
 }

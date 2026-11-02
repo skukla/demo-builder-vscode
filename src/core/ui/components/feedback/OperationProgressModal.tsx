@@ -143,6 +143,11 @@ function nextStepOf(
     return progress?.offer && offerStep ? offerStep(progress.offer) : undefined;
 }
 
+/** No question and no outcome yet: the work is under way. */
+function isRunning(prompt: OperationProgressPayload['prompt'], failed: boolean, succeeded: boolean): boolean {
+    return !prompt && !failed && !succeeded;
+}
+
 /** What a failure offers: the detail it wrote to the logs, and another go. */
 function failureButtons(failed: boolean, onRetry: () => void): ActionButton[] {
     if (!failed) return [];
@@ -176,6 +181,7 @@ export function OperationProgressModal({
     // modal is where the SC is looking, and a notification beside it asks twice
     // (owner, 2026-09-20: republishing Bodea showed both at once).
     const prompt = failed || succeeded ? undefined : progress?.prompt;
+    const running = isRunning(prompt, failed, succeeded);
 
     // What the SC has typed into the question's fields, if it has any. A ref, not
     // state: every keystroke would otherwise re-render the modal around the field
@@ -261,14 +267,15 @@ export function OperationProgressModal({
                 size="M"
                 onClose={close}
                 closeLabel={closeLabelFor(failed || succeeded, Boolean(prompt))}
-                holdSize={!prompt && !failed && !succeeded}
+                holdSize={running}
                 actionButtons={
                     prompt
                         ? answerButtons(prompt.actions, answer)
                         : [...failureButtons(failed, onRetry), ...nextStepButtons(offering, onClose)]
                 }
             >
-                {operation.subject && <div className="modal-progress-subject">{operation.subject}</div>}
+                {/* While it runs the body draws the subject, around which it levels the spinner. */}
+                {operation.subject && !running && <div className="modal-progress-subject">{operation.subject}</div>}
                 {/* Fits each state (dialog design rules, 2026-10-31). It was one fixed height for
                     every state, which left a one-line result in a box sized for a three-line
                     failure. */}
@@ -282,6 +289,7 @@ export function OperationProgressModal({
                         }
                         progress={progress}
                         onTyped={onTyped}
+                        subject={operation.subject}
                     />
                 </SteadyHeight>
             </Modal>

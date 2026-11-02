@@ -41,7 +41,9 @@ jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
     AdobeProjectField: ({
         selectedProjectId,
         onProjectSelect,
+        dialogHost,
     }: {
+        dialogHost?: { onWaiting: (waiting: boolean) => void };
         selectedProjectId?: string;
         onProjectSelect?: (p: { id: string; name: string; title?: string }) => void;
     }) => (
@@ -53,6 +55,12 @@ jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
                 }
             >
                 pick-project
+            </button>
+            <button type="button" onClick={() => dialogHost?.onWaiting(true)}>
+                list-starts-waiting
+            </button>
+            <button type="button" onClick={() => dialogHost?.onWaiting(false)}>
+                list-stops-waiting
             </button>
         </div>
     ),
@@ -133,7 +141,9 @@ export const APIS = [
 ];
 
 // --- phase-hook helper (DestinationStage's create/workspace flow) -------------
-export function setPhases(overrides: { phase?: string; phaseMessage?: string } = {}): void {
+export function setPhases(
+    overrides: { phase?: string; phaseMessage?: string; failedPhase?: string; error?: string; retry?: jest.Mock } = {},
+): void {
     phasesMock.mockReturnValue({
         phase: 'idle',
         phaseMessage: undefined,

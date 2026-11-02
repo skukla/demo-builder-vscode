@@ -12,6 +12,7 @@ jest.mock('@/features/data-installer/services/demoBuilderEngine/saveStore', () =
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/saveStore'),
     saveStoreChanges: jest.fn(),
     listPickable: jest.fn(),
+    countPickable: jest.fn(),
 }));
 jest.mock('@/features/data-installer/services/demoBuilderEngine/installRecord', () => ({
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/installRecord'),
@@ -31,13 +32,15 @@ import { storeChangesHandlers } from '@/features/data-installer/handlers/storeCh
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
 import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
 import { type InstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { type SaveResult, listPickable, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
+import { type SaveResult, countPickable, listPickable, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
+import { StoreChangesError } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
 import type { StoreItemPage } from '@/features/data-installer/pickableKinds';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 
 const mockedSave = saveStoreChanges as jest.MockedFunction<typeof saveStoreChanges>;
 const mockedList = listPickable as jest.MockedFunction<typeof listPickable>;
+const mockedCount = countPickable as jest.MockedFunction<typeof countPickable>;
 const mockedRecord = readInstallRecord as jest.MockedFunction<typeof readInstallRecord>;
 
 const LIBRARY = 'https://example-namespace.adobeioruntime.net/api/v1/web/datapack-store';
@@ -153,5 +156,71 @@ describe('the export door with Demo Builder engine', () => {
 
         expect(result).toMatchObject({ success: false, error: expect.stringMatching(/^Choose what to list: one of products, giftcards, categories/u) });
         expect(mockedList).not.toHaveBeenCalled();
+    });
+});
+
+describe('a list that fails', () => {
+    it('names the kind as a person reads it, not by its code', async () => {
+        mockedList.mockRejectedValue(new Error('boom'));
+
+        const result = await exportHandlers['list-datapack-export-items'](makeImportHarness(project()).context, { dataType: 'giftcards' });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/^The store's gift cards could not be listed\./u) });
+    });
+});
+
+describe('count-datapack-export-items', () => {
+    it("counts the project's store, pointed where the list reads: the project's own pack", async () => {
+        mockedRecord.mockResolvedValue(RECORD);
+        mockedCount.mockResolvedValue({ products: 139, giftcards: 0 });
+        const { context } = makeImportHarness(project());
+
+        const result = await exportHandlers['count-datapack-export-items'](context, {});
+
+        expect(mockedCount).toHaveBeenCalledWith(expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }), BODEA);
+        expect(result).toEqual({ success: true, data: { products: 139, giftcards: 0 } });
+    });
+
+    it('counts for the pack named when one is', async () => {
+        mockedCount.mockResolvedValue({});
+
+        await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, { datapackName: 'other', version: 'v2' });
+
+        expect(mockedCount).toHaveBeenCalledWith(expect.anything(), { name: 'other', version: 'v2' });
+    });
+
+    it('with no pack Demo Builder installed, counts for none', async () => {
+        mockedCount.mockResolvedValue({});
+
+        await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, {});
+
+        expect(mockedCount).toHaveBeenCalledWith(expect.anything(), undefined);
+    });
+
+    it('writes nothing to the project', async () => {
+        mockedCount.mockResolvedValue({ products: 1 });
+        const { context } = makeImportHarness(project());
+
+        await exportHandlers['count-datapack-export-items'](context, {});
+
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it("answers a failure when the store cannot be opened, for the list's read to report", async () => {
+        mockedCount.mockRejectedValue(new StoreChangesError('Choose the website and store view to install into first.'));
+
+        const result = await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, {});
+
+        expect(result).toEqual({ success: false, error: 'Choose the website and store view to install into first.' });
+    });
+
+    it("refuses with the service's engine, whose list answers from the service, asking nothing of the store", async () => {
+        (selectedDatapackEngine as jest.Mock).mockReturnValue('service');
+
+        const result = await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, {});
+
+        expect(result).toMatchObject({ success: false });
+        expect(mockedCount).not.toHaveBeenCalled();
     });
 });

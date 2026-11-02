@@ -18,7 +18,7 @@
  * owner 2026-11-01). A read that failed and nothing to assign are the title's outcome, with what
  * is left to know under it, in a small dialog with Close alone. No intro under the title (owner,
  * 2026-10-19: "still feels busy"): the title says what it does, and the website is in the count.
- * The attribute-set warning is a note line over the list, with its fix beside it.
+ * The attribute-set warning is a problem note over the list it is about, with its fix beside it.
  *
  * @module features/dashboard/ui/components/AssignErpProductsModal
  */
@@ -44,7 +44,7 @@ export const ASSIGN_COPY = {
     readFailed: "Couldn't read Commerce",
     nothingToAssign: (name: string) => `Nothing to assign to ${name}`,
     setsBody: (sets: string) =>
-        `Some products cannot be tagged yet: erp_owner is not in the attribute sets ${sets}, and Commerce drops a tag written to their products.`,
+        `erp_owner is missing from the attribute sets ${sets}, so Commerce drops their tags.`,
     setsAction: 'Add erp_owner to those sets',
     action: (count: number) => (count === 1 ? 'Assign 1 product' : `Assign ${digits(count)} products`),
     actionIdle: 'Assign',
@@ -159,7 +159,7 @@ function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsM
                 <div className="assign-products-body">
                     {options.setsWithoutOwner.length > 0 && (
                         <div className="assign-sets-note">
-                            <p className="dialog-note" data-testid="assign-sets-note">{ASSIGN_COPY.setsBody(setsInWords(options.setsWithoutOwner))}</p>
+                            <p className="dialog-problem text-notice" data-testid="assign-sets-note">{ASSIGN_COPY.setsBody(setsInWords(options.setsWithoutOwner))}</p>
                             <button type="button" className="inline-action-link" onClick={() => onAddSets(target.id)}>
                                 {ASSIGN_COPY.setsAction}
                             </button>

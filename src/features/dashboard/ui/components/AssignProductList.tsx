@@ -11,8 +11,8 @@
  * A Spectrum TableView in multiple selection, with SKU, Name, Category and Owner as columns
  * the SC sorts by (owner, 2026-10-19: the SKU and the name as column headings, the filters
  * above). Its heading checkbox selects every row shown. The search on its own line, the
- * filters under it with the count, the table taking the rest of the modal's height (owner,
- * 2026-10-18: not a list halfway down), and what the selection would do below it.
+ * filters under it with the count, the table as tall as its rows up to what the window holds,
+ * and what the selection would do below it.
  * Categories are two pickers, the top level and then its subcategories, rather than one long
  * path a picker cuts off. A row that cannot be tagged is disabled with the reason in its Owner
  * cell; one already this ERP's is disabled, not ticked, and its Owner says this ERP (owner,
@@ -68,6 +68,21 @@ interface ProductRow {
     owner: string;
     /** Why it cannot be picked, if it cannot. */
     locked?: 'blocked' | 'already';
+}
+
+/** The compact table's heading with its borders, and a row, measured in Chromium (2026-11-02). */
+const TABLE_HEADING_PX = 36;
+const TABLE_ROW_PX = 33;
+/** Room for "No products match." when the store has one row or none. */
+const FEWEST_ROWS = 2;
+
+/**
+ * How tall the table is: its rows, up to what the window holds (`--assign-list-cap`). Definite,
+ * or the table draws every row. From every row, not the ones shown, so a filter moves no button.
+ */
+function tableHeight(rowCount: number): string {
+    const rows = Math.max(rowCount, FEWEST_ROWS);
+    return `min(${TABLE_HEADING_PX + rows * TABLE_ROW_PX}px, var(--assign-list-cap))`;
 }
 
 /** A column the table sorts by. */
@@ -285,7 +300,7 @@ export function AssignProductList({ options, value, selected, onChange, summary 
                     onSortChange={setSort}
                     density="compact"
                     overflowMode="truncate"
-                    height="100%"
+                    height={tableHeight(rows.length)}
                     // "None match" sits where the rows would be, under the headings.
                     renderEmptyState={() => <div className="assign-list-empty">{LIST_COPY.nothing}</div>}
                 >

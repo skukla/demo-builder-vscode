@@ -296,7 +296,7 @@ it('offers no clearing when a ticked store is refused, and says why', async () =
     await tick(/Bodea Store/);
 
     const line = screen.getByText("The store bodea_store is also Bodea Demo's own store.");
-    expect(line).toHaveClass('text-notice');
+    expect(line).toHaveClass('dialog-problem', 'text-notice');
     // A line where the list would land, not a box: the rule's own example.
     expect(line.closest('.inline-notice')).toBeNull();
     expect(screen.queryByText(/is another project's/)).not.toBeInTheDocument();
@@ -312,7 +312,7 @@ it('says a failed check where the list would land, and keeps the stores on scree
 
     await tick(/Bodea Store/);
 
-    expect(screen.getByText("Couldn't read the stores: The store did not answer.")).toHaveClass('text-negative');
+    expect(screen.getByText("Couldn't read the stores: The store did not answer.")).toHaveClass('dialog-problem', 'text-negative');
     expect(screen.getByRole('checkbox', { name: /Bodea Store/ })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Clear demo data' })).toBeInTheDocument();
 });

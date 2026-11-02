@@ -41,7 +41,7 @@ function useConfirm(dialog: FlaggedCardDialog, action: CardAction, onRun: RunFla
     }, [pending, close, action, onRun]);
 }
 
-/** What every reinstall does, ending the dialog's one sentence. */
+/** What every reinstall does, the dialog's last line. */
 const REINSTALL_TAIL =
     'That sets up its webhooks and event subscriptions again and may reset its saved settings to their defaults.';
 
@@ -49,6 +49,7 @@ const REINSTALL_TAIL =
 function ReinstallDialog({ dialog, onRun }: { dialog: FlaggedCardDialog; onRun: RunFlaggedAction }): React.ReactElement {
     const confirm = useConfirm(dialog, 'reinstall', onRun);
     const name = dialog.pending?.name;
+    const refused = dialog.pending?.installation?.needsReinstall;
     return (
         <ConfirmActionDialog
             isOpen={dialog.pending !== null}
@@ -58,18 +59,20 @@ function ReinstallDialog({ dialog, onRun }: { dialog: FlaggedCardDialog; onRun: 
             onConfirm={confirm}
             onClose={dialog.close}
         >
-            {dialog.pending?.installation?.needsReinstall ? (
+            {refused ? (
                 <>
                     Commerce would not upgrade <strong>{name}</strong> in place, so this removes it
-                    from Commerce and installs the version already deployed. {REINSTALL_TAIL}
+                    from Commerce and installs the version already deployed.
                 </>
             ) : (
+                'For when Commerce has lost what the app set up and the app still says it is installed.'
+            )}
+            {!refused && (
                 <>
-                    For when Commerce has lost what the app set up and the app still says it is
-                    installed. Removes <strong>{name}</strong> from Commerce and installs the version
-                    already deployed. {REINSTALL_TAIL}
+                    Removes <strong>{name}</strong> from Commerce and installs the version already deployed.
                 </>
             )}
+            {REINSTALL_TAIL}
         </ConfirmActionDialog>
     );
 }
@@ -90,8 +93,8 @@ function RemoveAnywayDialog({ dialog, onRun }: { dialog: FlaggedCardDialog; onRu
             onConfirm={confirm}
             onClose={dialog.close}
         >
-            {dialog.pending?.removalStopped} Removing <strong>{name}</strong> anyway undeploys it now
-            and leaves that behind.
+            {dialog.pending?.removalStopped}
+            <>Removing <strong>{name}</strong> anyway undeploys it now and leaves that behind.</>
         </ConfirmActionDialog>
     );
 }

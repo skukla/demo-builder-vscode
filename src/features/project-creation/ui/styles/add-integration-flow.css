@@ -61,7 +61,7 @@
     gap: 12px;
 }
 
-/* Why the greyed tiles below cannot be picked: a note above them, its colour from `.text-orange-600`. */
+/* Why the greyed tiles below cannot be picked: a note above them, its colour from `.text-notice`. */
 .intflow-catalog-note {
     margin: 0;
     font-size: 12px;
@@ -99,29 +99,27 @@
     gap: 12px;
 }
 
-/* The project/workspace list keeps ONE height whether it shows 726 rows or the 5
-   that match a filter. By default `.list-refresh-container` is `flex: 1` inside an
-   auto-height chain, so the list is sized by its CONTENT — and the modal is
-   `fitContent`, so every keystroke resized the dialog and re-centred it under the
-   cursor. Same remedy as `.repo-selection-inline .list-refresh-container`, but a
-   definite height rather than a cap, because a cap still collapses when filtering.
-   It also moves the scrolling INTO the list (ListView virtualizes) instead of
-   scrolling the whole modal body past the sticky footer.
-   The ListView's `.flex-1` is what lets the "no <noun>s match" line share the box:
-   its `flex-basis: 0` overrides the `height="100%"` prop, so on an empty filter the
-   list yields the line its ~20px instead of pushing it out of view. */
+/* The project/workspace list fits its rows up to a cap, as every dialog's height fits its content
+   (dialog design rules). It was one fixed height whatever it showed, which left two rows over about
+   360px of empty box. A dialog is pinned near the top, so a filter that shortens the list moves only
+   the bottom edge.
+   The cap moves the scrolling INTO the list (ListView virtualizes) instead of scrolling the whole
+   modal body past the sticky footer. The viewport term is the dialog's own limit (84% of the
+   window, modal.css) less its chrome with the search box showing (title, search, footer): measured
+   245px at 200 rows (2026-11-02), so 16rem leaves 11px of slack at any height. A term off 100vh
+   could not: 24rem left the body scrolling by 23px at an 800px window, 11px at 725.
+   The ListView's `.flex-1` is what lets the "no <noun>s match" line share the box: on an empty filter
+   the list yields the line its ~20px instead of pushing it out of view. */
 .intflow-destination .list-refresh-container {
-    flex: 0 0 auto;
-    /* The viewport term reserves the modal chrome (title, search, count, context
-       line, footer, dialog margins) so a short window shrinks the list rather than
-       overflowing the dialog.
-       It was 22rem, which undercounted that chrome by 21px (measured 2026-10-28 at a
-       725px-tall webview, on both the project and the workspace list): `.modal-body`
-       ended up shorter than its content and scrolled, clipping the list's last row
-       and pulling its top row under the header. Scrolling the LIST cannot reveal
-       that strip, so a selected last row stayed half-hidden. 24rem leaves ~11px of
-       slack. */
-    height: min(420px, calc(100vh - 24rem));
+    flex: 0 1 auto;
+    max-height: min(420px, calc(84vh - 16rem));
+}
+
+/* No box border and no box of its own in a dialog (dialog design rules): the rows sit on the
+   dialog. Only here: on a whole screen the same list keeps its frame. */
+.intflow-destination .list-refresh-container .flex-1 {
+    border: none;
+    background: transparent;
 }
 
 /* A committed choice (project/workspace) collapsed to one compact boxed line. */

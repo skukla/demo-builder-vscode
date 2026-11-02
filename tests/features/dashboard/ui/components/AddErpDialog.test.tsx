@@ -268,7 +268,7 @@ describe('AddErpDialog — before and without the store', () => {
 
         const note = screen.getByTestId('add-erp-read-failed');
         expect(note).toHaveTextContent("Couldn't read the store. Adobe sign-in required. You can still add the ERP.");
-        expect(note).toHaveClass('dialog-note');
+        expect(note).toHaveClass('dialog-problem', 'text-negative');
         fireEvent.click(websitesRadio());
         expect(screen.getAllByText(/Adobe sign-in required\./)).toHaveLength(1);
         fireEvent.click(attributeRadio());

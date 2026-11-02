@@ -174,6 +174,24 @@ describe('a reset that finishes clears it', () => {
         expect(saveProject).toHaveBeenCalled();
     });
 
+    // A project installs one pack, then another, and names the last. Removing the first must not
+    // clear the second: project reset gates on this field, and would stop offering to remove it.
+    it.each([
+        ['another pack', { name: 'frescopa', version: 'main' }],
+        ['another version of it', { name: 'bodea', version: '2.0' }],
+    ])('leaves the project naming %s', async (_name, named) => {
+        happyClient();
+        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
+        const project = { ...PAAS_PROJECT(), datapack: named };
+        const { context, saveProject } = makeImportHarness(project);
+
+        await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(project.datapack).toEqual(named);
+        expect(saveProject).not.toHaveBeenCalled();
+    });
+
     // Confirm-gated: an unconfirmed reset does nothing at all, including to the
     // project record.
     it('CONTROL — an unconfirmed reset changes nothing', async () => {

@@ -139,7 +139,7 @@ describe('ShareModal', () => {
             expect(mockWriteText).not.toHaveBeenCalled();
             // A note line beside the button, not a box.
             expect(screen.getByTestId('share-error')).toHaveTextContent("Couldn't prepare the link. GitHub refused the write.");
-            expect(screen.getByTestId('share-error')).toHaveClass('dialog-note');
+            expect(screen.getByTestId('share-error')).toHaveClass('dialog-problem', 'text-negative');
             expect(button(SAVE_AND_COPY)).toBeInTheDocument();
         });
 

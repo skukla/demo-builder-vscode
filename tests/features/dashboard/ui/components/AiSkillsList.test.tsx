@@ -32,7 +32,7 @@ function renderList(props: Partial<React.ComponentProps<typeof AiSkillsList>> = 
 
 describe('AiSkillsList', () => {
     describe('Default state — groups visible, individually collapsed', () => {
-        it('shows a "Skills (N)" summary line', () => {
+        it('shows a "Skills" summary line, with no count of a list the SC can see', () => {
             renderList({
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
@@ -42,10 +42,10 @@ describe('AiSkillsList', () => {
             });
 
             const summary = screen.getByTestId('ai-skills-summary');
-            expect(summary).toHaveTextContent(/^Skills \(3\)$/);
+            expect(summary).toHaveTextContent(/^Skills$/);
         });
 
-        it('renders group rows with their counts by default (no outer toggle)', () => {
+        it('renders group rows by default with no count of a list the SC can see (no outer toggle)', () => {
             renderList({
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
@@ -56,11 +56,11 @@ describe('AiSkillsList', () => {
 
             const dbRow = screen.getByTestId('ai-skills-group-demo-builder');
             expect(dbRow).toHaveTextContent(/Demo Builder/);
-            expect(dbRow).toHaveTextContent(/2/);
+            expect(dbRow).not.toHaveTextContent(/\d/);
 
             const adobeRow = screen.getByTestId('ai-skills-group-adobe-aem');
             expect(adobeRow).toHaveTextContent(/Adobe Commerce Storefront skills/);
-            expect(adobeRow).toHaveTextContent(/1/);
+            expect(adobeRow).not.toHaveTextContent(/\d/);
         });
 
         it('renders groups in canonical order: Demo Builder → Adobe bundles → Custom', () => {
@@ -92,7 +92,7 @@ describe('AiSkillsList', () => {
             });
 
             const row = screen.getByTestId('ai-skills-group-adobe-appbuilder');
-            expect(row).toHaveTextContent('Adobe Commerce Integration Starter Kit skills (2)');
+            expect(row).toHaveTextContent(/^Adobe Commerce Integration Starter Kit skills$/);
             expect(screen.queryByText(/Adobe Commerce Storefront skills/)).not.toBeInTheDocument();
         });
 
@@ -104,12 +104,8 @@ describe('AiSkillsList', () => {
                 ],
             });
 
-            expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(
-                'Adobe Commerce Storefront skills (1)'
-            );
-            expect(screen.getByTestId('ai-skills-group-adobe-appbuilder')).toHaveTextContent(
-                'Adobe Commerce Integration Starter Kit skills (1)'
-            );
+            expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(/^Adobe Commerce Storefront skills$/);
+            expect(screen.getByTestId('ai-skills-group-adobe-appbuilder')).toHaveTextContent(/^Adobe Commerce Integration Starter Kit skills$/);
         });
 
         it('falls back to a plain Adobe label for an unrecognised bundle', () => {
@@ -117,7 +113,7 @@ describe('AiSkillsList', () => {
             renderList({ skills: [makeSkill('x', 'adobe', 'sometool')] });
 
             const row = screen.getByTestId('ai-skills-group-adobe-sometool');
-            expect(row).toHaveTextContent('Adobe skills (1)');
+            expect(row).toHaveTextContent(/^Adobe skills$/);
         });
 
         it('omits groups with no skills', () => {
@@ -192,12 +188,8 @@ describe('AiSkillsList', () => {
                 ],
             });
 
-            expect(screen.getByTestId('ai-skills-group-demo-builder')).toHaveTextContent(
-                'Demo Builder skills (2)'
-            );
-            expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(
-                'Adobe Commerce Storefront skills (1)'
-            );
+            expect(screen.getByTestId('ai-skills-group-demo-builder')).toHaveTextContent(/^Demo Builder skills$/);
+            expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(/^Adobe Commerce Storefront skills$/);
         });
 
         it('leaves skill names at the app default size, not the 12px .text-sm', () => {
@@ -221,7 +213,7 @@ describe('AiSkillsList', () => {
     // it matters only for Regenerate, so the modal says it once, beside that
     // button. The list has no edited prop at all now.
     describe('inside an integration section (flat)', () => {
-        it('heads its one set "Skills (N)", since the section already names whose they are', () => {
+        it('heads its one set "Skills", since the section already names whose they are', () => {
             renderList({
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
@@ -231,7 +223,7 @@ describe('AiSkillsList', () => {
             });
 
             expect(screen.getByTestId('ai-skills-group-demo-builder')).toHaveTextContent(
-                /^Skills \(2\)$/
+                /^Skills$/
             );
             expect(screen.queryByTestId('ai-skills-summary')).not.toBeInTheDocument();
         });
@@ -244,12 +236,8 @@ describe('AiSkillsList', () => {
                 flat: true,
             });
 
-            expect(screen.getByTestId('ai-skills-group-unknown')).toHaveTextContent(
-                'Custom skills (1)'
-            );
-            expect(screen.getByTestId('ai-skills-group-adobe-sometool')).toHaveTextContent(
-                'Adobe skills (1)'
-            );
+            expect(screen.getByTestId('ai-skills-group-unknown')).toHaveTextContent(/^Custom skills$/);
+            expect(screen.getByTestId('ai-skills-group-adobe-sometool')).toHaveTextContent(/^Adobe skills$/);
         });
 
         it('lays the names out in the two-column names grid', () => {
@@ -328,7 +316,7 @@ describe('empty (2026-08-06)', () => {
             renderList({ skills: [], gatedSkills: GATED, flat: true });
 
             expect(screen.getByTestId('ai-skills-group-gated')).toHaveTextContent(
-                /^Not available \(1\)$/
+                /^Not available$/
             );
             expect(screen.getByTestId('ai-skill-gated-row')).toHaveTextContent(
                 /^querying-commerce\.md: requires Playwright/
@@ -390,16 +378,14 @@ describe('grouping keys off the SOURCE, and only Adobe splits per bundle', () =>
     it('keeps a non-Adobe skill under its source even when it carries a bundle', () => {
         renderList({ skills: [makeSkill('local-helper', 'unknown', 'sometool')] });
 
-        expect(screen.getByTestId('ai-skills-group-unknown')).toHaveTextContent(
-            'Custom skills (1)'
-        );
+        expect(screen.getByTestId('ai-skills-group-unknown')).toHaveTextContent(/^Custom skills$/);
         expect(screen.queryByTestId('ai-skills-group-unknown-sometool')).not.toBeInTheDocument();
     });
 
     it('keeps an Adobe skill with no bundle under a plain Adobe group', () => {
         renderList({ skills: [makeSkill('loose-skill', 'adobe')] });
 
-        expect(screen.getByTestId('ai-skills-group-adobe')).toHaveTextContent('Adobe skills (1)');
+        expect(screen.getByTestId('ai-skills-group-adobe')).toHaveTextContent(/^Adobe skills$/);
     });
 });
 

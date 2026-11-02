@@ -28,8 +28,11 @@ import {
 import type { WizardState } from '@/types/webview';
 
 jest.mock('@/features/authentication/ui/components/AdobeProjectPicker', () => ({
-    AdobeProjectPicker: ({ headerAction }: { headerAction?: React.ReactNode }) => (
-        <div data-testid="project-picker">{headerAction}</div>
+    AdobeProjectPicker: ({ headerAction, dialogHost }: { headerAction?: React.ReactNode; dialogHost?: { onCreate: () => void } }) => (
+        <div data-testid="project-picker">
+            {headerAction}
+            {dialogHost && <button type="button" onClick={dialogHost.onCreate}>empty-list-new</button>}
+        </div>
     ),
 }));
 jest.mock('@/features/authentication/ui/components/AdobeWorkspacePicker', () => ({
@@ -37,13 +40,16 @@ jest.mock('@/features/authentication/ui/components/AdobeWorkspacePicker', () => 
         headerAction,
         selectedWorkspaceId,
         onWorkspaceSelect,
+        dialogHost,
     }: {
+        dialogHost?: { onCreate: () => void };
         headerAction?: React.ReactNode;
         selectedWorkspaceId?: string;
         onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;
     }) => (
         <div data-testid="workspace-picker" data-selected={selectedWorkspaceId ?? ''}>
             {headerAction}
+            {dialogHost && <button type="button" onClick={dialogHost.onCreate}>empty-list-new</button>}
             <button
                 type="button"
                 onClick={() => onWorkspaceSelect?.({ id: 'w9', name: 'nw', title: 'New WS' })}
@@ -601,5 +607,30 @@ describe('the project panel writes through the updater it was LAST given', () =>
 
         await waitFor(() => expect(second).toHaveBeenCalled());
         expect(first).not.toHaveBeenCalled();
+    });
+});
+
+// An empty list in a dialog offers New in the footer: the field is what can open the create panel.
+describe('the dialog\'s New on an empty list', () => {
+    const FRAME = { onOutcome: jest.fn(), onWaiting: jest.fn() };
+
+    it('opens the project create panel', () => {
+        renderField(<AdobeProjectField state={EMPTY} updateState={jest.fn()} dialogHost={FRAME} />);
+        fireEvent.click(screen.getByRole('button', { name: 'empty-list-new' }));
+
+        expect(screen.getByText('Create New Project')).toBeInTheDocument();
+    });
+
+    it('opens the workspace create panel', () => {
+        renderField(<AdobeWorkspaceField state={EMPTY} updateState={jest.fn()} dialogHost={FRAME} />);
+        fireEvent.click(screen.getByRole('button', { name: 'empty-list-new' }));
+
+        expect(screen.getByText('Create New Workspace')).toBeInTheDocument();
+    });
+
+    it('CONTROL: a field not in a dialog hands the picker no host', () => {
+        renderField(<AdobeProjectField state={EMPTY} updateState={jest.fn()} />);
+
+        expect(screen.queryByRole('button', { name: 'empty-list-new' })).toBeNull();
     });
 });

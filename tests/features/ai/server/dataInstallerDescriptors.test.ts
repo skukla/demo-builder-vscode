@@ -274,6 +274,18 @@ describe('what each row accepts', () => {
         expect(schema).not.toHaveProperty('alwaysSave');
     });
 
+    it('lets reset_datapack omit dataTypes, since its record decides, but not an import or a dry run', () => {
+        expect(() => row('reset_datapack')!.inputSchema!.dataTypes.parse(undefined)).not.toThrow();
+        expect(() => row('start_datapack_import')!.inputSchema!.dataTypes.parse(undefined)).toThrow();
+        expect(() => row('validate_datapack_import')!.inputSchema!.dataTypes.parse(undefined)).toThrow();
+    });
+
+    it('says what the ticks mean, for an import and for a removal', () => {
+        expect(row('start_datapack_import')!.description).toContain('only the dataTypes named install, with what they need');
+        expect(row('start_datapack_import')!.description).toContain('A kind left out is left alone');
+        expect(row('reset_datapack')!.description).toContain('takes everything the install record lists, whatever dataTypes names');
+    });
+
     it('says what reset_datapack does about changes, including what the setting does', () => {
         const { description } = row('reset_datapack')!;
 

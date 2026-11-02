@@ -224,6 +224,18 @@ describe('buildActions', () => {
         expect(actions[2].onPress).toBe(args.startImport);
     });
 
+    // A removal takes all its record lists, so the button says all and needs nothing ticked.
+    it('says all, and can be pressed with nothing to import, when a removal takes the whole record', () => {
+        const [remove, dryRun, importButton] = buildActions(actionArgs({ canStart: false, removesAll: true, canRemove: true }));
+        expect(remove).toMatchObject({ label: 'Remove all data', isDisabled: false });
+        expect(dryRun.isDisabled).toBe(true);
+        expect(importButton.isDisabled).toBe(true);
+    });
+
+    it('disables the removal when it cannot run, whatever it would take', () => {
+        expect(buildActions(actionArgs({ removesAll: true, canRemove: false }))[0]).toMatchObject({ label: 'Remove all data', isDisabled: true });
+    });
+
     it('disables all three form buttons when the import cannot start', () => {
         const disabled = buildActions(actionArgs({ canStart: false })).map((a) => a.isDisabled);
         expect(disabled).toStrictEqual([true, true, true]);

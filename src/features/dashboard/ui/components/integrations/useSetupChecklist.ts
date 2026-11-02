@@ -32,13 +32,12 @@ export interface CheckFailure {
 
 /**
  * Why a check request that threw could not answer. The client's own throw (its time limit,
- * a lost channel) says nothing an SC can act on, and the extension may well have finished
- * and saved the check after the guide stopped waiting (2026-10-01) — so this says that,
- * the same honest sentence whatever the transport detail was. The detail goes to the
- * webview logger; the extension's own log records what the check itself did.
+ * a lost channel) says nothing an SC can act on, so this is the same short line whatever the
+ * transport detail was: what is wrong and what to do. The extension may well have finished and
+ * saved the check after the guide stopped waiting (2026-10-01), and pressing again reads that.
+ * The detail goes to the webview logger; the extension's own log records what the check did.
  */
-export const NO_ANSWER =
-    "Demo Builder didn't get an answer in time. The check may still have finished; press Check all steps to try again.";
+export const NO_ANSWER = 'No answer in time. Press Check all steps to try again.';
 
 /** Where a check run is: the step being checked, and how far along. */
 export interface CheckProgress {
@@ -72,6 +71,8 @@ export interface SetupChecklistActions {
     busy: boolean;
     /** Why the last request failed, if it did. */
     error?: string;
+    /** The step that request was about. */
+    errorStepId?: string;
 }
 
 /**
@@ -81,6 +82,7 @@ export interface SetupChecklistActions {
 export function useSetupChecklist(componentId: string): SetupChecklistActions {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string>();
+    const [errorStepId, setErrorStepId] = useState<string>();
 
     const run = useCallback(async (type: string, payload: Record<string, unknown>) => {
         setBusy(true);
@@ -92,14 +94,17 @@ export function useSetupChecklist(componentId: string): SetupChecklistActions {
         } catch (thrown) {
             // The client's own throw is a transport detail; the SC gets a sentence.
             log.warn(`${type} did not answer`, thrown);
-            setError("Demo Builder didn't get an answer in time. Try again.");
+            setError('No answer in time. Try again.');
         } finally {
             setBusy(false);
         }
     }, []);
 
     const setStep = useCallback(
-        (stepId: string, state: StepState) => void run('setSetupStep', { id: componentId, stepId, state }),
+        (stepId: string, state: StepState) => {
+            setErrorStepId(stepId);
+            void run('setSetupStep', { id: componentId, stepId, state });
+        },
         [componentId, run],
     );
     const [progress, setProgress] = useState<CheckProgress>();
@@ -135,7 +140,7 @@ export function useSetupChecklist(componentId: string): SetupChecklistActions {
             .finally(() => setConnecting(false));
     }, [componentId]);
 
-    return { setStep, checkAll, progress, failures, prepare, connecting, busy, error };
+    return { setStep, checkAll, progress, failures, prepare, connecting, busy, error, errorStepId };
 }
 
 /**

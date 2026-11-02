@@ -127,7 +127,7 @@ describe('DatapackDetailPanel', () => {
         it('calls out declared types the service has no item for', () => {
             renderPanel();
 
-            expect(screen.getByTestId('datapack-detail-missing')).toHaveTextContent('Giftcards');
+            expect(screen.getByTestId('datapack-detail-missing')).toHaveTextContent('Gift cards');
         });
 
         it('renders no missing section when the pack holds everything it declares', () => {
@@ -250,7 +250,7 @@ describe('DatapackDetailPanel', () => {
             const { container } = renderPanel({ inventory: null });
 
             expect(container.querySelectorAll('.datapack-panel-type')).toHaveLength(3);
-            expect(screen.getByText('Giftcards')).toBeInTheDocument();
+            expect(screen.getByText('Gift cards')).toBeInTheDocument();
             expect(screen.queryByTestId('datapack-detail-missing')).not.toBeInTheDocument();
         });
     });

@@ -19,6 +19,7 @@ import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { tookValue, useRunClock } from '@/core/ui/hooks/useRunClock';
+import { cn } from '@/core/ui/utils/classNames';
 import { expectationLine, stageLine } from '@/core/utils/stageLine';
 import type { OperationChange, OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
 
@@ -31,6 +32,8 @@ export interface OperationProgressBodyProps {
     progress?: OperationProgressPayload | null;
     /** Every keystroke in a question's fields, for the buttons to hand back. */
     onTyped: (values: Record<string, string>) => void;
+    /** What the run acts on: while it runs, a line under the title, clear of the level spinner. */
+    subject?: string;
 }
 
 /** The one row that changes: a question, a failure, or where the work has got to. */
@@ -41,6 +44,7 @@ export function OperationProgressBody({
     successMessage,
     progress,
     onTyped,
+    subject,
 }: OperationProgressBodyProps): React.ReactElement | null {
     // The whole run, from the start the extension stamped on every push. The only
     // thing that moves while a step waits on Adobe.
@@ -76,16 +80,19 @@ export function OperationProgressBody({
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text (ImportDatapackModal).
     // The room for all three lines is kept and what is there sits level in it, so the spinner does
-    // not ride high over a blank line, and the box does not move when the third line arrives.
+    // not ride high over a blank line, and the box does not move when a line arrives. Row 3 only
+    // when it has words: `expectationLine` answers a blank for a screen that holds the row.
+    const hasExpectation = Boolean(progress?.expectation || total);
     return (
-        <div className="modal-wait modal-wait-progress">
+        <div className={cn('modal-wait', 'modal-wait-progress', subject && 'modal-wait-progress-subject')}>
+            {subject && <div className="modal-progress-subject">{subject}</div>}
             <LoadingDisplay
                 size="L"
                 steady
                 noBlankRows
                 message={progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting'}
                 subMessage={progress?.step}
-                helperText={expectationLine(progress?.expectation, total)}
+                helperText={hasExpectation ? expectationLine(progress?.expectation, total) : undefined}
             />
         </div>
     );

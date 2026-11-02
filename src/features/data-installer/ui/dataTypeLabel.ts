@@ -12,6 +12,7 @@
  * of the 21 current types — reads better for one or two awkward names and then
  * goes stale the moment the service adds a type, showing a raw code again in
  * the one case nobody is watching for. Derivation degrades gracefully instead.
+ * The one exception is a code with no underscore to split on (`giftcards`).
  *
  * This is presentation only. The code stays the value sent.
  *
@@ -28,6 +29,11 @@ const ACRONYMS: Record<string, string> = {
     aco: 'ACO',
 };
 
+/** Codes whose words run together, so casing alone cannot name them. The code stays the value sent. */
+const JOINED_CODES: Record<string, string> = {
+    giftcards: 'Gift cards',
+};
+
 /**
  * A data type's code as a human name — `attribute_sets` → "Attribute sets".
  *
@@ -35,6 +41,10 @@ const ACRONYMS: Record<string, string> = {
  * types"), not title case.
  */
 export function dataTypeLabel(code: string): string {
+    const joined = JOINED_CODES[code];
+    if (joined) {
+        return joined;
+    }
     const words = code.split('_').filter(Boolean);
     if (words.length === 0) {
         return code;

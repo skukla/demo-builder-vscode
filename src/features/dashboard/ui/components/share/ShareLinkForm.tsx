@@ -95,10 +95,10 @@ function PressNotes({ flow }: { flow: UseShareLink }): React.ReactElement {
     return (
         <>
             {flow.error?.title === 'save' ? (
-                <p className="dialog-note" data-testid="share-error">{SHARE_COPY.copyFailed} {flow.error.message}</p>
+                <p className="dialog-problem text-negative" data-testid="share-error">{SHARE_COPY.copyFailed} {flow.error.message}</p>
             ) : null}
             {flow.skipped ? (
-                <p className="dialog-note" data-testid="share-skipped">{SHARE_COPY.skippedTitle} {flow.skipped}</p>
+                <p className="dialog-problem text-notice" data-testid="share-skipped">{SHARE_COPY.skippedTitle} {flow.skipped}</p>
             ) : null}
         </>
     );
@@ -109,7 +109,7 @@ function RemoveNotes({ flow }: { flow: UseShareLink }): React.ReactElement {
     return (
         <>
             {flow.error?.title === 'remove' ? (
-                <p className="dialog-note" data-testid="share-error">{SHARE_COPY.removeFailed} {flow.error.message}</p>
+                <p className="dialog-problem text-negative" data-testid="share-error">{SHARE_COPY.removeFailed} {flow.error.message}</p>
             ) : null}
             {flow.removed ? (
                 <p className="dialog-note" data-testid="share-removed">{removedSentence(flow.removed)}</p>

@@ -19,6 +19,7 @@ import { hasMeasurableProgress, progressLabel, progressStep, summarizeProgress }
 import { DatapackResultBody } from './DatapackResultBody';
 import { ImportForm } from './ImportForm';
 import type { ResultContent } from './importResult';
+import { recordedRemovalWords } from './removalConfirm';
 import { RemovalConfirmBody } from './RemovalConfirmBody';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
@@ -66,12 +67,11 @@ export function typesInSentence(labels: string[]): string {
  * read as machine-made. What the SC changed since it was installed follows it (step 05).
  */
 function ResetConfirm({ ctx }: { ctx: BodyContext }): React.JSX.Element {
-    return (
-        <RemovalConfirmBody
-            deletes={`Permanently deletes ${ctx.displayName}\u2019s ${typesInSentence(ctx.selected.map(dataTypeLabel))}.`}
-            view={ctx.removal}
-        />
-    );
+    // Demo Builder's engine takes what its record lists; the service takes what is ticked.
+    const deletes = ctx.recordedKinds
+        ? recordedRemovalWords(ctx.displayName, ctx.recordedKinds, ctx.selected, (kinds) => typesInSentence(kinds.map(dataTypeLabel)))
+        : `Permanently deletes ${ctx.displayName}\u2019s ${typesInSentence(ctx.selected.map(dataTypeLabel))}.`;
+    return <RemovalConfirmBody deletes={deletes} view={ctx.removal} />;
 }
 
 /** Which view the modal is showing. */
@@ -84,6 +84,8 @@ export interface BodyContext {
     availableTypes: string[];
     selected: string[];
     allSelected: boolean;
+    /** The kinds on the pack's install record, when Demo Builder's engine installed it; else null. */
+    recordedKinds?: string[] | null;
     record: ImportJobRecord | null;
     result: ResultContent | null;
     busyMessage: string;

@@ -488,6 +488,14 @@
 .datapack-flow-cards--dense {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+
+/* What goes in it: every row one height, with room for a name and two lines however the cards fill
+   in, so a card losing its description to a grey never moves the grid. Tall enough for that and no
+   taller: ten cards then fit an 800px window with no scrolling. */
+.datapack-flow-cards--kinds {
+    grid-auto-rows: minmax(84px, 1fr);
+    row-gap: 8px;
+}
 }
 
 /* A kind's items (StoreKindItems, StoreItemChecklist; datapack-engine step 14), searchable, in a

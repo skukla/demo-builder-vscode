@@ -209,12 +209,12 @@ describe('a kind with nothing to pick', () => {
     it('keeps its card clickable until a read has answered, then greys it out', async () => {
         answer({});
         await open();
-        expect(card('Giftcards')).toBeEnabled();
+        expect(card('Gift cards')).toBeEnabled();
 
-        await press(card('Giftcards'));
+        await press(card('Gift cards'));
 
-        expect(card('Giftcards')).toBeDisabled();
-        expect(card('Giftcards')).toHaveTextContent('None in this store');
+        expect(card('Gift cards')).toBeDisabled();
+        expect(card('Gift cards')).toHaveTextContent('None in this store');
         expect(screen.queryByText(/of its own to pick/)).not.toBeInTheDocument();
         expect(listCalls()).toHaveLength(1);
     });
@@ -222,9 +222,9 @@ describe('a kind with nothing to pick', () => {
     it('cannot be opened again once greyed out', async () => {
         answer({});
         await open();
-        await press(card('Giftcards'));
+        await press(card('Gift cards'));
 
-        fireEvent.click(card('Giftcards'));
+        fireEvent.click(card('Gift cards'));
         await settle();
 
         expect(listCalls()).toHaveLength(1);
@@ -243,8 +243,15 @@ describe('a kind with nothing to pick', () => {
 });
 
 describe('a read that fails', () => {
+    /** The first list read is refused; the counts, read before it, are not. */
     function refuseFirst() {
-        mockRequest.mockImplementationOnce(async () => ({ success: false, error: 'The install target names no website.' }));
+        const answering = mockRequest.getMockImplementation();
+        let refused = false;
+        mockRequest.mockImplementation(async (type: string, payload?: { dataType?: string }) => {
+            if (type !== 'list-datapack-export-items' || refused) return answering?.(type, payload);
+            refused = true;
+            return { success: false, error: 'The install target names no website.' };
+        });
     }
 
     it('says why, and leaves the card clickable', async () => {

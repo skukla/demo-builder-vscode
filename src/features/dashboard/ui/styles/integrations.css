@@ -209,17 +209,26 @@
 
 /* Skip (or Reopen) is the rare action, so it is a quiet link under the step rather than a
    third footer button. */
-/* Assign products (AB-74): one toolbar line, the list filling the rest of the dialog, one line
-   of counts under it (owner, 2026-10-18: not a list halfway down). The body is height-bounded
-   like Manage APIs, so the list is the one region that scrolls. */
+/* Assign products (AB-74): one toolbar line, the list, one line of counts under it (owner,
+   2026-10-18: not a list halfway down). Height fits its rows (`AssignProductList` sets the table's
+   height from them), up to what the window holds, and past that the list is the one region that
+   scrolls, as Manage APIs does. It was one fixed height to stop a jump when the list landed, which
+   left three rows over 290px of empty space.
+   The cap is the room the body has (the dialog's limit of 84% of the window, less its 185 of title
+   and footer) less what sits around the table: the search, the filters and the counts line, 128,
+   and the warning's two lines with it. All measured in Chromium (2026-11-02). The body clips rather
+   than scrolls, so a cap that overcounts hides the counts line. */
 .assign-products-body {
+    --assign-list-cap: calc(min(640px, 84vh - 185px) - 128px);
     display: flex;
     flex-direction: column;
     gap: 12px;
-    height: min(640px, calc(100vh - 240px));
-    max-height: 100%;
     min-height: 0;
     min-width: 0;
+}
+
+.assign-products-body:has(.assign-sets-note) {
+    --assign-list-cap: calc(min(640px, 84vh - 185px) - 184px);
 }
 
 /* The attribute-set warning over the list, with its fix beside it: the words wrap, the fix does not. */
@@ -232,6 +241,9 @@
 .assign-sets-note .inline-action-link {
     flex: 0 0 auto;
     white-space: nowrap;
+    /* Body size: the way out of the warning has to read easily beside it. */
+    font-size: 14px;
+    padding: 0;
 }
 
 .assign-products-list {
@@ -258,7 +270,7 @@
 }
 
 .assign-list {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
 }
 

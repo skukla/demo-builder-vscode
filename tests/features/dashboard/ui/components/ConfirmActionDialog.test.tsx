@@ -1,6 +1,6 @@
 /**
  * ConfirmActionDialog — the one way a dashboard confirm is drawn (dialog design rules): the
- * question as the title with the amber icon, one sentence, Cancel and the action, solid red only
+ * question as the title with the amber icon, a few short lines, Cancel and the action, solid red only
  * when the caller says the action is dangerous. The real Modal over the shared Spectrum mock.
  */
 
@@ -45,6 +45,33 @@ describe('ConfirmActionDialog', () => {
         expect(screen.getByText('Remove the thing?')).toBeInTheDocument();
         expect(document.querySelector('.modal-status-icon .text-notice')).not.toBeNull();
         expect(screen.getByText('Removes the thing.')).toBeInTheDocument();
+    });
+
+    it('puts each child on a line of its own, with the rules\' spacing and no list', () => {
+        render(
+            <Provider theme={defaultTheme}>
+                <ConfirmActionDialog
+                    isOpen
+                    title="Remove the thing?"
+                    actionLabel="Remove"
+                    actionVariant="negative"
+                    onConfirm={jest.fn()}
+                    onClose={jest.fn()}
+                >
+                    <>Removes <strong>the thing</strong> from Adobe.</>
+                    {['Deletes its records.', 'Clears its tags.']}
+                    {null}
+                </ConfirmActionDialog>
+            </Provider>,
+        );
+
+        const lines = Array.from(document.querySelectorAll('.dialog-rows > .dialog-line'));
+        expect(lines.map((line) => line.textContent)).toEqual([
+            'Removes the thing from Adobe.',
+            'Deletes its records.',
+            'Clears its tags.',
+        ]);
+        expect(document.querySelector('li')).toBeNull();
     });
 
     it('offers Cancel, not Close, and Cancel only closes', () => {

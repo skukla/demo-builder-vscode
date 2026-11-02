@@ -99,9 +99,11 @@ export function ErpConfirmDialogs(props: ErpConfirmDialogsProps): React.ReactEle
                 onConfirm={confirmFill}
                 onClose={closeFill}
             >
-                Copies Commerce&apos;s products, companies and websites into {fill?.erpName} as they
-                stand now, adding or updating records and removing nothing. Any value changed by
-                hand in the ERP goes back to Commerce&apos;s.
+                {[
+                    `Copies Commerce's products, companies and websites into ${fill?.erpName} as they stand now.`,
+                    'Adds or updates records and removes nothing.',
+                    "Any value changed by hand in the ERP goes back to Commerce's.",
+                ]}
             </ConfirmActionDialog>
         </>
     );

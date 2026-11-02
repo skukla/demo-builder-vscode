@@ -27,14 +27,6 @@ jest.mock('@adobe/react-spectrum', () => ({
             {children}
         </div>
     ),
-    // Tagged so a test can count the LINES the dialog body renders — an extra
-    // empty one and a consequence rendered as bare text both read identically to
-    // getByText, and both are wrong.
-    Text: ({ children, ...props }: any) => (
-        <span data-testid="dialog-line" {...props}>
-            {children}
-        </span>
-    ),
 }));
 
 jest.mock('@/core/ui/components/ui/Modal', () => ({
@@ -91,29 +83,32 @@ describe('AppBuilderComponentRemoveDialog', () => {
         // The title is the question, amber (dialog design rules).
         expect(screen.getByRole('dialog', { name: 'Remove ERP sync?' })).toHaveAttribute('data-status', 'warning');
         // Says it leaves Adobe, not just this screen.
-        expect(screen.getByTestId('dialog-line')).toHaveTextContent(
+        expect(document.querySelector('.dialog-line')).toHaveTextContent(
             'Undeploys ERP sync from Adobe and removes it from this project.',
         );
     });
 
-    it('adds the extra consequence as its own sentence when one is supplied', () => {
+    it('adds each extra consequence as its own line when any are supplied', () => {
         // The mesh is the case that needs it: removing it also strips MESH_ENDPOINT
         // from the storefront config, which the generic warning does not say.
         render(
             <AppBuilderComponentRemoveDialog
                 isOpen
                 componentName="API Mesh"
-                consequence="Your storefront loses its API Mesh endpoint."
+                consequences={['Your storefront loses its API Mesh endpoint.', 'It also goes from the config.']}
                 onConfirm={jest.fn()}
                 onClose={jest.fn()}
             />
         );
 
-        const lines = screen.getAllByTestId('dialog-line');
-        expect(lines).toHaveLength(1);
-        expect(lines[0]).toHaveTextContent(
-            'Undeploys API Mesh from Adobe and removes it from this project. Your storefront loses its API Mesh endpoint.',
-        );
+        // Counted, not just found: an extra empty line and a consequence run into the first both
+        // read the same to getByText, and both are wrong.
+        const lines = Array.from(document.querySelectorAll('.dialog-rows > .dialog-line'));
+        expect(lines.map((line) => line.textContent)).toEqual([
+            'Undeploys API Mesh from Adobe and removes it from this project.',
+            'Your storefront loses its API Mesh endpoint.',
+            'It also goes from the config.',
+        ]);
     });
 
     it('ends the sentence cleanly when the teardown reaches no further than itself', () => {
@@ -128,8 +123,9 @@ describe('AppBuilderComponentRemoveDialog', () => {
             />
         );
 
-        expect(screen.getAllByTestId('dialog-line')).toHaveLength(1);
-        expect(screen.getByTestId('dialog-line').textContent).toMatch(/this project\.$/);
+        const lines = document.querySelectorAll('.dialog-rows > .dialog-line');
+        expect(lines).toHaveLength(1);
+        expect(lines[0].textContent).toMatch(/this project\.$/);
     });
 
     it('fires onConfirm (the consumer posts removeAppBuilderComponent) then closes on confirm', async () => {

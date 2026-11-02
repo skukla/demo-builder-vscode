@@ -40,13 +40,10 @@ function MissingDependencies({
         return null;
     }
     return (
-        // Body text in the warning colour, on a span so the line's own colour cannot win: this can
-        // fail a whole type, so it is not a muted footnote (dialog design rules).
-        <p className="dialog-line">
-            <span className="text-notice">
-                Not in this datapack: {missing.map(dataTypeLabel).join(', ')}. The types you selected
-                look these up by name, and one failed lookup fails the whole type.
-            </span>
+        // A problem note: one short line in the warning colour. This can fail a whole type, so it
+        // is not a muted footnote (dialog design rules).
+        <p className="dialog-problem text-notice">
+            Not in this datapack: {missing.map(dataTypeLabel).join(', ')}. One failed lookup fails a whole type.
         </p>
     );
 }

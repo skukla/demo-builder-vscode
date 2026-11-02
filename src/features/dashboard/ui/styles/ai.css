@@ -61,26 +61,14 @@
 
 /* Section heading (MCP servers / Skills) — the level ABOVE a group header.
    Both used to be 12px, differing only in colour, so "section > group > names"
-   existed in the comments and not on screen. */
-/* `!important` because this lands on Spectrum `Heading`/`Text`, which ship their
-   own single-class rules — a tie on specificity that source order decides, and
-   Spectrum wins it. The three utilities this replaced (.text-sm,
-   .font-semibold, .text-gray-800) all carried it for the same reason, as do
-   167 of the 238 font declarations in this file. Dropping it silently reverted
-   the heading to Spectrum's own size, which is how this shipped looking
-   unchanged the first time. */
+   existed in the comments and not on screen. No hairline under it: one rule per
+   dialog, under the title (dialog design rules).
+   `!important` is not needed: this lands on Spectrum `Heading`/`Text`, whose
+   rules sit in the vendor layer, which `@layer theme` outranks. */
 .ai-section-heading {
     font-size: 16px;
     font-weight: 700;
     color: var(--spectrum-global-color-gray-900);
-    /* Mirrors `.config-section-header` — the app's section convention, used by
-       ConfigureScreen: a title over a hairline rule. Matching it is what makes
-       this modal read as part of the same application.
-       (Ideally this would REUSE ConfigSection rather than restate its look, but
-       that component takes no test id and this list is queried by one; worth
-       doing when ConfigSection next earns a `data-testid` prop.) */
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
-    padding-bottom: 4px;
     margin: 0 0 4px 0;
 }
 
@@ -123,7 +111,7 @@
     margin: 12px 0 0 0;
 }
 
-/* Sticky group headers — deliberately QUIETER than the "Skills (N)"
+/* Sticky group headers — deliberately QUIETER than the "Skills"
    section heading above them: sentence case (caps read as emphasis regardless
    of size), small, muted. Hierarchy: section > group > names. They pin to the
    top of the scroll region while their group's skills scroll under. */

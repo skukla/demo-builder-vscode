@@ -68,7 +68,10 @@ it, it closes itself (the progress window); a dialog whose result offers Back to
 form (Import) stays until closed.
 
 **Four kinds of text.** Title; body text; label (small, muted, sentence case,
-never capitals); note (small, muted). Nothing else.
+never capitals); note (small, muted). Nothing else. A note about a problem is small and
+keeps its colour, and is one short line: what is wrong and what to do. Orange for a warning,
+red for a failure. Colour is for what is simple: a line that runs long or explains itself gets
+cut, not coloured (owner, 2026-11-02).
 
 **Spacing:** 4 between a label and its field, 8 between rows, 16 under the title,
 24 between groups.
@@ -84,14 +87,15 @@ dangerous main action is solid red. Never two buttons that do the same thing.
 - Facts, not commentary. Digits for numbers, with separators (1,284).
 - A warning is a word in the main sentence ("Permanently removes…"), never a
   muted footnote under it.
-- No bullet lists. A list of consequences is a few short sentences, every one a real
-  consequence (owner, 2026-11-02: one long sentence read worse), or sits on the row it
-  belongs to.
+- No bullet lists. A list of consequences is a few short sentences, each on its own line
+  8 apart and every one a real consequence (owner, 2026-11-02: one long sentence read worse,
+  and so did one block of ten lines), or sits on the row it belongs to.
 - A sentence names up to seven kinds in full; past that, three and "and 9 more
   data types".
 
 **Problems sit next to the thing they are about**, as a note line: a store another
-project claims gets its note on its own row, not a box above the list.
+project claims gets its note on its own row, not a box above the list; a check that failed
+sits under that step's title.
 
 **An Admin step is drawn one way everywhere**: Where (the menu path), Set (each
 value copyable), Then. In the setup guide, in a pack's setup step, and in a result
@@ -127,4 +131,5 @@ step.
 
 `core/ui/components/ui/Modal.tsx` (the title's status icon, the width steps and
 their easing, the button styles), `core/ui/components/ui/useDialogViewChange.ts` (a
-change of view), `core/ui/styles/modal.css` (pinning, text kinds, spacing).
+change of view), `core/ui/components/ui/DialogOutcome.tsx` (a state or a wait deep in a dialog's
+body reporting to its title and footer), `core/ui/styles/modal.css` (pinning, text kinds, spacing).

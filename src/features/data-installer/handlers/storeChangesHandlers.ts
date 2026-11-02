@@ -16,6 +16,9 @@
  * - `listPickable` (for `list-datapack-export-items` with Demo Builder's engine): one kind of the
  *   store's items to pick from, less what the pack being saved holds already.
  *
+ * - `countPickable` (for `count-datapack-export-items`): how many of each kind that list would read
+ *   from, for greying out a kind with none before it is clicked.
+ *
  * - `get-datapack-setup-step` / `check-datapack-setup-step` (step 12): the one Admin step a pack
  *   can leave (its root category is a root of its own, and only the SC can point the store at
  *   it), in the setup guide's step format, and its Check: the install's own read-only check
@@ -29,7 +32,7 @@
  * @module features/data-installer/handlers/storeChangesHandlers
  */
 
-import { PICKABLE_KINDS, type Selections, type StorePicks, isPickableKind, picksOf } from '../pickableKinds';
+import { KIND_NOUNS, PICKABLE_KINDS, type Selections, type StorePicks, isPickableKind, picksOf } from '../pickableKinds';
 import { layerFinder, projectCommerce, readPackItems } from '../services/buildDatapackEngine';
 import { selectedDatapackEngine } from '../services/dataInstallerConfig';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
@@ -37,7 +40,7 @@ import { writePackToStore } from '../services/datapackTransfer';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { checkRecordedRootStep, recordedRootStep, rootStepItem } from '../services/demoBuilderEngine/packRootCheck';
 import type { PackRootStep } from '../services/demoBuilderEngine/packRootStep';
-import { listPickable, saveStoreChanges } from '../services/demoBuilderEngine/saveStore';
+import { countPickable, listPickable, saveStoreChanges } from '../services/demoBuilderEngine/saveStore';
 import { type StoreChangesDeps, StoreChangesError } from '../services/demoBuilderEngine/storeAccess';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
 import { type DemoPackSave, demoPackSaveFor, recordDemoPackSave, recordOwnPackName } from '../services/demoPack';
@@ -254,7 +257,24 @@ export async function listPickableItems(context: HandlerContext, payload: (Store
     try {
         return { success: true, data: await listPickable(store.deps, kind, target.pack, target.source) };
     } catch (error) {
-        return failure(context, error, `The store's ${kind} could not be listed.`);
+        return failure(context, error, `The store's ${KIND_NOUNS[kind][1]} could not be listed.`);
+    }
+}
+
+/**
+ * How many of each kind the project's store has, so a screen can grey out a kind with none before
+ * it is clicked (the export door's `count-datapack-export-items`). Opened as `listPickableItems`
+ * opens, so it counts the website and root that list reads. Reads only.
+ */
+export async function countPickableItems(context: HandlerContext, payload: StoreChangesPayload | undefined): Promise<HandlerResponse> {
+    const store = await openProjectStore(context);
+    if ('response' in store) return store.response;
+    const target = await packToSave(store.project, payload);
+    if ('error' in target) return { success: false, error: target.error };
+    try {
+        return { success: true, data: await countPickable(store.deps, target.pack) };
+    } catch (error) {
+        return failure(context, error, "The store's items could not be counted.");
     }
 }
 

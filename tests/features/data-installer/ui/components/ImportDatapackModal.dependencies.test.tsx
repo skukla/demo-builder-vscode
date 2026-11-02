@@ -136,6 +136,9 @@ describe('dependencies the pack does not contain', () => {
         // either and the user needs to know before the import runs.
         expect(within(warning!).getByText(/attribute sets/i)).toBeInTheDocument();
         expect(within(warning!).getByText(/customer groups/i)).toBeInTheDocument();
+        // A problem note: small, orange, one short line, with the consequence kept.
+        expect(warning).toHaveClass('dialog-problem', 'text-notice');
+        expect(warning).toHaveTextContent('One failed lookup fails a whole type.');
     });
 
     it('warns without gating — the import stays startable', async () => {

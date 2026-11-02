@@ -412,7 +412,7 @@ describe('SetupGuideModal', () => {
         });
         expect(checkCalls()).toHaveLength(2);
         const notice = await screen.findByTestId('setup-guide-notice');
-        expect(notice).toHaveTextContent("Couldn't check Price scope");
+        expect(notice).toHaveTextContent("Couldn't check this step.");
         expect(notice).toHaveTextContent(NO_ANSWER);
         // The person never reads the transport's own words.
         expect(notice).not.toHaveTextContent('Request timeout');
@@ -426,11 +426,38 @@ describe('SetupGuideModal', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Check all steps' }));
         });
         expect(await screen.findByTestId('setup-guide-notice')).toHaveTextContent(
-            "Couldn't check Step A. Adobe sign-in required.",
+            "Couldn't check this step. Adobe sign-in required.",
         );
-        // A note line under the list and the buttons that act on it, not a box above the guide.
-        expect(screen.getByTestId('setup-guide-notice')).toHaveClass('dialog-note');
-        expect(screen.getByTestId('setup-guide-notice').closest('.setup-guide-side')).not.toBeNull();
+        // A red problem line under the step it is about, where the SC is reading. It was a muted
+        // note under the left list, which the SC could miss (owner, 2026-11-02).
+        const notice = screen.getByTestId('setup-guide-notice');
+        expect(notice).toHaveClass('dialog-problem', 'text-negative');
+        expect(notice.closest('[data-testid="setup-guide-step"]')).not.toBeNull();
+        expect(notice.closest('.setup-guide-side')).toBeNull();
+    });
+
+    it('says a failed check on its own step, and marks the others in the list', async () => {
+        answerChecks(async (_type, payload) => ((payload as { stepId: string }).stepId === 'b'
+            ? { success: false, error: 'Commerce did not answer.' }
+            : { success: true, data: { items: [] } }));
+        await renderGuide([
+            step({ id: 'a', title: 'Step A', checkable: true }),
+            step({ id: 'b', title: 'Step B', checkable: true }),
+        ]);
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Check all steps' }));
+        });
+
+        // On step A, which is fine: nothing to read in the pane, and B's row says it failed.
+        expect(screen.queryByTestId('setup-guide-notice')).toBeNull();
+        const railB = screen.getByRole('tab', { name: 'Step B' });
+        expect(railB.querySelector('[data-mark="failed"] .text-negative')).not.toBeNull();
+        expect(screen.getByRole('tab', { name: 'Step A' }).querySelector('[data-mark="failed"]')).toBeNull();
+
+        await act(async () => {
+            fireEvent.click(railB);
+        });
+        expect(screen.getByTestId('setup-guide-notice')).toHaveTextContent("Couldn't check this step. Commerce did not answer.");
     });
 
     // Busy until the extension answers, once Chrome's private window is likely up (owner, 2026-10-31).
@@ -468,6 +495,21 @@ describe('SetupGuideModal', () => {
         const notice = await screen.findByTestId('setup-guide-notice');
         expect(notice).toHaveTextContent("Couldn't save the step");
         expect(notice).toHaveTextContent('Adobe sign-in required.');
+        expect(notice).toHaveClass('dialog-problem', 'text-negative');
+    });
+
+    it('says a failed save on the step it was about, not on the next one the SC opens', async () => {
+        mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
+        await renderGuide(THREE);
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Mark as done' }));
+        });
+        await screen.findByTestId('setup-guide-notice');
+        const others = screen.getAllByRole('tab').filter((tab) => tab.getAttribute('aria-selected') !== 'true');
+        await act(async () => {
+            fireEvent.click(others[0]);
+        });
+        expect(screen.queryByTestId('setup-guide-notice')).toBeNull();
     });
 
     it('words a save that got no answer for a person, not with the transport error', async () => {
@@ -477,7 +519,7 @@ describe('SetupGuideModal', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Mark as done' }));
         });
         expect(await screen.findByTestId('setup-guide-notice')).toHaveTextContent(
-            "Demo Builder didn't get an answer in time. Try again.",
+            'No answer in time. Try again.',
         );
     });
 });

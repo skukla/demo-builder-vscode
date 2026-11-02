@@ -755,7 +755,11 @@ saved holds, counted in `inPackCount`), and `start_datapack_export` is the same 
 A project's datapack records the store that holds it (`installer` or `library`): creation, a copy
 and a project file install from that store, `configure_project` takes it as `datapack.store`, and
 `create_project_from_file` answers `datapackNote` when the pack named can't be read (the pack it
-was made from, or none, is installed instead) or a colleague's own pack is copied into your library first. Every removal path, `reset_datapack`
+was made from, or none, is installed instead) or a colleague's own pack is copied into your library first. `start_datapack_import` installs only the `dataTypes` named and
+what they need, and leaves the rest of the pack alone; `validate_datapack_import` and
+`preview_datapack_changes` decide it the same way. `reset_datapack` takes all the install record
+lists, whichever `dataTypes` it is sent (optional with this engine, needed for a pack the service
+installed), and its job reports the kinds on the record. Every removal path, `reset_datapack`
 included, keeps a category or set the pack made that holds something it did not, and the
 outcome's `note` says so ("Kept the set Racks: it holds 2 products you added."). A `reset_datapack`
 clears the project's datapack only when the removal finishes having taken everything out: one that
@@ -835,7 +839,9 @@ justrite_test_website. Remove it first, or install it there."), by `validate_dat
 
 No new tool. With Demo Builder's engine, `start_datapack_import` on a pack holding no `store_config`
 also applies its settings layer: the newest library pack named `<pack>-settings` that holds only
-`store_config`, written after the pack's data, on the pack's own record. `reset_datapack` takes both.
+`store_config`, written after the pack's data, on the pack's own record, when `dataTypes` names every
+kind the pack holds or `store_config`; otherwise the layer is left as it is and the note says so.
+`reset_datapack` takes both.
 `validate_datapack_import` refuses a layer's path a pack may not set, as the install does before any
 write; the allowed sections are `catalog/`, `sales/`, `checkout/`, `customer/`, `btob/` and
 `cataloginventory/`, and `web/`, `admin/` and any path ending in password, secret, token or key stay

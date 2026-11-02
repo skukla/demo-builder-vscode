@@ -3,19 +3,20 @@
  * Clicking a card opens that kind's items (`StoreItemsStage`); Back returns here with the count
  * updated.
  *
- * Whether the store has any of a kind is known only once a read of it has answered: the handler
- * lists one kind at a time, whole, and reading all ten up front was not chosen (products and
- * customers would each be read in full twice, on every open). So a card stays clickable until its
- * read has answered, and is greyed out from then on when that answer left nothing to pick.
+ * The cards show at once and stay clickable while the store's counts are read, and a count of none
+ * greys its card out without moving anything. Only none is said: a number could not be trusted,
+ * since a kind's list leaves off what the pack being saved holds, and cart rules and companies are
+ * counted across the whole store (`storeItems.ts`). So a card with a count above none stays
+ * clickable until its list has answered, and is greyed out from then on if nothing was left to pick.
  *
  * @module features/data-installer/ui/components/create-flow/stages/StoreKindsStage
  */
 
 import React from 'react';
-import { PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StorePicks } from '../../../../pickableKinds';
+import { PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks } from '../../../../pickableKinds';
 import { dataTypeLabel } from '../../../dataTypeLabel';
 import type { PackBeingSaved } from '../datapackFlowStages';
-import { hasNothingToPick, type KindReads } from '../useStorePicks';
+import { hasNothingToPick, isKnownEmpty, type KindReads } from '../useStorePicks';
 import { ChoiceCard } from '@/features/project-creation/ui/components/ChoiceCard';
 
 /** What a picked thing brings with it, on the cards where the SC needs to know. */
@@ -29,18 +30,20 @@ export interface StoreKindsStageProps {
     pack?: PackBeingSaved;
     picks: StorePicks;
     reads: KindReads;
+    counts: StoreKindCounts;
     onOpen: (kind: PickableKind) => void;
 }
 
 /** Why a card is greyed out, or how many are picked, or nothing. */
-function noteOf(page: StoreItemPage | null | undefined, picked: number): string | undefined {
+function noteOf(page: StoreItemPage | null | undefined, count: number | undefined, picked: number): string | undefined {
     if (page && hasNothingToPick(page)) {
         return page.inPackCount > 0 ? `${page.inPackCount.toLocaleString('en-US')} in the pack already` : 'None in this store';
     }
+    if (isKnownEmpty(page, count)) return 'None in this store';
     return picked > 0 ? `${picked.toLocaleString('en-US')} picked` : undefined;
 }
 
-export function StoreKindsStage({ pack, picks, reads, onOpen }: StoreKindsStageProps): React.ReactElement {
+export function StoreKindsStage({ pack, picks, reads, counts, onOpen }: StoreKindsStageProps): React.ReactElement {
     return (
         <>
             {pack ? (
@@ -49,18 +52,19 @@ export function StoreKindsStage({ pack, picks, reads, onOpen }: StoreKindsStageP
                 </p>
             ) : null}
             <span className="datapack-import-label">What goes in it</span>
-            <div className="datapack-flow-cards">
+            <div className="datapack-flow-cards datapack-flow-cards--kinds">
                 {PICKABLE_KINDS.map((kind) => {
                     const picked = picks[kind]?.length ?? 0;
+                    const empty = isKnownEmpty(reads[kind], counts[kind]);
                     return (
                         <ChoiceCard
                             key={kind}
                             variant="compact"
                             name={dataTypeLabel(kind)}
-                            description={BRINGS[kind]}
-                            note={noteOf(reads[kind], picked)}
+                            description={empty ? undefined : BRINGS[kind]}
+                            note={noteOf(reads[kind], counts[kind], picked)}
                             selected={picked > 0}
-                            disabled={hasNothingToPick(reads[kind])}
+                            disabled={empty}
                             onSelect={() => onOpen(kind)}
                         />
                     );

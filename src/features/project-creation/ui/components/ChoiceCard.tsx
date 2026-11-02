@@ -24,7 +24,8 @@ export interface ChoiceCardProps {
     description?: React.ReactNode;
     /**
      * `row` (default, wide), `tile` (square, for a gallery of many choices), or `compact` (as tall
-     * as its words and as wide as its grid cell, for a screen of a dozen or more short choices).
+     * as its words and as wide as its grid cell, for a screen of a dozen or more short choices,
+     * with the note in its bottom corner, so a note arriving moves nothing).
      */
     variant?: 'row' | 'tile' | 'compact';
     /** Selected pick: blue border/tint + a corner ✓. */

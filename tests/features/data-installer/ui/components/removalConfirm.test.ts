@@ -7,6 +7,7 @@ import type { DatapackRemovalChanges } from '@/features/data-installer/removalCh
 import {
     FRESH_CHOICE,
     confirmContent,
+    recordedRemovalWords,
     removalAnswer,
     removeLabel,
     toggleAlways,
@@ -104,5 +105,39 @@ describe('removeLabel', () => {
         expect(removeLabel({ kind: 'read-failed', reason: 'x' })).toBe('Remove anyway');
         expect(removeLabel({ kind: 'plain' })).toBe('Remove');
         expect(removeLabel({ kind: 'changes', sentence: 's', packName: 'p' })).toBe('Remove');
+    });
+});
+
+describe('recordedRemovalWords', () => {
+    const inWords = (kinds: string[]) => kinds.join(' and ');
+
+    it('names the kinds on the record, not the ticks', () => {
+        expect(recordedRemovalWords('Bodea', ['categories', 'products'], ['categories', 'products'], inWords)).toBe('Permanently deletes what Bodea installed: categories and products.');
+    });
+
+    it('says the ticks only choose what an import installs when they name less than what goes', () => {
+        expect(recordedRemovalWords('Bodea', ['categories', 'products'], ['categories'], inWords)).toBe(
+            'Permanently deletes what Bodea installed: categories and products. The ticked boxes only choose what Import installs.',
+        );
+    });
+
+    it('says nothing about ticks when none are ticked: nothing suggests a limit', () => {
+        expect(recordedRemovalWords('Bodea', ['categories'], [], inWords)).toBe('Permanently deletes what Bodea installed: categories.');
+    });
+
+    it('says nothing about ticks when they name more than what goes', () => {
+        expect(recordedRemovalWords('Bodea', ['categories'], ['categories', 'products'], inWords)).toBe('Permanently deletes what Bodea installed: categories.');
+    });
+
+    it('says settings go back, since nothing deletes them', () => {
+        expect(recordedRemovalWords('Bodea', ['categories', 'store_config'], [], inWords)).toBe('Permanently deletes what Bodea installed: categories. Puts back the store settings it changed.');
+    });
+
+    it('does not claim a deletion when settings are all it holds', () => {
+        expect(recordedRemovalWords('Bodea', ['store_config'], [], inWords)).toBe('Puts back the store settings Bodea changed.');
+    });
+
+    it('says so when the record lists nothing', () => {
+        expect(recordedRemovalWords('Bodea', [], ['categories'], inWords)).toBe('Bodea has nothing left in the store to delete.');
     });
 });

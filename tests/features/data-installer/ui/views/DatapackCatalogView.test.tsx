@@ -323,7 +323,7 @@ describe('DatapackCatalogView', () => {
             await screen.findByText('Import', { selector: '.modal-button' });
 
             expect(screen.getByRole('checkbox', { name: 'Products' })).toBeInTheDocument();
-            expect(screen.queryByRole('checkbox', { name: 'Giftcards' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Gift cards' })).not.toBeInTheDocument();
         });
 
         it('closes without closing the flyout behind it', async () => {

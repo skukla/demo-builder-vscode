@@ -30,7 +30,7 @@ import type { IntegrationCardModel } from './integrationCardModel';
 import { FIX_COPY, applyAllIds, checkableIds, footerButtons } from './setupGuideFooter';
 import { SetupGuideStep, StepList } from './SetupGuideStep';
 import { useGuideRun } from './useGuideRun';
-import { type CheckFailure, useSetupChecklist } from './useSetupChecklist';
+import { type SetupChecklistActions, useSetupChecklist } from './useSetupChecklist';
 import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -70,31 +70,14 @@ function firstOpen(items: SetupChecklistItem[], startAt?: string): number {
 }
 
 /**
- * What went wrong, as a note line under the list and the buttons that act on it: the steps the
- * last run could not check, by name, with why; or why a step could not be saved. Never the raw
- * transport text (`useSetupChecklist` words it).
+ * What went wrong on a step, in the words under its title: the last run could not check it and
+ * why, or it could not be saved and why. Never the raw transport text (`useSetupChecklist` words
+ * it). It sat under the left list, small and muted, away from what the SC was reading.
  */
-function GuideNote({
-    items,
-    failures,
-    error,
-}: {
-    items: SetupChecklistItem[];
-    failures: CheckFailure[];
-    error?: string;
-}): React.ReactElement | null {
-    let note: string | undefined;
-    if (failures.length > 0) {
-        const name = (id: string): string => {
-            const step = items.find((candidate) => candidate.id === id);
-            return step?.label ?? step?.title ?? id;
-        };
-        const reasons = [...new Set(failures.map((failure) => failure.reason))];
-        note = `Couldn't check ${failures.map((f) => name(f.stepId)).join(', ')}. ${reasons.join(' ')}`;
-    } else if (error) {
-        note = `Couldn't save the step. ${error}`;
-    }
-    return note ? <p className="dialog-note" data-testid="setup-guide-notice">{note}</p> : null;
+function problemOn(stepId: string | undefined, actions: SetupChecklistActions): string | undefined {
+    const failure = actions.failures.find((candidate) => candidate.stepId === stepId);
+    if (failure) return `Couldn't check this step. ${failure.reason}`;
+    return actions.error && actions.errorStepId === stepId ? `Couldn't save the step. ${actions.error}` : undefined;
 }
 
 /** The guide's body for one integration; mounted only while its guide is open. */
@@ -179,6 +162,7 @@ function Guide({
     // Apply all (AB-82): what "Prepare this store" did, from the one place the steps live.
     const ready = applyAllIds(items, item?.id);
     const applyAll = onAsk && ready.length > 0 ? () => run.start('apply', ready) : undefined;
+    const failedIds = new Set(actions.failures.map((failure) => failure.stepId));
     return (
         <Modal
             title={`Demo setup: ${model.name}`}
@@ -196,6 +180,7 @@ function Guide({
                         onSelect={setIndex}
                         checkingId={actions.progress?.stepId ?? run.workingId}
                         animateMarks={hasChecked}
+                        failedIds={failedIds}
                     />
                     <div className="setup-guide-list-actions">
                         {hasCheckable && (
@@ -219,7 +204,6 @@ function Guide({
                             </Button>
                         )}
                     </div>
-                    <GuideNote items={items} failures={actions.failures} error={actions.error} />
                 </div>
                 {/* Steps differ in length. Every step is laid in the same cell and only the
                     shown one is visible, so the pane is as tall as the TALLEST step from the
@@ -237,7 +221,7 @@ function Guide({
                                 checking={step.id === actions.progress?.stepId}
                                 onSet={(state) => actions.setStep(step.id, state)}
                                 integrationId={model.id}
-                                {...(step.id === item?.id ? { run } : {})}
+                                {...(step.id === item?.id ? { run, problem: problemOn(step.id, actions) } : {})}
                             />
                         ))}
                     </div>

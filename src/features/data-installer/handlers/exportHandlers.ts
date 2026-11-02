@@ -3,7 +3,8 @@
  *
  * The service's documented two-step flow, in two message types:
  * `list-datapack-export-items` (what is here to capture) and
- * `start-datapack-export` (capture it). Merged into `importHandlers` so the
+ * `start-datapack-export` (capture it), with `count-datapack-export-items` beside
+ * them for Demo Builder's engine (how many of each, before any is listed). Merged into `importHandlers` so the
  * panel and its tests keep one map to reach for; separate here because the
  * import spine was already at its size limit.
  *
@@ -43,7 +44,7 @@ import {
 } from '../services/dataInstallerExportClient';
 import { startAcoExport } from './acoExportHandler';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
-import { listPickableItems, saveFromStore } from './storeChangesHandlers';
+import { countPickableItems, listPickableItems, saveFromStore } from './storeChangesHandlers';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ErrorCode } from '@/types/errorCodes';
@@ -82,6 +83,21 @@ export const exportHandlers = defineHandlers({
                 code: ErrorCode.UNKNOWN,
             };
         }
+    },
+
+    /**
+     * How many of each pickable kind the store has, with Demo Builder's engine. The service's
+     * engine lists from the service, so a count read here could disagree with its list: it
+     * answers a refusal, and every card stays clickable.
+     */
+    'count-datapack-export-items': async (
+        context: HandlerContext,
+        payload?: ExportPayload,
+    ): Promise<HandlerResponse> => {
+        if (selectedDatapackEngine() === 'service') {
+            return { success: false, error: "The service's engine lists one kind at a time." };
+        }
+        return countPickableItems(context, payload);
     },
 
     /**

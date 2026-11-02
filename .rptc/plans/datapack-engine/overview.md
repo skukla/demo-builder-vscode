@@ -208,3 +208,20 @@ piece of UI it needs is already in the house vocabulary (`src/core/ui/components
   resumable if the window closes? (Answer before step 03 ships; first answer: record per
   item, so a re-run skips what exists.)
 - Which ACCS store to install into for live checks: a throwaway one is needed.
+
+## An import's ticks, and what a removal takes (2026-11-02)
+
+Proved by a failing test through the real engine: asking for categories alone still sent `POST
+products`, because `buildDatapackEngine` dropped the kinds asked for; and a removal's confirm named
+the ticks while the removal took all the record lists. Now an install, its dry run and its preview
+take the kinds asked for and what they need (`demoBuilderEngine/askedKinds.ts`); a kind left out is
+not installed, compared, removed or put back, and stays on the record. A removal takes the record, so
+the form says "Remove all data", the confirm names the record's kinds, and its check needs nothing of
+the pack (`validateRemoval`). The service's engine is unchanged. Finishing a removal now clears the
+project's pack only when it is the pack removed. Suites: `buildDatapackEngine-ticks.test.ts`,
+`buildDatapackEngine-removal.test.ts`, `importHandlers-removalScope.test.ts`.
+
+Not yet tried live. To prove it on the scratch store, with a pack holding categories and products:
+import with Categories ticked, check the store has no new products; import everything; import
+Categories again and check nothing changed; press Remove all data and read the confirm; check the
+store and the record are back to zero.

@@ -82,6 +82,11 @@ describe('dataTypeLabel', () => {
         expect(dataTypeLabel('loyalty_tier_rules')).toBe('Loyalty tier rules');
     });
 
+    /** A code with no underscore to split on, so casing alone would read "Giftcards". */
+    it('names gift cards in two words, leaving the code as it is', () => {
+        expect(dataTypeLabel('giftcards')).toBe('Gift cards');
+    });
+
     it('survives an empty or malformed code instead of throwing', () => {
         expect(dataTypeLabel('')).toBe('');
         expect(dataTypeLabel('__')).toBe('__');

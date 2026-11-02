@@ -45,10 +45,12 @@ interface StepListProps {
     checkingId?: string;
     /** Fade a mark in as it changes; off until a check has run, so opening does not animate. */
     animateMarks?: boolean;
+    /** The steps the last run could not check: each row's mark says so, wherever the SC is. */
+    failedIds?: ReadonlySet<string>;
 }
 
 /** A step's mark: a spinner while it is being checked, else its state's glyph. */
-function RailMark({ item, checking }: { item: SetupChecklistItem; checking: boolean }): React.ReactElement {
+function RailMark({ item, checking, failed }: { item: SetupChecklistItem; checking: boolean; failed: boolean }): React.ReactElement {
     if (checking) {
         return (
             <span className="setup-guide-rail-mark">
@@ -59,7 +61,7 @@ function RailMark({ item, checking }: { item: SetupChecklistItem; checking: bool
         );
     }
     // Keyed by what it shows, so a mark that changes is a new element and its fade-in plays.
-    const kind = markOf(item);
+    const kind = markOf(item, failed);
     return (
         <span key={kind} className="setup-guide-rail-mark" data-mark={kind} aria-hidden="true">
             {MARK_ICON[kind] ?? SKIPPED_MARK}
@@ -67,7 +69,7 @@ function RailMark({ item, checking }: { item: SetupChecklistItem; checking: bool
     );
 }
 
-type MarkKind = 'done' | 'ready' | 'unknown' | 'open' | 'dismissed';
+type MarkKind = 'done' | 'ready' | 'unknown' | 'open' | 'dismissed' | 'failed';
 
 /**
  * What a step's mark says (AB-82, the list is the at-a-glance summary Prepare's list was):
@@ -75,8 +77,10 @@ type MarkKind = 'done' | 'ready' | 'unknown' | 'open' | 'dismissed';
  * else a hollow circle for a step left to the SC, and a dash for one skipped. The hollow
  * circle was nothing until 2026-10-28 (release test row 4.19): Card payments and App
  * Management, the two by-hand steps, looked broken beside their ticked neighbours.
+ * A step the last run could not check says so first: the saved state is from before it.
  */
-function markOf(item: SetupChecklistItem): MarkKind {
+function markOf(item: SetupChecklistItem, failed: boolean): MarkKind {
+    if (failed) return 'failed';
     if (item.state === 'done') return 'done';
     if (item.state === 'dismissed') return 'dismissed';
     if (item.checkState === 'unknown') return 'unknown';
@@ -93,11 +97,12 @@ const MARK_ICON: Partial<Record<MarkKind, React.ReactElement>> = {
     done: <StatusIcon status="success" size="XS" />,
     ready: <Pending size="XS" UNSAFE_className="text-gray-600" />,
     unknown: <StatusIcon status="warning" size="XS" />,
+    failed: <StatusIcon status="error" size="XS" />,
     open: <Circle size="XS" UNSAFE_className="text-gray-500" />,
 };
 
 /** Every step down the left by its short label, done ones checked; the shown one highlighted. */
-export function StepList({ items, index, onSelect, checkingId, animateMarks }: StepListProps): React.ReactElement {
+export function StepList({ items, index, onSelect, checkingId, animateMarks, failedIds }: StepListProps): React.ReactElement {
     return (
         <ol
             className="setup-guide-rail"
@@ -120,7 +125,7 @@ export function StepList({ items, index, onSelect, checkingId, animateMarks }: S
                         )}
                         onClick={() => onSelect(i)}
                     >
-                        <RailMark item={item} checking={item.id === checkingId} />
+                        <RailMark item={item} checking={item.id === checkingId} failed={failedIds?.has(item.id) === true} />
                         <span className="setup-guide-rail-title">{item.label ?? item.title}</span>
                     </button>
                 </li>
@@ -145,6 +150,8 @@ export interface StepProps {
     run?: GuideRun;
     /** Check all steps is checking this step now: its banner shows the spinner. */
     checking?: boolean;
+    /** What went wrong on this step: a check that failed, or a save. On the shown step only. */
+    problem?: string;
 }
 
 /** The quiet link's words for each state: what pressing it will do. */
@@ -185,7 +192,11 @@ export function SetupGuideStep(props: StepProps): React.ReactElement {
             data-testid={shown ? 'setup-guide-step' : undefined}
             aria-hidden={shown ? undefined : true}
         >
-            <StepHeader item={item} integrationId={props.integrationId} run={props.run} checking={props.checking} />
+            {/* The header and the problem are one part of the step, so 8 between them. */}
+            <div className="dialog-rows">
+                <StepHeader item={item} integrationId={props.integrationId} run={props.run} checking={props.checking} />
+                {props.problem && <p className="dialog-problem text-negative" data-testid="setup-guide-notice">{props.problem}</p>}
+            </div>
             <SetupStepFacts item={item} />
             <SkipOrReopen {...props} />
         </div>

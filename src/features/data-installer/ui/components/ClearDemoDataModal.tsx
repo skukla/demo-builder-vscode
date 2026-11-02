@@ -51,13 +51,9 @@ const NONE: ReadonlySet<string> = new Set();
 /** Orders an ERP integration leaves open still need saying, nothing else to clear or not: the SC acts on that line. */
 const leavesErpOrders = (preview: WipePreview): boolean => preview.erp?.held !== undefined && preview.erp.orders.count > 0;
 
-/** What stopped the list, where the list would land. On a span, so the line's own colour cannot win. */
+/** What stopped the list, where the list would land: a problem note, small and in its colour. */
 function ProblemLine({ failed, children }: { failed?: boolean; children: React.ReactNode }) {
-    return (
-        <p className="dialog-line">
-            <span className={failed ? 'text-negative' : 'text-notice'}>{children}</span>
-        </p>
-    );
+    return <p className={failed ? 'dialog-problem text-negative' : 'dialog-problem text-notice'}>{children}</p>;
 }
 
 function PreviewView({ answer, loading, hasTicks }: { answer: DemoDataCheck | null; loading: boolean; hasTicks: boolean }) {

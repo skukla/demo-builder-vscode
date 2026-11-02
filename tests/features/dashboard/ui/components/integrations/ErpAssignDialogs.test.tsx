@@ -66,7 +66,7 @@ describe('ErpAssignDialogs', () => {
         const ops = renderDialogs();
         act(() => controls.confirmUndoAssignment(TARGET));
         expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.undoTitle('Accuform ERP'))).toBeInTheDocument();
-        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.undoBody)).toBeInTheDocument();
+        for (const line of ERP_ASSIGN_DIALOG_COPY.undoBody) expect(screen.getByText(line)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: ERP_ASSIGN_DIALOG_COPY.undoAction }));
         expect(ops.start).toHaveBeenCalledWith({
             id: 'erp-integration',
@@ -103,7 +103,7 @@ describe('ErpAssignDialogs', () => {
 
         act(() => controls.changeSets('erp-integration', 'add'));
         expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.addSetsTitle)).toBeInTheDocument();
-        expect(screen.getByText(ERP_ASSIGN_DIALOG_COPY.addSetsBody)).toBeInTheDocument();
+        for (const line of ERP_ASSIGN_DIALOG_COPY.addSetsBody) expect(screen.getByText(line)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: ERP_ASSIGN_DIALOG_COPY.addSetsAction }).className).toContain('modal-button-primary');
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
