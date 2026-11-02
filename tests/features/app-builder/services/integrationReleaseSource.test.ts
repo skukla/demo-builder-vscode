@@ -6,7 +6,7 @@
  */
 
 import { execSync } from 'child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import {
@@ -161,5 +161,103 @@ describe('a repository someone else owns', () => {
         expect(checked).toMatchObject({ status: 'available', to: head });
         expect(updated).toMatchObject({ status: 'updated', to: head });
         expect(read).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The old updater replaced a mesh's folder with a release archive, which has no `.git`. With
+ * no history the folder can be neither compared nor moved, so it would never be offered
+ * anything. It is cloned again, and the old folder is kept, because with no history there is
+ * no telling whether a file in it was the SC's own edit.
+ */
+describe('a folder with no git history', () => {
+    let project: string;
+    let folder: string;
+    let run2: GitRunner;
+
+    beforeEach(() => {
+        project = join(root, 'project');
+        folder = join(project, 'components', 'eds-accs-mesh');
+        mkdirSync(folder, { recursive: true });
+        writeFileSync(join(folder, 'one'), 'an edit we cannot recognise');
+        writeFileSync(join(folder, '.env'), 'KEPT=1');
+        // A clone from GitHub, answered by the local upstream.
+        const config = join(root, 'gitconfig');
+        writeFileSync(
+            config,
+            `[url "${upstream}"]\n\tinsteadOf = https://github.com/skukla/eds-accs-mesh.git\n`,
+        );
+        run2 = async (command, cwd) => {
+            try {
+                const stdout = execSync(command, {
+                    cwd,
+                    env: { ...cleanEnv(), GIT_CONFIG_GLOBAL: config },
+                    stdio: 'pipe',
+                }).toString();
+                return { code: 0, stdout, stderr: '' };
+            } catch (error) {
+                const failure = error as { status?: number; stderr?: Buffer };
+                return { code: failure.status ?? 1, stdout: '', stderr: failure.stderr?.toString() ?? '' };
+            }
+        };
+    });
+
+    const URL = 'https://github.com/skukla/eds-accs-mesh';
+
+    it('is offered the newest release', async () => {
+        const checked = await checkComponentSource(folder, 'main', run2, reads(release('v1.1.0')), URL);
+
+        expect(checked).toMatchObject({ status: 'available', version: '1.1.0' });
+    });
+
+    it('is offered nothing while there is no release', async () => {
+        const checked = await checkComponentSource(folder, 'main', run2, reads(null), URL);
+
+        expect(checked.status).toBe('current');
+    });
+
+    it('is cloned again at the release, keeping the old folder and the settings', async () => {
+        const tagged = commit('released');
+        git('tag v1.1.0', upstream);
+        commit('pushed-after-the-release');
+
+        const updated = await updateComponentSource(folder, 'main', run2, reads(release('v1.1.0')), URL);
+
+        const kept = join(project, 'component-backups', 'eds-accs-mesh-before-1.1.0');
+        expect(updated).toMatchObject({ status: 'updated', to: tagged, version: '1.1.0' });
+        expect(updated.detail).toContain(kept);
+        expect(git('rev-parse HEAD', folder)).toBe(tagged);
+        expect(readFileSync(join(folder, '.env'), 'utf8')).toBe('KEPT=1');
+        expect(readFileSync(join(kept, 'one'), 'utf8')).toBe('an edit we cannot recognise');
+    });
+
+    it('puts the folder back when the clone fails', async () => {
+        const updated = await updateComponentSource(folder, 'main', run2, reads(release('v9.9.9')), URL);
+
+        expect(updated.status).toBe('failed');
+        expect(readFileSync(join(folder, 'one'), 'utf8')).toBe('an edit we cannot recognise');
+        expect(existsSync(join(project, 'component-backups', 'eds-accs-mesh-before-9.9.9'))).toBe(false);
+    });
+
+    it('is left alone when it is not one of our repositories', async () => {
+        const read = reads(release('v1.1.0'));
+        const foreign = 'https://github.com/adobe/commerce-integration-starter-kit';
+
+        const checked = await checkComponentSource(folder, 'main', run2, read, foreign);
+
+        expect(checked.status).toBe('unknown');
+        expect(read).not.toHaveBeenCalled();
+    });
+
+    // A project folder can sit inside a repository of its own. Asking git from a folder with
+    // no `.git` would then answer about that outer repository.
+    it('never reads an outer repository as its own', async () => {
+        git(`init -q "${project}"`, root);
+        git('remote add origin https://github.com/skukla/demo-erp.git', project);
+        const read = reads(release('v1.1.0'));
+
+        await checkComponentSource(folder, 'main', run2, read, URL);
+
+        expect(read).toHaveBeenCalledWith('skukla/eds-accs-mesh');
     });
 });

@@ -298,9 +298,9 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      */
     readCloneCommit?: (componentPath: string) => Promise<string | undefined>;
     /** Fast-forward a clone to its branch (integrationSourceUpdate); update only. */
-    fetchComponentSource?: (componentPath: string, branch: string) => Promise<SourceUpdateResult>;
+    fetchComponentSource?: (componentPath: string, branch: string, repoUrl?: string) => Promise<SourceUpdateResult>;
     /** Whether a clone's branch has newer commits (integrationSourceUpdate); update check only. */
-    checkComponentSource?: (componentPath: string, branch: string) => Promise<UpdateCheckResult>;
+    checkComponentSource?: (componentPath: string, branch: string, repoUrl?: string) => Promise<UpdateCheckResult>;
     /** Reads a custom integration's Node range at the add door (PR-1a step 8); absent = Demo Builder's Node. */
     resolveCustomIntegrationNode?: CustomIntegrationNodeResolver;
     /** npm install (and build) in an existing clone, on `nodeVersion`; update only. */

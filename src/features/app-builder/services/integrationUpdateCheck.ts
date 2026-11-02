@@ -22,7 +22,7 @@ import { clearUpdateAvailable, runsOlderCode } from '@/core/state/appBuilderComp
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
 export interface UpdateCheckDeps {
-    checkClone: (componentPath: string, branch: string) => Promise<UpdateCheckResult>;
+    checkClone: (componentPath: string, branch: string, repoUrl?: string) => Promise<UpdateCheckResult>;
     readAppVersion?: (componentPath: string) => Promise<string | undefined>;
     /** ISO timestamp source; injectable for tests. */
     now?: () => string;
@@ -44,11 +44,17 @@ export interface IntegrationUpdateCheck {
 type UpdateAvailable = NonNullable<AppBuilderComponentState['updateAvailable']>;
 
 /** Deployed integrations, systems and meshes that have a clone to compare. */
-function candidates(project: Project): Array<{ id: string; state: AppBuilderComponentState; path: string }> {
+function candidates(project: Project): Array<{
+    id: string;
+    state: AppBuilderComponentState;
+    path: string;
+    repoUrl?: string;
+}> {
     return Object.entries(project.appBuilderComponents ?? {}).flatMap(([id, state]) => {
-        const path = project.componentInstances?.[id]?.path;
+        const instance = project.componentInstances?.[id];
+        const path = instance?.path;
         const eligible = state.status === 'deployed' && Boolean(path);
-        return eligible && path ? [{ id, state, path }] : [];
+        return eligible && path ? [{ id, state, path, repoUrl: instance?.repoUrl }] : [];
     });
 }
 
@@ -74,25 +80,24 @@ function sameAnswer(a: UpdateAvailable | undefined, b: UpdateAvailable | undefin
 }
 
 async function checkOne(
-    id: string,
-    state: AppBuilderComponentState,
-    path: string,
+    { id, state, path, repoUrl }: ReturnType<typeof candidates>[number],
     deps: UpdateCheckDeps,
 ): Promise<{ report: IntegrationUpdateReport; changed: boolean }> {
     const [clone, version] = await Promise.all([
-        deps.checkClone(path, state.source.branch ?? 'main'),
+        deps.checkClone(path, state.source.branch ?? 'main', repoUrl),
         versionAhead(state, path, deps),
     ]);
     if (clone.status === 'unknown' && !version) {
         return { report: { id, available: Boolean(state.updateAvailable), detail: clone.detail }, changed: false };
     }
     const commit = newerCommit(clone, state);
+    const release = clone.status === 'available' ? clone.version : undefined;
     const next: UpdateAvailable | undefined =
-        commit || version
+        commit || version || release
             ? {
                   ...(commit ? { commit } : {}),
                   ...(version ? { version } : {}),
-                  ...(clone.status === 'available' && clone.version ? { release: clone.version } : {}),
+                  ...(release ? { release } : {}),
                   checkedAt: (deps.now ?? (() => new Date().toISOString()))(),
               }
             : undefined;
@@ -135,7 +140,7 @@ export async function checkIntegrationUpdates(
     deps: UpdateCheckDeps,
 ): Promise<IntegrationUpdateCheck> {
     const results = await Promise.all(
-        candidates(project).map(({ id, state, path }) => checkOne(id, state, path, deps)),
+        candidates(project).map((candidate) => checkOne(candidate, deps)),
     );
     return {
         reports: results.map((result) => result.report),

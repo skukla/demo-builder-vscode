@@ -9,6 +9,8 @@
  * @module features/app-builder/services/integrationReleaseSource
  */
 
+import { promises as fsPromises } from 'fs';
+import * as path from 'path';
 import {
     checkCloneForUpdate,
     fastForwardClone,
@@ -30,6 +32,24 @@ export type ComponentReleaseReader = (repo: string) => Promise<ComponentRelease 
 
 type UpdateTarget = { ref: string; release?: ComponentRelease } | { unreleased: true };
 
+/** Settings the deploy reads and that no repository holds. */
+const LOCAL_SETTINGS = ['.env', '.env.local'];
+
+async function exists(target: string): Promise<boolean> {
+    try {
+        await fsPromises.access(target);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Whether the folder is a clone of its own. Asked of the disk, not of git: from a folder with
+ * no `.git`, git answers about any repository the project sits inside.
+ */
+const hasOwnHistory = (componentPath: string): Promise<boolean> => exists(path.join(componentPath, '.git'));
+
 async function targetOf(
     componentPath: string,
     branch: string,
@@ -44,13 +64,62 @@ async function targetOf(
     return release ? { ref: `refs/tags/${release.tag}`, release } : { unreleased: true };
 }
 
+/**
+ * Clone a folder with no history again at `release`, keeping the old folder beside the
+ * project's components (anything inside `components/` would be read as a component). With no
+ * history there is no telling whether a file in it was the SC's own edit, so it is never deleted.
+ */
+async function recloneAtRelease(
+    componentPath: string,
+    repo: string,
+    release: ComponentRelease,
+    run: GitRunner,
+): Promise<SourceUpdateResult> {
+    const componentsDir = path.dirname(componentPath);
+    const backups = path.join(path.dirname(componentsDir), 'component-backups');
+    const kept = path.join(backups, `${path.basename(componentPath)}-before-${release.version}`);
+    if (await exists(kept)) {
+        return { status: 'failed', detail: `An earlier copy is already kept at ${kept}. Move it, then update again.` };
+    }
+    await fsPromises.mkdir(backups, { recursive: true });
+    await fsPromises.rename(componentPath, kept);
+    const url = `https://github.com/${repo}.git`;
+    const cloned = await run(`git clone --branch "${release.tag}" "${url}" "${componentPath}"`, componentsDir);
+    if (cloned.code !== 0) {
+        await fsPromises.rm(componentPath, { recursive: true, force: true });
+        await fsPromises.rename(kept, componentPath);
+        return {
+            status: 'failed',
+            detail: `Could not clone version ${release.version}: ${cloned.stderr.trim() || 'git gave no reason'}.`,
+        };
+    }
+    for (const name of LOCAL_SETTINGS) {
+        if (await exists(path.join(kept, name))) {
+            await fsPromises.copyFile(path.join(kept, name), path.join(componentPath, name));
+        }
+    }
+    return {
+        status: 'updated',
+        detail: `Updated to version ${release.version}. The old folder is kept at ${kept}.`,
+        to: await readCloneCommit(componentPath, run),
+        version: release.version,
+    };
+}
+
 /** Whether there is newer code to move to. Changes nothing the SC can see. */
 export async function checkComponentSource(
     componentPath: string,
     branch: string,
     run: GitRunner,
     readRelease: ComponentReleaseReader,
+    repoUrl?: string,
 ): Promise<UpdateCheckResult> {
+    if (!(await hasOwnHistory(componentPath))) {
+        const repo = releasedRepoOf(repoUrl);
+        if (!repo) return { status: 'unknown', detail: 'This folder has no git history to compare.' };
+        const release = await readRelease(repo);
+        return release ? { status: 'available', version: release.version } : { status: 'current' };
+    }
     const target = await targetOf(componentPath, branch, run, readRelease);
     if ('unreleased' in target) {
         const commit = await readCloneCommit(componentPath, run);
@@ -66,7 +135,15 @@ export async function updateComponentSource(
     branch: string,
     run: GitRunner,
     readRelease: ComponentReleaseReader,
+    repoUrl?: string,
 ): Promise<SourceUpdateResult> {
+    if (!(await hasOwnHistory(componentPath))) {
+        const repo = releasedRepoOf(repoUrl);
+        const release = repo ? await readRelease(repo) : null;
+        return repo && release
+            ? recloneAtRelease(componentPath, repo, release, run)
+            : { status: 'failed', detail: 'This folder has no git history, and there is no release to replace it with.' };
+    }
     const target = await targetOf(componentPath, branch, run, readRelease);
     if ('unreleased' in target) {
         const commit = await readCloneCommit(componentPath, run);

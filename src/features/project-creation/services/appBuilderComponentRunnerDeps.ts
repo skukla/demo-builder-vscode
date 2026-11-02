@@ -215,10 +215,10 @@ export function buildDefaultRunnerDeps(
         // add path runs (ComponentManager, with the entry's Node version).
         // The commit every successful deploy records as shipped (AB-71).
         readCloneCommit: (componentPath) => readCloneCommit(componentPath, gitIn),
-        fetchComponentSource: (componentPath, branch) =>
-            updateComponentSource(componentPath, branch, gitIn, readRelease),
-        checkComponentSource: (componentPath, branch) =>
-            checkComponentSource(componentPath, branch, gitIn, readRelease),
+        fetchComponentSource: (componentPath, branch, repoUrl) =>
+            updateComponentSource(componentPath, branch, gitIn, readRelease, repoUrl),
+        checkComponentSource: (componentPath, branch, repoUrl) =>
+            checkComponentSource(componentPath, branch, gitIn, readRelease, repoUrl),
         installComponentDependencies: (componentPath, definition, nodeVersion) =>
             ctx.componentManager.installNpmDependencies(componentPath, definition, nodeVersion),
         // The app's own uninstall API ahead of a remove (the ERP undo and wipe: erpRunnerDeps):

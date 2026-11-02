@@ -42,7 +42,7 @@ describe('checkIntegrationUpdates', () => {
         const result = await checkIntegrationUpdates(p, d);
 
         expect(result).toEqual({ reports: [{ id: 'erp', available: true }], changed: true });
-        expect(d.checkClone).toHaveBeenCalledWith('/p/components/erp', 'release');
+        expect(d.checkClone).toHaveBeenCalledWith('/p/components/erp', 'release', undefined);
         expect(p.appBuilderComponents?.erp?.updateAvailable).toEqual({ commit: 'abc123', checkedAt: NOW });
     });
 
@@ -200,6 +200,19 @@ describe('a release', () => {
         await checkIntegrationUpdates(p, d);
 
         expect(p.appBuilderComponents?.erp?.updateAvailable).toBeUndefined();
+    });
+
+    // A folder with no git history has no commit to name, only a release.
+    it('is offered with no commit to name', async () => {
+        const p = project({ erp: component() });
+        const d = deps({ '/p/components/erp': { status: 'available', version: '1.2.0' } });
+
+        await checkIntegrationUpdates(p, d);
+
+        expect(p.appBuilderComponents?.erp?.updateAvailable).toEqual({
+            release: '1.2.0',
+            checkedAt: NOW,
+        });
     });
 
     it('counts as a change when only the release differs', async () => {

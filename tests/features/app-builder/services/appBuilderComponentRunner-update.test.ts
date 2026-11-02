@@ -116,7 +116,7 @@ describe('updateAppBuilderComponent', () => {
         const result = await updateAppBuilderComponent(project, ENTRY.id, deps);
 
         expect(result).toEqual({ success: true, detail: UPDATED.detail });
-        expect(deps.fetchComponentSource).toHaveBeenCalledWith(PATH, 'main');
+        expect(deps.fetchComponentSource).toHaveBeenCalledWith(PATH, 'main', undefined);
         expect(deps.installComponentDependencies).toHaveBeenCalledWith(
             PATH,
             expect.objectContaining({
@@ -368,7 +368,7 @@ describe('updateAppBuilderComponent', () => {
 
         await updateAppBuilderComponent(project, ENTRY.id, deps);
 
-        expect(deps.fetchComponentSource).toHaveBeenCalledWith(PATH, 'main');
+        expect(deps.fetchComponentSource).toHaveBeenCalledWith(PATH, 'main', undefined);
     });
 
     it('refuses an unknown integration, and a caller that wired no update', async () => {

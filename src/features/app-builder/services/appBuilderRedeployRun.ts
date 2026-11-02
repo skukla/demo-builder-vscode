@@ -161,6 +161,7 @@ export async function updateAppBuilderComponent(
     const fetched = await deps.fetchComponentSource(
         componentPath,
         existing.source.branch ?? 'main',
+        project.componentInstances?.[id]?.repoUrl,
     );
     if (fetched.status === 'refused' || fetched.status === 'failed') {
         return { success: false, error: fetched.detail };

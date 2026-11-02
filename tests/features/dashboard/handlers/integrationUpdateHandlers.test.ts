@@ -150,7 +150,7 @@ describe('handleCheckIntegrationUpdates', () => {
                 ],
             },
         });
-        expect(mockCheckComponentSource).toHaveBeenCalledWith('/p/demo-erp', 'main');
+        expect(mockCheckComponentSource).toHaveBeenCalledWith('/p/demo-erp', 'main', undefined);
         expect(mockProject.appBuilderComponents?.['demo-erp']?.updateAvailable?.commit).toBe('abc123');
         expect(mockContext.stateManager.saveProject).toHaveBeenCalledWith(mockProject);
         expect(mockSendSnapshot).toHaveBeenCalledTimes(1);
