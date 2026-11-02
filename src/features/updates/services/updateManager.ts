@@ -229,6 +229,7 @@ export class UpdateManager {
 
             return {
                 version,
+                tag: release.tag_name,
                 downloadUrl,
                 releaseNotes: release.body || 'No release notes available',
                 publishedAt: release.published_at,

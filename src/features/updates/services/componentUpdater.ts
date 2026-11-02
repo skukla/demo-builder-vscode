@@ -1,13 +1,17 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { flattenArchiveRoot } from './archiveRoot';
 import { ENV_VAR_RENAMES, mergeEnvContent, parseEnvFile } from './envMerge';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { nodeForInstall } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import {
+    moveCloneToRelease,
+    type ComponentRelease,
+} from '@/features/app-builder/services/integrationReleaseSource';
+import type { SourceUpdateResult } from '@/features/app-builder/services/integrationSourceUpdate';
 import type { ComponentInstance, Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
@@ -22,27 +26,53 @@ import { parseJSON } from '@/types/typeGuards';
  */
 const BUILD_OUTPUT_LOG_LIMIT = 500;
 
+/** Moves a component's folder to a release. Its real-git behaviour is pinned in integrationReleaseSource.test.ts. */
+export type MoveToRelease = (
+    componentPath: string,
+    repoUrl: string | undefined,
+    release: ComponentRelease,
+) => Promise<SourceUpdateResult>;
+
+/**
+ * A move that stopped before changing anything: the SC's own edits, or GitHub out of reach. There
+ * is nothing to roll back, and rolling back would cost the folder its dependencies for nothing.
+ */
+class NothingMoved extends Error {}
+
 export class ComponentUpdater {
     private logger: Logger;
     private extensionPath: string;
     private updatingComponents = new Set<string>(); // Concurrent update lock
+    private moveToRelease: MoveToRelease;
 
     /** ADR-015: the executor arrives with the logger and extension path. */
     constructor(
         logger: Logger,
         extensionPath: string,
         private commandManager: CommandExecutor,
+        moveToRelease?: MoveToRelease,
     ) {
         this.logger = logger;
         this.extensionPath = extensionPath;
+        this.moveToRelease =
+            moveToRelease ??
+            ((componentPath, repoUrl, release) =>
+                moveCloneToRelease(componentPath, repoUrl, release, (command, cwd) =>
+                    this.commandManager.execute(command, {
+                        cwd,
+                        enhancePath: true,
+                        shell: DEFAULT_SHELL,
+                        timeout: TIMEOUTS.LONG,
+                    }),
+                ));
     }
 
     /**
    * Update a component to a specific version with automatic rollback on failure
    * - Prevents concurrent updates to same component
    * - ALWAYS creates snapshot before update (excludes node_modules for speed - can be reinstalled)
-   * - Downloads and extracts new version
-   * - Verifies component structure post-extraction
+   * - Moves the folder to the release, refusing if it holds the SC's own edits
+   * - Verifies component structure after the move
    * - Merges .env files (preserves user config)
    * - Uses programmatic write suppression to avoid false notifications
    * - Automatically rolls back on ANY failure
@@ -51,7 +81,7 @@ export class ComponentUpdater {
     async updateComponent(
         project: Project,
         componentId: string,
-        downloadUrl: string,
+        tag: string,
         newVersion: string,
     ): Promise<void> {
         const component = project.componentInstances?.[componentId];
@@ -97,11 +127,14 @@ export class ComponentUpdater {
                 // 2. Preserve .env file(s) for merge
                 const envFiles = await this.backupEnvFiles(component.path);
 
-                // 3. Remove old component directory
-                await fs.rm(component.path, { recursive: true, force: true });
-
-                // 4. Download and extract new version
-                await this.downloadAndExtract(downloadUrl, component.path, componentId);
+                // 3. Move to the release. It keeps what the SC changed: edits refuse the move.
+                const moved = await this.moveToRelease(component.path, component.repoUrl, {
+                    tag,
+                    version: newVersion,
+                });
+                if (moved.status === 'refused' || moved.status === 'failed') {
+                    throw new NothingMoved(moved.detail);
+                }
 
                 // 5. VERIFY component structure (critical files exist)
                 await this.verifyComponentStructure(component.path, componentId);
@@ -135,6 +168,11 @@ export class ComponentUpdater {
                 this.logger.debug('[Updates] Removed snapshot (update successful)');
 
             } catch (error) {
+                if (error instanceof NothingMoved) {
+                    await fs.rm(snapshotPath, { recursive: true, force: true });
+                    throw new Error(error.message);
+                }
+
                 // AUTOMATIC ROLLBACK: Restore snapshot on ANY failure
                 this.logger.error('[Updates] Update failed, rolling back to snapshot', error as Error);
         
@@ -206,23 +244,11 @@ export class ComponentUpdater {
 
         // Timeout errors - use typed error detection
         if (transience.kind === 'timeout') {
-            return 'Update failed: Download timed out. Please try again with a better connection.';
+            return 'Update failed: GitHub timed out. Please try again with a better connection.';
         }
 
-        // HTTP errors - still use string detection for specific status codes
-        if (message.includes('http 404')) {
-            return 'Update failed: Release not found on GitHub. The version may have been removed.';
-        }
-        if (message.includes('http 403')) {
-            return 'Update failed: Access denied. GitHub rate limit may be exceeded.';
-        }
-        if (message.includes('http')) {
-            return `Update failed: Server error (${error.message}). Please try again later.`;
-        }
-
-        // Extraction/verification errors
-        if (message.includes('verification failed') || message.includes('missing after extraction')) {
-            return 'Update failed: Downloaded component is incomplete or corrupted. Please try again.';
+        if (message.includes('verification failed')) {
+            return 'Update failed: The new version is incomplete. Please try again.';
         }
 
         // The message is THIS EXTENSION'S OWN, not a library's, which is why it is
@@ -238,7 +264,7 @@ export class ComponentUpdater {
     }
 
     /**
-   * Verify component structure after extraction
+   * Verify component structure after the move
    * Ensures critical files exist before marking update as successful
    */
     private async verifyComponentStructure(componentPath: string, componentId: string): Promise<void> {
@@ -254,7 +280,7 @@ export class ComponentUpdater {
                 await fs.access(filePath);
                 this.logger.debug(`[Updates] ✓ Verified ${file} exists`);
             } catch {
-                throw new Error(`Component verification failed: ${file} missing after extraction`);
+                throw new Error(`Component verification failed: ${file} missing after the update`);
             }
         }
     
@@ -290,8 +316,8 @@ export class ComponentUpdater {
     /**
      * Run post-update setup: install dependencies and optionally build
      *
-     * After extracting a new component version from a zipball, node_modules is missing.
-     * This method always installs dependencies (unless skipNpmInstall is set), then
+     * A new version can need different dependencies, so this always installs them
+     * (unless skipNpmInstall is set), then
      * runs the build script if one is configured.
      */
     private async runPostUpdateBuild(componentPath: string, componentId: string): Promise<void> {
@@ -304,7 +330,7 @@ export class ComponentUpdater {
         // No package.json check here: verifyComponentStructure has already required
         // one, so a guard on it could never be false when this runs.
         try {
-            // 1. Install dependencies (always after zipball extraction, unless skipped)
+            // 1. Install dependencies (unless skipped)
             if (!skipNpmInstall) {
                 this.logger.debug(`[Updates] Installing dependencies for ${componentId}`);
                 const installResult = await this.commandManager.execute('npm install --no-fund', {
@@ -366,7 +392,7 @@ export class ComponentUpdater {
     }
 
     /**
-   * Backup .env files before component removal (simplified - just .env and .env.local)
+   * Backup .env files before the move (simplified - just .env and .env.local)
    */
     private async backupEnvFiles(componentPath: string): Promise<Map<string, string>> {
         const envFiles = new Map<string, string>();
@@ -384,85 +410,6 @@ export class ComponentUpdater {
         }
     
         return envFiles;
-    }
-
-    /**
-   * Download and extract component archive from GitHub
-   * Uses existing command execution and timeout patterns
-   */
-    private async downloadAndExtract(
-        downloadUrl: string,
-        targetPath: string,
-        componentId: string,
-    ): Promise<void> {
-        // SECURITY: Validate GitHub URL before downloading
-        const { validateGitHubDownloadURL } = await import('@/core/validation/URLValidator');
-        try {
-            validateGitHubDownloadURL(downloadUrl);
-        } catch (error) {
-            this.logger.error('[Updates] Download URL validation failed', error as Error);
-            throw new Error(`Security check failed: ${(error as Error).message}`);
-        }
-
-
-        const tempZip = path.join(path.dirname(targetPath), `${componentId}-temp.zip`);
-
-        try {
-            // Download zip with timeout
-            this.logger.debug(`[Updates] Downloading from ${downloadUrl}`);
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), TIMEOUTS.AUTH.BROWSER);
-
-            try {
-                const response = await fetch(downloadUrl, { signal: controller.signal });
-                if (!response.ok) {
-                    throw new Error(`Download failed: HTTP ${response.status}`);
-                }
-                const buffer = await response.arrayBuffer();
-                await fs.writeFile(tempZip, Buffer.from(buffer));
-                this.logger.debug(`[Updates] Downloaded ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
-            } finally {
-                clearTimeout(timeout);
-            }
-      
-            // Extract zip (GitHub archives have root folder, need to strip it)
-            await fs.mkdir(targetPath, { recursive: true });
-
-            // Reuse existing command execution pattern with timeout, shell, and path enhancement
-            // SECURITY: shell is SAFE here because:
-            // - tempZip and targetPath are internal paths (not user input)
-            // - downloadUrl is validated by validateGitHubDownloadURL() before this point
-            // - All paths are controlled by the extension (no user-supplied paths)
-            //
-            // Unzip only. The archive's root folder ("skukla-commerce-mesh-abc123/") is
-            // flattened in Node below: the shell glob that did it deleted every folder
-            // of the component and every dotfile (found 2026-09-15, see archiveRoot.ts).
-            const extractResult = await this.commandManager.execute(
-                `unzip -q "${tempZip}" -d "${targetPath}"`,
-                {
-                    shell: DEFAULT_SHELL,    // CRITICAL FIX: Required for command chaining (&&) and glob expansion (*/*)
-                    timeout: TIMEOUTS.NORMAL,
-                    enhancePath: true,
-                },
-            );
-
-            if (extractResult.code !== 0) {
-                throw new Error(
-                    `Extraction failed (exit code ${extractResult.code}): ${extractResult.stderr || 'unknown error'}`,
-                );
-            }
-
-            await flattenArchiveRoot(targetPath);
-            this.logger.debug(`[Updates] Extracted to ${targetPath}`);
-        } finally {
-            // Cleanup temp zip
-            try {
-                await fs.unlink(tempZip);
-            } catch {
-                // Ignore cleanup errors
-            }
-        }
     }
 
     /**

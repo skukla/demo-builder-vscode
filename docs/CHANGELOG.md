@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Meshes, ERPs and integrations update from releases.** Code reaches an SC when a version of it is released, as with the extension, not when it is pushed. The update row names the version it moves to, and updating fetches it and deploys it, so the live mesh cannot be left behind. Until now a mesh's version depended on how it was installed and on the update channel, and many projects were never offered a mesh update at all. Nothing to do for an existing project. (PL-88, PL-89)
+- **A Headless storefront update keeps your edits.** It moves your folder to the new release in place, rather than replacing the folder. If you have changed a file, the update stops and names it, and nothing is touched. If GitHub cannot be reached, it says so and the demo stays as it was. (PL-89)
 
 - **Check on a pack's step in the Admin shows what it found.** Pressing Check showed nothing while Demo Builder went on to record the answer, seen only after closing and opening the panel again. It now waits long enough for the store to answer, and says plainly when no answer came back.
 

@@ -138,7 +138,7 @@ async function applyComponents(
     const updater = new ComponentUpdater(ctx.logger, ctx.extensionPath, ctx.commandManager);
     for (const { project, items: updates } of byProject.values()) {
         for (const update of updates) {
-            if (!update.downloadUrl) continue;
+            if (!update.tag) continue;
             // Its display name, not its id: line 2 reads as a phrase (owner, 2026-10-16).
             const shown = project.componentInstances?.[update.componentId]?.name ?? update.componentId;
             onProgress?.(S.updatingComponents.label, `${shown} in ${project.name}`);
@@ -146,7 +146,7 @@ async function applyComponents(
                 await updater.updateComponent(
                     project,
                     update.componentId,
-                    update.downloadUrl,
+                    update.tag,
                     update.latestVersion,
                 );
                 result.successCount++;

@@ -14,15 +14,11 @@
 // Mock dependencies
 jest.mock('@/core/validation/PathSafetyValidator');
 jest.mock('@/core/validation/SensitiveDataRedactor');
-jest.mock('@/core/validation/URLValidator');
 jest.mock('@/core/validation/Validator');
 jest.mock('@/core/validation/fieldValidation');
 jest.mock('@/core/validation/normalizers');
 jest.mock('@/core/validation/validators/NodeVersionValidator');
 jest.mock('fs/promises');
-// The archive flatten works on the real filesystem, which these suites mock; it is
-// proved against a real unzip in archiveRoot.test.ts.
-jest.mock('@/features/updates/services/archiveRoot');
 jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         getComponentById: jest.fn().mockResolvedValue({
@@ -42,12 +38,10 @@ import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
-import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
 export { ComponentUpdater } from '@/features/updates/services/componentUpdater';
-export { flattenArchiveRoot } from '@/features/updates/services/archiveRoot';
 
 export {
     CommandExecutor,
@@ -60,11 +54,13 @@ export interface UpdaterHarness {
     logger: jest.Mocked<Logger>;
     executor: Record<string, jest.Mock>;
     project: Project;
+    /** The move to a release. Its real-git behaviour is pinned in integrationReleaseSource.test.ts. */
+    moveToRelease: jest.Mock;
 }
 
 /**
  * The arrangement every componentUpdater suite needs: a real updater over mocked
- * filesystem, shell and network, plus a project holding one installed component.
+ * filesystem, shell and git move, plus a project holding one installed component.
  *
  * The mocks themselves live at the top of this file; this is the per-test SETUP that
  * was copied byte for byte into each suite. Extracted when a third suite needed it —
@@ -85,32 +81,22 @@ export function setupUpdater(): UpdaterHarness {
         execute: jest.fn().mockResolvedValue({ stdout: '', stderr: '', code: 0, duration: 100 }),
     };
 
-    // Security validation is automocked at module scope. This used to reach into the
-    // barrel and ASSIGN a fresh jest.fn, which only worked because the barrel handed
-    // back a plain object — a real ES module namespace exposes getters that cannot be
-    // assigned.
-    jest.mocked(validateGitHubDownloadURL).mockReset();
-
     jest.spyOn(fs, 'cp').mockResolvedValue(undefined);
     jest.spyOn(fs, 'rm').mockResolvedValue(undefined);
-    jest.spyOn(fs, 'mkdir').mockResolvedValue(undefined);
     jest.spyOn(fs, 'readFile').mockResolvedValue('{"name": "test"}');
     jest.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
     jest.spyOn(fs, 'access').mockResolvedValue(undefined);
-    jest.spyOn(fs, 'unlink').mockResolvedValue(undefined);
     jest.spyOn(fs, 'rename').mockResolvedValue(undefined);
 
     (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
 
-    global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024)),
-    }) as unknown as typeof fetch;
+    const moveToRelease = jest.fn().mockResolvedValue({ status: 'updated', detail: 'Moved.' });
 
     const updater = new ComponentUpdater(
         logger,
         '/mock/extension/path',
-        executor as unknown as CommandExecutor
+        executor as unknown as CommandExecutor,
+        moveToRelease,
     );
 
     const project = createMockProject({
@@ -128,5 +114,5 @@ export function setupUpdater(): UpdaterHarness {
         componentVersions: {},
     });
 
-    return { updater, logger, executor, project };
+    return { updater, logger, executor, project, moveToRelease };
 }

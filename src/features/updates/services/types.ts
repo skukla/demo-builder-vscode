@@ -7,6 +7,8 @@
  */
 export interface ReleaseInfo {
     version: string;
+    /** The release's tag, as GitHub holds it: what a component's clone moves to. */
+    tag: string;
     downloadUrl: string;
     releaseNotes: string;
     publishedAt: string;

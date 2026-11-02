@@ -28,7 +28,9 @@ describe('ComponentUpdater — the snapshot and the rollback', () => {
         h = setupUpdater();
     });
 
-    const DOWNLOAD = 'https://github.com/test/repo/archive/v1.0.0.zip';
+    const TAG = 'v1.0.0';
+    const COMPONENT = '/path/to/project/components/test-component';
+    const RM_OPTS = { recursive: true, force: true };
 
     /** The filter handed to `fs.cp` when the pre-update snapshot was taken. */
     function snapshotFilter(): (src: string) => boolean {
@@ -39,7 +41,7 @@ describe('ComponentUpdater — the snapshot and the rollback', () => {
 
     describe('what the snapshot copies', () => {
         beforeEach(async () => {
-            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+            await h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0');
         });
 
         it('copies the component source', () => {
@@ -62,16 +64,33 @@ describe('ComponentUpdater — the snapshot and the rollback', () => {
     });
 
     describe('when the update fails part-way', () => {
+        const FAILURE = 'Could not fetch refs/tags/v1.0.0 from GitHub: bad object.';
+
         /** Make the update blow up after the snapshot exists. */
         function failDuringUpdate() {
-            h.executor.execute.mockRejectedValueOnce(new Error('Extraction failed'));
+            h.moveToRelease.mockRejectedValueOnce(new Error(FAILURE));
         }
+
+        it('removes the folder, renames the snapshot back, then reinstalls, in that order', async () => {
+            failDuringUpdate();
+
+            await expect(
+                h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0')
+            ).rejects.toThrow();
+
+            const removal = (fs.rm as jest.Mock).mock.calls.findIndex(([p]) => p === COMPONENT);
+            expect(removal).toBeGreaterThanOrEqual(0);
+            const removedAt = (fs.rm as jest.Mock).mock.invocationCallOrder[removal];
+            const restoredAt = (fs.rename as jest.Mock).mock.invocationCallOrder[0];
+            expect(removedAt).toBeLessThan(restoredAt);
+            expect(restoredAt).toBeLessThan(h.executor.execute.mock.invocationCallOrder[0]);
+        });
 
         it('puts the snapshot back', async () => {
             failDuringUpdate();
 
             await expect(
-                h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0')
+                h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0')
             ).rejects.toThrow();
 
             expect(fs.rename).toHaveBeenCalledWith(
@@ -86,7 +105,7 @@ describe('ComponentUpdater — the snapshot and the rollback', () => {
             failDuringUpdate();
 
             await expect(
-                h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0')
+                h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0')
             ).rejects.toThrow();
 
             const installs = h.executor.execute.mock.calls.filter(([cmd]) =>
@@ -104,8 +123,8 @@ describe('ComponentUpdater — the snapshot and the rollback', () => {
             failDuringUpdate();
 
             await expect(
-                h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0')
-            ).rejects.toThrow();
+                h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0')
+            ).rejects.toThrow(`Update failed and was rolled back: ${FAILURE}`);
         });
 
         it('does not abandon the rollback when the reinstall fails', async () => {
@@ -120,13 +139,83 @@ describe('ComponentUpdater — the snapshot and the rollback', () => {
             });
 
             await expect(
-                h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0')
+                h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0')
             ).rejects.toThrow();
 
             expect(fs.rename).toHaveBeenCalled();
             expect(h.logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('reinstall dependencies')
             );
+        });
+    });
+
+    // A rollback here would delete the folder and restore a copy with no dependencies, so an SC
+    // who updated while offline would come back to a demo that no longer starts.
+    describe('when the move stops before changing anything', () => {
+        const DETAIL = 'GitHub could not be reached. Check your connection, then update again.';
+
+        it('says why, leaves the folder alone and installs nothing', async () => {
+            h.moveToRelease.mockResolvedValueOnce({ status: 'failed', detail: DETAIL });
+
+            await expect(
+                h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0')
+            ).rejects.toThrow(DETAIL);
+
+            expect((fs.rm as jest.Mock).mock.calls).toStrictEqual([
+                [expect.stringMatching(/test-component\.snapshot-\d+$/), RM_OPTS],
+            ]);
+            expect(fs.rename).not.toHaveBeenCalled();
+            expect(h.executor.execute).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("when the SC's own edits refuse the move", () => {
+        // Nothing moved, so there is nothing to put back. A rollback here would delete a
+        // folder holding the very edits the refusal exists to protect.
+        const DETAIL =
+            'The folder has changes of its own (src/app.js). Commit or undo them, then update again.';
+
+        let message: string;
+
+        beforeEach(async () => {
+            h.moveToRelease.mockResolvedValueOnce({ status: 'refused', detail: DETAIL });
+
+            message = await h.updater
+                .updateComponent(h.project, 'test-component', TAG, '1.0.0')
+                .then(
+                    () => 'it resolved',
+                    (e: Error) => e.message
+                );
+        });
+
+        it('rejects with the refusal, word for word', () => {
+            expect(message).toBe(DETAIL);
+        });
+
+        it('removes only the snapshot, leaving the folder where it is', () => {
+            expect((fs.rm as jest.Mock).mock.calls).toStrictEqual([
+                [expect.stringMatching(/test-component\.snapshot-\d+$/), RM_OPTS],
+            ]);
+            expect(fs.rename).not.toHaveBeenCalled();
+        });
+
+        it('installs nothing', () => {
+            expect(h.executor.execute).not.toHaveBeenCalled();
+        });
+
+        it('records no version', () => {
+            expect(h.project.componentVersions?.['test-component']).toBeUndefined();
+            expect(h.project.componentInstances?.['test-component'].version).toBeUndefined();
+        });
+
+        it('is not logged as a failed update being rolled back', () => {
+            expect(h.logger.error).not.toHaveBeenCalled();
+        });
+
+        it('releases the lock, so the SC can try again after dealing with the edits', async () => {
+            await expect(
+                h.updater.updateComponent(h.project, 'test-component', TAG, '1.0.0')
+            ).resolves.toBeUndefined();
         });
     });
 

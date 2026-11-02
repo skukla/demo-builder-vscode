@@ -140,7 +140,7 @@ describe('fastForwardClone', () => {
 
         expect(result).toEqual({
             status: 'refused',
-            detail: 'The integration folder has changes of its own (app.commerce.config.ts). Commit or undo them, then update again.',
+            detail: 'The folder has changes of its own (app.commerce.config.ts). Commit or undo them, then update again.',
         });
         expect(git(fx, fx.clone, 'rev-parse', 'HEAD')).toBe(head);
         expect(fs.readFileSync(path.join(fx.clone, 'app.commerce.config.ts'), 'utf8')).toBe('the SC changed this\n');
@@ -178,7 +178,7 @@ describe('fastForwardClone', () => {
         const result = await fastForwardClone(fx.clone, 'main', realGit(fx));
 
         expect(result.detail).toBe(
-            'The integration folder has changes of its own (a.js, b.js, c.js, d.js, e.js and 2 more). Commit or undo them, then update again.',
+            'The folder has changes of its own (a.js, b.js, c.js, d.js, e.js and 2 more). Commit or undo them, then update again.',
         );
     }, REAL_GIT_TIMEOUT_MS);
 
@@ -203,7 +203,7 @@ describe('fastForwardClone', () => {
 
         expect(result.status).toBe('refused');
         expect(result.detail).toBe(
-            'The integration folder has commits that main on GitHub does not, so it cannot be updated in place.',
+            'The folder has commits that main on GitHub does not, so it cannot be updated in place.',
         );
         expect(git(fx, fx.clone, 'rev-parse', 'HEAD')).toBe(head);
     }, REAL_GIT_TIMEOUT_MS);

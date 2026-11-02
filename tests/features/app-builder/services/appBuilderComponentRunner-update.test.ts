@@ -162,7 +162,7 @@ describe('updateAppBuilderComponent', () => {
     it('stops at a refused fetch with its reason, deploying nothing', async () => {
         const refused: SourceUpdateResult = {
             status: 'refused',
-            detail: 'The integration folder has changes of its own (a.js). Commit or undo them, then update again.',
+            detail: 'The folder has changes of its own (a.js). Commit or undo them, then update again.',
         };
         const deps = updateDeps(refused);
         const project = installedProject();

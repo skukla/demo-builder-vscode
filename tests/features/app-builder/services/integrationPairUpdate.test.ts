@@ -159,15 +159,15 @@ describe('updateIntegrationPair', () => {
 
     it("passes the last member's refusal through, with its row in error", async () => {
         const { deps, rows } = fakeDeps();
-        mockUpdate.mockResolvedValue({ success: false, error: 'The integration folder has changes of its own (a.js).' });
+        mockUpdate.mockResolvedValue({ success: false, error: 'The folder has changes of its own (a.js).' });
 
         const result = await updateIntegrationPair(pairProject(), ['erp-integration'], deps);
 
-        expect(result).toEqual({ success: false, error: 'The integration folder has changes of its own (a.js).' });
+        expect(result).toEqual({ success: false, error: 'The folder has changes of its own (a.js).' });
         expect(rows).toHaveBeenLastCalledWith(
             'erp-integration',
             'error',
-            'The integration folder has changes of its own (a.js).',
+            'The folder has changes of its own (a.js).',
         );
     });
 });

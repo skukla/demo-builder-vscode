@@ -224,6 +224,7 @@ describe('applyUpdates', () => {
                 latest: '1.1.0',
                 releaseInfo: {
                     version: '1.1.0',
+                    tag: 'v1.1.0',
                     downloadUrl: 'https://github.com/x.vsix',
                     releaseNotes: '',
                     publishedAt: '',
@@ -247,7 +248,7 @@ describe('applyUpdates', () => {
                 hasUpdate: true,
                 current: '1.0.0',
                 latest: '1.1.0',
-                releaseInfo: { version: '1.1.0', downloadUrl: 'https://github.com/x.vsix', releaseNotes: '', publishedAt: '', isPrerelease: false },
+                releaseInfo: { version: '1.1.0', tag: 'v1.1.0', downloadUrl: 'https://github.com/x.vsix', releaseNotes: '', publishedAt: '', isPrerelease: false },
             },
         });
 

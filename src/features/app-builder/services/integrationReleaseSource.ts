@@ -15,6 +15,7 @@ import {
     checkCloneForUpdate,
     fastForwardClone,
     readCloneCommit,
+    unsafeBranch,
     type GitRunner,
     type SourceUpdateResult,
     type UpdateCheckResult,
@@ -64,6 +65,15 @@ async function targetOf(
     return release ? { ref: `refs/tags/${release.tag}`, release } : { unreleased: true };
 }
 
+/** A path nothing holds yet: a retry after a failed install must not stop on the earlier copy. */
+async function freeBackupPath(backups: string, name: string): Promise<string> {
+    let candidate = path.join(backups, name);
+    for (let attempt = 2; await exists(candidate); attempt++) {
+        candidate = path.join(backups, `${name}-${attempt}`);
+    }
+    return candidate;
+}
+
 /**
  * Clone a folder with no history again at `release`, keeping the old folder beside the
  * project's components (anything inside `components/` would be read as a component). With no
@@ -75,12 +85,11 @@ async function recloneAtRelease(
     release: ComponentRelease,
     run: GitRunner,
 ): Promise<SourceUpdateResult> {
+    const refusal = unsafeBranch(release.tag);
+    if (refusal) return { status: 'failed', detail: refusal };
     const componentsDir = path.dirname(componentPath);
     const backups = path.join(path.dirname(componentsDir), 'component-backups');
-    const kept = path.join(backups, `${path.basename(componentPath)}-before-${release.version}`);
-    if (await exists(kept)) {
-        return { status: 'failed', detail: `An earlier copy is already kept at ${kept}. Move it, then update again.` };
-    }
+    const kept = await freeBackupPath(backups, `${path.basename(componentPath)}-before-${release.version}`);
     await fsPromises.mkdir(backups, { recursive: true });
     await fsPromises.rename(componentPath, kept);
     const url = `https://github.com/${repo}.git`;
@@ -160,4 +169,27 @@ export async function updateComponentSource(
     return updated.status === 'updated'
         ? { ...updated, version, detail: `Updated to version ${version}.` }
         : { ...updated, version };
+}
+
+/**
+ * Move a component that is not deployed to Adobe, such as a Headless storefront, to a release
+ * it has been offered. The same rules as any other: an SC's edit refuses it, a folder with no
+ * history is cloned again and the old one kept.
+ */
+export async function moveCloneToRelease(
+    componentPath: string,
+    repoUrl: string | undefined,
+    release: ComponentRelease,
+    run: GitRunner,
+): Promise<SourceUpdateResult> {
+    if (!(await hasOwnHistory(componentPath))) {
+        const repo = releasedRepoOf(repoUrl);
+        return repo
+            ? recloneAtRelease(componentPath, repo, release, run)
+            : { status: 'failed', detail: 'This folder has no git history to update.' };
+    }
+    const updated = await fastForwardClone(componentPath, `refs/tags/${release.tag}`, run);
+    return updated.status === 'updated'
+        ? { ...updated, version: release.version, detail: `Updated to version ${release.version}.` }
+        : { ...updated, version: release.version };
 }

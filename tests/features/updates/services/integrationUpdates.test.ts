@@ -200,7 +200,7 @@ describe('applyIntegrationUpdates', () => {
     it('a failed update is a failure in plain words, and the next pair still runs', async () => {
         const ctx = makeCtx();
         ctx.updateIntegrationPair
-            .mockResolvedValueOnce({ success: false, error: 'The integration folder has changes of its own (a.js).' })
+            .mockResolvedValueOnce({ success: false, error: 'The folder has changes of its own (a.js).' })
             .mockResolvedValueOnce({ success: true });
 
         const result = await applyIntegrationUpdates(
@@ -211,7 +211,7 @@ describe('applyIntegrationUpdates', () => {
         expect(result).toEqual({
             successCount: 1,
             failCount: 1,
-            errors: ['ERP Integration and Justrite ERP in Justrite did not update: The integration folder has changes of its own (a.js).'],
+            errors: ['ERP Integration and Justrite ERP in Justrite did not update: The folder has changes of its own (a.js).'],
         });
         expect(ctx.updateIntegrationPair).toHaveBeenCalledTimes(2);
     });

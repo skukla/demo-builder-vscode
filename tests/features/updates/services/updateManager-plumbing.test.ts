@@ -427,6 +427,18 @@ describe('how a release is read', () => {
         expect(result.releaseInfo?.downloadUrl).toBe(vsixUrl('1.1.0'));
     });
 
+    it('a component carries the raw tag, which its clone moves to', async () => {
+        const project = createUpdateManagerProject([
+            component('widget', '1.0.0', { repoUrl: 'https://github.com/acme/widget' }),
+        ]);
+        respond(zipRelease('1.1.0'));
+
+        const results = await manager.checkAllProjectsForUpdates([project]);
+
+        expect(results[0].releaseInfo?.tag).toBe('v1.1.0');
+        expect(results[0].latestVersion).toBe('1.1.0');
+    });
+
     it('a component takes the zipball', async () => {
         const project = createUpdateManagerProject([
             component('widget', '1.0.0', { repoUrl: 'https://github.com/acme/widget' }),
@@ -468,6 +480,7 @@ describe('how a release is read', () => {
 
         expect(result.releaseInfo).toEqual({
             version: '1.1.0',
+            tag: 'v1.1.0',
             downloadUrl: vsixUrl('1.1.0'),
             releaseNotes: 'What changed',
             publishedAt: '2024-01-01T00:00:00Z',

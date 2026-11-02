@@ -11,6 +11,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import {
     checkComponentSource,
+    moveCloneToRelease,
     updateComponentSource,
     type ComponentRelease,
 } from '@/features/app-builder/services/integrationReleaseSource';
@@ -149,6 +150,25 @@ describe('a repository the builder owns', () => {
     });
 });
 
+describe('GitHub out of reach', () => {
+    it('says so in plain words, whatever git printed, and moves nothing', async () => {
+        cloneAs(RELEASED_URL);
+        const before = git('rev-parse HEAD', clone);
+        const offline: GitRunner = async (command, cwd) =>
+            command.startsWith('git fetch')
+                ? { code: 128, stdout: '', stderr: "fatal: unable to access 'https://x/': Could not resolve host: github.com" }
+                : run(command, cwd);
+
+        const updated = await updateComponentSource(clone, 'main', offline, reads(release('v1.1.0')));
+
+        expect(updated).toMatchObject({
+            status: 'failed',
+            detail: 'GitHub could not be reached. Check your connection, then update again.',
+        });
+        expect(git('rev-parse HEAD', clone)).toBe(before);
+    });
+});
+
 describe('a repository someone else owns', () => {
     it('follows its branch, and never asks about releases', async () => {
         cloneAs(FOREIGN_URL);
@@ -239,6 +259,27 @@ describe('a folder with no git history', () => {
         expect(existsSync(join(project, 'component-backups', 'eds-accs-mesh-before-9.9.9'))).toBe(false);
     });
 
+    it('keeps a second copy beside the first, so a retry does not stop on it', async () => {
+        commit('released');
+        git('tag v1.1.0', upstream);
+        const first = join(project, 'component-backups', 'eds-accs-mesh-before-1.1.0');
+        mkdirSync(first, { recursive: true });
+
+        const updated = await updateComponentSource(folder, 'main', run2, reads(release('v1.1.0')), URL);
+
+        expect(updated.status).toBe('updated');
+        expect(readFileSync(`${first}-2/one`, 'utf8')).toBe('an edit we cannot recognise');
+    });
+
+    it('refuses a tag that could not safely reach the shell, touching nothing', async () => {
+        const hostile = release('v1.1.0;touch-pwned');
+
+        const updated = await updateComponentSource(folder, 'main', run2, reads(hostile), URL);
+
+        expect(updated.status).toBe('failed');
+        expect(readFileSync(join(folder, 'one'), 'utf8')).toBe('an edit we cannot recognise');
+    });
+
     it('is left alone when it is not one of our repositories', async () => {
         const read = reads(release('v1.1.0'));
         const foreign = 'https://github.com/adobe/commerce-integration-starter-kit';
@@ -259,5 +300,40 @@ describe('a folder with no git history', () => {
         await checkComponentSource(folder, 'main', run2, read, URL);
 
         expect(read).toHaveBeenCalledWith('skukla/eds-accs-mesh');
+    });
+});
+
+describe('moveCloneToRelease: a component with no deploy of its own', () => {
+    it('moves to the offered release, not past it', async () => {
+        cloneAs(RELEASED_URL);
+        const tagged = commit('released');
+        git('tag v1.1.0', upstream);
+        commit('pushed-after-the-release');
+
+        const moved = await moveCloneToRelease(clone, RELEASED_URL, release('v1.1.0'), run);
+
+        expect(moved).toMatchObject({ status: 'updated', to: tagged, version: '1.1.0' });
+        expect(git('rev-parse HEAD', clone)).toBe(tagged);
+    });
+
+    it("refuses, and names the file, when it holds the SC's edit", async () => {
+        cloneAs(RELEASED_URL);
+        commit('released');
+        git('tag v1.1.0', upstream);
+        writeFileSync(join(clone, 'one'), 'an edit of their own');
+
+        const moved = await moveCloneToRelease(clone, RELEASED_URL, release('v1.1.0'), run);
+
+        expect(moved.status).toBe('refused');
+        expect(moved.detail).toContain('one');
+        expect(readFileSync(join(clone, 'one'), 'utf8')).toBe('an edit of their own');
+    });
+
+    it('fails when a folder with no history is not one of our repositories', async () => {
+        mkdirSync(clone);
+
+        const moved = await moveCloneToRelease(clone, 'https://github.com/someone/else', release('v1.1.0'), run);
+
+        expect(moved.status).toBe('failed');
     });
 });

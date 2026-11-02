@@ -56,7 +56,7 @@ export interface UpdateSelections {
         project: Project;
         componentId: string;
         latestVersion: string;
-        downloadUrl?: string;
+        tag?: string;
         currentVersion?: string;
     }>;
     adobeMcp: Array<{
@@ -233,15 +233,15 @@ async function checkComponents(
         ).checkAllProjectsForUpdates(projects);
         const asked = new Set(projects.map((p) => p.path));
         return results.flatMap((r) => {
-            const downloadUrl = r.releaseInfo?.downloadUrl;
-            if (!downloadUrl) return [];
+            const tag = r.releaseInfo?.tag;
+            if (!tag) return [];
             return r.outdatedProjects
                 .filter((o) => asked.has(o.project.path))
                 .map((o) => ({
                     project: o.project,
                     componentId: r.componentId,
                     latestVersion: r.latestVersion,
-                    downloadUrl,
+                    tag,
                     currentVersion: o.currentVersion,
                 }));
         });

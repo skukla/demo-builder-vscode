@@ -33,7 +33,7 @@ function mixed(): UpdateSelections {
     return {
         ...emptySelections(),
         forkSync: [forkA, forkB],
-        component: [{ project, componentId: 'eds-storefront', currentVersion: '1.0.0', latestVersion: '1.1.0', downloadUrl: 'https://x/1.1.0.zip' }],
+        component: [{ project, componentId: 'eds-storefront', currentVersion: '1.0.0', latestVersion: '1.1.0', tag: 'v1.1.0' }],
         blockLibrary: [{ project, library: installedLibrary('Lib A'), latestCommit: 'bbb' }],
         inspector: [{ project, latestCommit: 'newsha' }],
     } as UpdateSelections;

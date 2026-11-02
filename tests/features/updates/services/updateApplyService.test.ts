@@ -174,7 +174,7 @@ describe('applyUpdatesHeadless', () => {
                 project,
                 componentId: 'mesh',
                 latestVersion: '2.0.0',
-                downloadUrl: 'http://x/mesh.zip',
+                tag: 'v2.0.0',
             },
         ];
         const res = await applyUpdatesHeadless(sel, ctx);
@@ -182,7 +182,7 @@ describe('applyUpdatesHeadless', () => {
         expect(updateComponentMock).toHaveBeenCalledWith(
             project,
             'mesh',
-            'http://x/mesh.zip',
+            'v2.0.0',
             '2.0.0'
         );
         expect(
@@ -262,7 +262,7 @@ describe('applyUpdatesHeadless', () => {
     it('aggregates totals across categories', async () => {
         const sel = emptySelections();
         sel.forkSync = [{ owner: 'me', repo: 'a', branch: 'main' }];
-        sel.component = [{ project, componentId: 'mesh', latestVersion: '2', downloadUrl: 'u' }];
+        sel.component = [{ project, componentId: 'mesh', latestVersion: '2', tag: 'v2' }];
         const res = await applyUpdatesHeadless(sel, ctx);
         expect(res.totalApplied).toBe(2);
         expect(res.totalFailed).toBe(0);

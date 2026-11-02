@@ -37,6 +37,7 @@ import { createMockProject } from '../../../helpers/projectFake';
 
 const RELEASE = {
     version: '2.0.0',
+    tag: 'v2.0.0',
     downloadUrl: 'https://example.com/mesh.zip',
     releaseNotes: '',
     publishedAt: '',
@@ -187,7 +188,7 @@ describe('computeProjectUpdateSelections', () => {
     });
 
     describe('components', () => {
-        it('asks the update manager about this project only, and selects an outdated component with a download', async () => {
+        it('asks the update manager about this project only, and selects an outdated component with its release tag', async () => {
             const project = edsProject();
             mockCheckAllProjectsForUpdates.mockResolvedValue([componentResult({}, project)]);
 
@@ -203,7 +204,7 @@ describe('computeProjectUpdateSelections', () => {
                     project,
                     componentId: 'mesh',
                     latestVersion: '2.0.0',
-                    downloadUrl: 'https://example.com/mesh.zip',
+                    tag: 'v2.0.0',
                     currentVersion: '1.0.0',
                 },
             ]);
@@ -234,7 +235,7 @@ describe('computeProjectUpdateSelections', () => {
                 'the outdated project is a different one',
                 componentResult({}, edsProject({ path: '/p/other' })),
             ],
-            ['there is no release to download', componentResult({ releaseInfo: undefined })],
+            ['there is no release to move to', componentResult({ releaseInfo: undefined })],
         ])('selects nothing when %s, without warning', async (_label, result) => {
             mockCheckAllProjectsForUpdates.mockResolvedValue([result]);
             const handlerCtx = createMockHandlerContext();

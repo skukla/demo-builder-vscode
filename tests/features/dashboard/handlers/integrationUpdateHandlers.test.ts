@@ -320,15 +320,15 @@ describe('handleUpdateAppBuilderComponent', () => {
 
     it("passes the runner's refusal through, with the row in error", async () => {
         const { mockContext } = setup(pairProject());
-        mockUpdate.mockResolvedValue({ success: false, error: 'The integration folder has changes of its own (a.js).' });
+        mockUpdate.mockResolvedValue({ success: false, error: 'The folder has changes of its own (a.js).' });
 
         const result = await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration' });
 
-        expect(result).toMatchObject({ success: false, error: 'The integration folder has changes of its own (a.js).' });
+        expect(result).toMatchObject({ success: false, error: 'The folder has changes of its own (a.js).' });
         expect(mockSendStatus).toHaveBeenLastCalledWith(
             'erp-integration',
             'error',
-            'The integration folder has changes of its own (a.js).',
+            'The folder has changes of its own (a.js).',
         );
     });
 

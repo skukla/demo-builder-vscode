@@ -185,5 +185,3 @@ owner, not part of this.
 
 ## Open
 
-- Headless apply removes the folder and keeps only `.env` and `.env.local`, so an SC's edits are not kept, which breaks the
-  second property in `CLAUDE.md`. Stage 3 rewrites that path.

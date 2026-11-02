@@ -14,13 +14,14 @@ The plan this is being built to, with what is still to move: `.rptc/plans/compon
 | API Mesh, ERP, our integrations | Its newest release | A newer release has commits the clone lacks | Fetches the tag and deploys |
 | Adobe's starter kit, custom integrations | A branch | The branch has commits the clone lacks | Fetches and deploys |
 | EDS storefront | A template repository | The tested boilerplate or template moves | Syncs the repository |
-| Headless storefront | GitHub Releases | A newer release | Replaces the folder |
+| Headless storefront | Its newest release | A newer release | Moves the clone to the tag, then installs and builds |
 
 `readNewestRelease` is the one reader of releases: the highest version the channel accepts. A tag that is not a
 version never qualifies. Early access reads every track for a component, and is honoured only for a collaborator.
 
 A clone's own remote says which route it takes, so a project holds nothing to migrate. A clone ahead of the release
-is never moved back. An owned repository with no release yet offers nothing, and installs from its branch until it
+is never moved back. An SC's edit refuses the move and names the file. A folder with no git history, which the old
+updater left behind, is cloned again at the release, and the old folder is kept under `component-backups`. An owned repository with no release yet offers nothing, and installs from its branch until it
 has one.
 
 A mesh keeps `mesh.json` under version control and rebuilds it on every deploy, so a rebuilt one is not read as

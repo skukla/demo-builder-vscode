@@ -2,8 +2,7 @@
  * ComponentUpdater Tests - Core Workflow
  *
  * Tests for core update functionality:
- * - Shell parameter for unzip command (CRITICAL FIX)
- * - Full update workflow (snapshot, download, extract, verify, merge)
+ * - Full update workflow (snapshot, move to the release, verify, merge)
  * - Configuration-driven builds
  * - Snapshot lifecycle
  */
@@ -11,11 +10,9 @@
 import {
     CommandExecutor,
     ComponentUpdater,
-    flattenArchiveRoot,
     fs,
     setupUpdater,
 } from './componentUpdater.testUtils';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
@@ -27,6 +24,7 @@ describe('ComponentUpdater - Core Workflow', () => {
     let mockLogger: jest.Mocked<Logger>;
     let mockProject: Project;
     let mockExecutor: Record<string, jest.Mock>;
+    let moveToRelease: jest.Mock;
 
     beforeEach(() => {
         ({
@@ -34,62 +32,16 @@ describe('ComponentUpdater - Core Workflow', () => {
             logger: mockLogger,
             executor: mockExecutor,
             project: mockProject,
+            moveToRelease,
         } = setupUpdater());
-    });
-
-    describe('updateComponent() - Shell parameter for unzip (CRITICAL FIX)', () => {
-        it('should use shell parameter for unzip command', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // CRITICAL: Verify shell parameter is passed to unzip command
-            expect(mockExecutor.execute).toHaveBeenCalledWith(
-                expect.stringContaining('unzip'),
-                expect.objectContaining({
-                    shell: DEFAULT_SHELL,
-                })
-            );
-        });
-
-        it('should include timeout in shell command execution', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // Verify timeout is included
-            expect(mockExecutor.execute).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.objectContaining({
-                    timeout: expect.any(Number),
-                })
-            );
-        });
-
-        it('should include enhancePath in shell command execution', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // Verify enhancePath is included
-            expect(mockExecutor.execute).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.objectContaining({
-                    enhancePath: true,
-                })
-            );
-        });
     });
 
     describe('updateComponent() - Full workflow', () => {
         it('should create snapshot before update', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             // Verify snapshot creation (with filter to exclude node_modules)
             expect(fs.cp).toHaveBeenCalledWith(
@@ -103,14 +55,13 @@ describe('ComponentUpdater - Core Workflow', () => {
         });
 
         it('should rollback on failure', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
-            // Simulate failure during extraction
-            mockExecutor.execute.mockRejectedValueOnce(new Error('Extraction failed'));
+            moveToRelease.mockRejectedValueOnce(new Error('Could not fetch refs/tags/v1.0.0 from GitHub: bad object.'));
 
             await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
+                updater.updateComponent(mockProject, 'test-component', tag, newVersion)
             ).rejects.toThrow();
 
             // Verify rollback happened
@@ -121,14 +72,14 @@ describe('ComponentUpdater - Core Workflow', () => {
         });
 
         it('should prevent concurrent updates to same component', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             // Start first update
             const update1 = updater.updateComponent(
                 mockProject,
                 'test-component',
-                downloadUrl,
+                tag,
                 newVersion
             );
 
@@ -136,7 +87,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             const update2 = updater.updateComponent(
                 mockProject,
                 'test-component',
-                downloadUrl,
+                tag,
                 newVersion
             );
 
@@ -154,13 +105,13 @@ describe('ComponentUpdater - Core Workflow', () => {
 
     describe('runPostUpdateBuild() - Configuration-driven builds', () => {
         it('should run npm install after update even when no buildScript is configured', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             // Default mock has no buildScript (like the headless frontend)
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
-            // npm install MUST run even without buildScript — the zipball has no node_modules
+            // npm install MUST run even without buildScript — a release can change the dependencies
             const executeCalls = mockExecutor.execute.mock.calls;
             const installCalls = executeCalls.filter((call: unknown[]) =>
                 (call[0] as string).includes('npm install')
@@ -169,11 +120,11 @@ describe('ComponentUpdater - Core Workflow', () => {
         });
 
         it('should skip build step but still install deps when no buildScript configured', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             // Default mock has no buildScript
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             // npm run build should NOT be called
             const executeCalls = mockExecutor.execute.mock.calls;
@@ -184,7 +135,7 @@ describe('ComponentUpdater - Core Workflow', () => {
         });
 
         it('should skip npm install when skipNpmInstall is true', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             // Override mock to return component with skipNpmInstall (like eds-storefront)
@@ -204,7 +155,8 @@ describe('ComponentUpdater - Core Workflow', () => {
             const skipUpdater = new ComponentUpdater(
                 mockLogger,
                 '/mock/extension/path',
-                mockExecutor as unknown as CommandExecutor
+                mockExecutor as unknown as CommandExecutor,
+                moveToRelease
             );
 
             const edsProject = createMockProject({
@@ -223,7 +175,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             await skipUpdater.updateComponent(
                 edsProject,
                 'eds-storefront',
-                downloadUrl,
+                tag,
                 newVersion
             );
 
@@ -238,7 +190,7 @@ describe('ComponentUpdater - Core Workflow', () => {
         });
 
         it('should run npm install and build script when buildScript is configured', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             // Override mock to return component with buildScript
@@ -259,7 +211,8 @@ describe('ComponentUpdater - Core Workflow', () => {
             const buildUpdater = new ComponentUpdater(
                 mockLogger,
                 '/mock/extension/path',
-                mockExecutor as unknown as CommandExecutor
+                mockExecutor as unknown as CommandExecutor,
+                moveToRelease
             );
 
             // Add commerce-mesh to project
@@ -279,7 +232,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             await buildUpdater.updateComponent(
                 meshProject,
                 'eds-commerce-mesh',
-                downloadUrl,
+                tag,
                 newVersion
             );
 
@@ -302,45 +255,26 @@ describe('ComponentUpdater - Core Workflow', () => {
             );
         });
 
-        it('flattens the GitHub archive root folder in Node after unzipping, with no shell glob', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+        it('logs a failed move with its reason before rolling back', async () => {
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
-
-            // The glob that did this deleted the component's folders; archiveRoot.test.ts
-            // runs the real unzip and the real flatten.
-            expect(mockExecutor.execute).not.toHaveBeenCalledWith(expect.stringMatching(/mv |rm -rf/), expect.any(Object));
-            expect(flattenArchiveRoot).toHaveBeenCalledWith(mockProject.componentInstances?.['test-component']?.path);
-        });
-
-        it('should throw on extraction failure (non-zero exit code)', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
-            // Simulate extraction command failing with exit code 1
-            mockExecutor.execute.mockResolvedValueOnce({
-                stdout: '',
-                stderr: 'unzip: cannot open file',
-                code: 1,
-                duration: 533,
-            });
+            moveToRelease.mockRejectedValueOnce(new Error('Could not fetch refs/tags/v1.0.0 from GitHub: bad object.'));
 
             await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
+                updater.updateComponent(mockProject, 'test-component', tag, newVersion)
             ).rejects.toThrow();
 
-            // Verify the extraction failure was logged before rollback
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] Update failed, rolling back to snapshot',
                 expect.objectContaining({
-                    message: expect.stringContaining('Extraction failed'),
+                    message: expect.stringContaining('bad object'),
                 })
             );
         });
 
         it('should throw error when npm install fails during post-update build', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             // Override mock to return component with buildScript
@@ -360,7 +294,8 @@ describe('ComponentUpdater - Core Workflow', () => {
             const buildUpdater = new ComponentUpdater(
                 mockLogger,
                 '/mock/extension/path',
-                mockExecutor as unknown as CommandExecutor
+                mockExecutor as unknown as CommandExecutor,
+                moveToRelease
             );
 
             const meshProject = createMockProject({
@@ -377,20 +312,18 @@ describe('ComponentUpdater - Core Workflow', () => {
             });
 
             // Make npm install fail
-            mockExecutor.execute
-                .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // unzip
-                .mockResolvedValueOnce({
-                    stdout: '',
-                    stderr: 'npm ERR! install failed',
-                    code: 1,
-                    duration: 100,
-                }); // npm install fails
+            mockExecutor.execute.mockResolvedValueOnce({
+                stdout: '',
+                stderr: 'npm ERR! install failed',
+                code: 1,
+                duration: 100,
+            });
 
             await expect(
                 buildUpdater.updateComponent(
                     meshProject,
                     'eds-commerce-mesh',
-                    downloadUrl,
+                    tag,
                     newVersion
                 )
             ).rejects.toThrow();
@@ -402,7 +335,7 @@ describe('ComponentUpdater - Core Workflow', () => {
         });
 
         it('should throw error when build script fails', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
             // Override mock to return component with buildScript
@@ -422,7 +355,8 @@ describe('ComponentUpdater - Core Workflow', () => {
             const buildUpdater = new ComponentUpdater(
                 mockLogger,
                 '/mock/extension/path',
-                mockExecutor as unknown as CommandExecutor
+                mockExecutor as unknown as CommandExecutor,
+                moveToRelease
             );
 
             const meshProject = createMockProject({
@@ -440,7 +374,6 @@ describe('ComponentUpdater - Core Workflow', () => {
 
             // npm install succeeds, build fails
             mockExecutor.execute
-                .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // unzip
                 .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // npm install
                 .mockResolvedValueOnce({
                     stdout: '',
@@ -453,7 +386,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 buildUpdater.updateComponent(
                     meshProject,
                     'eds-commerce-mesh',
-                    downloadUrl,
+                    tag,
                     newVersion
                 )
             ).rejects.toThrow();
@@ -473,12 +406,25 @@ describe('ComponentUpdater - Core Workflow', () => {
          * `core/shell/buildComponent.ts`, where this is fixed for the deploy path.
          */
         it('dumps the post-update build output so the cause survives the message pipeline', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
+            const {
+                ComponentRegistryManager,
+            } = require('@/features/components/services/ComponentRegistryManager');
+            ComponentRegistryManager.mockImplementation(() => ({
+                getComponentById: jest.fn().mockResolvedValue({
+                    id: 'eds-commerce-mesh',
+                    name: 'Commerce Mesh',
+                    configuration: {
+                        buildScript: 'build',
+                    },
+                }),
+            }));
             const buildUpdater = new ComponentUpdater(
                 mockLogger,
                 '/mock/extension/path',
-                mockExecutor as unknown as CommandExecutor
+                mockExecutor as unknown as CommandExecutor,
+                moveToRelease
             );
             const meshProject = createMockProject({
                 ...mockProject,
@@ -499,7 +445,6 @@ describe('ComponentUpdater - Core Workflow', () => {
             ].join('\n');
 
             mockExecutor.execute
-                .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // unzip
                 .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // npm install
                 .mockResolvedValueOnce({ stdout: '', stderr: nodeCrash, code: 1, duration: 100 }); // build
 
@@ -507,7 +452,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 buildUpdater.updateComponent(
                     meshProject,
                     'eds-commerce-mesh',
-                    downloadUrl,
+                    tag,
                     newVersion
                 )
             ).rejects.toThrow();
@@ -522,10 +467,10 @@ describe('ComponentUpdater - Core Workflow', () => {
 
     describe('Snapshot lifecycle', () => {
         it('should remove snapshot after successful update', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const tag = 'v1.0.0';
             const newVersion = '1.0.0';
 
-            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+            await updater.updateComponent(mockProject, 'test-component', tag, newVersion);
 
             // Verify snapshot cleanup - fs.rm called with snapshot path
             expect(fs.rm).toHaveBeenCalledWith(expect.stringContaining('.snapshot-'), {
