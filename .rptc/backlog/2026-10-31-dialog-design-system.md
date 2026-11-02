@@ -52,3 +52,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  fix(data-installer): the pack root's note reads as a sentence (`2269591bb`)
 - 2026-11-02  feat(ui): one status icon everywhere, the wizard's set (`4cb8207e5`)
 - 2026-11-02  feat(ui): a wait keeps the dialog's box, and a small change does not animate (`d7244a4f4`)
+- 2026-11-02  fix(data-installer): a removal that kept a root says one step is left (`cd80a5acd`)
