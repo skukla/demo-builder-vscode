@@ -35,5 +35,5 @@ export function CreateDatapackModal({ engine, onClose, onSaveFromStore }: Create
         },
         [onClose, onSaveFromStore],
     );
-    return <DatapackFlowDialog title="Create a datapack" engine={engine} onClose={onClose} onSave={save} />;
+    return <DatapackFlowDialog title="Create datapack" engine={engine} onClose={onClose} onSave={save} />;
 }

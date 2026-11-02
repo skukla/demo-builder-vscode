@@ -20,7 +20,7 @@ export function PackNameStage({ answers, sharedCatalog }: {
         <>
             {sharedCatalog ? (
                 <p className="datapack-export-intro">
-                    The name and version identify it in the shared catalog, so pick something other teams will recognise as yours.
+                    Other teams see this name and version in the shared catalog.
                 </p>
             ) : null}
             <FormField

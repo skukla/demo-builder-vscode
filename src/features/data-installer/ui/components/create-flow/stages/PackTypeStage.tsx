@@ -1,5 +1,5 @@
 /**
- * Create a datapack's first screen: which kind of pack. Two cards; clicking one picks it, and
+ * Create datapack's first screen: which kind of pack. Two cards; clicking one picks it, and
  * Continue goes on, as Add Integration's kind screen does (`KindStage`).
  *
  * A Commerce pack's line says where it goes, which depends on the engine (`datapackFlowStages`).
@@ -18,8 +18,8 @@ export interface PackTypeStageProps {
 }
 
 const COMMERCE_LINE: Record<DatapackEngine, string> = {
-    'demo-builder': "Pick what to save from this store into this demo's own pack.",
-    service: 'Export data types from this store into the shared catalog.',
+    'demo-builder': "Save selected data from this store to this project's datapack.",
+    service: 'Export data types from this store to the shared catalog.',
 };
 
 export function PackTypeStage({ engine = 'service', packType, onPick }: PackTypeStageProps): React.ReactElement {
@@ -33,7 +33,7 @@ export function PackTypeStage({ engine = 'service', packType, onPick }: PackType
             />
             <ChoiceCard
                 name="ACO datapack"
-                description="Export catalog data for Adobe Commerce Optimizer into your library."
+                description="Export catalog data for Adobe Commerce Optimizer to your library."
                 selected={packType === 'aco'}
                 onSelect={() => onPick('aco')}
             />

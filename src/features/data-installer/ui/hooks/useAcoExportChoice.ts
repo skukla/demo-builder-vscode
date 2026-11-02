@@ -1,6 +1,6 @@
 /**
  * An ACO pack's choices (datapack-engine step 14 item 19): for an Adobe Commerce Optimizer pack,
- * which store views and which ACO kinds, on Create a datapack's own screens (`ExportChoiceStages`).
+ * which store views and which ACO kinds, on Create datapack's own screens (`ExportChoiceStages`).
  *
  * The store views come from the same discovery the import's target picker reads
  * (`list-datapack-import-scopes`), read once, when the SC first reaches them. Every store view and

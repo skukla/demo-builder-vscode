@@ -108,7 +108,7 @@ describe('an ACO pack', () => {
         withService({ 'list-datapack-import-scopes': { success: true, data: { websites: [] } } });
         await renderExport('aco');
 
-        expect(screen.getByText('The store views could not be listed, so the pack is made for every one.')).toBeInTheDocument();
+        expect(screen.getByText("Couldn't load store views. The datapack will include all of them.")).toBeInTheDocument();
         expect(isOff('Continue')).toBe(false);
     });
 
@@ -119,7 +119,7 @@ describe('an ACO pack', () => {
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
         expect(screen.queryByText(/Reading/)).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
-        expect(button('Close')).toBeInTheDocument();
+        expect(button('Cancel')).toBeInTheDocument();
     });
 
     it('has no shared-catalog line on the name screen', async () => {

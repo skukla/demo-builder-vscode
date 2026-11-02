@@ -1,5 +1,5 @@
 /**
- * useCreateDatapackFlow: the state of "Create a datapack" and "Save store changes to this pack",
+ * useCreateDatapackFlow: the state of "Create datapack" and "Save store changes to this pack",
  * apart from the view (`DatapackFlowDialog`), as `useIntegrationFlow` is for Add Integration.
  *
  * Holds the pack type and the stage, and works out the rest from `datapackFlowStages`: the route,
@@ -7,14 +7,11 @@
  * `useExportAnswers`, both kept when the SC goes back and forward. Choosing another pack type keeps
  * each route's own answers; nothing is sent until Save or Export.
  *
- * A read that finds nothing to pick returns to the cards, where that kind is now greyed out with
- * the reason: the card is the answer, in place of a screen with nothing on it.
- *
  * @module features/data-installer/ui/components/create-flow/useCreateDatapackFlow
  */
 
-import { useCallback, useState } from 'react';
-import type { PickableKind, StoreItemPage, StorePicks } from '../../../pickableKinds';
+import { useState } from 'react';
+import type { StorePicks } from '../../../pickableKinds';
 import {
     canProceed,
     type DatapackEngine,
@@ -30,7 +27,7 @@ import {
     stageOrder,
 } from './datapackFlowStages';
 import { type ExportAnswers, useExportAnswers } from './useExportAnswers';
-import { hasNothingToPick, type StorePicksState, useStorePicks } from './useStorePicks';
+import { type StorePicksState, useStorePicks } from './useStorePicks';
 
 export interface CreateDatapackFlowArgs {
     engine?: DatapackEngine;
@@ -59,15 +56,9 @@ export interface CreateDatapackFlow {
     pickPackType: (packType: PackType) => void;
     main: MainButton;
     store: StorePicksState;
-    /** Open a kind's items. */
-    openKind: (kind: PickableKind) => void;
-    /** A kind's read answered: its page, or null when it failed. Stable. */
-    kindAnswered: (kind: PickableKind, page: StoreItemPage | null) => void;
     answers: ExportAnswers;
     /** The dialog is reading what this screen will show: only the wait and the way out. */
     waiting: boolean;
-    /** This screen's own read is running, with its buttons kept, so the box stays as it was. */
-    holdSize: boolean;
 }
 
 /** What the dialog waits for on a stage. */
@@ -78,22 +69,12 @@ function isWaiting(stage: DatapackFlowStage, answers: ExportAnswers): boolean {
 
 export function useCreateDatapackFlow({ engine, startsAtPicks = false, pack, onSave }: CreateDatapackFlowArgs): CreateDatapackFlow {
     const [packType, setPackType] = useState<PackType | undefined>(startsAtPicks ? 'commerce' : undefined);
-    const [stage, setStage] = useState<DatapackFlowStage>(startsAtPicks ? 'store-kinds' : 'pack-type');
+    const [stage, setStage] = useState<DatapackFlowStage>(startsAtPicks ? 'store-picks' : 'pack-type');
 
     const route = packType && routeOf(packType, engine);
     const order = stageOrder(route, startsAtPicks);
-    const store = useStorePicks(stage === 'store-kinds', pack);
+    const store = useStorePicks(stage === 'store-picks', pack);
     const answers = useExportAnswers(route, stage !== 'pack-type');
-    const { open, answered } = store;
-
-    const openKind = useCallback((kind: PickableKind): void => {
-        open(kind);
-        setStage('store-items');
-    }, [open]);
-    const kindAnswered = useCallback((kind: PickableKind, page: StoreItemPage | null): void => {
-        answered(kind, page);
-        if (hasNothingToPick(page)) setStage('store-kinds');
-    }, [answered]);
 
     const action = mainActionOf(stage);
     const proceed = (): void => {
@@ -113,7 +94,7 @@ export function useCreateDatapackFlow({ engine, startsAtPicks = false, pack, onS
         back,
         pickPackType: setPackType,
         main: {
-            label: mainLabel(action, store.count),
+            label: mainLabel(action, startsAtPicks),
             isDisabled: !canProceed(stage, {
                 packTypeChosen: packType !== undefined,
                 canSave: pack !== undefined || store.count > 0,
@@ -126,10 +107,7 @@ export function useCreateDatapackFlow({ engine, startsAtPicks = false, pack, onS
             onPress: proceed,
         },
         store,
-        openKind,
-        kindAnswered,
         answers,
         waiting: isWaiting(stage, answers),
-        holdSize: stage === 'store-items' && store.reads[store.kind] === undefined,
     };
 }

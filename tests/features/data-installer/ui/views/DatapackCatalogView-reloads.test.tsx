@@ -217,13 +217,13 @@ describe('the two doors out of the catalog', () => {
 
         await press(screen.getByRole('button', { name: 'Create datapack' }));
 
-        expect(screen.getByText('Create a datapack')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Create datapack' })).toBeInTheDocument();
         await press(screen.getByRole('button', { name: /^Commerce datapack/ }));
         await press(screen.getByRole('button', { name: 'Continue' }));
 
         expect(screen.getByRole('button', { name: /^Products/ })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
-        expect(screen.queryByText('Choose what goes in the pack')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.queryByRole('heading', { name: 'Save store changes' })).not.toBeInTheDocument();
     });
 
     it("opens the service's export from Create datapack with the service engine, and closes it again", async () => {
@@ -240,11 +240,11 @@ describe('the two doors out of the catalog', () => {
         await press(screen.getByRole('button', { name: /^Commerce datapack/ }));
         await press(screen.getByRole('button', { name: 'Continue' }));
         expect(screen.getByText('Data types')).toBeInTheDocument();
-        expect(screen.getByText('Create a datapack')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Create datapack' })).toBeInTheDocument();
 
-        await press(screen.getByRole('button', { name: /^close$/i }));
+        await press(screen.getByRole('button', { name: 'Cancel' }));
 
-        expect(screen.queryByText('Create a datapack')).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Create datapack' })).not.toBeInTheDocument();
     });
 });
 

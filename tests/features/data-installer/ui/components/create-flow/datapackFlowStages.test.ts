@@ -34,15 +34,15 @@ describe('stageOrder', () => {
     });
 
     it.each([
-        ['store', ['pack-type', 'store-kinds', 'store-items']],
+        ['store', ['pack-type', 'store-picks']],
         ['aco', ['pack-type', 'aco-views', 'aco-kinds', 'pack-name']],
         ['service', ['pack-type', 'service-types', 'pack-name']],
     ] as const)('walks the %s route', (route, order) => {
         expect(stageOrder(route, false)).toEqual(order);
     });
 
-    it('starts at the kinds with no pack type to ask', () => {
-        expect(stageOrder('store', true)).toEqual(['store-kinds', 'store-items']);
+    it('starts at the picks with no pack type to ask', () => {
+        expect(stageOrder('store', true)).toEqual(['store-picks']);
     });
 });
 
@@ -59,17 +59,15 @@ describe('previousStage and nextStage', () => {
         expect(nextStage('pack-name', order)).toBeNull();
     });
 
-    it('has nothing behind the kinds when they are the start', () => {
-        expect(previousStage('store-kinds', stageOrder('store', true))).toBeNull();
-        expect(previousStage('store-items', stageOrder('store', true))).toBe('store-kinds');
+    it('has nothing behind the picks when they are the start', () => {
+        expect(previousStage('store-picks', stageOrder('store', true))).toBeNull();
     });
 });
 
 describe('the main button', () => {
     it.each([
         ['pack-type', 'continue'],
-        ['store-kinds', 'save'],
-        ['store-items', 'save'],
+        ['store-picks', 'save'],
         ['aco-views', 'continue'],
         ['aco-kinds', 'continue'],
         ['service-types', 'continue'],
@@ -80,8 +78,7 @@ describe('the main button', () => {
 
     it.each([
         ['pack-type', 'packTypeChosen'],
-        ['store-kinds', 'canSave'],
-        ['store-items', 'canSave'],
+        ['store-picks', 'canSave'],
         ['aco-views', 'viewsChosen'],
         ['aco-kinds', 'kindsChosen'],
         ['service-types', 'typesChosen'],
@@ -91,11 +88,10 @@ describe('the main button', () => {
         expect(canProceed(stage, { ...NOTHING, [gate]: true })).toBe(true);
     });
 
-    it('labels Save with what is picked, with separators', () => {
-        expect(mainLabel('save', 0)).toBe('Save');
-        expect(mainLabel('save', 2)).toBe('Save with 2 picked');
-        expect(mainLabel('save', 1284)).toBe('Save with 1,284 picked');
-        expect(mainLabel('continue', 3)).toBe('Continue');
-        expect(mainLabel('export', 3)).toBe('Export');
+    it('says Save for a new version of a pack, and Create for a new one', () => {
+        expect(mainLabel('save', true)).toBe('Save');
+        expect(mainLabel('save', false)).toBe('Create');
+        expect(mainLabel('continue', false)).toBe('Continue');
+        expect(mainLabel('export', false)).toBe('Export');
     });
 });

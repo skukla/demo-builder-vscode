@@ -106,7 +106,7 @@ describe('what Export waits for on the name', () => {
         await renderExport();
         await toTheName();
 
-        expect(screen.getByText(/identify it in the shared catalog/)).toBeInTheDocument();
+        expect(screen.getByText('Other teams see this name and version in the shared catalog.')).toBeInTheDocument();
     });
 });
 
@@ -240,7 +240,7 @@ describe('before the list arrives, and when it cannot', () => {
         expect(screen.queryByText(/Reading|Loading/)).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Select all' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
-        expect(button('Close')).toBeInTheDocument();
+        expect(button('Cancel')).toBeInTheDocument();
     });
 
     /** The section must never sit empty and unexplained: that is the silence this feature was built through. */
@@ -248,7 +248,7 @@ describe('before the list arrives, and when it cannot', () => {
         withService({ 'list-datapack-data-types': { success: false, error: 'An operation mode is required.' } });
         await renderExport();
 
-        expect(screen.getByText(/could not be loaded: An operation mode is required/)).toBeInTheDocument();
+        expect(screen.getByText(/Couldn't load data types: An operation mode is required/)).toBeInTheDocument();
         expect(isOff('Continue')).toBe(true);
     });
 });

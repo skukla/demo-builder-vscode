@@ -1,5 +1,5 @@
 /**
- * "Create a datapack": one window, one question per screen (owner, 2026-11-02). The first screen,
+ * "Create datapack": one window, one question per screen (owner, 2026-11-02). The first screen,
  * which route each engine and pack type takes, and Demo Builder's engine through to the save. The
  * export routes have their own suites; the screens that pick from the store are also pinned by
  * SaveFromStoreModal.test.tsx, which starts on them.
@@ -29,7 +29,7 @@ describe('the first screen', () => {
         await renderCreate('demo-builder');
 
         expect(screen.getAllByRole('dialog')).toHaveLength(1);
-        expect(screen.getByRole('heading', { name: 'Create a datapack' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Create datapack' })).toBeInTheDocument();
         expect(card('Commerce datapack')).toBeInTheDocument();
         expect(card('ACO datapack')).toBeInTheDocument();
         expect(screen.queryByRole('radio')).not.toBeInTheDocument();
@@ -43,11 +43,11 @@ describe('the first screen', () => {
         expect(mockRequest).not.toHaveBeenCalled();
     });
 
-    it('draws Close first, Back off, and Continue off until a card is clicked', async () => {
+    it('draws Cancel first, Back off, and Continue off until a card is clicked', async () => {
         await renderCreate('demo-builder');
 
-        const footer = screen.getAllByRole('button').filter((b) => ['Close', 'Back', 'Continue'].includes(b.textContent ?? ''));
-        expect(footer.map((b) => b.textContent)).toEqual(['Close', 'Back', 'Continue']);
+        const footer = screen.getAllByRole('button').filter((b) => ['Cancel', 'Back', 'Continue'].includes(b.textContent ?? ''));
+        expect(footer.map((b) => b.textContent)).toEqual(['Cancel', 'Back', 'Continue']);
         expect(isOff('Back')).toBe(true);
         expect(isOff('Continue')).toBe(true);
 
@@ -69,9 +69,9 @@ describe('the first screen', () => {
     });
 
     it.each([
-        ['demo-builder', "Pick what to save from this store into this demo's own pack."],
-        ['service', 'Export data types from this store into the shared catalog.'],
-        [undefined, 'Export data types from this store into the shared catalog.'],
+        ['demo-builder', "Save selected data from this store to this project's datapack."],
+        ['service', 'Export data types from this store to the shared catalog.'],
+        [undefined, 'Export data types from this store to the shared catalog.'],
     ] as const)('with the %s engine, says where a Commerce pack goes', async (engine, line) => {
         await renderCreate(engine);
 
@@ -80,14 +80,14 @@ describe('the first screen', () => {
 });
 
 describe('which route each engine and pack type takes', () => {
-    it("Commerce with Demo Builder's engine goes to the kinds, reading only how many of each", async () => {
+    it("Commerce with Demo Builder's engine goes to the selection, reading the counts and the first kind", async () => {
         await renderCreate('demo-builder');
         await press(card('Commerce datapack'));
         await press(button('Continue'));
 
         expect(card('Products')).toBeInTheDocument();
         expect(card('Attribute sets')).toBeInTheDocument();
-        expect(mockRequest.mock.calls.map((c) => c[0])).toEqual(['count-datapack-export-items']);
+        expect(mockRequest.mock.calls.map((c) => c[0]).sort()).toEqual(['count-datapack-export-items', 'list-datapack-export-items']);
     });
 
     it.each([['service'], [undefined]] as const)("Commerce with the %s engine goes to the service's data types", async (engine) => {
@@ -113,21 +113,20 @@ describe('which route each engine and pack type takes', () => {
 });
 
 describe("Commerce with Demo Builder's engine", () => {
-    it('Save starts the save with the picks, then closes', async () => {
+    it('Create starts the save with what is selected, then closes', async () => {
         const { onClose, onSaveFromStore } = await renderCreate('demo-builder');
         await press(card('Commerce datapack'));
         await press(button('Continue'));
-        expect(isOff('Save')).toBe(true);
+        expect(isOff('Create')).toBe(true);
 
-        await press(card('Products'));
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
-        await press(button('Save with 1 picked'));
+        await press(button('Create'));
 
         expect(onSaveFromStore).toHaveBeenCalledWith({ products: ['VR-Rack'] });
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('goes back from the kinds to the first screen, keeping the choice', async () => {
+    it('goes back from the selection to the first screen, keeping the choice', async () => {
         await renderCreate('demo-builder');
         await press(card('Commerce datapack'));
         await press(button('Continue'));
@@ -143,7 +142,7 @@ describe('closing and reopening', () => {
     it('closes without making anything', async () => {
         const { onClose, onSaveFromStore } = await renderCreate('demo-builder');
 
-        await press(button('Close'));
+        await press(button('Cancel'));
 
         expect(onClose).toHaveBeenCalledTimes(1);
         expect(onSaveFromStore).not.toHaveBeenCalled();

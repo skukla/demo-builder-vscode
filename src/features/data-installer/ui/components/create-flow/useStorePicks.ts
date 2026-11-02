@@ -1,21 +1,23 @@
 /**
- * What the SC has picked from the store, and what each kind's read answered (`useCreateDatapackFlow`).
+ * What the SC has selected from the store, and what each kind's read answered (`useCreateDatapackFlow`).
  *
- * The answers are kept by kind, so going back to the cards and opening a kind again shows its list
- * at once, and a kind the store has nothing to pick from can be greyed out on its card. A read that
- * failed is forgotten on the next open, which reads again. The read itself belongs to the screen
- * showing it (`StoreItemsStage`), so an answer arriving after the SC has left can never be taken for
- * another kind's.
+ * The answers are kept by kind, so returning to a kind shows its list at once, and a kind the store
+ * has nothing to select from can be greyed out on its row. A read that failed is forgotten on the
+ * next open, which reads again. The read itself belongs to the pane showing it (`StoreItemsStage`),
+ * so an answer arriving after the SC has moved on can never be taken for another kind's.
  *
- * How many of each kind the store has is read once, when the cards first show, without reading any
+ * How many of each kind the store has is read once, when the screen first shows, without reading any
  * of them (`count-datapack-export-items`). It only ever adds a grey: a count of none. A failed count
- * says nothing and the card stays clickable, and a kind's list, once it has answered, decides.
+ * says nothing and the row stays clickable, and a kind's list, once it has answered, decides.
+ *
+ * The kind shown is the one the SC chose, until that turns out to have nothing to select: then the
+ * next that may have some, so the pane is never empty while anything else could fill it.
  *
  * @module features/data-installer/ui/components/create-flow/useStorePicks
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../../pickableKinds';
+import { PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../../pickableKinds';
 import { useDataInstallerRequest } from '../../hooks/useDataInstallerRequest';
 import type { PackBeingSaved } from './datapackFlowStages';
 
@@ -23,8 +25,8 @@ import type { PackBeingSaved } from './datapackFlowStages';
 export type KindReads = Partial<Record<PickableKind, StoreItemPage | null>>;
 
 export interface StorePicksState {
-    /** The kind whose items are open. */
-    kind: PickableKind;
+    /** The kind whose items are shown; none when the store has nothing of any kind to select. */
+    kind: PickableKind | undefined;
     picks: StorePicks;
     count: number;
     reads: KindReads;
@@ -47,12 +49,19 @@ export function isKnownEmpty(read: StoreItemPage | null | undefined, count: numb
 
 const NO_COUNTS: StoreKindCounts = {};
 
+/** The chosen kind, or the next after it that may have something to select. */
+function kindToShow(chosen: PickableKind, reads: KindReads, counts: StoreKindCounts): PickableKind | undefined {
+    const from = PICKABLE_KINDS.indexOf(chosen);
+    const inTurn = [...PICKABLE_KINDS.slice(from), ...PICKABLE_KINDS.slice(0, from)];
+    return inTurn.find((kind) => !isKnownEmpty(reads[kind], counts[kind]));
+}
+
 /**
- * @param countsWanted - the cards are on screen, so the counts are wanted
+ * @param countsWanted - the kinds are on screen, so the counts are wanted
  * @param pack - the pack being saved, when there is one
  */
 export function useStorePicks(countsWanted: boolean, pack?: PackBeingSaved): StorePicksState {
-    const [kind, setKind] = useState<PickableKind>('products');
+    const [chosen, setChosen] = useState<PickableKind>('products');
     const [picks, setPicks] = useState<StorePicks>({});
     const [reads, setReads] = useState<KindReads>({});
 
@@ -64,17 +73,20 @@ export function useStorePicks(countsWanted: boolean, pack?: PackBeingSaved): Sto
         loadCounts(pack ? { datapackName: pack.id.name, version: pack.id.version, source: pack.source } : {});
     }, [countsWanted, loadCounts, pack]);
 
+    const known = counts ?? NO_COUNTS;
+    const kind = kindToShow(chosen, reads, known);
+
     const open = useCallback((next: PickableKind): void => {
-        setKind(next);
+        setChosen(next);
         setReads(({ [next]: page, ...rest }) => (page ? { ...rest, [next]: page } : rest));
     }, []);
     const setPicked = useCallback(
-        (ids: string[]): void => setPicks((current) => ({ ...current, [kind]: ids })),
+        (ids: string[]): void => setPicks((current) => (kind ? { ...current, [kind]: ids } : current)),
         [kind],
     );
     const answered = useCallback((of: PickableKind, page: StoreItemPage | null): void => {
         setReads((current) => ({ ...current, [of]: page }));
     }, []);
 
-    return { kind, picks, count: pickCount(picks), reads, counts: counts ?? NO_COUNTS, open, setPicked, answered };
+    return { kind, picks, count: pickCount(picks), reads, counts: known, open, setPicked, answered };
 }

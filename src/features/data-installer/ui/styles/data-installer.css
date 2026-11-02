@@ -489,17 +489,85 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-/* What goes in it: every row one height, a name and one line, however the counts come in, so a card
-   losing its description to a grey never moves the grid. Ten cards fit with no scrolling. The note
-   sits on the name's line, because the description has the line below it. */
-.datapack-flow-cards--kinds {
-    grid-auto-rows: 62px;
-    row-gap: 8px;
+/* The kinds beside the shown kind's items (StorePicksStage): one height whatever is read, so nothing
+   moves. Every row is one height too, so a note arriving moves no row. */
+.datapack-picks {
+    display: grid;
+    grid-template-columns: 186px minmax(0, 1fr);
+    height: 400px;
 }
 
-.datapack-flow-cards--kinds .choice-card-note {
-    top: var(--spectrum-global-dimension-size-125);
-    bottom: auto;
+.datapack-picks-rail {
+    list-style: none;
+    margin: 0;
+    padding: 0 14px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-right: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.datapack-picks-kind {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    height: 38px;
+    padding: 0 10px;
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--spectrum-global-color-gray-800);
+    font: inherit;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+}
+
+.datapack-picks-kind:hover {
+    background: var(--spectrum-global-color-gray-200);
+}
+
+.datapack-picks-kind:disabled {
+    background: transparent;
+    color: var(--spectrum-global-color-gray-500);
+    cursor: default;
+}
+
+.datapack-picks-kind--shown,
+.datapack-picks-kind--shown:hover {
+    border-left-color: var(--spectrum-global-color-blue-500);
+    background: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-900);
+    font-weight: 600;
+}
+
+.datapack-picks-note {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.datapack-picks-kind:disabled .datapack-picks-note {
+    color: var(--spectrum-global-color-gray-500);
+}
+
+.datapack-picks-kind--picked .datapack-picks-note {
+    color: var(--spectrum-global-color-blue-600);
+}
+
+.datapack-picks-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    min-height: 0;
+    padding-left: 18px;
+}
+
+.datapack-picks-pane > .modal-wait {
+    flex: 1;
 }
 }
 
@@ -508,14 +576,17 @@
 @layer theme {
 .datapack-pick-list {
     display: flex;
+    flex: 1;
     flex-direction: column;
     gap: 8px;
+    min-height: 0;
 }
 }
 
 @layer theme {
 .datapack-pick-rows {
-    max-height: 320px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
 }
 }

@@ -55,7 +55,7 @@ describe('the outcome is the title', () => {
 
         const heading = screen.getByRole('heading', { name: /Exported 1 of 1 data types/ });
         expect(heading.querySelector('.text-positive')).not.toBeNull();
-        expect(screen.queryByRole('heading', { name: 'Create a datapack' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Create datapack' })).not.toBeInTheDocument();
     });
 
     it.each([
@@ -78,7 +78,7 @@ describe('the outcome is the title', () => {
 
         await press(button('Back'));
 
-        expect(screen.getByRole('heading', { name: 'Create a datapack' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Create datapack' })).toBeInTheDocument();
         expect(screen.getByRole('textbox', { name: /datapack name/i })).toHaveValue('captured-pack');
         expect(button('Export')).toHaveAttribute('aria-disabled', 'false');
     });

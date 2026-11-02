@@ -51,7 +51,7 @@ import '@/core/ui/styles/work-row.css';
 // stores would do (datapack-engine step 10).
 import '@/core/ui/styles/fact-list.css';
 import '@/core/ui/styles/modal-text.css';
-// .choice-card* — Create a datapack's screens are cards (`ChoiceCard`, owned by project-creation).
+// .choice-card* — Create datapack's screens are cards (`ChoiceCard`, owned by project-creation).
 import '@/features/project-creation/ui/styles/choice-cards.css';
 // Feature-scoped: this is the ONLY entry that loads it, so its classes exist in
 // this bundle and nowhere else.

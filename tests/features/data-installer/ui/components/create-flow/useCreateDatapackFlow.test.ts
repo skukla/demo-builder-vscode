@@ -71,7 +71,7 @@ describe('the first screen', () => {
 
 describe('which route each engine and pack type takes', () => {
     it.each([
-        ['commerce', 'demo-builder', 'store-kinds'],
+        ['commerce', 'demo-builder', 'store-picks'],
         ['commerce', 'service', 'service-types'],
         ['commerce', undefined, 'service-types'],
         ['aco', 'demo-builder', 'aco-views'],
@@ -87,113 +87,97 @@ describe('which route each engine and pack type takes', () => {
 });
 
 describe('the store route', () => {
-    async function onTheKinds(args: Partial<CreateDatapackFlowArgs> = {}) {
+    async function onThePicks(args: Partial<CreateDatapackFlowArgs> = {}) {
         const flow = await flowFor({ engine: 'demo-builder', ...args });
         await flow.step(() => flow.result.current.pickPackType('commerce'));
         await flow.step(() => flow.result.current.main.onPress());
         return flow;
     }
 
-    it('opens a kind, goes back to the kinds, and on to the first screen', async () => {
-        const { result, step } = await onTheKinds();
+    it('opens a kind where it stands, and goes back to the first screen', async () => {
+        const { result, step } = await onThePicks();
 
-        await step(() => result.current.openKind('cart_rules'));
-        expect(result.current.stage).toBe('store-items');
+        await step(() => result.current.store.open('cart_rules'));
+        expect(result.current.stage).toBe('store-picks');
         expect(result.current.store.kind).toBe('cart_rules');
-
-        await step(() => result.current.back());
-        expect(result.current.stage).toBe('store-kinds');
 
         await step(() => result.current.back());
         expect(result.current.stage).toBe('pack-type');
         expect(result.current.packType).toBe('commerce');
     });
 
-    it('holds the box only while the open kind is unanswered', async () => {
-        const { result, step } = await onTheKinds();
-        expect(result.current.holdSize).toBe(false);
+    it('never waits the whole dialog on a kind', async () => {
+        const { result, step } = await onThePicks();
 
-        await step(() => result.current.openKind('products'));
-        expect(result.current.holdSize).toBe(true);
+        await step(() => result.current.store.open('products'));
+
         expect(result.current.waiting).toBe(false);
-
-        await step(() => result.current.kindAnswered('products', PAGE));
-        expect(result.current.holdSize).toBe(false);
     });
 
-    it('keeps picks across kinds, through the first screen and back, and saves them all', async () => {
-        const { result, step, onSave } = await onTheKinds();
-        await step(() => result.current.openKind('products'));
+    it('keeps selections across kinds, through the first screen and back, and saves them all', async () => {
+        const { result, step, onSave } = await onThePicks();
+        await step(() => result.current.store.open('products'));
         await step(() => result.current.store.setPicked(['VR-Rack', 'Tray']));
-        await step(() => result.current.back());
-        await step(() => result.current.openKind('cart_rules'));
+        await step(() => result.current.store.open('cart_rules'));
         await step(() => result.current.store.setPicked(['7']));
-        await step(() => result.current.back());
         await step(() => result.current.back());
         await step(() => result.current.main.onPress());
 
-        expect(result.current.stage).toBe('store-kinds');
-        expect(result.current.main).toMatchObject({ label: 'Save with 3 picked', isDisabled: false });
+        expect(result.current.stage).toBe('store-picks');
+        expect(result.current.main).toMatchObject({ label: 'Create', isDisabled: false });
 
         await step(() => result.current.main.onPress());
 
         expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Tray'], cart_rules: ['7'] });
     });
 
-    it('has Save off until something is picked, and on both pick screens', async () => {
-        const { result, step } = await onTheKinds();
-        expect(result.current.main).toMatchObject({ label: 'Save', isDisabled: true });
-
-        await step(() => result.current.openKind('products'));
-        expect(result.current.main).toMatchObject({ label: 'Save', isDisabled: true });
+    it('has the main button off until something is selected', async () => {
+        const { result, step } = await onThePicks();
+        expect(result.current.main).toMatchObject({ label: 'Create', isDisabled: true });
 
         await step(() => result.current.store.setPicked(['VR-Rack']));
-        expect(result.current.main).toMatchObject({ label: 'Save with 1 picked', isDisabled: false });
+        expect(result.current.main).toMatchObject({ label: 'Create', isDisabled: false });
     });
 
-    it('returns to the kinds when a read leaves nothing to pick, and keeps the answer', async () => {
-        const { result, step } = await onTheKinds();
-        await step(() => result.current.openKind('giftcards'));
+    it('moves to the next kind when a read leaves nothing to select, and keeps the answer', async () => {
+        const { result, step } = await onThePicks();
+        await step(() => result.current.store.open('giftcards'));
 
-        await step(() => result.current.kindAnswered('giftcards', NONE));
+        await step(() => result.current.store.answered('giftcards', NONE));
 
-        expect(result.current.stage).toBe('store-kinds');
+        expect(result.current.stage).toBe('store-picks');
+        expect(result.current.store.kind).toBe('categories');
         expect(result.current.store.reads.giftcards).toEqual(NONE);
     });
 
-    it('stays on the items when a read fails, and forgets the failure on the next open', async () => {
-        const { result, step } = await onTheKinds();
-        await step(() => result.current.openKind('products'));
+    it('stays on a kind whose read failed, and forgets the failure on the next open', async () => {
+        const { result, step } = await onThePicks();
+        await step(() => result.current.store.open('products'));
 
-        await step(() => result.current.kindAnswered('products', null));
-        expect(result.current.stage).toBe('store-items');
-        expect(result.current.holdSize).toBe(false);
+        await step(() => result.current.store.answered('products', null));
+        expect(result.current.store.kind).toBe('products');
 
-        await step(() => result.current.back());
-        await step(() => result.current.openKind('products'));
+        await step(() => result.current.store.open('products'));
 
         expect(result.current.store.reads.products).toBeUndefined();
-        expect(result.current.holdSize).toBe(true);
     });
 
     it('keeps a good answer on the next open', async () => {
-        const { result, step } = await onTheKinds();
-        await step(() => result.current.openKind('products'));
-        await step(() => result.current.kindAnswered('products', PAGE));
-        await step(() => result.current.back());
+        const { result, step } = await onThePicks();
+        await step(() => result.current.store.open('products'));
+        await step(() => result.current.store.answered('products', PAGE));
 
-        await step(() => result.current.openKind('products'));
+        await step(() => result.current.store.open('products'));
 
         expect(result.current.store.reads.products).toEqual(PAGE);
-        expect(result.current.holdSize).toBe(false);
     });
 });
 
 describe('starting at the picks', () => {
-    it('has nothing behind the kinds and no pack type to ask', async () => {
+    it('has nothing behind the picks and no pack type to ask', async () => {
         const { result } = await flowFor({ engine: 'demo-builder', startsAtPicks: true });
 
-        expect(result.current.stage).toBe('store-kinds');
+        expect(result.current.stage).toBe('store-picks');
         expect(result.current.route).toBe('store');
         expect(result.current.canGoBack).toBe(false);
     });

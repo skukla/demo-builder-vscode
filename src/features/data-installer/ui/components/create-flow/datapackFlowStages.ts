@@ -1,15 +1,15 @@
 /**
- * The stages of "Create a datapack" (`DatapackFlowDialog`), as data: which screens each kind of
+ * The stages of "Create datapack" (`DatapackFlowDialog`), as data: which screens each kind of
  * pack walks, in what order, what the main button does on each, and what turns it on. No React,
  * as `flowStages.ts` is for Add Integration.
  *
  * | Route | Pack, engine | Screens after the pack type |
  * |---|---|---|
- * | `store` | Commerce, Demo Builder's | what goes in it, then one kind's items |
+ * | `store` | Commerce, Demo Builder's | the kinds and their items, on one screen |
  * | `aco` | ACO, either | store views, ACO data types, name |
  * | `service` | Commerce, the service's (or none chosen) | data types, name |
  *
- * "Save store changes to this pack" walks `store` from what goes in it, with no pack type to ask.
+ * "Save store changes to this pack" is that one screen, with no pack type to ask.
  *
  * @module features/data-installer/ui/components/create-flow/datapackFlowStages
  */
@@ -26,8 +26,7 @@ export type DatapackRoute = 'store' | 'aco' | 'service';
 
 export type DatapackFlowStage =
     | 'pack-type'
-    | 'store-kinds'
-    | 'store-items'
+    | 'store-picks'
     | 'aco-views'
     | 'aco-kinds'
     | 'service-types'
@@ -55,15 +54,14 @@ export interface FlowGates {
 }
 
 const ROUTE_STAGES: Record<DatapackRoute, DatapackFlowStage[]> = {
-    store: ['store-kinds', 'store-items'],
+    store: ['store-picks'],
     aco: ['aco-views', 'aco-kinds', 'pack-name'],
     service: ['service-types', 'pack-name'],
 };
 
 const MAIN_ACTIONS: Record<DatapackFlowStage, MainAction> = {
     'pack-type': 'continue',
-    'store-kinds': 'save',
-    'store-items': 'save',
+    'store-picks': 'save',
     'aco-views': 'continue',
     'aco-kinds': 'continue',
     'service-types': 'continue',
@@ -72,8 +70,7 @@ const MAIN_ACTIONS: Record<DatapackFlowStage, MainAction> = {
 
 const GATES: Record<DatapackFlowStage, (gates: FlowGates) => boolean> = {
     'pack-type': (gates) => gates.packTypeChosen,
-    'store-kinds': (gates) => gates.canSave,
-    'store-items': (gates) => gates.canSave,
+    'store-picks': (gates) => gates.canSave,
     'aco-views': (gates) => gates.viewsChosen,
     'aco-kinds': (gates) => gates.kindsChosen,
     'service-types': (gates) => gates.typesChosen,
@@ -113,9 +110,13 @@ export function canProceed(stage: DatapackFlowStage, gates: FlowGates): boolean 
     return GATES[stage](gates);
 }
 
-/** The main button's words: Save counts what is picked. */
-export function mainLabel(action: MainAction, picked: number): string {
+/**
+ * The main button's words.
+ *
+ * @param savesExisting - a new version of a pack, so Save; otherwise the store's save makes one, so Create
+ */
+export function mainLabel(action: MainAction, savesExisting: boolean): string {
     if (action === 'continue') return 'Continue';
     if (action === 'export') return 'Export';
-    return picked > 0 ? `Save with ${picked.toLocaleString('en-US')} picked` : 'Save';
+    return savesExisting ? 'Save' : 'Create';
 }

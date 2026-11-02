@@ -1,9 +1,9 @@
 /**
- * One kind's items to pick, or why they could not be listed (`StoreItemsStage`).
+ * One kind's items to select, or why they could not be listed (`StoreItemsStage`).
  *
- * The screen keeps its Back and Save while the store is read (a slow read must not cost the picks
- * already made), so the spinner sits in the body, without words. A kind with nothing to pick never
- * rests here: the flow returns to the cards, where its card is greyed out.
+ * The screen keeps its kinds and buttons while the store is read (a slow read must not cost what is
+ * already selected), so the spinner sits in the pane, without words. A kind with nothing to select
+ * never rests here: the flow moves on to the next kind, and its row is greyed out.
  *
  * @module features/data-installer/ui/components/StoreKindItems
  */
@@ -12,6 +12,13 @@ import React from 'react';
 import { KIND_NOUNS, type PickableKind, type StoreItemPage } from '../../pickableKinds';
 import { StoreItemChecklist } from './StoreItemChecklist';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
+
+/** What selecting one of these also saves, on the kinds where the SC needs to know. */
+const INCLUDES: Partial<Record<PickableKind, string>> = {
+    products: 'Includes related categories, attributes and stock.',
+    cart_rules: 'Includes related coupons.',
+    b2b_companies: 'Includes the company admin.',
+};
 
 export interface StoreKindItemsProps {
     kind: PickableKind;
@@ -31,11 +38,12 @@ export function StoreKindItems({ kind, page, failure, loading, picked, onChange 
             </div>
         );
     }
-    if (failure || !page) return <p className="dialog-problem text-negative">The store&apos;s {many} could not be listed: {failure}</p>;
+    if (failure || !page) return <p className="dialog-problem text-negative">Couldn&apos;t load {many}: {failure}</p>;
     return (
         <>
+            {INCLUDES[kind] ? <p className="datapack-export-note">{INCLUDES[kind]}</p> : null}
             <StoreItemChecklist items={page.items} nouns={[one, many]} picked={picked} onChange={onChange} />
-            {page.inPackCount > 0 ? <p className="datapack-export-note">{page.inPackCount.toLocaleString('en-US')} more are in the pack already and are saved with it.</p> : null}
+            {page.inPackCount > 0 ? <p className="datapack-export-note">{page.inPackCount.toLocaleString('en-US')} more already in the datapack.</p> : null}
         </>
     );
 }

@@ -2,7 +2,7 @@
  * One kind's items to pick, read when first opened (`list-datapack-export-items`, less what the pack
  * being saved holds). The read belongs to this screen: the dialog keys it by kind, so an answer
  * arriving after the SC has left is dropped rather than taken for another kind's. Its answer goes up
- * to the flow, which keeps it, so the card behind can say what it found.
+ * to the flow, which keeps it, so the kind's row can say what it found.
  *
  * @module features/data-installer/ui/components/create-flow/stages/StoreItemsStage
  */

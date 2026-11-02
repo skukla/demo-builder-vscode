@@ -1,7 +1,8 @@
 /**
- * The cards of "What goes in it" as the store's counts arrive (`count-datapack-export-items`):
- * shown at once and clickable while they are read, greyed with no click by a count of none, and
- * left alone by a count that failed or was not none. A kind's list, once answered, decides.
+ * The kinds' rows as the store's counts arrive (`count-datapack-export-items`): shown at once and
+ * clickable while they are read, greyed with no click by a count of none, and left alone by a count
+ * that failed or was not none. A kind's list, once answered, decides. The kind shown moves on from
+ * one with nothing to select.
  */
 
 import '../../../../../../helpers/webviewClientMock';
@@ -19,7 +20,7 @@ const mockRequest = webviewClient.request as jest.Mock;
 
 const COUNT = 'count-datapack-export-items';
 const LIST = 'list-datapack-export-items';
-const NONE_NOTE = 'None in this store';
+const NONE_NOTE = 'None available';
 const PRODUCTS: StoreItemPage = { items: [{ id: 'VR-Rack', displayName: 'VR Rack', detail: 'VR-Rack', key: 'VR-Rack' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
 const ALL_IN_PACK: StoreItemPage = { items: [], totalCount: 3, excludedCount: 0, inPackCount: 3 };
 const PACK = { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', source: 'library' as const };
@@ -33,7 +34,9 @@ function answer(counts: unknown, pages: Record<string, StoreItemPage> = {}) {
 
 const counted = (counts: StoreKindCounts) => ({ success: true, data: counts });
 const callsOf = (type: string) => mockRequest.mock.calls.filter((c) => c[0] === type);
-const card = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}`) });
+const row = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}`) });
+const rows = () => screen.getAllByRole('button').filter((b) => b.classList.contains('datapack-picks-kind'));
+const shown = () => rows().find((b) => b.getAttribute('aria-current') === 'true');
 
 async function open(props: Partial<React.ComponentProps<typeof SaveFromStoreModal>> = {}) {
     render(<SaveFromStoreModal onClose={jest.fn()} onSave={jest.fn()} {...props} />);
@@ -43,61 +46,85 @@ async function open(props: Partial<React.ComponentProps<typeof SaveFromStoreModa
 beforeEach(() => mockRequest.mockReset());
 
 describe('while the counts are being read', () => {
-    it('shows every card at once, clickable', async () => {
+    it('shows every row at once, clickable, with only the items pane waiting', async () => {
         mockRequest.mockImplementation(() => new Promise(() => undefined));
         await open();
 
-        const cards = screen.getAllByRole('button').filter((b) => b.classList.contains('choice-card'));
-        expect(cards).toHaveLength(PICKABLE_KINDS.length);
-        cards.forEach((c) => expect(c).toBeEnabled());
-        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+        expect(rows()).toHaveLength(PICKABLE_KINDS.length);
+        rows().forEach((r) => expect(r).toBeEnabled());
+        expect(screen.getByRole('progressbar', { name: /Loading the store's products/ })).toBeInTheDocument();
     });
 });
 
 describe('a count of none', () => {
-    it('greys its card out with no click, and reads no list', async () => {
+    it('greys its row out with no click, and reads no list of it', async () => {
         answer(counted({ giftcards: 0, products: 139 }));
         await open();
 
-        expect(card('Gift cards')).toBeDisabled();
-        expect(card('Gift cards')).toHaveTextContent(NONE_NOTE);
-        expect(callsOf(LIST)).toHaveLength(0);
+        expect(row('Gift cards')).toBeDisabled();
+        expect(row('Gift cards')).toHaveTextContent(NONE_NOTE);
+        expect(callsOf(LIST).map((c) => c[1])).toEqual([{ dataType: 'products' }]);
     });
 
-    it('drops what the kind would bring, since it brings nothing', async () => {
-        answer(counted({ products: 0, cart_rules: 3 }));
-        await open();
-
-        expect(card('Products')).not.toHaveTextContent('Brings');
-        expect(card('Cart rules')).toHaveTextContent('Brings its coupons.');
-    });
-
-    it('leaves a card with some clickable, and says no number', async () => {
+    it('leaves a row with some clickable, and says no number', async () => {
         answer(counted({ giftcards: 0, products: 139 }));
         await open();
 
-        expect(card('Products')).toBeEnabled();
-        expect(card('Products')).not.toHaveTextContent('139');
+        expect(row('Products')).toBeEnabled();
+        expect(row('Products')).not.toHaveTextContent('139');
+    });
+});
+
+describe('the kind shown', () => {
+    it('starts at Products', async () => {
+        answer(counted({ products: 139 }));
+        await open();
+
+        expect(shown()).toBe(row('Products'));
+    });
+
+    it('moves on from a kind the counts say is empty', async () => {
+        answer(counted({ products: 0, giftcards: 2 }));
+        await open();
+
+        expect(shown()).toBe(row('Gift cards'));
+    });
+
+    it('moves on from a kind whose list left nothing to select', async () => {
+        answer(counted({ products: 3 }), { products: ALL_IN_PACK });
+        await open();
+
+        expect(shown()).not.toBe(row('Products'));
+        expect(row('Products')).toBeDisabled();
+    });
+
+    it('says so when the store has nothing of any kind', async () => {
+        answer(counted(Object.fromEntries(PICKABLE_KINDS.map((kind) => [kind, 0]))));
+        await open();
+
+        expect(shown()).toBeUndefined();
+        expect(screen.getByText('This store has no data to select.')).toBeInTheDocument();
+        expect(callsOf(LIST).filter((c) => c[1].dataType !== 'products')).toHaveLength(0);
     });
 });
 
 describe('a count that failed', () => {
-    it('leaves every card clickable and shows nothing: a refusal', async () => {
+    it('leaves every row clickable and shows nothing: a refusal', async () => {
         answer({ success: false, error: 'Sign in first.' });
         await open();
 
-        screen.getAllByRole('button').filter((b) => b.classList.contains('choice-card')).forEach((c) => expect(c).toBeEnabled());
+        rows().forEach((r) => expect(r).toBeEnabled());
         expect(screen.queryByText(/Sign in first/)).not.toBeInTheDocument();
     });
 
-    it('leaves every card clickable and shows nothing: no answer at all', async () => {
+    it('leaves every row clickable and shows nothing: no answer at all', async () => {
         mockRequest.mockImplementation(async (type: string) => {
             if (type === COUNT) throw new Error('Request timed out');
             return { success: true, data: PRODUCTS };
         });
         await open();
 
-        screen.getAllByRole('button').filter((b) => b.classList.contains('choice-card')).forEach((c) => expect(c).toBeEnabled());
+        rows().forEach((r) => expect(r).toBeEnabled());
         expect(screen.queryByText(/timed out/)).not.toBeInTheDocument();
     });
 
@@ -105,44 +132,38 @@ describe('a count that failed', () => {
         answer(counted({ products: 0 }));
         await open();
 
-        expect(card('Products')).toBeDisabled();
-        expect(card('Customers')).toBeEnabled();
+        expect(row('Products')).toBeDisabled();
+        expect(row('Customers')).toBeEnabled();
     });
 
-    it('does not ask again on the way back from a kind', async () => {
+    it('asks once, however many kinds are opened', async () => {
         answer({ success: false, error: 'Sign in first.' });
         await open();
 
-        await press(card('Products'));
-        await press(screen.getByRole('button', { name: 'Back' }));
+        await press(row('Customers'));
+        await press(row('Products'));
 
         expect(callsOf(COUNT)).toHaveLength(1);
     });
 });
 
 describe('a count and a list', () => {
-    it('lets the list decide once it has answered: the count said some, the list left none', async () => {
+    it('says the datapack holds them all when that is why', async () => {
         answer(counted({ products: 3 }), { products: ALL_IN_PACK });
         await open();
-        expect(card('Products')).toBeEnabled();
 
-        await press(card('Products'));
-
-        expect(card('Products')).toBeDisabled();
-        expect(card('Products')).toHaveTextContent('3 in the pack already');
+        expect(row('Products')).toHaveTextContent('All in datapack');
     });
 
-    it('keeps "2 picked" for a kind with a count above none', async () => {
+    it('says how many are selected on the row', async () => {
         const TWO: StoreItemPage = { ...PRODUCTS, items: [...PRODUCTS.items, { id: 'Tray', displayName: 'Cable Tray', key: 'Tray' }], totalCount: 2 };
         answer(counted({ products: 2 }), { products: TWO });
         await open();
 
-        await press(card('Products'));
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
         await press(screen.getByRole('checkbox', { name: /Cable Tray/ }));
-        await press(screen.getByRole('button', { name: 'Back' }));
 
-        expect(card('Products')).toHaveTextContent('2 picked');
+        expect(row('Products')).toHaveTextContent('2 selected');
         expect(callsOf(COUNT)).toHaveLength(1);
     });
 });
