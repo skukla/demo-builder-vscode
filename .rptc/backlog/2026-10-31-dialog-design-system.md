@@ -47,3 +47,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-01  fix(data-installer): the Import dialog's store wait uses a medium spinner (`dabd62734`)
 - 2026-11-01  Merge the dialog design work into develop for review (`343e85e43`)
 - 2026-11-02  fix(ui): a flyout waits as a dialog does, with a medium spinner and no words (`bdf9cf77f`)
+- 2026-11-02  feat(ui): a dialog's change of view is one move (`58ff89c10`)
