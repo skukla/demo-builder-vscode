@@ -253,7 +253,7 @@ describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
 
         // Each step the dialog's spinner names, in order (owner, 2026-09-14).
         expect(onProgress.mock.calls).toStrictEqual([
-            ['Creating the repository', 'summit · 2 files'],
+            ['Creating the repository', 'summit, 2 files'],
             ['Pushing files', '2 of 2'],
             ['Finishing up', 'Marking it as a template'],
         ]);

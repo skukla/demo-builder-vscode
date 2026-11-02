@@ -183,7 +183,7 @@ describe('IntegrationsStep — result cards from state', () => {
     // match, so these two assertions fail if the repetition returns.
     it('shows the committed destination ONCE, above the cards, with Change', async () => {
         await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
-        expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project, Stage')).toBeInTheDocument();
         expect(
             within(destinationLine()).getByRole('button', { name: 'Change' })
         ).toBeInTheDocument();
@@ -197,14 +197,14 @@ describe('IntegrationsStep — result cards from state', () => {
                 appBuilderComponentSources: { 'acme-widget': { owner: 'acme', repo: 'widget' } },
             })
         );
-        expect(screen.getAllByText('Demo Project · Stage')).toHaveLength(1);
+        expect(screen.getAllByText('Demo Project, Stage')).toHaveLength(1);
         expect(document.querySelectorAll('.integration-card').length).toBeGreaterThan(1);
     });
 
     it('puts the source line, and no API count, in the card subline', async () => {
         await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
         const custom = row('widget');
-        expect(within(custom).getByText(/Custom integration · acme\/widget$/)).toBeInTheDocument();
+        expect(within(custom).getByText(/Custom integration, acme\/widget$/)).toBeInTheDocument();
         expect(within(custom).queryByText(/\d APIs?$/)).not.toBeInTheDocument();
         expect(screen.queryByText('API access enabled')).not.toBeInTheDocument();
     });
@@ -316,7 +316,7 @@ describe('IntegrationsStep — modal wiring', () => {
         expect(
             within(dialog).getByRole('heading', { name: 'Edit API Access' })
         ).toBeInTheDocument();
-        expect(within(dialog).getByTestId('api-picker-stage')).toBeInTheDocument();
+        expect(await within(dialog).findByTestId('api-picker-stage')).toBeInTheDocument();
     });
 
     it('pressing a custom card opens the same picker (its only detail)', async () => {

@@ -93,3 +93,14 @@ export async function probeWith(answer: unknown): Promise<void> {
     typeLink('https://github.com/jen/isle5-demo');
     await click('Continue');
 }
+
+/** The dialog's title, by its words. */
+export function title(name: string): HTMLElement {
+    return screen.getByRole('heading', { name });
+}
+
+/** Every footer button's name, in order: the buttons follow the body, so read from the end of the dialog. */
+export function footerButtons(): string[] {
+    const footer = screen.getByRole('dialog').querySelector('.modal-footer-actions') as HTMLElement;
+    return Array.from(footer.querySelectorAll('[role="button"]')).map((b) => b.textContent ?? '');
+}

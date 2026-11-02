@@ -128,7 +128,7 @@ describe('handleImportStorefrontZip', () => {
 
         const steps = (context.sendMessage as jest.Mock).mock.calls.filter(([type]) => type === 'storefront-zip-progress').map(([, payload]) => payload);
         expect(steps[0]).toStrictEqual({ message: 'Reading the zip', detail: 'summit.zip' });
-        expect(steps[1]).toStrictEqual({ message: 'Creating the repository', detail: 'citisignal-b2b-summit · 3 files · 7 left out' });
+        expect(steps[1]).toStrictEqual({ message: 'Creating the repository', detail: 'citisignal-b2b-summit, 3 files, 7 left out' });
     });
 
     it('takes a name and private visibility when asked', async () => {

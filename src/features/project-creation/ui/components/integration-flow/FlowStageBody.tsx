@@ -18,6 +18,7 @@ import { CustomStage } from './stages/CustomStage';
 import { DestinationStage } from './stages/DestinationStage';
 import { KindStage } from './stages/KindStage';
 import type { UseIntegrationFlowReturn } from './useIntegrationFlow';
+import type { ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
 import {
     isPrebuiltIntegration,
     isSeedIntegration,
@@ -42,7 +43,6 @@ interface StageBodyInputs {
     updateState: (updates: Partial<WizardState>) => void;
     meshComponent?: AppBuilderComponentCatalogEntry;
     catalog: AppBuilderComponentCatalogEntry[];
-    onSignIn?: () => Promise<unknown>;
     /** Catalog entries that cannot be added here, and what to do instead. */
     unavailable?: UnavailableEntries;
 }
@@ -56,12 +56,15 @@ interface StageBodyInputs {
 export function FlowStageBody({
     flow,
     props,
+    apis,
 }: {
     flow: UseIntegrationFlowReturn;
     props: StageBodyInputs;
+    /** The org's APIs, read by the dialog: the api-access stage's list. */
+    apis: ApiAccessOption[];
 }): React.ReactElement {
     const { stage, draft } = flow;
-    const { state, updateState, meshComponent, catalog, onSignIn, unavailable } = props;
+    const { state, updateState, meshComponent, catalog, unavailable } = props;
 
     // The catalog prop is the stack-filtered MIXED list: derived meshes, authored
     // integrations, the blank shell, and SEEDS. Only finished integrations belong
@@ -146,8 +149,7 @@ export function FlowStageBody({
         // stage is terminal), so this is unconditionally the picker.
         return (
             <ApiPickerStage
-                onSignIn={onSignIn}
-                componentIds={selectedIds}
+                apis={apis}
                 selected={draft.selectedApis ?? EMPTY_IDS}
                 onToggle={flow.toggleApi}
             />

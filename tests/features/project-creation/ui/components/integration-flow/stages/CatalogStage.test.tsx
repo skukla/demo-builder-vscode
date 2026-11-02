@@ -264,8 +264,8 @@ describe('node-version disclosure', () => {
 });
 
 // One Commerce instance runs one ERP integration (AB-78). Like the API Mesh tile once
-// a project has its mesh, the tile stays in the gallery, greyed out. The words go in a
-// banner above the gallery, never on the tile, where they would be missed (owner).
+// a project has its mesh, the tile stays in the gallery, greyed out. The words go in an
+// amber note above the gallery, never on the tile, where they would be missed (owner).
 describe('an entry that cannot be added here', () => {
     const MESSAGE = 'JustRite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
 
@@ -276,10 +276,14 @@ describe('an entry that cannot be added here', () => {
         expect(screen.getByRole('button', { name: /Widget B/ })).toBeEnabled();
     });
 
-    it('says why and what to do in a banner above the gallery, not on the tile', () => {
+    it('says why and what to do in an amber note above the gallery, not a box and not on the tile', () => {
         renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
 
-        expect(screen.getByTestId('catalog-unavailable')).toHaveTextContent(MESSAGE);
+        const note = screen.getByTestId('catalog-unavailable');
+        expect(note).toHaveTextContent(MESSAGE);
+        expect(note).toHaveClass('intflow-catalog-note', 'text-orange-600');
+        expect(note).not.toHaveClass('inline-notice');
+        expect(note.parentElement?.firstElementChild).toBe(note);
         expect(screen.getByRole('button', { name: /Widget A/ })).not.toHaveTextContent(MESSAGE);
     });
 
@@ -303,7 +307,7 @@ describe('an entry that cannot be added here', () => {
         expect(screen.getByLabelText(/Name \(optional\)/)).toBeInTheDocument();
     });
 
-    it('shows no banner when nothing listed is unavailable', () => {
+    it('shows no note when nothing listed is unavailable', () => {
         renderStage({ unavailable: { message: MESSAGE, ids: ['not-listed'] } });
 
         expect(screen.queryByTestId('catalog-unavailable')).not.toBeInTheDocument();

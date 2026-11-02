@@ -150,10 +150,10 @@ describe('ProjectRow — pin, summary and aria-label', () => {
 
         // The slot, not merely the text: rendered unwrapped the words are
         // still on screen and the row loses the class that styles them.
-        expect(summarySlot(container)).toHaveTextContent('Headless · API Mesh');
+        expect(summarySlot(container)).toHaveTextContent('Headless, API Mesh');
         expect(screen.getByRole('button', { name: /^Summarised Row, / })).toHaveAttribute(
             'aria-label',
-            'Summarised Row, Stopped, Headless · API Mesh'
+            'Summarised Row, Stopped, Headless, API Mesh'
         );
     });
 
@@ -183,7 +183,7 @@ describe('ProjectRow — pin, summary and aria-label', () => {
         const { container, rerender } = renderWithProvider(
             <ProjectRow project={first} onSelect={jest.fn()} />
         );
-        expect(summarySlot(container)).toHaveTextContent('Headless · API Mesh');
+        expect(summarySlot(container)).toHaveTextContent('Headless, API Mesh');
 
         rerender(
             <Provider theme={defaultTheme} colorScheme="light">

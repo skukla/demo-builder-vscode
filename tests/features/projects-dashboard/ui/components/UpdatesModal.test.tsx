@@ -15,6 +15,7 @@ import type { PendingUpdateRow } from '@/types/pendingUpdates';
 jest.mock('@/core/ui/components/ui/Modal', () => ({
     Modal: ({
         title,
+        status,
         size,
         actionButtons = [],
         onClose,
@@ -23,6 +24,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         children,
     }: {
         title: string;
+        status?: string;
         size?: string;
         actionButtons?: ActionButton[];
         onClose: () => void;
@@ -30,7 +32,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         hideClose?: boolean;
         children: React.ReactNode;
     }) => (
-        <div role="dialog" aria-label={title} data-size={size}>
+        <div role="dialog" aria-label={title} data-size={size} data-status={status}>
             {children}
             {!hideClose && <button onClick={onClose}>{closeLabel ?? 'Close'}</button>}
             {actionButtons.map((b) => (
@@ -169,7 +171,7 @@ describe('UpdatesModal', () => {
         );
         const { container } = render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByRole('dialog', { name: 'Applying updates' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Applying updates' })).not.toHaveAttribute('data-status');
         expect(screen.queryByRole('checkbox')).toBeNull();
         expect(screen.getByText('Demo Builder Blocks in JustRite')).toBeInTheDocument();
         expect(screen.getByText('1.0.0 → 1.1.0')).toBeInTheDocument();
@@ -191,7 +193,7 @@ describe('UpdatesModal', () => {
         render(<UpdatesModal controls={c} />);
 
         expect(screen.getByText('Demo Builder Blocks: rate limited')).toHaveClass('work-row-why');
-        expect(screen.getByRole('dialog', { name: "Some updates didn't apply" })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: "Some updates didn't apply" })).toHaveAttribute('data-status', 'warning');
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
 
@@ -215,7 +217,7 @@ describe('UpdatesModal', () => {
         );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByRole('dialog', { name: 'Updates applied' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Updates applied' })).toHaveAttribute('data-status', 'success');
         expect(screen.getByText('One block left out.')).toHaveClass('work-row-note');
     });
 
@@ -239,9 +241,29 @@ describe('UpdatesModal', () => {
         const c = running({}, { state: 'failed', error: 'This list of updates is out of date. Check for updates again.' });
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByRole('dialog', { name: "Couldn't apply the updates" })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: "Couldn't apply the updates" })).toHaveAttribute('data-status', 'error');
         expect(screen.getByText('This list of updates is out of date. Check for updates again.')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Open Debug Logs' })).toBeInTheDocument();
+    });
+
+    it('says a failed run\'s reason once when a row already says it', () => {
+        const c = running(
+            { extension: { id: 'extension', state: 'failed', message: 'The download failed.' } },
+            { state: 'failed', error: 'The download failed.' },
+        );
+        render(<UpdatesModal controls={c} />);
+
+        expect(screen.getAllByText('The download failed.')).toHaveLength(1);
+    });
+
+    it('keeps a failed run\'s reason above the list when no row says the same', () => {
+        const c = running(
+            { extension: { id: 'extension', state: 'failed', message: 'The download failed.' } },
+            { state: 'failed', error: 'The run stopped.' },
+        );
+        const { container } = render(<UpdatesModal controls={c} />);
+
+        expect(container.querySelector('.updates-group-list')?.firstElementChild).toHaveTextContent('The run stopped.');
     });
 
     // A question is asked under the row it is about, the list still in view (owner,
@@ -260,6 +282,15 @@ describe('UpdatesModal', () => {
         await user().click(screen.getByRole('button', { name: 'Keep my blocks' }));
 
         expect(c.answer).toHaveBeenCalledWith('Keep my blocks');
+    });
+
+    // A prompt names its main answer first; a dialog's main button goes last.
+    it('puts the main answer of a question last, whatever the prompt lists first', () => {
+        const prompt = { message: 'Three ways on.', actions: ['Main', 'Second', 'Third'] };
+        const c = running({ 'blockLibrary:0': { id: 'blockLibrary:0', state: 'running' } }, { prompt });
+        render(<UpdatesModal controls={c} />);
+
+        expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Second', 'Third', 'Main']);
     });
 
     it('asks a question no row is running for above the list', () => {
@@ -466,17 +497,22 @@ describe('groupStatusOf', () => {
     });
 });
 
-// The window keeps one height and its list scrolls, so opening a project never resizes it
-// (owner, 2026-10-20). Asserted against the stylesheet: jsdom resolves no layout. Leaving
-// the house modal's "fit to content" off was tried first and changed nothing on screen;
-// the height has to be on the list.
+// Height fits the content (dialog design rules): a set height left 295px empty under two rows.
+// Asserted against the stylesheet: jsdom resolves no layout.
 describe('the Updates list', () => {
-    it('has a set height and scrolls, rather than growing', () => {
+    it('is as tall as its rows, and scrolls past a cap', () => {
         const rule = ruleFor('.updates-group-list');
 
-        expect(rule).toMatch(/(^|[;{\s])height:\s*[^;]+;/);
-        expect(rule).not.toMatch(/max-height/);
+        expect(rule).toMatch(/max-height:\s*[^;]+;/);
+        expect(rule).not.toMatch(/(^|[;{\s])height:/);
         expect(rule).toMatch(/overflow-y:\s*auto/);
+    });
+
+    // Lines: one rule, under the title. Groups are told apart by the 24 between them.
+    it('draws no box around its groups or its questions', () => {
+        expect(ruleFor('.updates-group')).not.toMatch(/border|background/);
+        expect(ruleFor('.updates-run-question')).not.toMatch(/border/);
+        expect(ruleFor('.updates-group-list')).toMatch(/gap:\s*24px/);
     });
 
     // A cut-off panel at the bottom edge did not read as "more below" (owner, 2026-10-20).

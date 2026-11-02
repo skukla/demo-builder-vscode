@@ -172,8 +172,8 @@ describe('StepContentArea', () => {
         it('shows the success view', () => {
             renderContent({ isCompleted: true, progress: progressOf({ currentOperation: 'Project Created' }) });
 
-            expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
-            expect(screen.getByText('Click below to view your projects')).toBeInTheDocument();
+            expect(screen.getByText('Project Created')).toBeInTheDocument();
+            expect(screen.queryByText('Click below to view your projects')).not.toBeInTheDocument();
         });
 
         it('shows the finishing update\'s one line under the heading (EDS-64)', () => {
@@ -187,7 +187,7 @@ describe('StepContentArea', () => {
             renderContent({ isCompleted: true, isOpeningProject: true });
 
             expect(screen.getByText('Loading your projects')).toBeInTheDocument();
-            expect(screen.queryByText('Project Created Successfully')).not.toBeInTheDocument();
+            expect(screen.queryByText('Project Created')).not.toBeInTheDocument();
         });
 
         it('gives way to the error view when the finished progress carries an error', () => {
@@ -199,7 +199,7 @@ describe('StepContentArea', () => {
 
             expect(screen.getByText('Project Creation Failed')).toBeInTheDocument();
             expect(screen.getByText('boom')).toBeInTheDocument();
-            expect(screen.queryByText('Project Created Successfully')).not.toBeInTheDocument();
+            expect(screen.queryByText('Project Created')).not.toBeInTheDocument();
         });
 
         it('says "Changes Saved" for an Edit, not "Project Created" (PL-75)', () => {
@@ -210,7 +210,7 @@ describe('StepContentArea', () => {
             });
 
             expect(screen.getByText('Changes Saved')).toBeInTheDocument();
-            expect(screen.queryByText('Project Created Successfully')).not.toBeInTheDocument();
+            expect(screen.queryByText('Project Created')).not.toBeInTheDocument();
         });
 
         it('names a failed Edit as saving changes', () => {

@@ -1,7 +1,7 @@
 /**
  * One deployment line per project card, not three.
  *
- * The card reported the mesh BY NAME ("Mesh · Update needed") and summarised
+ * The card reported the mesh BY NAME ("Mesh, Update needed") and summarised
  * integrations beside it, while the storefront — which drifts in exactly the same
  * way — was reported nowhere. `getStorefrontStatusText` existed and was tested,
  * and no component ever called it.

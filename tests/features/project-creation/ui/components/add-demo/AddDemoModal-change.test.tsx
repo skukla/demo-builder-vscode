@@ -6,7 +6,7 @@
 
 import { screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { JEN, READ, button, click, mockRequest, probeWith, renderModal, resetModalMocks } from './AddDemoModal.testUtils';
+import { JEN, READ, button, click, footerButtons, mockRequest, probeWith, renderModal, resetModalMocks, title } from './AddDemoModal.testUtils';
 
 /** A change dialog for a project whose Welcome step has the Bodea demo package, unless `withPackage` is false. */
 function renderChange(currentKind: 'eds' | 'headless' = 'eds', withPackage = true) {
@@ -60,9 +60,9 @@ describe('AddDemoModal — change mode', () => {
         renderChange('headless');
         await probeWith({ success: true, result: READ });
 
-        expect(screen.getByText('This demo is a different kind of storefront')).toBeInTheDocument();
+        expect(title('This demo is a different kind of storefront').innerHTML).toContain('text-negative');
         expect(screen.getByText('This project is built on a headless demo; pick a demo of the same kind.')).toBeInTheDocument();
-        expect(button('Change source')).toHaveAttribute('aria-disabled', 'true');
+        expect(footerButtons()).toEqual(['Close', 'Back']);
         expect(mockRequest).toHaveBeenCalledTimes(1);
     });
 
@@ -73,8 +73,9 @@ describe('AddDemoModal — change mode', () => {
             result: { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'adobe-commerce/boilerplate-b2b-template' },
         });
 
+        expect(title('This is the demo behind Starter (B2B + B2C)').innerHTML).toContain('text-orange-600');
         expect(screen.getByTestId('shipped-notice')).toHaveTextContent("A project can't be pointed at a demo we ship");
-        expect(button('Change source')).toHaveAttribute('aria-disabled', 'true');
+        expect(footerButtons()).toEqual(['Close', 'Back']);
     });
 
     it('shows the change failure inside the dialog and stays open', async () => {
@@ -82,7 +83,7 @@ describe('AddDemoModal — change mode', () => {
         await probeWith({ success: true, result: READ });
         mockRequest.mockResolvedValueOnce({ success: false, error: 'This project is built on an Edge Delivery demo; pick a demo of the same kind.' });
         await click('Change source');
-        expect(screen.getByTestId('add-error')).toHaveTextContent('Not changed');
+        expect(title("We couldn't change the source").innerHTML).toContain('text-negative');
         expect(props.onClose).not.toHaveBeenCalled();
     });
 });

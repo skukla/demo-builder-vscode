@@ -23,7 +23,7 @@ function row(overrides: Partial<IntegrationRow> = {}): IntegrationRow {
         id: 'erp-sync',
         kind: 'custom',
         name: 'ERP Sync',
-        sourceLine: 'Custom integration · acme/erp-sync',
+        sourceLine: 'Custom integration, acme/erp-sync',
         needsSetup: false,
         apis: ['AdobeIOManagementAPISDK', 'GraphQLServiceSDK'],
         ...overrides,
@@ -36,7 +36,7 @@ describe('toIntegrationCards', () => {
 
         expect(card.id).toBe('erp-sync');
         expect(card.name).toBe('ERP Sync');
-        expect(card.sourceLine).toBe('Custom integration · acme/erp-sync');
+        expect(card.sourceLine).toBe('Custom integration, acme/erp-sync');
         expect(card.apis).toEqual(['AdobeIOManagementAPISDK', 'GraphQLServiceSDK']);
     });
 
@@ -192,13 +192,13 @@ describe('sublineFor', () => {
     // Manage APIs opens the picker, which lists them.
     it('gives the source line alone, with no API count', () => {
         expect(sublineFor(toIntegrationCards([row()])[0])).toEqual([
-            'Custom integration · acme/erp-sync',
+            'Custom integration, acme/erp-sync',
         ]);
     });
 
     it('puts what comes with the integration on its own line', () => {
         expect(sublineFor(toIntegrationCards([row()])[0], 'Acme ERP')).toEqual([
-            'Custom integration · acme/erp-sync',
+            'Custom integration, acme/erp-sync',
             'Comes with Acme ERP',
         ]);
     });

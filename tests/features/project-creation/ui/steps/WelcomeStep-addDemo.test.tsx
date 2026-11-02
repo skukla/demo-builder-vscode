@@ -186,6 +186,7 @@ describe('WelcomeStep — editing an added demo', () => {
         });
 
         expect(screen.getByTestId('edit-demo-error')).toHaveTextContent('jen/isle5-demo is not on your Welcome step.');
-        expect(screen.getByRole('heading', { name: 'Edit demo package' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: "Couldn't save the changes" })).toBeInTheDocument();
+        expect(screen.getByLabelText('Demo name', { selector: 'input' })).toHaveValue('Isle5');
     });
 });

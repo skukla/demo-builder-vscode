@@ -16,6 +16,9 @@
  * they have no api-access stage — their destination stage is terminal. The modal
  * PROVISIONS NOTHING; every kind commits + closes immediately on Add.
  *
+ * The dialog itself answers for that stage's read of the org's APIs: a wait with nothing else on
+ * screen, or a failed read as its title and status icon.
+ *
  * On open (signed in) the host fires ONE fire-and-forget `list-org-console-apis`
  * to warm the extension-side org-services cache, so the custom/import picker's
  * later fetch is fast.
@@ -27,16 +30,22 @@ import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import { isAdobeSignedIn } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
+import { apiAccessProblemOf, type ApiAccessProblem } from './apiAccessProblem';
 import { FlowStageBody } from './FlowStageBody';
 import { type FlowMode, FlowStageId } from './flowStages';
 import type { UnavailableEntries } from './stages/CatalogStage';
-import { useIntegrationFlow, type ApiEditTarget } from './useIntegrationFlow';
+import { useIntegrationFlow, type ApiEditTarget, type UseIntegrationFlowReturn } from './useIntegrationFlow';
+import { useOrgApis } from './useOrgApis';
+import { ADOBE_APIS_WAIT } from '@/core/ui/components/feedback/adobeApisWait';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeAuthSessionState, WizardState } from '@/types/webview';
+
+/** Stable empty selection (avoids the inline-array re-render gotcha). */
+const NO_COMPONENT_IDS: string[] = [];
 
 const TITLES: Record<FlowMode, string> = {
     add: 'Add Integration',
@@ -146,33 +155,45 @@ function DestinationContext({
     );
 }
 
+/**
+ * The buttons beside Cancel. After a failed read of the APIs, an add can still finish, since its
+ * picks are optional and can change later in Manage APIs, so the put-it-right button sits before
+ * it. Editing picks has nothing to save without the list.
+ */
+function footerOf(flow: UseIntegrationFlowReturn, mode: FlowMode, problem: ApiAccessProblem | undefined): ActionButton[] {
+    const back: ActionButton = { label: 'Back', variant: 'secondary', onPress: flow.onBack, isDisabled: !flow.canGoBack };
+    const main: ActionButton = {
+        label: flow.continueLabel,
+        variant: 'accent',
+        onPress: flow.onContinue,
+        isDisabled: !flow.canContinue,
+    };
+    if (!problem) return [back, main];
+    const fix = problem.action;
+    if (mode === 'add') return fix ? [back, { ...fix, variant: 'secondary' }, main] : [back, main];
+    return fix ? [back, { ...fix, variant: 'accent' }] : [back];
+}
+
 /** The mounted-while-open journey: the hook + Modal shell (switch + footer only). */
 function FlowJourney(props: JourneyProps): React.ReactElement {
     // JourneyProps is structurally UseIntegrationFlowArgs — the hook takes it whole.
     const flow = useIntegrationFlow(props);
+    const onApiStage = flow.stage === 'api-access';
+    const orgApis = useOrgApis(onApiStage, props.state.selectedAppBuilderComponents ?? NO_COMPONENT_IDS);
+    const problem = onApiStage ? apiAccessProblemOf(orgApis, props.onSignIn) : undefined;
     return (
         <Modal
-            title={TITLES[props.mode]}
+            title={problem?.title ?? TITLES[props.mode]}
+            status={problem?.status}
             size="L"
             // Every stage sizes to ITS content: the kind/name/destination stages are
             // short, the api-access list is long and still scrolls at max-height.
             fitContent
+            // Reading what it will show: only the way out, and the one line a read this long needs.
+            waiting={onApiStage && orgApis.loading ? ADOBE_APIS_WAIT : false}
             onClose={props.onClose}
             closeLabel="Cancel"
-            actionButtons={[
-                {
-                    label: 'Back',
-                    variant: 'secondary',
-                    onPress: flow.onBack,
-                    isDisabled: !flow.canGoBack,
-                },
-                {
-                    label: flow.continueLabel,
-                    variant: 'accent',
-                    onPress: flow.onContinue,
-                    isDisabled: !flow.canContinue,
-                },
-            ]}
+            actionButtons={footerOf(flow, props.mode, problem)}
         >
             {/* Five stages, five natural heights. The dialog jumped at every step
                 without a floor under them (owner, 2026-09-20). Pinned to the top: a
@@ -181,12 +202,22 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
                 spinners centre themselves in their own containers. */}
             <SteadyHeight align="start">
             <div className="intflow-stage-body">
-                <DestinationContext
-                    state={props.state}
-                    stage={flow.stage}
-                    onChange={flow.changeDestination}
-                />
-                <FlowStageBody flow={flow} props={props} />
+                {problem ? (
+                    <div className="dialog-stack" data-testid="api-access-problem">
+                        {problem.lines.map((line) => (
+                            <p key={line} className="dialog-line">{line}</p>
+                        ))}
+                    </div>
+                ) : (
+                    <>
+                        <DestinationContext
+                            state={props.state}
+                            stage={flow.stage}
+                            onChange={flow.changeDestination}
+                        />
+                        <FlowStageBody flow={flow} props={props} apis={orgApis.apis} />
+                    </>
+                )}
             </div>
         </SteadyHeight>
         </Modal>

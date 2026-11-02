@@ -180,6 +180,7 @@ export function SiteAccessScreen({ projectName, hasStorefront }: SiteAccessScree
                 {pending && (
                     <Modal
                         title={`${pending.removal.label}?`}
+                        status="warning"
                         size="S"
                         onClose={() => setPending(null)}
                         closeLabel="Cancel"

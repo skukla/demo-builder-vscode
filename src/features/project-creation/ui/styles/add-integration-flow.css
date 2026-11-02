@@ -61,6 +61,14 @@
     gap: 12px;
 }
 
+/* Why the greyed tiles below cannot be picked: a note above them, its colour from `.text-orange-600`. */
+.intflow-catalog-note {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
 .intflow-choices {
     display: flex;
     flex-direction: row;
@@ -271,18 +279,6 @@
    list use the room); read-only info/confirmation text keeps the narrow measure. */
 .intflow-api-info--full {
     max-width: none;
-}
-
-/* API-access loading/error: fill the reserved stage body and center on both axes
-   (full width — not the left-aligned .intflow-api-info band), so the spinner sits
-   in the middle of the modal rather than a small band near the top. */
-.intflow-api-center {
-    flex: 1 1 auto;
-    align-self: stretch;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 360px;
 }
 
 .intflow-api-info-head {

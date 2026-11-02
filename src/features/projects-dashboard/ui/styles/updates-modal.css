@@ -1,14 +1,14 @@
 /**
- * .updates-group-* — the Updates modal's groups (PL-80): each a panel in the projects
- * list's own row style, its checkbox and a button that opens it on one line, its rows
- * inside the same panel.
+ * .updates-group-* — the Updates modal's groups (PL-80): each a heading, its checkbox and a
+ * button that opens it on one line, over its rows.
  *
  * FEATURE-SCOPED (ADR-017 §6). Imported by the `projectsList` entry alone
  * (ui/index.tsx), the one bundle that draws the modal.
  *
- * The panel takes `.project-row`'s surface (gray-50, a gray-300 border, 8px corners), and
- * the name and chevron are that row's own classes; Spectrum's Disclosure was tried first
- * and brought a look nothing else here has (owner, 2026-10-20).
+ * The name and chevron are the projects list's row classes; Spectrum's Disclosure was tried
+ * first and brought a look nothing else here has (owner, 2026-10-20). The groups were bordered
+ * panels until the dialog rules ruled out box borders (owner, 2026-10-31): the space between
+ * them separates them now.
  */
 
 /* Registered so it animates as a length; an unregistered property jumps between values. */
@@ -19,17 +19,15 @@
 }
 
 @layer theme {
-    /* Panels stacked with the cards' own gap, no divider lines. A set height that scrolls,
-       so opening a project never resizes the window (owner, 2026-10-20): leaving the
-       modal's "fit to content" off was tried first and changed nothing on screen. Capped
-       by the viewport so a short editor still shows the buttons. */
+    /* Groups 24 apart (dialog design rules). As tall as its rows, so two rows leave no empty
+       space under them, then it scrolls: the cap keeps the buttons on screen in a short editor. */
     .updates-group-list {
         display: flex;
         flex-direction: column;
-        gap: var(--card-gap);
-        height: min(440px, 55vh);
+        gap: 24px;
+        max-height: min(440px, 55vh);
         overflow-y: auto;
-        /* The last 32px fade out while there is more below, so a cut-off panel reads as
+        /* The last 32px fade out while there is more below, so a cut-off group reads as
            "scroll for more" (owner, 2026-10-20). The fade's size follows the scroll: full
            at the top, gone at the bottom. A list that fits has no scroll, so the
            animation never runs and the fade keeps its registered 0px. */
@@ -48,12 +46,8 @@
     }
 
     .updates-group {
-        /* A flex column with a set height squeezes its children; a panel keeps its own. */
+        /* A flex column at its height cap squeezes its children; a group keeps its own. */
         flex-shrink: 0;
-        background: var(--spectrum-global-color-gray-50);
-        border: 1px solid var(--spectrum-global-color-gray-300);
-        border-radius: 8px;
-        padding: 4px 12px;
     }
 
     .updates-group-header {
@@ -66,7 +60,7 @@
 
     /* Under the name, past the group's checkbox, so a row reads as part of the project. */
     .updates-group-rows {
-        padding: 0 0 8px 28px;
+        padding: 0 0 0 28px;
     }
 
     /* Thinner rows here only (owner, 2026-10-20): Spectrum's checkbox is 32px tall, and the
@@ -83,16 +77,13 @@
 
     /* The run (UpdatesRunView, 2026-10-21): an icon where the checkbox was, in a 28px
        column so names line up with the list the SC ticked. */
-    /* A question the run is paused on, inside the list under the row it is about: the
-       list keeps its height, so the window does not change size while it asks
-       (modal-steady-height). A rule down its left side marks it, not a warning fill. */
+    /* A question the run is paused on, inside the list under the row it is about. The row's
+       amber icon marks it, not a warning fill or a rule of its own. */
     .updates-run-question {
         display: flex;
         flex-direction: column;
         gap: 8px;
         margin: 6px 0 4px;
-        padding: 2px 0 2px 12px;
-        border-left: 2px solid var(--spectrum-global-color-orange-600);
     }
 
     /* A question may put each choice on its own line. */

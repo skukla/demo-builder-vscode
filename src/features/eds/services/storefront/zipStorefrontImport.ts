@@ -183,10 +183,10 @@ export async function createRepositoryFromZip(
     deps.logger.info(
         `[Zip] Creating ${opts.repoName} (${opts.isPrivate ? 'private' : 'public'}): ${files.size} files`,
     );
-    const leftOut = opts.leftOut ? ` · ${count(opts.leftOut)} left out` : '';
+    const leftOut = opts.leftOut ? `, ${count(opts.leftOut)} left out` : '';
     deps.onProgress?.(
         'Creating the repository',
-        `${opts.repoName} · ${count(files.size)} files${leftOut}`,
+        `${opts.repoName}, ${count(files.size)} files${leftOut}`,
     );
     const repository = await deps.repoOps.createEmptyRepository(opts.repoName, opts.isPrivate);
     const [owner, repo] = repository.fullName.split('/');

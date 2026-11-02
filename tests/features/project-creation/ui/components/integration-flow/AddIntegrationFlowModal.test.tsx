@@ -250,7 +250,7 @@ describe('AddIntegrationFlowModal — build custom (optional-name model)', () =>
         // Straight to api-access: the committed destination rides along as the
         // context line instead of costing a step.
         await click('Continue');
-        expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project, Stage')).toBeInTheDocument();
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
         await click('Add Integration');
         // The commit routes through the custom add with the MINTED identity —

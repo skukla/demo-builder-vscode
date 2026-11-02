@@ -154,7 +154,7 @@ function PackageCard({
                     </Text>
                     {libraryCount > 0 && (
                         <span className="brand-card-detail-trigger">
-                            <span className="brand-card-selection-sep"> · </span>
+                            <span className="brand-card-selection-sep">, </span>
                             <Text UNSAFE_className="brand-card-detail-link">
                                 {libraryCount} block {libraryCount === 1 ? 'library' : 'libraries'}
                             </Text>

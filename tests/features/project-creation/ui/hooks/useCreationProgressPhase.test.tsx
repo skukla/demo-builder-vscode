@@ -150,7 +150,7 @@ describe('useCreationProgressPhase (through ProjectCreationStep)', () => {
         it('should show the success view when the operation is Project Created', async () => {
             await renderStep(progressOf({ currentOperation: 'Project Created' }));
 
-            expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
+            expect(screen.getByText('Project Created')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'View Projects' })).toBeInTheDocument();
         });
     });
@@ -158,12 +158,12 @@ describe('useCreationProgressPhase (through ProjectCreationStep)', () => {
     describe('a phase outlives the progress event that set it', () => {
         it('should keep the success view when the progress event is cleared', async () => {
             const { rerender } = await renderStep(progressOf({ currentOperation: 'Project Created' }));
-            expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
+            expect(screen.getByText('Project Created')).toBeInTheDocument();
 
             rerender(step(stateWith(undefined)));
             await settle();
 
-            expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
+            expect(screen.getByText('Project Created')).toBeInTheDocument();
             // The footer has to agree: losing progress must not put the step back
             // into its starting window, which offers Cancel instead.
             expect(screen.getByRole('button', { name: 'View Projects' })).toBeInTheDocument();

@@ -150,7 +150,7 @@ describe('resolveIntegrationRows — mesh row (single-authority selection)', () 
         );
 
         expect(rows[0].name).toBe('API Mesh');
-        expect(rows[0].sourceLine).toBe('GraphQL bridge · deploys to Adobe I/O');
+        expect(rows[0].sourceLine).toBe('GraphQL bridge, deploys to Adobe I/O');
     });
 });
 
@@ -270,7 +270,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
         expect(rows[0]).not.toHaveProperty('companionRenamable');
     });
 
-    it('catalog sourceLine falls back to "Catalog · {name}" when the description is empty', () => {
+    it('catalog sourceLine falls back to "Catalog, {name}" when the description is empty', () => {
         const bare = { ...ERP_ENTRY, description: '' };
         const rows = resolveIntegrationRows(
             state({ selectedAppBuilderComponents: ['erp-sync'] }),
@@ -278,7 +278,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
             [bare]
         );
 
-        expect(rows[0].sourceLine).toBe('Catalog · ERP Sync');
+        expect(rows[0].sourceLine).toBe('Catalog, ERP Sync');
     });
 
     it('excludes ids that resolve to mesh-kind catalog entries (mesh never doubles as catalog)', () => {
@@ -307,7 +307,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
 });
 
 describe('resolveIntegrationRows — custom rows', () => {
-    it('resolves a sourced id to a custom row (name = repo, "Custom integration · owner/repo")', () => {
+    it('resolves a sourced id to a custom row (name = repo, "Custom integration, owner/repo")', () => {
         const rows = resolveIntegrationRows(
             state({
                 selectedAppBuilderComponents: ['acme-widget'],
@@ -322,7 +322,7 @@ describe('resolveIntegrationRows — custom rows', () => {
                 id: 'acme-widget',
                 kind: 'custom',
                 name: 'widget',
-                sourceLine: 'Custom integration · acme/widget',
+                sourceLine: 'Custom integration, acme/widget',
                 needsSetup: true,
                 apis: [BASELINE_CODE], // baseline only (no free picks)
             } satisfies IntegrationRow,

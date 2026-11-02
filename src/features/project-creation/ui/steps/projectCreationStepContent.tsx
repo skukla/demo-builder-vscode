@@ -10,12 +10,11 @@
  * @module features/project-creation/ui/steps/projectCreationStepContent
  */
 
-import { Text, Flex } from '@adobe/react-spectrum';
 import React from 'react';
 import type { StepPhase } from '../hooks/useCreationProgressPhase';
 import type { GitHubAppInstallData } from '../hooks/useGitHubAppPreflight';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { expectationFor } from '@/core/utils/operationStages';
@@ -36,26 +35,17 @@ function SuccessContent({ isOpeningProject, isEdit, note }: { isOpeningProject: 
         );
     }
 
+    // A whole wizard screen, so the large centred check every wizard success has (dialog design
+    // rules, owner 2026-11-02). Edit's heading says it all; a second line read as a claim about the
+    // project (owner, 2026-10-17). The one line worth knowing is about broken links (EDS-64).
     return (
-        <CenteredFeedbackContainer>
-            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
-                <StatusIcon status="success" size="L" />
-                <Flex direction="column" gap="size-100" alignItems="center">
-                    <Text UNSAFE_className="text-xl font-medium">
-                        {isEdit ? 'Changes Saved' : 'Project Created Successfully'}
-                    </Text>
-                    {/* Edit's heading says it all; a second line read as a claim about
-                        the project (owner, 2026-10-17). */}
-                    {!isEdit && (
-                        <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                            Click below to view your projects
-                        </Text>
-                    )}
-                </Flex>
-                {/* One line worth knowing about the finished project (broken links, EDS-64). */}
-                {note ? <Text UNSAFE_className="text-sm text-gray-600 text-center">{note}</Text> : null}
-            </Flex>
-        </CenteredFeedbackContainer>
+        <StatusDisplay
+            variant="success"
+            title={isEdit ? 'Changes Saved' : 'Project Created'}
+            message={note}
+            centerMessage
+            maxWidth="520px"
+        />
     );
 }
 
@@ -71,19 +61,13 @@ function ErrorContent({
 }) {
     const action = isEdit ? 'Saving Changes' : 'Project Creation';
     return (
-        <CenteredFeedbackContainer>
-            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
-                <StatusIcon status="error" size="L" />
-                <Flex direction="column" gap="size-100" alignItems="center">
-                    <Text UNSAFE_className="text-xl font-medium">
-                        {isCancelled ? `${action} Cancelled` : `${action} Failed`}
-                    </Text>
-                    {errorMessage && (
-                        <Text UNSAFE_className="text-sm text-gray-600">{errorMessage}</Text>
-                    )}
-                </Flex>
-            </Flex>
-        </CenteredFeedbackContainer>
+        <StatusDisplay
+            variant={isCancelled ? 'warning' : 'error'}
+            title={isCancelled ? `${action} Cancelled` : `${action} Failed`}
+            message={errorMessage}
+            centerMessage
+            maxWidth="520px"
+        />
     );
 }
 

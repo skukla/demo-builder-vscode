@@ -94,7 +94,7 @@ describe('ProjectCard', () => {
             expect(screen.getByText('Test Project')).toBeInTheDocument();
             expect(screen.getByText('Stopped')).toBeInTheDocument();
             expect(container.querySelector('.project-card-spectrum-components')).toHaveTextContent(
-                'BuildRight \u00b7 Headless + PaaS'
+                'BuildRight, Headless + PaaS'
             );
             expect(screen.queryByText('CitiSignal')).not.toBeInTheDocument();
             expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
@@ -114,7 +114,7 @@ describe('ProjectCard', () => {
     /**
      * ONE deployment line, not three.
      *
-     * The card used to name the mesh ("Mesh · Update needed") and count
+     * The card used to name the mesh ("Mesh, Update needed") and count
      * integrations, while saying nothing about the storefront — whose status
      * function existed, was tested, and was rendered by nobody. Naming one
      * component on the PROJECT card is a leftover from when the mesh was the
@@ -351,7 +351,7 @@ describe('ProjectCard', () => {
             );
 
             expect(summarySlot(container)).toHaveTextContent(
-                'CitiSignal \u00b7 Edge Delivery + PaaS'
+                'CitiSignal, Edge Delivery + PaaS'
             );
         });
 
@@ -383,7 +383,7 @@ describe('ProjectCard', () => {
                 </Provider>
             );
 
-            expect(summarySlot(container)).toHaveTextContent('BuildRight \u00b7 Headless + PaaS');
+            expect(summarySlot(container)).toHaveTextContent('BuildRight, Headless + PaaS');
         });
     });
 
@@ -483,7 +483,7 @@ describe('ProjectCard', () => {
         it('names only the lines the card actually renders', () => {
             // An EDS project at rest has no runtime line and, with nothing
             // deployed, no deployment line either. Without the filter the label
-            // would carry their empty slots as ", , ".
+            // would carry their empty slots as ",, ".
             const project = createProjectsDashboardProject({
                 name: 'Quiet Demo',
                 selectedStack: 'eds-paas',
@@ -496,7 +496,7 @@ describe('ProjectCard', () => {
 
             expect(screen.getByRole('button')).toHaveAttribute(
                 'aria-label',
-                'Quiet Demo, CitiSignal \u00b7 Edge Delivery + PaaS'
+                'Quiet Demo, CitiSignal, Edge Delivery + PaaS'
             );
         });
 

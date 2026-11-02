@@ -17,7 +17,7 @@
  * the window never looks finished while it is still going (owner, 2026-10-21: it was a
  * stage line, first under the list and then in the panel, that vanished once passed).
  * A run that ends with rows the SC unticked still waiting says how many above the list
- * (owner, 2026-10-22), inside it so the window keeps its height.
+ * (owner, 2026-10-22).
  *
  * @module features/projects-dashboard/ui/components/UpdatesRunView
  */
@@ -152,16 +152,23 @@ function RunGroup({ group, statuses, live }: { group: RowGroup; statuses: RowSta
     );
 }
 
+/** Why the run failed, above the list, unless a row already says the same under its name. */
+function failureLine(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): string | undefined {
+    if (progress?.state !== 'failed') return undefined;
+    const saidOnARow = rows.some((row) => statuses[row.id]?.message === progress.error);
+    return saidOnARow ? undefined : progress.error;
+}
+
 /** Every ticked row and where it is; a question under the row asking it, or above the list. */
 export function UpdatesRunView({ rows, statuses, progress, onTyped, remaining }: RunViewProps): React.ReactElement {
     const running = progress?.state !== 'failed' && progress?.state !== 'succeeded';
     const question = running ? progress?.prompt : undefined;
     const rowRunning = rows.some((r) => statuses[r.id]?.state === 'running');
     const live: Live = { step: progress?.step, question, onTyped };
-    // Inside the list, so a failure's reason does not make the window taller.
+    const failure = failureLine(progress, rows, statuses);
     return (
         <div className="updates-group-list">
-            {progress?.state === 'failed' && <p className="work-row-why">{progress.error}</p>}
+            {failure && <p className="work-row-why">{failure}</p>}
             {progress?.state === 'succeeded' && remaining > 0 && (
                 <p className="work-row-note">{waitingLine(remaining)}</p>
             )}

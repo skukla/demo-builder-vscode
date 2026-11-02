@@ -18,6 +18,8 @@ import {
     typeLink,
     chooseWay,
     pushed,
+    title,
+    footerButtons,
 } from './AddDemoModal.testUtils';
 
 describe('AddDemoModal', () => {
@@ -65,9 +67,10 @@ describe('AddDemoModal', () => {
         mockRequest.mockResolvedValueOnce({ success: false, error: 'This zip is not an Edge Delivery storefront: it has no head.html.' });
         await click('Choose a zip file');
         expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: true });
-        // The house error view replaces the form (owner, 2026-09-14), and Back returns to it.
-        expect(screen.getByTestId('zip-error')).toHaveTextContent("We couldn't add this zip");
+        // The failure replaces the form (owner, 2026-09-14), and Back returns to it.
+        expect(title("We couldn't add this zip").innerHTML).toContain('text-negative');
         expect(screen.getByTestId('zip-error')).toHaveTextContent('it has no head.html');
+        expect(footerButtons()).toEqual(['Close', 'Back']);
         expect(screen.queryByTestId('zip-public')).not.toBeInTheDocument();
         await click('Back');
         expect(screen.getByTestId('zip-public')).toBeInTheDocument();
@@ -88,10 +91,11 @@ describe('AddDemoModal', () => {
         await click('Choose a zip file');
         expect(screen.getByTestId('zip-error')).toHaveTextContent('already has a repository named citisignal-b2b-summit');
         // A choice, not a failure (owner, 2026-09-15): warning icon and words, not error.
-        expect(screen.getByTestId('zip-error')).toHaveTextContent('A repository with this name already exists');
-        expect(screen.getByTestId('zip-error')).not.toHaveTextContent("We couldn't add this zip");
-        expect(screen.getByTestId('zip-error').innerHTML).toContain('text-orange-600');
-        expect(screen.getByTestId('zip-error').innerHTML).not.toContain('text-negative');
+        expect(title('A repository with this name already exists').innerHTML).toContain('text-orange-600');
+        expect(title('A repository with this name already exists').innerHTML).not.toContain('text-negative');
+        expect(screen.queryByRole('heading', { name: "We couldn't add this zip" })).not.toBeInTheDocument();
+        // The way forward is the footer's main button, last.
+        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Add it from that repository']);
 
         mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/citisignal-b2b-summit' } });
         await click('Add it from that repository');
@@ -168,19 +172,60 @@ describe('AddDemoModal', () => {
             success: true,
             result: { ...READ, kind: 'not-a-storefront', missing: ['scripts/scripts.js'], warnings: [] },
         });
-        expect(screen.getByText("This doesn't look like a demo we can build on")).toBeInTheDocument();
+        expect(title("This doesn't look like a demo we can build on").innerHTML).toContain('text-negative');
         expect(screen.getByText(/missing scripts\/scripts.js/)).toBeInTheDocument();
-        expect(button('Add demo package')).toHaveAttribute('aria-disabled', 'true');
+        // Nothing to go on to, so no main button shown off beside Back.
+        expect(footerButtons()).toEqual(['Close', 'Back']);
         expect(button('Back')).toHaveAttribute('aria-disabled', 'false');
     });
 
     it('says to sign in to GitHub first, not that the link is not a demo, when there is no session', async () => {
         renderModal();
         await probeWith({ success: false, error: 'Sign in to GitHub to read this demo.', needsAuth: 'github' });
-        expect(screen.getByText('Sign in to GitHub first')).toBeInTheDocument();
+        expect(title('Sign in to GitHub first').innerHTML).toContain('text-orange-600');
         expect(screen.getByText(/Sign in to GitHub in VS Code/)).toBeInTheDocument();
         expect(screen.queryByText("This doesn't look like a demo we can build on")).not.toBeInTheDocument();
-        expect(button('Add demo package')).toHaveAttribute('aria-disabled', 'true');
+        expect(footerButtons()).toEqual(['Close', 'Back']);
+    });
+
+    // A read that did not finish says nothing about the demo.
+    it('says the storefront could not be read when the read fails, not that it is no demo', async () => {
+        renderModal();
+        await probeWith({ success: false, error: 'GitHub did not answer.' });
+        expect(title("We couldn't read this storefront").innerHTML).toContain('text-negative');
+        expect(screen.getByText('GitHub did not answer.')).toBeInTheDocument();
+        expect(screen.queryByText("This doesn't look like a demo we can build on")).not.toBeInTheDocument();
+    });
+
+    it('says what to do when the read fails with no reason, without repeating the title', async () => {
+        renderModal();
+        await probeWith({ success: false });
+        expect(title("We couldn't read this storefront")).toBeInTheDocument();
+        expect(screen.getByTestId('probe-refused')).toHaveTextContent(/^Check the link and try again\.$/);
+    });
+
+    it('says the same when GitHub answered that the repository cannot be read', async () => {
+        renderModal();
+        await probeWith({ success: true, result: { outcome: 'unreadable', reason: 'No such repository.' } });
+        expect(title("We couldn't read this storefront")).toBeInTheDocument();
+        expect(screen.getByText('No such repository.')).toBeInTheDocument();
+        expect(footerButtons()).toEqual(['Close', 'Back']);
+    });
+
+    it('goes back from a refusal to the link, still filled in', async () => {
+        renderModal();
+        await probeWith({ success: false, error: 'GitHub did not answer.' });
+        await click('Back');
+        expect(title('Add a demo package')).toBeInTheDocument();
+        expect(linkInput()).toHaveValue('https://github.com/jen/isle5-demo');
+    });
+
+    it('lists a warning about the demo as a note under what was found, not as bullets', async () => {
+        renderModal();
+        await probeWith({ success: true, result: { ...READ, warnings: ['The content site publishes no index.'] } });
+        const warnings = screen.getByTestId('found-warnings');
+        expect(warnings.querySelector('ul')).toBeNull();
+        expect(screen.getByText('The content site publishes no index.')).toHaveClass('add-demo-note');
     });
 
     it('offers our own card when the link is one of our templates', async () => {
@@ -189,10 +234,36 @@ describe('AddDemoModal', () => {
             success: true,
             result: { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'adobe-commerce/boilerplate-b2b-template' },
         });
-        expect(screen.getByTestId('shipped-notice')).toHaveTextContent('This is the demo behind Starter (B2B + B2C)');
+        expect(title('This is the demo behind Starter (B2B + B2C)').innerHTML).toContain('text-orange-600');
+        expect(screen.getByTestId('shipped-notice')).toHaveTextContent('Use the Starter (B2B + B2C) card instead');
+        expect(screen.getByTestId('shipped-notice').querySelector('.inline-notice')).toBeNull();
+        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Use Starter (B2B + B2C)']);
         await click('Use Starter (B2B + B2C)');
         expect(props.onUseShipped).toHaveBeenCalledWith('starter');
         expect(props.onClose).toHaveBeenCalled();
+    });
+
+    it('still reads as a sentence when the template belongs to a card it cannot name', async () => {
+        renderModal({ packages: [] });
+        await probeWith({
+            success: true,
+            result: { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'adobe-commerce/boilerplate-b2b-template' },
+        });
+        expect(title('This is a demo we ship')).toBeInTheDocument();
+        expect(screen.getByTestId('shipped-notice')).toHaveTextContent('Use its card instead');
+    });
+
+    it('offers to start a project from a bundle in the footer, before the main button', async () => {
+        renderModal();
+        await chooseWay('zip');
+        const setup = { version: 1, settings: {} };
+        mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'jen', repo: 'isle5-demo', setup } });
+        mockRequest.mockResolvedValueOnce({ success: true, result: READ });
+        await click('Choose a zip file');
+
+        expect(screen.getByTestId('bundle-setup')).toHaveClass('add-demo-note');
+        expect(screen.getByTestId('bundle-setup')).toHaveTextContent('This bundle also carries setup');
+        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Start a project with it', 'Add demo package']);
     });
 
     it('shows the add failure inside the dialog and stays open', async () => {
@@ -200,7 +271,7 @@ describe('AddDemoModal', () => {
         await probeWith({ success: true, result: READ });
         mockRequest.mockResolvedValueOnce({ success: false, error: 'The settings could not be saved.' });
         await click('Add demo package');
-        expect(screen.getByTestId('add-error')).toHaveTextContent('Not added');
+        expect(title("We couldn't add this demo").innerHTML).toContain('text-negative');
         expect(screen.getByTestId('add-error')).toHaveTextContent(/settings could not be saved/);
         expect(props.onClose).not.toHaveBeenCalled();
         // The error view replaces the form; Back returns to it, still filled in.
@@ -227,16 +298,20 @@ describe('AddDemoModal', () => {
 describe('AddDemoModal — while reading', () => {
     beforeEach(resetModalMocks);
 
-    it('says what it is reading and what it is checking for', async () => {
+    // Reading what it will show: only the title, the spinner and the way out.
+    it('shows only the title, a spinner and Cancel', async () => {
         let release: (value: unknown) => void = () => {};
         mockRequest.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
         renderModal();
         typeLink('https://github.com/jen/isle5-demo');
         await click('Continue');
 
-        expect(screen.getByText('Reading the storefront')).toBeInTheDocument();
-        expect(screen.getByText('jen/isle5-demo')).toBeInTheDocument();
-        expect(screen.getByText(/what kind of storefront it is, its store codes/)).toBeInTheDocument();
+        expect(title('Add a demo package')).toBeInTheDocument();
+        expect(screen.getByRole('dialog').querySelector('.modal-wait')).not.toBeNull();
+        expect(screen.queryByText('Reading the storefront')).not.toBeInTheDocument();
+        expect(screen.queryByText('jen/isle5-demo')).not.toBeInTheDocument();
+        expect(screen.queryByText(/what kind of storefront it is/)).not.toBeInTheDocument();
+        expect(footerButtons()).toEqual(['Cancel']);
 
         // Let the probe finish inside act, so the found panel's render is not stray.
         await act(async () => {

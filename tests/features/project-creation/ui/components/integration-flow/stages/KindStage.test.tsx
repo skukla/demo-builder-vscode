@@ -1,8 +1,8 @@
 /**
  * KindStage Tests (Add Integration flow — kind picker stage)
  *
- * Presentational: four flat choice tiles (API Mesh · Pre-built integration ·
- * Build custom · Import a repo). Mesh renders ONLY when offered (hidden —
+ * Presentational: four flat choice tiles (API Mesh, Pre-built integration ·
+ * Build custom, Import a repo). Mesh renders ONLY when offered (hidden —
  * never a disabled tile — when the stack lacks mesh or it's already added). The
  * pre-built catalog tile is disabled with a "None available yet" note when the
  * finished catalog is empty. The selected tile reflects `kind`.

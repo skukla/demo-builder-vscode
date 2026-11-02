@@ -78,7 +78,7 @@ function LabelValue({
                     )}
                 </Flex>
                 {subItems && subItems.length > 0 && (
-                    <Text UNSAFE_className="description-text">{subItems.join(' · ')}</Text>
+                    <Text UNSAFE_className="description-text">{subItems.join(', ')}</Text>
                 )}
             </Flex>
         </Flex>

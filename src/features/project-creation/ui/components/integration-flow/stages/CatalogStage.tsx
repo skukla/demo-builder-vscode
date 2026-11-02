@@ -18,7 +18,6 @@
 import React, { useState } from 'react';
 import { ChoiceCard } from '../../ChoiceCard';
 import { OptionalNameField } from '../OptionalNameField';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { DEFAULT_PAIR_BASE, pairedSystemOf, systemWordOf } from '@/features/app-builder/services/pairNames';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -59,7 +58,7 @@ function matchesQuery(entry: AppBuilderComponentCatalogEntry, query: string): bo
  * integration when another project already runs one on this Commerce instance (AB-78).
  */
 export interface UnavailableEntries {
-    /** Why, and what to do instead: the banner above the gallery. */
+    /** Why, and what to do instead: the note above the gallery. */
     message: string;
     /** The entries' ids; their tiles stay in the gallery, greyed out. */
     ids: readonly string[];
@@ -78,9 +77,10 @@ export interface CatalogStageProps {
     catalog: AppBuilderComponentCatalogEntry[];
     /**
      * Entries that cannot be added here: their tiles stay in the gallery, greyed out
-     * like the API Mesh tile once a project has its mesh, under a banner saying why
-     * and what to do instead. The banner, not the tile, carries the words: a note on
-     * a greyed tile is the easiest thing on the screen to miss (owner, 2026-10-15).
+     * like the API Mesh tile once a project has its mesh, under an amber note saying why
+     * and what to do instead. The line above the gallery, not the tile, carries the words:
+     * a note on a greyed tile is the easiest thing on the screen to miss (owner, 2026-10-15).
+     * It was a boxed banner until the dialog rules ruled out status boxes (owner, 2026-11-02).
      */
     unavailable?: UnavailableEntries;
     /** The draft's picked entry id (marks its tile selected). */
@@ -120,7 +120,9 @@ export function CatalogStage({
     return (
         <div className="intflow-catalog">
             {unavailable && greyed.length > 0 && (
-                <InlineNotice title={unavailable.message} testId="catalog-unavailable" />
+                <p className="intflow-catalog-note text-orange-600" data-testid="catalog-unavailable">
+                    {unavailable.message}
+                </p>
             )}
             <SearchHeader
                 searchQuery={query}

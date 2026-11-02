@@ -72,14 +72,14 @@ export interface IntegrationRow {
 }
 
 const MESH_FALLBACK_NAME = 'API Mesh';
-const MESH_FALLBACK_SOURCE_LINE = 'GraphQL bridge · deploys to Adobe I/O';
+const MESH_FALLBACK_SOURCE_LINE = 'GraphQL bridge, deploys to Adobe I/O';
 
 /**
  * Source line for an AI-built instance (shell instancing). An instance is a
  * shell-template clone with its own identity — the row must read as the
  * user's integration, never as the template repo ("app-builder-shell").
  */
-const AI_INSTANCE_SOURCE_LINE = 'Custom integration · built with AI';
+const AI_INSTANCE_SOURCE_LINE = 'Custom integration, built with AI';
 
 /**
  * The shell TEMPLATE's {owner, repo} — the AI-built instance discriminator.
@@ -219,7 +219,7 @@ export function resolveIntegrationRows(
                 name: source.name ?? source.repo,
                 sourceLine: isInstance
                     ? AI_INSTANCE_SOURCE_LINE
-                    : `Custom integration · ${source.owner}/${source.repo}`,
+                    : `Custom integration, ${source.owner}/${source.repo}`,
                 needsSetup,
                 apis: apiCodesFor(state, id),
                 ...(isInstance ? { renamable: true } : {}),
@@ -248,7 +248,7 @@ export function resolveIntegrationRows(
             id,
             kind: 'catalog',
             name: pair?.name ?? entry.name,
-            sourceLine: entry.description || `Catalog · ${entry.name}`,
+            sourceLine: entry.description || `Catalog, ${entry.name}`,
             needsSetup,
             apis: apiCodesFor(state, id, entry.requiredApis),
             // Generic, not mesh-only: a nativeForPackages entry resolves

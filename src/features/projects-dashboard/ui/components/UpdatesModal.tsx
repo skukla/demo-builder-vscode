@@ -12,7 +12,7 @@
  *
  * Built from the house pieces: `ui/Modal`, `CheckboxRow` (extracted from the API picker
  * for this) and `DisclosureToggle` (extracted from here, 2026-10-23). Each
- * group is a panel in the projects list's own row style, the trailing chevron: Spectrum's Disclosure was tried first and
+ * group is a heading with a trailing chevron over its rows: Spectrum's Disclosure was tried first and
  * brought a look nothing else here has (owner, 2026-10-20). With {@link OPEN_UP_TO} updates or
  * fewer in all, every group starts open, since they fit and a closed one hid what the SC
  * was approving (owner, 2026-10-24); with more, a group starts closed and says what it holds: its name in its own casing, and how many rows wait for the SC (one that
@@ -20,9 +20,9 @@
  * hide the row that needs a decision. Its checkbox already shows all, some or none ticked. The rest of its line opens it.
  * Its checkbox ticks or unticks the whole group (mixed while some rows are ticked; never a
  * locked row), and sits beside the opening button rather than in it, so ticking a group
- * does not open it. The list has a set height and scrolls (`.updates-group-list`), so
- * opening a project never resizes the window. No sentence under the title: the ticks and
- * the Apply count say it.
+ * does not open it. The list is as tall as its rows and scrolls past a cap
+ * (`.updates-group-list`). No sentence under the title: the ticks and the Apply count say it.
+ * How a run ended is the title with its status icon.
  *
  * @module features/projects-dashboard/ui/components/UpdatesModal
  */
@@ -34,7 +34,7 @@ import { groupsOf, type RowGroup } from './updateGroups';
 import { UpdatesRunView } from './UpdatesRunView';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { DisclosureToggle } from '@/core/ui/components/ui/DisclosureToggle';
-import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
+import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
@@ -112,16 +112,24 @@ function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: Up
     );
 }
 
+/** The title, and the icon before it saying how things stand. */
+interface Heading {
+    title: string;
+    status?: ModalStatus;
+}
+
 /**
  * The run's title: what it is doing, then how it ended. A row can end after the run: the
  * SC's AI finishing a kept fix turns its row done (EDS-56), so every row done is
  * "Updates applied" whatever the run's warning said when it ended.
  */
-function runTitleOf(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): string {
-    if (progress?.state === 'failed') return "Couldn't apply the updates";
-    if (progress?.state !== 'succeeded') return APPLYING_TITLE;
+function runHeadingOf(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): Heading {
+    if (progress?.state === 'failed') return { title: "Couldn't apply the updates", status: 'error' };
+    if (progress?.state !== 'succeeded') return { title: APPLYING_TITLE };
     const allDone = rows.every((row) => statuses[row.id]?.state === 'done');
-    return progress.warning && !allDone ? "Some updates didn't apply" : 'Updates applied';
+    return progress.warning && !allDone
+        ? { title: "Some updates didn't apply", status: 'warning' }
+        : { title: 'Updates applied', status: 'success' };
 }
 
 /** The window's dismiss button and the buttons beside it. */
@@ -147,7 +155,8 @@ function runChrome(controls: UpdatesModalControls): Chrome {
             variant: index === 0 ? 'accent' : 'secondary',
             onPress: () => controls.answer(label),
         }));
-        return { hideClose: true, actions };
+        // A prompt names its main answer first; a dialog's main button goes last.
+        return { hideClose: true, actions: [...actions.slice(1), ...actions.slice(0, 1)] };
     }
     if (!ended) return { closeLabel: 'Run in background', actions: NO_ACTIONS };
     if (progress?.state !== 'failed') return { closeLabel: 'Close', actions: backTo(controls) };
@@ -167,7 +176,7 @@ function backTo(controls: UpdatesModalControls): ActionButton[] {
 }
 
 /** What the modal shows: its title, body, dismiss label and the buttons beside it. */
-function contentFor(controls: UpdatesModalControls): Chrome & { title: string; body: React.ReactNode } {
+function contentFor(controls: UpdatesModalControls): Chrome & Heading & { body: React.ReactNode } {
     const { view } = controls;
     if (view.phase === 'applying') {
         const body = (
@@ -179,7 +188,7 @@ function contentFor(controls: UpdatesModalControls): Chrome & { title: string; b
                 remaining={controls.remaining}
             />
         );
-        return { title: runTitleOf(controls.progress, view.rows, controls.statuses), body, ...runChrome(controls) };
+        return { ...runHeadingOf(controls.progress, view.rows, controls.statuses), body, ...runChrome(controls) };
     }
     const rows = view.phase === 'list' ? view.rows : [];
     const count = rows.filter((r) => controls.ticked.has(r.id) && !r.lockedReason).length;
@@ -200,6 +209,7 @@ export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): 
             {content && (
                 <Modal
                     title={content.title}
+                    status={content.status}
                     size="L"
                     fitContent
                     onClose={controls.close}

@@ -17,7 +17,6 @@
 import { DialogContainer, TextArea, TextField } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
 import { COPY } from './addDemoFlow';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AddedDemo } from '@/types/projectFile';
@@ -34,9 +33,8 @@ export interface EditDemoPackageModalProps {
 const EDIT_COPY = {
     title: 'Edit demo package',
     save: 'Save',
-    saving: 'Saving',
     failed: "Couldn't save the changes",
-    fallback: "We couldn't save the changes. Try again.",
+    fallback: 'Try again.',
     repository: 'GitHub repository',
     repositoryWhy: 'To use a different repository, remove this demo package and add it again.',
 } as const;
@@ -77,17 +75,19 @@ function Journey({ demo, onClose, onSaved }: EditDemoPackageModalProps & { demo:
 
     return (
         <Modal
-            title={EDIT_COPY.title}
+            title={error ? EDIT_COPY.failed : EDIT_COPY.title}
+            status={error ? 'error' : undefined}
             size="M"
             fitContent
             onClose={onClose}
             closeLabel="Cancel"
             actionButtons={[
                 {
-                    label: saving ? EDIT_COPY.saving : EDIT_COPY.save,
+                    label: EDIT_COPY.save,
                     variant: 'accent',
                     onPress: () => void save(),
-                    isDisabled: saving || !name.trim(),
+                    isDisabled: !name.trim(),
+                    isPending: saving,
                 },
             ]}
         >
@@ -101,11 +101,7 @@ function Journey({ demo, onClose, onSaved }: EditDemoPackageModalProps & { demo:
                     description={EDIT_COPY.repositoryWhy}
                     width="100%"
                 />
-                {error ? (
-                    <InlineNotice tone="warning" title={EDIT_COPY.failed} testId="edit-demo-error">
-                        {error}
-                    </InlineNotice>
-                ) : null}
+                {error ? <p className="add-demo-error text-negative" data-testid="edit-demo-error">{error}</p> : null}
             </div>
         </Modal>
     );

@@ -247,11 +247,11 @@ describe('storefrontSummaryGroup', () => {
         const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
         expect(storefrontSummaryGroup(state({ demo })).rows[0]).toEqual({
             label: 'Demo',
-            value: 'Isle5 by Jen · Edge Delivery (no published pages yet: the site starts empty)',
+            value: 'Isle5 by Jen, Edge Delivery (no published pages yet: the site starts empty)',
             done: true,
         });
         const withPages = { ...demo, contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' } };
-        expect(storefrontSummaryGroup(state({ demo: withPages })).rows[0].value).toBe('Isle5 by Jen · Edge Delivery');
+        expect(storefrontSummaryGroup(state({ demo: withPages })).rows[0].value).toBe('Isle5 by Jen, Edge Delivery');
         expect(storefrontSummaryGroup(state({})).rows[0].label).not.toBe('Demo');
     });
 
@@ -261,7 +261,7 @@ describe('storefrontSummaryGroup', () => {
         const demo = { kind: 'demo' as const, version: 1, name: 'Bodea', source: { owner: 'jen', repo: 'bodea-demo' }, storefrontKind: 'headless' as const };
         expect(storefrontSummaryGroup(state({ demo })).rows[0]).toEqual({
             label: 'Demo',
-            value: 'Bodea · Headless',
+            value: 'Bodea, Headless',
             done: true,
         });
     });

@@ -137,6 +137,9 @@ describe('SiteAccessScreen', () => {
         await user.click(await screen.findByRole('button', { name: 'More actions for owner@x.example' }));
         await user.click(await screen.findByRole('menuitem', { name: 'Remove configuration admin' }));
         const dialog = await screen.findByRole('dialog');
+        // A dangerous confirm carries the amber icon before its title.
+        const heading = within(dialog).getByRole('heading', { name: 'Remove configuration admin?' });
+        expect(heading.querySelector('.modal-status-icon')).not.toBeNull();
         expect(mockRequest).not.toHaveBeenCalledWith('removeSiteAdmin', expect.anything(), undefined);
         await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
 
