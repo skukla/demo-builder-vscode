@@ -65,6 +65,12 @@ See `customer-pricing.md`. All test data was removed afterwards.
   a key in the config.
 - `V1/sharedCatalog/{id}/products` lists a shared catalog's SKUs.
 - Guest cart calls behave the same through the mesh as direct.
+- A mesh resolver read a table from an App Builder web action: the right view per company in about 100 to 190 ms, and
+  the action refused a call with no key.
+- A one-minute alarm fired 11 times, 59 to 61 seconds apart after the first run, and a scheduled action ran and
+  succeeded on Node 22 and Node 24. All of it removed afterwards, confirmed by reading the namespace back.
+- Reading Justrite's shared catalogs, their products, companies and 139 products' names and prices took about 3
+  seconds, from a local machine and without tier prices.
 
 ## Build
 
@@ -81,13 +87,14 @@ add it and it sets up, remove it and all of it goes.
 3. **The catalog answer.** An optional resolver in `eds-accs-mesh`. It reads which view a company gets from the
    sync's table, and signs with the project's key. A project without a mesh gets one, and the storefront's Commerce
    endpoint moves to it. Removal points the endpoint back, republishes, and takes the mesh off if it was added for
-   this. To prove: a mesh reading the table from an action.
+   this.
 4. **Staying in step, with no manual step.** An App Builder alarm runs on the connector's documented schedule: every
    minute for changes (`* * * * *`), with failed items retried every 5 minutes. It reads the shared catalogs, their
    products and companies from Commerce, compares them with what it last sent, and sends only the differences. ACO's
    admin API lists views and policies; products and prices cannot be read back, so the action keeps its own record.
-   A run that overlaps the one before it stops. To measure: whether a full compare fits inside a minute on a real
-   catalog, or needs a cheap changed-since check first, and what a run per minute costs against Commerce and Runtime.
+   A run that overlaps the one before it stops. Adobe's docs show `* * * * *` as the top of every minute, always in
+   UTC, and an alarm's run is a non-blocking call, so it can outlast the minute. To measure: what a run per minute
+   costs against Commerce and Runtime.
    Events are an optional later layer for changes that feel slow in a demo; the live list
    (`V1/eventing/supportedList`, 2026-11-01) has shared catalog and company events and none for assigning a product
    to a shared catalog.
