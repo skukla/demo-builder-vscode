@@ -56,3 +56,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  fix(ui): a dialog's title stays on screen through a change of view (`50dc162e3`)
 - 2026-11-02  feat(ui): a dialog's size no longer animates (`1d89359aa`)
 - 2026-11-02  fix(data-installer): the dialog stays on its wait until the job's status answers (`8da911eb1`)
+- 2026-11-02  feat(ui): one red, one orange, and warning and error differ in shape (`ceb5336d1`)
