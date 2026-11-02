@@ -114,3 +114,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-11-02  fix(data-installer): an import honours its ticks, and a removal says what goes (`280ad4f81`)
 - 2026-11-02  Clear demo data leaves nothing only the chosen stores use (c8556c19f; its commit names AB-83 by mistake). Settings layer and Save my changes first (50365ceae). Not yet proved live.
 - 2026-11-02  fix(data-installer): the preview stops promising options the store has (`fb59a4903`)
+- 2026-11-02  fix(ai): a question to the agent is not a failure on the SC's screen (`554134a2f`)
