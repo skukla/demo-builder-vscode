@@ -15,7 +15,7 @@ describe('runWipe', () => {
     it('closes returns and orders, deletes customers, then products, takes shared products off the website, then categories', async () => {
         const [pending, , , withReturn] = RESET_RULE_CASES;
         const store = sandbox({ orders: [pending.order, withReturn.order], returns: withReturn.returns });
-        const plan = await planWipeFor(store.get, TEST_STORE, PROJECT_RECORDS);
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: PROJECT_RECORDS });
         const stages: string[] = [];
 
         const outcome = await runWipe(store, plan, (stage) => stages.push(stage), '2026-10-30');
@@ -35,13 +35,17 @@ describe('runWipe', () => {
         expect(stages).toEqual(['Closing returns', 'Closing orders', 'Removing customers', 'Removing products', 'Taking products off sites']);
         expect(outcome.sentence).toBe(
             'Removed 3 products and 1 customer from the store justrite_test_store. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
-                'Took 1 product other websites also sell off the chosen websites.',
+                'Took 1 product other websites also sell off the chosen websites. ' +
+                'Left 1 of the products (ZZ-LONE-VARIANT): shown only as part of another product, which may be one another website sells. ' +
+                'Left 1 of the categories (Safety Cans): under root category 119, which the store justrite_store (website justrite) also shows. ' +
+                'Left 1 of the customers (zz.admin@example.com): they are in a company that stays. ' +
+                'Left 1 of the companies (company 28): who is in them could not be read.',
         );
     });
 
     it('deletes categories deepest first', async () => {
         const store = sandbox({ products: [], customers: [] });
-        const plan = await planWipeFor(store.get, [{ websiteCode: 'bodea', storeCode: 'bodea_store' }], PROJECT_RECORDS);
+        const plan = await planWipeFor(store.get, [{ websiteCode: 'bodea', storeCode: 'bodea_store' }], { records: PROJECT_RECORDS });
 
         await runWipe(store, plan);
 
@@ -53,11 +57,11 @@ describe('runWipe', () => {
 
     it('carries on past a refusal and says exactly what could not be removed', async () => {
         const store = sandbox({}, (path) => path === 'products/ZZ-JACKET');
-        const plan = await planWipeFor(store.get, TEST_STORE, PROJECT_RECORDS);
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: PROJECT_RECORDS });
 
         const outcome = await runWipe(store, plan);
 
-        expect(outcome.removed).toEqual({ customers: 1, products: 2, takenOff: 1, cartRules: 0, rulesTakenOff: 0, categories: 0 });
+        expect(outcome.removed).toMatchObject({ customers: 1, products: 2, takenOff: 1, cartRules: 0, rulesTakenOff: 0, categories: 0 });
         expect(outcome.failed).toEqual([{ what: 'remove 1 of the products', count: 1, first: 'ZZ-JACKET: Commerce answered 400: The product is in use.' }]);
         expect(outcome.sentence).toContain('Could not remove 1 of the products (ZZ-JACKET: Commerce answered 400: The product is in use.).');
     });
@@ -65,18 +69,18 @@ describe('runWipe', () => {
 
 describe('clearShown', () => {
     it('writes nothing when the store would now clear something the SC was not shown', async () => {
-        const shown = await planWipeFor(sandbox().get, TEST_STORE, PROJECT_RECORDS);
+        const shown = await planWipeFor(sandbox().get, TEST_STORE, { records: PROJECT_RECORDS });
         const store = sandbox({ customers: [{ id: 99, email: 'new@example.com', firstname: 'N', lastname: 'W', website_id: 5 }] });
 
-        await expect(clearShown(store, shown, PROJECT_RECORDS)).rejects.toThrow(WipeChangedError);
+        await expect(clearShown(store, shown, { records: PROJECT_RECORDS })).rejects.toThrow(WipeChangedError);
         expect(store.sent).toStrictEqual([]);
     });
 
     it('goes ahead when only things shown are gone since, as after the pack was removed', async () => {
-        const shown = await planWipeFor(sandbox().get, TEST_STORE, PROJECT_RECORDS);
+        const shown = await planWipeFor(sandbox().get, TEST_STORE, { records: PROJECT_RECORDS });
         const store = sandbox({ products: [] });
 
-        const outcome = await clearShown(store, shown, PROJECT_RECORDS);
+        const outcome = await clearShown(store, shown, { records: PROJECT_RECORDS });
 
         expect(store.sent).toEqual([{ method: 'DELETE', path: 'customers/70' }]);
         expect(outcome.removed.customers).toBe(1);

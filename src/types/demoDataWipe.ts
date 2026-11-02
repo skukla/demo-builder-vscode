@@ -44,7 +44,18 @@ export interface WipeNamed {
     names: string[];
 }
 
-export type WipeKind = 'products' | 'categories' | 'customers' | 'orders' | 'cart rules';
+export type WipeKind =
+    | 'products'
+    | 'categories'
+    | 'customers'
+    | 'orders'
+    | 'cart rules'
+    | 'companies'
+    | 'shared catalogs'
+    | 'customer groups'
+    | 'attribute sets'
+    | 'attributes'
+    | 'settings';
 
 /** Things of one kind the wipe leaves, and the one reason. */
 export interface WipeLeft extends WipeNamed {
@@ -83,8 +94,14 @@ export interface WipeErpPart {
 /** What the SC and the agent see before anything is written. Counts and a few names, never rows. */
 export interface WipePreview {
     stores: WipePlanStore[];
-    /** What would be deleted, by kind. A cart rule's coupons go with it (step 11). */
-    remove: Record<'products' | 'categories' | 'customers' | 'cartRules', WipeNamed>;
+    /**
+     * What would be deleted, by kind. A cart rule's coupons go with it (step 11). A shared catalog's
+     * customer group goes with it, as one (`catalogs`); `customerGroups` are groups no catalog uses.
+     * `customers` includes those in the `companies` going.
+     */
+    remove: Record<'products' | 'categories' | 'customers' | 'cartRules' | 'companies' | 'catalogs' | 'customerGroups' | 'attributeSets' | 'attributes', WipeNamed>;
+    /** Website settings set back to the Default scope's value, by path. */
+    settings: WipeNamed;
     /** Products also sold on websites not chosen: taken off the chosen ones only. */
     takenOff: WipeNamed;
     /** Cart rules also used on websites not chosen: taken off the chosen ones only (step 11). */

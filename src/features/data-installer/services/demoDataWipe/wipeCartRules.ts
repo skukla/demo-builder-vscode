@@ -36,6 +36,8 @@ export interface CartRuleDecision {
     partWebsite: CommerceSalesRule[];
     /** Holding a coupon an install record lists. */
     holding: CommerceSalesRule[];
+    /** Every rule on the instance this wipe does not delete: what a customer group or an attribute must not be named by. */
+    staying: CommerceSalesRule[];
 }
 
 /** The install records' cart rules and coupons, by id: never touched. */
@@ -71,13 +73,13 @@ function sortRule(rule: CommerceSalesRule, scope: WipeScope, holdingIds: Readonl
  * @param recorded - the rules and coupons install records list: never touched
  */
 export async function decideCartRules(get: CommerceGet, scope: WipeScope, recorded: RecordedPromotions): Promise<CartRuleDecision> {
-    const decided: CartRuleDecision = { remove: [], takeOff: [], partWebsite: [], holding: [] };
+    const decided: CartRuleDecision = { remove: [], takeOff: [], partWebsite: [], holding: [], staying: [] };
     const chosen = [...scope.websites.whole, ...scope.websites.part];
-    const rules = (await absentAsEmpty(() => readAllPages<CommerceSalesRule>(get, 'salesRules/search'))).filter(
-        (r) => r.rule_id !== undefined && !recorded.rules.has(String(r.rule_id)) && (r.website_ids ?? []).map(Number).some((id) => chosen.includes(id)),
-    );
+    const all = await absentAsEmpty(() => readAllPages<CommerceSalesRule>(get, 'salesRules/search'));
+    const rules = all.filter((r) => r.rule_id !== undefined && !recorded.rules.has(String(r.rule_id)) && (r.website_ids ?? []).map(Number).some((id) => chosen.includes(id)));
     const holdingIds = rules.length > 0 && recorded.coupons.size > 0 ? await rulesHoldingRecorded(get, recorded.coupons) : new Set<string>();
     for (const rule of rules) sortRule(rule, scope, holdingIds, decided);
+    decided.staying = all.filter((r) => !decided.remove.includes(r));
     return decided;
 }
 

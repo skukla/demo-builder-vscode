@@ -15,21 +15,39 @@
  *   project's records, all of them as before, and another project's records whose website is one of
  *   the chosen stores' websites. A record that names no website is read at its project's own (rule 3,
  *   as every record reader does); one whose website nothing says is kept, since it may be one of these.
+ * - **What any project's records list of the instance-wide kinds is left, whatever its website**
+ *   (owner, 2026-11-02): a company, catalog, group, attribute set or attribute belongs to no website,
+ *   so another demo's pack may have made one these stores also use (`everyRecord`). The same for a
+ *   website setting a datapack or the setup guide wrote (`settingsKept`): its undo puts it back.
  *
  * @module features/data-installer/services/demoDataWipe/wipeClaims
  */
 
 import { type InstallRecord, type RecordFiles, readProjectRecords } from '../demoBuilderEngine/installRecord';
 import { resolveInstallTarget } from '../sampleDataInstall';
+import { settingsKeptBy } from './wipeRecorded';
 import { type WipeScope, storeOfView } from './wipeScope';
+import { type WipeUnfinished, readWipeUnfinished } from './wipeUnfinished';
 import { andList } from '@/core/utils/andList';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { Project } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { WipeStoreChoice } from '@/types/demoDataWipe';
 
-/** Either why the stores may not be cleared from this project, or every record the wipe must leave. */
-export type WipeClaims = { refusal: string } | { records: InstallRecord[] };
+/** What a wipe must leave, from every project on this machine. */
+export interface WipeRespects {
+    /** This project's records, and others' on the chosen websites: what products, customers and the like go by. */
+    records: InstallRecord[];
+    /** Every record of every project, whatever its website: companies, catalogs, groups, sets and attributes are the instance's. */
+    everyRecord: InstallRecord[];
+    /** Website settings a datapack or the setup guide wrote, as `<website code>/<path>`. */
+    settingsKept: Set<string>;
+    /** What the last clearing of these same stores from this project could not finish. */
+    unfinished?: WipeUnfinished;
+}
+
+/** Either why the stores may not be cleared from this project, or everything the wipe must leave. */
+export type WipeClaims = { refusal: string } | WipeRespects;
 
 /** The stores (by id) a project records as its own: its view's store, or every store of its website when the view is gone. */
 function storesClaimedBy(structure: CommerceStoreStructure, other: Project): number[] {
@@ -75,10 +93,9 @@ export function claimedStores(structure: CommerceStoreStructure, project: Projec
     return new Map([...byStore].map(([id, claimants]) => [id, claimSentence(structure, id, claimants)]));
 }
 
-/** Another project's records that list things on the chosen websites, or may. */
-async function recordsOnWebsites(files: RecordFiles, other: Project, websiteCodes: ReadonlySet<string>): Promise<InstallRecord[]> {
+/** Of another project's records, those that list things on the chosen websites, or may. */
+function recordsOnWebsites(records: readonly InstallRecord[], other: Project, websiteCodes: ReadonlySet<string>): InstallRecord[] {
     const own = resolveInstallTarget(other)?.websiteCode;
-    const records = await readProjectRecords(files, other.path);
     return records.filter((record) => {
         const website = record.target?.websiteCode ?? own;
         return website === undefined || websiteCodes.has(website);
@@ -102,7 +119,16 @@ export async function readWipeClaims(
     const refused = scope.stores.flatMap((s) => claims.get(s.id) ?? []);
     if (refused.length > 0) return { refusal: refused.join(' ') };
     const websites = new Set(scope.stores.map((s) => s.website.code));
-    const records = await readProjectRecords(files, project.path);
-    for (const other of others.filter((o) => o.path !== project.path)) records.push(...(await recordsOnWebsites(files, other, websites)));
-    return { records };
+    const own = await readProjectRecords(files, project.path);
+    const records = [...own];
+    const everyRecord = [...own];
+    const settingsKept = new Set(settingsKeptBy(project, own));
+    for (const other of others.filter((o) => o.path !== project.path)) {
+        const theirs = await readProjectRecords(files, other.path);
+        records.push(...recordsOnWebsites(theirs, other, websites));
+        everyRecord.push(...theirs);
+        settingsKeptBy(other, theirs).forEach((key) => settingsKept.add(key));
+    }
+    const note = await readWipeUnfinished(files, project.path);
+    return { records, everyRecord, settingsKept, ...(note?.scopeKey === scope.key ? { unfinished: note } : {}) };
 }

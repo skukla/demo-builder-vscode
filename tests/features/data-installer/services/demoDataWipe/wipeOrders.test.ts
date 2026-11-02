@@ -54,7 +54,7 @@ describe('the one reset rule for orders', () => {
     it.each(RESET_RULE_CASES.map((example) => [example.name, example] as const))('%s', async (_name, example) => {
         const store = storeWith([example.order], example.returns);
 
-        const plan = await planWipeFor(store.get, TEST_STORE, []);
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
         await runWipe(store, plan, undefined, DAY);
 
         expect(store.sent).toEqual(expectedCalls(example));
@@ -66,7 +66,7 @@ describe('the one reset rule for orders', () => {
             RESET_RULE_CASES.flatMap((c) => c.returns),
         );
 
-        const { preview } = await planWipeFor(store.get, TEST_STORE, []);
+        const { preview } = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(preview.orders).toEqual({
             cancel: { count: 1, names: ['000000701'] },
@@ -80,7 +80,7 @@ describe('the one reset rule for orders', () => {
     it("reads only the orders placed in the chosen stores' views, and those orders' returns", async () => {
         const store = storeWith([RESET_RULE_CASES[3].order], RESET_RULE_CASES[3].returns);
 
-        await planWipeFor(store.get, TEST_STORE, []);
+        await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(store.reads.filter((p) => p.startsWith('orders?') || p.startsWith('returns?')).map((p) => p.split('&fields')[0])).toEqual([
             'orders?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100&searchCriteria[filterGroups][0][filters][0][field]=store_id&searchCriteria[filterGroups][0][filters][0][value]=6&searchCriteria[filterGroups][0][filters][0][conditionType]=in',
@@ -95,7 +95,7 @@ describe('the reset rule at its edges', () => {
     it('releases a hold before cancelling', async () => {
         const store = storeWith([held]);
 
-        await runWipe(store, await planWipeFor(store.get, TEST_STORE, []), undefined, DAY);
+        await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }), undefined, DAY);
 
         expect(store.sent).toEqual([{ method: 'POST', path: 'orders/504/unhold' }, { method: 'POST', path: 'orders/504/cancel' }, note(504, `Canceled by the demo reset on ${DAY}.`)]);
     });
@@ -103,7 +103,7 @@ describe('the reset rule at its edges', () => {
     it('leaves an order a reset already noted: run twice, nothing new', async () => {
         const store = storeWith([noted]);
 
-        const plan = await planWipeFor(store.get, TEST_STORE, []);
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.orders).toStrictEqual([]);
         expect(plan.preview.total).toBe(0);
@@ -111,10 +111,10 @@ describe('the reset rule at its edges', () => {
 
     it('changes nothing the second time: every order now carries a reset note, every return is closed', async () => {
         const store = storeWith(RESET_RULE_CASES.map((c) => c.order), RESET_RULE_CASES.flatMap((c) => c.returns));
-        await runWipe(store, await planWipeFor(store.get, TEST_STORE, []), undefined, DAY);
+        await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }), undefined, DAY);
         const written = store.sent.length;
 
-        const again = await planWipeFor(store.get, TEST_STORE, []);
+        const again = await planWipeFor(store.get, TEST_STORE, { records: [] });
         await runWipe(store, again, undefined, DAY);
 
         expect(again.preview.total).toBe(0);
@@ -126,7 +126,7 @@ describe('the reset rule at its edges', () => {
         const review = { ...RESET_RULE_CASES[1].order, entity_id: 710, increment_id: '000000710', state: 'payment_review' };
         const store = storeWith([review]);
 
-        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, []), undefined, DAY);
+        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }), undefined, DAY);
 
         expect(store.sent).toEqual([note(710, `Left open by the demo reset on ${DAY}: Commerce can neither cancel nor refund it.`)]);
         expect(outcome.orders).toMatchObject({ commented: 1, refunded: 0 });
@@ -135,7 +135,7 @@ describe('the reset rule at its edges', () => {
     it('answers the counts by the ERP reset\'s names', async () => {
         const store = storeWith(RESET_RULE_CASES.map((c) => c.order), RESET_RULE_CASES.flatMap((c) => c.returns));
 
-        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, []), undefined, DAY);
+        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }), undefined, DAY);
 
         expect(outcome.orders).toEqual({ cancelled: 1, refunded: 4, commented: 1, alreadyClosed: 1, returnsClosed: 1, failed: 0 });
         expect(outcome.sentence).toContain('Canceled 1 order, refunded 4 orders and left 1 order open with a note. Closed 1 return.');
@@ -144,7 +144,7 @@ describe('the reset rule at its edges', () => {
     it("refunds a configurable's line, never its child's", async () => {
         const store = storeWith([configurable]);
 
-        const plan = await planWipeFor(store.get, TEST_STORE, []);
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.orders[0].refund?.items).toEqual([{ order_item_id: 12, qty: 1 }]);
     });
@@ -152,7 +152,7 @@ describe('the reset rule at its edges', () => {
     it('notes a cancel Commerce answers with false as left open, as the ERP reset does', async () => {
         const store = storeWith([RESET_RULE_CASES[0].order], [], undefined, (path) => !path.endsWith('/cancel'));
 
-        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, []), undefined, DAY);
+        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }), undefined, DAY);
 
         expect(store.sent).toEqual([{ method: 'POST', path: 'orders/701/cancel' }, note(701, `Left open by the demo reset on ${DAY}: Commerce can neither cancel nor refund it.`)]);
         expect(outcome.orders).toMatchObject({ cancelled: 0, commented: 1 });
@@ -163,7 +163,7 @@ describe('the reset rule at its edges', () => {
         // Commerce answers the save but keeps the return as it was: the read back says so.
         const store = storeWith([example.order], example.returns, undefined, () => true);
 
-        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, []), undefined, DAY);
+        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }), undefined, DAY);
 
         expect(outcome.failed).toContainEqual({ what: 'close 1 of the returns', count: 1, first: '40: Commerce kept it authorized' });
         expect(outcome.orders.failed).toBe(1);
@@ -172,6 +172,6 @@ describe('the reset rule at its edges', () => {
     it('reads a store without returns as having none', async () => {
         const store = sandbox({ products: [], customers: [], orders: [] });
 
-        expect((await planWipeFor(store.get, TEST_STORE, [])).returnIds).toStrictEqual([]);
+        expect((await planWipeFor(store.get, TEST_STORE, { records: [] })).returnIds).toStrictEqual([]);
     });
 });

@@ -52,7 +52,7 @@ const withRules = () => sandbox({ rules: structuredClone(RULES), coupons: struct
 
 describe('planWipe with cart rules', () => {
     it('deletes a rule on only the chosen websites, and takes one also on another website off the chosen one', async () => {
-        const plan = await planWipeFor(withRules().get, TEST_STORE, RECORDS);
+        const plan = await planWipeFor(withRules().get, TEST_STORE, { records: RECORDS });
 
         expect(plan.ruleIds).toEqual(['101']);
         expect(plan.ruleTakeOff).toEqual([{ id: '102', websiteIds: [JUSTRITE_ID] }]);
@@ -61,7 +61,7 @@ describe('planWipe with cart rules', () => {
     });
 
     it("leaves what an install record lists, and a rule holding a code one lists, never another website's", async () => {
-        const plan = await planWipeFor(withRules().get, TEST_STORE, RECORDS);
+        const plan = await planWipeFor(withRules().get, TEST_STORE, { records: RECORDS });
 
         expect(plan.ruleIds).not.toContain('104');
         expect(plan.ruleIds).not.toContain('103');
@@ -70,7 +70,7 @@ describe('planWipe with cart rules', () => {
     });
 
     it('leaves a rule on a website only partly chosen, and says why', async () => {
-        const plan = await planWipeFor(withRules().get, BODEA_STORE, RECORDS);
+        const plan = await planWipeFor(withRules().get, BODEA_STORE, { records: RECORDS });
 
         expect(plan.ruleIds).toStrictEqual([]);
         expect(plan.ruleTakeOff).toStrictEqual([]);
@@ -83,15 +83,15 @@ describe('planWipe with cart rules', () => {
     });
 
     it('reads no rules as none on a store that does not answer the route', async () => {
-        const plan = await planWipeFor(sandbox().get, TEST_STORE, PROJECT_RECORDS);
+        const plan = await planWipeFor(sandbox().get, TEST_STORE, { records: PROJECT_RECORDS });
 
         expect(plan.ruleIds).toStrictEqual([]);
         expect(plan.preview.remove.cartRules.count).toBe(0);
     });
 
     it('stops a plan that would now take a rule the list did not hold', async () => {
-        const shown = await planWipeFor(sandbox().get, TEST_STORE, PROJECT_RECORDS);
-        const now = await planWipeFor(withRules().get, TEST_STORE, RECORDS);
+        const shown = await planWipeFor(sandbox().get, TEST_STORE, { records: PROJECT_RECORDS });
+        const now = await planWipeFor(withRules().get, TEST_STORE, { records: RECORDS });
 
         expect(withinPlan(shown, now)).toBe(false);
         expect(withinPlan(now, now)).toBe(true);
@@ -101,7 +101,7 @@ describe('planWipe with cart rules', () => {
 describe('runWipe with cart rules', () => {
     it("deletes the rule with DELETE salesRules/{id}, and takes the other off with its whole body and the chosen website out", async () => {
         const store = withRules();
-        const plan = await planWipeFor(store.get, TEST_STORE, RECORDS);
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: RECORDS });
 
         const outcome = await runWipe(store, plan);
 
@@ -118,9 +118,9 @@ describe('runWipe with cart rules', () => {
 
     it('clears only what the list it was shown holds', async () => {
         const store = withRules();
-        const shown = await planWipeFor(store.get, TEST_STORE, RECORDS);
+        const shown = await planWipeFor(store.get, TEST_STORE, { records: RECORDS });
 
-        await clearShown(store, shown, RECORDS);
+        await clearShown(store, shown, { records: RECORDS });
 
         expect(writesOf(store.sent).filter((w) => w.path.startsWith('salesRules/'))).toEqual([
             { method: 'DELETE', path: 'salesRules/101' },

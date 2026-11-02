@@ -6,7 +6,7 @@
  * | Read | Endpoint and field | Confirmed from a real answer? |
  * |---|---|---|
  * | the structure | `GET store/websites` (`id`, `code`, `name`), `GET store/storeGroups` (`id`, `code`, `name`, `website_id`, `root_category_id`), `GET store/storeViews` (`id`, `code`, `name`, `website_id`, `store_group_id`) | yes: `storeScopeOf` reads all three on every install, and store discovery reads the same lists |
- * | a website's products | `GET products`, `website_id` eq, fields `items[id,sku,name,type_id,visibility,extension_attributes[website_ids,configurable_product_links,category_links]]` | the `website_id` filter and `website_ids` yes (Assign products, 2026-10-19); `visibility`, `configurable_product_links` and `category_links` in a LIST answer **no** |
+ * | a website's products | `GET products`, `website_id` eq, fields `items[id,sku,name,type_id,visibility,attribute_set_id,custom_attributes[attribute_code],extension_attributes[website_ids,configurable_product_links,category_links]]` | the `website_id` filter and `website_ids` yes (Assign products, 2026-10-19); `visibility`, `attribute_set_id`, `custom_attributes`, `configurable_product_links` and `category_links` in a LIST answer **no** |
  * | the category tree | `GET categories/list`: `id`, `name`, `path` | yes: `listCategoryLabels` |
  * | a website's customers | `GET customers/search`, `website_id` eq: `id`, `email`, `website_id`, `store_id`, `created_in`, `extension_attributes.company_attributes.company_id` | `company_attributes` yes (2026-10-30, `…_DB08`); the `website_id` filter, `store_id` and `created_in` **no** |
  * | the chosen stores' orders | `GET orders`, `store_id` in, fields `items[entity_id,increment_id,state,status,store_id,customer_id,base_shipping_invoiced,base_shipping_refunded,status_histories[comment],items[item_id,parent_item_id,sku,qty_ordered,qty_invoiced,qty_refunded,qty_canceled,qty_shipped]]` | **no**. The `qty_*` fields and `status_histories` are the ones the ERP integration's reset reads (`commerce-erp-integration` `src/lib/close-orders.js:48-65`), from `GET orders/{id}` |
@@ -52,7 +52,8 @@ export async function readWipeStructure(get: CommerceGet): Promise<CommerceStore
     };
 }
 
-const PRODUCT_FIELDS = '&fields=total_count,items[id,sku,name,type_id,visibility,extension_attributes[website_ids,configurable_product_links,category_links]]';
+const PRODUCT_FIELDS =
+    '&fields=total_count,items[id,sku,name,type_id,visibility,attribute_set_id,custom_attributes[attribute_code],extension_attributes[website_ids,configurable_product_links,category_links]]';
 
 /** Every product on the website, enabled or not, in the fields a wipe decides by. */
 export function readWebsiteProducts(get: CommerceGet, websiteId: number): Promise<CommerceProduct[]> {

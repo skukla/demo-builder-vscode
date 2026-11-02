@@ -58,7 +58,7 @@ describe('the plan, with the ERP integration serving the store', () => {
     it("puts the routed store's orders and their returns in the ERP part, counted, with its one line", async () => {
         const { erp } = fakeErp();
 
-        const plan = await planWipeFor(twoOrders().get, TEST_STORE, [], erp);
+        const plan = await planWipeFor(twoOrders().get, TEST_STORE, { records: [], erp: erp });
 
         expect(plan.orders).toStrictEqual([]);
         expect(plan.returnIds).toStrictEqual([]);
@@ -75,7 +75,7 @@ describe('the plan, with the ERP integration serving the store', () => {
         const { erp } = fakeErp();
         const store = sandbox({ products: [], customers: [], orders: [PENDING.order, BODEA_OUTLET_ORDER] });
 
-        const plan = await planWipeFor(store.get, [...TEST_STORE, { websiteCode: 'bodea' }], [], erp);
+        const plan = await planWipeFor(store.get, [...TEST_STORE, { websiteCode: 'bodea' }], { records: [], erp: erp });
 
         expect(plan.orders.map((o) => o.id)).toStrictEqual(['600']);
         expect(plan.erp?.orders).toStrictEqual([{ id: '701', number: '000000701' }]);
@@ -85,7 +85,7 @@ describe('the plan, with the ERP integration serving the store', () => {
     it('leaves the orders, uncounted, and says the integration must be updated first', async () => {
         const { erp } = fakeErp({ status: STATUS_BEFORE });
 
-        const { preview } = await planWipeFor(twoOrders().get, TEST_STORE, [], erp);
+        const { preview } = await planWipeFor(twoOrders().get, TEST_STORE, { records: [], erp: erp });
 
         expect(preview.total).toBe(0);
         expect(preview.erp?.held).toBe(UPDATE_FIRST);
@@ -107,10 +107,10 @@ describe('clearing, with the ERP integration serving the store', () => {
             at.refill = store.sent.length;
             return {};
         });
-        const shown = await planWipeFor(store.get, TEST_STORE, [], erp);
+        const shown = await planWipeFor(store.get, TEST_STORE, { records: [], erp: erp });
         const stages: string[] = [];
 
-        const outcome = await clearShown(store, shown, [], { erp, report: (stage) => stages.push(stage) });
+        const outcome = await clearShown(store, shown, { records: [], erp }, (stage) => stages.push(stage));
 
         expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
         expect(refill).toHaveBeenCalledWith(expect.any(Function));
@@ -122,7 +122,8 @@ describe('clearing, with the ERP integration serving the store', () => {
         expect(outcome.sentence).toBe(
             'Removed nothing from the store justrite_test_store. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
                 '2 of the orders were closed through the ERP integration (JustRite), and removed from Justrite ERP. ' +
-                "JustRite's ERP was refreshed from Commerce.",
+                "JustRite's ERP was refreshed from Commerce. " +
+                'Left 1 of the categories (Safety Cans): under root category 119, which the store justrite_store (website justrite) also shows.',
         );
     });
 
@@ -139,9 +140,9 @@ describe('clearing, with the ERP integration serving the store', () => {
             at.refill = store.sent.length;
             return {};
         });
-        const shown = await planWipeFor(store.get, [...TEST_STORE, { websiteCode: 'bodea' }], [], erp);
+        const shown = await planWipeFor(store.get, [...TEST_STORE, { websiteCode: 'bodea' }], { records: [], erp: erp });
 
-        await clearShown(store, shown, [], { erp });
+        await clearShown(store, shown, { records: [], erp });
 
         expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
         expect(at).toEqual({ close: 0, refill: store.sent.length });
@@ -155,9 +156,9 @@ describe('clearing, with the ERP integration serving the store', () => {
     it('counts and names a close the integration could not make, carries on, and still refreshes', async () => {
         const store = twoOrders();
         const { erp, refill } = fakeErp({ close: async () => Promise.reject(new Error('ERP detach answered 500: Commerce timed out')) });
-        const shown = await planWipeFor(store.get, TEST_STORE, [], erp);
+        const shown = await planWipeFor(store.get, TEST_STORE, { records: [], erp: erp });
 
-        const outcome = await clearShown(store, shown, [], { erp });
+        const outcome = await clearShown(store, shown, { records: [], erp });
 
         expect(outcome.orders.failed).toBe(2);
         expect(outcome.failed).toEqual([{ what: 'close 1 of the orders through the ERP integration (JustRite)', count: 2, first: 'ERP detach answered 500: Commerce timed out' }]);
@@ -174,7 +175,7 @@ describe('clearing, with the ERP integration serving the store', () => {
         const store = twoOrders();
         const { erp } = fakeErp({ close });
 
-        const outcome = await clearShown(store, await planWipeFor(store.get, TEST_STORE, [], erp), [], { erp });
+        const outcome = await clearShown(store, await planWipeFor(store.get, TEST_STORE, { records: [], erp: erp }), { records: [], erp });
 
         expect(outcome.failed).toEqual([
             { what: 'close 1 of the orders through the ERP integration (JustRite)', count: 1, first: 'order 000000701: cancel failed: Commerce answered 400' },
@@ -189,7 +190,7 @@ describe('clearing, with the ERP integration serving the store', () => {
         const store = sandbox({ orders: [closedBefore] });
         const { erp, client } = fakeErp();
 
-        await clearShown(store, await planWipeFor(store.get, TEST_STORE, [], erp), [], { erp });
+        await clearShown(store, await planWipeFor(store.get, TEST_STORE, { records: [], erp: erp }), { records: [], erp });
 
         expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
         expect(writesOf(store.sent).filter((w) => w.path.startsWith('orders/'))).toStrictEqual([]);
@@ -199,7 +200,7 @@ describe('clearing, with the ERP integration serving the store', () => {
         const { erp } = fakeErp({ refill: async () => ({ failed: 'Demo ERP: Commerce did not answer products' }) });
         const store = twoOrders();
 
-        const outcome = await clearShown(store, await planWipeFor(store.get, TEST_STORE, [], erp), [], { erp });
+        const outcome = await clearShown(store, await planWipeFor(store.get, TEST_STORE, { records: [], erp: erp }), { records: [], erp });
 
         expect(outcome.erp?.refreshed).toBe(false);
         expect(outcome.sentence).toContain("JustRite's ERP was not refreshed from Commerce: Demo ERP: Commerce did not answer products.");
@@ -209,7 +210,7 @@ describe('clearing, with the ERP integration serving the store', () => {
         const store = twoOrders();
         const { erp, client, refill } = fakeErp({ status: STATUS_BEFORE });
 
-        const outcome = await clearShown(store, await planWipeFor(store.get, TEST_STORE, [], erp), [], { erp });
+        const outcome = await clearShown(store, await planWipeFor(store.get, TEST_STORE, { records: [], erp: erp }), { records: [], erp });
 
         expect(client.closeOrders).not.toHaveBeenCalled();
         expect(refill).not.toHaveBeenCalled();
@@ -219,10 +220,10 @@ describe('clearing, with the ERP integration serving the store', () => {
 
     it('writes nothing when the integration can now close orders the list showed as left', async () => {
         const store = twoOrders();
-        const held = await planWipeFor(store.get, TEST_STORE, [], fakeErp({ status: STATUS_BEFORE }).erp);
+        const held = await planWipeFor(store.get, TEST_STORE, { records: [], erp: fakeErp({ status: STATUS_BEFORE }).erp });
         const { erp, client } = fakeErp();
 
-        await expect(clearShown(store, held, [], { erp })).rejects.toThrow(WipeChangedError);
+        await expect(clearShown(store, held, { records: [], erp })).rejects.toThrow(WipeChangedError);
         expect(client.closeOrders).not.toHaveBeenCalled();
         expect(store.sent).toStrictEqual([]);
     });

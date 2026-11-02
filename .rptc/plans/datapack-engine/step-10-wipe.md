@@ -2,8 +2,9 @@
 
 Status: **built 2026-10-30, widened the same day to a chosen set of stores with their orders
 closed, then to "One action, ERP included" (an ERP integration's orders closed by it, its ERP
-refilled); not yet live.** B2B and settings are still left (decision 3 of the first build). Decided
-by the owner, 2026-10-27 and 2026-10-30.
+refilled); widened 2026-11-02 to "Nothing left behind" (companies, shared catalogs, customer groups,
+attribute sets, attributes, website settings); not yet live.** Decided by the owner, 2026-10-27,
+2026-10-30 and 2026-11-02.
 
 ## Why
 
@@ -43,9 +44,11 @@ An SC resets a demo to put new data in. The cases:
      categories are left and the screen says why;
    - **customers** of a wholly chosen website, or made in a chosen store;
    - **orders** placed in a chosen store: closed off, never deleted (the one reset rule below);
-   - **never** anything the instance shares (product attributes, attribute sets), the websites,
-     stores, store views and root categories themselves, admin users, or the integration's
-     credential. A new pack reuses an attribute that is already there, so leaving them blocks nothing.
+   - **companies, shared catalogs, customer groups, attribute sets, attributes and website settings**
+     when only the chosen stores use them (see "Nothing left behind");
+   - **never** the websites, stores, store views and root categories themselves, Commerce's own
+     customer groups and attributes, the public catalog, the Default attribute set, stocks and sources,
+     admin users, or the integration's credential.
 
 Emptying a whole instance is not part of reset, and is not offered at all (owner, 2026-10-30:
 "clean instance" rejected).
@@ -86,6 +89,134 @@ Emptying a whole instance is not part of reset, and is not offered at all (owner
 4. **The claims guard is per store**: a store another local project records as its own (the store
    its recorded website and store view codes name, `resolveInstallTarget`, the accessor the guard
    always used) cannot be ticked, and the refusal names the project.
+
+## Nothing left behind (owner, 2026-11-02)
+
+> "It shouldn't leave anything behind."
+
+The table the owner approved, and the rule each row became. Everything is decided from reads before
+anything is written; the plan is made again at the clearing and refused if it would take more.
+
+| Data | What Clear does | Module and rule |
+|---|---|---|
+| Companies | Removed when only the chosen stores use them | `wipeCompanies.ts`: found through the chosen websites' customers. Its admin and every customer in it (`GET hierarchy/{id}`) on wholly chosen websites, none listed by an install record, none with an order in a store not chosen |
+| Customers in those companies | Removed with them | The company goes first (Commerce refuses an admin's delete while the company stands); the customer's delete is held back if the company's failed |
+| Shared catalogs and customer groups | Removed when only the chosen stores use them, nobody landing in General | `wipeCatalogs.ts`: the groups the customers and companies going are in. Everyone in the group going, no cart rule that stays naming it. A catalog and its group are one unit. Asked again just before the delete (`removeEmptyGroup`). Never Commerce's own groups (ids 0 to 3) or the public catalog |
+| Website-level store settings | Put back to the default | `wipeSettings.ts`: on wholly chosen websites, a value that differs from the Default scope's is set to it. See the gap below |
+| Attributes and attribute sets | Removed if nothing else on the instance uses them | `wipeAttributes.ts`: those the products going use. No product that stays in the set (asked again before the delete, `removeEmptySet`, since Magento's schema deletes a set's products). An attribute: `is_user_defined`, not `erp_owner`, `brand` or `erp_*`, in no set that stays, tested by no cart rule that stays, carried by no product that stays. Any read that fails keeps it. Never the Default set |
+| Anything another demo also uses | Stays, and the dialog names it and says why | `WipePreview.left`, each with up to three names and a reason; `WipeOutcome.left` and the sentence say it afterwards |
+| Orders | Commerce cannot delete them, so they are closed, as now | Unchanged |
+
+An install record of ANY local project, on any website, keeps a company, catalog, group, set or
+attribute (`readWipeClaims`, `everyRecord`): these belong to the instance, not to a website. A website
+setting a datapack or the setup guide wrote is kept too (`settingsKept`), for its own undo.
+
+**Write order:** returns, orders; companies; customers (admins after their company); products, take-offs;
+cart rules, rule take-offs; catalogs each with its group, then groups with no catalog; categories;
+attribute sets; attributes; website settings. This differs from a pack's removal, which runs its
+record backwards and so deletes a catalog before its company: with a company being deleted anyway,
+deleting it first means nobody is ever moved to General. A write whose prerequisite failed is held back
+(`WipeWrite.needs`).
+
+**Run twice:** what failed is still tied to the stores through whoever is still there, except a catalog,
+group, set or attribute whose own delete failed once its customers or products were gone. Those are
+kept in a note beside the project (`wipeUnfinished.ts`, `.demo-builder/wipe-unfinished.json`), which
+only widens what the next clearing of the same stores looks at; every rule still applies.
+
+### What Commerce's settings API cannot do
+
+Measured and read 2026-11-02 ([Adobe's page](https://developer.adobe.com/commerce/webapi/rest/saas-integrations/system-config/);
+`GET system/config?scope=website&scopeCode=justrite_test_website` live):
+
+- **It cannot put a value back to inherited.** `PUT` needs a string `value` and there is no delete.
+  So a value set back reads the same as the default but stays the website's own row: a later change to
+  the default does not reach it. Only "Use Default Value" in the Admin clears it. The dialog and the
+  result both say so.
+- **It cannot list what a website set itself.** With no path filter it answers every path (943 on
+  the test website) with the value in force, inherited ones included. So only a value that DIFFERS
+  from the Default scope's can be told; one the same needs nothing.
+- **What stays, counted and named:** paths under `web/` or `admin/` and credentials (`isOffLimitsSetting`,
+  what a pack may not set), a value that reads as masked or encrypted, one with no value at the Default
+  scope (writing "" or "0" would be a guess).
+
+### Which reads and writes are confirmed (2026-11-02)
+
+The test website holds no customers and no products, so none of the B2B or attribute reads could be
+captured there; reads outside it were not made (the owner's limit for this work).
+
+| Read or write | Endpoint and field | Confirmed? |
+|---|---|---|
+| a website's settings, in pages | `GET system/config?scope=website&scopeCode=`, `searchCriteria[pageSize]`, `[currentPage]`: `items[path,value,scope,scope_code]`, `total_count` | yes, live 2026-11-02, pages 1, 200 and 471 |
+| the default's | the same with `scope=default` | Adobe's page; not read from here |
+| set a website setting | `configFix`, `PUT system/config` `{ items: [{ path, value, scope: "website", scope_code }] }`, read `errors` | Adobe's page's example; a default-scope value live 2026-10-10; a website value **no** |
+| a company | `GET company/{id}`: `super_user_id`, `customer_group_id`, `company_name` | yes, 2026-10-30 (`COMPANY_27_DB08`) |
+| who is in it | `GET hierarchy/{id}` | yes, 2026-10-30 (`HIERARCHY_28_DB08`) |
+| a customer's company and group | `GET customers/search`: `extension_attributes.company_attributes.company_id`, `group_id` | the first yes (2026-10-30); `group_id` in a search answer **no** (in `GET customers/{id}` yes) |
+| the catalogs | `GET sharedCatalog`: `id`, `name`, `type`, `customer_group_id` | yes, 2026-09-28, 2026-10-29 |
+| a group's name | `GET customerGroups/{id}`: `code` | yes, 2026-09-28 |
+| who uses a group | `GET customers/search` `group_id` eq, `GET company` `customer_group_id` eq | **no**; every answer filtered again here |
+| delete a company, customer, catalog, group | `DELETE company/{id}`, `customers/{id}`, `sharedCatalog/{id}`, `customerGroups/{id}` | the routes yes (2026-10-30); a company's delete followed by its admin's in this order **no** |
+| every set, what it holds | `GET products/attribute-sets/sets/list`, `GET products/attribute-sets/{id}/attributes`: `attribute_code` | yes (`loadStoreSets`, `erpOwnerAttributeSets`) |
+| the products in a set | `GET products`, `attribute_set_id` eq | **no** (the pack's own removal uses it) |
+| a product's set and attributes in a list | `attribute_set_id`, `custom_attributes[attribute_code]` under `fields=` | **no** |
+| an attribute | `GET products/attributes/{code}`: `is_user_defined` | yes |
+| who carries an attribute | `GET products`, the code `notnull`, value 1 | **no**, and it may answer for the default scope only. A refusal keeps the attribute; a false empty is caught by the set rule |
+| delete a set, an attribute | `DELETE products/attribute-sets/{id}`, `DELETE products/attributes/{code}` | **no** (the pack's own removal uses them) |
+
+### Tests
+
+`wipeCompanies.test.ts`, `wipeCatalogs.test.ts`, `wipeAttributes.test.ts`, `wipeSettings.test.ts`,
+`wipeUnfinished.test.ts` (one suite per decision, the case that stays beside each that goes) and
+`wipeRun-instance.test.ts` (the order and arguments of the writes, what is held back, a second
+clearing). The fake (`wipe.testUtils.ts`) does what Commerce was measured doing: an admin's delete
+refused with the captured message while the company stands, and a catalog's delete taking its group
+and moving everyone in it to group 1, counted in `movedToGeneral`, which every test leaves empty.
+Fixtures: `tests/helpers/commerceWipeInstanceFixtures.ts`.
+
+### Live proof (owner's call; `scratch-1028`, `justrite_test_website` / `justrite_test_store` ONLY)
+
+Nothing here can be undone, so the clearing only ever meets things the test made itself. Every step
+reads first; stop if `check_demo_data` lists anything the test did not make.
+
+1. **Read-only.** `check_demo_data` for the test store. Today the website holds no customers or products,
+   so expect no company, catalog, set or attribute to remove. **Read `data.preview.settings`: every path
+   and value it would set.** The owner reads that list before anything else, since the test website's
+   settings were never recorded.
+2. **Prove the unconfirmed reads.** `run_commerce_rest`: `system/config?scope=default&searchCriteria[pageSize]=5`;
+   a `notnull` search on an attribute a real product carries, as a positive control; `customers/search` on
+   `group_id` for a group a real customer is in. Record the answers as fixtures.
+3. **Make throwaways on the test website only:** an attribute `zz_clear_test`, a set `ZZ Clear Test` holding
+   it, one product in that set, group `ZZ Clear Group`, catalog `ZZ Clear Catalog` on it, an admin and a
+   buyer on the test website, company `ZZ Clear Co` on the group, and one website setting set
+   (`sales/totals_sort/tax`, its default's value + 1).
+4. **Keeps:** give another website a throwaway customer in `ZZ Clear Group`. `check_demo_data`: the catalog
+   stays, named, and so does the company if that customer is in it. Delete that customer by hand.
+5. **Clear:** `check_demo_data`, then `clear_demo_data` with its token. Expected order in the debug log:
+   company, customers, product, catalog, group, set, attribute, setting. Read `GET customers/{buyer}` as it
+   runs if possible: its group must never read 1 before it is deleted.
+6. **Back to zero:** `check_demo_data` answers `total` 0 with the same `left` as step 1 (settings included).
+   Every other demo reads as before: `GET products` and `customers/search` with Justrite's, Bodea's, BJU's and
+   CitiSignal's `website_id`, the same `total_count` as at step 1. What does not return: the setting stays
+   the website's own row, holding the default's value, until "Use Default Value" in the Admin.
+7. **A failed write:** not provable live without breaking something; covered by tests.
+
+### Open decisions (recommendation first)
+
+1. **A set, attribute, catalog or group nothing ties to the chosen stores is not looked at, and so not
+   reported.** The owner's table says "if nothing else on the instance uses them"; an empty set may be
+   another demo's about to be used, so only those the products or customers going use are judged.
+   Recommended: keep. The other reading would sweep every unused one on the instance.
+2. **A cart rule that stays and names the group keeps the group.** Commerce often lists every group on a
+   rule, so another demo's rule may keep a group it never really uses. Recommended: keep and name it,
+   the safe direction.
+3. **An attribute held by the Default set stays**, by the rule. Packs that add attributes to Default
+   (Bodea's `cs_format`) will keep them, named. Recommended: keep.
+4. **A customer in two companies** is not handled: `company_attributes` names one. Commerce's refusal is what
+   the SC would see. Recommended: wait for a real case.
+5. **Tier prices on another demo's products naming a group going** are not checked (as step 08). Commerce would
+   drop those prices with the group.
+6. **An ERP keeps its copy of a company or customer the clearing removed:** the refresh after a clearing adds
+   and updates, it does not delete. Customers already worked this way. Recommended: file for the ERP work.
 
 ## One reset rule (shared with the ERP reset)
 
@@ -249,12 +380,12 @@ pack's removal may run in between). The SC or the agent always sees the list fir
 |---|---|---|
 | products | every website it is on wholly chosen, or partly chosen with every category link under a cleared root (a configurable's child judged by its parent): deleted. Some of its websites chosen: taken off those | no category, or only shared roots: "which demo they belong to can't be told". In a store not chosen's own categories: left. Variant of nothing deleted; fields not answered: left |
 | categories | under a root every store using it is chosen, deepest first | under a root a store not chosen shares, naming that store; holding a category Demo Builder installed |
-| customers | of a wholly chosen website; on a partly chosen one, made in a chosen store's view (`store_id`, else `created_in` by the view's name) with no order in a store not chosen | made in, or ordering from, a store not chosen; made in the Admin (store not said); in a B2B company |
+| customers | of a wholly chosen website; on a partly chosen one, made in a chosen store's view (`store_id`, else `created_in` by the view's name) with no order in a store not chosen | made in, or ordering from, a store not chosen; made in the Admin (store not said); in a company that stays ("Nothing left behind") |
 | orders, returns | placed in a chosen store's views, and those orders' returns: the one reset rule | already Canceled, Closed or noted by a reset (counted, nothing written) |
 
 Writes go through `projectCommerce` (Store: `all`) behind `orgGuard`; the order and return writes
-name their own order or return id. Order of writes: returns, orders, customers, products, take-offs,
-categories. A refusal is counted and named; the rest carry on.
+name their own order or return id. Order of writes: "Nothing left behind", above. A refusal is
+counted and named; the rest carry on.
 
 **Human surfaces.** (1) The Data Installer's catalog header: "Clear demo data" opens a modal with
 the store tree (websites, their stores, each store's views on its row; claimed stores locked with
@@ -308,9 +439,7 @@ justrite_test_store". Battery prompt `reset-demo-leave-store-empty` reworded to 
 
 1. A second question on reset, not a box (a VS Code modal has no checkbox); Esc keeps.
 2. Tools of their own (`check_demo_data`, `clear_demo_data`), not a flag on `reset_project`.
-3. B2B is not cleared (companies, shared catalogs and customer groups are store-wide units).
-   Recommended next: clear a company whose admin and members are all the chosen stores' customers,
-   with its catalog and group, only when no other store's customer is in the group.
+3. B2B: superseded 2026-11-02 by "Nothing left behind".
 5. Several projects on one website: every local project's records on the chosen websites are read
    and what any lists is left.
 6. The headless reset does not ask. Recommended: ask there too, later.
@@ -337,7 +466,7 @@ justrite_test_store". Battery prompt `reset-demo-leave-store-empty` reworded to 
    Recommended: keep.
 9. **The modal's red button renders as the secondary style** (`ui/Modal` maps `negative` to
    secondary for every caller). Recommended: a Modal-wide change, not this step.
-10. Still open from the first build: B2B (3) and the headless reset (6) above.
+10. Still open from the first build: the headless reset (6) above.
 
 ### Tests
 

@@ -8,7 +8,9 @@
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { CommerceCoupon, CommerceSalesRule } from '@/types/commerceSalesRule';
-import type { CommerceCustomer, CommerceOrder, CommerceProduct, CommerceReturn } from '@/types/commerceWire';
+import type { CommerceCustomer, CommerceOrder, CommerceProduct, CommerceReturn, CommerceSystemConfigPutAnswer, CommerceSystemConfigWrite } from '@/types/commerceWire';
+import type { InstanceState } from '../../../../helpers/commerceWipeInstanceFixtures';
+import { DELETE_COMPANY_ADMIN_REFUSED_DB08 } from '../../../../helpers/commerceB2bFixtures';
 import {
     ADMIN_GROUP,
     ADMIN_VIEW,
@@ -32,6 +34,8 @@ export interface SandboxState {
     /** Cart rules (step 11). Absent: `salesRules/search` answers 404, as the wipe reads as none. */
     rules?: CommerceSalesRule[];
     coupons?: CommerceCoupon[];
+    /** Companies, catalogs, groups, attribute sets, attributes, settings. Absent: their routes answer 404, as on a store without B2B. */
+    instance?: InstanceState;
 }
 
 /** The ids a search filters on, from its address: `[field, values]`. */
@@ -71,6 +75,97 @@ function apply(data: SandboxState, path: string, body: unknown): void {
     }
 }
 
+/** What Commerce does with a wipe's instance-wide writes, as measured live (`commerceB2bFixtures.ts`). */
+function applyInstance(data: SandboxState, method: string, path: string, body: unknown): unknown {
+    const { instance } = data;
+    const id = idIn(path);
+    if (method !== 'DELETE' && path !== 'system/config') return undefined;
+    if (/^customers\/\d+$/u.test(path)) {
+        // Live 2026-10-30: Commerce refuses to delete a company's admin while the company stands.
+        if (instance?.companies.some((c) => String(c.super_user_id) === id)) throw new CommerceReadError(DELETE_COMPANY_ADMIN_REFUSED_DB08.message, DELETE_COMPANY_ADMIN_REFUSED_DB08.status);
+        data.customers = data.customers.filter((c) => String(c.id) !== id);
+    }
+    if (/^products\/[^/]+$/u.test(path)) data.products = data.products.filter((p) => encodeURIComponent(p.sku) !== path.split('/')[1]);
+    if (!instance) return undefined;
+    if (/^company\/\d+$/u.test(path)) instance.companies = instance.companies.filter((c) => String(c.id) !== id);
+    if (/^sharedCatalog\/\d+$/u.test(path)) {
+        // Live 2026-10-30: deleting a catalog deletes its group too, and moves everyone in it to General.
+        const groupId = instance.catalogs.find((c) => String(c.id) === id)?.customer_group_id;
+        instance.catalogs = instance.catalogs.filter((c) => String(c.id) !== id);
+        instance.groups = instance.groups.filter((g) => g.id !== groupId);
+        for (const customer of data.customers.filter((c) => c.group_id === groupId)) {
+            instance.movedToGeneral.push(Number(customer.id));
+            customer.group_id = 1;
+        }
+    }
+    if (/^customerGroups\/\d+$/u.test(path)) {
+        if (!instance.groups.some((g) => String(g.id) === id)) throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
+        instance.groups = instance.groups.filter((g) => String(g.id) !== id);
+    }
+    if (/^products\/attribute-sets\/\d+$/u.test(path)) instance.sets = instance.sets.filter((s) => s.attribute_set_id !== Number(path.split('/')[2]));
+    if (/^products\/attributes\/[^/]+$/u.test(path)) instance.attributes = instance.attributes.filter((a) => a.attribute_code !== path.split('/')[2]);
+    if (path === 'system/config') return putSettings(instance, body as { items: CommerceSystemConfigWrite[] });
+    return undefined;
+}
+
+/** `PUT system/config`: each row saved, or refused in `errors` under HTTP 200 (Adobe's page). */
+function putSettings(instance: InstanceState, body: { items: CommerceSystemConfigWrite[] }): CommerceSystemConfigPutAnswer {
+    const answer: Required<CommerceSystemConfigPutAnswer> = { items: [], errors: [] };
+    for (const item of body.items) {
+        const rows = instance.settings?.websites[item.scope_code ?? ''];
+        const row = rows?.find((r) => r.path === item.path);
+        if (row && item.path !== REFUSED_SETTING) {
+            row.value = item.value;
+            answer.items.push({ ...row });
+        } else answer.errors.push({ path: item.path, scope: item.scope, scope_code: item.scope_code, message: `Configuration path "${item.path}" was not found, is not visible for this scope, or is not allowed.` });
+    }
+    return answer;
+}
+
+/** A setting Commerce refuses to save, as `errors` would say. */
+export const REFUSED_SETTING = 'payment/companycredit/active';
+
+const SCOPE = /[?&]scope=(default|website)(?:&scopeCode=([^&]*))?/u;
+const NOT_NULL = /\[field\]=(\w+)&searchCriteria\[filterGroups\]\[0\]\[filters\]\[0\]\[value\]=1&searchCriteria\[filterGroups\]\[0\]\[filters\]\[0\]\[conditionType\]=notnull/u;
+
+/** The settings at the scope asked, by the paths asked for, when it names any. */
+function readSettings(instance: InstanceState, path: string): unknown {
+    const [, scope, code] = SCOPE.exec(path) ?? [];
+    const rows = scope === 'default' ? instance.settings?.default : instance.settings?.websites[decodeURIComponent(code ?? '')];
+    const asked = /conditionType\]=in/u.test(path) ? decodeURIComponent(/\[value\]=([^&]*)/u.exec(path)?.[1] ?? '').split(',') : undefined;
+    const items = (rows ?? []).filter((row) => !asked || asked.includes(row.path));
+    return { items, total_count: items.length };
+}
+
+/** The instance-wide reads, or undefined when a read is someone else's. */
+function readInstance(data: SandboxState, path: string): unknown {
+    const { instance } = data;
+    if (!instance) return undefined;
+    if (instance.failing.some((pattern) => pattern.test(path))) throw new CommerceReadError(`Commerce answered 500 for ${path}`, 500);
+    const page = <T>(items: T[]) => ({ items, total_count: items.length });
+    const id = path.includes('/') ? idIn(path) : '';
+    if (path.startsWith('system/config?') && instance.settings) return readSettings(instance, path);
+    if (path.startsWith('company?')) return page(instance.companies.map((c) => ({ id: c.id, company_name: c.company_name, company_email: c.company_email, customer_group_id: c.customer_group_id })));
+    if (path.startsWith('company/')) return instance.companies.find((c) => String(c.id) === id) ?? null;
+    if (path.startsWith('hierarchy/')) return instance.hierarchies[id];
+    if (path.startsWith('sharedCatalog?')) return page(instance.catalogs);
+    if (path.startsWith('customerGroups/')) return instance.groups.find((g) => String(g.id) === id) ?? null;
+    if (path.startsWith('products/attribute-sets/sets/list?')) return page(instance.sets);
+    const setId = /^products\/attribute-sets\/(\d+)\/attributes/u.exec(path)?.[1];
+    if (setId) return instance.setAttributes[setId] ?? [];
+    if (path.startsWith('products/attributes/')) return instance.attributes.find((a) => a.attribute_code === path.split('/')[2]) ?? null;
+    return undefined;
+}
+
+/** A `products` search that names a set, or asks who carries an attribute; undefined for a website's. */
+function productSearch(data: SandboxState, path: string): CommerceProduct[] | undefined {
+    const [field, values] = filterOf(path);
+    if (field === 'attribute_set_id') return data.products.filter((p) => values.includes(Number(p.attribute_set_id)));
+    const code = NOT_NULL.exec(path)?.[1];
+    if (code) return data.products.filter((p) => (p.custom_attributes ?? []).some((a) => a.attribute_code === code));
+    return undefined;
+}
+
 function reader(data: SandboxState) {
     const page = <T>(items: T[]) => ({ items, total_count: items.length });
     const matching = <T>(path: string, items: T[], fieldOf: (item: T) => unknown): T[] => {
@@ -78,12 +173,16 @@ function reader(data: SandboxState) {
         return items.filter((item) => values.includes(Number(fieldOf(item))));
     };
     return (path: string): unknown => {
+        const instanceAnswer = readInstance(data, path);
+        if (instanceAnswer !== undefined) return instanceAnswer;
         // Commerce answers its Admin scope (id 0) first, beside the real ones.
         if (path === 'store/websites') return [ADMIN_WEBSITE, ...SANDBOX_WEBSITES];
         if (path === 'store/storeGroups') return [ADMIN_GROUP, ...SANDBOX_GROUPS];
         if (path === 'store/storeViews') return [ADMIN_VIEW, ...SANDBOX_VIEWS];
         if (path.startsWith('categories/list?')) return page(SANDBOX_CATEGORIES);
         if (path.startsWith('products?')) {
+            const searched = productSearch(data, path);
+            if (searched) return page(searched);
             const [website] = filterOf(path)[1];
             return page(data.products.filter((p) => p.extension_attributes?.website_ids?.map(Number).includes(website)));
         }
@@ -117,6 +216,7 @@ export function sandbox(state: Partial<SandboxState> = {}, refuse: (path: string
         orders: state.orders ?? [],
         ...(state.returns ? { returns: state.returns } : {}),
         ...(state.rules ? { rules: state.rules, coupons: state.coupons ?? [] } : {}),
+        ...(state.instance ? { instance: state.instance } : {}),
     });
     const reads: string[] = [];
     const sent: Array<{ method: string; path: string; body?: unknown }> = [];
@@ -130,6 +230,8 @@ export function sandbox(state: Partial<SandboxState> = {}, refuse: (path: string
         if (refuse(path)) throw new CommerceReadError('Commerce answered 400: The product is in use.', 400);
         if (answer) return answer(path, body);
         apply(data, path, body);
+        const instanceAnswer = applyInstance(data, method, path, body);
+        if (instanceAnswer !== undefined) return instanceAnswer;
         return path.includes('/refund') ? 9001 : true;
     };
     return { data, reads, sent, get, send };

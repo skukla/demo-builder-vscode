@@ -31,7 +31,7 @@ import type { DemoDataCheck, WipePreview, WipeStoreChoice } from '@/types/demoDa
 /** Every string the modal shows that is not the extension's own. */
 export const CLEAR_COPY = {
     title: 'Clear demo data',
-    lead: "Choose the stores that are this demo's. Clearing permanently removes what they hold that Demo Builder didn't install, and closes their orders.",
+    lead: "Choose the stores that are this demo's. Clearing permanently removes what only they use and Demo Builder didn't install, and closes their orders.",
     stores: 'Stores',
     pick: 'Tick a store to see what clearing it would do.',
     checking: 'Checking the stores',
@@ -55,7 +55,7 @@ const leavesErpOrders = (preview: WipePreview): boolean => preview.erp?.held !==
 function ProblemLine({ failed, children }: { failed?: boolean; children: React.ReactNode }) {
     return (
         <p className="dialog-line">
-            <span className={failed ? 'text-negative' : 'text-orange-600'}>{children}</span>
+            <span className={failed ? 'text-negative' : 'text-notice'}>{children}</span>
         </p>
     );
 }
@@ -72,7 +72,8 @@ function PreviewView({ answer, loading, hasTicks }: { answer: DemoDataCheck | nu
     if (answer.refused) return <ProblemLine>{answer.refused}</ProblemLine>;
     const preview = answer.preview;
     if (!preview) return null;
-    if (preview.total === 0 && !leavesErpOrders(preview)) return <Text>{CLEAR_COPY.nothing}</Text>;
+    // What stays is still said when nothing goes: "holds nothing" would be false, and the SC should see why.
+    if (preview.total === 0 && !leavesErpOrders(preview) && preview.left.length === 0) return <Text>{CLEAR_COPY.nothing}</Text>;
     return (
         <div className="dialog-stack">
             <FactList>

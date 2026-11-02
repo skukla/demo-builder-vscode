@@ -9,7 +9,7 @@
  * | of a partly chosen website, made in a chosen store's view (`store_id`, else `created_in` by the view's name) and with no order in a store not chosen | removed |
  * | made in a store not chosen, or with an order there | left: they belong to that store too |
  * | where they were made not said (`store_id` 0, "Admin") | left |
- * | in a B2B company (an admin cannot be deleted while its company stands) | left |
+ * | in a B2B company | sorted out as `inCompany`: they go only with their company (`wipeCompanies.ts`), since Commerce refuses an admin's delete while the company stands |
  *
  * Their orders are never deleted: the orders placed in the chosen stores are closed off
  * (`wipeOrders.ts`), and an order keeps the customer's name and address when the account goes.
@@ -24,6 +24,7 @@ import type { CommerceCustomer, CommerceGet } from '@/types/commerceWire';
 
 export interface CustomerDecision {
     remove: CommerceCustomer[];
+    /** In a B2B company: `wipeCompanies.ts` decides these. */
     inCompany: CommerceCustomer[];
     /** Made in a store not chosen, or ordered in one. */
     elsewhere: CommerceCustomer[];

@@ -60,7 +60,19 @@ const digits = (count: number): string => count.toLocaleString('en-US');
 const plural = (count: number, one: string, many: string): string => `${digits(count)} ${count === 1 ? one : many}`;
 
 /** Each kind's word for one of it. */
-const ONE: Record<WipeKind, string> = { products: 'product', categories: 'category', customers: 'customer', orders: 'order', 'cart rules': 'cart rule' };
+const ONE: Record<WipeKind, string> = {
+    products: 'product',
+    categories: 'category',
+    customers: 'customer',
+    orders: 'order',
+    'cart rules': 'cart rule',
+    companies: 'company',
+    'shared catalogs': 'shared catalog',
+    'customer groups': 'customer group',
+    'attribute sets': 'attribute set',
+    attributes: 'attribute',
+    settings: 'setting',
+};
 
 /** "3 to remove", or nothing for none. */
 function countOf(count: number, what: string): string {
@@ -84,6 +96,20 @@ function ordersValue(orders: WipePreview['orders']): string {
     return parts.join(', ');
 }
 
+/** "2 companies (Acme and Bravo): why", or "5 products (A, B, C and 2 more): why": what stays, named. */
+function stayValue(left: WipePreview['left'][number]): string {
+    const more = left.count - left.names.length;
+    const names = [...left.names, ...(more > 0 && left.names.length > 0 ? [`${digits(more)} more`] : [])];
+    const listed = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names.join('');
+    return `${plural(left.count, ONE[left.kind], left.kind)}${listed ? ` (${listed})` : ''}: ${left.why}`;
+}
+
+/** "2 set to the default's value", and what Commerce can't do about them; or nothing. */
+function settingsValue(count: number): string {
+    if (count === 0) return '';
+    return `${digits(count)} set to the default's value. Commerce can't clear a website's own value, so a later change to the default won't reach ${count === 1 ? 'it' : 'them'}.`;
+}
+
 /** What the clearing would do, kind by kind, then what it leaves and what Demo Builder installed. */
 export function previewLines(preview: WipePreview): PreviewLine[] {
     const { remove, takenOff, rulesTakenOff, orders, installed } = preview;
@@ -94,10 +120,16 @@ export function previewLines(preview: WipePreview): PreviewLine[] {
         { label: 'Categories', value: countOf(remove.categories.count, 'to remove') },
         { label: 'Customers', value: countOf(remove.customers.count, 'to remove') },
         { label: 'Cart rules', value: rules },
+        { label: 'Companies', value: countOf(remove.companies.count, 'to remove, with their customers') },
+        { label: 'Shared catalogs', value: countOf(remove.catalogs.count, remove.catalogs.count === 1 ? 'to remove, with its customer group' : 'to remove, with their customer groups') },
+        { label: 'Customer groups', value: countOf(remove.customerGroups.count, 'to remove') },
+        { label: 'Attribute sets', value: countOf(remove.attributeSets.count, 'to remove') },
+        { label: 'Attributes', value: countOf(remove.attributes.count, 'to remove') },
+        { label: 'Website settings', value: settingsValue(preview.settings.count) },
         { label: 'Orders', value: ordersValue(orders) },
         // The orders an ERP integration closes, or why it leaves them: its own one line.
         { label: 'ERP', value: preview.erp?.line ?? '' },
-        ...preview.left.map((l) => ({ label: 'Left', value: `${plural(l.count, ONE[l.kind], l.kind)}: ${l.why}` })),
+        ...preview.left.map((l) => ({ label: 'Stays', value: stayValue(l) })),
     ];
     const made = Object.entries(installed).map(([kind, count]) => `${digits(count)} ${kind.replace(/_/gu, ' ')}`);
     if (made.length > 0) lines.push({ label: 'Installed', value: `${made.join(', ')}, which removing its datapack takes` });
