@@ -65,3 +65,4 @@ It carries a stand-in label on screen. The closed decision's reasoning stands as
 - 2026-11-02  Reopened by the owner: a labelled stand-in that comes off at GA. Live tests passed for the tag, mesh signing and shared catalog reads; a real order is approved for the build
 - 2026-11-01  feat(mesh): a deploy sends the mesh's secrets file when it has one (`9deea68b4`)
 - 2026-11-01  docs(aco): reopen private company catalogs as a stand-in that comes off (`d13dbeead`)
+- 2026-11-02  docs(aco): private catalogs stay in step through events, with no manual step (`ebcf7c4b6`)
