@@ -7359,7 +7359,7 @@
             "anchors": [
                 "} catch (openError) {"
             ],
-            "line": 182,
+            "line": 175,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.error call \u2014 emptying it leaves the same swallowed error and the same returned success, so the only observable difference is which log line prints. The classifier reads the 'catch (openError) {' line, which carries no logger token.",
