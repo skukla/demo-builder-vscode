@@ -187,6 +187,7 @@ function Guide({
                         checkingId={actions.progress?.stepId ?? run.workingId}
                         animateMarks={hasChecked}
                         failedIds={failedIds}
+                        waitingIds={actions.waiting}
                     />
                 </div>
                 {/* Steps differ in length. Every step is laid in the same cell and only the

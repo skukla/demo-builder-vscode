@@ -47,10 +47,20 @@ interface StepListProps {
     animateMarks?: boolean;
     /** The steps the last run could not check: each row's mark says so, wherever the SC is. */
     failedIds?: ReadonlySet<string>;
+    /** The running check's steps not answered yet: drawn empty until each one answers. */
+    waitingIds?: ReadonlySet<string>;
 }
 
 /** A step's mark: a spinner while it is being checked, else its state's glyph. */
-function RailMark({ item, checking, failed }: { item: SetupChecklistItem; checking: boolean; failed: boolean }): React.ReactElement {
+interface RailMarkProps {
+    item: SetupChecklistItem;
+    checking: boolean;
+    failed: boolean;
+    /** Waiting for this run to reach it: empty, whatever the last check found. */
+    waiting: boolean;
+}
+
+function RailMark({ item, checking, failed, waiting }: RailMarkProps): React.ReactElement {
     if (checking) {
         return (
             <span className="setup-guide-rail-mark">
@@ -61,7 +71,7 @@ function RailMark({ item, checking, failed }: { item: SetupChecklistItem; checki
         );
     }
     // Keyed by what it shows, so a mark that changes is a new element and its fade-in plays.
-    const kind = markOf(item, failed);
+    const kind = waiting ? 'open' : markOf(item, failed);
     return (
         <span key={kind} className="setup-guide-rail-mark" data-mark={kind} aria-hidden="true">
             {MARK_ICON[kind] ?? SKIPPED_MARK}
@@ -102,7 +112,15 @@ const MARK_ICON: Partial<Record<MarkKind, React.ReactElement>> = {
 };
 
 /** Every step down the left by its short label, done ones checked; the shown one highlighted. */
-export function StepList({ items, index, onSelect, checkingId, animateMarks, failedIds }: StepListProps): React.ReactElement {
+export function StepList({
+    items,
+    index,
+    onSelect,
+    checkingId,
+    animateMarks,
+    failedIds,
+    waitingIds,
+}: StepListProps): React.ReactElement {
     return (
         <ol
             className="setup-guide-rail"
@@ -125,7 +143,12 @@ export function StepList({ items, index, onSelect, checkingId, animateMarks, fai
                         )}
                         onClick={() => onSelect(i)}
                     >
-                        <RailMark item={item} checking={item.id === checkingId} failed={failedIds?.has(item.id) === true} />
+                        <RailMark
+                            item={item}
+                            checking={item.id === checkingId}
+                            failed={failedIds?.has(item.id) === true}
+                            waiting={waitingIds?.has(item.id) === true}
+                        />
                         <span className="setup-guide-rail-title">{item.label ?? item.title}</span>
                     </button>
                 </li>

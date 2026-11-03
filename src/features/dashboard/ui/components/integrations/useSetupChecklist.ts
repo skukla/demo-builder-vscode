@@ -58,6 +58,11 @@ export interface SetupChecklistActions {
     checkAll: (stepIds: string[]) => Promise<SetupChecklistItem[] | undefined>;
     /** The step being checked during a run, if one is running. */
     progress?: CheckProgress;
+    /**
+     * The run's steps not answered yet, the one being checked included: the list shows them
+     * empty, so a run starts from nothing and fills in one step at a time (owner, 2026-11-03).
+     */
+    waiting?: ReadonlySet<string>;
     /** The steps the last run could not check. */
     failures: CheckFailure[];
     /**
@@ -109,6 +114,7 @@ export function useSetupChecklist(componentId: string): SetupChecklistActions {
     );
     const [progress, setProgress] = useState<CheckProgress>();
     const [failures, setFailures] = useState<CheckFailure[]>([]);
+    const [waiting, setWaiting] = useState<ReadonlySet<string>>();
     const checkAll = useCallback(
         async (stepIds: string[]): Promise<SetupChecklistItem[] | undefined> => {
             setBusy(true);
@@ -116,13 +122,18 @@ export function useSetupChecklist(componentId: string): SetupChecklistActions {
             setFailures([]);
             const failed: CheckFailure[] = [];
             let items: SetupChecklistItem[] | undefined;
+            const left = new Set(stepIds);
+            setWaiting(new Set(left));
             for (const [index, stepId] of stepIds.entries()) {
                 setProgress({ stepId, position: index + 1, total: stepIds.length });
                 const answer = await checkOne(componentId, stepId);
                 if ('reason' in answer) failed.push({ stepId, reason: answer.reason });
                 else items = answer.items ?? items;
+                left.delete(stepId);
+                setWaiting(new Set(left));
             }
             setFailures(failed);
+            setWaiting(undefined);
             setProgress(undefined);
             setBusy(false);
             return items;
@@ -140,7 +151,7 @@ export function useSetupChecklist(componentId: string): SetupChecklistActions {
             .finally(() => setConnecting(false));
     }, [componentId]);
 
-    return { setStep, checkAll, progress, failures, prepare, connecting, busy, error, errorStepId };
+    return { setStep, checkAll, progress, waiting, failures, prepare, connecting, busy, error, errorStepId };
 }
 
 /**
