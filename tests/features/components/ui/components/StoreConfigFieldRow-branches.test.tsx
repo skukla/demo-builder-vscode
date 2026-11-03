@@ -4,8 +4,7 @@
  * The row is a router: eight rules decide whether a field renders normally,
  * renders as something else, or renders nothing at all. Its sibling suite covers
  * the website-code branch; this one covers the rest, which had no test at all —
- * the stored-secret disclosure, the store-code skip, and the OAuth pair that
- * renders as one unit from the id row.
+ * the stored-secret disclosure and the store-code skip.
  *
  * "Renders nothing" is asserted on an EMPTY container rather than on the absence
  * of one testid, because the difference between the skip branches and the
@@ -17,8 +16,6 @@ import React from 'react';
 import '@testing-library/jest-dom';
 
 import {
-    ACCS_OAUTH_CLIENT_ID,
-    ACCS_OAUTH_CLIENT_SECRET,
     ACCS_STORE_CODE,
     ACCS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
@@ -37,8 +34,6 @@ const accsGroup: ServiceGroup = {
     id: 'accs',
     label: 'ACCS',
     fields: [
-        makeField(ACCS_OAUTH_CLIENT_ID),
-        makeField(ACCS_OAUTH_CLIENT_SECRET),
         makeField(DEPENDENT),
     ],
 };
@@ -199,17 +194,3 @@ describe('StoreConfigFieldRow — which fields render at all', () => {
     });
 });
 
-describe('StoreConfigFieldRow — the ACCS OAuth fields', () => {
-    // Two plain inputs: nothing offers them as a shared credential any more (DI-6).
-    it('renders the id as a plain field', () => {
-        renderRow({ field: makeField(ACCS_OAUTH_CLIENT_ID) });
-
-        expect(screen.getByTestId(`config-field-${ACCS_OAUTH_CLIENT_ID}`)).toBeInTheDocument();
-    });
-
-    it('renders the secret as a plain field too', () => {
-        renderRow({ field: makeField(ACCS_OAUTH_CLIENT_SECRET) });
-
-        expect(screen.getByTestId(`config-field-${ACCS_OAUTH_CLIENT_SECRET}`)).toBeInTheDocument();
-    });
-});

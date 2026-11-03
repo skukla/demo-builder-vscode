@@ -157,8 +157,8 @@ describe('rollback when the save fails after the move', () => {
 describe("the project's secrets follow its path (PL-64)", () => {
     // Every rename goes through this core: the projects list, the dashboard, Configure and
     // the agents' rename_project. The secrets used to move only from Configure.
-    const OLD_KEY = commerceSecretKey('/projects/old-name', 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET');
-    const NEW_KEY = commerceSecretKey('/projects/bodea-b2b-demo', 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET');
+    const OLD_KEY = commerceSecretKey('/projects/old-name', 'adobe-commerce-accs', 'ADOBE_COMMERCE_ADMIN_PASSWORD');
+    const NEW_KEY = commerceSecretKey('/projects/bodea-b2b-demo', 'adobe-commerce-accs', 'ADOBE_COMMERCE_ADMIN_PASSWORD');
     const withSecret = () =>
         projectToRename({ componentConfigs: { 'adobe-commerce-accs': {} } });
 

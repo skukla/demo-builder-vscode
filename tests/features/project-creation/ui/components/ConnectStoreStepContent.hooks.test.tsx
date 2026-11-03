@@ -26,12 +26,10 @@ import '@testing-library/jest-dom';
 import {
     ACCS_ENDPOINT_KEY,
     ACCS_STORE_VIEW_CODE,
-    accsEndpointField,
     accsServiceGroup,
     catalogServiceGroup,
     type MockServiceGroup,
 } from './ConnectStoreStepContent.testUtils';
-import { ACCS_OAUTH_CLIENT_ID } from '@/core/config/envVarKeys';
 
 const mockUseAutoStoreDetect = jest.fn();
 
@@ -62,22 +60,6 @@ jest.mock('@/features/components/ui/components/StoreViewProductsNotice', () => (
 // ---------------------------------------------------------------------------
 
 const ORG_ID = 'org-1234@AdobeOrg';
-
-/** The ACCS group with the OAuth client id alongside the endpoint. */
-const accsGroupWithOauth: MockServiceGroup = {
-    ...accsServiceGroup,
-    fields: [
-        accsEndpointField,
-        {
-            key: ACCS_OAUTH_CLIENT_ID,
-            label: 'OAuth Client ID',
-            type: 'text',
-            required: false,
-            componentIds: ['accs'],
-        },
-        ...accsServiceGroup.fields.slice(1),
-    ],
-};
 
 /** The ACCS group with no credential field at all. */
 const accsGroupWithoutOauth: MockServiceGroup = accsServiceGroup;
@@ -255,17 +237,3 @@ describe('disclosing the catalog groups', () => {
     });
 });
 
-describe('the Connection slice carries its credentials', () => {
-    it('renders the endpoint and the OAuth field as one merged group', () => {
-        // The rail has no Credentials tab: two slices of the SAME group have to
-        // fold back together, or the group renders twice — or, worse, the user
-        // gets no way to supply their own pair during creation.
-        mockUseComponentConfig.serviceGroups = [accsGroupWithOauth];
-
-        renderContent({ section: 'connection' });
-
-        expect(screen.getByTestId(`config-field-${ACCS_ENDPOINT_KEY}`)).toBeInTheDocument();
-        expect(screen.getByTestId(`config-field-${ACCS_OAUTH_CLIENT_ID}`)).toBeInTheDocument();
-        expect(screen.getAllByText(accsGroupWithOauth.label)).toHaveLength(1);
-    });
-});

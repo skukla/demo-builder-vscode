@@ -57,6 +57,13 @@ function wizardStepSites(): LabelSite[] {
     return steps.map((step) => ({ file, line: 0, position: 'wizard-steps.name', text: step.name }));
 }
 
+/** The field labels the Configure screen and the wizard draw from the component catalog. */
+function catalogLabelSites(): LabelSite[] {
+    const file = 'src/features/components/config/components.json';
+    const { envVars } = JSON.parse(readFileSync(join(ROOT, file), 'utf8')) as { envVars: Record<string, { label?: string }> };
+    return Object.values(envVars).flatMap((envVar) => (envVar.label ? [{ file, line: 0, position: 'envVars.label', text: envVar.label }] : []));
+}
+
 const breaks = (site: LabelSite, ledger: Readonly<Record<string, Reason>> = LEDGER): string | undefined =>
     site.text === undefined || site.text in ledger ? undefined : firstNonTitleWord(site.text);
 
@@ -64,7 +71,7 @@ describe('Title Case for what names a thing', () => {
     let sites: LabelSite[];
 
     beforeAll(() => {
-        sites = [...scanBundles(), ...wizardStepSites()];
+        sites = [...scanBundles(), ...wizardStepSites(), ...catalogLabelSites()];
     }, 180_000);
 
     it('reads every webview bundle, by the build list', () => {

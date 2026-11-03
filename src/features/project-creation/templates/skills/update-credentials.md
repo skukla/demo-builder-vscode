@@ -19,21 +19,19 @@ write them with the tools below:
 - **API Mesh endpoint**: `MESH_ENDPOINT`, a frontend setting, in the frontend's `.env`
 - **ACCS endpoint**: `ACCS_GRAPHQL_ENDPOINT`, in the backend's settings
 
-**Passwords and client secrets do not.** They are kept in the OS keychain, so
+**Passwords do not.** They are kept in the OS keychain, so
 `get_component_config` shows them masked and a manifest read does not hold them —
 that is deliberate, not a fault. These are:
 
 - `ADOBE_COMMERCE_ADMIN_PASSWORD`
-- `ACCS_OAUTH_CLIENT_SECRET`
 
 **Never write a secret with any config tool.** `configure_project` refuses them by design, and raw file writes would land them in plaintext,
 which would put the credential back in plaintext and undo the protection. Ask the
 user to set it in **Configure → Connection**, where the field shows "Saved" when
 one is already held.
 
-For ACCS specifically, check whether a secret is needed at all: Demo Builder
-fetches a shared credential automatically for sample-data imports, and the OAuth
-fields are only an override.
+An ACCS project has no Commerce credential to set: installs use the SC's Adobe sign-in or the
+project's workspace credential.
 
 ## Steps
 

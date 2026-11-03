@@ -229,13 +229,8 @@ export function ConnectStoreStepContent({
 
     // When a section is requested (Commerce tabs), render only that slice.
     // Hooks stay mounted; only rendering is filtered so state persists across tabs.
-    //
-    // `connection` carries `credentials` with it. The wizard's rail has no
-    // Credentials tab — Configure splits them under separate headings, but here
-    // they belong to the one Connection view, and a slice that dropped them would
-    // leave the user no way to supply their own pair during creation.
     const visibleGroups = section
-        ? mergeSlices(disclosedGroups, section === 'connection' ? ['connection', 'credentials'] : [section])
+        ? mergeSlices(disclosedGroups, [section])
         : disclosedGroups;
 
     // Catalog section gate: catalog/assets groups stay hidden until a store view

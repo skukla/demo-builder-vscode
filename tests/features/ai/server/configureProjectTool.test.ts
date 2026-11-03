@@ -6,7 +6,7 @@
  * moved as a triple, and secrets refused rather than stored.
  *
  * Fixture shapes come from the Project interface (`base.ts`) and the real
- * env-var registry: ACCS_OAUTH_CLIENT_SECRET and ADOBE_COMMERCE_ADMIN_PASSWORD
+ * env-var registry: ADOBE_COMMERCE_ADMIN_PASSWORD and ADOBE_COMMERCE_ADMIN_PASSWORD
  * are the two keys `components.json` marks `type: 'password'`.
  */
 
@@ -110,7 +110,7 @@ describe('configure_project — guards', () => {
     it('refuses a secret with a handoff, and applies NOTHING else', async () => {
         const out = await serve()({
             addons: ['adobe-commerce-aco'],
-            env: { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret' } },
+            env: { 'adobe-commerce-accs': { ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret' } },
         });
 
         expect(out.needsUser).toMatchObject({ reason: 'secret-entry' });
@@ -121,7 +121,7 @@ describe('configure_project — guards', () => {
 
     it('never echoes the secret value back', async () => {
         const out = await serve()({
-            env: { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret' } },
+            env: { 'adobe-commerce-accs': { ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret' } },
         });
         expect(JSON.stringify(out)).not.toContain('fake-test-pw-not-a-secret');
     });
@@ -458,23 +458,23 @@ describe('configure_project — a partial payload touches only what it names', (
 describe('configure_project — the secret handoff', () => {
     it('sends the user to the Configure Project command', async () => {
         const out = await serve()({
-            env: { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret' } },
+            env: { 'adobe-commerce-accs': { ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret' } },
         });
 
         expect(out.needsUser.where).toStrictEqual({ command: 'demoBuilder.configureProject' });
-        expect(out.needsUser.tellUser).toMatch(/^ACCS_OAUTH_CLIENT_SECRET is a secret and/);
+        expect(out.needsUser.tellUser).toMatch(/^ADOBE_COMMERCE_ADMIN_PASSWORD is a secret and/);
     });
 
     it('says "are secrets" when more than one is offered', async () => {
         const out = await serve()({
             env: {
-                'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret' },
+                'adobe-commerce-accs': { ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret' },
                 'adobe-commerce': { ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret' },
             },
         });
 
         expect(out.needsUser.tellUser).toMatch(
-            /^ACCS_OAUTH_CLIENT_SECRET, ADOBE_COMMERCE_ADMIN_PASSWORD are secrets and/,
+            /^ADOBE_COMMERCE_ADMIN_PASSWORD, ADOBE_COMMERCE_ADMIN_PASSWORD are secrets and/,
         );
     });
 });

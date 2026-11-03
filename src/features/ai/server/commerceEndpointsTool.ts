@@ -43,10 +43,8 @@
  * ## No secrets, and that is checked rather than assumed
  *
  * The component registry marks confidential values with `secret: true`
- * (`components.json`). Exactly two keys carry it — `ACCS_OAUTH_CLIENT_SECRET`
- * and `ADOBE_COMMERCE_ADMIN_PASSWORD` — and neither is read by
- * `extractConfigParamsFromConfigs` or `generateHeaders`, so neither can reach
- * this output. Verified against the registry on 2026-08-25.
+ * (`components.json`). `ADOBE_COMMERCE_ADMIN_PASSWORD` carries it, and it is not read by
+ * `extractConfigParamsFromConfigs` or `generateHeaders`, so it cannot reach this output.
  *
  * A PaaS project's headers DO carry `x-api-key` (`ADOBE_CATALOG_API_KEY`,
  * `type: text`, not secret). That is deliberate: the same key is written into

@@ -188,7 +188,7 @@ describe('get_commerce_endpoints', () => {
     });
 
     it('NEVER returns a value the registry marks secret', async () => {
-        // The two keys carrying `secret: true` are ACCS_OAUTH_CLIENT_SECRET and
+        // The two keys carrying `secret: true` are ADOBE_COMMERCE_ADMIN_PASSWORD and
         // ADOBE_COMMERCE_ADMIN_PASSWORD. Neither is read by the resolvers this
         // tool calls — asserted here so a later field addition cannot quietly
         // open the path.
@@ -198,7 +198,6 @@ describe('get_commerce_endpoints', () => {
                 'adobe-commerce-paas': {
                     ...PAAS_PROJECT.componentConfigs['adobe-commerce-paas'],
                     ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
-                    ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret',
                 },
             },
         });
@@ -207,7 +206,7 @@ describe('get_commerce_endpoints', () => {
 
         expect(raw).not.toContain('fake-test-pw-not-a-secret');
         expect(raw).not.toContain('ADOBE_COMMERCE_ADMIN_PASSWORD');
-        expect(raw).not.toContain('ACCS_OAUTH_CLIENT_SECRET');
+        expect(raw).not.toContain('ADOBE_COMMERCE_ADMIN_PASSWORD');
     });
 
     describe('mesh and direct endpoint, reported separately', () => {

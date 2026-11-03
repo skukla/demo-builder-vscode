@@ -184,7 +184,7 @@ export const projectToolHandlers = {
             // on the `full` path too.
             //
             // Found by probing the live server (2026-08-17): a real project's
-            // response carried its ACCS_OAUTH_CLIENT_SECRET in plaintext, so every
+            // response carried a Commerce secret in plaintext, so every
             // agent that read the project put a working Commerce credential into
             // its transcript — and into whatever logs that transcript reaches.
             //
@@ -229,7 +229,7 @@ export const projectToolHandlers = {
         // a good answer — so the one reason to route through this tool is that
         // it keeps credentials out of the transcript, the same convention
         // get_project follows (stripManifestSecrets, after a live response
-        // carried a working ACCS_OAUTH_CLIENT_SECRET). Until today this
+        // carried a working Commerce secret). Until today this
         // returned .env files VERBATIM: the safe door, unlocked.
         if (path.basename(realResolved) === '.demo-builder.json') {
             try {

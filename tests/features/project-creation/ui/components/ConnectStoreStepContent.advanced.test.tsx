@@ -327,7 +327,6 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                 // Added when the OAuth pair got its own heading on Configure. The
                 // wizard has no Credentials tab — its Connection view renders both
                 // slices — but the verdict is still computed per section.
-                credentials: true,
                 'business-structure': true,
                 catalog: true,
             });

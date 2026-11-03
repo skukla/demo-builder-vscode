@@ -22,7 +22,6 @@ import {
 } from '@/features/dashboard/ui/configure/configureSections';
 import {
     ACCS_GRAPHQL_ENDPOINT,
-    ACCS_OAUTH_CLIENT_ID,
     PAAS_STORE_CODE,
     PAAS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
@@ -38,7 +37,7 @@ function field(
 
 /**
  * A field the shared fixtures do not carry — the store-code cascade and the
- * commerce credentials, which is what the connection group is SLICED on.
+ * connection fields, which is what the connection group is SLICED on.
  *
  * Built with the real key constants rather than string literals: the slice
  * rules read `isStoreCodeField` / `CREDENTIAL_FIELDS`, so a hand-typed key that
@@ -319,13 +318,13 @@ describe('buildConfigureSections', () => {
             ).toBe(true);
         });
 
-        it('keeps the credentials with the connection tab, which is what renders them', () => {
+        it('counts every field once, on the tab whose body renders it', () => {
             const accs: ServiceGroup = {
                 id: 'accs',
                 label: 'Adobe Commerce as a Cloud Service',
                 fields: [
                     keyedField(ACCS_GRAPHQL_ENDPOINT, true),
-                    keyedField(ACCS_OAUTH_CLIENT_ID, true),
+                    keyedField('ACCS_SECOND_REQUIRED', true),
                 ],
             };
 

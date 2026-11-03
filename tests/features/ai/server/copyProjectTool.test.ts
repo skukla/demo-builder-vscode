@@ -202,9 +202,7 @@ describe('copy_project — the copy reaches creation whole, minus what never tra
                 },
             ],
         });
-        expect(res.stillNeeded.credentials).toEqual([
-            { component: 'adobe-commerce-accs', key: 'ACCS_OAUTH_CLIENT_SECRET' },
-        ]);
+        expect(res.stillNeeded.credentials).toStrictEqual([]);
         expect(res).not.toHaveProperty('fromFile');
     });
 });

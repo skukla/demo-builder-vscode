@@ -49,8 +49,6 @@ const NOT_CREDENTIALS: Record<string, string> = {
     // A username is half a credential, not a secret — and the settings export stays
     // useful for re-import with it present. Documented in envVarKeys.ts.
     ADOBE_COMMERCE_ADMIN_USERNAME: 'a username is not a secret',
-    // An OAuth client id is public by design; only the secret half is sensitive.
-    ACCS_OAUTH_CLIENT_ID: 'an OAuth client id is not secret, its paired secret is',
 };
 
 function catalogEnvVarNames(): string[] {

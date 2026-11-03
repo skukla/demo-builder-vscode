@@ -6,8 +6,6 @@
  */
 
 import {
-    ACCS_OAUTH_CLIENT_ID,
-    ACCS_OAUTH_CLIENT_SECRET,
     PAAS_ADMIN_PASSWORD,
     PAAS_ADMIN_USERNAME,
 } from '@/core/config/envVarKeys';
@@ -142,21 +140,6 @@ export function readPaasAdminPair(
     const username = lookupComponentConfigValue(configs ?? {}, PAAS_ADMIN_USERNAME);
     const password = lookupComponentConfigValue(configs ?? {}, PAAS_ADMIN_PASSWORD);
     return username && password ? { username, password } : undefined;
-}
-
-/**
- * The ACCS OAuth Server-to-Server pair, or nothing.
- *
- * Symmetric with {@link readPaasAdminPair}, including both-halves-or-nothing. The
- * OAuth pair is the ACCS best practice — the IMS model for SaaS — and is read
- * instead of an admin pair rather than in addition to one.
- */
-export function readAccsOAuthPair(
-    configs: ConfigMap,
-): { clientId: string; clientSecret: string } | undefined {
-    const clientId = lookupComponentConfigValue(configs ?? {}, ACCS_OAUTH_CLIENT_ID);
-    const clientSecret = lookupComponentConfigValue(configs ?? {}, ACCS_OAUTH_CLIENT_SECRET);
-    return clientId && clientSecret ? { clientId, clientSecret } : undefined;
 }
 
 /**

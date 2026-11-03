@@ -389,7 +389,7 @@ describe('settingsSerializer', () => {
                 },
                 'adobe-commerce-accs': {
                     ACCS_GRAPHQL_ENDPOINT: 'https://example.invalid/graphql',
-                    ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret',
+                    ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
                 },
                 'some-integration': {
                     ACO_API_KEY: 'aco-key-value',

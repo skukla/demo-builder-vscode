@@ -324,9 +324,7 @@ describe('create_project_from_file — an Edge Delivery file', () => {
         const res = await create();
 
         expect(res).toMatchObject({ created: true, name: 'new-storefront' });
-        expect(res.stillNeeded.credentials).toEqual([
-            { component: 'adobe-commerce-accs', key: 'ACCS_OAUTH_CLIENT_SECRET' },
-        ]);
+        expect(res.stillNeeded.credentials).toStrictEqual([]);
         expect(res.fromFile.applied).toEqual([
             'package',
             'stack',

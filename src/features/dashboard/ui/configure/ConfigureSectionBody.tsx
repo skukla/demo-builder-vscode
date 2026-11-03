@@ -22,7 +22,6 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
     filterGroupsForSection,
     isConnectionGroup,
-    type ConnectStoreSection,
 } from '@/features/components/config/storeFieldHelpers';
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
 import type { AuthoringExperience, CommerceAdminExperience } from '@/types/base';
@@ -172,42 +171,21 @@ function BusinessStructureSection({
     );
 }
 
-function CommerceSubSections({
+function ConnectionSection({
     group,
     renderFieldRow,
 }: {
     group: ServiceGroup;
     renderFieldRow: (field: UniqueField, group: ServiceGroup) => React.ReactNode;
-}): React.ReactElement {
-    const parts: { section: ConnectStoreSection; label: string }[] = [
-        { section: 'connection', label: 'Connection' },
-        // Credentials get their own heading even though they usually render a
-        // single line saying nothing needs entering — because "Use my own instead"
-        // reveals two inputs, and those need somewhere to belong rather than
-        // appearing under the endpoint field they have nothing to do with.
-        { section: 'credentials', label: 'Credentials' },
-    ];
-
+}): React.ReactElement | null {
+    const sliced = filterGroupsForSection([group], 'connection')[0];
+    if (!sliced) return null;
     return (
-        <>
-            {parts.map(({ section, label }) => {
-                const sliced = filterGroupsForSection([group], section)[0];
-                if (!sliced) return null;
-                return (
-                    // No `showDivider`. Every ConfigSection header already draws its own
-                    // border-bottom, so the divider would put a SECOND rule between two
-                    // sub-sections of one tab — reading as a harder break than the tab
-                    // boundaries above it. The headings are the separation.
-                    <ConfigSection key={section} id={section} label={label}>
-                        {sliced.fields.map((field) => (
-                            <React.Fragment key={field.key}>
-                                {renderFieldRow(field, group)}
-                            </React.Fragment>
-                        ))}
-                    </ConfigSection>
-                );
-            })}
-        </>
+        <ConfigSection id="connection" label="Connection">
+            {sliced.fields.map((field) => (
+                <React.Fragment key={field.key}>{renderFieldRow(field, group)}</React.Fragment>
+            ))}
+        </ConfigSection>
     );
 }
 
@@ -261,12 +239,11 @@ export function ConfigureSectionBody({
     // Those are now a rail tab each. The earlier note here preferred sub-sections
     // because "two tabs would have to borrow the wizard's gating, which is what
     // deadlocked PaaS" — the gating is the hazard, not the tabs, and neither tab
-    // here locks. Connection keeps its Credentials sub-section, because that pair
-    // is part of reaching the instance rather than a third task.
+    // here locks.
     if (isConnectionGroup(group.id)) {
         return (
             <>
-                <CommerceSubSections group={group} renderFieldRow={renderFieldRow} />
+                <ConnectionSection group={group} renderFieldRow={renderFieldRow} />
                 {hasAdminChoice ? <CommerceAdminBody value={commerceAdminExperience} onChange={onCommerceAdminExperienceChange} /> : null}
             </>
         );

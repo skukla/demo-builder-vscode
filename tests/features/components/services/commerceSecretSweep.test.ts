@@ -43,15 +43,15 @@ const withSecret = (path: string) => ({
     path,
     componentConfigs: {
         'adobe-commerce-accs': {
-            ACCS_OAUTH_CLIENT_ID: 'id',
-            ACCS_OAUTH_CLIENT_SECRET: FAKE_SECRET,
+            ADOBE_COMMERCE_ADMIN_USERNAME: 'id',
+            ADOBE_COMMERCE_ADMIN_PASSWORD: FAKE_SECRET,
         },
     },
 });
 
 const withoutSecret = (path: string) => ({
     path,
-    componentConfigs: { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'id' } },
+    componentConfigs: { 'adobe-commerce-accs': { ADOBE_COMMERCE_ADMIN_USERNAME: 'id' } },
 });
 
 describe('converging', () => {
@@ -69,7 +69,7 @@ describe('converging', () => {
         expect(saveProject).toHaveBeenCalledTimes(1);
         expect(
             projects[0].componentConfigs['adobe-commerce-accs'],
-        ).not.toHaveProperty('ACCS_OAUTH_CLIENT_SECRET');
+        ).not.toHaveProperty('ADOBE_COMMERCE_ADMIN_PASSWORD');
     });
 
     it('converges several projects in one pass', async () => {
@@ -130,7 +130,7 @@ describe('blast radius', () => {
         // Returns the zero counts rather than falling through to the loop with
         // no store — a project must be left exactly as it was.
         expect(result).toStrictEqual({ converged: 0, retained: 0 });
-        expect(projects[0].componentConfigs['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(
+        expect(projects[0].componentConfigs['adobe-commerce-accs'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
             FAKE_SECRET,
         );
         expect(log).not.toHaveBeenCalled();
@@ -186,7 +186,7 @@ describe('one bad project does not stop the rest', () => {
         expect(result.converged).toBe(0);
         expect(result.retained).toBe(2);
         // The credential still works — it is exactly where it was.
-        expect(projects[0].componentConfigs['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(
+        expect(projects[0].componentConfigs['adobe-commerce-accs'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
             FAKE_SECRET,
         );
     });

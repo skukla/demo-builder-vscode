@@ -148,8 +148,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // and only a shared root leaves the one Admin step (datapack-engine step 12).
     // 49: import-datapack says an import installs what is ticked, and a removal takes the whole record.
     // 50: a project that never chose an authoring experience now links Experience Workspace.
-    it('is 50 (AGENTS.md links the Experience Workspace default)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(50);
+    // 51: update-credentials no longer names the ACCS OAuth pair.
+    it('is 51 (update-credentials no longer names the ACCS OAuth pair)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(51);
     });
 });
 

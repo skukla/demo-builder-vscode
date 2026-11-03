@@ -13149,7 +13149,7 @@
             "anchors": [
                 "if (!accsEndpoint) return undefined;"
             ],
-            "line": 107,
+            "line": 105,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the guard false, so parseAccsEndpoint falls through to ACCS_ENDPOINT_PATTERN.exec(accsEndpoint) with a falsy value. RegExp.prototype.exec coerces its argument to a string first, so undefined becomes the literal 'undefined' and '' stays empty; neither matches an anchored https:// host, and the function returns undefined by the very next line. Verified by planting the mutation as a standalone probe: exec(undefined), exec(null) and exec('') all returned null. The guard is what lets the call typecheck \u2014 accsEndpoint is string | undefined and exec takes string \u2014 so it cannot be deleted without a cast at the call boundary, which this repo bans.",
@@ -14837,18 +14837,6 @@
             "category": "other",
             "reason": "The final '' is read only when the user has browsed no version AND pickDefaultVersion returns undefined, which needs a group with no versions. groupDatapacks builds a group only from catalog rows, so each has at least one. No test reaches the literal because no catalog can; Stryker reports it uncovered, not survived. (Re-anchored 2026-10-29: the line now records the store too.)",
             "decision": "none \u2014 the empty-string fallback is for a group the catalog cannot produce",
-            "recorded": "2026-10-10",
-            "source": "PL-70 batch MUT-03"
-        },
-        {
-            "module": "src/features/project-creation/ui/components/ConnectStoreStepContent.tsx",
-            "anchors": [
-                "? mergeSlices(disclosedGroups, section === 'connection' ? ['connection', 'credentials'] : [section])"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The mutant replaces the first slice name 'connection' with an empty string. filterGroupsForSection hands the name to sectionFilter (storeFieldHelpers.ts), where 'connection' is deliberately the DEFAULT arm: any name that is not 'credentials', 'business-structure' or 'catalog' keeps exactly the connection fields. So '' selects the same fields as 'connection'. Verified by planting it: all 66 ConnectStoreStepContent tests pass, including the one asserting the endpoint and the OAuth field render as one merged group.",
-            "decision": "none \u2014 the connection slice is the filter's default, so its name is not what selects it",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-03"
         },

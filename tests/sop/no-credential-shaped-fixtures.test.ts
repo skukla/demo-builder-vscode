@@ -79,7 +79,6 @@ const CREDENTIAL_CEILINGS: Record<string, number> = {
     'tests/features/authentication/services/adobeWorkspaceCredentials.s2s.test.ts': 1,
     'tests/features/authentication/services/adobeWorkspaceCredentials.testUtils.ts': 2,
     'tests/features/authentication/services/consoleProjectTeardown.test.ts': 2,
-    'tests/features/components/services/commerceCredentialStore.test.ts': 1,
     'tests/features/data-installer/handlers/dataInstallerHandlers.test.ts': 1,
     'tests/features/eds/services/commerceStoreDiscovery.test.ts': 6,
     'tests/features/eds/services/toolManager.test.ts': 1,

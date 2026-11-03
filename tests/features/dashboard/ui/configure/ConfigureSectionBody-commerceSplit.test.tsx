@@ -79,11 +79,11 @@ describe('ConfigureSectionBody — the Commerce tab splits into two sub-sections
         expect(screen.queryByText('Credentials')).not.toBeInTheDocument();
     });
 
-    it('shows the Credentials heading on ACCS', () => {
+    it('has no Credentials heading on ACCS: the shared sign-in needs no pair', () => {
         renderBody(ACCS);
 
         expect(screen.getByText('Connection')).toBeInTheDocument();
-        expect(screen.getByText('Credentials')).toBeInTheDocument();
+        expect(screen.queryByText('Credentials')).not.toBeInTheDocument();
     });
 
     it('does NOT repeat the group label as a third heading', () => {
@@ -115,7 +115,6 @@ describe('ConfigureSectionBody — the Commerce tab splits into two sub-sections
         renderBody(ACCS, false);
 
         expect(screen.getByText('Connection')).toBeInTheDocument();
-        expect(screen.getByText('Credentials')).toBeInTheDocument();
     });
 });
 

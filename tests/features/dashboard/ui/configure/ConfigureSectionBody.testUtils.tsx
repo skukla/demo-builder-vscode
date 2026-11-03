@@ -36,14 +36,12 @@ export const COMMERCE: ServiceGroup = {
     ],
 };
 
-/** The ACCS half: the only backend with the brokered OAuth pair. */
+/** The ACCS half. */
 export const ACCS: ServiceGroup = {
     id: 'accs',
     label: 'Adobe Commerce Cloud Service',
     fields: [
         field('ACCS_GRAPHQL_ENDPOINT'),
-        field('ACCS_OAUTH_CLIENT_ID'),
-        field('ACCS_OAUTH_CLIENT_SECRET'),
         field('ACCS_WEBSITE_CODE'),
     ],
 };

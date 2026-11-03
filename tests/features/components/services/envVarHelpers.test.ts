@@ -11,7 +11,6 @@ import {
     deriveAccsTenantId,
     deriveAccsUnifiedAdminUrl,
     lookupComponentConfigValue,
-    readAccsOAuthPair,
     readPaasAdminPair,
 } from '@/features/components/services/envVarHelpers';
 
@@ -70,25 +69,8 @@ describe('envVarHelpers', () => {
             ).toEqual({ username: 'admin', password: 'fake-test-pw-not-a-secret' });
         });
 
-        it('reads the ACCS OAuth pair', () => {
-            expect(
-                readAccsOAuthPair({
-                    'adobe-commerce-accs': {
-                        ACCS_OAUTH_CLIENT_ID: 'id',
-                        ACCS_OAUTH_CLIENT_SECRET: 'fake-test-secret-not-a-secret',
-                    },
-                }),
-            ).toEqual({ clientId: 'id', clientSecret: 'fake-test-secret-not-a-secret' });
-        });
 
-        it('returns nothing for half an ACCS pair', () => {
-            expect(readAccsOAuthPair({ x: { ACCS_OAUTH_CLIENT_ID: 'id' } })).toBeUndefined();
-        });
 
-        it('returns nothing for no configs at all', () => {
-            expect(readPaasAdminPair(undefined)).toBeUndefined();
-            expect(readAccsOAuthPair(undefined)).toBeUndefined();
-        });
     });
 
     /**

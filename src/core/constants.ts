@@ -328,7 +328,9 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // are sent. Existing projects would keep telling the agent removal scope follows dataTypes.
 // v50 (2026-11-02, Experience Workspace default): a project that never chose an authoring experience
 // now opens Experience Workspace. Existing projects' AGENTS.md would keep the DA.live Classic link.
-export const AI_CONTEXT_VERSION = 50;
+// v51 (2026-11-03, ACCS credential fields removed): update-credentials stops telling the agent about
+// an OAuth pair nothing reads.
+export const AI_CONTEXT_VERSION = 51;
 
 /**
  * Component IDs for standardized component instance access

@@ -137,10 +137,7 @@ function toSlicedSection(
     isFieldComplete: (field: UniqueField) => boolean,
     fieldHasError: (field: UniqueField) => boolean,
 ): ConfigureSection {
-    // `connection` carries its credentials, matching what its body renders.
-    const sections: ConnectStoreSection[] =
-        section === 'connection' ? ['connection', 'credentials'] : [section];
-    const fields = sections.flatMap((s) => filterGroupsForSection([group], s)[0]?.fields ?? []);
+    const fields = filterGroupsForSection([group], section)[0]?.fields ?? [];
 
     const requiredFields = fields.filter((f) => f.required);
     const requiredComplete = requiredFields.filter((f) => isFieldComplete(f)).length;

@@ -12,7 +12,7 @@
 
 import {
     commerceSecretKey,
-    resolveAccsOAuthPair,
+    resolvePaasAdminPair,
 } from '@/features/components/services/commerceCredentialStore';
 import {
     declaredSecretKeys,
@@ -58,9 +58,9 @@ function lyingStore() {
 }
 
 const configs = () => ({
-    'adobe-commerce-accs': {
-        ACCS_OAUTH_CLIENT_ID: 'public-id',
-        ACCS_OAUTH_CLIENT_SECRET: FAKE_SECRET,
+    'adobe-commerce-paas': {
+        ADOBE_COMMERCE_ADMIN_USERNAME: 'public-id',
+        ADOBE_COMMERCE_ADMIN_PASSWORD: FAKE_SECRET,
     },
 });
 
@@ -68,7 +68,7 @@ describe('what the catalog declares', () => {
     it('treats both Commerce credentials as secret', () => {
         const keys = declaredSecretKeys();
 
-        expect(keys.has('ACCS_OAUTH_CLIENT_SECRET')).toBe(true);
+        expect(keys.has('ADOBE_COMMERCE_ADMIN_PASSWORD')).toBe(true);
         // The PaaS password moved only once its three consumers were handled:
         // `.env` generation hydrates it at write time, the webview gates on an
         // `isSet` flag rather than the value, and the Configure field renders
@@ -80,7 +80,7 @@ describe('what the catalog declares', () => {
     it('does NOT treat the client id as secret — it is not one', () => {
         // The id is public and is what the UI shows to confirm which credential is
         // in use. Sweeping it into SecretStorage would blank that display.
-        expect(declaredSecretKeys().has('ACCS_OAUTH_CLIENT_ID')).toBe(false);
+        expect(declaredSecretKeys().has('ADOBE_COMMERCE_ADMIN_USERNAME')).toBe(false);
     });
 });
 
@@ -90,17 +90,17 @@ describe('the happy path', () => {
 
         const out = await migrateDeclaredSecrets(configs(), PROJECT, secrets);
 
-        expect(out.moved).toEqual(['ACCS_OAUTH_CLIENT_SECRET']);
+        expect(out.moved).toEqual(['ADOBE_COMMERCE_ADMIN_PASSWORD']);
         expect(out.retained).toStrictEqual([]);
         expect(
-            out.sanitizedConfigs?.['adobe-commerce-accs'],
-        ).not.toHaveProperty('ACCS_OAUTH_CLIENT_SECRET');
+            out.sanitizedConfigs?.['adobe-commerce-paas'],
+        ).not.toHaveProperty('ADOBE_COMMERCE_ADMIN_PASSWORD');
     });
 
     it('leaves non-secret fields exactly where they are', async () => {
         const out = await migrateDeclaredSecrets(configs(), PROJECT, workingStore());
 
-        expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_ID).toBe('public-id');
+        expect(out.sanitizedConfigs?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_USERNAME).toBe('public-id');
     });
 
     it('verifies by READING BACK, not by trusting the write', async () => {
@@ -118,7 +118,7 @@ describe('the happy path', () => {
         const original = configs();
         await migrateDeclaredSecrets(original, PROJECT, workingStore());
 
-        expect(original['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(FAKE_SECRET);
+        expect(original['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(FAKE_SECRET);
     });
 });
 
@@ -127,8 +127,8 @@ describe('the credential is never lost', () => {
         const out = await migrateDeclaredSecrets(configs(), PROJECT, throwingStore());
 
         expect(out.moved).toStrictEqual([]);
-        expect(out.retained).toEqual(['ACCS_OAUTH_CLIENT_SECRET']);
-        expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(
+        expect(out.retained).toEqual(['ADOBE_COMMERCE_ADMIN_PASSWORD']);
+        expect(out.sanitizedConfigs?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
             FAKE_SECRET,
         );
     });
@@ -138,8 +138,8 @@ describe('the credential is never lost', () => {
         // read-back this case strips a credential into the void.
         const out = await migrateDeclaredSecrets(configs(), PROJECT, lyingStore());
 
-        expect(out.retained).toEqual(['ACCS_OAUTH_CLIENT_SECRET']);
-        expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(
+        expect(out.retained).toEqual(['ADOBE_COMMERCE_ADMIN_PASSWORD']);
+        expect(out.sanitizedConfigs?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
             FAKE_SECRET,
         );
     });
@@ -153,8 +153,8 @@ describe('the credential is never lost', () => {
 
         const out = await migrateDeclaredSecrets(configs(), PROJECT, secrets);
 
-        expect(out.retained).toEqual(['ACCS_OAUTH_CLIENT_SECRET']);
-        expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(
+        expect(out.retained).toEqual(['ADOBE_COMMERCE_ADMIN_PASSWORD']);
+        expect(out.sanitizedConfigs?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
             FAKE_SECRET,
         );
     });
@@ -167,7 +167,7 @@ describe('nothing to do', () => {
         const out = await migrateDeclaredSecrets(configs(), undefined, secrets);
 
         expect(secrets.store).not.toHaveBeenCalled();
-        expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(
+        expect(out.sanitizedConfigs?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
             FAKE_SECRET,
         );
     });
@@ -176,7 +176,7 @@ describe('nothing to do', () => {
         const out = await migrateDeclaredSecrets(configs(), PROJECT, undefined);
 
         expect(out.moved).toStrictEqual([]);
-        expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(
+        expect(out.sanitizedConfigs?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
             FAKE_SECRET,
         );
     });
@@ -185,7 +185,7 @@ describe('nothing to do', () => {
         const secrets = workingStore();
 
         await migrateDeclaredSecrets(
-            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: '' } },
+            { 'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_PASSWORD: '' } },
             PROJECT,
             secrets,
         );
@@ -211,12 +211,12 @@ describe('the seam: migrate, then read back', () => {
         const secrets = workingStore();
 
         const out = await migrateDeclaredSecrets(configs(), PROJECT, secrets);
-        const pair = await resolveAccsOAuthPair(
+        const pair = await resolvePaasAdminPair(
             { secrets, projectId: PROJECT },
             out.sanitizedConfigs,
         );
 
-        expect(pair).toEqual({ clientId: 'public-id', clientSecret: FAKE_SECRET });
+        expect(pair).toEqual({ username: 'public-id', password: FAKE_SECRET });
     });
 
     it('stays resolvable after a SECOND migration pass', async () => {
@@ -224,24 +224,24 @@ describe('the seam: migrate, then read back', () => {
 
         const first = await migrateDeclaredSecrets(configs(), PROJECT, secrets);
         const second = await migrateDeclaredSecrets(first.sanitizedConfigs, PROJECT, secrets);
-        const pair = await resolveAccsOAuthPair(
+        const pair = await resolvePaasAdminPair(
             { secrets, projectId: PROJECT },
             second.sanitizedConfigs,
         );
 
-        expect(pair).toEqual({ clientId: 'public-id', clientSecret: FAKE_SECRET });
+        expect(pair).toEqual({ username: 'public-id', password: FAKE_SECRET });
     });
 
     it('a RETAINED secret is still resolvable — nothing moved, nothing lost', async () => {
         const secrets = throwingStore();
 
         const out = await migrateDeclaredSecrets(configs(), PROJECT, secrets);
-        const pair = await resolveAccsOAuthPair(
+        const pair = await resolvePaasAdminPair(
             { secrets, projectId: PROJECT },
             out.sanitizedConfigs,
         );
 
-        expect(pair).toEqual({ clientId: 'public-id', clientSecret: FAKE_SECRET });
+        expect(pair).toEqual({ username: 'public-id', password: FAKE_SECRET });
     });
 });
 
@@ -255,17 +255,17 @@ describe('clearing a credential', () => {
 
         const cleared = await migrateDeclaredSecrets(
             {
-                'adobe-commerce-accs': {
-                    ...migrated.sanitizedConfigs?.['adobe-commerce-accs'],
-                    ACCS_OAUTH_CLIENT_SECRET: '',
+                'adobe-commerce-paas': {
+                    ...migrated.sanitizedConfigs?.['adobe-commerce-paas'],
+                    ADOBE_COMMERCE_ADMIN_PASSWORD: '',
                 },
             },
             PROJECT,
             secrets,
         );
 
-        expect(cleared.cleared).toEqual(['ACCS_OAUTH_CLIENT_SECRET']);
-        const pair = await resolveAccsOAuthPair(
+        expect(cleared.cleared).toEqual(['ADOBE_COMMERCE_ADMIN_PASSWORD']);
+        const pair = await resolvePaasAdminPair(
             { secrets, projectId: PROJECT },
             cleared.sanitizedConfigs,
         );
@@ -278,22 +278,22 @@ describe('re-keying after a rename', () => {
         const secrets = workingStore();
         const out = await migrateDeclaredSecrets(configs(), PROJECT, secrets);
 
-        const moved = await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], secrets);
+        const moved = await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-paas'], secrets);
 
-        expect(moved).toEqual(['ACCS_OAUTH_CLIENT_SECRET']);
-        const pair = await resolveAccsOAuthPair(
+        expect(moved).toEqual(['ADOBE_COMMERCE_ADMIN_PASSWORD']);
+        const pair = await resolvePaasAdminPair(
             { secrets, projectId: '/p/renamed' },
             out.sanitizedConfigs,
         );
-        expect(pair?.clientSecret).toBe(FAKE_SECRET);
+        expect(pair?.password).toBe(FAKE_SECRET);
     });
 
     it('leaves nothing readable at the old key', async () => {
         const secrets = workingStore();
         await migrateDeclaredSecrets(configs(), PROJECT, secrets);
-        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], secrets);
+        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-paas'], secrets);
 
-        const atOldKey = await resolveAccsOAuthPair({ secrets, projectId: PROJECT }, {});
+        const atOldKey = await resolvePaasAdminPair({ secrets, projectId: PROJECT }, {});
 
         expect(atOldKey).toBeUndefined();
     });
@@ -311,7 +311,7 @@ describe('re-keying after a rename', () => {
         };
         await migrateDeclaredSecrets(configs(), PROJECT, secrets);
 
-        const moved = await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], secrets);
+        const moved = await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-paas'], secrets);
 
         expect(moved).toStrictEqual([]);
         expect(secrets.delete).not.toHaveBeenCalled();
@@ -321,7 +321,7 @@ describe('re-keying after a rename', () => {
         // gone — which is the very thing this test exists to rule out.
         expect(
             await secrets.get(
-                commerceSecretKey(PROJECT, 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET'),
+                commerceSecretKey(PROJECT, 'adobe-commerce-paas', 'ADOBE_COMMERCE_ADMIN_PASSWORD'),
             ),
         ).toBe(FAKE_SECRET);
     });
@@ -337,7 +337,7 @@ describe('hydrate — the write-time inverse', () => {
 
         const hydrated = await hydrateDeclaredSecrets(out.sanitizedConfigs, PROJECT, secrets);
 
-        expect(hydrated?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(FAKE_SECRET);
+        expect(hydrated?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(FAKE_SECRET);
     });
 
     it('does NOT mutate the configs it was given — the copy must never be persisted', async () => {
@@ -346,8 +346,8 @@ describe('hydrate — the write-time inverse', () => {
 
         await hydrateDeclaredSecrets(out.sanitizedConfigs, PROJECT, secrets);
 
-        expect(out.sanitizedConfigs?.['adobe-commerce-accs']).not.toHaveProperty(
-            'ACCS_OAUTH_CLIENT_SECRET',
+        expect(out.sanitizedConfigs?.['adobe-commerce-paas']).not.toHaveProperty(
+            'ADOBE_COMMERCE_ADMIN_PASSWORD',
         );
     });
 
@@ -356,18 +356,18 @@ describe('hydrate — the write-time inverse', () => {
         await migrateDeclaredSecrets(configs(), PROJECT, secrets);
 
         const hydrated = await hydrateDeclaredSecrets(
-            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: 'just-typed' } },
+            { 'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_PASSWORD: 'just-typed' } },
             PROJECT,
             secrets,
         );
 
-        expect(hydrated?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe('just-typed');
+        expect(hydrated?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe('just-typed');
     });
 
     it('is a no-op without a store — the value simply is not there to restore', async () => {
         const hydrated = await hydrateDeclaredSecrets(configs(), PROJECT, undefined);
 
-        expect(hydrated?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(FAKE_SECRET);
+        expect(hydrated?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(FAKE_SECRET);
     });
 });
 
@@ -376,15 +376,15 @@ describe('isSet flags — what the webview is allowed to know', () => {
         const secrets = workingStore();
         await migrateDeclaredSecrets(configs(), PROJECT, secrets);
 
-        const flags = await loadDeclaredSecretFlags(['adobe-commerce-accs'], PROJECT, secrets);
+        const flags = await loadDeclaredSecretFlags(['adobe-commerce-paas'], PROJECT, secrets);
 
-        expect(flags).toEqual({ 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: true } });
+        expect(flags).toEqual({ 'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_PASSWORD: true } });
         expect(JSON.stringify(flags)).not.toContain(FAKE_SECRET);
     });
 
     it('omits a component that holds nothing', async () => {
         const flags = await loadDeclaredSecretFlags(
-            ['adobe-commerce-accs'],
+            ['adobe-commerce-paas'],
             PROJECT,
             workingStore(),
         );
@@ -426,7 +426,7 @@ describe('re-keying decides whether to do anything at all', () => {
         // onto its own key would be a pointless keychain write per save.
         const secrets = workingStore();
 
-        const rekeyed = await reKeyProjectSecrets(PROJECT, PROJECT, ['adobe-commerce-accs'], secrets);
+        const rekeyed = await reKeyProjectSecrets(PROJECT, PROJECT, ['adobe-commerce-paas'], secrets);
 
         expect(rekeyed).toStrictEqual([]);
         expect(secrets.get).not.toHaveBeenCalled();
@@ -449,7 +449,7 @@ describe('re-keying decides whether to do anything at all', () => {
             delete: jest.fn(async () => undefined),
         };
 
-        const rekeyed = await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], secrets);
+        const rekeyed = await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-paas'], secrets);
 
         expect(rekeyed).toStrictEqual([]);
         expect(secrets.delete).not.toHaveBeenCalled();
@@ -465,7 +465,7 @@ describe('re-keying decides whether to do anything at all', () => {
             delete: jest.fn(async () => undefined),
         };
 
-        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], secrets, (l) =>
+        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-paas'], secrets, (l) =>
             lines.push(l),
         );
 
@@ -477,7 +477,7 @@ describe('re-keying decides whether to do anything at all', () => {
         // credential, and a summary line for it is noise on every rename.
         const lines: string[] = [];
 
-        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], workingStore(), (l) =>
+        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-paas'], workingStore(), (l) =>
             lines.push(l),
         );
 
@@ -489,7 +489,7 @@ describe('re-keying decides whether to do anything at all', () => {
         const secrets = workingStore();
         await migrateDeclaredSecrets(configs(), PROJECT, secrets);
 
-        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], secrets, (l) =>
+        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-paas'], secrets, (l) =>
             lines.push(l),
         );
 
@@ -504,20 +504,20 @@ describe('hydrate decides whether to reach for storage', () => {
         const hydrated = await hydrateDeclaredSecrets(configs(), undefined, secrets);
 
         expect(secrets.get).not.toHaveBeenCalled();
-        expect(hydrated?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(FAKE_SECRET);
+        expect(hydrated?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(FAKE_SECRET);
     });
 
     it('does not invent a field storage does not hold', async () => {
         // Writing `undefined` in would put the key back into `.env` generation as
         // an empty assignment — the exact breakage hydrate exists to prevent.
         const hydrated = await hydrateDeclaredSecrets(
-            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'public-id' } },
+            { 'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_USERNAME: 'public-id' } },
             PROJECT,
             workingStore(),
         );
 
-        expect(Object.keys(hydrated?.['adobe-commerce-accs'] ?? {})).toStrictEqual([
-            'ACCS_OAUTH_CLIENT_ID',
+        expect(Object.keys(hydrated?.['adobe-commerce-paas'] ?? {})).toStrictEqual([
+            'ADOBE_COMMERCE_ADMIN_USERNAME',
         ]);
     });
 });
@@ -530,7 +530,7 @@ describe('a value that is not a string', () => {
         const secrets = workingStore();
 
         const out = await migrateDeclaredSecrets(
-            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: true } },
+            { 'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_PASSWORD: true } },
             PROJECT,
             secrets,
         );
@@ -538,7 +538,7 @@ describe('a value that is not a string', () => {
         expect(secrets.store).not.toHaveBeenCalled();
         expect(secrets.delete).not.toHaveBeenCalled();
         expect(out.cleared).toStrictEqual([]);
-        expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(true);
+        expect(out.sanitizedConfigs?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(true);
     });
 });
 
@@ -559,20 +559,20 @@ describe('when the clear cannot reach SecretStorage', () => {
         // the state a user cannot detect: the box is empty and the extension goes
         // on authenticating with the old value.
         const out = await migrateDeclaredSecrets(
-            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: '' } },
+            { 'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_PASSWORD: '' } },
             PROJECT,
             undeletableStore(),
         );
 
         expect(out.cleared).toStrictEqual([]);
-        expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe('');
+        expect(out.sanitizedConfigs?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe('');
     });
 
     it('tells the caller, so the failure is not silent', async () => {
         const lines: string[] = [];
 
         await migrateDeclaredSecrets(
-            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: '' } },
+            { 'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_PASSWORD: '' } },
             PROJECT,
             undeletableStore(),
             (l) => lines.push(l),
@@ -598,9 +598,9 @@ describe('what the migration reports', () => {
 
         await migrateDeclaredSecrets(
             {
-                'adobe-commerce-accs': {
-                    ...migrated.sanitizedConfigs?.['adobe-commerce-accs'],
-                    ACCS_OAUTH_CLIENT_SECRET: '',
+                'adobe-commerce-paas': {
+                    ...migrated.sanitizedConfigs?.['adobe-commerce-paas'],
+                    ADOBE_COMMERCE_ADMIN_PASSWORD: '',
                 },
             },
             PROJECT,
@@ -615,7 +615,7 @@ describe('what the migration reports', () => {
         const lines: string[] = [];
 
         await migrateDeclaredSecrets(
-            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'public-id' } },
+            { 'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_USERNAME: 'public-id' } },
             PROJECT,
             workingStore(),
             (l) => lines.push(l),
@@ -630,9 +630,9 @@ describe('forgetting a deleted project', () => {
         const secrets = workingStore();
         const declared = [...declaredSecretKeys()];
 
-        const asked = await forgetProjectCommerceSecrets(PROJECT, ['adobe-commerce-accs', 'adobe-commerce-paas'], secrets);
+        const asked = await forgetProjectCommerceSecrets(PROJECT, ['adobe-commerce-paas', 'adobe-commerce-paas'], secrets);
 
-        const expected = ['adobe-commerce-accs', 'adobe-commerce-paas'].flatMap((componentId) =>
+        const expected = ['adobe-commerce-paas', 'adobe-commerce-paas'].flatMap((componentId) =>
             declared.map((varName) => commerceSecretKey(PROJECT, componentId, varName)),
         );
         expect(declared.length).toBeGreaterThan(0);

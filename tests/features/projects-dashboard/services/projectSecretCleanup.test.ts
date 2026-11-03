@@ -2,7 +2,7 @@
  * forgetProjectSecrets — a deleted project's secrets leave SecretStorage with it (2026-10-01).
  *
  * Driven against the real bundled catalogs: `components.json` declares the Commerce secrets
- * (ACCS_OAUTH_CLIENT_SECRET, ADOBE_COMMERCE_ADMIN_PASSWORD) and `app-builder-components.json`
+ * (ADOBE_COMMERCE_ADMIN_PASSWORD) and `app-builder-components.json`
  * gives demo-erp its screen key (ERP_SCREEN_KEY). The keys asserted are built by the same
  * key-scheme functions the writers use, so a scheme change cannot leave this test asserting
  * keys nothing writes. A Map stands in for SecretStorage.
@@ -47,7 +47,6 @@ const project = (): Project =>
     });
 
 const KEPT = [
-    commerceSecretKey(PATH, 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET'),
     commerceSecretKey(PATH, 'adobe-commerce-accs', 'ADOBE_COMMERCE_ADMIN_PASSWORD'),
     secretKey(PATH, 'demo-erp', 'ERP_SCREEN_KEY'),
     'demoBuilder.commerceRest.credential.ws-project',
@@ -94,7 +93,6 @@ describe('moveProjectSecrets — a rename takes the secrets to the new path', ()
     const NEW = '/projects/acme-b2b';
     const renamed = (): Project => ({ ...project(), path: NEW });
     const SECRETS = [
-        [commerceSecretKey, 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET'],
         [commerceSecretKey, 'adobe-commerce-accs', 'ADOBE_COMMERCE_ADMIN_PASSWORD'],
         [secretKey, 'demo-erp', 'ERP_SCREEN_KEY'],
     ] as const;

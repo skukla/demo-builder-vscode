@@ -45,8 +45,6 @@ export const ACCS_GRAPHQL_ENDPOINT = 'ACCS_GRAPHQL_ENDPOINT';
  * The client id is NOT a secret — it is public by design, and only its paired
  * secret belongs in {@link SECRET_ENV_KEYS}.
  */
-export const ACCS_OAUTH_CLIENT_ID = 'ACCS_OAUTH_CLIENT_ID';
-export const ACCS_OAUTH_CLIENT_SECRET = 'ACCS_OAUTH_CLIENT_SECRET';
 export const ACCS_WEBSITE_CODE = 'ACCS_WEBSITE_CODE';
 export const ACCS_STORE_CODE = 'ACCS_STORE_CODE';
 export const ACCS_STORE_VIEW_CODE = 'ACCS_STORE_VIEW_CODE';
@@ -131,7 +129,6 @@ export const BACKEND_OWNED_SCOPE_KEYS: readonly string[] = [
  */
 export const SECRET_ENV_KEYS: readonly string[] = [
     PAAS_ADMIN_PASSWORD,
-    ACCS_OAUTH_CLIENT_SECRET,
     CATALOG_API_KEY,
     ACO_API_KEY,
     EXPERIENCE_PLATFORM_API_KEY,
