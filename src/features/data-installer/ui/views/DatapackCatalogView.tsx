@@ -46,7 +46,7 @@ import { CatalogHeaderActions } from '../components/CatalogHeaderActions';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
-import { renderDataInstallerFailure } from '../dataInstallerFailure';
+import { installerProblemLine, renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useHeldPack } from '../hooks/useHeldPack';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
@@ -96,7 +96,7 @@ export function DatapackCatalogView(): React.JSX.Element {
     const [importing, setImporting] = useState<DatapackId | undefined>(undefined);
 
     // Both catalogs in one answer: the Data Installer's packs plus the library's,
-    // each tagged. A library outage still shows the Data Installer's, with a reason.
+    // each tagged. Either one's outage still shows the other's, with a reason.
     const { load, loading, value, failure, settled } =
         useDataInstallerRequest<CatalogPage>('find-datapacks');
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
@@ -106,7 +106,7 @@ export function DatapackCatalogView(): React.JSX.Element {
     const projectContext = useDataInstallerRequest<ProjectSampleData>('get-datapack-import-target');
 
     useEffect(() => {
-        load({ includeCommunity, includeLibrary: true });
+        load({ includeCommunity, includeLibrary: true, keepLibraryOnFailure: true });
     }, [load, includeCommunity]);
 
     const loadProjectContext = projectContext.load;
@@ -170,7 +170,7 @@ export function DatapackCatalogView(): React.JSX.Element {
     );
 
     const refresh = useCallback(
-        (): void => load({ includeCommunity, includeLibrary: true }),
+        (): void => load({ includeCommunity, includeLibrary: true, keepLibraryOnFailure: true }),
         [load, includeCommunity],
     );
 
@@ -335,6 +335,9 @@ export function DatapackCatalogView(): React.JSX.Element {
                     />
                 }
             >
+                {value?.installerError ? (
+                    <p className="dialog-problem text-notice">{installerProblemLine(value.installerError)}</p>
+                ) : null}
                 {value?.libraryError ? (
                     <p className="datapack-export-note">
                         The datapack library could not be listed: {value.libraryError}

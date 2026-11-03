@@ -147,7 +147,12 @@ export type ChangesOnRemoval = 'ask' | 'save';
  * offers Install on a library pack only when Demo Builder's engine is chosen: the service
  * installs only from its own catalog.
  */
-export type CatalogPage = Page<DatapackSummary> & { libraryError?: string; engine?: DatapackEngineId };
+export type CatalogPage = Page<DatapackSummary> & {
+    libraryError?: string;
+    /** Why the Data Installer's rows are missing, when only the library's are here. */
+    installerError?: string;
+    engine?: DatapackEngineId;
+};
 
 /**
  * What is installed, or what happened, from both engines (step 14): Demo Builder's rows first,

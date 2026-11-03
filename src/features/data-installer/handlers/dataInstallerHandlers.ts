@@ -28,7 +28,8 @@ import { orgNumberOf } from '../services/dataInstallerSignIn';
 import { packReadsVia } from '../services/recordedPack';
 import { layerForDetail } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
-import type { CatalogPage, DatapackSummary, OperationMode, Page } from '../types';
+import type { DatapackSummary, OperationMode, Page } from '../types';
+import { LIBRARY_LIST_FAILED, libraryWithoutInstaller, listLibrary, withLibraryRows } from './catalogLibraryRows';
 import { activityFromBoth, installedFromBoth } from './engineHistoryReads';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -262,54 +263,6 @@ function toFailure(error: unknown, fallback: string): HandlerResponse {
 }
 
 /** Run one client call behind the guard, mapping both failure kinds. */
-const LIBRARY_LIST_FAILED = 'Could not list the datapack library.';
-
-/**
- * The library's catalog, each row tagged `library`.
- *
- * No curation filter: the library already answers each SC with the shared packs
- * plus their own, and their own are exactly what they came to find.
- */
-async function listLibrary(
-    client: DataInstallerClient,
-    paging: { limit?: number; skip?: number },
-): Promise<Page<DatapackSummary>> {
-    const listed = await client.findDatapacks(paging);
-    return { ...listed, items: listed.items.map((item) => ({ ...item, store: 'library' as const })) };
-}
-
-/**
- * The Data Installer's page with the library's rows added.
- *
- * A library that cannot be reached costs only its own rows: the Data Installer's
- * catalog still shows, and the reason travels as `libraryError` so the panel can
- * say why the library is missing rather than silently showing less.
- */
-async function withLibraryRows(
-    context: HandlerContext,
-    installer: Page<DatapackSummary>,
-    paging: { limit?: number; skip?: number },
-): Promise<HandlerResponse> {
-    const library = await withClient(
-        context,
-        LIBRARY_LIST_FAILED,
-        (client) => listLibrary(client, paging),
-        'library',
-    );
-    if (!library.success) {
-        const libraryError = library.error ?? LIBRARY_LIST_FAILED;
-        return { success: true, data: { ...installer, libraryError, engine: selectedDatapackEngine() } satisfies CatalogPage };
-    }
-    const extra = (library.data as Page<DatapackSummary>).items;
-    // No `total`: the two stores' totals do not add up to anything a caller can use.
-    const merged: CatalogPage = {
-        items: [...installer.items, ...extra],
-        count: installer.count + extra.length,
-        engine: selectedDatapackEngine(),
-    };
-    return { success: true, data: merged };
-}
-
 async function withClient(
     context: HandlerContext,
     fallback: string,
@@ -347,6 +300,8 @@ export interface FindDatapacksPayload {
     store?: DatapackStoreName;
     /** With the Data Installer's list: add the library's packs to it. */
     includeLibrary?: boolean;
+    /** When the Data Installer would not answer, answer with the library's alone, and say why. */
+    keepLibraryOnFailure?: boolean;
     includeCommunity?: boolean;
     limit?: number;
     skip?: number;
@@ -374,14 +329,9 @@ export const dataInstallerHandlers = defineHandlers({
             ...(payload?.limit !== undefined ? { limit: payload.limit } : {}),
             ...(payload?.skip !== undefined ? { skip: payload.skip } : {}),
         };
-        if (payload?.store === 'library') {
-            return withClient(
-                context,
-                LIBRARY_LIST_FAILED,
-                (client) => listLibrary(client, paging),
-                'library',
-            );
-        }
+        const askLibrary = (): Promise<HandlerResponse> =>
+            withClient(context, LIBRARY_LIST_FAILED, (client) => listLibrary(client, paging), 'library');
+        if (payload?.store === 'library') return askLibrary();
         const installer = await withClient(context, 'Could not list datapacks.', (client) =>
             client.findDatapacks({
                 // Curated by default: 23 of 40 live entries are shared, and the
@@ -390,10 +340,11 @@ export const dataInstallerHandlers = defineHandlers({
                 ...paging,
             }),
         );
-        if (!payload?.includeLibrary || !installer.success) {
-            return installer;
+        if (!payload?.includeLibrary) return installer;
+        if (!installer.success) {
+            return payload.keepLibraryOnFailure ? libraryWithoutInstaller(installer, askLibrary) : installer;
         }
-        return withLibraryRows(context, installer.data as Page<DatapackSummary>, paging);
+        return withLibraryRows(installer.data as Page<DatapackSummary>, askLibrary);
     },
 
     'get-datapack-detail': async (

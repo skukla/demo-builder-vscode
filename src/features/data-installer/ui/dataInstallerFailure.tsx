@@ -38,6 +38,15 @@ export interface DataInstallerFailureOptions {
 /** The gateway's refusal when the account lacks a product profile: `[ERR1201] Missing required product profiles: '<id>'`. */
 const MISSING_PROFILE = /Missing required product profiles?: '([^']+)'/u;
 
+const missingProfileLine = (profile: string): string =>
+    `Your Adobe account isn't in the Data Installer's product profile (${profile}). An administrator of your Adobe org can add you in the Admin Console.`;
+
+/** The line above a catalog showing only the library, because the Data Installer would not answer. */
+export function installerProblemLine(message: string): string {
+    const profile = MISSING_PROFILE.exec(message)?.[1];
+    return profile ? missingProfileLine(profile) : `The Data Installer catalog could not be listed: ${message}`;
+}
+
 /**
  * Render a failure with the affordance that can actually fix it.
  *
@@ -76,7 +85,7 @@ export function renderDataInstallerFailure(
             <StatusDisplay
                 variant="warning"
                 title="Data Installer Access Required"
-                message={`Your Adobe account isn't in the Data Installer's product profile (${missingProfile}). An administrator of your Adobe org can add you in the Admin Console.`}
+                message={missingProfileLine(missingProfile)}
                 details={extra}
                 actions={[{ label: 'Retry', onPress: onRetry, variant: 'primary' }]}
             />

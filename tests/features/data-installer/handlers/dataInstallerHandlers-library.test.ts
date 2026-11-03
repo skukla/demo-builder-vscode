@@ -279,6 +279,41 @@ describe('the library store', () => {
             expect(MockedClient).toHaveBeenCalledTimes(1);
         });
 
+        it('answers with the library alone when asked to, saying why the Data Installer is missing', async () => {
+            setupLibrary(LIBRARY);
+            const client = () => MockedClient.mock.calls.length;
+            MockedClient.mockImplementation(
+                () =>
+                    (client() === 1
+                        ? { findDatapacks: jest.fn().mockRejectedValue(new Error('refused')) }
+                        : { findDatapacks: jest.fn().mockResolvedValue({ items: [LIBRARY_ROW], count: 1 }) }) as unknown as InstanceType<typeof MockedClient>,
+            );
+
+            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {
+                includeLibrary: true,
+                keepLibraryOnFailure: true,
+            });
+
+            expect(res).toMatchObject({
+                success: true,
+                data: { items: [{ ...LIBRARY_ROW, store: 'library' }], installerError: expect.any(String) },
+            });
+        });
+
+        it('keeps the Data Installer failure when the library cannot answer either', async () => {
+            setupLibrary(LIBRARY);
+            MockedClient.mockImplementation(
+                () => ({ findDatapacks: jest.fn().mockRejectedValue(new Error('down')) }) as unknown as InstanceType<typeof MockedClient>,
+            );
+
+            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {
+                includeLibrary: true,
+                keepLibraryOnFailure: true,
+            });
+
+            expect(res.success).toBe(false);
+        });
+
         it('asks only the Data Installer when the library is not requested — the control', async () => {
             setupLibrary(LIBRARY);
             storesAnswer(async () => ({ items: [LIBRARY_ROW], count: 1 }));

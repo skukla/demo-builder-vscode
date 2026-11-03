@@ -59,7 +59,7 @@ describe('DatapackCatalogView', () => {
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
-                payload: { includeCommunity: false, includeLibrary: true },
+                payload: { includeCommunity: false, includeLibrary: true, keepLibraryOnFailure: true },
             })
         );
     });
@@ -120,7 +120,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'find-datapacks',
-                    payload: { includeCommunity: true, includeLibrary: true },
+                    payload: { includeCommunity: true, includeLibrary: true, keepLibraryOnFailure: true },
                 })
             );
         });
@@ -436,6 +436,23 @@ describe('DatapackCatalogView — the datapack library beside the Data Installer
 
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(2));
         expect(screen.getByText('Yours')).toBeInTheDocument();
+    });
+
+    it('still shows the library when the Data Installer refuses, and names the missing profile', async () => {
+        mockRequest.mockResolvedValue({
+            success: true,
+            data: {
+                items: [],
+                count: 0,
+                installerError: "find-datapacks: 401 Unauthorized — [ERR1201] Missing required product profiles: '1176292542' for workspace 'Stage'",
+            },
+        });
+
+        render(<DatapackCatalogView />);
+        await settle();
+
+        await waitFor(() => expect(screen.getByText(/product profile \(1176292542\)/)).toBeInTheDocument());
+        expect(screen.queryByText('Data Installer Access Required')).not.toBeInTheDocument();
     });
 
     it('still shows the Data Installer catalog when the library cannot be listed, and says why', async () => {

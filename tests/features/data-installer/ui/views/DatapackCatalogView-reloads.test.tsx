@@ -55,7 +55,7 @@ describe('refresh re-asks with the toggle as it stands now', () => {
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
-                payload: { includeCommunity: true, includeLibrary: true },
+                payload: { includeCommunity: true, includeLibrary: true, keepLibraryOnFailure: true },
             }),
         );
     });
