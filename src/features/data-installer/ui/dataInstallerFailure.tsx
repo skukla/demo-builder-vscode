@@ -35,6 +35,9 @@ export interface DataInstallerFailureOptions {
     extraDetail?: string;
 }
 
+/** The gateway's refusal when the account lacks a product profile: `[ERR1201] Missing required product profiles: '<id>'`. */
+const MISSING_PROFILE = /Missing required product profiles?: '([^']+)'/u;
+
 /**
  * Render a failure with the affordance that can actually fix it.
  *
@@ -61,6 +64,21 @@ export function renderDataInstallerFailure(
                 message="Sign in with Adobe to browse datapacks."
                 details={extra}
                 actions={[{ label: 'Sign In with Adobe', onPress: onRetry, variant: 'primary' }]}
+            />
+        );
+    }
+
+    // Signed in, and the gateway names a product profile the account is not in: nothing in this
+    // extension fixes that, so nothing here points at settings (owner, 2026-11-03).
+    const missingProfile = MISSING_PROFILE.exec(failure.message)?.[1];
+    if (failure.code === ErrorCode.AUTH_FORBIDDEN && missingProfile) {
+        return (
+            <StatusDisplay
+                variant="warning"
+                title="Data Installer Access Required"
+                message={`Your Adobe account isn't in the Data Installer's product profile (${missingProfile}). An administrator of your Adobe org can add you in the Admin Console.`}
+                details={extra}
+                actions={[{ label: 'Retry', onPress: onRetry, variant: 'primary' }]}
             />
         );
     }
