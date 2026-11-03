@@ -2,6 +2,9 @@
  * The ACO choice of `start-datapack-export` (`aco: true`, step 14 item 19): how the export is
  * called, which Commerce reads it is handed, and where its pack is written.
  *
+ * While ACO packs are held back (owner, 2026-11-03) `start-datapack-export` refuses `aco: true`,
+ * so these call `startAcoExport` itself, and the last test pins the refusal. The ACO line reverts this.
+ *
  * The export itself (`acoPackExport.ts`) has its own suite; here it is mocked and its ARGUMENTS
  * asserted, since what this layer owns is how it is called: the pack named, the store views,
  * the project's own Commerce client per store view, and a write into the LIBRARY, never `update`.
@@ -32,6 +35,8 @@ jest.mock('@/features/data-installer/services/datapackTransfer', () => ({
 
 // The shared wall first (it chooses the SERVICE engine), then the subject.
 import { importHandlers, makeImportHarness } from './importHandlers.testUtils';
+import { startAcoExport } from '@/features/data-installer/handlers/acoExportHandler';
+import { ACO_HELD_BACK } from '@/features/data-installer/handlers/exportHandlers';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import {
@@ -81,10 +86,9 @@ const OUTCOME: AcoExportOutcome = {
 };
 
 const send = (payload: Record<string, unknown>) =>
-    importHandlers['start-datapack-export'](makeImportHarness(PROJECT).context, {
+    startAcoExport(makeImportHarness(PROJECT).context, {
         datapackName: 'aco_acme',
         version: 'main',
-        aco: true,
         ...payload,
     });
 
@@ -245,5 +249,18 @@ describe('start-datapack-export with aco', () => {
             error: 'The ACO pack could not be made. Details are in Debug Logs.',
             code: ErrorCode.UNKNOWN,
         });
+    });
+});
+
+describe('while ACO packs are held back', () => {
+    it('start-datapack-export refuses aco:true, and makes nothing', async () => {
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(PROJECT).context, {
+            datapackName: 'aco_acme',
+            version: 'main',
+            aco: true,
+        });
+
+        expect(result).toEqual({ success: false, error: ACO_HELD_BACK, code: ErrorCode.INVALID_OPERATION });
+        expect(mockedExport).not.toHaveBeenCalled();
     });
 });

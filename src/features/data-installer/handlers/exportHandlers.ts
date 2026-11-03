@@ -42,13 +42,15 @@ import {
     type ExportRequest,
     type ExportOutcome,
 } from '../services/dataInstallerExportClient';
-import { startAcoExport } from './acoExportHandler';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { countPickableItems, listPickableItems, saveFromStore } from './storeChangesHandlers';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
+
+/** Why an ACO export is refused while ACO packs are held back (owner, 2026-11-03). */
+export const ACO_HELD_BACK = 'ACO datapacks arrive with ACO support, in a later release. Make a Commerce datapack instead.';
 
 export const exportHandlers = defineHandlers({
     /**
@@ -115,9 +117,9 @@ export const exportHandlers = defineHandlers({
         context: HandlerContext,
         payload?: ExportPayload,
     ): Promise<HandlerResponse> => {
-        // An ACO pack is Demo Builder's own (step 14 item 19): read here, saved into the
-        // library, with either engine.
-        if (payload?.aco === true) return startAcoExport(context, payload);
+        // ACO packs are held back until ACO support ships (owner, 2026-11-03): one saved now would
+        // sit in the library with nothing to install it. The ACO line reverts this.
+        if (payload?.aco === true) return { success: false, error: ACO_HELD_BACK, code: ErrorCode.INVALID_OPERATION };
         // The service's export has not saved what it reads since August, into a catalog other
         // teams share. With Demo Builder's engine the export is Demo Builder's own save (step 14).
         if (selectedDatapackEngine() !== 'service') return saveFromStore(context, payload);

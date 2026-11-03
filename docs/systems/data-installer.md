@@ -232,6 +232,11 @@ Adobe Commerce Optimizer pack from the project's own store (datapack-engine step
 PL-60): `aco_metadata`, `aco_categories`, `aco_products`, `aco_price_books` and `aco_prices`,
 for the store views the SC ticks (none named means every one). It is Demo Builder's port of the
 service's `process-aco-datapack` export (`services/acoExport/`), so it runs with either engine,
+**Held back in beta.153** (owner, 2026-11-03): Create Datapack opens straight on the Commerce
+pack, with no pack-type screen, and `start_datapack_export` refuses `aco: true`
+(`ACO_HELD_BACK`). An ACO pack saved now would sit in the library with nothing to install it. The
+code below ships unreached. The ACO line reverts the hold commit when ACO support is released.
+
 reads Commerce only, and saves into the SC's datapack **library**, never the shared catalog.
 Each kind is checked against the service's own schemas (`config/aco-schemas/`, copied
 verbatim). An existing name and version is refused, and so are `commerceInstance` and

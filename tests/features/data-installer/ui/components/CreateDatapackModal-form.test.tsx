@@ -7,13 +7,12 @@
  * from "any of the three".
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React from 'react';
 import { press, settle } from '../../../../helpers/reactSettle';
 import {
     button,
-    card,
     check,
     CreateDatapackModal,
     isOff,
@@ -220,8 +219,8 @@ describe('choosing types', () => {
         await press(button('Back'));
         expect(check('Categories')).toBeChecked();
 
-        await press(button('Back'));
         await press(button('Continue'));
+        await press(button('Back'));
 
         expect(check('Categories')).toBeChecked();
         expect(mockRequest.mock.calls.filter((c) => c[0] === 'list-datapack-data-types')).toHaveLength(1);
@@ -232,9 +231,6 @@ describe('before the list arrives, and when it cannot', () => {
     it('shows only the wait while it reads, with no words', async () => {
         mockRequest.mockImplementation(() => new Promise(() => undefined));
         render(<CreateDatapackModal engine="service" onClose={jest.fn()} onSaveFromStore={jest.fn()} />);
-        await settle();
-        fireEvent.click(card('Commerce Datapack'));
-        fireEvent.click(button('Continue'));
         await settle();
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();

@@ -217,8 +217,6 @@ describe('the two doors out of the catalog', () => {
         await press(screen.getByRole('button', { name: 'Create Datapack' }));
 
         expect(screen.getByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
-        await press(screen.getByRole('button', { name: /^Commerce Datapack/ }));
-        await press(screen.getByRole('button', { name: 'Continue' }));
 
         expect(screen.getByRole('button', { name: /^Products/ })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
@@ -236,8 +234,6 @@ describe('the two doors out of the catalog', () => {
 
         await press(screen.getByRole('button', { name: 'Create Datapack' }));
         // The export's screens are Create datapack's own window.
-        await press(screen.getByRole('button', { name: /^Commerce Datapack/ }));
-        await press(screen.getByRole('button', { name: 'Continue' }));
         expect(screen.getByText('Data Types')).toBeInTheDocument();
         expect(screen.getByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
 

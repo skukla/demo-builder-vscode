@@ -91,7 +91,9 @@ export function routeOf(packType: PackType, engine: DatapackEngine | undefined):
  */
 export function stageOrder(route: DatapackRoute | undefined, startsAtPicks: boolean): DatapackFlowStage[] {
     if (startsAtPicks) return ROUTE_STAGES.store;
-    return route ? ['pack-type', ...ROUTE_STAGES[route]] : ['pack-type'];
+    // No pack-type screen while ACO packs are held back (owner, 2026-11-03): Commerce is the one
+    // type. The ACO line reverts this, and the screen asks again.
+    return route ? ROUTE_STAGES[route] : ['pack-type'];
 }
 
 export function previousStage(stage: DatapackFlowStage, order: readonly DatapackFlowStage[]): DatapackFlowStage | null {

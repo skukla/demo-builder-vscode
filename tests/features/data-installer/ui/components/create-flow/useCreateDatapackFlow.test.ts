@@ -48,62 +48,33 @@ beforeEach(() => {
     });
 });
 
+// ACO packs are held back until ACO support ships (owner, 2026-11-03): the flow is a Commerce pack
+// from the start, with no pack-type screen. The ACO line reverts this, and its route's tests.
 describe('the first screen', () => {
-    it('starts there with Back and Continue off, reading nothing', async () => {
-        const { result } = await flowFor({ engine: 'demo-builder' });
-
-        expect(result.current.stage).toBe('pack-type');
-        expect(result.current.canGoBack).toBe(false);
-        expect(result.current.main).toMatchObject({ label: 'Continue', isDisabled: true });
-        expect(mockRequest).not.toHaveBeenCalled();
-    });
-
-    it('turns Continue on once a pack type is chosen, and still reads nothing', async () => {
-        const { result, step } = await flowFor();
-
-        await step(() => result.current.pickPackType('aco'));
-
-        expect(result.current.main.isDisabled).toBe(false);
-        expect(result.current.stage).toBe('pack-type');
-        expect(mockRequest).not.toHaveBeenCalled();
-    });
-});
-
-describe('which route each engine and pack type takes', () => {
     it.each([
-        ['commerce', 'demo-builder', 'store-picks'],
-        ['commerce', 'service', 'service-types'],
-        ['commerce', undefined, 'service-types'],
-        ['aco', 'demo-builder', 'aco-views'],
-        ['aco', 'service', 'aco-views'],
-    ] as const)('%s with the %s engine goes on to %s', async (packType, engine, stage) => {
-        const { result, step } = await flowFor({ engine });
+        ['demo-builder', 'store-picks'],
+        ['service', 'service-types'],
+        [undefined, 'service-types'],
+    ] as const)("with the %s engine, starts on the Commerce pack's %s with nothing behind it", async (engine, stage) => {
+        const { result } = await flowFor({ engine });
 
-        await step(() => result.current.pickPackType(packType));
-        await step(() => result.current.main.onPress());
-
+        expect(result.current.packType).toBe('commerce');
         expect(result.current.stage).toBe(stage);
+        expect(result.current.canGoBack).toBe(false);
     });
 });
 
 describe('the store route', () => {
     async function onThePicks(args: Partial<CreateDatapackFlowArgs> = {}) {
-        const flow = await flowFor({ engine: 'demo-builder', ...args });
-        await flow.step(() => flow.result.current.pickPackType('commerce'));
-        await flow.step(() => flow.result.current.main.onPress());
-        return flow;
+        return flowFor({ engine: 'demo-builder', ...args });
     }
 
-    it('opens a kind where it stands, and goes back to the first screen', async () => {
+    it('opens a kind where it stands', async () => {
         const { result, step } = await onThePicks();
 
         await step(() => result.current.store.open('cart_rules'));
         expect(result.current.stage).toBe('store-picks');
         expect(result.current.store.kind).toBe('cart_rules');
-
-        await step(() => result.current.back());
-        expect(result.current.stage).toBe('pack-type');
-        expect(result.current.packType).toBe('commerce');
     });
 
     it('waits for the first kind, and never again for another', async () => {
@@ -117,14 +88,12 @@ describe('the store route', () => {
         expect(result.current.waiting).toBe(false);
     });
 
-    it('keeps selections across kinds, through the first screen and back, and saves them all', async () => {
+    it('keeps selections across kinds, and saves them all', async () => {
         const { result, step, onSave } = await onThePicks();
         await step(() => result.current.store.open('products'));
         await step(() => result.current.store.setPicked(['VR-Rack', 'Tray']));
         await step(() => result.current.store.open('cart_rules'));
         await step(() => result.current.store.setPicked(['7']));
-        await step(() => result.current.back());
-        await step(() => result.current.main.onPress());
 
         expect(result.current.stage).toBe('store-picks');
         expect(result.current.main).toMatchObject({ label: 'Create', isDisabled: false });
@@ -194,83 +163,9 @@ describe('starting at the picks', () => {
     });
 });
 
-describe('the ACO route', () => {
-    async function onTheViews() {
-        const flow = await flowFor({ engine: 'service' });
-        await flow.step(() => flow.result.current.pickPackType('aco'));
-        await flow.step(() => flow.result.current.main.onPress());
-        return flow;
-    }
-
-    it('walks store views, kinds and name, ending in Export', async () => {
-        const { result, step } = await onTheViews();
-        expect(result.current.stage).toBe('aco-views');
-
-        await step(() => result.current.main.onPress());
-        expect(result.current.stage).toBe('aco-kinds');
-
-        await step(() => result.current.main.onPress());
-        expect(result.current.stage).toBe('pack-name');
-        expect(result.current.main).toMatchObject({ label: 'Export', isDisabled: true });
-    });
-
-    it('waits on the store views until they have answered, from the first frame', async () => {
-        mockRequest.mockImplementation(() => new Promise(() => undefined));
-        const { result, step } = await flowFor();
-        await step(() => result.current.pickPackType('aco'));
-        expect(result.current.waiting).toBe(false);
-
-        await step(() => result.current.main.onPress());
-
-        expect(result.current.stage).toBe('aco-views');
-        expect(result.current.waiting).toBe(true);
-    });
-
-    it('gates each screen on its own answer', async () => {
-        const { result, step } = await onTheViews();
-        await step(() => result.current.answers.aco.toggleView('default', false));
-        await step(() => result.current.answers.aco.toggleView('fr', false));
-        expect(result.current.main.isDisabled).toBe(true);
-
-        await step(() => result.current.answers.aco.toggleView('fr', true));
-        await step(() => result.current.main.onPress());
-        expect(result.current.main.isDisabled).toBe(false);
-    });
-
-    it('reads the store views once through Back and forward, keeping what was turned off', async () => {
-        const { result, step } = await onTheViews();
-        await step(() => result.current.answers.aco.toggleView('fr', false));
-        await step(() => result.current.back());
-        await step(() => result.current.main.onPress());
-
-        expect(callsOf('list-datapack-import-scopes')).toHaveLength(1);
-        expect(result.current.answers.aco.pickedViews).toEqual(['default']);
-    });
-
-    it('keeps Back off and the button pending while the export runs', async () => {
-        const { result, step } = await onTheViews();
-        await step(() => result.current.main.onPress());
-        await step(() => result.current.main.onPress());
-        await step(() => {
-            result.current.answers.setName('aco_acme');
-            result.current.answers.setVersion('main');
-        });
-        expect(result.current.canGoBack).toBe(true);
-
-        await step(() => result.current.main.onPress());
-
-        expect(callsOf('start-datapack-export')[0][1]).toEqual({ datapackName: 'aco_acme', version: 'main', aco: true });
-        expect(result.current.main.isPending).toBe(true);
-        expect(result.current.canGoBack).toBe(false);
-    });
-});
-
 describe("the service's route", () => {
     async function onTheTypes() {
-        const flow = await flowFor({ engine: 'service' });
-        await flow.step(() => flow.result.current.pickPackType('commerce'));
-        await flow.step(() => flow.result.current.main.onPress());
-        return flow;
+        return flowFor({ engine: 'service' });
     }
 
     it('gates the types on one chosen, then the name on both fields', async () => {
@@ -293,8 +188,9 @@ describe("the service's route", () => {
 
     it('reads the types and the target once, whichever way the SC walks', async () => {
         const { result, step } = await onTheTypes();
-        await step(() => result.current.back());
+        await step(() => result.current.answers.types.onToggle('products', true));
         await step(() => result.current.main.onPress());
+        await step(() => result.current.back());
 
         expect(callsOf('list-datapack-data-types')).toHaveLength(1);
         expect(callsOf('get-datapack-import-target')).toHaveLength(1);

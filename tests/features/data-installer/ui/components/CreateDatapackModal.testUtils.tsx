@@ -76,12 +76,12 @@ export async function renderCreate(engine?: 'service' | 'demo-builder') {
     return { ...props, ...result };
 }
 
-/** The screen after the pack type: the data types, or an ACO pack's store views. */
-export async function renderExport(packType: 'commerce' | 'aco' = 'commerce') {
-    const rendered = await renderCreate('service');
-    await press(card(packType === 'aco' ? 'ACO Datapack' : 'Commerce Datapack'));
-    await press(button('Continue'));
-    return rendered;
+/**
+ * The Commerce pack's first screen, the data types. There is no pack-type screen while ACO packs
+ * are held back (owner, 2026-11-03); the ACO line reverts this.
+ */
+export async function renderExport() {
+    return renderCreate('service');
 }
 
 /**

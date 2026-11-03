@@ -434,12 +434,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "demo's own library pack, with the project's own pack when Demo Builder installed it; the same save " +
             'as save_store_changes_to_pack, answering the same way. Send only selections and confirm. With the ' +
             'service engine: **writes into the SHARED catalog other teams depend on** — requires confirm:true ' +
-            'and confirmName equal to the datapack name. List what it would contain first. With aco:true, with ' +
-            "either engine, it instead makes an Adobe Commerce Optimizer (ACO) pack from the project's store " +
-            '(aco_metadata, aco_categories, aco_products, aco_price_books, aco_prices) for the storeViews named ' +
-            '(omit for every one), saved into YOUR datapack library as datapackName and version (confirmName ' +
-            'equal to it); dataTypes then names ACO kinds (omit for all five), and commerceInstance and ' +
-            'selections are refused.',
+            'and confirmName equal to the datapack name. List what it would contain first. aco:true (an Adobe ' +
+            'Commerce Optimizer pack) is refused in this release: ACO datapacks arrive with ACO support.',
         map: importHandlers,
         type: 'start-datapack-export',
         confirm: true,
@@ -456,7 +452,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 .optional()
                 .describe(`Data types to capture; at least one${SERVICE_OR_ACO}. With aco, ACO kinds (omit for all five)`),
             selections: SELECTIONS,
-            aco: z.boolean().optional().describe("Make an ACO pack from the project's store, into your datapack library"),
+            aco: z.boolean().optional().describe('Refused in this release: ACO datapacks arrive with ACO support'),
             storeViews: z
                 .array(z.string())
                 .optional()

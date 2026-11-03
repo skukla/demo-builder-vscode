@@ -12,7 +12,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import type { DataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
@@ -33,8 +33,6 @@ function idle<T>(over: Partial<DataInstallerRequest<T>> = {}): DataInstallerRequ
 function renderToTheTypes(types: Partial<DataInstallerRequest<unknown>>) {
     mockRequestState.mockImplementation((type: string) => (type === 'list-datapack-data-types' ? idle(types) : idle()));
     render(<CreateDatapackModal engine="service" onClose={jest.fn()} onSaveFromStore={jest.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: /^Commerce Datapack/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 }
 
 beforeEach(() => {

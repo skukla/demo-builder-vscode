@@ -69,8 +69,12 @@ function isWaiting(stage: DatapackFlowStage, answers: ExportAnswers, store: Stor
 }
 
 export function useCreateDatapackFlow({ engine, startsAtPicks = false, pack, onSave }: CreateDatapackFlowArgs): CreateDatapackFlow {
-    const [packType, setPackType] = useState<PackType | undefined>(startsAtPicks ? 'commerce' : undefined);
-    const [stage, setStage] = useState<DatapackFlowStage>(startsAtPicks ? 'store-picks' : 'pack-type');
+    // A Commerce pack, chosen for the SC: ACO packs are held back until ACO support ships (owner,
+    // 2026-11-03), so there is no second type to ask about. The ACO line reverts this.
+    const [packType, setPackType] = useState<PackType | undefined>('commerce');
+    const [stage, setStage] = useState<DatapackFlowStage>(
+        () => stageOrder(routeOf('commerce', engine), startsAtPicks)[0] ?? 'pack-type',
+    );
 
     const route = packType && routeOf(packType, engine);
     const order = stageOrder(route, startsAtPicks);

@@ -33,11 +33,13 @@ describe('stageOrder', () => {
         expect(stageOrder(undefined, false)).toEqual(['pack-type']);
     });
 
+    // No pack-type screen in front while ACO packs are held back (owner, 2026-11-03); the ACO line
+    // reverts this.
     it.each([
-        ['store', ['pack-type', 'store-picks']],
-        ['aco', ['pack-type', 'aco-views', 'aco-kinds', 'pack-name']],
-        ['service', ['pack-type', 'service-types', 'pack-name']],
-    ] as const)('walks the %s route', (route, order) => {
+        ['store', ['store-picks']],
+        ['aco', ['aco-views', 'aco-kinds', 'pack-name']],
+        ['service', ['service-types', 'pack-name']],
+    ] as const)('walks the %s route with no pack-type screen in front', (route, order) => {
         expect(stageOrder(route, false)).toEqual(order);
     });
 
@@ -51,11 +53,11 @@ describe('previousStage and nextStage', () => {
 
     it('walks back to the start and no further', () => {
         expect(previousStage('pack-name', order)).toBe('aco-kinds');
-        expect(previousStage('pack-type', order)).toBeNull();
+        expect(previousStage('aco-views', order)).toBeNull();
     });
 
     it('walks on to the end and no further', () => {
-        expect(nextStage('pack-type', order)).toBe('aco-views');
+        expect(nextStage('aco-views', order)).toBe('aco-kinds');
         expect(nextStage('pack-name', order)).toBeNull();
     });
 
