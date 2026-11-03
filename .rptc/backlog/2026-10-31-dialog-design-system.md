@@ -72,3 +72,5 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  fix(data-installer): the two-column pane keeps one layout on every kind (`171f0c2af`)
 - 2026-11-02  feat(ui): Title Case for what names a thing, enforced (`bbf147b7c`)
 - 2026-11-02  fix(data-installer): Clear demo data never rewrites a list setting (`ce4dd0e3f`)
+- 2026-11-02  fix(ui): the API and catalog pickers always show their filter (`e8ccfad04`)
+- 2026-11-02  fix(data-installer): Select All sits close to the count above it (`7f34ca2d8`)
