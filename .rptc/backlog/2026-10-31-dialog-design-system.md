@@ -69,3 +69,5 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  feat(data-installer): select a pack's data in one two-pane screen (`278aef169`)
 - 2026-11-02  fix(data-installer): an export's several choices are checkboxes, not cards (`b8a3d6e8d`)
 - 2026-11-02  fix(data-installer): one wait until both columns are ready, and a Select all checkbox (`ff65bd915`)
+- 2026-11-02  fix(data-installer): the two-column pane keeps one layout on every kind (`171f0c2af`)
+- 2026-11-02  feat(ui): Title Case for what names a thing, enforced (`bbf147b7c`)
