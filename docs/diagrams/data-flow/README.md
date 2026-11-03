@@ -24,6 +24,10 @@ Not built yet. These diagrams wait for the tech-case-engine's Lucid builder (its
 builder handoff document, docs/diagrams/builder-handoff.md in that repository), so
 they are drawn by the shared tool rather than a one-off script here.
 
+One stop-gap until then: `lucid/generate_d1.py` writes Lucid Standard Import specs for d1
+in two layouts (`python3 lucid/generate_d1.py <out_dir>`). Delete it once the shared
+builder draws d1.
+
 | # | Lucid URL | Built from commit |
 |---|---|---|
 | d1 | — | — |
