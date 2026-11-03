@@ -650,7 +650,9 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             "The datapacks this SC can install: Demo Builder's datapack store (team packs and your own, " +
             "store:\"library\"), then whatever the Data Installer adds if it answers (store:\"installer\"). A pack in both " +
             'shows once, as the store\'s. One row per (name, version). installerMissing says the Data Installer\'s packs ' +
-            'are absent: no-address (none set) or no-answer (refused or down); install them from DSC if you have access. ' +
+            'are absent: no-address (none set), no-access (it turned this Adobe account away; an admin of the org can ' +
+            'add it to the Data Installer\'s product profile) or no-answer (down). includeInstaller:false leaves the ' +
+            'Data Installer out (installerOff says so). ' +
             'includeCommunity adds colleagues\' shared packs and non-curated Data Installer packs. store lists one alone. ' +
             'A pack named <pack>-settings holding only store_config is that pack\'s settings layer, not a demo. This ' +
             'endpoint reports no total, so count === limit means there may be more; page with skip.',
@@ -662,6 +664,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
                 .boolean()
                 .optional()
                 .describe("Include colleagues' shared packs and non-curated Data Installer packs"),
+            includeInstaller: z
+                .boolean()
+                .optional()
+                .describe("false leaves the Data Installer's packs out of the one list (default: ask it)"),
             store: z
                 .enum(['installer', 'library'])
                 .optional()

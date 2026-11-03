@@ -14,6 +14,7 @@
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import { resolveDataInstallerBaseUrl, selectedDatapackEngine } from '../services/dataInstallerConfig';
 import type { CatalogPage, DatapackSummary, Page } from '../types';
+import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse } from '@/types/handlers';
 
 export const LIBRARY_LIST_FAILED = 'Could not list the datapack store.';
@@ -32,25 +33,31 @@ function inDefaultList(item: DatapackSummary): boolean {
     return item.team === true || item.mine === true;
 }
 
-/** Why the Data Installer's rows are absent: never asked, or asked and not answered. */
-function whyMissing(): NonNullable<CatalogPage['installerMissing']> {
+/** Why the Data Installer's rows are absent: never asked, the SC's sign-in turned away, or no answer. */
+function whyMissing(installer: HandlerResponse): NonNullable<CatalogPage['installerMissing']> {
     const address = resolveDataInstallerBaseUrl();
-    return !address.ok && address.reason === 'not-configured' ? 'no-address' : 'no-answer';
+    if (!address.ok && address.reason === 'not-configured') return 'no-address';
+    return installer.code === ErrorCode.AUTH_FORBIDDEN ? 'no-access' : 'no-answer';
 }
+
+/** The Data Installer's part when the SC switched it off: not asked, so nothing to report. */
+export const INSTALLER_OFF = 'off';
 
 /**
  * The two answers as one list. Fails only when neither store answered, with the store's reason,
  * so a sign-in problem still reads as one.
  *
  * @param library - the store's answer
- * @param installer - the Data Installer's answer
+ * @param installer - the Data Installer's answer, or `INSTALLER_OFF` when the SC switched it off
  * @param includeCommunity - whether a colleague's shared pack is listed
  */
 export function mergedCatalog(
     library: HandlerResponse,
-    installer: HandlerResponse,
+    asked: HandlerResponse | typeof INSTALLER_OFF,
     includeCommunity: boolean,
 ): HandlerResponse {
+    const off = asked === INSTALLER_OFF;
+    const installer: HandlerResponse = off ? { success: true, data: { items: [] } } : asked;
     if (!library.success && !installer.success) return library;
     const own = library.success ? (library.data as Page<DatapackSummary>).items : [];
     const names = new Set(own.map((item) => item.id.name));
@@ -65,7 +72,8 @@ export function mergedCatalog(
         count: items.length,
         engine: selectedDatapackEngine(),
         ...(library.success ? {} : { storeMissing: true }),
-        ...(installer.success ? {} : { installerMissing: whyMissing() }),
+        ...(installer.success ? {} : { installerMissing: whyMissing(installer) }),
+        ...(off ? { installerOff: true } : {}),
     };
     return { success: true, data: page };
 }

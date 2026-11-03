@@ -21,9 +21,14 @@ Every surface lists the store first and adds the Data Installer's packs when it
 answers, asked at each load (`handlers/catalogLibraryRows.ts`). A pack in both shows
 once, as the store's. Nothing gates on the Data Installer any more: the wizard's
 Datapacks step and the dashboard tile always show, and the panel is titled
-**Datapacks**. When the Data Installer is unset or does not answer, the list says so
-in one line under the cards (`installerMissing: 'no-address' | 'no-answer'`); when
-the store does not answer, one line above them (`storeMissing`). Only when neither
+**Datapacks**. An **Include Data Installer Datapacks** switch sits beside Include
+Community, shown only once the Data Installer has answered this SC (an address is set
+and it accepts their sign-in). It starts on; off leaves it unasked (`includeInstaller:
+false`, answered with `installerOff`). When it is asked and missing, a blue house banner
+above the cards says only Demo Builder's datapacks are shown, and why (`installerMissing`:
+`no-access` when it turned the SC's sign-in away, `no-answer` when it is down). No address
+(`no-address`) shows nothing: that is most SCs (owner, 2026-11-03). When the store does not
+answer, an amber banner says so (`storeMissing`). Only when neither
 answers does the list fail, with the store's reason, and its title is "Datapacks
 Aren't Available".
 
@@ -226,6 +231,11 @@ July and September 2026), so "blocked indefinitely" in older notes is out of dat
 A dated finding about a service we do not own — re-verify before relying on it.
 
 ### An ACO pack from a Commerce store
+
+**Held back in beta.153** (owner, 2026-11-03): Create Datapack opens straight on the Commerce
+pack, with no pack-type screen, and `start_datapack_export` refuses `aco: true`
+(`ACO_HELD_BACK`). An ACO pack saved now would sit in the library with nothing to install it. The
+code below ships unreached. The ACO line reverts the hold commit when ACO support is released.
 
 The export screen's "Pack type" choice, and `start_datapack_export` with `aco: true`, make an
 Adobe Commerce Optimizer pack from the project's own store (datapack-engine step 14 item 19,

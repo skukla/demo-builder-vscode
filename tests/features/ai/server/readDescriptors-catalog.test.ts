@@ -172,7 +172,7 @@ const CATALOG: Row[] = [
         map: dataInstallerHandlers,
         type: 'find-datapacks',
         needsAuth: ['adobe'],
-        args: ['includeCommunity', 'store', 'limit', 'skip'],
+        args: ['includeCommunity', 'includeInstaller', 'store', 'limit', 'skip'],
     },
     {
         tool: 'get_datapack',

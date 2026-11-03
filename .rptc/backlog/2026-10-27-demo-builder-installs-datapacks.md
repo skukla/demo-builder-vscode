@@ -117,3 +117,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-11-02  fix(ai): a question to the agent is not a failure on the SC's screen (`554134a2f`)
 - 2026-11-02  fix(commerce): a write that hit a database deadlock is sent again (`b86d11130`)
 - 2026-11-03  fix(data-installer): products keep installing when a pack's root is not made (`01e13e311`)
+- 2026-11-03  feat(data-installer): datapacks work with or without the Data Installer (`88475c876`)

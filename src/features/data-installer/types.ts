@@ -153,10 +153,14 @@ export type CatalogPage = Page<DatapackSummary> & {
     /** Demo Builder's datapack store did not answer, so only the Data Installer's rows are here. */
     storeMissing?: boolean;
     /**
-     * The Data Installer's rows are not here. `no-address`: none is set, so it was not asked.
-     * `no-answer`: it was asked and refused or did not reply; which of those is not the SC's concern.
+     * The Data Installer's rows are not here, though they were asked for. `no-address`: none is
+     * set, so it was not asked. `no-access`: it turned the SC's Adobe sign-in away (not in its
+     * product profile). `no-answer`: it failed or did not reply. Told apart since 2026-11-03,
+     * so the screen can say which; one "no answer" left a refused SC reading "try again".
      */
-    installerMissing?: 'no-address' | 'no-answer';
+    installerMissing?: 'no-address' | 'no-access' | 'no-answer';
+    /** The SC switched the Data Installer's datapacks off, so it was not asked. */
+    installerOff?: boolean;
     engine?: DatapackEngineId;
 };
 

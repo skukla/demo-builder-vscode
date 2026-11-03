@@ -30,6 +30,7 @@ import {
     CATALOG,
     INVENTORY_COMPLETE,
     INVENTORY_WITH_GAP,
+    SOURCE_NOTICE_COPY,
 } from './DatapackCatalogView.testUtils';
 
 describe('DatapackCatalogView', () => {
@@ -438,13 +439,17 @@ describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Inst
         expect(screen.getByText('Yours')).toBeInTheDocument();
     });
 
-    it('still shows Demo Builder\'s datapacks when the Data Installer did not answer, and says where the rest are', async () => {
+    // The banner says what IS on screen, then why the rest is not (owner, 2026-11-03).
+    it.each([
+        ['did not answer', 'no-answer', SOURCE_NOTICE_COPY.noAnswer],
+        ['turned the Adobe account away', 'no-access', SOURCE_NOTICE_COPY.noAccess],
+    ] as const)('still shows Demo Builder\'s datapacks when the Data Installer %s, and says which', async (_how, missing, line) => {
         mockRequest.mockResolvedValue({
             success: true,
             data: {
                 items: [makeSummary('bodea', 'v1', { store: 'library', shared: true })],
                 count: 1,
-                installerMissing: 'no-answer',
+                installerMissing: missing,
             },
         });
 
@@ -452,9 +457,10 @@ describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Inst
         await settle();
 
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
-        expect(screen.getByText(/Datapacks in the Data Installer aren't listed here/)).toBeInTheDocument();
-        // No address is missing, so there is no setting to open.
-        expect(screen.queryByText('Open Settings')).not.toBeInTheDocument();
+        const notice = screen.getByTestId('datapack-source-notice');
+        expect(notice).toHaveTextContent(SOURCE_NOTICE_COPY.ownOnly);
+        expect(notice).toHaveTextContent(line);
+        expect(notice).toHaveClass('inline-notice--info');
     });
 
     it('still shows the Data Installer\'s datapacks when Demo Builder\'s cannot be listed, and says so', async () => {
@@ -467,7 +473,9 @@ describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Inst
         await settle();
 
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
-        expect(screen.getByText("Demo Builder's datapacks aren't available right now.")).toBeInTheDocument();
+        const notice = screen.getByTestId('datapack-source-notice');
+        expect(notice).toHaveTextContent(SOURCE_NOTICE_COPY.storeMissing);
+        expect(notice).not.toHaveClass('inline-notice--info');
     });
 });
 

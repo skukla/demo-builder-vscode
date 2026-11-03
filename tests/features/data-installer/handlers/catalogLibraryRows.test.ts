@@ -7,7 +7,7 @@
  */
 
 import * as vscode from 'vscode';
-import { mergedCatalog } from '@/features/data-installer/handlers/catalogLibraryRows';
+import { INSTALLER_OFF, mergedCatalog } from '@/features/data-installer/handlers/catalogLibraryRows';
 import type { CatalogPage, DatapackSummary } from '@/features/data-installer/types';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse } from '@/types/handlers';
@@ -108,6 +108,16 @@ describe('when one does not answer', () => {
         expect(page(mergedCatalog(answered(row('ours', { team: true })), refused('down'), false)).installerMissing).toBe('no-answer');
     });
 
+    // Told apart from no-answer (2026-11-03): "Refresh to try again" is wrong for an SC the
+    // Data Installer turned away, and the screen says who can fix it instead.
+    it('says no-access when it has an address and turned the Adobe account away', () => {
+        address(ADDRESS);
+
+        const merged = mergedCatalog(answered(row('ours', { team: true })), refused('Not in the profile.', ErrorCode.AUTH_FORBIDDEN), false);
+
+        expect(page(merged).installerMissing).toBe('no-access');
+    });
+
     it('says no-answer for an address that is set but not usable: someone did set it up', () => {
         address('http://not-https.example.test');
 
@@ -119,6 +129,16 @@ describe('when one does not answer', () => {
 
         expect(names(merged)).toEqual(['theirs']);
         expect(page(merged).storeMissing).toBe(true);
+    });
+
+    it('says installerOff, and lists only the store, when the SC switched the Data Installer off', () => {
+        address(ADDRESS);
+
+        const merged = mergedCatalog(answered(row('ours', { team: true })), INSTALLER_OFF, false);
+
+        expect(names(merged)).toEqual(['ours']);
+        expect(page(merged).installerOff).toBe(true);
+        expect(page(merged)).not.toHaveProperty('installerMissing');
     });
 
     it('CONTROL: says neither when both answer', () => {

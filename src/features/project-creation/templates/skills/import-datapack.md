@@ -209,6 +209,8 @@ rebuilds the catalog menu once the categories show.
 
 Datapacks come from Demo Builder's datapack store first, and that needs no setup. The Data Installer
 is an extra: `find_datapacks` adds its packs only when `demoBuilder.dataInstaller.apiBaseUrl` is set
-and it answers this person's Adobe sign-in, and says why not in `installerMissing`. Nothing in Demo
-Builder can grant that access. Someone who has it can install those packs from DSC directly. The URL
+and it answers this person's Adobe sign-in, and says why not in `installerMissing`: `no-address` (not
+set up), `no-access` (it turned this Adobe account away; an admin of the Adobe org can add them to the
+Data Installer's product profile, which nothing in Demo Builder can do) or `no-answer` (down; try again
+later). `includeInstaller: false` leaves it out on purpose, and the answer says `installerOff`. The URL
 reports as `{configured: true|false}` rather than its value.

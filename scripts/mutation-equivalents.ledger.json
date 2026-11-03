@@ -10813,15 +10813,14 @@
             "module": "src/features/data-installer/ui/views/DatapackCatalogView.tsx",
             "anchors": [
                 "}, [loadProjectContext]);",
-                "}, []);",
                 "[],",
                 "[loadDetail],",
                 "const closeDetail = useCallback((): void => setSelected(undefined), []);",
                 "const openImport = useCallback((id: DatapackId): void => setImporting(id), []);"
             ],
-            "mutants": 6,
+            "mutants": 5,
             "category": "other",
-            "reason": "Six dependency lists whose entries never change between renders. Two of them name a hook's `load`, which is a useCallback over `execute` from useVSCodeRequest and is stable for the component's lifetime \u2014 dropping it leaves the effect and the callback firing exactly as before (and if it were NOT stable the effect at line 104 would re-fire on every render, which it does not). The other four are empty and constant, and Stryker replaces them with a different constant array: React compares dependency lists element by element between renders, and two renders both produce the same one, so the memoisation is identical. Each planted individually: all 38 tests pass. The three dependency lists in this file that DO carry a changing value \u2014 refresh's includeCommunity, closeImport's commerceInstance, retryDetail's selected \u2014 are each killed by a test.",
+            "reason": "Five dependency lists whose entries never change between renders. Two of them name a hook's `load`, which is a useCallback over `execute` from useVSCodeRequest and is stable for the component's lifetime \u2014 dropping it leaves the effect and the callback firing exactly as before (and if it were NOT stable the effect at line 104 would re-fire on every render, which it does not). The other three are empty and constant, and Stryker replaces them with a different constant array: React compares dependency lists element by element between renders, and two renders both produce the same one, so the memoisation is identical. Each planted individually: all 38 tests pass. The three dependency lists in this file that DO carry a changing value \u2014 refresh's includeCommunity, closeImport's commerceInstance, retryDetail's selected \u2014 are each killed by a test.",
             "decision": "none \u2014 every one of these lists is required and correct as written",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"

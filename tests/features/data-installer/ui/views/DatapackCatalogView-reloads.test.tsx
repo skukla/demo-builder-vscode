@@ -166,19 +166,54 @@ describe('the flyout’s Retry', () => {
 });
 
 describe('the two doors out of the catalog', () => {
-    it('offers Open Settings when the Data Installer has no address, and opens them', async () => {
-        // The line says the Data Installer's datapacks are not listed. Without the action
-        // the user is left to find the setting that would list them.
+    // The switch is for an SC the Data Installer answers: one with no address, or one it turns
+    // away, has nothing to switch (owner, 2026-11-03). No address shows no banner either.
+    it.each([
+        ['has no address', 'no-address', false],
+        ['turns the Adobe account away', 'no-access', true],
+    ] as const)('shows no switch while the Data Installer %s', async (_how, missing, banner) => {
         mockRequest.mockResolvedValue({
             success: true,
-            data: { items: CATALOG, count: CATALOG.length, installerMissing: 'no-address' },
+            data: { items: CATALOG, count: CATALOG.length, installerMissing: missing },
         });
         render(<DatapackCatalogView />);
         await settle();
+        await screen.findAllByTestId('datapack-card');
 
-        await press(await screen.findByText('Open Settings'));
+        expect(screen.queryByRole('checkbox', { name: /data installer/i })).not.toBeInTheDocument();
+        // CONTROL: the switch beside it is there.
+        expect(screen.getByRole('checkbox', { name: /community/i })).toBeInTheDocument();
+        expect(Boolean(screen.queryByTestId('datapack-source-notice'))).toBe(banner);
+    });
 
-        expect(mockPostMessage).toHaveBeenCalledWith('open-data-installer-settings');
+    it('keeps the switch, reading off, once the SC switched an answering Data Installer off', async () => {
+        resolveWith(CATALOG);
+        render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+        mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, installerOff: true } });
+
+        await press(screen.getByRole('checkbox', { name: /data installer/i }));
+
+        await waitFor(() => expect(screen.getByRole('checkbox', { name: /data installer/i })).not.toBeChecked());
+    });
+
+    it('reads on while the Data Installer answers, and switching it off leaves it out', async () => {
+        resolveWith(CATALOG);
+        render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+        const toggle = screen.getByRole('checkbox', { name: /data installer/i });
+        expect(toggle).toBeChecked();
+
+        await press(toggle);
+
+        await waitFor(() =>
+            expect(requestOfType('find-datapacks')).toEqual({
+                type: 'find-datapacks',
+                payload: { includeCommunity: false, includeInstaller: false },
+            }),
+        );
     });
 
     // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save

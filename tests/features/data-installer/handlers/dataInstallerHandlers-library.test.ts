@@ -325,6 +325,20 @@ describe('the library store', () => {
             });
         });
 
+        // The SC's switch beside Community (2026-11-03): off means the Data Installer is not asked.
+        it('never asks the Data Installer when the SC switched it off, and says so', async () => {
+            setupLibrary(LIBRARY);
+            const seen = storesAnswer(async () => ({ items: [LIBRARY_ROW], count: 1 }), async () => ({ items: [INSTALLER_ROW], count: 1 }));
+
+            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), { includeInstaller: false });
+
+            expect(seen.asked).toEqual(['library']);
+            expect(res).toMatchObject({
+                success: true,
+                data: { items: [{ ...LIBRARY_ROW, store: 'library' }], installerOff: true },
+            });
+        });
+
         it("fails only when neither answers, with the store's response", async () => {
             setupLibrary(LIBRARY);
             storesAnswer(down, async () => {

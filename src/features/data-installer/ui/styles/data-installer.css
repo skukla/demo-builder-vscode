@@ -461,10 +461,6 @@
     font-size: 12px;
     color: var(--vscode-descriptionForeground);
 }
-
-.datapack-catalog-note {
-    margin-top: 16px;
-}
 }
 
 /* Create a datapack's card screens (create-flow): two across, as Add Integration's kind screen has

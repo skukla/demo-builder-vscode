@@ -38,13 +38,13 @@
  * @module features/data-installer/ui/views/DatapackCatalogView
  */
 
-import { Flex, Link, Switch } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { groupDatapacks, withoutLayerCards, type DatapackGroup } from '../../services/datapackCatalog';
 import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack, PackDetailLayer, Page } from '../../types';
-import { CatalogHeaderActions } from '../components/CatalogHeaderActions';
+import { CatalogCountRow } from '../components/CatalogCountRow';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
+import { DatapackSourceNotice } from '../components/DatapackSourceNotice';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -69,10 +69,6 @@ interface DatapackDetailResponse {
     settingsLayer?: PackDetailLayer;
 }
 
-/** The Data Installer is an extra: true whether nobody set it up, or it refused, or it is down. */
-const INSTALLER_MISSING_LINE =
-    "Datapacks in the Data Installer aren't listed here. If you have access to DSC, you can install them from there.";
-const STORE_MISSING_LINE = "Demo Builder's datapacks aren't available right now.";
 const DATAPACKS_UNAVAILABLE = "Datapacks Aren't Available";
 
 /**
@@ -94,6 +90,11 @@ async function requestDatapackRename(id: DatapackId, displayName: string): Promi
 
 export function DatapackCatalogView(): React.JSX.Element {
     const [includeCommunity, setIncludeCommunity] = useState(false);
+    // The Data Installer switch, beside Community (owner, 2026-11-03: not buried in a setting).
+    // Unset, the handler asks it when it is set up. Shown only once it has answered this SC:
+    // an SC with no address, or one it turns away, has nothing to switch (owner, same day).
+    const [includeInstaller, setIncludeInstaller] = useState<boolean | undefined>(undefined);
+    const [installerAnswered, setInstallerAnswered] = useState(false);
     const [query, setQuery] = useState('');
     const [versions, setVersions] = useState<Record<string, string>>({});
     const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
@@ -111,8 +112,8 @@ export function DatapackCatalogView(): React.JSX.Element {
     const projectContext = useDataInstallerRequest<ProjectSampleData>('get-datapack-import-target');
 
     useEffect(() => {
-        load({ includeCommunity });
-    }, [load, includeCommunity]);
+        load({ includeCommunity, includeInstaller });
+    }, [load, includeCommunity, includeInstaller]);
 
     const loadProjectContext = projectContext.load;
     useEffect(() => {
@@ -175,14 +176,13 @@ export function DatapackCatalogView(): React.JSX.Element {
     );
 
     const refresh = useCallback(
-        (): void => load({ includeCommunity }),
-        [load, includeCommunity],
+        (): void => load({ includeCommunity, includeInstaller }),
+        [load, includeCommunity, includeInstaller],
     );
-
-    /** Opens VS Code settings at the section a configuration refusal names. */
-    const openDataInstallerSettings = useCallback((): void => {
-        webviewClient.postMessage('open-data-installer-settings');
-    }, []);
+    // Whether it answered, from each list that asked it; a list with it switched off says nothing.
+    useEffect(() => {
+        if (value && value.installerOff !== true) setInstallerAnswered(value.installerMissing === undefined);
+    }, [value]);
     const pickVersion = useCallback(
         (name: string, version: string): void =>
             setVersions((current) => ({ ...current, [name]: version })),
@@ -322,25 +322,21 @@ export function DatapackCatalogView(): React.JSX.Element {
                         // curated catalog is exactly when it must be reachable.
                         alwaysShowCount
                         countTrailing={
-                            <Flex gap="size-200" alignItems="center">
-                                <Switch
-                                    isSelected={includeCommunity}
-                                    onChange={setIncludeCommunity}
-                                >
-                                    Include Community Datapacks
-                                </Switch>
-                                {/* Create datapack, Load from file, then Clear demo data set apart. */}
-                                <CatalogHeaderActions
-                                    onCatalogChanged={refresh}
-                                    engine={value?.engine}
-                                    onSaveFromStore={heldPack.saveFromStore}
-                                />
-                            </Flex>
+                            <CatalogCountRow
+                                includeCommunity={includeCommunity}
+                                onIncludeCommunity={setIncludeCommunity}
+                                {...(installerAnswered
+                                    ? { installer: { on: includeInstaller !== false, onChange: setIncludeInstaller } }
+                                    : {})}
+                                onCatalogChanged={refresh}
+                                engine={value?.engine}
+                                onSaveFromStore={heldPack.saveFromStore}
+                            />
                         }
                     />
                 }
             >
-                {value?.storeMissing ? <p className="datapack-export-note">{STORE_MISSING_LINE}</p> : null}
+                <DatapackSourceNotice page={value} />
                 <DatapackCatalogGrid
                     groups={groups}
                     filtered={filtered}
@@ -350,14 +346,6 @@ export function DatapackCatalogView(): React.JSX.Element {
                     openDetail={openDetail}
                     installedPacks={installedPacks}
                 />
-                {value?.installerMissing ? (
-                    <p className="datapack-export-note datapack-catalog-note">
-                        {INSTALLER_MISSING_LINE}{' '}
-                        {value.installerMissing === 'no-address' ? (
-                            <Link onPress={openDataInstallerSettings}>Open Settings</Link>
-                        ) : null}
-                    </p>
-                ) : null}
             </FullScreenSurface>
 
             <DatapackDetailPanel

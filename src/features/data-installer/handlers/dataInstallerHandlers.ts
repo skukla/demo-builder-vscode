@@ -28,7 +28,7 @@ import { packReadsVia } from '../services/recordedPack';
 import { layerForDetail } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import type { OperationMode } from '../types';
-import { LIBRARY_LIST_FAILED, listLibrary, mergedCatalog } from './catalogLibraryRows';
+import { INSTALLER_OFF, LIBRARY_LIST_FAILED, listLibrary, mergedCatalog } from './catalogLibraryRows';
 import { activityFromBoth, installedFromBoth } from './engineHistoryReads';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -301,6 +301,8 @@ export interface FindDatapacksPayload {
     /** List only this store. Without it: the one list, the datapack store's then the Data Installer's. */
     store?: DatapackStoreName;
     includeCommunity?: boolean;
+    /** Ask the Data Installer too (the one list only). Off is the SC's switch; absent asks it. */
+    includeInstaller?: boolean;
     limit?: number;
     skip?: number;
 }
@@ -342,7 +344,8 @@ export const dataInstallerHandlers = defineHandlers({
         if (payload?.store === 'installer') return askInstaller();
         // One after the other: either may prompt for the one Adobe sign-in they share.
         const library = await askLibrary();
-        return mergedCatalog(library, await askInstaller(), payload?.includeCommunity === true);
+        const installer = payload?.includeInstaller === false ? INSTALLER_OFF : await askInstaller();
+        return mergedCatalog(library, installer, payload?.includeCommunity === true);
     },
 
     'get-datapack-detail': async (

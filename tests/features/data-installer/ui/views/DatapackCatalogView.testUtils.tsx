@@ -157,6 +157,7 @@ const INVENTORY_WITH_GAP = {
 
 // Shared with the split suites.
 export { DatapackCatalogView } from '@/features/data-installer/ui/views/DatapackCatalogView';
+export { SOURCE_NOTICE_COPY } from '@/features/data-installer/ui/components/DatapackSourceNotice';
 export {
     mockRequest,
     mockPost,
