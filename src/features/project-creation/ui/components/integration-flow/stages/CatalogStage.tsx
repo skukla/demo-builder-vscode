@@ -45,8 +45,8 @@ function nameField(entry: AppBuilderComponentCatalogEntry | undefined): { fieldL
 /** Stable empty id list (avoids a new array each render). */
 const NO_IDS: readonly string[] = [];
 
-/** Show the catalog filter only once the gallery is big enough to warrant it. */
-const CATALOG_SEARCH_THRESHOLD = 5;
+/** The filter shows on every catalog, however short, so the stage keeps one layout (owner, 2026-11-02). */
+const CATALOG_SEARCH_THRESHOLD = 0;
 
 /** Case-insensitive match of a catalog entry's name + description against a query. */
 function matchesQuery(entry: AppBuilderComponentCatalogEntry, query: string): boolean {

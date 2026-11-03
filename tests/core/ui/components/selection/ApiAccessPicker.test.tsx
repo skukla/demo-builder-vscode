@@ -140,9 +140,9 @@ describe('ApiAccessPicker', () => {
             expect(screen.queryByText('Adobe Campaign')).not.toBeInTheDocument();
         });
 
-        it('hides the search field at or below the threshold (5 items)', () => {
-            renderPicker({ apis: APIS.slice(0, 5) });
-            expect(screen.queryByTestId('spectrum-searchfield')).not.toBeInTheDocument();
+        it('shows the search field on a short list too', () => {
+            renderPicker({ apis: APIS.slice(0, 2) });
+            expect(screen.getByTestId('spectrum-searchfield')).toBeInTheDocument();
         });
     });
 

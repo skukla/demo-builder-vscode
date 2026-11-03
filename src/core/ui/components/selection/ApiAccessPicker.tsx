@@ -37,8 +37,8 @@ import { CheckboxRow } from './CheckboxRow';
 import { andList } from '@/core/utils/andList';
 import type { CloudGrouping } from '@/types/adobeApis';
 
-/** Show the filter only once the list is big enough to warrant it (catalog parity). */
-const API_SEARCH_THRESHOLD = 5;
+/** The filter shows on every list, however short, so the picker keeps one layout (owner, 2026-11-02). */
+const API_SEARCH_THRESHOLD = 0;
 
 /** One org Adobe service, as the wizard/dashboard API handlers report it. */
 export interface ApiAccessOption {

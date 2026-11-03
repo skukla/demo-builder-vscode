@@ -145,7 +145,7 @@ describe('CatalogStage', () => {
         expect(onPick).toHaveBeenCalledWith('acme-a');
     });
 
-    it('hides the search field at or below the threshold', () => {
+    it('shows the search field on a short catalog too', () => {
         renderStage({
             catalog: [
                 entry('acme-a', 'Widget A'),
@@ -155,7 +155,7 @@ describe('CatalogStage', () => {
                 entry('acme-e', 'Widget E'),
             ],
         });
-        expect(screen.queryByTestId('spectrum-searchfield')).not.toBeInTheDocument();
+        expect(screen.getByTestId('spectrum-searchfield')).toBeInTheDocument();
     });
 
     it('shows the search field past the threshold', () => {
