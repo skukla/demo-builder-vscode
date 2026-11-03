@@ -71,7 +71,7 @@ export function BlockLibrariesStepContent({
             <Text UNSAFE_className="description-block">
                 Add blocks from these libraries to the storefront. Ticked libraries are included.
             </Text>
-            <div className="choice-grid" role="group" aria-label="Block libraries">
+            <div className="choice-grid choice-grid--columns" role="group" aria-label="Block libraries">
                 {includedBlockLibraries.map((lib) => (
                     <LibraryCard
                         key={lib.id}
@@ -106,7 +106,7 @@ export function BlockLibrariesStepContent({
             <Divider size="S" marginTop="size-300" marginBottom="size-200" />
             <Text UNSAFE_className="description-block-sm">Custom Libraries</Text>
             {customBlockLibraryDefaults.length > 0 ? (
-                <div className="choice-grid" role="group" aria-label="Custom block libraries">
+                <div className="choice-grid choice-grid--columns" role="group" aria-label="Custom block libraries">
                     {customBlockLibraryDefaults.map((lib) => (
                         <LibraryCard
                             key={`${lib.source.owner}/${lib.source.repo}`}

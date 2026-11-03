@@ -148,6 +148,18 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+
+/* A grid of many picks (block libraries): three to a row when the 720px row allows, fewer as
+   it narrows. Columns keep their width when there are fewer cards, so two libraries do not
+   stretch into two very wide cards (owner, 2026-11-03). */
+.choice-grid--columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.choice-grid--columns > .choice-card {
+    min-width: 0;
+}
 }
 
 @layer overrides {
