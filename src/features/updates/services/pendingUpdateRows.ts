@@ -15,6 +15,10 @@
  * shown unticked and locked, and `selectionsForIds` leaves it out even if its id comes
  * back.
  *
+ * A colleague's storefront whose source demo was reset since it was last taken also starts
+ * unticked, saying so: its "changes" are the reset, and applying it replaces the storefront
+ * (owner, 2026-11-03).
+ *
  * @module features/updates/services/pendingUpdateRows
  */
 
@@ -63,15 +67,22 @@ function pairVersions(releases?: Array<{ name: string; version: string }>): stri
 /** "Newer version" dropped where it is said: it tells the SC nothing (owner, 2026-10-20). */
 const LIVE_SITE_DETAIL = 'Updates the live site';
 
+/** A colleague's demo that was reset since this storefront took from it. */
+export const SOURCE_RESET_DETAIL = 'The source demo was reset to its template. Applying replaces this storefront with it';
+
 /** `ticked: false` is a row that waits for the SC's tick; a locked row is never ticked. */
 type RowText = Pick<PendingUpdateRow, 'label' | 'detail'> & { lockedReason?: string; ticked?: false };
 
 /** Each project kind's words for one of its entries. */
 const PROJECT_KINDS: { [K in ProjectSelectionKind]: (entry: UpdateSelections[K][number]) => RowText } = {
-    template: (t) => ({
-        label: templateLabel(t.project),
-        detail: t.version ? `version ${t.version}, ${LIVE_SITE}` : LIVE_SITE_DETAIL,
-    }),
+    template: (t) =>
+        t.sourceReset
+            ? // Waits for the SC's tick, saying why (owner, 2026-11-03): a reset source replaces the storefront.
+              { label: templateLabel(t.project), detail: SOURCE_RESET_DETAIL, ticked: false }
+            : {
+                  label: templateLabel(t.project),
+                  detail: t.version ? `version ${t.version}, ${LIVE_SITE}` : LIVE_SITE_DETAIL,
+              },
     // Adobe's half of a colleague's storefront, to the version our daily gate tested (EDS-56).
     boilerplate: () => ({ label: 'Adobe boilerplate', detail: `Tested version, ${LIVE_SITE}` }),
     // A clash kept to fix with AI (EDS-57): applying it checks the fix and pushes it.

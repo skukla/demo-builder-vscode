@@ -17,10 +17,12 @@ import * as vscode from 'vscode';
 import {
     compareCommits,
     getLatestBranchCommit,
+    type GitHubCompareResponse,
 } from './githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
 import { refOfSource } from '@/core/releases/componentRelease';
 import { releasedRepoOf } from '@/core/releases/releasedRepos';
+import { RESET_TO_TEMPLATE_MESSAGE } from '@/features/eds/services/github/githubRepoArchive';
 import { readLatestPatchesRelease, readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { isLkgSource } from '@/features/updates/services/thinLayerUpdate';
 import type { Project } from '@/types/base';
@@ -44,6 +46,18 @@ export interface TemplateUpdateResult {
     templateRepo: string;
     /** The patches release a thin-layer storefront would move to, when it can be read. */
     release?: string;
+    /**
+     * The source was reset to its template in the range (Demo Builder's reset commit is there).
+     * Its "changes" are the source being rebuilt, not edits made to it, so the update waits for the
+     * SC rather than being offered ticked (owner, 2026-11-03: a colleague reset their demo three
+     * times in a day, and JustRite was offered all of it as one ticked update to the live site).
+     */
+    sourceReset?: true;
+}
+
+/** Whether a compare's commits include a reset to the template. */
+function includesReset(commits: GitHubCompareResponse['commits']): boolean {
+    return (commits ?? []).some((entry) => entry.commit.message.split('\n')[0] === RESET_TO_TEMPLATE_MESSAGE);
 }
 
 /** Whether `latest` is a higher version than `recorded`. A tag that is not a version never is. */
@@ -272,6 +286,7 @@ export class TemplateUpdateChecker {
             commitsBehind,
             templateOwner,
             templateRepo,
+            ...(commitsBehind > 0 && includesReset(comparison.commits) ? { sourceReset: true as const } : {}),
         };
     }
 }

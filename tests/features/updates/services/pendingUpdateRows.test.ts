@@ -10,6 +10,7 @@
 import {
     rowIdsOf,
     selectionsForIds,
+    SOURCE_RESET_DETAIL,
     storefrontUpdateName,
     toPendingUpdateRows,
 } from '@/features/updates/services/pendingUpdateRows';
@@ -79,6 +80,19 @@ describe('toPendingUpdateRows', () => {
         const [row] = toPendingUpdateRows({ ...empty(), template: [{ project: storefront(metadata) }] }, undefined, undefined);
 
         expect(row).toMatchObject({ label: expected, detail: LIVE });
+    });
+
+    // A colleague's demo reset since it was last taken replaces the storefront: the row waits for the
+    // SC's tick and says why (owner, 2026-11-03).
+    it("leaves a colleague's reset demo unticked, saying it was reset", () => {
+        const project = storefront({ templateOwner: 'kmanns', templateRepo: 'justrite' });
+
+        const [reset] = toPendingUpdateRows({ ...empty(), template: [{ project, sourceReset: true }] }, undefined, undefined);
+        const [edited] = toPendingUpdateRows({ ...empty(), template: [{ project }] }, undefined, undefined);
+
+        expect(reset).toMatchObject({ label: 'Changes from kmanns/justrite', detail: SOURCE_RESET_DETAIL, ticked: false });
+        // CONTROL: the same source, only edited, starts ticked as before.
+        expect(edited).toMatchObject({ detail: LIVE, ticked: true });
     });
 
     // The notification a finished fix raises names the update as its row does (EDS-56, 2026-10-30).

@@ -25,6 +25,8 @@ export const GITHUB_API_BASE = 'https://api.github.com';
 
 export interface GitHubCompareResponse {
     ahead_by: number;
+    /** The commits in the range, oldest first (GitHub lists at most 250). */
+    commits?: Array<{ commit: { message: string } }>;
     /** The changed files, at most 300 (GitHub's cap); a rename also names its old path. */
     files?: Array<{ filename: string; previous_filename?: string }>;
 }

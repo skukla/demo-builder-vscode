@@ -214,6 +214,39 @@ describe('checkForUpdates — an added demo on a branch', () => {
 
         expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(mockSecrets, 'jen', 'isle5-demo', 'main');
     });
+
+    // A colleague reset their demo three times in a day, and JustRite was offered all of it as one
+    // ticked update to the live site (owner, 2026-11-03).
+    it('says when the source was reset to its template since it was last taken', async () => {
+        mockGetLatestBranchCommit.mockResolvedValue(NEW_SHA);
+        mockCompareCommits.mockResolvedValue({
+            ahead_by: 3,
+            commits: [
+                { commit: { message: 'chore: reset repository to template' } },
+                { commit: { message: 'chore: add blocks from 2 libraries (10 blocks)' } },
+                { commit: { message: "fix: bring the storefront up to Demo Builder's current fixes" } },
+            ],
+        });
+        const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
+
+        const result = await checker.checkForUpdates(makeProject({ templateOwner: 'jen', templateRepo: 'isle5-demo', lastSyncedCommit: OLD_SHA }));
+
+        expect(result).toMatchObject({ hasUpdates: true, commitsBehind: 3, sourceReset: true });
+    });
+
+    it('CONTROL: says nothing of a reset when the source was only edited', async () => {
+        mockGetLatestBranchCommit.mockResolvedValue(NEW_SHA);
+        mockCompareCommits.mockResolvedValue({
+            ahead_by: 1,
+            commits: [{ commit: { message: 'feat: a new hero block\n\nchore: reset repository to template is only in the body' } }],
+        });
+        const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
+
+        const result = await checker.checkForUpdates(makeProject({ templateOwner: 'jen', templateRepo: 'isle5-demo', lastSyncedCommit: OLD_SHA }));
+
+        expect(result).toMatchObject({ hasUpdates: true, commitsBehind: 1 });
+        expect(result).not.toHaveProperty('sourceReset');
+    });
 });
 
 // ==========================================================================

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Experience Workspace is the default for authoring.** Projects that never chose an authoring experience now open Experience Workspace. A project that chose DA.live Classic keeps it.
 
 ### Changed
+- **A colleague's demo that was reset is no longer offered as an ordinary update.** If the demo your storefront was copied from has been reset to its template since you last took it, the Updates window shows that update unticked and says the source was reset, because applying it would replace your storefront. Agents leave it out unless you ask for it.
 - **Clear demo data leaves nothing behind that only the chosen stores use.** It now also removes their companies and the customers in them, shared catalogs with their customer groups, customer groups, attribute sets and attributes, and sets their websites' settings to the default's value. Anything another demo also uses stays, and the dialog names it and says why. Not yet proved on a live store.
 - **A dialog that is waiting shows only its spinner.** Import, Export, Manage APIs, Add ERP, Simulate downtime and Clear demo data no longer show part of their form, or disabled buttons, while they load. A pack with one data type starts ticked.
 - **The dashboard shows a status as a dot alone.** The word that sat beside it ("Needed", "Deploy failed") is now the hover text, and a card keeps its description with the dot beside its title.

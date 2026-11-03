@@ -194,6 +194,7 @@ describe('apply_updates', () => {
         expect(res.summary).toStrictEqual({
             forkSync: ['skukla/a-store'],
             template: 2,
+            templateSourceReset: 0,
             // A colleague's storefront's Adobe half: from its base to the tested version (EDS-56).
             boilerplate: ['adobe-commerce/boilerplate-b2b-template 71a67e0 → 48bed04'],
             // A clash kept to fix with AI, waiting to be finished (EDS-57).
@@ -235,6 +236,22 @@ describe('apply_updates', () => {
         const res = await s.call({ confirm: true });
 
         expect(res.categories.boilerplate).toStrictEqual(boilerplate);
+    });
+
+    // A colleague's demo reset since it was last taken replaces the storefront (owner, 2026-11-03).
+    it.each([
+        [undefined, 0],
+        [true, 1],
+    ])('leaves out a reset source unless includeSourceReset is %s', async (includeSourceReset, applied) => {
+        const reset = { project: { name: 'p' }, sourceReset: true };
+        computeMock.mockResolvedValue({ ...EMPTY, template: [reset] });
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        expect((await s.call({})).summary).toMatchObject({ template: 1, templateSourceReset: 1 });
+        await s.call({ confirm: true, ...(includeSourceReset ? { includeSourceReset } : {}) });
+
+        expect(applyMock.mock.calls.at(-1)[0].template).toHaveLength(applied);
     });
 
     // JustRite, 2026-10-30: the boilerplate update stopped on a clash, the answer led with

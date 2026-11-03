@@ -23,6 +23,12 @@ import { batchTreeEntries, type GitHubTreeCommits } from './githubTreeCommits';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { Logger } from '@/types/logger';
 
+/**
+ * The message of the commit a reset makes. The update check reads it in a colleague's demo: a
+ * source that was reset since a storefront last took from it is not an ordinary update.
+ */
+export const RESET_TO_TEMPLATE_MESSAGE = 'chore: reset repository to template';
+
 /** One file read out of a repository archive: its exact bytes and the mode its tree entry takes. */
 export interface ArchivedFile {
     data: Buffer;
@@ -295,7 +301,7 @@ export class GitHubRepoArchive {
         const commitSha = await this.treeCommits.createCommit(
             targetOwner,
             targetRepo,
-            'chore: reset repository to template',
+            RESET_TO_TEMPLATE_MESSAGE,
             newTreeSha,
             targetBranchInfo.commitSha,
         );

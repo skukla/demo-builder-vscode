@@ -45,6 +45,8 @@ function summarize(selections: UpdateSelections): Record<string, unknown> {
     return {
         forkSync: selections.forkSync.map((f) => `${f.owner}/${f.repo}`),
         template: selections.template.length,
+        // A colleague's demo reset since it was last taken: applied only on includeSourceReset.
+        templateSourceReset: selections.template.filter((t) => t.sourceReset).length,
         finish: selections.finish.map((f) => `${f.clash.track}: ${f.clash.files.join(', ')}`),
         boilerplate: selections.boilerplate.map(
             (b) => `${b.base.template.owner}/${b.base.template.repo} ${b.base.commit.slice(0, 7)} → ${b.tested.slice(0, 7)}`,
@@ -57,6 +59,15 @@ function summarize(selections: UpdateSelections): Record<string, unknown> {
         ),
         integration: selections.integration.map(describeIntegrationUpdate),
     };
+}
+
+/**
+ * The selections to apply: a template whose colleague's demo was reset since it was last taken
+ * stays out unless the user chose it (owner, 2026-11-03). Applying it replaces the storefront.
+ */
+function withoutUnchosenReset(selections: UpdateSelections, includeSourceReset: boolean): UpdateSelections {
+    if (includeSourceReset || !selections.template.some((t) => t.sourceReset)) return selections;
+    return { ...selections, template: selections.template.filter((t) => !t.sourceReset) };
 }
 
 /**
@@ -90,12 +101,19 @@ export function registerApplyUpdatesTool(
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK, and deployed integrations and their ERPs (the same pair update as update_integration, ERPs first) — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. An integration pair whose project uses a different Adobe organization is listed, not deployed: categories.integration.deferred says to open that project. A template update brings a storefront built on Demo Builder\'s tested boilerplate (most are) to that tested version, never Adobe\'s latest, and puts its fixes back; categories.template.applied names any it could not. A storefront update never clashes with Demo Builder\'s own additions (its code fixes and Quick Edit wiring are set aside around Adobe\'s change and put back; a block library\'s block folders are left to the library\'s own update). An update that clashes with somebody\'s edits stops, changes nothing on GitHub, and is listed FIRST in the response: top-level stopped (project, update, files, edits saying whose edit each file holds, pushed:false) and message; check stopped before reading applied. The same clash is under categories.template.clashes or categories.boilerplate.clashes; onClash:keep leaves the clash in the project\'s local storefront copy for you to fix, and onClash:reset applies over the files, never on a tested-boilerplate storefront, whose way through a clash is reset_project. On a storefront built from a colleague\'s demo, template follows the colleague\'s repository, and categories.boilerplate brings its Adobe half to the same tested version when the Adobe commit it started from is known; it never resets, so a clash stops (or, with onClash:keep, is kept) and names the files. A block library update never puts back what the user removed by hand from the storefront: a block folder it copied, an entry it added to the component-definition, component-filters or component-models file, or an HTML example it filled in; categories.addon.leftOut names any it left out. After applying, remaining is how many updates the same check still finds for the project (one that failed, a pair in another organization, a clash that stopped): 0 means nothing is left.',
+                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK, and deployed integrations and their ERPs (the same pair update as update_integration, ERPs first) — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. An integration pair whose project uses a different Adobe organization is listed, not deployed: categories.integration.deferred says to open that project. A template update brings a storefront built on Demo Builder\'s tested boilerplate (most are) to that tested version, never Adobe\'s latest, and puts its fixes back; categories.template.applied names any it could not. A storefront update never clashes with Demo Builder\'s own additions (its code fixes and Quick Edit wiring are set aside around Adobe\'s change and put back; a block library\'s block folders are left to the library\'s own update). An update that clashes with somebody\'s edits stops, changes nothing on GitHub, and is listed FIRST in the response: top-level stopped (project, update, files, edits saying whose edit each file holds, pushed:false) and message; check stopped before reading applied. The same clash is under categories.template.clashes or categories.boilerplate.clashes; onClash:keep leaves the clash in the project\'s local storefront copy for you to fix, and onClash:reset applies over the files, never on a tested-boilerplate storefront, whose way through a clash is reset_project. On a storefront built from a colleague\'s demo, template follows the colleague\'s repository, and categories.boilerplate brings its Adobe half to the same tested version when the Adobe commit it started from is known; it never resets, so a clash stops (or, with onClash:keep, is kept) and names the files. A template whose colleague\'s demo was reset to its template since the storefront last took it (summary.templateSourceReset) replaces the storefront with that reset, so confirm:true leaves it out: pass includeSourceReset:true only when the user has explicitly chosen it. A block library update never puts back what the user removed by hand from the storefront: a block folder it copied, an entry it added to the component-definition, component-filters or component-models file, or an HTML example it filled in; categories.addon.leftOut names any it left out. After applying, remaining is how many updates the same check still finds for the project (one that failed, a pair in another organization, a clash that stopped): 0 means nothing is left.',
             inputSchema: {
                 confirm: z
                     .boolean()
                     .optional()
                     .describe('Set true to apply; omit to only report what is available'),
+                includeSourceReset: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        'Apply a template whose colleague\'s demo was reset since it was last taken '
+                            + '(summary.templateSourceReset): it replaces the storefront with the reset. ONLY when the user chose it.',
+                    ),
                 onClash: z
                     .enum(['stop', 'keep', 'reset'])
                     .optional()
@@ -146,7 +164,7 @@ export function registerApplyUpdatesTool(
             const phases: string[] = [];
             const sayStep = stepPhaseReporter();
             const result = await applyUpdatesHeadless(
-                selections,
+                withoutUnchosenReset(selections, args?.includeSourceReset === true),
                 {
                     secrets: ctx.context.secrets,
                     extensionPath: ctx.context.extensionPath,

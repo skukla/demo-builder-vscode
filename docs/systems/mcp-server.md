@@ -516,7 +516,10 @@ EDS-51): it rewrites storefront code, and `onClash: 'reset'` discards the
 user's own edits; `onClash: 'keep'` leaves a clash in the local storefront copy for the
 agent to fix (EDS-57). A storefront built on Demo Builder's tested boilerplate is brought to
 that tested version with its fixes put back, and is never reset to the bare template;
-its way through a conflict is `reset_project`.
+its way through a conflict is `reset_project`. A storefront built from a colleague's demo that the
+colleague has since reset to its template is counted in `summary.templateSourceReset` and left out
+of `confirm:true`: applying it replaces the storefront with the reset, so `includeSourceReset: true`
+only when the user chose it (2026-11-03).
 
 `finish_storefront_update` (EDS-57) previews the same way: without `confirm` it returns the
 kept clash's files, the ones still carrying conflict markers, and the diff that would go

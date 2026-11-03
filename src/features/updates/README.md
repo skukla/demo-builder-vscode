@@ -143,6 +143,7 @@ runs the colleague's first, each its own commit.
 | Kept true | reset forgets it; after the colleague's update, their `demo.demo-builder.json` moves it forward when it is ahead (`boilerplateBaseRefresh.ts`); Share Demo's link save writes it as `builtWith.lkg`; changing the demo source keeps it (the code did not change) |
 | Fixes | Demo Builder's repairs run in the update's clone before the change, and they apply every known patch that fits (EDS-64), so D6's "no fixes re-applied" no longer holds. A fix the storefront already had is set aside around the change and put back (see above) |
 | Never | a reset on a conflict, or a move backwards |
+| A reset source | when the colleague's new commits include Demo Builder's reset commit (`RESET_TO_TEMPLATE_MESSAGE`), the source was rebuilt, not edited: the row starts unticked and says so, and `apply_updates` leaves it out unless `includeSourceReset` (owner, 2026-11-03: a colleague reset their demo three times in a day, and JustRite was offered it ticked) |
 
 ## A clash is fixed with AI (EDS-57)
 
