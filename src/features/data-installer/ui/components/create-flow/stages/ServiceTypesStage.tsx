@@ -7,9 +7,9 @@
  */
 
 import React, { useMemo } from 'react';
-import { SelectAllRow } from '../../SelectAllRow';
 import type { TypeChoices } from '../useExportAnswers';
 import { CheckRows, typeOptions } from './CheckRows';
+import { SelectAllRow } from '@/core/ui/components/selection/SelectAllRow';
 
 export function ServiceTypesStage({ types }: { types: TypeChoices }): React.ReactElement {
     const options = useMemo(() => typeOptions(types.available), [types.available]);

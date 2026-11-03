@@ -1,12 +1,13 @@
 /**
- * Select all over a datapack form's boxes: a checkbox that shows the list's state (owner, 2026-11-02).
+ * Select All over any list of boxes: a checkbox that shows the list's state (owner, 2026-11-02).
  * A link that swapped its words did not, and neither did the grey button and the icon before it.
+ * Set apart from the boxes under it by `.select-all-row` (owner, 2026-11-03).
  */
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { SelectAllRow } from '@/features/data-installer/ui/components/SelectAllRow';
+import { SelectAllRow } from '@/core/ui/components/selection/SelectAllRow';
 
 const box = () => screen.getByRole('checkbox', { name: 'Select All' });
 
@@ -33,5 +34,12 @@ describe('SelectAllRow', () => {
 
         expect(box()).toBeChecked();
         expect(box()).not.toBePartiallyChecked();
+    });
+
+    // The rule under it lives on this class (`checkbox-row.css`): it was lost among the boxes.
+    it('sits in the row that sets it apart from the list', () => {
+        render(<SelectAllRow all={false} some={false} onToggle={jest.fn()} />);
+
+        expect(box().closest('.select-all-row')).not.toBeNull();
     });
 });

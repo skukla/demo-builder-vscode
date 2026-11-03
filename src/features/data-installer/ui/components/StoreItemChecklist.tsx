@@ -11,9 +11,9 @@
 
 import React, { useMemo, useState } from 'react';
 import type { StoreItem } from '../../pickableKinds';
-import { SelectAllRow } from './SelectAllRow';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
+import { SelectAllRow } from '@/core/ui/components/selection/SelectAllRow';
 
 /** Fields a query is matched against. */
 const matches = (item: StoreItem, query: string): boolean => {

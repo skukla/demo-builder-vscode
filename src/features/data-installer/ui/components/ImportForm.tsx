@@ -17,7 +17,7 @@ import React from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { TargetWebsite } from '../hooks/useImportScopes';
 import { blockedBy, missingDependencies } from '../importDependencies';
-import { SelectAllRow } from './SelectAllRow';
+import { SelectAllRow } from '@/core/ui/components/selection/SelectAllRow';
 
 /**
  * Dependencies the selected types need that this datapack does not contain.

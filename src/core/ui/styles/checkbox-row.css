@@ -1,9 +1,11 @@
 /**
  * .checkbox-row — one row of a checkbox list (`selection/CheckboxRow`): a name, a
- * quieter detail, and the reason a locked row cannot change.
+ * quieter detail, and the reason a locked row cannot change. .select-all-row — the
+ * "Select All" row over such a list (`selection/SelectAllRow`).
  *
  * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `wizard`, `dashboard` and
- * `integrations` (the API picker) and `projectsList` (the Updates modal, PL-80). A new
+ * `integrations` (the API picker), `projectsList` (the Updates modal, PL-80),
+ * `configure` and `dataInstaller` (the datapack forms' Select All). A new
  * host bundle imports it in its entry, or the rows render unstyled with no error.
  *
  * Moved unchanged on 2026-10-20 from the project-creation feature's
@@ -34,5 +36,13 @@
         margin-left: 8px;
         font-size: 11px;
         color: var(--spectrum-global-color-gray-600);
+    }
+    /* "Select All" over a list (`selection/SelectAllRow`): a thin rule under it, so it reads as
+       a control over the boxes, as a table's header checkbox does, not one more of them
+       (owner, 2026-11-03: "it gets lost"). */
+    .select-all-row {
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid var(--spectrum-global-color-gray-300);
     }
 }

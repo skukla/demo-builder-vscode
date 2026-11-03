@@ -21,6 +21,7 @@
 
 import { Checkbox, Flex, Item, Picker, TextField } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
+import { SelectAllRow } from '@/core/ui/components/selection/SelectAllRow';
 import type { OperationPromptField } from '@/types/webviewPayloads';
 
 export interface OperationPromptFormProps {
@@ -103,11 +104,8 @@ function SelectAllBox({ ids, values, onChange }: {
         const value = all ? '' : 'true';
         onChange({ ...values, ...Object.fromEntries(ids.map((id) => [id, value])) });
     };
-    return (
-        <Checkbox isSelected={all} isIndeterminate={ticked > 0 && !all} onChange={setAll}>
-            Select All
-        </Checkbox>
-    );
+    // The house row every Select All uses, set apart from the boxes under it (2026-11-03).
+    return <SelectAllRow all={all} some={ticked > 0} onToggle={setAll} />;
 }
 
 /** The fields of one question, in the order the guard asked for them. */
