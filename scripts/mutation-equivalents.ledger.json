@@ -10945,7 +10945,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 272,
+            "line": 286,
             "mutants": 1,
             "category": "block",
             "reason": "The else branch contains a single logger.warn and nothing else \u2014 no state change, no return, no call the caller can observe. Emptying it leaves the rename result, the project object and every collaborator call identical.",
@@ -10958,7 +10958,7 @@
             "anchors": [
                 "} catch (rollbackError) {"
             ],
-            "line": 328,
+            "line": 342,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch drops a logger.error and a 'return false'; falling off the end returns undefined instead, and the caller's guard is 'if (!undone)' \u2014 falsy either way. Same branch, same message, same result.",
@@ -11062,7 +11062,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 278,
+            "line": 292,
             "mutants": 1,
             "category": "block",
             "reason": "The remote-sync catch body is a single logger.warn. Emptying it still swallows the Console failure, still leaves the local rename successful and its result unchanged, and still leaves adobe.projectTitle recording the title that was never applied \u2014 the only difference is whether a line reaches the log channel.",

@@ -13,12 +13,25 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { normalizeProjectName } from '@/core/validation/normalizers';
 import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 import { followRenameIntoPack } from '@/features/projects-dashboard/services/demoPackRename';
 import { moveProjectSecrets } from '@/features/projects-dashboard/services/projectSecretCleanup';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+
+/** The screens opened for one project, which keep acting on the folder they were opened on. */
+const PROJECT_SCREENS = ['demoBuilder.configureProject', 'demoBuilder.integrations', 'demoBuilder.openAi'];
+
+/**
+ * A screen open for this project now holds a folder that is gone, so a save there would act on it.
+ * Close it, and reopening finds the project where it is. The dashboard stays: it made the rename and
+ * follows it.
+ */
+function closeScreensOnTheOldFolder(): void {
+    for (const id of PROJECT_SCREENS) BaseWebviewCommand.getActivePanel(id)?.dispose();
+}
 
 /**
  * Rename a loaded project.
@@ -203,6 +216,7 @@ export async function renameProjectCore(
         // Best effort, like the Console title above: never undoes the rename.
         await followRenameIntoPack(context, project);
 
+        if (newPath !== oldPath) closeScreensOnTheOldFolder();
         context.logger.info(`Renamed project: "${oldName}" → "${newName}"`);
 
         return {

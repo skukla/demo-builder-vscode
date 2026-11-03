@@ -12,6 +12,8 @@
  * `projectRenameService.testUtils.ts`.
  */
 
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import {
     renameHandlerContext,
     mockAccess,
@@ -43,6 +45,18 @@ describe('renameProjectCore', () => {
         expect((context.stateManager.saveProject as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
             mockFollowRenameIntoPack.mock.invocationCallOrder[0],
         );
+    });
+
+    it('closes a screen still open on the old folder, once the folder has moved', async () => {
+        const configure = createMockWebviewPanel();
+        const getActivePanel = jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockImplementation(
+            (id: string) => (id === 'demoBuilder.configureProject' ? configure : undefined),
+        );
+
+        await renameProjectCore(renameHandlerContext(), projectToRename(), 'Renamed Project');
+
+        expect(configure.dispose).toHaveBeenCalledTimes(1);
+        getActivePanel.mockRestore();
     });
 
     it('does not touch the pack when the rename is refused', async () => {
