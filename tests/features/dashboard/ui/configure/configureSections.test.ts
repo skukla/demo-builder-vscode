@@ -149,6 +149,12 @@ describe('buildConfigureSections', () => {
             expect(sections).toHaveLength(3); // + Project
         });
 
+        it('includes Commerce Admin last, and only when the project has the choice', () => {
+            const sections = buildConfigureSections({ ...baseInput, hasAdminChoice: true });
+            expect(sections[sections.length - 1]).toMatchObject({ id: 'commerce-admin', label: 'Commerce Admin', kind: 'commerceAdmin' });
+            expect(buildConfigureSections(baseInput).some((s) => s.id === 'commerce-admin')).toBe(false);
+        });
+
         it('includes Authoring only for EDS projects', () => {
             const eds = buildConfigureSections({ ...baseInput, isEds: true });
             const nonEds = buildConfigureSections({ ...baseInput, isEds: false });

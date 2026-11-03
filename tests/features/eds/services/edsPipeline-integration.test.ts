@@ -28,6 +28,7 @@ const mockVerifyLibraryPreviewed = jest.fn().mockResolvedValue(true);
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
+    resolveProjectAuthoringExperience: () => 'da-live-classic',
     publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
     verifyLibraryPreviewed: (...args: unknown[]) => mockVerifyLibraryPreviewed(...args),
 }));

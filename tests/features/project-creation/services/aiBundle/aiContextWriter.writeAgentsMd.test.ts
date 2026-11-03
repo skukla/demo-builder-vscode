@@ -269,7 +269,7 @@ describe('aiContextWriter', () => {
                 const result = generateAgentsMd(project, STACKS);
 
                 // sanitizeUrl preserves # (valid fragment separator), escapeMarkdown then escapes it
-                expect(result).toContain('https://da.live/\\#/my-org/my-site');
+                expect(result).toContain('https://da.live/canvas\\#/my-org/my-site/index');
             });
 
             it('strips # from adobe organization field to prevent heading injection', () => {

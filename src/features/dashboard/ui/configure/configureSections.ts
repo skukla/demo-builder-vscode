@@ -26,8 +26,8 @@ import {
     type ConnectStoreSection,
 } from '@/features/components/config/storeFieldHelpers';
 
-/** Which of the four sources a section came from. Callers should not need to care. */
-export type ConfigureSectionKind = 'project' | 'serviceGroup' | 'blockLibraries' | 'authoring';
+/** Which of the sources a section came from. Callers should not need to care. */
+export type ConfigureSectionKind = 'project' | 'serviceGroup' | 'blockLibraries' | 'authoring' | 'commerceAdmin';
 
 /** One configurable section of the Configure screen, whatever its source. */
 export interface ConfigureSection {
@@ -63,6 +63,8 @@ export interface BuildConfigureSectionsInput {
     isEds: boolean;
     /** The project has at least one block library to show (`hasBlockLibraryChoices`). */
     hasBlockLibraryChoices: boolean;
+    /** A Cloud Service store with no Admin URL of its own — gates the Commerce Admin section. */
+    hasAdminChoice?: boolean;
     /** The project name is set and passes validation. */
     isProjectNameValid: boolean;
 }
@@ -175,6 +177,7 @@ export function buildConfigureSections({
     fieldHasError,
     isEds,
     hasBlockLibraryChoices,
+    hasAdminChoice,
     isProjectNameValid,
 }: BuildConfigureSectionsInput): ConfigureSection[] {
     // The project name is the section's one required field: it is always populated, so
@@ -235,6 +238,11 @@ export function buildConfigureSections({
     // field to be incomplete about. Zero counts here are the model, not an oversight.
     if (isEds) {
         sections.push(unvalidatedSection('authoring-experience', 'Authoring', 'authoring'));
+    }
+
+    // The same: one radio that always carries a value.
+    if (hasAdminChoice) {
+        sections.push(unvalidatedSection('commerce-admin', 'Commerce Admin', 'commerceAdmin'));
     }
 
     return sections;

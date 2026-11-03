@@ -41,6 +41,9 @@ jest.mock(
             showInformationMessage: jest.fn().mockResolvedValue(undefined),
         },
         ColorThemeKind: { Dark: 2, Light: 1 },
+        workspace: {
+            getConfiguration: jest.fn(() => ({ get: jest.fn() })),
+        },
         env: {
             openExternal: jest.fn().mockResolvedValue(true),
         },

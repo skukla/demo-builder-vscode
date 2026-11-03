@@ -199,6 +199,10 @@
           "$ref": "#/definitions/OwnDatapack",
           "description": "This demo's own library pack, once its first save made one (step 07)."
         },
+        "commerceAdminExperience": {
+          "$ref": "#/definitions/CommerceAdminExperience",
+          "description": "The Commerce Admin interface chosen on Configure. Absent: the setting's."
+        },
         "selectedStack": {
           "type": "string"
         },
@@ -1716,6 +1720,14 @@
         "name"
       ],
       "description": "This demo's own pack (step 07): the library pack every save from this project goes into, made at the first save. Never in a project file, so a copy or an import starts from the original's pack and makes its own at its first save."
+    },
+    "CommerceAdminExperience": {
+      "type": "string",
+      "enum": [
+        "unified-shell",
+        "classic"
+      ],
+      "description": "Which Commerce Admin interface a Cloud Service project opens. Stored on the project when the SC chooses; absent, the `demoBuilder.commerce.adminExperience` setting decides. Only which link opens changes: nothing in Commerce does, and Adobe's classic links keep opening the classic interface."
     },
     "CustomBlockLibrary": {
       "type": "object",

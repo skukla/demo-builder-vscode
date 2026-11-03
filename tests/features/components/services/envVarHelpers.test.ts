@@ -9,6 +9,7 @@ import {
     deriveGraphqlEndpoint,
     deriveAccsAdminUrl,
     deriveAccsTenantId,
+    deriveAccsUnifiedAdminUrl,
     lookupComponentConfigValue,
     readAccsOAuthPair,
     readPaasAdminPair,
@@ -191,6 +192,20 @@ describe('envVarHelpers', () => {
      * rather than re-parsing the endpoint a second way — two regexes over one string
      * format is how they drift apart.
      */
+    describe('deriveAccsUnifiedAdminUrl', () => {
+        const ENDPOINT = 'https://na1-sandbox.api.commerce.adobe.com/tenant123/graphql';
+
+        it('builds the form Adobe documents, by organization and instance', () => {
+            expect(deriveAccsUnifiedAdminUrl(ENDPOINT, 'acme')).toBe(
+                'https://experience.adobe.com/#/@acme/in:tenant123/commerce/cloud-service/admin',
+            );
+        });
+
+        it('has no URL for an endpoint that is not a Cloud Service tenant', () => {
+            expect(deriveAccsUnifiedAdminUrl('https://example.com/graphql', 'acme')).toBeUndefined();
+        });
+    });
+
     describe('deriveAccsTenantId', () => {
         it('extracts the tenant id from a sandbox ACCS GraphQL endpoint', () => {
             expect(

@@ -26,7 +26,7 @@ import {
     type ConnectStoreSection,
 } from '@/features/components/config/storeFieldHelpers';
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
-import type { AuthoringExperience } from '@/types/base';
+import type { AuthoringExperience, CommerceAdminExperience } from '@/types/base';
 
 export interface ConfigureSectionBodyProps {
     /** The section to draw. */
@@ -53,6 +53,9 @@ export interface ConfigureSectionBodyProps {
     /** EDS authoring-experience preference. */
     authoringExperience: AuthoringExperience;
     onAuthoringExperienceChange: (value: AuthoringExperience) => void;
+    /** The Commerce Admin interface this project opens. */
+    commerceAdminExperience?: CommerceAdminExperience;
+    onCommerceAdminExperienceChange?: (value: CommerceAdminExperience) => void;
     /** The block libraries choice, drawn by the Block Libraries section alone (EDS-39). */
     blockLibraries?: BlockLibrariesSectionProps;
 }
@@ -145,6 +148,29 @@ function AuthoringBody({
             >
                 <Radio value="da-live-classic">DA.live Classic</Radio>
                 <Radio value="experience-workspace">Experience Workspace</Radio>
+            </RadioGroup>
+        </ConfigSection>
+    );
+}
+
+/** Which Commerce Admin this project opens. Only which link opens changes, so nothing else runs. */
+function CommerceAdminBody({
+    value,
+    onChange,
+}: {
+    value: CommerceAdminExperience;
+    onChange: (value: CommerceAdminExperience) => void;
+}): React.ReactElement {
+    return (
+        <ConfigSection id="commerce-admin" label="Commerce Admin" showDivider={false}>
+            {/* aria-label, as Authoring's: the section heading already names it. */}
+            <RadioGroup
+                aria-label="Commerce Admin Interface"
+                value={value}
+                onChange={(next) => onChange(next as CommerceAdminExperience)}
+            >
+                <Radio value="unified-shell">Unified Shell</Radio>
+                <Radio value="classic">Classic UI</Radio>
             </RadioGroup>
         </ConfigSection>
     );
@@ -258,6 +284,8 @@ export function ConfigureSectionBody({
     storeStructureReady,
     authoringExperience,
     onAuthoringExperienceChange,
+    commerceAdminExperience = 'unified-shell',
+    onCommerceAdminExperienceChange = () => undefined,
     blockLibraries,
 }: ConfigureSectionBodyProps): React.ReactElement | null {
     if (section.kind === 'project') {
@@ -279,6 +307,10 @@ export function ConfigureSectionBody({
 
     if (section.kind === 'authoring') {
         return <AuthoringBody value={authoringExperience} onChange={onAuthoringExperienceChange} />;
+    }
+
+    if (section.kind === 'commerceAdmin') {
+        return <CommerceAdminBody value={commerceAdminExperience} onChange={onCommerceAdminExperienceChange} />;
     }
 
     // Business Structure is its own rail tab, so its id carries the slice suffix.

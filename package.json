@@ -245,6 +245,25 @@
                 }
             },
             {
+                "title": "Commerce Admin",
+                "properties": {
+                    "demoBuilder.commerce.adminExperience": {
+                        "type": "string",
+                        "enum": [
+                            "unified-shell",
+                            "classic"
+                        ],
+                        "enumItemLabels": [
+                            "Unified Shell",
+                            "Classic UI"
+                        ],
+                        "default": "unified-shell",
+                        "description": "Which Commerce Admin opens for a Commerce as a Cloud Service project. Each project can choose differently on its Configure screen.",
+                        "order": 1
+                    }
+                }
+            },
+            {
                 "title": "Content Authoring",
                 "properties": {
                     "demoBuilder.daLive.aemAuthorUrl": {
@@ -263,8 +282,8 @@
                             "DA.live Classic",
                             "Experience Workspace"
                         ],
-                        "default": "da-live-classic",
-                        "description": "How new storefronts are edited. DA.live Classic opens the da.live document editor. Experience Workspace opens the newer visual canvas. Each project can choose differently on its Configure screen.",
+                        "default": "experience-workspace",
+                        "description": "How storefronts are edited. DA.live Classic opens the da.live document editor. Experience Workspace opens the newer visual canvas. Each project can choose differently on its Configure screen.",
                         "order": 2
                     },
                     "demoBuilder.daLive.IMSOrgId": {

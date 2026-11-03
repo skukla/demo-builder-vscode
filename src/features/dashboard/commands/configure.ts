@@ -11,6 +11,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
+import { resolveAdminExperience } from '@/core/utils/commerceAdmin';
 import { loadDeclaredSecretFlags } from '@/features/components/services/commerceSecretMigration';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
@@ -38,9 +39,9 @@ import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecli
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { Project, type AuthoringExperience } from '@/types/base';
+import { Project, type AuthoringExperience, type CommerceAdminExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
+import { getComponentInstanceEntries, getEdsDaLiveUrl, hasAdminExperienceChoice, isEdsProject } from '@/types/typeGuards';
 import type { ComponentConfigs } from '@/types/webview';
 import type {
     ConfigureInitialData,
@@ -66,6 +67,7 @@ interface SaveConfigurationData extends BlockLibrarySelectionInput {
     configChanges?: ComponentConfigs;
     newProjectName?: string;
     authoringExperience?: AuthoringExperience;
+    commerceAdminExperience?: CommerceAdminExperience;
 }
 
 export class ConfigureProjectWebviewCommand extends BundledPanelCommand<ConfigureInitialData> {
@@ -209,6 +211,8 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             existingProjectNames,
             isEds: isEdsProject(project),
             authoringExperience: resolveProjectAuthoringExperience(project),
+            hasAdminChoice: hasAdminExperienceChoice(project),
+            commerceAdminExperience: resolveAdminExperience(project),
             // The setting is read HERE, at the boundary; the lists are built by a
             // `vscode`-free function from the same loader the wizard's picker uses.
             blockLibraryChoices: buildBlockLibraryChoices(project, readCustomLibrarySetting()),
@@ -318,6 +322,10 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
                 project,
                 data.authoringExperience,
             );
+
+            if (data.commerceAdminExperience === 'unified-shell' || data.commerceAdminExperience === 'classic') {
+                project.commerceAdminExperience = data.commerceAdminExperience;
+            }
 
             await this.stateManager.saveProject(project);
 

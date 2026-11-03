@@ -69,6 +69,7 @@ export const SETTING_KEYS = [
     'demoBuilder.daLive.aemAuthorUrl',
     'demoBuilder.daLive.IMSOrgId',
     'demoBuilder.daLive.authoringExperience',
+    'demoBuilder.commerce.adminExperience',
     'demoBuilder.daLive.ewCanvasBranch',
     'demoBuilder.accsDiscovery.services',
     'demoBuilder.byom.enabled',

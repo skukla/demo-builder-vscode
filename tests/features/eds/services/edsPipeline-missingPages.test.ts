@@ -27,6 +27,7 @@ import {
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: jest.fn().mockResolvedValue(undefined),
+    resolveProjectAuthoringExperience: () => 'da-live-classic',
     publishLibraryPaths: jest.fn().mockResolvedValue(undefined),
     publishSheetPaths: jest.fn().mockResolvedValue({ published: 0, failed: 0 }),
     verifyLibraryPreviewed: jest.fn().mockResolvedValue(true),

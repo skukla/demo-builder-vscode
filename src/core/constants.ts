@@ -326,7 +326,9 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v49 (2026-11-02, datapack ticks): import-datapack says Demo Builder's engine installs only the
 // dataTypes named and what they need, and that its removal takes all the record lists, whichever
 // are sent. Existing projects would keep telling the agent removal scope follows dataTypes.
-export const AI_CONTEXT_VERSION = 49;
+// v50 (2026-11-02, Experience Workspace default): a project that never chose an authoring experience
+// now opens Experience Workspace. Existing projects' AGENTS.md would keep the DA.live Classic link.
+export const AI_CONTEXT_VERSION = 50;
 
 /**
  * Component IDs for standardized component instance access

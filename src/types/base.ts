@@ -126,6 +126,8 @@ export interface Project {
      * holding the SC's things, leaves it). `configure_project` records it without installing.
      */
     datapack?: ProjectDatapack;
+    /** The Commerce Admin interface chosen on Configure. Absent: the setting's. */
+    commerceAdminExperience?: CommerceAdminExperience;
     /** This demo's own library pack, once its first save made one (step 07). */
     ownDatapack?: OwnDatapack;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
@@ -510,9 +512,16 @@ export interface CustomIconPaths {
  * Stored per-project on the EDS component-instance metadata as
  * `authoringExperience` (beside `daLiveOrg`/`daLiveSite`). Absence falls back
  * to the global `demoBuilder.daLive.authoringExperience` setting (default
- * 'da-live-classic'). Resolved via resolveAuthoringExperience in authoringExperience.ts.
+ * 'experience-workspace'). Resolved via resolveAuthoringExperience in authoringExperience.ts.
  */
 export type AuthoringExperience = 'da-live-classic' | 'experience-workspace';
+
+/**
+ * Which Commerce Admin interface a Cloud Service project opens. Stored on the project when the SC
+ * chooses; absent, the `demoBuilder.commerce.adminExperience` setting decides. Only which link opens
+ * changes: nothing in Commerce does, and Adobe's classic links keep opening the classic interface.
+ */
+export type CommerceAdminExperience = 'unified-shell' | 'classic';
 
 export interface ComponentInstance {
     id: string; // Component ID (e.g., "headless")

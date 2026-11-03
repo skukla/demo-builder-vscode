@@ -18,6 +18,7 @@ import {
     isEdsStackId,
     isEdsProject,
     getAdminPanelUrl,
+    hasAdminExperienceChoice,
 } from '@/types/typeGuards';
 import { createMockProject } from '../helpers/projectFake';
 
@@ -245,6 +246,27 @@ describe('typeGuards - Project Accessors', () => {
     // =================================================================
     // getAdminPanelUrl Tests (SOP §4 compliance - admin URL access)
     // =================================================================
+
+    describe('getAdminPanelUrl with a Unified Shell organization', () => {
+        const ACCS = { headless: { ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.adobe.com/tenant123/graphql' } };
+
+        it('opens a Cloud Service store in the Unified Shell', () => {
+            const project = createMockProject({ componentConfigs: ACCS });
+            expect(getAdminPanelUrl(project, 'acme')).toBe('https://experience.adobe.com/#/@acme/in:tenant123/commerce/cloud-service/admin');
+            expect(getAdminPanelUrl(project)).toBe('https://na1-sandbox.admin.commerce.adobe.com/tenant123/admin/admin/dashboard/');
+        });
+
+        it('lets a URL of the project\'s own win, so there is no choice to offer', () => {
+            const project = createMockProject({ componentConfigs: { headless: { ...ACCS.headless, ADOBE_COMMERCE_ADMIN_URL: 'https://own.example.com/admin' } } });
+            expect(getAdminPanelUrl(project, 'acme')).toBe('https://own.example.com/admin');
+            expect(hasAdminExperienceChoice(project)).toBe(false);
+        });
+
+        it('offers the choice only on a Cloud Service store', () => {
+            expect(hasAdminExperienceChoice(createMockProject({ componentConfigs: ACCS }))).toBe(true);
+            expect(hasAdminExperienceChoice(createMockProject({ componentConfigs: {} }))).toBe(false);
+        });
+    });
 
     describe('getAdminPanelUrl', () => {
         it('should return admin URL stored under the backend component config', () => {

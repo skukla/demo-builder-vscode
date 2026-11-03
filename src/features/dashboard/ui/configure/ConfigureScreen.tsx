@@ -49,7 +49,7 @@ import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { StepRail } from '@/core/ui/components/navigation/StepRail';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
-import type { AuthoringExperience } from '@/types/base';
+import type { AuthoringExperience, CommerceAdminExperience } from '@/types/base';
 import type { ConfigureInitialData } from '@/types/webviewPayloads';
 
 /** Stable empty reference for an optional prop (avoid hook churn). */
@@ -77,12 +77,15 @@ export function ConfigureScreen({
     existingProjectNames = [],
     isEds = false,
     authoringExperience: initialAuthoringExperience,
+    hasAdminChoice = false,
+    commerceAdminExperience: initialCommerceAdminExperience = 'unified-shell',
     blockLibraryChoices: initialBlockLibraryChoices,
     componentSecretFlags = EMPTY_SECRET_FLAGS,
 }: ConfigureScreenProps) {
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
-        initialAuthoringExperience ?? 'da-live-classic',
+        initialAuthoringExperience ?? 'experience-workspace',
     );
+    const [commerceAdminExperience, setCommerceAdminExperience] = useState<CommerceAdminExperience>(initialCommerceAdminExperience);
     // What the Block Libraries tab offers; the custom list follows the VS Code setting.
     const blockLibraryChoices = useBlockLibraryChoices(initialBlockLibraryChoices);
     // The block libraries ticked on the Block Libraries tab — lifted, like every value here.
@@ -146,7 +149,9 @@ export function ConfigureScreen({
         touchedFields,
         isEds,
         authoringExperience,
-        initialAuthoringExperience: initialAuthoringExperience ?? 'da-live-classic',
+        initialAuthoringExperience: initialAuthoringExperience ?? 'experience-workspace',
+        commerceAdminExperience,
+        initialCommerceAdminExperience,
         blockLibrarySelection: changedSelection,
         onSaved: markSaved,
     });
@@ -175,6 +180,7 @@ export function ConfigureScreen({
             isFieldComplete,
             isEds,
             hasBlockLibraryChoices: hasBlockLibraryChoices(blockLibraryChoices),
+            hasAdminChoice,
             projectNameError,
         });
 
@@ -225,6 +231,8 @@ export function ConfigureScreen({
                                 projectFolder={projectFolder}
                                 authoringExperience={authoringExperience}
                                 onAuthoringExperienceChange={setAuthoringExperience}
+                                commerceAdminExperience={commerceAdminExperience}
+                                onCommerceAdminExperienceChange={setCommerceAdminExperience}
                                 blockLibraries={blockLibraries}
                             />
                         </Form>

@@ -117,6 +117,23 @@ describe('useConfigureSave', () => {
         });
     });
 
+    it('sends the Commerce Admin choice only once it changed, whatever the project\'s kind', async () => {
+        let current = props({ commerceAdminExperience: 'unified-shell', initialCommerceAdminExperience: 'unified-shell' });
+        const { result, rerender } = renderHook(() => useConfigureSave(current));
+
+        await act(() => result.current.handleSave());
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('commerceAdminExperience');
+
+        current = { ...current, commerceAdminExperience: 'classic' };
+        rerender();
+        await act(() => result.current.handleSave());
+        expect(mockRequest.mock.calls[1][1]).toMatchObject({ commerceAdminExperience: 'classic' });
+
+        rerender();
+        await act(() => result.current.handleSave());
+        expect(mockRequest.mock.calls[2][1]).not.toHaveProperty('commerceAdminExperience');
+    });
+
     it('hands what it sent to onSaved once the save succeeds, and not when it fails', async () => {
         const onSaved = jest.fn();
         const ok = render({ onSaved });

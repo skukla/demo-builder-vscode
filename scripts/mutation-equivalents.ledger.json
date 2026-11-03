@@ -7126,7 +7126,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
             ],
-            "line": 101,
+            "line": 103,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",
@@ -10227,7 +10227,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 161,
+            "line": 171,
             "mutants": 1,
             "category": "other",
             "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
@@ -12772,7 +12772,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 98,
+            "line": 104,
             "mutants": 1,
             "category": "other",
             "reason": "The deployment-status subscription's dependency array holds no values, so ['Stryker was here'] is just as constant as [] when React compares it element-wise with Object.is on every render: the effect subscribes once on mount and unsubscribes on unmount either way. The listener reads nothing from the render it was created in, only the stable setIsDeploying setter. Survived identically on ConfigureScreen.tsx before the EDS-8 split, where the PL-22 row for the handlers already described the same equivalence.",
@@ -13173,7 +13173,7 @@
             "anchors": [
                 "if (!accsEndpoint) return undefined;"
             ],
-            "line": 95,
+            "line": 107,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the guard false, so parseAccsEndpoint falls through to ACCS_ENDPOINT_PATTERN.exec(accsEndpoint) with a falsy value. RegExp.prototype.exec coerces its argument to a string first, so undefined becomes the literal 'undefined' and '' stays empty; neither matches an anchored https:// host, and the function returns undefined by the very next line. Verified by planting the mutation as a standalone probe: exec(undefined), exec(null) and exec('') all returned null. The guard is what lets the call typecheck \u2014 accsEndpoint is string | undefined and exec takes string \u2014 so it cannot be deleted without a cast at the call boundary, which this repo bans.",

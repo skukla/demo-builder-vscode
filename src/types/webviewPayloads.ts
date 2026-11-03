@@ -16,7 +16,7 @@
 import type { AppBuilderComponentCatalogEntry, ComponentSettings } from './appBuilderComponents';
 import type {
     AppBuilderComponentState,
-    AuthoringExperience,
+    AuthoringExperience, CommerceAdminExperience,
     Project,
     ProjectStatus,
 } from './base';
@@ -252,6 +252,10 @@ export interface ConfigureInitialData {
     isEds: boolean;
     /** Resolved authoring experience seeding the radio (EDS only). */
     authoringExperience: AuthoringExperience;
+    /** A Cloud Service store with no Admin URL of its own — gates the Commerce Admin radio. */
+    hasAdminChoice: boolean;
+    /** Resolved Commerce Admin interface seeding the radio. */
+    commerceAdminExperience: CommerceAdminExperience;
     /** The block libraries this project can choose from (EDS only; else empty lists). */
     blockLibraryChoices: ConfigureBlockLibraryChoices;
     /**

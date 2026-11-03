@@ -39,6 +39,8 @@ export interface UseConfigureSectionsProps {
     isEds: boolean;
     /** The project has at least one block library to show — gates the Block Libraries section. */
     hasBlockLibraryChoices: boolean;
+    /** A Cloud Service store with no Admin URL of its own — gates the Commerce Admin section. */
+    hasAdminChoice?: boolean;
     /** The project-name field's error, if any. */
     projectNameError: string | undefined;
 }
@@ -69,6 +71,7 @@ export function useConfigureSections({
     isFieldComplete,
     isEds,
     hasBlockLibraryChoices,
+    hasAdminChoice,
     projectNameError,
 }: UseConfigureSectionsProps): UseConfigureSectionsReturn {
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -97,9 +100,10 @@ export function useConfigureSections({
                 fieldHasError,
                 isEds,
                 hasBlockLibraryChoices,
+                hasAdminChoice,
                 isProjectNameValid: !projectNameError,
             }),
-        [serviceGroups, isFieldComplete, fieldHasError, isEds, hasBlockLibraryChoices, projectNameError],
+        [serviceGroups, isFieldComplete, fieldHasError, isEds, hasBlockLibraryChoices, hasAdminChoice, projectNameError],
     );
 
     // Sections come and go as components are configured, so the stored id can go stale;

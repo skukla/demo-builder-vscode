@@ -147,8 +147,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // v47: import-datapack and diagnose-demo say a pack's root goes under the store's own root,
     // and only a shared root leaves the one Admin step (datapack-engine step 12).
     // 49: import-datapack says an import installs what is ticked, and a removal takes the whole record.
-    it('is 49 (the import skill says ticks choose what goes in, and a removal takes the record)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(49);
+    // 50: a project that never chose an authoring experience now links Experience Workspace.
+    it('is 50 (AGENTS.md links the Experience Workspace default)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(50);
     });
 });
 

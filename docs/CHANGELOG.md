@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Commerce Admin opens in the Unified Shell.** Commerce as a Cloud Service projects now open Adobe's Unified Shell by default. Each project can choose the Classic UI on Configure, under Commerce Admin, and the `demoBuilder.commerce.adminExperience` setting changes the default.
+- **Experience Workspace is the default for authoring.** Projects that never chose an authoring experience now open Experience Workspace. A project that chose DA.live Classic keeps it.
+
 ### Changed
 - **Clear demo data leaves nothing behind that only the chosen stores use.** It now also removes their companies and the customers in them, shared catalogs with their customer groups, customer groups, attribute sets and attributes, and sets their websites' settings to the default's value. Anything another demo also uses stays, and the dialog names it and says why. Not yet proved on a live store.
 - **A dialog that is waiting shows only its spinner.** Import, Export, Manage APIs, Add ERP, Simulate downtime and Clear demo data no longer show part of their form, or disabled buttons, while they load. A pack with one data type starts ticked.

@@ -62,6 +62,18 @@ export function deriveAccsAdminUrl(accsEndpoint: string | undefined): string | u
 }
 
 /**
+ * The same tenant's Admin in Adobe's Unified Shell, in the form Adobe documents (Experience League,
+ * "Commerce Admin in Adobe Unified Experience"). The organization is its short name.
+ *
+ * @returns The URL, or undefined when the endpoint doesn't match the ACCS tenant shape.
+ */
+export function deriveAccsUnifiedAdminUrl(accsEndpoint: string | undefined, imsOrg: string): string | undefined {
+    const parsed = parseAccsEndpoint(accsEndpoint);
+    if (!parsed) return undefined;
+    return `https://experience.adobe.com/#/@${encodeURIComponent(imsOrg)}/in:${parsed.tenantId}/commerce/cloud-service/admin`;
+}
+
+/**
  * The ACCS tenant id on its own, for callers that need the IDENTITY not a URL.
  *
  * This is the Data Installer's `commerce_instance`. Its live values were measured

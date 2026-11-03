@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import { withProjectFromPath } from './projectFromPath';
 import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';
 import { openPrivateBrowser } from '@/core/utils/browserUtils';
+import { resolveAdminPanelUrl } from '@/core/utils/commerceAdmin';
 import { validateURL } from '@/core/validation/URLValidator';
 import {
     getEwCanvasBranch,
@@ -17,7 +18,7 @@ import {
 } from '@/features/eds/handlers/edsHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
-import { getEdsLiveUrl, getEdsDaLiveUrl, getAdminPanelUrl } from '@/types/typeGuards';
+import { getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 // ============================================================================
 // Demo Control Handlers (Start/Stop/Open)
@@ -133,14 +134,14 @@ export const handleOpenDaLive = withProjectFromPath<{ projectPath: string }>(
 /**
  * Open the Adobe Commerce Admin Panel for a project.
  *
- * The admin URL resolves via getAdminPanelUrl: an explicit
+ * The admin URL resolves via resolveAdminPanelUrl: an explicit
  * ADOBE_COMMERCE_ADMIN_URL (PaaS Configure field / override) wins, otherwise
  * SaaS projects derive it from the ACCS tenant endpoint. When unresolvable,
  * a notification offers a jump to the Configure screen instead of failing.
  */
 export const handleOpenAdminPanel = withProjectFromPath<{ projectPath: string }>(
     async (context, project): Promise<HandlerResponse> => {
-        const url = getAdminPanelUrl(project);
+        const url = resolveAdminPanelUrl(project);
 
         if (!url) {
             // No URL configured — offer the Configure screen. Fire-and-forget so the

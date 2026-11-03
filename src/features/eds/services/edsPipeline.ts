@@ -759,12 +759,14 @@ const PIPELINE_STEPS: PipelineStep[] = [
                 operation: 'eds-settings',
                 message: STOREFRONT_JOBS.applyingDaLiveSettings,
             });
-            const { applyDaLiveOrgConfigSettings } = await import('../handlers/edsHelpers');
+            const { applyDaLiveOrgConfigSettings, resolveProjectAuthoringExperience } = await import('../handlers/edsHelpers');
+            // A project being reset keeps its own choice; a new one takes the default.
             await applyDaLiveOrgConfigSettings(
                 services.daLiveContentOps,
                 params.daLiveOrg,
                 params.daLiveSite,
                 services.logger,
+                params.project ? resolveProjectAuthoringExperience(params.project) : undefined,
             );
         },
     },

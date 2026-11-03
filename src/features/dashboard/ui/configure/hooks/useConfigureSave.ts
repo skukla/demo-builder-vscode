@@ -17,7 +17,7 @@ import { withStoredSecretsPreserved } from '../storedSecretPayload';
 import type { BlockLibrarySelection } from './useBlockLibrarySelection';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import type { AuthoringExperience, Project } from '@/types/base';
+import type { AuthoringExperience, CommerceAdminExperience, Project } from '@/types/base';
 import type { ComponentConfigs } from '@/types/webview';
 import type { DeploymentStatusPayload } from '@/types/webviewPayloads';
 
@@ -41,6 +41,9 @@ export interface UseConfigureSaveProps {
     authoringExperience: AuthoringExperience;
     /** The choice the screen loaded with. */
     initialAuthoringExperience: AuthoringExperience;
+    /** The Commerce Admin choice, sent only once changed, and the one the screen loaded with. */
+    commerceAdminExperience?: CommerceAdminExperience;
+    initialCommerceAdminExperience?: CommerceAdminExperience;
     /**
      * The block libraries to record (EDS only). Undefined while the SC has not
      * touched the picker, and then nothing about them is sent.
@@ -76,6 +79,8 @@ export function useConfigureSave({
     isEds,
     authoringExperience,
     initialAuthoringExperience,
+    commerceAdminExperience,
+    initialCommerceAdminExperience,
     blockLibrarySelection,
     onSaved,
 }: UseConfigureSaveProps): UseConfigureSaveReturn {
@@ -86,6 +91,7 @@ export function useConfigureSave({
     // back looked like "no change" the second time (owner, 2026-10-17).
     const [savedName, setSavedName] = useState<string>(() => getProjectDisplayName(project));
     const [savedAuthoring, setSavedAuthoring] = useState(initialAuthoringExperience);
+    const [savedAdmin, setSavedAdmin] = useState(initialCommerceAdminExperience);
 
     // Listen for deployment status updates from backend
     // This keeps the Save button disabled during mesh/storefront deployment
@@ -118,6 +124,7 @@ export function useConfigureSave({
                         touchedFields,
                     ),
                     newProjectName,
+                    ...(commerceAdminExperience !== savedAdmin ? { commerceAdminExperience } : {}),
                     ...(isEds
                         ? {
                               ...(authoringChanged ? { authoringExperience } : {}),
@@ -131,6 +138,7 @@ export function useConfigureSave({
             }
             if (newProjectName) setSavedName(newProjectName);
             if (isEds) setSavedAuthoring(authoringExperience);
+            setSavedAdmin(commerceAdminExperience);
             onSaved?.(configChanges);
         } catch {
             // Error handled by extension - no action needed
@@ -150,8 +158,10 @@ export function useConfigureSave({
         // compare a new name against an old one and silently drop the rename.
         savedName,
         savedAuthoring,
+        savedAdmin,
         isEds,
         authoringExperience,
+        commerceAdminExperience,
         blockLibrarySelection,
         onSaved,
     ]);

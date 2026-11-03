@@ -243,6 +243,16 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         expect(meta?.authoringExperience).toBe('experience-workspace');
     });
 
+    it('keeps the project\'s Commerce Admin choice, without touching DA.live', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
+        const save = captureSaveHandler(command);
+
+        await save({ componentConfigs: {}, commerceAdminExperience: 'classic' });
+
+        expect(savedProject?.commerceAdminExperience).toBe('classic');
+        expect(mockInstallQuickEdit).not.toHaveBeenCalled();
+    });
+
     it('re-applies editor.path with the new experience when it changed', async () => {
         mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
