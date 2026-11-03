@@ -20,6 +20,7 @@ import { press, settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 
 import {
+    SOURCE_NOTICE_COPY,
     DatapackCatalogView,
     mockRequest,
     requestOfType,
@@ -184,6 +185,39 @@ describe('the two doors out of the catalog', () => {
         // CONTROL: the switch beside it is there.
         expect(screen.getByRole('checkbox', { name: /community/i })).toBeInTheDocument();
         expect(Boolean(screen.queryByTestId('datapack-source-notice'))).toBe(banner);
+    });
+
+    // Only "no access" closes: it is true on every visit and the SC cannot fix it (owner, 2026-11-03).
+    it('closes the "no access" banner, and tells the extension to remember it', async () => {
+        mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, installerMissing: 'no-access' } });
+        render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+
+        await press(screen.getByRole('button', { name: SOURCE_NOTICE_COPY.dismiss }));
+
+        expect(screen.queryByTestId('datapack-source-notice')).not.toBeInTheDocument();
+        expect(mockPostMessage).toHaveBeenCalledWith('dismiss-datapack-no-access');
+    });
+
+    it('shows nothing for "no access" once dismissed, and offers no close on "didn\'t answer"', async () => {
+        mockRequest.mockResolvedValue({
+            success: true,
+            data: { items: CATALOG, count: CATALOG.length, installerMissing: 'no-access', noAccessDismissed: true },
+        });
+        const { unmount } = render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+        expect(screen.queryByTestId('datapack-source-notice')).not.toBeInTheDocument();
+        unmount();
+
+        mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, installerMissing: 'no-answer' } });
+        render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+        // CONTROL: the banner is there, with no way to close it.
+        expect(screen.getByTestId('datapack-source-notice')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: SOURCE_NOTICE_COPY.dismiss })).not.toBeInTheDocument();
     });
 
     it('keeps the switch, reading off, once the SC switched an answering Data Installer off', async () => {

@@ -161,6 +161,11 @@ export type CatalogPage = Page<DatapackSummary> & {
     installerMissing?: 'no-address' | 'no-access' | 'no-answer';
     /** The SC switched the Data Installer's datapacks off, so it was not asked. */
     installerOff?: boolean;
+    /**
+     * The SC dismissed the "no access" banner on this machine (`dismiss-datapack-no-access`).
+     * Cleared once the Data Installer answers them, so it comes back if access is lost again.
+     */
+    noAccessDismissed?: boolean;
     engine?: DatapackEngineId;
 };
 

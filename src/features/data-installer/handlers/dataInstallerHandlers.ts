@@ -27,7 +27,7 @@ import { orgNumberOf } from '../services/dataInstallerSignIn';
 import { packReadsVia } from '../services/recordedPack';
 import { layerForDetail } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
-import type { OperationMode } from '../types';
+import type { CatalogPage, OperationMode } from '../types';
 import { INSTALLER_OFF, LIBRARY_LIST_FAILED, listLibrary, mergedCatalog } from './catalogLibraryRows';
 import { activityFromBoth, installedFromBoth } from './engineHistoryReads';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
@@ -315,6 +315,24 @@ interface DatapackRefPayload {
     store?: DatapackStoreName;
 }
 
+/** globalState: the SC dismissed the Datapacks screen's "no access" banner on this machine. */
+export const NO_ACCESS_DISMISSED_KEY = 'demoBuilder.datapacks.noAccessNoticeDismissed';
+
+/**
+ * Say whether the "no access" banner was dismissed, and forget the dismissal once the Data
+ * Installer answers this SC: access that comes back and is lost again shows the banner again.
+ */
+async function withNoAccessDismissal(context: HandlerContext, response: HandlerResponse): Promise<HandlerResponse> {
+    if (!response.success) return response;
+    const page = response.data as CatalogPage;
+    const state = context.context.globalState;
+    if (page.installerMissing === 'no-access') {
+        return state.get<boolean>(NO_ACCESS_DISMISSED_KEY) ? { ...response, data: { ...page, noAccessDismissed: true } } : response;
+    }
+    if (!page.installerMissing && !page.installerOff) await state.update(NO_ACCESS_DISMISSED_KEY, undefined);
+    return response;
+}
+
 export const dataInstallerHandlers = defineHandlers({
     'check-datapack-service': async (context: HandlerContext): Promise<HandlerResponse> =>
         withClient(context, 'Could not reach the Data Installer API.', (client) =>
@@ -345,7 +363,13 @@ export const dataInstallerHandlers = defineHandlers({
         // One after the other: either may prompt for the one Adobe sign-in they share.
         const library = await askLibrary();
         const installer = payload?.includeInstaller === false ? INSTALLER_OFF : await askInstaller();
-        return mergedCatalog(library, installer, payload?.includeCommunity === true);
+        return withNoAccessDismissal(context, mergedCatalog(library, installer, payload?.includeCommunity === true));
+    },
+
+    /** The SC closed the "no access" banner: remember it on this machine (2026-11-03). */
+    'dismiss-datapack-no-access': async (context: HandlerContext): Promise<HandlerResponse> => {
+        await context.context.globalState.update(NO_ACCESS_DISMISSED_KEY, true);
+        return { success: true };
     },
 
     'get-datapack-detail': async (

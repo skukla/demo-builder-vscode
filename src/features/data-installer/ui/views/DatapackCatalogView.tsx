@@ -179,6 +179,17 @@ export function DatapackCatalogView(): React.JSX.Element {
         (): void => load({ includeCommunity, includeInstaller }),
         [load, includeCommunity, includeInstaller],
     );
+    // The "no access" banner closes at once, and the extension remembers it (2026-11-03).
+    const [noAccessClosed, setNoAccessClosed] = useState(false);
+    const dismissNoAccess = useCallback((): void => {
+        setNoAccessClosed(true);
+        webviewClient.postMessage('dismiss-datapack-no-access');
+    }, []);
+    const noticePage = useMemo(
+        () => (value && noAccessClosed ? { ...value, noAccessDismissed: true } : value),
+        [value, noAccessClosed],
+    );
+
     // Whether it answered, from each list that asked it; a list with it switched off says nothing.
     useEffect(() => {
         if (value && value.installerOff !== true) setInstallerAnswered(value.installerMissing === undefined);
@@ -336,7 +347,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                     />
                 }
             >
-                <DatapackSourceNotice page={value} />
+                <DatapackSourceNotice page={noticePage} onDismiss={dismissNoAccess} />
                 <DatapackCatalogGrid
                     groups={groups}
                     filtered={filtered}

@@ -244,11 +244,14 @@ function initial(displayName: string): string {
 /**
  * The one word beside the title, if any. A team pack says nothing: it is the normal case, and an SC
  * has no need to learn where it lives. Everything else says what makes it different.
+ *
+ * Team before Yours (owner, 2026-11-03): a team pack is the library's, whoever uploaded it, so the
+ * SC who loaded the team's packs saw "Yours" on every one of them.
  */
 function cardTag(group: DatapackGroup): string | undefined {
     if (group.store === 'library') {
-        if (group.mine) return 'Yours';
-        return group.team ? undefined : 'Community';
+        if (group.team) return undefined;
+        return group.mine ? 'Yours' : 'Community';
     }
     return group.shared ? 'Data Installer' : 'Community';
 }

@@ -520,6 +520,24 @@ describe('DatapackCard — where the pack lives', () => {
         // Spectrum's grey badge, as the integration card's type label (owner, 2026-10-31).
         expect(screen.getByText('Yours').closest('[data-variant]')).toHaveAttribute('data-variant', 'neutral');
     });
+
+    // A team pack is the library's, whoever uploaded it (owner, 2026-11-03): the SC who loaded the
+    // team's packs saw "Yours" on all of them.
+    it('tags a team pack nothing even for the SC who uploaded it', () => {
+        render(
+            <DatapackCard
+                group={makeGroup({ key: 'library:bodea', store: 'library', shared: true, team: true, mine: true })}
+                selectedVersion="main"
+                onVersionChange={jest.fn()}
+                onOpen={jest.fn()}
+            />,
+        );
+
+        expect(screen.queryByText('Yours')).not.toBeInTheDocument();
+        expect(screen.queryByText('Community')).not.toBeInTheDocument();
+        // CONTROL: the card itself rendered.
+        expect(screen.getByTestId('datapack-card')).toBeInTheDocument();
+    });
 });
 
 

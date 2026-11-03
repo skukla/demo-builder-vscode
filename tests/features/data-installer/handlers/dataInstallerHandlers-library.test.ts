@@ -22,7 +22,9 @@ import {
     resolveDataInstallerAccess,
     resolveDatapackAccess,
 } from './dataInstallerHandlers.testUtils';
+import { NO_ACCESS_DISMISSED_KEY } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
+import { DataInstallerApiError } from '@/features/data-installer/services/dataInstallerErrors';
 import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -336,6 +338,49 @@ describe('the library store', () => {
             expect(res).toMatchObject({
                 success: true,
                 data: { items: [{ ...LIBRARY_ROW, store: 'library' }], installerOff: true },
+            });
+        });
+
+        // The "no access" banner closes, and stays closed on this machine until the Data Installer
+        // answers this SC (owner, 2026-11-03).
+        describe('the dismissed "no access" banner', () => {
+            const refused = async () => {
+                throw new DataInstallerApiError('Not in the product profile.', 403, 'datapacks');
+            };
+            function contextWithDismissal(dismissed: boolean) {
+                const context = makeHeadlessContext();
+                const state = context.context.globalState as unknown as { get: jest.Mock; update: jest.Mock };
+                state.get.mockImplementation((key: string) => (key === NO_ACCESS_DISMISSED_KEY ? dismissed : undefined));
+                return { context, state };
+            }
+
+            it('is remembered when the SC closes it', async () => {
+                const { context, state } = contextWithDismissal(false);
+
+                expect(await dataInstallerHandlers['dismiss-datapack-no-access'](context)).toEqual({ success: true });
+                expect(state.update).toHaveBeenCalledWith(NO_ACCESS_DISMISSED_KEY, true);
+            });
+
+            it('is reported on a list the Data Installer turned away, and only once dismissed', async () => {
+                setupLibrary(LIBRARY);
+                storesAnswer(async () => ({ items: [LIBRARY_ROW], count: 1 }), refused);
+
+                const dismissed = await dataInstallerHandlers['find-datapacks'](contextWithDismissal(true).context, {});
+                const shown = await dataInstallerHandlers['find-datapacks'](contextWithDismissal(false).context, {});
+
+                expect(dismissed).toMatchObject({ data: { installerMissing: 'no-access', noAccessDismissed: true } });
+                expect(shown).toMatchObject({ data: { installerMissing: 'no-access' } });
+                expect((shown.data as Record<string, unknown>).noAccessDismissed).toBeUndefined();
+            });
+
+            it('is forgotten once the Data Installer answers, so lost access shows it again', async () => {
+                setupLibrary(LIBRARY);
+                storesAnswer(async () => ({ items: [LIBRARY_ROW], count: 1 }));
+                const { context, state } = contextWithDismissal(true);
+
+                await dataInstallerHandlers['find-datapacks'](context, {});
+
+                expect(state.update).toHaveBeenCalledWith(NO_ACCESS_DISMISSED_KEY, undefined);
             });
         });
 

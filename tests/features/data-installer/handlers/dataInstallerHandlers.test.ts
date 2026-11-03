@@ -40,9 +40,11 @@ describe('dataInstallerHandlers', () => {
             'list-datapack-data-types',
             'list-installed-datapacks',
             'get-datapack-activity',
+            // The Datapacks screen's "no access" banner, closed and remembered (2026-11-03).
+            'dismiss-datapack-no-access',
         ];
 
-        it('registers exactly the six Stage 1 message types', () => {
+        it('registers exactly the six Stage 1 message types and the banner dismissal', () => {
             // Count pin. An unregistered type is SILENCE, not an error — the
             // webview request hangs to timeout — so the set is asserted exactly.
             expect(Object.keys(dataInstallerHandlers).sort()).toEqual([...EXPECTED].sort());
