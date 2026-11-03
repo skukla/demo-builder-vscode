@@ -15,6 +15,13 @@ import { SelectAllRow } from './SelectAllRow';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 
+/**
+ * The filter shows on every list, however short: `SearchHeader` otherwise drops it at five items or
+ * fewer, and every kind's count, Select All and rows would then start higher than the last kind's
+ * (owner, 2026-11-02).
+ */
+const SEARCH_THRESHOLD = 0;
+
 /** Fields a query is matched against. */
 const matches = (item: StoreItem, query: string): boolean => {
     const q = query.trim().toLowerCase();
@@ -46,6 +53,7 @@ export function StoreItemChecklist({ items, nouns, picked, onChange }: StoreItem
                 searchQuery={query}
                 onSearchQueryChange={setQuery}
                 searchPlaceholder={`Filter ${nouns[1]}`}
+                searchThreshold={SEARCH_THRESHOLD}
                 totalCount={items.length}
                 filteredCount={shown.length}
                 itemNoun={nouns[0]}

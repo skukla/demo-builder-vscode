@@ -76,6 +76,23 @@ describe('the screen', () => {
         expect(screen.queryByText(/^Includes/)).not.toBeInTheDocument();
     });
 
+    it('keeps the same layout on a short list with a note: filter, count, Select All, rows, then the note', async () => {
+        answer({ products: PRODUCTS, cart_rules: RULES });
+        await open();
+        await press(row('Cart Rules'));
+
+        const order = [
+            screen.getByRole('searchbox', { name: 'Filter cart rules' }),
+            screen.getByText('1 cart rule'),
+            screen.getByRole('checkbox', { name: 'Select All' }),
+            screen.getByRole('checkbox', { name: /Spring Sale/ }),
+            screen.getByText('Includes related coupons.'),
+        ];
+        order.slice(1).forEach((later, i) => {
+            expect(order[i].compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        });
+    });
+
     it('has nothing to go back to', async () => {
         answer({ products: PRODUCTS });
         await open();

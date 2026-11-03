@@ -5,6 +5,9 @@
  * already selected), so the spinner sits in the pane, without words. A kind with nothing to select
  * never rests here: the flow moves on to the next kind, and its row is greyed out.
  *
+ * Its notes sit under the list, so the filter, count and Select All are in the same place on every
+ * kind, whichever ones have a note (owner, 2026-11-02).
+ *
  * @module features/data-installer/ui/components/StoreKindItems
  */
 
@@ -41,8 +44,8 @@ export function StoreKindItems({ kind, page, failure, loading, picked, onChange 
     if (failure || !page) return <p className="dialog-problem text-negative">Couldn&apos;t load {many}: {failure}</p>;
     return (
         <>
-            {INCLUDES[kind] ? <p className="datapack-export-note">{INCLUDES[kind]}</p> : null}
             <StoreItemChecklist items={page.items} nouns={[one, many]} picked={picked} onChange={onChange} />
+            {INCLUDES[kind] ? <p className="datapack-export-note">{INCLUDES[kind]}</p> : null}
             {page.inPackCount > 0 ? <p className="datapack-export-note">{page.inPackCount.toLocaleString('en-US')} more already in the datapack.</p> : null}
         </>
     );
