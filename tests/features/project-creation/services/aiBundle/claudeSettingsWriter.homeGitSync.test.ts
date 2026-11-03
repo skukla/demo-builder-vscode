@@ -42,6 +42,13 @@ const GIT_ENV = {
     GIT_COMMITTER_EMAIL: 'test@example.com',
 };
 
+/**
+ * The strictest sh on this machine. A hook runs under /bin/sh, which is dash on Linux and bash on
+ * macOS, so bash-only syntax passed here and failed on CI (`[[`, 2026-10-29 to 2026-11-03). macOS
+ * ships dash too: run under it when it is there, so this fails on a Mac the way it fails on Linux.
+ */
+const POSIX_SH = fs.existsSync('/bin/dash') ? '/bin/dash' : '/bin/sh';
+
 function git(cwd: string, ...args: string[]): string {
     return execFileSync('git', args, { cwd, env: GIT_ENV, encoding: 'utf8' }).trim();
 }
@@ -69,7 +76,7 @@ function editAndRunHook(root: string, dir: string, command = buildHomeGitSyncCom
     const file = path.join(dir, 'edited.txt');
     fs.writeFileSync(file, 'an agent edit\n');
     expect(command).not.toBe('');
-    spawnSync('/bin/sh', ['-c', command], {
+    spawnSync(POSIX_SH, ['-c', command], {
         input: JSON.stringify({ tool_name: 'Write', tool_input: { file_path: file } }),
         env: GIT_ENV,
     });

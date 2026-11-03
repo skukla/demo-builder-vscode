@@ -333,6 +333,8 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v52 (2026-11-03, datapacks without the Data Installer): the enabled setting is gone, and import-datapack
 // and diagnose-demo say datapacks come from Demo Builder's datapack store first, the Data Installer being
 // an extra. Existing projects would keep sending the agent to a setting that no longer exists.
+// Also in v52: a project's storefront git-sync hook is plain POSIX sh (`case`, not bash's `[[`),
+// so it runs on Linux, where /bin/sh is dash. Existing projects would keep a hook that never pushes there.
 export const AI_CONTEXT_VERSION = 52;
 
 /**

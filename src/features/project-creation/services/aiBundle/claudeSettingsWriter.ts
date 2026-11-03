@@ -351,6 +351,11 @@ function buildToolFileExtraction(nodePath: string): string {
  * Extracts the edited file into `$TOOL_FILE` (see `buildToolFileExtraction`),
  * then commits + pushes only when that file is under the storefront path.
  *
+ * Plain POSIX sh: `case` for the prefix test, not bash's `[[ … == …* ]]`. The hook runs under
+ * `/bin/sh`, which is dash on Linux, where `[[` does not exist; the test failed there and
+ * nothing was ever pushed (CI on Linux, every run since 2026-10-29). macOS's sh is bash, which
+ * is why it worked locally.
+ *
  * `nodePath` is interpolated into the extractor command, so it is subject to
  * the same `SHELL_METACHAR_RE` guard as `storefrontPath`.
  */
@@ -369,10 +374,11 @@ function buildGitSyncCommand(storefrontPath: string, nodePath: string): string {
         buildToolFileExtraction(nodePath) +
         // Not while a storefront update's clash is kept in the copy for fixing: the copy
         // holds the half-applied update, and the first edit pushed all of it (2026-10-21).
-        `if [[ "$TOOL_FILE" == ${quoted}* ]] && [ ! -e ${quoted}/.git/${KEPT_CLASH_MARK} ]; then ` +
+        `case "$TOOL_FILE" in ${quoted}*) ` +
+        `if [ ! -e ${quoted}/.git/${KEPT_CLASH_MARK} ]; then ` +
         `git -C ${quoted} add -A && ` +
         `git -C ${quoted} commit -m "${GIT_SYNC_SIGNATURE}" && ` +
-        `git -C ${quoted} push; fi`
+        `git -C ${quoted} push; fi ;; esac`
     );
 }
 
