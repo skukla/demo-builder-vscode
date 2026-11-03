@@ -246,9 +246,7 @@ export interface ConfigureInitialData {
     componentsData: ConfigureComponentsData;
     /** Existing env values from component .env files. */
     existingEnvValues: Record<string, Record<string, string>>;
-    /** All project names — rename validation. */
-    existingProjectNames: string[];
-    /** Whether this is an EDS project — gates the Authoring Experience radio. */
+    /** Whether this is an EDS project — gates the Storefront section. */
     isEds: boolean;
     /** Resolved authoring experience seeding the radio (EDS only). */
     authoringExperience: AuthoringExperience;

@@ -15,18 +15,16 @@
  *   - That error stays FINDABLE. `hasError` rides each section onto its rail tab,
  *     because a disabled Save with no visible cause is a dead end.
  *
- * This file is the wiring and the page chrome. The jobs live in hooks (EDS-8): the
- * project-name field in `useProjectNameField`, Save/Close and the busy flags in
- * `useConfigureSave`, the sections, global validation and rail in `useConfigureSections`,
+ * This file is the wiring and the page chrome. The jobs live in hooks (EDS-8): Save/Close and the
+ * busy flags in `useConfigureSave`, the sections, global validation and rail in `useConfigureSections`,
  * and the field row with store discovery in `useConfigureFieldRow`. A new rail tab is a
  * new section kind in `buildConfigureSections` plus its body in `ConfigureSectionBody`.
  *
  * @module features/dashboard/ui/configure/ConfigureScreen
  */
 
-import { Form, Button, View } from '@adobe/react-spectrum';
+import { Form, Button, Text, View } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
-import { hasBlockLibraryChoices } from './BlockLibrariesSection';
 import { ConfigureSectionBody } from './ConfigureSectionBody';
 import type { UniqueField } from './configureTypes';
 import { useBlockLibraryChoices } from './hooks/useBlockLibraryChoices';
@@ -35,7 +33,6 @@ import { useConfigureFieldRow } from './hooks/useConfigureFieldRow';
 import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
 import { useConfigureSave } from './hooks/useConfigureSave';
 import { useConfigureSections } from './hooks/useConfigureSections';
-import { useProjectNameField } from './hooks/useProjectNameField';
 import { useRepublishProgress } from './hooks/useRepublishProgress';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
@@ -49,6 +46,7 @@ import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { StepRail } from '@/core/ui/components/navigation/StepRail';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { AuthoringExperience, CommerceAdminExperience } from '@/types/base';
 import type { ConfigureInitialData } from '@/types/webviewPayloads';
 
@@ -74,7 +72,6 @@ export function ConfigureScreen({
     project,
     componentsData,
     existingEnvValues,
-    existingProjectNames = [],
     isEds = false,
     authoringExperience: initialAuthoringExperience,
     hasAdminChoice = false,
@@ -113,14 +110,6 @@ export function ConfigureScreen({
             toggleCustomLibrary,
         ],
     );
-    const {
-        projectName,
-        projectNameTouched,
-        projectNameError,
-        projectFolder,
-        handleProjectNameChange,
-    } = useProjectNameField({ project, existingProjectNames });
-
     // Focus trap for keyboard navigation
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
@@ -142,8 +131,6 @@ export function ConfigureScreen({
     } = useConfigureFieldValues({ project, existingEnvValues });
 
     const { isSaving, isDeploying, handleSave, handleCancel } = useConfigureSave({
-        project,
-        projectName,
         configChanges,
         componentSecretFlags,
         touchedFields,
@@ -179,9 +166,6 @@ export function ConfigureScreen({
             isStoredSecret,
             isFieldComplete,
             isEds,
-            hasBlockLibraryChoices: hasBlockLibraryChoices(blockLibraryChoices),
-            hasAdminChoice,
-            projectNameError,
         });
 
     const { renderFieldRow, autoDetectKey } = useConfigureFieldRow({
@@ -200,42 +184,44 @@ export function ConfigureScreen({
             <View width="100%" height="100%">
                 <div className="content-area">
                     {/* Header */}
-                    <PageHeader title="Configure Project" subtitle={projectName} />
+                    <PageHeader title="Configure Project" subtitle={getProjectDisplayName(project)} />
 
                     {/* Content — the wizard's area shell: rail on top, one section below.
                         `.step-view` is the single scroller, so the Form is a plain block
                         (no `container-form`) and there is no second scroll parent. */}
                     <StepAreaShell
                         areaLabel="Configure"
-                        viewKey={activeSection.id}
+                        viewKey={activeSection?.id ?? 'nothing'}
                         rail={
-                            <StepRail
-                                steps={railTabs}
-                                activeId={activeSection.id}
-                                onSelect={setActiveSectionId}
-                            />
+                            activeSection ? (
+                                <StepRail
+                                    steps={railTabs}
+                                    activeId={activeSection.id}
+                                    onSelect={setActiveSectionId}
+                                />
+                            ) : undefined
                         }
                     >
-                        <Form>
-                            <ConfigureSectionBody
-                                section={activeSection}
-                                serviceGroups={serviceGroups}
-                                renderFieldRow={renderFieldRow}
-                                // Same signal StoreConfigFieldRow discloses on, so the
-                                // Business Structure heading and its fields appear together.
-                                storeStructureReady={Boolean(autoDetectKey)}
-                                projectName={projectName}
-                                onProjectNameChange={handleProjectNameChange}
-                                projectNameError={projectNameError}
-                                projectNameTouched={projectNameTouched}
-                                projectFolder={projectFolder}
-                                authoringExperience={authoringExperience}
-                                onAuthoringExperienceChange={setAuthoringExperience}
-                                commerceAdminExperience={commerceAdminExperience}
-                                onCommerceAdminExperienceChange={setCommerceAdminExperience}
-                                blockLibraries={blockLibraries}
-                            />
-                        </Form>
+                        {activeSection ? (
+                            <Form>
+                                <ConfigureSectionBody
+                                    section={activeSection}
+                                    serviceGroups={serviceGroups}
+                                    renderFieldRow={renderFieldRow}
+                                    // Same signal StoreConfigFieldRow discloses on, so the
+                                    // Business Structure heading and its fields appear together.
+                                    storeStructureReady={Boolean(autoDetectKey)}
+                                    authoringExperience={authoringExperience}
+                                    onAuthoringExperienceChange={setAuthoringExperience}
+                                    hasAdminChoice={hasAdminChoice}
+                                    commerceAdminExperience={commerceAdminExperience}
+                                    onCommerceAdminExperienceChange={setCommerceAdminExperience}
+                                    blockLibraries={blockLibraries}
+                                />
+                            </Form>
+                        ) : (
+                            <Text UNSAFE_className="text-gray-600">No components requiring configuration were found.</Text>
+                        )}
                     </StepAreaShell>
 
                     {/* Footer */}

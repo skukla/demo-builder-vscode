@@ -123,9 +123,6 @@ export function renderSectionBody(overrides: Partial<ConfigureSectionBodyProps> 
             section={serviceGroupSection(COMMERCE.id, COMMERCE.label)}
             serviceGroups={[COMMERCE, CATALOG]}
             renderFieldRow={recordFieldRow}
-            projectName="p"
-            onProjectNameChange={jest.fn()}
-            projectNameTouched={false}
             authoringExperience="da-live-classic"
             onAuthoringExperienceChange={jest.fn()}
             storeStructureReady={true}

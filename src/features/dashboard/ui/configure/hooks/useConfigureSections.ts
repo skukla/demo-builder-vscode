@@ -35,33 +35,30 @@ export interface UseConfigureSectionsProps {
     isStoredSecret: StoredSecretCheck;
     /** Whether a field currently holds a value. */
     isFieldComplete: (field: UniqueField) => boolean;
-    /** EDS project — gates the Block Libraries and Authoring sections. */
+    /** EDS project — gates the Storefront section. */
     isEds: boolean;
-    /** The project has at least one block library to show — gates the Block Libraries section. */
-    hasBlockLibraryChoices: boolean;
-    /** A Cloud Service store with no Admin URL of its own — gates the Commerce Admin section. */
-    hasAdminChoice?: boolean;
-    /** The project-name field's error, if any. */
-    projectNameError: string | undefined;
 }
 
 export interface UseConfigureSectionsReturn {
     /** Validation errors across EVERY section, keyed by field. */
     validationErrors: Record<string, string>;
-    /** The section on screen (falls back to the first when the stored id is stale). */
-    activeSection: ConfigureSection;
+    /**
+     * The section on screen (falls back to the first when the stored id is stale). Undefined for a
+     * project with nothing to configure.
+     */
+    activeSection: ConfigureSection | undefined;
     /** The rail's tabs. */
     railTabs: StepTab[];
     /** Switch the rail to a section. */
     setActiveSectionId: (id: string) => void;
-    /** No validation error anywhere and a valid project name. */
+    /** Something to configure, and no validation error anywhere. */
     canSave: boolean;
 }
 
 /**
  * Manage the Configure screen's sections, validation and rail.
  *
- * @param props - the service groups, the field reads and the project-name error
+ * @param props - the service groups and the field reads
  * @returns the active section, the rail tabs, the errors and whether Save is allowed
  */
 export function useConfigureSections({
@@ -70,15 +67,12 @@ export function useConfigureSections({
     isStoredSecret,
     isFieldComplete,
     isEds,
-    hasBlockLibraryChoices,
-    hasAdminChoice,
-    projectNameError,
 }: UseConfigureSectionsProps): UseConfigureSectionsReturn {
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-    // Which section the rail is on. It survives a tab-away (`retainContextWhenHidden`),
-    // and starts again on Project when Configure is re-opened: the entry remounts the
-    // screen on every `init`, so nothing from before the re-open is kept (PL-76).
-    const [activeSectionId, setActiveSectionId] = useState('project-info');
+    // Which section the rail is on, none until one is chosen: the first shows. It survives a
+    // tab-away (`retainContextWhenHidden`), and starts again when Configure is re-opened: the entry
+    // remounts the screen on every `init`, so nothing from before the re-open is kept (PL-76).
+    const [activeSectionId, setActiveSectionId] = useState<string>();
 
     // GLOBAL validation: every service group, not the one on screen. An error the user
     // cannot see must still block Save, and its rail tab is what points them at it.
@@ -91,7 +85,6 @@ export function useConfigureSections({
         [validationErrors],
     );
 
-    // Validate project name — `projectNameError` is useProjectNameField's; the rail reads it too.
     const sections = useMemo(
         () =>
             buildConfigureSections({
@@ -99,26 +92,23 @@ export function useConfigureSections({
                 isFieldComplete,
                 fieldHasError,
                 isEds,
-                hasBlockLibraryChoices,
-                hasAdminChoice,
-                isProjectNameValid: !projectNameError,
             }),
-        [serviceGroups, isFieldComplete, fieldHasError, isEds, hasBlockLibraryChoices, hasAdminChoice, projectNameError],
+        [serviceGroups, isFieldComplete, fieldHasError, isEds],
     );
 
     // Sections come and go as components are configured, so the stored id can go stale;
-    // fall back to the first tab (Project, which is always present) rather than a blank view.
+    // fall back to the first tab rather than a blank view.
     const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0];
 
     const railTabs = useMemo(
-        () => toStepRailTabs(sections, activeSection.id),
-        [sections, activeSection.id],
+        () => toStepRailTabs(sections, activeSection?.id ?? ''),
+        [sections, activeSection?.id],
     );
 
-    // Can save if no validation errors (env vars and project name). This walks EVERY
+    // Can save if there is anything to save and no validation errors. This walks EVERY
     // group's errors, not the rendered one's — a hidden section can still block Save,
     // and its rail tab carries `hasError` so the user can reach it.
-    const canSave = !hasEntries(validationErrors) && !projectNameError;
+    const canSave = sections.length > 0 && !hasEntries(validationErrors);
 
     return { validationErrors, activeSection, railTabs, setActiveSectionId, canSave };
 }

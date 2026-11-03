@@ -71,60 +71,26 @@ const baseInput = {
     isFieldComplete: allComplete,
     fieldHasError: noErrors,
     isEds: true,
-    hasBlockLibraryChoices: false,
-    isProjectNameValid: true,
 };
 
 describe('buildConfigureSections', () => {
     describe('order and kinds', () => {
-        it('returns Project → service groups → Authoring', () => {
+        it('returns the service groups, then Storefront', () => {
             const sections = buildConfigureSections(baseInput);
-            expect(sections.map((s) => s.kind)).toEqual([
-                'project',
-                'serviceGroup',
-                'serviceGroup',
-                'authoring',
-            ]);
-        });
-
-        it('puts Block Libraries immediately before Authoring when there are libraries to choose', () => {
-            const sections = buildConfigureSections({ ...baseInput, hasBlockLibraryChoices: true });
             expect(sections.map((s) => [s.id, s.label, s.kind])).toEqual([
-                ['project-info', 'Project', 'project'],
                 ['adobe-commerce', 'Adobe Commerce', 'serviceGroup'],
                 ['catalog-service', 'Catalog Service', 'serviceGroup'],
-                ['block-libraries', 'Block Libraries', 'blockLibraries'],
-                ['authoring-experience', 'Authoring', 'authoring'],
+                ['storefront', 'Storefront', 'storefront'],
             ]);
         });
 
-        it('has no Block Libraries section for a project that is not Edge Delivery', () => {
-            const sections = buildConfigureSections({
-                ...baseInput,
-                isEds: false,
-                hasBlockLibraryChoices: true,
-            });
-            expect(sections.some((s) => s.id === 'block-libraries')).toBe(false);
+        it('has no Storefront section for a project that is not Edge Delivery', () => {
+            const sections = buildConfigureSections({ ...baseInput, isEds: false });
+            expect(sections.some((s) => s.id === 'storefront')).toBe(false);
         });
 
-        it('uses the existing anchor ids so nothing else has to be renamed', () => {
-            const sections = buildConfigureSections(baseInput);
-            expect(sections.map((s) => s.id)).toEqual([
-                'project-info',
-                'adobe-commerce',
-                'catalog-service',
-                'authoring-experience',
-            ]);
-        });
-
-        it('carries each source label through unchanged', () => {
-            const sections = buildConfigureSections(baseInput);
-            expect(sections.map((s) => s.label)).toEqual([
-                'Project',
-                'Adobe Commerce',
-                'Catalog Service',
-                'Authoring',
-            ]);
+        it('has no sections at all for a project with nothing to configure', () => {
+            expect(buildConfigureSections({ ...baseInput, serviceGroups: [], isEds: false })).toStrictEqual([]);
         });
 
         it('keeps the service groups in the order given (useServiceGroups already sorted them)', () => {
@@ -146,32 +112,16 @@ describe('buildConfigureSections', () => {
                 isEds: false,
             });
             expect(sections.filter((s) => s.kind === 'serviceGroup')).toHaveLength(2);
-            expect(sections).toHaveLength(3); // + Project
+            expect(sections).toHaveLength(2);
         });
 
-        it('includes Commerce Admin last, and only when the project has the choice', () => {
-            const sections = buildConfigureSections({ ...baseInput, hasAdminChoice: true });
-            expect(sections[sections.length - 1]).toMatchObject({ id: 'commerce-admin', label: 'Commerce Admin', kind: 'commerceAdmin' });
-            expect(buildConfigureSections(baseInput).some((s) => s.id === 'commerce-admin')).toBe(false);
-        });
-
-        it('includes Authoring only for EDS projects', () => {
+        it('includes Storefront only for EDS projects', () => {
             const eds = buildConfigureSections({ ...baseInput, isEds: true });
             const nonEds = buildConfigureSections({ ...baseInput, isEds: false });
-            expect(eds.some((s) => s.id === 'authoring-experience')).toBe(true);
-            expect(nonEds.some((s) => s.id === 'authoring-experience')).toBe(false);
+            expect(eds.some((s) => s.id === 'storefront')).toBe(true);
+            expect(nonEds.some((s) => s.id === 'storefront')).toBe(false);
         });
 
-        it('still returns the Project section when there is nothing else to configure', () => {
-            const sections = buildConfigureSections({
-                ...baseInput,
-                serviceGroups: [],
-                isEds: false,
-            });
-            expect(sections).toEqual([
-                expect.objectContaining({ id: 'project-info', kind: 'project' }),
-            ]);
-        });
     });
 
     describe('completeness', () => {
@@ -222,38 +172,9 @@ describe('buildConfigureSections', () => {
             });
         });
 
-        it('tracks the Project section against the project-name validity', () => {
-            const valid = buildConfigureSections(baseInput);
-            const invalid = buildConfigureSections({ ...baseInput, isProjectNameValid: false });
-            expect(valid.find((s) => s.id === 'project-info')).toMatchObject({
-                requiredTotal: 1,
-                requiredComplete: 1,
-                isComplete: true,
-            });
-            expect(invalid.find((s) => s.id === 'project-info')).toMatchObject({
-                requiredTotal: 1,
-                requiredComplete: 0,
-                isComplete: false,
-            });
-        });
-
-        it('reports Block Libraries complete with zero required fields (nothing there can block Save)', () => {
-            const sections = buildConfigureSections({
-                ...baseInput,
-                hasBlockLibraryChoices: true,
-                isFieldComplete: () => false,
-            });
-            expect(sections.find((s) => s.id === 'block-libraries')).toMatchObject({
-                requiredTotal: 0,
-                requiredComplete: 0,
-                isComplete: true,
-                hasError: false,
-            });
-        });
-
-        it('reports Authoring complete with zero required fields (a radio is always set)', () => {
+        it('reports Storefront complete with zero required fields (a radio is always set)', () => {
             const sections = buildConfigureSections({ ...baseInput, isFieldComplete: () => false });
-            expect(sections.find((s) => s.id === 'authoring-experience')).toMatchObject({
+            expect(sections.find((s) => s.id === 'storefront')).toMatchObject({
                 requiredTotal: 0,
                 requiredComplete: 0,
                 isComplete: true,
@@ -287,10 +208,6 @@ describe('buildConfigureSections', () => {
             expect(commerce).toMatchObject({ isComplete: true, hasError: true });
         });
 
-        it('flags the Project section when the name is invalid', () => {
-            const sections = buildConfigureSections({ ...baseInput, isProjectNameValid: false });
-            expect(sections.find((s) => s.id === 'project-info')?.hasError).toBe(true);
-        });
     });
 
     /**
@@ -363,7 +280,6 @@ describe('buildConfigureSections', () => {
 
         it('emits a Business Structure tab beside the connection one', () => {
             expect(scopedSections().map((s) => s.id)).toEqual([
-                'project-info',
                 'adobe-commerce',
                 'adobe-commerce:business-structure',
             ]);
@@ -371,7 +287,6 @@ describe('buildConfigureSections', () => {
 
         it('labels the second tab Business Structure, keeping the group label on the first', () => {
             expect(scopedSections().map((s) => s.label)).toEqual([
-                'Project',
                 'Adobe Commerce',
                 'Business Structure',
             ]);
@@ -457,21 +372,21 @@ describe('toStepRailTabs', () => {
     it('marks every section reachable — the active one current, the rest done', () => {
         const sections = buildConfigureSections(baseInput);
         const tabs = toStepRailTabs(sections, 'catalog-service');
-        expect(tabs.map((t) => t.status)).toEqual(['done', 'done', 'current', 'done']);
+        expect(tabs.map((t) => t.status)).toEqual(['done', 'current', 'done']);
     });
 
     it('carries each section id and label onto the tab', () => {
         const sections = buildConfigureSections(baseInput);
-        const tabs = toStepRailTabs(sections, 'project-info');
+        const tabs = toStepRailTabs(sections, 'adobe-commerce');
         expect(tabs[0]).toEqual({
-            id: 'project-info',
-            title: 'Project',
+            id: 'adobe-commerce',
+            title: 'Adobe Commerce',
             status: 'current',
             hasError: false,
         });
         expect(tabs[1]).toEqual({
-            id: 'adobe-commerce',
-            title: 'Adobe Commerce',
+            id: 'catalog-service',
+            title: 'Catalog Service',
             status: 'done',
             hasError: false,
         });
@@ -482,7 +397,7 @@ describe('toStepRailTabs', () => {
             ...baseInput,
             fieldHasError: (f: UniqueField) => f.key === 'ADOBE_COMMERCE_URL',
         });
-        const tabs = toStepRailTabs(sections, 'project-info');
+        const tabs = toStepRailTabs(sections, 'adobe-commerce');
         expect(tabs.find((t) => t.id === 'adobe-commerce')?.hasError).toBe(true);
         expect(tabs.find((t) => t.id === 'catalog-service')?.hasError).toBe(false);
     });

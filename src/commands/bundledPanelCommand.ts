@@ -63,11 +63,6 @@ export abstract class BundledPanelCommand<TInitialData> extends BaseWebviewComma
         return project;
     }
 
-    /** The screen's project moved folder (a rename): keep acting on it at its new path. */
-    protected followOwnProject(newPath: string): void {
-        if (this.projectStateReal) this.ownProjectPath = newPath;
-    }
-
     /** The HTML `<title>`. The tab title is `getWebviewTitle()`; the wizard differs. */
     protected documentTitle(): string {
         return this.getWebviewTitle();

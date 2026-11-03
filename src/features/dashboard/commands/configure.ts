@@ -38,7 +38,6 @@ import {
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
-import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project, type AuthoringExperience, type CommerceAdminExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { getComponentInstanceEntries, getEdsDaLiveUrl, hasAdminExperienceChoice, isEdsProject } from '@/types/typeGuards';
@@ -65,7 +64,6 @@ const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<Authorin
 interface SaveConfigurationData extends BlockLibrarySelectionInput {
     /** Only the values the SC changed; laid over the settings as they are now (PL-76). */
     configChanges?: ComponentConfigs;
-    newProjectName?: string;
     authoringExperience?: AuthoringExperience;
     commerceAdminExperience?: CommerceAdminExperience;
 }
@@ -185,10 +183,6 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         // Load existing env values from component .env files
         const existingEnvValues = await this.loadExistingEnvValues(project);
 
-        // Get existing project names for rename validation
-        const allProjects = await this.stateManager.getAllProjects();
-        const existingProjectNames = allProjects.map((p) => p.name);
-
         // Get current theme
         const theme =
             vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
@@ -208,7 +202,6 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             project,
             componentsData,
             existingEnvValues,
-            existingProjectNames,
             isEds: isEdsProject(project),
             authoringExperience: resolveProjectAuthoringExperience(project),
             hasAdminChoice: hasAdminExperienceChoice(project),
@@ -266,13 +259,10 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
     /** The save-configuration message body (extracted 2026-08-24, function-length pass). */
     private async handleSaveConfiguration(data: SaveConfigurationData): Promise<unknown> {
         try {
-            let project = await this.stateManager.getCurrentProject();
+            const project = await this.stateManager.getCurrentProject();
             if (!project) {
                 throw new Error('No project found');
             }
-
-            // Handle project rename if name changed (renameProjectCore moves path-keyed secrets)
-            project = await this.renameProjectIfRequested(project, data.newProjectName);
 
             // The screen sends only what the SC changed (PL-76). Staging lays it over
             // the settings as they are now, keeps integration settings, moves secrets,
@@ -396,39 +386,6 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
                 code: ErrorCode.CONFIG_INVALID,
             };
         }
-    }
-
-    /**
-     * Rename the project when the save carries a new name, then re-key the
-     * path-keyed SecretStorage entries. The SecretStorage key is keyed on the
-     * project PATH, so a rename orphans it — an already-migrated secret is no
-     * longer in componentConfigs, so a missed re-key loses it from both places
-     * and the Configure field simply reads blank. Returns the (re-loaded)
-     * project. (Extracted 2026-08-24, function-length pass — body unchanged.)
-     */
-    private async renameProjectIfRequested(
-        project: Project,
-        newProjectName: string | undefined,
-    ): Promise<Project> {
-        if (!newProjectName || newProjectName === project.name) {
-            return project;
-        }
-        const renameResult = await handleRenameProject(this.createHandlerContext(), {
-            projectPath: project.path,
-            newName: newProjectName,
-        });
-        if (!renameResult.success) {
-            throw new Error(renameResult.error || 'Failed to rename project');
-        }
-        // The folder moved with the name: this screen follows it there (AI-15).
-        const newPath = renamedPathOf(renameResult.data);
-        if (newPath) this.followOwnProject(newPath);
-        // Reload project after rename (path may have changed)
-        const reloaded = await this.stateManager.getCurrentProject();
-        if (!reloaded) {
-            throw new Error('Project not found after rename');
-        }
-        return reloaded;
     }
 
     /**
@@ -856,8 +813,3 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
     }
 }
 
-/** The folder a successful rename moved the project to (`renameProjectCore`'s `data.newPath`). */
-function renamedPathOf(data: unknown): string | undefined {
-    if (typeof data !== 'object' || data === null || !('newPath' in data)) return undefined;
-    return typeof data.newPath === 'string' ? data.newPath : undefined;
-}

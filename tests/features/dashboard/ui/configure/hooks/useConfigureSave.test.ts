@@ -18,14 +18,11 @@ import {
     useConfigureSave,
     type UseConfigureSaveProps,
 } from '@/features/dashboard/ui/configure/hooks/useConfigureSave';
-import { createMockProject } from '../../../../../helpers/projectFake';
 
 const NO_SECRETS: Record<string, Record<string, boolean>> = {};
 
 function props(overrides: Partial<UseConfigureSaveProps> = {}): UseConfigureSaveProps {
     return {
-        project: createMockProject({ name: 'bodea-demo', title: 'Bodea Demo' }),
-        projectName: 'Bodea Demo',
         configChanges: { headless: { ADOBE_COMMERCE_URL: 'https://example.com' } },
         componentSecretFlags: NO_SECRETS,
         touchedFields: new Set<string>(),
@@ -65,7 +62,7 @@ describe('useConfigureSave', () => {
         expect(result.current.isDeploying).toBe(false);
     });
 
-    it('sends only what changed, and no rename when the title is unchanged', async () => {
+    it('sends only what changed', async () => {
         // PL-76: the whole loaded map used to ride here, so a window opened before
         // another change put the old values back.
         const { result } = render();
@@ -74,33 +71,7 @@ describe('useConfigureSave', () => {
 
         expect(mockRequest).toHaveBeenCalledWith('save-configuration', {
             configChanges: { headless: { ADOBE_COMMERCE_URL: 'https://example.com' } },
-            newProjectName: undefined,
         });
-    });
-
-    it('sends the trimmed title when it changed, even by capitalisation alone', async () => {
-        const { result } = render({ projectName: '  bodea demo  ' });
-
-        await act(() => result.current.handleSave());
-
-        expect(mockRequest.mock.calls[0][1]).toMatchObject({ newProjectName: 'bodea demo' });
-    });
-
-    // The window stays open after Save. Compared with the name it OPENED with, a
-    // rename and then a rename back looked like "no change" the second time, and
-    // the project kept the first new name (owner, 2026-10-17).
-    it('sends a rename back to the opening name after an earlier rename was saved', async () => {
-        let current = props({ projectName: 'Renamed' });
-        const { result, rerender } = renderHook(() => useConfigureSave(current));
-
-        await act(() => result.current.handleSave());
-        expect(mockRequest.mock.calls[0][1]).toMatchObject({ newProjectName: 'Renamed' });
-
-        current = { ...current, projectName: 'Bodea Demo' };
-        rerender();
-        await act(() => result.current.handleSave());
-
-        expect(mockRequest.mock.calls[1][1]).toMatchObject({ newProjectName: 'Bodea Demo' });
     });
 
     it('sends the authoring experience switched back after an earlier switch was saved', async () => {

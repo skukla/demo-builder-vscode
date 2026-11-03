@@ -37,7 +37,6 @@ class PlainPanel extends BundledPanelCommand<Record<string, never>> {
     public handlerContext(shared?: SharedState): HandlerContext { return this.createHandlerContext(shared); }
     public setPanel(panel: ReturnType<typeof createMockWebviewPanel> | undefined): void { this.panel = panel; }
     public open(projectPath?: unknown): ReturnType<PlainPanel['openForCurrentProject']> { return this.openForCurrentProject(projectPath); }
-    public follow(newPath: string): void { this.followOwnProject(newPath); }
     public state(): StateView { return this.stateManager; }
 }
 
@@ -157,20 +156,6 @@ describe('openForCurrentProject', () => {
 
         expect(await screen.open(A.path)).toBe(A);
         expect(real.getCurrentProject).not.toHaveBeenCalled();
-    });
-
-    it('follows its project to a new folder after a rename', async () => {
-        const real = createMockStateManager({
-            getCurrentProject: jest.fn().mockResolvedValue(A),
-            loadProjectFromPath: jest.fn().mockResolvedValue(A),
-        });
-        const screen = screenOver(real);
-        await screen.open();
-
-        screen.follow('/projects/justrite-2');
-        await screen.state().getCurrentProject();
-
-        expect(real.loadProjectFromPath).toHaveBeenLastCalledWith('/projects/justrite-2', undefined, { persistAfterLoad: false });
     });
 
     // The projects list selects a project by saving it; it never opens FOR one.

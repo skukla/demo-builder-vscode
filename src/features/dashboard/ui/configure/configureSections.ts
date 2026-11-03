@@ -1,15 +1,14 @@
 /**
  * Configure Section Model
  *
- * ONE ordered list of everything the Configure screen renders. Before this, sections
- * came from unrelated sources — the service groups (`useServiceGroups`) and two
- * hardcoded blocks in `ConfigureScreen` ("Project" and the EDS-only "Authoring") — and
- * only the service groups reached the nav. (An integration's settings are not here:
- * they live on its tile, AB-21.) The "Sections" sidebar was therefore not the list of
- * sections on screen. A rail has to show every section, so they had to become one list.
+ * ONE ordered list of everything the Configure screen renders: the service groups
+ * (`useServiceGroups`), then Storefront for an Edge Delivery project. (An integration's settings are
+ * not here: they live on its tile, AB-21.)
  *
- * "Block Libraries" is the fourth kind (EDS-39): Edge Delivery only, only when the
- * project has a library to show, and immediately before Authoring.
+ * A tab holds a job, not a control (owner, 2026-11-03). Project was one name field, and the name
+ * changes in place on the dashboard title and the project's card. Commerce Admin was one radio, and
+ * sits on the Commerce tab. Authoring and Block Libraries are both how the storefront is authored.
+ * A project with nothing to configure has no tabs at all.
  *
  * Pure: no React, no DOM. The service groups arrive ALREADY filtered and sorted by
  * `useServiceGroups` (empty groups dropped, API Mesh dropped when no mesh component is
@@ -27,11 +26,11 @@ import {
 } from '@/features/components/config/storeFieldHelpers';
 
 /** Which of the sources a section came from. Callers should not need to care. */
-export type ConfigureSectionKind = 'project' | 'serviceGroup' | 'blockLibraries' | 'authoring' | 'commerceAdmin';
+export type ConfigureSectionKind = 'serviceGroup' | 'storefront';
 
 /** One configurable section of the Configure screen, whatever its source. */
 export interface ConfigureSection {
-    /** The anchor id (`project-info`, `<group.id>`, `block-libraries`, `authoring-experience`). */
+    /** The anchor id (`<group.id>`, `storefront`). */
     id: string;
     /** Tab / heading label. */
     label: string;
@@ -59,14 +58,8 @@ export interface BuildConfigureSectionsInput {
     isFieldComplete: (field: UniqueField) => boolean;
     /** Whether a field currently carries a validation error (keys of `validationErrors`). */
     fieldHasError: (field: UniqueField) => boolean;
-    /** EDS project — gates the Block Libraries and Authoring sections. */
+    /** EDS project — gates the Storefront section. */
     isEds: boolean;
-    /** The project has at least one block library to show (`hasBlockLibraryChoices`). */
-    hasBlockLibraryChoices: boolean;
-    /** A Cloud Service store with no Admin URL of its own — gates the Commerce Admin section. */
-    hasAdminChoice?: boolean;
-    /** The project name is set and passes validation. */
-    isProjectNameValid: boolean;
 }
 
 /** A section with no required fields of its own — complete by construction. */
@@ -176,23 +169,8 @@ export function buildConfigureSections({
     isFieldComplete,
     fieldHasError,
     isEds,
-    hasBlockLibraryChoices,
-    hasAdminChoice,
-    isProjectNameValid,
 }: BuildConfigureSectionsInput): ConfigureSection[] {
-    // The project name is the section's one required field: it is always populated, so
-    // "complete" here means "valid" (a duplicate or malformed name is what makes it not).
-    const sections: ConfigureSection[] = [
-        {
-            id: 'project-info',
-            label: 'Project',
-            kind: 'project',
-            isComplete: isProjectNameValid,
-            requiredTotal: 1,
-            requiredComplete: isProjectNameValid ? 1 : 0,
-            hasError: !isProjectNameValid,
-        },
-    ];
+    const sections: ConfigureSection[] = [];
 
     for (const group of serviceGroups) {
         if (isConnectionGroup(group.id)) {
@@ -228,21 +206,10 @@ export function buildConfigureSections({
         sections.push(toServiceGroupSection(group, isFieldComplete, fieldHasError));
     }
 
-    // Block Libraries is a set of tick boxes: any combination, none included, is a
-    // valid choice, so it has nothing required and nothing that can block Save.
-    if (isEds && hasBlockLibraryChoices) {
-        sections.push(unvalidatedSection('block-libraries', 'Block Libraries', 'blockLibraries'));
-    }
-
-    // Authoring is a single radio that always carries a value, so it has no required
-    // field to be incomplete about. Zero counts here are the model, not an oversight.
+    // A radio that always carries a value and tick boxes where any combination is valid: nothing
+    // required, nothing that can block Save. Zero counts here are the model, not an oversight.
     if (isEds) {
-        sections.push(unvalidatedSection('authoring-experience', 'Authoring', 'authoring'));
-    }
-
-    // The same: one radio that always carries a value.
-    if (hasAdminChoice) {
-        sections.push(unvalidatedSection('commerce-admin', 'Commerce Admin', 'commerceAdmin'));
+        sections.push(unvalidatedSection('storefront', 'Storefront', 'storefront'));
     }
 
     return sections;

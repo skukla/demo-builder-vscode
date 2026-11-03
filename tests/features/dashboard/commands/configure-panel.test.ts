@@ -292,19 +292,6 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
             );
         });
 
-        it('sends the existing project names so the rename field can reject duplicates', async () => {
-            stateManager.getAllProjects.mockResolvedValue([
-                createMockProject({ name: 'alpha' }),
-                createMockProject({ name: 'beta' }),
-            ]);
-
-            const data = await internals(command).getInitialData<{
-                existingProjectNames: string[];
-            }>();
-
-            expect(data.existingProjectNames).toEqual(['alpha', 'beta']);
-        });
-
         it('forwards the secret FLAGS (never the values) the webview needs', async () => {
             const data = await internals(command).getInitialData<{
                 componentSecretFlags: Record<string, boolean>;

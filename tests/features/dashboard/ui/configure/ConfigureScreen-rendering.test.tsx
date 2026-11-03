@@ -129,24 +129,24 @@ describe('ConfigureScreen - Rendering', () => {
     });
 
     describe('Section rail', () => {
-        it('renders one tab per configurable section, Project first', () => {
+        it('renders one tab per configurable section', () => {
             renderWithProvider(
                 <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
-            expect(railTabLabels()).toEqual(['Project', 'Adobe Commerce', 'Catalog Service']);
+            expect(railTabLabels()).toEqual(['Adobe Commerce', 'Catalog Service']);
         });
 
-        it('starts on Project and marks the clicked tab selected', () => {
+        it('starts on the first section and marks the clicked tab selected', () => {
             renderWithProvider(
                 <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
-            expect(railTab('Project')).toHaveAttribute('aria-selected', 'true');
+            expect(railTab('Adobe Commerce')).toHaveAttribute('aria-selected', 'true');
 
             selectSection('Catalog Service');
             expect(railTab('Catalog Service')).toHaveAttribute('aria-selected', 'true');
-            expect(railTab('Project')).toHaveAttribute('aria-selected', 'false');
+            expect(railTab('Adobe Commerce')).toHaveAttribute('aria-selected', 'false');
         });
 
         it('leaves every tab reachable — Configure is not a linear wizard', () => {

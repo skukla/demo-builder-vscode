@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - **Commerce Admin opens in the Unified Shell.** Commerce as a Cloud Service projects now open Adobe's Unified Shell by default. It opens in your own browser, signed in. Each project can choose the Classic UI on Configure, under Commerce Admin, which still opens in a private window, and the `demoBuilder.commerce.adminExperience` setting changes the default.
+- **Configure has fewer tabs.** The Project tab is gone: rename a project on the dashboard title or its card. Commerce Admin sits on the Commerce tab, and Authoring and Block Libraries share a Storefront tab.
 - **Experience Workspace is the default for authoring.** Projects that never chose an authoring experience now open Experience Workspace. A project that chose DA.live Classic keeps it.
 
 ### Changed

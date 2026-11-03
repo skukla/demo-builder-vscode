@@ -1,11 +1,10 @@
 /**
- * ConfigureSectionBody draws ONE section, and which one is a five-way decision.
+ * ConfigureSectionBody draws ONE section, and which one is a decision by kind.
  *
- * The Commerce split has its own suite; this one covers the other four kinds —
- * Project, Block Libraries, Authoring, and a single App Builder component — plus
+ * The Commerce split has its own suite; this one covers the rest — the Storefront tab, Commerce
+ * Admin on the Commerce tab, and a single App Builder component — plus
  * the fall-through that ends in `null`. Each of those branches was reachable only through the
- * rail, so nothing here was entered by a test before 2026-09-06: the Project
- * body could have stopped rendering its "nothing to configure" note, the
+ * rail, so nothing here was entered by a test before 2026-09-06: the
  * Authoring radios could have stopped reporting a choice, and the App Builder
  * section could have been handed the WHOLE catalog instead of the one entry its
  * tab is for, with every test still green.
@@ -65,61 +64,11 @@ import {
     serviceGroupSection,
 } from './ConfigureSectionBody.testUtils';
 
-const PROJECT_SECTION = sectionOf('project', 'project-info', 'Project');
-const AUTHORING_SECTION = sectionOf('authoring', 'authoring-experience', 'Authoring');
-const BLOCK_LIBRARIES_SECTION = sectionOf('blockLibraries', 'block-libraries', 'Block Libraries');
+const AUTHORING_SECTION = sectionOf('storefront', 'storefront', 'Storefront');
+const BLOCK_LIBRARIES_SECTION = AUTHORING_SECTION;
 
 beforeEach(() => {
     jest.clearAllMocks();
-});
-
-describe('the Project section', () => {
-    it('draws the rename field and its error, not a service group', () => {
-        renderSectionBody({
-            section: PROJECT_SECTION,
-            projectName: 'bodea',
-            projectNameError: 'Already taken',
-            projectNameTouched: true,
-        });
-
-        expect(screen.getByText('Project Name')).toBeInTheDocument();
-        expect(screen.getByTestId('field-error')).toHaveTextContent('Already taken');
-        expect(screen.queryByText('Connection')).not.toBeInTheDocument();
-    });
-
-    it('says where the project lands on disk', () => {
-        // ConfigureScreen derives the slug and passes it; the body forwarded
-        // nothing, so this description never rendered before 2026-09-06.
-        renderSectionBody({ section: PROJECT_SECTION, projectFolder: 'bodea-demo' });
-
-        expect(screen.getByTestId('field-description')).toHaveTextContent('Folder: bodea-demo');
-    });
-
-    it('leaves the description off when there is no folder yet', () => {
-        renderSectionBody({ section: PROJECT_SECTION, projectFolder: undefined });
-
-        expect(screen.queryByTestId('field-description')).not.toBeInTheDocument();
-    });
-
-    it('carries the "nothing to configure" note ONLY when there are no groups', () => {
-        renderSectionBody({ section: PROJECT_SECTION, serviceGroups: [] });
-
-        expect(screen.getByText(/No components requiring configuration/i)).toBeInTheDocument();
-    });
-
-    it('drops that note as soon as one group exists', () => {
-        renderSectionBody({ section: PROJECT_SECTION, serviceGroups: [CATALOG] });
-
-        expect(
-            screen.queryByText(/No components requiring configuration/i)
-        ).not.toBeInTheDocument();
-    });
-
-    it('draws no divider — it is the first thing on the tab', () => {
-        const { container } = renderSectionBody({ section: PROJECT_SECTION });
-
-        expect(container.querySelectorAll('hr')).toHaveLength(0);
-    });
 });
 
 describe('the Authoring section', () => {
@@ -229,32 +178,28 @@ describe('the Block Libraries section', () => {
         expect(mockPostMessage).toHaveBeenCalledWith('open-block-library-settings');
     });
 
-    it('draws nothing when the project has none to choose from, or no choices arrived', () => {
+    it('leaves the heading off when the project has none to choose from, or no choices arrived', () => {
         const none = renderSectionBody({
             section: BLOCK_LIBRARIES_SECTION,
             blockLibraries: blockLibrariesOf({
                 choices: { native: [], available: [], customDefaults: [] },
             }),
         });
-        expect(none.container).toBeEmptyDOMElement();
+        expect(screen.queryByText('Block Libraries')).not.toBeInTheDocument();
         none.unmount();
 
-        const absent = renderSectionBody({ section: BLOCK_LIBRARIES_SECTION });
-        expect(absent.container).toBeEmptyDOMElement();
+        renderSectionBody({ section: BLOCK_LIBRARIES_SECTION });
+        expect(screen.queryByText('Block Libraries')).not.toBeInTheDocument();
     });
 
-    it('keeps block libraries off every other section, Authoring included', () => {
-        const project = renderSectionBody({
-            section: PROJECT_SECTION,
-            blockLibraries: blockLibrariesOf(),
-        });
+    it('sits with Authoring on the Storefront tab, and nowhere else', () => {
+        const commerce = renderSectionBody({ blockLibraries: blockLibrariesOf() });
         expect(screen.queryByText('Block Libraries')).not.toBeInTheDocument();
-        project.unmount();
+        commerce.unmount();
 
         renderSectionBody({ section: AUTHORING_SECTION, blockLibraries: blockLibrariesOf() });
         expect(screen.getByText('DA.live Classic')).toBeInTheDocument();
-        expect(screen.queryByText('Block Libraries')).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /Demo Builder Blocks/ })).not.toBeInTheDocument();
+        expect(screen.getByText('Block Libraries')).toBeInTheDocument();
     });
 });
 
@@ -276,5 +221,24 @@ describe('a service-group section nothing matches', () => {
         });
 
         expect(container).toBeEmptyDOMElement();
+    });
+});
+
+describe('the Commerce Admin choice', () => {
+    it('sits on the Commerce tab, and reports the choice to its owner', () => {
+        const onCommerceAdminExperienceChange = jest.fn();
+        renderSectionBody({ hasAdminChoice: true, commerceAdminExperience: 'unified-shell', onCommerceAdminExperienceChange });
+
+        expect(screen.getByText('Connection')).toBeInTheDocument();
+        expect(screen.getByText('Classic UI')).toBeInTheDocument();
+        fireEvent.click(screen.getByText('pick Experience Workspace'));
+
+        expect(onCommerceAdminExperienceChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not offered to a project without the choice', () => {
+        renderSectionBody({ hasAdminChoice: false });
+
+        expect(screen.queryByText('Commerce Admin')).not.toBeInTheDocument();
     });
 });
