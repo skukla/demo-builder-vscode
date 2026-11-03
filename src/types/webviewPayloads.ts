@@ -227,6 +227,8 @@ export interface ConfigureComponentsData {
  * is Edge Delivery.
  */
 export interface ConfigureBlockLibraryChoices {
+    /** Libraries every storefront gets: shown ticked and locked. */
+    included: BlockLibrary[];
     /** Libraries that came with the storefront: shown ticked and locked. */
     native: BlockLibrary[];
     /** Catalog libraries the SC may tick or untick. */

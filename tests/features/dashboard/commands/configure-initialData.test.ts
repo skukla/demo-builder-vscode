@@ -137,6 +137,6 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
             blockLibraryChoices: { native: unknown[]; available: unknown[] };
         }>();
 
-        expect(data.blockLibraryChoices).toEqual({ native: [], available: [], customDefaults: [] });
+        expect(data.blockLibraryChoices).toEqual({ included: [], native: [], available: [], customDefaults: [] });
     });
 });

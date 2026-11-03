@@ -33,9 +33,11 @@ const mockGetAvailable = jest.fn((..._args: unknown[]) => [
     { id: 'lib-a', name: 'Library A', description: 'A' },
 ]);
 const mockGetNative = jest.fn((..._args: unknown[]) => [{ id: 'native-1', name: 'Native Blocks' }]);
+const mockGetIncluded = jest.fn((..._args: unknown[]) => [{ id: 'every-1', name: 'Every Storefront Blocks' }]);
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getAvailableBlockLibraries: (...args: unknown[]) => mockGetAvailable(...args),
     getNativeBlockLibraries: (...args: unknown[]) => mockGetNative(...args),
+    getAlwaysIncludedBlockLibraries: (...args: unknown[]) => mockGetIncluded(...args),
     getDefaultBlockLibraryIds: jest.fn(() => []),
     getPackageDefaultBlockLibraryIds: jest.fn(() => []),
 }));

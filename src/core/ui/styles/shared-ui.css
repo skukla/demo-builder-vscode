@@ -168,6 +168,13 @@
     padding-bottom: 4px;
 }
 
+/* A section straight after another on one tab (Authoring then Block Libraries; Connection then
+   Commerce Admin): twice the heading-to-content gap above it, so the next heading starts a new
+   group rather than reading as part of the text above (owner, 2026-11-03). It had 12px. */
+.config-section + .config-section {
+    margin-top: 32px;
+}
+
 .config-section-header {
     padding-bottom: 4px;
     margin-bottom: 12px;

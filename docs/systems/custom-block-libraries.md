@@ -7,9 +7,12 @@ collection, so a demo can carry blocks a team already maintains.
 
 Built-in libraries live in `src/features/components/config/block-libraries.json`.
 Custom ones are configured by the user in VS Code settings, and both appear as
-checkboxes in the wizard's Storefront area and on Configure's Block Libraries tab.
-Both screens follow the setting while open: a custom library added or removed in
-Settings appears or disappears without reopening the screen.
+cards in the wizard's Storefront area and on Configure's Storefront tab. The
+picker also shows, locked and ticked, the libraries the storefront gets anyway:
+every storefront's (`alwaysIncluded`) and the package's own (`nativeForPackages`).
+Its Custom Libraries group shows even when there are none, with the link to add
+one in Settings. Both screens follow the setting while open: a custom library
+added or removed in Settings appears or disappears without reopening the screen.
 
 The shape is in `src/types/blockLibraries.ts` and the schema beside the registry.
 

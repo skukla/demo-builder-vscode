@@ -88,6 +88,7 @@ const validConfig = {
 
 // What the extension offers one Edge Delivery project (typed to the real payload).
 const blockLibraryChoices: ConfigureBlockLibraryChoices = {
+    included: [],
     native: [],
     available: [
         {

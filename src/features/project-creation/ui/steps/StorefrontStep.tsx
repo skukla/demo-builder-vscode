@@ -36,6 +36,7 @@ import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import {
     getAvailableBlockLibraries,
+    getAlwaysIncludedBlockLibraries,
     getNativeBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
 import { DaLiveServiceCard } from '@/features/eds/ui/components/DaLiveServiceCard';
@@ -153,6 +154,10 @@ export function StorefrontStep({
         if (!pkg || !selectedStack || !isEdsStack) return EMPTY_LIBRARY_ARRAY;
         return getAvailableBlockLibraries(selectedStack, pkg.id);
     }, [pkg, selectedStack, isEdsStack]);
+    const includedBlockLibraries = useMemo(() => {
+        if (!pkg || !selectedStack || !isEdsStack) return EMPTY_LIBRARY_ARRAY;
+        return getAlwaysIncludedBlockLibraries(selectedStack, pkg.id);
+    }, [pkg, selectedStack, isEdsStack]);
     const nativeBlockLibraries = useMemo(() => {
         if (!pkg || !selectedStack || !isEdsStack) return EMPTY_LIBRARY_ARRAY;
         return getNativeBlockLibraries(selectedStack, pkg.id);
@@ -231,6 +236,7 @@ export function StorefrontStep({
     const blockLibraries = isEdsStack ? (
         <>
             <BlockLibrariesStepContent
+                includedBlockLibraries={includedBlockLibraries}
                 nativeBlockLibraries={nativeBlockLibraries}
                 availableBlockLibraries={availableBlockLibraries}
                 selectedBlockLibraries={state.selectedBlockLibraries ?? EMPTY_STRING_ARRAY}

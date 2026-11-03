@@ -22,6 +22,16 @@ const nativeLib: BlockLibrary = {
     nativeForPackages: ['citisignal'],
 };
 
+const everyStorefrontLib: BlockLibrary = {
+    id: 'demo-builder-blocks',
+    name: 'Demo Builder Blocks',
+    description: 'Blocks every storefront needs',
+    type: 'standalone',
+    source: { owner: 'adobe', repo: 'demo-builder-blocks', branch: 'main' },
+    stackTypes: ['eds-storefront'],
+    alwaysIncluded: true,
+};
+
 const availableLib: BlockLibrary = {
     id: 'commerce-blocks',
     name: 'Commerce Blocks',
@@ -57,6 +67,7 @@ const noop = jest.fn();
 
 describe('BlockLibrariesStepContent', () => {
     const defaultProps = {
+        includedBlockLibraries: [] as BlockLibrary[],
         nativeBlockLibraries: [] as BlockLibrary[],
         availableBlockLibraries: [] as BlockLibrary[],
         selectedBlockLibraries: [] as string[],
@@ -76,7 +87,20 @@ describe('BlockLibrariesStepContent', () => {
     it('should render the header text', () => {
         render(<BlockLibrariesStepContent {...defaultProps} />);
 
-        expect(screen.getByText('Which block libraries should be included?')).toBeInTheDocument();
+        expect(
+            screen.getByText('Add blocks from these libraries to the storefront. Ticked libraries are included.'),
+        ).toBeInTheDocument();
+    });
+
+    // --- Every storefront's libraries: shown, so the SC can see the storefront has them (2026-11-03) ---
+
+    it('should show a library every storefront gets as a locked, ticked card', () => {
+        render(<BlockLibrariesStepContent {...defaultProps} includedBlockLibraries={[everyStorefrontLib]} />);
+
+        const card = screen.getByRole('button', { name: /Demo Builder Blocks/ });
+        expect(card).toHaveAttribute('aria-pressed', 'true');
+        expect(card).toBeDisabled();
+        expect(screen.getByText('Included with every storefront')).toBeInTheDocument();
     });
 
     // --- Native Libraries ---
@@ -161,10 +185,15 @@ describe('BlockLibrariesStepContent', () => {
             expect(screen.getByText('My Custom Lib')).toBeInTheDocument();
         });
 
-        it('should not render custom libraries section when customBlockLibraryDefaults is empty', () => {
-            render(<BlockLibrariesStepContent {...defaultProps} />);
+        it('should say none are added, and where to add one, when there are none', () => {
+            const onOpenCustomSettings = jest.fn();
+            render(<BlockLibrariesStepContent {...defaultProps} onOpenCustomSettings={onOpenCustomSettings} />);
 
-            expect(screen.queryByText('Custom Libraries')).not.toBeInTheDocument();
+            expect(screen.getByText('Custom Libraries')).toBeInTheDocument();
+            expect(screen.getByText('None added yet.')).toBeInTheDocument();
+            expect(screen.queryByRole('group', { name: 'Custom block libraries' })).not.toBeInTheDocument();
+            fireEvent.click(screen.getByText('Add Custom Libraries in Settings'));
+            expect(onOpenCustomSettings).toHaveBeenCalled();
         });
 
         it('should show custom library source as description', () => {

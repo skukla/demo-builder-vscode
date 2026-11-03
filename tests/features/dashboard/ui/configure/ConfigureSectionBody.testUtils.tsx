@@ -71,6 +71,7 @@ export const blockLibrariesOf = (
     overrides: Partial<BlockLibrariesSectionProps> = {}
 ): BlockLibrariesSectionProps => ({
     choices: {
+        included: [],
         native: [library('bodea-blocks', 'Bodea Blocks')],
         available: [
             library('demo-team-blocks', 'Demo Team Block Collection'),

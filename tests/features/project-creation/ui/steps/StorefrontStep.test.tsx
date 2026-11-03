@@ -40,6 +40,7 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
         { id: 'lib-a', name: 'Library A', description: 'Adds A blocks' },
     ]),
     getNativeBlockLibraries: jest.fn(() => [{ id: 'native-1', name: 'Native Blocks' }]),
+    getAlwaysIncludedBlockLibraries: jest.fn(() => [{ id: 'every-1', name: 'Every Storefront Blocks' }]),
     getDefaultBlockLibraryIds: jest.fn(() => []),
     getPackageDefaultBlockLibraryIds: jest.fn(() => []),
 }));

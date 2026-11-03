@@ -59,6 +59,26 @@ export function withAlwaysIncludedBlockLibraries(selected: string[] | undefined,
 }
 
 /**
+ * The libraries every storefront gets (`alwaysIncluded`), for the picker to show locked.
+ *
+ * Never a choice, so no selection names them (`withAlwaysIncludedBlockLibraries` adds
+ * them). Hidden from the picker until 2026-11-03, when an SC reading Configure could not
+ * tell the storefront had them (owner).
+ *
+ * @param stack - The selected stack object
+ * @param packageId - The selected package ID
+ * @returns the always-included libraries this stack and package get
+ */
+export function getAlwaysIncludedBlockLibraries(stack: Stack, packageId: string): BlockLibrary[] {
+    return config.libraries.filter(
+        (lib) =>
+            lib.alwaysIncluded === true &&
+            lib.stackTypes.includes(stack.frontend) &&
+            isBlockLibraryAvailableForPackage(lib.id, packageId),
+    );
+}
+
+/**
  * Get block libraries that are native to the given package.
  *
  * Native libraries have blocks that ship with the package's storefront,

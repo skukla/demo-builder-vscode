@@ -118,8 +118,11 @@ describe('the Block Libraries section', () => {
             blockLibraries: blockLibrariesOf(),
         });
 
-        // Its own tab, so nothing above it to divide from.
-        expect(container.querySelectorAll('hr')).toHaveLength(0);
+        // Its own tab, so nothing above it to divide from: the one rule is the picker's own, over
+        // Custom Libraries, which shows even when there are none (2026-11-03).
+        const rules = container.querySelectorAll('hr');
+        expect(rules).toHaveLength(1);
+        expect(rules[0].nextElementSibling).toHaveTextContent('Custom Libraries');
 
         expect(screen.getByText('Block Libraries')).toBeInTheDocument();
         expect(card('Demo Team Block Collection')).toHaveAttribute('aria-pressed', 'true');
@@ -158,7 +161,7 @@ describe('the Block Libraries section', () => {
 
     it('offers the custom libraries from settings and reports a tick with the library', () => {
         const blockLibraries = blockLibrariesOf({
-            choices: { native: [], available: [], customDefaults: [CUSTOM_LIBRARY] },
+            choices: { included: [], native: [], available: [], customDefaults: [CUSTOM_LIBRARY] },
         });
         renderSectionBody({ section: BLOCK_LIBRARIES_SECTION, blockLibraries });
 
@@ -169,7 +172,7 @@ describe('the Block Libraries section', () => {
 
     it('its settings link asks for the block library settings by name', () => {
         const blockLibraries = blockLibrariesOf({
-            choices: { native: [], available: [], customDefaults: [CUSTOM_LIBRARY] },
+            choices: { included: [], native: [], available: [], customDefaults: [CUSTOM_LIBRARY] },
         });
         renderSectionBody({ section: BLOCK_LIBRARIES_SECTION, blockLibraries });
 
@@ -182,7 +185,7 @@ describe('the Block Libraries section', () => {
         const none = renderSectionBody({
             section: BLOCK_LIBRARIES_SECTION,
             blockLibraries: blockLibrariesOf({
-                choices: { native: [], available: [], customDefaults: [] },
+                choices: { included: [], native: [], available: [], customDefaults: [] },
             }),
         });
         expect(screen.queryByText('Block Libraries')).not.toBeInTheDocument();
