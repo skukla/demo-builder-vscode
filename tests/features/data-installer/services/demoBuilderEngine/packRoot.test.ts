@@ -73,3 +73,55 @@ describe('underStoreRootLine', () => {
         expect(underStoreRootLine('own', FRESCOPA, SHARED)).toBeUndefined();
     });
 });
+
+describe('placeCategories, when the pack root is not made', () => {
+    const ROOT = { name: 'Frescopa', custom_attributes: [{ attribute_code: 'url_key', value: 'frescopa' }] };
+    const product = (links: string[]) => ({
+        product: {
+            sku: 'tea02',
+            extension_attributes: { category_links: links.map((category_id) => ({ position: -1, category_id })) },
+            custom_attributes: [{ attribute_code: 'category_ids', value: links }, { attribute_code: 'url_key', value: 'tea-two' }],
+        },
+    });
+    const items = (rows: unknown[]) => ({ categories: { root_category: ROOT, categories: [] }, products: rows, giftcards: rows });
+
+    it('drops the root from what a product links, keeping its real categories', () => {
+        const placed = placeCategories(items([product(['frescopa', 'tea'])]), 'store') as { products: ReturnType<typeof product>[] };
+
+        const row = placed.products[0].product;
+        expect(row.extension_attributes.category_links).toEqual([{ position: -1, category_id: 'tea' }]);
+        expect(row.custom_attributes).toEqual([
+            { attribute_code: 'category_ids', value: ['tea'] },
+            { attribute_code: 'url_key', value: 'tea-two' },
+        ]);
+    });
+
+    it('does the same for gift cards, which install as products', () => {
+        const placed = placeCategories(items([product(['frescopa'])]), 'store') as { giftcards: ReturnType<typeof product>[] };
+
+        expect(placed.giftcards[0].product.extension_attributes.category_links).toHaveLength(0);
+    });
+
+    it('drops the root from what a shared catalog assigns, which Bodea does', () => {
+        const source = {
+            categories: { root_category: ROOT, categories: [] },
+            b2b_shared_catalog_categories: { catalogs: [{ name: 'Default', categories: [{ id: 'frescopa' }, { id: 'tea' }] }] },
+        };
+        const placed = placeCategories(source, 'store') as { b2b_shared_catalog_categories: { catalogs: Array<{ categories: unknown[] }> } };
+
+        expect(placed.b2b_shared_catalog_categories.catalogs[0].categories).toEqual([{ id: 'tea' }]);
+    });
+
+    it('leaves a product alone when the pack keeps its own root, because that root is made', () => {
+        const source = items([product(['frescopa', 'tea'])]);
+
+        expect(placeCategories(source, 'own')).toBe(source);
+    });
+
+    it('leaves a pack alone when its root names no url key, so nothing is guessed', () => {
+        const source = { categories: { root_category: { name: 'Frescopa' }, categories: [] }, products: [product(['frescopa'])] };
+        const placed = placeCategories(source, 'store') as { products: ReturnType<typeof product>[] };
+
+        expect(placed.products[0].product.extension_attributes.category_links).toHaveLength(1);
+    });
+});

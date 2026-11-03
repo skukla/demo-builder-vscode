@@ -31,6 +31,7 @@
 
 import { readWipeStructure } from '../demoDataWipe/wipeReads';
 import { resolveWipeScope, storeOfView } from '../demoDataWipe/wipeScope';
+import { CATALOG_CATEGORIES_KIND } from './b2bKeys';
 import type { CreatedObject, TargetCodes } from './installRecord';
 import { ROOT_KEY } from './packForm';
 import type { CommerceGet } from '@/types/commerceWire';
@@ -50,6 +51,9 @@ export interface StoreRoot {
 export type RootPlacement = 'own' | 'store';
 
 type Row = Record<string, unknown>;
+
+/** The kinds whose rows are products, and so name their categories by url key. */
+const PRODUCT_ROW_KINDS = ['products', 'giftcards'];
 
 /** The pack's own root category row, when it has one. */
 export function packRootOf(categories: unknown): Row | undefined {
@@ -89,11 +93,65 @@ export function rootPlacement(categories: unknown, created: readonly CreatedObje
     return storeRoot.sharedWith.length > 0 ? 'own' : 'store';
 }
 
+/** The url key a pack's root names, when it names one. */
+function rootUrlKey(root: Row | undefined): string | undefined {
+    const attributes = (root?.custom_attributes ?? []) as Row[];
+    const key = attributes.find((a) => a.attribute_code === 'url_key')?.value;
+    return typeof key === 'string' ? key : undefined;
+}
+
+/** One product row, with the root left out of the two places a product names its categories. */
+function productWithoutRoot(row: Row, key: string): Row {
+    const product = row.product as Row | undefined;
+    if (!product) return row;
+    const ext = product.extension_attributes as Row | undefined;
+    const links = ext?.category_links as Row[] | undefined;
+    const attributes = product.custom_attributes as Row[] | undefined;
+    return {
+        ...row,
+        product: {
+            ...product,
+            ...(links ? { extension_attributes: { ...ext, category_links: links.filter((l) => l.category_id !== key) } } : {}),
+            ...(attributes
+                ? {
+                      custom_attributes: attributes.map((a) =>
+                          a.attribute_code === 'category_ids' && Array.isArray(a.value)
+                              ? { ...a, value: a.value.filter((id) => id !== key) }
+                              : a,
+                      ),
+                  }
+                : {}),
+        },
+    };
+}
+
+/** A shared catalog's categories, with the root left out. */
+function catalogsWithoutRoot(records: Row, key: string): Row {
+    const catalogs = records.catalogs as Row[] | undefined;
+    if (!Array.isArray(catalogs)) return records;
+    return { ...records, catalogs: catalogs.map((c) => ({ ...c, categories: (c.categories as Row[]).filter((m) => m.id !== key) })) };
+}
+
+/**
+ * The rows that name the pack's root by its url key, with the root left out: it is not made, so no
+ * category has that key. A product keeps its other categories, and its place in the store's root
+ * is what the storefront shows anyway.
+ */
+function withoutRootLinks(items: Record<string, unknown>, key: string): Record<string, unknown> {
+    const out = { ...items };
+    for (const kind of PRODUCT_ROW_KINDS) {
+        if (Array.isArray(out[kind])) out[kind] = (out[kind] as Row[]).map((row) => productWithoutRoot(row, key));
+    }
+    if (out[CATALOG_CATEGORIES_KIND]) out[CATALOG_CATEGORIES_KIND] = catalogsWithoutRoot(out[CATALOG_CATEGORIES_KIND] as Row, key);
+    return out;
+}
+
 /** The pack's rows as this install places them: without the pack's root when its categories go under the store's. */
 export function placeCategories(items: Record<string, unknown>, placement: RootPlacement | undefined): Record<string, unknown> {
     if (placement !== 'store') return items;
-    const { root_category: _root, ...categories } = items.categories as Row;
-    return { ...items, categories };
+    const { root_category: root, ...categories } = items.categories as Row;
+    const key = rootUrlKey(root as Row | undefined);
+    return { ...(key ? withoutRootLinks(items, key) : items), categories };
 }
 
 /** The one line an install says when the pack's categories went under the store's root. */
