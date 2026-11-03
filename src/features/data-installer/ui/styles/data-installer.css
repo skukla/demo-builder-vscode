@@ -572,6 +572,11 @@
     gap: 8px;
     min-height: 0;
 }
+
+/* The list's own gap sets the space under the count, so Select All sits close to what it counts. */
+.datapack-pick-list .search-header-count-row {
+    margin-bottom: 0;
+}
 }
 
 @layer theme {
