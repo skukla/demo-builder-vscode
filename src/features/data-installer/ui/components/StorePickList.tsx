@@ -11,14 +11,18 @@
  * they choose ONE website, store and view, and fetch through the wizard's discovery with form
  * credentials, where this picks several stores of a project already made. The rows are the house
  * `CheckboxRow` (a website's row shows some-but-not-all with its `isIndeterminate`), as the Updates
- * modal's groups and the API picker use it. The ERP "Assign products" list is a searchable table of
- * products; a few dozen stores in their tree needs neither.
+ * modal's groups and the API picker use it.
+ *
+ * It has the house filter, as every list whose length depends on the store does (owner, 2026-11-03).
+ * A store that matches keeps its website showing above it, and a website that matches shows all its
+ * stores, since ticking a website ticks every one of them whatever the filter shows.
  *
  * @module features/data-installer/ui/components/StorePickList
  */
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { tickOf, toggleStore, toggleWebsite, viewsLine, websiteTicks } from '../clearDemoDataWords';
+import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import type { WipeChoiceWebsite } from '@/types/demoDataWipe';
 
@@ -61,13 +65,42 @@ function WebsiteRows({ site, ticks, onChange, isDisabled }: Omit<StorePickListPr
     );
 }
 
-/** Every website and its stores, ticked as `ticks` says. */
+/** The websites a query leaves: one that matches keeps every store, otherwise only the stores that match. */
+function filterChoices(choices: WipeChoiceWebsite[], query: string): WipeChoiceWebsite[] {
+    const q = query.trim().toLowerCase();
+    if (!q) return choices;
+    const hit = (...values: string[]): boolean => values.some((value) => value.toLowerCase().includes(q));
+    return choices.flatMap((site) => {
+        if (hit(site.name, site.code)) return [site];
+        const stores = site.stores.filter((store) => hit(store.name, store.code));
+        return stores.length > 0 ? [{ ...site, stores }] : [];
+    });
+}
+
+const storeCount = (choices: WipeChoiceWebsite[]): number => choices.reduce((sum, site) => sum + site.stores.length, 0);
+
+/** Every website and its stores, filterable, ticked as `ticks` says. */
 export function StorePickList({ choices, ticks, onChange, isDisabled }: StorePickListProps): React.ReactElement {
+    const [query, setQuery] = useState('');
+    const shown = useMemo(() => filterChoices(choices, query), [choices, query]);
     return (
-        <div className="clear-demo-store-list" data-testid="clear-demo-store-list">
-            {choices.map((site) => (
-                <WebsiteRows key={site.code} site={site} ticks={ticks} onChange={onChange} isDisabled={isDisabled} />
-            ))}
-        </div>
+        <>
+            <SearchHeader
+                searchQuery={query}
+                onSearchQueryChange={setQuery}
+                searchPlaceholder="Filter stores"
+                totalCount={storeCount(choices)}
+                filteredCount={storeCount(shown)}
+                itemNoun="store"
+                hasLoadedOnce
+                hideCount
+            />
+            <div className="clear-demo-store-list" data-testid="clear-demo-store-list">
+                {shown.map((site) => (
+                    <WebsiteRows key={site.code} site={site} ticks={ticks} onChange={onChange} isDisabled={isDisabled} />
+                ))}
+                {shown.length === 0 ? <p className="datapack-export-note">No stores match “{query}”.</p> : null}
+            </div>
+        </>
     );
 }
