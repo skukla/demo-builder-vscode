@@ -76,3 +76,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  fix(data-installer): Select All sits close to the count above it (`7f34ca2d8`)
 - 2026-11-03  refactor(ui): every list with anything in it shows its filter (`20e70be8c`)
 - 2026-11-03  feat(data-installer): Clear Demo Data's store list has the filter (`b3fa6b5f7`)
+- 2026-11-03  fix(ui): the last Title Case and Select wording, and a label the check missed (`3af36bb50`)
