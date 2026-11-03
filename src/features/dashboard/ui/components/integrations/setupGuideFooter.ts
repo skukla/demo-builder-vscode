@@ -85,3 +85,41 @@ export function footerButtons({ item, busy, setDone, openAdmin, openingAdmin, fi
     }
     return [open];
 }
+
+export interface ListActionsInput {
+    /** Check every step Demo Builder can check; absent when none can be. */
+    checkAll?: () => void;
+    /** Apply every step ready to apply; absent when none is. */
+    applyAll?: { count: number; run: () => void } | undefined;
+    busy: boolean;
+    /** A pressed Check All Steps is waiting on the Commerce sign-in the guide started. */
+    waitsOnSignIn: boolean;
+}
+
+/**
+ * What acts on the step list as a whole (AB-82), for the footer's start under the list: in the
+ * body it was clipped once the steps ran past the dialog's height (owner, 2026-11-03).
+ *
+ * No "Checking 2 of 5" (owner, 2026-10-31): the list marks the step being checked and the open
+ * step's banner shows its spinner, so Check All Steps only stops taking presses. A run waiting on
+ * the Commerce sign-in moves nothing else, so the button shows its own spinner then.
+ *
+ * @param input - the two actions, when they apply, and how the guide stands
+ * @returns the buttons, Check All Steps first
+ */
+export function listActionButtons({ checkAll, applyAll, busy, waitsOnSignIn }: ListActionsInput): ActionButton[] {
+    const buttons: ActionButton[] = [];
+    if (checkAll) {
+        buttons.push({
+            label: 'Check All Steps',
+            variant: 'secondary',
+            onPress: checkAll,
+            isDisabled: busy && !waitsOnSignIn,
+            isPending: waitsOnSignIn,
+        });
+    }
+    if (applyAll) {
+        buttons.push({ label: FIX_COPY.all(applyAll.count), variant: 'secondary', onPress: applyAll.run, isDisabled: busy });
+    }
+    return buttons;
+}

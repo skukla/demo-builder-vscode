@@ -26,9 +26,16 @@ jest.mock('@adobe/react-spectrum', () => ({
 }));
 
 jest.mock('@/core/ui/components/ui/Modal', () => ({
-    Modal: ({ title, actionButtons = [], onClose, closeLabel, children }: any) => (
+    Modal: ({ title, actionButtons = [], startButtons = [], onClose, closeLabel, children }: any) => (
         <div role="dialog" aria-label={title}>
             {children}
+            <div data-testid="modal-footer-start">
+                {startButtons.map((b: any) => (
+                    <button key={b.label} onClick={b.onPress} disabled={b.isDisabled} data-pending={b.isPending ? 'true' : undefined}>
+                        {b.label}
+                    </button>
+                ))}
+            </div>
             <button onClick={onClose}>{closeLabel ?? 'Close'}</button>
             {actionButtons.map((b: any) => (
                 <button key={b.label} onClick={b.onPress} disabled={b.isDisabled} data-pending={b.isPending ? 'true' : undefined}>

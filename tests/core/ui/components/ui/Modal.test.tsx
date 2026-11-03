@@ -10,16 +10,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import { Modal, ActionButton } from '@/core/ui/components/ui/Modal';
-
-// Helper to render with Spectrum Provider
-const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {ui}
-        </Provider>
-    );
-};
+import { Modal, type ActionButton, renderWithProvider } from './Modal.testUtils';
 
 describe('Modal', () => {
     const defaultProps = {

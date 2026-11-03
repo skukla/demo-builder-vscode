@@ -33,6 +33,12 @@ export interface ModalProps {
     status?: ModalStatus;
     size?: 'S' | 'M' | 'L' | 'fullscreen' | 'fullscreenTakeover';
     actionButtons?: ActionButton[];
+    /**
+     * Buttons at the footer's START, apart from the dialog's own answers on the right. For what
+     * acts on a list in the body as a whole (the setup guide's Check All Steps, under its step
+     * list): below the body they cannot be scrolled out of sight or clipped (owner, 2026-11-03).
+     */
+    startButtons?: ActionButton[];
     onClose: () => void;
     /** Label for the built-in close button (default "Close"). */
     closeLabel?: string;
@@ -166,11 +172,28 @@ function FocusableButton({ variant, onPress, isDisabled: disabled, isPending, pe
     );
 }
 
+/** One footer button, keyed by its place in its group. */
+function renderButton(button: ActionButton, index: number): React.JSX.Element {
+    return (
+        <FocusableButton
+            key={index}
+            variant={button.variant}
+            onPress={button.onPress}
+            isDisabled={button.isDisabled}
+            isPending={button.isPending}
+            pendingName={button.label}
+        >
+            {button.label}
+        </FocusableButton>
+    );
+}
+
 export function Modal({
     title,
     status,
     size = 'M',
     actionButtons = [],
+    startButtons = [],
     onClose,
     closeLabel = 'Close',
     closeVariant = 'secondary',
@@ -239,24 +262,16 @@ export function Modal({
                     </SteadyHeight>
                 </div>
                 <div className="modal-footer-actions">
+                    {!waiting && startButtons.length > 0 && (
+                        <div className="modal-footer-start">{startButtons.map(renderButton)}</div>
+                    )}
                     {/* Close/Cancel on left, primary actions on right (per Spectrum design guidelines) */}
                     {!hideClose && (
                         <FocusableButton variant={closeVariant} onPress={onClose}>
                             {closeLabel}
                         </FocusableButton>
                     )}
-                    {(waiting ? [] : actionButtons).map((button, index) => (
-                        <FocusableButton
-                            key={index}
-                            variant={button.variant}
-                            onPress={button.onPress}
-                            isDisabled={button.isDisabled}
-                            isPending={button.isPending}
-                            pendingName={button.label}
-                        >
-                            {button.label}
-                        </FocusableButton>
-                    ))}
+                    {(waiting ? [] : actionButtons).map(renderButton)}
                 </div>
             </Content>
         </Dialog>

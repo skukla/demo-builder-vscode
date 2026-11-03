@@ -279,11 +279,11 @@ describe('SetupGuideModal', () => {
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Check All Steps' }));
         });
-        expect(screen.getByRole('button', { name: 'Check All Steps' })).toHaveAttribute('aria-busy', 'true');
+        expect(screen.getByRole('button', { name: 'Check All Steps' })).toHaveAttribute('data-pending', 'true');
         await act(async () => signedIn(PREPARED));
         const button = screen.getByRole('button', { name: 'Check All Steps' });
         expect(button).toBeDisabled();
-        expect(button).not.toHaveAttribute('aria-busy');
+        expect(button).not.toHaveAttribute('data-pending');
     });
 
     it('closes from the dialog footer', async () => {
@@ -354,10 +354,11 @@ describe('SetupGuideModal', () => {
         expect(within(shown()).queryByRole('link')).not.toBeInTheDocument();
     });
 
-    it('keeps Check All Steps under the list, and offers no Mark as Done on a step Demo Builder can check', async () => {
+    it('keeps Check All Steps at the footer\'s start, and offers no Mark as Done on a step Demo Builder can check', async () => {
         await renderGuide();
-        // Under the list, with Apply all: it acts on the whole list, not the shown step (2026-10-28).
-        expect(screen.getByRole('button', { name: 'Check All Steps' }).closest('.setup-guide-list-actions')).not.toBeNull();
+        // At the footer's start, under the list, with Apply all: it acts on the whole list, not the
+        // shown step (2026-10-28), and in the body it was clipped by a long list (2026-11-03).
+        expect(screen.getByRole('button', { name: 'Check All Steps' }).closest('[data-testid="modal-footer-start"]')).not.toBeNull();
         fireEvent.click(screen.getByRole('tab', { name: 'Step C' }));
         expect(screen.queryByRole('button', { name: 'Mark as Done' })).not.toBeInTheDocument();
     });

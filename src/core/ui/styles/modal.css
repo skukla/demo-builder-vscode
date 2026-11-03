@@ -141,6 +141,14 @@
     background: var(--spectrum-global-color-gray-100);
 }
 
+/* Modal `startButtons`: held to the footer's start, the dialog's own answers staying at its end. */
+.modal-footer-start {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-right: auto;
+}
+
 /* The title, with how things stand as an icon before it (Modal `status`). The icon sits on the
    title's first line when a long title wraps. */
 .modal-title {

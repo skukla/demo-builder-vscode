@@ -93,17 +93,6 @@
     border-right: 1px solid var(--spectrum-global-color-gray-300);
 }
 
-/* What acts on the whole list, under it: Check all steps, and Apply all when it would do more
-   than the step's own Apply. Always as tall as both buttons, so Apply all coming and going
-   does not change the dialog's height and re-centre it (release test row 4.19, 2026-10-28). */
-.setup-guide-list-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spectrum-global-dimension-size-100);
-    min-height: calc(2 * var(--spectrum-global-dimension-size-400) + var(--spectrum-global-dimension-size-100));
-}
-
 .setup-guide-rail {
     list-style: none;
     margin: 0;

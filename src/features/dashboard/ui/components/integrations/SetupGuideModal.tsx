@@ -24,10 +24,10 @@
  * @module features/dashboard/ui/components/integrations/SetupGuideModal
  */
 
-import { Button, DialogContainer } from '@adobe/react-spectrum';
+import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
-import { FIX_COPY, applyAllIds, checkableIds, footerButtons } from './setupGuideFooter';
+import { applyAllIds, checkableIds, footerButtons, listActionButtons } from './setupGuideFooter';
 import { SetupGuideStep, StepList } from './SetupGuideStep';
 import { useGuideRun } from './useGuideRun';
 import { type SetupChecklistActions, useSetupChecklist } from './useSetupChecklist';
@@ -162,6 +162,12 @@ function Guide({
     // Apply all (AB-82): what "Prepare this store" did, from the one place the steps live.
     const ready = applyAllIds(items, item?.id);
     const applyAll = onAsk && ready.length > 0 ? () => run.start('apply', ready) : undefined;
+    const listButtons = listActionButtons({
+        checkAll: hasCheckable ? () => void checkAll() : undefined,
+        applyAll: applyAll && { count: ready.length, run: applyAll },
+        busy: busyNow,
+        waitsOnSignIn: runWaitsOnSignIn,
+    });
     const failedIds = new Set(actions.failures.map((failure) => failure.stepId));
     return (
         <Modal
@@ -170,9 +176,9 @@ function Guide({
             wide
             onClose={onClose}
             actionButtons={buttons}
+            startButtons={listButtons}
         >
             <div className="setup-guide-layout">
-                {/* The list, and under it what acts on the list as a whole (AB-82, 2026-10-28). */}
                 <div className="setup-guide-side">
                     <StepList
                         items={items}
@@ -182,28 +188,6 @@ function Guide({
                         animateMarks={hasChecked}
                         failedIds={failedIds}
                     />
-                    <div className="setup-guide-list-actions">
-                        {hasCheckable && (
-                            // No "Checking 2 of 5" (owner, 2026-10-31): the list marks the step
-                            // being checked and the open step's banner shows its spinner, so the
-                            // button only stops taking presses. A run waiting on the Commerce
-                            // sign-in moves nothing else, so the button shows its own spinner
-                            // then. The sign-in the guide starts as it opens is not a wait yet.
-                            <Button
-                                variant="secondary"
-                                onPress={() => void checkAll()}
-                                isDisabled={busyNow && !runWaitsOnSignIn}
-                                isPending={runWaitsOnSignIn}
-                            >
-                                Check All Steps
-                            </Button>
-                        )}
-                        {applyAll && (
-                            <Button variant="secondary" onPress={applyAll} isDisabled={busyNow}>
-                                {FIX_COPY.all(ready.length)}
-                            </Button>
-                        )}
-                    </div>
                 </div>
                 {/* Steps differ in length. Every step is laid in the same cell and only the
                     shown one is visible, so the pane is as tall as the TALLEST step from the
