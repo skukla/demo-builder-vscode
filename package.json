@@ -325,7 +325,7 @@
                             "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
                         },
                         "default": [],
-                        "description": "Custom block libraries to include for new EDS projects. Each entry is a public GitHub repository URL containing a blocks/ directory."
+                        "description": "Block libraries Demo Builder offers alongside its own, for a storefront to tick in the wizard or on Configure. Listing one adds it to the choices, not to any storefront. Each entry is a public GitHub repository URL containing a blocks/ directory."
                     },
                     "demoBuilder.blockLibraries.syncBehavior": {
                         "type": "string",
