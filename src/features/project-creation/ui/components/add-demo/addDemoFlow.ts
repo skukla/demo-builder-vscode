@@ -109,7 +109,7 @@ export function updateDemoPackageLabel(name: string): string {
 /** The one rule of change mode: an Edge Delivery project takes an Edge Delivery demo, a headless one a headless demo. */
 export function wrongKindMessage(currentKind: StorefrontKind): string {
     const built = currentKind === 'eds' ? 'an Edge Delivery' : 'a headless';
-    return `This project is built on ${built} demo; pick a demo of the same kind.`;
+    return `This project uses ${built} demo. Select a demo of the same type.`;
 }
 
 /** Whether the read demo can be this project's source (change mode). */

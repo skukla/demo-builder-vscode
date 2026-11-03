@@ -192,7 +192,7 @@ function contentFor(controls: UpdatesModalControls): Chrome & Heading & { body: 
     }
     const rows = view.phase === 'list' ? view.rows : [];
     const count = rows.filter((r) => controls.ticked.has(r.id) && !r.lockedReason).length;
-    const label = count === 1 ? 'Apply 1 update' : `Apply ${count} updates`;
+    const label = count === 1 ? 'Apply 1 Update' : `Apply ${count} Updates`;
     return {
         title: LIST_TITLE,
         body: <UpdateList rows={rows} controls={controls} />,

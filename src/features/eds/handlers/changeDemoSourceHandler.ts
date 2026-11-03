@@ -74,7 +74,7 @@ export async function handleChangeDemoSource(
     if (project.demo.storefrontKind !== demo.storefrontKind) {
         return {
             success: false,
-            error: `This project is built on ${KIND_LABEL[project.demo.storefrontKind]} demo; pick a demo of the same kind.`,
+            error: `This project uses ${KIND_LABEL[project.demo.storefrontKind]} demo. Select a demo of the same type.`,
         };
     }
 

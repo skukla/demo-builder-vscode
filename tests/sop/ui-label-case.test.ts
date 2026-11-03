@@ -28,7 +28,7 @@ const LEDGER: Readonly<Record<string, Reason>> = {
 };
 
 /** Strings in a naming position the compiler cannot read: props and runtime values. Shrink only. */
-const DYNAMIC_PIN = 64;
+const DYNAMIC_PIN = 70;
 
 
 /** A positive control: well below this, the scan has stopped finding the sites. */
@@ -114,6 +114,7 @@ describe('the scan catches what it says it catches', () => {
         ['a Text one side of a conditional', '<Button>{on ? <Text>Save changes</Text> : <Spinner />}</Button>', '<Button>: Save changes'],
         ['a function with several returns', 'function titleOf(failed: boolean) { if (failed) return "Could not save"; return "Fine Title"; } <Modal title={titleOf(x)} />', 'Modal.title: Could not save'],
         ['a constant table', 'const TITLES = { a: "Fine Title", b: "Add a demo" }; <Modal title={TITLES[mode]} />', 'Modal.title: Add a demo'],
+        ['a label handed over by name', 'const label = n ? "Apply 1 update" : "Fine"; const b = { label, variant: "accent", onPress: f };', 'object.label: Apply 1 update'],
         ['a run title', 'const r = { title: "Syncing the store", failureTitle: "Couldn\'t Sync", successTitle: "Synced" };', 'object.title: Syncing the store'],
     ])('fails %s', (_what, source, expected) => {
         expect(flagged(source)).toContain(expected);

@@ -239,9 +239,9 @@ export function ownedRowOfAssign(row: AssignProductRow, websiteCodeById: Readonl
 
 /** A selection's own words, for a refusal or a log line. */
 export function selectionProblem(selection: ErpProductSelection | undefined): string | undefined {
-    if (!selection) return 'Pick products by category, brand, SKU prefix or a list of SKUs.';
-    if (selection.by === 'category' && !Number.isInteger(selection.categoryId)) return 'Pick a category.';
-    if (selection.by === 'brand' && !selection.brand?.trim()) return 'Pick a brand.';
+    if (!selection) return 'Select products by category, brand, SKU prefix or a list of SKUs.';
+    if (selection.by === 'category' && !Number.isInteger(selection.categoryId)) return 'Select a category.';
+    if (selection.by === 'brand' && !selection.brand?.trim()) return 'Select a brand.';
     if (selection.by === 'skuPrefix' && !selection.prefix?.trim()) return 'Type the start of the SKUs.';
     if (selection.by === 'skus' && !(selection.skus ?? []).some((sku) => sku.trim())) return 'Paste at least one SKU.';
     return undefined;

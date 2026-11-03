@@ -40,7 +40,7 @@ export function savedSentence(saveAs: { id: DatapackId; displayName: string }, i
 export function leftOutLine(leftOut: readonly LeftOut[]): string | undefined {
     const any = leftOut.filter((each) => each.count > 0);
     if (any.length === 0) return undefined;
-    return `Left out, because nothing picked them: ${any.map(counted).join(', ')}.`;
+    return `Left out, because nothing selected them: ${any.map(counted).join(', ')}.`;
 }
 
 /** The ids kept as they are, named (step 14, item 14); nothing when every one was named. */

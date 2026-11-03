@@ -61,7 +61,7 @@ describe('AddDemoModal — change mode', () => {
         await probeWith({ success: true, result: READ });
 
         expect(title('This demo is a different kind of storefront').innerHTML).toContain('text-negative');
-        expect(screen.getByText('This project is built on a headless demo; pick a demo of the same kind.')).toBeInTheDocument();
+        expect(screen.getByText('This project uses a headless demo. Select a demo of the same type.')).toBeInTheDocument();
         expect(footerButtons()).toEqual(['Close', 'Back']);
         expect(mockRequest).toHaveBeenCalledTimes(1);
     });
@@ -81,7 +81,7 @@ describe('AddDemoModal — change mode', () => {
     it('shows the change failure inside the dialog and stays open', async () => {
         const { props } = renderChange();
         await probeWith({ success: true, result: READ });
-        mockRequest.mockResolvedValueOnce({ success: false, error: 'This project is built on an Edge Delivery demo; pick a demo of the same kind.' });
+        mockRequest.mockResolvedValueOnce({ success: false, error: 'This project uses an Edge Delivery demo. Select a demo of the same type.' });
         await click('Change Source');
         expect(title("Couldn't Change Source").innerHTML).toContain('text-negative');
         expect(props.onClose).not.toHaveBeenCalled();

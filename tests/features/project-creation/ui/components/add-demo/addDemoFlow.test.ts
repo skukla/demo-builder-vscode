@@ -231,8 +231,8 @@ describe('change mode', () => {
         expect(kindMatches(READ, 'headless')).toBe(false);
         expect(kindMatches({ ...READ, kind: 'headless' }, 'headless')).toBe(true);
         expect(kindMatches(READ, undefined)).toBe(true);
-        expect(wrongKindMessage('eds')).toBe('This project is built on an Edge Delivery demo; pick a demo of the same kind.');
-        expect(wrongKindMessage('headless')).toBe('This project is built on a headless demo; pick a demo of the same kind.');
+        expect(wrongKindMessage('eds')).toBe('This project uses an Edge Delivery demo. Select a demo of the same type.');
+        expect(wrongKindMessage('headless')).toBe('This project uses a headless demo. Select a demo of the same type.');
     });
 
     it('starts with the update-demo-package box off', () => {

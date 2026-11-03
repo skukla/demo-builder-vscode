@@ -245,13 +245,13 @@ describe('change_demo_source', () => {
 
     it("passes the handler's refusal through (the other kind, or no added demo)", async () => {
         mockProbe.mockResolvedValue({ success: true, result: READ });
-        mockChange.mockResolvedValue({ success: false, error: 'This project is built on a headless demo; pick a demo of the same kind.' });
+        mockChange.mockResolvedValue({ success: false, error: 'This project uses a headless demo. Select a demo of the same type.' });
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
         const res = await s.call('change_demo_source', { owner: 'steve', repo: 'isle5-copy' });
 
-        expect(res).toEqual({ error: 'This project is built on a headless demo; pick a demo of the same kind.' });
+        expect(res).toEqual({ error: 'This project uses a headless demo. Select a demo of the same type.' });
     });
 
     it('refuses a shipped template, an unreadable repository, and one that is not a storefront', async () => {

@@ -143,7 +143,7 @@ describe('handleChangeDemoSource', () => {
 
         expect(result).toEqual({
             success: false,
-            error: 'This project is built on an Edge Delivery demo; pick a demo of the same kind.',
+            error: 'This project uses an Edge Delivery demo. Select a demo of the same type.',
         });
         expect(p.demo).toEqual(OLD);
     });

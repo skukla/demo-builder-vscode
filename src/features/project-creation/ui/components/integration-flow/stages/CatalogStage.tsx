@@ -162,7 +162,7 @@ export function CatalogStage({
                     fieldLabel={naming.fieldLabel}
                     defaultLabel={naming.defaultLabel}
                     onLabelChange={onLabelChange}
-                    disabledHint={selectedEntry ? undefined : 'Pick an integration first'}
+                    disabledHint={selectedEntry ? undefined : 'Select an integration first'}
                     // A pre-built integration's name is fixed once it is deployed (owner,
                     // 2026-09-25): say so before the name is committed, not after.
                     description={NAME_IS_FIXED}

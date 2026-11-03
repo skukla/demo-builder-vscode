@@ -110,7 +110,7 @@ interface SaveStart {
 async function startSave(deps: StoreChangesDeps, target: SaveTarget, files: RecordFiles): Promise<SaveStart> {
     const { pack } = target;
     if (!pack) {
-        if (pickCount(target.picks ?? {}) === 0) throw new StoreChangesError('Pick at least one thing from the store to save. Nothing was saved.');
+        if (pickCount(target.picks ?? {}) === 0) throw new StoreChangesError('Select at least one item from the store to save. Nothing was saved.');
         return { installed: { rows: {} } };
     }
     const record = await readInstallRecord(files, deps.projectPath, pack);

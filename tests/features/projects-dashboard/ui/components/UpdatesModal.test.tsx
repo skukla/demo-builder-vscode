@@ -151,7 +151,7 @@ describe('UpdatesModal', () => {
         await user().click(screen.getByRole('button', { name: /JustRite/ }));
         // Demo Builder's checkbox, JustRite's, then JustRite's rows: Demo Builder is closed.
         await user().click(screen.getAllByRole('checkbox')[2]);
-        await user().click(screen.getByRole('button', { name: 'Apply 2 updates' }));
+        await user().click(screen.getByRole('button', { name: 'Apply 2 Updates' }));
 
         expect(c.toggle).toHaveBeenCalledWith('blockLibrary:0');
         expect(c.apply).toHaveBeenCalledTimes(1);
@@ -160,7 +160,7 @@ describe('UpdatesModal', () => {
     it('disables Apply when nothing is ticked', () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
 
-        expect(screen.getByRole('button', { name: 'Apply 0 updates' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Apply 0 Updates' })).toBeDisabled();
     });
 
     // Each ticked row as the Prerequisites step draws its checks (owner, 2026-10-21).

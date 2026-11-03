@@ -53,7 +53,7 @@ describe('a save of picks from a store Demo Builder did not fill', () => {
     it('refuses, writing nothing, when nothing is picked', async () => {
         const { d, written, write } = await deps(false);
 
-        await expect(saveStoreChanges(d, { saveAs: SAVE_AS, picks: {} }, write)).rejects.toThrow('Pick at least one thing from the store to save. Nothing was saved.');
+        await expect(saveStoreChanges(d, { saveAs: SAVE_AS, picks: {} }, write)).rejects.toThrow('Select at least one item from the store to save. Nothing was saved.');
         expect(written).toStrictEqual([]);
     });
 
@@ -83,7 +83,7 @@ describe('a save of a pack Demo Builder installed, with picks', () => {
         const result = await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write);
 
         expect(result.leftOut).toContainEqual({ kind: 'categories', count: 1, names: ['Cables'] });
-        expect(result.sentence).toMatch(/^Saved to the Acme Demo pack\. Bodea is unchanged\. Left out, because nothing picked them: 1 category \(Cables\)/u);
+        expect(result.sentence).toMatch(/^Saved to the Acme Demo pack\. Bodea is unchanged\. Left out, because nothing selected them: 1 category \(Cables\)/u);
     });
 });
 

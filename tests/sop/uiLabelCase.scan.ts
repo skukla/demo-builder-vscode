@@ -99,7 +99,8 @@ class Reader {
     }
 
     private initializerOf(node: ts.Expression): ts.Expression | undefined {
-        let symbol = this.checker.getSymbolAtLocation(ts.isPropertyAccessExpression(node) ? node.name : node);
+        const shorthand = ts.isIdentifier(node) && ts.isShorthandPropertyAssignment(node.parent);
+        let symbol = shorthand ? this.checker.getShorthandAssignmentValueSymbol(node.parent) : this.checker.getSymbolAtLocation(ts.isPropertyAccessExpression(node) ? node.name : node);
         if (symbol && symbol.flags & ts.SymbolFlags.Alias) symbol = this.checker.getAliasedSymbol(symbol);
         const declaration = symbol?.valueDeclaration;
         if (!declaration) return undefined;
@@ -222,10 +223,10 @@ export function scanSources(sources: readonly ts.SourceFile[], checker: ts.TypeC
                 const action = isActionObject(node);
                 const run = keys.includes('failureTitle');
                 for (const property of node.properties) {
-                    if (!ts.isPropertyAssignment(property)) continue;
+                    if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) continue;
                     const key = propertyNameOf(property);
                     const isNaming = (action && key === 'label') || (run && RUN_TITLES.has(key)) || key === 'closeLabel';
-                    if (isNaming) add(property, `object.${key}`, reader.read(property.initializer));
+                    if (isNaming) add(property, `object.${key}`, reader.read(ts.isPropertyAssignment(property) ? property.initializer : property.name));
                 }
             }
             ts.forEachChild(node, visit);

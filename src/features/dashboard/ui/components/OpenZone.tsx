@@ -133,7 +133,7 @@ export function OpenZone({
                     needed={needsRestart}
                     icon={<Refresh size="L" />}
                     testId="restart-tile"
-                    description="Pick up configuration changes"
+                    description="Apply configuration changes"
                     onPress={handleRestartDemo}
                 />
             )}

@@ -357,7 +357,7 @@ async function pickNamespace(
 
     const picked = await vscode.window.showQuickPick(items, {
         title: 'Manage DA.live Sites',
-        placeHolder: 'Pick the DA.live namespace whose sites you want to manage',
+        placeHolder: 'Select the DA.live namespace whose sites you want to manage',
         ignoreFocusOut: true,
     });
 

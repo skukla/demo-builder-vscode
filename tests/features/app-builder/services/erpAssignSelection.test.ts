@@ -119,7 +119,7 @@ describe('selections', () => {
     });
 
     it('refuses an empty selection in words', () => {
-        expect(selectionProblem(undefined)).toMatch(/Pick products/u);
+        expect(selectionProblem(undefined)).toMatch(/Select products/u);
         expect(selectionProblem({ by: 'skus', skus: [' '] })).toBe('Paste at least one SKU.');
         expect(selectionProblem({ by: 'brand', brand: 'Accuform' })).toBeUndefined();
     });

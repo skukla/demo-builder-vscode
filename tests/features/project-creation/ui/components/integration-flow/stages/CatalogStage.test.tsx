@@ -227,7 +227,7 @@ describe('naming a picked entry (optional-name model, 2026-08-27)', () => {
         renderStage();
         const field = screen.getByLabelText(/Name \(Optional\)/);
         expect(field).toBeDisabled();
-        expect(field).toHaveAttribute('placeholder', 'Pick an integration first');
+        expect(field).toHaveAttribute('placeholder', 'Select an integration first');
     });
 
     it("shows the picked entry's name as the PLACEHOLDER, empty value, no validation", () => {
