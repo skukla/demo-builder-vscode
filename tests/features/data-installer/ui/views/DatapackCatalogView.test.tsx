@@ -59,7 +59,7 @@ describe('DatapackCatalogView', () => {
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
-                payload: { includeCommunity: false, includeLibrary: true, keepLibraryOnFailure: true },
+                payload: { includeCommunity: false },
             })
         );
     });
@@ -120,7 +120,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'find-datapacks',
-                    payload: { includeCommunity: true, includeLibrary: true, keepLibraryOnFailure: true },
+                    payload: { includeCommunity: true },
                 })
             );
         });
@@ -347,7 +347,7 @@ describe('DatapackCatalogView', () => {
             // act() rather than in the next query's wait loop.
             await settle();
 
-            expect(await screen.findByText('No Datapacks Found')).toBeInTheDocument();
+            expect(await screen.findByText('No Datapacks Yet')).toBeInTheDocument();
             expect(screen.getByRole('checkbox', { name: /community/i })).toBeInTheDocument();
         });
 
@@ -370,10 +370,12 @@ describe('DatapackCatalogView', () => {
             expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
         });
 
-        it('names the settings for an INVALID_OPERATION refusal', async () => {
+        // The list fails only when Demo Builder's own store fails, so the Data Installer's
+        // settings are not the advice: the title says datapacks, not the Data Installer.
+        it('names datapacks, not the Data Installer\'s settings, when nothing could be listed', async () => {
             mockRequest.mockResolvedValue({
                 success: false,
-                error: 'No Data Installer API URL is configured.',
+                error: 'Could not list the datapack store.',
                 code: 'INVALID_OPERATION',
             });
 
@@ -382,10 +384,8 @@ describe('DatapackCatalogView', () => {
             // act() rather than in the next query's wait loop.
             await settle();
 
-            expect(
-                await screen.findByText('The Data Installer is not configured')
-            ).toBeInTheDocument();
-            expect(screen.getByText(/demoBuilder\.dataInstaller\.apiBaseUrl/)).toBeInTheDocument();
+            expect(await screen.findByText("Datapacks Aren't Available")).toBeInTheDocument();
+            expect(screen.queryByText(/demoBuilder\.dataInstaller\.apiBaseUrl/)).not.toBeInTheDocument();
         });
 
         it('retries a transport failure', async () => {
@@ -420,7 +420,7 @@ describe('DatapackCatalogView', () => {
  * prose, which is also what makes them survive the next wording change.
  */
 
-describe('DatapackCatalogView — the datapack library beside the Data Installer', () => {
+describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Installer\'s', () => {
     beforeEach(() => {
         mockRequest.mockReset();
     });
@@ -438,36 +438,36 @@ describe('DatapackCatalogView — the datapack library beside the Data Installer
         expect(screen.getByText('Yours')).toBeInTheDocument();
     });
 
-    it('still shows the library when the Data Installer refuses, and names the missing profile', async () => {
+    it('still shows Demo Builder\'s datapacks when the Data Installer did not answer, and says where the rest are', async () => {
         mockRequest.mockResolvedValue({
             success: true,
             data: {
-                items: [],
-                count: 0,
-                installerError: "find-datapacks: 401 Unauthorized — [ERR1201] Missing required product profiles: '1176292542' for workspace 'Stage'",
+                items: [makeSummary('bodea', 'v1', { store: 'library', shared: true })],
+                count: 1,
+                installerMissing: 'no-answer',
             },
         });
 
         render(<DatapackCatalogView />);
         await settle();
 
-        await waitFor(() => expect(screen.getByText(/product profile \(1176292542\)/)).toBeInTheDocument());
-        expect(screen.queryByText('Data Installer Access Required')).not.toBeInTheDocument();
+        await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
+        expect(screen.getByText(/Datapacks in the Data Installer aren't listed here/)).toBeInTheDocument();
+        // No address is missing, so there is no setting to open.
+        expect(screen.queryByText('Open Settings')).not.toBeInTheDocument();
     });
 
-    it('still shows the Data Installer catalog when the library cannot be listed, and says why', async () => {
+    it('still shows the Data Installer\'s datapacks when Demo Builder\'s cannot be listed, and says so', async () => {
         mockRequest.mockResolvedValue({
             success: true,
-            data: { items: [makeSummary('bodea', 'main')], count: 1, libraryError: 'Adobe sign-in is required.' },
+            data: { items: [makeSummary('bodea', 'main')], count: 1, storeMissing: true },
         });
 
         render(<DatapackCatalogView />);
         await settle();
 
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
-        expect(
-            screen.getByText('The datapack library could not be listed: Adobe sign-in is required.'),
-        ).toBeInTheDocument();
+        expect(screen.getByText("Demo Builder's datapacks aren't available right now.")).toBeInTheDocument();
     });
 });
 

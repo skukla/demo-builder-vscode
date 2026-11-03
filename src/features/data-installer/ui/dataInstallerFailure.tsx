@@ -33,18 +33,11 @@ export interface DataInstallerFailureOptions {
     onOpenSettings?: () => void;
     /** One extra line, for a surface that can say what still works without it. Shown on every failure. */
     extraDetail?: string;
-}
-
-/** The gateway's refusal when the account lacks a product profile: `[ERR1201] Missing required product profiles: '<id>'`. */
-const MISSING_PROFILE = /Missing required product profiles?: '([^']+)'/u;
-
-const missingProfileLine = (profile: string): string =>
-    `Your Adobe account isn't in the Data Installer's product profile (${profile}). An administrator of your Adobe org can add you in the Admin Console.`;
-
-/** The line above a catalog showing only the library, because the Data Installer would not answer. */
-export function installerProblemLine(message: string): string {
-    const profile = MISSING_PROFILE.exec(message)?.[1];
-    return profile ? missingProfileLine(profile) : `The Data Installer catalog could not be listed: ${message}`;
+    /**
+     * The title when nothing answered, for a surface that is not only about the Data Installer. Its
+     * failure is the datapack store's, so the Data Installer's own advice is not offered with it.
+     */
+    unreachableTitle?: string;
 }
 
 /**
@@ -77,24 +70,9 @@ export function renderDataInstallerFailure(
         );
     }
 
-    // Signed in, and the gateway names a product profile the account is not in: nothing in this
-    // extension fixes that, so nothing here points at settings (owner, 2026-11-03).
-    const missingProfile = MISSING_PROFILE.exec(failure.message)?.[1];
-    if (failure.code === ErrorCode.AUTH_FORBIDDEN && missingProfile) {
-        return (
-            <StatusDisplay
-                variant="warning"
-                title="Data Installer Access Required"
-                message={missingProfileLine(missingProfile)}
-                details={extra}
-                actions={[{ label: 'Retry', onPress: onRetry, variant: 'primary' }]}
-            />
-        );
-    }
-
     // Signed in, and the service turned the sign-in away: Sign In would hand it the same one.
     // Usually the address points at a deployment that does not take this sign-in.
-    if (failure.code === ErrorCode.AUTH_FORBIDDEN) {
+    if (failure.code === ErrorCode.AUTH_FORBIDDEN && !options.unreachableTitle) {
         const details = ['Check the Data Installer address in settings.'];
         if (options.extraDetail) {
             details.push(options.extraDetail);
@@ -115,9 +93,9 @@ export function renderDataInstallerFailure(
         );
     }
 
-    if (failure.code === ErrorCode.INVALID_OPERATION) {
+    if (failure.code === ErrorCode.INVALID_OPERATION && !options.unreachableTitle) {
         const details = [
-            'Set demoBuilder.dataInstaller.apiBaseUrl, and make sure demoBuilder.dataInstaller.enabled is on.',
+            'Set demoBuilder.dataInstaller.apiBaseUrl.',
         ];
         if (options.extraDetail) {
             details.push(options.extraDetail);
@@ -146,7 +124,7 @@ export function renderDataInstallerFailure(
     return (
         <StatusDisplay
             variant="error"
-            title="Could Not Reach the Data Installer"
+            title={options.unreachableTitle ?? 'Could Not Reach the Data Installer'}
             message={failure.message}
             details={extra}
             actions={[{ label: 'Retry', onPress: onRetry, variant: 'primary' }]}

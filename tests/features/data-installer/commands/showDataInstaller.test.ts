@@ -94,7 +94,7 @@ describe('ShowDataInstallerCommand', () => {
         });
 
         it('titles the panel for humans', () => {
-            expect(makeCommand().getWebviewTitle()).toBe('Data Installer');
+            expect(makeCommand().getWebviewTitle()).toBe('Datapacks');
         });
 
         it('has a loading message', () => {
@@ -260,7 +260,7 @@ describe('ShowDataInstallerCommand', () => {
                 scriptUri: 'vscode-webview://bundle.js',
                 nonce: expect.any(String),
                 cspSource: 'vscode-webview:',
-                title: 'Data Installer',
+                title: 'Datapacks',
             });
         });
     });

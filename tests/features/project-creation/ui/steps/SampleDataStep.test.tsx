@@ -16,7 +16,7 @@ import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 
 import {
     mockExecute,
-    mockPostMessage,
+    CATALOG,
     envelope,
     mockTypes,
     pending,
@@ -167,7 +167,7 @@ describe('SampleDataStep', () => {
         setMockState(refusal("The Data Installer didn't accept your Adobe sign-in.", 'AUTH_FORBIDDEN'));
         renderStep();
 
-        expect(await screen.findByText("The Data Installer didn't accept your sign-in")).toBeInTheDocument();
+        expect(await screen.findByText("Datapacks Aren't Available")).toBeInTheDocument();
         expect(screen.queryByText('Adobe sign-in required')).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Sign In with Adobe' })).not.toBeInTheDocument();
     });
@@ -188,29 +188,16 @@ describe('SampleDataStep', () => {
     /**
      * The reason this step failed for a colleague on 2026-08-18: nobody but the
      * author has `demoBuilder.dataInstaller.apiBaseUrl` set (it ships with no
-     * default, deliberately — the repo is public). The step must say so and hand
-     * her the setting, not report a generic failure.
+     * default, deliberately — the repo is public). Demo Builder's own datapacks
+     * are listed without it, so the step lists them and asks for no setting.
      */
     describe('when the Data Installer has never been configured', () => {
-        it('names the setting that is missing', async () => {
-            setMockState(notConfigured());
+        it("lists Demo Builder's datapacks and offers no settings button", async () => {
+            setMockState(envelope({ ...CATALOG, installerMissing: 'no-address' }));
             renderStep();
 
-            // findAllBy: the handler's own message names the key and the shared
-            // renderer's detail line names it again. Both are legitimate.
-            expect(
-                (await screen.findAllByText(/demoBuilder\.dataInstaller\.apiBaseUrl/)).length
-            ).toBeGreaterThan(0);
-        });
-
-        it('offers a button that opens the setting', async () => {
-            setMockState(notConfigured());
-            renderStep();
-
-            const open = await screen.findByRole('button', { name: /open settings/i });
-            fireEvent.click(open);
-
-            expect(mockPostMessage).toHaveBeenCalledWith('open-data-installer-settings');
+            expect((await screen.findAllByTestId('datapack-card')).length).toBeGreaterThan(0);
+            expect(screen.queryByRole('button', { name: /open settings/i })).not.toBeInTheDocument();
         });
 
         /**
@@ -224,7 +211,7 @@ describe('SampleDataStep', () => {
             setMockState(notConfigured());
             renderStep();
 
-            await screen.findAllByText(/demoBuilder\.dataInstaller\.apiBaseUrl/);
+            await screen.findByText('You can create this project without a datapack.');
             expect(screen.queryByText(/from the dashboard/i)).not.toBeInTheDocument();
         });
 

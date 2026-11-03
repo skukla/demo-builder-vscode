@@ -1,6 +1,7 @@
 /**
- * What a refused sign-in says. A missing product profile is the account's access, which an org
- * administrator fixes, so it must not send the SC to the address setting.
+ * What a failure says, and whether it offers settings. A refused sign-in points at the Data Installer's
+ * address, unless the surface speaks for the one list (`unreachableTitle`): that failure is the datapack
+ * store's, so advice about the Data Installer would send the SC to the wrong setting.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -9,22 +10,43 @@ import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataIns
 import { ErrorCode } from '@/types/errorCodes';
 
 const refused = (message: string) => ({ message, code: ErrorCode.AUTH_FORBIDDEN });
+const unconfigured = (message: string) => ({ message, code: ErrorCode.INVALID_OPERATION });
+const TITLE = "Datapacks Aren't Available";
 
-describe('renderDataInstallerFailure, a refused sign-in', () => {
-    it('names the missing product profile, and who can add it', () => {
-        const message = "The Data Installer didn't accept your Adobe sign-in. find-datapacks: 401 Unauthorized — { \"error\": \"request is invalid: [ERR1201] Missing required product profiles: '1176292542' for workspace 'Stage' and app 'x'\" }";
-
-        render(renderDataInstallerFailure(refused(message), jest.fn(), { onOpenSettings: jest.fn() }));
-
-        expect(screen.getByText('Data Installer Access Required')).toBeInTheDocument();
-        expect(screen.getByText(/product profile \(1176292542\).*Admin Console/)).toBeInTheDocument();
-        expect(screen.queryByText(/address in settings/)).not.toBeInTheDocument();
-        expect(screen.queryByText('Open Settings')).not.toBeInTheDocument();
-    });
-
-    it('CONTROL: any other refusal still points at the address', () => {
+describe('renderDataInstallerFailure, a surface about the Data Installer', () => {
+    it('points a refused sign-in at the address', () => {
         render(renderDataInstallerFailure(refused('find-datapacks: 401 Unauthorized'), jest.fn(), { onOpenSettings: jest.fn() }));
 
+        expect(screen.getByText("The Data Installer didn't accept your sign-in")).toBeInTheDocument();
         expect(screen.getByText(/address in settings/)).toBeInTheDocument();
+        expect(screen.getByText('Open Settings')).toBeInTheDocument();
+    });
+
+    it('names the one setting a missing address needs, and no other', () => {
+        render(renderDataInstallerFailure(unconfigured('No address.'), jest.fn(), { onOpenSettings: jest.fn() }));
+
+        expect(screen.getByText('The Data Installer is not configured')).toBeInTheDocument();
+        expect(screen.getByText('Set demoBuilder.dataInstaller.apiBaseUrl.')).toBeInTheDocument();
+    });
+});
+
+describe('renderDataInstallerFailure, the one list', () => {
+    it.each([
+        ['a refused sign-in', refused('The store refused the sign-in.')],
+        ['an unusable address', unconfigured('The store has no usable address.')],
+        ['anything else', { message: 'The store is down.', code: ErrorCode.UNKNOWN }],
+    ])('titles %s as datapacks being unavailable, with its own message and no Data Installer advice', (_name, failure) => {
+        render(renderDataInstallerFailure(failure, jest.fn(), { unreachableTitle: TITLE }));
+
+        expect(screen.getByText(TITLE)).toBeInTheDocument();
+        expect(screen.getByText(failure.message)).toBeInTheDocument();
+        expect(screen.queryByText(/Data Installer/)).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    });
+
+    it('still offers the sign-in, the one failure an SC can fix from here', () => {
+        render(renderDataInstallerFailure({ message: 'Sign in.', code: ErrorCode.AUTH_REQUIRED }, jest.fn(), { unreachableTitle: TITLE }));
+
+        expect(screen.getByRole('button', { name: 'Sign In with Adobe' })).toBeInTheDocument();
     });
 });

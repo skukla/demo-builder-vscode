@@ -26,8 +26,9 @@ import type { DatapackStoreName } from '@/types/datapack';
 /** Every version of one datapack, ready to render as a single card. */
 export interface DatapackGroup {
     /**
-     * Unique across the grid: the store and the name. Two stores may hold a pack of
-     * the same name, and they are different packs — one card each, never merged.
+     * Unique across the grid: the store and the name. The one list already shows a pack
+     * held in both as the datapack store's (`mergedCatalog`), so this keeps apart only what
+     * a caller asked of both on its own.
      */
     key: string;
     name: string;
@@ -38,6 +39,8 @@ export interface DatapackGroup {
     shared: boolean;
     /** True when the signed-in SC owns ANY version. Only library packs can be. */
     mine: boolean;
+    /** True when ANY version is an official team pack. Only library packs can be. */
+    team: boolean;
     /** Ordered by {@link orderVersions}: live first, archived last. */
     versions: DatapackSummary[];
 }
@@ -109,6 +112,7 @@ export function groupDatapacks(items: DatapackSummary[]): DatapackGroup[] {
             existing.versions.push(item);
             existing.shared = existing.shared || item.shared;
             existing.mine = existing.mine || item.mine === true;
+            existing.team = existing.team || item.team === true;
             continue;
         }
         byName.set(key, {
@@ -118,6 +122,7 @@ export function groupDatapacks(items: DatapackSummary[]): DatapackGroup[] {
             store,
             shared: item.shared,
             mine: item.mine === true,
+            team: item.team === true,
             versions: [item],
         });
     }

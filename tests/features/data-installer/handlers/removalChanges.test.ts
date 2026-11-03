@@ -18,10 +18,15 @@ jest.mock('@/features/data-installer/services/demoBuilderEngine/installRecord', 
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/installRecord'),
     readInstallRecord: jest.fn(),
 }));
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
-    ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
-    resolveDataInstallerAccess: jest.fn(),
-}));
+jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
+    const resolveDataInstallerAccess = jest.fn();
+    return {
+        ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
+        resolveDataInstallerAccess,
+        // The write path's door, as it answers with the Data Installer's address set.
+        resolveDatapackAccess: (context: unknown) => resolveDataInstallerAccess(context),
+    };
+});
 jest.mock('@/features/data-installer/services/datapackStoreWriter');
 jest.mock('@/features/data-installer/services/datapackTransfer', () => ({
     ...jest.requireActual('@/features/data-installer/services/datapackTransfer'),
@@ -121,6 +126,7 @@ beforeEach(() => {
     events = [];
     setting('ask');
     mockedGuard.mockResolvedValue(undefined);
+    jest.spyOn(DataInstallerClient.prototype, 'checkHealth').mockResolvedValue({ reachable: true });
     mockedAccess.mockImplementation(async (_context, store = 'installer') => ({
         ok: true,
         baseUrl: `https://example.invalid/${store}`,
@@ -337,6 +343,37 @@ describe('a pack the service installed', () => {
 
         expect(mockedSave).not.toHaveBeenCalled();
         expect(events).toEqual(['remove bodea@main']);
+    });
+
+    const UNAVAILABLE = "The Data Installer installed this datapack, and it isn't available. Use Clear Demo Data to remove what it added.";
+
+    it('says what to do instead when the Data Installer does not answer, and sends nothing', async () => {
+        jest.spyOn(DataInstallerClient.prototype, 'checkHealth').mockRejectedValue(new Error('down'));
+
+        const result = await reset();
+
+        expect(result).toEqual({ success: false, error: UNAVAILABLE, code: ErrorCode.INVALID_OPERATION });
+        expect(events).toHaveLength(0);
+        expect(mockedRun).not.toHaveBeenCalled();
+    });
+
+    it('says the same when its address is gone, and asks the Data Installer rather than the store', async () => {
+        // The gate opens first, as it does on the datapack store's access with no address set. The
+        // next to ask is the health check, which wants the Data Installer's own.
+        const opened = mockedAccess.getMockImplementation();
+        let asked = 0;
+        mockedAccess.mockImplementation(async (context, store) => {
+            asked += 1;
+            if (asked === 1) return opened!(context, store);
+            return { ok: false, response: { success: false, error: 'No address', code: ErrorCode.INVALID_OPERATION } };
+        });
+
+        const result = await reset();
+
+        expect(result).toEqual({ success: false, error: UNAVAILABLE, code: ErrorCode.INVALID_OPERATION });
+        expect(mockedAccess.mock.calls[1]).toHaveLength(1);
+        expect(DataInstallerClient.prototype.checkHealth).not.toHaveBeenCalled();
+        expect(events).toHaveLength(0);
     });
 });
 

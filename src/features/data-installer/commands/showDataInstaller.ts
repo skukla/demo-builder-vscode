@@ -53,7 +53,7 @@ export class ShowDataInstallerCommand extends StandalonePanelCommand<DataInstall
     }
 
     protected getWebviewTitle(): string {
-        return 'Data Installer';
+        return 'Datapacks';
     }
 
     protected getLoadingMessage(): string {

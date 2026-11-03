@@ -445,6 +445,9 @@ describe('rows with no output safety net are classified', () => {
         // HANDLER RETURNS DATA (owner, 2026-10-30, read in datapackLibraryHandlers.ts):
         // `{datapackName, shared, versions}`, three fixed fields.
         'share_datapack',
+        // HANDLER RETURNS DATA (beta.153, read in datapackLibraryHandlers.ts):
+        // `{datapackName, team, versions}`, three fixed fields.
+        'mark_team_datapack',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {

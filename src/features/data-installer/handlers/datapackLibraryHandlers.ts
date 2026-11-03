@@ -62,6 +62,11 @@ export interface RenameLibraryDatapackPayload {
     confirm?: boolean;
 }
 
+export interface MarkTeamDatapackPayload {
+    datapackName?: string;
+    team?: boolean;
+}
+
 export interface ShareLibraryDatapackPayload {
     datapackName?: string;
     /** True to share, false to stop sharing. */
@@ -281,6 +286,30 @@ export const datapackLibraryHandlers = defineHandlers({
             return { success: true, data: { datapackName: input.name, shared: input.shared, versions: versions.length, ...(layers.length > 0 ? { settingsLayerVersions: layers.length } : {}) } };
         } catch (error) {
             return failure(context, error, input.shared ? 'The library datapack could not be shared.' : 'The library datapack could not stop being shared.');
+        }
+    },
+
+    'mark-team-datapack': async (
+        context: HandlerContext,
+        payload?: MarkTeamDatapackPayload,
+    ): Promise<HandlerResponse> => {
+        const name = payload?.datapackName;
+        if (!name || typeof payload?.team !== 'boolean') {
+            return { success: false, error: 'Name the datapack, and say whether it is a team datapack.' };
+        }
+        const access = await resolveDataInstallerAccess(context, 'library');
+        if (!access.ok) return access.response;
+        try {
+            const versions = await myVersions(access.client, name);
+            if (versions.length === 0) {
+                return { success: false, error: `Demo Builder's datapack store has no pack of yours named ${name}.`, code: ErrorCode.INVALID_OPERATION };
+            }
+            const writer = writerFor(context, access);
+            for (const version of versions) await writer.updateTeam(version, payload.team);
+            context.logger.info(`${LOG_PREFIX} ${payload.team ? 'Marked' : 'Unmarked'} ${name} as a team datapack (${versions.length} versions).`);
+            return { success: true, data: { datapackName: name, team: payload.team, versions: versions.length } };
+        } catch (error) {
+            return failure(context, error, 'The team datapack mark could not be changed.');
         }
     },
 

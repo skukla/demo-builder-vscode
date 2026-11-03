@@ -123,14 +123,14 @@ describe('a library pack', () => {
         expect(menuLabels()).toEqual(['Save as File']);
     });
 
-    it('lists Share on a private pack of the SC, Stop sharing on a shared one, and Remove from Library at the bottom', () => {
+    it('lists Share on a private pack of the SC, Stop sharing on a shared one, and Remove Datapack at the bottom', () => {
         renderActions({ detail: OWN, onSaveStoreChanges: jest.fn() });
-        expect(menuLabels()).toEqual(['Save as File', 'Save Store Changes to This Datapack', 'Share', 'Remove from Library']);
+        expect(menuLabels()).toEqual(['Save as File', 'Save Store Changes to This Datapack', 'Share', 'Remove Datapack']);
     });
 
     it('lists Stop sharing on a shared pack of the SC', () => {
         renderActions({ detail: { ...OWN, shared: true } });
-        expect(menuLabels()).toEqual(['Save as File', 'Stop Sharing', 'Remove from Library']);
+        expect(menuLabels()).toEqual(['Save as File', 'Stop Sharing', 'Remove Datapack']);
     });
 });
 
@@ -162,22 +162,22 @@ describe('Share and Stop sharing keep their confirmation', () => {
     });
 });
 
-describe('Remove from Library keeps its confirmation', () => {
+describe('Remove Datapack keeps its confirmation', () => {
     it('removes on the one choice when there is nothing to warn about, then says so', async () => {
         const props = renderActions({ detail: OWN });
         mockRequest.mockResolvedValue({ success: true, data: { deleted: true } });
 
-        await press(row('Remove from Library'));
+        await press(row('Remove Datapack'));
 
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'bodea', version: 'main', confirm: true }, undefined);
-        expect(await screen.findByText('Removed from the library.')).toBeInTheDocument();
+        expect(await screen.findByText('Removed.')).toBeInTheDocument();
         expect(props.onRemoved).toHaveBeenCalled();
     });
 
     it('shows the warning first, and removes only on the Remove press', async () => {
         renderActions({ detail: OWN, sharedInFile: WARNING });
 
-        await press(row('Remove from Library'));
+        await press(row('Remove Datapack'));
         expect(screen.getByText(WARNING)).toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalled();
 
@@ -188,7 +188,7 @@ describe('Remove from Library keeps its confirmation', () => {
     it('keeps the pack when the warning is cancelled', async () => {
         renderActions({ detail: OWN, sharedInFile: WARNING });
 
-        await press(row('Remove from Library'));
+        await press(row('Remove Datapack'));
         await press(screen.getByRole('button', { name: 'Cancel' }));
 
         expect(mockRequest).not.toHaveBeenCalled();
@@ -199,7 +199,7 @@ describe('Remove from Library keeps its confirmation', () => {
         mockRequest.mockResolvedValue({ success: false, error: 'Only the owner can delete this pack.' });
         renderActions({ detail: OWN });
 
-        await press(row('Remove from Library'));
+        await press(row('Remove Datapack'));
 
         expect(await screen.findByText('It could not be removed: Only the owner can delete this pack.')).toBeInTheDocument();
     });
@@ -217,14 +217,14 @@ describe('a pack with a settings layer (datapack-engine step 09)', () => {
         await press(row('Remove Its Store Settings'));
 
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'bodea-settings', version: '2', confirm: true }, undefined);
-        expect(await screen.findByText('Removed from the library.')).toBeInTheDocument();
+        expect(await screen.findByText('Removed.')).toBeInTheDocument();
         expect(onSharingChanged).toHaveBeenCalled();
     });
 
     it("offers it beside the SC's own pack's Remove, after it", () => {
         renderActions({ detail: OWN, settingsLayer: LAYER });
 
-        expect(menuLabels().slice(-2)).toEqual(['Remove from Library', 'Remove Its Store Settings']);
+        expect(menuLabels().slice(-2)).toEqual(['Remove Datapack', 'Remove Its Store Settings']);
     });
 
     it("does not offer a colleague's layer, which only its owner can remove", () => {

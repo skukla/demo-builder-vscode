@@ -365,6 +365,19 @@ describe('paged envelope — total is reported, never fabricated', () => {
     });
 });
 
+/** `team`, the store's official-pack mark: read as `mine` is, true or absent, never guessed. */
+describe('team — an official team pack', () => {
+    const teamRow = { datapack_name: 'frescopa', version: 'main', display_name: 'Frescopa', shared: true, data_types: [] };
+
+    it('passes through when the store says true', () => {
+        expect(parseDatapackList({ datapacks: [{ ...teamRow, team: true }] }).items[0].team).toBe(true);
+    });
+
+    it.each([[false], [undefined], ['true'], [1]])('is absent for %s', (team) => {
+        expect(parseDatapackList({ datapacks: [{ ...teamRow, team }] }).items[0]).not.toHaveProperty('team');
+    });
+});
+
 /**
  * `mine` — the one field only the datapack library sends. Read only when it is
  * literally true, so a row that does not say is never offered as the caller's.

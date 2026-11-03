@@ -10,6 +10,7 @@
  */
 
 import * as vscode from 'vscode';
+import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
 import type { Project } from '@/types/base';
@@ -143,6 +144,11 @@ export function happyClient() {
     return { validateImport, startImport, startDelete, checkCredentials };
 }
 
+/** The Data Installer answers its health check: what a removal of a pack it installed asks first. */
+export function answeringDataInstaller(): void {
+    jest.spyOn(DataInstallerClient.prototype, 'checkHealth').mockResolvedValue({ reachable: true });
+}
+
 /**
  * The preamble every spec runs. A shared `beforeEach` in this module would NOT
  * apply to importing specs, so each calls this from its own.
@@ -150,5 +156,6 @@ export function happyClient() {
 export function resetImportHandlerMocks(): void {
     jest.clearAllMocks();
     setupSettings();
+    answeringDataInstaller();
     mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
 }

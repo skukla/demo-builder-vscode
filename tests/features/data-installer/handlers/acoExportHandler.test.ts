@@ -12,10 +12,15 @@ jest.mock('@/features/data-installer/services/acoExport/acoPackExport', () => ({
     ...jest.requireActual('@/features/data-installer/services/acoExport/acoPackExport'),
     exportAcoPack: jest.fn(),
 }));
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
-    ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
-    resolveDataInstallerAccess: jest.fn(),
-}));
+jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
+    const resolveDataInstallerAccess = jest.fn();
+    return {
+        ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
+        resolveDataInstallerAccess,
+        // The write path's door, as it answers with the Data Installer's address set.
+        resolveDatapackAccess: (context: unknown) => resolveDataInstallerAccess(context),
+    };
+});
 jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
     commerceClientForProject: jest.fn(),
 }));

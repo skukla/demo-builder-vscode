@@ -9,20 +9,29 @@ date, re-probing it is cheaper than trusting it.
 
 ## Configuration
 
-Three settings, read in one place — `services/dataInstallerConfig.ts`:
+Two address settings, read in one place — `services/dataInstallerConfig.ts`:
 
 | Setting | Default | |
 |---|---|---|
-| `demoBuilder.dataInstaller.enabled` | `true` | A corrupted non-boolean reads as `true` — a broken `settings.json` should not look like a deliberate opt-out |
-| `demoBuilder.dataInstaller.apiBaseUrl` | **empty** | `https` only, ≤2048 chars, trailing slash stripped |
-| `demoBuilder.datapackStore.apiBaseUrl` | the team's deployment | The datapack **library**: the team's own store, which answers the same catalog routes. Same URL rule. Its default is a path on a host the repository already publishes (the PDP overlay's), pinned by a test |
+| `demoBuilder.datapackStore.apiBaseUrl` | the team's deployment | Demo Builder's own **datapack store**, the list every SC gets. Its default is a path on a host the repository already publishes (the PDP overlay's), pinned by a test. `https` only, ≤2048 chars, trailing slash stripped |
+| `demoBuilder.dataInstaller.apiBaseUrl` | **empty** | The Data Installer, an **extra**. Same URL rule |
 
-**Nobody has the URL set until they set it**, and that is the whole first-run story.
-A fresh install has the feature enabled and pointed nowhere, so the wizard's
-sample-data step refuses and the dashboard tile is hidden
-(`isDataInstallerConfigured()` gates it). Both surfaces name the setting and offer an
-**Open Settings** button rather than reporting a dead end — this was mistaken for a
-bug on 2026-08-18.
+**Datapacks work with or without the Data Installer** (owner, 2026-11-03; beta.153).
+Every surface lists the store first and adds the Data Installer's packs when it
+answers, asked at each load (`handlers/catalogLibraryRows.ts`). A pack in both shows
+once, as the store's. Nothing gates on the Data Installer any more: the wizard's
+Datapacks step and the dashboard tile always show, and the panel is titled
+**Datapacks**. When the Data Installer is unset or does not answer, the list says so
+in one line under the cards (`installerMissing: 'no-address' | 'no-answer'`); when
+the store does not answer, one line above them (`storeMissing`). Only when neither
+answers does the list fail, with the store's reason, and its title is "Datapacks
+Aren't Available".
+
+The store's default list is its **team** packs (marked with `mark_team_datapack`)
+and the SC's own; a colleague's shared pack is **Community**, behind the same Include
+Community switch as the Data Installer's non-curated packs. Removed with this: the
+on/off setting that gated the whole feature, the check that read it, and the Open
+Settings button that both surfaces offered when it was off.
 
 ## Credentials: none are sent
 

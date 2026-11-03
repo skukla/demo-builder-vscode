@@ -37,7 +37,7 @@ import { demoDataHandlers } from './demoDataHandlers';
 import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
-import { SERVICE_INSTALLS_ONLY_ITS_OWN, libraryReads } from './libraryReads';
+import { SERVICE_INSTALLS_ONLY_ITS_OWN, SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from './libraryReads';
 import { STARTING_REMOVAL_STAGE, type SavedFirst, removalChangesHandlers, removalStageReporter, settleChangesBeforeRemoval } from './removalChanges';
 import { storeChangesHandlers } from './storeChangesHandlers';
 import { TransientStateManager } from '@/core/state/transientStateManager';
@@ -369,6 +369,9 @@ async function engineFor(
         if (orgFailure) {
             return { response: { success: false, error: orgFailure.error, code: ErrorCode.ORG_MISMATCH } };
         }
+    }
+    if (engineId === 'service' && write.write === 'remove' && !(await gate.dataInstallerAnswers())) {
+        return { response: { success: false, error: SERVICE_REMOVAL_UNAVAILABLE, code: ErrorCode.INVALID_OPERATION } };
     }
     if (engineId === 'service' && write.source === 'library') {
         return {

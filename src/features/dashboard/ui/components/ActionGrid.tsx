@@ -112,18 +112,6 @@ export interface ActionGridProps {
     isStopDisabled: boolean;
     /** Whether mesh-related actions (Configure) should be disabled */
     isMeshActionDisabled: boolean;
-    /**
-     * Whether to offer the Sample Data tile. The Data Installer needs BOTH
-     * `dataInstaller.enabled` and a usable `apiBaseUrl`; without the URL the
-     * surface refuses every request, so a tile is an invitation to a dead end.
-     * Decided host-side (`isDataInstallerConfigured`) — these are settings, and
-     * the webview cannot read them.
-     *
-     * Defaults to hidden. An undefined flag means the host did not say, and
-     * offering a surface we have not confirmed is the failure this prop exists
-     * to prevent.
-     */
-    dataInstallerAvailable?: boolean;
     /** This demo's own pack, as the SC sees it named (step 07); absent when it has none. */
     ownDatapackName?: string;
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
@@ -227,7 +215,6 @@ export function ActionGrid({
     openingTile = null,
     demoStatus,
     handleRestartDemo,
-    dataInstallerAvailable,
     ownDatapackName,
     appBuilderComponents,
     hasMesh,
@@ -307,7 +294,6 @@ export function ActionGrid({
             <BuildZone
                 canEdit={canEdit}
                 isMeshActionDisabled={isMeshActionDisabled}
-                dataInstallerAvailable={dataInstallerAvailable}
                 ownDatapackName={ownDatapackName}
                 handleEditProject={handleEditProject}
                 handleConfigure={handleConfigure}

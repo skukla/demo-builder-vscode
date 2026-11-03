@@ -242,15 +242,15 @@ function initial(displayName: string): string {
 
 /** Keep a nested control's events inside the control. */
 /**
- * The one word beside the title, if any: where the pack lives and whose it is. A
- * library pack always says so, because only the Data Installer's can be installed
- * from the flyout; a Data Installer pack says only when it is not curated.
+ * The one word beside the title, if any. A team pack says nothing: it is the normal case, and an SC
+ * has no need to learn where it lives. Everything else says what makes it different.
  */
 function cardTag(group: DatapackGroup): string | undefined {
     if (group.store === 'library') {
-        return group.mine ? 'Yours' : 'Library';
+        if (group.mine) return 'Yours';
+        return group.team ? undefined : 'Community';
     }
-    return group.shared ? undefined : 'Community';
+    return group.shared ? 'Data Installer' : 'Community';
 }
 
 /**

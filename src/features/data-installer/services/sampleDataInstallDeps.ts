@@ -10,11 +10,12 @@
  * @module features/data-installer/services/sampleDataInstallDeps
  */
 
-import { resolveDataInstallerAccess } from '../handlers/dataInstallerHandlers';
-import { SERVICE_INSTALLS_ONLY_ITS_OWN, libraryReads } from '../handlers/libraryReads';
+import { resolveDataInstallerAccess, resolveDatapackAccess } from '../handlers/dataInstallerHandlers';
+import { SERVICE_INSTALLS_ONLY_ITS_OWN, SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from '../handlers/libraryReads';
+import type { DatapackStoreName } from '@/types/datapack';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
 import { buildDatapackEngine, engineThatInstalled } from './buildDatapackEngine';
-import { selectedDatapackEngine } from './dataInstallerConfig';
+import { resolveDataInstallerBaseUrl, selectedDatapackEngine } from './dataInstallerConfig';
 import type { DatapackEngine } from './datapackEngine';
 import { watchImportJob } from './importJobRunner';
 import type { SampleDataDeps } from './sampleDataInstall';
@@ -70,16 +71,17 @@ export function buildSampleDataDeps(
         // Asked of the store that holds the pack: the Data Installer unless the project
         // recorded the library.
         inventory: async ({ store, ...id }) => {
-            const access = await resolveDataInstallerAccess(context, store ?? 'installer');
-            if (!access.ok) {
-                return [];
-            }
-            const detail = await access.client.getDatapackDetail(id);
-            if (detail.dataTypes.length === 0) {
-                return [];
-            }
-            const inventory = await access.client.batchGetDataItems(id, detail.dataTypes);
-            return inventory.present;
+            const held = async (from: DatapackStoreName): Promise<string[]> => {
+                const access = await resolveDataInstallerAccess(context, from);
+                if (!access.ok) return [];
+                const detail = await access.client.getDatapackDetail(id);
+                if (detail.dataTypes.length === 0) return [];
+                return (await access.client.batchGetDataItems(id, detail.dataTypes)).present;
+            };
+            if (store === 'library') return held('library');
+            // The datapack store's copy first, as the install reads it (`readPackItems`).
+            const fromStore = await held('library').catch(() => []);
+            return fromStore.length > 0 ? fromStore : held('installer');
         },
 
         startImport: async (request) => {
@@ -137,9 +139,9 @@ export function buildSampleDataDeps(
 
 /** The engine the setting chooses, built the way the import handlers build it (`buildDatapackEngine`). */
 async function engine(context: HandlerContext, project: Project, mode: SampleDataMode): Promise<DatapackEngine> {
-    const access = await resolveDataInstallerAccess(context);
+    const access = await resolveDatapackAccess(context);
     if (!access.ok) {
-        throw new Error('The Data Installer is not reachable for this project.');
+        throw new Error('Datapacks are not available for this project.');
     }
     // A removal goes through the engine that installed the project's pack (DI-5).
     const engineId =
@@ -150,6 +152,8 @@ async function engine(context: HandlerContext, project: Project, mode: SampleDat
         const orgFailure = await orgGuard(context, project, context.authManager);
         if (orgFailure) throw new Error(orgFailure.error);
     }
+    // With no address, `access` is the datapack store's, and the store does not run the service's jobs.
+    if (engineId === 'service' && !resolveDataInstallerBaseUrl().ok) throw new Error(SERVICE_REMOVAL_UNAVAILABLE);
     return buildDatapackEngine(
         engineId,
         {

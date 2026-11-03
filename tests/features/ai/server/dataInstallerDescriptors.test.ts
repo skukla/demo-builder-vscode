@@ -21,9 +21,9 @@ import type { HandlerResponse } from '@/types/handlers';
 
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
 
-// Nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
+// Twenty since mark_team_datapack (beta.153); nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
 // check_demo_data and clear_demo_data (sixteen since step 07 added rename_datapack, fifteen since step 05).
-it('registers the nineteen tools, and only those', () => {
+it('registers the twenty tools, and only those', () => {
     expect(DATA_INSTALLER_DESCRIPTORS.map((d) => d.tool).sort()).toEqual([
         'check_demo_data',
         'clear_demo_data',
@@ -34,6 +34,7 @@ it('registers the nineteen tools, and only those', () => {
         'list_datapack_export_items',
         'list_datapack_import_scopes',
         'load_datapack_zip',
+        'mark_team_datapack',
         'open_datapack_zip',
         'preview_datapack_changes',
         'rename_datapack',
@@ -58,13 +59,14 @@ it('every row dispatches to a handler that actually exists', () => {
 
 describe('gates', () => {
     // Saving a file into the project is not gated: it changes no store and no instance.
-    it('gates exactly the ten writes that reach a store or an instance', () => {
+    it('gates exactly the eleven writes that reach a store or an instance', () => {
         const gated = DATA_INSTALLER_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
             'clear_demo_data',
             'copy_library_datapack_to_installer',
             'delete_library_datapack',
             'load_datapack_zip',
+            'mark_team_datapack',
             'rename_datapack',
             'reset_datapack',
             'save_store_changes_to_pack',
@@ -207,7 +209,7 @@ describe('what each row declares', () => {
 
     // readOnly is what the write-gating machinery reads. The dry run is a read;
     // the three that touch a live instance or the shared catalog are not.
-    it('exposes eight reads and eleven writes', () => {
+    it('exposes eight reads and twelve writes', () => {
         const byFlag = (readOnly: boolean) =>
             DATA_INSTALLER_DESCRIPTORS.filter((d) => d.readOnly === readOnly)
                 .map((d) => d.tool)
@@ -228,6 +230,7 @@ describe('what each row declares', () => {
             'copy_library_datapack_to_installer',
             'delete_library_datapack',
             'load_datapack_zip',
+            'mark_team_datapack',
             'rename_datapack',
             'reset_datapack',
             'save_datapack_zip',

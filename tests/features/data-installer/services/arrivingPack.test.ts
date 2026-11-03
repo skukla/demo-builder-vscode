@@ -45,7 +45,7 @@ describe('settleArrivingPack', () => {
         );
         expect(p.datapack).toEqual({ ...d.copy.mock.calls[0][1].id, store: 'library', origin: COLLEAGUES.origin });
         expect(p.ownDatapack?.name).toBe(p.datapack?.name);
-        expect(result).toEqual({ changed: true, note: "Copied Priya Acme into your datapack library as this demo's own pack." });
+        expect(result).toEqual({ changed: true, note: "Copied Priya Acme into your datapacks as this demo's own pack." });
     });
 
     it('leaves the SC\'s own pack, a shared one, and a Data Installer one as recorded', async () => {
@@ -68,7 +68,7 @@ describe('settleArrivingPack', () => {
 
         expect(p.datapack).toEqual(COLLEAGUES);
         expect(p.ownDatapack).toBeUndefined();
-        expect(result).toEqual({ changed: false, note: 'Priya Acme could not be copied into your datapack library (library refused), so it is installed from where it is.' });
+        expect(result).toEqual({ changed: false, note: 'Priya Acme could not be copied into your datapacks (library refused), so it is installed from where it is.' });
     });
 
     it('records the store the check found a pack recorded with no store in', async () => {

@@ -4,11 +4,10 @@
  *
  * ## Why the read exists
  *
- * Two of these keys are FUNCTIONAL GATES, not preferences: the Data Installer
- * surface does not exist without `dataInstaller.enabled` and
- * `dataInstaller.apiBaseUrl`. An agent asked "why can I not import a datapack?"
- * had no way to discover that the answer was a setting, and would go looking for
- * a broken service instead. Several others explain behaviour that otherwise
+ * Some of these keys are FUNCTIONAL GATES, not preferences: the Data Installer's
+ * own datapacks are listed only when `dataInstaller.apiBaseUrl` names it. An agent
+ * asked "why is that datapack not listed?" had no way to discover that the answer
+ * was a setting, and would go looking for a broken service instead. Several others explain behaviour that otherwise
  * looks like a bug — `byom.enabled` off means product pages will not route,
  * `updateChannel` decides which releases are even visible.
  *
@@ -76,7 +75,6 @@ export const SETTING_KEYS = [
     'demoBuilder.byom.overlayUrl',
     'demoBuilder.ai.engine',
     'demoBuilder.ai.permissions',
-    'demoBuilder.dataInstaller.enabled',
     'demoBuilder.dataInstaller.engine',
     'demoBuilder.dataInstaller.changesOnRemoval',
     'demoBuilder.dataInstaller.apiBaseUrl',
@@ -127,7 +125,7 @@ export function registerSettingsTools(
             title: 'Get Settings',
             description:
                 "The extension's VS Code settings and their current values. Check here when a " +
-                'feature seems absent rather than broken — dataInstaller.enabled and byom.enabled ' +
+                'feature seems absent rather than broken — dataInstaller.apiBaseUrl and byom.enabled ' +
                 'are functional gates, not preferences.',
             inputSchema: {
                 key: z
@@ -142,7 +140,7 @@ export function registerSettingsTools(
 
             if (requested) {
                 // Accept the unprefixed form. Watched live on 2026-08-27: the
-                // agent asked for `dataInstaller.enabled`, was refused, and
+                // agent asked for an unprefixed key, was refused, and
                 // retried with the `demoBuilder.` prefix — a wasted round trip
                 // for a key that was unambiguous the first time.
                 if (

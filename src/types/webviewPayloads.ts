@@ -128,11 +128,6 @@ export interface DashboardInitialData {
     /** Whether the project has an Adobe org (drives the "Checking organization" telegraph) */
     hasAdobeContext: boolean;
     /**
-     * Whether the Data Installer is switched on AND pointed at an API. Decided
-     * host-side (`isDataInstallerConfigured`) because both halves are settings.
-     */
-    dataInstallerAvailable: boolean;
-    /**
      * This demo's own library pack, by the name the SC sees (step 07), for the Datapacks
      * tile's line. Absent when the demo has none.
      */

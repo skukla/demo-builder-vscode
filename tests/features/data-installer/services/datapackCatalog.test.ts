@@ -216,6 +216,7 @@ describe('datapackCatalog', () => {
                 store: 'installer',
                 shared: false,
                 mine: false,
+                team: false,
                 versions: [],
             };
             expect(pickDefaultVersion(empty)).toBeUndefined();

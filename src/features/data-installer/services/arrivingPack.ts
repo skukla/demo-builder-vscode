@@ -49,11 +49,11 @@ async function copyIn(project: Project, check: Extract<RecordedPackCheck, { verd
         const reason = error instanceof Error ? error.message : String(error);
         return {
             changed: false,
-            note: `${check.displayName} could not be copied into your datapack library (${reason}), so it is installed from where it is.`,
+            note: `${check.displayName} could not be copied into your datapacks (${reason}), so it is installed from where it is.`,
         };
     }
     recordDemoPackSave(project, save);
-    return { changed: true, note: `Copied ${check.displayName} into your datapack library as this demo's own pack.` };
+    return { changed: true, note: `Copied ${check.displayName} into your datapacks as this demo's own pack.` };
 }
 
 /**

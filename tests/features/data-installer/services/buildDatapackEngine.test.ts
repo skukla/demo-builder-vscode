@@ -9,9 +9,12 @@ import {
     engineThatInstalled,
     layerFinder,
     projectCommerce,
+    readPackItems,
     type DatapackEngineAccess,
 } from '@/features/data-installer/services/buildDatapackEngine';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { DatapackId } from '@/types/datapack';
+import type { DatapackQuery } from '@/features/data-installer/services/dataInstallerClient';
 import { InstallRecordError, installRecordPath, openInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { NOW, PACK, PROJECT, memoryFiles } from './demoBuilderEngine/demoBuilderEngine.testUtils';
 import { nodeActivityFiles, readEngineActivity } from '@/features/data-installer/services/engineActivityLog';
@@ -128,6 +131,74 @@ describe('projectCommerce', () => {
         await projectCommerce({ project, authManager, secrets: undefined })();
 
         expect(mockCommerceClientForProject).toHaveBeenCalledWith(project, authManager, undefined, undefined, 'all');
+    });
+});
+
+describe('readPackItems, the datapack store first whatever the pack names', () => {
+    const ID = { name: 'frescopa', version: 'main' };
+
+    /** A store holding the pack with these rows; with none, one that refuses it. */
+    function store(rows?: Record<string, unknown>): jest.Mocked<Required<DatapackEngineAccess>['libraryCatalog'] extends () => Promise<infer C> ? C : never> {
+        return {
+            findDatapacks: jest.fn(async (_query: DatapackQuery) => ({ items: [], count: 0 })),
+            getDatapackDetail: jest.fn(async (_id: DatapackId) => {
+                if (!rows) throw new Error('not found');
+                return { id: ID, displayName: 'Frescopa', shared: true, dataTypes: Object.keys(rows), art: {} };
+            }),
+            getDataItem: jest.fn(async (_id, dataType) => ({ dataType, records: rows?.[dataType] })),
+        };
+    }
+
+    const OURS = { products: ['from the store'] };
+    const THEIRS = { products: ['from the Data Installer'] };
+
+    it('reads a pack named in the Data Installer from the store when the store holds it', async () => {
+        const installer = store(THEIRS);
+        const library = store(OURS);
+
+        await expect(readPackItems({ catalog: installer, libraryCatalog: async () => library }, ID, 'installer')).resolves.toEqual(OURS);
+
+        expect(library.getDatapackDetail).toHaveBeenCalledWith(ID);
+        expect(installer.getDatapackDetail).not.toHaveBeenCalled();
+    });
+
+    it('falls through to the Data Installer when the store has no such pack', async () => {
+        const installer = store(THEIRS);
+
+        await expect(readPackItems({ catalog: installer, libraryCatalog: async () => store() }, ID, 'installer')).resolves.toEqual(THEIRS);
+
+        expect(installer.getDatapackDetail).toHaveBeenCalledWith(ID);
+    });
+
+    it('falls through when the store cannot even be opened', async () => {
+        const libraryCatalog = async () => {
+            throw new Error('The store is not reachable.');
+        };
+
+        await expect(readPackItems({ catalog: store(THEIRS), libraryCatalog }, ID, 'installer')).resolves.toEqual(THEIRS);
+    });
+
+    it('reads the Data Installer alone when there is no store to ask', async () => {
+        await expect(readPackItems({ catalog: store(THEIRS) }, ID, 'installer')).resolves.toEqual(THEIRS);
+    });
+
+    it("gives the Data Installer's failure when neither has it", async () => {
+        const installer = store();
+        installer.getDatapackDetail.mockRejectedValue(new Error('the Data Installer has none'));
+
+        await expect(readPackItems({ catalog: installer, libraryCatalog: async () => store() }, ID, 'installer')).rejects.toThrow('the Data Installer has none');
+    });
+
+    it('never falls through for a pack named in the store: its failure is the answer', async () => {
+        const installer = store(THEIRS);
+
+        await expect(readPackItems({ catalog: installer, libraryCatalog: async () => store() }, ID, 'library')).rejects.toThrow('not found');
+
+        expect(installer.getDatapackDetail).not.toHaveBeenCalled();
+    });
+
+    it('refuses a pack named in the store when there is no store to ask', async () => {
+        await expect(readPackItems({ catalog: store(THEIRS) }, ID, 'library')).rejects.toThrow(/cannot be read from here/);
     });
 });
 

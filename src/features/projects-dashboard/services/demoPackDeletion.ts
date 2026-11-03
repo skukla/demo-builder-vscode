@@ -40,10 +40,10 @@ export async function deleteDemoPack(store: DemoPackStore, pack: OwnDatapack): P
     try {
         versions = await store.list(pack.name);
     } catch (error) {
-        return { type: 'datapack', name, success: false, error: `The datapack library could not list it: ${errorText(error)}` };
+        return { type: 'datapack', name, success: false, error: `Its versions could not be listed: ${errorText(error)}` };
     }
     if (versions.length === 0) {
-        return { type: 'datapack', name, success: true, skipped: true, error: 'The datapack library holds no version of it.' };
+        return { type: 'datapack', name, success: true, skipped: true, error: 'No version of it was found.' };
     }
     const kept: string[] = [];
     for (const id of versions) {

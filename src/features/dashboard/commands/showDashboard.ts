@@ -15,7 +15,6 @@ import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
-import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -181,12 +180,6 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
         // "Checking Adobe organization…" state before the result arrives.
         const hasAdobeContext = Boolean(project?.adobe?.organization);
 
-        // Whether to OFFER the Sample Data tile at all. Read here rather than in
-        // the webview because these are host settings; the tile used to render
-        // unconditionally, so a user without an API URL got a tile that opened a
-        // surface refusing them.
-        const dataInstallerAvailable = isDataInstallerConfigured();
-
         return {
             theme,
             project: project
@@ -205,7 +198,6 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
             edsDaLiveUrl,
             initialEdsStorefrontStatus,
             hasAdobeContext,
-            dataInstallerAvailable,
             // This demo's own pack (step 07), as the Datapacks tile names it.
             ...(project?.ownDatapack
                 ? { ownDatapackName: project.ownDatapack.displayName ?? getProjectDisplayName(project) }

@@ -23,6 +23,7 @@ import { type HistoryFilter, engineActivityRows, engineInstalledRows } from '../
 import { deriveImportInstance } from '../services/importInstance';
 import type { ActivityEntry, DatapackEngineId, HistoryPage, InstalledDatapack, Page } from '../types';
 import type { Project } from '@/types/base';
+import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /** Paging as both reads take it. */
@@ -89,7 +90,9 @@ export async function mergeHistory<T extends { source?: DatapackEngineId }>(
     const service = await servicePage(query);
     const engineError = ours.error ? { engineError: ours.error } : {};
     if (!service.success) {
-        if (ours.rows.length === 0 && !ours.error) return service;
+        // Only a sign-in has a fix worth stopping for: a Data Installer that is not set up or will
+        // not answer costs its own rows, and Demo Builder's record is still the answer.
+        if (ours.rows.length === 0 && !ours.error && service.code === ErrorCode.AUTH_REQUIRED) return service;
         const data: HistoryPage<T> = {
             items: shown,
             count: shown.length,

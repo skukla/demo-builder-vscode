@@ -87,7 +87,7 @@ it('loads into the library by default, private, without replacing anything', asy
     await settle();
 
     expect(loadCall()).toEqual({ path: OPENED.path, target: 'library', update: false });
-    const heading = screen.getByRole('heading', { name: /Loaded 2 of 2 data types into the datapack library/ });
+    const heading = screen.getByRole('heading', { name: /Loaded 2 of 2 data types into your datapacks/ });
     expect(heading.querySelector('.text-positive')).not.toBeNull();
 });
 
@@ -169,7 +169,7 @@ it('lists each refused type with its reason when only part of the file landed', 
     await press(screen.getByRole('button', { name: 'Load' }));
     await settle();
 
-    const heading = screen.getByRole('heading', { name: /Loaded 1 of 2 data types into the datapack library/ });
+    const heading = screen.getByRole('heading', { name: /Loaded 1 of 2 data types into your datapacks/ });
     expect(heading.querySelector('.text-notice')).not.toBeNull();
     expect(screen.getByText(/too large to send in one request/)).toBeInTheDocument();
 });
@@ -184,7 +184,7 @@ it('titles a load the service refused, with its reason in the body', async () =>
     const heading = screen.getByRole('heading', { name: /The file was not loaded/ });
     expect(heading.querySelector('.text-negative')).not.toBeNull();
     expect(screen.getByText('The library is not reachable.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Remove from Library' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove Datapack' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
 });
 
@@ -210,7 +210,7 @@ it('offers the undo after a load that created a library pack, and removes it on 
     await press(screen.getByRole('button', { name: 'Load' }));
     await settle();
 
-    await press(screen.getByRole('button', { name: 'Remove from Library' }));
+    await press(screen.getByRole('button', { name: 'Remove Datapack' }));
     await settle();
 
     expect(mockRequest.mock.calls.find((c) => c[0] === 'delete-library-datapack')?.[1]).toEqual({
@@ -218,7 +218,7 @@ it('offers the undo after a load that created a library pack, and removes it on 
         version: 'v1',
         confirm: true,
     });
-    expect(screen.getByText('Removed from the library.')).toBeInTheDocument();
+    expect(screen.getByText('Removed.')).toBeInTheDocument();
 });
 
 it('does not offer the undo when the load updated a pack that was already there', async () => {
@@ -240,7 +240,7 @@ it('does not offer the undo when the load updated a pack that was already there'
     await settle();
 
     expect(
-        screen.queryByRole('button', { name: 'Remove from Library' })
+        screen.queryByRole('button', { name: 'Remove Datapack' })
     ).not.toBeInTheDocument();
 });
 
@@ -257,7 +257,7 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
 
         await openModal();
 
-        expect(screen.getByText('It also carries store settings, which go into the datapack library: catalog/frontend/grid_per_page.')).toBeInTheDocument();
+        expect(screen.getByText('It also carries store settings, which go into your datapacks: catalog/frontend/grid_per_page.')).toBeInTheDocument();
     });
 
     it('says nothing of the kind for a file with none', async () => {
@@ -272,9 +272,9 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
 
         await press(screen.getByRole('button', { name: 'Load' }));
 
-        expect(screen.getByText(/and its store settings into the datapack library/)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Remove from Library' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Remove Its Store Settings from the Library' })).not.toBeInTheDocument();
+        expect(screen.getByText(/and its store settings into your datapacks/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Remove Datapack' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Remove Its Store Settings' })).not.toBeInTheDocument();
     });
 
     it('offers the layer its own undo at another version, or when the data went to the Data Installer', async () => {
@@ -282,9 +282,9 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
         await openModal();
 
         await press(screen.getByRole('button', { name: 'Load' }));
-        await press(screen.getByRole('button', { name: 'Remove Its Store Settings from the Library' }));
+        await press(screen.getByRole('button', { name: 'Remove Its Store Settings' }));
 
-        expect(screen.queryByRole('button', { name: 'Remove from Library' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Remove Datapack' })).not.toBeInTheDocument();
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'justrite-settings', version: '3', confirm: true }, undefined);
     });
 
@@ -295,7 +295,7 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
         await press(screen.getByRole('button', { name: 'Load' }));
 
         expect(screen.getByText(/Store settings: The library already holds justrite-settings@3/)).toBeInTheDocument();
-        expect(screen.getByText('Loaded 2 of 2 data types into the datapack library')).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Remove Its Store Settings from the Library' })).not.toBeInTheDocument();
+        expect(screen.getByText('Loaded 2 of 2 data types into your datapacks')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Remove Its Store Settings' })).not.toBeInTheDocument();
     });
 });

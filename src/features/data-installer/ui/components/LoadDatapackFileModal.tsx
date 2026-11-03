@@ -139,7 +139,7 @@ export function LoadDatapackFileModal({
                         <RemoveFromLibraryButton id={{ name: outcome.datapackName, version: outcome.version }} />
                     ) : null}
                     {result && undoLayer ? (
-                        <RemoveFromLibraryButton id={{ name: undoLayer.datapackName, version: undoLayer.version }} label="Remove Its Store Settings from the Library" />
+                        <RemoveFromLibraryButton id={{ name: undoLayer.datapackName, version: undoLayer.version }} label="Remove Its Store Settings" />
                     ) : null}
                 </div>
             </Modal>
@@ -183,10 +183,10 @@ function loadResult(args: {
     return { variant: details.length === 0 ? 'success' : 'warning', title: loadTitle(count, outcome?.target === 'installer', landed), details };
 }
 
-/** Where the file's parts went: the settings go to the library wherever the data goes. */
+/** Where the file's parts went: the settings stay with the SC's own datapacks wherever the data goes. */
 function loadTitle(count: string, intoInstaller: boolean, settingsLanded: boolean): string {
-    if (intoInstaller) return `Loaded ${count} into the Data Installer${settingsLanded ? ', and its store settings into the datapack library' : ''}`;
-    return `Loaded ${count}${settingsLanded ? ' and its store settings' : ''} into the datapack library`;
+    if (intoInstaller) return `Loaded ${count} into the Data Installer${settingsLanded ? ', and its store settings into your datapacks' : ''}`;
+    return `Loaded ${count}${settingsLanded ? ' and its store settings' : ''} into your datapacks`;
 }
 
 /** What is in the file, and where it should go. */
@@ -199,7 +199,7 @@ function LoadForm({ file, choice }: { file: OpenedFile; choice: TargetChoice }):
             </p>
             {file.settingsLayer ? (
                 <p className="datapack-export-note">
-                    It also carries store settings, which go into the datapack library: {file.settingsLayer.paths.join(', ')}.
+                    It also carries store settings, which go into your datapacks: {file.settingsLayer.paths.join(', ')}.
                 </p>
             ) : null}
             <RadioGroup
@@ -208,7 +208,7 @@ function LoadForm({ file, choice }: { file: OpenedFile; choice: TargetChoice }):
                 onChange={(value) => choice.onTarget(value as DatapackStoreName)}
             >
                 <Radio value="library">
-                    Datapack Library (Private Until Shared)
+                    Your Datapacks (Private Until Shared)
                 </Radio>
                 <Radio value="installer">Data Installer (Shared Catalog)</Radio>
             </RadioGroup>

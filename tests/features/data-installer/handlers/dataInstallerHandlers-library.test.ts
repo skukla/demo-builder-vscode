@@ -1,6 +1,6 @@
 /**
  * The Data Installer handlers pointed at the datapack LIBRARY: the access guard, the
- * library's own catalog, and the combined catalog the panel shows.
+ * library's own catalog, and the one list every surface shows.
  */
 
 // These suites drive the SERVICE engine. Demo Builder's own is the default since 2026-10-28,
@@ -20,6 +20,7 @@ import {
     mockedEnsureAuth,
     resetDataInstallerHandlerMocks,
     resolveDataInstallerAccess,
+    resolveDatapackAccess,
 } from './dataInstallerHandlers.testUtils';
 import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
 import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
@@ -32,19 +33,17 @@ beforeEach(() => {
 });
 
 /**
- * The same guard pointed at the datapack LIBRARY: same feature switch, same
- * sign-in, its own address. The stub answers per section, so a guard reading
+ * The same guard pointed at the datapack LIBRARY: same sign-in, its own address. The stub answers per section, so a guard reading
  * the wrong section gets the wrong URL and the base-URL assertion catches it.
  */
 describe('the library store', () => {
     const LIBRARY = 'https://library.example.test/api/v1/web/datapack-store';
 
-    function setupLibrary(library: unknown, enabled: unknown = true): void {
+    function setupLibrary(library: unknown, installer: unknown = BASE): void {
         (vscode.workspace.getConfiguration as jest.Mock).mockImplementation((section: string) => ({
             get: jest.fn((key: string, fallback?: unknown) => {
-                if (key === 'enabled') return enabled;
                 if (key !== 'apiBaseUrl') return fallback;
-                return section === 'demoBuilder.datapackStore' ? library : BASE;
+                return section === 'demoBuilder.datapackStore' ? library : installer;
             }),
         }));
     }
@@ -79,12 +78,16 @@ describe('the library store', () => {
         });
     });
 
-    it('honours the feature switch for the library too', async () => {
-        setupLibrary(LIBRARY, false);
+    it('takes no other setting into account: a leftover enabled:false turns nothing off', async () => {
+        (vscode.workspace.getConfiguration as jest.Mock).mockImplementation(() => ({
+            get: jest.fn((key: string, fallback?: unknown) => {
+                if (key === 'enabled') return false;
+                return key === 'apiBaseUrl' ? LIBRARY : fallback;
+            }),
+        }));
 
-        const access = await resolveDataInstallerAccess(makeHeadlessContext(), 'library');
-
-        expect(access).toMatchObject({ ok: false, response: { code: ErrorCode.INVALID_OPERATION } });
+        expect(await resolveDataInstallerAccess(makeHeadlessContext(), 'library')).toMatchObject({ ok: true });
+        expect(await resolveDataInstallerAccess(makeHeadlessContext())).toMatchObject({ ok: true });
     });
 
     it('reports sign-in for the library the same way, without prompting', async () => {
@@ -214,114 +217,177 @@ describe('the library store', () => {
         expect((installer.data as Record<string, unknown>).sharedInFile).toBeUndefined();
     });
 
-    describe('the combined catalog the panel shows', () => {
+    describe('the one list every surface shows', () => {
         const INSTALLER_ROW = { id: { name: 'bodea', version: 'main' }, shared: true };
         const LIBRARY_ROW = { id: { name: 'justrite', version: 'v1' }, shared: false, mine: true };
 
-        /** One fake client per address, so each store answers for itself. */
-        function storesAnswer(library: () => Promise<unknown>): jest.Mock[] {
-            const calls: jest.Mock[] = [];
+        /** One fake client per address, so each store answers for itself. Each `findDatapacks`, in the order asked. */
+        function storesAnswer(
+            library: () => Promise<unknown>,
+            installer: () => Promise<unknown> = async () => ({ items: [INSTALLER_ROW], count: 1 }),
+        ): { asked: string[]; query: Record<string, unknown> } {
+            const seen = { asked: [] as string[], query: {} as Record<string, unknown> };
             MockedClient.mockImplementation((deps: { baseUrl: string }) => {
-                const findDatapacks = jest.fn(
-                    deps.baseUrl === LIBRARY ? library : async () => ({ items: [INSTALLER_ROW], count: 1 }),
-                );
-                calls.push(findDatapacks);
+                const store = deps.baseUrl === LIBRARY ? 'library' : 'installer';
+                const findDatapacks = jest.fn((query: unknown) => {
+                    seen.asked.push(store);
+                    seen.query[store] = query;
+                    return store === 'library' ? library() : installer();
+                });
                 return { findDatapacks } as unknown as InstanceType<typeof MockedClient>;
             });
-            return calls;
+            return seen;
         }
 
-        it('adds the library rows, tagged, after the Data Installer ones', async () => {
+        const down = async () => {
+            throw new Error('socket hang up');
+        };
+
+        it('asks the datapack store first and then the Data Installer, one after the other', async () => {
+            setupLibrary(LIBRARY);
+            const seen = storesAnswer(async () => ({ items: [LIBRARY_ROW], count: 1 }));
+
+            await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {});
+
+            expect(seen.asked).toEqual(['library', 'installer']);
+            expect(MockedClient.mock.calls.map(([deps]) => deps.baseUrl)).toEqual([LIBRARY, BASE]);
+        });
+
+        it('asks the Data Installer for its curated packs and the store with no filter, passing paging to both', async () => {
+            setupLibrary(LIBRARY);
+            const seen = storesAnswer(async () => ({ items: [], count: 0 }));
+
+            await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), { limit: 5, skip: 10 });
+
+            expect(seen.query).toStrictEqual({
+                library: { limit: 5, skip: 10 },
+                installer: { shared: true, limit: 5, skip: 10 },
+            });
+        });
+
+        it('drops the Data Installer curated filter with includeCommunity', async () => {
+            setupLibrary(LIBRARY);
+            const seen = storesAnswer(async () => ({ items: [], count: 0 }));
+
+            await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), { includeCommunity: true });
+
+            expect(seen.query).toStrictEqual({ library: {}, installer: {} });
+        });
+
+        it('answers one list: the store rows, tagged, then the Data Installer rows', async () => {
             setupLibrary(LIBRARY);
             storesAnswer(async () => ({ items: [LIBRARY_ROW], count: 1 }));
 
-            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {
-                includeLibrary: true,
-            });
+            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {});
 
             expect(res).toEqual({
                 success: true,
                 // `engine`: the screen offers Import on a library pack only with Demo Builder's (DI-5).
-                data: { items: [INSTALLER_ROW, { ...LIBRARY_ROW, store: 'library' }], count: 2, engine: 'service' },
+                data: { items: [{ ...LIBRARY_ROW, store: 'library' }, INSTALLER_ROW], count: 2, engine: 'service' },
             });
         });
 
-        it('keeps the Data Installer rows when the library cannot be reached, and says why', async () => {
+        it('keeps the Data Installer rows when the store cannot be reached, and says so', async () => {
             setupLibrary(LIBRARY);
-            storesAnswer(async () => {
-                throw new Error('socket hang up');
-            });
+            storesAnswer(down);
 
-            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {
-                includeLibrary: true,
+            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {});
+
+            expect(res).toEqual({
+                success: true,
+                data: { items: [INSTALLER_ROW], count: 1, engine: 'service', storeMissing: true },
             });
+        });
+
+        it('keeps the store rows when the Data Installer will not answer, saying which way it failed', async () => {
+            setupLibrary(LIBRARY);
+            storesAnswer(async () => ({ items: [LIBRARY_ROW], count: 1 }), down);
+
+            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {});
 
             expect(res).toMatchObject({
                 success: true,
-                data: { items: [INSTALLER_ROW], count: 1, libraryError: expect.any(String) },
+                data: { items: [{ ...LIBRARY_ROW, store: 'library' }], installerMissing: 'no-answer' },
             });
         });
 
-        it('fails as before when the Data Installer fails, without asking the library', async () => {
-            setupLibrary(LIBRARY);
-            MockedClient.mockImplementation(
-                () =>
-                    ({
-                        findDatapacks: jest.fn().mockRejectedValue(new Error('down')),
-                    }) as unknown as InstanceType<typeof MockedClient>,
-            );
+        it('never builds a Data Installer client when it has no address, and says that instead', async () => {
+            setupLibrary(LIBRARY, '');
+            const seen = storesAnswer(async () => ({ items: [LIBRARY_ROW], count: 1 }));
 
-            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {
-                includeLibrary: true,
-            });
+            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {});
 
-            expect(res.success).toBe(false);
-            expect(MockedClient).toHaveBeenCalledTimes(1);
-        });
-
-        it('answers with the library alone when asked to, saying why the Data Installer is missing', async () => {
-            setupLibrary(LIBRARY);
-            const client = () => MockedClient.mock.calls.length;
-            MockedClient.mockImplementation(
-                () =>
-                    (client() === 1
-                        ? { findDatapacks: jest.fn().mockRejectedValue(new Error('refused')) }
-                        : { findDatapacks: jest.fn().mockResolvedValue({ items: [LIBRARY_ROW], count: 1 }) }) as unknown as InstanceType<typeof MockedClient>,
-            );
-
-            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {
-                includeLibrary: true,
-                keepLibraryOnFailure: true,
-            });
-
+            expect(seen.asked).toEqual(['library']);
+            expect(MockedClient.mock.calls.map(([deps]) => deps.baseUrl)).toEqual([LIBRARY]);
             expect(res).toMatchObject({
                 success: true,
-                data: { items: [{ ...LIBRARY_ROW, store: 'library' }], installerError: expect.any(String) },
+                data: { items: [{ ...LIBRARY_ROW, store: 'library' }], installerMissing: 'no-address' },
             });
         });
 
-        it('keeps the Data Installer failure when the library cannot answer either', async () => {
+        it("fails only when neither answers, with the store's response", async () => {
             setupLibrary(LIBRARY);
-            MockedClient.mockImplementation(
-                () => ({ findDatapacks: jest.fn().mockRejectedValue(new Error('down')) }) as unknown as InstanceType<typeof MockedClient>,
-            );
-
-            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {
-                includeLibrary: true,
-                keepLibraryOnFailure: true,
+            storesAnswer(down, async () => {
+                throw new Error('the Data Installer is down');
             });
 
-            expect(res.success).toBe(false);
+            const res = await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {});
+
+            expect(res).toMatchObject({ success: false, error: 'socket hang up' });
         });
 
-        it('asks only the Data Installer when the library is not requested — the control', async () => {
+        it("keeps a sign-in failure as one when it stops both, so the screen offers the sign-in", async () => {
             setupLibrary(LIBRARY);
-            storesAnswer(async () => ({ items: [LIBRARY_ROW], count: 1 }));
+            const context = makeHeadlessContext();
+            (context.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 
-            await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), {});
+            const res = await dataInstallerHandlers['find-datapacks'](context, {});
 
-            expect(MockedClient).toHaveBeenCalledTimes(1);
+            expect(res).toMatchObject({ success: false, code: ErrorCode.AUTH_REQUIRED, needsAuth: 'adobe' });
+        });
+
+        it.each([
+            ['installer', BASE],
+            ['library', LIBRARY],
+        ] as const)('store:"%s" still lists that one alone', async (store, address) => {
+            setupLibrary(LIBRARY);
+            const seen = storesAnswer(async () => ({ items: [LIBRARY_ROW], count: 1 }));
+
+            await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), { store });
+
+            expect(seen.asked).toEqual([store]);
+            expect(MockedClient.mock.calls.map(([deps]) => deps.baseUrl)).toEqual([address]);
+        });
+    });
+
+    describe('resolveDatapackAccess, the door every datapack write opens by', () => {
+        it("is the Data Installer's when its address is set", async () => {
+            setupLibrary(LIBRARY);
+
+            expect(await resolveDatapackAccess(makeHeadlessContext())).toMatchObject({ ok: true, baseUrl: BASE });
             expect(MockedClient).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: BASE }));
+        });
+
+        it("is the datapack store's when no address is set, with Demo Builder's engine", async () => {
+            setupLibrary(LIBRARY, '');
+            mockedEngine.mockReturnValue('demo-builder');
+
+            expect(await resolveDatapackAccess(makeHeadlessContext())).toMatchObject({ ok: true, baseUrl: LIBRARY });
+            expect(MockedClient.mock.calls.map(([deps]) => deps.baseUrl)).toEqual([LIBRARY]);
+        });
+
+        // The store does not run the service's jobs, so an SC who chose the service must not reach it.
+        it('keeps the refusal when the service engine is chosen and no address is set', async () => {
+            setupLibrary(LIBRARY, '');
+            mockedEngine.mockReturnValue('service');
+
+            const access = await resolveDatapackAccess(makeHeadlessContext());
+
+            expect(access).toMatchObject({
+                ok: false,
+                response: { code: ErrorCode.INVALID_OPERATION, error: expect.stringContaining('No Data Installer API URL') },
+            });
+            expect(MockedClient).not.toHaveBeenCalled();
         });
     });
 });

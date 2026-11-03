@@ -49,6 +49,7 @@ function makeGroup(overrides: Partial<DatapackGroup> = {}): DatapackGroup {
         store: 'installer',
         shared: true,
         mine: false,
+        team: false,
         versions: [makeVersion()],
         ...overrides,
     };
@@ -480,20 +481,32 @@ describe('DatapackCard — as a choice', () => {
 });
 
 describe('DatapackCard — where the pack lives', () => {
-    it('tags a library pack Library, and Yours when the SC owns it', () => {
+    it("tags no team pack, a colleague's pack Community, and Yours when the SC owns it", () => {
         const onOpen = jest.fn();
         const { unmount } = render(
             <DatapackCard
-                group={makeGroup({ key: 'library:bodea', store: 'library', shared: false })}
+                group={makeGroup({ key: 'library:bodea', store: 'library', shared: true, team: true })}
                 selectedVersion="main"
                 onVersionChange={jest.fn()}
                 onOpen={onOpen}
             />,
         );
-        expect(screen.getByText('Library')).toBeInTheDocument();
+        expect(screen.queryByText('Community')).not.toBeInTheDocument();
+        expect(screen.queryByText('Library')).not.toBeInTheDocument();
         fireEvent.click(screen.getByTestId('datapack-card'));
         expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'main' }, 'library');
         unmount();
+
+        const colleague = render(
+            <DatapackCard
+                group={makeGroup({ key: 'library:bodea', store: 'library', shared: true })}
+                selectedVersion="main"
+                onVersionChange={jest.fn()}
+                onOpen={jest.fn()}
+            />,
+        );
+        expect(screen.getByText('Community')).toBeInTheDocument();
+        colleague.unmount();
 
         render(
             <DatapackCard
@@ -528,10 +541,10 @@ describe('DatapackCard — a pack the SC shared', () => {
         expect(screen.queryByText('Shared')).not.toBeInTheDocument();
     });
 
-    it("adds nothing to a colleague's library pack, which the library lists only because it is shared", () => {
+    it("adds nothing but Community to a colleague's pack, which is listed only because it is shared", () => {
         renderCard({ ...own(true), mine: false });
 
-        expect(screen.getByText('Library')).toBeInTheDocument();
+        expect(screen.getByText('Community')).toBeInTheDocument();
         expect(screen.queryByText('Shared')).not.toBeInTheDocument();
     });
 });

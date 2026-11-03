@@ -64,7 +64,7 @@ export function DataInstallerScreen(_props: DataInstallerScreenProps): React.JSX
         <PageLayout
             header={
                 <PageHeader
-                    title="Data Installer"
+                    title="Datapacks"
                     subtitle="Browse and install Adobe Commerce sample-data datapacks"
                     // Aligns the title with the content band below it. Both
                     // page-level peers set it; without it the header ran the full

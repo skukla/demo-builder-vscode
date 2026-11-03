@@ -12,9 +12,14 @@
  * every closure here is a different answer to that question.
  */
 
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
-    resolveDataInstallerAccess: jest.fn(),
-}));
+jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
+    const resolveDataInstallerAccess = jest.fn();
+    return {
+        resolveDataInstallerAccess,
+        // The write path's door, as it answers with the Data Installer's address set.
+        resolveDatapackAccess: (context: unknown) => resolveDataInstallerAccess(context),
+    };
+});
 jest.mock('@/features/data-installer/services/dataInstallerWriteClient', () => ({
     DataInstallerWriteClient: jest.fn(),
 }));
@@ -36,8 +41,10 @@ import { DataInstallerWriteClient } from '@/features/data-installer/services/dat
 import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
 import type { DataTypeStatus } from '@/features/data-installer/types';
 import {
+    dataInstallerAddress,
     importHarness,
     ACCS_PROJECT,
+    INSTALLER_ADDRESS,
     NOT_REACHABLE,
 } from './sampleDataInstallDeps.testUtils';
 
@@ -82,6 +89,7 @@ function deps(mode: 'install' | 'remove' = 'install') {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    dataInstallerAddress(INSTALLER_ADDRESS);
     MockedWriteClient.mockImplementation(() => ({
         startImport: jest.fn().mockResolvedValue({ activationId: 'imp-1' }),
         startDelete: jest.fn().mockResolvedValue({ activationId: 'del-1' }),
@@ -158,6 +166,17 @@ describe('startImport / startDelete', () => {
         unreachable();
 
         await expect(deps().startImport(REQUEST)).rejects.toThrow(NOT_REACHABLE);
+        expect(MockedWriteClient).not.toHaveBeenCalled();
+    });
+
+    // With no address the access in hand is the datapack store's, which does not run the service's jobs.
+    it('says what to do instead of sending a removal the service owes to the datapack store', async () => {
+        dataInstallerAddress('');
+        reachable(readClient());
+
+        await expect(deps('remove').startDelete!(REQUEST)).rejects.toThrow(
+            "The Data Installer installed this datapack, and it isn't available. Use Clear Demo Data to remove what it added.",
+        );
         expect(MockedWriteClient).not.toHaveBeenCalled();
     });
 });

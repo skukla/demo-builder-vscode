@@ -17,6 +17,10 @@ export const SERVICE_INSTALLS_ONLY_ITS_OWN =
     'The Data Installer service installs only packs in its own catalog. Copy this one to the Data Installer first, ' +
     'or set demoBuilder.dataInstaller.engine to demo-builder.';
 
+/** The sentence a removal answers when the service installed the pack and cannot be asked to remove it. */
+export const SERVICE_REMOVAL_UNAVAILABLE =
+    "The Data Installer installed this datapack, and it isn't available. Use Clear Demo Data to remove what it added.";
+
 /**
  * Open the library's reads for this context.
  *

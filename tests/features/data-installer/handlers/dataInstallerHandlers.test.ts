@@ -68,8 +68,8 @@ describe('dataInstallerHandlers', () => {
             expect(access.ok).toBe(true);
         });
 
-        it('refuses when the feature is disabled, without constructing a client', async () => {
-            setupSettings({ enabled: false });
+        it('refuses when no base URL is set, without constructing a client', async () => {
+            setupSettings({ apiBaseUrl: '' });
             const access = await resolveDataInstallerAccess(makeAccessContext());
             expect(access.ok).toBe(false);
             expect(access.ok === false && access.response.code).toBe(ErrorCode.INVALID_OPERATION);
@@ -102,14 +102,14 @@ describe('dataInstallerHandlers', () => {
                 expect(logged).toContain('apiBaseUrl');
             });
 
-            it('logs the disabled feature by name', async () => {
-                setupSettings({ enabled: false });
+            it('logs the unusable base URL by name', async () => {
+                setupSettings({ apiBaseUrl: 'not a url' });
                 const context = makeAccessContext();
 
                 await resolveDataInstallerAccess(context);
 
                 const logged = JSON.stringify((context.logger.warn as jest.Mock).mock.calls);
-                expect(logged).toContain('enabled');
+                expect(logged).toContain('apiBaseUrl');
             });
 
             /**
@@ -120,11 +120,11 @@ describe('dataInstallerHandlers', () => {
             it('codes both config refusals so the UI can offer the settings fix', async () => {
                 setupSettings({ apiBaseUrl: '' });
                 const unset = await resolveDataInstallerAccess(makeAccessContext());
-                setupSettings({ enabled: false });
-                const off = await resolveDataInstallerAccess(makeAccessContext());
+                setupSettings({ apiBaseUrl: 'not a url' });
+                const unusable = await resolveDataInstallerAccess(makeAccessContext());
 
                 expect(unset.ok === false && unset.response.code).toBe(ErrorCode.INVALID_OPERATION);
-                expect(off.ok === false && off.response.code).toBe(ErrorCode.INVALID_OPERATION);
+                expect(unusable.ok === false && unusable.response.code).toBe(ErrorCode.INVALID_OPERATION);
             });
         });
 
@@ -461,7 +461,9 @@ describe('dataInstallerHandlers', () => {
 
             await dataInstallerHandlers['find-datapacks'](makeAccessContext());
 
-            expect(findDatapacks.mock.calls[0][0]).toStrictEqual({ shared: true });
+            // The datapack store, then the Data Installer: one client mock answers for both here.
+            expect(findDatapacks.mock.calls[0][0]).toStrictEqual({});
+            expect(findDatapacks.mock.calls[1][0]).toStrictEqual({ shared: true });
         });
 
         it('forwards limit and skip, and omits the KEYS when they are absent', async () => {
@@ -478,12 +480,15 @@ describe('dataInstallerHandlers', () => {
                 includeCommunity: true,
             });
 
-            expect(findDatapacks.mock.calls[0][0]).toStrictEqual({
+            // Each call asks the datapack store, then the Data Installer.
+            expect(findDatapacks.mock.calls[0][0]).toStrictEqual({ limit: 5, skip: 10 });
+            expect(findDatapacks.mock.calls[1][0]).toStrictEqual({
                 shared: true,
                 limit: 5,
                 skip: 10,
             });
-            expect(findDatapacks.mock.calls[1][0]).toStrictEqual({});
+            expect(findDatapacks.mock.calls[2][0]).toStrictEqual({});
+            expect(findDatapacks.mock.calls[3][0]).toStrictEqual({});
         });
 
         it('get-datapack-detail refuses when EITHER half of the identity is missing', async () => {
@@ -590,14 +595,15 @@ describe('dataInstallerHandlers', () => {
             // UI `undefined` where the fallback sentence belongs.
             MockedClient.prototype.findDatapacks = jest.fn().mockRejectedValue('a bare string');
 
-            const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), {});
+            const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), { store: 'installer' });
 
             expect(res.error).toBe('Could not list datapacks.');
             expect(res.code).toBe(ErrorCode.UNKNOWN);
         });
 
         it('returns the guard failure unchanged rather than calling the client', async () => {
-            setupSettings({ enabled: false });
+            // Neither address is set: `setupSettings` answers for both sections.
+            setupSettings({ apiBaseUrl: '' });
             const findDatapacks = jest.fn();
             MockedClient.prototype.findDatapacks = findDatapacks;
             const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), {});

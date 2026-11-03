@@ -227,6 +227,41 @@ describe('updateShared', () => {
     });
 });
 
+/** The `team` mark goes through the same owner-only action; only the store's list of owners may set it. */
+describe('updateTeam', () => {
+    it('sends PUT update-datapack-metadata with the identity and team, as a boolean', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        await expect(writer(fetchImpl).updateTeam({ name: 'frescopa', version: '1.0.0' }, true)).resolves.toBe('updated');
+
+        const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe(`${BASE}/update-datapack-metadata`);
+        expect(init.method).toBe('PUT');
+        expect(JSON.parse(String(init.body))).toEqual({ datapack_name: 'frescopa', version: '1.0.0', team: true });
+    });
+
+    it('sends false to take the mark off', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        await writer(fetchImpl).updateTeam({ name: 'frescopa', version: '1.0.0' }, false);
+
+        const [, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+        expect(JSON.parse(String(init.body))).toEqual({ datapack_name: 'frescopa', version: '1.0.0', team: false });
+    });
+
+    it("answers not-found on the 404 for a pack that is not the caller's", async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(404, { success: false, error: 'not found' }));
+
+        await expect(writer(fetchImpl).updateTeam({ name: 'x', version: '1' }, true)).resolves.toBe('not-found');
+    });
+
+    it('throws on any other refusal, so one from the list of owners is not read as done', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(403, { success: false, error: 'Only team pack owners can do this.' }));
+
+        await expect(writer(fetchImpl).updateTeam({ name: 'x', version: '1' }, true)).rejects.toThrow('Only team pack owners can do this.');
+    });
+});
+
 /**
  * With Adobe's gateway check on for the store's actions, a request that names no org is refused,
  * so every write names the caller's org as every read already does (DI-5).

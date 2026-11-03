@@ -42,23 +42,24 @@ describe('SampleDataStep — the line that says where changes go', () => {
 });
 
 describe('SampleDataStep — a pack the project arrived with', () => {
-    it("lists the library too when the project's pack is a library one, and shows it chosen", async () => {
+    it("lists a colleague's packs too when the project arrived with one, and shows it chosen", async () => {
         setMockState(envelope({ ...CATALOG, items: [...CATALOG.items, LIBRARY_ROW] }));
         const check = answerFor('check-recorded-datapack', envelope(null));
 
         renderStep({ datapack: OWN });
 
-        expect(mockExecute).toHaveBeenCalledWith({ includeCommunity: true, includeLibrary: true });
+        expect(mockExecute).toHaveBeenCalledWith({ includeCommunity: true });
         await waitFor(() => expect(cardFor('Acme Demo')).toHaveAttribute('aria-checked', 'true'));
         expect(cardFor('Bodea')).toHaveAttribute('aria-checked', 'false');
         // Listed, so nothing to ask.
         expect(check).not.toHaveBeenCalled();
     });
 
-    it('does not show a library pack as chosen because a Data Installer pack has its name', async () => {
+    // The one list shows a pack once, whichever store holds it, so the card is matched by name.
+    it('shows the card chosen by name, whichever store the project recorded', async () => {
         renderStep({ datapack: { name: 'bodea', version: 'main', store: 'library' } });
 
-        await waitFor(() => expect(cardFor('Bodea')).toHaveAttribute('aria-checked', 'false'));
+        await waitFor(() => expect(cardFor('Bodea')).toHaveAttribute('aria-checked', 'true'));
     });
 
     it("says what creation will install when the pack can't be read, and offers it", async () => {

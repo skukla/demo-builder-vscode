@@ -41,7 +41,6 @@ import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { cn } from '@/core/ui/utils/classNames';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
     groupDatapacks,
     withoutLayerCards,
@@ -52,7 +51,7 @@ import type { DatapackSummary, Page } from '@/features/data-installer/types';
 import { DatapackCard } from '@/features/data-installer/ui/components/DatapackCard';
 import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataInstallerFailure';
 import { useDataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
-import { type ProjectDatapack, storeOf } from '@/types/datapack';
+import type { ProjectDatapack } from '@/types/datapack';
 import type { BaseStepProps } from '@/types/wizard';
 
 /**
@@ -80,20 +79,17 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
     // once: a pack the SC presses later must not refetch the catalog.
     const [arrived] = useState<ProjectDatapack | undefined>(() => state.datapack);
     const includeCommunity = Boolean(asked) || Boolean(arrived);
-    const includeLibrary = [arrived, asked].some((pack) => pack !== undefined && storeOf(pack) === 'library');
     useEffect(() => {
-        // Curated only, unless a demo asks for a pack or the project arrived with
-        // one: the community half of the catalog is developer scratch, and this is a
-        // first-run choice, not a browsing surface. The library's packs only when the
-        // project's own pack is one, so it can be found and shown chosen.
-        load({ includeCommunity, ...(includeLibrary ? { includeLibrary } : {}) });
-    }, [load, includeCommunity, includeLibrary]);
+        // The one list, without a colleague's packs unless a demo asks for a pack or the
+        // project arrived with one: this is a first-run choice, not a browsing surface.
+        load({ includeCommunity });
+    }, [load, includeCommunity]);
 
     // A settings layer is applied with its pack, never chosen as a demo (datapack-engine step 09).
     const groups = useMemo(() => groupDatapacks(withoutLayerCards(value?.items ?? [], new Set(arrived ? [arrived.name] : []))), [value, arrived]);
     const arrivedListed = useMemo(() => arrived !== undefined && isListed(groups, arrived), [groups, arrived]);
     const askedGroup = useMemo(
-        () => (asked ? groups.find((group) => group.name === asked.name && group.store === storeOf(asked)) : undefined),
+        () => (asked ? groups.find((group) => group.name === asked.name) : undefined),
         [groups, asked],
     );
 
@@ -115,10 +111,6 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
         if (version) updateState({ datapack: { name: askedGroup.name, version, store: askedGroup.store } });
     }, [editing, settled, askedGroup, askedName, askedVersion, chosenName, updateState]);
 
-    /** Opens VS Code settings at the section the refusal names. */
-    const openDataInstallerSettings = useCallback((): void => {
-        webviewClient.postMessage('open-data-installer-settings');
-    }, []);
 
     /**
      * Filtered locally, because the service offers nothing else. Its
@@ -200,7 +192,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                         failure,
                         () => load({ includeCommunity: false }),
                         {
-                            onOpenSettings: openDataInstallerSettings,
+                            unreachableTitle: "Datapacks Aren't Available",
                             extraDetail: 'You can create this project without a datapack.',
                         },
                     )}
@@ -267,6 +259,9 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                         <p className="sample-data-note">
                             No datapacks match “{query}”.
                         </p>
+                    ) : null}
+                    {settled && groups.length === 0 ? (
+                        <p className="sample-data-note">No Datapacks Yet. You can add one after the project is created.</p>
                     ) : null}
                 </>
             )}

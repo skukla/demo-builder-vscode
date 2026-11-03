@@ -264,7 +264,7 @@ function datapackCheckFor(name: string, where: DatapackAvailability | undefined)
         return {
             id: 'datapack',
             ok: false,
-            message: `The sample data this demo uses (${name}) is in your datapack library, where colleagues can't read it yet.`,
+            message: `The sample data this demo uses (${name}) is one of your own datapacks, which colleagues can't read yet.`,
         };
     }
     return { id: 'datapack', ok: false, message: `The sample data this demo uses (${name}) isn't available to colleagues yet.` };

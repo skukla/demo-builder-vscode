@@ -15,8 +15,6 @@ import {
     DATA_INSTALLER_MAX_URL_LENGTH,
     actionUrl,
     fingerprintUrl,
-    isDataInstallerConfigured,
-    isDataInstallerEnabled,
     selectedDatapackEngine,
     resolveDataInstallerBaseUrl,
     resolveDatapackStoreBaseUrl,
@@ -25,14 +23,11 @@ import {
 const STAGE_URL = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
 
 /** Stub `getConfiguration` so both reads in the module see the given values. */
-function setupConfig(values: { apiBaseUrl?: unknown; enabled?: unknown; engine?: unknown }): void {
+function setupConfig(values: { apiBaseUrl?: unknown; engine?: unknown }): void {
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
         get: jest.fn((key: string, fallback?: unknown) => {
             if (key === 'apiBaseUrl') {
                 return 'apiBaseUrl' in values ? values.apiBaseUrl : fallback;
-            }
-            if (key === 'enabled') {
-                return 'enabled' in values ? values.enabled : fallback;
             }
             if (key === 'engine') {
                 return 'engine' in values ? values.engine : fallback;
@@ -45,24 +40,6 @@ function setupConfig(values: { apiBaseUrl?: unknown; enabled?: unknown; engine?:
 describe('dataInstallerConfig', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-    });
-
-    describe('isDataInstallerEnabled', () => {
-        it('defaults to enabled when the setting is absent', () => {
-            setupConfig({});
-            expect(isDataInstallerEnabled()).toBe(true);
-        });
-
-        it('is disabled when the setting is false', () => {
-            setupConfig({ enabled: false });
-            expect(isDataInstallerEnabled()).toBe(false);
-        });
-
-        it('treats a non-boolean setting as enabled rather than crashing', () => {
-            // Corrupted settings.json — VS Code's typed get can hand back anything.
-            setupConfig({ enabled: 'yes' });
-            expect(isDataInstallerEnabled()).toBe(true);
-        });
     });
 
     describe('selectedDatapackEngine', () => {
@@ -264,42 +241,9 @@ describe('dataInstallerConfig', () => {
     });
 });
 
-/**
- * The OFFER question, as opposed to the SERVE question `resolveDataInstallerAccess`
- * answers. Both halves have to hold: the dashboard tile used to render on
- * neither, so a user with no API URL got an invitation to a surface that
- * refused them.
- */
-describe('isDataInstallerConfigured', () => {
+describe('dataInstallerConfig, the datapack store', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-    });
-
-    it('is true when enabled and pointed at a usable URL', () => {
-        setupConfig({ enabled: true, apiBaseUrl: STAGE_URL });
-
-        expect(isDataInstallerConfigured()).toBe(true);
-    });
-
-    it('is false when switched off, even with a good URL', () => {
-        setupConfig({ enabled: false, apiBaseUrl: STAGE_URL });
-
-        expect(isDataInstallerConfigured()).toBe(false);
-    });
-
-    it('is false when enabled but no URL is configured', () => {
-        // The shipped default: `enabled` true, `apiBaseUrl` empty. This is the
-        // exact combination every beta user has until they set one, and the
-        // combination the ungated tile was wrong about.
-        setupConfig({ enabled: true, apiBaseUrl: '' });
-
-        expect(isDataInstallerConfigured()).toBe(false);
-    });
-
-    it('is false when the configured URL is not usable', () => {
-        setupConfig({ enabled: true, apiBaseUrl: 'http://insecure.example.com' });
-
-        expect(isDataInstallerConfigured()).toBe(false);
     });
 
     describe('resolveDatapackStoreBaseUrl', () => {

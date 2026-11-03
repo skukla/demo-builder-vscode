@@ -147,8 +147,19 @@ export class DatapackStoreWriter {
         return this.updateMetadata(id, { shared });
     }
 
+    /**
+     * Mark one version as an official team pack, or take the mark off. The store refuses anyone not
+     * on its deployed list of team pack owners.
+     *
+     * @returns `updated`, or `not-found` when the store holds no pack of the caller's by that id
+     * @throws DataInstallerApiError for any other refusal
+     */
+    async updateTeam(id: DatapackId, team: boolean): Promise<'updated' | 'not-found'> {
+        return this.updateMetadata(id, { team });
+    }
+
     /** One `update-datapack-metadata` PUT for one version; the library answers 404 for a pack not the caller's. */
-    private async updateMetadata(id: DatapackId, fields: { display_name?: string; shared?: boolean }): Promise<'updated' | 'not-found'> {
+    private async updateMetadata(id: DatapackId, fields: { display_name?: string; shared?: boolean; team?: boolean }): Promise<'updated' | 'not-found'> {
         const response = await this.post('update-datapack-metadata', { datapack_name: id.name, version: id.version, ...fields }, 'PUT');
         if (response.status === 404) return 'not-found';
         await this.check(response, 'update-datapack-metadata');

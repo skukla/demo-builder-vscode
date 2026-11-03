@@ -24,23 +24,23 @@ import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import {
     dataInstallerHandlers,
     resolveDataInstallerAccess,
+    resolveDatapackAccess,
 } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
 import type { HandlerContext } from '@/types/handlers';
 
-export { dataInstallerHandlers, resolveDataInstallerAccess };
+export { dataInstallerHandlers, resolveDataInstallerAccess, resolveDatapackAccess };
 
 export const MockedClient = DataInstallerClient as jest.MockedClass<typeof DataInstallerClient>;
 export const mockedEnsureAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAuth>;
 
 export const BASE = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
 
-/** Stub the two settings the guard reads. */
-export function setupSettings(values: { apiBaseUrl?: unknown; enabled?: unknown } = {}): void {
+/** Stub the setting the guard reads. */
+export function setupSettings(values: { apiBaseUrl?: unknown } = {}): void {
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
         get: jest.fn((key: string, fallback?: unknown) => {
             if (key === 'apiBaseUrl') return 'apiBaseUrl' in values ? values.apiBaseUrl : BASE;
-            if (key === 'enabled') return 'enabled' in values ? values.enabled : true;
             return fallback;
         }),
     });

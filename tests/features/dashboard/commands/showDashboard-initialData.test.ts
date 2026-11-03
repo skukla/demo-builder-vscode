@@ -2,8 +2,7 @@
  * ProjectDashboardWebviewCommand — the payload the dashboard is built from.
  *
  * Everything on the dashboard is decided once, here, and never recomputed: which
- * tiles exist, which URLs they open, whether the Sample Data tile is offered at
- * all. Three independent signals can each turn the mesh tile on, and a project
+ * tiles exist, which URLs they open, which pack the Datapacks tile names. Three independent signals can each turn the mesh tile on, and a project
  * can be missing any field in the chain, so the assertions below are about which
  * SIGNAL produced the answer rather than the answer alone.
  */
@@ -12,7 +11,6 @@ import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
-import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import type { Project } from '@/types/base';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
 import { internals } from '../../../helpers/commandInternals';
@@ -31,9 +29,6 @@ jest.mock('@/core/config/ConfigurationLoader', () => ({
     ConfigurationLoader: jest.fn().mockImplementation(() => ({
         load: jest.fn().mockResolvedValue({ stacks: [] }),
     })),
-}));
-jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
-    isDataInstallerConfigured: jest.fn(() => true),
 }));
 jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
     ...jest.requireActual('@/features/project-creation/services/addedDemoSettings'),
@@ -148,7 +143,6 @@ describe('ProjectDashboardWebviewCommand - getInitialData', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (loadDemoPackages as jest.Mock).mockResolvedValue([]);
-        (isDataInstallerConfigured as jest.Mock).mockReturnValue(true);
         (ConfigurationLoader as jest.Mock).mockImplementation(() => ({
             load: jest.fn().mockResolvedValue({ stacks: [] }),
         }));
@@ -275,10 +269,8 @@ describe('ProjectDashboardWebviewCommand - getInitialData', () => {
             expect(data.appBuilderComponents).toBeUndefined();
         });
 
-        it('offers the Sample Data tile only when the data installer is configured', async () => {
-            (isDataInstallerConfigured as jest.Mock).mockReturnValue(false);
-
-            expect((await initialData(createMockProject())).dataInstallerAvailable).toBe(false);
+        it('sends no Data Installer flag: the Datapacks tile is offered to every SC', async () => {
+            expect(await initialData(createMockProject())).not.toHaveProperty('dataInstallerAvailable');
         });
 
         // Step 07: the Datapacks tile names this demo's own pack.

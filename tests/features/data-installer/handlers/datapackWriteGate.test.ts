@@ -7,9 +7,10 @@
  * (DEMOSYS-1698), so the gate stopped refusing projects that have none (DI-6).
  */
 
-import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
+import { resolveDataInstallerAccess, resolveDatapackAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { resolveDatapackWriteAccess } from '@/features/data-installer/handlers/datapackWriteGate';
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
+import type { ServiceHealth } from '@/features/data-installer/types';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -18,9 +19,13 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
     resolveDataInstallerAccess: jest.fn(),
+    resolveDatapackAccess: jest.fn(),
 }));
 
-const mockedAccess = jest.mocked(resolveDataInstallerAccess);
+/** What the gate opens by: the Data Installer's access when its address is set, else the store's. */
+const mockedAccess = jest.mocked(resolveDatapackAccess);
+/** What `dataInstallerAnswers` asks: the Data Installer's own, never the store's. */
+const mockedInstallerAccess = jest.mocked(resolveDataInstallerAccess);
 
 const BASE_URL = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
 const getToken = jest.fn().mockResolvedValue('tok');
@@ -105,6 +110,7 @@ describe('resolveDatapackWriteAccess — when every check passes', () => {
             jobs: READ_CLIENT,
             // The same read client: Demo Builder's engine reads a pack's rows through it (DI-5).
             catalog: READ_CLIENT,
+            dataInstallerAnswers: expect.any(Function),
             project,
             backend,
         });
@@ -115,5 +121,53 @@ describe('resolveDatapackWriteAccess — when every check passes', () => {
         const gate = await resolveDatapackWriteAccess(contextWith(ACCS_PROJECT), 'export');
 
         expect(gate).not.toHaveProperty('response');
+    });
+});
+
+describe('dataInstallerAnswers, asked only for what only the Data Installer can do', () => {
+    async function answers(context = contextWith(ACCS_PROJECT)) {
+        const gate = await resolveDatapackWriteAccess(context, 'import');
+        if ('response' in gate) throw new Error('the gate should have opened');
+        return gate.dataInstallerAnswers();
+    }
+
+    /** A Data Installer access whose health check answers as told. */
+    function installerHealth(check: () => Promise<ServiceHealth>): jest.Mock {
+        const checkHealth = jest.fn(check);
+        const client = new DataInstallerClient({ baseUrl: BASE_URL, getToken });
+        client.checkHealth = checkHealth;
+        mockedInstallerAccess.mockResolvedValue({ ok: true, client, baseUrl: BASE_URL, getToken });
+        return checkHealth;
+    }
+
+    it('is not asked just by opening the gate', async () => {
+        await resolveDatapackWriteAccess(contextWith(ACCS_PROJECT), 'import');
+
+        expect(mockedInstallerAccess).not.toHaveBeenCalled();
+    });
+
+    it('is true when the Data Installer takes the sign-in and its health check answers', async () => {
+        const checkHealth = installerHealth(async () => ({ reachable: true }));
+        const context = contextWith(ACCS_PROJECT);
+
+        await expect(answers(context)).resolves.toBe(true);
+
+        // Asked with no store: the Data Installer, not the datapack store.
+        expect(mockedInstallerAccess).toHaveBeenCalledWith(context);
+        expect(checkHealth).toHaveBeenCalledTimes(1);
+    });
+
+    it('is false when the health check fails', async () => {
+        installerHealth(async () => {
+            throw new Error('down');
+        });
+
+        await expect(answers()).resolves.toBe(false);
+    });
+
+    it('is false, without a network call, when it has no address or refuses the sign-in', async () => {
+        mockedInstallerAccess.mockResolvedValue({ ok: false, response: { success: false, error: 'No address' } });
+
+        await expect(answers()).resolves.toBe(false);
     });
 });

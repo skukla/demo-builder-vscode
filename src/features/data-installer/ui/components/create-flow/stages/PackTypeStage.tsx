@@ -33,7 +33,7 @@ export function PackTypeStage({ engine = 'service', packType, onPick }: PackType
             />
             <ChoiceCard
                 name="ACO Datapack"
-                description="Export catalog data for Adobe Commerce Optimizer to your library."
+                description="Export catalog data for Adobe Commerce Optimizer as one of your datapacks."
                 selected={packType === 'aco'}
                 onSelect={() => onPick('aco')}
             />

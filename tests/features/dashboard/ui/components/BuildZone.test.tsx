@@ -59,7 +59,6 @@ function props(overrides: Partial<BuildZoneProps> = {}): BuildZoneProps {
     return {
         canEdit: true,
         isMeshActionDisabled: false,
-        dataInstallerAvailable: true,
         handleEditProject: jest.fn(),
         handleConfigure: jest.fn(),
         handleOpenAemAssets: jest.fn(),
@@ -157,16 +156,10 @@ describe('BuildZone', () => {
     });
 
     describe('Datapacks', () => {
-        it('is offered only when the host says the Data Installer is set up', () => {
-            render(<BuildZone {...props({ dataInstallerAvailable: false })} />);
+        it('is offered to every SC, with or without the Data Installer', () => {
+            render(<BuildZone {...props()} />);
 
-            expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
-        });
-
-        it('is hidden when the host did not say', () => {
-            render(<BuildZone {...props({ dataInstallerAvailable: undefined })} />);
-
-            expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
+            expect(buttonFor('Datapacks')).toBeInTheDocument();
         });
 
         it("names this demo's own pack on its line when there is one", () => {

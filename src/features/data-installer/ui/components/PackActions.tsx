@@ -69,7 +69,7 @@ function packRows(detail: DatapackDetail, saveStore: boolean): Row[] {
 /** The menu's lower section: what removes something from the library. */
 function removeRows(ownPack: boolean, ownLayer: boolean): Row[] {
     return [
-        ...(ownPack ? [{ key: 'remove', label: 'Remove from Library', icon: 'delete' }] : []),
+        ...(ownPack ? [{ key: 'remove', label: 'Remove Datapack', icon: 'delete' }] : []),
         ...(ownLayer ? [{ key: 'remove-settings', label: 'Remove Its Store Settings', icon: 'delete' }] : []),
     ];
 }

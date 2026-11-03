@@ -7,10 +7,15 @@
  */
 
 jest.mock('@/features/authentication/services/projectOrgGuard', () => ({ orgGuard: jest.fn() }));
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
-    ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
-    resolveDataInstallerAccess: jest.fn(),
-}));
+jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
+    const resolveDataInstallerAccess = jest.fn();
+    return {
+        ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
+        resolveDataInstallerAccess,
+        // The write path's door, as it answers with the Data Installer's address set.
+        resolveDatapackAccess: (context: unknown) => resolveDataInstallerAccess(context),
+    };
+});
 jest.mock('@/features/data-installer/services/demoBuilderEngine/packRootCheck', () => ({
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/packRootCheck'),
     recordedRootStep: jest.fn(),

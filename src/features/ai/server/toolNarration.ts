@@ -267,6 +267,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     load_datapack_zip: 'Loading a datapack file',
     delete_library_datapack: 'Deleting a library datapack',
     rename_datapack: 'Renaming the datapack',
+    // "Mark one of your own datapacks ... as an official team pack, or take the mark off".
+    mark_team_datapack: 'Changing a team datapack mark',
     // "Share one of your own datapack library packs with your team, or stop sharing it".
     share_datapack: 'Changing who can use a datapack',
     copy_library_datapack_to_installer: 'Copying a pack to the installer',
@@ -367,6 +369,7 @@ const NAMED_NARRATION: Readonly<Record<string, NamedForm>> = {
     start_datapack_export: naming(['datapackName'], (name) => `Exporting ${name}`),
     delete_library_datapack: naming(['datapackName'], (name) => `Deleting ${name}`),
     rename_datapack: naming(['datapackName'], (name) => `Renaming the ${name} pack`),
+    mark_team_datapack: naming(['datapackName'], (name) => `Changing whether ${name} is a team pack`),
     share_datapack: naming(['datapackName'], (name) => `Changing who can use the ${name} pack`),
     copy_library_datapack_to_installer: naming(['datapackName'], (name) => `Copying ${name}`),
     remove_block_from_library: naming(['blockId'], (block) => `Removing the ${block} block`),

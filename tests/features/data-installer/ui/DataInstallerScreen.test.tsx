@@ -57,7 +57,7 @@ describe('DataInstallerScreen', () => {
         // act() rather than in the next query's wait loop.
         await settle();
 
-        expect(screen.getByText('Data Installer')).toBeInTheDocument();
+        expect(screen.getByText('Datapacks')).toBeInTheDocument();
     });
 
     it('opens on the catalog', async () => {
@@ -71,7 +71,7 @@ describe('DataInstallerScreen', () => {
         await waitFor(() => expect(mockRequest).toHaveBeenCalled());
         const [type, payload] = mockRequest.mock.calls[0];
         expect(type).toBe('find-datapacks');
-        expect(payload).toEqual({ includeCommunity: false, includeLibrary: true, keepLibraryOnFailure: true });
+        expect(payload).toEqual({ includeCommunity: false });
     });
 
     it('no longer spends a round trip on the connectivity check', async () => {

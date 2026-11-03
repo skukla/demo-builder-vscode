@@ -150,7 +150,7 @@ describe('AI_CONTEXT_VERSION', () => {
     // 50: a project that never chose an authoring experience now links Experience Workspace.
     // 51: update-credentials no longer names the ACCS OAuth pair.
     it('is 51 (update-credentials no longer names the ACCS OAuth pair)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(51);
+        expect(AI_CONTEXT_VERSION).toBe(52);
     });
 });
 

@@ -20,38 +20,19 @@ describe('ActionGrid', () => {
         jest.clearAllMocks();
     });
 
-    describe('Sample Data tile gating', () => {
-        /**
-         * The Data Installer needs both `dataInstaller.enabled` and a usable
-         * `apiBaseUrl`. The tile used to render on neither, so every user
-         * without the URL — which is the shipped default — got a tile that
-         * opened a surface refusing them. The host decides; this only obeys.
-         */
-        it('hides the tile when the Data Installer is not configured', () => {
-            render(<ActionGrid {...defaultProps} dataInstallerAvailable={false} />);
-
-            expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
-        });
-
-        it('shows the tile when the Data Installer is configured', () => {
-            render(<ActionGrid {...defaultProps} dataInstallerAvailable={true} />);
+    describe('Datapacks tile', () => {
+        // Demo Builder's datapack store works with no Data Installer address, so every SC
+        // gets the tile; the address only adds the Data Installer's packs to the list.
+        it('is offered with no Data Installer flag from the host', () => {
+            render(<ActionGrid {...defaultProps} />);
 
             expect(screen.getByText('Datapacks')).toBeInTheDocument();
         });
 
-        it('hides the tile when the host did not say', () => {
-            // Undefined is not "yes". Offering a surface we have not confirmed
-            // is the failure the flag exists to prevent, so absence must fail
-            // closed rather than fall back to the old unconditional render.
-            render(<ActionGrid {...defaultProps} />);
+        it('is offered on EDS projects too', () => {
+            render(<ActionGrid {...edsProps} />);
 
-            expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
-        });
-
-        it('gates it for EDS projects too', () => {
-            render(<ActionGrid {...edsProps} dataInstallerAvailable={false} />);
-
-            expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
+            expect(screen.getByText('Datapacks')).toBeInTheDocument();
         });
     });
 
@@ -137,7 +118,7 @@ describe('ActionGrid', () => {
         });
 
         it('puts AEM Assets in Build after Datapacks, and nothing beside the Open cards', () => {
-            const { container } = render(<ActionGrid {...edsProps} dataInstallerAvailable />);
+            const { container } = render(<ActionGrid {...edsProps} />);
 
             const build = Array.from(getZone(container, 'build').querySelectorAll('.icon-label')).map(
                 (n) => n.textContent

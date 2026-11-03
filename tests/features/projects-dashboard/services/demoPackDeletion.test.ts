@@ -52,13 +52,13 @@ describe('deleteDemoPack', () => {
     it('reports nothing to delete when the library lists no version of it', async () => {
         const result = await deleteDemoPack(store({ list: jest.fn().mockResolvedValue([]) }), PACK);
 
-        expect(result).toEqual({ type: 'datapack', name: 'Acme Demo', success: true, skipped: true, error: 'The datapack library holds no version of it.' });
+        expect(result).toEqual({ type: 'datapack', name: 'Acme Demo', success: true, skipped: true, error: 'No version of it was found.' });
     });
 
     it('fails, without throwing, when the library cannot list it', async () => {
         const result = await deleteDemoPack(store({ list: jest.fn().mockRejectedValue(new Error('down')) }), PACK);
 
-        expect(result).toEqual({ type: 'datapack', name: 'Acme Demo', success: false, error: 'The datapack library could not list it: down' });
+        expect(result).toEqual({ type: 'datapack', name: 'Acme Demo', success: false, error: 'Its versions could not be listed: down' });
     });
 
     it('names the pack by its library name when it has no display name', async () => {

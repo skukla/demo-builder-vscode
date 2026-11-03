@@ -38,7 +38,7 @@
  * @module features/data-installer/ui/views/DatapackCatalogView
  */
 
-import { Flex, Switch } from '@adobe/react-spectrum';
+import { Flex, Link, Switch } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { groupDatapacks, withoutLayerCards, type DatapackGroup } from '../../services/datapackCatalog';
 import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack, PackDetailLayer, Page } from '../../types';
@@ -46,7 +46,7 @@ import { CatalogHeaderActions } from '../components/CatalogHeaderActions';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
-import { installerProblemLine, renderDataInstallerFailure } from '../dataInstallerFailure';
+import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useHeldPack } from '../hooks/useHeldPack';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
@@ -68,6 +68,12 @@ interface DatapackDetailResponse {
     /** The settings layer Import will apply after the pack's data (step 09). */
     settingsLayer?: PackDetailLayer;
 }
+
+/** The Data Installer is an extra: true whether nobody set it up, or it refused, or it is down. */
+const INSTALLER_MISSING_LINE =
+    "Datapacks in the Data Installer aren't listed here. If you have access to DSC, you can install them from there.";
+const STORE_MISSING_LINE = "Demo Builder's datapacks aren't available right now.";
+const DATAPACKS_UNAVAILABLE = "Datapacks Aren't Available";
 
 /**
  * Rename the SC's own library pack (step 07), the inline field's contract: null on success,
@@ -95,8 +101,7 @@ export function DatapackCatalogView(): React.JSX.Element {
     const [selectedStore, setSelectedStore] = useState<DatapackStoreName>('installer');
     const [importing, setImporting] = useState<DatapackId | undefined>(undefined);
 
-    // Both catalogs in one answer: the Data Installer's packs plus the library's,
-    // each tagged. Either one's outage still shows the other's, with a reason.
+    // The one list: Demo Builder's datapack store, then the Data Installer's if it answers.
     const { load, loading, value, failure, settled } =
         useDataInstallerRequest<CatalogPage>('find-datapacks');
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
@@ -106,7 +111,7 @@ export function DatapackCatalogView(): React.JSX.Element {
     const projectContext = useDataInstallerRequest<ProjectSampleData>('get-datapack-import-target');
 
     useEffect(() => {
-        load({ includeCommunity, includeLibrary: true, keepLibraryOnFailure: true });
+        load({ includeCommunity });
     }, [load, includeCommunity]);
 
     const loadProjectContext = projectContext.load;
@@ -170,7 +175,7 @@ export function DatapackCatalogView(): React.JSX.Element {
     );
 
     const refresh = useCallback(
-        (): void => load({ includeCommunity, includeLibrary: true, keepLibraryOnFailure: true }),
+        (): void => load({ includeCommunity }),
         [load, includeCommunity],
     );
 
@@ -292,7 +297,7 @@ export function DatapackCatalogView(): React.JSX.Element {
 
     if (failure) {
         return renderDataInstallerFailure(failure, refresh, {
-            onOpenSettings: openDataInstallerSettings,
+            unreachableTitle: DATAPACKS_UNAVAILABLE,
         });
     }
 
@@ -335,14 +340,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                     />
                 }
             >
-                {value?.installerError ? (
-                    <p className="dialog-problem text-notice">{installerProblemLine(value.installerError)}</p>
-                ) : null}
-                {value?.libraryError ? (
-                    <p className="datapack-export-note">
-                        The datapack library could not be listed: {value.libraryError}
-                    </p>
-                ) : null}
+                {value?.storeMissing ? <p className="datapack-export-note">{STORE_MISSING_LINE}</p> : null}
                 <DatapackCatalogGrid
                     groups={groups}
                     filtered={filtered}
@@ -352,6 +350,14 @@ export function DatapackCatalogView(): React.JSX.Element {
                     openDetail={openDetail}
                     installedPacks={installedPacks}
                 />
+                {value?.installerMissing ? (
+                    <p className="datapack-export-note datapack-catalog-note">
+                        {INSTALLER_MISSING_LINE}{' '}
+                        {value.installerMissing === 'no-address' ? (
+                            <Link onPress={openDataInstallerSettings}>Open Settings</Link>
+                        ) : null}
+                    </p>
+                ) : null}
             </FullScreenSurface>
 
             <DatapackDetailPanel

@@ -136,6 +136,7 @@ describe('the Data Installer URL is not configured', () => {
 
         expect(client.validateImport).not.toHaveBeenCalled();
         expect(result.success).toBe(false);
+        // This harness has the service engine chosen, and that needs the Data Installer's own address.
         expect(result.error).toContain('Data Installer API URL');
     });
 

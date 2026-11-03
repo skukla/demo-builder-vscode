@@ -94,6 +94,7 @@ function summary(value: unknown): DatapackSummary | undefined {
         // Only the datapack library sends it. Present only when true, so a row that
         // does not say is never treated as the caller's — the safe direction.
         ...(row.mine === true ? { mine: true } : {}),
+        ...(row.team === true ? { team: true } : {}),
     };
 }
 

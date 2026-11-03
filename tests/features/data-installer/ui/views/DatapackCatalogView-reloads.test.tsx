@@ -55,7 +55,7 @@ describe('refresh re-asks with the toggle as it stands now', () => {
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
-                payload: { includeCommunity: true, includeLibrary: true, keepLibraryOnFailure: true },
+                payload: { includeCommunity: true },
             }),
         );
     });
@@ -166,18 +166,17 @@ describe('the flyout’s Retry', () => {
 });
 
 describe('the two doors out of the catalog', () => {
-    it('offers Open Settings on a configuration refusal, and opens them', async () => {
-        // The refusal names two settings by key. Without the action the user is
-        // told what is wrong and left to find Settings themselves.
+    it('offers Open Settings when the Data Installer has no address, and opens them', async () => {
+        // The line says the Data Installer's datapacks are not listed. Without the action
+        // the user is left to find the setting that would list them.
         mockRequest.mockResolvedValue({
-            success: false,
-            error: 'The Data Installer is not configured.',
-            code: 'INVALID_OPERATION',
+            success: true,
+            data: { items: CATALOG, count: CATALOG.length, installerMissing: 'no-address' },
         });
         render(<DatapackCatalogView />);
         await settle();
 
-        await press(await screen.findByRole('button', { name: /open settings/i }));
+        await press(await screen.findByText('Open Settings'));
 
         expect(mockPostMessage).toHaveBeenCalledWith('open-data-installer-settings');
     });
@@ -257,7 +256,7 @@ describe('a response carrying no page at all', () => {
         render(<DatapackCatalogView />);
         await settle();
 
-        expect(await screen.findByText('No Datapacks Found')).toBeInTheDocument();
+        expect(await screen.findByText('No Datapacks Yet')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: /community/i })).not.toBeInTheDocument();
     });
 });

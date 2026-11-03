@@ -22,6 +22,7 @@
  * @see tests/sop/test-family-setup.test.ts
  */
 
+import * as vscode from 'vscode';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -45,4 +46,13 @@ export const ACCS_PROJECT = createMockProject({
 });
 
 /** The refusal both the write client and the poller give when access fails. */
-export const NOT_REACHABLE = 'The Data Installer is not reachable for this project.';
+export const NOT_REACHABLE = 'Datapacks are not available for this project.';
+
+/** The Data Installer's address is set, or not. The engine it decides for reads the real setting. */
+export function dataInstallerAddress(address: string): void {
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+        get: jest.fn((key: string, fallback?: unknown) => (key === 'apiBaseUrl' ? address : fallback)),
+    });
+}
+
+export const INSTALLER_ADDRESS = 'https://installer.test/api';

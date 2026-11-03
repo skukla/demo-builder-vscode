@@ -177,6 +177,8 @@ describe('the ceiling table tracks the tool surface', () => {
             'clear_demo_data',
             // share_datapack (owner, 2026-10-30): three fixed fields; not yet run live.
             'share_datapack',
+            // mark_team_datapack (beta.153): three fixed fields; not yet run live.
+            'mark_team_datapack',
         ]);
 
         const missing = descriptorTools.filter(

@@ -647,13 +647,13 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'List Adobe Commerce sample-data datapacks the Data Installer holds. Returns one row ' +
-            'per (name, version) pair — the same pack appears once per version. Curated packs ' +
-            'only unless includeCommunity is set. store:"library" lists the team datapack ' +
-            'library instead (shared packs plus your own, mine:true on yours); includeLibrary ' +
-            'adds those rows after the Data Installer ones, each tagged store:"library". A library pack ' +
-            'named <pack>-settings holding only store_config is that pack\'s settings layer, not a demo. This ' +
-            'endpoint reports no total, so count === limit means there may be more — page with skip.',
+            "The datapacks this SC can install: Demo Builder's datapack store (team packs and your own, " +
+            "store:\"library\"), then whatever the Data Installer adds if it answers (store:\"installer\"). A pack in both " +
+            'shows once, as the store\'s. One row per (name, version). installerMissing says the Data Installer\'s packs ' +
+            'are absent: no-address (none set) or no-answer (refused or down); install them from DSC if you have access. ' +
+            'includeCommunity adds colleagues\' shared packs and non-curated Data Installer packs. store lists one alone. ' +
+            'A pack named <pack>-settings holding only store_config is that pack\'s settings layer, not a demo. This ' +
+            'endpoint reports no total, so count === limit means there may be more; page with skip.',
         map: dataInstallerHandlers,
         type: 'find-datapacks',
         shape: (res) => shapeRows(res, leanDatapackRow),
@@ -661,15 +661,11 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             includeCommunity: z
                 .boolean()
                 .optional()
-                .describe('Include non-shared developer packs (default: curated only)'),
+                .describe("Include colleagues' shared packs and non-curated Data Installer packs"),
             store: z
                 .enum(['installer', 'library'])
                 .optional()
-                .describe('Which catalog to list (default: the Data Installer)'),
-            includeLibrary: z
-                .boolean()
-                .optional()
-                .describe('With the Data Installer list, add the library rows too'),
+                .describe('List only this one (default: the one list, the datapack store then the Data Installer)'),
             ...PAGING,
         },
     },

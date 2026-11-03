@@ -56,7 +56,7 @@ export type StoreAccess =
 export function packReadsVia(open: (store: DatapackStoreName) => Promise<StoreAccess>): PackReads {
     const clientOf = async (store: DatapackStoreName) => {
         const access = await open(store);
-        if (!access.ok) throw new Error(`The ${store === 'library' ? 'datapack library' : 'Data Installer'} is not reachable.`);
+        if (!access.ok) throw new Error((store === 'library' ? "Demo Builder's datapacks aren't available right now." : 'The Data Installer is not reachable.'));
         return access.client;
     };
     return {
@@ -92,11 +92,13 @@ async function newest(reads: PackReads, origin: DatapackLocation): Promise<Datap
  * library versions too (rule 3, no migration), and the answer names the store it was found in.
  */
 async function locate(reads: PackReads, recorded: ProjectDatapack): Promise<{ pack: ProjectDatapack; found: DatapackSummary } | null> {
+    if (storeOf(recorded) !== 'library') {
+        // The datapack store's copy wins, and answers when the Data Installer will not.
+        const inLibrary = await find(reads, { ...recorded, store: 'library' }).catch(() => null);
+        if (inLibrary) return { pack: { ...recorded, store: 'library' }, found: inLibrary };
+    }
     const found = await find(reads, recorded);
-    if (found) return { pack: recorded, found };
-    if (recorded.store !== undefined) return null;
-    const inLibrary = await find(reads, { ...recorded, store: 'library' });
-    return inLibrary ? { pack: { ...recorded, store: 'library' }, found: inLibrary } : null;
+    return found ? { pack: recorded, found } : null;
 }
 
 /** The pack it was made from, its newest version, or nothing: what a fallback can install. */

@@ -475,6 +475,12 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'displayName'],
         sessionGrant: false,
     },
+    mark_team_datapack: {
+        action: 'Mark or unmark a team datapack',
+        consequence: 'Marked, this pack is in the default list for everyone it is shared with; unmarked, it is behind Include Community.',
+        target: ['datapackName', 'team'],
+        sessionGrant: false,
+    },
     share_datapack: {
         action: 'Share or stop sharing a library datapack',
         consequence: 'Shared, everyone with access to the datapack library can see and install every version of this pack; stopped, only you can.',

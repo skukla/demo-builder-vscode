@@ -44,8 +44,11 @@ export interface DatapackEngineAccess extends ServiceEngineAccess {
 }
 
 /**
- * A pack's rows by kind, read from the store that holds it. Shared by the engine and by the
- * preview and save of store changes (step 05), which read a pack the same way.
+ * A pack's rows by kind. Demo Builder's datapack store comes first whatever the pack names, so a
+ * project made from the Data Installer's Frescopa still installs from the same name and version
+ * here, whether or not the Data Installer answers, and every SC gets the same data. Only a pack the
+ * store does not hold is read from the Data Installer. Shared by the engine and by the preview and
+ * save of store changes (step 05), which read a pack the same way.
  */
 export async function readPackItems(
     access: Pick<DatapackEngineAccess, 'catalog' | 'libraryCatalog'>,
@@ -53,9 +56,17 @@ export async function readPackItems(
     source: DatapackStoreName,
 ): Promise<PackItems> {
     if (source === 'library' && !access.libraryCatalog) throw new Error('The datapack library cannot be read from here.');
-    const catalog = source === 'library' && access.libraryCatalog ? await access.libraryCatalog() : access.catalog;
-    const file = await readPackFromStore(catalog, id, source);
-    return Object.fromEntries(file.items.map((item) => [item.dataType, item.records]));
+    const rows = (file: Awaited<ReturnType<typeof readPackFromStore>>): PackItems =>
+        Object.fromEntries(file.items.map((item) => [item.dataType, item.records]));
+    if (source === 'library') return rows(await readPackFromStore(await (access.libraryCatalog as NonNullable<typeof access.libraryCatalog>)(), id, 'library'));
+    if (access.libraryCatalog) {
+        try {
+            return rows(await readPackFromStore(await access.libraryCatalog(), id, 'library'));
+        } catch {
+            // Not held there, or the store did not answer: the Data Installer may still have it.
+        }
+    }
+    return rows(await readPackFromStore(access.catalog, id, source));
 }
 
 /**

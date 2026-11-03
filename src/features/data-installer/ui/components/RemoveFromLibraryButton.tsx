@@ -26,7 +26,7 @@ export interface LibraryRemoval {
     start: () => void;
     removing: boolean;
     removed: boolean;
-    /** "Removed from the library.", or why it could not be; nothing before it runs. */
+    /** "Removed.", or why it could not be; nothing before it runs. */
     note: React.JSX.Element | null;
 }
 
@@ -48,7 +48,7 @@ export function useLibraryRemoval(id: DatapackId, onRemoved?: () => void): Libra
     }, [removed, onRemoved]);
 
     let note: React.JSX.Element | null = null;
-    if (removed) note = <p className="datapack-export-note">Removed from the library.</p>;
+    if (removed) note = <p className="datapack-export-note">Removed.</p>;
     else if (remove.failure) note = <p className="dialog-problem text-negative">It could not be removed: {remove.failure.message}</p>;
     return { start, removing: remove.loading, removed, note };
 }
@@ -61,7 +61,7 @@ export interface RemoveFromLibraryButtonProps {
     label?: string;
 }
 
-export function RemoveFromLibraryButton({ id, onRemoved, label = 'Remove from Library' }: RemoveFromLibraryButtonProps): React.JSX.Element {
+export function RemoveFromLibraryButton({ id, onRemoved, label = 'Remove Datapack' }: RemoveFromLibraryButtonProps): React.JSX.Element {
     const { start, removing, removed, note } = useLibraryRemoval(id, onRemoved);
     if (removed) return <>{note}</>;
     return (

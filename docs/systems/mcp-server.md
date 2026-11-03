@@ -941,6 +941,14 @@ reference, so `export_project_settings` and `export_demo_bundle` (with its setup
 this pack's data. Share it? …"; a person exporting from the projects list or the dashboard is asked
 the same question once, with Share, and declining exports anyway.
 
+### Team packs (beta.153, 2026-11-03)
+
+`mark_team_datapack` (confirm-gated; the consent names the pack and whether it becomes a team
+pack) marks every version of a store pack as a team pack, or unmarks it (`team: false`), through
+the store's owner-only `update-datapack-metadata` (`team`). A team pack is in every SC's default
+list with no tag; any other shared pack is Community, listed only with `includeCommunity`. It
+answers `{datapackName, team, versions}`.
+
 ### Renaming a library pack, and a pack shared in a file (datapack-engine step 07, 2026-10-29)
 
 `rename_datapack` (confirm-gated) gives every version of one of the SC's own library packs a new

@@ -132,7 +132,7 @@ function cleanupItems(project: Project, edsMetadata: ReturnType<typeof extractEd
             id: 'datapack',
             label: '$(package) Delete Its Pack',
             description: project.ownDatapack.displayName ?? project.ownDatapack.name,
-            detail: "Every version of this demo's pack in the datapack library",
+            detail: "Every version of this demo's own datapack",
             picked: false,
         });
     }

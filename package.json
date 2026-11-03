@@ -59,7 +59,7 @@
             },
             {
                 "command": "demoBuilder.showDataInstaller",
-                "title": "Open Data Installer",
+                "title": "Open Datapacks",
                 "category": "Demo Builder"
             },
             {
@@ -347,11 +347,6 @@
             {
                 "title": "Sample Data",
                 "properties": {
-                    "demoBuilder.dataInstaller.enabled": {
-                        "type": "boolean",
-                        "default": true,
-                        "description": "Enable the Data Installer surface for browsing and installing Adobe Commerce sample-data datapacks. When off, the panel and its AI tools report the feature as unavailable."
-                    },
                     "demoBuilder.dataInstaller.engine": {
                         "type": "string",
                         "enum": [

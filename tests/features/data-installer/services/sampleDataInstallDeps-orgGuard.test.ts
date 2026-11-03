@@ -4,7 +4,14 @@
  * that owns the store stops the job before it starts, in the guard's own words (DI-5).
  */
 
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({ resolveDataInstallerAccess: jest.fn() }));
+jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
+    const resolveDataInstallerAccess = jest.fn();
+    return {
+        resolveDataInstallerAccess,
+        // The write path's door, as it answers with the Data Installer's address set.
+        resolveDatapackAccess: (context: unknown) => resolveDataInstallerAccess(context),
+    };
+});
 jest.mock('@/features/authentication/services/projectOrgGuard', () => ({ orgGuard: jest.fn() }));
 jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
     ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
@@ -12,7 +19,7 @@ jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
 }));
 
 // The shared wall first (webview-test-authoring §3).
-import { ACCS_PROJECT, importHarness } from './sampleDataInstallDeps.testUtils';
+import { ACCS_PROJECT, INSTALLER_ADDRESS, dataInstallerAddress, importHarness } from './sampleDataInstallDeps.testUtils';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
@@ -25,6 +32,7 @@ const MISMATCH = 'Project uses a different Adobe organization. Use "Switch IMS O
 
 beforeEach(() => {
     jest.clearAllMocks();
+    dataInstallerAddress(INSTALLER_ADDRESS);
     mockedAccess.mockResolvedValue({
         ok: true,
         client: { getJobStatus: jest.fn(), getJobFailureReason: jest.fn(), getDatapackDetail: jest.fn(), getDataItem: jest.fn() },

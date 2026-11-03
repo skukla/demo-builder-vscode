@@ -42,6 +42,7 @@ beforeEach(() => {
         getToken: async () => 'tok',
         jobs: { getJobStatus: jest.fn(), getJobFailureReason: jest.fn() },
         catalog: unreadable,
+        dataInstallerAnswers: async () => true,
         project: projectOf(),
         backend: 'paas',
     }));

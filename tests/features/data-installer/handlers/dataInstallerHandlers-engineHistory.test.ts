@@ -150,7 +150,7 @@ describe('list-installed-datapacks from both engines', () => {
 
     it("still lists Demo Builder's installs when the service cannot be read, and says why the rest are missing", async () => {
         await installed([{ kind: 'categories', id: '40' }]);
-        setupSettings({ enabled: false });
+        setupSettings({ apiBaseUrl: '' });
 
         const res = await dataInstallerHandlers['list-installed-datapacks'](context(), {});
 
@@ -158,16 +158,54 @@ describe('list-installed-datapacks from both engines', () => {
         const data = res.data as HistoryPage<InstalledDatapack>;
         expect(data.items.map((row) => row.source)).toStrictEqual(['demo-builder']);
         expect(data.total).toBe(1);
-        expect(data.serviceError).toMatch(/turned off/);
+        expect(data.serviceError).toMatch(/No Data Installer API URL/);
     });
 
-    it('answers a service refusal unchanged when Demo Builder installed nothing here', async () => {
-        setupSettings({ enabled: false });
+    // The Data Installer is an extra: a project with no history answers that it has none, not a failure.
+    it('answers the empty page, saying why, when the Data Installer is not set up and Demo Builder installed nothing here', async () => {
+        setupSettings({ apiBaseUrl: '' });
 
         const res = await dataInstallerHandlers['list-installed-datapacks'](context(), {});
 
-        expect(res.success).toBe(false);
-        expect(res.code).toBe(ErrorCode.INVALID_OPERATION);
+        expect(res).toStrictEqual({
+            success: true,
+            data: { items: [], count: 0, total: 0, serviceError: expect.stringMatching(/No Data Installer API URL/) },
+        });
+    });
+
+    it('answers the empty page, saying why, when the Data Installer will not answer', async () => {
+        MockedClient.prototype.getInstalledDatapacks = jest.fn().mockRejectedValue(new Error('down'));
+
+        const res = await dataInstallerHandlers['list-installed-datapacks'](context(), {});
+
+        expect(res).toMatchObject({ success: true, data: { items: [], count: 0, serviceError: 'down' } });
+    });
+
+    // The one failure with a fix worth stopping for.
+    it('still answers as the failure when the Data Installer needs a sign-in and there is nothing of ours to show', async () => {
+        const signedOut = makeAccessContext({
+            panel: undefined,
+            stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project()) }),
+        });
+        (signedOut.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
+
+        const res = await dataInstallerHandlers['list-installed-datapacks'](signedOut, {});
+
+        expect(res).toMatchObject({ success: false, code: ErrorCode.AUTH_REQUIRED });
+    });
+
+    it("CONTROL: a sign-in failure does not hide Demo Builder's own rows", async () => {
+        await installed([{ kind: 'categories', id: '40' }]);
+        const signedOut = makeAccessContext({
+            panel: undefined,
+            stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project()) }),
+        });
+        (signedOut.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
+
+        const res = await dataInstallerHandlers['list-installed-datapacks'](signedOut, {});
+
+        expect(res.success).toBe(true);
+        expect((res.data as HistoryPage<InstalledDatapack>).items.map((row) => row.source)).toStrictEqual(['demo-builder']);
     });
 
     it("says Demo Builder's records could not be read rather than listing as if there were none", async () => {

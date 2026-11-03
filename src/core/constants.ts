@@ -330,7 +330,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // now opens Experience Workspace. Existing projects' AGENTS.md would keep the DA.live Classic link.
 // v51 (2026-11-03, ACCS credential fields removed): update-credentials stops telling the agent about
 // an OAuth pair nothing reads.
-export const AI_CONTEXT_VERSION = 51;
+// v52 (2026-11-03, datapacks without the Data Installer): the enabled setting is gone, and import-datapack
+// and diagnose-demo say datapacks come from Demo Builder's datapack store first, the Data Installer being
+// an extra. Existing projects would keep sending the agent to a setting that no longer exists.
+export const AI_CONTEXT_VERSION = 52;
 
 /**
  * Component IDs for standardized component instance access

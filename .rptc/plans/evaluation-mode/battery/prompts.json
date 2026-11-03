@@ -1507,5 +1507,14 @@
         ],
         "cwd": "project",
         "why": "Owner, 2026-10-30: a project file names its pack by reference, and a private library pack is the owner's alone. Judges that the agent finds the demo's own pack (find_datapacks mine, or export_project_settings' packNote), asks the user, and calls share_datapack with shared:true rather than copying the pack anywhere. Writes to the library, so the battery stops at the consent."
+    },
+    {
+        "id": "mark-team-pack",
+        "prompt": "Make my Bodea pack one of the official team packs, so everyone sees it without turning on Include Community.",
+        "expect": [
+            "mark_team_datapack"
+        ],
+        "cwd": "project",
+        "why": "Owner, beta.153: team packs are in the default list and every other shared pack is behind Include Community. Judges that the agent finds the pack (find_datapacks mine), asks the user, and calls mark_team_datapack with team:true rather than share_datapack, which only shares it. Writes to the store, so the battery stops at the consent."
     }
 ]

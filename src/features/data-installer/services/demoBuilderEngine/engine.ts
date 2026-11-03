@@ -40,6 +40,12 @@ import { errorText } from '@/features/app-builder/services/storePreparation/fixC
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
+/** What an SC will wonder next, measured on a live install: search took about 17 minutes (2026-11-03). */
+const AFTER_PRODUCTS_LINES = [
+    'Products can take up to 20 minutes to appear in storefront search.',
+    "This datapack doesn't include product images. Products show the images that are in AEM Assets.",
+];
+
 /** What this engine needs from the project it installs into. */
 export interface DemoBuilderEngineDeps {
     /** The project's signed Commerce access, or why there is none. */
@@ -186,6 +192,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         underStoreRootLine(outcome.rootPlacement, items.categories, session.storeRoot),
         rootStepLine(outcome.rootStep),
         ambiguousKeysLine(session.ambiguousCategoryKeys),
+        ...(Array.isArray(items.products) && items.products.length > 0 ? AFTER_PRODUCTS_LINES : []),
     ].filter(Boolean).join(' ') || undefined;
     if (current) job.perType[current] = 'success';
 }

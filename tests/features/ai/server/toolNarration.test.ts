@@ -196,6 +196,7 @@ describe('every named form says what it acts on, from the argument that names it
         ['reset_datapack', { datapackName: 'Bodea B2B' }, 'Resetting Bodea B2B'],
         ['clear_demo_data', { stores: [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }] }, 'Clearing justrite_test_store'],
         ['share_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing who can use the acme-1a2b3c pack'],
+        ['mark_team_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing whether acme-1a2b3c is a team pack'],
         ['delete_library_datapack', { datapackName: 'Bodea B2B' }, 'Deleting Bodea B2B'],
         ['copy_library_datapack_to_installer', { datapackName: 'Bodea B2B' }, 'Copying Bodea B2B'],
         ['rename_datapack', { datapackName: 'acme-demo-1a2b3c' }, 'Renaming the acme-demo-1a2b3c pack'],

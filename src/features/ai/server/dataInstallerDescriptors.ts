@@ -601,6 +601,23 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'mark_team_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Mark one of your own datapacks in Demo Builder's datapack store as an official team pack, or take " +
+            'the mark off: every version. A team pack is in the default list; any other shared pack is behind ' +
+            'Include Community. It does not share the pack: share_datapack does that. The store refuses anyone ' +
+            'not on its list of team pack owners. Ask the user first.',
+        map: importHandlers,
+        type: 'mark-team-datapack',
+        confirm: true,
+        inputSchema: {
+            datapackName: z.string().describe('The pack name from find_datapacks (one of yours)'),
+            team: z.boolean().describe('true to mark it as a team pack, false to take the mark off'),
+        },
+    },
+    {
         tool: 'copy_library_datapack_to_installer',
         needsAuth: ['adobe'],
         readOnly: false,

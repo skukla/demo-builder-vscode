@@ -41,6 +41,8 @@ export interface DatapackSummary {
     store?: DatapackStoreName;
     /** True when the signed-in SC owns it. Only the library says; absent otherwise. */
     mine?: boolean;
+    /** An official team pack, listed by default. Only Demo Builder's datapack store says. */
+    team?: boolean;
 }
 
 /** A pack's settings layer, as its flyout and `get_datapack` name it (datapack-engine step 09). */
@@ -148,9 +150,13 @@ export type ChangesOnRemoval = 'ask' | 'save';
  * installs only from its own catalog.
  */
 export type CatalogPage = Page<DatapackSummary> & {
-    libraryError?: string;
-    /** Why the Data Installer's rows are missing, when only the library's are here. */
-    installerError?: string;
+    /** Demo Builder's datapack store did not answer, so only the Data Installer's rows are here. */
+    storeMissing?: boolean;
+    /**
+     * The Data Installer's rows are not here. `no-address`: none is set, so it was not asked.
+     * `no-answer`: it was asked and refused or did not reply; which of those is not the SC's concern.
+     */
+    installerMissing?: 'no-address' | 'no-answer';
     engine?: DatapackEngineId;
 };
 

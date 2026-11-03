@@ -59,21 +59,68 @@ describe('checkRecordedPack', () => {
         expect(r.detail).toHaveBeenCalledWith({ name: 'acme-demo-1a2b3c', version: '20261029-183000' }, 'library');
     });
 
-    it('reads a pack recorded with no store from the Data Installer', async () => {
+    it('reads a pack recorded with no store from the Data Installer when the datapack store has none', async () => {
         const r = reads([{ id: { name: 'bodea', version: 'main' }, store: 'installer' }]);
 
         await expect(checkRecordedPack(r, { name: 'bodea', version: 'main' })).resolves.toMatchObject({ verdict: 'readable' });
-        expect(r.detail).toHaveBeenCalledWith({ name: 'bodea', version: 'main' }, 'installer');
+        expect(r.detail.mock.calls.map((call) => call[1])).toEqual(['library', 'installer']);
     });
 
     // Rule 3: a project saved before the store was recorded may name a library version (the old
-    // "-saved-" ones). The Data Installer first, as every such reader asked; then the library.
-    it('finds a pack recorded with no store in the library when the Data Installer has none, and names that store', async () => {
+    // "-saved-" ones), found by asking the datapack store first as every pack now is.
+    it('finds a pack recorded with no store in the datapack store, and names that store', async () => {
         const saved = { name: 'bodea', version: 'main-saved-20261029-1830' };
         const r = reads([{ id: saved, store: 'library', over: { mine: true } }]);
 
         await expect(checkRecordedPack(r, saved)).resolves.toMatchObject({ verdict: 'readable', pack: { ...saved, store: 'library' }, mine: true });
-        expect(r.detail.mock.calls.map((call) => call[1])).toEqual(['installer', 'library']);
+        expect(r.detail.mock.calls.map((call) => call[1])).toEqual(['library']);
+    });
+
+    describe("the datapack store's copy of a pack recorded in the Data Installer", () => {
+        const RECORDED: ProjectDatapack = { name: 'frescopa', version: 'main', store: 'installer' };
+
+        it('wins when both hold it, and the Data Installer is not asked', async () => {
+            const r = reads([
+                { id: RECORDED, store: 'library' },
+                { id: RECORDED, store: 'installer' },
+            ]);
+
+            await expect(checkRecordedPack(r, RECORDED)).resolves.toMatchObject({
+                verdict: 'readable',
+                pack: { name: 'frescopa', version: 'main', store: 'library' },
+            });
+            expect(r.detail.mock.calls.map((call) => call[1])).toEqual(['library']);
+        });
+
+        it('survives a Data Installer that refuses', async () => {
+            const r = reads([{ id: RECORDED, store: 'library' }]);
+            const held = r.detail.getMockImplementation();
+            r.detail.mockImplementation(async (id, store) => {
+                if (store === 'installer') throw new DataInstallerApiError('refused', 403, 'get-datapack-metadata');
+                return held!(id, store);
+            });
+
+            await expect(checkRecordedPack(r, RECORDED)).resolves.toMatchObject({ verdict: 'readable', pack: { store: 'library' } });
+        });
+
+        it('counts a refused datapack store read as none there, and asks the Data Installer', async () => {
+            const r = reads([{ id: RECORDED, store: 'installer' }]);
+            const held = r.detail.getMockImplementation();
+            r.detail.mockImplementation(async (id, store) => {
+                if (store === 'library') throw new DataInstallerApiError('refused', 403, 'get-datapack-metadata');
+                return held!(id, store);
+            });
+
+            await expect(checkRecordedPack(r, RECORDED)).resolves.toMatchObject({ verdict: 'readable', pack: RECORDED });
+        });
+
+        it('CONTROL: a pack recorded in the datapack store never asks the Data Installer', async () => {
+            const r = reads([{ id: { name: 'acme', version: '1' }, store: 'installer' }]);
+
+            await checkRecordedPack(r, { name: 'acme', version: '1', store: 'library' });
+
+            expect(r.detail.mock.calls.map((call) => call[1])).not.toContain('installer');
+        });
     });
 
     it('falls back to the pack it was made from, saying the changes are not included', async () => {

@@ -211,9 +211,10 @@ until someone sets it by hand. `diagnose-demo` carries the full symptom, includi
 why `GET /V1/categories` hides it. On an Edge Delivery storefront, `republish`
 rebuilds the catalog menu once the categories show.
 
-## If the Data Installer is not there at all
+## If a pack from the Data Installer is not listed
 
-Check `get_settings`. `demoBuilder.dataInstaller.enabled` and
-`demoBuilder.dataInstaller.apiBaseUrl` are functional gates — with either unset the whole
-surface is absent, which looks like a broken service rather than an unconfigured one. The
-URL reports as `{configured: true|false}` rather than its value.
+Datapacks come from Demo Builder's datapack store first, and that needs no setup. The Data Installer
+is an extra: `find_datapacks` adds its packs only when `demoBuilder.dataInstaller.apiBaseUrl` is set
+and it answers this person's Adobe sign-in, and says why not in `installerMissing`. Nothing in Demo
+Builder can grant that access. Someone who has it can install those packs from DSC directly. The URL
+reports as `{configured: true|false}` rather than its value.

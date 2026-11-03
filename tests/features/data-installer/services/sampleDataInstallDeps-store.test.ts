@@ -6,7 +6,14 @@
  * own catalog, and says so rather than failing on a pack it cannot see.
  */
 
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({ resolveDataInstallerAccess: jest.fn() }));
+jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
+    const resolveDataInstallerAccess = jest.fn();
+    return {
+        resolveDataInstallerAccess,
+        // The write path's door, as it answers with the Data Installer's address set.
+        resolveDatapackAccess: (context: unknown) => resolveDataInstallerAccess(context),
+    };
+});
 jest.mock('@/features/authentication/services/projectOrgGuard', () => ({ orgGuard: jest.fn(async () => undefined) }));
 jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
     ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
@@ -18,7 +25,7 @@ jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
 }));
 
 // The shared wall first (webview-test-authoring §3).
-import { ACCS_PROJECT, importHarness } from './sampleDataInstallDeps.testUtils';
+import { ACCS_PROJECT, INSTALLER_ADDRESS, dataInstallerAddress, importHarness } from './sampleDataInstallDeps.testUtils';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { buildDatapackEngine } from '@/features/data-installer/services/buildDatapackEngine';
 import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
@@ -54,6 +61,7 @@ const LIBRARY_REQUEST: ImportRequest = {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    dataInstallerAddress(INSTALLER_ADDRESS);
     mockedAccess.mockImplementation(async (_context, store) =>
         ({ ok: true, client: store === 'library' ? library : installer, baseUrl: 'https://x.test', getToken: async () => 'tok' }) as unknown as Access,
     );
@@ -71,13 +79,36 @@ describe('the creation install reads the store the project recorded', () => {
         expect(installer.getDatapackDetail).not.toHaveBeenCalled();
     });
 
-    it('asks the Data Installer for a pack with no store recorded', async () => {
-        const deps = buildSampleDataDeps(importHarness(), ACCS_PROJECT, jest.fn());
+    // As the install reads it (`readPackItems`): the datapack store's copy first, whatever the pack names.
+    describe('a pack with no store recorded, or recorded in the Data Installer', () => {
+        const FRESCOPA = { name: 'frescopa', version: 'main' };
 
-        await deps.inventory({ name: 'bodea', version: 'main' });
+        it.each([[undefined], ['installer' as const]])('answers from the datapack store when it holds the pack (store %s)', async (store) => {
+            const deps = buildSampleDataDeps(importHarness(), ACCS_PROJECT, jest.fn());
 
-        expect(installer.getDatapackDetail).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
-        expect(library.getDatapackDetail).not.toHaveBeenCalled();
+            await expect(deps.inventory({ ...FRESCOPA, store })).resolves.toStrictEqual(['products']);
+
+            expect(library.getDatapackDetail).toHaveBeenCalledWith(FRESCOPA);
+            expect(installer.getDatapackDetail).not.toHaveBeenCalled();
+        });
+
+        it('asks the Data Installer when the datapack store holds none of it', async () => {
+            library.getDatapackDetail.mockResolvedValue({ dataTypes: [] });
+            const deps = buildSampleDataDeps(importHarness(), ACCS_PROJECT, jest.fn());
+
+            await expect(deps.inventory(FRESCOPA)).resolves.toStrictEqual(['products']);
+
+            expect(installer.getDatapackDetail).toHaveBeenCalledWith(FRESCOPA);
+        });
+
+        it('asks the Data Installer when the datapack store refuses', async () => {
+            library.getDatapackDetail.mockRejectedValue(new Error('not found'));
+            const deps = buildSampleDataDeps(importHarness(), ACCS_PROJECT, jest.fn());
+
+            await expect(deps.inventory(FRESCOPA)).resolves.toStrictEqual(['products']);
+
+            expect(installer.getDatapackDetail).toHaveBeenCalledWith(FRESCOPA);
+        });
     });
 
     it("hands Demo Builder's engine the library's reads", async () => {

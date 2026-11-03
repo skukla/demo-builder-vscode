@@ -6,9 +6,14 @@
  * (DEMOSYS-1698), so the install no longer gathers a pair to send (DI-6).
  */
 
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
-    resolveDataInstallerAccess: jest.fn().mockResolvedValue({ ok: false }),
-}));
+jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
+    const resolveDataInstallerAccess = jest.fn();
+    return {
+        resolveDataInstallerAccess,
+        // The write path's door, as it answers with the Data Installer's address set.
+        resolveDatapackAccess: (context: unknown) => resolveDataInstallerAccess(context),
+    };
+});
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
@@ -25,7 +30,7 @@ jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import type { HandlerContext } from '@/types/handlers';
 import type { DataTypeStatus } from '@/features/data-installer/types';
-import { importHarness, ACCS_PROJECT } from './sampleDataInstallDeps.testUtils';
+import { dataInstallerAddress, importHarness, ACCS_PROJECT, INSTALLER_ADDRESS } from './sampleDataInstallDeps.testUtils';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 const PROJECT = ACCS_PROJECT;
@@ -72,6 +77,7 @@ describe('buildSampleDataDeps — watch', () => {
     };
 
     beforeEach(() => {
+        dataInstallerAddress(INSTALLER_ADDRESS);
         resolveDataInstallerAccess.mockResolvedValue({
             ok: true,
             client: readClient,
