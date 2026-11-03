@@ -68,26 +68,24 @@ describe('SearchHeader', () => {
     });
 
     describe('search field visibility', () => {
-        it('should show search field when totalCount > threshold', () => {
+        it('should show search field on a short list', () => {
             renderWithProvider(
                 <SearchHeader
                     {...defaultProps}
-                    totalCount={6}
-                    filteredCount={6}
-                    searchThreshold={5}
+                    totalCount={1}
+                    filteredCount={1}
                 />
             );
 
             expect(screen.getByPlaceholderText(/type to filter/i)).toBeInTheDocument();
         });
 
-        it('should hide search field when totalCount <= threshold', () => {
+        it('should hide search field when there is nothing to filter', () => {
             renderWithProvider(
                 <SearchHeader
                     {...defaultProps}
-                    totalCount={5}
-                    filteredCount={5}
-                    searchThreshold={5}
+                    totalCount={0}
+                    filteredCount={0}
                 />
             );
 
@@ -388,13 +386,12 @@ describe('SearchHeader', () => {
     describe('where the action buttons live', () => {
         // showSearch decides the header's SHAPE: with a search field the buttons
         // sit in the search row, without one they move down beside the count.
-        it('puts the refresh button on the count row when the list is below the threshold', () => {
+        it('puts the refresh button on the count row when the list is empty', () => {
             renderWithProvider(
                 <SearchHeader
                     {...defaultProps}
-                    totalCount={3}
-                    filteredCount={3}
-                    searchThreshold={5}
+                    totalCount={0}
+                    filteredCount={0}
                     onRefresh={jest.fn()}
                     alwaysShowCount={true}
                 />
@@ -411,7 +408,6 @@ describe('SearchHeader', () => {
                     {...defaultProps}
                     totalCount={10}
                     filteredCount={10}
-                    searchThreshold={5}
                     onRefresh={jest.fn()}
                     alwaysShowCount={true}
                 />
@@ -431,7 +427,6 @@ describe('SearchHeader', () => {
                     filteredCount={2}
                     hasLoadedOnce
                     alwaysShowCount
-                    searchThreshold={0}
                     countTrailing={<span data-testid="trailing">context</span>}
                 />
             );
@@ -448,7 +443,6 @@ describe('SearchHeader', () => {
                     filteredCount={2}
                     hasLoadedOnce
                     alwaysShowCount
-                    searchThreshold={0}
                 />
             );
 

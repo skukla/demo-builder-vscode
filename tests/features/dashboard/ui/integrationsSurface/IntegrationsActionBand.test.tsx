@@ -98,7 +98,6 @@ describe('IntegrationsActionBand', () => {
             searchQuery: 'erp',
             onSearchQueryChange: SET_QUERY,
             searchPlaceholder: 'Filter integrations',
-            searchThreshold: 0,
             totalCount: 2,
             filteredCount: 1,
             itemNoun: 'integration',

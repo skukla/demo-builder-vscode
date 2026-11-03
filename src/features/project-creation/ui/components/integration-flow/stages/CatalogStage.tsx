@@ -45,9 +45,6 @@ function nameField(entry: AppBuilderComponentCatalogEntry | undefined): { fieldL
 /** Stable empty id list (avoids a new array each render). */
 const NO_IDS: readonly string[] = [];
 
-/** The filter shows on every catalog, however short, so the stage keeps one layout (owner, 2026-11-02). */
-const CATALOG_SEARCH_THRESHOLD = 0;
-
 /** Case-insensitive match of a catalog entry's name + description against a query. */
 function matchesQuery(entry: AppBuilderComponentCatalogEntry, query: string): boolean {
     return `${entry.name} ${entry.description}`.toLowerCase().includes(query);
@@ -131,7 +128,6 @@ export function CatalogStage({
                 filteredCount={filtered.length}
                 itemNoun="integration"
                 hasLoadedOnce
-                searchThreshold={CATALOG_SEARCH_THRESHOLD}
                 searchPlaceholder="Filter integrations"
             />
             {filtered.length === 0 ? (

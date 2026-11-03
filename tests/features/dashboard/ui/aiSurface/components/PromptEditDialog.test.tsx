@@ -37,7 +37,7 @@ function getTitleInput(): HTMLInputElement {
 }
 
 function getPromptInput(): HTMLTextAreaElement {
-    return screen.getByLabelText(/prompt/i);
+    return screen.getByLabelText(/prompt/i, { selector: 'textarea' });
 }
 
 function getSaveButton(): HTMLElement {

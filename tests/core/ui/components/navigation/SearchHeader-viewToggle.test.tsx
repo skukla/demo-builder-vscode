@@ -203,9 +203,8 @@ describe('SearchHeader action-button group', () => {
         // An empty group is not invisible: the count row is space-between, so a
         // zero-width sibling still occupies the end slot.
         const { container } = renderHeader({
-            totalCount: 3,
-            filteredCount: 3,
-            searchThreshold: 5,
+            totalCount: 0,
+            filteredCount: 0,
             alwaysShowCount: true,
         });
 

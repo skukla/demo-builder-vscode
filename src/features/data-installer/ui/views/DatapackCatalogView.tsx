@@ -59,15 +59,6 @@ import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/dat
 /** Fields a query is matched against — the id and the label, nothing else. */
 const SEARCH_FIELDS: ReadonlyArray<keyof DatapackGroup> = ['name', 'displayName'];
 
-/**
- * Show the search field from the first item, as both page-level peers do.
- *
- * NOT a tuning knob. `SearchHeader` puts the count BESIDE the refresh button when
- * there is no field and BENEATH the field when there is, so a non-zero threshold
- * makes the band change shape as the catalog crosses it.
- */
-const SEARCH_THRESHOLD = 0;
-
 /** What `get-datapack-detail` hands back — metadata plus what is actually stored. */
 interface DatapackDetailResponse {
     detail: DatapackDetail;
@@ -315,7 +306,6 @@ export function DatapackCatalogView(): React.JSX.Element {
                         searchQuery={query}
                         onSearchQueryChange={setQuery}
                         searchPlaceholder="Filter datapacks"
-                        searchThreshold={SEARCH_THRESHOLD}
                         totalCount={groups.length}
                         filteredCount={filtered.length}
                         itemNoun="datapack"

@@ -232,7 +232,6 @@ export function BrandGallery({
                 searchQuery={searchQuery}
                 onSearchQueryChange={setSearchQuery}
                 searchPlaceholder="Filter packages"
-                searchThreshold={2}
                 totalCount={packages.length}
                 filteredCount={filteredPackages.length}
                 itemNoun="package"

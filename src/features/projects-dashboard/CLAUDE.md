@@ -31,10 +31,8 @@ current?".
 `getProjectStatusDisplay` still serves `ProjectRow`, which shows exactly one line
 and therefore keeps the storefront in it.
 
-**Search is always available here.** `SearchHeader` defaults to showing search only
-past 5 items, but this surface passes `searchThreshold={0}`. That is not a tuning
-preference — the threshold changes the header's shape, deciding where the action
-buttons sit, so it is a layout decision rather than a knob.
+**Search is always available here,** as on every list with anything in it: `SearchHeader`
+has no setting to hide it on a short list (owner, 2026-11-02).
 
 ## No workspace anchoring — the always-root home model
 

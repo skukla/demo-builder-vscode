@@ -53,15 +53,12 @@ jest.mock('@/core/ui/components/layout/PageLayout', () => ({
 }));
 
 jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
-    // Mirrors the real `showSearch: totalCount > searchThreshold` so the
-    // threshold this screen passes is actually exercised. The mock used to
-    // render the field unconditionally, which made the threshold untestable.
+    // Mirrors the real `showSearch: totalCount > 0`.
     SearchHeader: ({
         totalCount,
         filteredCount,
         onSearchQueryChange,
         onRefresh,
-        searchThreshold,
         countTrailing,
         countText,
         viewMode,
@@ -71,7 +68,7 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
             <span data-testid="count-text">{countText}</span>
             <span data-testid="total-count">{totalCount}</span>
             <span data-testid="filtered-count">{filteredCount}</span>
-            {totalCount > (searchThreshold ?? 5) && (
+            {totalCount > 0 && (
                 <input
                     aria-label="Filter integrations"
                     onChange={(e) => onSearchQueryChange(e.target.value)}

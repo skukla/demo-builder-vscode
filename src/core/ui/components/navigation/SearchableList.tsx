@@ -34,8 +34,6 @@ export interface SearchableListProps<T extends SearchableListItem> {
     onRefresh?: () => void;
     /** Whether data has loaded at least once */
     hasLoadedOnce: boolean;
-    /** Show search field threshold (default: 5) */
-    searchThreshold?: number;
     /** Aria label for the list */
     ariaLabel: string;
     /** Custom item renderer */
@@ -61,7 +59,7 @@ export interface SearchableListProps<T extends SearchableListItem> {
  * Used for Adobe resource selection (projects, workspaces, organizations).
  *
  * Features:
- * - Search field (shown when items > threshold)
+ * - Search field (shown whenever there are items)
  * - Refresh button
  * - Item count display
  * - Selection handling
@@ -95,7 +93,6 @@ export function SearchableList<T extends SearchableListItem>({
     isRefreshing = false,
     onRefresh,
     hasLoadedOnce,
-    searchThreshold = 5,
     ariaLabel,
     renderItem,
     itemNoun = 'item',
@@ -144,7 +141,6 @@ export function SearchableList<T extends SearchableListItem>({
                 searchQuery={searchQuery}
                 onSearchQueryChange={onSearchQueryChange}
                 searchPlaceholder={searchPlaceholder}
-                searchThreshold={searchThreshold}
                 totalCount={items.length}
                 filteredCount={filteredItems.length}
                 itemNoun={itemNoun}

@@ -433,13 +433,6 @@ describe('the counts a directory guide states match its own source', () => {
         );
     });
 
-    it("projects-dashboard: states SearchHeader's real default threshold", () => {
-        const dflt = /searchThreshold = props\.searchThreshold \?\? (\d+)/.exec(
-            read('src/core/ui/components/navigation/SearchHeader.tsx')
-        )?.[1];
-        expect(dflt).toBeTruthy();
-        expect(read('src/features/projects-dashboard/CLAUDE.md')).toContain(`past ${dflt} items`);
-    });
 });
 
 describe('every area of the codebase has exactly one front door', () => {

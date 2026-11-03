@@ -90,7 +90,7 @@ describe('AiOverviewScreen — user prompts', () => {
             });
             expect(screen.getByRole('heading', { name: /new prompt/i })).toBeInTheDocument();
             const titleInput = screen.getByLabelText(/title/i) as HTMLInputElement;
-            const promptInput = screen.getByLabelText(/prompt/i) as HTMLTextAreaElement;
+            const promptInput = screen.getByLabelText(/prompt/i, { selector: 'textarea' }) as HTMLTextAreaElement;
             expect(titleInput.value).toBe('');
             expect(promptInput.value).toBe('');
         });
@@ -107,7 +107,7 @@ describe('AiOverviewScreen — user prompts', () => {
                 screen.getAllByText('Edit')[0].click();
             });
             const titleInput = screen.getByLabelText(/title/i) as HTMLInputElement;
-            const promptInput = screen.getByLabelText(/prompt/i) as HTMLTextAreaElement;
+            const promptInput = screen.getByLabelText(/prompt/i, { selector: 'textarea' }) as HTMLTextAreaElement;
             expect(titleInput.value).toBe('My first user prompt');
             expect(promptInput.value).toBe('Do thing one');
         });
@@ -133,7 +133,7 @@ describe('AiOverviewScreen — user prompts', () => {
                 fireEvent.click(screen.getByTestId('ai-new-prompt-tile'));
             });
             const titleInput = screen.getByLabelText(/title/i);
-            const promptInput = screen.getByLabelText(/prompt/i);
+            const promptInput = screen.getByLabelText(/prompt/i, { selector: 'textarea' });
             fireEvent.change(titleInput, { target: { value: 'New title' } });
             fireEvent.change(promptInput, { target: { value: 'New body' } });
 
@@ -183,7 +183,7 @@ describe('AiOverviewScreen — user prompts', () => {
             });
 
             const titleInput = screen.getByLabelText(/title/i);
-            const promptInput = screen.getByLabelText(/prompt/i);
+            const promptInput = screen.getByLabelText(/prompt/i, { selector: 'textarea' });
             fireEvent.change(titleInput, { target: { value: 'Edited title' } });
             fireEvent.change(promptInput, { target: { value: 'Edited body' } });
 
@@ -293,7 +293,7 @@ describe('AiOverviewScreen — user prompts', () => {
                 fireEvent.click(screen.getByTestId('ai-new-prompt-tile'));
             });
             fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Brand new' } });
-            fireEvent.change(screen.getByLabelText(/prompt/i), {
+            fireEvent.change(screen.getByLabelText(/prompt/i, { selector: 'textarea' }), {
                 target: { value: 'Brand new body' },
             });
 

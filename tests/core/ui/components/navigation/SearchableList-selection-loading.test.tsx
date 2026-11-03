@@ -54,7 +54,6 @@ describe('SearchableList - Selection and Loading', () => {
                     isLoading={true}
                     hasLoadedOnce={false}
                     onRefresh={jest.fn()}
-                    searchThreshold={3}
                 />
             );
 
@@ -68,7 +67,6 @@ describe('SearchableList - Selection and Loading', () => {
                     {...defaultProps}
                     isLoading={true}
                     onRefresh={jest.fn()}
-                    searchThreshold={3}
                 />
             );
 
@@ -97,7 +95,6 @@ describe('SearchableList - Selection and Loading', () => {
                 <SearchableList
                     {...defaultProps}
                     onRefresh={jest.fn()}
-                    searchThreshold={3}
                 />
             );
 
@@ -112,7 +109,6 @@ describe('SearchableList - Selection and Loading', () => {
                 <SearchableList
                     {...defaultProps}
                     onRefresh={handleRefresh}
-                    searchThreshold={3}
                 />
             );
 
@@ -130,7 +126,6 @@ describe('SearchableList - Selection and Loading', () => {
                     items={fewItems}
                     filteredItems={fewItems}
                     onRefresh={jest.fn()}
-                    searchThreshold={5}
                 />
             );
 

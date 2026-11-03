@@ -5,22 +5,17 @@
  * Provides consistent UI patterns across selection views.
  *
  * Features:
- * - Search field (shown when items exceed threshold)
+ * - Search field (shown whenever there are items)
  * - Refresh button with loading state
  * - View mode toggle (cards/rows)
  * - Item count display ("Y items", and "X of Y items" while filtering)
  * - Configurable visibility and behavior
  *
- * `searchThreshold` IS NOT A TUNING KNOB — it changes the header's SHAPE.
- * `showSearch` (`totalCount > searchThreshold`) decides where the action buttons live:
- * with no search field they sit beside the count on the count row; with one they move up
- * into the search row and the count drops to its own line beneath. So a non-zero threshold
- * makes the header rearrange itself as the list grows past it — the same screen renders two
- * different layouts depending on how much data came back.
- *
- * Page-level surfaces therefore pass 0 (`ProjectsDashboard`, `IntegrationsActionBand`) so the
- * field is present from the first item and the layout never moves. Pick non-zero only for a
- * bounded in-page list where you have decided both layouts are acceptable.
+ * The search field shows on every list with anything in it, however short (owner, 2026-11-02). It
+ * used to hide below a threshold each screen chose, and that changed the header's SHAPE: with no
+ * field the action buttons sit beside the count on the count row; with one they move up into the
+ * search row and the count drops to its own line beneath. So one screen rendered two layouts
+ * depending on how much data came back.
  *
  * Typing in the field must not move anything either (owner, 2026-10-31). The count holds the
  * width of its longest form ("12 of 12 datapacks") from the start, and nothing on its row
@@ -54,12 +49,6 @@ export interface SearchHeaderProps {
     onSearchQueryChange: (query: string) => void;
     /** Placeholder text for search field */
     searchPlaceholder?: string;
-    /**
-     * Show search field when totalCount exceeds this (default: 5).
-     * Changes the header's LAYOUT, not just the field's visibility — see the module
-     * docstring. Page-level surfaces pass 0.
-     */
-    searchThreshold?: number;
 
     /** Total number of items (before filtering) */
     totalCount: number;
@@ -84,7 +73,7 @@ export interface SearchHeaderProps {
 
     /** Whether data has loaded at least once (shows count when true) */
     hasLoadedOnce: boolean;
-    /** Always show count even below threshold (default: false) */
+    /** Show the count on an empty list too (default: false) */
     alwaysShowCount?: boolean;
     /**
      * Say no count at all: in a dialog, a count of what the SC can see is cut (dialog design
@@ -227,13 +216,12 @@ function renderActionButtons(
 
 /** Compute derived display values from props */
 function computeDisplayValues(props: SearchHeaderProps) {
-    const searchThreshold = props.searchThreshold ?? 5;
     const itemNoun = props.itemNoun ?? 'item';
     const alwaysShowCount = props.alwaysShowCount ?? false;
     const nounPlural = props.itemNounPlural || `${itemNoun}s`;
 
     return {
-        showSearch: props.totalCount > searchThreshold,
+        showSearch: props.totalCount > 0,
         showCount: props.hasLoadedOnce && (alwaysShowCount || props.totalCount > 0),
         nounPlural,
         displayNoun: props.totalCount === 1 ? itemNoun : nounPlural,

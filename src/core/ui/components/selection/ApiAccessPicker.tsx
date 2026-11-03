@@ -37,9 +37,6 @@ import { CheckboxRow } from './CheckboxRow';
 import { andList } from '@/core/utils/andList';
 import type { CloudGrouping } from '@/types/adobeApis';
 
-/** The filter shows on every list, however short, so the picker keeps one layout (owner, 2026-11-02). */
-const API_SEARCH_THRESHOLD = 0;
-
 /** One org Adobe service, as the wizard/dashboard API handlers report it. */
 export interface ApiAccessOption {
     /** The service's sdkCode (what subscriptions are keyed by). */
@@ -243,7 +240,6 @@ export function ApiAccessPicker({
                 filteredCount={searched.length}
                 itemNoun="API"
                 hasLoadedOnce
-                searchThreshold={API_SEARCH_THRESHOLD}
                 searchPlaceholder="Filter APIs"
             />
             {chips.length > 0 && (

@@ -53,8 +53,6 @@ describe('BrandGallery', () => {
         });
 
         it('narrows the rendered cards when the search filter matches a subset', () => {
-            // searchThreshold=2 inside BrandGallery — need >2 packages for the
-            // search field to render.
             render(
                 <BrandGallery
                     {...defaultProps}

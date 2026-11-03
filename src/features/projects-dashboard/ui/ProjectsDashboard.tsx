@@ -187,7 +187,6 @@ export function ProjectsDashboard({
                                     searchQuery={searchQuery}
                                     onSearchQueryChange={setSearchQuery}
                                     searchPlaceholder="Filter projects"
-                                    searchThreshold={0}
                                     totalCount={projects.length}
                                     filteredCount={filteredProjects.length}
                                     itemNoun="project"

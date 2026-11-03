@@ -48,29 +48,27 @@ describe('SearchableList - Rendering and Search', () => {
     });
 
     describe('Search Functionality', () => {
-        it('shows search field when items exceed threshold', () => {
+        it('shows search field', () => {
             renderWithProviders(
                 <SearchableList
                     {...defaultProps}
-                    searchThreshold={3}
                 />
             );
 
             expect(screen.getByRole('searchbox')).toBeInTheDocument();
         });
 
-        it('does not show search field when items below threshold', () => {
+        it('shows search field on a short list too', () => {
             const fewItems = mockItems.slice(0, 2);
             renderWithProviders(
                 <SearchableList
                     {...defaultProps}
                     items={fewItems}
                     filteredItems={fewItems}
-                    searchThreshold={5}
                 />
             );
 
-            expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+            expect(screen.getByRole('searchbox')).toBeInTheDocument();
         });
 
         it('calls onSearchQueryChange when typing in search', async () => {
@@ -81,7 +79,6 @@ describe('SearchableList - Rendering and Search', () => {
                 <SearchableList
                     {...defaultProps}
                     onSearchQueryChange={handleSearch}
-                    searchThreshold={3}
                 />
             );
 
@@ -96,7 +93,6 @@ describe('SearchableList - Rendering and Search', () => {
                 <SearchableList
                     {...defaultProps}
                     searchQuery="Project"
-                    searchThreshold={3}
                 />
             );
 
