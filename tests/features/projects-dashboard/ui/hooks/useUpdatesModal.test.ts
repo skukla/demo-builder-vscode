@@ -183,13 +183,13 @@ describe('useUpdatesModal', () => {
 
         act(() => result.current.close());
 
-        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: UPDATES_OPERATION_ID, title: 'Applying updates' });
+        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: UPDATES_OPERATION_ID, title: 'Applying Updates' });
         expect(result.current.view).toEqual({ phase: 'closed' });
     });
 
     it('answers a question with what was typed, and closing it answers it as cancelled', async () => {
         const { result } = await applying();
-        const prompt = { message: 'Bodea is running. Stop it to update it?', actions: ['Stop and update', 'Skip'] };
+        const prompt = { message: 'Bodea is running. Stop it to update it?', actions: ['Stop and Update', 'Skip'] };
         await push('operationProgress', { id: UPDATES_OPERATION_ID, state: 'running', prompt });
 
         act(() => result.current.onTyped({ note: 'x' }));
@@ -213,7 +213,7 @@ describe('useUpdatesModal', () => {
     });
 
     // Owner, 2026-10-22: after applying only some, the SC can go back to the rest.
-    describe('Back to updates', () => {
+    describe('Back to Updates', () => {
         const FRESH = [row('blockLibrary:0', { group: { key: '/p/bodea', title: 'Bodea' } }), row('integration:0', { ticked: false })];
 
         /** A run of the first row, the other two left, that ended with `remaining` still waiting. */

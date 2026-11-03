@@ -115,11 +115,11 @@ interface RunWords {
 }
 
 const APPLY_WORDS: RunWords = {
-    title: 'Applying the demo setup',
+    title: 'Applying the Demo Setup',
     stage: OPERATION_STAGES.preparingStore,
     nothing: 'Nothing changed: every step was already done in the store.',
 };
-const UNDO_WORDS: RunWords = { title: 'Undoing the demo setup', stage: OPERATION_STAGES.undoingStorePreparation };
+const UNDO_WORDS: RunWords = { title: 'Undoing the Demo Setup', stage: OPERATION_STAGES.undoingStorePreparation };
 
 /**
  * What the run changed, for the result screen (live release test, 2026-10-22: it said only

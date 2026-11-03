@@ -131,7 +131,7 @@ describe('row and card presentation', () => {
     it('gives each card the subtle background that separates it from the page', () => {
         renderReview({ edsConfig: { repoName: 'acme-site' } as WizardState['edsConfig'] });
 
-        const card = screen.getByText('EDGE DELIVERY SERVICES').parentElement as HTMLElement;
+        const card = screen.getByText('Edge Delivery Services').parentElement as HTMLElement;
         // Declared in CSS since 2026-09-10; jsdom loads no stylesheets, so the
         // contract this can check is the class or attribute the rule keys on.
         expect(card).toHaveClass('review-panel');

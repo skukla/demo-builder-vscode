@@ -34,7 +34,7 @@ describe('what is the row\'s fault', () => {
         ['a 429', new CommerceReadError('x', 429), false],
         ['a 500', new CommerceReadError('x', 500), false],
         ['no answer at all', new CommerceReadError('Commerce did not answer products: timed out'), false],
-        ['anything else', new Error('Commerce did not answer the new cart rule Spring\'s id.'), false],
+        ['anything else', new Error('Commerce did not return the new cart rule Spring\'s id.'), false],
     ])('%s: %s', (_label, error, rows) => {
         expect(isRowRefusal(error)).toBe(rows);
     });

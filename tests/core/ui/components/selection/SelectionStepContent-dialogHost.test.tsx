@@ -22,17 +22,17 @@ function hosted(extra: Record<string, unknown>, onSignIn?: () => Promise<unknown
 }
 
 describe('SelectionStepContent in a dialog', () => {
-    it('reports a failed read as a red title with Try Again, and draws no icon or button', () => {
+    it('reports a failed read as a red title with Retry, and draws no icon or button', () => {
         const { outcome, onLoad } = hosted({ error: 'Adobe did not answer.' });
 
         expect(outcome()).toMatchObject({
             title: baseLabels.errorTitle,
             status: 'error',
             lines: ['Adobe did not answer.'],
-            actions: [{ label: 'Try Again' }],
+            actions: [{ label: 'Retry' }],
         });
         expect(screen.getByText('Adobe did not answer.')).toHaveClass('dialog-line');
-        expect(screen.queryByRole('button', { name: 'Try Again' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
         outcome().actions[0].onPress();
         expect(onLoad).toHaveBeenCalledTimes(1);
     });
@@ -41,17 +41,17 @@ describe('SelectionStepContent in a dialog', () => {
         const onSwitchOrg = jest.fn();
         const { outcome } = hosted({ error: 'Wrong org.', errorCode: ErrorCode.ORG_MISMATCH, onSwitchOrg });
 
-        expect(outcome().actions.map((action: { label: string }) => action.label)).toEqual(['Try Again', 'Switch IMS Org']);
+        expect(outcome().actions.map((action: { label: string }) => action.label)).toEqual(['Retry', 'Switch IMS Org']);
         outcome().actions[1].onPress();
         expect(onSwitchOrg).toHaveBeenCalledTimes(1);
     });
 
     it.each([ErrorCode.AUTH_REQUIRED, ErrorCode.AUTH_EXPIRED])('offers sign-in for %s, never a retry, and reads again after it', async (errorCode) => {
         const onSignIn = jest.fn(async () => undefined);
-        const { outcome, onLoad } = hosted({ error: 'Adobe sign-in required.', errorCode }, onSignIn);
+        const { outcome, onLoad } = hosted({ error: 'Adobe Sign-In Required.', errorCode }, onSignIn);
 
         expect(outcome()).toMatchObject({
-            title: 'Sign in to Adobe',
+            title: 'Sign In to Adobe',
             status: 'warning',
             actions: [{ label: 'Sign In with Adobe' }],
         });
@@ -63,7 +63,7 @@ describe('SelectionStepContent in a dialog', () => {
     });
 
     it('offers no retry when signed out and the host has no way to sign in', () => {
-        const { outcome } = hosted({ error: 'Adobe sign-in required.', errorCode: ErrorCode.AUTH_REQUIRED });
+        const { outcome } = hosted({ error: 'Adobe Sign-In Required.', errorCode: ErrorCode.AUTH_REQUIRED });
 
         expect(outcome().actions).toStrictEqual([]);
     });
@@ -109,11 +109,11 @@ describe('SelectionStepContent in a dialog', () => {
 });
 
 describe('SelectionStepContent on a whole wizard screen', () => {
-    it('CONTROL: keeps its large view with Try Again in the body', () => {
+    it('CONTROL: keeps its large view with Retry in the body', () => {
         renderContent({ error: 'Adobe did not answer.' });
 
         expect(screen.getByText(baseLabels.errorTitle)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     });
 
     it('CONTROL: keeps its words while loading, its count, and its empty message', () => {
@@ -130,7 +130,7 @@ describe('SelectionStepContent on a whole wizard screen', () => {
     });
 
     it('CONTROL: a signed-out read is not changed for the wizard by the dialog\'s rule', () => {
-        renderContent({ error: 'Adobe sign-in required.', errorCode: ErrorCode.AUTH_REQUIRED });
+        renderContent({ error: 'Adobe Sign-In Required.', errorCode: ErrorCode.AUTH_REQUIRED });
 
         expect(screen.getByText(baseLabels.errorTitle)).toBeInTheDocument();
     });

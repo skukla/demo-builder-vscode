@@ -84,11 +84,11 @@ export interface SelectionStepContentProps<T extends SelectableItem> {
     hasLoadedOnce: boolean;
     /** Error message if loading failed */
     error: string | null;
-    /** Typed failure code — ORG_MISMATCH swaps Try Again for the org recovery. */
+    /** Typed failure code — ORG_MISMATCH swaps Retry for the org recovery. */
     errorCode?: ErrorCode | null;
     /**
      * Start a FORCED sign-in to land in a different IMS org. Supplied only where the
-     * host can perform it; without it an org mismatch falls back to Try Again.
+     * host can perform it; without it an org mismatch falls back to Retry.
      */
     onSwitchOrg?: () => void;
     /** Current search query */
@@ -186,7 +186,7 @@ export function SelectionStepContent<T extends SelectableItem>({
         // Again stays as the secondary, for the genuinely transient case.
         const isOrgMismatch = errorCode === ErrorCode.ORG_MISMATCH && onSwitchOrg;
         if (dialogHost) {
-            const tryAgain = { label: 'Try Again', onPress: onLoad };
+            const tryAgain = { label: 'Retry', onPress: onLoad };
             return (
                 <DialogOutcomeBody
                     onOutcome={dialogHost.onOutcome}
@@ -215,9 +215,9 @@ export function SelectionStepContent<T extends SelectableItem>({
                                       onPress: onSwitchOrg,
                                       variant: 'accent' as const,
                                   },
-                                  { label: 'Try Again', onPress: onLoad, variant: 'secondary' as const },
+                                  { label: 'Retry', onPress: onLoad, variant: 'secondary' as const },
                               ]
-                            : [{ label: 'Try Again', onPress: onLoad, variant: 'accent' as const }]
+                            : [{ label: 'Retry', onPress: onLoad, variant: 'accent' as const }]
                     }
                 />
             </>

@@ -2,7 +2,7 @@
  * StoreConfigFieldRow Component Tests
  *
  * Focus: the website-code branch's loading treatment. While discovery runs (the
- * initial detect OR any Re-detect), a compact spinner+label (LoadingDisplay)
+ * initial detect OR any Re-Detect), a compact spinner+label (LoadingDisplay)
  * anchored under the connection fields stands in for the store-selection row.
  * On success the populated dropdowns ARE the result — there is NO separate
  * "Store structure detected" confirmation.
@@ -59,17 +59,17 @@ function buildProps(overrides: Partial<Parameters<typeof StoreConfigFieldRow>[0]
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('StoreConfigFieldRow — website-code branch (spinner replaces the row)', () => {
-    it('shows the compact spinner+label while detecting (no dropdowns/Re-detect)', () => {
+    it('shows the compact spinner+label while detecting (no dropdowns/Re-Detect)', () => {
         render(<StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />);
 
         expect(screen.getByText('Detecting store structure')).toBeInTheDocument();
-        // The spinner stands in for the whole row — no dropdowns or Re-detect yet.
+        // The spinner stands in for the whole row — no dropdowns or Re-Detect yet.
         expect(screen.queryByTestId('store-selection-row')).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /re-detect/i })).not.toBeInTheDocument();
     });
 
-    it('shows the spinner (not stale dropdowns) on a Re-detect — every fetch swaps the row', () => {
-        // A Re-detect nulls store data while it re-runs: same spinner branch as the
+    it('shows the spinner (not stale dropdowns) on a Re-Detect — every fetch swaps the row', () => {
+        // A Re-Detect nulls store data while it re-runs: same spinner branch as the
         // initial detect. The user's selection is preserved in the field values.
         render(<StoreConfigFieldRow {...buildProps({ isFetching: true, hasStoreData: false })} />);
 

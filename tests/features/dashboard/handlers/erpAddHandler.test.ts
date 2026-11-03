@@ -244,7 +244,7 @@ describe('handleAddErp without confirm', () => {
         mockReadOptions.mockResolvedValue(OPTIONS);
         const { mockContext } = setup();
         const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
-        expect(result).toMatchObject({ success: true, data: { next: 'Brand B ERP will own no products yet. After adding, use Assign products on its card.' } });
+        expect(result).toMatchObject({ success: true, data: { next: 'Brand B ERP will own no products yet. After adding, use Assign Products on its card.' } });
     });
 });
 
@@ -339,14 +339,14 @@ describe('handleAddErp', () => {
         });
 
         it("says what the pass says the SC still has to do, as the answer's warning", async () => {
-            mockApply.mockResolvedValue(applied({}, ['Brand B ERP owns no products yet: use Assign products on its card to give it some.']));
+            mockApply.mockResolvedValue(applied({}, ['Brand B ERP owns no products yet: use Assign Products on its card to give it some.']));
             const { mockContext } = setup();
 
             const result = await handleAddErp(mockContext, { confirm: true, id: 'erp-integration', name: 'Brand B ERP' });
 
             expect(result).toMatchObject({
                 success: true,
-                data: { warning: 'Brand B ERP owns no products yet: use Assign products on its card to give it some.' },
+                data: { warning: 'Brand B ERP owns no products yet: use Assign Products on its card to give it some.' },
             });
         });
 
@@ -355,7 +355,7 @@ describe('handleAddErp', () => {
 
             const result = await handleAddErp(mockContext, { confirm: true, id: 'erp-integration', name: 'Brand B ERP', owns: { mode: 'websites', websites: [] } });
 
-            expect(result).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID, error: 'Tick at least one website.' });
+            expect(result).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID, error: 'Select at least one website.' });
             expect(mockAdd).not.toHaveBeenCalled();
         });
 
@@ -437,7 +437,7 @@ describe('handleAddErp', () => {
     });
 
     it('fails the add when the integration could not be told, and says how to finish it', async () => {
-        mockSync.mockResolvedValue({ status: 'failed', detail: 'Adobe sign-in required.' });
+        mockSync.mockResolvedValue({ status: 'failed', detail: 'Adobe Sign-In Required.' });
         const { mockContext } = setup();
 
         const result = await handleAddErp(mockContext, { confirm: true, id: 'erp-integration', name: 'Brand B ERP' });
@@ -445,7 +445,7 @@ describe('handleAddErp', () => {
         expect(result).toEqual({
             success: false,
             error:
-                'Brand B ERP is deployed, but the integration was not told about it: Adobe sign-in required. ' +
+                'Brand B ERP is deployed, but the integration was not told about it: Adobe Sign-In Required. ' +
                 'Add it again with the same name to finish.',
         });
         expect(mockApply).not.toHaveBeenCalled();
@@ -526,7 +526,7 @@ describe('handleAddErp', () => {
 
     // AB-74: a new ERP that owns nothing by erp_owner is offered "Assign products" on the
     // progress window's success view; one that owns products, or owns by another rule, is not.
-    it('offers Assign products on the success view when the new ERP owns nothing yet', async () => {
+    it('offers Assign Products on the success view when the new ERP owns nothing yet', async () => {
         const nothing = applied();
         nothing.erps[0].ownsNow = 0;
         mockApply.mockResolvedValue(nothing);
@@ -542,7 +542,7 @@ describe('handleAddErp', () => {
                 id: 'erp-integration',
                 erp: 'demo-erp-2',
                 name: 'Brand B ERP',
-                message: 'Next: Brand B ERP owns no products yet. Assign products to it.',
+                message: 'Next: Brand B ERP owns no products yet. Assign Products to it.',
             },
             startedAt: expect.any(Number),
             tookMs: expect.any(Number),
@@ -551,7 +551,7 @@ describe('handleAddErp', () => {
 
     // Justrite, 2026-10-18: "owns no products yet" twice, under a warning icon. The offer says it.
     it('does not repeat the offer as a warning, so the add reads as a plain success', async () => {
-        const nothing = applied({}, ['Brand B ERP owns no products yet: use Assign products on its card to give it some.', 'Something else to know.']);
+        const nothing = applied({}, ['Brand B ERP owns no products yet: use Assign Products on its card to give it some.', 'Something else to know.']);
         nothing.erps[0].ownsNow = 0;
         mockApply.mockResolvedValue(nothing);
         const { mockContext } = setup();
@@ -672,7 +672,7 @@ describe('handleAddErp', () => {
     });
 
     it('runs nothing when the guards refuse', async () => {
-        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, error: 'Sign in to Adobe first.' });
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, error: 'Sign In to Adobe first.' });
         const { mockContext } = setup();
 
         const result = await handleAddErp(mockContext, { confirm: true, id: 'erp-integration', name: 'Brand B ERP' });

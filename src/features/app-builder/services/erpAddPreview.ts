@@ -118,7 +118,7 @@ function plainRule(entry: ErpOwnsEntry, row: { count: number; isNew: boolean }, 
     }
     if (row.count > 0) return 'Products assigned to it';
     // An ERP already added carries an Assign products button on its line, which says the rest.
-    return row.isNew ? 'None yet: assign products to it after adding' : 'None yet.';
+    return row.isNew ? 'None. Assign products after adding.' : 'None yet.';
 }
 
 /**
@@ -145,7 +145,7 @@ export function previewLines(
         return line;
     });
     if (preview.nobody.count > 0) {
-        lines.push({ who: 'Nobody', count: productCount(preview.nobody.count), says: 'Products no ERP owns' });
+        lines.push({ who: 'None', count: productCount(preview.nobody.count), says: 'Products no ERP owns' });
     }
     if (preview.overlap.count > 0) {
         lines.push({
@@ -165,6 +165,6 @@ export function ownsNothingNext(preview: ErpAddPreview, rule: ErpOwnsRule): stri
     const added = preview.erps.find((erp) => erp.isNew);
     if (!added || added.count > 0) return undefined;
     const byOwnerTag = rule.mode === 'attribute' && (rule.attribute ?? '').startsWith('erp_owner=');
-    if (byOwnerTag) return `${added.name} will own no products yet. After adding, use Assign products on its card.`;
+    if (byOwnerTag) return `${added.name} will own no products yet. After adding, use Assign Products on its card.`;
     return `${added.name} will own no products yet. No product in the store matches its rule.`;
 }

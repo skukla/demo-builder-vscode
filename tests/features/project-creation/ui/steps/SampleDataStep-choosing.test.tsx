@@ -56,7 +56,7 @@ describe('SampleDataStep — the catalog request', () => {
         setMockState(refusal('The Data Installer service is unreachable.'));
         renderStep();
 
-        fireEvent.click(await screen.findByRole('button', { name: /try again/i }));
+        fireEvent.click(await screen.findByRole('button', { name: /retry/i }));
 
         await waitFor(() => expect(mockExecute).toHaveBeenCalledTimes(2));
         expect(mockExecute).toHaveBeenLastCalledWith({ includeCommunity: false });

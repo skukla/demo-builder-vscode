@@ -205,7 +205,7 @@ export function AdobeProjectPicker({
                         <span className="inline-rename-row">
                             <InlineRenameField
                                 name={title}
-                                label={`New name for ${title}`}
+                                label={`New Name for ${title}`}
                                 onRename={(next) => handleRename(item, next)}
                             />
                         </span>

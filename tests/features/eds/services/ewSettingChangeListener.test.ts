@@ -185,7 +185,7 @@ describe('registerEwSettingChangeListener', () => {
         expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
             '1 project(s) affected by this Experience Workspace setting change — republish now?',
             'Republish',
-            'Not now'
+            'Not Now'
         );
         expect(mockApplyAuthoringExperienceFlip).toHaveBeenCalledTimes(1);
         const [flippedProject] = mockApplyAuthoringExperienceFlip.mock.calls[0];
@@ -221,8 +221,8 @@ describe('registerEwSettingChangeListener', () => {
         expect(mockApplyAuthoringExperienceFlip).not.toHaveBeenCalled();
     });
 
-    it('prompt cancel ("Not now") → no writes', async () => {
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Not now');
+    it('prompt cancel ("Not Now") → no writes', async () => {
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Not Now');
         const sm = buildStateManager([{ name: 'ew', eds: true, override: 'experience-workspace' }]);
         register(sm);
 
@@ -265,7 +265,7 @@ describe('registerEwSettingChangeListener', () => {
     });
 
     it('debounce coalesces rapid edits into a single handling pass', async () => {
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Not now');
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Not Now');
         const sm = buildStateManager([{ name: 'ew', eds: true, override: 'experience-workspace' }]);
         register(sm);
 
@@ -315,7 +315,7 @@ describe('registerEwSettingChangeListener', () => {
     });
 
     it('clears the experience flag once handled, so the next branch edit stays a branch edit', async () => {
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Not now');
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Not Now');
         // Follows the global default: affected by an experience change, NOT by a
         // branch change (it resolves to da-live-classic, not EW).
         const sm = buildStateManager([{ name: 'follows-default', eds: true }]);
@@ -367,7 +367,7 @@ describe('registerEwSettingChangeListener', () => {
         // current project out from under whatever the SC is doing. The empty
         // component factory matters for the same reason: a populated catalog
         // here would let the load reshape componentInstances.
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Not now');
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Not Now');
         const sm = buildStateManager([{ name: 'solo', eds: true }]);
         register(sm);
 

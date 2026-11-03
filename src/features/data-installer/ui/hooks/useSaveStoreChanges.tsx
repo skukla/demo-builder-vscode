@@ -67,10 +67,10 @@ export function useSaveStoreChanges(onClosed: () => void): SaveStoreChanges {
                 name: saving?.id.name ?? 'store',
                 message: 'save-store-changes-to-pack',
                 payload: { ...requestOf(saving, picks) },
-                title: 'Saving store changes',
+                title: 'Saving Store Changes',
                 subject: saving?.displayName ?? 'This store',
-                failureTitle: "Couldn't save the store changes",
-                successTitle: 'Store changes saved',
+                failureTitle: "Couldn't Save the Store Changes",
+                successTitle: 'Store Changes Saved',
             });
         },
         [start],

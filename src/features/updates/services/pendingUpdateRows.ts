@@ -38,7 +38,7 @@ interface ExtensionUpdateSummary {
 }
 
 const EXTENSION_GROUP: PendingUpdateGroup = { key: 'extension', title: 'Demo Builder' };
-const FORKS_GROUP: PendingUpdateGroup = { key: 'forks', title: 'Template repositories' };
+const FORKS_GROUP: PendingUpdateGroup = { key: 'forks', title: 'Template Repositories' };
 const EXTENSION_ID = 'extension';
 const LOCKED_OTHER_ORG = `This project ${OTHER_ORG_NOTE}`;
 /**

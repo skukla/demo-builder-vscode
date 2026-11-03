@@ -49,12 +49,12 @@ describe('changesSentence', () => {
             { kind: 'products', count: 2, names: ['A', 'B'] },
         ]);
 
-        expect(sentence).toBe('You changed 3 things since it was installed: the category Critical Power, and 2 products.');
+        expect(sentence).toBe('3 items changed since install: the category Critical Power, and 2 products.');
     });
 
     it('says one thing in the singular', () => {
         expect(changesSentence([{ kind: 'products', count: 1, names: ['VR-RACK'] }])).toBe(
-            'You changed 1 thing since it was installed: the product VR-RACK.',
+            '1 item changed since install: the product VR-RACK.',
         );
     });
 
@@ -66,14 +66,14 @@ describe('changesSentence', () => {
         const seven = ['products', 'categories', 'customers', 'coupons', 'sources', 'stocks', 'cart_rules'].map((k) => ({ kind: k, count: 2, names: ['x', 'y'] }));
 
         expect(changesSentence(seven)).toBe(
-            'You changed 14 things since it was installed: 2 products, 2 categories, 2 customers, 2 coupons, 2 sources, 2 stocks, and 2 cart rules.',
+            '14 items changed since install: 2 products, 2 categories, 2 customers, 2 coupons, 2 sources, 2 stocks, and 2 cart rules.',
         );
     });
 
     it('past seven kinds names three and counts the kinds left', () => {
         const eight = ['products', 'categories', 'customers', 'coupons', 'sources', 'stocks', 'cart_rules', 'giftcards'].map((k) => ({ kind: k, count: 2, names: ['x', 'y'] }));
 
-        expect(changesSentence(eight)).toBe('You changed 16 things since it was installed: 2 products, 2 categories, 2 customers, and 5 more data types.');
+        expect(changesSentence(eight)).toBe('16 items changed since install: 2 products, 2 categories, 2 customers, and 5 more data types.');
     });
 
     it('still reads for a kind it has no word for', () => {

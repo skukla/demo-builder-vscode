@@ -68,7 +68,7 @@ export function resolveView(state: {
     readingChanges?: boolean;
     resetArmed: boolean;
     running: boolean;
-    /** The SC is still following the running job; false once they press Stop watching. */
+    /** The SC is still following the running job; false once they press Close. */
     watching: boolean;
     result: ResultContent | null;
     /** The project named no Commerce instance, and the target request settled. */
@@ -154,7 +154,7 @@ export function buildActions(a: {
 }[] {
     if (a.view === 'watching') {
         // NOT "Cancel" — no endpoint exists to cancel with.
-        return [{ label: 'Stop watching', variant: 'secondary', onPress: a.stopWatching }];
+        return [{ label: 'Close', variant: 'secondary', onPress: a.stopWatching }];
     }
     if (a.view === 'confirm-reset') {
         // Cancel stands in for Close here (the frame hides Close): two buttons that both
@@ -185,8 +185,8 @@ export function buildActions(a: {
         //
         // "Remove all data" when Demo Builder's engine installed it: the removal takes what its
         // record lists, so the button must not read as acting on the ticks above it.
-        { label: a.removesAll ? 'Remove all data' : 'Remove data', variant: 'quiet', onPress: a.armReset, isDisabled: !(a.canRemove ?? a.canStart) },
-        { label: 'Dry run', variant: 'quiet', onPress: a.validate, isDisabled: !a.canStart },
+        { label: a.removesAll ? 'Remove All Data' : 'Remove Data', variant: 'quiet', onPress: a.armReset, isDisabled: !(a.canRemove ?? a.canStart) },
+        { label: 'Dry Run', variant: 'quiet', onPress: a.validate, isDisabled: !a.canStart },
         {
             label: 'Import',
             variant: 'accent',
@@ -220,7 +220,7 @@ export interface ViewFrame {
  */
 export function closeLabel(view: ModalView, handsOver = false): string {
     if (view === 'reading-changes') return 'Cancel';
-    return view === 'watching' || (view === 'busy' && handsOver) ? 'Run in background' : 'Close';
+    return view === 'watching' || (view === 'busy' && handsOver) ? 'Run in Background' : 'Close';
 }
 
 /**
@@ -253,7 +253,7 @@ export function viewFrame(a: {
     const small = { size: 'S' as const, wide: false, hideClose: false };
     // Amber: nothing failed, and the next move is the SC's.
     if (a.view === 'no-instance') return { ...small, title: 'This project has no Commerce instance', status: 'warning' };
-    if (a.view === 'stopped-watching') return { ...small, title: 'Stopped watching' };
+    if (a.view === 'stopped-watching') return { ...small, title: 'Running in Background' };
     switch (a.view) {
         // One title for the read and the confirm it leads to, so the wait does not retitle the dialog.
         case 'reading-changes':

@@ -67,16 +67,16 @@ export function CatalogHeaderActions({
         <>
             <ActionButton isQuiet onPress={() => setOpen('create')}>
                 {renderMenuIcon('add')}
-                <Text>Create datapack</Text>
+                <Text>Create Datapack</Text>
             </ActionButton>
             <ActionButton isQuiet onPress={() => setOpen('load')}>
                 {renderMenuIcon('openFile')}
-                <Text>Load from file</Text>
+                <Text>Load from File</Text>
             </ActionButton>
             <Divider orientation="vertical" size="S" />
             <ActionButton isQuiet onPress={() => setOpen('clear')}>
                 {renderMenuIcon('delete')}
-                <Text>Clear demo data</Text>
+                <Text>Clear Demo Data</Text>
             </ActionButton>
             {open === 'create' ? <CreateDatapackModal engine={engine} onClose={close} onSaveFromStore={onSaveFromStore} /> : null}
             {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} /> : null}

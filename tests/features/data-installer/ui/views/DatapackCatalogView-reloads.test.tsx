@@ -126,7 +126,7 @@ describe('closing the import modal re-reads what this project holds', () => {
     });
 });
 
-describe('the flyout’s Try Again', () => {
+describe('the flyout’s Retry', () => {
     /** Catalog loads; every detail request refuses. */
     function detailAlwaysFails(): void {
         mockRequest.mockImplementation((type: string) => {
@@ -155,7 +155,7 @@ describe('the flyout’s Try Again', () => {
         await settle();
         const before = countOf('get-datapack-detail');
 
-        await press(await screen.findByRole('button', { name: /try again/i }));
+        await press(await screen.findByRole('button', { name: /retry/i }));
 
         expect(countOf('get-datapack-detail')).toBeGreaterThan(before);
         expect(requestOfType('get-datapack-detail')).toEqual({
@@ -185,7 +185,7 @@ describe('the two doors out of the catalog', () => {
     // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save
     // from this store", quiet buttons rather than links, with every engine; Clear demo data last.
     it.each([['demo-builder'], [undefined], ['service']] as const)(
-        'with the %s engine, offers Create datapack, Load from file and, last, Clear demo data',
+        'with the %s engine, offers Create Datapack, Load from File and, last, Clear Demo Data',
         async (engine) => {
             mockRequest.mockResolvedValue({
                 success: true,
@@ -195,7 +195,7 @@ describe('the two doors out of the catalog', () => {
             await settle();
             await screen.findAllByTestId('datapack-card');
 
-            const labels = ['Create datapack', 'Load from file', 'Clear demo data'];
+            const labels = ['Create Datapack', 'Load from File', 'Clear Demo Data'];
             const buttons = labels.map((name) => screen.getByRole('button', { name }));
             expect(buttons.every((button, i) => i === 0 || buttons[i - 1].compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
             expect(screen.queryByText('Export from this instance')).not.toBeInTheDocument();
@@ -205,7 +205,7 @@ describe('the two doors out of the catalog', () => {
     );
 
     // One dialog (owner, 2026-10-31): the pick screens are Create datapack's own.
-    it("walks to the pick screens inside Create datapack with Demo Builder's engine, with no pack", async () => {
+    it("walks to the pick screens inside Create Datapack with Demo Builder's engine, with no pack", async () => {
         mockRequest.mockImplementation(async (type: string) =>
             type === 'list-datapack-export-items'
                 ? { success: true, data: { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 } }
@@ -215,18 +215,18 @@ describe('the two doors out of the catalog', () => {
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        await press(screen.getByRole('button', { name: 'Create datapack' }));
+        await press(screen.getByRole('button', { name: 'Create Datapack' }));
 
-        expect(screen.getByRole('heading', { name: 'Create datapack' })).toBeInTheDocument();
-        await press(screen.getByRole('button', { name: /^Commerce datapack/ }));
+        expect(screen.getByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
+        await press(screen.getByRole('button', { name: /^Commerce Datapack/ }));
         await press(screen.getByRole('button', { name: 'Continue' }));
 
         expect(screen.getByRole('button', { name: /^Products/ })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
-        expect(screen.queryByRole('heading', { name: 'Save store changes' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Save Store Changes' })).not.toBeInTheDocument();
     });
 
-    it("opens the service's export from Create datapack with the service engine, and closes it again", async () => {
+    it("opens the service's export from Create Datapack with the service engine, and closes it again", async () => {
         mockRequest.mockResolvedValue({
             success: true,
             data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine: 'service' },
@@ -235,16 +235,16 @@ describe('the two doors out of the catalog', () => {
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        await press(screen.getByRole('button', { name: 'Create datapack' }));
+        await press(screen.getByRole('button', { name: 'Create Datapack' }));
         // The export's screens are Create datapack's own window.
-        await press(screen.getByRole('button', { name: /^Commerce datapack/ }));
+        await press(screen.getByRole('button', { name: /^Commerce Datapack/ }));
         await press(screen.getByRole('button', { name: 'Continue' }));
-        expect(screen.getByText('Data types')).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: 'Create datapack' })).toBeInTheDocument();
+        expect(screen.getByText('Data Types')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
 
         await press(screen.getByRole('button', { name: 'Cancel' }));
 
-        expect(screen.queryByRole('heading', { name: 'Create datapack' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Create Datapack' })).not.toBeInTheDocument();
     });
 });
 
@@ -257,7 +257,7 @@ describe('a response carrying no page at all', () => {
         render(<DatapackCatalogView />);
         await settle();
 
-        expect(await screen.findByText('No datapacks found')).toBeInTheDocument();
+        expect(await screen.findByText('No Datapacks Found')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: /community/i })).not.toBeInTheDocument();
     });
 });

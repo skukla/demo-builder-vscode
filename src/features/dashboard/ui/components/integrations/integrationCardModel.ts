@@ -354,8 +354,8 @@ function deriveInstallation(
 
 /**
  * kindLabel / source-line / apis facet. Catalog id → 'Pre-built' (+ its
- * requiredApis); a blank-entry source → 'Custom (blank starter)' (the shell
- * instancing path); anything else → 'Imported repo' with a mono owner/repo.
+ * requiredApis); a blank-entry source → 'Custom (Blank Starter)' (the shell
+ * instancing path); anything else → 'Imported Repository' with a mono owner/repo.
  * `renamable`: a pre-built one only when its name comes from an input (the ERP
  * integration, AB-16o) — the rename sets that input, so a redeploy keeps it.
  */
@@ -393,13 +393,13 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
             // out yourself (with AI, in-project, later). Labelling a freshly-added
             // shell as already AI-built described the intended workflow as though
             // it had happened (reported 2026-07-31).
-            kindLabel: 'Custom (blank starter)',
+            kindLabel: 'Custom (Blank Starter)',
             sourceLine: 'Blank starter — build it out',
             renamable: true,
         };
     }
     return {
-        kindLabel: 'Imported repo',
+        kindLabel: 'Imported Repository',
         sourceLine: formatSourceLine(entry.source),
         renamable: true,
     };
@@ -750,7 +750,7 @@ const COMMERCE_SCOPE_PARTS: {
     { label: 'Website', keys: [ACCS_WEBSITE_CODE, PAAS_WEBSITE_CODE], list: 'websites' },
     { label: 'Store', keys: [ACCS_STORE_CODE, PAAS_STORE_CODE], list: 'storeGroups' },
     {
-        label: 'Store view',
+        label: 'Store View',
         keys: [ACCS_STORE_VIEW_CODE, PAAS_STORE_VIEW_CODE],
         list: 'storeViews',
     },

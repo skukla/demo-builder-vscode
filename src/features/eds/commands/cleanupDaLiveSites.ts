@@ -78,7 +78,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Loading DA.live sites',
+                title: 'Loading DA.live Sites',
                 cancellable: false,
             },
             async () => {
@@ -183,7 +183,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Deleting DA.live sites',
+                title: 'Deleting DA.live Sites',
                 cancellable: false,
             },
             async (progress) => {

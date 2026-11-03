@@ -890,6 +890,17 @@ check says so and names the file.
 > modals").
 > Enforced by `tests/sop/status-icons.test.ts`.
 
+> **Convention.** What names a thing is Title Case, across the extension's own UI: titles, buttons,
+> tabs, menu items, headings and field labels ("Run in Background", "Couldn't Load Adobe APIs").
+> Small words stay small in the middle; product names and identifiers keep their own form. What
+> tells the SC something keeps normal capitals: a sentence, a status note like "3 selected", and a
+> title that is a complete sentence. The Command Palette keeps its own title case.
+> *Why:* the owner overruled Spectrum's sentence case on 2026-11-02: "I don't like sentence case. I
+> don't think it goes with professional applications." Before the rule the dialogs used one and the
+> wizard the other, and that disagreement is what reads as unfinished.
+> Enforced by `tests/sop/ui-label-case.test.ts`, which reads every webview bundle with the compiler,
+> holds strings it cannot read to a pin, and proves itself on planted defects.
+
 > **Convention.** A dialog that is waiting shows nothing else: the title, a medium spinner centred
 > both ways in the space between the rule and the buttons, and the way out. `Modal`'s `waiting` prop
 > does it. A flyout waits the same way: its title and a medium centred spinner, with no words
@@ -1869,11 +1880,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 65 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 66 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 134 conventions. 132 of them are enforced; 2 are not.**
+**This handbook states 135 conventions. 133 of them are enforced; 2 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

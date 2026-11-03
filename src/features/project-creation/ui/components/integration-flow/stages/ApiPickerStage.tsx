@@ -28,7 +28,7 @@ export interface ApiPickerStageProps {
     onToggle: (code: string) => void;
 }
 
-const HELPER = 'Pick the Adobe APIs this app needs — change them anytime in Manage APIs.';
+const HELPER = 'Select the Adobe APIs this app needs. You can change them in Manage APIs.';
 
 /**
  * The interactive API-access step for custom/import apps.

@@ -29,7 +29,7 @@ it("renames the SC's own library pack in place, handing the pack and the new nam
     renderPanel(MINE, onRename);
 
     fireEvent.click(screen.getByRole('button', { name: 'Rename Acme Demo' }));
-    const input = screen.getByRole('textbox', { name: 'New datapack name' });
+    const input = screen.getByRole('textbox', { name: 'New Datapack Name' });
     fireEvent.change(input, { target: { value: 'Acme Q4' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 

@@ -374,7 +374,7 @@ async function ensureStock(deps: FixDeps, plan: Plan, record: WarehouseStepRecor
     };
     try {
         const id = Number(await deps.commerce.send('POST', 'inventory/stocks', body));
-        if (!Number.isInteger(id)) throw new Error('Commerce did not answer the new stock id.');
+        if (!Number.isInteger(id)) throw new Error('Commerce did not return the new stock id.');
         record.createdStock = { id, name: plan.stock.create };
         changes.push(`Created ${plan.stock.create}, a stock the website sells from`);
         return id;

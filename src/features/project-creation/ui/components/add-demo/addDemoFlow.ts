@@ -52,49 +52,49 @@ export interface AddDemoDraft {
 }
 
 export const COPY = {
-    title: 'Add a demo package',
+    title: 'Add a Demo Package',
     /** The two ways in, as choice cards. */
-    wayQuestion: 'Where is the demo?',
-    wayLink: 'From a link',
-    wayLinkWhy: "A GitHub link or the demo's site address. Keeps its history and later changes.",
-    wayZip: 'From a zip file',
-    wayZipWhy: 'Becomes a repository in your GitHub account. No history or later changes.',
-    linkLabel: 'Link to the demo',
+    wayQuestion: 'Source',
+    wayLink: 'From a Link',
+    wayLinkWhy: 'GitHub URL or site address. Includes history and later changes.',
+    wayZip: 'From a Zip File',
+    wayZipWhy: 'Creates a repository in your GitHub account, with no history or later changes.',
+    linkLabel: 'Demo URL',
     linkPlaceholder: 'https://github.com/name/demo',
     invalidLink: "Enter a GitHub link, like https://github.com/name/demo, or the demo's site address",
     duplicateLink: "You've already added this demo.",
-    notADemo: "This doesn't look like a demo we can build on",
-    notADemoWhy: 'A demo is a storefront: an Edge Delivery site, or a Next.js site.',
-    readFailed: "We couldn't read this storefront",
-    signInFirst: 'Sign in to GitHub first',
+    notADemo: 'Unsupported Demo',
+    notADemoWhy: 'Supported demos: Edge Delivery and Next.js storefronts.',
+    readFailed: "Couldn't Read Storefront",
+    signInFirst: 'Sign In to GitHub First',
     signInHow: 'Sign in to GitHub in VS Code (Accounts, bottom left), then press Back and Continue.',
-    addFailed: "We couldn't add this demo",
-    shippedUnnamed: 'This is a demo we ship',
-    found: 'Package details',
+    addFailed: "Couldn't Add Demo",
+    shippedUnnamed: 'Demo Already Available',
+    found: 'Package Details',
     descriptionLabel: 'Description',
-    nameLabel: 'Demo name',
-    b2bSwitch: 'Uses company (B2B) features',
-    b2bWhy: "We couldn't tell whether this demo uses company accounts, quotes and purchase orders.",
+    nameLabel: 'Demo Name',
+    b2bSwitch: 'Uses Company (B2B) Features',
+    b2bWhy: "Couldn't detect B2B features.",
     b2bIfWrong: 'If it does and this stays off, company users will see an empty account menu.',
     /** The second way in (step 10): a storefront that arrived as a zip file. */
-    zipPublic: 'Make the repository public',
-    zipButton: 'Choose a zip file',
+    zipPublic: 'Make the Repository Public',
+    zipButton: 'Choose a Zip File',
     importing: 'Creating your repository from the zip',
-    zipFailed: "We couldn't add this zip",
-    zipNameTaken: 'A repository with this name already exists',
-    useExisting: 'Add it from that repository',
+    zipFailed: "Couldn't Add Zip File",
+    zipNameTaken: 'Repository Name Already Exists',
+    useExisting: 'Add from Repository',
     bundleSetup: 'This bundle also carries setup: Commerce, Adobe, GitHub and DA.live settings from whoever sent it.',
-    bundleStart: 'Start a project with it',
-    add: 'Add demo package',
-    adding: 'Adding the demo package',
+    bundleStart: 'Start a Project with It',
+    add: 'Add Demo Package',
+    adding: 'Adding the Demo Package',
     /** The dashboard's "Change source" door: the same dialog, a different commit. */
     change: {
-        title: 'Change the demo source',
+        title: 'Change the Demo Source',
         lead: "Point this project at another copy of its demo: a colleague's link or the demo's site address. Only where reset and updates read from changes; the project's code and pages stay as they are.",
-        commit: 'Change source',
-        changing: 'Changing the source',
-        changeFailed: "We couldn't change the source",
-        shipped: "A project can't be pointed at a demo we ship. Use the demo's own repository.",
+        commit: 'Change Source',
+        changing: 'Changing the Source',
+        changeFailed: "Couldn't Change Source",
+        shipped: "A project can't point to a demo that's already available. Use the demo's repository.",
         wrongKindTitle: 'This demo is a different kind of storefront',
     },
 } as const;
@@ -103,7 +103,7 @@ export const INITIAL_DRAFT: AddDemoDraft = { name: '', description: '', b2bOn: f
 
 /** Change mode's box, naming the demo package it updates (owner, 2026-09-15: short, and by name). */
 export function updateDemoPackageLabel(name: string): string {
-    return `Also update the ${name} demo package`;
+    return `Also Update the ${name} Demo Package`;
 }
 
 /** The one rule of change mode: an Edge Delivery project takes an Edge Delivery demo, a headless one a headless demo. */
@@ -146,7 +146,7 @@ export function foundRows(read: SharedDemoRead): SummaryRow[] {
         { label: 'Type', value: KIND_LABEL[read.kind], done: true },
         // One row only (EDS-13f decision 7): the rest of the origin is in Diagnostics.
         ...(read.boilerplate
-            ? [{ label: 'Built on', value: builtOnValue(read.boilerplate), done: true }]
+            ? [{ label: 'Built On', value: builtOnValue(read.boilerplate), done: true }]
             : []),
         {
             label: 'Pages',
@@ -156,10 +156,10 @@ export function foundRows(read: SharedDemoRead): SummaryRow[] {
         // One row per level, labelled like every other row (owner, 2026-09-14).
         { label: 'Website', value: codes?.websiteCode, done: Boolean(codes?.websiteCode) },
         { label: 'Store', value: codes?.storeCode, done: Boolean(codes?.storeCode) },
-        { label: 'Store view', value: codes?.storeViewCode, done: Boolean(codes?.storeViewCode) },
+        { label: 'Store View', value: codes?.storeViewCode, done: Boolean(codes?.storeViewCode) },
         ...(read.b2b === 'unknown'
             ? []
-            : [{ label: 'Company (B2B) features', value: read.b2b === 'on' ? 'On' : 'Off', done: true }]),
+            : [{ label: 'Company (B2B) Features', value: read.b2b === 'on' ? 'On' : 'Off', done: true }]),
     ];
 }
 

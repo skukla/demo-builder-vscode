@@ -64,7 +64,7 @@ const MODES: OperationMode[] = ['import', 'export', 'delete', 'validate'];
  * is NOT verified — the bug was seen in tests, never at runtime.
  */
 const MODE_OPTIONS: { key: string; label: string }[] = [
-    { key: ALL_MODES, label: 'All operations' },
+    { key: ALL_MODES, label: 'All Operations' },
     ...MODES.map((mode) => ({ key: mode, label: mode })),
 ];
 
@@ -166,7 +166,7 @@ export function DatapackActivityView(): React.JSX.Element {
     if (targetSettled && !commerceInstance) {
         return (
             <EmptyState
-                title="No project open"
+                title="No Project Open"
                 description="Open a project to see the sample-data runs on its Commerce instance."
             />
         );
@@ -251,7 +251,7 @@ function renderActivityBody({
     if (entries.length === 0) {
         return (
             <EmptyState
-                title="No activity yet"
+                title="No Activity Yet"
                 description="Neither Demo Builder nor the Data Installer has a run on this store matching this filter."
             />
         );

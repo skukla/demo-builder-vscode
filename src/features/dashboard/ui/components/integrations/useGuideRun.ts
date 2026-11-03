@@ -53,11 +53,11 @@ const nameOf = (item: SetupChecklistItem): string => item.label ?? item.title;
 /** The progress window's three titles for a run, for the one case handed to it. */
 function titlesOf(name: string, mode: GuideRunMode, steps: SetupChecklistItem[]): Pick<StartableOperation, 'title' | 'failureTitle' | 'successTitle'> {
     const label = steps.length === 1 ? nameOf(steps[0]) : 'the demo setup';
-    if (mode === 'undo') return { title: `Undoing ${label}`, failureTitle: `Couldn't undo ${label}`, successTitle: `${label} undone` };
+    if (mode === 'undo') return { title: `Undoing ${label}`, failureTitle: `Couldn't Undo ${label}`, successTitle: `${label} Undone` };
     if (steps.length > 1) {
-        return { title: `Applying the demo setup for ${name}`, failureTitle: `Couldn't apply the demo setup for ${name}`, successTitle: `Demo setup applied for ${name}` };
+        return { title: `Applying the Demo Setup for ${name}`, failureTitle: `Couldn't Apply the Demo Setup for ${name}`, successTitle: `Demo Setup Applied for ${name}` };
     }
-    return { title: `Applying ${label}`, failureTitle: `Couldn't apply ${label}`, successTitle: `${label} applied` };
+    return { title: `Applying ${label}`, failureTitle: `Couldn't Apply ${label}`, successTitle: `${label} Applied` };
 }
 
 /** The request a run sends: the steps to apply, or the one step to undo. */

@@ -69,7 +69,7 @@ describe('ErpDowntimeDialog', () => {
         await open();
 
         // The title is the outcome, with nothing to start.
-        expect(screen.getByText("Couldn't read Nordwind")).toBeInTheDocument();
+        expect(screen.getByText("Couldn't Read Nordwind")).toBeInTheDocument();
         expect(document.querySelector('.modal-status-icon')).not.toBeNull();
         expect(screen.getByText('Adobe sign-in required.')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /^start downtime$/i })).toBeNull();
@@ -103,7 +103,7 @@ describe('ErpDowntimeDialog — the window', () => {
         await open();
 
         expect(mockRequest).toHaveBeenCalledWith('getErpDemoControls', WHICH);
-        expect(screen.getByText(/Nordwind: simulate downtime/)).toBeInTheDocument();
+        expect(screen.getByText(/Nordwind: Simulate Downtime/)).toBeInTheDocument();
         expect(screen.getByLabelText('Minutes')).toHaveValue(30);
         fireEvent.click(button(/^start downtime$/i));
         await flush();
@@ -125,7 +125,7 @@ describe('ErpDowntimeDialog — the window', () => {
         fireEvent.click(button(/^start downtime$/i));
         await flush();
 
-        expect(screen.getByText("Couldn't start downtime on Nordwind")).toBeInTheDocument();
+        expect(screen.getByText("Couldn't Start Downtime on Nordwind")).toBeInTheDocument();
         expect(document.querySelector('.modal-status-icon')).not.toBeNull();
         expect(screen.getByText('The ERP is not deployed.')).not.toHaveClass('text-negative');
         expect(screen.getByLabelText('Minutes')).toHaveValue(30);
@@ -139,7 +139,7 @@ describe('ErpDowntimeDialog — the window', () => {
         fireEvent.click(button(/^end downtime$/i));
         await flush();
 
-        expect(screen.getByText("Couldn't end downtime on Nordwind")).toBeInTheDocument();
+        expect(screen.getByText("Couldn't End Downtime on Nordwind")).toBeInTheDocument();
         expect(screen.getByText(WINDOW.message)).toBeInTheDocument();
     });
 

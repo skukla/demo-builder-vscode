@@ -123,7 +123,7 @@ export function PromptGrid({
                 ))}
                 {searchQuery.trim() ? null : (
                     <AddCard
-                        name="New prompt"
+                        name="New Prompt"
                         onOpen={onNew}
                         cardClassName="ai-prompt-card"
                         testId="ai-new-prompt-tile"

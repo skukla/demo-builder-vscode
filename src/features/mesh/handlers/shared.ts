@@ -98,7 +98,7 @@ export async function ensureAuthenticated(
     // Webview surface: a person is looking at this, so offer the way there.
     const selection = await askDuringOperation(
         {
-            title: 'Sign in to Adobe',
+            title: 'Sign In to Adobe',
             message: `Sign in to Adobe from the project dashboard to ${operationName}.`,
         },
         'Open Dashboard',

@@ -92,7 +92,7 @@ export function DaLiveServiceCard({
     const namespaceOptions = useMemo(() => {
         const options: { key: string; label: string }[] = [];
         if (githubUser) {
-            options.push({ key: githubUser, label: `${githubUser} (Personal account)` });
+            options.push({ key: githubUser, label: `${githubUser} (Personal Account)` });
         }
         const sortedOrgs = [...availableOrgs].sort((a, b) => a.localeCompare(b));
         for (const org of sortedOrgs) {
@@ -138,7 +138,7 @@ export function DaLiveServiceCard({
     const inputForm = showInput ? (
         <div className="dalive-input-form">
             <Picker
-                label="GitHub namespace for this demo"
+                label="GitHub Namespace for This Demo"
                 selectedKey={selectedNamespace}
                 onSelectionChange={(key) => setSelectedNamespace(String(key))}
                 items={namespaceOptions}
@@ -211,7 +211,7 @@ export function DaLiveServiceCard({
                 onChange={onReset}
                 error={error}
                 onAction={onSetup}
-                actionLabel={setupComplete ? 'Connect DA.live' : 'Set up DA.live'}
+                actionLabel={setupComplete ? 'Connect DA.live' : 'Set Up DA.live'}
             />
         </ServiceCardShell>
     );

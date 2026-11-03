@@ -52,8 +52,8 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             name: projectName,
             message: 'resetProject',
             title: `Resetting ${projectName}`,
-            failureTitle: `Couldn't reset ${projectName}`,
-            successTitle: `${projectName} reset`,
+            failureTitle: `Couldn't Reset ${projectName}`,
+            successTitle: `${projectName} Reset`,
         });
     }, [start, projectName]);
 
@@ -63,8 +63,8 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             name: projectName,
             message: 'deleteProject',
             title: `Deleting ${projectName}`,
-            failureTitle: `Couldn't delete ${projectName}`,
-            successTitle: `${projectName} deleted`,
+            failureTitle: `Couldn't Delete ${projectName}`,
+            successTitle: `${projectName} Deleted`,
         });
     }, [start, projectName]);
 
@@ -73,9 +73,9 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             id: SYNC_OPERATION_ID,
             name: projectName,
             message: 'syncStorefront',
-            title: 'Syncing the storefront',
-            failureTitle: "Couldn't sync the storefront",
-            successTitle: 'Storefront synced',
+            title: 'Syncing the Storefront',
+            failureTitle: "Couldn't Sync the Storefront",
+            successTitle: 'Storefront Synced',
         });
     }, [start, projectName]);
 
@@ -84,9 +84,9 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             id: BLOCK_LIBRARY_OPERATION_ID,
             name: projectName,
             message: 'refreshBlockLibrary',
-            title: 'Refreshing the block library',
-            failureTitle: "Couldn't refresh the block library",
-            successTitle: 'Block library refreshed',
+            title: 'Refreshing the Block Library',
+            failureTitle: "Couldn't Refresh the Block Library",
+            successTitle: 'Block Library Refreshed',
         });
     }, [start, projectName]);
 
@@ -96,8 +96,8 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             name: projectName,
             message: 'republishContent',
             title: `Republishing ${projectName}`,
-            failureTitle: `Couldn't republish ${projectName}`,
-            successTitle: `${projectName} republished`,
+            failureTitle: `Couldn't Republish ${projectName}`,
+            successTitle: `${projectName} Republished`,
         });
     }, [start, projectName]);
 

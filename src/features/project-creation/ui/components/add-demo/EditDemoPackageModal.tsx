@@ -31,11 +31,11 @@ export interface EditDemoPackageModalProps {
 }
 
 const EDIT_COPY = {
-    title: 'Edit demo package',
+    title: 'Edit Demo Package',
     save: 'Save',
-    failed: "Couldn't save the changes",
+    failed: "Couldn't Save the Changes",
     fallback: 'Try again.',
-    repository: 'GitHub repository',
+    repository: 'GitHub Repository',
     repositoryWhy: 'To use a different repository, remove this demo package and add it again.',
 } as const;
 

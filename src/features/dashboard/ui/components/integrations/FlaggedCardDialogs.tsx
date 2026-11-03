@@ -65,7 +65,7 @@ function ReinstallDialog({ dialog, onRun }: { dialog: FlaggedCardDialog; onRun: 
                     from Commerce and installs the version already deployed.
                 </>
             ) : (
-                'For when Commerce has lost what the app set up and the app still says it is installed.'
+                "Use when Commerce lost the app's setup but the app still shows as installed."
             )}
             {!refused && (
                 <>
@@ -87,14 +87,14 @@ function RemoveAnywayDialog({ dialog, onRun }: { dialog: FlaggedCardDialog; onRu
     return (
         <ConfirmActionDialog
             isOpen={dialog.pending !== null}
-            title={`Remove ${name} anyway?`}
-            actionLabel="Remove anyway"
+            title={`Remove ${name} Anyway?`}
+            actionLabel="Remove Anyway"
             actionVariant="negative"
             onConfirm={confirm}
             onClose={dialog.close}
         >
             {dialog.pending?.removalStopped}
-            <>Removing <strong>{name}</strong> anyway undeploys it now and leaves that behind.</>
+            <>Removing anyway undeploys <strong>{name}</strong> and leaves the subscriptions in Commerce.</>
         </ConfirmActionDialog>
     );
 }

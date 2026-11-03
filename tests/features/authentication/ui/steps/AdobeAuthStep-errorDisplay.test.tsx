@@ -55,7 +55,7 @@ describe('AdobeAuthStep - what the error state hands StatusDisplay', () => {
         expect(props.title).toBe('Connection Issue');
         // No icon of its own: StatusDisplay draws the one every surface draws for this variant.
         expect(props.icon).toBeUndefined();
-        expect(props.actions?.map((a) => a.label)).toEqual(['Try Again', 'Sign In Again']);
+        expect(props.actions?.map((a) => a.label)).toEqual(['Retry', 'Sign In Again']);
     });
 
     it('is an orange WARNING when the account merely lacks App Builder', () => {
@@ -63,6 +63,6 @@ describe('AdobeAuthStep - what the error state hands StatusDisplay', () => {
         expect(props.variant).toBe('warning');
         expect(props.title).toBe('Insufficient Privileges');
         expect(props.icon).toBeUndefined();
-        expect(props.actions?.map((a) => a.label)).toEqual(['Sign in with a different account']);
+        expect(props.actions?.map((a) => a.label)).toEqual(['Sign In with a Different Account']);
     });
 });

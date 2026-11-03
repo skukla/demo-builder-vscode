@@ -47,25 +47,25 @@ describe('the Edge Delivery card', () => {
     it('is absent entirely when the wizard has no EDS config', () => {
         renderReview({});
 
-        expect(screen.queryByText('EDGE DELIVERY SERVICES')).not.toBeInTheDocument();
+        expect(screen.queryByText('Edge Delivery Services')).not.toBeInTheDocument();
     });
 
     it('is absent when the EDS config carries no repo and no site', () => {
         renderReview(withEds({ daLiveOrg: 'acme-da' }));
 
-        expect(screen.queryByText('EDGE DELIVERY SERVICES')).not.toBeInTheDocument();
+        expect(screen.queryByText('Edge Delivery Services')).not.toBeInTheDocument();
     });
 
     it('appears for a config carrying only a repo name', () => {
         renderReview(withEds({ repoName: 'acme-site' }));
 
-        expect(screen.getByText('EDGE DELIVERY SERVICES')).toBeInTheDocument();
+        expect(screen.getByText('Edge Delivery Services')).toBeInTheDocument();
     });
 
     it('appears for a config carrying only a selected site', () => {
         renderReview(withEds({ selectedSite: { id: 's', name: 'acme-site-da' } }));
 
-        expect(screen.getByText('EDGE DELIVERY SERVICES')).toBeInTheDocument();
+        expect(screen.getByText('Edge Delivery Services')).toBeInTheDocument();
     });
 
     it('appears for a config carrying only a selected repo', () => {
@@ -80,17 +80,17 @@ describe('the Edge Delivery card', () => {
             })
         );
 
-        expect(screen.getByText('EDGE DELIVERY SERVICES')).toBeInTheDocument();
+        expect(screen.getByText('Edge Delivery Services')).toBeInTheDocument();
     });
 
     it('appears for a config carrying only a DA.live site name', () => {
         renderReview(withEds({ daLiveSite: 'acme-site-da' }));
 
-        expect(screen.getByText('EDGE DELIVERY SERVICES')).toBeInTheDocument();
+        expect(screen.getByText('Edge Delivery Services')).toBeInTheDocument();
     });
 });
 
-describe('the GitHub repository row', () => {
+describe('the GitHub Repository row', () => {
     it('takes the owner from the selected repo full name', () => {
         renderReview(
             withEds({
@@ -260,7 +260,7 @@ describe('the Adobe I/O card', () => {
     it('is absent when none of the three is known', () => {
         renderReview({});
 
-        expect(screen.queryByText('ADOBE I/O')).not.toBeInTheDocument();
+        expect(screen.queryByText('Adobe I/O')).not.toBeInTheDocument();
     });
 
     it('shows only the organization when that is all that is known', () => {
@@ -351,7 +351,7 @@ describe('the project configuration card', () => {
     it('is absent when neither a package nor a stack was chosen', () => {
         renderWithCatalogs({});
 
-        expect(screen.queryByText('PROJECT CONFIGURATION')).not.toBeInTheDocument();
+        expect(screen.queryByText('Project Configuration')).not.toBeInTheDocument();
     });
 
     it('shows the package name for the selected package id', () => {
@@ -372,6 +372,6 @@ describe('the project configuration card', () => {
     it('is absent when the selected ids match nothing in the catalogs', () => {
         renderWithCatalogs({ selectedPackage: 'unknown', selectedStack: 'unknown' });
 
-        expect(screen.queryByText('PROJECT CONFIGURATION')).not.toBeInTheDocument();
+        expect(screen.queryByText('Project Configuration')).not.toBeInTheDocument();
     });
 });

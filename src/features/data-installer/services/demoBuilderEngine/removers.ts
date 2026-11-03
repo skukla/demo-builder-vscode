@@ -253,5 +253,5 @@ export function containersLine(kept: readonly KeptContainer[]): string | undefin
         return `Kept ${namedAs(one)}: ${reasonOf(one)}.`;
     }
     const names = kept.map(namedAs);
-    return `Kept ${kept.length} things that hold what you added: ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}.`;
+    return `Kept ${kept.length} items that hold what you added: ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}.`;
 }

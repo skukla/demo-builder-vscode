@@ -289,7 +289,7 @@ export function IntegrationsGrid({
                 ))}
                 {onAdd ? (
                     <AddCard
-                        name="Add an integration"
+                        name="Add an Integration"
                         onOpen={onAdd}
                         cardClassName={viewMode === 'rows' ? 'integration-row' : 'integration-card'}
                     />

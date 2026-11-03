@@ -528,7 +528,7 @@ function validateStackLookup(
 
 /**
  * Whether the storefront's existing pages are replaced with the package's: when the SC
- * resets to the template ("replaces all content", the tick's own words) or changes the
+ * resets to the template ("Replaces All Content", the tick's own words) or changes the
  * package in an Edit. The separate tick for the site's content went with the DA.live site
  * picker (b21696992), and nothing set it since, so an Edit onto another package kept the
  * old package's pages under the new package's code (owner, 2026-10-19: Bodea over CitiSignal).

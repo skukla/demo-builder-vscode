@@ -165,7 +165,7 @@ function Guide({
     const failedIds = new Set(actions.failures.map((failure) => failure.stepId));
     return (
         <Modal
-            title={`Demo setup: ${model.name}`}
+            title={`Demo Setup: ${model.name}`}
             size="L"
             wide
             onClose={onClose}
@@ -195,7 +195,7 @@ function Guide({
                                 isDisabled={busyNow && !runWaitsOnSignIn}
                                 isPending={runWaitsOnSignIn}
                             >
-                                Check all steps
+                                Check All Steps
                             </Button>
                         )}
                         {applyAll && (

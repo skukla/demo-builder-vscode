@@ -33,7 +33,7 @@ import { PROJECT_FILE_SUFFIX } from '@/types/projectFile';
 import type { ExportDemoBundleRequest, ExportDemoBundleResult } from '@/types/webviewRequests';
 
 export const NO_STOREFRONT_TO_BUNDLE = 'Only an Edge Delivery project has a storefront to put in the file.';
-export const NOTHING_TICKED = 'Tick at least one part to put in the file.';
+export const NOTHING_TICKED = 'Select at least one part to put in the file.';
 
 function bundleBaseName(project: Project): string {
     return getSuggestedFilename(project.name).slice(0, -PROJECT_FILE_SUFFIX.length) || 'demo';
@@ -58,7 +58,7 @@ async function askWhere(project: Project): Promise<string | undefined> {
     const picked = await vscode.window.showSaveDialog({
         defaultUri: vscode.Uri.file(defaultBundleName(bundleBaseName(project))),
         filters: { 'Demo bundle': ['zip'] },
-        title: 'Save the demo bundle',
+        title: 'Save the Demo Bundle',
     });
     return picked?.fsPath;
 }

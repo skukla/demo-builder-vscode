@@ -220,7 +220,7 @@ describe('signInAdobe', () => {
 
         expect((vscode.window.withProgress as jest.Mock).mock.calls[0][0]).toEqual({
             location: vscode.ProgressLocation.Notification,
-            title: 'Signing in to Adobe',
+            title: 'Signing In to Adobe',
         });
     });
 
@@ -239,7 +239,7 @@ describe('signInAdobe', () => {
             modal: true,
             detail: expect.stringMatching(/lasts about .+ more\. Signing in again can also sign you out of DA\.live\./),
         });
-        expect(actions).toEqual(['Sign in again']);
+        expect(actions).toEqual(['Sign In Again']);
         expect(mockLogin).not.toHaveBeenCalled();
     });
 
@@ -248,7 +248,7 @@ describe('signInAdobe', () => {
     it('omits the expiry when the status does not report one', async () => {
         const h = harness();
         mockGetTokenStatus.mockResolvedValue({ isAuthenticated: true });
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign in again');
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign In Again');
 
         await h.handlerFor('demoBuilder.signInAdobe')();
 
@@ -519,14 +519,14 @@ describe('signInGitHub', () => {
     it('offers a fresh sign-in when one is already valid, and forces it', async () => {
         const h = harness();
         mockValidateGitHubToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign in again');
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign In Again');
 
         await h.handlerFor('demoBuilder.signInGitHub')();
 
         expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0]).toEqual([
             'Already signed in to GitHub',
             { modal: true, detail: 'Signed in as steve.' },
-            'Sign in again',
+            'Sign In Again',
         ]);
         expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
             force: true,
@@ -536,14 +536,14 @@ describe('signInGitHub', () => {
     it('makes the same offer without a name when the valid token carries no user', async () => {
         const h = harness();
         mockValidateGitHubToken.mockResolvedValue({ valid: true });
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign in again');
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign In Again');
 
         await h.handlerFor('demoBuilder.signInGitHub')();
 
         expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0]).toEqual([
             'Already signed in to GitHub',
             { modal: true, detail: undefined },
-            'Sign in again',
+            'Sign In Again',
         ]);
         expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
             force: true,
@@ -605,7 +605,7 @@ describe('signInGitHub', () => {
 
         expect((vscode.window.withProgress as jest.Mock).mock.calls[0][0]).toEqual({
             location: vscode.ProgressLocation.Notification,
-            title: 'Signing in to GitHub',
+            title: 'Signing In to GitHub',
         });
     });
 });

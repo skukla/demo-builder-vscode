@@ -258,7 +258,7 @@ describe('DestinationStage', () => {
             const { onOutcome } = renderStage('project');
             expect(screen.getByText('boom')).toBeInTheDocument();
             expect(onOutcome).toHaveBeenLastCalledWith(expect.objectContaining({
-                title: 'Project setup failed',
+                title: 'Project Setup Failed',
                 status: 'error',
                 lines: ['boom'],
                 actions: [{ label: 'Retry', onPress: expect.any(Function) }],

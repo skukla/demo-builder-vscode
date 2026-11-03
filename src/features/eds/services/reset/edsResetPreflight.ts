@@ -187,7 +187,7 @@ export async function checkGitHubAppInstallation(
 
     const appWarning = await askDuringOperation(
         {
-            title: 'Install the AEM Code Sync app',
+            title: 'Install the AEM Code Sync App',
             message:
                 'The AEM Code Sync GitHub App is not installed on this repository. ' +
                 'Without it, code changes will not sync to the CDN and the site may not work correctly.',
@@ -202,7 +202,7 @@ export async function checkGitHubAppInstallation(
 
         const afterInstall = await askDuringOperation(
             {
-                title: 'Finish installing the app',
+                title: 'Finish Installing the App',
                 message: 'Once the app is installed, choose Continue to go on with the reset.',
             },
             'Continue',

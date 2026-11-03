@@ -53,9 +53,9 @@ export function ErpDowntimeDialog({ target, onClose }: {
 
 /** The title: the question it is open on, or what did not go through. */
 function titleOf(name: string, state: ErpDemoState | null, error: string | null): string {
-    if (!error) return `${name}: simulate downtime`;
-    if (!state) return `Couldn't read ${name}`;
-    return state.maintenance ? `Couldn't end downtime on ${name}` : `Couldn't start downtime on ${name}`;
+    if (!error) return `${name}: Simulate Downtime`;
+    if (!state) return `Couldn't Read ${name}`;
+    return state.maintenance ? `Couldn't End Downtime on ${name}` : `Couldn't Start Downtime on ${name}`;
 }
 
 /** How long, and start; or, while the ERP is down, end it. Mounted per opening. */
@@ -69,7 +69,7 @@ function DowntimeModal({ target, onClose }: {
 
     const action: ActionButton = running
         ? {
-            label: 'End downtime',
+            label: 'End Downtime',
             variant: 'accent',
             onPress: () => {
                 void run('endErpDowntime', {});
@@ -77,7 +77,7 @@ function DowntimeModal({ target, onClose }: {
             isDisabled: busy,
         }
         : {
-            label: 'Start downtime',
+            label: 'Start Downtime',
             variant: 'accent',
             onPress: () => {
                 void run('startErpDowntime', { minutes });

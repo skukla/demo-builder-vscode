@@ -125,7 +125,7 @@ function DestinationLine({
     const workspace = state.adobeWorkspace;
     return (
         <div className="int-destination">
-            <span className="int-destination-label">Deploys to</span>
+            <span className="int-destination-label">Deploys To</span>
             {!needsSetup ? (
                 <DestinationContext
                     project={project?.title ?? project?.name}
@@ -136,7 +136,7 @@ function DestinationLine({
                 <>
                     <span className="int-destination-unset">Not set</span>
                     <ActionButton isQuiet onPress={onOpenDestination}>
-                        Set up
+                        Set Up
                     </ActionButton>
                 </>
             )}

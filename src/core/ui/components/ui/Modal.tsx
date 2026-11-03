@@ -78,7 +78,7 @@ export interface ModalProps {
      */
     waiting?: ModalWait | false;
     /**
-     * The body is a wait of its own that keeps its buttons (a running job with Stop watching), so it
+     * The body is a wait of its own that keeps its buttons (a running job with Close), so it
      * keeps the box it found, as `waiting` does.
      */
     holdSize?: boolean;

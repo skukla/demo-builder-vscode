@@ -48,17 +48,17 @@ function describeType(row: ExportTypeOutcome): string {
  */
 export function exportResult(outcome: ExportOutcome | null, error?: string): ResultContent {
     if (error) {
-        return { variant: 'error', title: 'The export could not run', message: error };
+        return { variant: 'error', title: 'Export Failed', message: error };
     }
     const perType = outcome?.perType ?? [];
     const details = perType.map(describeType);
     if (!outcome?.success) {
-        return { variant: 'error', title: 'The export did not complete', details };
+        return { variant: 'error', title: 'Export Incomplete', details };
     }
     const captured = perType.filter((row) => row.success);
     return {
         variant: captured.length === perType.length ? 'success' : 'warning',
-        title: `Exported ${captured.length} of ${perType.length} data types`,
+        title: `Exported ${captured.length} of ${perType.length} Data Types`,
         details,
     };
 }

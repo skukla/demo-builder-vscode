@@ -117,7 +117,7 @@ describe('applyErpOwnership after products moved', () => {
         );
         expect(result).toMatchObject({ status: 'applied' });
         if (result.status !== 'applied') return;
-        expect(result.notes).not.toContain('Kukla ERP owns no products yet: use Assign products on its card to give it some.');
+        expect(result.notes).not.toContain('Kukla ERP owns no products yet: use Assign Products on its card to give it some.');
     });
 
     it('CONTROL: with nothing moved, every ERP is filled and an empty ERP is told what next', async () => {
@@ -125,7 +125,7 @@ describe('applyErpOwnership after products moved', () => {
 
         expect(mockFillEvery).toHaveBeenCalledWith(expect.anything(), 'erp-integration', expect.not.objectContaining({ fillOnly: expect.anything() }));
         if (result.status !== 'applied') throw new Error('not applied');
-        expect(result.notes).toContain('Kukla ERP owns no products yet: use Assign products on its card to give it some.');
+        expect(result.notes).toContain('Kukla ERP owns no products yet: use Assign Products on its card to give it some.');
     });
 });
 
@@ -145,7 +145,7 @@ describe('applyErpOwnership', () => {
                 { erp: 'demo-erp-2', listId: 'kukla', name: 'Kukla ERP', owns: OPTIONS.erps[1].owns, ownsNow: 0, discontinued: 0, restored: 0 },
             ],
             notes: [
-                'Kukla ERP owns no products yet: use Assign products on its card to give it some.',
+                'Kukla ERP owns no products yet: use Assign Products on its card to give it some.',
                 '1 product belongs to no ERP.',
             ],
         });

@@ -144,25 +144,25 @@ function renderViewToggle(
                 <ActionButton
                     isQuiet
                     onPress={() => onViewModeChange('cards')}
-                    aria-label="Card view"
+                    aria-label="Card View"
                     aria-pressed={viewMode === 'cards'}
                     UNSAFE_className="search-header-toggle"
                 >
                     <ViewGrid />
                 </ActionButton>
-                <Tooltip>Card view</Tooltip>
+                <Tooltip>Card View</Tooltip>
             </TooltipTrigger>
             <TooltipTrigger delay={300}>
                 <ActionButton
                     isQuiet
                     onPress={() => onViewModeChange('rows')}
-                    aria-label="List view"
+                    aria-label="List View"
                     aria-pressed={viewMode === 'rows'}
                     UNSAFE_className="search-header-toggle"
                 >
                     <ViewList />
                 </ActionButton>
-                <Tooltip>List view</Tooltip>
+                <Tooltip>List View</Tooltip>
             </TooltipTrigger>
         </Flex>
     );

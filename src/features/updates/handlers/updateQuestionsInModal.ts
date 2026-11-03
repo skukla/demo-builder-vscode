@@ -20,13 +20,13 @@ import { projectsOf, selectionsWhere } from '@/features/updates/services/updateS
 import type { Project } from '@/types/base';
 
 const FIX_WITH_AI = 'Fix with AI';
-const LEAVE_IT = 'Leave it as it is';
-const USE_THE_UPDATE = 'Use the update';
-const KEEP_FOR_LATER = 'Keep it for later';
-const DROP_THE_FIX = 'Drop the fix';
-const REPLACE_BLOCKS = 'Replace blocks';
-const KEEP_BLOCKS = 'Keep my blocks';
-const STOP_AND_UPDATE = 'Stop and update';
+const LEAVE_IT = 'Leave It As It Is';
+const USE_THE_UPDATE = 'Use Update';
+const KEEP_FOR_LATER = 'Keep It for Later';
+const DROP_THE_FIX = 'Drop the Fix';
+const REPLACE_BLOCKS = 'Replace Blocks';
+const KEEP_BLOCKS = 'Keep My Blocks';
+const STOP_AND_UPDATE = 'Stop and Update';
 const SKIP = 'Skip';
 
 /** The two questions the shared apply asks, asked in the modal. */
@@ -67,7 +67,7 @@ export const questionsInModal: UpdateQuestions = {
         // it says what each answer does (owner, 2026-10-21).
         const answer = await askDuringOperation(
             {
-                title: 'Replace the blocks?',
+                title: 'Replace the Blocks?',
                 message:
                     `"${REPLACE_BLOCKS}" puts in the new versions, and any edits you made to these blocks are lost. ` +
                     `"${KEEP_BLOCKS}" leaves them as they are.`,
@@ -105,7 +105,7 @@ export async function stopRunningDemos(
     for (const project of projectsOf(selections).filter((p) => p.status === 'running')) {
         const name = getProjectDisplayName(project);
         const answer = await askDuringOperation(
-            { title: 'Stop the demo to update it?', message: `${name} is running. Stop it to update it?` },
+            { title: 'Stop the Demo to Update It?', message: `${name} is running. Stop it to update it?` },
             STOP_AND_UPDATE,
             SKIP,
         );

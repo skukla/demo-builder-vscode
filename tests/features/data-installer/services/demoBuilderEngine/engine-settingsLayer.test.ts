@@ -263,7 +263,7 @@ describe('installing a layered pack again', () => {
         const status = await finished(engine, again.activationId);
 
         expect(sent.filter((call) => call.path === 'system/config')).toStrictEqual([]);
-        expect(status.note).toContain('Kept 1 thing you had changed in the Admin.');
+        expect(status.note).toContain('Kept 1 item changed in the Admin.');
     });
 
     it('puts a setting back once the layer no longer exists', async () => {

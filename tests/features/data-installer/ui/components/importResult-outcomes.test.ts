@@ -39,10 +39,10 @@ describe('a finished job that succeeded', () => {
         const result = outcomeOf({
             outcome: 'success',
             perType: { products: 'success' as DataTypeStatus },
-            note: 'Kept 2 things you had changed in the Admin.',
+            note: 'Kept 2 items changed in the Admin.',
         });
 
-        expect(result).toEqual({ variant: 'success', title: `Imported ${PACK_NAME}`, message: 'Kept 2 things you had changed in the Admin.' });
+        expect(result).toEqual({ variant: 'success', title: `Imported ${PACK_NAME}`, message: 'Kept 2 items changed in the Admin.' });
     });
 
     it('calls a reset a REMOVAL', () => {
@@ -67,8 +67,8 @@ describe('a finished job that succeeded', () => {
 
         expect(outcomeOf({ outcome: 'success', operation: 'reset', keptRoot, note: 'Kept the category ZZ Root DB12: ...' })).toEqual({
             variant: 'warning',
-            title: `One step left to remove ${PACK_NAME}`,
-            message: "Justrite Test Store still uses the pack's root category, ZZ Root DB12, so it stayed.",
+            title: `Action Required to Remove ${PACK_NAME}`,
+            message: "Justrite Test Store still uses the datapack's root category, ZZ Root DB12, so it stayed.",
             keptRoot,
         });
     });
@@ -85,32 +85,32 @@ describe('a finished job that did not fully succeed', () => {
 
         expect(result).toEqual({
             variant: 'warning',
-            title: `Imported ${PACK_NAME}, except some data types`,
-            details: ['Products: failed', 'Running it again skips what is already there.'],
+            title: `Imported ${PACK_NAME}, Except Some Data Types`,
+            details: ['Products: failed', 'Running it again skips existing items.'],
         });
     });
 
     it('still says what it kept when some types did not finish', () => {
-        const result = outcomeOf({ outcome: 'partial', perType: troubled, note: 'Kept 1 thing you had changed in the Admin.' });
+        const result = outcomeOf({ outcome: 'partial', perType: troubled, note: 'Kept 1 item changed in the Admin.' });
 
         expect(result?.details).toEqual([
-            'Kept 1 thing you had changed in the Admin.',
+            'Kept 1 item changed in the Admin.',
             'Products: failed',
-            'Running it again skips what is already there.',
+            'Running it again skips existing items.',
         ]);
     });
 
     it('carries the record’s reason through as the message', () => {
         const result = outcomeOf({ outcome: 'error', reason: 'Commerce rejected the token' });
 
-        expect(result).toMatchObject({ variant: 'error', title: `Couldn't import ${PACK_NAME}`, message: 'Commerce rejected the token' });
+        expect(result).toMatchObject({ variant: 'error', title: `Couldn't Import ${PACK_NAME}`, message: 'Commerce rejected the token' });
     });
 
     it.each([
-        ['never-registered', 'error', 'The import never started', undefined],
-        ['stopped', 'info', 'Stopped watching', 'The import carries on without you.'],
-        ['still-running', 'info', 'Still running', 'The import carries on without you. Its result shows on the Activity tab.'],
-        ['unwatchable', 'warning', 'Lost track of the import', 'It is still running. Its result shows on the Activity tab.'],
+        ['never-registered', 'error', 'Import Did Not Start', undefined],
+        ['stopped', 'info', 'Running in Background', 'The import continues in the background.'],
+        ['still-running', 'info', 'Still Running', 'The import continues in the background. See the Activity tab for the result.'],
+        ['unwatchable', 'warning', 'Import Status Unknown', 'It is still running. See the Activity tab for the result.'],
     ])('%s reads as a %s with its own wording', (outcome, variant, title, message) => {
         const result = outcomeOf({ outcome: outcome as ImportJobRecord['outcome'] });
 
@@ -118,7 +118,7 @@ describe('a finished job that did not fully succeed', () => {
     });
 
     it('words a removal as a removal inside a sentence', () => {
-        expect(outcomeOf({ outcome: 'never-registered', operation: 'reset' })?.title).toBe('The removal never started');
-        expect(outcomeOf({ outcome: 'error', operation: 'reset' })?.title).toBe(`Couldn't remove ${PACK_NAME}`);
+        expect(outcomeOf({ outcome: 'never-registered', operation: 'reset' })?.title).toBe('Removal Did Not Start');
+        expect(outcomeOf({ outcome: 'error', operation: 'reset' })?.title).toBe(`Couldn't Remove ${PACK_NAME}`);
     });
 });

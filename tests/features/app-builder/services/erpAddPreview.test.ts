@@ -78,7 +78,7 @@ describe('previewErpAdd', () => {
             // Both claim A-1 and A-2: each counts them, and the overlap line says so.
             { who: 'Kukla ERP', count: '2 products', says: 'Products whose erp_owner is accuform' },
             { who: 'Accuform ERP', count: '2 products', says: 'Products assigned to it' },
-            { who: 'Nobody', count: '3 products', says: 'Products no ERP owns' },
+            { who: 'None', count: '3 products', says: 'Products no ERP owns' },
             { who: 'Two ERPs', count: '2 products', says: 'Their orders are refused until a rule changes' },
         ]);
         expect(preview.erps.map((erp) => erp.describe)).toStrictEqual([
@@ -99,7 +99,7 @@ describe('previewErpAdd', () => {
             { who: 'Justrite ERP', count: '3 products', says: 'All products not assigned to another ERP' },
             { who: 'Accuform ERP', count: '2 products', says: 'Products assigned to it' },
             { who: 'Acme ERP', count: '0 products', says: 'None yet.', assignable: true },
-            { who: 'Fresh ERP', count: '0 products', says: 'None yet: assign products to it after adding' },
+            { who: 'Fresh ERP', count: '0 products', says: 'None. Assign products after adding.' },
         ]);
     });
 
@@ -138,7 +138,7 @@ describe('previewErpAdd', () => {
         const rule = { mode: 'attribute' as const, attribute: 'erp_owner=evo' };
         const preview = previewErpAdd(PRODUCTS, { websites: WEBSITES, erps: [JUSTRITE_ALL] }, { erp: 'evo', name: 'Evo ERP', owns: rule });
         expect(preview.erps[1].count).toBe(0);
-        expect(ownsNothingNext(preview, rule)).toBe('Evo ERP will own no products yet. After adding, use Assign products on its card.');
+        expect(ownsNothingNext(preview, rule)).toBe('Evo ERP will own no products yet. After adding, use Assign Products on its card.');
         const byWebsite = { mode: 'websites' as const, websites: ['nowhere'] };
         const empty = previewErpAdd(PRODUCTS, { websites: WEBSITES, erps: [JUSTRITE_ALL] }, { erp: 'evo', name: 'Evo ERP', owns: byWebsite });
         expect(ownsNothingNext(empty, byWebsite)).toBe('Evo ERP will own no products yet. No product in the store matches its rule.');

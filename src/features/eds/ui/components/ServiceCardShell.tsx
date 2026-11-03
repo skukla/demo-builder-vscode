@@ -137,7 +137,7 @@ export function ServiceCardStatus({
                     <Text UNSAFE_className="status-text-error">{error}</Text>
                 </Flex>
                 <button className="service-action-button" onClick={onAction}>
-                    Try Again
+                    Retry
                 </button>
             </Flex>
         );

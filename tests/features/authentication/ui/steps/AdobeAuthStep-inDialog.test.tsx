@@ -37,7 +37,7 @@ describe('AdobeAuthStep hosted in a dialog', () => {
         const { outcome } = renderInDialog({ isAuthenticated: false, isChecking: false });
 
         expect(outcome()).toMatchObject({
-            title: 'Sign in to Adobe',
+            title: 'Sign In to Adobe',
             status: 'warning',
             lines: ['Connect your Adobe account to create and deploy App Builder applications.'],
             actions: [{ label: 'Sign In with Adobe' }],
@@ -49,7 +49,7 @@ describe('AdobeAuthStep hosted in a dialog', () => {
         const { outcome } = renderInDialog({ isAuthenticated: false, isChecking: false, error: 'network' });
 
         expect(outcome().status).toBe('error');
-        expect(outcome().actions.map((action: { label: string }) => action.label)).toEqual(['Try Again', 'Sign In Again']);
+        expect(outcome().actions.map((action: { label: string }) => action.label)).toEqual(['Retry', 'Sign In Again']);
     });
 
     it('CONTROL: a whole wizard screen keeps its large view, with the button in the body', () => {

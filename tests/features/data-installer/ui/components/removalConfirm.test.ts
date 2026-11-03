@@ -18,7 +18,7 @@ import type { DataInstallerFailure } from '@/features/data-installer/ui/hooks/us
 const CHANGED: DatapackRemovalChanges = {
     count: 3,
     kinds: [],
-    sentence: 'You changed 3 things since it was installed: the category Critical Power, and 2 products.',
+    sentence: '3 items changed since install: the category Critical Power, and 2 products.',
     ownPackName: 'Acme Demo',
     alwaysSave: false,
 };
@@ -95,14 +95,14 @@ describe('removalAnswer', () => {
         expect(removalAnswer({ kind: 'plain' }, FRESH_CHOICE)).toEqual({ changes: 'drop' });
     });
 
-    it('drops after a failed read: Remove anyway is that choice', () => {
+    it('drops after a failed read: Remove Anyway is that choice', () => {
         expect(removalAnswer({ kind: 'read-failed', reason: 'x' }, FRESH_CHOICE)).toEqual({ changes: 'drop' });
     });
 });
 
 describe('removeLabel', () => {
-    it('says Remove anyway only after a failed read', () => {
-        expect(removeLabel({ kind: 'read-failed', reason: 'x' })).toBe('Remove anyway');
+    it('says Remove Anyway only after a failed read', () => {
+        expect(removeLabel({ kind: 'read-failed', reason: 'x' })).toBe('Remove Anyway');
         expect(removeLabel({ kind: 'plain' })).toBe('Remove');
         expect(removeLabel({ kind: 'changes', sentence: 's', packName: 'p' })).toBe('Remove');
     });
@@ -117,7 +117,7 @@ describe('recordedRemovalLines', () => {
 
     it('says the ticks only choose what an import installs when they name less than what goes', () => {
         expect(recordedRemovalLines('Bodea', ['categories', 'products'], ['categories'], inWords)).toEqual(
-            ['Permanently deletes what Bodea installed: categories and products.', 'The ticked boxes only choose what Import installs.'],
+            ['Permanently deletes what Bodea installed: categories and products.', 'Selected data types apply to Import only.'],
         );
     });
 

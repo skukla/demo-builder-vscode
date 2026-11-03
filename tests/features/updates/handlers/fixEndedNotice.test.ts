@@ -45,12 +45,12 @@ beforeEach(() => {
 
 describe('tellFixEnded: the notification', () => {
     it('says a finished update is live, naming it as its row does, and offers the storefront', async () => {
-        showInfo.mockResolvedValue('Open storefront');
+        showInfo.mockResolvedValue('Open Storefront');
 
         const line = tellFixEnded(justrite(), 'boilerplate', 'finished', true);
 
         expect(line).toBe("JustRite's Adobe boilerplate update is live.");
-        expect(showInfo).toHaveBeenCalledWith("JustRite's Adobe boilerplate update is live.", 'Open storefront');
+        expect(showInfo).toHaveBeenCalledWith("JustRite's Adobe boilerplate update is live.", 'Open Storefront');
         await settle();
         expect(openBrowser).toHaveBeenCalledWith('https://main--justrite--skukla.aem.live');
     });

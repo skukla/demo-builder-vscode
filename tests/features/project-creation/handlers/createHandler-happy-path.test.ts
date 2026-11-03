@@ -144,7 +144,7 @@ describe('Project Creation - Create Handler - Happy Path', () => {
             expect(vscode.window.showInformationMessage).toHaveBeenNthCalledWith(
                 2,
                 expect.stringContaining('Add'),
-                'Got it!'
+                'Got It!'
             );
         });
 

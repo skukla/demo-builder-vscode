@@ -31,7 +31,7 @@ export interface SandboxState {
     orders: CommerceOrder[];
     /** Absent: the store has no returns module, and `returns` answers 404. */
     returns?: CommerceReturn[];
-    /** Cart rules (step 11). Absent: `salesRules/search` answers 404, as the wipe reads as none. */
+    /** Cart Rules (step 11). Absent: `salesRules/search` answers 404, as the wipe reads as none. */
     rules?: CommerceSalesRule[];
     coupons?: CommerceCoupon[];
     /** Companies, catalogs, groups, attribute sets, attributes, settings. Absent: their routes answer 404, as on a store without B2B. */

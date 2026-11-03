@@ -463,7 +463,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Switching author mode',
+                title: 'Switching Author Mode',
                 cancellable: false,
             },
             async (progress) => {

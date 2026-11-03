@@ -13,7 +13,7 @@ export function AcoKindsStage({ aco }: { aco: AcoExportChoice }): React.ReactEle
     const options = useMemo(() => typeOptions(aco.kinds), [aco.kinds]);
     return (
         <>
-            <span className="datapack-import-label">ACO data types</span>
+            <span className="datapack-import-label">ACO Data Types</span>
             <CheckRows options={options} picked={aco.pickedKinds} onToggle={aco.toggleKind} />
         </>
     );

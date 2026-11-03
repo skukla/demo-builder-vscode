@@ -263,7 +263,7 @@ describe('BlockLibrariesStepContent', () => {
                 />
             );
 
-            expect(screen.getByText('Configure custom libraries in Settings')).toBeInTheDocument();
+            expect(screen.getByText('Configure Custom Libraries in Settings')).toBeInTheDocument();
         });
 
         it('should call onOpenCustomSettings when settings link is clicked', () => {
@@ -276,7 +276,7 @@ describe('BlockLibrariesStepContent', () => {
                 />
             );
 
-            fireEvent.click(screen.getByText('Configure custom libraries in Settings'));
+            fireEvent.click(screen.getByText('Configure Custom Libraries in Settings'));
             expect(onOpenCustomSettings).toHaveBeenCalled();
         });
 

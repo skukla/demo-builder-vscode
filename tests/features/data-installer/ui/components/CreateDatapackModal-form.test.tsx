@@ -25,7 +25,7 @@ import {
 } from './CreateDatapackModal.testUtils';
 
 async function toTheName(): Promise<void> {
-    await press(check('Attribute sets'));
+    await press(check('Attribute Sets'));
     await press(button('Continue'));
 }
 
@@ -39,15 +39,15 @@ describe('what Continue waits for on the data types', () => {
         await renderExport();
         expect(isOff('Continue')).toBe(true);
 
-        await press(check('Attribute sets'));
+        await press(check('Attribute Sets'));
 
         expect(isOff('Continue')).toBe(false);
     });
 
     it('is off again when the last type is taken away', async () => {
         await renderExport();
-        await press(check('Attribute sets'));
-        await press(check('Attribute sets'));
+        await press(check('Attribute Sets'));
+        await press(check('Attribute Sets'));
 
         expect(isOff('Continue')).toBe(true);
     });
@@ -166,7 +166,7 @@ describe('choosing types', () => {
 
     it('drops a type again when it is taken away', async () => {
         await renderExport();
-        await press(screen.getByRole('checkbox', { name: 'Select all' }));
+        await press(screen.getByRole('checkbox', { name: 'Select All' }));
         await press(check('Categories'));
         await press(button('Continue'));
         await fillIdentity('captured-pack', 'v1');
@@ -176,17 +176,17 @@ describe('choosing types', () => {
         expect(exportCall()).toMatchObject({ dataTypes: ['attribute_sets'] });
     });
 
-    it('Select all ticks every data type, and unticks them again', async () => {
+    it('Select All ticks every data type, and unticks them again', async () => {
         await renderExport();
-        await press(screen.getByRole('checkbox', { name: 'Select all' }));
+        await press(screen.getByRole('checkbox', { name: 'Select All' }));
 
-        expect(check('Attribute sets')).toBeChecked();
+        expect(check('Attribute Sets')).toBeChecked();
         expect(check('Categories')).toBeChecked();
         expect(isOff('Continue')).toBe(false);
 
-        await press(screen.getByRole('checkbox', { name: 'Select all' }));
+        await press(screen.getByRole('checkbox', { name: 'Select All' }));
 
-        expect(check('Attribute sets')).not.toBeChecked();
+        expect(check('Attribute Sets')).not.toBeChecked();
         expect(check('Categories')).not.toBeChecked();
         // Not merely unmarked: the selection has to be genuinely EMPTY, which only the off button can show.
         expect(isOff('Continue')).toBe(true);
@@ -195,7 +195,7 @@ describe('choosing types', () => {
     /** Selecting all must send CODES: the labels are presentation only. */
     it('sends the codes it selected, never the names it showed', async () => {
         await renderExport();
-        await press(screen.getByRole('checkbox', { name: 'Select all' }));
+        await press(screen.getByRole('checkbox', { name: 'Select All' }));
         await press(button('Continue'));
         await fillIdentity('captured-pack', 'v1');
         await press(button('Export'));
@@ -233,13 +233,13 @@ describe('before the list arrives, and when it cannot', () => {
         mockRequest.mockImplementation(() => new Promise(() => undefined));
         render(<CreateDatapackModal engine="service" onClose={jest.fn()} onSaveFromStore={jest.fn()} />);
         await settle();
-        fireEvent.click(card('Commerce datapack'));
+        fireEvent.click(card('Commerce Datapack'));
         fireEvent.click(button('Continue'));
         await settle();
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
         expect(screen.queryByText(/Reading|Loading/)).not.toBeInTheDocument();
-        expect(screen.queryByRole('checkbox', { name: 'Select all' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: 'Select All' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
         expect(button('Cancel')).toBeInTheDocument();
     });

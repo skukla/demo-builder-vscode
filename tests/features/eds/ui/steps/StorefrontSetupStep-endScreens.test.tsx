@@ -124,7 +124,7 @@ describe('StorefrontSetupStep — published screen', () => {
             warnings: ['Product pages will not render', 'Search is not configured'],
         });
 
-        expect(screen.getByText('Storefront Published, with warnings')).toBeInTheDocument();
+        expect(screen.getByText('Storefront Published, with Warnings')).toBeInTheDocument();
         expect(iconClass(container)).toBe('text-notice');
     });
 

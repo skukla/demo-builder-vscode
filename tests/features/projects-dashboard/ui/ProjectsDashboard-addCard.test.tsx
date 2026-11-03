@@ -28,7 +28,7 @@ function renderDashboard(overrides: Partial<ProjectsDashboardProps> = {}) {
 
 const addCard = () => screen.queryByTestId('projects-add-card');
 
-describe('the New project card', () => {
+describe('the New Project card', () => {
     it('is the last cell of the card grid, and the header has no New button', () => {
         renderDashboard();
 
@@ -67,7 +67,7 @@ describe('the New project card', () => {
         const onCreateProject = jest.fn();
         renderDashboard({ onCreateProject, onImportFromFile: jest.fn() });
 
-        fireEvent.click(screen.getByRole('button', { name: 'New project' }));
+        fireEvent.click(screen.getByRole('button', { name: 'New Project' }));
         fireEvent.click(await screen.findByRole('menuitem', { name: /new project/i }));
 
         expect(onCreateProject).toHaveBeenCalledTimes(1);

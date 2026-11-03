@@ -1,5 +1,5 @@
 /**
- * Gift cards (datapack-engine step 11). A gift card is a product (`type_id: giftcard`), made with
+ * Gift Cards (datapack-engine step 11). A gift card is a product (`type_id: giftcard`), made with
  * `POST products` as the Data Installer's `GiftCardImportProcessor` makes it, so the `giftcards`
  * kind rides the products kind's install, update and removal, recorded under its own kind so a
  * repeat install finds its rows under `giftcards`. What is its own is its amounts:

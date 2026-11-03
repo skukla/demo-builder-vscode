@@ -58,10 +58,10 @@ describe('the screen', () => {
         answer({ products: PRODUCTS });
         await open();
 
-        expect(screen.getByRole('heading', { name: 'Save store changes' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Save Store Changes' })).toBeInTheDocument();
         const names = screen.getAllByRole('button').filter((b) => b.classList.contains('datapack-picks-kind')).map((b) => b.firstChild?.textContent);
         expect(names).toEqual(PICKABLE_KINDS.map(dataTypeLabel));
-        expect(screen.queryByRole('button', { name: /Commerce datapack/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Commerce Datapack/ })).not.toBeInTheDocument();
     });
 
     it('says what selecting also saves, on the kinds that bring something', async () => {
@@ -69,7 +69,7 @@ describe('the screen', () => {
         await open();
         expect(screen.getByText('Includes related categories, attributes and stock.')).toBeInTheDocument();
 
-        await press(row('Cart rules'));
+        await press(row('Cart Rules'));
         expect(screen.getByText('Includes related coupons.')).toBeInTheDocument();
 
         await press(row('Customers'));
@@ -128,7 +128,7 @@ describe('selecting the items', () => {
         expect(row('Products')).toHaveTextContent('1 selected');
         expect(row('Categories')).not.toHaveTextContent('selected');
 
-        await press(row('Cart rules'));
+        await press(row('Cart Rules'));
         await press(row('Products'));
 
         expect(screen.getByRole('checkbox', { name: /VR Rack/ })).toBeChecked();
@@ -140,20 +140,20 @@ describe('selecting the items', () => {
         const onSave = await open();
 
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
-        await press(row('Cart rules'));
+        await press(row('Cart Rules'));
         await press(screen.getByRole('checkbox', { name: /Spring Sale/ }));
         await press(button('Save'));
 
         expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'], cart_rules: ['7'] });
     });
 
-    it('ticks every item the filter shows with Select all, showing a dash for some', async () => {
+    it('ticks every item the filter shows with Select All, showing a dash for some', async () => {
         answer({ products: PRODUCTS });
         const onSave = await open();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
-        expect(screen.getByRole('checkbox', { name: 'Select all' })).toBePartiallyChecked();
+        expect(screen.getByRole('checkbox', { name: 'Select All' })).toBePartiallyChecked();
 
-        await press(screen.getByRole('checkbox', { name: 'Select all' }));
+        await press(screen.getByRole('checkbox', { name: 'Select All' }));
         await press(button('Save'));
 
         expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'] });
@@ -164,7 +164,7 @@ describe('selecting the items', () => {
         answer({ products: { items, totalCount: 1284, excludedCount: 0, inPackCount: 0 } });
         await open();
 
-        await press(screen.getByRole('checkbox', { name: 'Select all' }));
+        await press(screen.getByRole('checkbox', { name: 'Select All' }));
 
         expect(row('Products')).toHaveTextContent('1,284 selected');
     });
@@ -177,7 +177,7 @@ describe('selecting the items', () => {
         await open();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
 
-        await press(row('Cart rules'));
+        await press(row('Cart Rules'));
 
         expect(screen.getByRole('progressbar', { name: /Loading the store's cart rules/ })).toBeInTheDocument();
         expect(screen.queryByText(/Loading the store's/)).not.toBeInTheDocument();
@@ -196,8 +196,8 @@ describe('selecting the items', () => {
             return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : RULES });
         });
         await open();
-        await press(row('Gift cards'));
-        await press(row('Cart rules'));
+        await press(row('Gift Cards'));
+        await press(row('Cart Rules'));
 
         late.resolve?.({ success: true, data: PRODUCTS });
         await settle();
@@ -211,22 +211,22 @@ describe('a kind with nothing to select', () => {
     it('keeps its row clickable until a read has answered, then greys it out and moves on', async () => {
         answer({ products: PRODUCTS, customers: RULES });
         await open();
-        expect(row('Gift cards')).toBeEnabled();
+        expect(row('Gift Cards')).toBeEnabled();
 
-        await press(row('Gift cards'));
+        await press(row('Gift Cards'));
 
-        expect(row('Gift cards')).toBeDisabled();
-        expect(row('Gift cards')).toHaveTextContent('None available');
+        expect(row('Gift Cards')).toBeDisabled();
+        expect(row('Gift Cards')).toHaveTextContent('None available');
         expect(row('Categories')).not.toHaveAttribute('aria-current', 'false');
     });
 
     it('cannot be opened again once greyed out', async () => {
         answer({ products: PRODUCTS, categories: RULES });
         await open();
-        await press(row('Gift cards'));
+        await press(row('Gift Cards'));
         const reads = listCalls().length;
 
-        fireEvent.click(row('Gift cards'));
+        fireEvent.click(row('Gift Cards'));
         await settle();
 
         expect(listCalls()).toHaveLength(reads);
@@ -260,7 +260,7 @@ describe('a read that fails', () => {
         const products = refuseProducts();
         await open();
 
-        await press(row('Cart rules'));
+        await press(row('Cart Rules'));
         products.recovered = true;
         await press(row('Products'));
 

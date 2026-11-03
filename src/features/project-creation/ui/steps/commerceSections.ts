@@ -62,7 +62,7 @@ export const BACKEND_LABELS: Record<string, string> = {
 /** Summary-row label per Commerce sub-step (the short forms used in the summary). */
 export const ROW_LABELS: Record<CommerceSectionId, string> = {
     backend: 'Backend',
-    signin: 'Sign-in',
+    signin: 'Sign-In',
     connection: 'Connection',
     'business-structure': 'Business',
     catalog: 'Catalog',
@@ -72,7 +72,7 @@ export const ROW_LABELS: Record<CommerceSectionId, string> = {
 /** Human labels for the step/tab titles (the vertical step list nav). */
 export const SECTION_TITLES: Record<CommerceSectionId, string> = {
     backend: 'Backend',
-    signin: 'Sign in to Adobe',
+    signin: 'Sign In to Adobe',
     connection: 'Connection',
     'business-structure': 'Business Structure',
     catalog: 'Catalog',

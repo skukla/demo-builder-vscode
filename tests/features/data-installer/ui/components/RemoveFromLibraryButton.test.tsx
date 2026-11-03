@@ -26,7 +26,7 @@ beforeEach(() => {
 it('removes on the one press when there is nothing to warn about', () => {
     render(<RemoveFromLibraryButton id={ID} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove it from the library' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove from Library' }));
 
     expect(mockLoad).toHaveBeenCalledWith({ datapackName: ID.name, version: ID.version, confirm: true });
 });
@@ -37,5 +37,5 @@ it('says it is gone once the library has removed it', () => {
     render(<RemoveFromLibraryButton id={ID} />);
 
     expect(screen.getByText('Removed from the library.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Remove it from the library' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove from Library' })).not.toBeInTheDocument();
 });

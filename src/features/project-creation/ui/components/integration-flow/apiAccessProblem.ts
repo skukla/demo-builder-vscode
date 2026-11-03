@@ -28,7 +28,7 @@ export function apiAccessProblemOf(apis: OrgApis, onSignIn?: () => Promise<unkno
     if (apis.loading) return undefined;
     if (apis.needsSignIn) {
         return {
-            title: 'Sign in to Adobe',
+            title: 'Sign In to Adobe',
             status: 'warning',
             lines: [
                 'Your Adobe session has ended. Sign in to choose the APIs this app needs.',
@@ -42,7 +42,7 @@ export function apiAccessProblemOf(apis: OrgApis, onSignIn?: () => Promise<unkno
     }
     if (apis.error) {
         return {
-            title: "Couldn't load Adobe APIs",
+            title: "Couldn't Load Adobe APIs",
             status: 'error',
             lines: [apis.error],
             action: { label: 'Retry', onPress: apis.retry },

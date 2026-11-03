@@ -28,10 +28,10 @@ import type { ForcedSignInWatch } from '@/features/authentication/services/adobe
 import { createDaLiveForcedSignInWatch } from '@/features/eds/services/daLive/daLiveForcedSignInWatch';
 
 /** The dialog's button: the existing DA.live sign-in. */
-export const SIGN_IN_TO_DA_LIVE = 'Sign in to DA.live';
+export const SIGN_IN_TO_DA_LIVE = 'Sign In to DA.live';
 
 /** The dialog's heading; the sentence sits under it. */
-const SIGNED_OUT_TITLE = 'Signed out of DA.live';
+const SIGNED_OUT_TITLE = 'Signed Out of DA.live';
 
 /**
  * Say it to the SC, on the surface the sign-in came from.

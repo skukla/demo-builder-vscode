@@ -67,7 +67,7 @@ export function OrgContextNotice({
     return (
         <div className="page-container-padded">
             <InlineNotice
-                title="Wrong Adobe organization"
+                title="Wrong Adobe Organization"
                 testId="org-mismatch-banner"
                 hint={switchAttempted ? buildHint(currentOrg) : undefined}
                 action={

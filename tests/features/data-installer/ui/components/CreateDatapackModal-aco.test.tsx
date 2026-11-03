@@ -9,7 +9,7 @@ import { press } from '../../../../helpers/reactSettle';
 import { button, check, isOff, exportCall, fillIdentity, mockRequest, renderExport, SCOPES, withService } from './CreateDatapackModal.testUtils';
 
 const VIEWS = ['Default Store View', 'French', 'CitiSignal US'];
-const KINDS = ['ACO metadata', 'ACO categories', 'ACO products', 'ACO price books', 'ACO prices'];
+const KINDS = ['ACO Metadata', 'ACO Categories', 'ACO Products', 'ACO Price Books', 'ACO Prices'];
 
 /** From the store views, on through the kinds to the name. */
 async function toTheName(): Promise<void> {
@@ -43,7 +43,7 @@ describe('an ACO pack', () => {
         await press(button('Continue'));
 
         for (const kind of KINDS) expect(check(kind)).toBeChecked();
-        expect(screen.queryByRole('button', { name: /^Attribute sets/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Attribute Sets/ })).not.toBeInTheDocument();
     });
 
     it('sends every store view and kind as none named, which makes the pack for all of them', async () => {
@@ -59,7 +59,7 @@ describe('an ACO pack', () => {
         await renderExport('aco');
         await press(check('CitiSignal US'));
         await press(button('Continue'));
-        await press(check('ACO prices'));
+        await press(check('ACO Prices'));
         await press(button('Continue'));
         await fillIdentity('aco_acme', 'main');
         await press(button('Export'));
@@ -141,9 +141,9 @@ describe('an ACO pack', () => {
         await toTheName();
         await fillIdentity('aco_acme', 'main');
         await press(button('Export'));
-        expect(screen.getByText(/ACO products: 3 exported \(2 left out\)/)).toBeInTheDocument();
+        expect(screen.getByText(/ACO Products: 3 exported \(2 left out\)/)).toBeInTheDocument();
 
-        await press(button('Save as file'));
+        await press(button('Save as File'));
 
         expect(mockRequest.mock.calls.find((c) => c[0] === 'save-datapack-zip')?.[1]).toEqual({
             source: 'library',

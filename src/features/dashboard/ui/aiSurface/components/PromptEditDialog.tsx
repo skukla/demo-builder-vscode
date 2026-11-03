@@ -66,7 +66,7 @@ export function PromptEditDialog({
         void Promise.resolve(onSave(payload));
     }, [isValid, mode, initialPrompt, title, promptBody, onSave]);
 
-    const modalTitle = mode === 'edit' ? 'Edit prompt' : 'New prompt';
+    const modalTitle = mode === 'edit' ? 'Edit Prompt' : 'New Prompt';
 
     return (
         <Modal

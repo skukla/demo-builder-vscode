@@ -1,7 +1,7 @@
 /**
  * ResetToTemplateOption
  *
- * The "Reset to template (replaces all content)" tick above the repository
+ * The "Reset to Template (Replaces All Content)" tick above the repository
  * list, with the one-line notice beneath it. What it shows is decided by
  * `describeResetOption`; this only draws that decision.
  *
@@ -54,7 +54,7 @@ export function ResetToTemplateOption({
     return (
         <Flex direction="column" gap="size-50" UNSAFE_className="reset-to-template-top">
             <Checkbox isSelected={checked} isDisabled={locked} onChange={onResetToTemplateChange}>
-                {`Reset to ${templateName ?? 'template'} (replaces all content)`}
+                {`Reset to ${templateName ?? 'Template'} (Replaces All Content)`}
             </Checkbox>
 
             <View marginStart="size-300" UNSAFE_className="reset-warning-container">

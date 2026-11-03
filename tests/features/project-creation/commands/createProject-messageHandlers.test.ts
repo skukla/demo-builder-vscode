@@ -237,7 +237,7 @@ describe('the shortcut to project configuration', () => {
     });
 
     it('asks before throwing away changes made in Edit, and goes on a yes', async () => {
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Discard and open');
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Discard and Open');
         const { comm } = wireUp();
 
         await comm.handlerFor('open-configure')?.({ discardsEdits: true });
@@ -245,7 +245,7 @@ describe('the shortcut to project configuration', () => {
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
             expect.stringContaining('Discard'),
             { modal: true },
-            'Discard and open',
+            'Discard and Open',
         );
         expect(swapWebviewSurface).toHaveBeenCalled();
     });

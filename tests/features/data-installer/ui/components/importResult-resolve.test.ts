@@ -40,7 +40,7 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toEqual({
             variant: 'success',
-            title: 'Dry run passed',
+            title: 'Dry Run Passed',
             message: 'Nothing was written.',
         });
     });
@@ -53,7 +53,7 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toMatchObject({
             variant: 'warning',
-            title: 'The service would refuse this',
+            title: 'Validation Failed',
             message: 'Catalog is locked',
         });
     });
@@ -63,7 +63,7 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toEqual({
             variant: 'error',
-            title: 'Dry run failed',
+            title: 'Dry Run Failed',
             message: 'Request timed out',
         });
     });
@@ -71,7 +71,7 @@ describe('resolveResult — dry run', () => {
     it('prefers the failure over a value the request is still holding', () => {
         const stale = { ...failed<{ valid: boolean }>('Request timed out'), value: { valid: true } };
 
-        expect(resolveResult('dryRun', sources({ dryRun: stale }))?.title).toBe('Dry run failed');
+        expect(resolveResult('dryRun', sources({ dryRun: stale }))?.title).toBe('Dry Run Failed');
     });
 
     it('shows nothing while the dry run has neither answered nor failed', () => {
@@ -81,8 +81,8 @@ describe('resolveResult — dry run', () => {
 
 describe('resolveResult — start and reset', () => {
     it.each([
-        ['start', "Couldn't start the import"],
-        ['reset', "Couldn't start the removal"],
+        ['start', "Couldn't Start the Import"],
+        ['reset', "Couldn't Start the Removal"],
     ])('%s reports its own wording for a request that never started', (action, title) => {
         const failure = failed<{ activationId: string }>('The service is unreachable');
         const result = resolveResult(
@@ -154,7 +154,7 @@ describe('resolveResult — a removal that was to save the changes first (step 0
 
         expect(resolveResult('reset', sources({ reset }))).toEqual({
             variant: 'error',
-            title: "Couldn't save your changes, so nothing was removed",
+            title: "Couldn't save changes. Nothing was removed.",
             message: 'The library is not answering.',
             backToConfirm: true,
         });
@@ -163,7 +163,7 @@ describe('resolveResult — a removal that was to save the changes first (step 0
     it('CONTROL: any other failure to start is the plain one, back to the form', () => {
         const result = resolveResult('reset', sources({ reset: failed('The service said no.') }));
 
-        expect(result?.title).toBe("Couldn't start the removal");
+        expect(result?.title).toBe("Couldn't Start the Removal");
         expect(result).not.toHaveProperty('backToConfirm');
     });
 

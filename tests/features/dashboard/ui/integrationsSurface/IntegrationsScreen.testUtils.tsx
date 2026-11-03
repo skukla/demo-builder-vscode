@@ -82,8 +82,8 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
                 (renderViewToggle); the same gate here keeps the screen honest. */}
             {viewMode !== undefined && onViewModeChange !== undefined && (
                 <>
-                    <button aria-label="Card view" onClick={() => onViewModeChange('cards')} />
-                    <button aria-label="List view" onClick={() => onViewModeChange('rows')} />
+                    <button aria-label="Card View" onClick={() => onViewModeChange('cards')} />
+                    <button aria-label="List View" onClick={() => onViewModeChange('rows')} />
                 </>
             )}
             {countTrailing}

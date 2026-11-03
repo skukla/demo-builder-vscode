@@ -93,7 +93,7 @@ async function readTokenFromClipboard(logger: Logger): Promise<string | undefine
  */
 function promptForOrgName(): Thenable<string | undefined> {
     return vscode.window.showInputBox({
-        title: 'Sign in to DA.live — namespace',
+        title: 'Sign In to DA.live: Namespace',
         prompt: 'Enter your DA.live organization name (your GitHub username or a team org you belong to)',
         placeHolder: 'e.g. your-github-username or demo-system-stores',
         ignoreFocusOut: true,
@@ -116,7 +116,7 @@ function promptForOrgName(): Thenable<string | undefined> {
  */
 function promptForToken(): Thenable<string | undefined> {
     return vscode.window.showInputBox({
-        title: 'Sign in to DA.live — token',
+        title: 'Sign In to DA.live: Token',
         prompt: 'No DA.live token found on your clipboard. Run the bookmarklet on da.live to copy one, then paste it here.',
         placeHolder: 'Paste token here',
         password: true,
@@ -153,10 +153,10 @@ function promptForToken(): Thenable<string | undefined> {
  */
 async function confirmTokenReady(context: DaLiveAuthContext): Promise<boolean> {
     const openDaLiveChoice = await vscode.window.showInformationMessage(
-        'Sign in to DA.live',
-        { modal: true, detail: 'You need a token from DA.live. Open DA.live to get one, or carry on if you already have it.' },
+        'Sign In to DA.live',
+        { modal: true, detail: 'You need a token from DA.live. Open DA.live to get one, or continue if you already have it.' },
         'Open DA.live',
-        'I have my token',
+        'I Have My Token',
     );
 
     // User dismissed the message (clicked X or pressed Escape)
@@ -273,7 +273,7 @@ export async function showDaLiveAuthQuickPick(
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Verifying DA.live credentials',
+            title: 'Verifying DA.live Credentials',
             cancellable: false,
         },
         () => validateAndStoreToken(context, token, orgName),

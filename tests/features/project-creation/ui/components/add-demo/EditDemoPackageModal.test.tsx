@@ -70,13 +70,13 @@ describe('EditDemoPackageModal', () => {
 
         await pressSave();
 
-        const title = screen.getByRole('heading', { name: "Couldn't save the changes" });
+        const title = screen.getByRole('heading', { name: "Couldn't Save the Changes" });
         expect(title.innerHTML).toContain('text-negative');
         const note = screen.getByTestId('edit-demo-error');
         expect(note).toHaveTextContent('The settings could not be saved.');
         expect(note).toHaveClass('add-demo-error', 'text-negative');
         expect(document.querySelector('.inline-notice')).toBeNull();
-        expect(screen.getByLabelText('Demo name', { selector: 'input' })).toHaveValue(DEMO.name);
+        expect(screen.getByLabelText('Demo Name', { selector: 'input' })).toHaveValue(DEMO.name);
         expect(onClose).not.toHaveBeenCalled();
     });
 
@@ -103,7 +103,7 @@ describe('EditDemoPackageModal', () => {
         mockRequest.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
         await pressSave();
 
-        expect(screen.getByRole('heading', { name: 'Edit demo package' }).innerHTML).not.toContain('text-negative');
+        expect(screen.getByRole('heading', { name: 'Edit Demo Package' }).innerHTML).not.toContain('text-negative');
         expect(screen.queryByTestId('edit-demo-error')).not.toBeInTheDocument();
 
         await act(async () => {

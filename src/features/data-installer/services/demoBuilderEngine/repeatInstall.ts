@@ -210,5 +210,5 @@ export function keptOf(plans: readonly KindPlan[]): KeptThing[] {
 /** The one line a repeat install says about what it kept, or nothing when it kept nothing. */
 export function keptLine(kept: readonly KeptThing[]): string | undefined {
     if (kept.length === 0) return undefined;
-    return `Kept ${kept.length} ${kept.length === 1 ? 'thing' : 'things'} you had changed in the Admin.`;
+    return `Kept ${kept.length} ${kept.length === 1 ? 'item' : 'items'} changed in the Admin.`;
 }

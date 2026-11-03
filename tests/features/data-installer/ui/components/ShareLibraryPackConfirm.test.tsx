@@ -41,7 +41,7 @@ it('asks with no explanation on a shared pack, and stops sharing on Stop sharing
     render(<ShareLibraryPackConfirm id={ID} shared onDone={onDone} />);
 
     expect(screen.queryByText(SENTENCE)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Stop sharing' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Stop Sharing' }));
     expect(mockLoad).toHaveBeenCalledWith({ datapackName: ID.name, shared: false, confirm: true });
 });
 

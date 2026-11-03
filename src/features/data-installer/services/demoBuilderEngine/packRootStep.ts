@@ -32,9 +32,9 @@ export interface RootStepAsker {
 }
 
 /** The three answers, the first being the one that continues the work. */
-export const OPEN_ADMIN = 'Open the Admin';
+export const OPEN_ADMIN = 'Open Admin';
 export const DONE_IT = "I've done it";
-export const SKIP = 'Skip for now';
+export const SKIP = 'Skip for Now';
 
 /** What the read-only check found. `done` undefined: it could not tell. */
 export interface RootCheck {
@@ -47,7 +47,7 @@ export function packRootGuideStep(step: PackRootStep): Omit<SetupStep, 'check'> 
     return {
         id: 'pack-root-category',
         label: 'Root category',
-        title: `Show ${step.rootName}'s categories on the storefront`,
+        title: `Show ${step.rootName}'s Categories on the Storefront`,
         why: `The store ${step.storeName} shares its root category with another store, so ${step.rootName}'s categories are a root of their own, and a store shows only its root's categories. No API can change a store's root.`,
         where: `Stores > All Stores > ${step.storeName}`,
         path: ['Stores', 'All Stores', step.storeName],
@@ -142,7 +142,7 @@ async function rootLabelOrNone(get: CommerceGet, id: number): Promise<string | u
 function question(step: PackRootStep, found?: string): Question {
     const ask = `${instruction(step)} Demo Builder can't make this change for you.`;
     return {
-        title: `One step in the Admin to show ${step.rootName}'s categories`,
+        title: `One Step in the Admin to Show ${step.rootName}'s Categories`,
         message: found ? `${found} ${ask}` : ask,
         tone: 'info',
         dismiss: SKIP,

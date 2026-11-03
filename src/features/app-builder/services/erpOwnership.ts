@@ -236,7 +236,7 @@ export function countOwnedAfterAdd(
 
 /** Why a rule cannot be saved yet, or undefined when it can. */
 export function ownsProblem(rule: ErpOwnsRule): string | undefined {
-    if (rule.mode === 'websites' && !(rule.websites ?? []).length) return 'Tick at least one website.';
+    if (rule.mode === 'websites' && !(rule.websites ?? []).length) return 'Select at least one website.';
     if (rule.mode === 'attribute' && !/^[^=\s]+=\S+$/u.test(rule.attribute ?? '')) {
         return 'The attribute is code=value, e.g. erp_owner=acme.';
     }

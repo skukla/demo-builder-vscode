@@ -142,17 +142,17 @@ describe('DashboardStatusHeader — the IMS Org badge', () => {
 });
 
 describe('DashboardStatusHeader — the IMS Org badge action', () => {
-    it('offers Sign in when signed out, wired to onReAuthenticate', async () => {
+    it('offers Sign In when signed out, wired to onReAuthenticate', async () => {
         const user = setupUser();
         const props = makeProps({ orgCheckState: 'signed-out' });
         render(<DashboardStatusHeader {...props} />);
 
         expect(cardFor('IMS Org')?.action).toEqual({
-            label: 'Sign in',
+            label: 'Sign In',
             onPress: props.onReAuthenticate,
         });
 
-        await user.click(screen.getByText('Sign in'));
+        await user.click(screen.getByText('Sign In'));
         expect(props.onReAuthenticate).toHaveBeenCalledTimes(1);
         expect(props.onVerifyOrg).not.toHaveBeenCalled();
     });
@@ -207,7 +207,7 @@ describe('DashboardStatusHeader — the AI badge', () => {
     });
 });
 
-describe('DashboardStatusHeader — the AI "Regenerate AI files" remediation', () => {
+describe('DashboardStatusHeader — the AI "Regenerate AI Files" remediation', () => {
     it.each<AiReadyState['color']>(['red', 'yellow'])(
         'offers it when the AI badge is %s, wired to onRegenerateAi',
         async (color) => {
@@ -216,7 +216,7 @@ describe('DashboardStatusHeader — the AI "Regenerate AI files" remediation', (
             render(<DashboardStatusHeader {...props} />);
 
             expect(cardFor('AI')?.action).toEqual({
-                label: 'Regenerate AI files',
+                label: 'Regenerate AI Files',
                 onPress: props.onRegenerateAi,
                 testId: 'ai-regenerate-trigger',
             });
@@ -238,7 +238,7 @@ describe('DashboardStatusHeader — the AI "Regenerate AI files" remediation', (
 
             expect(cardFor('AI')?.action).toBeUndefined();
             expect(screen.queryByTestId('ai-regenerate-trigger')).not.toBeInTheDocument();
-            expect(screen.queryByText('Regenerate AI files')).not.toBeInTheDocument();
+            expect(screen.queryByText('Regenerate AI Files')).not.toBeInTheDocument();
         }
     );
 

@@ -132,7 +132,7 @@ export function StoreSelectionRow({
             )}
             {storeViewField && (
                 <StoreStructureSelector
-                    label="Store view"
+                    label="Store View"
                     items={getStoreViewItems(selectedStore)}
                     selectedCode={String(getFieldValue(storeViewField) || '')}
                     onSelect={(code) => updateField(storeViewField, code)}

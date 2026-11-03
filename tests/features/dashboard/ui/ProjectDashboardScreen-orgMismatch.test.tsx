@@ -115,7 +115,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         expect(screen.queryByText(/Switch IMS Org/i)).not.toBeInTheDocument();
     });
 
-    it('resolves to a yellow "Signed out" badge with Sign in (no banner) when signed out', async () => {
+    it('resolves to a yellow "Signed out" badge with Sign In (no banner) when signed out', async () => {
         // P1: when the check can't run non-interactively on open, it never opens a
         // surprise browser or shows a mismatch banner.
         renderDashboard({ hasAdobeContext: true });
@@ -127,18 +127,18 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
             expect(imsOrgBadge()).toHaveAttribute('data-color', 'yellow');
         });
         expect(imsOrgBadge()).toHaveTextContent(/Signed out/);
-        expect(screen.getByText('Sign in')).toBeInTheDocument();
+        expect(screen.getByText('Sign In')).toBeInTheDocument();
         expect(screen.queryByText(/Switch IMS Org/i)).not.toBeInTheDocument();
     });
 
-    it('requests reAuthenticate when Sign in is clicked (user-initiated)', async () => {
+    it('requests reAuthenticate when Sign In is clicked (user-initiated)', async () => {
         const { webviewClient } = require('@/core/ui/utils/WebviewClient');
         renderDashboard({ hasAdobeContext: true });
 
         emitOrgSignedOut();
         advancePastOrgCheckGate();
 
-        fireEvent.click(await screen.findByText('Sign in'));
+        fireEvent.click(await screen.findByText('Sign In'));
 
         expect(webviewClient.postMessage).toHaveBeenCalledWith('reAuthenticate');
     });
@@ -177,7 +177,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
     it('renders the warning banner, names the current org, and offers a switch action on mismatch', async () => {
         await showMismatchBanner();
 
-        expect(screen.getByText(/Wrong Adobe organization/i)).toBeInTheDocument();
+        expect(screen.getByText(/Wrong Adobe Organization/i)).toBeInTheDocument();
         // Banner message names BOTH the current org and the project's expected org.
         expect(
             screen.getByText(

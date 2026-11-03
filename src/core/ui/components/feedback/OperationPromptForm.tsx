@@ -105,7 +105,7 @@ function SelectAllBox({ ids, values, onChange }: {
     };
     return (
         <Checkbox isSelected={all} isIndeterminate={ticked > 0 && !all} onChange={setAll}>
-            Select all
+            Select All
         </Checkbox>
     );
 }

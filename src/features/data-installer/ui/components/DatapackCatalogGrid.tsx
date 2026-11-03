@@ -47,7 +47,7 @@ export function DatapackCatalogGrid({
     if (groups.length === 0) {
         return (
             <EmptyState
-                title="No datapacks found"
+                title="No Datapacks Found"
                 description="The service returned no datapacks. Turn on community datapacks to include entries that are not shared."
             />
         );

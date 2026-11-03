@@ -55,7 +55,7 @@ function publishedScreen(warnings: string[] | undefined): {
     if (warnings?.length) {
         return {
             variant: 'warning',
-            title: 'Storefront Published, with warnings',
+            title: 'Storefront Published, with Warnings',
             details: [...warnings, CONTINUE_HINT],
         };
     }

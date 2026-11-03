@@ -165,7 +165,7 @@ describe('no answer, and something changed', () => {
         const result = await reset();
 
         expect(result).toMatchObject({ success: false, code: ErrorCode.CHANGES_NEED_ANSWER });
-        expect(result.error).toContain('You changed 3 things since it was installed: the category Critical Power, and 2 products.');
+        expect(result.error).toContain('3 items changed since install: the category Critical Power, and 2 products.');
         expect(result.error).toContain('Nothing was removed.');
         expect(result.error).toContain('changes:"keep"');
         expect(result.error).toContain('changes:"drop"');
@@ -428,7 +428,7 @@ describe('get-datapack-removal-changes', () => {
             success: true,
             data: {
                 count: 3,
-                sentence: 'You changed 3 things since it was installed: the category Critical Power, and 2 products.',
+                sentence: '3 items changed since install: the category Critical Power, and 2 products.',
                 ownPackName: 'Acme Demo',
                 alwaysSave: false,
             },

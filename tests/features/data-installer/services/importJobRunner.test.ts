@@ -148,13 +148,13 @@ describe('watchImportJob', () => {
     it('carries the engine\'s one line about what it kept onto the result (step 05)', async () => {
         const { promise } = runWith([
             snap({ categories: 'processing' }),
-            snap({ categories: 'success', products: 'success' }, { note: 'Kept 2 things you had changed in the Admin.' }),
+            snap({ categories: 'success', products: 'success' }, { note: 'Kept 2 items changed in the Admin.' }),
         ]);
 
         const result = await promise;
 
         expect(result.outcome).toBe('success');
-        expect(result.note).toBe('Kept 2 things you had changed in the Admin.');
+        expect(result.note).toBe('Kept 2 items changed in the Admin.');
     });
 
     describe('progress reporting', () => {

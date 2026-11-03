@@ -79,7 +79,7 @@ export async function renderCreate(engine?: 'service' | 'demo-builder') {
 /** The screen after the pack type: the data types, or an ACO pack's store views. */
 export async function renderExport(packType: 'commerce' | 'aco' = 'commerce') {
     const rendered = await renderCreate('service');
-    await press(card(packType === 'aco' ? 'ACO datapack' : 'Commerce datapack'));
+    await press(card(packType === 'aco' ? 'ACO Datapack' : 'Commerce Datapack'));
     await press(button('Continue'));
     return rendered;
 }
@@ -99,7 +99,7 @@ export async function fillIdentity(name: string, version: string): Promise<void>
 
 /** From the data types: tick one, name the pack, and press Export. */
 export async function exportAs(name: string, version: string) {
-    await press(check('Attribute sets'));
+    await press(check('Attribute Sets'));
     await press(button('Continue'));
     await fillIdentity(name, version);
     await press(button('Export'));

@@ -174,10 +174,10 @@ export function IntegrationsScreen({
                     screen with no project context and no way back. */}
                 {cards.length === 0 ? (
                     <CtaEmptyState
-                        title="No integrations yet"
+                        title="No Integrations Yet"
                         description="Add an API Mesh, a pre-built integration, or your own."
                         actions={[
-                            { label: 'Add integration', variant: 'accent', onPress: openAdd },
+                            { label: 'Add Integration', variant: 'accent', onPress: openAdd },
                         ]}
                     />
                 ) : (

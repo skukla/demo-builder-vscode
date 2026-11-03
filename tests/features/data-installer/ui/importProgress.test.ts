@@ -143,11 +143,11 @@ describe('progressLabel', () => {
     const firstFive = Object.fromEntries(FOURTEEN.slice(0, 5).map((type): [string, DataTypeStatus] => [type, 'success']));
 
     it('counts the types and names the one in flight, in human words', () => {
-        expect(line({ ...firstFive, customer_groups: 'processing' }, FOURTEEN)).toBe('5 of 14 data types: Customer groups');
+        expect(line({ ...firstFive, customer_groups: 'processing' }, FOURTEEN)).toBe('5 of 14 data types: Customer Groups');
     });
 
     it('names the next type between polls, never a bare count', () => {
-        expect(line(firstFive, FOURTEEN)).toBe('5 of 14 data types: Customer groups');
+        expect(line(firstFive, FOURTEEN)).toBe('5 of 14 data types: Customer Groups');
     });
 
     it('says only the name of a single type, whatever state it is in', () => {

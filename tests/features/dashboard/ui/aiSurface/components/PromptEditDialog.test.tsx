@@ -317,16 +317,16 @@ describe('PromptEditDialog', () => {
     describe('what the mode changes about the chrome', () => {
         const EXISTING: AiPrompt = { id: 'e1', title: 'T', prompt: 'P' };
 
-        it('titles the dialog "New prompt" in create mode', () => {
+        it('titles the dialog "New Prompt" in create mode', () => {
             renderDialog({ mode: 'create' });
 
-            expect(screen.getByRole('heading')).toHaveTextContent('New prompt');
+            expect(screen.getByRole('heading')).toHaveTextContent('New Prompt');
         });
 
-        it('titles the dialog "Edit prompt" in edit mode', () => {
+        it('titles the dialog "Edit Prompt" in edit mode', () => {
             renderDialog({ mode: 'edit', initialPrompt: EXISTING });
 
-            expect(screen.getByRole('heading')).toHaveTextContent('Edit prompt');
+            expect(screen.getByRole('heading')).toHaveTextContent('Edit Prompt');
         });
 
         // The PROP, not the resulting focus: jsdom has no layout and react-aria's

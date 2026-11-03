@@ -31,7 +31,7 @@ export interface ShareLibraryPackConfirmProps {
 export function ShareLibraryPackConfirm({ id, shared, onChanged, onDone }: ShareLibraryPackConfirmProps): React.JSX.Element {
     const request = useDataInstallerRequest<{ shared?: boolean }>('share-library-datapack');
     const run = request.load;
-    const label = shared ? 'Stop sharing' : 'Share';
+    const label = shared ? 'Stop Sharing' : 'Share';
     const confirm = useCallback((): void => {
         run({ datapackName: id.name, shared: !shared, confirm: true });
     }, [run, id.name, shared]);

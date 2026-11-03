@@ -36,14 +36,14 @@ function GiveAccessForm({ choices, onGive, onClose }: Omit<GiveAccessModalProps,
     const canGive = trimmed !== '' && (read || admin);
     return (
         <Modal
-            title="Give access"
+            title="Give Access"
             size="S"
             fitContent
             onClose={onClose}
             closeLabel="Cancel"
             actionButtons={[
                 {
-                    label: 'Give access',
+                    label: 'Give Access',
                     variant: 'accent',
                     isDisabled: !canGive,
                     onPress: () => onGive({ email: trimmed, admin, read }),
@@ -54,12 +54,12 @@ function GiveAccessForm({ choices, onGive, onClose }: Omit<GiveAccessModalProps,
                 <TextField label="Email" type="email" value={email} onChange={setEmail} width="100%" autoFocus />
                 {choices.read && (
                     <Checkbox isSelected={read} onChange={setRead}>
-                        Read the content in DA.live
+                        Read the Content in DA.live
                     </Checkbox>
                 )}
                 {choices.admin && (
                     <Checkbox isSelected={admin} onChange={setAdmin}>
-                        Change the storefront&apos;s settings (configuration admin)
+                        Change the Storefront&apos;s Settings (Configuration Admin)
                     </Checkbox>
                 )}
             </Flex>

@@ -50,13 +50,13 @@ describe('WelcomeStep — added demos', () => {
         );
     });
 
-    it('opens the Add a demo package dialog from the plus card', () => {
+    it('opens the Add a Demo Package dialog from the plus card', () => {
         renderWelcome({ packages: PACKAGES, stacks: STACKS });
-        expect(screen.queryByRole('heading', { name: 'Add a demo package' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Add a Demo Package' })).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByTestId('add-demo-card'));
 
-        expect(screen.getByRole('heading', { name: 'Add a demo package' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Add a Demo Package' })).toBeInTheDocument();
     });
 });
 
@@ -129,7 +129,7 @@ describe('WelcomeStep — editing an added demo', () => {
         });
     }
 
-    it('opens Edit demo package with the name and description filled in, and saves both by the demo\'s repository', async () => {
+    it('opens Edit Demo Package with the name and description filled in, and saves both by the demo\'s repository', async () => {
         const described = { ...JEN, description: 'Old words' };
         const edited = { ...described, name: 'Isle5 luxury', description: 'New words' };
         request.mockResolvedValue({ success: true, result: { demo: edited } });
@@ -142,18 +142,18 @@ describe('WelcomeStep — editing an added demo', () => {
         updateState.mockClear();
 
         await openEdit();
-        expect(screen.getByRole('heading', { name: 'Edit demo package' })).toBeInTheDocument();
-        const name = screen.getByLabelText('Demo name', { selector: 'input' }) as HTMLInputElement;
+        expect(screen.getByRole('heading', { name: 'Edit Demo Package' })).toBeInTheDocument();
+        const name = screen.getByLabelText('Demo Name', { selector: 'input' }) as HTMLInputElement;
         const description = screen.getByLabelText('Description', { selector: 'textarea' }) as HTMLTextAreaElement;
         expect(name.value).toBe('Isle5 by Jen');
         expect(description.value).toBe('Old words');
         // Where the card reads from, in a plain read-only field (owner, 2026-09-15): a new
         // repository is re-added through Add a demo package, which reads it.
-        const repository = screen.getByLabelText(/^GitHub repository/, { selector: 'input' }) as HTMLInputElement;
+        const repository = screen.getByLabelText(/^GitHub Repository/, { selector: 'input' }) as HTMLInputElement;
         expect(repository.value).toBe('https://github.com/jen/isle5-demo');
         expect(repository).toHaveAttribute('readonly');
         expect(screen.getByText('To use a different repository, remove this demo package and add it again.')).toBeInTheDocument();
-        expect(screen.queryByText('Package details')).not.toBeInTheDocument();
+        expect(screen.queryByText('Package Details')).not.toBeInTheDocument();
 
         fireEvent.change(name, { target: { value: 'Isle5 luxury' } });
         fireEvent.change(description, { target: { value: 'New words' } });
@@ -168,7 +168,7 @@ describe('WelcomeStep — editing an added demo', () => {
         });
         // The selected card's row follows, so the Build summary shows the new name.
         expect(updateState).toHaveBeenCalledWith({ demo: edited });
-        expect(screen.queryByRole('heading', { name: 'Edit demo package' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Edit Demo Package' })).not.toBeInTheDocument();
     });
 
     it('will not save a blank name, and keeps the dialog open with the refusal when the host says no', async () => {
@@ -176,7 +176,7 @@ describe('WelcomeStep — editing an added demo', () => {
         renderWelcome({ packages: [...PACKAGES, JEN_CARD], stacks: STACKS, addedDemos: [JEN] });
 
         await openEdit();
-        const name = screen.getByLabelText('Demo name', { selector: 'input' });
+        const name = screen.getByLabelText('Demo Name', { selector: 'input' });
         fireEvent.change(name, { target: { value: '   ' } });
         expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
 
@@ -186,7 +186,7 @@ describe('WelcomeStep — editing an added demo', () => {
         });
 
         expect(screen.getByTestId('edit-demo-error')).toHaveTextContent('jen/isle5-demo is not on your Welcome step.');
-        expect(screen.getByRole('heading', { name: "Couldn't save the changes" })).toBeInTheDocument();
-        expect(screen.getByLabelText('Demo name', { selector: 'input' })).toHaveValue('Isle5');
+        expect(screen.getByRole('heading', { name: "Couldn't Save the Changes" })).toBeInTheDocument();
+        expect(screen.getByLabelText('Demo Name', { selector: 'input' })).toHaveValue('Isle5');
     });
 });

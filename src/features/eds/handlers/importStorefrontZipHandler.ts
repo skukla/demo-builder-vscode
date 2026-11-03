@@ -31,7 +31,7 @@ import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { StorefrontZipProgressPayload } from '@/types/webviewPayloads';
 import type { ImportStorefrontZipRequest, ImportStorefrontZipResult, UseBundleSetupRequest } from '@/types/webviewRequests';
 
-const PICKER_TITLE = 'Add a storefront from a zip file';
+const PICKER_TITLE = 'Add a Storefront from a Zip File';
 
 async function pickZip(): Promise<string | undefined> {
     const picked = await vscode.window.showOpenDialog({

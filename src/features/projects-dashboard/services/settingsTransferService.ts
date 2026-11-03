@@ -54,7 +54,7 @@ export async function pickImportFile(context: HandlerContext): Promise<vscode.Ur
             'Demo Builder settings or bundle': ['json', 'zip'],
             'All Files': ['*'],
         },
-        title: 'Import a settings file or a demo bundle',
+        title: 'Import a Settings File or a Demo Bundle',
     });
     return fileUris?.[0];
 }

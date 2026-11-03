@@ -65,7 +65,7 @@ interface RowsProps {
  * Health in one line under the title: the deploy status, and on an App Management app
  * the Commerce install beside it. When either needs attention, the reason and the fix
  * sit under it — the deploy's live message, or the failed install's hands-back line and
- * "Finish install" (the idempotent pass that also repairs a record left "failed" by a
+ * "Finish Install" (the idempotent pass that also repairs a record left "failed" by a
  * call that timed out while the app finished, 2026-09-30). When Commerce refused an upgrade,
  * the install pass would meet the same refusal, so the fix is the reinstall the line names,
  * through the menu's own confirm (2026-10-18).
@@ -91,7 +91,7 @@ function HealthLine({ model, onAction }: RowsProps): React.ReactElement {
                         {install.detail ?? `${install.label} in Commerce`}
                     </span>
                     <Link isQuiet onPress={() => onAction(model, install.needsReinstall ? 'reinstall' : 'install')}>
-                        {install.needsReinstall ? 'Reinstall in Commerce' : 'Finish install'}
+                        {install.needsReinstall ? 'Reinstall in Commerce' : 'Finish Install'}
                     </Link>
                 </>
             )}
@@ -132,7 +132,7 @@ function PanelContent({
                         {model.canRename ? (
                             <InlineRenameField
                                 name={model.name}
-                                label="New integration name"
+                                label="New Integration Name"
                                 onRename={(newName) => onRename(model.id, newName)}
                             />
                         ) : (
@@ -152,7 +152,7 @@ function PanelContent({
                     {/* What the mesh is DEPLOYED against — a permanent row, so "what is
                         my mesh pointed at?" never needs a warning badge to be answerable. */}
                     {commerceScope?.length ? (
-                        <PanelRow label="Commerce scope">
+                        <PanelRow label="Commerce Scope">
                             <CommerceScopeList parts={commerceScope} />
                         </PanelRow>
                     ) : null}

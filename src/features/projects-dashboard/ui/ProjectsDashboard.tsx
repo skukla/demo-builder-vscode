@@ -157,7 +157,7 @@ export function ProjectsDashboard({
     const addCard = (cardClassName: string): React.ReactElement | null =>
         isFiltering ? null : (
             <AddCard
-                name="New project"
+                name="New Project"
                 cardClassName={cardClassName}
                 testId="projects-add-card"
                 menu={

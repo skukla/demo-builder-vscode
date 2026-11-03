@@ -349,7 +349,7 @@ describe('the redesigned target section', () => {
         expect(screen.queryByLabelText('Loading the stores')).not.toBeInTheDocument();
         expect(screen.getAllByTestId('spectrum-picker-select')).toHaveLength(2);
         expect(screen.getByText('Website')).toBeInTheDocument();
-        expect(screen.getByText('Store view')).toBeInTheDocument();
+        expect(screen.getByText('Store View')).toBeInTheDocument();
     });
 
     /** The spinner carries "busy"; no field repeats it as static text. */

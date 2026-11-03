@@ -58,10 +58,10 @@ interface Row {
 
 /** The menu's upper section: what any pack offers, then what the SC's own library pack adds. */
 function packRows(detail: DatapackDetail, saveStore: boolean): Row[] {
-    const rows: Row[] = [{ key: 'save-file', label: 'Save as file', icon: 'saveFile' }];
-    if (saveStore) rows.push({ key: 'save-store', label: 'Save store changes to this pack', icon: 'capture' });
+    const rows: Row[] = [{ key: 'save-file', label: 'Save as File', icon: 'saveFile' }];
+    if (saveStore) rows.push({ key: 'save-store', label: 'Save Store Changes to This Datapack', icon: 'capture' });
     if (detail.store === 'library' && detail.mine) {
-        rows.push({ key: 'share', label: detail.shared ? 'Stop sharing' : 'Share', icon: 'share' });
+        rows.push({ key: 'share', label: detail.shared ? 'Stop Sharing' : 'Share', icon: 'share' });
     }
     return rows;
 }
@@ -69,8 +69,8 @@ function packRows(detail: DatapackDetail, saveStore: boolean): Row[] {
 /** The menu's lower section: what removes something from the library. */
 function removeRows(ownPack: boolean, ownLayer: boolean): Row[] {
     return [
-        ...(ownPack ? [{ key: 'remove', label: 'Remove from library', icon: 'delete' }] : []),
-        ...(ownLayer ? [{ key: 'remove-settings', label: 'Remove its store settings', icon: 'delete' }] : []),
+        ...(ownPack ? [{ key: 'remove', label: 'Remove from Library', icon: 'delete' }] : []),
+        ...(ownLayer ? [{ key: 'remove-settings', label: 'Remove Its Store Settings', icon: 'delete' }] : []),
     ];
 }
 

@@ -330,7 +330,7 @@ describe('ManageApisModal', () => {
             await flush();
 
             // The title is the outcome, in red; the reason is plain body text over the list.
-            expect(screen.getByText("Couldn't update API access")).toBeInTheDocument();
+            expect(screen.getByText("Couldn't Update API Access")).toBeInTheDocument();
             expect(document.querySelector('.modal-status-icon')).not.toBeNull();
             expect(screen.getByText(/needs a product profile/i)).not.toHaveClass('text-negative');
             expect(screen.getByRole('checkbox', { name: /firefly/i })).toBeInTheDocument();
@@ -345,7 +345,7 @@ describe('ManageApisModal', () => {
             renderModal();
             await flush();
 
-            expect(screen.getByText("Couldn't load Adobe APIs")).toBeInTheDocument();
+            expect(screen.getByText("Couldn't Load Adobe APIs")).toBeInTheDocument();
             expect(document.querySelector('.modal-status-icon')).not.toBeNull();
             expect(screen.getByText('boom')).toBeInTheDocument();
             const callsBefore = getClient().request.mock.calls.length;
@@ -362,7 +362,7 @@ describe('ManageApisModal', () => {
     describe('signed out offers sign-in, not Retry', () => {
         const signedOut = {
             success: false,
-            error: 'Adobe sign-in required.',
+            error: 'Adobe Sign-In Required.',
             code: 'AUTH_REQUIRED',
         };
 
@@ -371,7 +371,7 @@ describe('ManageApisModal', () => {
             renderModal();
             await flush();
 
-            expect(screen.getByText('Sign in to Adobe')).toBeInTheDocument();
+            expect(screen.getByText('Sign In to Adobe')).toBeInTheDocument();
             expect(document.querySelector('.modal-status-icon')).not.toBeNull();
             expect(screen.getByText(/Adobe sign-in will open in your browser/)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();
@@ -400,7 +400,7 @@ describe('ManageApisModal', () => {
             await flush();
 
             expect(screen.getByRole('button', { name: /^retry$/i })).toBeInTheDocument();
-            expect(screen.queryByText('Sign in to Adobe')).not.toBeInTheDocument();
+            expect(screen.queryByText('Sign In to Adobe')).not.toBeInTheDocument();
         });
     });
 

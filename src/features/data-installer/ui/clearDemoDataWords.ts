@@ -119,17 +119,17 @@ export function previewLines(preview: WipePreview): PreviewLine[] {
         { label: 'Products', value: products },
         { label: 'Categories', value: countOf(remove.categories.count, 'to remove') },
         { label: 'Customers', value: countOf(remove.customers.count, 'to remove') },
-        { label: 'Cart rules', value: rules },
+        { label: 'Cart Rules', value: rules },
         { label: 'Companies', value: countOf(remove.companies.count, 'to remove, with their customers') },
-        { label: 'Shared catalogs', value: countOf(remove.catalogs.count, remove.catalogs.count === 1 ? 'to remove, with its customer group' : 'to remove, with their customer groups') },
-        { label: 'Customer groups', value: countOf(remove.customerGroups.count, 'to remove') },
-        { label: 'Attribute sets', value: countOf(remove.attributeSets.count, 'to remove') },
+        { label: 'Shared Catalogs', value: countOf(remove.catalogs.count, remove.catalogs.count === 1 ? 'to remove, with its customer group' : 'to remove, with their customer groups') },
+        { label: 'Customer Groups', value: countOf(remove.customerGroups.count, 'to remove') },
+        { label: 'Attribute Sets', value: countOf(remove.attributeSets.count, 'to remove') },
         { label: 'Attributes', value: countOf(remove.attributes.count, 'to remove') },
-        { label: 'Website settings', value: settingsValue(preview.settings.count) },
+        { label: 'Website Settings', value: settingsValue(preview.settings.count) },
         { label: 'Orders', value: ordersValue(orders) },
         // The orders an ERP integration closes, or why it leaves them: its own one line.
         { label: 'ERP', value: preview.erp?.line ?? '' },
-        ...preview.left.map((l) => ({ label: 'Stays', value: stayValue(l) })),
+        ...preview.left.map((l) => ({ label: 'Not Removed', value: stayValue(l) })),
     ];
     const made = Object.entries(installed).map(([kind, count]) => `${digits(count)} ${kind.replace(/_/gu, ' ')}`);
     if (made.length > 0) lines.push({ label: 'Installed', value: `${made.join(', ')}, which removing its datapack takes` });
@@ -138,5 +138,5 @@ export function previewLines(preview: WipePreview): PreviewLine[] {
 
 /** The clear button: how many things, or nothing to clear. */
 export function clearLabel(total: number): string {
-    return total === 1 ? 'Clear 1 thing' : `Clear ${digits(total)} things`;
+    return total === 1 ? 'Clear 1 Item' : `Clear ${digits(total)} Items`;
 }

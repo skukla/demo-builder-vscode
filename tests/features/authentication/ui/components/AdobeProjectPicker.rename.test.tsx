@@ -49,7 +49,7 @@ function renderPicker(state: Partial<WizardState> = baseState) {
 /** Open a row's title for editing, type a new one, and press Enter. */
 async function renameTo(current: string, next: string): Promise<void> {
     fireEvent.click(screen.getByLabelText(`Rename ${current}`));
-    const input = screen.getByLabelText(`New name for ${current}`);
+    const input = screen.getByLabelText(`New Name for ${current}`);
     fireEvent.change(input, { target: { value: next } });
     fireEvent.keyDown(input, { key: 'Enter' });
     await act(async () => {
@@ -85,7 +85,7 @@ describe('AdobeProjectPicker — rename', () => {
         await renameTo('Test Project 1', 'Kukla Bodea');
 
         expect(screen.getByText('You are not a developer on every profile.')).toBeInTheDocument();
-        expect(screen.getByLabelText('New name for Test Project 1')).toBeInTheDocument();
+        expect(screen.getByLabelText('New Name for Test Project 1')).toBeInTheDocument();
     });
 
     it('carries the new title into the selected project', async () => {
@@ -129,7 +129,7 @@ describe('AdobeProjectPicker — rename', () => {
 
         await renameTo('Test Project 1', 'Kukla Bodea');
 
-        expect(screen.queryByLabelText('New name for Test Project 1')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('New Name for Test Project 1')).not.toBeInTheDocument();
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         expect(mockUpdateState).not.toHaveBeenCalled();
     });

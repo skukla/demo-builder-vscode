@@ -111,7 +111,7 @@ describe('StorefrontSetupStep — completion', () => {
             ],
         });
 
-        expect(screen.getByText('Storefront Published, with warnings')).toBeInTheDocument();
+        expect(screen.getByText('Storefront Published, with Warnings')).toBeInTheDocument();
         expect(screen.queryByText('Storefront Published')).not.toBeInTheDocument();
         expect(
             screen.getByText(

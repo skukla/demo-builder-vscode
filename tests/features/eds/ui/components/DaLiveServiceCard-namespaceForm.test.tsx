@@ -111,7 +111,7 @@ describe('DaLiveServiceCard — namespace options', () => {
     it('lists the personal account first, then the orgs alphabetically', () => {
         renderCard({ githubUser: 'leah', availableOrgs: ['zeta', 'alpha'] });
 
-        expect(optionLabels()).toEqual(['leah (Personal account)', 'alpha', 'zeta']);
+        expect(optionLabels()).toEqual(['leah (Personal Account)', 'alpha', 'zeta']);
     });
 
     it('offers only the orgs when there is no GitHub user', () => {
@@ -125,7 +125,7 @@ describe('DaLiveServiceCard — namespace options', () => {
         // would show up as a namespace the user cannot actually write to.
         renderCard({ githubUser: 'leah' });
 
-        expect(optionLabels()).toEqual(['leah (Personal account)']);
+        expect(optionLabels()).toEqual(['leah (Personal Account)']);
     });
 
     it('selects the personal account by default', () => {
@@ -160,7 +160,7 @@ describe('DaLiveServiceCard — namespace options', () => {
             />,
         );
 
-        expect(optionLabels()).toEqual(['leah (Personal account)']);
+        expect(optionLabels()).toEqual(['leah (Personal Account)']);
         expect(selectedKey()).toBe('leah');
     });
 

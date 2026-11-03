@@ -60,7 +60,7 @@ function sessionViews({ state, handleLogin }: AuthViewInputs): StatusDisplayProp
             message: `Your Adobe session expires in ${adobeAuth.tokenExpiresIn || 0} ${adobeAuth.tokenExpiresIn === 1 ? 'minute' : 'minutes'}. Please re-authenticate to avoid interruption during project setup.`,
             centerMessage: true,
             maxWidth: '520px',
-            actions: [{ label: 'Re-authenticate Now', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }],
+            actions: [{ label: 'Re-Authenticate Now', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }],
         });
     }
     if (isAuthenticatedWithOrg(adobeAuth, adobeOrg) && adobeOrg) {
@@ -92,13 +92,13 @@ function authErrorView({ state, authSubMessage, checkAuthentication, handleLogin
         title: noAppBuilder ? 'Insufficient Privileges' : 'Connection Issue',
         message: authSubMessage || (noAppBuilder
             ? 'You need Developer or System Admin role in an Adobe organization with App Builder access.'
-            : "We couldn't connect to Adobe services. Please check your internet connection."),
+            : "Couldn't connect to Adobe services. Check your internet connection."),
         centerMessage: true,
         maxWidth: '520px',
         actions: noAppBuilder
-            ? [{ label: 'Sign in with a different account', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }]
+            ? [{ label: 'Sign In with a Different Account', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }]
             : [
-                { label: 'Try Again', icon: <Refresh size="S" />, variant: 'secondary', onPress: () => checkAuthentication() },
+                { label: 'Retry', icon: <Refresh size="S" />, variant: 'secondary', onPress: () => checkAuthentication() },
                 { label: 'Sign In Again', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(false) },
             ],
     };
@@ -113,7 +113,7 @@ function signedOutViews(inputs: AuthViewInputs): StatusDisplayProps[] {
         views.push({
             variant: 'info',
             icon: <Key UNSAFE_className="text-gray-500" size="L" />,
-            title: authStatus || 'Sign in to Adobe',
+            title: authStatus || 'Sign In to Adobe',
             message: authSubMessage || 'Connect your Adobe account to create and deploy App Builder applications.',
             centerMessage: true,
             maxWidth: '520px',

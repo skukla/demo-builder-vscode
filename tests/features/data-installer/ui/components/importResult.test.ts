@@ -32,7 +32,7 @@ describe('describePerType', () => {
             record({ customer_groups: 'success' as DataTypeStatus }),
         );
 
-        expect(lines).toEqual(['Customer groups: success']);
+        expect(lines).toEqual(['Customer Groups: success']);
         expect(lines[0]).not.toContain('_');
     });
 
@@ -66,7 +66,7 @@ describe('describePerType', () => {
         it('drops the types that succeeded', () => {
             expect(describePerType(mixed, { troubledOnly: true })).toEqual([
                 'Products: failed',
-                'Customer groups: skipped',
+                'Customer Groups: skipped',
             ]);
         });
 

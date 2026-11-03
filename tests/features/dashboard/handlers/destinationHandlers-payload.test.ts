@@ -71,7 +71,7 @@ describe('handleSetProjectDestination — what it names the destination', () => 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
         expect(mockWithProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Changing destination to New Project, Production' }),
+            expect.objectContaining({ title: 'Changing Destination to New Project, Production' }),
             expect.any(Function)
         );
     });
@@ -87,7 +87,7 @@ describe('handleSetProjectDestination — what it names the destination', () => 
         });
 
         expect(mockWithProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Changing destination to NewProject, Production' }),
+            expect.objectContaining({ title: 'Changing Destination to NewProject, Production' }),
             expect.any(Function)
         );
     });

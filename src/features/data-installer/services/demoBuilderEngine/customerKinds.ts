@@ -79,7 +79,7 @@ export async function installCustomerGroups(ctx: KindContext, rows: CustomerGrou
             const body: { group: CommerceCustomerGroup } = { group: { code: group.code, tax_class_id: group.tax_class_id ?? RETAIL_TAX_CLASS } };
             return createOne(ctx, { kind: CUSTOMER_GROUP_KIND, key: group.code }, async () => {
                 const id = Number(((await ctx.send('POST', 'customerGroups', body)) as CommerceCustomerGroup | null)?.id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer group ${group.code}'s id.`);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new customer group ${group.code}'s id.`);
                 return { kind: CUSTOMER_GROUP_KIND, id: String(id), key: group.code };
             });
         });
@@ -146,7 +146,7 @@ export async function installCustomers(ctx: KindContext, rows: CustomerRows): Pr
             return createOne(ctx, { kind: CUSTOMER_KIND, key, find: { websiteId } }, async () => {
                 const answer = (await ctx.send('POST', 'customers', { customer, ...(row.password ? { password: row.password } : {}) })) as CommerceCustomer | null;
                 const id = Number(answer?.id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new customer ${key}'s id.`);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new customer ${key}'s id.`);
                 return { kind: CUSTOMER_KIND, id: String(id), key };
             });
         });

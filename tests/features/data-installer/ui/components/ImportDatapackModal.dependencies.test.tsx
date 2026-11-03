@@ -109,8 +109,8 @@ describe('a needed type cannot be unticked', () => {
         await press(box('Customers'));
         await press(box('Products'));
 
-        expect(box('Customer groups')).toBeChecked();
-        expect(box('Customer groups')).toBeDisabled();
+        expect(box('Customer Groups')).toBeChecked();
+        expect(box('Customer Groups')).toBeDisabled();
     });
 
     it('leaves products itself free — nothing in the pack needs it', async () => {

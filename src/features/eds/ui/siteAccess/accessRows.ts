@@ -29,13 +29,13 @@ export interface AccessRow {
 
 const ADMIN_REMOVAL: AccessRemoval = {
     type: 'removeSiteAdmin',
-    label: 'Remove configuration admin',
+    label: 'Remove Configuration Admin',
     consequence: 'be a configuration admin',
 };
 
 const READER_REMOVAL: AccessRemoval = {
     type: 'removeContentReader',
-    label: 'Remove content access',
+    label: 'Remove Content Access',
     consequence: "be able to read this storefront's content",
 };
 

@@ -345,7 +345,7 @@ describe('AiOverviewScreen — user prompts', () => {
     });
 
     describe('copyAiPrompt wiring through PromptCard', () => {
-        it('clicking the "Copy prompt" kebab item dispatches copyAiPrompt with the prompt body', async () => {
+        it('clicking the "Copy Prompt" kebab item dispatches copyAiPrompt with the prompt body', async () => {
             const { webviewClient } = await renderScreen({
                 projectOverrides: {
                     aiPrompts: [{ id: 'u1', title: 'Copy me', prompt: 'This is the body' }],
@@ -358,7 +358,7 @@ describe('AiOverviewScreen — user prompts', () => {
                 kebab.click();
             });
             await act(async () => {
-                screen.getByText('Copy prompt').click();
+                screen.getByText('Copy Prompt').click();
             });
 
             const calls = (webviewClient.postMessage as jest.Mock).mock.calls;

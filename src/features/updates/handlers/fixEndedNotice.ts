@@ -42,7 +42,7 @@ export interface KeptRow {
     localCopyId: string;
 }
 
-const OPEN_STOREFRONT = 'Open storefront';
+const OPEN_STOREFRONT = 'Open Storefront';
 
 /** What the row says once the fix has ended. */
 const ROW_STATUS: Record<FixEnding, Omit<UpdateRowStatus, 'id'>> = {

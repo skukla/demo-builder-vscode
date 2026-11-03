@@ -61,7 +61,7 @@ export interface RemoveFromLibraryButtonProps {
     label?: string;
 }
 
-export function RemoveFromLibraryButton({ id, onRemoved, label = 'Remove it from the library' }: RemoveFromLibraryButtonProps): React.JSX.Element {
+export function RemoveFromLibraryButton({ id, onRemoved, label = 'Remove from Library' }: RemoveFromLibraryButtonProps): React.JSX.Element {
     const { start, removing, removed, note } = useLibraryRemoval(id, onRemoved);
     if (removed) return <>{note}</>;
     return (

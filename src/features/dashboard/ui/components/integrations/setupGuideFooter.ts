@@ -17,9 +17,9 @@ import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 /** The fix buttons' words, in one place. */
 export const FIX_COPY = {
-    fix: 'Apply this step',
-    undo: 'Undo this step',
-    all: (count: number) => `Apply all (${count})`,
+    fix: 'Apply This Step',
+    undo: 'Undo This Step',
+    all: (count: number) => `Apply All (${count})`,
 };
 
 /**
@@ -81,7 +81,7 @@ export function footerButtons({ item, busy, setDone, openAdmin, openingAdmin, fi
     if (!item) return [open];
     if (item.checkable && item.state !== 'dismissed') return [...fixButtons(item, fix, busy), open];
     if (item.state === 'open') {
-        return [{ label: 'Mark as done', variant: 'secondary', onPress: setDone, isDisabled: busy }, open];
+        return [{ label: 'Mark as Done', variant: 'secondary', onPress: setDone, isDisabled: busy }, open];
     }
     return [open];
 }

@@ -273,7 +273,7 @@ describe('probeSharedDemo', () => {
     it('is unreadable, not a throw, when the repository cannot be found', async () => {
         const result = await probeSharedDemo(deps({ files: {} }), 'nobody', 'nothing', logger);
 
-        expect(result).toEqual({ outcome: 'unreadable', reason: expect.stringMatching(/couldn't find/) });
+        expect(result).toEqual({ outcome: 'unreadable', reason: expect.stringMatching(/couldn't find/i) });
     });
 
     it('names both halves when the site answers but the repository does not', async () => {

@@ -102,7 +102,7 @@ export function setupNextStep(
     // The button alone: a "Next: 1 setup step …" sentence above it said the same thing and
     // made the result busy (owner, 2026-10-26).
     return {
-        action: 'Open demo setup',
+        action: 'Open Demo Setup',
         onPress: () => openGuide(card.id),
     };
 }

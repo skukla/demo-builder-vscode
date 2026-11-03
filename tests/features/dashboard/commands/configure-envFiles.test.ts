@@ -271,7 +271,7 @@ describe('ConfigureProjectWebviewCommand - env file reads and writes', () => {
             );
         });
 
-        it('runs behind a non-cancellable "Republishing storefront" toast', async () => {
+        it('runs behind a non-cancellable "Republishing Storefront" toast', async () => {
             mockRepublishStorefrontConfig.mockResolvedValue({ success: true });
 
             await files(command).republishStorefront(projectWith({}));
@@ -279,7 +279,7 @@ describe('ConfigureProjectWebviewCommand - env file reads and writes', () => {
             expect(vscode.window.withProgress).toHaveBeenCalledWith(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Republishing storefront',
+                    title: 'Republishing Storefront',
                     // A half-published config.json serves a storefront that points
                     // at neither the old nor the new configuration.
                     cancellable: false,

@@ -51,8 +51,8 @@ describe('FieldHelpButton step navigation', () => {
         });
 
         // "Done" on the first of three would claim the user has read them all.
-        it('labels the accent button "Got it", not "Done"', () => {
-            expect(screen.getByRole('button', { name: /Got it/i })).toBeInTheDocument();
+        it('labels the accent button "Got It", not "Done"', () => {
+            expect(screen.getByRole('button', { name: /Got It/i })).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^Done$/i })).not.toBeInTheDocument();
         });
 
@@ -83,7 +83,7 @@ describe('FieldHelpButton step navigation', () => {
 
         it('labels the accent button "Done"', () => {
             expect(screen.getByRole('button', { name: /Done/i })).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /Got it/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Got It/i })).not.toBeInTheDocument();
         });
 
         it('steps back exactly one at a time', async () => {
@@ -131,8 +131,8 @@ describe('FieldHelpButton step navigation', () => {
         });
 
         // Nothing was stepped through, so nothing was "Done".
-        it('labels the accent button "Got it"', () => {
-            expect(screen.getByRole('button', { name: /Got it/i })).toBeInTheDocument();
+        it('labels the accent button "Got It"', () => {
+            expect(screen.getByRole('button', { name: /Got It/i })).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^Done$/i })).not.toBeInTheDocument();
         });
     });

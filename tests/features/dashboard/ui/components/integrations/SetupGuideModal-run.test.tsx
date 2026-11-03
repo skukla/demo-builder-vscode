@@ -92,10 +92,10 @@ describe('Apply runs in the guide', () => {
     it('follows the run in the pane, waits its buttons, and ends on what changed', async () => {
         const { onClose } = await renderGuide();
         fireEvent.click(screen.getByRole('button', { name: FIX_COPY.fix }));
-        push({ id: 'erp-integration', state: 'running', stage: 'Applying the demo setup', step: 'ERP warehouse: Applying' });
+        push({ id: 'erp-integration', state: 'running', stage: 'Applying the Demo Setup', step: 'ERP warehouse: Applying' });
         // The extension's progress words stay out of the guide: the list's mark spins instead.
         expect(says()).toBe(STATUS_COPY.applying);
-        expect(screen.getByRole('button', { name: 'Check all steps' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Check All Steps' })).toBeDisabled();
 
         push({
             id: 'erp-integration',
@@ -111,7 +111,7 @@ describe('Apply runs in the guide', () => {
         expect(says()).toBe(`${STATUS_COPY.done}${DONE_COPY.applied}`);
         expect(banner()).toHaveClass('inline-notice--success');
         expect(within(pane()).queryByText(/Switched Test Warehouse/)).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Check all steps' })).not.toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Check All Steps' })).not.toBeDisabled();
         expect(onClose).not.toHaveBeenCalled();
     });
 
@@ -135,7 +135,7 @@ describe('a run that stops on a question', () => {
     it('closes the guide and hands the run to the progress window, with the step to come back to', async () => {
         const { onClose, onAsk } = await renderGuide();
         fireEvent.click(screen.getByRole('button', { name: FIX_COPY.fix }));
-        push({ id: 'erp-integration', state: 'running', prompt: { message: 'Sign in to Adobe?', actions: ['Sign in'] } });
+        push({ id: 'erp-integration', state: 'running', prompt: { message: 'Sign In to Adobe?', actions: ['Sign In'] } });
         // The guide forgets the run, so its pane reads the plan again: let that read land.
         await act(async () => {});
         expect(onClose).toHaveBeenCalled();
@@ -146,8 +146,8 @@ describe('a run that stops on a question', () => {
                 message: 'prepareCommerceStore',
                 payload: { id: 'erp-integration', confirm: true, stepIds: ['second-source'] },
                 title: 'Applying ERP warehouse',
-                failureTitle: "Couldn't apply ERP warehouse",
-                successTitle: 'ERP warehouse applied',
+                failureTitle: "Couldn't Apply ERP warehouse",
+                successTitle: 'ERP warehouse Applied',
             },
             'second-source',
         );

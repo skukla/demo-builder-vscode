@@ -146,7 +146,7 @@ describe('sync storefront', () => {
         await handleSyncStorefront(context(), undefined);
 
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Syncing the storefront' }),
+            expect.objectContaining({ title: 'Syncing the Storefront' }),
             expect.any(Function),
         );
         expect(pushes()).toStrictEqual([]);

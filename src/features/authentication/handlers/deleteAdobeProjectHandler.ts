@@ -144,7 +144,7 @@ function runTeardownWithProgress(
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Deleting the Adobe project',
+            title: 'Deleting the Adobe Project',
             cancellable: false,
         },
         (progress) => teardownConsoleProject(deps, target, (p) =>

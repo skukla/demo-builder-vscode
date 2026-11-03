@@ -59,14 +59,14 @@ async function openPrompt() {
     renderCards([integrationCard(), erpCard('demo-erp', 'Acme ERP')]);
     const panel = await openPanel(user, 'Acme ERP Integration', 'Deployed');
     await user.click(within(panel).getByRole('button', { name: /^add another erp$/i }));
-    return { user, dialog: screen.getByRole('dialog', { name: 'Add another ERP' }) };
+    return { user, dialog: screen.getByRole('dialog', { name: 'Add Another ERP' }) };
 }
 
-describe('IntegrationsGrid — Add another ERP', () => {
+describe('IntegrationsGrid — Add Another ERP', () => {
     it('names the new ERP and sends addErp with the integration id, into the modal', async () => {
         const { user, dialog } = await openPrompt();
 
-        await user.type(within(dialog).getByRole('textbox', { name: 'ERP name' }), 'Brand B ERP');
+        await user.type(within(dialog).getByRole('textbox', { name: 'ERP Name' }), 'Brand B ERP');
         await user.click(within(dialog).getByRole('button', { name: 'Add' }));
 
         // The store was not read here (the harness answers requests with a bare success), so the
@@ -85,14 +85,14 @@ describe('IntegrationsGrid — Add another ERP', () => {
     it('refuses a name the project already has, without case, and sends nothing', async () => {
         const { user, dialog } = await openPrompt();
 
-        await user.type(within(dialog).getByRole('textbox', { name: 'ERP name' }), 'acme erp');
+        await user.type(within(dialog).getByRole('textbox', { name: 'ERP Name' }), 'acme erp');
 
-        expect(within(dialog).getByText('An ERP named "acme ERP" is already in this project. Pick another name.')).toBeInTheDocument();
+        expect(within(dialog).getByText('An ERP named "acme ERP" is already in this project. Enter a different name.')).toBeInTheDocument();
         await user.click(within(dialog).getByRole('button', { name: 'Add' }));
         expect(getClient().postMessage).not.toHaveBeenCalledWith('addErp', expect.anything());
     });
 
-    it('Assign products on an ERP that owns nothing closes the prompt and opens that ERP\'s', async () => {
+    it('Assign Products on an ERP that owns nothing closes the prompt and opens that ERP\'s', async () => {
         const store: ErpOwnershipOptionsResult = {
             success: true,
             data: {
@@ -112,10 +112,10 @@ describe('IntegrationsGrid — Add another ERP', () => {
         const panel = await openPanel(user, 'Acme ERP Integration', 'Deployed');
         await user.click(within(panel).getByRole('button', { name: /^add another erp$/i }));
 
-        await user.click(await screen.findByRole('button', { name: 'Assign products to Brand B ERP' }));
+        await user.click(await screen.findByRole('button', { name: 'Assign Products to Brand B ERP' }));
 
         expect(erpAssign.openAssign).toHaveBeenCalledWith({ id: 'erp-integration', erp: 'demo-erp-2', name: 'Brand B ERP' });
-        expect(screen.queryByRole('dialog', { name: 'Add another ERP' })).toBeNull();
+        expect(screen.queryByRole('dialog', { name: 'Add Another ERP' })).toBeNull();
     });
 
     it("an added ERP's Remove says the integration stays", async () => {

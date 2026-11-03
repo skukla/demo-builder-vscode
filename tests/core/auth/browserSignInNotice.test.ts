@@ -73,8 +73,8 @@ describe('with a modal on screen', () => {
 
         expect(vscode.window.withProgress).not.toHaveBeenCalled();
         expect(mockAsk).toHaveBeenCalledWith(
-            { title: 'Finish signing in', message: expect.stringMatching(/browser/) },
-            'Open sign-in page',
+            { title: 'Finish Signing In', message: expect.stringMatching(/browser/) },
+            'Open Sign-In Page',
             'Cancel',
         );
         signIn.finish(true);
@@ -84,7 +84,7 @@ describe('with a modal on screen', () => {
     it('opens the sign-in page when asked, and keeps waiting for the sign-in', async () => {
         const signIn = signInThatWaits();
         questionThatWaits();
-        mockAsk.mockResolvedValueOnce('Open sign-in page');
+        mockAsk.mockResolvedValueOnce('Open Sign-In Page');
 
         const result = withBrowserSignInNotice(signIn.run);
         await settle();
@@ -132,7 +132,7 @@ describe('with no modal', () => {
                 { isCancellationRequested: false, onCancellationRequested: (fn: () => void) => (cancel = fn) },
             ),
         );
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('Open sign-in page');
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('Open Sign-In Page');
         const signIn = signInThatWaits();
 
         const result = withBrowserSignInNotice(signIn.run);
@@ -144,7 +144,7 @@ describe('with no modal', () => {
         );
         expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
             expect.stringMatching(/browser/),
-            'Open sign-in page',
+            'Open Sign-In Page',
         );
         expect(vscode.env.openExternal).toHaveBeenCalledWith(expect.objectContaining({ path: LINK }));
         cancel();

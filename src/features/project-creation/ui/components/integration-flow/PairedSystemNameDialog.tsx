@@ -81,14 +81,14 @@ export function PairedSystemNameDialog({ target, onClose, onSave }: PairedSystem
         <DialogContainer onDismiss={onClose}>
             {target && (
                 <Modal
-                    title={`${target.integrationName} settings`}
+                    title={`${target.integrationName} Settings`}
                     size="S"
                     fitContent
                     onClose={onClose}
                     actionButtons={[{ label: 'Save', variant: 'accent', onPress: save, isDisabled: !ready }]}
                 >
                     <TextField
-                        label={`${target.systemWord} name`}
+                        label={`${target.systemWord} Name`}
                         value={name}
                         onChange={setName}
                         maxLength={MAX_ERP_NAME}

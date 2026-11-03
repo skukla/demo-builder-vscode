@@ -127,7 +127,7 @@ describe('DatapackDetailPanel', () => {
         it('calls out declared types the service has no item for', () => {
             renderPanel();
 
-            expect(screen.getByTestId('datapack-detail-missing')).toHaveTextContent('Gift cards');
+            expect(screen.getByTestId('datapack-detail-missing')).toHaveTextContent('Gift Cards');
         });
 
         it('renders no missing section when the pack holds everything it declares', () => {
@@ -167,7 +167,7 @@ describe('DatapackDetailPanel', () => {
         it('says a curated pack is visible to everyone', () => {
             renderPanel();
 
-            expect(screen.getByText('Visible to')).toBeInTheDocument();
+            expect(screen.getByText('Visible To')).toBeInTheDocument();
             expect(screen.getByText('Everyone')).toBeInTheDocument();
             expect(screen.queryByText('Curation')).not.toBeInTheDocument();
         });
@@ -250,7 +250,7 @@ describe('DatapackDetailPanel', () => {
             const { container } = renderPanel({ inventory: null });
 
             expect(container.querySelectorAll('.datapack-panel-type')).toHaveLength(3);
-            expect(screen.getByText('Gift cards')).toBeInTheDocument();
+            expect(screen.getByText('Gift Cards')).toBeInTheDocument();
             expect(screen.queryByTestId('datapack-detail-missing')).not.toBeInTheDocument();
         });
     });
@@ -377,7 +377,7 @@ describe('DatapackDetailPanel', () => {
             renderPanel({ loading: true });
 
             expect(screen.getByRole('status')).toBeInTheDocument();
-            expect(screen.queryByText('Visible to')).not.toBeInTheDocument();
+            expect(screen.queryByText('Visible To')).not.toBeInTheDocument();
         });
 
         it('shows the failure treatment with a retry', () => {
@@ -388,7 +388,7 @@ describe('DatapackDetailPanel', () => {
             });
 
             expect(screen.getByText('Could not load the datapack.')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         });
 
         it('offers sign-in rather than retry for an auth refusal', () => {
@@ -413,7 +413,7 @@ describe('DatapackDetailPanel — actions', () => {
 
         expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'More actions for Bodea' })).toBeInTheDocument();
-        expect(screen.getByRole('menuitem', { name: 'Save store changes to this pack' })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: 'Save Store Changes to This Datapack' })).toBeInTheDocument();
     });
 
     it('offers no menu while the detail is loading', () => {
@@ -429,13 +429,13 @@ describe('DatapackDetailPanel and a settings layer (datapack-engine step 09)', (
     it('says what Import will also set, by path and value', () => {
         renderPanel({ settingsLayer: LAYER });
 
-        expect(screen.getByText('Also sets')).toBeInTheDocument();
+        expect(screen.getByText('Also Sets')).toBeInTheDocument();
         expect(screen.getByText('catalog/frontend/grid_per_page: 24')).toBeInTheDocument();
     });
 
     it('has no such row for a pack with no layer', () => {
         renderPanel();
 
-        expect(screen.queryByText('Also sets')).not.toBeInTheDocument();
+        expect(screen.queryByText('Also Sets')).not.toBeInTheDocument();
     });
 });

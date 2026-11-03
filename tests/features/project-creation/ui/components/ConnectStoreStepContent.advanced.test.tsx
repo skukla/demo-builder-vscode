@@ -51,7 +51,7 @@ const PAAS_ADMIN_PASSWORD = 'ADOBE_COMMERCE_ADMIN_PASSWORD';
 // ---------------------------------------------------------------------------
 
 /** PaaS service group — connection fields + website code (needed for StoreConfigFieldRow's
- *  isWebsiteCodeField branch, which renders the Re-detect button and StoreSelectionRow) */
+ *  isWebsiteCodeField branch, which renders the Re-Detect button and StoreSelectionRow) */
 const paasServiceGroup: MockServiceGroup = {
     id: 'adobe-commerce',
     label: 'Adobe Commerce',
@@ -606,9 +606,9 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
             expect(screen.getByRole('button', { name: /re-detect/i })).toBeEnabled();
         });
 
-        it('shows the spinner and NO Re-detect while store data has not loaded', () => {
+        it('shows the spinner and NO Re-Detect while store data has not loaded', () => {
             // The spinner stands in for the whole row during detection — the
-            // Re-detect button only appears once the dropdowns are populated.
+            // Re-Detect button only appears once the dropdowns are populated.
             mockUseStoreDiscovery.hasStoreData = false;
             mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();

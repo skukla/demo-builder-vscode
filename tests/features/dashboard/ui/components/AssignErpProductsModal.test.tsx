@@ -172,7 +172,7 @@ describe('AssignErpProductsModal', () => {
         pick('ACC-1');
         pick('CAB-30');
         expect(screen.getByTestId('assign-preview')).toHaveTextContent('2 selected, all from Justrite ERP.');
-        fireEvent.click(screen.getByRole('button', { name: 'Assign 2 products' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Assign 2 Products' }));
         expect(onAssign).toHaveBeenCalledWith(TARGET, { by: 'skus', skus: ['ACC-1', 'CAB-30'] });
     });
 
@@ -185,7 +185,7 @@ describe('AssignErpProductsModal', () => {
         filterBy(LIST_COPY.category, 'any');
         fireEvent.click(screen.getByRole('button', { name: LIST_COPY.selectedOnly }));
         expect(shownSkus()).toEqual(['ACC-1', 'CAB-30']);
-        expect(screen.getByRole('button', { name: 'Assign 2 products' })).not.toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByRole('button', { name: 'Assign 2 Products' })).not.toHaveAttribute('aria-disabled', 'true');
         fireEvent.click(screen.getByRole('button', { name: LIST_COPY.clear }));
         expect(screen.getByRole('button', { name: ASSIGN_COPY.actionIdle })).toHaveAttribute('aria-disabled', 'true');
     });
@@ -195,7 +195,7 @@ describe('AssignErpProductsModal', () => {
         filterBy(LIST_COPY.category, 'Signs');
         // ACC-3 is already Accuform's and ACC-9 cannot be tagged: one of three is open.
         fireEvent.click(screen.getByRole('checkbox', { name: 'Select All' }));
-        expect(screen.getByRole('button', { name: 'Assign 1 product' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Assign 1 Product' })).toBeInTheDocument();
         pick('ACC-1');
         expect(screen.getByRole('button', { name: ASSIGN_COPY.actionIdle })).toHaveAttribute('aria-disabled', 'true');
     });
@@ -235,7 +235,7 @@ describe('AssignErpProductsModal', () => {
         expect(cells('ACC-1')[3]).toBe('Justrite ERP');
         pick('ACC-3');
         expect(screen.getByTestId('assign-preview')).toHaveTextContent('1 selected, from Accuform ERP.');
-        fireEvent.click(screen.getByRole('button', { name: 'Assign 1 product' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Assign 1 Product' }));
         expect(onAssign).toHaveBeenCalledWith({ ...TARGET }, { by: 'skus', skus: ['ACC-3'] });
     });
 
@@ -278,14 +278,14 @@ describe('AssignErpProductsModal', () => {
     });
 
     it("says the read's words when Commerce could not be read", async () => {
-        mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required to assign products.' });
+        mockRequest.mockResolvedValue({ success: false, error: 'Adobe Sign-In Required to assign products.' });
         render(
             <Provider theme={defaultTheme}>
                 <AssignErpProductsModal target={TARGET} onClose={jest.fn()} onAssign={jest.fn()} onAddSets={jest.fn()} />
             </Provider>,
         );
         await flush();
-        expect(screen.getByText('Adobe sign-in required to assign products.')).toBeInTheDocument();
+        expect(screen.getByText('Adobe Sign-In Required to assign products.')).toBeInTheDocument();
         expect(screen.getByText(ASSIGN_COPY.readFailed)).toBeInTheDocument();
         expect(document.querySelector('.modal-status-icon')).not.toBeNull();
         expect(screen.queryByRole('button', { name: ASSIGN_COPY.actionIdle })).toBeNull();
@@ -310,7 +310,7 @@ describe('AssignErpProductsModal', () => {
     });
 
     it('writes counts with separators, in the button and the list', () => {
-        expect(ASSIGN_COPY.action(1284)).toBe('Assign 1,284 products');
+        expect(ASSIGN_COPY.action(1284)).toBe('Assign 1,284 Products');
         expect(LIST_COPY.shown(1284, 1284)).toBe('1,284 products');
         expect(LIST_COPY.shown(12, 1284, 'Justrite Website')).toBe('12 of 1,284 products on Justrite Website');
     });

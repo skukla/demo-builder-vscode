@@ -51,7 +51,7 @@ export class ExtensionUpdater {
             // Asked in the Updates modal when it runs there (PL-80), otherwise a notification.
             const reload = await askDuringOperation(
                 {
-                    title: 'Reload to finish updating',
+                    title: 'Reload to Finish Updating',
                     message: `Demo Builder updated to v${newVersion}. Reload the window to start using it?`,
                 },
                 'Reload Now',

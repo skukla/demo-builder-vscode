@@ -36,7 +36,7 @@ export function SignedOutOutcome({ host, onLoad }: { host: SelectionDialogHost; 
         <DialogOutcomeBody
             onOutcome={host.onOutcome}
             outcome={{
-                title: 'Sign in to Adobe',
+                title: 'Sign In to Adobe',
                 status: 'warning',
                 lines: ['Adobe sign-in will open in your browser.'],
                 actions: onSignIn

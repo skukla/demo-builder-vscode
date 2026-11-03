@@ -37,16 +37,16 @@ function NoInstanceNotice(): React.JSX.Element {
 }
 
 /**
- * After Stop watching: said so "stopped looking" never reads as "cancelled". No spinner, because
+ * After Close: said so "stopped looking" never reads as "cancelled". No spinner, because
  * nothing here is waiting any more; the title says it stopped (`viewFrame`).
  */
 function StoppedWatching({ record }: { record: ImportJobRecord }): React.JSX.Element {
-    return <LeadText>The {record.operation === 'reset' ? 'removal' : 'import'} carries on without you.</LeadText>;
+    return <LeadText>The {record.operation === 'reset' ? 'removal' : 'import'} continues in the background.</LeadText>;
 }
 
-/** A data type's label inside a sentence: "categories", but "B2B companies" keeps its capitals. */
+/** A data type's label inside a sentence: "attribute sets", but "B2B companies" keeps its acronym. */
 function inSentence(label: string): string {
-    return /^.[A-Z0-9]/.test(label) ? label : label.charAt(0).toLowerCase() + label.slice(1);
+    return label.split(' ').map((word) => (/^[A-Z][a-z]+$/.test(word) ? word.toLowerCase() : word)).join(' ');
 }
 
 /**
@@ -139,7 +139,7 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
 
 /**
  * The in-flight watch: spinner, and the per-type states in the subMessage slot. The footer's "Run in
- * background" and "Stop watching" say the job carries on while it is watched.
+ * background" and "Close" say the job carries on while it is watched.
  */
 function WatchProgress({ record }: { record: ImportJobRecord }): React.JSX.Element {
     // `op` is the WIRE value, passed to progressStep; the words the SC reads come from it.

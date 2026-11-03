@@ -205,7 +205,7 @@ describe('DatapackActivityView', () => {
 
             render(<DatapackActivityView />);
 
-            expect(await screen.findByText('No activity yet')).toBeInTheDocument();
+            expect(await screen.findByText('No Activity Yet')).toBeInTheDocument();
         });
 
         it('offers sign-in — never Retry — for a returned AUTH_REQUIRED refusal', async () => {
@@ -217,8 +217,8 @@ describe('DatapackActivityView', () => {
 
             render(<DatapackActivityView />);
 
-            expect(await screen.findByText('Adobe sign-in required')).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+            expect(await screen.findByText('Adobe Sign-In Required')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
         });
     });
 });

@@ -70,7 +70,7 @@ function orgBadgeAction(
     onReAuthenticate: () => void,
     onVerifyOrg: () => void,
 ): { label: string; onPress: () => void } | undefined {
-    if (state === 'signed-out') return { label: 'Sign in', onPress: onReAuthenticate };
+    if (state === 'signed-out') return { label: 'Sign In', onPress: onReAuthenticate };
     if (state === 'unverified') return { label: 'Verify', onPress: onVerifyOrg };
     return undefined;
 }
@@ -143,7 +143,7 @@ export function DashboardStatusHeader({
                                             action={
                                                 offersRegenerate(aiReady)
                                                     ? {
-                                                          label: 'Regenerate AI files',
+                                                          label: 'Regenerate AI Files',
                                                           onPress: onRegenerateAi,
                                                           testId: 'ai-regenerate-trigger',
                                                       }

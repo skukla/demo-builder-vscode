@@ -69,7 +69,7 @@ export class CheckUpdatesCommand extends BaseCommand {
     /** The SC's check: told in a notification, then the modal or "up to date". */
     private async checkInNotification(): Promise<void> {
         try {
-            const found = await withProgressRegister({ title: 'Checking for updates' }, () => this.check());
+            const found = await withProgressRegister({ title: 'Checking for Updates' }, () => this.check());
             await this.maybeOfferGraduation();
             if (found.count === 0) {
                 const version: string = this.context.extension.packageJSON.version;

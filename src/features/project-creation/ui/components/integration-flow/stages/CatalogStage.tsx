@@ -39,7 +39,7 @@ function nameField(entry: AppBuilderComponentCatalogEntry | undefined): { fieldL
     const system = entry && pairedSystemOf(entry, getAppBuilderComponentCatalog());
     if (!system) return { defaultLabel: entry?.name ?? '' };
     const word = systemWordOf(system);
-    return { fieldLabel: `${word} name (optional)`, defaultLabel: `${DEFAULT_PAIR_BASE} ${word}` };
+    return { fieldLabel: `${word} Name (Optional)`, defaultLabel: `${DEFAULT_PAIR_BASE} ${word}` };
 }
 
 /** Stable empty id list (avoids a new array each render). */

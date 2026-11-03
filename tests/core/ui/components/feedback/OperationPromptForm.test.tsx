@@ -17,7 +17,7 @@ function renderForm(fields: OperationPromptField[]) {
 describe('OperationPromptForm — field kinds', () => {
     it("a checkbox starts as its value says and answers 'true' or ''", () => {
         const { last } = renderForm([
-            { id: 'repo', label: 'Delete the GitHub repository', kind: 'checkbox', value: 'true' },
+            { id: 'repo', label: 'Delete the GitHub Repository', kind: 'checkbox', value: 'true' },
         ]);
         const box = screen.getByRole('checkbox');
         expect(box).toBeChecked();
@@ -38,13 +38,13 @@ describe('OperationPromptForm — field kinds', () => {
         renderForm([
             {
                 id: 'github',
-                label: 'Also delete the GitHub repository',
+                label: 'Also delete the GitHub Repository',
                 kind: 'checkbox',
                 value: '',
                 description: 'skukla/scratch-1022-b',
             },
         ]);
-        const box = screen.getByRole('checkbox', { name: /Also delete the GitHub repository/ });
+        const box = screen.getByRole('checkbox', { name: /Also delete the GitHub Repository/ });
         const detail = screen.getByText('skukla/scratch-1022-b');
 
         expect(detail).toHaveClass('prompt-checkbox-detail');
@@ -80,17 +80,17 @@ describe('OperationPromptForm — field kinds', () => {
 // QuickPick it replaced had a select-all; the modal had none.
 describe('OperationPromptForm — select all', () => {
     const RESOURCES: OperationPromptField[] = [
-        { id: 'github', label: 'Also delete the GitHub repository', kind: 'checkbox', value: '' },
+        { id: 'github', label: 'Also delete the GitHub Repository', kind: 'checkbox', value: '' },
         { id: 'daLive', label: 'Also delete the DA.live site', kind: 'checkbox', value: '' },
     ];
 
     it('offers a select-all above two or more boxes, which ticks and clears every one', () => {
         const { last } = renderForm(RESOURCES);
-        const all = screen.getByRole('checkbox', { name: 'Select all' });
+        const all = screen.getByRole('checkbox', { name: 'Select All' });
 
         fireEvent.click(all);
         expect(last()).toEqual({ github: 'true', daLive: 'true' });
-        expect(screen.getByRole('checkbox', { name: 'Also delete the GitHub repository' })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Also delete the GitHub Repository' })).toBeChecked();
         expect(screen.getByRole('checkbox', { name: 'Also delete the DA.live site' })).toBeChecked();
 
         fireEvent.click(all);
@@ -99,9 +99,9 @@ describe('OperationPromptForm — select all', () => {
 
     it('reads ticked when every box is, and partly ticked when only some are', () => {
         renderForm(RESOURCES);
-        const all = screen.getByRole('checkbox', { name: 'Select all' });
+        const all = screen.getByRole('checkbox', { name: 'Select All' });
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Also delete the GitHub repository' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Also delete the GitHub Repository' }));
         expect(all).not.toBeChecked();
         expect(all).toHaveAttribute('aria-checked', 'mixed');
 
@@ -113,7 +113,7 @@ describe('OperationPromptForm — select all', () => {
     it('from partly ticked, ticks the rest', () => {
         const { last } = renderForm([{ ...RESOURCES[0], value: 'true' }, RESOURCES[1]]);
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Select All' }));
 
         expect(last()).toEqual({ github: 'true', daLive: 'true' });
     });
@@ -121,7 +121,7 @@ describe('OperationPromptForm — select all', () => {
     it('is not offered for a single box, and is never an answer of its own', () => {
         const { last } = renderForm([RESOURCES[0], { id: 'name', label: 'Name', value: 'x' }]);
 
-        expect(screen.queryByRole('checkbox', { name: 'Select all' })).toBeNull();
+        expect(screen.queryByRole('checkbox', { name: 'Select All' })).toBeNull();
         expect(Object.keys(last() ?? {})).toStrictEqual(['github', 'name']);
     });
 });

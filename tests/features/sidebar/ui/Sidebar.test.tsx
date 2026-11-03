@@ -123,7 +123,7 @@ describe('Sidebar', () => {
             expect(screen.queryByRole('menuitem', { name: /new chat/i })).not.toBeInTheDocument();
         });
 
-        it('offers Continue and New chat from the Chat menu when onNewAiChat is given', () => {
+        it('offers Continue and New Chat from the Chat menu when onNewAiChat is given', () => {
             // Chat becomes a MenuTrigger rather than gaining a sibling tile —
             // the projects toolbar's `New` button pattern. The repo's Spectrum
             // mock renders menu content eagerly, so no open-click is needed.
@@ -222,9 +222,9 @@ describe('Sidebar', () => {
             );
 
             expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-                'Continue chat',
-                'Pick an earlier chat',
-                'New chat',
+                'Continue Chat',
+                'Select an Earlier Chat',
+                'New Chat',
             ]);
         });
 

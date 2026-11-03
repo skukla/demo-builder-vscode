@@ -63,11 +63,11 @@ describe('SelectionStepContent — which state it shows', () => {
             expect(screen.queryByText('Selectable Org')).not.toBeInTheDocument();
         });
 
-        it('offers Try Again, and retrying calls onLoad', async () => {
+        it('offers Retry, and retrying calls onLoad', async () => {
             const onLoad = jest.fn();
             renderContent({ error: 'Adobe said no', onLoad });
 
-            await user().click(screen.getByRole('button', { name: /try again/i }));
+            await user().click(screen.getByRole('button', { name: /retry/i }));
 
             expect(onLoad).toHaveBeenCalledTimes(1);
         });
@@ -96,16 +96,16 @@ describe('SelectionStepContent — which state it shows', () => {
             await user().click(screen.getByRole('button', { name: /switch ims org/i }));
 
             expect(onSwitchOrg).toHaveBeenCalledTimes(1);
-            expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         });
 
-        it('falls back to Try Again alone when the host cannot switch orgs', () => {
+        it('falls back to Retry alone when the host cannot switch orgs', () => {
             renderContent({ error: 'Wrong org', errorCode: ErrorCode.ORG_MISMATCH });
 
             expect(
                 screen.queryByRole('button', { name: /switch ims org/i })
             ).not.toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         });
 
         it('a NON-mismatch error never offers the org switch, even when it could', () => {

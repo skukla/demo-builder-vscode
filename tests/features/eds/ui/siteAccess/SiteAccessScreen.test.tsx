@@ -110,7 +110,7 @@ describe('SiteAccessScreen', () => {
         renderScreen(false);
 
         expect(mockRequest).not.toHaveBeenCalled();
-        fireEvent.change(screen.getByLabelText('DA.live organization'), { target: { value: 'acme' } });
+        fireEvent.change(screen.getByLabelText('DA.live Organization'), { target: { value: 'acme' } });
         fireEvent.change(screen.getByLabelText('Site'), { target: { value: 'shop' } });
         fireEvent.click(screen.getByRole('button', { name: 'Show Access' }));
 
@@ -135,10 +135,10 @@ describe('SiteAccessScreen', () => {
         const user = setupUser();
 
         await user.click(await screen.findByRole('button', { name: 'More actions for owner@x.example' }));
-        await user.click(await screen.findByRole('menuitem', { name: 'Remove configuration admin' }));
+        await user.click(await screen.findByRole('menuitem', { name: 'Remove Configuration Admin' }));
         const dialog = await screen.findByRole('dialog');
         // A dangerous confirm carries the amber icon before its title.
-        const heading = within(dialog).getByRole('heading', { name: 'Remove configuration admin?' });
+        const heading = within(dialog).getByRole('heading', { name: 'Remove Configuration Admin?' });
         expect(heading.querySelector('.modal-status-icon')).not.toBeNull();
         expect(mockRequest).not.toHaveBeenCalledWith('removeSiteAdmin', expect.anything(), undefined);
         await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
@@ -151,7 +151,7 @@ describe('SiteAccessScreen', () => {
         );
     });
 
-    it('gives content access by default from the Give access dialog', async () => {
+    it('gives content access by default from the Give Access dialog', async () => {
         const after: SiteAccessChangeResult = {
             notice: { tone: 'success', message: 'new@x.example can now read this content.' },
             view: VIEW,
@@ -163,9 +163,9 @@ describe('SiteAccessScreen', () => {
         renderScreen(true);
         const user = setupUser();
 
-        await user.click(await screen.findByRole('button', { name: 'Give access' }));
+        await user.click(await screen.findByRole('button', { name: 'Give Access' }));
         const dialog = await screen.findByRole('dialog');
-        const give = within(dialog).getByRole('button', { name: 'Give access' });
+        const give = within(dialog).getByRole('button', { name: 'Give Access' });
         expect(give).toHaveAttribute('aria-disabled', 'true');
         await user.type(within(dialog).getByLabelText('Email'), 'new@x.example');
         await user.click(give);
@@ -188,11 +188,11 @@ describe('SiteAccessScreen', () => {
         renderScreen(true);
         const user = setupUser();
 
-        await user.click(await screen.findByRole('button', { name: 'Give access' }));
+        await user.click(await screen.findByRole('button', { name: 'Give Access' }));
         const dialog = await screen.findByRole('dialog');
         await user.type(within(dialog).getByLabelText('Email'), 'nope@x.example');
-        await user.click(within(dialog).getByRole('checkbox', { name: /configuration admin/ }));
-        await user.click(within(dialog).getByRole('button', { name: 'Give access' }));
+        await user.click(within(dialog).getByRole('checkbox', { name: /Configuration Admin/ }));
+        await user.click(within(dialog).getByRole('button', { name: 'Give Access' }));
 
         expect(await screen.findByText('That is not an email address.')).toBeInTheDocument();
         expect(mockRequest).toHaveBeenCalledWith('addSiteAdmin', { email: 'nope@x.example', target: undefined }, undefined);
@@ -222,9 +222,9 @@ describe('SiteAccessScreen', () => {
 
         fireEvent.click(await screen.findByRole('button', { name: 'Open Code Sync App' }));
         expect(mockRequest).toHaveBeenCalledWith('openSiteAccessLink', { id: 'code-sync-app' }, undefined);
-        expect(screen.queryByRole('button', { name: 'Give access' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Give Access' })).not.toBeInTheDocument();
 
-        fireEvent.click(screen.getByRole('button', { name: /check access/ }));
+        fireEvent.click(screen.getByRole('button', { name: /Check Access/ }));
         // The wait is a table step: its name, its detail until the first check, its expectation.
         expect(await screen.findByText(OPERATION_STAGES.waitingForSiteAccess.label)).toBeInTheDocument();
         expect(screen.getByText(OPERATION_STAGES.waitingForSiteAccess.detail)).toBeInTheDocument();

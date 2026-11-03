@@ -41,12 +41,12 @@ import type { ErpOwnershipOptions, ErpOwnsRule } from '@/types/erpOwnership';
 
 /** Every string the dialog shows, in one place. */
 export const ADD_ERP_COPY = {
-    title: 'Add another ERP',
-    nameLabel: 'ERP name',
-    afterAdding: 'Products each ERP will own',
+    title: 'Add Another ERP',
+    nameLabel: 'ERP Name',
+    afterAdding: 'Ownership Preview',
     readFailed: "Couldn't read the store. You can still add the ERP.",
     add: 'Add',
-    assign: 'Assign products',
+    assign: 'Assign Products',
 };
 
 /** The ERP integration an ERP is added to, while the prompt is open. */

@@ -26,7 +26,7 @@ async function renameTo(name: string): Promise<void> {
     await settle();
     await press((await screen.findAllByTestId('datapack-card'))[0]);
     await press(await screen.findByRole('button', { name: 'Rename Acme Demo' }));
-    const input = screen.getByRole('textbox', { name: 'New datapack name' });
+    const input = screen.getByRole('textbox', { name: 'New Datapack Name' });
     fireEvent.change(input, { target: { value: name } });
     fireEvent.keyDown(input, { key: 'Enter' });
     await settle();
@@ -50,5 +50,5 @@ it('keeps the field open with the reason when the library refuses', async () => 
     await renameTo('Acme Q4');
 
     expect(await screen.findByText('The datapack library has no pack of yours named acme-1a2b3c.')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'New datapack name' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'New Datapack Name' })).toBeInTheDocument();
 });

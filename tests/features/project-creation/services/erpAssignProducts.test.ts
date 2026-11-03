@@ -127,7 +127,7 @@ describe('planErpAssignment', () => {
         const plan = await planErpAssignment(TARGET, { auth: AUTH, commerce: commerce({}) }, { by: 'skuPrefix', prefix: 'e' });
         expect(plan).toStrictEqual({
             refusal:
-                'Accuform ERP owns the products sold on bodea, not the products assigned to it. To assign products to it, first change which products it owns to "Products you assign to it" in its Settings.',
+                'Accuform ERP owns the products sold on bodea, not the products assigned to it. To assign products to it, first change which products it owns to "Products You Assign to It" in its Settings.',
         });
     });
 });

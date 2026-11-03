@@ -201,7 +201,7 @@ export async function handleCreateProject(
                 `Add "${demoBuilderPath}" to your Trusted Folders ` +
                     '(Cmd+Shift+P → "Workspaces: Manage Workspace Trust" → Add Folder). ' +
                     'All future projects will be trusted automatically, no more dialogs!',
-                'Got it!',
+                'Got It!',
             );
         }
     }

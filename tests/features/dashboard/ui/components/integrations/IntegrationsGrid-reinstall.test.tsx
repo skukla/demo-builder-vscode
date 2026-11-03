@@ -110,7 +110,7 @@ describe('IntegrationsGrid — remove anyway', () => {
         act(() => setCards([stoppedCard(REASON)]));
 
         expect(removeAnywayDialog()).toHaveTextContent(REASON);
-        expect(removeAnywayDialog()).toHaveTextContent('Removing ERP integration anyway undeploys it now and leaves that behind.');
+        expect(removeAnywayDialog()).toHaveTextContent('Removing anyway undeploys ERP integration and leaves the subscriptions in Commerce.');
         expect(getClient().postMessage).not.toHaveBeenCalled();
     });
 

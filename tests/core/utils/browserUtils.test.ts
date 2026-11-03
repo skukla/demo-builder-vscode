@@ -117,7 +117,7 @@ describe('openPrivateBrowser', () => {
         expect(mockWithProgress).toHaveBeenCalledWith(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Opening a private browser',
+                title: 'Opening a Private Browser',
                 cancellable: false,
             },
             expect.any(Function),

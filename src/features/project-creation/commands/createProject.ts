@@ -56,7 +56,7 @@ function formatComponentDefaults(defaults: ComponentSelection | null): string {
 }
 
 /** The confirm button when leaving an Edit that has changes for Configure. */
-const DISCARD_AND_OPEN = 'Discard and open';
+const DISCARD_AND_OPEN = 'Discard and Open';
 
 export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardInitialData> {
     protected readonly bundleName = 'wizard';

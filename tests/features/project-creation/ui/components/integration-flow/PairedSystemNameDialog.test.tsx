@@ -35,13 +35,13 @@ function renderDialog(target: PairedSystemNameTarget | null = TARGET) {
     return { onSave, onClose };
 }
 
-const field = () => screen.getByLabelText(/^ERP name/);
+const field = () => screen.getByLabelText(/^ERP Name/);
 const save = () => screen.getByRole('button', { name: /^save$/i });
 
 describe('PairedSystemNameDialog', () => {
     it('opens on the ERP\'s current name, under the integration\'s title', () => {
         renderDialog();
-        expect(screen.getByText('ERP Integration settings')).toBeInTheDocument();
+        expect(screen.getByText('ERP Integration Settings')).toBeInTheDocument();
         expect(field()).toHaveValue('Acme ERP');
         expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
     });
@@ -71,6 +71,6 @@ describe('PairedSystemNameDialog', () => {
 
     it('renders nothing while closed', () => {
         renderDialog(null);
-        expect(screen.queryByLabelText(/^ERP name/)).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/^ERP Name/)).not.toBeInTheDocument();
     });
 });

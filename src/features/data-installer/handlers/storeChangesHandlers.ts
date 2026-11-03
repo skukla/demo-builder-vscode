@@ -332,7 +332,7 @@ export const storeChangesHandlers = defineHandlers({
         }
     },
 
-    // The step's "Open the Admin", as the dashboard's Admin button opens it.
+    // The step's "Open Admin", as the dashboard's Admin button opens it.
     openAdminPanel: handleOpenAdminPanel,
 
     'preview-datapack-changes': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
@@ -357,7 +357,7 @@ export const storeChangesHandlers = defineHandlers({
             }
             const opened = await openSave(context, payload);
             if ('response' in opened) return opened.response;
-            const options = { id: DATAPACK_SAVE_OPERATION_ID, title: 'Saving store changes', inModal: payload.progress === 'modal' };
+            const options = { id: DATAPACK_SAVE_OPERATION_ID, title: 'Saving Store Changes', inModal: payload.progress === 'modal' };
             return withOperationProgress(options, (report) => saveToOwnPack(context, opened, (stage) => report(stage)));
         },
         () => DATAPACK_SAVE_OPERATION_ID,

@@ -76,7 +76,7 @@ describe('CatalogStage', () => {
 
         it('names the ERP, not the integration, and says only that it is fixed once deployed', () => {
             renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration', label: 'JustRite' });
-            expect(screen.getByLabelText(/^ERP name \(optional\)/)).toHaveValue('JustRite');
+            expect(screen.getByLabelText(/^ERP Name \(Optional\)/)).toHaveValue('JustRite');
             expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
             expect(screen.queryByText(/Adds “/)).not.toBeInTheDocument();
         });
@@ -87,9 +87,9 @@ describe('CatalogStage', () => {
         });
     });
 
-    it('an entry with no paired system keeps the plain "Name (optional)" field', () => {
+    it('an entry with no paired system keeps the plain "Name (Optional)" field', () => {
         renderStage({ selectedId: 'acme-b' });
-        expect(screen.getByLabelText(/^Name \(optional\)/)).toBeInTheDocument();
+        expect(screen.getByLabelText(/^Name \(Optional\)/)).toBeInTheDocument();
     });
 
     it('says nothing about the name before a pick', () => {
@@ -225,14 +225,14 @@ describe('naming a picked entry (optional-name model, 2026-08-27)', () => {
     // the whole dialog under the SC's cursor (owner, 2026-09-21).
     it('shows the name field before a pick, disabled, saying what to do first', () => {
         renderStage();
-        const field = screen.getByLabelText(/Name \(optional\)/);
+        const field = screen.getByLabelText(/Name \(Optional\)/);
         expect(field).toBeDisabled();
         expect(field).toHaveAttribute('placeholder', 'Pick an integration first');
     });
 
     it("shows the picked entry's name as the PLACEHOLDER, empty value, no validation", () => {
         const { onLabelChange } = renderStage({ selectedId: 'acme-a' });
-        const field = screen.getByLabelText(/Name \(optional\)/);
+        const field = screen.getByLabelText(/Name \(Optional\)/);
         expect(field).toHaveValue('');
         expect(field).toHaveAttribute('placeholder', 'Widget A');
 
@@ -298,13 +298,13 @@ describe('an entry that cannot be added here', () => {
     it('drops the name field when no tile can be picked', () => {
         renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a', 'acme-b'] } });
 
-        expect(screen.queryByLabelText(/Name \(optional\)/)).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/Name \(Optional\)/)).not.toBeInTheDocument();
     });
 
     it('keeps the name field while another tile can still be picked — control', () => {
         renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
 
-        expect(screen.getByLabelText(/Name \(optional\)/)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Name \(Optional\)/)).toBeInTheDocument();
     });
 
     it('shows no note when nothing listed is unavailable', () => {

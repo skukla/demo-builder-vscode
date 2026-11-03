@@ -23,7 +23,7 @@ describe('ResetToTemplateOption — the label', () => {
         const { unmount } = render(
             <ResetToTemplateOption resetToTemplate={false} onResetToTemplateChange={jest.fn()} />,
         );
-        expect(screen.getByText('Reset to template (replaces all content)')).toBeInTheDocument();
+        expect(screen.getByText('Reset to Template (Replaces All Content)')).toBeInTheDocument();
         unmount();
 
         render(
@@ -33,7 +33,7 @@ describe('ResetToTemplateOption — the label', () => {
                 templateName="Isle5 by Jen"
             />,
         );
-        expect(screen.getByText('Reset to Isle5 by Jen (replaces all content)')).toBeInTheDocument();
+        expect(screen.getByText('Reset to Isle5 by Jen (Replaces All Content)')).toBeInTheDocument();
     });
 });
 

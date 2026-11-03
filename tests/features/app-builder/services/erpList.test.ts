@@ -89,7 +89,7 @@ describe('erpNameProblem over takenSystemNames', () => {
 
     it('refuses a name already in the project, without case', () => {
         expect(erpNameProblem('acme erp', takenSystemNames(taken))).toBe(
-            'An ERP named "acme erp" is already in this project. Pick another name.'
+            'An ERP named "acme erp" is already in this project. Enter a different name.'
         );
     });
 

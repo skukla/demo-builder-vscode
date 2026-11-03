@@ -52,7 +52,7 @@ const HEADLESS_DEPENDENCY = 'next';
 /** The `config.json` flag ADR-009 injects for B2B storefronts. */
 const B2B_FLAG = 'commerce-b2b-enabled';
 
-const CANNOT_READ = "We couldn't find this repository, or you don't have access to it.";
+const CANNOT_READ = "Couldn't find this repository, or you don't have access to it.";
 
 /** The sign-in is the problem, not the repository: a missing token, or one GitHub has stopped accepting. */
 export function isCredentialFailure(error: unknown): boolean {
@@ -88,7 +88,7 @@ async function unreadableReason(
         return cannotReadReason(owner, repo, deps.fetchImpl ?? fetch, logger);
     }
     logger.warn(`[SharedDemo] Unexpected failure reading ${owner}/${repo}: ${message}`);
-    return `GitHub did not answer for ${owner}/${repo}: ${message}`;
+    return `GitHub did not respond for ${owner}/${repo}: ${message}`;
 }
 
 /**

@@ -59,7 +59,7 @@ async function continueWithZip(hook: ReturnType<typeof setup>['hook']): Promise<
 describe('useAddDemoFlow', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it('starts on "From a link"; picking the zip needs no link and relabels Continue as the picker', () => {
+    it('starts on "From a Link"; picking the zip needs no link and relabels Continue as the picker', () => {
         const { hook } = setup();
         expect(hook.result.current.way).toBe('link');
         expect(hook.result.current.continueLabel).toBe('Continue');
@@ -67,7 +67,7 @@ describe('useAddDemoFlow', () => {
         act(() => hook.result.current.setWay('zip'));
 
         expect(hook.result.current.canContinue).toBe(true);
-        expect(hook.result.current.continueLabel).toBe('Choose a zip file');
+        expect(hook.result.current.continueLabel).toBe('Choose a Zip File');
         expect(mockRequest).not.toHaveBeenCalled();
     });
 
@@ -87,16 +87,16 @@ describe('useAddDemoFlow', () => {
         expect(mockRequest).toHaveBeenCalledWith('probe-shared-demo', { owner: 'jen', repo: 'isle5-demo' });
         expect(hook.result.current.stage).toBe('found');
         expect(hook.result.current.probe).toEqual({ status: 'done', result: READ });
-        expect(hook.result.current.continueLabel).toBe('Add demo package');
+        expect(hook.result.current.continueLabel).toBe('Add Demo Package');
         expect(hook.result.current.canContinue).toBe(true);
     });
 
     it('carries the sign-in handoff on a failed probe, so the stage can say what to do', async () => {
         const { hook } = setup();
-        await walkToFound(hook, { success: false, error: 'Sign in to GitHub to read this demo.', needsAuth: 'github' });
+        await walkToFound(hook, { success: false, error: 'Sign In to GitHub to read this demo.', needsAuth: 'github' });
         expect(hook.result.current.probe).toEqual({
             status: 'failed',
-            error: 'Sign in to GitHub to read this demo.',
+            error: 'Sign In to GitHub to read this demo.',
             needsAuth: true,
         });
     });

@@ -142,12 +142,12 @@ describe('IntegrationsGrid — the system card verbs', () => {
 
     // Simulated downtime (AB-59): through the INTEGRATION's id, naming THIS ERP, in a modal
     // that reads the ERP as it opens.
-    it('Simulate downtime opens its modal on THIS ERP', async () => {
+    it('Simulate Downtime opens its modal on THIS ERP', async () => {
         const { user, panel } = await openSystem();
 
-        await user.click(within(panel).getByRole('button', { name: 'Simulate downtime' }));
+        await user.click(within(panel).getByRole('button', { name: 'Simulate Downtime' }));
 
-        expect(await screen.findByText('Nordwind: simulate downtime')).toBeInTheDocument();
+        expect(await screen.findByText('Nordwind: Simulate Downtime')).toBeInTheDocument();
         expect(getClient().request).toHaveBeenCalledWith('getErpDemoControls', {
             id: 'erp-integration',
             erp: 'demo-erp',
@@ -166,14 +166,14 @@ describe('IntegrationsGrid — the system card verbs', () => {
 describe("IntegrationsGrid — the integration's ERP verbs", () => {
     // It asks first: it removes nothing, but a hand-edited ERP value goes back to
     // Commerce's (audit, 2026-10-18).
-    it('Fill ERPs from Commerce asks first, then fills every ERP it serves — no ERP named', async () => {
+    it('Fill ERPs from Commerce asks first, then fills every ERP it serves — no ERP Named', async () => {
         const { user, panel } = await openIntegration();
 
         await user.click(within(panel).getByRole('button', { name: /^fill erps from commerce$/i }));
         const dialog = screen.getByRole('dialog', { name: 'Fill Nordwind from Commerce?' });
         expect(dialog).toHaveAttribute('data-status', 'warning');
         expect(dialog).toHaveTextContent('Adds or updates records and removes nothing.');
-        expect(dialog).toHaveTextContent("Any value changed by hand in the ERP goes back to Commerce's.");
+        expect(dialog).toHaveTextContent("Manual changes in the ERP are replaced with Commerce values.");
         expect(getClient().postMessage).not.toHaveBeenCalledWith('loadErpDemoData', expect.anything());
         // It overwrites a hand edit, but removes nothing: the main action, not the red one.
         expect(within(dialog).getByRole('button', { name: /^fill$/i })).toHaveAttribute('data-variant', 'accent');

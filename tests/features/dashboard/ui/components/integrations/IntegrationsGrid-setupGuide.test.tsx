@@ -33,7 +33,7 @@ function renderWithSteps() {
     return renderCards(cards);
 }
 
-const SETUP_LINE = 'Demo setup: 0 of 1 done';
+const SETUP_LINE = 'Demo Setup: 0 of 1 done';
 /** The card's accessible name: its name, status and setup line. */
 const LABEL = `Deployed, ${SETUP_LINE}`;
 
@@ -52,9 +52,9 @@ describe('IntegrationsGrid setup guide', () => {
         ).toBeInTheDocument();
         const panel = await openPanel(user, 'other-app', LABEL);
         expect(within(panel).getByText('0 of 1 done')).toBeInTheDocument();
-        await user.click(within(panel).getByRole('link', { name: 'Open demo setup' }));
+        await user.click(within(panel).getByRole('link', { name: 'Open Demo Setup' }));
 
-        const guide = screen.getByRole('dialog', { name: /^Demo setup:/ });
+        const guide = screen.getByRole('dialog', { name: /^Demo Setup:/ });
         // The title appears twice by design — in the step list and as the shown step's heading.
         expect(
             within(guide).getByRole('heading', {
@@ -68,7 +68,7 @@ describe('IntegrationsGrid setup guide', () => {
         expect(within(guide).getByText('Where')).toBeInTheDocument();
 
         await user.click(within(guide).getByRole('button', { name: 'Close' }));
-        expect(screen.queryByRole('dialog', { name: /^Demo setup:/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: /^Demo Setup:/ })).not.toBeInTheDocument();
     });
 
     // The tile's setup line goes straight to the guide; the flyout stays shut.
@@ -80,7 +80,7 @@ describe('IntegrationsGrid setup guide', () => {
             within(card('other-app', LABEL)).getByRole('button', { name: SETUP_LINE })
         );
 
-        expect(screen.getByRole('dialog', { name: /^Demo setup:/ })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: /^Demo Setup:/ })).toBeInTheDocument();
         expect(document.querySelector('.db-drawer.open')).toBeNull();
     });
 });

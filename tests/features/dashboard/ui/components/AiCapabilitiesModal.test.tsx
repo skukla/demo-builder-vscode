@@ -175,7 +175,7 @@ describe('AiCapabilitiesModal', () => {
     it('prints no middle dot in the flat body either', () => {
         renderModal({ skills: SKILLS, mcps: [] });
 
-        expect(screen.getByTestId('ai-mcps-heading')).toHaveTextContent(/^MCP servers$/);
+        expect(screen.getByTestId('ai-mcps-heading')).toHaveTextContent(/^MCP Servers$/);
         expect(screen.getByTestId('ai-capabilities-columns').textContent).not.toContain('·');
     });
 
@@ -229,13 +229,13 @@ describe('AiCapabilitiesModal', () => {
         expect(screen.getByTestId('ai-mcps-error')).toBeInTheDocument();
     });
 
-    it('flags MCP servers that timed out during inspection', () => {
+    it('flags MCP Servers that timed out during inspection', () => {
         const stuck: McpInventoryEntry[] = [{ id: 'slow-server', status: 'timeout' }];
         renderModal({ skills: SKILLS, mcps: stuck });
         expect(screen.getByTestId('ai-mcp-slow-server')).toHaveTextContent(/timed out|timeout/i);
     });
 
-    it('flags MCP servers that errored during inspection', () => {
+    it('flags MCP Servers that errored during inspection', () => {
         const broken: McpInventoryEntry[] = [
             { id: 'broken-server', status: 'error', error: 'boom' },
         ];
@@ -323,7 +323,7 @@ describe('AiCapabilitiesModal', () => {
             mcps: MCPS,
             errorMessage: 'Failed to install AI tooling dependencies: npm exploded',
         });
-        expect(screen.getByText("Couldn't regenerate AI files")).toBeInTheDocument();
+        expect(screen.getByText("Couldn't Regenerate AI Files")).toBeInTheDocument();
         expect(document.querySelector('.modal-status-icon')).not.toBeNull();
         expect(screen.getByTestId('ai-regen-error')).toHaveTextContent(
             'Failed to install AI tooling dependencies: npm exploded'
@@ -346,7 +346,7 @@ describe('AiCapabilitiesModal', () => {
 
     // ─── Actions ─────────────────────────────────────────────────────────────
 
-    it('fires onRegenerate when "Regenerate AI files" is pressed', () => {
+    it('fires onRegenerate when "Regenerate AI Files" is pressed', () => {
         const { onRegenerate } = renderModal({ skills: SKILLS, mcps: MCPS });
         fireEvent.click(screen.getByRole('button', { name: /regenerate ai files/i }));
         expect(onRegenerate).toHaveBeenCalledTimes(1);
@@ -363,7 +363,7 @@ describe('AiCapabilitiesModal', () => {
     it("is the Modal's wait while busy: the spinner and the way out, no lists", () => {
         renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Run in background' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
         // isBusy is set during BOTH verify-ai-setup (every dashboard mount and every open) and
         // regenerate-ai-files, and neither has anything to say until a step arrives. The old
         // "Reinstalling storefront dependencies" was specific to regen and misled during a verify.
@@ -385,7 +385,7 @@ describe('AiCapabilitiesModal', () => {
         renderModal({ isLoading: true });
         expect(screen.queryByTestId('ai-mcps-empty')).not.toBeInTheDocument();
         expect(screen.queryByTestId('ai-skills-empty')).not.toBeInTheDocument();
-        expect(screen.queryByText(/Regenerate AI files/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Regenerate AI Files/i)).not.toBeInTheDocument();
     });
 
     it('shows the lists when the modal is not busy', () => {
@@ -531,12 +531,12 @@ describe('AiCapabilitiesModal — closing', () => {
     it('hands a running regenerate to the background, by its operation id, then closes', () => {
         const { onClose } = renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
 
-        fireEvent.click(screen.getByRole('button', { name: 'Run in background' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Run in Background' }));
 
         expect(postMessage).toHaveBeenCalledTimes(1);
         expect(postMessage).toHaveBeenCalledWith('backgroundOperation', {
             id: 'ai-files',
-            title: 'Regenerating AI files',
+            title: 'Regenerating AI Files',
         });
         expect(onClose).toHaveBeenCalledTimes(1);
     });

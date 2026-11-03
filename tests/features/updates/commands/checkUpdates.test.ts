@@ -73,11 +73,11 @@ describe('CheckUpdatesCommand', () => {
             await running;
         }
 
-        it('checks in a "Checking for updates" notification, with a headless context and the integration probe', async () => {
+        it('checks in a "Checking for Updates" notification, with a headless context and the integration probe', async () => {
             await runBySc();
 
             expect(vscode.window.withProgress).toHaveBeenCalledWith(
-                expect.objectContaining({ title: 'Checking for updates' }),
+                expect.objectContaining({ title: 'Checking for Updates' }),
                 expect.any(Function),
             );
             expect(mockFindAllUpdates).toHaveBeenCalledWith({ marker: 'headless' }, { marker: 'probe' });
@@ -131,7 +131,7 @@ describe('CheckUpdatesCommand', () => {
             await Promise.resolve();
             // Shown before the check ends, not after.
             expect(vscode.window.withProgress).toHaveBeenCalledWith(
-                expect.objectContaining({ title: 'Checking for updates' }),
+                expect.objectContaining({ title: 'Checking for Updates' }),
                 expect.any(Function),
             );
             finish(check);

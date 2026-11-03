@@ -332,7 +332,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                                     isSelected={includeCommunity}
                                     onChange={setIncludeCommunity}
                                 >
-                                    Include community datapacks
+                                    Include Community Datapacks
                                 </Switch>
                                 {/* Create datapack, Load from file, then Clear demo data set apart. */}
                                 <CatalogHeaderActions

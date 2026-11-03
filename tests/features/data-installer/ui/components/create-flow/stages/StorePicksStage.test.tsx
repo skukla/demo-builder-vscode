@@ -71,7 +71,7 @@ describe('before both columns are ready', () => {
         await open();
 
         expect(rows()).toHaveLength(PICKABLE_KINDS.length);
-        expect(row('Gift cards')).toBeDisabled();
+        expect(row('Gift Cards')).toBeDisabled();
         expect(screen.getByRole('checkbox', { name: /VR Rack/ })).toBeInTheDocument();
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
@@ -95,8 +95,8 @@ describe('a count of none', () => {
         answer(counted({ giftcards: 0, products: 139 }));
         await open();
 
-        expect(row('Gift cards')).toBeDisabled();
-        expect(row('Gift cards')).toHaveTextContent(NONE_NOTE);
+        expect(row('Gift Cards')).toBeDisabled();
+        expect(row('Gift Cards')).toHaveTextContent(NONE_NOTE);
         expect(callsOf(LIST).map((c) => c[1])).toEqual([{ dataType: 'products' }]);
     });
 
@@ -121,7 +121,7 @@ describe('the kind shown', () => {
         answer(counted({ products: 0, giftcards: 2 }));
         await open();
 
-        expect(shown()).toBe(row('Gift cards'));
+        expect(shown()).toBe(row('Gift Cards'));
     });
 
     it('moves on from a kind whose list left nothing to select', async () => {

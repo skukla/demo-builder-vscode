@@ -26,13 +26,13 @@ export function PackTypeStage({ engine = 'service', packType, onPick }: PackType
     return (
         <div className="datapack-flow-cards">
             <ChoiceCard
-                name="Commerce datapack"
+                name="Commerce Datapack"
                 description={COMMERCE_LINE[engine]}
                 selected={packType === 'commerce'}
                 onSelect={() => onPick('commerce')}
             />
             <ChoiceCard
-                name="ACO datapack"
+                name="ACO Datapack"
                 description="Export catalog data for Adobe Commerce Optimizer to your library."
                 selected={packType === 'aco'}
                 onSelect={() => onPick('aco')}

@@ -29,7 +29,7 @@ import { createMockLogger } from '../helpers/loggerFake';
 import { createMockProject } from '../helpers/projectFake';
 import { createMockStateManager } from '../helpers/stateManagerFake';
 
-const TITLE = 'Repairing site configuration';
+const TITLE = 'Repairing Site Configuration';
 
 /** Each notification the command opened under its title, with the lines it showed. */
 function notifications(): Array<{ title: string; lines: string[] }> {

@@ -337,7 +337,7 @@ describe('executeSampleDataPhase', () => {
             expect(progress).toHaveBeenCalledWith(
                 OPERATION_STAGES.installingDatapack.label,
                 94,
-                '1 of 3 data types: Products, Attribute sets'
+                '1 of 3 data types: Products, Attribute Sets'
             );
         });
 

@@ -69,7 +69,7 @@ describe('the removal confirmation for a pack Demo Builder installed', () => {
         // One consequence per line (dialog design rules), so each is its own element.
         expect(screen.getByText('Permanently deletes what ZZ Test Root DB12 installed: attribute sets, categories and products.')).toBeInTheDocument();
         expect(screen.getByText('Puts back the store settings it changed.')).toBeInTheDocument();
-        expect(screen.getByText('The ticked boxes only choose what Import installs.')).toBeInTheDocument();
+        expect(screen.getByText('Selected data types apply to Import only.')).toBeInTheDocument();
     });
 
     it('CONTROL: names the ticks when there is no record, as the service removes those', () => {
@@ -83,13 +83,13 @@ describe('typesInSentence', () => {
     it.each([
         [['Categories'], 'categories'],
         [['Categories', 'Products'], 'categories and products'],
-        [['Attribute sets', 'Categories', 'Products'], 'attribute sets, categories and products'],
+        [['Attribute Sets', 'Categories', 'Products'], 'attribute sets, categories and products'],
     ])('joins %j as a sentence joins them', (labels, sentence) => {
         expect(typesInSentence(labels)).toBe(sentence);
     });
 
     it('keeps the capitals of a label that starts with an acronym', () => {
-        expect(typesInSentence(['B2B companies', 'ACO catalog'])).toBe('B2B companies and ACO catalog');
+        expect(typesInSentence(['B2B Companies', 'ACO catalog'])).toBe('B2B companies and ACO catalog');
     });
 
     it('names three and counts the rest past seven', () => {
@@ -127,7 +127,7 @@ describe('the running view', () => {
     it('says the import carries on once watching has stopped, with nothing still spinning', () => {
         render(<ImportDatapackModalBody view="stopped-watching" ctx={ctx({ record: RECORD })} />);
 
-        expect(screen.getByText('The import carries on without you.')).toBeInTheDocument();
+        expect(screen.getByText('The import continues in the background.')).toBeInTheDocument();
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
         expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });

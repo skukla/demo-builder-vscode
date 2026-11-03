@@ -182,7 +182,7 @@ export async function installCatalogs(ctx: KindContext, rows: CatalogRows): Prom
                     return [];
                 }
                 const id = Number(answer);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new shared catalog ${row.name}'s id.`);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new shared catalog ${row.name}'s id.`);
                 // A failed read-back records no `held`: removal then counts everything in it as not the pack's.
                 const held = await readHeld(ctx.get, id).catch(() => undefined);
                 return [{ kind: CATALOG_KIND, id: String(id), key: row.name, ...(held ? { previous: { held } } : {}) }];

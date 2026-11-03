@@ -76,7 +76,7 @@ describe('AdobeAuthStep - Session Expiring Soon', () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         renderExpiring(5);
 
-        await user.click(screen.getByText('Re-authenticate Now'));
+        await user.click(screen.getByText('Re-Authenticate Now'));
 
         expect(mockRequestAuth).toHaveBeenCalledTimes(1);
         expect(mockRequestAuth).toHaveBeenCalledWith(true);

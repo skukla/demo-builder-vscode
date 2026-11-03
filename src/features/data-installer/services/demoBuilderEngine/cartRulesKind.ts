@@ -122,7 +122,7 @@ export async function installCartRules(ctx: KindContext, rows: CartRuleRows): Pr
             return createOne(ctx, { kind: CART_RULE_KIND, key: rule.name }, async () => {
                 const answer = (await ctx.send('POST', 'salesRules', { rule: await toCommerceRule(lk, rule, websiteId) })) as CommerceSalesRule | null;
                 const id = Number(answer?.rule_id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new cart rule ${rule.name}'s id.`);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new cart rule ${rule.name}'s id.`);
                 return { kind: CART_RULE_KIND, id: String(id), key: rule.name };
             });
         });

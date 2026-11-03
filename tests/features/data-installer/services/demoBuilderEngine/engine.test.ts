@@ -99,7 +99,7 @@ describe('demoBuilderEngine install', () => {
         const status = await settle(engine, activationId);
 
         expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
-        expect(status.note).toBe('Kept 1 thing you had changed in the Admin.');
+        expect(status.note).toBe('Kept 1 item changed in the Admin.');
         expect(ctx.sent).toStrictEqual([]);
     });
 
@@ -180,12 +180,12 @@ describe('demoBuilderEngine install', () => {
     });
 
     it('says why when the project has no Commerce access', async () => {
-        const { engine } = await engineWith({}, () => ({}), { commerce: async () => ({ refusal: 'Sign in to Adobe first.' }) });
+        const { engine } = await engineWith({}, () => ({}), { commerce: async () => ({ refusal: 'Sign In to Adobe first.' }) });
 
         const { activationId } = await engine.startImport(request());
         await settle(engine, activationId);
 
-        expect((await engine.getJobFailureReason(activationId))?.error).toBe('Sign in to Adobe first.');
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe('Sign In to Adobe first.');
     });
 });
 
@@ -267,7 +267,7 @@ describe('demoBuilderEngine removal', () => {
 
     // Step 14 item 20 (owner, 2026-10-30): still refused, nothing matched by name, and the SC is
     // pointed at the one thing that clears what an earlier install left.
-    it('fails, removing nothing, when this engine never installed the pack here, and points to Clear demo data', async () => {
+    it('fails, removing nothing, when this engine never installed the pack here, and points to Clear Demo Data', async () => {
         const { engine, ctx } = await engineWith({}, () => true);
 
         const { activationId } = await engine.startDelete(request());
@@ -275,7 +275,7 @@ describe('demoBuilderEngine removal', () => {
 
         expect((await engine.getJobFailureReason(activationId))?.error).toBe(
             'Demo Builder did not install this pack in this project, so it has no record of what the pack made and removes ' +
-                'nothing by name. To clear what an earlier install left in the store, use Clear demo data on the Data Installer screen.',
+                'nothing by name. To clear what an earlier install left in the store, use Clear Demo Data on the Data Installer screen.',
         );
         expect(status.perType).toEqual({ attribute_sets: 'error', categories: 'error' });
         expect(ctx.sent).toStrictEqual([]);

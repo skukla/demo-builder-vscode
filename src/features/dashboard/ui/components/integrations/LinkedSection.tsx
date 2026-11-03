@@ -35,7 +35,7 @@ export function LinkedSection({
     const linked = model.linked;
     if (!linked?.cards.length) return null;
     return (
-        <PanelRow label="Connected to">
+        <PanelRow label="Connected To">
             {linked.cards.map((card) => (
                 <span
                     key={card.id}

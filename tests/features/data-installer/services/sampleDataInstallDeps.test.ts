@@ -173,7 +173,7 @@ describe('buildSampleDataDeps — progress wording', () => {
         buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'install').onProgress?.(live);
 
         expect(report).toHaveBeenCalledWith(
-            expect.objectContaining({ processing: ['Customer groups'] })
+            expect.objectContaining({ processing: ['Customer Groups'] })
         );
     });
 });

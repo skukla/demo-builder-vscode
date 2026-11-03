@@ -110,7 +110,7 @@ export function BlockLibrariesStepContent({
                     </div>
                     <div className="settings-link">
                         <Link isQuiet onPress={onOpenCustomSettings}>
-                            Configure custom libraries in Settings
+                            Configure Custom Libraries in Settings
                         </Link>
                     </div>
                 </>

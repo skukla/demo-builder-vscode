@@ -225,7 +225,7 @@ describe('toPendingUpdateRows', () => {
         );
 
         expect(rows.map((r) => r.group.title)).toEqual([
-            'Template repositories',
+            'Template Repositories',
             'JustRite',
             'Bodea',
             'patch-canary-b2b',

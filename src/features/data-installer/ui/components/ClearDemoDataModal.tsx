@@ -30,13 +30,13 @@ import type { DemoDataCheck, WipePreview, WipeStoreChoice } from '@/types/demoDa
 
 /** Every string the modal shows that is not the extension's own. */
 export const CLEAR_COPY = {
-    title: 'Clear demo data',
+    title: 'Clear Demo Data',
     lead: "Choose the stores that are this demo's. Clearing permanently removes what only they use and Demo Builder didn't install, and closes their orders.",
     stores: 'Stores',
-    pick: 'Tick a store to see what clearing it would do.',
+    pick: 'Select a store to preview what will be cleared.',
     checking: 'Checking the stores',
     nothing: 'These stores hold nothing Demo Builder did not install.',
-    readFailed: "Couldn't read the stores",
+    readFailed: "Couldn't Read the Stores",
 };
 
 export interface ClearDemoDataModalProps {

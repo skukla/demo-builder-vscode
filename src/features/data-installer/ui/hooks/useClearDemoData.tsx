@@ -34,10 +34,10 @@ export function useClearDemoData(onClosed: () => void): ClearDemoData {
                 name: stores.map((s) => s.storeCode ?? s.websiteCode).join(', '),
                 message: 'clear-demo-data',
                 payload: { ...payload },
-                title: 'Clearing demo data',
+                title: 'Clearing Demo Data',
                 subject: stores.map((s) => s.storeCode ?? s.websiteCode).join(', '),
-                failureTitle: "Couldn't clear the stores",
-                successTitle: 'Stores cleared',
+                failureTitle: "Couldn't Clear the Stores",
+                successTitle: 'Stores Cleared',
             });
         },
         [start],

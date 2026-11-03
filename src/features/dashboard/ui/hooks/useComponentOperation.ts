@@ -55,6 +55,9 @@ const ACTION_PAYLOADS: Partial<Record<CardAction, Record<string, unknown>>> = {
     'remove-anyway': { force: true },
 };
 
+/** A verb on its own in a title: titles are Title Case (dialog design rules). */
+const titleWord = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
+
 /**
  * What each action is called while it runs, when it fails, and when it is done.
  *
@@ -85,13 +88,13 @@ function titlesFor(
 ): Pick<ScreenOperation, 'title' | 'failureTitle' | 'successTitle'> {
     const verb = VERBS[action];
     if (!verb) {
-        return { title: name, failureTitle: `${name} did not finish`, successTitle: `${name} finished` };
+        return { title: name, failureTitle: `${name} Did Not Finish`, successTitle: `${name} Finished` };
     }
     const suffix = verb.suffix ?? '';
     return {
         title: `${verb.running} ${name}${suffix}`,
-        failureTitle: `Couldn't ${verb.base} ${name}${suffix}`,
-        successTitle: `${name}${suffix} ${verb.done}`,
+        failureTitle: `Couldn't ${titleWord(verb.base)} ${name}${suffix}`,
+        successTitle: `${name}${suffix} ${titleWord(verb.done)}`,
     };
 }
 
@@ -139,8 +142,8 @@ export function useComponentOperation(): ComponentOperationControls {
                 name: 'the ERPs',
                 message: 'resetErpRecords',
                 title: 'Resetting the ERPs',
-                failureTitle: "Couldn't reset the ERPs",
-                successTitle: 'ERPs reset',
+                failureTitle: "Couldn't Reset the ERPs",
+                successTitle: 'ERPs Reset',
             });
         },
         [start],
@@ -157,8 +160,8 @@ export function useComponentOperation(): ComponentOperationControls {
                 name: erpName,
                 message: 'loadErpDemoData',
                 title: `Filling ${erpName} from Commerce`,
-                failureTitle: `Couldn't fill ${erpName} from Commerce`,
-                successTitle: `${erpName} filled from Commerce`,
+                failureTitle: `Couldn't Fill ${erpName} from Commerce`,
+                successTitle: `${erpName} Filled from Commerce`,
             });
         },
         [start],
@@ -186,8 +189,8 @@ export function useComponentOperation(): ComponentOperationControls {
                 message: 'addAppBuilderComponent',
                 payload,
                 title: `Adding ${name}`,
-                failureTitle: `Couldn't add ${name}`,
-                successTitle: `${name} added`,
+                failureTitle: `Couldn't Add ${name}`,
+                successTitle: `${name} Added`,
             });
         },
         [show],
@@ -206,8 +209,8 @@ export function useComponentOperation(): ComponentOperationControls {
                 // The SC confirmed in the dialog; without it the handler only previews (AB-75).
                 payload: { name: erpName, owns, confirm: true },
                 title: `Adding ${erpName}`,
-                failureTitle: `Couldn't add ${erpName}`,
-                successTitle: `${erpName} added`,
+                failureTitle: `Couldn't Add ${erpName}`,
+                successTitle: `${erpName} Added`,
             });
         },
         [start],

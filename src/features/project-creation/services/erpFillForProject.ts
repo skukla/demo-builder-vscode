@@ -104,7 +104,7 @@ async function commerceReply(
         : await requestRest(method, target, path, body, fetchImpl);
     const route = path.split('?')[0];
     if ('failed' in answer)
-        throw new CommerceReadError(`Commerce did not answer ${route}: ${answer.failed}`);
+        throw new CommerceReadError(`Commerce did not respond to ${route}: ${answer.failed}`);
     if (!answer.ok) {
         throw new CommerceReadError(
             `Commerce answered ${answer.status} for ${route}: ${answer.text.slice(0, 200)}`,

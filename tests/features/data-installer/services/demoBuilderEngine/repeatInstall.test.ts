@@ -299,7 +299,7 @@ describe('things the SC renamed or deleted in the Admin', () => {
 describe('keptLine', () => {
     it('says what was kept in one plain line', () => {
         expect(keptLine([])).toBeUndefined();
-        expect(keptLine([{ kind: 'products', key: 'vrrack' }])).toBe('Kept 1 thing you had changed in the Admin.');
-        expect(keptLine([{ kind: 'products', key: 'a' }, { kind: 'categories', key: 'b' }])).toBe('Kept 2 things you had changed in the Admin.');
+        expect(keptLine([{ kind: 'products', key: 'vrrack' }])).toBe('Kept 1 item changed in the Admin.');
+        expect(keptLine([{ kind: 'products', key: 'a' }, { kind: 'categories', key: 'b' }])).toBe('Kept 2 items changed in the Admin.');
     });
 });

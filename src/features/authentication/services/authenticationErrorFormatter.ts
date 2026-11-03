@@ -159,7 +159,7 @@ export function explainAdobeAccessFailure(text: string): string | undefined {
     const timedOut = /504/.test(text) && /Gateway Timeout|timed out/i.test(text);
     if (timedOut && /CoreConsoleAPISDK|licenses/i.test(text)) {
         return (
-            "Adobe's Developer Console did not answer in time. This is on Adobe's side — " +
+            "Adobe's Developer Console did not respond in time. This is on Adobe's side — " +
             'try again in a few minutes. Details are in Debug Logs.'
         );
     }

@@ -209,7 +209,7 @@ describe('rulesAfterAdd and countOwnedAfterAdd — what the dialog counts is wha
 
 describe('ownsProblem — a rule that cannot be saved', () => {
     it('a list mode with nothing ticked, an attribute without code=value', () => {
-        expect(ownsProblem({ mode: 'websites', websites: [] })).toBe('Tick at least one website.');
+        expect(ownsProblem({ mode: 'websites', websites: [] })).toBe('Select at least one website.');
         expect(ownsProblem({ mode: 'attribute', attribute: 'erp_owner' })).toBe('The attribute is code=value, e.g. erp_owner=acme.');
         expect(ownsProblem({ mode: 'websites', websites: ['base'] })).toBeUndefined();
         expect(ownsProblem({ mode: 'all' })).toBeUndefined();

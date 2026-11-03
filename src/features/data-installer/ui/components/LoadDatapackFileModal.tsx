@@ -115,7 +115,7 @@ export function LoadDatapackFileModal({
     return (
         <DialogContainer onDismiss={onClose}>
             <Modal
-                title={result?.title ?? 'Load a datapack file'}
+                title={result?.title ?? 'Load a Datapack File'}
                 status={result ? resultStatus(result) : undefined}
                 size={result ? 'S' : 'M'}
                 fitContent
@@ -139,7 +139,7 @@ export function LoadDatapackFileModal({
                         <RemoveFromLibraryButton id={{ name: outcome.datapackName, version: outcome.version }} />
                     ) : null}
                     {result && undoLayer ? (
-                        <RemoveFromLibraryButton id={{ name: undoLayer.datapackName, version: undoLayer.version }} label="Remove its store settings from the library" />
+                        <RemoveFromLibraryButton id={{ name: undoLayer.datapackName, version: undoLayer.version }} label="Remove Its Store Settings from the Library" />
                     ) : null}
                 </div>
             </Modal>
@@ -203,18 +203,18 @@ function LoadForm({ file, choice }: { file: OpenedFile; choice: TargetChoice }):
                 </p>
             ) : null}
             <RadioGroup
-                label="Load it into"
+                label="Destination"
                 value={choice.target}
                 onChange={(value) => choice.onTarget(value as DatapackStoreName)}
             >
                 <Radio value="library">
-                    The datapack library: private to you until you share it
+                    Datapack Library (Private Until Shared)
                 </Radio>
-                <Radio value="installer">The Data Installer: the catalog other teams share</Radio>
+                <Radio value="installer">Data Installer (Shared Catalog)</Radio>
             </RadioGroup>
             {choice.target === 'library' ? (
                 <Checkbox isSelected={choice.update} onChange={choice.onUpdate}>
-                    If this version is already in the library, replace its data with this file
+                    Replace Existing Version
                 </Checkbox>
             ) : (
                 <p className="datapack-export-note">

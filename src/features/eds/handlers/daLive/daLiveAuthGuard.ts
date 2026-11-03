@@ -65,7 +65,7 @@ export async function ensureDaLiveAuth(
     // and its answer opens the input-box flow below.
     if (!modalIsAsking()) {
         const selection = await askDuringOperation(
-            { title: 'Sign in to DA.live', message: `${expiry} Sign in to keep going.` },
+            { title: 'Sign In to DA.live', message: `${expiry} Sign in to keep going.` },
             'Sign In',
         );
         if (selection !== 'Sign In') {

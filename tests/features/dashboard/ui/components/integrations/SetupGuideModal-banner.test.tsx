@@ -85,7 +85,7 @@ describe('Apply all', () => {
         expect(applyAllIds(items, 'done')).toEqual(['warehouse']);
     });
 
-    it('is not drawn in the guide on that one step, while Check all steps stays', async () => {
+    it('is not drawn in the guide on that one step, while Check All Steps stays', async () => {
         mockRequest.mockResolvedValue({ success: true, data: { ready: true } });
         const model = { id: 'erp-integration', name: 'ERP Integration', setupChecklist: items } as IntegrationCardModel;
         render(<SetupGuideModal model={model} onClose={jest.fn()} onOpenAdmin={jest.fn()} onAsk={jest.fn()} />);
@@ -93,6 +93,6 @@ describe('Apply all', () => {
         expect(screen.queryByRole('button', { name: FIX_COPY.all(1) })).not.toBeInTheDocument();
         // CONTROL: the step's own Apply and the list's check are there.
         expect(screen.getByRole('button', { name: FIX_COPY.fix })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Check all steps' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Check All Steps' })).toBeInTheDocument();
     });
 });

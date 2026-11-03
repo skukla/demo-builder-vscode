@@ -12,15 +12,15 @@ import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse } from '@/types/handlers';
 
-const SENTENCE = 'You changed 3 things since it was installed: the category Critical Power, and 2 products.';
+const SENTENCE = '3 items changed since install: the category Critical Power, and 2 products.';
 const CHANGED: DatapackRemovalChanges = { count: 3, kinds: [{ kind: 'categories', count: 1, names: ['Critical Power'] }, { kind: 'products', count: 2, names: ['A', 'B'] }], sentence: SENTENCE, ownPackName: 'Acme Demo', alwaysSave: false };
 const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], ownPackName: 'Acme Demo', alwaysSave: false };
-const SAVE_BOX = 'Save my changes to the Acme Demo pack first';
-const ALWAYS_BOX = 'Always do this, and stop asking';
+const SAVE_BOX = 'Save Changes to the Acme Demo Datapack First';
+const ALWAYS_BOX = "Don't Ask Again";
 const DELETES = 'Permanently deletes Bodea’s categories.';
 
-const removeData = () => screen.getByRole('button', { name: 'Remove data' });
-const footerRemove = () => screen.getByRole('button', { name: /^Remove( anyway)?$/ });
+const removeData = () => screen.getByRole('button', { name: 'Remove Data' });
+const footerRemove = () => screen.getByRole('button', { name: /^Remove( Anyway)?$/ });
 const resetCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'reset-datapack');
 const readCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'get-datapack-removal-changes');
 
@@ -101,7 +101,7 @@ describe('a pack Demo Builder installed: its record decides what goes', () => {
         });
     }
 
-    const removeAll = () => screen.getByRole('button', { name: 'Remove all data' });
+    const removeAll = () => screen.getByRole('button', { name: 'Remove All Data' });
 
     it('asks for the pack and offers Remove all data with nothing ticked', async () => {
         recorded(['categories', 'products']);
@@ -136,7 +136,7 @@ describe('a pack Demo Builder installed: its record decides what goes', () => {
         await settle();
 
         expect(screen.getByText(RECORDED)).toBeInTheDocument();
-        expect(screen.getByText('The ticked boxes only choose what Import installs.')).toBeInTheDocument();
+        expect(screen.getByText('Selected data types apply to Import only.')).toBeInTheDocument();
     });
 
     it('needs a tick and says Remove data when there is no record: the service removes what it is sent', async () => {
@@ -145,7 +145,7 @@ describe('a pack Demo Builder installed: its record decides what goes', () => {
         await awaitForm();
 
         expect(removeData()).toHaveAttribute('aria-disabled', 'true');
-        expect(screen.queryByRole('button', { name: 'Remove all data' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Remove All Data' })).not.toBeInTheDocument();
     });
 
     it('needs a tick when the record lists nothing: a job still has to report on something', async () => {
@@ -314,11 +314,11 @@ describe('a read that fails', () => {
         await openConfirm();
 
         expect(screen.getByText(/Couldn.t check whether you changed anything in it since it was installed, so any changes would be lost\. The store could not be read\./)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Remove anyway' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Remove Anyway' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 
-    it('Remove anyway removes, losing any changes', async () => {
+    it('Remove Anyway removes, losing any changes', async () => {
         await openConfirm();
 
         await press(footerRemove());
@@ -337,7 +337,7 @@ describe('a save that fails', () => {
         await press(footerRemove());
         await settle();
 
-        expect(screen.getByRole('heading', { name: "Couldn't save your changes, so nothing was removed" })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: "Couldn't save changes. Nothing was removed." })).toBeInTheDocument();
         expect(screen.getByText(REASON)).toBeInTheDocument();
         expect(screen.getByRole('heading').querySelector('.text-negative')).not.toBeNull();
     });
@@ -361,7 +361,7 @@ describe('a save that fails', () => {
         await press(footerRemove());
         await settle();
 
-        expect(screen.getByRole('heading', { name: "Couldn't start the removal" })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: "Couldn't Start the Removal" })).toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Back' }));
         expect(removeData()).toBeInTheDocument();
     });
@@ -413,7 +413,7 @@ describe('while it saves first', () => {
         await press(footerRemove());
         pushStage('Saving to the library');
 
-        await press(screen.getByRole('button', { name: 'Run in background' }));
+        await press(screen.getByRole('button', { name: 'Run in Background' }));
 
         expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Removing Bodea' });
         expect(onClose).toHaveBeenCalled();

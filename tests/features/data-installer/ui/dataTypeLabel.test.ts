@@ -50,13 +50,13 @@ const REAL_CODES = [
 
 describe('dataTypeLabel', () => {
     it('replaces the underscores with spaces and capitalises the first word', () => {
-        expect(dataTypeLabel('attribute_sets')).toBe('Attribute sets');
-        expect(dataTypeLabel('stock_source_links')).toBe('Stock source links');
+        expect(dataTypeLabel('attribute_sets')).toBe('Attribute Sets');
+        expect(dataTypeLabel('stock_source_links')).toBe('Stock Source Links');
     });
 
     /** Sentence case, matching the surrounding labels — "Website", "Data". */
     it('uses sentence case, not title case', () => {
-        expect(dataTypeLabel('customer_groups')).toBe('Customer groups');
+        expect(dataTypeLabel('customer_groups')).toBe('Customer Groups');
     });
 
     it('capitalises a single-word code', () => {
@@ -68,9 +68,9 @@ describe('dataTypeLabel', () => {
      * this prefix, so getting it wrong is not a corner case.
      */
     it('keeps B2B an acronym rather than "B2b"', () => {
-        expect(dataTypeLabel('b2b_companies')).toBe('B2B companies');
+        expect(dataTypeLabel('b2b_companies')).toBe('B2B Companies');
         expect(dataTypeLabel('b2b_shared_catalog_company_assignments')).toBe(
-            'B2B shared catalog company assignments',
+            'B2B Shared Catalog Company Assignments',
         );
     });
 
@@ -79,12 +79,12 @@ describe('dataTypeLabel', () => {
      * list and grows it. An unmapped type must still read as words.
      */
     it('reads a type this extension has never heard of', () => {
-        expect(dataTypeLabel('loyalty_tier_rules')).toBe('Loyalty tier rules');
+        expect(dataTypeLabel('loyalty_tier_rules')).toBe('Loyalty Tier Rules');
     });
 
     /** A code with no underscore to split on, so casing alone would read "Giftcards". */
     it('names gift cards in two words, leaving the code as it is', () => {
-        expect(dataTypeLabel('giftcards')).toBe('Gift cards');
+        expect(dataTypeLabel('giftcards')).toBe('Gift Cards');
     });
 
     it('survives an empty or malformed code instead of throwing', () => {

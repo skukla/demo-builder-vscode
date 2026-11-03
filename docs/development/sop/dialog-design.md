@@ -67,7 +67,12 @@ done result with nothing else to say is just its title. Where nothing follows fr
 it, it closes itself (the progress window); a dialog whose result offers Back to its
 form (Import) stays until closed.
 
-**Four kinds of text.** Title; body text; label (small, muted, sentence case,
+**Capitals.** What names a thing is Title Case: the title, buttons, tabs, menu items and labels
+("Run in Background", "Data Types"). What tells the SC something keeps normal capitals: a sentence,
+a status note ("3 selected"), and a title that is a complete sentence. Owner, 2026-11-02, over
+Spectrum's sentence case. Enforced by `tests/sop/ui-label-case.test.ts`.
+
+**Four kinds of text.** Title; body text; label (small, muted, Title Case,
 never capitals); note (small, muted). Nothing else. A note about a problem is small and
 keeps its colour, and is one short line: what is wrong and what to do. Orange for a warning,
 red for a failure. Colour is for what is simple: a line that runs long or explains itself gets

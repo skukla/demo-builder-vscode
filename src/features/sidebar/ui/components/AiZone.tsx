@@ -148,9 +148,9 @@ export function AiZone({ onOpenAiChat, onShowPrompts, onNewAiChat, onPickAiChat 
                                 }
                             }}
                         >
-                            <Item key={CONTINUE}>Continue chat</Item>
-                            {onPickAiChat ? <Item key={PICK}>Pick an earlier chat</Item> : null}
-                            <Item key={NEW}>New chat</Item>
+                            <Item key={CONTINUE}>Continue Chat</Item>
+                            {onPickAiChat ? <Item key={PICK}>Select an Earlier Chat</Item> : null}
+                            <Item key={NEW}>New Chat</Item>
                         </Menu>
                     </MenuTrigger>
                 ) : (

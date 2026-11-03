@@ -66,7 +66,7 @@ describe('FieldHelpButton content', () => {
                 '2',
             ]);
             // No footer: the popover is dismissed by clicking away, not by a button.
-            expect(screen.queryByRole('button', { name: /Got it/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Got It/i })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /Next/i })).not.toBeInTheDocument();
         });
 

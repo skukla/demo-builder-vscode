@@ -168,6 +168,6 @@ describe('containersLine', () => {
                 { object: obj('attribute_sets', '12'), kind: 'set', name: 'Racks', count: 2, holds: 'product' },
                 { object: obj('categories', '41'), kind: 'category', name: 'Sale', count: 1, holds: 'category' },
             ]),
-        ).toBe('Kept 2 things that hold what you added: the set Racks and the category Sale.');
+        ).toBe('Kept 2 items that hold what you added: the set Racks and the category Sale.');
     });
 });

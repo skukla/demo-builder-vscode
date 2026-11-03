@@ -25,7 +25,7 @@ export function PackNameStage({ answers, sharedCatalog }: {
             ) : null}
             <FormField
                 fieldKey="datapackName"
-                label="Datapack name"
+                label="Datapack Name"
                 type="text"
                 value={answers.name}
                 onChange={answers.setName}

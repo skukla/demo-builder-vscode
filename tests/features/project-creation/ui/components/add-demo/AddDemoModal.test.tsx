@@ -25,12 +25,12 @@ import {
 describe('AddDemoModal', () => {
     beforeEach(resetModalMocks);
 
-    it('opens on the two ways in, "From a link" picked, with only the link field below', () => {
+    it('opens on the two ways in, "From a Link" picked, with only the link field below', () => {
         renderModal();
-        expect(screen.getByRole('heading', { name: 'Add a demo package' })).toBeInTheDocument();
-        expect(screen.getByText('Where is the demo?')).toBeInTheDocument();
-        expect(screen.getByTestId('add-demo-way-link')).toHaveTextContent('From a link');
-        expect(screen.getByTestId('add-demo-way-zip')).toHaveTextContent('From a zip file');
+        expect(screen.getByRole('heading', { name: 'Add a Demo Package' })).toBeInTheDocument();
+        expect(screen.getByText('Source')).toBeInTheDocument();
+        expect(screen.getByTestId('add-demo-way-link')).toHaveTextContent('From a Link');
+        expect(screen.getByTestId('add-demo-way-zip')).toHaveTextContent('From a Zip File');
         expect(linkInput()).toBeInTheDocument();
         // One form at a time (owner, 2026-09-14: the dialog showed both and was too busy).
         expect(screen.queryByTestId('zip-public')).not.toBeInTheDocument();
@@ -54,21 +54,21 @@ describe('AddDemoModal', () => {
         renderModal();
         await chooseWay('zip');
         expect(screen.queryByPlaceholderText('https://github.com/name/demo')).not.toBeInTheDocument();
-        expect(screen.getByTestId('zip-public')).toHaveTextContent('Make the repository public');
+        expect(screen.getByTestId('zip-public')).toHaveTextContent('Make the Repository Public');
         expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
 
         // Public by default (owner, 2026-09-14).
         expect((screen.getByTestId('zip-public').querySelector('input') as HTMLInputElement).checked).toBe(true);
         mockRequest.mockResolvedValueOnce({ success: true, result: { cancelled: true } });
-        await click('Choose a zip file');
+        await click('Choose a Zip File');
         expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: false });
 
         fireEvent.click(screen.getByTestId('zip-public').querySelector('input') as HTMLInputElement);
         mockRequest.mockResolvedValueOnce({ success: false, error: 'This zip is not an Edge Delivery storefront: it has no head.html.' });
-        await click('Choose a zip file');
+        await click('Choose a Zip File');
         expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: true });
         // The failure replaces the form (owner, 2026-09-14), and Back returns to it.
-        expect(title("We couldn't add this zip").innerHTML).toContain('text-negative');
+        expect(title("Couldn't Add Zip File").innerHTML).toContain('text-negative');
         expect(screen.getByTestId('zip-error')).toHaveTextContent('it has no head.html');
         expect(footerButtons()).toEqual(['Close', 'Back']);
         expect(screen.queryByTestId('zip-public')).not.toBeInTheDocument();
@@ -88,20 +88,20 @@ describe('AddDemoModal', () => {
             error: 'Your GitHub account already has a repository named citisignal-b2b-summit.',
             existing: { owner: 'steve', repo: 'citisignal-b2b-summit' },
         });
-        await click('Choose a zip file');
+        await click('Choose a Zip File');
         expect(screen.getByTestId('zip-error')).toHaveTextContent('already has a repository named citisignal-b2b-summit');
         // A choice, not a failure (owner, 2026-09-15): warning icon and words, not error.
-        expect(title('A repository with this name already exists').innerHTML).toContain('text-notice');
-        expect(title('A repository with this name already exists').innerHTML).not.toContain('text-negative');
-        expect(screen.queryByRole('heading', { name: "We couldn't add this zip" })).not.toBeInTheDocument();
+        expect(title('Repository Name Already Exists').innerHTML).toContain('text-notice');
+        expect(title('Repository Name Already Exists').innerHTML).not.toContain('text-negative');
+        expect(screen.queryByRole('heading', { name: "Couldn't Add Zip File" })).not.toBeInTheDocument();
         // The way forward is the footer's main button, last.
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Add it from that repository']);
+        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Add from Repository']);
 
         mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/citisignal-b2b-summit' } });
-        await click('Add it from that repository');
+        await click('Add from Repository');
 
         expect(mockRequest).toHaveBeenLastCalledWith('probe-shared-demo', { owner: 'steve', repo: 'citisignal-b2b-summit' });
-        expect(screen.getByText('Package details')).toBeInTheDocument();
+        expect(screen.getByText('Package Details')).toBeInTheDocument();
     });
 
     it('says when a link is already added, whatever its case', () => {
@@ -115,9 +115,9 @@ describe('AddDemoModal', () => {
         const { props } = renderModal();
         await probeWith({ success: true, result: READ });
 
-        expect(screen.getByText('Package details')).toBeInTheDocument();
+        expect(screen.getByText('Package Details')).toBeInTheDocument();
         // The name is filled in, not a grey placeholder that reads as read-only (owner, 2026-09-15).
-        const name = screen.getByLabelText('Demo name', { selector: 'input' }) as HTMLInputElement;
+        const name = screen.getByLabelText('Demo Name', { selector: 'input' }) as HTMLInputElement;
         expect(name.value).toBe('Isle5 Demo');
         expect(name).not.toHaveAttribute('placeholder');
         expect(screen.getByTestId('found-Type')).toHaveTextContent('Edge Delivery');
@@ -125,8 +125,8 @@ describe('AddDemoModal', () => {
         // One row per level, labelled on the left like every other row (owner, 2026-09-14).
         expect(screen.getByTestId('found-Website')).toHaveTextContent('isle5');
         expect(screen.getByTestId('found-Store')).toHaveTextContent('isle5_store');
-        expect(screen.getByTestId('found-Store view')).toHaveTextContent('isle5_us');
-        expect(screen.getByTestId('found-Company (B2B) features')).toHaveTextContent('On');
+        expect(screen.getByTestId('found-Store View')).toHaveTextContent('isle5_us');
+        expect(screen.getByTestId('found-Company (B2B) Features')).toHaveTextContent('On');
         expect(screen.queryByTestId('b2b-switch')).not.toBeInTheDocument();
         // The copy was removed 2026-09-14 (step 11): the card reads from the link.
         expect(screen.queryByText(/own copy/)).not.toBeInTheDocument();
@@ -136,7 +136,7 @@ describe('AddDemoModal', () => {
         fireEvent.change(description.querySelector('textarea') ?? description, { target: { value: 'Luxury B2C demo' } });
 
         mockRequest.mockResolvedValueOnce({ success: true, result: { demo: JEN } });
-        await click('Add demo package');
+        await click('Add Demo Package');
 
         expect(mockRequest).toHaveBeenLastCalledWith('add-shared-demo', {
             demo: expect.objectContaining({ description: 'Luxury B2C demo', source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } }),
@@ -162,8 +162,8 @@ describe('AddDemoModal', () => {
         renderModal();
         await probeWith({ success: true, result: { ...READ, b2b: 'unknown', b2bSource: undefined } });
         expect(screen.getByTestId('b2b-switch')).toBeInTheDocument();
-        expect(screen.getByText(/We couldn't tell whether this demo uses company accounts/)).toBeInTheDocument();
-        expect(screen.queryByTestId('found-Company (B2B) features')).not.toBeInTheDocument();
+        expect(screen.getByText(/Couldn't detect B2B features/)).toBeInTheDocument();
+        expect(screen.queryByTestId('found-Company (B2B) Features')).not.toBeInTheDocument();
     });
 
     it('refuses a repository that is not a demo, naming what is missing', async () => {
@@ -172,7 +172,7 @@ describe('AddDemoModal', () => {
             success: true,
             result: { ...READ, kind: 'not-a-storefront', missing: ['scripts/scripts.js'], warnings: [] },
         });
-        expect(title("This doesn't look like a demo we can build on").innerHTML).toContain('text-negative');
+        expect(title("Unsupported Demo").innerHTML).toContain('text-negative');
         expect(screen.getByText(/missing scripts\/scripts.js/)).toBeInTheDocument();
         // Nothing to go on to, so no main button shown off beside Back.
         expect(footerButtons()).toEqual(['Close', 'Back']);
@@ -181,10 +181,10 @@ describe('AddDemoModal', () => {
 
     it('says to sign in to GitHub first, not that the link is not a demo, when there is no session', async () => {
         renderModal();
-        await probeWith({ success: false, error: 'Sign in to GitHub to read this demo.', needsAuth: 'github' });
-        expect(title('Sign in to GitHub first').innerHTML).toContain('text-notice');
+        await probeWith({ success: false, error: 'Sign In to GitHub to read this demo.', needsAuth: 'github' });
+        expect(title('Sign In to GitHub First').innerHTML).toContain('text-notice');
         expect(screen.getByText(/Sign in to GitHub in VS Code/)).toBeInTheDocument();
-        expect(screen.queryByText("This doesn't look like a demo we can build on")).not.toBeInTheDocument();
+        expect(screen.queryByText("Unsupported Demo")).not.toBeInTheDocument();
         expect(footerButtons()).toEqual(['Close', 'Back']);
     });
 
@@ -192,22 +192,22 @@ describe('AddDemoModal', () => {
     it('says the storefront could not be read when the read fails, not that it is no demo', async () => {
         renderModal();
         await probeWith({ success: false, error: 'GitHub did not answer.' });
-        expect(title("We couldn't read this storefront").innerHTML).toContain('text-negative');
+        expect(title("Couldn't Read Storefront").innerHTML).toContain('text-negative');
         expect(screen.getByText('GitHub did not answer.')).toBeInTheDocument();
-        expect(screen.queryByText("This doesn't look like a demo we can build on")).not.toBeInTheDocument();
+        expect(screen.queryByText("Unsupported Demo")).not.toBeInTheDocument();
     });
 
     it('says what to do when the read fails with no reason, without repeating the title', async () => {
         renderModal();
         await probeWith({ success: false });
-        expect(title("We couldn't read this storefront")).toBeInTheDocument();
+        expect(title("Couldn't Read Storefront")).toBeInTheDocument();
         expect(screen.getByTestId('probe-refused')).toHaveTextContent(/^Check the link and try again\.$/);
     });
 
     it('says the same when GitHub answered that the repository cannot be read', async () => {
         renderModal();
         await probeWith({ success: true, result: { outcome: 'unreadable', reason: 'No such repository.' } });
-        expect(title("We couldn't read this storefront")).toBeInTheDocument();
+        expect(title("Couldn't Read Storefront")).toBeInTheDocument();
         expect(screen.getByText('No such repository.')).toBeInTheDocument();
         expect(footerButtons()).toEqual(['Close', 'Back']);
     });
@@ -216,7 +216,7 @@ describe('AddDemoModal', () => {
         renderModal();
         await probeWith({ success: false, error: 'GitHub did not answer.' });
         await click('Back');
-        expect(title('Add a demo package')).toBeInTheDocument();
+        expect(title('Add a Demo Package')).toBeInTheDocument();
         expect(linkInput()).toHaveValue('https://github.com/jen/isle5-demo');
     });
 
@@ -249,7 +249,7 @@ describe('AddDemoModal', () => {
             success: true,
             result: { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'adobe-commerce/boilerplate-b2b-template' },
         });
-        expect(title('This is a demo we ship')).toBeInTheDocument();
+        expect(title('Demo Already Available')).toBeInTheDocument();
         expect(screen.getByTestId('shipped-notice')).toHaveTextContent('Use its card instead');
     });
 
@@ -259,19 +259,19 @@ describe('AddDemoModal', () => {
         const setup = { version: 1, settings: {} };
         mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'jen', repo: 'isle5-demo', setup } });
         mockRequest.mockResolvedValueOnce({ success: true, result: READ });
-        await click('Choose a zip file');
+        await click('Choose a Zip File');
 
         expect(screen.getByTestId('bundle-setup')).toHaveClass('add-demo-note');
         expect(screen.getByTestId('bundle-setup')).toHaveTextContent('This bundle also carries setup');
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Start a project with it', 'Add demo package']);
+        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Start a Project with It', 'Add Demo Package']);
     });
 
     it('shows the add failure inside the dialog and stays open', async () => {
         const { props } = renderModal();
         await probeWith({ success: true, result: READ });
         mockRequest.mockResolvedValueOnce({ success: false, error: 'The settings could not be saved.' });
-        await click('Add demo package');
-        expect(title("We couldn't add this demo").innerHTML).toContain('text-negative');
+        await click('Add Demo Package');
+        expect(title("Couldn't Add Demo").innerHTML).toContain('text-negative');
         expect(screen.getByTestId('add-error')).toHaveTextContent(/settings could not be saved/);
         expect(props.onClose).not.toHaveBeenCalled();
         // The error view replaces the form; Back returns to it, still filled in.
@@ -306,7 +306,7 @@ describe('AddDemoModal — while reading', () => {
         typeLink('https://github.com/jen/isle5-demo');
         await click('Continue');
 
-        expect(title('Add a demo package')).toBeInTheDocument();
+        expect(title('Add a Demo Package')).toBeInTheDocument();
         expect(screen.getByRole('dialog').querySelector('.modal-wait')).not.toBeNull();
         expect(screen.queryByText('Reading the storefront')).not.toBeInTheDocument();
         expect(screen.queryByText('jen/isle5-demo')).not.toBeInTheDocument();
@@ -325,9 +325,9 @@ describe('AddDemoModal — while reading', () => {
         await probeWith({ success: true, result: READ });
         let release: (value: unknown) => void = () => {};
         mockRequest.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
-        await click('Add demo package');
+        await click('Add Demo Package');
 
-        expect(screen.getByText('Adding the demo package')).toBeInTheDocument();
+        expect(screen.getByText('Adding the Demo Package')).toBeInTheDocument();
         expect(screen.queryByTestId('demo-description')).not.toBeInTheDocument();
 
         await act(async () => {
@@ -342,7 +342,7 @@ describe('AddDemoModal — while reading', () => {
         mockRequest.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
         renderModal();
         await chooseWay('zip');
-        await click('Choose a zip file');
+        await click('Choose a Zip File');
 
         expect(screen.getByText('Creating your repository from the zip')).toBeInTheDocument();
         // The step and its detail say enough; no sentence under them (owner, 2026-09-15).

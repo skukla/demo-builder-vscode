@@ -177,7 +177,7 @@ red, and so is a registry entry for something deleted.
 | Cadence | What runs | Who triggers it |
 |---|---|---|
 | per-tool-call | 25 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 65 enforcer suites in `tests/sop/` | automatic |
+| per-jest-run | 66 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
 | periodic | 15 scripted checks + 10 guided reviews | **`npm run sweep`** |
@@ -254,7 +254,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 134 of them, 132 with an enforcer that fails the build — and
+this codebase holds itself to — 135 of them, 133 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent
@@ -513,6 +513,12 @@ are sure is present, re-Read rather than re-deriving it from memory.
      friction rather than a defect. Prose was not the instrument; do not re-expand it without
      evidence that a longer form works. -->
 
+
+## Words on screen
+
+What names a thing is Title Case: titles, buttons, tabs, menu items, headings and field labels. A
+sentence or a status note keeps normal capitals. The owner chose this over Spectrum's sentence case
+on 2026-11-02, so do not propose it again. `tests/sop/ui-label-case.test.ts` enforces it.
 
 ## Gotchas (verified, load-bearing)
 

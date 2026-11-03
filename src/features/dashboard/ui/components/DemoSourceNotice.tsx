@@ -35,8 +35,8 @@ export interface DemoSourceNoticeProps {
 
 export const DEMO_SOURCE_NOTICE_TITLE = "This demo's source can't be reached";
 export const DEMO_PAGES_NOTICE_TITLE = "This demo's pages can't be reached";
-export const CHANGE_SOURCE_LABEL = 'Change source';
-export const KEEP_AS_OWN_LABEL = 'Keep as my own demo';
+export const CHANGE_SOURCE_LABEL = 'Change Source';
+export const KEEP_AS_OWN_LABEL = 'Keep as My Own Demo';
 /**
  * Which door fits, said without claiming which happened: a deleted repository
  * and a network failure read the same from here.

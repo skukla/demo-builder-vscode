@@ -134,7 +134,7 @@ describe('installStocks', () => {
         const ctx = await fakeContext(inventory({}), () => ({}));
         ctx.session.websiteCode = 'base';
 
-        await expect(installStocks(ctx, parseStocks(CARVELO))).rejects.toThrow(/did not answer the new stock Carvelo Inventory's id/);
+        await expect(installStocks(ctx, parseStocks(CARVELO))).rejects.toThrow(/did not return the new stock Carvelo Inventory's id/);
     });
 });
 

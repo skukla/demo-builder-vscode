@@ -48,7 +48,7 @@ function renderModal(options: Omit<RenderOptions, 'reservedIds' | 'blankComponen
  * advances to dest-project.
  */
 async function walkCatalogToPick(): Promise<void> {
-    await click(/Pre-built integration/);
+    await click(/Pre-Built Integration/);
     await click('Continue');
     await click(/ERP Sync/);
 }
@@ -128,7 +128,7 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
 describe('AddIntegrationFlowModal — catalog first-add walk', () => {
     it('gates Continue on the catalog stage until an entry is picked', async () => {
         renderModal();
-        await click(/Pre-built integration/);
+        await click(/Pre-Built Integration/);
         await click('Continue');
         expect(button(/ERP Sync/)).toBeInTheDocument();
         expect(button(/CRM Connect/)).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe('AddIntegrationFlowModal — signed-out routing', () => {
 describe('AddIntegrationFlowModal — custom integration', () => {
     it('gates Continue until a valid URL and flags duplicates', async () => {
         renderModal({ initial: { selectedAppBuilderComponents: ['acme-widget'] } });
-        await click(/Import a repo/);
+        await click(/Import Repository/);
         await click('Continue');
         const input = screen.getByPlaceholderText('https://github.com/owner/repo');
         await change(input, 'https://github.com/acme/widget');
@@ -191,7 +191,7 @@ describe('AddIntegrationFlowModal — custom integration', () => {
 
     it('disables Continue again when a previously valid URL is cleared or invalidated', async () => {
         renderModal({ initial: COMMITTED_DEST });
-        await click(/Import a repo/);
+        await click(/Import Repository/);
         await click('Continue');
         const input = screen.getByPlaceholderText('https://github.com/owner/repo');
         await change(input, 'https://github.com/acme/widget');
@@ -206,7 +206,7 @@ describe('AddIntegrationFlowModal — custom integration', () => {
 
     it('finishes a custom add on Add (interactive picker, no confirmation hold)', async () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
-        await click(/Import a repo/);
+        await click(/Import Repository/);
         await click('Continue');
         const input = screen.getByPlaceholderText('https://github.com/owner/repo');
         await change(input, 'https://github.com/acme/widget');
@@ -270,7 +270,7 @@ describe('AddIntegrationFlowModal — org-API prefetch (warm the cache)', () => 
         // here would have the handler lock APIs against a component that does
         // not exist.
         renderModal({ initial: {} });
-        await click(/Import a repo/);
+        await click(/Import Repository/);
         await click('Continue');
         await change(
             screen.getByPlaceholderText('https://github.com/owner/repo'),
@@ -322,13 +322,13 @@ describe('AddIntegrationFlowModal — cancel & reopen', () => {
 
     it('reopening starts a fresh journey at the kind stage', async () => {
         const { setOpen } = renderModal();
-        await click(/Pre-built integration/);
+        await click(/Pre-Built Integration/);
         await click('Continue');
         expect(button(/ERP Sync/)).toBeInTheDocument();
         setOpen(false);
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         setOpen(true);
-        expect(button(/Pre-built integration/)).toBeInTheDocument();
+        expect(button(/Pre-Built Integration/)).toBeInTheDocument();
         expectDisabled('Continue');
     });
 });

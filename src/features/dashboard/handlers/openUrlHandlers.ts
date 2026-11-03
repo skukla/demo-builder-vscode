@@ -120,7 +120,7 @@ export const handleOpenDaLive: MessageHandler = async (context, data) => {
 export const handleOpenAdminPanel: MessageHandler<{ notify?: boolean }> = async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     // Validated before it opens (a user-supplied URL), in a private window; shared with a
-    // datapack install's "Open the Admin" (`openCommerceAdmin`). No URL in the log. Answered once
+    // datapack install's "Open Admin" (`openCommerceAdmin`). No URL in the log. Answered once
     // Chrome's window is likely up, so a button shows its spinner until then; a link with no
     // spinner of its own asks for the notification instead (`notify`, owner 2026-10-31).
     const opening = await openCommerceAdmin(project, { notify: payload?.notify === true });

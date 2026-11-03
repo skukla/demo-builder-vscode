@@ -158,7 +158,7 @@ export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOu
         // The run saves every project it updates; none of them may become the open one.
         const runContext = { ...context, stateManager: createNonSwitchingStateManager(context.stateManager) };
         try {
-            return await withOperationProgress({ id: UPDATES_OPERATION_ID, title: 'Applying updates', inModal: true }, (report) =>
+            return await withOperationProgress({ id: UPDATES_OPERATION_ID, title: 'Applying Updates', inModal: true }, (report) =>
                 presented
                     ? applyTicked(runContext, { ...presented, ids: payload?.ids ?? [] }, report)
                     : applyOnFreshCheck(runContext, tickedRows, report),

@@ -109,7 +109,7 @@ const CANCEL = 'Cancel';
  */
 function closeLabelFor(ended: boolean, asking: boolean): string {
     if (asking) return CANCEL;
-    return ended ? 'Close' : 'Run in background';
+    return ended ? 'Close' : 'Run in Background';
 }
 
 /**

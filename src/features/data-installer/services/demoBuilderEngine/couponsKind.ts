@@ -101,7 +101,7 @@ export async function installCoupons(ctx: KindContext, rows: CouponRows): Promis
             return createOne(ctx, { kind: COUPON_KIND, key: coupon.code }, async () => {
                 const answer = (await ctx.send('POST', 'coupons', { coupon: { ...without(coupon), rule_id: ruleId } })) as CommerceCoupon | null;
                 const id = Number(answer?.coupon_id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new coupon ${coupon.code}'s id.`);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new coupon ${coupon.code}'s id.`);
                 return { kind: COUPON_KIND, id: String(id), key: coupon.code };
             });
         });

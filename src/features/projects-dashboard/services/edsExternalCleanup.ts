@@ -345,7 +345,7 @@ async function promptGitHubAuth(
     results: CleanupResultItem[],
 ): Promise<boolean> {
     const selection = await askDuringOperation(
-        { title: 'Sign in to GitHub', message: 'Sign in to GitHub to delete the repository.' },
+        { title: 'Sign In to GitHub', message: 'Sign in to GitHub to delete the repository.' },
         'Sign In',
     );
 

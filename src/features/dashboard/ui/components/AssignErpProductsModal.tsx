@@ -40,13 +40,13 @@ function digits(count: number): string {
 
 /** Every string the modal shows, in one place. */
 export const ASSIGN_COPY = {
-    title: (name: string) => `Assign products to ${name}`,
-    readFailed: "Couldn't read Commerce",
-    nothingToAssign: (name: string) => `Nothing to assign to ${name}`,
+    title: (name: string) => `Assign Products to ${name}`,
+    readFailed: "Couldn't Read Commerce",
+    nothingToAssign: (name: string) => `Nothing to Assign to ${name}`,
     setsBody: (sets: string) =>
         `erp_owner is missing from the attribute sets ${sets}, so Commerce drops their tags.`,
-    setsAction: 'Add erp_owner to those sets',
-    action: (count: number) => (count === 1 ? 'Assign 1 product' : `Assign ${digits(count)} products`),
+    setsAction: 'Add erp_owner to Those Sets',
+    action: (count: number) => (count === 1 ? 'Assign 1 Product' : `Assign ${digits(count)} Products`),
     actionIdle: 'Assign',
 };
 

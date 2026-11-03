@@ -199,7 +199,7 @@ describe('IntegrationsStep — the modal it hosts', () => {
         await press(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
         await press(screen.getByRole('button', { name: 'Add Integration' }));
         const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /Build custom/ }));
+        await press(within(dialog).getByRole('button', { name: /Build Custom/ }));
         await press(within(dialog).getByRole('button', { name: 'Continue' }));
         await press(within(dialog).getByRole('button', { name: 'Continue' }));
         await settle();
@@ -367,9 +367,9 @@ describe('IntegrationsStep — minting against the catalog as it stands NOW', ()
     async function addCustomNamed(updateState: jest.Mock, label: string) {
         await press(screen.getByRole('button', { name: 'Add Integration' }));
         const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /Build custom/ }));
+        await press(within(dialog).getByRole('button', { name: /Build Custom/ }));
         await press(within(dialog).getByRole('button', { name: 'Continue' }));
-        await change(within(dialog).getByLabelText(/Name \(optional\)/), label);
+        await change(within(dialog).getByLabelText(/Name \(Optional\)/), label);
         for (let step = 0; step < 4; step += 1) {
             const next = within(dialog).queryByRole('button', { name: 'Continue' });
             if (!next) break;

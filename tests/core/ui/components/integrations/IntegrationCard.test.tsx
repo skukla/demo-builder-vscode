@@ -362,7 +362,7 @@ describe('IntegrationCard', () => {
 
             fireEvent.click(screen.getByRole('button', { name: 'Rename ERP Sync' }));
 
-            const input = screen.getByLabelText('New integration name');
+            const input = screen.getByLabelText('New Integration Name');
             fireEvent.change(input, { target: { value: 'ERP Sync v2' } });
             await act(async () => {
                 fireEvent.keyDown(input, { key: 'Enter' });

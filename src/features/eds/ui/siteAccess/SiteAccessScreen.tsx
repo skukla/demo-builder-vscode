@@ -67,7 +67,7 @@ function SiteTargetForm({ isBusy, onShow }: {
     const isEmpty = org.trim() === '' || site.trim() === '';
     return (
         <Flex gap="size-100" alignItems="end" wrap marginBottom="size-300">
-            <TextField label="DA.live organization" value={org} onChange={setOrg} isDisabled={isBusy} />
+            <TextField label="DA.live Organization" value={org} onChange={setOrg} isDisabled={isBusy} />
             <TextField label="Site" value={site} onChange={setSite} isDisabled={isBusy} />
             <Button
                 variant="accent"
@@ -155,7 +155,7 @@ export function SiteAccessScreen({ projectName, hasStorefront }: SiteAccessScree
                             </View>
                             {rows.length === 0 && !canGive ? (
                                 <EmptyState
-                                    title="Nobody to show"
+                                    title="No People to Show"
                                     description="No one has access you can see, and you cannot give access here."
                                 />
                             ) : (

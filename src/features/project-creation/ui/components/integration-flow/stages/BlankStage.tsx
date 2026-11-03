@@ -69,7 +69,7 @@ export function BlankStage({
     const defaultLabel = selectedSeed?.name ?? BLANK_DEFAULT_LABEL;
     return (
         <div className="intflow-blank">
-            <SectionLabel>Start from</SectionLabel>
+            <SectionLabel>Start From</SectionLabel>
             <div className="intflow-kind-choices">
                 <ChoiceCard
                     name={BLANK_CARD_NAME}
@@ -86,7 +86,7 @@ export function BlankStage({
                             description={clampDescription(seed.description)}
                             selected={seedId === seed.id}
                             disabled={alreadyAdded}
-                            note={alreadyAdded ? 'Already added — one per project' : undefined}
+                            note={alreadyAdded ? 'Already added (one per project)' : undefined}
                             onSelect={() => onSeedChange?.(seed.id)}
                         />
                     );

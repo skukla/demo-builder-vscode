@@ -8,6 +8,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { settle } from '../../../../helpers/reactSettle';
 import {
     press,
     mockRequest,
@@ -309,7 +310,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
                     operation: 'reset',
                 },
             });
-            expect(await screen.findByRole('button', { name: /stop watching/i })).toBeInTheDocument();
+            expect((await settle(), screen.getByRole('button', { name: /^close$/i }))).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
         });
 
@@ -371,7 +372,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             );
             renderModal();
 
-            expect(await screen.findByRole('button', { name: /stop watching/i })).toBeInTheDocument();
+            expect((await settle(), screen.getByRole('button', { name: /^close$/i }))).toBeInTheDocument();
         });
 
         it('does NOT show a finished record from a previous session', async () => {
@@ -450,7 +451,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
             renderModal();
 
-            await screen.findByRole('button', { name: /stop watching/i });
+            await settle();
+            expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
             expect(screen.queryByText(/of 2 data types/i)).not.toBeInTheDocument();
         });
 
@@ -458,7 +460,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         // either turns "we stopped looking" into "we cancelled your import".
         // Closing says "Run in background", never "Cancel": the footer is what says the job
         // carries on while it is watched (dialog design rules: no hint repeating a button).
-        it('offers Stop watching, and Run in background in place of Close', async () => {
+        it('offers Close, and Run in Background in place of Close', async () => {
             withStatus({
                 activationId: 'act-1',
                 dataTypes: ['categories'],
@@ -466,11 +468,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
                 perType: {},
             });
             renderModal();
+            await settle();
 
-            expect(
-                await screen.findByRole('button', { name: /stop watching/i })
-            ).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Run in background' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
         });
 
         it('never offers a Cancel affordance — there is no such endpoint', async () => {
@@ -482,7 +483,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
             renderModal();
 
-            await screen.findByRole('button', { name: /stop watching/i });
+            await settle();
+            expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
 
             expect(
                 screen.queryByRole('button', { name: /cancel import/i })
@@ -614,7 +616,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             );
             await startAJob();
 
-            expect(await screen.findByText(/never started/i)).toBeInTheDocument();
+            expect(await screen.findByText(/did not start/i)).toBeInTheDocument();
             expect(await screen.findByText(/Must provide one of/)).toBeInTheDocument();
         });
     });

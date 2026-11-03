@@ -17,9 +17,9 @@ export const REPUBLISH_OPERATION: StartableOperation = {
     id: CONFIGURE_REPUBLISH_OPERATION_ID,
     name: 'storefront',
     message: 'republish-storefront',
-    title: 'Republishing storefront',
-    failureTitle: "Couldn't republish the storefront",
-    successTitle: 'Storefront republished',
+    title: 'Republishing Storefront',
+    failureTitle: "Couldn't Republish the Storefront",
+    successTitle: 'Storefront Republished',
 };
 
 /** The screen's operation runner, opened for a Republish the prompt started. */

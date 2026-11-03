@@ -39,7 +39,7 @@ import type {
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 /** The run's title: the modal's while it runs, and the notification's on handover. */
-export const APPLYING_TITLE = 'Applying updates';
+export const APPLYING_TITLE = 'Applying Updates';
 
 /** What the modal shows. */
 export type UpdatesView =

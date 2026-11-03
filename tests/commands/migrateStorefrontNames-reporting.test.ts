@@ -65,7 +65,7 @@ describe('MigrateStorefrontNamesCommand — the progress notification', () => {
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Migrating storefront names',
+                title: 'Migrating Storefront Names',
                 cancellable: false,
             },
             expect.any(Function)

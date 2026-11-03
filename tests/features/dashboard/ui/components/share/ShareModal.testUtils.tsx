@@ -105,7 +105,7 @@ export function nameInput(): HTMLInputElement {
 
 /** Open the name and description fields behind their quiet link. */
 export async function openDetails(): Promise<void> {
-    await click('Change name or description');
+    await click('Change Name or Description');
 }
 
 /** The requests of one type the dialog sent, in order. */

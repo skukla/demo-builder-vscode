@@ -385,7 +385,7 @@ async function offerToKeepContent(
     demoName: string,
     check: DemoSourceCheck,
 ): Promise<boolean | undefined> {
-    const keepButton: import('vscode').MessageItem = { title: 'Keep current content' };
+    const keepButton: import('vscode').MessageItem = { title: 'Keep Current Content' };
     const answer = await vscode.window.showWarningMessage(
         `${check.contentMessage ?? `The ${demoName} demo's pages can't be reached right now.`} ` +
             'You can reset the code and keep the content this site has now.',

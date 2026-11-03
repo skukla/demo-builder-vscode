@@ -127,7 +127,7 @@ describe('IntegrationsActionBand', () => {
         const props = renderBand();
 
         const row = screen.getByTestId('page-destination');
-        expect(row).toHaveTextContent('Deploys to');
+        expect(row).toHaveTextContent('Deploys To');
         expect(row).toHaveTextContent('Kukla Mesh');
         expect(row).not.toHaveTextContent('Stage');
 
@@ -142,7 +142,7 @@ describe('IntegrationsActionBand', () => {
         const props = renderBand({ destination: undefined });
 
         const row = screen.getByTestId('page-destination');
-        expect(row).toHaveTextContent('Deploys to');
+        expect(row).toHaveTextContent('Deploys To');
         expect(row).toHaveTextContent('Not chosen yet');
 
         await user.click(screen.getByRole('button', { name: 'Choose' }));

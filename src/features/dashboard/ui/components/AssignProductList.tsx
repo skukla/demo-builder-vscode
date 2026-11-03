@@ -37,13 +37,13 @@ const ANY = 'any';
 const NO_ERP = 'none';
 
 export const LIST_COPY = {
-    search: 'Search SKU or name',
+    search: 'Search SKU or Name',
     category: 'Category',
     subcategory: 'Subcategory',
-    anySubcategory: 'All subcategories',
+    anySubcategory: 'All Subcategories',
     owner: 'Owner',
-    anyCategory: 'All categories',
-    anyOwner: 'Any owner',
+    anyCategory: 'All Categories',
+    anyOwner: 'Any Owner',
     noErp: 'No ERP',
     shown: (shown: number, total: number, website?: string) => {
         const all = total.toLocaleString('en-US');
@@ -51,11 +51,11 @@ export const LIST_COPY = {
         return `${count} products${website ? ` on ${website}` : ''}`;
     },
     columns: { sku: 'SKU', name: 'Name', category: 'Category', owner: 'Owner' },
-    selectedOnly: 'Show selected',
-    showAll: 'Show all',
+    selectedOnly: 'Show Selected',
+    showAll: 'Show All',
     clear: 'Clear',
     blocked: "Can't be tagged (no erp_owner in its set)",
-    elsewhere: (erp: string) => `To move ${erp}'s products to another ERP, open Assign products on that ERP.`,
+    elsewhere: (erp: string) => `To move ${erp}'s products to another ERP, open Assign Products on that ERP.`,
     nothing: 'No products match.',
 };
 

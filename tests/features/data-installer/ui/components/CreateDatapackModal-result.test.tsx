@@ -31,20 +31,20 @@ describe('the headline count', () => {
     it('counts the types that captured, not the types that were tried', async () => {
         await runExport(exportAnswer([CAPTURED, REFUSED]));
 
-        expect(screen.getByRole('heading', { name: /Exported 1 of 2 data types/ })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Exported 1 of 2 Data Types/ })).toBeInTheDocument();
     });
 
     // The summary can claim success while every row failed. The count reads the ROWS.
     it('reads zero when the summary says success and no row did', async () => {
         await runExport(exportAnswer([{ ...CAPTURED, success: false }, REFUSED]));
 
-        expect(screen.getByRole('heading', { name: /Exported 0 of 2 data types/ })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Exported 0 of 2 Data Types/ })).toBeInTheDocument();
     });
 
     it('survives a success that carries no per-type breakdown', async () => {
         await runExport({ 'start-datapack-export': { success: true, data: { success: true } } });
 
-        expect(screen.getByRole('heading', { name: /Exported 0 of 0 data types/ })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Exported 0 of 0 Data Types/ })).toBeInTheDocument();
         expect(screen.queryByText(/failed/i)).not.toBeInTheDocument();
     });
 });
@@ -53,9 +53,9 @@ describe('the outcome is the title', () => {
     it('titles the result, with the status icon before it, in place of the form title', async () => {
         await runExport(exportAnswer([CAPTURED]));
 
-        const heading = screen.getByRole('heading', { name: /Exported 1 of 1 data types/ });
+        const heading = screen.getByRole('heading', { name: /Exported 1 of 1 Data Types/ });
         expect(heading.querySelector('.text-positive')).not.toBeNull();
-        expect(screen.queryByRole('heading', { name: 'Create datapack' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Create Datapack' })).not.toBeInTheDocument();
     });
 
     it.each([
@@ -69,7 +69,7 @@ describe('the outcome is the title', () => {
     it('titles an export that could not run, with why in the body', async () => {
         await runExport({ 'start-datapack-export': { success: false, error: 'Open a project first.' } });
 
-        expect(screen.getByRole('heading', { name: 'The export could not run' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Export Failed' })).toBeInTheDocument();
         expect(screen.getByText('Open a project first.')).toBeInTheDocument();
     });
 
@@ -78,15 +78,15 @@ describe('the outcome is the title', () => {
 
         await press(button('Back'));
 
-        expect(screen.getByRole('heading', { name: 'Create datapack' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
         expect(screen.getByRole('textbox', { name: /datapack name/i })).toHaveValue('captured-pack');
         expect(button('Export')).toHaveAttribute('aria-disabled', 'false');
     });
 
-    it('offers Save as file once something was captured, from where the service wrote it', async () => {
+    it('offers Save as File once something was captured, from where the service wrote it', async () => {
         await runExport(exportAnswer([CAPTURED]));
 
-        await press(button('Save as file'));
+        await press(button('Save as File'));
 
         expect(mockRequest.mock.calls.find((c) => c[0] === 'save-datapack-zip')?.[1]).toEqual({
             source: 'installer',
@@ -95,10 +95,10 @@ describe('the outcome is the title', () => {
         });
     });
 
-    it('offers no Save as file when nothing was captured', async () => {
+    it('offers no Save as File when nothing was captured', async () => {
         await runExport(exportAnswer([REFUSED], false));
 
-        expect(screen.queryByRole('button', { name: 'Save as file' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save as File' })).not.toBeInTheDocument();
     });
 });
 
@@ -106,7 +106,7 @@ describe('the per-type lines', () => {
     it('writes large counts with separators', async () => {
         await runExport(exportAnswer([{ ...CAPTURED, exported: 1284, excluded: 1012 }]));
 
-        expect(screen.getByText('Attribute sets: 1,284 exported (1,012 left out)')).toBeInTheDocument();
+        expect(screen.getByText('Attribute Sets: 1,284 exported (1,012 left out)')).toBeInTheDocument();
     });
 
     it('says which type failed and why', async () => {

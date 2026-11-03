@@ -104,7 +104,7 @@ function PhaseFailed({ phases, onOutcome }: { phases: Phases; onOutcome: ReportO
         <DialogOutcomeBody
             onOutcome={onOutcome}
             outcome={{
-                title: 'Project setup failed',
+                title: 'Project Setup Failed',
                 status: 'error',
                 lines: phases.error ? [phases.error] : [],
                 actions: [{ label: 'Retry', onPress: phases.retry }],

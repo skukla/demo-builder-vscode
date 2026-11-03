@@ -18,7 +18,7 @@ describe('AddDemoModal — change mode', () => {
 
     it('opens with the change words', () => {
         renderChange();
-        expect(screen.getByRole('heading', { name: 'Change the demo source' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Change the Demo Source' })).toBeInTheDocument();
         expect(screen.getByText(/Point this project at another copy of its demo/)).toBeInTheDocument();
     });
 
@@ -26,16 +26,16 @@ describe('AddDemoModal — change mode', () => {
         const { props } = renderChange();
         await probeWith({ success: true, result: READ });
 
-        expect(screen.getByTestId('update-demo-package')).toHaveTextContent('Also update the Bodea demo package');
+        expect(screen.getByTestId('update-demo-package')).toHaveTextContent('Also Update the Bodea Demo Package');
         const box = screen.getByTestId('update-demo-package').querySelector('input') as HTMLInputElement;
         expect(box.checked).toBe(true);
-        expect(button('Change source')).toHaveAttribute('aria-disabled', 'false');
+        expect(button('Change Source')).toHaveAttribute('aria-disabled', 'false');
 
         mockRequest.mockResolvedValueOnce({
             success: true,
             result: { demo: JEN, previous: { owner: 'old', repo: 'demo' } },
         });
-        await click('Change source');
+        await click('Change Source');
 
         expect(mockRequest).toHaveBeenLastCalledWith('change-demo-source', {
             demo: expect.objectContaining({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } }),
@@ -51,7 +51,7 @@ describe('AddDemoModal — change mode', () => {
 
         expect(screen.queryByTestId('update-demo-package')).not.toBeInTheDocument();
         mockRequest.mockResolvedValueOnce({ success: true, result: { demo: JEN, previous: { owner: 'old', repo: 'demo' } } });
-        await click('Change source');
+        await click('Change Source');
 
         expect(mockRequest).toHaveBeenLastCalledWith('change-demo-source', expect.objectContaining({ updateDemoPackage: false }));
     });
@@ -66,7 +66,7 @@ describe('AddDemoModal — change mode', () => {
         expect(mockRequest).toHaveBeenCalledTimes(1);
     });
 
-    it('will not point a project at a demo we ship', async () => {
+    it('will not point a project at a demo that is already available', async () => {
         renderChange();
         await probeWith({
             success: true,
@@ -74,7 +74,7 @@ describe('AddDemoModal — change mode', () => {
         });
 
         expect(title('This is the demo behind Starter (B2B + B2C)').innerHTML).toContain('text-notice');
-        expect(screen.getByTestId('shipped-notice')).toHaveTextContent("A project can't be pointed at a demo we ship");
+        expect(screen.getByTestId('shipped-notice')).toHaveTextContent("A project can't point to a demo that's already available");
         expect(footerButtons()).toEqual(['Close', 'Back']);
     });
 
@@ -82,8 +82,8 @@ describe('AddDemoModal — change mode', () => {
         const { props } = renderChange();
         await probeWith({ success: true, result: READ });
         mockRequest.mockResolvedValueOnce({ success: false, error: 'This project is built on an Edge Delivery demo; pick a demo of the same kind.' });
-        await click('Change source');
-        expect(title("We couldn't change the source").innerHTML).toContain('text-negative');
+        await click('Change Source');
+        expect(title("Couldn't Change Source").innerHTML).toContain('text-negative');
         expect(props.onClose).not.toHaveBeenCalled();
     });
 });

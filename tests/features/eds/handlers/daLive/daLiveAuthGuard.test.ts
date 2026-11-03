@@ -201,7 +201,7 @@ describe('ensureDaLiveAuth', () => {
             expires_in: '3600000',
             email: 'user@example.com',
         })}.signature`;
-        showInfoMessageResponse = 'I have my token';
+        showInfoMessageResponse = 'I Have My Token';
         showInputBoxResponses = [validToken];
 
         // When: ensureDaLiveAuth is called
@@ -217,7 +217,7 @@ describe('ensureDaLiveAuth', () => {
         showWarningMessageResponse = 'Sign In';
 
         // Token-first flow: info message → invalid token
-        showInfoMessageResponse = 'I have my token';
+        showInfoMessageResponse = 'I Have My Token';
         showInputBoxResponses = ['not-a-jwt'];
 
         // When: ensureDaLiveAuth is called
@@ -325,10 +325,10 @@ describe('ensureDaLiveAuth', () => {
         // Then: showInformationMessage should have been called (first step of QuickPick)
         // Called twice: once for ensureDaLiveAuth warning, once for QuickPick info message
         expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-            'Sign in to DA.live',
+            'Sign In to DA.live',
             expect.objectContaining({ modal: true, detail: expect.stringContaining('token from DA.live') }),
             'Open DA.live',
-            'I have my token'
+            'I Have My Token'
         );
     });
 });

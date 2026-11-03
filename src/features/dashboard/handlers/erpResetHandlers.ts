@@ -177,7 +177,7 @@ export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?:
             const result = await withOperationProgress(
                 {
                     id: call.id,
-                    title: `Resetting ${erpName} records`,
+                    title: `Resetting ${erpName} Records`,
                     inModal: progressSurfaceOf(payload) === 'modal',
                     cardLabel: `${erpName} records`,
                 },

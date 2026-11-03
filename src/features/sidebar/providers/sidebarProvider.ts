@@ -70,7 +70,7 @@ const COMMAND_BUTTONS = new Map<string, CommandButton>(Object.entries({
     openAiChat: { label: 'Open AI chat', command: 'demoBuilder.openAiExperience' },
     showPrompts: { label: 'Show prompts', command: 'demoBuilder.showPromptsPicker' },
     newAiChat: { label: 'New AI chat', command: 'demoBuilder.newAiChat' },
-    pickAiChat: { label: 'Pick an earlier AI chat', command: 'demoBuilder.pickAiChat' },
+    pickAiChat: { label: 'Select an Earlier AI Chat', command: 'demoBuilder.pickAiChat' },
 }));
 
 /**

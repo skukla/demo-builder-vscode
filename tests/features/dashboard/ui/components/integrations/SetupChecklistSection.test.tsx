@@ -35,20 +35,20 @@ describe('SetupChecklistSection', () => {
         expect(screen.getByText('1 of 2 done')).toBeInTheDocument();
         expect(screen.getByText('Create the "Confirmed in ERP" order status')).toBeInTheDocument();
         expect(screen.queryByText('Stores > Settings > Order Status')).not.toBeInTheDocument();
-        expect(screen.queryByText('Mark as done')).not.toBeInTheDocument();
+        expect(screen.queryByText('Mark as Done')).not.toBeInTheDocument();
     });
 
     it('opens the setup guide', () => {
         const onOpenGuide = jest.fn();
         render(<SetupChecklistSection model={model([step({})])} onOpenGuide={onOpenGuide} />);
-        fireEvent.click(screen.getByRole('link', { name: 'Open demo setup' }));
+        fireEvent.click(screen.getByRole('link', { name: 'Open Demo Setup' }));
         expect(onOpenGuide).toHaveBeenCalledTimes(1);
     });
 
     it('offers a review instead once nothing is left to do', () => {
         render(<SetupChecklistSection model={model([step({ state: 'done' }), step({ id: 'b', state: 'dismissed' })])} onOpenGuide={jest.fn()} />);
         expect(screen.getByText('All done')).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: 'Review setup' })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Review Setup' })).toBeInTheDocument();
     });
 
     it('puts no dot between the summary and the guide', () => {

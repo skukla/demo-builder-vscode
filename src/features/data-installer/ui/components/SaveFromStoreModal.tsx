@@ -21,5 +21,5 @@ export interface SaveFromStoreModalProps {
 }
 
 export function SaveFromStoreModal({ onClose, onSave, pack }: SaveFromStoreModalProps): React.JSX.Element {
-    return <DatapackFlowDialog title="Save store changes" engine="demo-builder" startsAtPicks pack={pack} onClose={onClose} onSave={onSave} />;
+    return <DatapackFlowDialog title="Save Store Changes" engine="demo-builder" startsAtPicks pack={pack} onClose={onClose} onSave={onSave} />;
 }

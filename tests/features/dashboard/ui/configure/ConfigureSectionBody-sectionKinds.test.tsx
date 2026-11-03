@@ -224,7 +224,7 @@ describe('the Block Libraries section', () => {
         });
         renderSectionBody({ section: BLOCK_LIBRARIES_SECTION, blockLibraries });
 
-        fireEvent.click(screen.getByText('Configure custom libraries in Settings'));
+        fireEvent.click(screen.getByText('Configure Custom Libraries in Settings'));
 
         expect(mockPostMessage).toHaveBeenCalledWith('open-block-library-settings');
     });

@@ -128,7 +128,7 @@ async function writeVersion(write: (file: DatapackFile) => Promise<PackWriteOutc
     const outcome = await write(file);
     if (outcome.failed.length === 0) return;
     const reasons = outcome.failed.map((f) => `${f.dataType}: ${f.reason}`).join('; ');
-    throw new StoreChangesError(`The library did not take all of ${labelPack(file.id)} (${reasons}). Delete ${labelPack(version)} from the library and try again.`);
+    throw new StoreChangesError(`Some of ${labelPack(file.id)} could not be saved to the library (${reasons}). Delete ${labelPack(version)} from the library and try again.`);
 }
 
 /** The rows of a capture that are the version's, and the settings that go beside it, if any. */

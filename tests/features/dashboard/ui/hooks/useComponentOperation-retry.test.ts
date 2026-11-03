@@ -49,8 +49,8 @@ it('shows the modal for an add whose Retry re-sends that same add', () => {
         message: 'addAppBuilderComponent',
         payload: { id: 'erp-integration', name: 'Northwind ERP' },
         title: 'Adding Northwind ERP',
-        failureTitle: "Couldn't add Northwind ERP",
-        successTitle: 'Northwind ERP added',
+        failureTitle: "Couldn't Add Northwind ERP",
+        successTitle: 'Northwind ERP Added',
     });
 });
 
@@ -65,7 +65,7 @@ it('leaves a card action retrying the action it ran', () => {
         expect.objectContaining({
             message: 'redeployAppBuilderComponent',
             title: 'Redeploying ERP integration',
-            successTitle: 'ERP integration redeployed',
+            successTitle: 'ERP integration Redeployed',
         }),
     );
 });

@@ -35,7 +35,7 @@ describe('IntegrationsScreen — the add card', () => {
     it('has no Add button in the header band once there are cards', () => {
         renderWithCards();
 
-        expect(screen.queryByRole('button', { name: 'Add integration' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Add Integration' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'grid-add' })).toBeInTheDocument();
     });
 
@@ -70,7 +70,7 @@ describe('IntegrationsScreen — the add card', () => {
         render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{}} />);
         settleStatus(handlers);
 
-        expect(screen.getAllByRole('button', { name: 'Add integration' })).toHaveLength(1);
+        expect(screen.getAllByRole('button', { name: 'Add Integration' })).toHaveLength(1);
         expect(screen.queryByRole('button', { name: 'grid-add' })).not.toBeInTheDocument();
     });
 });

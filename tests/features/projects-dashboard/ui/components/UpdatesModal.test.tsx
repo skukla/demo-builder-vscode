@@ -171,7 +171,7 @@ describe('UpdatesModal', () => {
         );
         const { container } = render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByRole('dialog', { name: 'Applying updates' })).not.toHaveAttribute('data-status');
+        expect(screen.getByRole('dialog', { name: 'Applying Updates' })).not.toHaveAttribute('data-status');
         expect(screen.queryByRole('checkbox')).toBeNull();
         expect(screen.getByText('Demo Builder Blocks in JustRite')).toBeInTheDocument();
         expect(screen.getByText('1.0.0 → 1.1.0')).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe('UpdatesModal', () => {
             'done',
             'running',
         ]);
-        expect(screen.getByRole('button', { name: 'Run in background' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
     });
 
     it('says under a row why it did not apply, and titles the end by it', () => {
@@ -207,7 +207,7 @@ describe('UpdatesModal', () => {
         expect(screen.getByText('Not updated — your blocks were kept.')).toHaveClass('work-row-note');
     });
 
-    it('titles a run where everything applied "Updates applied", a note under its row', () => {
+    it('titles a run where everything applied "Updates Applied", a note under its row', () => {
         const c = running(
             {
                 extension: { id: 'extension', state: 'done' },
@@ -217,13 +217,13 @@ describe('UpdatesModal', () => {
         );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByRole('dialog', { name: 'Updates applied' })).toHaveAttribute('data-status', 'success');
+        expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toHaveAttribute('data-status', 'success');
         expect(screen.getByText('One block left out.')).toHaveClass('work-row-note');
     });
 
     // EDS-56, 2026-10-30: the row the SC's AI was fixing turns done when the AI finishes,
     // after the run ended with "1 update did not apply"; the title follows the rows.
-    it('titles the run "Updates applied" once a row that did not apply is done after all', () => {
+    it('titles the run "Updates Applied" once a row that did not apply is done after all', () => {
         const c = running(
             {
                 extension: { id: 'extension', state: 'done' },
@@ -233,7 +233,7 @@ describe('UpdatesModal', () => {
         );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByRole('dialog', { name: 'Updates applied' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toBeInTheDocument();
         expect(screen.getByText('Updated by your AI.')).toHaveClass('work-row-note');
     });
 
@@ -241,7 +241,7 @@ describe('UpdatesModal', () => {
         const c = running({}, { state: 'failed', error: 'This list of updates is out of date. Check for updates again.' });
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByRole('dialog', { name: "Couldn't apply the updates" })).toHaveAttribute('data-status', 'error');
+        expect(screen.getByRole('dialog', { name: "Couldn't Apply the Updates" })).toHaveAttribute('data-status', 'error');
         expect(screen.getByText('This list of updates is out of date. Check for updates again.')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Open Debug Logs' })).toBeInTheDocument();
     });
@@ -269,19 +269,19 @@ describe('UpdatesModal', () => {
     // A question is asked under the row it is about, the list still in view (owner,
     // 2026-10-21); its answers are the only buttons, since a dismiss would repeat one.
     it('asks a question under the row asking it, its answers the only buttons', async () => {
-        const prompt = { message: '"Replace blocks" puts in the new versions.', actions: ['Replace blocks', 'Keep my blocks'] };
+        const prompt = { message: '"Replace Blocks" puts in the new versions.', actions: ['Replace Blocks', 'Keep My Blocks'] };
         const c = running({ 'blockLibrary:0': { id: 'blockLibrary:0', state: 'running' } }, { prompt, step: 'Lib A' });
         const { container } = render(<UpdatesModal controls={c} />);
 
         const row = container.querySelector('.work-row[data-state="running"]') as HTMLElement;
         expect(row).toHaveTextContent('Demo Builder Blocks');
-        expect(row.querySelector('.updates-run-question')).toHaveTextContent('"Replace blocks" puts in the new versions.');
+        expect(row.querySelector('.updates-run-question')).toHaveTextContent('"Replace Blocks" puts in the new versions.');
         expect(screen.getByText('Demo Builder extension')).toBeInTheDocument();
-        expect(screen.getByRole('dialog', { name: 'Applying updates' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Applying Updates' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /cancel|close|run in background/i })).toBeNull();
-        await user().click(screen.getByRole('button', { name: 'Keep my blocks' }));
+        await user().click(screen.getByRole('button', { name: 'Keep My Blocks' }));
 
-        expect(c.answer).toHaveBeenCalledWith('Keep my blocks');
+        expect(c.answer).toHaveBeenCalledWith('Keep My Blocks');
     });
 
     // A prompt names its main answer first; a dialog's main button goes last.
@@ -294,7 +294,7 @@ describe('UpdatesModal', () => {
     });
 
     it('asks a question no row is running for above the list', () => {
-        const prompt = { message: 'Bodea is running. Stop it to update it?', actions: ['Stop and update', 'Skip'] };
+        const prompt = { message: 'Bodea is running. Stop it to update it?', actions: ['Stop and Update', 'Skip'] };
         const c = running({}, { prompt });
         const { container } = render(<UpdatesModal controls={c} />);
 
@@ -317,7 +317,7 @@ describe('UpdatesModal', () => {
             p.textContent?.includes('JustRite'),
         ) as HTMLElement;
         const step = Array.from(justrite.querySelectorAll('.work-row')).at(-1) as HTMLElement;
-        expect(step).toHaveTextContent('Your local copy');
+        expect(step).toHaveTextContent('Your Local Copy');
         expect(step).toHaveTextContent('Bringing it up to GitHub');
         expect(justrite.querySelector('.updates-run-header [role="progressbar"]')).not.toBeNull();
     });
@@ -336,17 +336,17 @@ describe('UpdatesModal', () => {
         );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByText('Your local copy')).toBeInTheDocument();
+        expect(screen.getByText('Your Local Copy')).toBeInTheDocument();
         expect(screen.getByText('Left as it is — it has commits GitHub does not have.')).toHaveClass('work-row-note');
     });
 
     // No sentence under the title: the ticks and the Apply count say it, and what cannot
     // be undone says so on its own row (owner, 2026-10-20). Large, so the longest row
     // ("…, Newer version, redeploys to Adobe") keeps to one line.
-    it('opens large, titled "Updates available", straight onto the list', () => {
+    it('opens large, titled "Updates Available", straight onto the list', () => {
         const { container } = render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
 
-        const dialog = screen.getByRole('dialog', { name: 'Updates available' });
+        const dialog = screen.getByRole('dialog', { name: 'Updates Available' });
         expect(dialog).toHaveAttribute('data-size', 'L');
         expect(container.querySelector('.updates-group-list')).not.toBeNull();
         expect(container.querySelector('.lead-text')).toBeNull();
@@ -401,7 +401,7 @@ describe('UpdatesModal', () => {
         const rows = [ROWS[0], ROWS[1], redeploy];
         const { rerender } = render(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension'])} />);
 
-        expect(screen.getByText('1 waiting for you')).toBeInTheDocument();
+        expect(screen.getByText('1 needs attention')).toBeInTheDocument();
 
         rerender(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension', 'integration:1'])} />);
         expect(screen.queryByText(/waiting for you/)).not.toBeInTheDocument();
@@ -421,7 +421,7 @@ describe('UpdatesModal', () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
 
         expect(screen.queryByText(/\d+ of \d+/)).not.toBeInTheDocument();
-        expect(screen.getByText('1 waiting for you')).toBeInTheDocument();
+        expect(screen.getByText('1 needs attention')).toBeInTheDocument();
     });
 
     // Owner, 2026-10-22: after applying only some, the SC can go back to the rest.
@@ -431,15 +431,15 @@ describe('UpdatesModal', () => {
             remaining,
         });
 
-        it('says how many inside the list, and offers Back to updates beside Close', async () => {
+        it('says how many inside the list, and offers Back to Updates beside Close', async () => {
             const c = ended(2, { state: 'succeeded', warning: '1 update did not apply.' });
             const { container } = render(<UpdatesModal controls={c} />);
 
             const list = container.querySelector('.updates-group-list') as HTMLElement;
-            expect(list.firstElementChild).toHaveTextContent('2 updates still waiting');
+            expect(list.firstElementChild).toHaveTextContent('2 updates pending');
             expect(screen.getByRole('dialog', { name: "Some updates didn't apply" })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
-            await user().click(screen.getByRole('button', { name: 'Back to updates' }));
+            await user().click(screen.getByRole('button', { name: 'Back to Updates' }));
 
             expect(c.back).toHaveBeenCalledTimes(1);
         });
@@ -447,15 +447,15 @@ describe('UpdatesModal', () => {
         it('says one in the singular', () => {
             render(<UpdatesModal controls={ended(1)} />);
 
-            expect(screen.getByText('1 update still waiting')).toHaveClass('work-row-note');
-            expect(screen.getByRole('dialog', { name: 'Updates applied' })).toBeInTheDocument();
+            expect(screen.getByText('1 update pending')).toHaveClass('work-row-note');
+            expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toBeInTheDocument();
         });
 
         it('offers only Close when nothing the SC left is waiting', () => {
             render(<UpdatesModal controls={ended(0)} />);
 
             expect(screen.queryByText(/still waiting/)).toBeNull();
-            expect(screen.queryByRole('button', { name: 'Back to updates' })).toBeNull();
+            expect(screen.queryByRole('button', { name: 'Back to Updates' })).toBeNull();
             expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
 
@@ -463,13 +463,13 @@ describe('UpdatesModal', () => {
         it('shows the button busy while the check runs, so it cannot be pressed again', () => {
             render(<UpdatesModal controls={{ ...ended(1), rechecking: true }} />);
 
-            expect(screen.getByRole('button', { name: 'Back to updates' })).toHaveAttribute('aria-busy', 'true');
+            expect(screen.getByRole('button', { name: 'Back to Updates' })).toHaveAttribute('aria-busy', 'true');
         });
 
         it('offers nothing new while the run is still going', () => {
             render(<UpdatesModal controls={ended(1, { state: 'running' })} />);
 
-            expect(screen.queryByRole('button', { name: 'Back to updates' })).toBeNull();
+            expect(screen.queryByRole('button', { name: 'Back to Updates' })).toBeNull();
             expect(screen.queryByText(/still waiting/)).toBeNull();
         });
     });

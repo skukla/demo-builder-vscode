@@ -1,6 +1,6 @@
 /**
  * Open a project's Commerce Admin in the browser: the dashboard's Admin button
- * (`handleOpenAdminPanel`) and a datapack install's "Open the Admin" (datapack-engine step 12)
+ * (`handleOpenAdminPanel`) and a datapack install's "Open Admin" (datapack-engine step 12)
  * open it the same way.
  *
  * The URL comes from `getAdminPanelUrl` (an explicit `ADOBE_COMMERCE_ADMIN_URL` wins, else an

@@ -238,7 +238,7 @@ async function saveTarget(
     const picked = await vscode.window.showSaveDialog({
         defaultUri: vscode.Uri.file(name),
         filters: ZIP_FILTER,
-        title: 'Save the datapack file',
+        title: 'Save the Datapack File',
     });
     return picked?.fsPath;
 }
@@ -256,7 +256,7 @@ async function openSource(
     const picked = await vscode.window.showOpenDialog({
         canSelectMany: false,
         filters: ZIP_FILTER,
-        title: 'Open a datapack file',
+        title: 'Open a Datapack File',
     });
     const chosen = picked?.[0]?.fsPath;
     if (chosen) openedByDialog.add(chosen);

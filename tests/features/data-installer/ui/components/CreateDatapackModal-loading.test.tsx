@@ -33,7 +33,7 @@ function idle<T>(over: Partial<DataInstallerRequest<T>> = {}): DataInstallerRequ
 function renderToTheTypes(types: Partial<DataInstallerRequest<unknown>>) {
     mockRequestState.mockImplementation((type: string) => (type === 'list-datapack-data-types' ? idle(types) : idle()));
     render(<CreateDatapackModal engine="service" onClose={jest.fn()} onSaveFromStore={jest.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: /^Commerce datapack/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Commerce Datapack/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 }
 
@@ -51,7 +51,7 @@ describe('before the type list arrives', () => {
         renderToTheTypes(types);
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
-        expect(screen.queryByRole('checkbox', { name: 'Select all' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: 'Select All' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
     });
 
@@ -60,6 +60,6 @@ describe('before the type list arrives', () => {
         renderToTheTypes({ loading: false, settled: true, value: { dataTypes: ['attribute_sets'] } });
 
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-        expect(screen.getByRole('checkbox', { name: /^Attribute sets/ })).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: /^Attribute Sets/ })).toBeInTheDocument();
     });
 });

@@ -37,7 +37,7 @@ export function recordedRemovalLines(displayName: string, recordedKinds: readonl
         kinds.length > 0 ? `Permanently deletes what ${displayName} installed: ${typesInWords(kinds)}.` : undefined,
         kinds.length < recordedKinds.length ? `Puts back the store settings ${kinds.length > 0 ? 'it' : displayName} changed.` : undefined,
         recordedKinds.length === 0 ? `${displayName} has nothing left in the store to delete.` : undefined,
-        selected.length > 0 && recordedKinds.some((kind) => !selected.includes(kind)) ? 'The ticked boxes only choose what Import installs.' : undefined,
+        selected.length > 0 && recordedKinds.some((kind) => !selected.includes(kind)) ? 'Selected data types apply to Import only.' : undefined,
     ];
     return sentences.filter((line): line is string => line !== undefined);
 }
@@ -85,5 +85,5 @@ export function removalAnswer(content: ConfirmContent, choice: RemovalChoice): R
 
 /** The confirm's main button. */
 export function removeLabel(content: ConfirmContent): string {
-    return content.kind === 'read-failed' ? 'Remove anyway' : 'Remove';
+    return content.kind === 'read-failed' ? 'Remove Anyway' : 'Remove';
 }

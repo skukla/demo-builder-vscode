@@ -18,8 +18,8 @@ const OPERATION: StartableOperation = {
     name: 'storefront',
     message: 'republish-storefront',
     title: 'Republishing storefront',
-    failureTitle: "Couldn't republish the storefront",
-    successTitle: 'Storefront republished',
+    failureTitle: "Couldn't Republish the Storefront",
+    successTitle: 'Storefront Republished',
 };
 
 function push(payload: Record<string, unknown>): void {

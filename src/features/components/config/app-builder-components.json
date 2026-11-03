@@ -76,7 +76,7 @@
         {
           "name": "ERP_DISPLAY_NAME",
           "type": "text",
-          "label": "ERP name",
+          "label": "ERP Name",
           "default": "Acme ERP"
         }
       ],
@@ -107,7 +107,7 @@
         {
           "id": "confirmed-status",
           "check": "erp-confirmed-status",
-          "label": "Confirmed status",
+          "label": "Confirmed Status",
           "title": "Create the \"Confirmed in ERP\" order status",
           "why": "Without it, an order the ERP confirmed looks the same as one it never saw in the Orders grid.",
           "where": "Stores > Settings > Order Status: create erp_confirmed, assign it to Pending (not as default), then pick it for \"Order status when the ERP confirms\" on the integration's Mapping tab.",
@@ -124,7 +124,7 @@
         },
         {
           "id": "company-catalogs",
-          "label": "Shared catalogs",
+          "label": "Shared Catalogs",
           "title": "Give each priced company its own shared catalog",
           "why": "The ERP publishes each company's prices into that company's shared catalog. Companies that share a catalog would share prices.",
           "where": "Catalog > Shared Catalogs > Add Shared Catalog, then Assign Companies.",
@@ -143,7 +143,7 @@
         {
           "id": "price-scope-website",
           "check": "price-scope-website",
-          "label": "Price scope",
+          "label": "Price Scope",
           "title": "Set the catalog price scope to Website",
           "why": "The ERP publishes a company's prices per website. At the default scope, Global, every site would show the same prices.",
           "where": "Stores > Configuration > Catalog > Catalog > Price > Catalog Price Scope: set to Website, Save Config. Catalog > Shared Catalogs > Set Pricing and Structure then shows a Website chooser above the prices.",
@@ -174,7 +174,7 @@
         },
         {
           "id": "second-source",
-          "label": "ERP warehouse",
+          "label": "ERP Warehouse",
           "title": "Give each ERP a warehouse, and assign it to the website's stock",
           "why": "Each ERP keeps its own stock, in its own warehouse. The website needs a stock of its own to sell from more than one.",
           "where": "Stores > Inventory > Sources > Add New Source, one per ERP (for example Northwind Warehouse). Then Stores > Inventory > Stocks > Add New Stock, with the website as its sales channel and the warehouses assigned. Then move the website's products' quantities to the new source (Catalog > Products > Actions > Move stock between the ERP's warehouses) and save each product once, so the storefront's catalog reads the new stock.",
@@ -196,7 +196,7 @@
         },
         {
           "id": "erp-attributes",
-          "label": "Product attributes",
+          "label": "Product Attributes",
           "title": "Create the erp_owner and brand product attributes",
           "why": "erp_owner names the ERP a product belongs to (Accuform ERP is accuform). A product without one stays with the main ERP. Buyers filter on brand.",
           "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand. Then Stores > Attributes > Attribute Set, to add both to every set your products use (the check names any set erp_owner is missing from, and Demo Builder can add it). Give each additional ERP its products with Assign products on its card, and set brand on the products you sell.",
@@ -220,7 +220,7 @@
         {
           "id": "partially-held-status",
           "check": "partially-held-status",
-          "label": "Partially Held status",
+          "label": "Partially Held Status",
           "title": "Create the \"Partially Held\" order status",
           "why": "When one ERP holds its part of an order and another carries on, the order says so. Without it, the integration writes only a note.",
           "where": "Stores > Settings > Order Status: create partially_held (label Partially Held), then assign it to Processing and to Pending (not as default, not visible on the storefront).",
@@ -301,7 +301,7 @@
           "id": "card-payments",
           "check": "card-payments-enabled",
           "optional": true,
-          "label": "Card payments",
+          "label": "Card Payments",
           "title": "Switch on card payments for the storefront",
           "why": "Only for a demo where the buyer pays by card. Payment Services is Commerce's own card payments, powered by PayPal, and needs its own sandbox onboarding with a PayPal sandbox business account before it can be switched on.",
           "where": "Sales > Payment Services: click Sandbox onboarding and connect a PayPal sandbox business account, then under Settings > General Configuration, for the website, set Enable to Yes and Save.",
@@ -365,19 +365,19 @@
         {
           "name": "ERP_BASE_URL",
           "type": "text",
-          "label": "ERP address",
+          "label": "ERP Address",
           "providedBy": "demo-erp"
         },
         {
           "name": "ERP_DISPLAY_NAME",
           "type": "text",
-          "label": "ERP name",
+          "label": "ERP Name",
           "default": "Acme ERP"
         },
         {
           "name": "INTEGRATION_DISPLAY_NAME",
           "type": "text",
-          "label": "Integration name",
+          "label": "Integration Name",
           "default": "ERP Integration"
         }
       ],

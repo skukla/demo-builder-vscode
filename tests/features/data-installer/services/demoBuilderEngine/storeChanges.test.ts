@@ -62,7 +62,7 @@ describe('previewChanges', () => {
                     keep: { count: 1, names: ['Racks'] },
                 },
             ],
-            kept: 'Kept 1 thing you had changed in the Admin.',
+            kept: 'Kept 1 item changed in the Admin.',
         });
         expect(ctx.sent).toStrictEqual([]);
         expect(files.data.get(installRecordPath(PROJECT, PACK))).toBe(before);

@@ -73,9 +73,9 @@ describe('ErpAssignDialogs', () => {
             name: 'Accuform ERP',
             message: 'undoErpAssignment',
             payload: { erp: 'demo-erp-2', confirm: true },
-            title: "Undoing Accuform ERP's last assignment",
-            failureTitle: "Couldn't undo Accuform ERP's last assignment",
-            successTitle: "Accuform ERP's last assignment undone",
+            title: "Undoing Accuform ERP's Last Assignment",
+            failureTitle: "Couldn't Undo Accuform ERP's Last Assignment",
+            successTitle: "Accuform ERP's Last Assignment Undone",
         });
     });
 
@@ -119,9 +119,9 @@ describe('ErpAssignDialogs', () => {
             id: 'erp-integration',
             erp: 'demo-erp-2',
             name: 'Accuform ERP',
-            message: 'Next: Accuform ERP owns no products yet. Assign products to it.',
+            message: 'Next: Accuform ERP owns no products yet. Assign Products to it.',
         });
-        expect(step).toMatchObject({ action: ERP_ASSIGN_DIALOG_COPY.offerAction, message: 'Next: Accuform ERP owns no products yet. Assign products to it.' });
+        expect(step).toMatchObject({ action: ERP_ASSIGN_DIALOG_COPY.offerAction, message: 'Next: Accuform ERP owns no products yet. Assign Products to it.' });
         await act(async () => step?.onPress());
         expect(mockRequest).toHaveBeenCalledWith('getErpAssignOptions', { id: 'erp-integration', erp: 'demo-erp-2' });
     });

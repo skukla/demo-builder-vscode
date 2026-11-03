@@ -165,14 +165,14 @@ describe('commerceSummaryGroup - ACCS', () => {
 
         expect(group.rows.map((r) => r.label)).toEqual([
             'Backend',
-            'Sign-in',
+            'Sign-In',
             'Connection',
             'Business',
             'Catalog',
             'Datapacks',
         ]);
-        const signin = group.rows.find((r) => r.label === 'Sign-in');
-        expect(signin).toEqual({ label: 'Sign-in', value: 'Demo Org', done: true });
+        const signin = group.rows.find((r) => r.label === 'Sign-In');
+        expect(signin).toEqual({ label: 'Sign-In', value: 'Demo Org', done: true });
     });
 
     it('leaves a committed sub-step undone while its own state is not satisfied', () => {

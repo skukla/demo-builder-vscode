@@ -105,7 +105,7 @@ function TargetScopeFields({
                     ))}
                 </Picker>
             </ScopeField>
-            <ScopeField label="Store view">
+            <ScopeField label="Store View">
                 <Picker
                     aria-label="Store view"
                     placeholder={storePlaceholder(chosen ? storeViews[0]?.name : undefined)}

@@ -86,7 +86,7 @@ export function erpNameProblem(name: string | undefined, takenNames: readonly st
     if (trimmed.length > MAX_ERP_NAME) return `An ERP name is at most ${MAX_ERP_NAME} characters.`;
     const lower = trimmed.toLowerCase();
     return takenNames.some((taken) => taken.trim().toLowerCase() === lower)
-        ? `An ERP named "${trimmed}" is already in this project. Pick another name.`
+        ? `An ERP named "${trimmed}" is already in this project. Enter a different name.`
         : undefined;
 }
 

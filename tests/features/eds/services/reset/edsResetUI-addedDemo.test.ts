@@ -147,7 +147,7 @@ describe('reset of a project built on an added demo — the source check', () =>
     it('offers to keep the current content when the content site is gone, and resets the code only', async () => {
         mockedCheck.mockResolvedValue(CONTENT_GONE);
         (vscode.window.showWarningMessage as jest.Mock)
-            .mockResolvedValueOnce({ title: 'Keep current content' })
+            .mockResolvedValueOnce({ title: 'Keep Current Content' })
             .mockResolvedValue(RESET);
 
         await run();
@@ -156,7 +156,7 @@ describe('reset of a project built on an added demo — the source check', () =>
             1,
             "The Isle5 by Jen demo's pages can't be reached right now. You can reset the code and keep the content this site has now.",
             { modal: true },
-            { title: 'Keep current content' },
+            { title: 'Keep Current Content' },
         );
         expect(mockedReset).toHaveBeenCalledWith(
             expect.objectContaining({ keepContent: true }),
@@ -207,7 +207,7 @@ describe('reset of a project built on an added demo — the source check', () =>
             `The ${project.demo!.name} demo's pages can't be reached right now. ` +
                 'You can reset the code and keep the content this site has now.',
             { modal: true },
-            { title: 'Keep current content' },
+            { title: 'Keep Current Content' },
         );
     });
 

@@ -405,15 +405,15 @@ export class CommandManager {
                                 : ''
                         }Signing in again can also sign you out of DA.live.`,
                     },
-                    'Sign in again',
+                    'Sign In Again',
                 );
-                if (pick !== 'Sign in again') return;
+                if (pick !== 'Sign In Again') return;
                 force = true;
             }
             const ok = await vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Signing in to Adobe',
+                    title: 'Signing In to Adobe',
                 },
                 () => auth.login(force),
             );
@@ -467,13 +467,13 @@ export class CommandManager {
                         modal: true,
                         detail: current.user?.login ? `Signed in as ${current.user.login}.` : undefined,
                     },
-                    'Sign in again',
+                    'Sign In Again',
                 );
-                if (pick !== 'Sign in again') return;
+                if (pick !== 'Sign In Again') return;
                 force = true;
             }
             const outcome = await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: 'Signing in to GitHub' },
+                { location: vscode.ProgressLocation.Notification, title: 'Signing In to GitHub' },
                 () => signInToGitHub(tokenService, this.logger, { force }),
             );
             // Success is announced by signInToGitHub itself.

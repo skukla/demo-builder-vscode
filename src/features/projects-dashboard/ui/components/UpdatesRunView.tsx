@@ -58,7 +58,7 @@ interface RunViewProps {
 
 /** "1 update still waiting", "2 updates still waiting". */
 function waitingLine(count: number): string {
-    return count === 1 ? '1 update still waiting' : `${count} updates still waiting`;
+    return count === 1 ? '1 update pending' : `${count} updates pending`;
 }
 
 /** What one row says beside its name: what it is doing while it runs, else its detail. */
@@ -130,7 +130,7 @@ const LOCAL_COPY_LINE: Partial<Record<UpdateRowState, string>> = {
  * GitHub, and that has a local copy, has one.
  */
 function LocalCopyStep({ status }: { status: UpdateRowStatus }) {
-    return <Step label="Your local copy" detail={LOCAL_COPY_LINE[status.state] ?? ''} status={status} />;
+    return <Step label="Your Local Copy" detail={LOCAL_COPY_LINE[status.state] ?? ''} status={status} />;
 }
 
 function RunGroup({ group, statuses, live }: { group: RowGroup; statuses: RowStatuses; live: Live }) {

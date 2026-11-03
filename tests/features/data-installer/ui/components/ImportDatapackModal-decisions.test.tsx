@@ -79,7 +79,7 @@ describe('ImportDatapackModal — decisions', () => {
             withStatus(runningRecord());
             renderModal();
             await settle();
-            await screen.findByRole('button', { name: /stop watching/i });
+            await screen.findByRole('button', { name: /^close$/i });
 
             const before = statusCalls();
             await tick(2000);
@@ -91,24 +91,23 @@ describe('ImportDatapackModal — decisions', () => {
             withStatus(runningRecord());
             renderModal();
             await settle();
-            await press(await screen.findByRole('button', { name: /stop watching/i }));
+            await press(await screen.findByRole('button', { name: /^close$/i }));
 
             const before = statusCalls();
             await tick(6000);
 
             expect(statusCalls()).toBe(before);
-            expect(screen.getByRole('heading', { name: 'Stopped watching' })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Running in Background' })).toBeInTheDocument();
         });
 
-        it('shows no spinner and no Stop watching once stopped, and Close is the way out', async () => {
+        it('shows no spinner and no Close once stopped, and Close is the way out', async () => {
             withStatus(runningRecord());
             renderModal();
             await settle();
-            await press(await screen.findByRole('button', { name: /stop watching/i }));
+            await press(await screen.findByRole('button', { name: /^close$/i }));
 
             expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /stop watching/i })).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: 'Run in background' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Run in Background' })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
 
@@ -127,7 +126,7 @@ describe('ImportDatapackModal — decisions', () => {
             withStatus(runningRecord());
             renderModal();
             await settle();
-            await screen.findByRole('button', { name: /stop watching/i });
+            await screen.findByRole('button', { name: /^close$/i });
             await tick(2000);
 
             withStatus(runningRecord({ outcome: 'success', perType: { categories: 'success' } }));
@@ -155,7 +154,7 @@ describe('ImportDatapackModal — decisions', () => {
             );
             renderModal();
             await awaitForm();
-            await press(screen.getByRole('checkbox', { name: 'Select all' }));
+            await press(screen.getByRole('checkbox', { name: 'Select All' }));
 
             const before = statusCalls();
             await press(screen.getByRole('button', { name: /^import$/i }));
@@ -167,7 +166,7 @@ describe('ImportDatapackModal — decisions', () => {
     /**
      * The watching view says what the JOB is, and the job can be a removal.
      * Three strings are derived from one `operation` field — the spinner's
-     * message, the progress verb and the "carries on without you" noun — and a
+     * message, the progress verb and the "continues in the background" noun — and a
      * single test of the import path leaves all three free to say "import" for a
      * removal, which is the wording bug this surface already shipped once.
      */
@@ -197,9 +196,9 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await settle();
 
-            await press(await screen.findByRole('button', { name: /stop watching/i }));
+            await press(await screen.findByRole('button', { name: /^close$/i }));
 
-            expect(screen.getByText('The removal carries on without you.')).toBeInTheDocument();
+            expect(screen.getByText('The removal continues in the background.')).toBeInTheDocument();
         });
 
         it('CONTROL — says the IMPORT carries on once watching stops', async () => {
@@ -207,9 +206,9 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await settle();
 
-            await press(await screen.findByRole('button', { name: /stop watching/i }));
+            await press(await screen.findByRole('button', { name: /^close$/i }));
 
-            expect(screen.getByText('The import carries on without you.')).toBeInTheDocument();
+            expect(screen.getByText('The import continues in the background.')).toBeInTheDocument();
         });
 
         it('gives the ring the measured percentage once a type has reported', async () => {
@@ -287,7 +286,7 @@ describe('ImportDatapackModal — decisions', () => {
             hang('reset-datapack');
             renderModal();
             await awaitForm();
-            await press(screen.getByRole('checkbox', { name: 'Select all' }));
+            await press(screen.getByRole('checkbox', { name: 'Select All' }));
             await press(screen.getByRole('button', { name: /^remove data/i }));
 
             await press(screen.getByRole('button', { name: /^remove$/i }));
@@ -337,7 +336,7 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal({ onClose });
             await settle();
 
-            await press(await screen.findByRole('button', { name: 'Run in background' }));
+            await press(await screen.findByRole('button', { name: 'Run in Background' }));
 
             expect(mockPostMessage.mock.calls).toStrictEqual([
                 ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Importing Bodea' }],
@@ -350,7 +349,7 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal({ onClose: jest.fn() });
             await settle();
 
-            await press(await screen.findByRole('button', { name: 'Run in background' }));
+            await press(await screen.findByRole('button', { name: 'Run in Background' }));
 
             expect(mockPostMessage.mock.calls).toStrictEqual([
                 ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Removing Bodea' }],
@@ -398,19 +397,19 @@ describe('ImportDatapackModal — decisions', () => {
 
     describe('select all', () => {
         // Nothing to select "all" of with fewer than two types (owner, 2026-10-31).
-        it.each([[[]], [['categories']]])('offers no Select all for a pack of %j', async (availableTypes) => {
+        it.each([[[]], [['categories']]])('offers no Select All for a pack of %j', async (availableTypes) => {
             renderModal({ availableTypes });
             await settle();
 
-            expect(screen.queryByRole('checkbox', { name: 'Select all' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Select All' })).not.toBeInTheDocument();
         });
 
         it('clearing everything leaves the import unstartable', async () => {
             renderModal();
             await awaitForm();
-            await press(screen.getByRole('checkbox', { name: 'Select all' }));
+            await press(screen.getByRole('checkbox', { name: 'Select All' }));
 
-            await press(screen.getByRole('checkbox', { name: 'Select all' }));
+            await press(screen.getByRole('checkbox', { name: 'Select All' }));
 
             expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
                 'aria-disabled',

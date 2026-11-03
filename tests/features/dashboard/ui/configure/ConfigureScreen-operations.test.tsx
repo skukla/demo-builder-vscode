@@ -242,7 +242,7 @@ describe('ConfigureScreen - Operations', () => {
                 });
             });
 
-            expect(screen.getByRole('dialog')).toHaveTextContent('Republishing storefront');
+            expect(screen.getByRole('dialog')).toHaveTextContent('Republishing Storefront');
         });
     });
 

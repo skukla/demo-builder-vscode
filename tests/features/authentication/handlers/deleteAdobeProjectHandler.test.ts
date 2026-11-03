@@ -437,7 +437,7 @@ describe('handleDeleteAdobeProject', () => {
             expect(mockWithProgress).toHaveBeenCalledWith(
                 expect.objectContaining({
                     location: vscode.ProgressLocation.Notification,
-                    title: expect.stringContaining('Deleting the Adobe project'),
+                    title: expect.stringContaining('Deleting the Adobe Project'),
                     cancellable: false,
                 }),
                 expect.any(Function)

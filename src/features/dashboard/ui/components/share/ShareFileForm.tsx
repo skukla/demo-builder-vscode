@@ -14,14 +14,14 @@ import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { ExportDemoBundleRequest, ExportDemoBundleResult } from '@/types/webviewRequests';
 
 const FILE_COPY = {
-    whatFile: 'What to include',
+    whatFile: 'What to Include',
     setup: 'Setup',
     setupWhat: 'Your Commerce, Adobe, GitHub and DA.live settings. Never a credential.',
     storefront: 'Storefront',
     storefrontWhat: "The storefront's code and content site.",
     storefrontHeadless: 'This project has no storefront of its own.',
-    saveFile: 'Save file',
-    nothingTicked: 'Tick at least one part.',
+    saveFile: 'Save',
+    nothingTicked: 'Select at least one part.',
     fileFailed: "Couldn't save the file.",
 } as const;
 

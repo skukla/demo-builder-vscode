@@ -97,7 +97,7 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
                     // callback handed to the migration below — this slot has no card to fill,
                     // which is NOT the same as the move having nothing to say.
                     id: payload?.id ?? DESTINATION_OPERATION_ID,
-                    title: `Changing destination to ${target}`,
+                    title: `Changing Destination to ${target}`,
                     inModal: progressSurfaceOf(payload) === 'modal',
                 },
                 async (report) =>

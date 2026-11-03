@@ -49,7 +49,7 @@ export function NewAdobeEntityForm({
             <Heading level={3} margin={0} marginBottom="size-200">{`Create New ${noun}`}</Heading>
 
             <TextField
-                label={`${noun} name`}
+                label={`${noun} Name`}
                 value={name}
                 onChange={setName}
                 description={contextHint}

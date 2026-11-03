@@ -60,7 +60,7 @@ export async function openPrivateBrowser(url: string): Promise<boolean> {
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Opening a private browser',
+            title: 'Opening a Private Browser',
             cancellable: false,
         },
         async () => {

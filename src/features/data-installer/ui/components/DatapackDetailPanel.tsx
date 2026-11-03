@@ -227,7 +227,7 @@ function DetailRows({
                 <PanelRow label="Description">{detail.description}</PanelRow>
             ) : null}
             {ownerLabel(detail) ? <PanelRow label="Owner">{ownerLabel(detail)}</PanelRow> : null}
-            <PanelRow label="Visible to">{visibleTo(detail)}</PanelRow>
+            <PanelRow label="Visible To">{visibleTo(detail)}</PanelRow>
             {detail.updatedAt ? (
                 <PanelRow label="Updated">{formatDate(detail.updatedAt)}</PanelRow>
             ) : null}
@@ -241,7 +241,7 @@ function DetailRows({
                 </span>
             </PanelRow>
             {missing.length > 0 ? (
-                <PanelRow label="Declared, not stored">
+                <PanelRow label="Declared, Not Stored">
                     <span className="datapack-panel-types" data-testid="datapack-detail-missing">
                         {missing.map((dataType) => (
                             <span key={dataType} className="datapack-panel-type is-missing">
@@ -252,7 +252,7 @@ function DetailRows({
                 </PanelRow>
             ) : null}
             {settingsLayer && settingsLayer.settings.length > 0 ? (
-                <PanelRow label="Also sets">
+                <PanelRow label="Also Sets">
                     <span className="datapack-panel-types" data-testid="datapack-detail-settings">
                         {settingsLayer.settings.map((setting) => (
                             <span key={setting.path} className="datapack-panel-type">

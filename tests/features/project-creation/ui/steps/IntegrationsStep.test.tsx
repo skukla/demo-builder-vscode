@@ -149,8 +149,8 @@ describe('IntegrationsStep — results-only layout', () => {
 
     it('does not render the old deployable type-rows', async () => {
         await renderStep(baseState());
-        expect(screen.queryByText('Pre-built integration')).not.toBeInTheDocument();
-        expect(screen.queryByText('Import a repo')).not.toBeInTheDocument();
+        expect(screen.queryByText('Pre-Built Integration')).not.toBeInTheDocument();
+        expect(screen.queryByText('Import Repository')).not.toBeInTheDocument();
         expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
     });
 
@@ -167,7 +167,7 @@ describe('IntegrationsStep — result cards from state', () => {
         expect(row(MESH_NAME)).not.toBeNull();
         expect(within(destinationLine()).getByText('Not set')).toBeInTheDocument();
         expect(
-            within(destinationLine()).getByRole('button', { name: 'Set up' })
+            within(destinationLine()).getByRole('button', { name: 'Set Up' })
         ).toBeInTheDocument();
     });
 
@@ -217,7 +217,7 @@ describe('IntegrationsStep — result cards from state', () => {
         ).toBeInTheDocument();
     });
 
-    it('renders a card for a committed blank "Build custom" app', async () => {
+    it('renders a card for a committed blank "Build Custom" app', async () => {
         // Regression: the blank shell was resolved against the blank-FILTERED catalog,
         // so a committed "Build custom" app produced no row.
         await renderStep(baseState({ selectedAppBuilderComponents: ['app-builder-shell'] }));
@@ -285,13 +285,13 @@ describe('IntegrationsStep — modal wiring', () => {
         ).toBeInTheDocument();
         // The kind picker renders inside the journey.
         expect(
-            within(dialog).getByRole('button', { name: /Pre-built integration/ })
+            within(dialog).getByRole('button', { name: /Pre-Built Integration/ })
         ).toBeInTheDocument();
     });
 
-    it("the destination line's Set up opens the modal in destination mode", async () => {
+    it("the destination line's Set Up opens the modal in destination mode", async () => {
         await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID], ...SIGNED_IN }));
-        await press(within(destinationLine()).getByRole('button', { name: 'Set up' }));
+        await press(within(destinationLine()).getByRole('button', { name: 'Set Up' }));
         const dialog = screen.getByRole('dialog');
         expect(
             within(dialog).getByRole('heading', { name: 'Deployment Destination' })
@@ -335,9 +335,9 @@ describe('IntegrationsStep — modal wiring', () => {
         await renderStep(baseState());
         await press(screen.getByRole('button', { name: 'Add Integration' }));
         const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /Build custom/ }));
+        await press(within(dialog).getByRole('button', { name: /Build Custom/ }));
         await press(within(dialog).getByRole('button', { name: 'Continue' }));
-        const input = within(dialog).getByLabelText(/Name \(optional\)/);
+        const input = within(dialog).getByLabelText(/Name \(Optional\)/);
         const DUPLICATE = 'That name is already used by another part of this project.';
         await change(input, 'App Builder Shell');
         expect(within(dialog).queryByText(DUPLICATE)).not.toBeInTheDocument();
@@ -507,7 +507,7 @@ describe('IntegrationsStep — the ERP pair before creation', () => {
 
         await pickMenuItem(row('ERP Integration'), /Settings/i);
         const dialog = await screen.findByRole('dialog');
-        await change(within(dialog).getByLabelText(/^ERP name/), 'Justrite');
+        await change(within(dialog).getByLabelText(/^ERP Name/), 'Justrite');
         await press(within(dialog).getByRole('button', { name: /^Save$/ }));
 
         expect(updateState).toHaveBeenCalledWith({
@@ -526,10 +526,10 @@ describe('IntegrationsStep — the ERP pair before creation', () => {
         const { updateState } = await renderStep(baseState({ ...SIGNED_IN, ...COMMITTED_DEST }));
         await press(screen.getByRole('button', { name: 'Add Integration' }));
         const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /Pre-built integration/ }));
+        await press(within(dialog).getByRole('button', { name: /Pre-Built Integration/ }));
         await press(within(dialog).getByRole('button', { name: 'Continue' }));
         await press(within(dialog).getByRole('button', { name: /ERP Integration/ }));
-        await change(within(dialog).getByLabelText(/^ERP name/), 'Northwind');
+        await change(within(dialog).getByLabelText(/^ERP Name/), 'Northwind');
         // Walk the rest of the journey to its terminal stage, whatever length it is.
         for (let step = 0; step < 4; step += 1) {
             const next = within(dialog).queryByRole('button', { name: 'Continue' });

@@ -9455,7 +9455,7 @@
             "anchors": [
                 "default:"
             ],
-            "line": 206,
+            "line": 208,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable through the only route into unfinishedResult. Its switch names six outcomes; the record type declares eight. The two it omits cannot arrive: terminalResult hands 'success' to successResult before this call, and resolveResult only reaches terminalResult when record.outcome !== 'watching'. So no ImportJobRecord a caller can build lands in the default arm, and no test can distinguish it from the arms above. Re-anchored 2026-10-31 (202 -> 181): describeOutcome and the per-outcome variant table became one switch, unfinishedResult, when results moved to the dialog design rules; the default arm and the argument are unchanged.",

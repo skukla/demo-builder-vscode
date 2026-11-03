@@ -69,8 +69,8 @@ describe('questionsInModal', () => {
                     'Or use the update and drop those edits.',
             },
             'Fix with AI',
-            'Leave it as it is',
-            'Use the update',
+            'Leave It As It Is',
+            'Use Update',
         );
     });
 
@@ -95,7 +95,7 @@ describe('questionsInModal', () => {
     });
 
     it("never offers a reset on Adobe's row", async () => {
-        ask.mockResolvedValue('Leave it as it is');
+        ask.mockResolvedValue('Leave It As It Is');
 
         const answer = await questionsInModal.onClash(stopped, { track: 'boilerplate', files: ['blocks/header/header.js'], canReset: false });
 
@@ -103,16 +103,16 @@ describe('questionsInModal', () => {
         expect(ask).toHaveBeenCalledWith(
             question('The update clashes with your edits', "This update changes something that was already edited in Bodea's storefront"),
             'Fix with AI',
-            'Leave it as it is',
+            'Leave It As It Is',
         );
         expect(ask.mock.calls[0][0].message).not.toMatch(/use the update/i);
     });
 
     it.each([
-        ['Use the update', true, 'reset'],
+        ['Use Update', true, 'reset'],
         // A reset the question did not offer is never taken.
-        ['Use the update', false, 'leave'],
-        ['Leave it as it is', true, 'leave'],
+        ['Use Update', false, 'leave'],
+        ['Leave It As It Is', true, 'leave'],
         // Dismissed: nothing changes.
         [undefined, true, 'leave'],
     ])('answers %s (reset offered: %s) as %s', async (choice, canReset, expected) => {
@@ -135,14 +135,14 @@ describe('questionsInModal', () => {
                     'later from Check for Updates, or drop it and skip this update.',
             },
             'Fix with AI',
-            'Keep it for later',
-            'Drop the fix',
+            'Keep It for Later',
+            'Drop the Fix',
         );
     });
 
     it.each([
-        ['Drop the fix', 'leave'],
-        ['Keep it for later', 'later'],
+        ['Drop the Fix', 'leave'],
+        ['Keep It for Later', 'later'],
         // Dismissed: the fix is kept, nothing is lost.
         [undefined, 'later'],
     ])('answers %s as %s', async (choice, expected) => {
@@ -151,34 +151,34 @@ describe('questionsInModal', () => {
         expect(await questionsInModal.onUnfinished(stopped, 'x')).toBe(expected);
     });
 
-    it('asks whether to replace a library, and answers yes only on Replace blocks', async () => {
-        ask.mockResolvedValueOnce('Replace blocks').mockResolvedValueOnce('Keep my blocks');
+    it('asks whether to replace a library, and answers yes only on Replace Blocks', async () => {
+        ask.mockResolvedValueOnce('Replace Blocks').mockResolvedValueOnce('Keep My Blocks');
 
         expect(await questionsInModal.replaceLibraryBlocks('Demo Builder Blocks', stopped)).toBe(true);
         expect(await questionsInModal.replaceLibraryBlocks('Demo Builder Blocks', stopped)).toBe(false);
         expect(ask).toHaveBeenCalledWith(
             {
-                title: 'Replace the blocks?',
+                title: 'Replace the Blocks?',
                 message:
-                    '"Replace blocks" puts in the new versions, and any edits you made to these blocks are lost. "Keep my blocks" leaves them as they are.',
+                    '"Replace Blocks" puts in the new versions, and any edits you made to these blocks are lost. "Keep My Blocks" leaves them as they are.',
             },
-            'Replace blocks',
-            'Keep my blocks',
+            'Replace Blocks',
+            'Keep My Blocks',
         );
     });
 });
 
 describe('stopRunningDemos', () => {
     it('asks once per running project, and stops the open one before its update', async () => {
-        ask.mockResolvedValue('Stop and update');
+        ask.mockResolvedValue('Stop and Update');
         const stopDemo = jest.fn().mockResolvedValue(undefined);
 
         const out = await stopRunningDemos(selections(), '/p/justrite', stopDemo);
 
         expect(ask).toHaveBeenCalledTimes(1);
         expect(ask).toHaveBeenCalledWith(
-            { title: 'Stop the demo to update it?', message: 'JustRite is running. Stop it to update it?' },
-            'Stop and update',
+            { title: 'Stop the Demo to Update It?', message: 'JustRite is running. Stop it to update it?' },
+            'Stop and Update',
             'Skip',
         );
         expect(stopDemo).toHaveBeenCalledTimes(1);

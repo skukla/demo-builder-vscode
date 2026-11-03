@@ -25,20 +25,19 @@
  */
 const ACRONYMS: Record<string, string> = {
     b2b: 'B2B',
-    // Adobe Commerce Optimizer's kinds: `aco_price_books` → "ACO price books".
+    // Adobe Commerce Optimizer's kinds: `aco_price_books` → "ACO Price Books".
     aco: 'ACO',
 };
 
 /** Codes whose words run together, so casing alone cannot name them. The code stays the value sent. */
 const JOINED_CODES: Record<string, string> = {
-    giftcards: 'Gift cards',
+    giftcards: 'Gift Cards',
 };
 
 /**
- * A data type's code as a human name — `attribute_sets` → "Attribute sets".
+ * A data type's code as a human name: `attribute_sets` → "Attribute Sets".
  *
- * Sentence case, matching the labels around it ("Target website", "Data
- * types"), not title case.
+ * Title Case, as anything that names a thing is here (dialog design rules).
  */
 export function dataTypeLabel(code: string): string {
     const joined = JOINED_CODES[code];
@@ -52,11 +51,17 @@ export function dataTypeLabel(code: string): string {
     return words.map(renderWord).join(' ');
 }
 
-/** Acronyms stay upper wherever they fall; otherwise only the first word leads. */
+/** Words a Title Case name keeps small unless it leads. */
+const SMALL_WORDS = new Set(['to', 'of', 'and']);
+
+/** Acronyms stay upper wherever they fall; every other word leads with a capital, bar the small ones. */
 function renderWord(word: string, index: number): string {
     const acronym = ACRONYMS[word.toLowerCase()];
     if (acronym) {
         return acronym;
     }
-    return index === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word;
+    if (index > 0 && SMALL_WORDS.has(word)) {
+        return word;
+    }
+    return word.charAt(0).toUpperCase() + word.slice(1);
 }

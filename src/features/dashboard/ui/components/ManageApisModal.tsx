@@ -86,13 +86,13 @@ export interface ManageApisModalProps {
 /** Every string the dialog shows that it does not take from the extension, in one place. */
 export const MANAGE_APIS_COPY = {
     title: (name: string) => `Manage APIs for ${name}`,
-    loadFailedTitle: "Couldn't load Adobe APIs",
+    loadFailedTitle: "Couldn't Load Adobe APIs",
     retry: 'Retry',
-    signInTitle: 'Sign in to Adobe',
+    signInTitle: 'Sign In to Adobe',
     signIn: 'Sign In with Adobe',
     // Says the browser is coming before it does: an unannounced jump reads as a glitch.
     signInBody: "Your Adobe session has ended. Sign in to manage this app's API access. Adobe sign-in will open in your browser.",
-    applyFailedTitle: "Couldn't update API access",
+    applyFailedTitle: "Couldn't Update API Access",
 };
 
 /** A dialog reading what it will show says nothing while it does. */

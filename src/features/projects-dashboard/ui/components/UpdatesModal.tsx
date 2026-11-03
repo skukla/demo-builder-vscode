@@ -39,7 +39,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
-const LIST_TITLE = 'Updates available';
+const LIST_TITLE = 'Updates Available';
 const NO_ACTIONS: ActionButton[] = [];
 /** The most updates the list opens every group for: two lines each, they fit unscrolled. */
 export const OPEN_UP_TO = 3;
@@ -53,7 +53,7 @@ function summaryOf(group: RowGroup, ticked: ReadonlySet<string>): { open: string
     const open = group.rows.filter((r) => !r.lockedReason).map((r) => r.id);
     const tickedCount = open.filter((id) => ticked.has(id)).length;
     const waiting = group.rows.filter((r) => !r.ticked && !ticked.has(r.id)).length;
-    return { open, tickedCount, text: waiting > 0 ? `${waiting} waiting for you` : '' };
+    return { open, tickedCount, text: waiting > 0 ? `${waiting} needs attention` : '' };
 }
 
 interface RowGroupViewProps {
@@ -124,12 +124,12 @@ interface Heading {
  * "Updates applied" whatever the run's warning said when it ended.
  */
 function runHeadingOf(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): Heading {
-    if (progress?.state === 'failed') return { title: "Couldn't apply the updates", status: 'error' };
+    if (progress?.state === 'failed') return { title: "Couldn't Apply the Updates", status: 'error' };
     if (progress?.state !== 'succeeded') return { title: APPLYING_TITLE };
     const allDone = rows.every((row) => statuses[row.id]?.state === 'done');
     return progress.warning && !allDone
         ? { title: "Some updates didn't apply", status: 'warning' }
-        : { title: 'Updates applied', status: 'success' };
+        : { title: 'Updates Applied', status: 'success' };
 }
 
 /** The window's dismiss button and the buttons beside it. */
@@ -158,7 +158,7 @@ function runChrome(controls: UpdatesModalControls): Chrome {
         // A prompt names its main answer first; a dialog's main button goes last.
         return { hideClose: true, actions: [...actions.slice(1), ...actions.slice(0, 1)] };
     }
-    if (!ended) return { closeLabel: 'Run in background', actions: NO_ACTIONS };
+    if (!ended) return { closeLabel: 'Run in Background', actions: NO_ACTIONS };
     if (progress?.state !== 'failed') return { closeLabel: 'Close', actions: backTo(controls) };
     const logs: ActionButton = {
         label: 'Open Debug Logs',
@@ -172,7 +172,7 @@ function runChrome(controls: UpdatesModalControls): Chrome {
 function backTo(controls: UpdatesModalControls): ActionButton[] {
     if (controls.remaining === 0) return NO_ACTIONS;
     // The button's spinner while the list is read again, not "Checking for updates" (owner, 2026-10-31).
-    return [{ label: 'Back to updates', variant: 'secondary', onPress: controls.back, isPending: controls.rechecking }];
+    return [{ label: 'Back to Updates', variant: 'secondary', onPress: controls.back, isPending: controls.rechecking }];
 }
 
 /** What the modal shows: its title, body, dismiss label and the buttons beside it. */

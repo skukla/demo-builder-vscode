@@ -59,12 +59,12 @@ beforeEach(() => {
 });
 
 describe('a Data Installer pack', () => {
-    it('shows Import as the one button, and Save as file in the menu; never Share or Remove', async () => {
+    it('shows Import as the one button, and Save as File in the menu; never Share or Remove', async () => {
         const props = renderActions({ detail: makeDetail({ mine: true }) });
 
         expect(screen.getByRole('button', { name: 'More actions for Bodea' })).toBeInTheDocument();
-        expect(menuLabels()).toEqual(['Save as file']);
-        expect(screen.queryByRole('button', { name: 'Save as file' })).not.toBeInTheDocument();
+        expect(menuLabels()).toEqual(['Save as File']);
+        expect(screen.queryByRole('button', { name: 'Save as File' })).not.toBeInTheDocument();
 
         await press(screen.getByRole('button', { name: 'Import' }));
         expect(props.onImport).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
@@ -74,17 +74,17 @@ describe('a Data Installer pack', () => {
         mockRequest.mockResolvedValue({ success: true, data: { path: '/tmp/bodea.zip' } });
         renderActions();
 
-        await press(row('Save as file'));
+        await press(row('Save as File'));
 
         expect(mockRequest).toHaveBeenCalledWith('save-datapack-zip', { source: 'installer', datapackName: 'bodea', version: 'main' }, undefined);
         expect(await screen.findByText('Saved to /tmp/bodea.zip')).toBeInTheDocument();
     });
 });
 
-describe('Save store changes to this pack', () => {
+describe('Save Store Changes to This Datapack', () => {
     it('is in the menu only when the catalog offers it', () => {
         renderActions();
-        expect(menuLabels()).not.toContain('Save store changes to this pack');
+        expect(menuLabels()).not.toContain('Save Store Changes to This Datapack');
     });
 
     it.each([
@@ -94,7 +94,7 @@ describe('Save store changes to this pack', () => {
         const onSaveStoreChanges = jest.fn();
         renderActions({ detail, installsFromLibrary: true, onSaveStoreChanges });
 
-        await press(row('Save store changes to this pack'));
+        await press(row('Save Store Changes to This Datapack'));
 
         expect(onSaveStoreChanges).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
     });
@@ -106,7 +106,7 @@ describe('a library pack', () => {
 
         expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Copy to the Data Installer' })).toBeInTheDocument();
-        await press(row('Save as file'));
+        await press(row('Save as File'));
         expect(mockRequest).toHaveBeenCalledWith('save-datapack-zip', { source: 'library', datapackName: 'bodea', version: 'main' }, undefined);
     });
 
@@ -120,17 +120,17 @@ describe('a library pack', () => {
 
     it("offers neither Share nor Remove on a colleague's library pack", () => {
         renderActions({ detail: LIBRARY });
-        expect(menuLabels()).toEqual(['Save as file']);
+        expect(menuLabels()).toEqual(['Save as File']);
     });
 
-    it('lists Share on a private pack of the SC, Stop sharing on a shared one, and Remove from library at the bottom', () => {
+    it('lists Share on a private pack of the SC, Stop sharing on a shared one, and Remove from Library at the bottom', () => {
         renderActions({ detail: OWN, onSaveStoreChanges: jest.fn() });
-        expect(menuLabels()).toEqual(['Save as file', 'Save store changes to this pack', 'Share', 'Remove from library']);
+        expect(menuLabels()).toEqual(['Save as File', 'Save Store Changes to This Datapack', 'Share', 'Remove from Library']);
     });
 
     it('lists Stop sharing on a shared pack of the SC', () => {
         renderActions({ detail: { ...OWN, shared: true } });
-        expect(menuLabels()).toEqual(['Save as file', 'Stop sharing', 'Remove from library']);
+        expect(menuLabels()).toEqual(['Save as File', 'Stop Sharing', 'Remove from Library']);
     });
 });
 
@@ -153,21 +153,21 @@ describe('Share and Stop sharing keep their confirmation', () => {
     it('Stop sharing asks with no explanation; Cancel changes nothing', async () => {
         renderActions({ detail: { ...OWN, shared: true } });
 
-        await press(row('Stop sharing'));
+        await press(row('Stop Sharing'));
         expect(screen.queryByText(SHARE_CONSENT)).not.toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Cancel' }));
 
         expect(mockRequest).not.toHaveBeenCalled();
-        expect(screen.queryByRole('button', { name: 'Stop sharing' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Stop Sharing' })).not.toBeInTheDocument();
     });
 });
 
-describe('Remove from library keeps its confirmation', () => {
+describe('Remove from Library keeps its confirmation', () => {
     it('removes on the one choice when there is nothing to warn about, then says so', async () => {
         const props = renderActions({ detail: OWN });
         mockRequest.mockResolvedValue({ success: true, data: { deleted: true } });
 
-        await press(row('Remove from library'));
+        await press(row('Remove from Library'));
 
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'bodea', version: 'main', confirm: true }, undefined);
         expect(await screen.findByText('Removed from the library.')).toBeInTheDocument();
@@ -177,7 +177,7 @@ describe('Remove from library keeps its confirmation', () => {
     it('shows the warning first, and removes only on the Remove press', async () => {
         renderActions({ detail: OWN, sharedInFile: WARNING });
 
-        await press(row('Remove from library'));
+        await press(row('Remove from Library'));
         expect(screen.getByText(WARNING)).toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalled();
 
@@ -188,7 +188,7 @@ describe('Remove from library keeps its confirmation', () => {
     it('keeps the pack when the warning is cancelled', async () => {
         renderActions({ detail: OWN, sharedInFile: WARNING });
 
-        await press(row('Remove from library'));
+        await press(row('Remove from Library'));
         await press(screen.getByRole('button', { name: 'Cancel' }));
 
         expect(mockRequest).not.toHaveBeenCalled();
@@ -199,7 +199,7 @@ describe('Remove from library keeps its confirmation', () => {
         mockRequest.mockResolvedValue({ success: false, error: 'Only the owner can delete this pack.' });
         renderActions({ detail: OWN });
 
-        await press(row('Remove from library'));
+        await press(row('Remove from Library'));
 
         expect(await screen.findByText('It could not be removed: Only the owner can delete this pack.')).toBeInTheDocument();
     });
@@ -213,8 +213,8 @@ describe('a pack with a settings layer (datapack-engine step 09)', () => {
         mockRequest.mockResolvedValue({ success: true, data: { deleted: true } });
         renderActions({ settingsLayer: LAYER, onSharingChanged });
 
-        expect(menuLabels()).toEqual(['Save as file', 'Remove its store settings']);
-        await press(row('Remove its store settings'));
+        expect(menuLabels()).toEqual(['Save as File', 'Remove Its Store Settings']);
+        await press(row('Remove Its Store Settings'));
 
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'bodea-settings', version: '2', confirm: true }, undefined);
         expect(await screen.findByText('Removed from the library.')).toBeInTheDocument();
@@ -224,12 +224,12 @@ describe('a pack with a settings layer (datapack-engine step 09)', () => {
     it("offers it beside the SC's own pack's Remove, after it", () => {
         renderActions({ detail: OWN, settingsLayer: LAYER });
 
-        expect(menuLabels().slice(-2)).toEqual(['Remove from library', 'Remove its store settings']);
+        expect(menuLabels().slice(-2)).toEqual(['Remove from Library', 'Remove Its Store Settings']);
     });
 
     it("does not offer a colleague's layer, which only its owner can remove", () => {
         renderActions({ settingsLayer: { ...LAYER, mine: false } });
 
-        expect(menuLabels()).toEqual(['Save as file']);
+        expect(menuLabels()).toEqual(['Save as File']);
     });
 });

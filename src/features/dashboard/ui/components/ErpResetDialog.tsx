@@ -25,7 +25,7 @@ export interface ErpResetDialogProps {
 /** The question: the ERP by name when there is one, else how many. */
 function resetTitle(erpNames: string[]): string {
     if (erpNames.length === 1) return `Reset ${erpNames[0]}?`;
-    return erpNames.length > 1 ? `Reset ${erpNames.length} ERPs?` : 'Reset every ERP?';
+    return erpNames.length > 1 ? `Reset ${erpNames.length} ERPs?` : 'Reset Every ERP?';
 }
 
 /**

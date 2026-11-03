@@ -45,7 +45,7 @@ describe('AdobeAuthStep - Error Handling', () => {
             );
 
             expect(screen.getByText('Connection Issue')).toBeInTheDocument();
-            expect(screen.getByText('Try Again')).toBeInTheDocument();
+            expect(screen.getByText('Retry')).toBeInTheDocument();
             expect(screen.getByText('Sign In Again')).toBeInTheDocument();
         });
 
@@ -93,7 +93,7 @@ describe('AdobeAuthStep - Error Handling', () => {
             );
 
             // The genuine account-switch case keeps force-login, clearly labeled.
-            const accountSwitch = screen.getByText('Sign in with a different account');
+            const accountSwitch = screen.getByText('Sign In with a Different Account');
             expect(accountSwitch).toBeInTheDocument();
             await user.click(accountSwitch);
             expect(mockRequestAuth).toHaveBeenCalledWith(true);
@@ -115,7 +115,7 @@ describe('AdobeAuthStep - Error Handling', () => {
 
             expect(
                 screen.getByText(
-                    "We couldn't connect to Adobe services. Please check your internet connection.",
+                    "Couldn't connect to Adobe services. Check your internet connection.",
                 ),
             ).toBeInTheDocument();
         });
@@ -147,7 +147,7 @@ describe('AdobeAuthStep - Error Handling', () => {
             ).toBeInTheDocument();
         });
 
-        it('re-checks on Try Again — a SECOND check, after the one mount already sent', async () => {
+        it('re-checks on Retry — a SECOND check, after the one mount already sent', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,
@@ -166,7 +166,7 @@ describe('AdobeAuthStep - Error Handling', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('check-auth');
             mockPostMessage.mockClear();
 
-            await user.click(screen.getByText('Try Again'));
+            await user.click(screen.getByText('Retry'));
 
             expect(mockPostMessage).toHaveBeenCalledWith('check-auth');
         });
@@ -211,7 +211,7 @@ describe('AdobeAuthStep - Error Handling', () => {
                 />
             );
 
-            const tryAgainButton = screen.getByText('Try Again');
+            const tryAgainButton = screen.getByText('Retry');
             await user.click(tryAgainButton);
 
             expect(mockPostMessage).toHaveBeenCalledWith('check-auth');

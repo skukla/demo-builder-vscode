@@ -59,8 +59,8 @@ describe('foundRows', () => {
             { label: 'Pages', value: '12 published', done: true },
             { label: 'Website', value: 'isle5', done: true },
             { label: 'Store', value: 'isle5_store', done: true },
-            { label: 'Store view', value: 'isle5_us', done: true },
-            { label: 'Company (B2B) features', value: 'On', done: true },
+            { label: 'Store View', value: 'isle5_us', done: true },
+            { label: 'Company (B2B) Features', value: 'On', done: true },
         ]);
     });
 
@@ -72,7 +72,7 @@ describe('foundRows', () => {
             storeCodes: undefined,
             contentPublished: { indexFound: false },
         });
-        expect(rows.map((r) => r.label)).toEqual(['Code', 'Type', 'Pages', 'Website', 'Store', 'Store view']);
+        expect(rows.map((r) => r.label)).toEqual(['Code', 'Type', 'Pages', 'Website', 'Store', 'Store View']);
         expect(rows[2]).toEqual({ label: 'Pages', value: undefined, done: false });
         expect(rows[3]).toEqual({ label: 'Website', value: undefined, done: false });
     });
@@ -80,7 +80,7 @@ describe('foundRows', () => {
     it("adds ONE row naming what the storefront was built on, when it was read (EDS-13f)", () => {
         const rows = foundRows({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' } });
 
-        expect(rows[2]).toEqual({ label: 'Built on', value: "Adobe's Commerce boilerplate 6.0.0", done: true });
+        expect(rows[2]).toEqual({ label: 'Built On', value: "Adobe's Commerce boilerplate 6.0.0", done: true });
         expect(rows).toHaveLength(foundRows(READ).length + 1);
     });
 
@@ -88,7 +88,7 @@ describe('foundRows', () => {
         const rows = foundRows({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' } });
 
         expect(rows[2]).toEqual({
-            label: 'Built on',
+            label: 'Built On',
             value: "Adobe's Commerce boilerplate 4.0.1. Built on an older boilerplate (4.x) than Demo Builder tests on.",
             done: true,
         });
@@ -211,18 +211,18 @@ describe('buildAddedDemo', () => {
 describe('continueLabel', () => {
     it('is Continue on the link stage, Use <name> for a shipped template, Add demo otherwise', () => {
         expect(continueLabel('link', undefined, undefined)).toBe('Continue');
-        expect(continueLabel('link', undefined, undefined, 'add', 'zip')).toBe('Choose a zip file');
+        expect(continueLabel('link', undefined, undefined, 'add', 'zip')).toBe('Choose a Zip File');
         expect(
             continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter (B2B + B2C)'),
         ).toBe('Use Starter (B2B + B2C)');
-        expect(continueLabel('found', READ, undefined)).toBe('Add demo package');
+        expect(continueLabel('found', READ, undefined)).toBe('Add Demo Package');
     });
 });
 
 describe('change mode', () => {
-    it('labels the commit Change source whatever the probe said', () => {
-        expect(continueLabel('found', READ, undefined, 'change')).toBe('Change source');
-        expect(continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter', 'change')).toBe('Change source');
+    it('labels the commit Change Source whatever the probe said', () => {
+        expect(continueLabel('found', READ, undefined, 'change')).toBe('Change Source');
+        expect(continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter', 'change')).toBe('Change Source');
         expect(continueLabel('link', undefined, undefined, 'change')).toBe('Continue');
     });
 
@@ -240,6 +240,6 @@ describe('change mode', () => {
     });
 
     it('names the demo package the box updates, by its name (owner, 2026-09-15)', () => {
-        expect(updateDemoPackageLabel('Bodea')).toBe('Also update the Bodea demo package');
+        expect(updateDemoPackageLabel('Bodea')).toBe('Also Update the Bodea Demo Package');
     });
 });

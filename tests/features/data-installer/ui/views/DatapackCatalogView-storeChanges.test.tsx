@@ -12,7 +12,7 @@ import { press, settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 import { CATALOG, DatapackCatalogView, INVENTORY_COMPLETE, mockPost, mockRequest } from './DatapackCatalogView.testUtils';
 
-const LABEL = 'Save store changes to this pack';
+const LABEL = 'Save Store Changes to This Datapack';
 
 /** The catalog, the detail of bodea@main, and the open project's recorded pack. */
 function store(engine: 'demo-builder' | 'service', datapack: { name: string; version: string } | undefined) {
@@ -43,14 +43,14 @@ beforeEach(() => {
     mockPost.mockClear();
 });
 
-describe('Save store changes to this pack', () => {
+describe('Save Store Changes to This Datapack', () => {
     // Step 14: it opens the pick screen first, so what the SC added by hand can go in too.
     it('is offered for the pack the project holds, picks first, then starts the save in the progress window', async () => {
         store('demo-builder', { name: 'bodea', version: 'main' });
         await openBodea();
 
         await press(screen.getByRole('menuitem', { name: LABEL }));
-        expect(await screen.findByRole('heading', { name: 'Save store changes' })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Save Store Changes' })).toBeInTheDocument();
         expect(mockPost).not.toHaveBeenCalled();
         await press(screen.getByRole('button', { name: 'Save' }));
 
@@ -63,7 +63,7 @@ describe('Save store changes to this pack', () => {
             id: 'datapack-save',
             progress: 'modal',
         });
-        expect(await screen.findByText('Saving store changes')).toBeInTheDocument();
+        expect(await screen.findByText('Saving Store Changes')).toBeInTheDocument();
     });
 
     it('is not offered for a pack the project does not hold', async () => {
@@ -71,7 +71,7 @@ describe('Save store changes to this pack', () => {
         await openBodea();
 
         // The control: the menu is there, only this row is not.
-        expect(screen.getByRole('menuitem', { name: 'Save as file' })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: 'Save as File' })).toBeInTheDocument();
         expect(screen.queryByRole('menuitem', { name: LABEL })).not.toBeInTheDocument();
     });
 
@@ -80,7 +80,7 @@ describe('Save store changes to this pack', () => {
         await openBodea();
 
         // The control: the menu is there, only this row is not.
-        expect(screen.getByRole('menuitem', { name: 'Save as file' })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: 'Save as File' })).toBeInTheDocument();
         expect(screen.queryByRole('menuitem', { name: LABEL })).not.toBeInTheDocument();
     });
 });

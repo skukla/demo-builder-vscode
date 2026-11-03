@@ -311,7 +311,7 @@ function assignOffer(plan: ErpAddPlan, applied: ApplyOwnershipOutcome): { offer?
             id: plan.integrationId,
             erp: plan.entry.id,
             name: plan.name,
-            message: `Next: ${plan.name} owns no products yet. Assign products to it.`,
+            message: `Next: ${plan.name} owns no products yet. Assign Products to it.`,
         },
     };
 }

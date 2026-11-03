@@ -141,14 +141,14 @@ describe('the progress modal', () => {
         push({ id: 'custom-app', state: 'succeeded' });
 
         // The outcome is the dialog's title, green (dialog design rules, 2026-10-31).
-        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toHaveAttribute('data-status', 'success');
+        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toHaveAttribute('data-status', 'success');
 
         // Long enough to read, then gone without a click.
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
         });
         expect(
-            screen.queryByRole('dialog', { name: 'custom-app deployed' }),
+            screen.queryByRole('dialog', { name: 'custom-app Deployed' }),
         ).not.toBeInTheDocument();
     });
 
@@ -161,16 +161,16 @@ describe('the progress modal', () => {
 
         push({ id: 'custom-app', state: 'succeeded', warning: 'Prices were not published.' });
 
-        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toHaveAttribute('data-status', 'warning');
+        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toHaveAttribute('data-status', 'warning');
         expect(within(modal).getByTestId('operation-end')).toHaveTextContent('Prices were not published.');
 
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toBeInTheDocument();
         await user.click(within(modal).getByRole('button', { name: 'Close' }));
         expect(
-            screen.queryByRole('dialog', { name: 'custom-app deployed' }),
+            screen.queryByRole('dialog', { name: 'custom-app Deployed' }),
         ).not.toBeInTheDocument();
     });
 
@@ -187,7 +187,7 @@ describe('the progress modal', () => {
             note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
         });
 
-        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toHaveAttribute('data-status', 'success');
+        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toHaveAttribute('data-status', 'success');
         expect(within(modal).getByTestId('operation-end')).toHaveTextContent(
             'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
         );
@@ -195,10 +195,10 @@ describe('the progress modal', () => {
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toBeInTheDocument();
         await user.click(within(modal).getByRole('button', { name: 'Close' }));
         expect(
-            screen.queryByRole('dialog', { name: 'custom-app deployed' }),
+            screen.queryByRole('dialog', { name: 'custom-app Deployed' }),
         ).not.toBeInTheDocument();
     });
 
@@ -228,11 +228,11 @@ describe('the progress modal', () => {
             'Added erp_owner to the attribute set Default',
             'By hand: Check the PDP.',
         ]);
-        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toHaveAttribute('data-status', 'success');
+        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toHaveAttribute('data-status', 'success');
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'custom-app deployed' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toBeInTheDocument();
     });
 
     it('stays open on failure with the reason', async () => {
@@ -242,7 +242,7 @@ describe('the progress modal', () => {
 
         push({ id: 'custom-app', state: 'failed', error: 'Adobe refused this.' });
 
-        expect(screen.getByRole('dialog', { name: "Couldn't deploy custom-app" })).toHaveAttribute('data-status', 'error');
+        expect(screen.getByRole('dialog', { name: "Couldn't Deploy custom-app" })).toHaveAttribute('data-status', 'error');
         expect(within(modal).getByTestId('operation-end')).toHaveTextContent('Adobe refused this.');
     });
 
@@ -274,7 +274,7 @@ describe('the progress modal', () => {
             expect.anything(),
         );
 
-        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+        await user.click(within(modal).getByRole('button', { name: 'Run in Background' }));
         setCards(cardsFor({ appBuilderComponents: DEPLOYING }));
         await user.click(card('custom-app', 'Deploying'));
 
@@ -295,12 +295,12 @@ describe('the progress modal', () => {
     });
 
     // The modal used to just vanish (owner, 2026-09-19); the notification carries on.
-    it('"Run in background" hands the operation to a notification, by id and title', async () => {
+    it('"Run in Background" hands the operation to a notification, by id and title', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
 
-        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+        await user.click(within(modal).getByRole('button', { name: 'Run in Background' }));
 
         expect(getClient().postMessage).toHaveBeenCalledWith('backgroundOperation', {
             id: 'custom-app',
@@ -322,12 +322,12 @@ describe('the progress modal', () => {
         );
     });
 
-    it('hides on "Run in background"', async () => {
+    it('hides on "Run in Background"', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
 
-        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+        await user.click(within(modal).getByRole('button', { name: 'Run in Background' }));
 
         expect(screen.queryByRole('dialog', { name: 'Deploying custom-app' })).not.toBeInTheDocument();
     });
@@ -336,7 +336,7 @@ describe('the progress modal', () => {
         const user = setupUser();
         const { setCards } = renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
-        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+        await user.click(within(modal).getByRole('button', { name: 'Run in Background' }));
 
         setCards(cardsFor({ appBuilderComponents: DEPLOYING }));
         await user.click(card('custom-app', 'Deploying'));
@@ -382,7 +382,7 @@ describe('the mesh deploy', () => {
             progress: 'modal',
         });
         const modal = screen.getByRole('dialog', { name: 'Deploying API Mesh' });
-        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+        await user.click(within(modal).getByRole('button', { name: 'Run in Background' }));
 
         setCards(cardsFor({ ...meshOptions, meshStatus: 'deploying', meshStatusText: 'Deploying…' }));
         await user.click(card('API Mesh', 'Deploying…'));

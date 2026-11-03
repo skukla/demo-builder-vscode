@@ -132,7 +132,7 @@ async function handleEwSettingChange(
         const selection = await vscode.window.showInformationMessage(
             `${affected.length} project(s) affected by this Experience Workspace setting change — republish now?`,
             'Republish',
-            'Not now',
+            'Not Now',
         );
         if (selection !== 'Republish') {
             return;

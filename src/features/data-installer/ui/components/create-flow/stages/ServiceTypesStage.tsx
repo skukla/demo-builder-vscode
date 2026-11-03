@@ -18,7 +18,7 @@ export function ServiceTypesStage({ types }: { types: TypeChoices }): React.Reac
     }
     return (
         <>
-            <span className="datapack-import-label">Data types</span>
+            <span className="datapack-import-label">Data Types</span>
             {options.length > 0 ? <SelectAllRow all={types.allSelected} some={types.selected.length > 0} onToggle={types.onToggleAll} /> : null}
             <CheckRows options={options} picked={types.selected} onToggle={types.onToggle} />
         </>

@@ -4,7 +4,7 @@
  * "it should look like the instructions the ERP integration's setup guide gives"). The same
  * pieces: the step's title over the house banner for where it stands (`SetupStepHeader`), then
  * Where as breadcrumbs, the value to copy and Why (`SetupStepFacts`). Its two buttons sit in the
- * dialog's footer, where the guide keeps a step's actions: Open the Admin and Check.
+ * dialog's footer, where the guide keeps a step's actions: Open Admin and Check.
  *
  * The banner says what the Check found, and shows the spinner while one runs (owner, 2026-10-31: the
  * banner is the only thing a Check changes, so it is where the waiting shows). Still open: Not set
@@ -51,11 +51,11 @@ function statusOf(item: SetupChecklistItem, failure: string | undefined): StepSt
     return item.state === 'done' && item.note ? { ...saved, line: item.note } : saved;
 }
 
-/** Open the Admin and Check while the step is open; nothing but Close once it is done. */
+/** Open Admin and Check while the step is open; nothing but Close once it is done. */
 function footer({ item, checking, onCheck, openingAdmin, onOpenAdmin }: PackSetupStepDialogProps): ActionButton[] {
     if (item.state === 'done') return [];
     return [
-        { label: 'Open the Admin', variant: 'secondary', onPress: onOpenAdmin, isPending: openingAdmin },
+        { label: 'Open Admin', variant: 'secondary', onPress: onOpenAdmin, isPending: openingAdmin },
         // The banner shows the spinner while a Check runs, so the button only stops taking presses.
         { label: 'Check', variant: 'accent', onPress: onCheck, isDisabled: checking },
     ];

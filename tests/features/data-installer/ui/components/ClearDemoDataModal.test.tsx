@@ -81,7 +81,7 @@ it('asks for the stores alone first, with nothing ticked and nothing to clear', 
     await openModal();
 
     expect(checks()).toEqual([{ stores: [] }]);
-    expect(screen.getByText(/Tick a store to see what clearing it would do/)).toBeInTheDocument();
+    expect(screen.getByText(/Select a store to preview what will be cleared/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clear' })).toHaveAttribute('aria-disabled', 'true');
 });
 
@@ -147,21 +147,21 @@ describe('previewLines, the kinds only the chosen stores use', () => {
         const lines = previewLines(preview);
 
         expect(lines).toContainEqual({ label: 'Companies', value: '2 to remove, with their customers' });
-        expect(lines).toContainEqual({ label: 'Shared catalogs', value: '1 to remove, with its customer group' });
-        expect(lines).toContainEqual({ label: 'Customer groups', value: '2 to remove' });
-        expect(lines).toContainEqual({ label: 'Attribute sets', value: '1 to remove' });
+        expect(lines).toContainEqual({ label: 'Shared Catalogs', value: '1 to remove, with its customer group' });
+        expect(lines).toContainEqual({ label: 'Customer Groups', value: '2 to remove' });
+        expect(lines).toContainEqual({ label: 'Attribute Sets', value: '1 to remove' });
         expect(lines).toContainEqual({ label: 'Attributes', value: '2 to remove' });
     });
 
     it('says plainly what Commerce cannot do about a website setting, digits with separators', () => {
         expect(previewLines(preview)).toContainEqual({
-            label: 'Website settings',
+            label: 'Website Settings',
             value: "1,012 set to the default's value. Commerce can't clear a website's own value, so a later change to the default won't reach them.",
         });
     });
 
     it('names what stays and why, beside each kind', () => {
-        const lines = previewLines(preview).filter((l) => l.label === 'Stays').map((l) => l.value);
+        const lines = previewLines(preview).filter((l) => l.label === 'Not Removed').map((l) => l.value);
 
         expect(lines).toEqual([
             '5 shared catalogs (Silver, Bronze, Tin and 2 more): a customer that stays uses them',
@@ -179,7 +179,7 @@ describe('previewLines, the kinds only the chosen stores use', () => {
         const labels = previewLines({ ...PREVIEW, left: [] }).map((l) => l.label);
 
         expect(labels).not.toContain('Companies');
-        expect(labels).not.toContain('Website settings');
+        expect(labels).not.toContain('Website Settings');
     });
 });
 
@@ -224,14 +224,14 @@ it('writes large counts with separators, in the list and on the button', async (
         { label: 'Products', value: '1,284 to remove, 1,100 taken off the chosen websites' },
         { label: 'Categories', value: '1,012 to remove' },
         { label: 'Customers', value: '2,500 to remove' },
-        { label: 'Cart rules', value: '3,000 to remove, with their coupons, 4,000 taken off the chosen websites' },
+        { label: 'Cart Rules', value: '3,000 to remove, with their coupons, 4,000 taken off the chosen websites' },
         { label: 'Orders', value: '5,000 to cancel, 6,000 to refund, 7,000 to leave open with a note, 8,000 returns to close' },
-        { label: 'Stays', value: '9,000 products: x' },
+        { label: 'Not Removed', value: '9,000 products: x' },
         { label: 'Installed', value: '1,500 products, which removing its datapack takes' },
     ]);
     await openModal();
     await tick(/Bodea Store/);
-    expect(screen.getByRole('button', { name: 'Clear 1,311 things' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear 1,311 Items' })).toBeInTheDocument();
 });
 
 it('shows a re-check as a spinner where the answer lands, with no words, and keeps the stores', async () => {
@@ -263,8 +263,8 @@ it('waits with no words while it reads the stores', async () => {
 it('lists the cart rules it would clear on their own line, with what is only taken off (step 11)', () => {
     const lines = previewLines({ ...PREVIEW, remove: { ...PREVIEW.remove, cartRules: named(['ZZ Ten Off']) }, rulesTakenOff: named(['ZZ Shared']) });
 
-    expect(lines).toContainEqual({ label: 'Cart rules', value: '1 to remove, with their coupons, 1 taken off the chosen websites' });
-    expect(previewLines(PREVIEW).some((l) => l.label === 'Cart rules')).toBe(false);
+    expect(lines).toContainEqual({ label: 'Cart Rules', value: '1 to remove, with their coupons, 1 taken off the chosen websites' });
+    expect(previewLines(PREVIEW).some((l) => l.label === 'Cart Rules')).toBe(false);
 });
 
 it('ticks every store of a website when the website is ticked', async () => {
@@ -284,7 +284,7 @@ it('hands the ticked stores and the shown list’s token to the screen on Clear'
     const { onClear } = await openModal();
     await tick(/Bodea Store/);
 
-    await press(screen.getByRole('button', { name: 'Clear 9 things' }));
+    await press(screen.getByRole('button', { name: 'Clear 9 Items' }));
 
     expect(onClear).toHaveBeenCalledWith([{ websiteCode: 'bodea', storeCode: 'bodea_store' }], 'tok-1');
 });
@@ -312,21 +312,21 @@ it('says a failed check where the list would land, and keeps the stores on scree
 
     await tick(/Bodea Store/);
 
-    expect(screen.getByText("Couldn't read the stores: The store did not answer.")).toHaveClass('dialog-problem', 'text-negative');
+    expect(screen.getByText("Couldn't Read the Stores: The store did not answer.")).toHaveClass('dialog-problem', 'text-negative');
     expect(screen.getByRole('checkbox', { name: /Bodea Store/ })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Clear demo data' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Clear Demo Data' })).toBeInTheDocument();
 });
 
 it('says the stores could not be read when the first check is refused', async () => {
     mockRequest.mockReset();
-    mockRequest.mockResolvedValue({ success: false, error: 'Sign in to Adobe first.' });
+    mockRequest.mockResolvedValue({ success: false, error: 'Sign In to Adobe first.' });
 
     await openModal();
 
-    const heading = screen.getByRole('heading', { name: /Couldn't read the stores/ });
+    const heading = screen.getByRole('heading', { name: /Couldn't Read the Stores/ });
     expect(heading.querySelector('.text-negative')).not.toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Clear demo data' })).not.toBeInTheDocument();
-    expect(screen.getByText('Sign in to Adobe first.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Clear Demo Data' })).not.toBeInTheDocument();
+    expect(screen.getByText('Sign In to Adobe first.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
 });
 

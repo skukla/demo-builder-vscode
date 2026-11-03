@@ -19,7 +19,7 @@ import {
 } from './AddIntegrationFlowModal.testUtils';
 
 const RESERVED_IDS = new Set<string>();
-const SIGNED_OUT_ANSWER = { success: false, error: 'Adobe sign-in required.', code: 'AUTH_REQUIRED' };
+const SIGNED_OUT_ANSWER = { success: false, error: 'Adobe Sign-In Required.', code: 'AUTH_REQUIRED' };
 const FAILED_ANSWER = { success: false, error: 'Adobe API catalog unavailable.' };
 
 function answerList(answer: unknown): void {
@@ -45,7 +45,7 @@ function renderEdit(onSignIn?: () => Promise<unknown>) {
 /** The add journey as far as the api-access stage, by importing a repo. */
 async function walkAddToApis(onSignIn?: () => Promise<unknown>) {
     const view = renderFlowModal({ initial: COMMITTED_DEST, reservedIds: RESERVED_IDS, onSignIn });
-    await click(/Import a repo/);
+    await click(/Import Repository/);
     await click('Continue');
     fireEvent.change(screen.getByPlaceholderText('https://github.com/owner/repo'), {
         target: { value: 'https://github.com/acme/widget' },
@@ -89,7 +89,7 @@ describe('AddIntegrationFlowModal — a failed read of the APIs', () => {
         answerList(FAILED_ANSWER);
         renderEdit();
 
-        const title = await screen.findByRole('heading', { name: "Couldn't load Adobe APIs" });
+        const title = await screen.findByRole('heading', { name: "Couldn't Load Adobe APIs" });
         expect(title.innerHTML).toContain('text-negative');
         expect(screen.getByTestId('api-access-problem')).toHaveTextContent('Adobe API catalog unavailable.');
         expect(screen.queryByText('Demo Project, Stage')).not.toBeInTheDocument();
@@ -99,7 +99,7 @@ describe('AddIntegrationFlowModal — a failed read of the APIs', () => {
     it('reads again on Retry, back to the list', async () => {
         answerList(FAILED_ANSWER);
         renderEdit();
-        await screen.findByRole('heading', { name: "Couldn't load Adobe APIs" });
+        await screen.findByRole('heading', { name: "Couldn't Load Adobe APIs" });
 
         answerList({ success: true, data: { apis: APIS } });
         await click('Retry');
@@ -113,7 +113,7 @@ describe('AddIntegrationFlowModal — a failed read of the APIs', () => {
         answerList(FAILED_ANSWER);
         const { builder, onClose } = await walkAddToApis();
 
-        await screen.findByRole('heading', { name: "Couldn't load Adobe APIs" });
+        await screen.findByRole('heading', { name: "Couldn't Load Adobe APIs" });
         expect(footerButtons()).toEqual(['Cancel', 'Back', 'Retry', 'Add Integration']);
 
         await click('Add Integration');
@@ -127,7 +127,7 @@ describe('AddIntegrationFlowModal — signed out when it reads the APIs', () => 
         answerList(SIGNED_OUT_ANSWER);
         renderEdit(jest.fn().mockResolvedValue(undefined));
 
-        const title = await screen.findByRole('heading', { name: 'Sign in to Adobe' });
+        const title = await screen.findByRole('heading', { name: 'Sign In to Adobe' });
         expect(title.innerHTML).toContain('text-notice');
         expect(screen.getByText(/Your Adobe session has ended/)).toBeInTheDocument();
         expect(screen.getByText('Adobe sign-in will open in your browser.')).toBeInTheDocument();
@@ -138,7 +138,7 @@ describe('AddIntegrationFlowModal — signed out when it reads the APIs', () => 
         answerList(SIGNED_OUT_ANSWER);
         const onSignIn = jest.fn().mockResolvedValue(undefined);
         renderEdit(onSignIn);
-        await screen.findByRole('heading', { name: 'Sign in to Adobe' });
+        await screen.findByRole('heading', { name: 'Sign In to Adobe' });
 
         answerList({ success: true, data: { apis: APIS } });
         await click('Sign In with Adobe');
@@ -151,7 +151,7 @@ describe('AddIntegrationFlowModal — signed out when it reads the APIs', () => 
         answerList(SIGNED_OUT_ANSWER);
         renderEdit();
 
-        await screen.findByRole('heading', { name: 'Sign in to Adobe' });
+        await screen.findByRole('heading', { name: 'Sign In to Adobe' });
         expect(footerButtons()).toEqual(['Cancel', 'Back']);
     });
 
@@ -159,7 +159,7 @@ describe('AddIntegrationFlowModal — signed out when it reads the APIs', () => 
         answerList(SIGNED_OUT_ANSWER);
         await walkAddToApis(jest.fn().mockResolvedValue(undefined));
 
-        await screen.findByRole('heading', { name: 'Sign in to Adobe' });
+        await screen.findByRole('heading', { name: 'Sign In to Adobe' });
         expect(footerButtons()).toEqual(['Cancel', 'Back', 'Sign In with Adobe', 'Add Integration']);
     });
 });
@@ -173,7 +173,7 @@ describe('AddIntegrationFlowModal — a destination stage that failed', () => {
         renderFlowModal({ mode: 'destination', initial: SIGNED_IN, reservedIds: RESERVED_IDS });
         await act(async () => {});
 
-        const title = screen.getByRole('heading', { name: 'Project setup failed' });
+        const title = screen.getByRole('heading', { name: 'Project Setup Failed' });
         expect(title.querySelector('.modal-status-icon .text-negative')).not.toBeNull();
         expect(screen.getByText('Adobe did not answer.')).toHaveClass('dialog-line');
         expect(footerButtons()).toEqual(['Cancel', 'Back', 'Retry']);

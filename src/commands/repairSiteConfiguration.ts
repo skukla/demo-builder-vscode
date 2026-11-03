@@ -82,7 +82,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
         return vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Repairing site configuration',
+                title: 'Repairing Site Configuration',
                 cancellable: false,
             },
             // Each half names its step, as the same job is named everywhere else
@@ -107,7 +107,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
         const result = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Repairing site configuration',
+                title: 'Repairing Site Configuration',
                 cancellable: false,
             },
             (progress) => {

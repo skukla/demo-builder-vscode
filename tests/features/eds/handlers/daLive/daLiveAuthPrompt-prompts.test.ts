@@ -82,15 +82,15 @@ beforeEach(() => {
 });
 
 describe('the "get a token" gate', () => {
-    it('is a modal headed "Sign in to DA.live", with the sentence under it', async () => {
+    it('is a modal headed "Sign In to DA.live", with the sentence under it', async () => {
         showInfoMessageResponses = [undefined];
 
         await showDaLiveAuthQuickPick(createAuthPromptContext());
 
         const [title, options, ...actions] = showInfoMessageCalls[0];
-        expect(title).toBe('Sign in to DA.live');
+        expect(title).toBe('Sign In to DA.live');
         expect(options).toEqual({ modal: true, detail: expect.stringContaining('token from DA.live') });
-        expect(actions).toEqual(['Open DA.live', 'I have my token']);
+        expect(actions).toEqual(['Open DA.live', 'I Have My Token']);
     });
 
     it('ends the flow when the SC dismisses it, without reaching for the clipboard', async () => {
@@ -107,7 +107,7 @@ describe('the "get a token" gate', () => {
     });
 
     it('goes straight on when the SC already holds a token', async () => {
-        showInfoMessageResponses = ['I have my token'];
+        showInfoMessageResponses = ['I Have My Token'];
 
         await showDaLiveAuthQuickPick(createAuthPromptContext());
 
@@ -144,14 +144,14 @@ describe('the verification progress notification', () => {
         // Not cancellable: the token is already in hand and storing it is
         // quick. A cancel button here would offer to abandon a sign-in
         // half-way through writing the credential.
-        showInfoMessageResponses = ['I have my token'];
+        showInfoMessageResponses = ['I Have My Token'];
         (vscode.window.showInputBox as jest.Mock).mockResolvedValueOnce(liveToken);
 
         await showDaLiveAuthQuickPick(createAuthPromptContext());
 
         expect(withProgressOptions[0]).toEqual({
             location: 15,
-            title: 'Verifying DA.live credentials',
+            title: 'Verifying DA.live Credentials',
             cancellable: false,
         });
     });

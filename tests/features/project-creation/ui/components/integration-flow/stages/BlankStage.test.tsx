@@ -49,7 +49,7 @@ function renderStage(props: Partial<Props> = {}): {
 }
 
 function nameField(): HTMLElement {
-    return screen.getByLabelText(/Name \(optional\)/);
+    return screen.getByLabelText(/Name \(Optional\)/);
 }
 
 /** The choice-card button whose title reads `name`. */
@@ -70,16 +70,16 @@ describe('BlankStage — starting-point cards', () => {
         expect(screen.queryByText(/build it out with AI/i)).not.toBeInTheDocument();
     });
 
-    it('labels the card group as the "Start from" sub-choice', () => {
+    it('labels the card group as the "Start From" sub-choice', () => {
         renderStage();
-        expect(screen.getByText('Start from')).toBeInTheDocument();
+        expect(screen.getByText('Start From')).toBeInTheDocument();
     });
 
     it("a seed card shows the entry's REAL description, not a generated repeat of its title", () => {
         renderStage({ seeds: [KIT_SEED] });
         expect(screen.getByText(/scaffolding for bidirectional product/)).toBeInTheDocument();
         expect(
-            screen.queryByText(/Start from Commerce Integration Starter Kit and/)
+            screen.queryByText(/Start From Commerce Integration Starter Kit and/)
         ).not.toBeInTheDocument();
     });
 
@@ -96,7 +96,7 @@ describe('BlankStage — starting-point cards', () => {
             seeds: [KIT_SEED],
             selectedIds: ['commerce-integration-starter-kit'],
         });
-        expect(screen.getByText('Already added — one per project')).toBeInTheDocument();
+        expect(screen.getByText('Already added (one per project)')).toBeInTheDocument();
         fireEvent.click(screen.getByText('Commerce Integration Starter Kit'));
         expect(onSeedChange).not.toHaveBeenCalled();
     });

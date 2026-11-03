@@ -103,7 +103,7 @@ describe('DatapackActivityView — which loading treatment', () => {
 
         // The filter change empties the accumulator, so a body that reads only
         // "no rows" states there is no activity before the answer arrives.
-        expect(screen.queryByText('No activity yet')).not.toBeInTheDocument();
+        expect(screen.queryByText('No Activity Yet')).not.toBeInTheDocument();
         expect(screen.getByText(/loading activity/i)).toBeInTheDocument();
     });
 });
@@ -137,9 +137,9 @@ describe('DatapackActivityView — a page that fails', () => {
         failNthPage(1, [{ items: [makeEntry()], total: 1 }]);
 
         render(<DatapackActivityView />);
-        expect(await screen.findByText('Could not reach the Data Installer')).toBeInTheDocument();
+        expect(await screen.findByText('Could Not Reach the Data Installer')).toBeInTheDocument();
 
-        fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+        fireEvent.click(screen.getByRole('button', { name: /retry/i }));
 
         await waitFor(() => expect(activityCallCount()).toBe(2));
     });
@@ -155,9 +155,9 @@ describe('DatapackActivityView — a page that fails', () => {
 
         render(<DatapackActivityView />);
         fireEvent.click(await screen.findByRole('button', { name: /load 50 more/i }));
-        await screen.findByText('Could not reach the Data Installer');
+        await screen.findByText('Could Not Reach the Data Installer');
 
-        fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+        fireEvent.click(screen.getByRole('button', { name: /retry/i }));
 
         await waitFor(() => expect(screen.getAllByTestId('activity-row')).toHaveLength(1));
     });
@@ -171,9 +171,9 @@ describe('DatapackActivityView — a page that fails', () => {
         });
 
         render(<DatapackActivityView />);
-        await screen.findByText('Could not reach the Data Installer');
+        await screen.findByText('Could Not Reach the Data Installer');
 
-        fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+        fireEvent.click(screen.getByRole('button', { name: /retry/i }));
 
         await waitFor(() =>
             expect(

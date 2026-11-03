@@ -79,8 +79,8 @@ const RESET_OPERATION: ScreenOperation = {
     name: 'My Demo',
     message: 'resetProject',
     title: 'Resetting My Demo',
-    failureTitle: "Couldn't reset My Demo",
-    successTitle: 'My Demo reset',
+    failureTitle: "Couldn't Reset My Demo",
+    successTitle: 'My Demo Reset',
     run: 1,
     resume: false,
 };

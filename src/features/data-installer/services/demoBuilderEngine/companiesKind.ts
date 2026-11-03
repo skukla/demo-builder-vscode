@@ -151,7 +151,7 @@ async function adminId(ctx: KindContext, admin: CompanyRow['variables']['input']
     const key = customerKey(admin.email);
     const made = await createOne(ctx, { kind: CUSTOMER_KIND, key, find: { websiteId } }, async () => {
         const id = Number(((await ctx.send('POST', 'customers', { customer })) as CommerceCustomer | null)?.id);
-        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new company admin ${admin.email}'s id.`);
+        if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new company admin ${admin.email}'s id.`);
         return { kind: CUSTOMER_KIND, id: String(id), key };
     });
     ctx.log(`created customer ${key}, a company admin`);
@@ -186,7 +186,7 @@ export async function installCompanies(ctx: KindContext, rows: CompanyRows): Pro
             };
             return createOne(ctx, { kind: COMPANY_KIND, key: name, find: { email }, previous: { superUserId } }, async () => {
                 const id = Number(((await ctx.send('POST', 'company', { company })) as CommerceCompany | null)?.id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new company ${name}'s id.`);
+                if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new company ${name}'s id.`);
                 return { kind: COMPANY_KIND, id: String(id), key: name, previous: { superUserId } };
             });
         });

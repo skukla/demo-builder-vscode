@@ -24,7 +24,7 @@ export function PackSetupStepLine({ onShow }: PackSetupStepLineProps): React.JSX
         <div className="datapack-setup-line" data-testid="pack-setup-step">
             <span>1 step left in the Admin</span>
             <Button variant="secondary" onPress={onShow}>
-                Show step
+                Show Step
             </Button>
         </div>
     );

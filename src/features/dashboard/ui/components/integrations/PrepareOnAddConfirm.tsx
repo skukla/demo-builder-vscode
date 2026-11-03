@@ -27,9 +27,9 @@ import type { AddAppBuilderComponentRequestPayload } from '@/types/webviewReques
 
 /** Every string the dialog shows, in one place. */
 export const PREPARE_ON_ADD_COPY = {
-    title: (name: string) => `Add ${name} and prepare the store?`,
-    refusedTitle: (name: string) => `Couldn't add ${name}`,
-    action: 'Add and apply',
+    title: (name: string) => `Add ${name} and Prepare the Store?`,
+    refusedTitle: (name: string) => `Couldn't Add ${name}`,
+    action: 'Add and Apply',
     intro: (name: string) =>
         `Applies ${name}'s demo setup to this Commerce store before its ERP is filled. It records what it changes, so Undo this step in the demo setup, or removing the integration, puts it back.`,
     everyWebsite: (labels: readonly string[]) =>

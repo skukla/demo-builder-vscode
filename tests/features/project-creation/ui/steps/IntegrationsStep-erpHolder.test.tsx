@@ -71,7 +71,7 @@ async function renderStep(state: WizardState, unavailable?: UnavailableEntries, 
 async function openGallery(): Promise<HTMLElement> {
     await press(screen.getByRole('button', { name: 'Add Integration' }));
     const dialog = screen.getByRole('dialog');
-    await press(within(dialog).getByRole('button', { name: /Pre-built integration/ }));
+    await press(within(dialog).getByRole('button', { name: /Pre-Built Integration/ }));
     await press(within(dialog).getByRole('button', { name: 'Continue' }));
     return dialog;
 }
@@ -102,7 +102,7 @@ describe('IntegrationsStep — an instance that already has an ERP integration',
         expect(within(dialog).getByRole('button', { name: /ERP Integration/ })).toBeDisabled();
         expect(within(dialog).getByTestId('catalog-unavailable')).toHaveTextContent(MESSAGE);
         // Its only tile is out, so there is nothing to name.
-        expect(within(dialog).queryByLabelText(/Name \(optional\)/)).not.toBeInTheDocument();
+        expect(within(dialog).queryByLabelText(/Name \(Optional\)/)).not.toBeInTheDocument();
     });
 
     it('leaves it pickable when nothing is unavailable — control', async () => {

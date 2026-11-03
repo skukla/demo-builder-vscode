@@ -46,7 +46,7 @@ describe('IntegrationsGrid repository verbs', () => {
         });
 
         const tile = card('Order Sync', 'Deployed');
-        await user.click(within(tile).getByRole('button', { name: 'Delete its GitHub repository' }));
+        await user.click(within(tile).getByRole('button', { name: 'Delete Its GitHub Repository' }));
 
         expect(getClient().postMessage).toHaveBeenCalledWith('unpromoteAppBuilderComponent', {
             id: 'order-sync',

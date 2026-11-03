@@ -94,5 +94,5 @@ export function changesSentence(kinds: readonly ChangedKind[]): string {
     const total = kinds.reduce((sum, k) => sum + k.count, 0);
     const parts = kinds.map(phrase);
     const shown = parts.length > KINDS_IN_FULL ? [...parts.slice(0, KINDS_PAST_THAT), `${parts.length - KINDS_PAST_THAT} more data types`] : parts;
-    return `You changed ${total} ${total === 1 ? 'thing' : 'things'} since it was installed: ${listed(shown)}.`;
+    return `${total} ${total === 1 ? 'item' : 'items'} changed since install: ${listed(shown)}.`;
 }

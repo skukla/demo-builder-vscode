@@ -306,7 +306,7 @@ describe('CommandManager', () => {
                     expiresInMinutes: 420,
                 });
                 (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(
-                    'Sign in again'
+                    'Sign In Again'
                 );
 
                 await handlerFor('demoBuilder.signInAdobe')();

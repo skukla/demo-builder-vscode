@@ -1,9 +1,9 @@
 /**
  * BuildYourProjectSummary Component (v6 unified scaffold)
  *
- * The single persistent "Your project" summary column for the whole Build Your
+ * The single persistent "Your Project" summary column for the whole Build Your
  * Project step — the generalization of the Commerce-only `CommerceSummary`.
- * Renders a "Your project" title, a derived read-only Architecture line, then one
+ * Renders a "Your Project" title, a derived read-only Architecture line, then one
  * GROUP per area (Commerce / Storefront / Integrations), each with its heading and
  * rows. A row shows its value or a muted "Not set", with a ✓ when done+value.
  *
@@ -85,7 +85,7 @@ export function SummaryRowItem({
 }
 
 /**
- * The persistent cross-area "Your project" summary column.
+ * The persistent cross-area "Your Project" summary column.
  *
  * @param props - the derived architecture label and the visible area groups
  * @returns the summary column element
@@ -96,7 +96,7 @@ export function BuildYourProjectSummary({
 }: BuildYourProjectSummaryProps) {
     return (
         <>
-            <div className="sum-title">Your project</div>
+            <div className="sum-title">Your Project</div>
             <div className="sum-arch">
                 {architectureLabel ?? <span className="empty">{ARCHITECTURE_PENDING}</span>}
             </div>

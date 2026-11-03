@@ -218,7 +218,7 @@ describe('createOne', () => {
 
     it.each([
         ['a 5xx, which may have landed', new CommerceReadError('Commerce answered 503 for products', 503)],
-        ["an answer missing the new id, which did land", new Error('Commerce did not answer the new cart rule Spring\'s id.')],
+        ["an answer missing the new id, which did land", new Error('Commerce did not return the new cart rule Spring\'s id.')],
     ])('keeps the pending entry after %s', async (_label, error) => {
         const ctx = await fakeContext();
 

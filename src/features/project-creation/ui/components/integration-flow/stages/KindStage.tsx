@@ -65,26 +65,26 @@ export function KindStage({
                     description="Combine your Commerce and other APIs behind a single GraphQL endpoint."
                     selected={kind === 'mesh'}
                     disabled={meshAlreadyAdded}
-                    note={meshAlreadyAdded ? 'Already added — one per project' : undefined}
+                    note={meshAlreadyAdded ? 'Already added (one per project)' : undefined}
                     onSelect={() => onPickKind('mesh')}
                 />
             ) : null}
             <ChoiceCard
-                name="Pre-built integration"
-                description="Pick a finished integration from the catalog."
+                name="Pre-Built Integration"
+                description="Select a ready-made integration from the catalog."
                 selected={kind === 'catalog'}
                 disabled={catalogEmpty}
                 note={catalogEmpty ? 'None available yet' : undefined}
                 onSelect={() => onPickKind('catalog')}
             />
             <ChoiceCard
-                name="Build custom"
+                name="Build Custom"
                 description="Start from a blank app or the Commerce starter kit."
                 selected={kind === 'blank'}
                 onSelect={() => onPickKind('blank')}
             />
             <ChoiceCard
-                name="Import a repo"
+                name="Import Repository"
                 description="Add your own custom integration from a public GitHub repository."
                 selected={kind === 'custom'}
                 onSelect={() => onPickKind('custom')}

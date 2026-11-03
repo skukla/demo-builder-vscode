@@ -8,7 +8,7 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { SelectAllRow } from '@/features/data-installer/ui/components/SelectAllRow';
 
-const box = () => screen.getByRole('checkbox', { name: 'Select all' });
+const box = () => screen.getByRole('checkbox', { name: 'Select All' });
 
 describe('SelectAllRow', () => {
     it('is empty when nothing is ticked, and says when it is pressed', () => {

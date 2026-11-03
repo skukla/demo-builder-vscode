@@ -22,5 +22,5 @@ export interface SelectAllRowProps {
 }
 
 export function SelectAllRow({ all, some, onToggle }: SelectAllRowProps): React.JSX.Element {
-    return <CheckboxRow label="Select all" isSelected={all} isIndeterminate={some && !all} onChange={onToggle} />;
+    return <CheckboxRow label="Select All" isSelected={all} isIndeterminate={some && !all} onChange={onToggle} />;
 }

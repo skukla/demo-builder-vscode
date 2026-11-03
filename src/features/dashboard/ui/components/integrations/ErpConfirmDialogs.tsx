@@ -102,7 +102,7 @@ export function ErpConfirmDialogs(props: ErpConfirmDialogsProps): React.ReactEle
                 {[
                     `Copies Commerce's products, companies and websites into ${fill?.erpName} as they stand now.`,
                     'Adds or updates records and removes nothing.',
-                    "Any value changed by hand in the ERP goes back to Commerce's.",
+                    'Manual changes in the ERP are replaced with Commerce values.',
                 ]}
             </ConfirmActionDialog>
         </>

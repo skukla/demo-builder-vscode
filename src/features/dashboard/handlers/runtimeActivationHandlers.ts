@@ -210,7 +210,7 @@ export const handleInvokeRuntimeAction: MessageHandler<InvokeRuntimeActionPayloa
     try {
         web = await invokeWebAction(webUrl, auth, params ?? {}, fetch);
     } catch (error) {
-        return { success: false, error: `The web action did not answer: ${toError(error).message}` };
+        return { success: false, error: `The web action did not respond: ${toError(error).message}` };
     }
     // The extra-logging header made Runtime keep the run; its newest activation is this one.
     return inNamespace(context, opened, payload?.componentId, async (deps, env) => {

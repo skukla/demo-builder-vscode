@@ -76,16 +76,18 @@ export function resultStatus(result: ResultContent): ModalStatus | undefined {
 interface OperationWords {
     /** "Imported" / "Removed" */
     done: string;
-    /** "import" / "remove" */
-    verb: string;
-    /** "import" / "removal" */
+    /** "Import" / "Remove", for a title */
+    verbTitle: string;
+    /** "import" / "removal", for a sentence */
     noun: string;
+    /** "Import" / "Removal", for a title */
+    nounTitle: string;
 }
 
 function wordsFor(operation: 'start' | 'reset' | undefined): OperationWords {
     return operation === 'reset'
-        ? { done: 'Removed', verb: 'remove', noun: 'removal' }
-        : { done: 'Imported', verb: 'import', noun: 'import' };
+        ? { done: 'Removed', verbTitle: 'Remove', noun: 'removal', nounTitle: 'Removal' }
+        : { done: 'Imported', verbTitle: 'Import', noun: 'import', nounTitle: 'Import' };
 }
 
 /**
@@ -117,10 +119,10 @@ export function resolveResult(
             const request = lastAction === 'start' ? start : reset;
             const words = wordsFor(lastAction);
             if (request.failure?.code === ErrorCode.CHANGES_NOT_SAVED) {
-                return { variant: 'error', title: "Couldn't save your changes, so nothing was removed", message: request.failure.message, backToConfirm: true };
+                return { variant: 'error', title: "Couldn't save changes. Nothing was removed.", message: request.failure.message, backToConfirm: true };
             }
             if (request.failure) {
-                return { variant: 'error', title: `Couldn't start the ${words.noun}`, message: request.failure.message };
+                return { variant: 'error', title: `Couldn't Start the ${words.nounTitle}`, message: request.failure.message };
             }
             // The terminal record for THIS session's job. A running record is
             // the watching view's business, not a result.
@@ -146,11 +148,11 @@ function withSavedNote(result: ResultContent, savedNote: string | undefined): Re
 
 /** A dry run's answer. A refusal is an ANSWER the button exists to fetch: amber, not red. */
 function dryRunResult(dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>): ResultContent | null {
-    if (dryRun.failure) return { variant: 'error', title: 'Dry run failed', message: dryRun.failure.message };
+    if (dryRun.failure) return { variant: 'error', title: 'Dry Run Failed', message: dryRun.failure.message };
     if (!dryRun.value) return null;
     return dryRun.value.valid
-        ? { variant: 'success', title: 'Dry run passed', message: 'Nothing was written.' }
-        : { variant: 'warning', title: 'The service would refuse this', message: dryRun.value.reason };
+        ? { variant: 'success', title: 'Dry Run Passed', message: 'Nothing was written.' }
+        : { variant: 'warning', title: 'Validation Failed', message: dryRun.value.reason };
 }
 
 /** A finished job, worded for ITS operation: a removal must not say "Imported". */
@@ -170,8 +172,8 @@ function successResult(record: ImportJobRecord, name: string, words: OperationWo
     if (record.keptRoot) {
         return {
             variant: 'warning',
-            title: `One step left to remove ${name}`,
-            message: `${record.keptRoot.store} still uses the pack's root category, ${record.keptRoot.category}, so it stayed.`,
+            title: `Action Required to Remove ${name}`,
+            message: `${record.keptRoot.store} still uses the datapack's root category, ${record.keptRoot.category}, so it stayed.`,
             keptRoot: record.keptRoot,
         };
     }
@@ -185,24 +187,24 @@ function successResult(record: ImportJobRecord, name: string, words: OperationWo
 function unfinishedResult(record: ImportJobRecord, name: string, words: OperationWords): ResultContent {
     const troubled = describePerType(record.perType, { troubledOnly: true });
     const kept = record.note ? [record.note] : [];
-    const later = `The ${words.noun} carries on without you. Its result shows on the Activity tab.`;
+    const later = `The ${words.noun} continues in the background. See the Activity tab for the result.`;
     switch (record.outcome) {
         case 'partial':
             return {
                 variant: 'warning',
-                title: `${words.done} ${name}, except some data types`,
-                details: [...kept, ...troubled, 'Running it again skips what is already there.'],
+                title: `${words.done} ${name}, Except Some Data Types`,
+                details: [...kept, ...troubled, 'Running it again skips existing items.'],
             };
         case 'error':
-            return { variant: 'error', title: `Couldn't ${words.verb} ${name}`, message: record.reason, details: [...kept, ...troubled] };
+            return { variant: 'error', title: `Couldn't ${words.verbTitle} ${name}`, message: record.reason, details: [...kept, ...troubled] };
         case 'never-registered':
-            return { variant: 'error', title: `The ${words.noun} never started`, message: record.reason };
+            return { variant: 'error', title: `${words.nounTitle} Did Not Start`, message: record.reason };
         case 'stopped':
-            return { variant: 'info', title: 'Stopped watching', message: `The ${words.noun} carries on without you.` };
+            return { variant: 'info', title: 'Running in Background', message: `The ${words.noun} continues in the background.` };
         case 'still-running':
-            return { variant: 'info', title: 'Still running', message: later };
+            return { variant: 'info', title: 'Still Running', message: later };
         case 'unwatchable':
-            return { variant: 'warning', title: `Lost track of the ${words.noun}`, message: 'It is still running. Its result shows on the Activity tab.' };
+            return { variant: 'warning', title: `${words.nounTitle} Status Unknown`, message: 'It is still running. See the Activity tab for the result.' };
         default:
             return { variant: 'info', title: String(record.outcome) };
     }

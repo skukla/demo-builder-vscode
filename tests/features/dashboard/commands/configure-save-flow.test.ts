@@ -678,7 +678,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             expect(vscode.window.withProgress).toHaveBeenCalledWith(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Switching author mode',
+                    title: 'Switching Author Mode',
                     // Not cancellable: half-applying an authoring flip leaves the
                     // storefront pointing at an editor that is no longer configured.
                     cancellable: false,

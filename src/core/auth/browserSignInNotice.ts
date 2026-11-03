@@ -24,17 +24,17 @@ import { cancelSignIn, signInLink } from './signInSession';
 import { askDuringOperation, modalIsAsking, withdrawQuestion } from '@/core/vscode/operationPrompt';
 
 /** Sign-in. Says where it happens, not that a window opened: that is not ours to know. */
-export const BROWSER_SIGN_IN_TITLE = 'Signing in to Adobe in your browser';
+export const BROWSER_SIGN_IN_TITLE = 'Signing In to Adobe in Your Browser';
 
 /** Org switch — a forced sign-in, so name the outcome rather than the mechanism. */
-export const BROWSER_ORG_SWITCH_TITLE = 'Opening browser to switch organization';
+export const BROWSER_ORG_SWITCH_TITLE = 'Opening Browser to Switch Organization';
 
 /** The modal step's question, and its answer that opens the link. */
 const IN_MODAL = {
-    title: 'Finish signing in',
+    title: 'Finish Signing In',
     message: 'Sign in to Adobe in your browser. No browser window? Open the sign-in page.',
 };
-const OPEN_PAGE = 'Open sign-in page';
+const OPEN_PAGE = 'Open Sign-In Page';
 const NO_WINDOW = 'No browser window opened for the Adobe sign-in? Open the sign-in page here.';
 
 /**

@@ -118,7 +118,7 @@ function deadWebsitesNote(row: ErpRow, websites: ReadonlyArray<{ code: string }>
  * "Assign products" as its next step, can leave out the note that says the same.
  */
 export function assignProductsNote(name: string): string {
-    return `${name} owns no products yet: use Assign products on its card to give it some.`;
+    return `${name} owns no products yet: use Assign Products on its card to give it some.`;
 }
 
 /**
@@ -362,7 +362,7 @@ export async function applyErpOwnership(
         // item; a rule that matches nothing is.
         if (owned.size === 0 && row.owns.mode !== 'all') {
             const note = ownsNothingNote(row);
-            // Not "use Assign products" after an assignment or its undo: an ERP left with nothing
+            // Not "use Assign Products" after an assignment or its undo: an ERP left with nothing
             // is what the SC just chose (owner, 2026-10-19). A rule on another attribute still says.
             if (moment !== 'assign' || note !== assignProductsNote(row.name)) notes.push(note);
         }

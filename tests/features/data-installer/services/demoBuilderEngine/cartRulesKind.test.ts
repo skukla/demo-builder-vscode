@@ -125,7 +125,7 @@ describe('cart_rules install', () => {
     it("stops when Commerce does not answer the new rule's id", async () => {
         const ctx = await storeWith({ [ruleSearch(FRIENDS_AND_FAMILY.rule.name)]: NO_RULES_PAGE, ...group('VIP', 7) }, {});
 
-        await expect(installCartRules(ctx, parseCartRuleRows([FRIENDS_AND_FAMILY]))).rejects.toThrow("did not answer the new cart rule");
+        await expect(installCartRules(ctx, parseCartRuleRows([FRIENDS_AND_FAMILY]))).rejects.toThrow("did not return the new cart rule");
     });
 
     it('refuses a pack row with no name before anything is sent', () => {

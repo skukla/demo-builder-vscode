@@ -243,9 +243,9 @@ function ProjectsDashboardApp() {
             id: COPY_SETTINGS_OPERATION_ID,
             name: 'settings',
             message: 'copyFromExisting',
-            title: 'Copy settings from a project',
-            failureTitle: "Couldn't copy the settings",
-            successTitle: 'Settings copied',
+            title: 'Copy Settings from a Project',
+            failureTitle: "Couldn't Copy the Settings",
+            successTitle: 'Settings Copied',
         });
     }, [startOperation]);
 
@@ -260,8 +260,8 @@ function ProjectsDashboardApp() {
                     name: project.name,
                     message: 'deleteProject',
                     title: `Deleting ${getProjectDisplayName(project)}`,
-                    failureTitle: `Couldn't delete ${getProjectDisplayName(project)}`,
-                    successTitle: `${getProjectDisplayName(project)} deleted`,
+                    failureTitle: `Couldn't Delete ${getProjectDisplayName(project)}`,
+                    successTitle: `${getProjectDisplayName(project)} Deleted`,
                     payload: { projectPath: project.path },
                 },
                 () => fetchProjects(true),
@@ -354,8 +354,8 @@ function ProjectsDashboardApp() {
                 name: project.name,
                 message: 'resetProject',
                 title: `Resetting ${getProjectDisplayName(project)}`,
-                failureTitle: `Couldn't reset ${getProjectDisplayName(project)}`,
-                successTitle: `${getProjectDisplayName(project)} reset`,
+                failureTitle: `Couldn't Reset ${getProjectDisplayName(project)}`,
+                successTitle: `${getProjectDisplayName(project)} Reset`,
                 // The list must reflect what the reset changed; the modal closes
                 // on success, so the refresh rides the same moment.
                 payload: { projectPath: project.path },

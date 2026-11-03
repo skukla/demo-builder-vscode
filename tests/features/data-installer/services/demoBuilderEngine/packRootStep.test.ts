@@ -67,7 +67,7 @@ describe('packRootGuideStep', () => {
 
         expect(step).toMatchObject({
             id: 'pack-root-category',
-            title: "Show Frescopa's categories on the storefront",
+            title: "Show Frescopa's Categories on the Storefront",
             where: 'Stores > All Stores > JustRite Test Store',
             path: ['Stores', 'All Stores', 'JustRite Test Store'],
             enter: ['Root Category: Frescopa'],
@@ -116,7 +116,7 @@ describe('settlePackRoot', () => {
     });
 
     // Owner, 2026-10-30: the first wording led with why, named store codes and buried the step.
-    it('Skip for now leaves the step open on the record, and the question leads with the one thing to do', async () => {
+    it('Skip for Now leaves the step open on the record, and the question leads with the one thing to do', async () => {
         const { ctx, files } = await settling();
         const run = scripted(SKIP);
 
@@ -126,7 +126,7 @@ describe('settlePackRoot', () => {
         expect((await readInstallRecord(files, PROJECT, PACK))?.rootStep?.state).toBe('open');
         expect(run.asked).toEqual([
             {
-                title: "One step in the Admin to show Frescopa's categories",
+                title: "One Step in the Admin to Show Frescopa's Categories",
                 message: "In Stores > All Stores > JustRite Test Store, set Root Category to Frescopa, then Save Store. Demo Builder can't make this change for you.",
                 tone: 'info',
                 dismiss: SKIP,
@@ -154,7 +154,7 @@ describe('settlePackRoot', () => {
         expect(store.sent).toStrictEqual([]);
     });
 
-    it('Open the Admin opens it and asks again; a dismissed question counts as Skip', async () => {
+    it('Open Admin opens it and asks again; a dismissed question counts as Skip', async () => {
         const { ctx } = await settling();
         const run = scripted(OPEN_ADMIN, undefined);
 

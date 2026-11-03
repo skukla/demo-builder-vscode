@@ -152,11 +152,11 @@ describe('AddErpDialog — After adding', () => {
 
         expect(rows()).toStrictEqual([
             'Acme ERP | 3 products | All products not assigned to another ERP',
-            'Evo ERP | 0 products | None yet: assign products to it after adding',
+            'Evo ERP | 0 products | None. Assign products after adding.',
         ]);
     });
 
-    it('offers Assign products on an ERP already added that owns nothing, and only there', async () => {
+    it('offers Assign Products on an ERP already added that owns nothing, and only there', async () => {
         const kept: ErpOwnershipOptions['erps'][number] = { erp: 'kept', name: 'Kept ERP', owns: { mode: 'attribute', attribute: 'erp_owner=kept' } };
         mockRequest.mockResolvedValue(answers({ ...STORE, erps: [...STORE.erps, kept], takenListIds: ['acme', 'kept'] }));
         const { onAssign } = await open();
@@ -165,11 +165,11 @@ describe('AddErpDialog — After adding', () => {
         expect(rows()).toStrictEqual([
             'Acme ERP | 3 products | All products not assigned to another ERP',
             'Kept ERP | 0 products | None yet.',
-            'Evo ERP | 0 products | None yet: assign products to it after adding',
+            'Evo ERP | 0 products | None. Assign products after adding.',
         ]);
-        expect(screen.getAllByRole('button', { name: /^Assign products/ })).toHaveLength(1);
+        expect(screen.getAllByRole('button', { name: /^Assign Products/ })).toHaveLength(1);
         // The screen's inline action, as "Change" beside Deploys to, on the hint's line.
-        const assign = screen.getByRole('button', { name: 'Assign products to Kept ERP' });
+        const assign = screen.getByRole('button', { name: 'Assign Products to Kept ERP' });
         expect(assign).toHaveClass('inline-action-link');
         fireEvent.click(assign);
         expect(onAssign).toHaveBeenCalledWith('Kept ERP');
@@ -203,7 +203,7 @@ describe('AddErpDialog — After adding', () => {
 
         expect(rows()).toEqual(
             expect.arrayContaining([
-                'Nobody | 2 products | Products no ERP owns',
+                'None | 2 products | Products no ERP owns',
                 'Two ERPs | 1 product | Their orders are refused until a rule changes',
             ]),
         );
@@ -226,7 +226,7 @@ describe('AddErpDialog — the name', () => {
         mockRequest.mockResolvedValue(answers(STORE));
         await open();
         typeName('acme');
-        expect(screen.getByText('An ERP named "acme ERP" is already in this project. Pick another name.')).toBeInTheDocument();
+        expect(screen.getByText('An ERP named "acme ERP" is already in this project. Enter a different name.')).toBeInTheDocument();
         expect(addDisabled()).toBe(true);
     });
 
@@ -247,7 +247,7 @@ describe('AddErpDialog — before and without the store', () => {
         expect(screen.getAllByRole('progressbar')).toHaveLength(1);
         // A dialog reading what it will show says nothing (dialog design rules).
         expect(screen.queryByText(/Reading/)).toBeNull();
-        expect(screen.queryByLabelText(/^ERP name/)).toBeNull();
+        expect(screen.queryByLabelText(/^ERP Name/)).toBeNull();
         expect(screen.queryByRole('button', { name: ADD_ERP_COPY.add })).toBeNull();
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
@@ -261,7 +261,7 @@ describe('AddErpDialog — before and without the store', () => {
 
     // A note line under the preview's label, not a box, and one short line: Commerce's reason stays out.
     it("a store that could not be read says so, once, in a note line; Add still works", async () => {
-        mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
+        mockRequest.mockResolvedValue({ success: false, error: 'Adobe Sign-In Required.' });
         const { onAdd } = await open();
         typeName('Brand B ERP');
 

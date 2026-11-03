@@ -24,25 +24,25 @@ import type { OperationOffer } from '@/types/webviewPayloads';
 
 /** Every string the confirms show, in one place. */
 export const ERP_ASSIGN_DIALOG_COPY = {
-    undoTitle: (name: string) => `Undo ${name}'s last assignment?`,
+    undoTitle: (name: string) => `Undo ${name}'s Last Assignment?`,
     undoAction: 'Undo',
     undoBody: [
         'Puts back the erp_owner each product had before that assignment, leaving any product whose erp_owner has changed since.',
-        'Then fills every ERP again with what it owns.',
+        'Every ERP is then refilled with its products.',
     ],
-    addSetsTitle: 'Add erp_owner to the attribute sets?',
+    addSetsTitle: 'Add erp_owner to Attribute Sets?',
     addSetsAction: 'Add',
     addSetsBody: [
         'Adds erp_owner to every attribute set your products use that does not have it.',
-        'It records which sets, so Demo Builder can take it out again.',
+        'Demo Builder records the sets so this can be undone.',
     ],
-    removeSetsTitle: 'Take erp_owner out of the attribute sets?',
-    removeSetsAction: 'Take it out',
+    removeSetsTitle: 'Remove erp_owner from Attribute Sets?',
+    removeSetsAction: 'Remove',
     removeSetsBody: [
         'Takes erp_owner out of the attribute sets Demo Builder added it to.',
-        'It refuses while a product in those sets is tagged.',
+        'Not available while products in those sets are tagged.',
     ],
-    offerAction: 'Assign products',
+    offerAction: 'Assign Products',
 };
 
 /** Which attribute-set change is waiting for its confirm. */
@@ -81,9 +81,9 @@ export function useErpAssignDialogs(operations: ComponentOperationControls): Erp
                 name: target.name,
                 message: 'assignErpProducts',
                 payload: { erp: target.erp, selection, confirm: true },
-                title: `Assigning products to ${target.name}`,
-                failureTitle: `Couldn't assign products to ${target.name}`,
-                successTitle: `Products assigned to ${target.name}`,
+                title: `Assigning Products to ${target.name}`,
+                failureTitle: `Couldn't Assign Products to ${target.name}`,
+                successTitle: `Products Assigned to ${target.name}`,
             });
         },
         [start],
@@ -95,9 +95,9 @@ export function useErpAssignDialogs(operations: ComponentOperationControls): Erp
                 name: undoing.name,
                 message: 'undoErpAssignment',
                 payload: { erp: undoing.erp, confirm: true },
-                title: `Undoing ${undoing.name}'s last assignment`,
-                failureTitle: `Couldn't undo ${undoing.name}'s last assignment`,
-                successTitle: `${undoing.name}'s last assignment undone`,
+                title: `Undoing ${undoing.name}'s Last Assignment`,
+                failureTitle: `Couldn't Undo ${undoing.name}'s Last Assignment`,
+                successTitle: `${undoing.name}'s Last Assignment Undone`,
             });
         }
         setUndoing(null);
@@ -111,14 +111,14 @@ export function useErpAssignDialogs(operations: ComponentOperationControls): Erp
                 message: adding ? 'addErpOwnerToAttributeSets' : 'removeErpOwnerFromAttributeSets',
                 payload: { confirm: true },
                 title: adding
-                    ? 'Adding erp_owner to attribute sets'
-                    : 'Taking erp_owner out of attribute sets',
+                    ? 'Adding erp_owner to Attribute Sets'
+                    : 'Removing erp_owner from Attribute Sets',
                 failureTitle: adding
-                    ? "Couldn't add erp_owner to the attribute sets"
-                    : "Couldn't take erp_owner out of the attribute sets",
+                    ? "Couldn't Add erp_owner to Attribute Sets"
+                    : "Couldn't Remove erp_owner from Attribute Sets",
                 successTitle: adding
-                    ? 'erp_owner added to the attribute sets'
-                    : 'erp_owner taken out of the attribute sets',
+                    ? 'erp_owner Added to Attribute Sets'
+                    : 'erp_owner Removed from Attribute Sets',
             });
         }
         setSets(null);

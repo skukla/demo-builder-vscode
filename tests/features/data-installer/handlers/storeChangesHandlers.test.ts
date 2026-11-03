@@ -84,7 +84,7 @@ beforeEach(() => {
 
 describe('preview-datapack-changes', () => {
     it('asks the service about this project\'s store, at the target it chose, for the pack named', async () => {
-        mockedPreview.mockResolvedValue({ installed: true, kinds: [], kept: 'Kept 1 thing you had changed in the Admin.' });
+        mockedPreview.mockResolvedValue({ installed: true, kinds: [], kept: 'Kept 1 item changed in the Admin.' });
 
         const result = await storeChangesHandlers['preview-datapack-changes'](harness(), { ...ID, source: 'library', dataTypes: ['products'] });
 
@@ -96,7 +96,7 @@ describe('preview-datapack-changes', () => {
         );
         expect(result).toEqual({
             success: true,
-            data: { datapackName: 'bodea', version: 'main', installed: true, kinds: [], kept: 'Kept 1 thing you had changed in the Admin.' },
+            data: { datapackName: 'bodea', version: 'main', installed: true, kinds: [], kept: 'Kept 1 item changed in the Admin.' },
         });
     });
 

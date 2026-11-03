@@ -116,7 +116,7 @@ function valueOfRule(name: string, rule: ErpOwnsEntry['owns'] | undefined): { va
         refusal:
             // In the SC's words, not the attribute code (owner, 2026-10-18), and the picker's.
             `${name} owns ${owns.replace(/^products /u, 'the products ')}, not the products assigned to it. ` +
-            `To assign products to it, first change which products it owns to "Products you assign to it" in its Settings.`,
+            `To assign products to it, first change which products it owns to "Products You Assign to It" in its Settings.`,
     };
 }
 

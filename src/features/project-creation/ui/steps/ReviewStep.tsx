@@ -177,7 +177,7 @@ function ProjectConfigSection({
 }) {
     if (!packageName && !stackName) return <View />;
     return (
-        <Section title="PROJECT CONFIGURATION">
+        <Section title="Project Configuration">
             {packageName && <LabelValue label="Package" value={packageName} />}
             {stackName && <LabelValue label="Architecture" value={stackName} />}
         </Section>
@@ -196,7 +196,7 @@ function AdobeIOSection({
 }) {
     if (!orgName && !projectName && !workspaceName) return <View />;
     return (
-        <Section title="ADOBE I/O">
+        <Section title="Adobe I/O">
             {orgName && <LabelValue label="Organization" value={orgName} />}
             {projectName && <LabelValue label="Project" value={projectName} />}
             {workspaceName && <LabelValue label="Workspace" value={workspaceName} />}
@@ -236,7 +236,7 @@ function EdsSection({
     aemAssetsEnabled: boolean;
 }) {
     return (
-        <Section title="EDGE DELIVERY SERVICES">
+        <Section title="Edge Delivery Services">
             {githubRepoInfo && (
                 <LabelValue
                     label="GitHub Repository"

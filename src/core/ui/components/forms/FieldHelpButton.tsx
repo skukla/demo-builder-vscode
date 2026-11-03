@@ -344,7 +344,7 @@ export function FieldHelpButton({
                                 {/* Accent button - right aligned */}
                                 <div className="flex-end-container">
                                     <Button variant="accent" onPress={close}>
-                                        {hasMultipleSteps && currentStep === totalSteps - 1 ? 'Done' : 'Got it'}
+                                        {hasMultipleSteps && currentStep === totalSteps - 1 ? 'Done' : 'Got It'}
                                     </Button>
                                 </div>
                             </Flex>

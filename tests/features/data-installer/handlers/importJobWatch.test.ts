@@ -256,13 +256,13 @@ describe('the shared progress channel', () => {
 
     it('closes the notice with the line about what it kept, so a backgrounded install still says it', async () => {
         happyClient();
-        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {}, note: 'Kept 1 thing you had changed in the Admin.' });
+        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {}, note: 'Kept 1 item changed in the Admin.' });
         const { context } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
         await new Promise((r) => setTimeout(r, 25));
 
-        expect(pushes()).toContainEqual({ id: DATAPACK_OPERATION_ID, state: 'succeeded', note: 'Kept 1 thing you had changed in the Admin.' });
+        expect(pushes()).toContainEqual({ id: DATAPACK_OPERATION_ID, state: 'succeeded', note: 'Kept 1 item changed in the Admin.' });
     });
 
     it('closes the notice as failed with the runner reason', async () => {
@@ -416,12 +416,12 @@ describe('what the finished watch records', () => {
     it('keeps the engine\'s line about what it kept, so the window and get_datapack_import_status say it', async () => {
         const { context, stores } = makeImportHarness();
         happyClient();
-        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {}, note: 'Kept 2 things you had changed in the Admin.' });
+        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {}, note: 'Kept 2 items changed in the Admin.' });
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
         await new Promise((resolve) => setImmediate(resolve));
 
-        expect(stores.peek('dataInstaller.import.current')).toMatchObject({ note: 'Kept 2 things you had changed in the Admin.' });
+        expect(stores.peek('dataInstaller.import.current')).toMatchObject({ note: 'Kept 2 items changed in the Admin.' });
     });
 
     it('omits both fields when the runner reported neither', async () => {

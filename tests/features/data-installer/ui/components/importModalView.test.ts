@@ -89,7 +89,7 @@ describe('watchedActivation', () => {
 });
 
 /** A result to show, typed to the real interface. */
-const RESULT: ResultContent = { variant: 'success', title: 'Dry run passed' };
+const RESULT: ResultContent = { variant: 'success', title: 'Dry Run Passed' };
 
 /** Nothing set: the state a fresh modal with an instance is in. */
 const IDLE = { busy: false, resetArmed: false, running: false, watching: true, result: null, noInstance: false };
@@ -180,10 +180,10 @@ function rows(args: ActionArgs): { label: string; variant: string; isDisabled?: 
 
 describe('buildActions', () => {
     /** NOT "Cancel": there is no endpoint to cancel with. */
-    it('offers only Stop watching while a job runs, wired to stopWatching', () => {
+    it('offers only Close while a job runs, wired to stopWatching', () => {
         const args = actionArgs({ view: 'watching' });
         const actions = buildActions(args);
-        expect(rows(args)).toStrictEqual([{ label: 'Stop watching', variant: 'secondary' }]);
+        expect(rows(args)).toStrictEqual([{ label: 'Close', variant: 'secondary' }]);
         expect(actions[0].onPress).toBe(args.stopWatching);
     });
 
@@ -211,12 +211,12 @@ describe('buildActions', () => {
     });
 
     // The main action last; the two beside it quiet (dialog design rules, 2026-10-31).
-    it('shows Remove data and Dry run quiet, then Import, each wired', () => {
+    it('shows Remove data and Dry Run quiet, then Import, each wired', () => {
         const args = actionArgs();
         const actions = buildActions(args);
         expect(rows(args)).toStrictEqual([
-            { label: 'Remove data', variant: 'quiet', isDisabled: false },
-            { label: 'Dry run', variant: 'quiet', isDisabled: false },
+            { label: 'Remove Data', variant: 'quiet', isDisabled: false },
+            { label: 'Dry Run', variant: 'quiet', isDisabled: false },
             { label: 'Import', variant: 'accent', isDisabled: false },
         ]);
         expect(actions[0].onPress).toBe(args.armReset);
@@ -227,13 +227,13 @@ describe('buildActions', () => {
     // A removal takes all its record lists, so the button says all and needs nothing ticked.
     it('says all, and can be pressed with nothing to import, when a removal takes the whole record', () => {
         const [remove, dryRun, importButton] = buildActions(actionArgs({ canStart: false, removesAll: true, canRemove: true }));
-        expect(remove).toMatchObject({ label: 'Remove all data', isDisabled: false });
+        expect(remove).toMatchObject({ label: 'Remove All Data', isDisabled: false });
         expect(dryRun.isDisabled).toBe(true);
         expect(importButton.isDisabled).toBe(true);
     });
 
     it('disables the removal when it cannot run, whatever it would take', () => {
-        expect(buildActions(actionArgs({ removesAll: true, canRemove: false }))[0]).toMatchObject({ label: 'Remove all data', isDisabled: true });
+        expect(buildActions(actionArgs({ removesAll: true, canRemove: false }))[0]).toMatchObject({ label: 'Remove All Data', isDisabled: true });
     });
 
     it('disables all three form buttons when the import cannot start', () => {
@@ -248,7 +248,7 @@ describe('buildActions', () => {
     it('keeps every label while a check or a start runs', () => {
         for (const busy of [{ checking: true }, { starting: true }]) {
             const actions = buildActions(actionArgs({ view: 'busy', canStart: false, ...busy }));
-            expect(actions.map((a) => a.label)).toStrictEqual(['Remove data', 'Dry run', 'Import']);
+            expect(actions.map((a) => a.label)).toStrictEqual(['Remove Data', 'Dry Run', 'Import']);
             expect(actions.every((a) => a.isDisabled === true)).toBe(true);
         }
     });
@@ -326,7 +326,7 @@ describe('viewFrame', () => {
     it('titles a watch the SC stopped, with no status: it is neither good nor bad', () => {
         const frame = viewFrame({ ...base, view: 'stopped-watching' });
 
-        expect(frame).toMatchObject({ title: 'Stopped watching', size: 'S', hideClose: false });
+        expect(frame).toMatchObject({ title: 'Running in Background', size: 'S', hideClose: false });
         expect(frame.status).toBeUndefined();
     });
 
@@ -385,9 +385,9 @@ describe('the removal confirm (step 05)', () => {
     });
 
     it('offers the background only once a save is under way', () => {
-        expect(closeLabel('busy', true)).toBe('Run in background');
+        expect(closeLabel('busy', true)).toBe('Run in Background');
         expect(closeLabel('busy')).toBe('Close');
-        expect(closeLabel('watching')).toBe('Run in background');
+        expect(closeLabel('watching')).toBe('Run in Background');
     });
 
     it('says the save\'s stage over the removal\'s, and the removal\'s once there is none', () => {

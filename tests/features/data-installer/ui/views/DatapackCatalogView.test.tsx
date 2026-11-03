@@ -323,7 +323,7 @@ describe('DatapackCatalogView', () => {
             await screen.findByText('Import', { selector: '.modal-button' });
 
             expect(screen.getByRole('checkbox', { name: 'Products' })).toBeInTheDocument();
-            expect(screen.queryByRole('checkbox', { name: 'Gift cards' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Gift Cards' })).not.toBeInTheDocument();
         });
 
         it('closes without closing the flyout behind it', async () => {
@@ -347,7 +347,7 @@ describe('DatapackCatalogView', () => {
             // act() rather than in the next query's wait loop.
             await settle();
 
-            expect(await screen.findByText('No datapacks found')).toBeInTheDocument();
+            expect(await screen.findByText('No Datapacks Found')).toBeInTheDocument();
             expect(screen.getByRole('checkbox', { name: /community/i })).toBeInTheDocument();
         });
 
@@ -365,9 +365,9 @@ describe('DatapackCatalogView', () => {
             // act() rather than in the next query's wait loop.
             await settle();
 
-            expect(await screen.findByText('Adobe sign-in required')).toBeInTheDocument();
+            expect(await screen.findByText('Adobe Sign-In Required')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
         });
 
         it('names the settings for an INVALID_OPERATION refusal', async () => {
@@ -396,7 +396,7 @@ describe('DatapackCatalogView', () => {
             // Mount effects fire requests; settle so their responses commit inside
             // act() rather than in the next query's wait loop.
             await settle();
-            const retry = await screen.findByRole('button', { name: /try again/i });
+            const retry = await screen.findByRole('button', { name: /retry/i });
 
             await press(retry);
 

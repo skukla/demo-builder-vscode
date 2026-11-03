@@ -112,7 +112,7 @@ export function IntegrationsActionBand({
                         // deploy, and the add journey asks for one itself (owner).
                         (destinationLabel || cards.length > 0) && (
                             <div className="page-destination-row" data-testid="page-destination">
-                                <span className="page-destination-label">Deploys to</span>
+                                <span className="page-destination-label">Deploys To</span>
                                 <DestinationContext
                                     project={destinationLabel}
                                     projectOnly

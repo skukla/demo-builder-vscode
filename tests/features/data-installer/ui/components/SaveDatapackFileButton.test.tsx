@@ -22,7 +22,7 @@ function answer(response: unknown): void {
 
 async function saveFrom(source?: 'installer' | 'library'): Promise<void> {
     render(<SaveDatapackFileButton id={ID} {...(source ? { source } : {})} />);
-    await press(screen.getByRole('button', { name: 'Save as file' }));
+    await press(screen.getByRole('button', { name: 'Save as File' }));
     await settle();
 }
 

@@ -185,7 +185,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Loading GitHub repositories',
+                title: 'Loading GitHub Repositories',
                 cancellable: false,
             },
             async () => {
@@ -274,7 +274,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
         const outcome = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Deleting repositories',
+                title: 'Deleting Repositories',
                 cancellable: false,
             },
             (progress) =>

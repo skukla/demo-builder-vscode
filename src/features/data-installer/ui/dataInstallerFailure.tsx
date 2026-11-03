@@ -50,14 +50,14 @@ export function renderDataInstallerFailure(
     options: DataInstallerFailureOptions = {},
 ): React.JSX.Element {
     // What still works without the Data Installer, on every failure, not only the settings
-    // one: a 404 from a deployment that had gone left a colleague looking at Try Again with
+    // one: a 404 from a deployment that had gone left a colleague looking at Retry with
     // nothing saying the project could go ahead (beta.149, 2026-10-26).
     const extra = options.extraDetail ? [options.extraDetail] : undefined;
     if (failure.code === ErrorCode.AUTH_REQUIRED) {
         return (
             <StatusDisplay
                 variant="info"
-                title="Adobe sign-in required"
+                title="Adobe Sign-In Required"
                 message="Sign in with Adobe to browse datapacks."
                 details={extra}
                 actions={[{ label: 'Sign In with Adobe', onPress: onRetry, variant: 'primary' }]}
@@ -82,7 +82,7 @@ export function renderDataInstallerFailure(
                     ...(options.onOpenSettings
                         ? [{ label: 'Open Settings', onPress: options.onOpenSettings, variant: 'secondary' as const }]
                         : []),
-                    { label: 'Try Again', onPress: onRetry, variant: 'primary' as const },
+                    { label: 'Retry', onPress: onRetry, variant: 'primary' as const },
                 ]}
             />
         );
@@ -119,10 +119,10 @@ export function renderDataInstallerFailure(
     return (
         <StatusDisplay
             variant="error"
-            title="Could not reach the Data Installer"
+            title="Could Not Reach the Data Installer"
             message={failure.message}
             details={extra}
-            actions={[{ label: 'Try Again', onPress: onRetry, variant: 'primary' }]}
+            actions={[{ label: 'Retry', onPress: onRetry, variant: 'primary' }]}
         />
     );
 }

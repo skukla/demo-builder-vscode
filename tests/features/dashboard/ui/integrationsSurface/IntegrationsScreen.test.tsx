@@ -67,7 +67,7 @@ describe('IntegrationsScreen', () => {
             expect(screen.getByRole('button', { name: 'Project Dashboard' })).toBeInTheDocument();
             // Exactly ONE Add integration: the empty state's CTA. The band's copy
             // is withheld while empty rather than doubling it.
-            expect(screen.getAllByRole('button', { name: 'Add integration' })).toHaveLength(1);
+            expect(screen.getAllByRole('button', { name: 'Add Integration' })).toHaveLength(1);
         });
 
         it('opens the add modal from the empty state CTA', async () => {
@@ -76,7 +76,7 @@ describe('IntegrationsScreen', () => {
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{}} />);
             settleStatus(handlers);
 
-            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+            await user.click(screen.getByRole('button', { name: 'Add Integration' }));
 
             expect(screen.getByTestId('add-modal')).toBeInTheDocument();
         });

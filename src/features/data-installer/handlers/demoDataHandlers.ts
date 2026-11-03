@@ -180,7 +180,7 @@ async function clear(deps: DemoDataDeps, plans: Map<string, WipePlan>, context: 
     if (refusal || !payload?.stores) return { success: false, error: refusal, code: ErrorCode.INVALID_OPERATION };
     const shown = plans.get(payload.token ?? '');
     if (!shown) return { success: false, error: 'That list is no longer known here. Check what would be removed again.' };
-    const options = { id: DEMO_DATA_CLEAR_OPERATION_ID, title: 'Clearing demo data', inModal: payload.progress === 'modal' };
+    const options = { id: DEMO_DATA_CLEAR_OPERATION_ID, title: 'Clearing Demo Data', inModal: payload.progress === 'modal' };
     const stores = payload.stores;
     return withOperationProgress(options, async (report) => {
         try {

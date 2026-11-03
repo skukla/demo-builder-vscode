@@ -95,7 +95,7 @@ export const sharedCatalogsFix: StepFix = {
             try {
                 const body: { sharedCatalog: CommerceSharedCatalog } = { sharedCatalog: { name, type: CUSTOM_CATALOG, store_id: 0, tax_class_id: RETAIL_TAX_CLASS } };
                 id = Number(await send('POST', 'sharedCatalog', body));
-                if (!Number.isInteger(id)) throw new Error('Commerce did not answer the new catalog id.');
+                if (!Number.isInteger(id)) throw new Error('Commerce did not return the new catalog id.');
             } catch (error) {
                 rejected.push(`Create the shared catalog ${name}: ${errorText(error)}`);
                 continue;

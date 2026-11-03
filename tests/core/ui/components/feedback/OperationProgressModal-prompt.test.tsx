@@ -70,8 +70,8 @@ import { OperationProgressModal } from '@/core/ui/components/feedback/OperationP
 const OPERATION = {
     id: 'republish:bodea',
     title: 'Republishing Bodea',
-    failureTitle: "Couldn't republish Bodea",
-    successTitle: 'Bodea republished',
+    failureTitle: "Couldn't Republish Bodea",
+    successTitle: 'Bodea Republished',
     run: 1,
     resume: false,
 };
@@ -196,11 +196,11 @@ it('cancels rather than backgrounding while it waits', async () => {
     expect(onClose).toHaveBeenCalled();
 });
 
-it('still offers Run in background when nothing is being asked', async () => {
+it('still offers Run in Background when nothing is being asked', async () => {
     progress = { id: OPERATION.id, state: 'running', stage: 'Publishing pages' };
     renderModal();
 
-    await user().click(screen.getByRole('button', { name: 'Run in background' }));
+    await user().click(screen.getByRole('button', { name: 'Run in Background' }));
 
     expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
         id: OPERATION.id,
@@ -210,13 +210,13 @@ it('still offers Run in background when nothing is being asked', async () => {
 
 // The target under a short title, not inside a long one that wrapped (2026-10-28).
 describe('an operation with a subject', () => {
-    const WITH_SUBJECT = { ...OPERATION, title: 'Changing destination', subject: 'Kukla Test App 2, Production' };
+    const WITH_SUBJECT = { ...OPERATION, title: 'Changing Destination', subject: 'Kukla Test App 2, Production' };
 
     it('titles the modal short and shows the subject on its own line', () => {
         progress = { id: OPERATION.id, state: 'running', stage: 'Redeploying' };
         render(<OperationProgressModal operation={WITH_SUBJECT} onRetry={jest.fn()} onClose={jest.fn()} />);
 
-        expect(screen.getByRole('dialog', { name: 'Changing destination' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Changing Destination' })).toBeInTheDocument();
         expect(screen.getByText('Kukla Test App 2, Production')).toBeInTheDocument();
     });
 
@@ -224,18 +224,18 @@ describe('an operation with a subject', () => {
         progress = { id: OPERATION.id, state: 'running', stage: 'Redeploying' };
         render(<OperationProgressModal operation={WITH_SUBJECT} onRetry={jest.fn()} onClose={jest.fn()} />);
 
-        await user().click(screen.getByRole('button', { name: 'Run in background' }));
+        await user().click(screen.getByRole('button', { name: 'Run in Background' }));
 
         expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
             id: OPERATION.id,
-            title: 'Changing destination: Kukla Test App 2, Production',
+            title: 'Changing Destination: Kukla Test App 2, Production',
         });
     });
 });
 
 describe('a question that needs something typed', () => {
     const SIGN_IN = {
-        message: 'Sign in to DA.live.',
+        message: 'Sign In to DA.live.',
         actions: ['Sign In', 'Open DA.live'],
         fields: [
             { id: 'orgName', label: 'DA.live namespace', value: 'acme' },
@@ -248,7 +248,7 @@ describe('a question that needs something typed', () => {
 
         renderModal();
 
-        expect(screen.getByText('Sign in to DA.live.')).toBeInTheDocument();
+        expect(screen.getByText('Sign In to DA.live.')).toBeInTheDocument();
         expect(screen.getByLabelText('DA.live namespace')).toHaveValue('acme');
         expect(screen.getByLabelText('Token')).toHaveAttribute('type', 'password');
         expect(screen.getByTestId('Token-description')).toHaveTextContent('That token was refused.');
@@ -291,7 +291,7 @@ describe('the end of a run', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         const { onClose } = renderModal();
 
-        expect(screen.getByRole('dialog', { name: 'Bodea republished' })).toHaveAttribute('data-status', 'success');
+        expect(screen.getByRole('dialog', { name: 'Bodea Republished' })).toHaveAttribute('data-status', 'success');
         expect(onClose).not.toHaveBeenCalled();
 
         await act(async () => {
@@ -307,7 +307,7 @@ describe('the end of a run', () => {
         progress = { id: OPERATION.id, state: 'succeeded', note: 'Added Demo Team Block Collection (9 blocks).' };
         renderModal();
 
-        expect(screen.getByRole('dialog', { name: 'Bodea republished' })).toHaveAttribute('data-status', 'success');
+        expect(screen.getByRole('dialog', { name: 'Bodea Republished' })).toHaveAttribute('data-status', 'success');
         expect(screen.getByTestId('operation-end')).toHaveTextContent('Added Demo Team Block Collection (9 blocks).');
     });
 
@@ -315,7 +315,7 @@ describe('the end of a run', () => {
         progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
         renderModal();
 
-        expect(screen.getByRole('dialog', { name: "Couldn't republish Bodea" })).toHaveAttribute('data-status', 'error');
+        expect(screen.getByRole('dialog', { name: "Couldn't Republish Bodea" })).toHaveAttribute('data-status', 'error');
         expect(screen.getByTestId('operation-end')).toHaveTextContent('Adobe refused this.');
     });
 
@@ -328,18 +328,18 @@ describe('the end of a run', () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
 
-        expect(screen.getByRole('dialog', { name: "Couldn't republish Bodea" })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: "Couldn't Republish Bodea" })).toBeInTheDocument();
         expect(onClose).not.toHaveBeenCalled();
     });
 
     // Neither ending has anything left to narrate, so neither offers the background.
-    it('offers Close rather than Run in background once it has ended', () => {
+    it('offers Close rather than Run in Background once it has ended', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         renderModal();
 
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         expect(
-            screen.queryByRole('button', { name: 'Run in background' }),
+            screen.queryByRole('button', { name: 'Run in Background' }),
         ).not.toBeInTheDocument();
     });
 });
@@ -347,7 +347,7 @@ describe('the end of a run', () => {
 // A success with something left to do (AB-26x: an install that leaves demo setup steps)
 // says what is left and offers it, and waits for the SC rather than closing by itself.
 describe('a next step on success', () => {
-    const NEXT = { message: 'Next: 2 setup steps in Commerce for the demo.', action: 'Open demo setup' };
+    const NEXT = { message: 'Next: 2 setup steps in Commerce for the demo.', action: 'Open Demo Setup' };
 
     function renderWithNext(): { onClose: jest.Mock; onPress: jest.Mock } {
         const onClose = jest.fn();
@@ -367,9 +367,9 @@ describe('a next step on success', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         renderWithNext();
 
-        expect(screen.getByRole('dialog', { name: 'Bodea republished' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Bodea Republished' })).toBeInTheDocument();
         expect(screen.getByText(NEXT.message)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Open demo setup' })).toHaveAttribute('data-variant', 'accent');
+        expect(screen.getByRole('button', { name: 'Open Demo Setup' })).toHaveAttribute('data-variant', 'accent');
     });
 
     it('waits for the SC instead of closing by itself', async () => {
@@ -387,7 +387,7 @@ describe('a next step on success', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         const { onClose, onPress } = renderWithNext();
 
-        await user().click(screen.getByRole('button', { name: 'Open demo setup' }));
+        await user().click(screen.getByRole('button', { name: 'Open Demo Setup' }));
 
         expect(onClose).toHaveBeenCalledTimes(1);
         expect(onPress).toHaveBeenCalledTimes(1);
@@ -397,7 +397,7 @@ describe('a next step on success', () => {
         progress = { id: OPERATION.id, state: 'running', stage: 'Deploying' };
         renderWithNext();
 
-        expect(screen.queryByRole('button', { name: 'Open demo setup' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Open Demo Setup' })).not.toBeInTheDocument();
     });
 });
 
@@ -409,19 +409,19 @@ describe('a next step the run offered', () => {
         id: 'erp-integration',
         erp: 'demo-erp-2',
         name: 'Accuform ERP',
-        message: 'Next: Accuform ERP owns no products yet. Assign products to it.',
+        message: 'Next: Accuform ERP owns no products yet. Assign Products to it.',
     };
 
     it("shows the screen's button for it on success, and starts it after closing", async () => {
         progress = { id: OPERATION.id, state: 'succeeded', offer: OFFER };
         const onClose = jest.fn();
         const onPress = jest.fn();
-        const offerStep = jest.fn(() => ({ message: OFFER.message, action: 'Assign products', onPress }));
+        const offerStep = jest.fn(() => ({ message: OFFER.message, action: 'Assign Products', onPress }));
         render(<OperationProgressModal operation={OPERATION} onRetry={jest.fn()} onClose={onClose} offerStep={offerStep} />);
 
         expect(offerStep).toHaveBeenCalledWith(OFFER);
         expect(screen.getByText(OFFER.message)).toBeInTheDocument();
-        await user().click(screen.getByRole('button', { name: 'Assign products' }));
+        await user().click(screen.getByRole('button', { name: 'Assign Products' }));
         expect(onClose).toHaveBeenCalledTimes(1);
         expect(onPress).toHaveBeenCalledTimes(1);
     });

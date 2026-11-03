@@ -92,7 +92,7 @@ async function promptAndSignIn(
     // after pressing it seven hours on).
     logger.info(`${logPrefix} awaiting the sign-in prompt in the VS Code window`);
     let timedOut = false;
-    const asked = askDuringOperation({ title: 'Sign in to Adobe', message: warningMessage }, 'Sign In', 'Cancel');
+    const asked = askDuringOperation({ title: 'Sign In to Adobe', message: warningMessage }, 'Sign In', 'Cancel');
     const selection = await Promise.race([
         asked,
         new Promise<undefined>((resolve) =>

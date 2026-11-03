@@ -103,7 +103,7 @@ describe('IntegrationDetailPanel — the Commerce install on the health line', (
     });
 
     // It was only in the kebab before, and the row read as a dead end (owner, 2026-10-01).
-    it('a failed install adds its reason and "Finish install" — the idempotent install pass', () => {
+    it('a failed install adds its reason and "Finish Install" — the idempotent install pass', () => {
         const model = makeModel({
             installation: { label: 'Not installed', detail: 'hands-back line', failed: true },
         });
@@ -111,20 +111,20 @@ describe('IntegrationDetailPanel — the Commerce install on the health line', (
 
         expect(detailLines()).toStrictEqual(['hands-back line']);
         expect(healthLine().querySelector('.integration-panel-status-aside')).toBeNull();
-        screen.getByText('Finish install').click();
+        screen.getByText('Finish Install').click();
 
         expect(onAction).toHaveBeenCalledWith(model, 'install');
     });
 
     // A refused upgrade: the install pass would meet the same refusal, so the line's fix is
-    // the reinstall it names, not "Finish install" (audit, 2026-10-18).
+    // the reinstall it names, not "Finish Install" (audit, 2026-10-18).
     it('a refused upgrade offers the reinstall its reason names, not the install pass', () => {
         const model = makeModel({
             installation: { label: 'Not installed', detail: 'Reinstalling it applies the new version.', failed: true, needsReinstall: true },
         });
         const { onAction } = renderPanel(model);
 
-        expect(screen.queryByText('Finish install')).not.toBeInTheDocument();
+        expect(screen.queryByText('Finish Install')).not.toBeInTheDocument();
         screen.getByText('Reinstall in Commerce').click();
 
         expect(onAction).toHaveBeenCalledWith(model, 'reinstall');
@@ -138,10 +138,10 @@ describe('IntegrationDetailPanel — the Commerce install on the health line', (
         expect(detailLines()).toStrictEqual(['Not installed in Commerce']);
     });
 
-    it('an installed app offers no "Finish install"', () => {
+    it('an installed app offers no "Finish Install"', () => {
         renderPanel(makeModel({ installation: { label: 'Installed', failed: false } }));
 
-        expect(screen.queryByText('Finish install')).not.toBeInTheDocument();
+        expect(screen.queryByText('Finish Install')).not.toBeInTheDocument();
     });
 
     // The Admin is reached from the Actions list's "Open Commerce Admin"; the health line

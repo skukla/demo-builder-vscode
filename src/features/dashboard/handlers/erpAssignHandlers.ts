@@ -246,7 +246,7 @@ export const handleAssignErpProducts: MessageHandler<ErpAssignRequestPayload> = 
         }
         const name = opened.call.erp?.name ?? 'the ERP';
         const outcome = await withOperationProgress(
-            { id: opened.call.id, title: `Assigning products to ${name}`, inModal: progressSurfaceOf(payload) === 'modal', cardLabel: `Assigning products to ${name}` },
+            { id: opened.call.id, title: `Assigning Products to ${name}`, inModal: progressSurfaceOf(payload) === 'modal', cardLabel: `Assigning products to ${name}` },
             async (report) => runAssign(context, opened, payload, selection, logged(context, `Assign products to ${name}`, report)).catch((error: unknown) => readFailed('assign the products', error) as AssignOutcome),
         );
         await postComponentsSnapshot(context);
@@ -314,7 +314,7 @@ export const handleUndoErpAssignment: MessageHandler<ErpAssignRequestPayload> = 
         }
         const name = opened.call.erp?.name ?? 'the ERP';
         const outcome = await withOperationProgress(
-            { id: opened.call.id, title: `Undoing ${name}'s last assignment`, inModal: progressSurfaceOf(payload) === 'modal', cardLabel: `Undoing ${name}'s assignment` },
+            { id: opened.call.id, title: `Undoing ${name}'s Last Assignment`, inModal: progressSurfaceOf(payload) === 'modal', cardLabel: `Undoing ${name}'s assignment` },
             async (report) => runUndo(context, opened, payload, record, logged(context, `Undo ${name}'s assignment`, report)).catch((error: unknown) => readFailed('undo the assignment', error) as AssignOutcome),
         );
         await postComponentsSnapshot(context);

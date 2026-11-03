@@ -45,7 +45,7 @@ export const handleSyncStorefront: MessageHandler<StorefrontActionPayload> = nar
         withOperationProgress(
             {
                 id: payload?.id ?? SYNC_OPERATION_ID,
-                title: 'Syncing the storefront',
+                title: 'Syncing the Storefront',
                 inModal: progressSurfaceOf(payload) === 'modal',
             },
             async () => {
@@ -99,7 +99,7 @@ export const handleRefreshBlockLibrary: MessageHandler<StorefrontActionPayload> 
             return withOperationProgress(
                 {
                     id: payload?.id ?? BLOCK_LIBRARY_OPERATION_ID,
-                    title: 'Refreshing the block library',
+                    title: 'Refreshing the Block Library',
                     inModal: progressSurfaceOf(payload) === 'modal',
                 },
                 async () => {

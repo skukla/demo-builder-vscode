@@ -94,7 +94,7 @@ describe('AddIntegrationFlowModal — host & shell', () => {
         expect(screen.getByRole('heading', { name: 'Deployment Destination' })).toBeInTheDocument();
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
         expect(
-            screen.queryByRole('button', { name: /Pre-built integration/ })
+            screen.queryByRole('button', { name: /Pre-Built Integration/ })
         ).not.toBeInTheDocument();
     });
 
@@ -118,7 +118,7 @@ describe('AddIntegrationFlowModal — kind stage', () => {
     it('disables the mesh tile, with a reason, when mesh is already selected', () => {
         renderModal({ initial: { selectedAppBuilderComponents: ['commerce-mesh'] } });
         expect(screen.getByRole('button', { name: /API Mesh/ })).toBeDisabled();
-        expect(screen.getByText('Already added — one per project')).toBeInTheDocument();
+        expect(screen.getByText('Already added (one per project)')).toBeInTheDocument();
     });
 
     it('hides the mesh tile when the stack has no mesh component', () => {
@@ -130,7 +130,7 @@ describe('AddIntegrationFlowModal — kind stage', () => {
         renderModal();
         expectDisabled('Back');
         expectDisabled('Continue');
-        await click(/Import a repo/);
+        await click(/Import Repository/);
         expectEnabled('Continue');
         expectDisabled('Back');
     });
@@ -211,9 +211,9 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
 describe('AddIntegrationFlowModal — build custom (optional-name model)', () => {
     /** kind → source-blank (the starting-point + optional-name stage). */
     async function walkToBlankStage(): Promise<HTMLElement> {
-        await click(/Build custom/);
+        await click(/Build Custom/);
         await click('Continue');
-        return screen.getByLabelText(/Name \(optional\)/);
+        return screen.getByLabelText(/Name \(Optional\)/);
     }
 
     it('Continue is enabled immediately — the name never gates', async () => {
@@ -325,28 +325,28 @@ describe('AddIntegrationFlowModal — only genuine pre-built entries reach the g
     it('disables the Pre-built tile when the catalog holds only a mesh and the shell', () => {
         renderModal({ catalog: MIXED });
 
-        expect(screen.getByRole('button', { name: /Pre-built/ })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /Pre-Built/ })).toBeDisabled();
     });
 
     it('counts a genuine authored integration', () => {
         renderModal({ catalog: [MESH_ENTRY, BLANK, ERP] });
 
-        expect(screen.getByRole('button', { name: /Pre-built/ })).not.toBeDisabled();
+        expect(screen.getByRole('button', { name: /Pre-Built/ })).not.toBeDisabled();
     });
 
     it('enables the Pre-built tile when a real integration arrives in a later catalog', () => {
         const { setCatalog } = renderModal({ catalog: MIXED });
-        expect(screen.getByRole('button', { name: /Pre-built/ })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /Pre-Built/ })).toBeDisabled();
 
         setCatalog([MESH_ENTRY, BLANK, ERP]);
 
-        expect(screen.getByRole('button', { name: /Pre-built/ })).not.toBeDisabled();
+        expect(screen.getByRole('button', { name: /Pre-Built/ })).not.toBeDisabled();
     });
 
     it('keeps the mesh and the shell OUT of the gallery', async () => {
         // Reachable only when something real exists, so ERP opens the door.
         renderModal({ catalog: [MESH_ENTRY, BLANK, ERP] });
-        await click(/Pre-built/);
+        await click(/Pre-Built/);
         await click('Continue');
 
         expect(await screen.findByText(ERP.name)).toBeInTheDocument();

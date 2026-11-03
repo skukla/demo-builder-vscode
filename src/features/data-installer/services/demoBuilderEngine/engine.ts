@@ -83,7 +83,7 @@ const NO_TARGET = 'Choose the website and store view to install into first.';
  */
 const NO_RECORD =
     'Demo Builder did not install this pack in this project, so it has no record of what the pack made and removes ' +
-    'nothing by name. To clear what an earlier install left in the store, use Clear demo data on the Data Installer screen.';
+    'nothing by name. To clear what an earlier install left in the store, use Clear Demo Data on the Data Installer screen.';
 
 interface Job {
     perType: Record<string, DataTypeStatus>;

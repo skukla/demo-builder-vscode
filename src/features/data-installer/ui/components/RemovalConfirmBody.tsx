@@ -28,8 +28,8 @@ export function RemovalConfirmBody({ deletes, view }: { deletes: readonly string
                 <>
                     <LeadText>{content.sentence}</LeadText>
                     <div>
-                        <CheckboxRow label={`Save my changes to the ${content.packName} pack first`} isSelected={choice.saveFirst} onChange={view.onToggleSave} />
-                        <CheckboxRow label="Always do this, and stop asking" isSelected={choice.always} isDisabled={!choice.saveFirst} onChange={view.onToggleAlways} />
+                        <CheckboxRow label={`Save Changes to the ${content.packName} Datapack First`} isSelected={choice.saveFirst} onChange={view.onToggleSave} />
+                        <CheckboxRow label="Don't Ask Again" isSelected={choice.always} isDisabled={!choice.saveFirst} onChange={view.onToggleAlways} />
                     </div>
                 </>
             ) : null}

@@ -33,7 +33,7 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
         id: 'custom-app',
         isMesh: false,
         name: 'Custom App',
-        kindLabel: 'Imported repo',
+        kindLabel: 'Imported Repository',
         sourceLine: 'acme/custom-app',
         status: 'deployed',
         statusLabel: 'Deployed',
@@ -229,7 +229,7 @@ describe('IntegrationDetailPanel', () => {
 
             expect(document.querySelectorAll('.integration-panel-status-message')).toHaveLength(0);
             expect(screen.queryByText('Settings')).not.toBeInTheDocument();
-            expect(screen.queryByText('Demo setup')).not.toBeInTheDocument();
+            expect(screen.queryByText('Demo Setup')).not.toBeInTheDocument();
         });
     });
 
@@ -363,8 +363,8 @@ describe('IntegrationDetailPanel', () => {
             });
             const { onAction, panel } = renderPanel(model);
 
-            const section = within(panel).getByRole('region', { name: 'Demo setup' });
-            fireEvent.click(within(section).getByText('Open demo setup'));
+            const section = within(panel).getByRole('region', { name: 'Demo Setup' });
+            fireEvent.click(within(section).getByText('Open Demo Setup'));
 
             expect(onAction).toHaveBeenCalledTimes(1);
             expect(onAction).toHaveBeenCalledWith(model, 'setup-guide');

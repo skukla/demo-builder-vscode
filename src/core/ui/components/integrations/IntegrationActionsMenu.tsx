@@ -42,7 +42,7 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     retry: { label: 'Retry', icon: 'reset' },
     install: { label: 'Install into Commerce', icon: 'play' },
     reinstall: { label: 'Reinstall in Commerce', icon: 'reset' },
-    'sign-in': { label: 'Sign in', icon: 'admin' },
+    'sign-in': { label: 'Sign In', icon: 'admin' },
     // The deliberate ones.
     open: { label: 'Open', icon: 'globe' },
     'open-admin': { label: 'Open Commerce Admin', icon: 'admin' },
@@ -50,21 +50,21 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     settings: { label: 'Settings', icon: 'settings' },
     'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },
     // The ERP integration's: another ERP beside the one it has (AB-16).
-    'add-erp': { label: 'Add another ERP', icon: 'add' },
+    'add-erp': { label: 'Add Another ERP', icon: 'add' },
     remove: { label: 'Remove', icon: 'delete' },
-    'remove-anyway': { label: 'Remove anyway', icon: 'delete' },
+    'remove-anyway': { label: 'Remove Anyway', icon: 'delete' },
     // A system card's own verbs.
     'load-demo-data': { label: 'Fill from Commerce', icon: 'loadData' },
     // Its simulated downtime (AB-59), in a modal.
-    'simulate-downtime': { label: 'Simulate downtime', icon: 'downtime' },
+    'simulate-downtime': { label: 'Simulate Downtime', icon: 'downtime' },
     // Tag Commerce products for this ERP, and put the tags back (AB-74).
-    'assign-products': { label: 'Assign products', icon: 'edit' },
-    'undo-assignment': { label: 'Undo last assignment', icon: 'reset' },
+    'assign-products': { label: 'Assign Products', icon: 'edit' },
+    'undo-assignment': { label: 'Undo Last Assignment', icon: 'reset' },
     // The integration's alone: a reset covers every ERP it serves (owner, 2026-10-01).
     'reset-records': { label: 'Reset ERPs', icon: 'reset' },
     // A blank-starter app's own repository (AB-1c), and its undo.
     'save-to-github': { label: 'Save to GitHub', icon: 'export' },
-    'delete-github-repo': { label: 'Delete its GitHub repository', icon: 'delete' },
+    'delete-github-repo': { label: 'Delete Its GitHub Repository', icon: 'delete' },
 };
 
 /**

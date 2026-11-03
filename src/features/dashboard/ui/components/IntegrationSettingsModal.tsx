@@ -40,8 +40,8 @@ interface SaveFailure {
 
 /** The title: the settings, or what did not go through. */
 function titleOf(name: string, failure: SaveFailure | null): string {
-    if (!failure) return `${name} settings`;
-    return failure.saved ? `Couldn't redeploy ${name}` : `Couldn't save ${name} settings`;
+    if (!failure) return `${name} Settings`;
+    return failure.saved ? `Couldn't Redeploy ${name}` : `Couldn't Save ${name} Settings`;
 }
 
 function initialValues(settings: ComponentSettings): Record<string, string> {
@@ -176,9 +176,9 @@ export function IntegrationSettingsModal({
                     size="M"
                     onClose={onClose}
                     // The redeploy carries on after the window closes, with its progress on the card.
-                    closeLabel={isSaving ? 'Run in background' : 'Cancel'}
+                    closeLabel={isSaving ? 'Run in Background' : 'Cancel'}
                     actionButtons={[{
-                        label: 'Save and redeploy',
+                        label: 'Save and Redeploy',
                         variant: 'accent',
                         onPress: () => {
                             void handleSave();

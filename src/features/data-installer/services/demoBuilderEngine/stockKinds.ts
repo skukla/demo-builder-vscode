@@ -101,7 +101,7 @@ export async function installStocks(ctx: KindContext, pack: StocksPack): Promise
         const made = await tryRow(ctx, { kind: STOCK_KIND, key: stock.name }, () =>
             createOne(ctx, { kind: STOCK_KIND, key: stock.name, previous }, async () => {
                 const answer = Number(await ctx.send('POST', 'inventory/stocks', body));
-                if (!Number.isInteger(answer)) throw new Error(`Commerce did not answer the new stock ${stock.name}'s id.`);
+                if (!Number.isInteger(answer)) throw new Error(`Commerce did not return the new stock ${stock.name}'s id.`);
                 return { kind: STOCK_KIND, id: String(answer), previous };
             }),
         );

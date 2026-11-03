@@ -144,7 +144,7 @@ export function AiCapabilitiesModal({
         if (isBusy) {
             webviewClient.postMessage('backgroundOperation', {
                 id: AI_FILES_OPERATION_ID,
-                title: 'Regenerating AI files',
+                title: 'Regenerating AI Files',
             });
         }
         onClose();
@@ -152,16 +152,16 @@ export function AiCapabilitiesModal({
 
     return (
         <Modal
-            title={regenFailed ? "Couldn't regenerate AI files" : 'AI Capabilities'}
+            title={regenFailed ? "Couldn't Regenerate AI Files" : 'AI Capabilities'}
             status={regenFailed ? 'error' : undefined}
             size="L"
             fitContent
             onClose={close}
-            closeLabel={isBusy ? 'Run in background' : undefined}
+            closeLabel={isBusy ? 'Run in Background' : undefined}
             waiting={waitOf(isBusy, isLoading, progress)}
             actionButtons={[
                 {
-                    label: 'Regenerate AI files',
+                    label: 'Regenerate AI Files',
                     variant: 'secondary',
                     onPress: () => {
                         void onRegenerate();
@@ -193,7 +193,7 @@ export function AiCapabilitiesModal({
                                     UNSAFE_className="ai-section-heading"
                                     data-testid="ai-mcps-heading"
                                 >
-                                    MCP servers
+                                    MCP Servers
                                 </Heading>
                                 <AiMcpsList mcps={mcps} hasError={hasMcpsError} />
                             </Flex>
