@@ -3,7 +3,9 @@
  *
  * The list loads in two places: when the webview asks (`handleGetProjects`) and when
  * a project file or a running creation changes under it (`ShowProjectsListCommand`).
- * Both read through here, so the two cannot disagree about what a project looks like.
+ * Both read through here, so the two cannot disagree about what a project looks like,
+ * nor about the order: until 2026-11-03 only the first sorted, so the second redrew the
+ * cards in folder order (newest modified first) and a card jumped rows as the list opened.
  *
  * @module features/projects-dashboard/services/loadProjectsForList
  */
@@ -35,8 +37,7 @@ function beingCreated(projectPath: string): Project {
  * is set up, so it gets a tile of its own until then.
  *
  * @param stateManager - where the projects are read from
- * @returns the projects in the order the state manager lists them, then any
- *          creation that has no file yet
+ * @returns the projects pinned first, then by name, a creation with no file yet among them
  */
 export async function loadProjectsForList(
     stateManager: Pick<StateManager, 'getAllProjects' | 'loadProjectFromPath'>,
@@ -55,5 +56,11 @@ export async function loadProjectsForList(
     for (const projectPath of runningCreations()) {
         if (!listed.has(projectPath)) projects.push(beingCreated(projectPath));
     }
-    return projects;
+    return projects.sort(byPinThenName);
+}
+
+/** Pinned projects first, then by name: the order every path draws the list in. */
+function byPinThenName(a: Project, b: Project): number {
+    if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
+    return a.name.localeCompare(b.name);
 }

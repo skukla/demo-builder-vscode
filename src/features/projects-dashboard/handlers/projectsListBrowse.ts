@@ -71,15 +71,8 @@ export const handleGetProjects: MessageHandler = async (
             }
         }
 
-        // Pinned projects first, then alphabetical within each group.
-        // (mtime-based scanner order is unstable after mesh enrichment writes,
-        // so we always re-sort to make the rendered order deterministic.)
-        projects.sort((a, b) => {
-            const aPinned = a.pinned ? 1 : 0;
-            const bPinned = b.pinned ? 1 : 0;
-            if (aPinned !== bPinned) return bPinned - aPinned;
-            return a.name.localeCompare(b.name);
-        });
+        // Already pinned first, then by name (`loadProjectsForList`), the order every path
+        // draws; mesh enrichment changes no name or pin, so it cannot disturb it.
 
         // In the response rather than a separate request (no race with init):
         // the session's choice over the setting (`core/state/viewModePreference`).
