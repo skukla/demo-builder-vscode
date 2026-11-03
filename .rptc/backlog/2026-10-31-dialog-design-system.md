@@ -74,3 +74,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-02  fix(data-installer): Clear demo data never rewrites a list setting (`ce4dd0e3f`)
 - 2026-11-02  fix(ui): the API and catalog pickers always show their filter (`e8ccfad04`)
 - 2026-11-02  fix(data-installer): Select All sits close to the count above it (`7f34ca2d8`)
+- 2026-11-03  refactor(ui): every list with anything in it shows its filter (`20e70be8c`)
