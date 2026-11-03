@@ -43,7 +43,7 @@ async function storedAt(get: CommerceGet, paths: readonly string[], scope: 'defa
     const answer = (await get(configListPath(paths, scope, websiteCode))) as CommerceSystemConfigList | null;
     const stored = new Map<string, string | null>();
     for (const row of answer?.items ?? []) {
-        if (paths.includes(row.path)) stored.set(row.path, row.value ?? null);
+        if (paths.includes(row.path)) stored.set(row.path, Array.isArray(row.value) ? row.value.join(',') : row.value ?? null);
     }
     return stored;
 }

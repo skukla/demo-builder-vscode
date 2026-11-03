@@ -136,7 +136,8 @@ export interface CommerceAttributeGroupList {
 /** One row of `GET /V1/system/config`. */
 export interface CommerceSystemConfigRow {
     path: string;
-    value: string | null;
+    /** A list setting can answer as an array (`sales/cancellation/reasons`, live 2026-11-02). */
+    value: string | string[] | null;
     scope: 'default' | 'website' | 'store' | string;
     scope_code?: string | null;
 }

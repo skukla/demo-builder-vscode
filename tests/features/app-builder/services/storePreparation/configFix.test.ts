@@ -5,7 +5,7 @@
  */
 
 import { commerceFake, configList, configRefused, configSaved } from '../../../../helpers/commercePreparationFixtures';
-import { configFix, configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { configFix, configListPath, readPrevious } from '@/features/app-builder/services/storePreparation/configFix';
 import type { SetupConfigFix } from '@/types/appBuilderComponents';
 import type { CommerceSystemConfigPutAnswer } from '@/types/commerceWire';
 
@@ -235,5 +235,16 @@ describe('undo', () => {
         const commerce = store([]);
         const undone = await configFix(FIX).undo({ commerce, erpNames: [] }, { kind: 'shared-catalogs', catalogs: [] });
         expect(undone.rejected).toEqual(['The record is not a settings record (shared-catalogs).']);
+    });
+});
+
+describe('readPrevious', () => {
+    it('reads a list setting, which can answer as an array, as the text a write would leave', async () => {
+        const path = 'sales/cancellation/reasons';
+        const get = async () => ({ items: [{ path, value: ['Changed my mind', 'Ordered by mistake'], scope: 'default' }] });
+
+        const [previous] = await readPrevious(get, [{ path, scope: 'default' }]);
+
+        expect(previous).toMatchObject({ stored: 'Changed my mind,Ordered by mistake', effective: 'Changed my mind,Ordered by mistake' });
     });
 });

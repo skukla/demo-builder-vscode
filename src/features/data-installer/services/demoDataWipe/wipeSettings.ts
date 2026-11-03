@@ -20,6 +20,7 @@
  * | base URLs, cookies, the Admin's, a credential (`isOffLimitsSetting`, what a pack may not set), or a value masked or encrypted | stays, counted: a website needs its own, and a masked value must never be copied |
  * | written by a datapack or the setup guide, whose records say (`settingsKept`) | stays, counted: its removal or undo puts it back |
  * | no value at the Default scope | stays, counted: there is nothing to put back, and writing "" or "0" would be a guess |
+ * | a list, on either side | stays, counted: a write sends text, and the read then answers one joined string, which the API cannot turn back into the list (live 2026-11-02, `sales/cancellation/reasons`). Only "Use Default Value" in the Admin restores it |
  * | a website that cannot be read | stays, counted, by website |
  *
  * | Read or write | Endpoint and field | Confirmed from a real answer? |
@@ -59,18 +60,27 @@ export interface SettingsDecision {
     offLimits: string[];
     installed: string[];
     noDefault: string[];
+    lists: string[];
     /** Websites that could not be read. */
     unread: string[];
 }
 
+type SettingValue = CommerceSystemConfigRow['value'];
+
 const readScope = (get: CommerceGet, criteria: string): Promise<CommerceSystemConfigRow[]> => absentAsEmpty(() => readAllPages<CommerceSystemConfigRow>(get, 'system/config', criteria));
 
-function sortRow(row: CommerceSystemConfigRow, websiteCode: string, defaults: ReadonlyMap<string, string | null>, kept: ReadonlySet<string>, decided: SettingsDecision): void {
+/** A setting's value as text: a list reads the same as the string a write turned it into. */
+const asText = (value: SettingValue): string | null => (Array.isArray(value) ? value.join(',') : value);
+
+function sortRow(row: CommerceSystemConfigRow, websiteCode: string, defaults: ReadonlyMap<string, SettingValue>, kept: ReadonlySet<string>, decided: SettingsDecision): void {
     const fallback = defaults.get(row.path) ?? null;
-    if (row.value === null || row.value === fallback) return;
-    if (isOffLimitsSetting(row.path) || HIDDEN_VALUE.test(row.value) || (fallback !== null && HIDDEN_VALUE.test(fallback))) decided.offLimits.push(row.path);
+    const value = asText(row.value);
+    const fallbackText = asText(fallback);
+    if (value === null || value === fallbackText) return;
+    if (isOffLimitsSetting(row.path) || HIDDEN_VALUE.test(value) || (fallbackText !== null && HIDDEN_VALUE.test(fallbackText))) decided.offLimits.push(row.path);
     else if (kept.has(`${websiteCode}/${row.path}`)) decided.installed.push(row.path);
     else if (fallback === null) decided.noDefault.push(row.path);
+    else if (Array.isArray(fallback) || Array.isArray(row.value)) decided.lists.push(row.path);
     else decided.reset.push({ websiteCode, path: row.path, value: fallback });
 }
 
@@ -83,10 +93,10 @@ const wholeWebsiteCodes = (scope: WipeScope): string[] => [...new Set(scope.stor
  * @param kept - settings a record says a datapack or the setup guide wrote, as `<website code>/<path>`
  */
 export async function decideSettings(get: CommerceGet, scope: WipeScope, kept: ReadonlySet<string>): Promise<SettingsDecision> {
-    const decided: SettingsDecision = { reset: [], offLimits: [], installed: [], noDefault: [], unread: [] };
+    const decided: SettingsDecision = { reset: [], offLimits: [], installed: [], noDefault: [], lists: [], unread: [] };
     const websites = wholeWebsiteCodes(scope);
     if (websites.length === 0) return decided;
-    let defaults: Map<string, string | null>;
+    let defaults: Map<string, SettingValue>;
     try {
         defaults = new Map((await readScope(get, '&scope=default')).map((row) => [row.path, row.value]));
     } catch {
@@ -110,6 +120,7 @@ export function settingsLeft(decided: SettingsDecision): WipeLeft[] {
         leftRow('settings', decided.offLimits, 'base URLs, cookies, Admin settings and credentials are never changed'),
         leftRow('settings', decided.installed, 'a datapack or the setup guide set them, and its removal or undo puts them back'),
         leftRow('settings', decided.noDefault, 'they have no default value to go back to'),
+        leftRow('settings', decided.lists, 'Commerce cannot write a list back, so set them to Use Default Value in the Admin'),
         leftRow('settings', decided.unread.map((code) => `website ${code}`), "Commerce would not list the website's settings"),
     ];
 }

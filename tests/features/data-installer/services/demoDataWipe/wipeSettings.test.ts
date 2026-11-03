@@ -67,6 +67,41 @@ describe('decideSettings, through the plan', () => {
         expect(plan.preview.left).toContainEqual({ kind: 'settings', count: 1, names: ['general/store_information/name'], why: 'they have no default value to go back to' });
     });
 
+    describe('a list setting, which answers as an array', () => {
+        const REASONS = ['Changed my mind', 'Ordered by mistake'];
+        const withList = (websiteValue: string | string[]) => {
+            const instance = settingsInstance();
+            instance.settings?.default.push({ path: 'sales/cancellation/reasons', value: REASONS, scope: 'default' });
+            instance.settings?.websites[TEST].push({ path: 'sales/cancellation/reasons', value: websiteValue, scope: 'website', scope_code: TEST });
+            return instance;
+        };
+        const LIST_WHY = 'Commerce cannot write a list back, so set them to Use Default Value in the Admin';
+
+        it('needs nothing when its contents match the default, though each read is a new array', async () => {
+            const plan = await planWipeFor(sandbox({ ...NOTHING, instance: withList([...REASONS]) }).get, TEST_STORE, { records: [] });
+
+            expect(plan.settings.map((s) => s.path)).not.toContain('sales/cancellation/reasons');
+            expect(plan.preview.left).not.toContainEqual(expect.objectContaining({ why: LIST_WHY }));
+        });
+
+        it('needs nothing when an earlier write joined it into the same text', async () => {
+            const plan = await planWipeFor(sandbox({ ...NOTHING, instance: withList(REASONS.join(',')) }).get, TEST_STORE, { records: [] });
+
+            expect(plan.settings.map((s) => s.path)).not.toContain('sales/cancellation/reasons');
+            expect(plan.preview.left).not.toContainEqual(expect.objectContaining({ why: LIST_WHY }));
+        });
+
+        it.each<[string, string | string[]]>([
+            ['an array', ['Changed my mind']],
+            ['a string', 'Changed my mind'],
+        ])('never writes one that differs, as %s, and says why it stays', async (_form, websiteValue) => {
+            const plan = await planWipeFor(sandbox({ ...NOTHING, instance: withList(websiteValue) }).get, TEST_STORE, { records: [] });
+
+            expect(plan.settings.map((s) => s.path)).not.toContain('sales/cancellation/reasons');
+            expect(plan.preview.left).toContainEqual({ kind: 'settings', count: 1, names: ['sales/cancellation/reasons'], why: LIST_WHY });
+        });
+    });
+
     it('leaves a setting a datapack or the setup guide wrote, for its undo', async () => {
         const settingsKept = new Set([`${TEST}/payment/companycredit/active`]);
 
@@ -121,7 +156,7 @@ describe('decideSettings, through the plan', () => {
 
         const decided = await decideSettings(store.get, resolveWipeScope(structure, TEST_STORE), new Set());
 
-        expect(decided).toEqual({ reset: [], offLimits: [], installed: [], noDefault: [], unread: [] });
+        expect(decided).toEqual({ reset: [], offLimits: [], installed: [], noDefault: [], lists: [], unread: [] });
     });
 });
 
