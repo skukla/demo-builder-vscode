@@ -41,6 +41,31 @@ function LibraryCard({
     );
 }
 
+/**
+ * Where the custom list is edited, as one sentence with its link, in the small grey text
+ * Configure's Authoring line uses (owner, 2026-11-03). A link on its own line under "None
+ * added yet." sat 32px away from what it was about.
+ */
+function CustomLibrariesNote({
+    hasLibraries,
+    onOpenSettings,
+}: {
+    hasLibraries: boolean;
+    onOpenSettings: () => void;
+}): React.ReactElement {
+    return (
+        <div className={hasLibraries ? 'settings-link' : undefined}>
+            <Text UNSAFE_className="text-gray-600 text-sm">
+                {hasLibraries ? 'Edit this list in ' : 'None added yet. Add them in '}
+                <Link onPress={onOpenSettings} UNSAFE_className="cursor-pointer">
+                    Block Library Settings
+                </Link>
+                .
+            </Text>
+        </div>
+    );
+}
+
 export interface BlockLibrariesStepContentProps {
     /** Libraries every storefront gets: locked, ticked. */
     includedBlockLibraries: BlockLibrary[];
@@ -121,16 +146,11 @@ export function BlockLibrariesStepContent({
                         />
                     ))}
                 </div>
-            ) : (
-                <Text UNSAFE_className="description-block">None added yet.</Text>
-            )}
-            <div className="settings-link">
-                <Link isQuiet onPress={onOpenCustomSettings}>
-                    {customBlockLibraryDefaults.length > 0
-                        ? 'Configure Custom Libraries in Settings'
-                        : 'Add Custom Libraries in Settings'}
-                </Link>
-            </div>
+            ) : null}
+            <CustomLibrariesNote
+                hasLibraries={customBlockLibraryDefaults.length > 0}
+                onOpenSettings={onOpenCustomSettings}
+            />
         </>
     );
 }

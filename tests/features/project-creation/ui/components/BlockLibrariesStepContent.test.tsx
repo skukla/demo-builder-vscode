@@ -190,9 +190,9 @@ describe('BlockLibrariesStepContent', () => {
             render(<BlockLibrariesStepContent {...defaultProps} onOpenCustomSettings={onOpenCustomSettings} />);
 
             expect(screen.getByText('Custom Libraries')).toBeInTheDocument();
-            expect(screen.getByText('None added yet.')).toBeInTheDocument();
+            expect(screen.getByText(/None added yet\. Add them in/)).toBeInTheDocument();
             expect(screen.queryByRole('group', { name: 'Custom block libraries' })).not.toBeInTheDocument();
-            fireEvent.click(screen.getByText('Add Custom Libraries in Settings'));
+            fireEvent.click(screen.getByText('Block Library Settings'));
             expect(onOpenCustomSettings).toHaveBeenCalled();
         });
 
@@ -292,7 +292,8 @@ describe('BlockLibrariesStepContent', () => {
                 />
             );
 
-            expect(screen.getByText('Configure Custom Libraries in Settings')).toBeInTheDocument();
+            expect(screen.getByText(/Edit this list in/)).toBeInTheDocument();
+            expect(screen.getByText('Block Library Settings')).toBeInTheDocument();
         });
 
         it('should call onOpenCustomSettings when settings link is clicked', () => {
@@ -305,7 +306,7 @@ describe('BlockLibrariesStepContent', () => {
                 />
             );
 
-            fireEvent.click(screen.getByText('Configure Custom Libraries in Settings'));
+            fireEvent.click(screen.getByText('Block Library Settings'));
             expect(onOpenCustomSettings).toHaveBeenCalled();
         });
 
