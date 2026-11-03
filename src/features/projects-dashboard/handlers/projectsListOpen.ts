@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { withProjectFromPath } from './projectFromPath';
 import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';
 import { openPrivateBrowser } from '@/core/utils/browserUtils';
-import { resolveAdminPanelUrl } from '@/core/utils/commerceAdmin';
+import { openAdminUrl, resolveAdminPanelUrl } from '@/core/utils/commerceAdmin';
 import { validateURL } from '@/core/validation/URLValidator';
 import {
     getEwCanvasBranch,
@@ -179,12 +179,10 @@ export const handleOpenAdminPanel = withProjectFromPath<{ projectPath: string }>
             return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
         }
 
-        // A private window, like the live site: Commerce Admin rejects a request whose
-        // adobe.com cookies have grown too large ("400 Request Header Or Cookie Too
-        // Large"), and a normal profile collects them. With the notification while Chrome
-        // starts, as the live site has: the card's menu closes as the item is picked, so nothing
-        // else shows it working (owner, 2026-10-31).
-        await openPrivateBrowser(url);
+        // Classic UI in a private window, the Unified Shell in the SC's own browser (`openAdminUrl`
+        // says why). With the notification while Chrome starts, as the live site has: the card's
+        // menu closes as the item is picked, so nothing else shows it working (owner, 2026-10-31).
+        await openAdminUrl(url, { notify: true });
         return { success: true };
     },
 );

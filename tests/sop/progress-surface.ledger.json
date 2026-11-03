@@ -15,7 +15,7 @@
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:273": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
         "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts:102": "Runs when a VS Code setting changes, so there is no screen and no agent \u2014 a notification is the only surface available.",
         "src/commands/commandManager.ts:475": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24).",
-        "src/core/utils/browserUtils.ts:60": "Covers the two or three seconds Chrome takes to show a private window, for an open with no button to show its own spinner: a menu item, a link, a question that has closed (owner, 2026-10-31). A button shows its spinner instead and calls openInIncognito. There is no operation to narrate and nothing can fail slowly."
+        "src/core/utils/browserUtils.ts:79": "Covers the two or three seconds Chrome takes to show a private window, for an open with no button to show its own spinner: a menu item, a link, a question that has closed (owner, 2026-10-31). A button shows its spinner instead and calls openInIncognito. There is no operation to narrate and nothing can fail slowly."
     },
     "blockingDialogs": {
         "src/features/dashboard/handlers/appBuilderComponentPromote.ts:137": "Gates: create a PUBLIC GitHub repository and push the app to it? Only when no screen modal is asking; from the card the same yes is the modal's Create button.",

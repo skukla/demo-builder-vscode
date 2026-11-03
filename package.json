@@ -258,7 +258,7 @@
                             "Classic UI"
                         ],
                         "default": "unified-shell",
-                        "description": "Which Commerce Admin opens for a Commerce as a Cloud Service project. Each project can choose differently on its Configure screen.",
+                        "description": "Which Commerce Admin opens for a Commerce as a Cloud Service project. Unified Shell opens in your browser, and Classic UI in a private window. Each project can choose differently on its Configure screen.",
                         "order": 1
                     }
                 }

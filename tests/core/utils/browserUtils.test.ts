@@ -28,7 +28,7 @@ const mockSleep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/core/utils/sleep', () => ({ sleep: (ms: number) => mockSleep(ms) }));
 
 import * as vscode from 'vscode';
-import { openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
+import { openInDefaultBrowser, openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 const realPlatform = process.platform;
@@ -105,6 +105,32 @@ describe('openInIncognito', () => {
  * The notification that covers the launch. It lived in two screens' handlers,
  * written out twice; both call this now, so this is where its shape is pinned.
  */
+describe('openInDefaultBrowser', () => {
+    const UNIFIED = 'https://experience.adobe.com/#/@acme/in:tenant123/commerce/cloud-service/admin';
+    const realPlatform = process.platform;
+
+    afterEach(() => Object.defineProperty(process, 'platform', { value: realPlatform }));
+
+    it('hands macOS the address as written, as one argument', async () => {
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
+        mockExecFile.mockImplementation((_file, _args, callback) => callback(null, '', ''));
+
+        await openInDefaultBrowser(UNIFIED);
+
+        expect(mockExecFile).toHaveBeenCalledWith('open', [UNIFIED], expect.any(Function));
+        expect(mockOpenExternal).not.toHaveBeenCalled();
+    });
+
+    it('falls back to VS Code when that fails', async () => {
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
+        mockExecFile.mockImplementation((_file, _args, callback) => callback(new Error('no opener'), '', ''));
+
+        await openInDefaultBrowser(UNIFIED);
+
+        expect(mockOpenExternal).toHaveBeenCalledTimes(1);
+    });
+});
+
 describe('openPrivateBrowser', () => {
     it('opens incognito behind a notification that cannot be cancelled', async () => {
         onPlatform('darwin');

@@ -4,9 +4,16 @@
  */
 
 import * as vscode from 'vscode';
-import { resolveAdminExperience, resolveAdminPanelUrl } from '@/core/utils/commerceAdmin';
+import { openInDefaultBrowser, openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
+import { openCommerceAdmin, resolveAdminExperience, resolveAdminPanelUrl } from '@/core/utils/commerceAdmin';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../helpers/projectFake';
+
+jest.mock('@/core/utils/browserUtils', () => ({
+    openInDefaultBrowser: jest.fn().mockResolvedValue(undefined),
+    openInIncognito: jest.fn().mockResolvedValue(true),
+    openPrivateBrowser: jest.fn().mockResolvedValue(true),
+}));
 
 const UNIFIED = 'https://experience.adobe.com/#/@acme/in:tenant123/commerce/cloud-service/admin';
 const CLASSIC = 'https://na1-sandbox.admin.commerce.adobe.com/tenant123/admin/admin/dashboard/';
@@ -54,5 +61,35 @@ describe('resolveAdminPanelUrl', () => {
     it.each([undefined, '', '  '])('opens the classic Admin with no organization to address (%p)', (IMSOrgId) => {
         settings({ IMSOrgId });
         expect(resolveAdminPanelUrl(project())).toBe(CLASSIC);
+    });
+});
+
+describe('openCommerceAdmin', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('opens the Unified Shell in the SC\'s own browser', async () => {
+        settings({ IMSOrgId: 'acme' });
+
+        await expect(openCommerceAdmin(project())).resolves.toEqual({ outcome: 'opened' });
+
+        expect(openInDefaultBrowser).toHaveBeenCalledWith(UNIFIED);
+        expect(openInIncognito).not.toHaveBeenCalled();
+    });
+
+    it('opens Classic UI in a private window', async () => {
+        settings({ IMSOrgId: 'acme' });
+
+        await openCommerceAdmin(project('classic'));
+
+        expect(openInIncognito).toHaveBeenCalledWith(CLASSIC);
+        expect(openInDefaultBrowser).not.toHaveBeenCalled();
+    });
+
+    it('shows the notification for Classic UI when asked', async () => {
+        settings({ IMSOrgId: 'acme' });
+
+        await openCommerceAdmin(project('classic'), { notify: true });
+
+        expect(openPrivateBrowser).toHaveBeenCalledWith(CLASSIC);
     });
 });

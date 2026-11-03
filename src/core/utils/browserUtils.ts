@@ -43,6 +43,25 @@ export async function openInIncognito(url: string): Promise<boolean> {
 }
 
 /**
+ * Open a URL in the SC's own browser, signed in as they are, keeping its address exactly.
+ *
+ * On macOS through `open`: a Unified Shell address carries `@` and `:` after its `#`, and
+ * `vscode.Uri` percent-encodes those when it writes the address back out. Elsewhere VS Code's opener
+ * is the only one there is. The URL is expected to be validated already.
+ */
+export async function openInDefaultBrowser(url: string): Promise<void> {
+    if (process.platform === 'darwin') {
+        try {
+            await execFileAsync('open', [url]);
+            return;
+        } catch {
+            // No opener answered; VS Code's may.
+        }
+    }
+    await vscode.env.openExternal(vscode.Uri.parse(url));
+}
+
+/**
  * Open a URL in a private browser window, with a notification covering the launch.
  *
  * For an open with no button to show it working: a menu item, which closes as it is picked
