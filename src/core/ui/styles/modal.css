@@ -21,6 +21,13 @@
    scrolling content bleed through that strip, so zero it — the footer owns the bottom gap. */
 .modal-content {
     padding-bottom: 0;
+    /* Room for a focus ring (2px outline, 2px offset) at the dialog's edges. Spectrum's content
+       box clips what it holds, and the buttons and the body's fields sit flush with its sides
+       and bottom, so a ring there was cut off. The box reaches 4px further out on those three
+       sides, and the body and the buttons take the 4px back as padding, so nothing moves.
+       It also stops a field's own ring room (`.search-header`) poking past the body's edge,
+       which made the body scroll sideways by 4px (owner, 2026-11-04). */
+    margin: 0 -4px -4px;
     /* Column flex so .modal-body can grow and push the footer to the true bottom on a
        SHORT modal (sticky only pins against an overflowing container — see below). */
     display: flex;
@@ -33,6 +40,8 @@
 .modal-body {
     flex: 1 1 auto;
     min-height: 0;
+    /* The ring room `.modal-content` reaches out for, given back. */
+    padding: 0 4px;
     /* THE scroll container. Without this the body just grows: a long list (the
        ~90-row Adobe API picker) overflows the dialog, and the sticky footer pins
        against a container that no longer scrolls — so the buttons land in the
@@ -127,9 +136,10 @@
     /* 24 between the body and the buttons (dialog design rules). The 16px of padding that
        sat over the rule line went with the line. */
     margin-top: 24px;
-    padding-top: 0;
-    /* None: the dialog's own padding below matches the 40 above its title. */
-    padding-bottom: 0;
+    /* No space of its own above or below: the dialog's own padding below matches the 40 above
+       its title. The 4px on the sides and bottom is the ring room `.modal-content` reaches out
+       for, given back. */
+    padding: 0 4px 4px;
     display: flex;
     justify-content: flex-end;
     /* Wraps the row, never a label, when the dialog is too narrow for its buttons. */
