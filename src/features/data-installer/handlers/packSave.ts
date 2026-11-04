@@ -17,7 +17,7 @@ import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { writePackToStore } from '../services/datapackTransfer';
 import { saveStoreChanges } from '../services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '../services/demoBuilderEngine/storeAccess';
-import { type SaveInto, copyNameFor, planSave, recordSave } from '../services/demoPack';
+import { type SaveInto, planSave, recordSave } from '../services/demoPack';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { ProjectStore, SaveOpened } from './storeChangesHandlers';
 import type { OperationOutcome } from '@/core/vscode/withOperationProgress';
@@ -35,12 +35,12 @@ export function failure(context: HandlerContext, error: unknown, fallback: strin
 }
 
 /** A save the SC must name: the demo's pack is not theirs, or there is none. Writes nothing. */
-function needsName(suggestedName: string): HandlerResponse {
+function needsName(): HandlerResponse {
     return {
         success: false,
         error: 'This datapack is not yours, so the changes cannot be saved into it. Save them as a new datapack of your own: send saveAs with its name.',
         code: ErrorCode.INVALID_OPERATION,
-        data: { needsName: true, suggestedName },
+        data: { needsName: true },
     };
 }
 
@@ -56,7 +56,6 @@ export async function saveIntoFor(
     const typed = typeof saveAs?.displayName === 'string' ? saveAs.displayName.trim() : '';
     if (typed) return { displayName: typed };
     const held = store.project.datapack;
-    const about = held ? await store.deps.describe(held) : undefined;
     if (held?.store === 'library') {
         const library = await resolveDataInstallerAccess(context, 'library');
         if (library.ok) {
@@ -70,7 +69,7 @@ export async function saveIntoFor(
             }
         }
     }
-    return { response: needsName(copyNameFor(about?.displayName)) };
+    return { response: needsName() };
 }
 
 /** Capture, write the new version into the library, and record it on the project. */

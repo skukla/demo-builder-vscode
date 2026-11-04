@@ -20,7 +20,7 @@ const SENTENCE = '3 items changed since install: the category Critical Power, an
 /** The demo's pack is the SC's own: saving goes into it. */
 const CHANGED_MINE: DatapackRemovalChanges = { count: 3, kinds: [], sentence: SENTENCE, packName: 'Acme Bodea', alwaysSave: false };
 /** The demo's pack is a team pack: saving makes a new pack, starting from this name. */
-const CHANGED_TEAM: DatapackRemovalChanges = { count: 3, kinds: [], sentence: SENTENCE, suggestedName: 'Bodea Copy', alwaysSave: false };
+const CHANGED_TEAM: DatapackRemovalChanges = { count: 3, kinds: [], sentence: SENTENCE, alwaysSave: false };
 const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], alwaysSave: false };
 const FAILED: DataInstallerFailure = { message: 'The store could not be read.' };
 
@@ -34,11 +34,11 @@ describe('confirmContent', () => {
     });
 
     it("names the SC's pack the changes go into", () => {
-        expect(confirmContent(CHANGED_MINE, null)).toEqual({ kind: 'changes', sentence: SENTENCE, packName: 'Acme Bodea', suggestedName: '' });
+        expect(confirmContent(CHANGED_MINE, null)).toEqual({ kind: 'changes', sentence: SENTENCE, packName: 'Acme Bodea' });
     });
 
-    it("starts Save As's name when the pack is not the SC's", () => {
-        expect(confirmContent(CHANGED_TEAM, null)).toEqual({ kind: 'changes', sentence: SENTENCE, suggestedName: 'Bodea Copy' });
+    it("names no pack when the pack is not the SC's: Save As's name starts empty", () => {
+        expect(confirmContent(CHANGED_TEAM, null)).toEqual({ kind: 'changes', sentence: SENTENCE });
     });
 
     it("says only that they will be saved when the setting answers and the pack is the SC's", () => {
@@ -72,9 +72,9 @@ describe('the box and the name', () => {
         expect(toggleAlways(FRESH_CHOICE)).toEqual({ always: true });
     });
 
-    it('takes the name typed, else the one it started with, trimmed', () => {
+    it('takes the name typed, trimmed; it starts empty, as Create Datapack\'s does', () => {
         const team = confirmContent(CHANGED_TEAM, null);
-        expect(saveAsNameOf(team, FRESH_CHOICE)).toBe('Bodea Copy');
+        expect(saveAsNameOf(team, FRESH_CHOICE)).toBe('');
         expect(saveAsNameOf(team, { always: false, saveAsName: '  My Bodea ' })).toBe('My Bodea');
         expect(saveAsNameOf(team, { always: false, saveAsName: '' })).toBe('');
     });
@@ -99,7 +99,6 @@ describe('removalAnswer', () => {
 
     it("keeps as a new pack by the name given when the pack is not the SC's", () => {
         expect(removalAnswer(team, { always: false, saveAsName: 'My Bodea' }, true)).toEqual({ changes: 'keep', saveAs: { displayName: 'My Bodea' } });
-        expect(removalAnswer(team, FRESH_CHOICE, true)).toEqual({ changes: 'keep', saveAs: { displayName: 'Bodea Copy' } });
     });
 
     it('keeps when the setting already answers, whichever button', () => {
@@ -119,8 +118,8 @@ describe('removeLabel', () => {
     it('names what the main button does', () => {
         expect(removeLabel({ kind: 'read-failed', reason: 'x' })).toBe('Remove Anyway');
         expect(removeLabel({ kind: 'plain' })).toBe('Remove');
-        expect(removeLabel({ kind: 'changes', sentence: 's', packName: 'p', suggestedName: '' })).toBe('Save and Remove');
-        expect(removeLabel({ kind: 'changes', sentence: 's', suggestedName: 'Bodea Copy' })).toBe('Save As New and Remove');
+        expect(removeLabel({ kind: 'changes', sentence: 's', packName: 'p' })).toBe('Save and Remove');
+        expect(removeLabel({ kind: 'changes', sentence: 's' })).toBe('Save As New and Remove');
     });
 });
 

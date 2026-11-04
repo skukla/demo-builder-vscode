@@ -10,6 +10,7 @@
  */
 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { engineThatInstalled } from '@/features/data-installer/services/buildDatapackEngine';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
@@ -116,10 +117,17 @@ export async function confirmSampleDataRemoval(
  * they must go and do something about it.
  */
 /**
- * Asks for the name of a new datapack the SC's changes go into (Save As), when the demo's pack is
- * not theirs; nothing (or empty) loses the changes. The reset's own question was already asked.
+ * The SC's answer about their changes, when the demo's pack is not theirs: a name to save them as
+ * a new datapack of theirs (Save As), losing them, or no answer, which keeps the data where it is.
  */
-export type AskSaveAsName = (suggestedName: string) => Promise<string | undefined>;
+export type SaveAsAnswer = { saveAs: string } | 'drop' | undefined;
+
+/**
+ * Asks it. The name is required: losing the changes is its own answer, never an empty name (owner,
+ * 2026-11-04), as in Create Datapack and the Datapacks screen's removal. The reset's own question
+ * was already asked.
+ */
+export type AskSaveAsName = (asked: { sentence?: string }) => Promise<SaveAsAnswer>;
 
 /**
  * The SC's changes, before the reset removes the pack: saved into the demo's pack when it is
@@ -142,10 +150,14 @@ async function settleBeforeReset(
         unanswered: 'keep' as const,
     };
     let settled = await settleChangesBeforeRemoval(forProject, request, (stage) => report(stage));
-    const suggested = 'response' in settled ? (settled.response.data as { suggestedName?: string } | undefined)?.suggestedName : undefined;
     if ('response' in settled && settled.response.code === ErrorCode.CHANGES_NEED_ANSWER && askName) {
-        const name = (await askName(suggested ?? ''))?.trim();
-        const answer = name ? { answer: 'keep' as const, saveAs: { displayName: name } } : { answer: 'drop' as const };
+        const asked = settled.response.data as { sentence?: string } | undefined;
+        const chosen = await askName(asked?.sentence ? { sentence: asked.sentence } : {});
+        if (chosen === undefined) {
+            context.logger.info('[EdsReset] Sample data kept: the changes in it were not answered.');
+            return false;
+        }
+        const answer = chosen === 'drop' ? { answer: 'drop' as const } : { answer: 'keep' as const, saveAs: { displayName: chosen.saveAs } };
         settled = await settleChangesBeforeRemoval(forProject, { ...request, ...answer }, (stage) => report(stage));
     }
     if ('response' in settled) {
@@ -208,20 +220,52 @@ export async function removeProjectSampleData(
     }
 }
 
+/** The answers, in the Datapacks screen's removal words (`importModalView`). */
+const SAVE = 'Save As New and Remove';
+const DROP = 'Remove Without Saving';
+const NAME_LABEL = 'Save Changes As';
+const NAME_REQUIRED = 'Datapack name is required';
+
 /**
- * The reset's Save As question, as a VS Code input box: the name starts as the suggested one, and
- * leaving it empty or pressing Escape loses the changes, as the prompt says.
+ * In the reset's progress window: the name field, empty as Create Datapack's starts, and both
+ * answers; an empty name is asked again.
+ */
+async function askInWindow(sentence: string | undefined): Promise<SaveAsAnswer> {
+    let value = '';
+    let missing = false;
+    for (;;) {
+        const answer = await askForDetailsDuringOperation({
+            message: sentence ?? '',
+            fields: [{ id: 'name', label: NAME_LABEL, value, ...(missing ? { description: NAME_REQUIRED } : {}) }],
+            actions: [SAVE, DROP],
+        });
+        if (answer.action === DROP) return 'drop';
+        if (answer.action !== SAVE) return undefined;
+        const name = (answer.values.name ?? '').trim();
+        if (name) return { saveAs: name };
+        value = answer.values.name ?? '';
+        missing = true;
+    }
+}
+
+/** With no window to ask in: the two answers, then the name, which the box will not take empty. */
+async function askInDialogs(vscode: typeof import('vscode'), sentence: string | undefined): Promise<SaveAsAnswer> {
+    const chosen = await vscode.window.showWarningMessage(sentence ?? NAME_LABEL, { modal: true }, SAVE, DROP);
+    if (chosen === DROP) return 'drop';
+    if (chosen !== SAVE) return undefined;
+    const name = await vscode.window.showInputBox({
+        title: NAME_LABEL,
+        ignoreFocusOut: true,
+        validateInput: (typed) => (typed.trim() ? undefined : NAME_REQUIRED),
+    });
+    return name?.trim() ? { saveAs: name.trim() } : undefined;
+}
+
+/**
+ * The reset's Save As question: in its progress window when one is open, else in VS Code's dialogs.
  *
  * @param vscode - the VS Code API
  */
 export function askSaveAsNameWith(vscode: typeof import('vscode')): AskSaveAsName {
-    return (suggestedName) =>
-        Promise.resolve(
-            vscode.window.showInputBox({
-                title: 'Save Your Changes As',
-                prompt: 'This demo uses a datapack that is not yours. Name a new one of yours to keep your changes, or leave it empty to lose them.',
-                value: suggestedName,
-                ignoreFocusOut: true,
-            }),
-        );
+    return ({ sentence }) => (modalIsAsking() ? askInWindow(sentence) : askInDialogs(vscode, sentence));
 }

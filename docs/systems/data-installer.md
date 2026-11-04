@@ -115,11 +115,15 @@ which lists every object the install made. It never removes by name.
   **Save and Remove** and **Remove Without Saving**. When the demo's pack is the SC's own, saving is
   Save, a new version of it, the previous one kept, and "Always Save Without Asking" sets
   `demoBuilder.dataInstaller.changesOnRemoval` to `save`. When it is not (a team pack), saving is
-  Save As: the confirm asks the new pack's name, starting from "{pack} Copy", and the main button
+  Save As: the confirm asks the new pack's name, starting empty as Create Datapack's does (owner,
+  2026-11-04: two demos of Bodea both suggested "Bodea Copy"), and the main button
   says **Save As New and Remove**. The removal is then of the saved version,
   since the install record moved onto it. A save that fails removes nothing. A read that fails says
   so and offers Remove anyway. A project reset or an Edit that removes the pack saves first without
-  a second question; `reset_datapack` names the changes and refuses until `changes` is `keep` or
+  a second question when the pack is the SC's; when it is not, it asks the same two answers, in its
+  progress window (**Save Changes As**, required, then **Save As New and Remove**, or **Remove
+  Without Saving**), and closing the question keeps the data (owner, 2026-11-04: an empty name used
+  to lose the changes). `reset_datapack` names the changes and refuses until `changes` is `keep` or
   `drop`, unless the setting answers.
 - **A pack it has no record of** (one the service installed, or one installed from
   another project) is refused, and nothing is removed (owner, 2026-10-30, step 14

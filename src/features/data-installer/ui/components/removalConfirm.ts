@@ -18,7 +18,7 @@ export type ConfirmContent =
      * The SC's changes: saved into the demo's pack when it is theirs (`packName`), else as a new
      * pack under a name they give (`suggestedName` is where the name starts).
      */
-    | { kind: 'changes'; sentence: string; packName?: string; suggestedName: string }
+    | { kind: 'changes'; sentence: string; packName?: string }
     /** The setting answers: the one line, and no boxes. */
     | { kind: 'will-save'; packName: string }
     /** The read failed, so nothing is known; never the same as nothing changed. */
@@ -75,7 +75,6 @@ export function confirmContent(answer: DatapackRemovalChanges | null, failure: D
         kind: 'changes',
         sentence: answer.sentence,
         ...(answer.packName ? { packName: answer.packName } : {}),
-        suggestedName: answer.suggestedName ?? '',
     };
 }
 
@@ -83,10 +82,10 @@ export function toggleAlways(choice: RemovalChoice): RemovalChoice {
     return { ...choice, always: !choice.always };
 }
 
-/** The name Save As would use: what the SC typed, else where it started. */
+/** The name Save As would use: what the SC typed. It starts empty, as Create Datapack's does. */
 export function saveAsNameOf(content: ConfirmContent, choice: RemovalChoice): string {
     if (content.kind !== 'changes') return '';
-    return (choice.saveAsName ?? content.suggestedName).trim();
+    return (choice.saveAsName ?? '').trim();
 }
 
 /**

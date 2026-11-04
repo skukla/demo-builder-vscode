@@ -740,7 +740,7 @@ answers only the job's id, so that line arrives with the outcome, not with the s
 and at most three names per count, never rows. `save_store_changes_to_pack` (confirm-gated) saves
 the store's copy of the pack into the datapack library, Save or Save As (2026-11-03): without
 `saveAs` a new version of the pack the project uses, only when it is the user's own; otherwise it
-writes nothing and answers `data.needsName` with `data.suggestedName`, and `saveAs: {displayName}`
+writes nothing and answers `data.needsName`, and `saveAs: {displayName}`
 makes a new pack of the user's under that name. Either way it saves what the install record lists and
 the installed version's own products, attributes and sets, read from the store, leaves the pack
 installed as it was, moves the project onto the new version (recording the store and the pack it was

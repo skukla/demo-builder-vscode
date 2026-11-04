@@ -308,7 +308,8 @@ describe('the setting answers', () => {
     it("still asks when the demo's pack is not the SC's: there is nowhere to save without a name", async () => {
         const result = await reset();
 
-        expect(result).toMatchObject({ success: false, code: ErrorCode.CHANGES_NEED_ANSWER, data: { suggestedName: 'Bodea Copy' } });
+        expect(result).toMatchObject({ success: false, code: ErrorCode.CHANGES_NEED_ANSWER });
+        expect(result.data).not.toHaveProperty('packName');
         expect(events).toStrictEqual([]);
     });
 
@@ -497,14 +498,13 @@ describe('get-datapack-removal-changes', () => {
                 alwaysSave: false,
             },
         });
-        expect(result.data).not.toHaveProperty('suggestedName');
     });
 
-    it("answers the name Save As starts with when the demo's pack is not the SC's", async () => {
+    it("names no pack to save into when the demo's pack is not the SC's (Save As, its name typed)", async () => {
         const result = await read();
 
-        expect(result.data).toMatchObject({ suggestedName: 'Bodea Copy' });
         expect(result.data).not.toHaveProperty('packName');
+        expect(result.data).not.toHaveProperty('suggestedName');
     });
 
     it('answers no sentence with nothing changed', async () => {

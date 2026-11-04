@@ -4,7 +4,7 @@
  * name when the demo's pack is not the SC's), and that a wait shows only its spinner.
  */
 
-import { act, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { mockRequest, press, renderModal, resetModalMocks, settle, awaitForm, defaultResponse, mockPostMessage } from './ImportDatapackModal.testUtils';
 import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
@@ -18,7 +18,7 @@ const KINDS = [{ kind: 'categories', count: 1, names: ['Critical Power'] }, { ki
 /** The demo's pack is the SC's own: saving goes into it. */
 const CHANGED: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENTENCE, packName: 'Acme Bodea', alwaysSave: false };
 /** The demo's pack is a team pack: saving makes a new pack of the SC's, by a name they give. */
-const CHANGED_TEAM: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENTENCE, suggestedName: 'Bodea Copy', alwaysSave: false };
+const CHANGED_TEAM: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENTENCE, alwaysSave: false };
 const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], alwaysSave: false };
 const ALWAYS_BOX = 'Always Save Without Asking';
 const DELETES = 'Permanently deletes Bodea’s categories.';
@@ -279,20 +279,23 @@ describe('something changed, in a pack of the SC\'s', () => {
 describe('something changed, in a pack that is not the SC\'s', () => {
     beforeEach(() => answers({ success: true, data: CHANGED_TEAM }));
 
-    it('asks the new pack\'s name, starting from the suggested one, with no always box', async () => {
+    it('asks the new pack\'s name, starting empty, with no always box, and saves only once it has one', async () => {
         await openConfirm();
 
-        expect(screen.getByRole('textbox', { name: 'Save Changes As' })).toHaveValue('Bodea Copy');
+        expect(screen.getByRole('textbox', { name: 'Save Changes As' })).toHaveValue('');
         expect(screen.queryByRole('checkbox', { name: ALWAYS_BOX })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Save As New and Remove' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Save As New and Remove' })).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('keeps them as a new pack by the name given', async () => {
         await openConfirm();
 
+        await act(async () => {
+            fireEvent.change(screen.getByRole('textbox', { name: 'Save Changes As' }), { target: { value: 'My Bodea' } });
+        });
         await press(footerRemove());
 
-        expect(resetCalls()[0][1]).toMatchObject({ changes: 'keep', saveAs: { displayName: 'Bodea Copy' } });
+        expect(resetCalls()[0][1]).toMatchObject({ changes: 'keep', saveAs: { displayName: 'My Bodea' } });
     });
 });
 

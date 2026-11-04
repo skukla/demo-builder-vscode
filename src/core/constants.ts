@@ -338,7 +338,9 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v53 (2026-11-03, datapack Save and Save As): import-datapack says a save goes into the pack the
 // project uses when it is the user's, else asks for a name, and that there is no automatic pack per
 // demo. Existing projects would keep telling the agent saves go to "this demo's own pack".
-export const AI_CONTEXT_VERSION = 53;
+// v54 (2026-11-04, no suggested Save As name): import-datapack stops telling the agent to offer
+// `suggestedName`, which the save no longer answers. Existing projects would keep pointing at it.
+export const AI_CONTEXT_VERSION = 54;
 
 /**
  * Component IDs for standardized component instance access

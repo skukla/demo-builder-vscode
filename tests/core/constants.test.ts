@@ -149,8 +149,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // 49: import-datapack says an import installs what is ticked, and a removal takes the whole record.
     // 50: a project that never chose an authoring experience now links Experience Workspace.
     // 51: update-credentials no longer names the ACCS OAuth pair.
-    it('is 51 (update-credentials no longer names the ACCS OAuth pair)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(53);
+    // 52: datapacks come from Demo Builder's datapack store first. 53: datapack Save and Save As.
+    // 54: import-datapack no longer offers a suggested Save As name.
+    it('is 54 (import-datapack no longer offers a suggested Save As name)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(54);
     });
 });
 

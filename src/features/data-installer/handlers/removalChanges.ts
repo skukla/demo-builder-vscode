@@ -80,12 +80,10 @@ async function readChanges(context: HandlerContext, project: Project, pack: Data
     }
 }
 
-/** Where a save of the changes would go: the demo's pack by name (Save), or the name Save As starts with. */
-async function whereSaved(context: HandlerContext, store: Parameters<typeof saveIntoFor>[1]): Promise<{ packName: string } | { suggestedName?: string }> {
+/** Where a save of the changes would go: the demo's pack by name (Save); none when it needs a name (Save As). */
+async function whereSaved(context: HandlerContext, store: Parameters<typeof saveIntoFor>[1]): Promise<{ packName?: string }> {
     const into = await saveIntoFor(context, store, undefined);
-    if (!('response' in into)) return { packName: into.displayName };
-    const suggested = (into.response.data as { suggestedName?: string } | undefined)?.suggestedName;
-    return suggested ? { suggestedName: suggested } : {};
+    return 'response' in into ? {} : { packName: into.displayName };
 }
 
 /**
@@ -140,10 +138,14 @@ function askFor(changes: DatapackRemovalChanges): HandlerResponse {
         success: false,
         error:
             `${changes.sentence} Nothing was removed. Tell the user, then call again with changes:"keep" to save them first ` +
-            `(${changes.packName ? `into ${changes.packName}` : `as a new datapack of theirs: also send saveAs with its name, e.g. "${changes.suggestedName ?? 'My Datapack'}"`}), ` +
+            `(${changes.packName ? `into ${changes.packName}` : 'as a new datapack of theirs: also send saveAs with the name the user gives it'}), ` +
             'or changes:"drop" to lose them.',
         code: ErrorCode.CHANGES_NEED_ANSWER,
-        data: { changes: changes.kinds, ...(changes.packName ? { packName: changes.packName } : {}), ...(changes.suggestedName ? { suggestedName: changes.suggestedName } : {}) },
+        data: {
+            changes: changes.kinds,
+            ...(changes.sentence ? { sentence: changes.sentence } : {}),
+            ...(changes.packName ? { packName: changes.packName } : {}),
+        },
     };
 }
 

@@ -294,7 +294,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'Save the store\'s copy of the datapack this project uses into the datapack library, with the categories, ' +
             'set, attributes and quantities its products need: Save or Save As. Without saveAs (Save) it is a NEW version of ' +
             'the pack the project uses, only when that pack is the user\'s own; when it is not (a team pack such as ' +
-            'Bodea, or a colleague\'s), nothing is written and the answer has data.needsName with data.suggestedName: ' +
+            'Bodea, or a colleague\'s), nothing is written and the answer has data.needsName: ' +
             'ask the user for a name, then call again with saveAs.displayName (Save As), which makes a NEW pack of ' +
             'theirs. Either way the project then uses the new version. Things added by hand in the Admin go in too ' +
             'when picked in selections (list_datapack_export_items lists them). No pack named: the project\'s when ' +

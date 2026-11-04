@@ -69,11 +69,6 @@ export function packIdFor(displayName: string, suffix: string = randomSuffix()):
     return `${slug || 'datapack'}-${suffix}`;
 }
 
-/** The name Save As starts with: the pack's own with "Copy", or empty when there is none. */
-export function copyNameFor(displayName: string | undefined): string {
-    return displayName ? `${displayName} Copy` : '';
-}
-
 /** A save's version: the UTC time to the second, as `YYYYMMDD-HHMMSS`. */
 export function savedVersion(at: Date): string {
     return at.toISOString().replace(/[-:]/gu, '').replace('T', '-').slice(0, 15);

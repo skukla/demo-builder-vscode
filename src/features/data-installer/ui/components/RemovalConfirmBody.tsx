@@ -36,7 +36,7 @@ export function RemovalConfirmBody({ deletes, view }: { deletes: readonly string
                         // Not the SC's pack, so saving makes a new one of theirs: Save As, named here.
                         <TextField
                             label="Save Changes As"
-                            value={choice.saveAsName ?? content.suggestedName}
+                            value={choice.saveAsName ?? ''}
                             onChange={view.onSaveAsName}
                             width="100%"
                         />

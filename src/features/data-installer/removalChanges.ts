@@ -28,8 +28,6 @@ export interface DatapackRemovalChanges {
     sentence?: string;
     /** The demo's pack by the name the SC knows it, when it is theirs: saving goes there (Save). */
     packName?: string;
-    /** When the demo's pack is not theirs: the name a save of the changes as a new pack starts with (Save As). */
-    suggestedName?: string;
     /** `demoBuilder.dataInstaller.changesOnRemoval` is `save`, so nobody needs asking. */
     alwaysSave: boolean;
 }

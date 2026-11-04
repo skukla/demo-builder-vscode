@@ -5,7 +5,6 @@
  */
 
 import {
-    copyNameFor,
     myVersions,
     packIdFor,
     planSave,
@@ -42,13 +41,6 @@ describe('packIdFor', () => {
     it('keeps only letters and digits, and has a name even when nothing is left', () => {
         expect(packIdFor('  Café — Q4!  ', 'abc123')).toBe('cafe-q4-abc123');
         expect(packIdFor('!!!', 'abc123')).toBe('datapack-abc123');
-    });
-});
-
-describe('copyNameFor', () => {
-    it("is the pack's own name with Copy, or nothing when there is none", () => {
-        expect(copyNameFor('Bodea')).toBe('Bodea Copy');
-        expect(copyNameFor(undefined)).toBe('');
     });
 });
 

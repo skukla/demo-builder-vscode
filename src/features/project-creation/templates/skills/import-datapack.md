@@ -126,9 +126,9 @@ Save As: the pack Demo Builder installed here, plus anything you pick in `select
 
 - **Save** (no `saveAs`): a NEW version of the pack the project uses, only when that pack is the
   user's own. When it is not (a team pack such as Bodea, or a colleague's), nothing is written and
-  the answer carries `data.needsName` and `data.suggestedName`.
+  the answer carries `data.needsName`.
 - **Save As** (`saveAs: { displayName }`): a NEW pack of the user's, under the name they give.
-  Ask the user for the name; offer `suggestedName`.
+  Ask the user for the name; do not make one up.
 
 Either way the project then uses the new version: it installs from it and resets to it. With no
 pack named it saves only what is picked, which is how a store built by hand in the Admin becomes

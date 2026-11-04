@@ -250,12 +250,13 @@ describe('save-store-changes-to-pack', () => {
         expect(context.stateManager.saveProject).not.toHaveBeenCalled();
     });
 
-    it("writes nothing into a pack that is not the SC's, and asks for a name, starting with the pack's", async () => {
+    it("writes nothing into a pack that is not the SC's, and asks for a name", async () => {
         const context = harness();
 
         const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, confirm: true });
 
-        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION, data: { needsName: true, suggestedName: 'Bodea Copy' } });
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION, data: { needsName: true } });
+        expect(result.data).not.toHaveProperty('suggestedName');
         expect(mockedSave).not.toHaveBeenCalled();
         expect(context.stateManager.saveProject).not.toHaveBeenCalled();
     });

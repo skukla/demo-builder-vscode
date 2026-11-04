@@ -42,26 +42,36 @@ beforeEach(() => {
 });
 
 describe("removeProjectSampleData, when the demo's pack is not the SC's (Save As, 2026-11-03)", () => {
-    const needsName = { response: { success: false, error: 'Name it.', code: ErrorCode.CHANGES_NEED_ANSWER, data: { suggestedName: 'Bodea Copy' } } };
+    const sentence = 'You changed 2 things since it was installed.';
+    const needsName = { response: { success: false, error: 'Name it.', code: ErrorCode.CHANGES_NEED_ANSWER, data: { sentence } } };
 
-    it('asks for a name, starting from the suggested one, then saves under it and removes', async () => {
+    it('asks for a name, with what changed, then saves under it and removes', async () => {
         mockedSettle.mockResolvedValueOnce(needsName).mockResolvedValueOnce({});
-        const askName = jest.fn().mockResolvedValue('  My Bodea ');
+        const askName = jest.fn().mockResolvedValue({ saveAs: 'My Bodea' });
 
         await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), askName);
 
-        expect(askName).toHaveBeenCalledWith('Bodea Copy');
+        expect(askName).toHaveBeenCalledWith({ sentence });
         expect(mockedSettle.mock.calls[1][1]).toMatchObject({ answer: 'keep', saveAs: { displayName: 'My Bodea' } });
         expect(mockedRemove).toHaveBeenCalledTimes(1);
     });
 
-    it('loses the changes when no name is given, as the question says, and still removes', async () => {
+    it('loses the changes only when Remove Without Saving is the answer, and still removes', async () => {
         mockedSettle.mockResolvedValueOnce(needsName).mockResolvedValueOnce({});
 
-        await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), jest.fn().mockResolvedValue(undefined));
+        await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), jest.fn().mockResolvedValue('drop'));
 
         expect(mockedSettle.mock.calls[1][1]).toMatchObject({ answer: 'drop' });
         expect(mockedRemove).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the data, removing nothing, when the question is closed unanswered', async () => {
+        mockedSettle.mockResolvedValueOnce(needsName);
+
+        await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), jest.fn().mockResolvedValue(undefined));
+
+        expect(mockedSettle).toHaveBeenCalledTimes(1);
+        expect(mockedRemove).not.toHaveBeenCalled();
     });
 
     it('removes nothing with no way to ask, and says so', async () => {
