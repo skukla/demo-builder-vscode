@@ -160,7 +160,8 @@ describe('UpdatesModal', () => {
     it('disables Apply when nothing is ticked', () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
 
-        expect(screen.getByRole('button', { name: 'Apply 0 Updates' })).toBeDisabled();
+        // No number with nothing ticked: "Apply 0 Updates" read as a broken count (2026-11-03).
+        expect(screen.getByRole('button', { name: 'Apply Updates' })).toBeDisabled();
     });
 
     // Each ticked row as the Prerequisites step draws its checks (owner, 2026-10-21).

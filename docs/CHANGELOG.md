@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Experience Workspace is the default for authoring.** Projects that never chose an authoring experience now open Experience Workspace. A project that chose DA.live Classic keeps it.
 
 ### Changed
+- **The Updates window's button names no number when nothing is ticked.** It reads Apply Updates, greyed out, rather than Apply 0 Updates.
 - **Block Libraries shows everything the storefront gets.** Demo Builder Blocks, which every storefront has, now shows as a locked, ticked card, as a package's own blocks already did. Custom Libraries always shows: "None added yet. Add them in Block Library Settings." when you have none, with the link in the sentence.
 - **A colleague's demo that was reset is no longer offered as an ordinary update.** If the demo your storefront was copied from has been reset to its template since you last took it, the Updates window shows that update unticked and says the source was reset, because applying it would replace your storefront. Agents leave it out unless you ask for it.
 - **Clear demo data leaves nothing behind that only the chosen stores use.** It now also removes their companies and the customers in them, shared catalogs with their customer groups, customer groups, attribute sets and attributes, and sets their websites' settings to the default's value. Anything another demo also uses stays, and the dialog names it and says why. Not yet proved on a live store.

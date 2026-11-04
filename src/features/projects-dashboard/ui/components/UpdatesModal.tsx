@@ -192,7 +192,7 @@ function contentFor(controls: UpdatesModalControls): Chrome & Heading & { body: 
     }
     const rows = view.phase === 'list' ? view.rows : [];
     const count = rows.filter((r) => controls.ticked.has(r.id) && !r.lockedReason).length;
-    const label = count === 1 ? 'Apply 1 Update' : `Apply ${count} Updates`;
+    const label = applyLabel(count);
     return {
         title: LIST_TITLE,
         body: <UpdateList rows={rows} controls={controls} />,
@@ -222,4 +222,11 @@ export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): 
             )}
         </DialogContainer>
     );
+}
+
+/** The Apply button names what it will do; with nothing ticked it names no number (2026-11-03: "Apply 0 Updates"). */
+function applyLabel(count: number): string {
+    if (count === 0) return 'Apply Updates';
+    if (count === 1) return 'Apply 1 Update';
+    return `Apply ${count} Updates`;
 }
