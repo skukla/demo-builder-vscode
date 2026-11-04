@@ -104,9 +104,13 @@ describe('buildDatapackEngine activity log', () => {
 
             // No target: the job stops at once, which is a job that ended all the same.
             await engine.startImport({ id: PACK, commerceInstance: 'unused', dataTypes: ['categories'] });
+            // The log is written after the job ends, through the real file system, so it is
+            // waited for in REAL time: up to 200 looks 10ms apart. It used to be 100 turns of the
+            // event loop, which a full-suite run outpaced while the write sat in the file system's
+            // queue, failing the push gate at random (2026-11-04). Normally the first look finds it.
             let entries = await readEngineActivity(nodeActivityFiles, dir);
-            for (let i = 0; i < 100 && entries.length === 0; i += 1) {
-                await new Promise((resolve) => setImmediate(resolve));
+            for (let i = 0; i < 200 && entries.length === 0; i += 1) {
+                await new Promise((resolve) => setTimeout(resolve, 10));
                 entries = await readEngineActivity(nodeActivityFiles, dir);
             }
 
