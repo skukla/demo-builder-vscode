@@ -339,3 +339,40 @@ describe('Save As', () => {
         expect(button('Continue')).toHaveAttribute('aria-disabled', 'true');
     });
 });
+
+describe('Select Everything (2026-11-03)', () => {
+    const everything = () => screen.getByRole('checkbox', { name: 'Select Everything' });
+
+    it('reads the kinds not opened yet, ticks every item of every kind, and hands them all to Save', async () => {
+        answer({ products: PRODUCTS, cart_rules: RULES });
+        const onSave = await open({ pack: PACK });
+        expect(everything()).not.toBeChecked();
+
+        await press(everything());
+        await settle();
+
+        // Every kind that may have something was asked for, once each.
+        expect(listCalls().map((call) => call.dataType)).toEqual(expect.arrayContaining(['products', 'cart_rules', 'customers']));
+        expect(everything()).toBeChecked();
+        expect(row('Products')).toHaveTextContent('2 selected');
+        expect(row('Cart Rules')).toHaveTextContent('1 selected');
+        await press(button('Save'));
+        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'], cart_rules: ['7'] });
+    });
+
+    it('shows the dash when only some are ticked, and clears every kind when unticked', async () => {
+        answer({ products: PRODUCTS, cart_rules: RULES });
+        await open({ pack: PACK });
+
+        await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
+        expect(everything()).toHaveAttribute('aria-checked', 'mixed');
+
+        await press(everything());
+        await settle();
+        expect(everything()).toBeChecked();
+        await press(everything());
+
+        expect(everything()).not.toBeChecked();
+        expect(row('Products')).not.toHaveTextContent('selected');
+    });
+});

@@ -13,6 +13,10 @@
  * the list's state, where before it a grey button was hard to see and an icon of a ticked box said
  * everything was selected above boxes that were not (owner, 2026-10-31).
  *
+ * `everything` is the same row one level up, over a list of lists: Create Datapack's kinds, where it
+ * ticks every item of every kind (owner, 2026-11-03, chosen over a footer button because it shows the
+ * partial state and sits on what it changes).
+ *
  * Styled by `core/ui/styles/checkbox-row.css` (`.select-all-row`), which every host bundle imports.
  *
  * @module core/ui/components/selection/SelectAllRow
@@ -27,12 +31,22 @@ export interface SelectAllRowProps {
     /** At least one box is ticked. */
     some: boolean;
     onToggle: () => void;
+    /** Over a list of lists: every item of every one ("Select Everything"). */
+    everything?: boolean;
+    /** Still reading what it would tick. */
+    isDisabled?: boolean;
 }
 
-export function SelectAllRow({ all, some, onToggle }: SelectAllRowProps): React.JSX.Element {
+export function SelectAllRow({ all, some, onToggle, everything = false, isDisabled }: SelectAllRowProps): React.JSX.Element {
     return (
         <div className="select-all-row">
-            <CheckboxRow label="Select All" isSelected={all} isIndeterminate={some && !all} onChange={onToggle} />
+            <CheckboxRow
+                label={everything ? 'Select Everything' : 'Select All'}
+                isSelected={all}
+                isIndeterminate={some && !all}
+                isDisabled={isDisabled}
+                onChange={onToggle}
+            />
         </div>
     );
 }

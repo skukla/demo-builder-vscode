@@ -18,6 +18,7 @@ import { dataTypeLabel } from '../../../dataTypeLabel';
 import type { PackBeingSaved } from '../datapackFlowStages';
 import { type StorePicksState, hasNothingToPick, isKnownEmpty } from '../useStorePicks';
 import { StoreItemsStage } from './StoreItemsStage';
+import { SelectAllRow } from '@/core/ui/components/selection/SelectAllRow';
 import { cn } from '@/core/ui/utils/classNames';
 
 const NO_PICKS: string[] = [];
@@ -65,6 +66,15 @@ export function StorePicksStage({ pack, store }: StorePicksStageProps): React.Re
             ) : null}
             <div className="datapack-picks">
                 <ul className="datapack-picks-rail">
+                    <li>
+                        <SelectAllRow
+                            everything
+                            all={store.everything.all}
+                            some={store.everything.some}
+                            isDisabled={store.everything.busy}
+                            onToggle={() => void store.selectEverything(!store.everything.all)}
+                        />
+                    </li>
                     {PICKABLE_KINDS.map((each) => <KindRow key={each} kind={each} store={store} />)}
                 </ul>
                 <div className="datapack-picks-pane">

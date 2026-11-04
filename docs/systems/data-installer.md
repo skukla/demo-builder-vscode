@@ -209,7 +209,9 @@ kinds' `total_count` at once (`pageSize=1`, `storeItems.ts`), reads only, with n
 `list_datapack_export_items` answers per kind. Only a count of none is shown or acted on. Cart rules
 and companies are scoped in code after their read, so theirs count the whole store and grey only when
 the whole store has none; a failed count says nothing. Any other card stays clickable until its list
-answers, and greys then if nothing was left to pick. The list leaves off what the pack holds already,
+answers, and greys then if nothing was left to pick. **Select Everything**, at the head of the kinds,
+ticks every item of every kind that may have some, reading any kind not opened yet; unticking it
+clears them all, and its box is dashed when some are ticked. The list leaves off what the pack holds already,
 so what is left is what the SC made by hand. The save (`packSave.ts`, `saveStore.ts`) writes the pack
 Demo Builder installed here when there is one, plus what was picked; with none, a store Demo Builder
 did not fill, what was picked alone. A pick brings what it needs (a

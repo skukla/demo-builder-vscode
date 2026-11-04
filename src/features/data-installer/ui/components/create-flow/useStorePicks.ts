@@ -17,6 +17,10 @@
  * The kind shown is the one the SC chose, until that turns out to have nothing to select: then the
  * next that may have some, so the pane is never empty while anything else could fill it.
  *
+ * **Select Everything** (owner, 2026-11-03) ticks every item of every kind that may have some,
+ * reading first any kind not yet opened; unticking it clears every kind. Its box is ticked when every
+ * kind read is wholly selected, and dashed when some are.
+ *
  * @module features/data-installer/ui/components/create-flow/useStorePicks
  */
 
@@ -24,6 +28,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../../pickableKinds';
 import { useDataInstallerRequest } from '../../hooks/useDataInstallerRequest';
 import type { PackBeingSaved } from './datapackFlowStages';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { HandlerResponse } from '@/types/handlers';
 
 /** One kind's answer: its page, or null when the read failed. Absent until a read answers. */
 export type KindReads = Partial<Record<PickableKind, StoreItemPage | null>>;
@@ -43,6 +49,10 @@ export interface StorePicksState {
     open: (kind: PickableKind) => void;
     setPicked: (ids: string[]) => void;
     answered: (kind: PickableKind, page: StoreItemPage | null) => void;
+    /** Select Everything's box: every kind wholly ticked, some ticked, and still reading. */
+    everything: { all: boolean; some: boolean; busy: boolean };
+    /** Tick every item of every kind (reading those not opened yet), or clear them all. */
+    selectEverything: (on: boolean) => Promise<void>;
 }
 
 /** A read answered and left nothing to pick. */
@@ -56,6 +66,27 @@ export function isKnownEmpty(read: StoreItemPage | null | undefined, count: numb
 }
 
 const NO_COUNTS: StoreKindCounts = {};
+
+/** One kind's list, as its pane reads it (`list-datapack-export-items`); null when it did not answer. */
+async function readKind(kind: PickableKind, pack: PackBeingSaved | undefined): Promise<StoreItemPage | null> {
+    const of = pack ? { datapackName: pack.id.name, version: pack.id.version, source: pack.source } : {};
+    try {
+        const answer = await webviewClient.request<HandlerResponse>('list-datapack-export-items', { dataType: kind, ...of });
+        return answer?.success === true ? (answer.data as StoreItemPage) : null;
+    } catch {
+        return null;
+    }
+}
+
+/** Every kind that may have something to select is read and wholly ticked. */
+function everythingOf(picks: StorePicks, reads: KindReads, counts: StoreKindCounts): { all: boolean; some: boolean } {
+    const open = PICKABLE_KINDS.filter((kind) => !isKnownEmpty(reads[kind], counts[kind]));
+    const all = open.length > 0 && open.every((kind) => {
+        const page = reads[kind];
+        return page !== undefined && page !== null && (picks[kind]?.length ?? 0) === page.items.length;
+    });
+    return { all, some: pickCount(picks) > 0 };
+}
 
 /** The chosen kind, or the next after it that may have something to select. */
 function kindToShow(chosen: PickableKind, reads: KindReads, counts: StoreKindCounts): PickableKind | undefined {
@@ -99,5 +130,42 @@ export function useStorePicks(countsWanted: boolean, pack?: PackBeingSaved): Sto
         setReads((current) => ({ ...current, [of]: page }));
     }, []);
 
-    return { kind, picks, count: pickCount(picks), reads, counts: known, ready: shown.current, firstRead, open, setPicked, answered };
+    const [busy, setBusy] = useState(false);
+    const selectEverything = useCallback(
+        async (on: boolean): Promise<void> => {
+            if (!on) {
+                setPicks({});
+                return;
+            }
+            setBusy(true);
+            try {
+                const next: StorePicks = {};
+                for (const each of PICKABLE_KINDS) {
+                    if (isKnownEmpty(reads[each], known[each])) continue;
+                    const page = reads[each] ?? (await readKind(each, pack));
+                    if (reads[each] === undefined) answered(each, page);
+                    if (page && page.items.length > 0) next[each] = page.items.map((item) => item.id);
+                }
+                setPicks(next);
+            } finally {
+                setBusy(false);
+            }
+        },
+        [reads, known, pack, answered],
+    );
+
+    return {
+        kind,
+        picks,
+        count: pickCount(picks),
+        reads,
+        counts: known,
+        ready: shown.current,
+        firstRead,
+        open,
+        setPicked,
+        answered,
+        everything: { ...everythingOf(picks, reads, known), busy },
+        selectEverything,
+    };
 }
