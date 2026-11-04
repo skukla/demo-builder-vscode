@@ -239,8 +239,8 @@ it('shows a re-check as a spinner where the answer lands, with no words, and kee
 
     await press(screen.getByRole('checkbox', { name: /Bodea Store/ }));
 
-    expect(screen.getByRole('progressbar', { name: 'Checking the stores' })).toBeInTheDocument();
-    expect(screen.queryByText('Checking the stores')).not.toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Reading demo data' })).toBeInTheDocument();
+    expect(screen.queryByText('Reading demo data')).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /Bodea Store/ })).toBeInTheDocument();
     await act(async () => {
         jest.advanceTimersByTime(FRONTEND_TIMEOUTS.COMPONENT_DEBOUNCE);
@@ -255,7 +255,7 @@ it('waits with no words while it reads the stores', async () => {
     await openModal();
 
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
-    expect(screen.queryByText('Checking the stores')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reading demo data')).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
 });

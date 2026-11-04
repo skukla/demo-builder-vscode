@@ -133,13 +133,33 @@ describe('saveStoreChanges', () => {
         expect(await readInstallRecord(files, PROJECT, PACK)).toBeDefined();
     });
 
-    it('reports each stage as it starts, for the progress window', async () => {
+    it('reports each stage as it starts, with a line of its own, for the progress window', async () => {
         const { d, write } = await deps();
-        const stages: string[] = [];
+        const stages: Array<[string, string | undefined]> = [];
 
-        await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write, (stage) => stages.push(stage));
+        await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write, (stage, step) => stages.push([stage, step]));
 
-        expect(stages).toEqual(['Reading from Commerce', 'Saving the datapack']);
+        expect(stages).toEqual([
+            ['Reading from Commerce', '0 of 12 data types: Products, Gift Cards'],
+            ['Reading from Commerce', '0 of 12 data types: Products, Gift Cards'],
+            ['Reading from Commerce', '2 of 12 data types: Categories'],
+            ['Reading from Commerce', '3 of 12 data types: Product Attributes'],
+            ['Reading from Commerce', '4 of 12 data types: Attribute Sets'],
+            ['Reading from Commerce', '5 of 12 data types: Source Items'],
+            ['Reading from Commerce', '6 of 12 data types: Customer Groups, Customers, B2B Companies, B2B Shared Catalogs'],
+            ['Reading from Commerce', '10 of 12 data types: Cart Rules'],
+            ['Reading from Commerce', '11 of 12 data types: Store Config'],
+            ['Saving to your library', 'As its first version'],
+        ]);
+    });
+
+    it("says a save into the demo's own pack is a new version of it", async () => {
+        const { d, write } = await deps();
+        const steps: Array<string | undefined> = [];
+
+        await saveStoreChanges(d, { pack: PACK, saveAs: { ...SAVE_AS, id: { name: PACK.name, version: '20261104-051753' } } }, write, (_stage, step) => steps.push(step));
+
+        expect(steps.at(-1)).toBe('As a new version');
     });
 });
 

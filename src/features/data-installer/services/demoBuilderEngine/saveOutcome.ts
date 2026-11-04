@@ -1,6 +1,10 @@
 /**
- * The sentence a save ends on (step 05, step 07, step 14): where it saved, what it left out of the
- * store because nothing picked it, and which ids it kept because the store could not name them.
+ * What a save says: the line under its saving step, and the sentence it ends on (step 05,
+ * step 07, step 14): where it saved, what it left out of the store because nothing picked it, and
+ * which ids it kept because the store could not name them.
+ *
+ * Each step's line is a fact of its own, not the end of the step's sentence (owner, 2026-11-04:
+ * "Reading from Commerce / The data you selected" broke one sentence across two lines).
  *
  * @module features/data-installer/services/demoBuilderEngine/saveOutcome
  */
@@ -26,6 +30,9 @@ function counted(each: LeftOut): string {
     const more = each.count > each.names.length ? ` and ${each.count - each.names.length} more` : '';
     return `${each.count} ${each.count === 1 ? one : many} (${each.names.join(', ')}${more})`;
 }
+
+/** The saving step's line: a version of a pack already there, or a new pack's first. */
+export const savingLine = (newPack: boolean): string => (newPack ? 'As its first version' : 'As a new version');
 
 /** "Saved to the Acme Demo pack.", and that the pack it came from is unchanged when it is another. */
 export function savedSentence(saveAs: { id: DatapackId; displayName: string }, installed?: { id: DatapackId; displayName: string }): string {

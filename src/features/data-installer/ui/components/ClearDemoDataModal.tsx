@@ -34,7 +34,7 @@ export const CLEAR_COPY = {
     lead: "Choose the stores that are this demo's. Clearing permanently removes what only they use and Demo Builder didn't install, and closes their orders.",
     stores: 'Stores',
     pick: 'Select a store to preview what will be cleared.',
-    checking: 'Checking the stores',
+    checking: 'Reading demo data',
     nothing: 'These stores hold nothing Demo Builder did not install.',
     readFailed: "Couldn't Read the Stores",
 };

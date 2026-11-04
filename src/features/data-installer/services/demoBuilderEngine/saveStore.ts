@@ -30,13 +30,14 @@
 import { type LeftOut, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../pickableKinds';
 import { STORE_CONFIG_KIND, settingsLayerName } from '../datapackCatalog';
 import type { PackWriteOutcome } from '../datapackTransfer';
+import { phaseLine } from '../datapackTypesLine';
 import type { DatapackFile } from '../datapackZip';
-import { capturePack } from './capture';
+import { CAPTURE_PHASES, capturePack } from './capture';
 import { type InstallRecord, type RecordFiles, forgetInstallRecord, nodeRecordFiles, readInstallRecord, writeInstallRecord } from './installRecord';
 import { lookUpLayer } from './layerStep';
 import { rebaseRecord } from './recordFingerprints';
 import { packRowRefusals } from './runPack';
-import { layerLine, leftOutLine, savedSentence, saveSentence, unnamedLine } from './saveOutcome';
+import { layerLine, leftOutLine, savedSentence, saveSentence, savingLine, unnamedLine } from './saveOutcome';
 import { type StoreChangesDeps, StoreChangesError, labelPack, openStore } from './storeAccess';
 import { countStoreItems, holdsOf, leftOutOf, listStoreItems, seedsOf } from './storeItems';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -175,15 +176,16 @@ export async function saveStoreChanges(
     deps: StoreChangesDeps,
     target: SaveTarget,
     write: (file: DatapackFile) => Promise<PackWriteOutcome>,
-    report: (stage: string) => void = () => undefined,
+    report: (stage: string, step?: string) => void = () => undefined,
 ): Promise<SaveResult> {
     const { pack, saveAs } = target;
     const files = deps.files ?? nodeRecordFiles;
     const { record, installed } = await startSave(deps, target, files);
-    report(OPERATION_STAGES.readingStoreChanges.label);
+    const reading = (at: number): void => report(OPERATION_STAGES.readingStoreChanges.label, phaseLine(CAPTURE_PHASES, at));
+    reading(0);
     const ctx = await openStore(deps, pack ?? saveAs.id, record);
     const named = await namedByInstalled(deps, pack, installed.rows);
-    const captured = await capturePack(ctx, [...(record?.created ?? []), ...seedsOf(target.picks ?? {})], named);
+    const captured = await capturePack(ctx, [...(record?.created ?? []), ...seedsOf(target.picks ?? {})], named, reading);
     const { rows, layerRows } = splitSettings(captured.items, STORE_CONFIG_KIND in installed.rows);
     if (Object.keys(rows).length === 0) {
         throw new StoreChangesError(pack ? `The store no longer holds anything ${labelPack(pack)} made, so there is nothing to save.` : 'The store holds none of what was picked, so there is nothing to save.');
@@ -191,7 +193,7 @@ export async function saveStoreChanges(
     refuseUninstallable(captured.items);
     const leftOut = await leftOutOf(ctx, captured.items);
     const about = pack ? await deps.describe(pack) : undefined;
-    report(OPERATION_STAGES.savingToLibrary.label);
+    report(OPERATION_STAGES.savingToLibrary.label, savingLine(saveAs.id.name !== pack?.name));
     const items = Object.entries(rows).map(([dataType, records]) => ({ dataType, records }));
     const exportedAt = (deps.now ?? (() => new Date()))().toISOString();
     await writeVersion(write, { id: saveAs.id, displayName: saveAs.displayName, ...(about?.description ? { description: about.description } : {}), items, source: 'library', exportedAt });

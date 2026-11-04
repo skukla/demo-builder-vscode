@@ -90,7 +90,6 @@ export function useSaveStoreChanges(onSaved: () => void): SaveStoreChanges {
                 message: 'save-store-changes-to-pack',
                 payload: { ...requestOf(pack, picks, saveAsName) },
                 title: saveAsName ? `Creating ${name}` : `Saving ${name}`,
-                subject: name,
                 failureTitle: saveAsName ? `Couldn't Create ${name}` : `Couldn't Save ${name}`,
                 successTitle: saveAsName ? 'Datapack Created' : 'Datapack Saved',
             });

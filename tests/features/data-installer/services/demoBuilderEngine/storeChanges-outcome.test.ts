@@ -9,6 +9,7 @@
 
 import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { packRowRefusals } from '@/features/data-installer/services/demoBuilderEngine/runPack';
+import { savingLine } from '@/features/data-installer/services/demoBuilderEngine/saveOutcome';
 import { PACK } from './demoBuilderEngine.testUtils';
 import { SAVE_AS, deps } from './storeChanges.testUtils';
 
@@ -67,5 +68,12 @@ describe('packRowRefusals, as a save checks a version', () => {
             { kind: 'products', reason: expect.stringMatching(/^The pack's products are not in the shape Commerce takes/u) },
             { kind: 'coupons', reason: expect.stringMatching(/^The pack's coupons are not in the shape Commerce takes/u) },
         ]);
+    });
+});
+
+describe("the saving step's own line", () => {
+    it("says whether the save is a new pack's first version or a new version", () => {
+        expect(savingLine(true)).toBe('As its first version');
+        expect(savingLine(false)).toBe('As a new version');
     });
 });

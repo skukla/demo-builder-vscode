@@ -62,6 +62,7 @@ import { type ErpClosed, type ErpRefreshed, closeErpOrders, erpSentence, refresh
 import { type OrderOutcome, closeOrder, closeReturn } from './wipeOrderRun';
 import { type WipeInputs, type WipePlan, planWipeFor, withinPlan } from './wipePlan';
 import { putBackSettings } from './wipeSettings';
+import { stepLine } from './wipeStepLine';
 import type { WipeUnfinished } from './wipeUnfinished';
 import { andList } from '@/core/utils/andList';
 import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
@@ -309,17 +310,18 @@ function count(key: StepKey, result: OrderOutcome | void, removed: WipeCounts, o
 /**
  * Carry a plan out, as made: every write named in it, in order, counting what Commerce refused.
  *
- * @param report - called as each kind starts, for the progress window
+ * @param report - called as each kind starts and after each of its writes, with how far it has got
  * @param day - the day the orders' notes name; today by default
  */
-export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (stage: string) => void = () => undefined, day = today()): Promise<WipeOutcome> {
+export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (stage: string, step?: string) => void = () => undefined, day = today()): Promise<WipeOutcome> {
     const removed: WipeCounts = { customers: 0, products: 0, takenOff: 0, cartRules: 0, rulesTakenOff: 0, categories: 0, companies: 0, catalogs: 0, customerGroups: 0, attributeSets: 0, attributes: 0, settings: 0 };
     const orders: OrderCounts = { cancelled: 0, refunded: 0, commented: 0, alreadyClosed: plan.alreadyClosed, returnsClosed: 0, failed: 0 };
     const failed: WipeOutcome['failed'] = [];
     const notDone = new Set<string>();
     for (const [key, step] of Object.entries(stepsOf(commerce, plan, day)) as Array<[StepKey, WipeStep]>) {
-        if (step.writes.length > 0) report(step.stage);
-        const refused = await runStep(key, step, { removed, orders, notDone });
+        const done = (n: number): void => report(step.stage, stepLine(key, n, step.writes.length));
+        if (step.writes.length > 0) done(0);
+        const refused = await runStep(key, step, { removed, orders, notDone }, done);
         if (key === 'orders' || key === 'returns') orders.failed += refused.length;
         if (refused.length > 0) failed.push({ what: step.failed, count: refused.length, first: refused[0] });
     }
@@ -330,22 +332,23 @@ export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (
 }
 
 /** Every write of one step, what it needs first checked; answers each it could not do, as "id: why". */
-async function runStep(key: StepKey, step: WipeStep, tally: { removed: WipeCounts; orders: OrderCounts; notDone: Set<string> }): Promise<string[]> {
+async function runStep(key: StepKey, step: WipeStep, tally: { removed: WipeCounts; orders: OrderCounts; notDone: Set<string> }, done: (n: number) => void): Promise<string[]> {
     const refused: string[] = [];
     const missed = (write: WipeWrite, why: string): void => {
         refused.push(`${write.id}: ${why}`);
         if (write.key) tally.notDone.add(write.key);
     };
-    for (const write of step.writes) {
+    for (const [at, write] of step.writes.entries()) {
         if (write.needs?.some((need) => tally.notDone.has(need))) {
             missed(write, HELD_BACK);
-            continue;
+        } else {
+            try {
+                count(key, await write.write(), tally.removed, tally.orders);
+            } catch (error) {
+                missed(write, errorText(error));
+            }
         }
-        try {
-            count(key, await write.write(), tally.removed, tally.orders);
-        } catch (error) {
-            missed(write, errorText(error));
-        }
+        done(at + 1);
     }
     return refused;
 }

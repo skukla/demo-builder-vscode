@@ -30,11 +30,13 @@
  */
 
 import { projectCommerce } from '../services/buildDatapackEngine';
+import { phaseLine } from '../services/datapackTypesLine';
 import { type RecordFiles, nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
 import type { RemovalAccess } from '../services/demoBuilderEngine/removers';
 import { type WipeRespects, claimedStores, projectStoreChoice, readWipeClaims } from '../services/demoDataWipe/wipeClaims';
 import type { WipeErp } from '../services/demoDataWipe/wipeErp';
 import { findWipeErp } from '../services/demoDataWipe/wipeErpDeps';
+import { WIPE_PHASES } from '../services/demoDataWipe/wipePhases';
 import { type WipePlan, planWipe, planWipeFor } from '../services/demoDataWipe/wipePlan';
 import { WipeScopeError, readWipeStructure } from '../services/demoDataWipe/wipeReads';
 import { WipeChangedError, clearShown, storesInWords } from '../services/demoDataWipe/wipeRun';
@@ -164,8 +166,10 @@ async function clearIn(deps: DemoDataDeps, plans: Map<string, WipePlan>, context
     plans.delete(shown.preview.token);
     if ('refusal' in claims) return { success: false, error: claims.refusal, code: ErrorCode.INVALID_OPERATION };
     try {
-        report(DATAPACK_STAGES.checkingStores.label);
-        const outcome = await clearShown(opened.commerce, shown, { ...claims, erp: opened.erp }, report);
+        const verifying = DATAPACK_STAGES.verifyingDemoData.label;
+        const onPhase = (at: number): void => report(verifying, phaseLine(WIPE_PHASES, at));
+        onPhase(0);
+        const outcome = await clearShown(opened.commerce, shown, { ...claims, erp: opened.erp, onPhase }, report);
         await rememberWipeUnfinished(deps.files, opened.project.path, outcome.unfinished).catch((error: unknown) => context.logger.warn(`${LOG_PREFIX} What was left to do could not be noted: ${String(error)}`));
         context.logger.info(`${LOG_PREFIX} ${outcome.sentence}`);
         return { success: true, note: outcome.sentence, data: outcome };

@@ -78,7 +78,7 @@ export async function saveToPack(
     context: HandlerContext,
     opened: SaveOpened,
     into: SaveInto,
-    report: (stage: string) => void,
+    report: (stage: string, step?: string) => void,
 ): Promise<HandlerResponse & OperationOutcome> {
     const library = await resolveDataInstallerAccess(context, 'library');
     if (!library.ok) return library.response;

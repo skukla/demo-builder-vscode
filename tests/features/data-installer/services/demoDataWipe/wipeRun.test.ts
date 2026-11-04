@@ -18,7 +18,8 @@ describe('runWipe', () => {
         const plan = await planWipeFor(store.get, TEST_STORE, { records: PROJECT_RECORDS });
         const stages: string[] = [];
 
-        const outcome = await runWipe(store, plan, (stage) => stages.push(stage), '2026-10-30');
+        // Once per step, in order; a step reports again after each of its items (its count line).
+        const outcome = await runWipe(store, plan, (stage) => stages.at(-1) !== stage && stages.push(stage), '2026-10-30');
 
         expect(writesOf(store.sent)).toEqual([
             { method: 'PUT', path: 'returns/40' },

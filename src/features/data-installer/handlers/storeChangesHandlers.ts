@@ -309,7 +309,7 @@ export const storeChangesHandlers = defineHandlers({
             if ('response' in into) return into.response;
             const title = into.name ? `Saving ${into.displayName}` : `Creating ${into.displayName}`;
             const options = { id: DATAPACK_SAVE_OPERATION_ID, title, inModal: payload.progress === 'modal' };
-            return withOperationProgress(options, (report) => saveToPack(context, opened, into, (stage) => report(stage)));
+            return withOperationProgress(options, (report) => saveToPack(context, opened, into, (stage, step) => report(stage, step)));
         },
         () => DATAPACK_SAVE_OPERATION_ID,
     ),

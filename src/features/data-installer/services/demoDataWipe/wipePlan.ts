@@ -95,6 +95,8 @@ export interface WipePlan {
  */
 export interface WipeInputs extends Pick<WipeRespects, 'records'>, Partial<Omit<WipeRespects, 'records'>> {
     erp?: WipeErp;
+    /** Told as each of `WIPE_PHASES` starts, by its place in the list: the check's progress. */
+    onPhase?: (at: number) => void;
 }
 
 export const NEVER_TOUCHED =
@@ -203,6 +205,7 @@ interface Respecting {
     route?: WipeErpRoute;
     settingsKept: ReadonlySet<string>;
     unfinished?: WipeRespects['unfinished'];
+    onPhase?: WipeInputs['onPhase'];
 }
 
 /** Customers on wholly chosen websites no record lists: the only ones a company may hold and still go. */
@@ -228,24 +231,29 @@ async function decideB2b(get: CommerceGet, scope: WipeScope, read: CustomerDecis
 
 async function decideAll(get: CommerceGet, scope: WipeScope, structure: CommerceStoreStructure, respecting: Respecting): Promise<Decided> {
     const { recorded, onInstance, unfinished } = respecting;
+    const phase = respecting.onPhase ?? (() => undefined);
+    phase(0);
     const tree = await readCategoryTree(get);
+    phase(1);
     const products = decideProducts(await readScopeProducts(get, scope), scope, tree, recorded.products);
+    phase(2);
     const cartRules = await decideCartRules(get, scope, { rules: recorded.rules, coupons: recorded.coupons });
+    phase(3);
     const customers = await decideCustomers(get, scope, structure, recorded.customers);
-    return {
-        products,
-        categories: decideCategories(tree, scope, recorded.categories),
-        cartRules,
-        ...(await decideB2b(get, scope, customers, cartRules.staying, respecting)),
-        attributes: await decideAttributes(get, {
-            goingProducts: products.remove,
-            stayingRules: cartRules.staying,
-            recorded: onInstance,
-            unfinished: { sets: unfinished?.sets ?? [], attributes: unfinished?.attributes ?? [] },
-        }),
-        settings: await decideSettings(get, scope, respecting.settingsKept),
-        ...(await decideAllOrders(get, scope, respecting.route)),
-    };
+    phase(4);
+    const b2b = await decideB2b(get, scope, customers, cartRules.staying, respecting);
+    phase(5);
+    const attributes = await decideAttributes(get, {
+        goingProducts: products.remove,
+        stayingRules: cartRules.staying,
+        recorded: onInstance,
+        unfinished: { sets: unfinished?.sets ?? [], attributes: unfinished?.attributes ?? [] },
+    });
+    phase(6);
+    const settings = await decideSettings(get, scope, respecting.settingsKept);
+    phase(7);
+    const orders = await decideAllOrders(get, scope, respecting.route);
+    return { products, categories: decideCategories(tree, scope, recorded.categories), cartRules, ...b2b, attributes, settings, ...orders };
 }
 
 function previewOf(scope: WipeScope, decided: Decided, plan: Omit<WipePlan, 'preview' | 'choices' | 'scopeKey'>, records: readonly InstallRecord[]): WipePreview {
@@ -311,6 +319,7 @@ export async function planWipe(get: CommerceGet, structure: CommerceStoreStructu
         route,
         settingsKept: inputs.settingsKept ?? new Set(),
         ...(inputs.unfinished ? { unfinished: inputs.unfinished } : {}),
+        ...(inputs.onPhase ? { onPhase: inputs.onPhase } : {}),
     });
     const ids = {
         deleteSkus: skus(decided.products.remove),

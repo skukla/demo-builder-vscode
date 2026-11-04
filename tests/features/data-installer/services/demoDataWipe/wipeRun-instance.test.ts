@@ -20,7 +20,7 @@ describe('runWipe, the B2B kinds', () => {
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
         const stages: string[] = [];
 
-        const outcome = await runWipe(store, plan, (stage) => stages.push(stage));
+        const outcome = await runWipe(store, plan, (stage) => stages.at(-1) !== stage && stages.push(stage));
 
         expect(writesOf(store.sent)).toEqual([
             { method: 'DELETE', path: 'company/28' },
@@ -174,7 +174,7 @@ describe('runWipe, website settings', () => {
         const store = sandbox({ ...NOTHING, instance: settingsInstance() });
         const stages: string[] = [];
 
-        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }), (stage) => stages.push(stage));
+        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }), (stage) => stages.at(-1) !== stage && stages.push(stage));
 
         expect(stages).toEqual(['Resetting site settings']);
         expect(outcome.removed.settings).toBe(1);

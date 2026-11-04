@@ -11,12 +11,14 @@ export const DATAPACK_STAGES = {
     readingStoreChanges: {
         label: 'Reading from Commerce',
         expectation: 'Usually about a minute',
-        detail: 'The data you selected',
+        // Shown when the save names nothing of its own; it names what it reads (`readingLine`).
+        detail: "From this demo's Commerce instance",
     },
     savingToLibrary: {
-        label: 'Saving the datapack',
+        label: 'Saving to your library',
         expectation: 'Usually a few seconds',
-        detail: 'To the datapack library',
+        // Shown when the save names nothing of its own; it says which version (`savingLine`).
+        detail: 'As a new version of the datapack',
     },
     // "Also delete its pack" on a project delete (step 07): one library delete per version.
     // FIRST ESTIMATE, NOT MEASURED.
@@ -27,10 +29,12 @@ export const DATAPACK_STAGES = {
     },
     // Clearing a demo's stores (step 10), in the order the clearing runs. FIRST ESTIMATES, NOT
     // MEASURED: the clearing has not yet run against a live store.
-    checkingStores: {
-        label: 'Checking the stores',
+    // Re-reads what it is about to remove, data type by data type (`phaseLine`), against the list
+    // the SC approved (owner, 2026-11-04: "Checking the stores" named the wrong thing).
+    verifyingDemoData: {
+        label: 'Verifying demo data',
         expectation: 'Usually under a minute',
-        detail: 'That the list shown still holds',
+        detail: 'Each data type, in Commerce',
     },
     // An ERP integration serves some chosen stores ("One action, ERP included"): it closes their
     // orders first, and its ERP is filled again from Commerce last.
