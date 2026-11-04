@@ -182,13 +182,14 @@ judgement in this feature:
 ## Saving a store into a pack, with Demo Builder's engine (datapack-engine step 14)
 
 **Save and Save As** (owner, 2026-11-03, `.rptc/plans/datapack-save-as/`). There is no automatic pack
-per demo. The open demo's pack (`project.datapack`, the pack it installs from and resets to) is pinned
-above the catalog as its own card (`ProjectPackSection`), and that card is the one way into a save:
+per demo. **Create Datapack** in the catalog's header makes one: the new pack's name, then what goes
+in it, and the demo then uses it. Once the demo has a pack the catalog lists (`project.datapack`, the
+pack it installs from and resets to), it is pinned above the catalog as its own card
+(`ProjectPackSection`), which saves it; with none, nothing is pinned:
 
 - **Save {pack}**, only when the pack is the SC's own (the library lists it as `mine`): a new version
   of it.
-- **Save As** (or **Create Datapack** with no pack yet): the new pack's name first, starting from
-  "{pack} Copy", then the item picker. It makes a new pack of the SC's, whose library name is
+- **Save As**: the new pack's name first, starting from "{pack} Copy", then the item picker. It makes a new pack of the SC's, whose library name is
   generated from the name typed (`packIdFor`: a slug and a random suffix, so it can never land on a
   colleague's). The demo then uses it.
 - **Newer Version: {date}**, when the library has a later version of the pack, or the version
@@ -196,7 +197,7 @@ above the catalog as its own card (`ProjectPackSection`), and that card is the o
   in place as `main`). Pressing it opens that version's panel. It is deliberately not an update in
   the Updates window: a demo may stay on an older version on purpose.
 
-With the service's engine the header's "Create datapack" exports into the shared catalog instead.
+With the service's engine the header's Create Datapack exports into the shared catalog instead.
 
 Both doors walk the same screens (`create-flow/DatapackFlowDialog`): a card per kind (products, gift
 cards, categories, cart rules, customers, companies, customer groups, shared catalogs, attributes,

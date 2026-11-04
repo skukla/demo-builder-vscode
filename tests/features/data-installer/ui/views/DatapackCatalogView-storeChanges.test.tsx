@@ -92,12 +92,19 @@ describe("the demo's datapack", () => {
         expect(await screen.findByText('Saving Acme Bodea')).toBeInTheDocument();
     });
 
-    it('offers Create Datapack on a demo with no pack yet', async () => {
+    it('pins nothing on a demo with no pack yet: the header\'s Create Datapack makes one', async () => {
         store('demo-builder', undefined);
         await renderView();
 
-        expect(section()).toBeInTheDocument();
+        expect(section()).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Create Datapack' })).toBeInTheDocument();
+    });
+
+    it('pins nothing for a pack the catalog does not list, rather than bare buttons', async () => {
+        store('demo-builder', { name: 'gone-pack', version: '1', store: 'library' });
+        await renderView();
+
+        expect(section()).not.toBeInTheDocument();
     });
 
     it('offers no save with the service engine, which keeps no record to read back', async () => {

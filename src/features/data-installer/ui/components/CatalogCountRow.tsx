@@ -42,7 +42,7 @@ export function CatalogCountRow({
                     Include Data Installer Datapacks
                 </Switch>
             ) : null}
-            {/* Create datapack (the service's engine only), Load from file, then Clear demo data set apart. */}
+            {/* Create datapack, Load from file, then Clear demo data set apart. */}
             <CatalogHeaderActions {...actions} />
         </Flex>
     );

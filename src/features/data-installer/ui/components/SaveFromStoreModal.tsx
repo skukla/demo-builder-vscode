@@ -24,7 +24,7 @@ export interface SaveFromStoreModalProps {
 }
 
 export function SaveFromStoreModal({ onClose, onSave, pack, saveAsName }: SaveFromStoreModalProps): React.JSX.Element {
-    const title = saveAsName !== undefined ? 'Save As New Datapack' : `Save ${pack?.displayName ?? 'Datapack'}`;
+    const title = titleOf(pack, saveAsName);
     return (
         <DatapackFlowDialog
             title={title}
@@ -36,4 +36,10 @@ export function SaveFromStoreModal({ onClose, onSave, pack, saveAsName }: SaveFr
             onSave={onSave}
         />
     );
+}
+
+/** Save names the pack; Save As from a pack says so; with no pack it is Create, the header's own words. */
+function titleOf(pack: PackBeingSaved | undefined, saveAsName: string | undefined): string {
+    if (saveAsName === undefined) return `Save ${pack?.displayName ?? 'Datapack'}`;
+    return pack ? 'Save As New Datapack' : 'Create Datapack';
 }

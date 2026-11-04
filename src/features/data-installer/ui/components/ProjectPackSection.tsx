@@ -6,8 +6,10 @@
  * went.
  *
  * - **Save** appears only when the pack is the SC's own; someone else's pack is never written.
- * - **Save As** makes a new pack of the SC's, which the demo then uses. With no pack yet it is
- * **Create Datapack**, from what is picked in the store.
+ * - **Save As** makes a new pack of the SC's, which the demo then uses.
+ *
+ * Shown only once the demo has a pack the catalog lists: before that, the header's Create Datapack
+ * makes one (owner, 2026-11-03: a heading over a lone button read as broken).
  * - **Newer version** marks what the library has since the demo installed its pack
  *   (`newerVersionOf`); pressing it opens that version's panel, where it is installed.
  *
@@ -45,35 +47,33 @@ export interface ProjectPackSectionProps {
 const NO_VERSION_CHANGE = (): void => undefined;
 
 export function ProjectPackSection({ held, group, installedAt, canSave, onSave, onSaveAs, onOpen }: ProjectPackSectionProps): React.JSX.Element | null {
-    if (!held && !canSave) return null;
-    const pack: PackBeingSaved | undefined = held
-        ? { id: { name: held.name, version: held.version }, displayName: group?.displayName ?? held.name, source: held.store ?? group?.store ?? 'installer' }
-        : undefined;
+    // Only with its card: a pack the catalog does not list (deleted, or its store switched off) would
+    // leave a heading over two bare buttons. The header's Create Datapack still makes one.
+    if (!held || !group) return null;
+    const pack: PackBeingSaved = { id: { name: held.name, version: held.version }, displayName: group.displayName, source: held.store ?? group.store };
     const newer = newerVersionOf(group, held, installedAt);
-    const store = held?.store ?? group?.store ?? 'library';
+    const store = held.store ?? group.store;
     return (
         <section className="datapack-project-pack" aria-label="This Demo's Datapack">
             <SectionLabel>This Demo&rsquo;s Datapack</SectionLabel>
             <div className="datapack-project-pack-row">
-                {group && held ? (
-                    <div className="datapack-project-pack-card">
-                        <DatapackCard group={group} selectedVersion={held.version} onVersionChange={NO_VERSION_CHANGE} onOpen={onOpen} />
-                    </div>
-                ) : null}
+                <div className="datapack-project-pack-card">
+                    <DatapackCard group={group} selectedVersion={held.version} onVersionChange={NO_VERSION_CHANGE} onOpen={onOpen} />
+                </div>
                 <div className="datapack-project-pack-actions">
                     {newer ? (
                         <ActionButton isQuiet onPress={() => onOpen(newer.id, store)}>
                             Newer Version: {shortDate(newer.at)}
                         </ActionButton>
                     ) : null}
-                    {canSave && pack && group?.mine ? (
+                    {canSave && group.mine ? (
                         <Button variant="accent" onPress={() => onSave(pack)}>
                             Save {pack.displayName}
                         </Button>
                     ) : null}
                     {canSave ? (
-                        <Button variant="secondary" onPress={() => onSaveAs(pack ? `${pack.displayName} Copy` : '', pack)}>
-                            {pack ? 'Save As' : 'Create Datapack'}
+                        <Button variant="secondary" onPress={() => onSaveAs(`${pack.displayName} Copy`, pack)}>
+                            Save As
                         </Button>
                     ) : null}
                 </div>

@@ -251,9 +251,8 @@ describe('the two doors out of the catalog', () => {
     });
 
     // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save
-    // from this store", quiet buttons rather than links; Clear demo data last. With Demo Builder's
-    // engine a pack is made from the demo's own card instead (Save As, 2026-11-03).
-    it.each([[undefined], ['service']] as const)(
+    // from this store", quiet buttons rather than links, with every engine; Clear demo data last.
+    it.each([['demo-builder'], [undefined], ['service']] as const)(
         'with the %s engine, offers Create Datapack, Load from File and, last, Clear Demo Data',
         async (engine) => {
             mockRequest.mockResolvedValue({
@@ -273,15 +272,18 @@ describe('the two doors out of the catalog', () => {
         },
     );
 
-    it("offers no Create Datapack in the header with Demo Builder's engine: the demo's card is the way in", async () => {
+    // With Demo Builder's engine it is Save As with no name yet: the name first, then the picks (2026-11-03).
+    it("opens Create Datapack's name screen first with Demo Builder's engine, empty", async () => {
         mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine: 'demo-builder' } });
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        expect(screen.queryByRole('button', { name: 'Create Datapack' })).not.toBeInTheDocument();
-        // CONTROL: the header's other actions are there.
-        expect(screen.getByRole('button', { name: 'Load from File' })).toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Create Datapack' }));
+
+        expect(await screen.findByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
+        expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('');
+        expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute('aria-disabled', 'true');
     });
 
     it("opens the service's export from Create Datapack with the service engine, and closes it again", async () => {

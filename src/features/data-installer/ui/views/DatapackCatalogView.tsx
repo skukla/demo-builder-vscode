@@ -260,6 +260,10 @@ export function DatapackCatalogView(): React.JSX.Element {
         onSaved: afterSave,
     });
 
+    // The header's Create Datapack with Demo Builder's engine: Save As, the name first and empty.
+    const offerSaveAs = heldPack.saves.offerSaveAs;
+    const createDatapack = useCallback((): void => offerSaveAs(''), [offerSaveAs]);
+
     const retryDetail = useCallback((): void => {
         if (selected) {
             loadDetail({ datapackName: selected.name, version: selected.version, store: selectedStore });
@@ -340,6 +344,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                                     : {})}
                                 onCatalogChanged={refresh}
                                 engine={value?.engine}
+                                onCreate={createDatapack}
                             />
                         }
                     />

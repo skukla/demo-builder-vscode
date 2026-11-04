@@ -6,10 +6,10 @@
  * glyphs from `renderMenuIcon`, so "delete" is one glyph everywhere). They were blue text links,
  * which read as navigation when every one is an action.
  *
- * Create datapack is here only with the service's engine, where it exports into the shared
- * catalog (`CreateDatapackModal`). With Demo Builder's engine a pack is made from the demo's own
- * card instead, Save As (`ProjectPackSection`, owner 2026-11-03): two doors to one save were how the
- * owner lost track of where it went. Clear demo data clears the stores the SC ticks of what Demo Builder did
+ * Create datapack: with Demo Builder's engine it is Save As with no name yet (`onCreate`): the
+ * new pack's name, then what goes in it, and the demo then uses it; once a demo has a pack, its own
+ * card above the catalog saves it (`ProjectPackSection`, owner 2026-11-03). With the service's
+ * engine it exports into the shared catalog (`CreateDatapackModal`). Clear demo data clears the stores the SC ticks of what Demo Builder did
  * not install (datapack-engine step 10), after its own confirmation, in the screen's progress
  * window.
  *
@@ -30,8 +30,10 @@ import type { WipeStoreChoice } from '@/types/demoDataWipe';
 export interface CatalogHeaderActionsProps {
     /** A file was loaded (or the load modal closed): the catalog may have changed. Stable. */
     onCatalogChanged: () => void;
-    /** The engine chosen: Create Datapack is here only with the service's. */
+    /** The engine chosen, which decides what Create Datapack opens. */
     engine?: 'service' | 'demo-builder';
+    /** Demo Builder's engine: Create Datapack is Save As with no name yet. Stable. */
+    onCreate?: () => void;
 }
 
 /** Which dialog the header has open. */
@@ -40,6 +42,7 @@ type Open = 'create' | 'load' | 'clear' | null;
 export function CatalogHeaderActions({
     onCatalogChanged,
     engine,
+    onCreate,
 }: CatalogHeaderActionsProps): React.JSX.Element {
     const [open, setOpen] = useState<Open>(null);
     const { clear, progressWindow } = useClearDemoData(onCatalogChanged);
@@ -60,12 +63,10 @@ export function CatalogHeaderActions({
 
     return (
         <>
-            {engine !== 'demo-builder' ? (
-                <ActionButton isQuiet onPress={() => setOpen('create')}>
-                    {renderMenuIcon('add')}
-                    <Text>Create Datapack</Text>
-                </ActionButton>
-            ) : null}
+            <ActionButton isQuiet onPress={() => (engine === 'demo-builder' && onCreate ? onCreate() : setOpen('create'))}>
+                {renderMenuIcon('add')}
+                <Text>Create Datapack</Text>
+            </ActionButton>
             <ActionButton isQuiet onPress={() => setOpen('load')}>
                 {renderMenuIcon('openFile')}
                 <Text>Load from File</Text>
