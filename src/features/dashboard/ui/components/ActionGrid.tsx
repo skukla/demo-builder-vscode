@@ -112,8 +112,6 @@ export interface ActionGridProps {
     isStopDisabled: boolean;
     /** Whether mesh-related actions (Configure) should be disabled */
     isMeshActionDisabled: boolean;
-    /** This demo's own pack, as the SC sees it named (step 07); absent when it has none. */
-    ownDatapackName?: string;
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     hasMesh?: boolean;
     meshStatus?: MeshStatus;
@@ -215,7 +213,6 @@ export function ActionGrid({
     openingTile = null,
     demoStatus,
     handleRestartDemo,
-    ownDatapackName,
     appBuilderComponents,
     hasMesh,
     meshStatus,
@@ -294,7 +291,6 @@ export function ActionGrid({
             <BuildZone
                 canEdit={canEdit}
                 isMeshActionDisabled={isMeshActionDisabled}
-                ownDatapackName={ownDatapackName}
                 handleEditProject={handleEditProject}
                 handleConfigure={handleConfigure}
                 handleOpenAemAssets={handleOpenAemAssets}

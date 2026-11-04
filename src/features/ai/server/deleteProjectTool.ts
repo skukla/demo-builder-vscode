@@ -24,7 +24,7 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { deleteProjectDemoPack } from '@/features/projects-dashboard/services/demoPackDeletion';
+import { deletablePackOf, deleteProjectDemoPack } from '@/features/projects-dashboard/services/demoPackDeletion';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -144,11 +144,12 @@ interface PackAnswer {
     error?: string;
 }
 
-/** The project's own pack, deleted last, as the button deletes it (step 07). Never throws. */
+/** The pack the project uses, deleted last, as the button deletes it. Never throws. */
 async function deleteOwnPack(ctx: HandlerContext, project: Project): Promise<PackAnswer> {
-    if (!project.ownDatapack) return { deleted: false, error: 'This project has no pack of its own.' };
+    const pack = await deletablePackOf(ctx, project);
+    if (!pack) return { deleted: false, error: 'This project uses no datapack of yours that no other project here uses, so none was deleted.' };
     reportPhase(OPERATION_STAGES.deletingOwnPack.label);
-    const result = await deleteProjectDemoPack(ctx, project.ownDatapack);
+    const result = await deleteProjectDemoPack(ctx, pack);
     return { name: result.name, deleted: result.success && !result.skipped, ...(result.error ? { error: result.error } : {}) };
 }
 

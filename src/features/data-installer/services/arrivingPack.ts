@@ -2,8 +2,9 @@
  * What creation does with a project's recorded pack before installing it (datapack-engine
  * step 07, "Sharing a demo with a colleague: by reference, copied on arrival").
  *
- * - **A colleague's own demo pack** (a library pack neither this SC's nor shared) is copied into
- *   this SC's library as the new demo's own pack, and installed from there: from then on the
+ * - **A colleague's private pack** (a library pack neither this SC's nor shared) is copied into
+ *   this SC's library under its own name, as a new pack of theirs, and installed from there
+ *   (`planSave`, Save As; owner 2026-11-03): from then on the
  *   demo stands alone, whatever its owner later does with theirs. Today the library lets no one
  *   but its owner read such a pack, so this waits on the library's "unlisted" change.
  * - **A pack that cannot be read** is replaced by the pack it was made from, its newest version,
@@ -17,7 +18,7 @@
  * @module features/data-installer/services/arrivingPack
  */
 
-import { type DemoPackSave, demoPackSaveFor, recordDemoPackSave } from './demoPack';
+import { type DemoPackSave, planSave, recordSave } from './demoPack';
 import type { Project } from '@/types/base';
 import { type DatapackId, type ProjectDatapack, type RecordedPackCheck, storeOf } from '@/types/datapack';
 
@@ -42,7 +43,7 @@ function isColleaguesOwn(check: Extract<RecordedPackCheck, { verdict: 'readable'
 
 async function copyIn(project: Project, check: Extract<RecordedPackCheck, { verdict: 'readable' }>, deps: ArrivalDeps): Promise<Arrival> {
     const recorded = check.pack;
-    const save = demoPackSaveFor(project, recorded, (deps.now ?? (() => new Date()))());
+    const save = planSave(project, recorded, { displayName: check.displayName }, (deps.now ?? (() => new Date()))());
     try {
         await deps.copy({ name: recorded.name, version: recorded.version }, save);
     } catch (error) {
@@ -52,14 +53,14 @@ async function copyIn(project: Project, check: Extract<RecordedPackCheck, { verd
             note: `${check.displayName} could not be copied into your datapacks (${reason}), so it is installed from where it is.`,
         };
     }
-    recordDemoPackSave(project, save);
-    return { changed: true, note: `Copied ${check.displayName} into your datapacks as this demo's own pack.` };
+    recordSave(project, save);
+    return { changed: true, note: `Copied ${check.displayName} into your datapacks, and this demo uses your copy.` };
 }
 
 /**
  * Settle the recorded pack: copy it in, replace it, or leave it.
  *
- * @param project - the project being created; its `datapack` (and `ownDatapack`) may change
+ * @param project - the project being created; its `datapack` may change
  * @param deps - the check and the copy
  */
 export async function settleArrivingPack(project: Project, deps: ArrivalDeps): Promise<Arrival> {

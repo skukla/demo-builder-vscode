@@ -252,7 +252,7 @@ function renderActivityBody({
         return (
             <EmptyState
                 title="No Activity Yet"
-                description="Neither Demo Builder nor the Data Installer has a run on this store matching this filter."
+                description="Neither Demo Builder nor the Data Installer has a run on this Commerce instance matching this filter."
             />
         );
     }

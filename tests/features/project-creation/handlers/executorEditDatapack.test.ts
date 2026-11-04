@@ -8,6 +8,8 @@
 jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
     beginSampleDataRemovalCheck: jest.fn().mockReturnValue(Promise.resolve(true)),
     removeProjectSampleData: jest.fn().mockResolvedValue(undefined),
+    // The Save As question a removal asks when the demo's pack is not the SC's: never shown here.
+    askSaveAsNameWith: jest.fn(() => jest.fn()),
 }));
 jest.mock('@/features/project-creation/handlers/executorSampleDataPhase', () => ({
     executeSampleDataPhase: jest.fn().mockResolvedValue(undefined),

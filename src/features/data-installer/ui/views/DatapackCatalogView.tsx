@@ -44,8 +44,8 @@ import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack,
 import { CatalogCountRow } from '../components/CatalogCountRow';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
-import { DatapackSourceNotice } from '../components/DatapackSourceNotice';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
+import { CatalogLead } from '../components/ProjectPackSection';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useHeldPack } from '../hooks/useHeldPack';
@@ -253,7 +253,6 @@ export function DatapackCatalogView(): React.JSX.Element {
     }, [loadProjectContext, refresh]);
     const heldPack = useHeldPack({
         selected,
-        selectedStore,
         held: projectContext.value?.datapack,
         engine: value?.engine,
         detail: detail.value?.detail,
@@ -341,13 +340,20 @@ export function DatapackCatalogView(): React.JSX.Element {
                                     : {})}
                                 onCatalogChanged={refresh}
                                 engine={value?.engine}
-                                onSaveFromStore={heldPack.saveFromStore}
                             />
                         }
                     />
                 }
             >
-                <DatapackSourceNotice page={noticePage} onDismiss={dismissNoAccess} />
+                <CatalogLead
+                    page={noticePage}
+                    onDismissNotice={dismissNoAccess}
+                    project={projectContext.value ?? undefined}
+                    groups={groups}
+                    canSave={value?.engine === 'demo-builder'}
+                    saves={heldPack.saves}
+                    onOpen={openDetail}
+                />
                 <DatapackCatalogGrid
                     groups={groups}
                     filtered={filtered}
@@ -370,7 +376,6 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onImport={openImport}
                 onRemoved={removedFromLibrary}
                 installsFromLibrary={value?.engine === 'demo-builder'}
-                onSaveStoreChanges={heldPack.offerSave}
                 setupStep={heldPack.setupStepLine}
                 onRename={renamePack}
                 sharedInFile={detail.value?.sharedInFile}
@@ -398,6 +403,8 @@ export function DatapackCatalogView(): React.JSX.Element {
 /** What `get-datapack-import-target` reports about the open project. */
 interface ProjectSampleData {
     projectName?: string;
+    /** When Demo Builder's engine installed the pack, when it did. */
+    installedAt?: string;
     /** The Commerce instance this project writes to — scopes the installed list. */
     instance?: string;
     datapack?: ProjectDatapack;

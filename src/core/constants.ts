@@ -335,7 +335,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // an extra. Existing projects would keep sending the agent to a setting that no longer exists.
 // Also in v52: a project's storefront git-sync hook is plain POSIX sh (`case`, not bash's `[[`),
 // so it runs on Linux, where /bin/sh is dash. Existing projects would keep a hook that never pushes there.
-export const AI_CONTEXT_VERSION = 52;
+// v53 (2026-11-03, datapack Save and Save As): import-datapack says a save goes into the pack the
+// project uses when it is the user's, else asks for a name, and that there is no automatic pack per
+// demo. Existing projects would keep telling the agent saves go to "this demo's own pack".
+export const AI_CONTEXT_VERSION = 53;
 
 /**
  * Component IDs for standardized component instance access

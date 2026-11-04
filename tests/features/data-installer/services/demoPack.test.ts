@@ -1,15 +1,15 @@
 /**
- * Each demo has its own pack (datapack-engine step 07): what a save from a project is
- * called, which version it makes, the pack it records it was made from, and what the
- * project then records.
+ * Where a save from a demo goes, Save and Save As (owner, 2026-11-03,
+ * `.rptc/plans/datapack-save-as/`): a new pack's generated name, the version a save makes, the pack
+ * it records it was made from, and what the project then records.
  */
 
 import {
-    demoPackSaveFor,
+    copyNameFor,
     myVersions,
-    ownPackName,
-    recordDemoPackSave,
-    recordOwnPackName,
+    packIdFor,
+    planSave,
+    recordSave,
     savedVersion,
 } from '@/features/data-installer/services/demoPack';
 import type { Project } from '@/types/base';
@@ -29,17 +29,26 @@ function project(over: Partial<Project> = {}): Project {
     });
 }
 
-describe('ownPackName', () => {
-    it("is the project's slug and a short hash of where and when it was made", () => {
-        expect(ownPackName(project())).toMatch(/^acme-demo-[0-9a-f]{6}$/u);
+describe('packIdFor', () => {
+    it('is a slug of the name typed and a short random suffix', () => {
+        expect(packIdFor('My Bodea', '3f9a1c')).toBe('my-bodea-3f9a1c');
+        expect(packIdFor('My Bodea')).toMatch(/^my-bodea-[0-9a-f]{6}$/u);
     });
 
-    it('differs for a copy of the same name made somewhere else', () => {
-        expect(ownPackName(project())).not.toBe(ownPackName(project({ path: '/Users/other/.demo-builder/projects/acme-demo' })));
+    it('never makes the same name twice for the same words', () => {
+        expect(packIdFor('My Bodea')).not.toBe(packIdFor('My Bodea'));
     });
 
-    it('is the recorded name once the demo has one', () => {
-        expect(ownPackName(project({ ownDatapack: { name: 'acme-demo-abc123' } }))).toBe('acme-demo-abc123');
+    it('keeps only letters and digits, and has a name even when nothing is left', () => {
+        expect(packIdFor('  Café — Q4!  ', 'abc123')).toBe('cafe-q4-abc123');
+        expect(packIdFor('!!!', 'abc123')).toBe('datapack-abc123');
+    });
+});
+
+describe('copyNameFor', () => {
+    it("is the pack's own name with Copy, or nothing when there is none", () => {
+        expect(copyNameFor('Bodea')).toBe('Bodea Copy');
+        expect(copyNameFor(undefined)).toBe('');
     });
 });
 
@@ -49,81 +58,44 @@ describe('savedVersion', () => {
     });
 });
 
-describe('demoPackSaveFor', () => {
-    it('makes a first save into a new pack named for the project, made from the pack installed', () => {
-        const save = demoPackSaveFor(project({ datapack: BODEA }), BODEA, AT);
+describe('planSave', () => {
+    it('makes Save As a new pack under the name typed, made from the pack installed', () => {
+        const save = planSave(project({ datapack: BODEA }), BODEA, { displayName: 'My Bodea' }, AT);
 
-        expect(save).toEqual({
-            id: { name: ownPackName(project()), version: '20261029-183005' },
-            displayName: 'Acme Demo',
-            origin: BODEA,
-        });
-    });
-
-    it("saves into the demo's own pack again, keeping the pack it was first made from", () => {
-        const own = { name: 'acme-demo-abc123', version: '20261028-090000', store: 'library' as const, origin: BODEA };
-        const save = demoPackSaveFor(project({ datapack: own, ownDatapack: { name: 'acme-demo-abc123' } }), own, AT);
-
-        expect(save).toEqual({ id: { name: 'acme-demo-abc123', version: '20261029-183005' }, displayName: 'Acme Demo', origin: BODEA });
-    });
-
-    it("gives a copy its own pack, made from the template the original's pack came from", () => {
-        const originals = { name: 'acme-demo-abc123', version: '20261028-090000', store: 'library' as const, origin: BODEA };
-        const copy = project({ name: 'acme-copy', title: 'Acme Copy', path: '/p/acme-copy', datapack: originals });
-
-        const save = demoPackSaveFor(copy, originals, AT);
-
-        expect(save.id.name).toMatch(/^acme-copy-[0-9a-f]{6}$/u);
-        expect(save.displayName).toBe('Acme Copy');
+        expect(save.id).toEqual({ name: expect.stringMatching(/^my-bodea-[0-9a-f]{6}$/u), version: '20261029-183005' });
+        expect(save.displayName).toBe('My Bodea');
         expect(save.origin).toEqual(BODEA);
     });
 
-    it('keeps the name the SC gave the pack once they renamed it', () => {
-        const own = { name: 'acme-demo-abc123', version: '1', store: 'library' as const };
-        const renamed = project({ datapack: own, ownDatapack: { name: 'acme-demo-abc123', displayName: 'Acme Q4', renamed: true } });
-        const followed = project({ datapack: own, ownDatapack: { name: 'acme-demo-abc123', displayName: 'Old title' } });
+    it('makes Save a new version of the pack named, keeping the pack it was first made from', () => {
+        const mine = { name: 'my-bodea-abc123', version: '20261028-090000', store: 'library' as const, origin: BODEA };
+        const save = planSave(project({ datapack: mine }), mine, { name: 'my-bodea-abc123', displayName: 'My Bodea' }, AT);
 
-        expect(demoPackSaveFor(renamed, own, AT).displayName).toBe('Acme Q4');
-        expect(demoPackSaveFor(followed, own, AT).displayName).toBe('Acme Demo');
-    });
-});
-
-describe('recordDemoPackSave', () => {
-    it("records the new version as the project's pack, in the library, and the demo's own pack", () => {
-        const recorded = project({ datapack: BODEA });
-
-        recordDemoPackSave(recorded, { id: { name: 'acme-demo-abc123', version: '20261029-183005' }, displayName: 'Acme Demo', origin: BODEA });
-
-        expect(recorded.datapack).toEqual({ name: 'acme-demo-abc123', version: '20261029-183005', store: 'library', origin: BODEA });
-        expect(recorded.ownDatapack).toEqual({ name: 'acme-demo-abc123', displayName: 'Acme Demo' });
+        expect(save).toEqual({ id: { name: 'my-bodea-abc123', version: '20261029-183005' }, displayName: 'My Bodea', origin: BODEA });
     });
 
-    it('keeps "renamed" across saves', () => {
-        const recorded = project({ ownDatapack: { name: 'acme-demo-abc123', renamed: true } });
+    it('names no pack it was made from for a save of picks alone', () => {
+        const save = planSave(project(), undefined, { displayName: 'Hand Built' }, AT);
 
-        recordDemoPackSave(recorded, { id: { name: 'acme-demo-abc123', version: '2' }, displayName: 'Acme Q4' });
-
-        expect(recorded.ownDatapack).toEqual({ name: 'acme-demo-abc123', displayName: 'Acme Q4', renamed: true });
-        expect(recorded.datapack).not.toHaveProperty('origin');
-    });
-});
-
-// Step 14: a save of picks from a store Demo Builder did not fill names no pack it was made from.
-describe('a save of picks alone', () => {
-    it('makes a version of the demo\'s own pack made from nothing', () => {
-        const save = demoPackSaveFor(project({ datapack: BODEA }), undefined, AT);
-
-        expect(save.id).toEqual({ name: expect.stringMatching(/^acme-demo-[0-9a-f]{6}$/u), version: '20261029-183005' });
         expect(save).not.toHaveProperty('origin');
     });
+});
 
-    it("records only the own pack's name, leaving the pack the project installs from as it was", () => {
+describe('recordSave', () => {
+    it("records the new version as the project's pack, in the library", () => {
         const recorded = project({ datapack: BODEA });
 
-        recordOwnPackName(recorded, { id: { name: 'acme-demo-abc123', version: '20261029-183005' }, displayName: 'Acme Demo' });
+        recordSave(recorded, { id: { name: 'my-bodea-abc123', version: '20261029-183005' }, displayName: 'My Bodea', origin: BODEA });
 
-        expect(recorded.datapack).toEqual(BODEA);
-        expect(recorded.ownDatapack).toEqual({ name: 'acme-demo-abc123', displayName: 'Acme Demo' });
+        expect(recorded.datapack).toEqual({ name: 'my-bodea-abc123', version: '20261029-183005', store: 'library', origin: BODEA });
+    });
+
+    it('records no origin when the save names none', () => {
+        const recorded = project();
+
+        recordSave(recorded, { id: { name: 'hand-built-abc123', version: '2' }, displayName: 'Hand Built' });
+
+        expect(recorded.datapack).toEqual({ name: 'hand-built-abc123', version: '2', store: 'library' });
     });
 });
 

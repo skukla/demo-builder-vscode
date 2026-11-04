@@ -55,23 +55,6 @@ export interface DatapackReference {
 export type ProjectDatapack = DatapackReference & { version: string };
 
 /**
- * This demo's own pack (step 07): the library pack every save from this project
- * goes into, made at the first save. Never in a project file, so a copy or an
- * import starts from the original's pack and makes its own at its first save.
- */
-export interface OwnDatapack {
-    /** The pack's name in the library. Immutable there. */
-    name: string;
-    /** What the SC sees it called, as last saved or renamed. */
-    displayName?: string;
-    /**
-     * True once the SC renamed the pack themselves; until then its display name
-     * follows the project's.
-     */
-    renamed?: boolean;
-}
-
-/**
  * The reference as a project can record it, or none.
  *
  * A project records a name AND a version, so a reference naming no version records

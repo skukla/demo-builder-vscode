@@ -1,6 +1,7 @@
 /**
  * The removal confirm through the real modal (datapack-engine step 05): what the SC sees for what
- * the read found, what Remove sends, and that a wait shows only its spinner.
+ * the read found, what each button sends (Save and Remove, Remove Without Saving, with Save As's
+ * name when the demo's pack is not the SC's), and that a wait shows only its spinner.
  */
 
 import { act, screen } from '@testing-library/react';
@@ -13,14 +14,18 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse } from '@/types/handlers';
 
 const SENTENCE = '3 items changed since install: the category Critical Power, and 2 products.';
-const CHANGED: DatapackRemovalChanges = { count: 3, kinds: [{ kind: 'categories', count: 1, names: ['Critical Power'] }, { kind: 'products', count: 2, names: ['A', 'B'] }], sentence: SENTENCE, ownPackName: 'Acme Demo', alwaysSave: false };
-const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], ownPackName: 'Acme Demo', alwaysSave: false };
-const SAVE_BOX = 'Save Changes to the Acme Demo Datapack First';
-const ALWAYS_BOX = "Don't Ask Again";
+const KINDS = [{ kind: 'categories', count: 1, names: ['Critical Power'] }, { kind: 'products', count: 2, names: ['A', 'B'] }];
+/** The demo's pack is the SC's own: saving goes into it. */
+const CHANGED: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENTENCE, packName: 'Acme Bodea', alwaysSave: false };
+/** The demo's pack is a team pack: saving makes a new pack of the SC's, by a name they give. */
+const CHANGED_TEAM: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENTENCE, suggestedName: 'Bodea Copy', alwaysSave: false };
+const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], alwaysSave: false };
+const ALWAYS_BOX = 'Always Save Without Asking';
 const DELETES = 'Permanently deletes Bodea’s categories.';
 
 const removeData = () => screen.getByRole('button', { name: 'Remove Data' });
-const footerRemove = () => screen.getByRole('button', { name: /^Remove( Anyway)?$/ });
+const footerRemove = () => screen.getByRole('button', { name: /^(Remove( Anyway)?|Save and Remove|Save As New and Remove)$/ });
+const withoutSaving = () => screen.getByRole('button', { name: 'Remove Without Saving' });
 const resetCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'reset-datapack');
 const readCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'get-datapack-removal-changes');
 
@@ -200,9 +205,10 @@ describe('nothing changed', () => {
         await openConfirm();
 
         expect(screen.getByText(DELETES)).toBeInTheDocument();
-        expect(screen.queryByRole('checkbox', { name: SAVE_BOX })).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
         expect(screen.queryByText(/You changed/)).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Remove Without Saving' })).not.toBeInTheDocument();
     });
 
     it('removes with nothing to keep', async () => {
@@ -215,38 +221,39 @@ describe('nothing changed', () => {
     });
 });
 
-describe('something changed', () => {
+describe('something changed, in a pack of the SC\'s', () => {
     beforeEach(() => answers({ success: true, data: CHANGED }));
 
-    it('keeps the question and the sentence, then says what changed, with the save ticked', async () => {
+    it('keeps the question and the sentence, then offers saving first or not, as two buttons', async () => {
         await openConfirm();
 
         expect(screen.getByRole('heading', { name: 'Remove from inst?' })).toBeInTheDocument();
         expect(screen.getByText(DELETES)).toBeInTheDocument();
         expect(screen.getByText(SENTENCE)).toBeInTheDocument();
-        expect(screen.getByRole('checkbox', { name: SAVE_BOX })).toBeChecked();
+        expect(screen.getByRole('button', { name: 'Save and Remove' })).toBeEnabled();
+        expect(withoutSaving()).toBeInTheDocument();
         expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).not.toBeChecked();
     });
 
-    it('with the box ticked, Remove keeps them', async () => {
+    it('Save and Remove keeps them', async () => {
         await openConfirm();
 
         await press(footerRemove());
 
         expect(resetCalls()[0][1]).toMatchObject({ confirm: true, changes: 'keep' });
         expect(resetCalls()[0][1]).not.toHaveProperty('alwaysSave');
+        expect(resetCalls()[0][1]).not.toHaveProperty('saveAs');
     });
 
-    it('with the box unticked, Remove drops them', async () => {
+    it('Remove Without Saving drops them', async () => {
         await openConfirm();
 
-        await press(screen.getByRole('checkbox', { name: SAVE_BOX }));
-        await press(footerRemove());
+        await press(withoutSaving());
 
         expect(resetCalls()[0][1]).toMatchObject({ confirm: true, changes: 'drop' });
     });
 
-    it('with always ticked, Remove also asks for the setting', async () => {
+    it('with always ticked, Save and Remove also asks for the setting', async () => {
         await openConfirm();
 
         await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
@@ -255,19 +262,9 @@ describe('something changed', () => {
         expect(resetCalls()[0][1]).toMatchObject({ changes: 'keep', alwaysSave: true });
     });
 
-    it('unticking the save unticks and locks always', async () => {
-        await openConfirm();
-        await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
-
-        await press(screen.getByRole('checkbox', { name: SAVE_BOX }));
-
-        expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).not.toBeChecked();
-        expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).toBeDisabled();
-    });
-
     it('Cancel removes nothing, and the next press starts afresh', async () => {
         await openConfirm();
-        await press(screen.getByRole('checkbox', { name: SAVE_BOX }));
+        await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
 
         await press(screen.getByRole('button', { name: 'Cancel' }));
         expect(resetCalls()).toHaveLength(0);
@@ -275,7 +272,27 @@ describe('something changed', () => {
         await press(removeData());
         await settle();
         expect(readCalls()).toHaveLength(2);
-        expect(screen.getByRole('checkbox', { name: SAVE_BOX })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).not.toBeChecked();
+    });
+});
+
+describe('something changed, in a pack that is not the SC\'s', () => {
+    beforeEach(() => answers({ success: true, data: CHANGED_TEAM }));
+
+    it('asks the new pack\'s name, starting from the suggested one, with no always box', async () => {
+        await openConfirm();
+
+        expect(screen.getByRole('textbox', { name: 'Save Changes As' })).toHaveValue('Bodea Copy');
+        expect(screen.queryByRole('checkbox', { name: ALWAYS_BOX })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save As New and Remove' })).toBeEnabled();
+    });
+
+    it('keeps them as a new pack by the name given', async () => {
+        await openConfirm();
+
+        await press(footerRemove());
+
+        expect(resetCalls()[0][1]).toMatchObject({ changes: 'keep', saveAs: { displayName: 'Bodea Copy' } });
     });
 });
 
@@ -286,7 +303,7 @@ describe('the setting answers', () => {
         await openConfirm();
 
         expect(screen.getByText(DELETES)).toBeInTheDocument();
-        expect(screen.getByText('Your changes will be saved to the Acme Demo pack first.')).toBeInTheDocument();
+        expect(screen.getByText('Your changes will be saved to Acme Bodea first.')).toBeInTheDocument();
         expect(screen.queryByText(SENTENCE)).not.toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });

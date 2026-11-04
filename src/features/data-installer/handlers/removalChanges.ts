@@ -2,10 +2,11 @@
  * What a removal does about the SC's changes (datapack-engine step 05). One path for every door:
  * the import window's confirm, `reset_datapack`, and a project reset or Edit that removes the pack.
  *
- * It finds changes with the preview's own read (`previewChanges`) and saves them with "Save store
- * changes" itself (`openSave`, `saveToOwnPack`): a new version of the demo's own pack, made at its
- * first save, the previous version kept. Saving moves the install record onto that version, so the
- * removal that follows has to be of the saved version; the caller is told which it is.
+ * It finds changes with the preview's own read (`previewChanges`) and saves them with the save
+ * itself (`openSave`, `saveIntoFor`, `saveToPack`): Save, a new version of the demo's pack when it
+ * is the SC's, else Save As under the name sent, the previous version kept either way. Saving moves
+ * the install record onto that version, so the removal that follows has to be of the saved
+ * version; the caller is told which it is.
  *
  * A pack with no install record (the service's engine installed it) has no record of changes, so
  * nothing here applies to it and it is removed as it always was. Objects recorded before hashes
@@ -19,8 +20,8 @@ import { alwaysSaveChangesOnRemoval, changesOnRemoval } from '../services/dataIn
 import { InstallRecordError, nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
-import { demoPackSaveFor } from '../services/demoPack';
-import { failure, openProjectStore, openSave, readPayload, saveToOwnPack, type StoreChangesPayload } from './storeChangesHandlers';
+import { failure, saveIntoFor, saveToPack } from './packSave';
+import { openProjectStore, openSave, readPayload, type StoreChangesPayload } from './storeChangesHandlers';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -41,6 +42,8 @@ export interface RemovalChangesRequest {
     unanswered: 'refuse' | 'keep';
     /** Turn on "always save" once a save has worked: the confirm's box. */
     rememberAlways?: boolean;
+    /** Save As: the name for a new datapack, when the demo's pack is not the SC's. */
+    saveAs?: { displayName?: unknown };
 }
 
 /** The version a save made: what the removal has to be of, and the sentence it ended on. */
@@ -64,10 +67,11 @@ const hasRecord = async (project: Project, pack: DatapackId): Promise<boolean> =
 
 /** What a removal of this pack would lose, or the response to answer instead. Writes nothing. */
 async function readChanges(context: HandlerContext, project: Project, pack: DatapackId, source: DatapackStoreName | undefined): Promise<DatapackRemovalChanges | { response: HandlerResponse }> {
-    const answer = { ownPackName: demoPackSaveFor(project, undefined, new Date()).displayName, alwaysSave: changesOnRemoval() === 'save' };
-    if (!(await hasRecord(project, pack))) return { count: 0, kinds: [], ...answer };
+    const alwaysSave = changesOnRemoval() === 'save';
+    if (!(await hasRecord(project, pack))) return { count: 0, kinds: [], alwaysSave };
     const store = await openProjectStore(context);
     if ('response' in store) return store;
+    const answer = { alwaysSave, ...(await whereSaved(context, store)) };
     try {
         const changes = changesFromPreview(await previewChanges(store.deps, pack, installedIn(project, pack, source)));
         return { ...changes, ...(changes.count > 0 ? { sentence: changesSentence(changes.kinds) } : {}), ...answer };
@@ -76,21 +80,28 @@ async function readChanges(context: HandlerContext, project: Project, pack: Data
     }
 }
 
+/** Where a save of the changes would go: the demo's pack by name (Save), or the name Save As starts with. */
+async function whereSaved(context: HandlerContext, store: Parameters<typeof saveIntoFor>[1]): Promise<{ packName: string } | { suggestedName?: string }> {
+    const into = await saveIntoFor(context, store, undefined);
+    if (!('response' in into)) return { packName: into.displayName };
+    const suggested = (into.response.data as { suggestedName?: string } | undefined)?.suggestedName;
+    return suggested ? { suggestedName: suggested } : {};
+}
+
 /**
- * The record has moved on: an earlier save made the demo's own pack from this one, so the data is
- * that version's now. Sending the old name on would ask the service to delete by name.
+ * The record has moved on: an earlier save made a pack from this one, or a newer version of it, so
+ * the data is that version's now. Sending the old name on would ask the service to delete by name.
  */
 async function movedOn(project: Project, pack: DatapackId): Promise<HandlerResponse | undefined> {
     const held = project.datapack;
     if (!held || isSamePack(held, pack) || (await hasRecord(project, pack))) return undefined;
     const madeFromIt = held.origin !== undefined && isSamePack(held.origin, pack);
-    const ownOlderVersion = held.name === pack.name && project.ownDatapack?.name === pack.name;
-    if (!madeFromIt && !ownOlderVersion) return undefined;
+    const olderVersion = held.name === pack.name;
+    if (!madeFromIt && !olderVersion) return undefined;
     if (!(await hasRecord(project, held))) return undefined;
-    const name = project.ownDatapack?.displayName ?? held.name;
     return {
         success: false,
-        error: `What this pack put in the store was saved to the ${name} pack, so it is removed from there. Nothing was removed.`,
+        error: `What this pack put in the store was saved to ${held.name}@${held.version}, the datapack this demo now uses, so it is removed from there. Nothing was removed.`,
         code: ErrorCode.INVALID_OPERATION,
     };
 }
@@ -100,7 +111,9 @@ async function saveFirst(context: HandlerContext, request: RemovalChangesRequest
     const payload: StoreChangesPayload = { datapackName: request.pack.name, version: request.pack.version, ...(request.source ? { source: request.source } : {}) };
     const opened = await openSave(context, payload);
     if ('response' in opened) return { response: notSaved(opened.response) };
-    const result = await saveToOwnPack(context, opened, report);
+    const into = await saveIntoFor(context, opened, request.saveAs);
+    if ('response' in into) return { response: { ...into.response, code: ErrorCode.CHANGES_NEED_ANSWER } };
+    const result = await saveToPack(context, opened, into, report);
     if (!result.success) return { response: notSaved(result) };
     const data = result.data as SaveStoreChangesResult;
     if (request.rememberAlways) await rememberAlways(context);
@@ -126,10 +139,11 @@ function askFor(changes: DatapackRemovalChanges): HandlerResponse {
     return {
         success: false,
         error:
-            `${changes.sentence} Nothing was removed. Tell the user, then call again with changes:"keep" to save them to the ` +
-            `${changes.ownPackName} pack first, or changes:"drop" to lose them.`,
+            `${changes.sentence} Nothing was removed. Tell the user, then call again with changes:"keep" to save them first ` +
+            `(${changes.packName ? `into ${changes.packName}` : `as a new datapack of theirs: also send saveAs with its name, e.g. "${changes.suggestedName ?? 'My Datapack'}"`}), ` +
+            'or changes:"drop" to lose them.',
         code: ErrorCode.CHANGES_NEED_ANSWER,
-        data: { changes: changes.kinds, ownPackName: changes.ownPackName },
+        data: { changes: changes.kinds, ...(changes.packName ? { packName: changes.packName } : {}), ...(changes.suggestedName ? { suggestedName: changes.suggestedName } : {}) },
     };
 }
 
@@ -166,7 +180,9 @@ export async function settleChangesBeforeRemoval(
     const changes = await readChanges(context, project, request.pack, request.source);
     if ('response' in changes) return { response: couldNotCheck(changes.response) };
     if (changes.count === 0) return {};
-    if (request.unanswered === 'keep' || changes.alwaysSave) return saveFirst(context, request, report);
+    // Saving without asking needs somewhere to save: the demo's own pack, or a name already given.
+    const canSave = changes.packName !== undefined || request.saveAs !== undefined;
+    if ((request.unanswered === 'keep' || changes.alwaysSave) && canSave) return saveFirst(context, request, report);
     return { response: askFor(changes) };
 }
 

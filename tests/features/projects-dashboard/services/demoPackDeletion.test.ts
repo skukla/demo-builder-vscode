@@ -1,10 +1,20 @@
 /**
- * Deleting a project's own pack (datapack-engine step 07): every version of it the library
- * lists as the SC's goes, one delete per version, and the result says what went and what did
- * not. It never throws: the project delete it rides on must finish whatever the library says.
+ * Deleting the pack a project uses: which pack may go with it (`deletablePackOf`: the SC's own,
+ * used by no other local project), and every version of it the library lists as the SC's goes,
+ * one delete per version, the result saying what went and what did not. Neither throws: the
+ * project delete they ride on must finish whatever the library says.
  */
 
-import { deleteDemoPack, type DemoPackStore } from '@/features/projects-dashboard/services/demoPackDeletion';
+const mockOthers = jest.fn();
+jest.mock('@/core/state/otherProjects', () => ({ loadOtherProjects: (...a: unknown[]) => mockOthers(...a) }));
+const mockOpen = jest.fn();
+jest.mock('@/features/data-installer/handlers/libraryWriter', () => ({ openLibraryWriter: (...a: unknown[]) => mockOpen(...a) }));
+const mockFind = jest.fn();
+
+// Below the mocks on purpose: they hoist above it.
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
+import { deletablePackOf, deleteDemoPack, type DemoPackStore } from '@/features/projects-dashboard/services/demoPackDeletion';
 
 const PACK = { name: 'acme-demo-1a2b3c', displayName: 'Acme Demo' };
 
@@ -61,9 +71,46 @@ describe('deleteDemoPack', () => {
         expect(result).toEqual({ type: 'datapack', name: 'Acme Demo', success: false, error: 'Its versions could not be listed: down' });
     });
 
-    it('names the pack by its library name when it has no display name', async () => {
-        const result = await deleteDemoPack(store(), { name: PACK.name });
+});
 
-        expect(result.name).toBe('acme-demo-1a2b3c');
+describe('deletablePackOf', () => {
+    const held = { name: PACK.name, version: '20261029-183005', store: 'library' as const };
+    const row = (mine: boolean) => ({ id: { name: PACK.name, version: held.version }, displayName: 'Acme Demo', shared: false, dataTypes: [], art: {}, ...(mine ? { mine } : {}) });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockOthers.mockResolvedValue([]);
+        mockFind.mockResolvedValue({ items: [row(true)], count: 1 });
+        mockOpen.mockResolvedValue({ ok: true, client: { findDatapacks: mockFind } });
+    });
+
+    it("offers the pack the project uses when it is the SC's and no other project uses it", async () => {
+        await expect(deletablePackOf(createMockHandlerContext(), createMockProject({ datapack: held }))).resolves.toEqual(PACK);
+        expect(mockFind).toHaveBeenCalledWith({ datapackName: PACK.name });
+    });
+
+    it('offers nothing when another project on this machine uses it, without asking the library', async () => {
+        mockOthers.mockResolvedValue([createMockProject({ name: 'other', datapack: { ...held, version: 'older' } })]);
+
+        await expect(deletablePackOf(createMockHandlerContext(), createMockProject({ datapack: held }))).resolves.toBeUndefined();
+        expect(mockFind).not.toHaveBeenCalled();
+    });
+
+    it("offers nothing for a pack that is not the SC's", async () => {
+        mockFind.mockResolvedValue({ items: [row(false)], count: 1 });
+
+        await expect(deletablePackOf(createMockHandlerContext(), createMockProject({ datapack: held }))).resolves.toBeUndefined();
+    });
+
+    it("offers nothing for a pack outside the library, or none, without asking anything", async () => {
+        await expect(deletablePackOf(createMockHandlerContext(), createMockProject({ datapack: { name: 'bodea', version: 'main', store: 'installer' } }))).resolves.toBeUndefined();
+        await expect(deletablePackOf(createMockHandlerContext(), createMockProject())).resolves.toBeUndefined();
+        expect(mockOthers).not.toHaveBeenCalled();
+    });
+
+    it('offers nothing when the library cannot be asked: keeping a pack is the reversible answer', async () => {
+        mockFind.mockRejectedValue(new Error('down'));
+
+        await expect(deletablePackOf(createMockHandlerContext(), createMockProject({ datapack: held }))).resolves.toBeUndefined();
     });
 });

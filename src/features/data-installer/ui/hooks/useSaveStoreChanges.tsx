@@ -1,7 +1,7 @@
 /**
- * "Save store changes to this pack", and "Create datapack" for a Commerce pack with Demo Builder's
- * engine, from the catalog (datapack-engine step 05, step 14): the pick screen that opens first
- * (`SaveFromStoreModal`), the request that starts the save, and the house progress window that follows it
+ * Save and Save As, from the demo's pack card (`.rptc/plans/datapack-save-as/`): the pick screen
+ * that opens first (`SaveFromStoreModal`, with Save As's name first), the request that starts the
+ * save, and the house progress window that follows it
  * (`OperationProgressModal`, through `useOperationRunner`, as the projects list and the dashboard
  * host theirs).
  *
@@ -24,13 +24,10 @@ import type { SaveStoreChangesRequest } from '@/types/webviewRequests';
 
 /** The save's start, and the windows to mount. */
 export interface SaveStoreChanges {
-    /** Open the pick screen for the pack the project holds ("Save store changes to this pack"). */
-    offer: (pack?: PackBeingSaved) => void;
-    /**
-     * Start a save from the store alone with picks already made: Create datapack's pick screens, which
-     * are its own dialog's steps rather than a second dialog (owner, 2026-10-31).
-     */
-    saveNew: (picks: StorePicks) => void;
+    /** Save: open the pick screen for the demo's pack, which is the SC's. */
+    offer: (pack: PackBeingSaved) => void;
+    /** Save As: open the name and pick screens; `pack` is what the store holds, when Demo Builder installed one. */
+    offerSaveAs: (suggestedName: string, pack?: PackBeingSaved) => void;
     /** The pick screen and the progress window; mount once, beside the flyout. */
     windows: React.JSX.Element;
 }
@@ -38,13 +35,16 @@ export interface SaveStoreChanges {
 /** What the open pick screen is for. */
 interface Offer {
     pack?: PackBeingSaved;
+    /** Save As's starting name; absent for Save. */
+    saveAsName?: string;
 }
 
-/** The request a save sends: the pack when there is one, the picks when there are any. */
-function requestOf(pack: PackBeingSaved | undefined, picks: StorePicks): Omit<SaveStoreChangesRequest, 'progress'> {
+/** The request a save sends: the pack when there is one, the picks when there are any, and the name. */
+function requestOf(pack: PackBeingSaved | undefined, picks: StorePicks, saveAsName: string | undefined): Omit<SaveStoreChangesRequest, 'progress'> {
     return {
         ...(pack ? { datapackName: pack.id.name, version: pack.id.version, source: pack.source } : {}),
         ...(pickCount(picks) > 0 ? { selections: selectionsOf(picks) } : {}),
+        ...(saveAsName ? { saveAs: { displayName: saveAsName } } : {}),
         confirm: true,
     };
 }
@@ -56,33 +56,32 @@ export function useSaveStoreChanges(onClosed: () => void): SaveStoreChanges {
     const { start, open, retry, close } = useOperationRunner();
     const [offered, setOffered] = useState<Offer | undefined>(undefined);
 
-    const offer = useCallback((pack?: PackBeingSaved): void => setOffered(pack ? { pack } : {}), []);
+    const offer = useCallback((pack: PackBeingSaved): void => setOffered({ pack }), []);
+    const offerSaveAs = useCallback(
+        (suggestedName: string, pack?: PackBeingSaved): void => setOffered({ saveAsName: suggestedName, ...(pack ? { pack } : {}) }),
+        [],
+    );
     const closeOffer = useCallback((): void => setOffered(undefined), []);
-    const pack = offered?.pack;
 
-    const run = useCallback(
-        (picks: StorePicks, saving?: PackBeingSaved): void => {
+    const save = useCallback(
+        (picks: StorePicks, saveAsName?: string): void => {
+            const pack = offered?.pack;
+            setOffered(undefined);
+            // The window names the pack: the one saved into, or the one Save As makes.
+            const name = saveAsName ?? pack?.displayName ?? 'Datapack';
             start({
                 id: DATAPACK_SAVE_OPERATION_ID,
-                name: saving?.id.name ?? 'store',
+                name,
                 message: 'save-store-changes-to-pack',
-                payload: { ...requestOf(saving, picks) },
-                title: 'Saving Store Changes',
-                subject: saving?.displayName ?? 'This store',
-                failureTitle: "Couldn't Save the Store Changes",
-                successTitle: 'Store Changes Saved',
+                payload: { ...requestOf(pack, picks, saveAsName) },
+                title: saveAsName ? `Creating ${name}` : `Saving ${name}`,
+                subject: name,
+                failureTitle: saveAsName ? `Couldn't Create ${name}` : `Couldn't Save ${name}`,
+                successTitle: saveAsName ? 'Datapack Created' : 'Datapack Saved',
             });
         },
-        [start],
+        [start, offered],
     );
-    const save = useCallback(
-        (picks: StorePicks): void => {
-            setOffered(undefined);
-            run(picks, pack);
-        },
-        [run, pack],
-    );
-    const saveNew = useCallback((picks: StorePicks): void => run(picks), [run]);
 
     const closeWindow = useCallback((): void => {
         close();
@@ -91,9 +90,9 @@ export function useSaveStoreChanges(onClosed: () => void): SaveStoreChanges {
 
     const windows = (
         <>
-            {offered ? <SaveFromStoreModal pack={pack} onSave={save} onClose={closeOffer} /> : null}
+            {offered ? <SaveFromStoreModal pack={offered.pack} saveAsName={offered.saveAsName} onSave={save} onClose={closeOffer} /> : null}
             <OperationProgressModal operation={open} onRetry={retry} onClose={closeWindow} />
         </>
     );
-    return { offer, saveNew, windows };
+    return { offer, offerSaveAs, windows };
 }

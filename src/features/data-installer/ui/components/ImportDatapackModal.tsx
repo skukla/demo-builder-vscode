@@ -199,8 +199,8 @@ export function ImportDatapackModal({
         start.load(requestBody());
     }, [act, start, requestBody]);
 
-    const confirmReset = (): void => {
-        const answer = removal.press();
+    const confirmRemoval = (save: boolean): void => {
+        const answer = removal.press(save);
         act('reset');
         setWatching(true);
         // `confirm` is added HERE and nowhere else. The handler refuses
@@ -315,8 +315,7 @@ export function ImportDatapackModal({
                     validate,
                     armReset,
                     disarmReset: removal.disarm,
-                    confirmReset,
-                    removeLabel: removeLabel(removal.content),
+                    ...removalButtons(removal, confirmRemoval),
                     startImport,
                     goBack,
                 })}
@@ -325,4 +324,22 @@ export function ImportDatapackModal({
             </Modal>
         </DialogContainer>
     );
+}
+
+/**
+ * The confirm's buttons: one Remove, or, with changes to keep, Save and Remove beside Remove
+ * Without Saving, the save waiting on a Save As name when it needs one.
+ */
+function removalButtons(
+    removal: Pick<ReturnType<typeof useRemovalConfirm>, 'content' | 'canSave'>,
+    confirmRemoval: (save: boolean) => void,
+): Pick<Parameters<typeof buildActions>[0], 'confirmReset' | 'removeLabel' | 'removeWithoutSaving' | 'removeSavesAs' | 'removeDisabled'> {
+    const base = { confirmReset: () => confirmRemoval(true), removeLabel: removeLabel(removal.content) };
+    if (removal.content.kind !== 'changes') return base;
+    return {
+        ...base,
+        removeWithoutSaving: () => confirmRemoval(false),
+        removeSavesAs: removal.content.packName === undefined,
+        removeDisabled: !removal.canSave,
+    };
 }

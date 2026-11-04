@@ -12,7 +12,7 @@
 
 import * as vscode from 'vscode';
 import { confirmPlainDelete, showCleanupConfirmation, type CleanupOptions } from './deletionConfirmation';
-import { deleteProjectDemoPack } from './demoPackDeletion';
+import { type DeletablePack, deletablePackOf, deleteProjectDemoPack } from './demoPackDeletion';
 import { edsCleanupSteps, performEdsCleanup, type DeletionServices } from './edsExternalCleanup';
 import { deleteProjectFiles } from './projectFilesDeletion';
 import { numberedSteps } from '@/core/utils/numberedSteps';
@@ -45,13 +45,15 @@ async function askBeforeDelete(
     project: Project,
     edsMetadata: ReturnType<typeof extractEdsMetadata>,
     options?: DeleteProgressOptions,
+    pack?: DeletablePack,
 ): Promise<CleanupOptions | null> {
-    if (edsMetadata || project.ownDatapack) {
+    if (edsMetadata || pack) {
         // Auth is checked lazily in performEdsCleanup when user selects an option
         return showCleanupConfirmation(
             project,
             edsMetadata,
             options?.progress === 'modal' ? (options.operationId ?? deleteOperationId(project.name)) : undefined,
+            pack,
         );
     }
     return (await confirmPlainDelete(project)) ? { deleteGitHubRepo: false, deleteDaLiveSite: false } : null;
@@ -77,11 +79,12 @@ export async function deleteProject(
 
     // Auth is checked lazily in performEdsCleanup when user actually selects an option
     // This avoids slow auth checks before showing the confirmation dialog
-    const cleanupOptions = await askBeforeDelete(project, edsMetadata, options);
+    const deletable = await deletablePackOf(context, project);
+    const cleanupOptions = await askBeforeDelete(project, edsMetadata, options, deletable);
     if (cleanupOptions === null) {
         return { success: true, data: { success: false, error: 'cancelled' } };
     }
-    const ownPack = cleanupOptions.deleteDatapack ? project.ownDatapack : undefined;
+    const ownPack = cleanupOptions.deleteDatapack ? deletable : undefined;
 
     // Collect cleanup results for EDS projects
     const cleanupResults: CleanupResultItem[] = [];

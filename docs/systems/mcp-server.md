@@ -561,13 +561,14 @@ one IMS refuses or cannot be asked about, the repository is kept (`kept: true` /
 `stopped` with the sentence to sign in to DA.live and delete again), and `delete_project`
 keeps the project too.
 
-**A project's own datapack goes only when asked.** `delete_project` takes `deletePack`, the
-button's "Also delete its pack" box (datapack-engine step 07): every version of the project's
-own pack in the datapack library, deleted after the project's files. It is off unless the call
-asks, `deleteAll` never turns it on (keeping a pack can be undone, deleting it cannot), and
-`localOnly` refuses it with a `note`. `datapack` in the answer names the pack and says whether
-every version went (`deleted`), and which did not (`error`); a project with no pack of its own
-answers `datapack.deleted: false` and deletes nothing from the library.
+**A project's datapack goes only when asked.** `delete_project` takes `deletePack`, the button's
+"Also delete its pack" box: every version of the pack the project uses, in the datapack library,
+deleted after the project's files, and only when that pack is the user's own and no other project on
+this machine uses it (`deletablePackOf`, 2026-11-03). It is off unless the call asks, `deleteAll`
+never turns it on (keeping a pack can be undone, deleting it cannot), and `localOnly` refuses it with
+a `note`. `datapack` in the answer names the pack and says whether every version went (`deleted`),
+and which did not (`error`); a project whose pack may not go answers `datapack.deleted: false` and
+deletes nothing from the library.
 
 `delete_page` deliberately uses the plain `confirm: true` gate instead — it removes
 one page from the current project's own storefront, not a whole repository or site.
@@ -737,28 +738,31 @@ carries one line, `note` ("Kept 2 things you had changed in the Admin."). The st
 answers only the job's id, so that line arrives with the outcome, not with the start.
 `preview_datapack_changes` (a read) says beforehand what an install would do: counts per data kind
 and at most three names per count, never rows. `save_store_changes_to_pack` (confirm-gated) saves
-the store's copy of the pack as a new version of this demo's OWN pack in the datapack library (step
-07: made at the first save, named for the project; what the install record lists and the installed
-version's own products, attributes and sets, read from the store), leaves the pack installed as it
-was, moves the project onto the new version (recording the store and the pack it was made from),
-and changes nothing in Commerce; it is undone by `delete_library_datapack` on the new version.
+the store's copy of the pack into the datapack library, Save or Save As (2026-11-03): without
+`saveAs` a new version of the pack the project uses, only when it is the user's own; otherwise it
+writes nothing and answers `data.needsName` with `data.suggestedName`, and `saveAs: {displayName}`
+makes a new pack of the user's under that name. Either way it saves what the install record lists and
+the installed version's own products, attributes and sets, read from the store, leaves the pack
+installed as it was, moves the project onto the new version (recording the store and the pack it was
+made from), and changes nothing in Commerce; it is undone by `delete_library_datapack` on the new
+version. There is no automatic pack per demo.
 Step 14 (2026-10-30): it takes `selections` too (`{kind: {field: [ids]}}`, the service's export
 shape; kinds and fields in `src/features/data-installer/pickableKinds.ts`), so what the SC added by
 hand in the Admin goes in when picked, and it never joins the install record, so removing the pack
-leaves it. With no pack named it saves the project's own when Demo Builder installed it, else the
-picks alone: a pack from a store Demo Builder did not fill, recorded only as the demo's own pack.
+leaves it. With no pack named it reads the project's when Demo Builder installed it, else saves the
+picks alone (send `saveAs`): a pack from a store Demo Builder did not fill, which the project then uses.
 It answers `unnamed` (ids kept because the store could not name them) and `leftOut` (what the store
 has, of products, gift cards, categories, cart rules, customers and companies, that the version
 does not hold), both also in its message, and a version the install's own parsers would refuse is
 not saved. With Demo Builder's engine (the default), `list_datapack_export_items` lists one kind of
 the project's store to pick from (website-scoped where Commerce scopes it, less what the pack being
-saved holds, counted in `inPackCount`), and `start_datapack_export` is the same save, sent only
-`selections` and `confirm`: the service's fields (`datapackName`, `version`, `commerceInstance`,
+saved holds, counted in `inPackCount`), and `start_datapack_export` is the same save, sent
+`selections`, `saveAs` and `confirm`: the service's fields (`datapackName`, `version`, `commerceInstance`,
 `dataTypes`) are refused there, and the name echo applies only to a call naming a pack.
 A project's datapack records the store that holds it (`installer` or `library`): creation, a copy
 and a project file install from that store, `configure_project` takes it as `datapack.store`, and
 `create_project_from_file` answers `datapackNote` when the pack named can't be read (the pack it
-was made from, or none, is installed instead) or a colleague's own pack is copied into your library first. `start_datapack_import` installs only the `dataTypes` named and
+was made from, or none, is installed instead) or a colleague's private pack is copied into your library first, as a pack of yours. `start_datapack_import` installs only the `dataTypes` named and
 what they need, and leaves the rest of the pack alone; `validate_datapack_import` and
 `preview_datapack_changes` decide it the same way. `reset_datapack` takes all the install record
 lists, whichever `dataTypes` it is sent (optional with this engine, needed for a pack the service
@@ -768,8 +772,9 @@ outcome's `note` says so ("Kept the set Racks: it holds 2 products you added.").
 clears the project's datapack only when the removal finishes having taken everything out: one that
 stops, or keeps a container holding the SC's things, leaves the project naming the pack, so the
 next removal can finish the job (live, 2026-10-30). If the SC changed anything the pack made,
-`reset_datapack` names the changes and removes nothing until `changes` answers: `keep` saves them to
-the demo's own pack first (the new version is what is then removed; a failed save, code
+`reset_datapack` names the changes and removes nothing until `changes` answers: `keep` saves them
+first, into the user's own pack or as a new one named by `saveAs` (the new version is what is then
+removed; a failed save, code
 `CHANGES_NOT_SAVED`, removes nothing), `drop` loses them. With `changes` omitted and
 `demoBuilder.dataInstaller.changesOnRemoval` on `save`, it saves without asking; otherwise it refuses
 with `CHANGES_NEED_ANSWER`. A pack the service installed has no record of changes, and is removed as
@@ -956,16 +961,13 @@ answers `{datapackName, team, versions}`.
 
 `rename_datapack` (confirm-gated) gives every version of one of the SC's own library packs a new
 display name through the library's `update-datapack-metadata`; the pack's `datapackName` never
-changes. On this demo's own pack the project records that the SC named it, so its name stops
-following the project's. It answers `{datapackName, displayName, versions}`. The Data Installer
+changes, and no project is written. It answers `{datapackName, displayName, versions}`. The Data Installer
 screen's pack flyout offers the same Rename. Exporting a project whose pack is in the library
 (the save dialog, `export_project_settings`, or a demo bundle with its setup part) remembers that
 it went out in a file, on this machine; `delete_library_datapack` then carries one sentence, as
 `sharedInFile` without confirm and as `warning` with it: "You shared this pack in a project file
 on 27 October. Anyone who hasn't created that project yet will get Bodea instead." The pack it was
-made from is named as the store lists it, never by its id. Deleting the last version of this demo's
-own pack stops the project naming it (`ownPackCleared: true`), so the dashboard's Datapacks tile
-loses its "This demo's pack" line; the next save makes the pack again. Plan:
+made from is named as the store lists it, never by its id. Plan:
 `.rptc/plans/datapack-engine/step-07-demo-packs.md`.
 
 ### Integrations live in Adobe workspaces of their own (AB-23)

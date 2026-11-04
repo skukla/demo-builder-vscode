@@ -24,6 +24,8 @@ jest.mock('@/features/projects-dashboard/services/projectFilesDeletion', () => (
 }));
 jest.mock('@/features/projects-dashboard/services/demoPackDeletion', () => ({
     deleteProjectDemoPack: jest.fn(),
+    // Whether the project's pack may go with it: none unless a suite says so.
+    deletablePackOf: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/features/ai/server/agentProjectCleanup', () => ({
     ...jest.requireActual('@/features/ai/server/agentProjectCleanup'),

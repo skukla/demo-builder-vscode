@@ -22,7 +22,7 @@ import { type ResultContent, resultStatus } from '../importResult';
 import type { DatapackEngine, PackBeingSaved } from './datapackFlowStages';
 import { AcoKindsStage } from './stages/AcoKindsStage';
 import { AcoViewsStage } from './stages/AcoViewsStage';
-import { PackNameStage } from './stages/PackNameStage';
+import { PackNameStage, SaveAsNameStage } from './stages/PackNameStage';
 import { PackTypeStage } from './stages/PackTypeStage';
 import { ServiceTypesStage } from './stages/ServiceTypesStage';
 import { FirstKindRead } from './stages/StoreItemsStage';
@@ -36,9 +36,11 @@ export interface DatapackFlowDialogProps {
     /** Start at what goes in it, with no pack type to ask. */
     startsAtPicks?: boolean;
     pack?: PackBeingSaved;
+    /** Save As: ask the new pack's name first, starting with this. */
+    saveAsName?: string;
     onClose: () => void;
-    /** Start the save with these picks. Must be stable. */
-    onSave: (picks: StorePicks) => void;
+    /** Start the save with these picks, and Save As's name. Must be stable. */
+    onSave: (picks: StorePicks, saveAsName?: string) => void;
 }
 
 /** A read of what the screen will show says nothing. */
@@ -60,6 +62,7 @@ function footerOf(flow: CreateDatapackFlow): ActionButton[] {
 /** The body the stage asks for. */
 function StageBody({ flow, engine, pack }: Pick<DatapackFlowDialogProps, 'engine' | 'pack'> & { flow: CreateDatapackFlow }): React.ReactElement {
     const { stage, store, answers } = flow;
+    if (stage === 'save-as-name') return <SaveAsNameStage name={flow.saveAsName} onChange={flow.setSaveAsName} />;
     if (stage === 'pack-type') return <PackTypeStage engine={engine} packType={flow.packType} onPick={flow.pickPackType} />;
     if (stage === 'store-picks') return <StorePicksStage pack={pack} store={store} />;
     if (stage === 'aco-views') return <AcoViewsStage aco={answers.aco} />;
@@ -68,8 +71,8 @@ function StageBody({ flow, engine, pack }: Pick<DatapackFlowDialogProps, 'engine
     return <PackNameStage answers={answers} sharedCatalog={flow.route === 'service'} />;
 }
 
-export function DatapackFlowDialog({ title, engine, startsAtPicks, pack, onClose, onSave }: DatapackFlowDialogProps): React.ReactElement {
-    const flow = useCreateDatapackFlow({ engine, startsAtPicks, pack, onSave });
+export function DatapackFlowDialog({ title, engine, startsAtPicks, pack, saveAsName, onClose, onSave }: DatapackFlowDialogProps): React.ReactElement {
+    const flow = useCreateDatapackFlow({ engine, startsAtPicks, pack, saveAsName, onSave });
     const { result, savable } = flow.answers;
     const { firstRead } = flow.store;
     return (

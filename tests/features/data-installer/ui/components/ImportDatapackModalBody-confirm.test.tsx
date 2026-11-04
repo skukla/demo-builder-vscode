@@ -35,7 +35,7 @@ function ctx(over: Partial<BodyContext> = {}): BodyContext {
         result: null,
         busyMessage: '',
         scope: SCOPE,
-        removal: { content: { kind: 'plain' }, choice: { saveFirst: true, always: false }, onToggleSave: jest.fn(), onToggleAlways: jest.fn() },
+        removal: { content: { kind: 'plain' }, choice: { always: false }, onToggleAlways: jest.fn(), onSaveAsName: jest.fn() },
         toggle: jest.fn(),
         toggleAll: jest.fn(),
         ...over,

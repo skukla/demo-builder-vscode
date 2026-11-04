@@ -441,7 +441,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_export: {
         action: 'Export sample data',
         consequence:
-            "With Demo Builder's engine, saves what was picked from this project's store as a new version of this demo's own pack in the datapack library; nothing in Commerce changes. With the Data Installer service's, captures this instance's data into the shared catalogue, where other people will see it. An ACO pack, with either engine, goes into your own datapack library.",
+            "With Demo Builder's engine, saves what was picked from this project's store into the datapack library: a new version of the project's pack when it is yours, else a new pack of yours by the name given; nothing in Commerce changes. With the Data Installer service's, captures this instance's data into the shared catalogue, where other people will see it. An ACO pack, with either engine, goes into your own datapack library.",
         // The pack and the store it is captured FROM. `confirmName` is the
         // proof-of-intent echo, not the target.
         target: ['datapackName', 'version', 'commerceInstance'],
@@ -457,7 +457,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     save_store_changes_to_pack: {
         action: "Save the store's changes to a datapack",
         consequence:
-            "Saves this pack as the project's store now holds it, with anything picked from the store, as a new version of this demo's own pack in the datapack library; the pack installed is kept as it is, and nothing in Commerce changes.",
+            "Saves this pack as the project's store now holds it, with anything picked from the store, into the datapack library: a new version of the project's pack when it is yours, else a new pack of yours by the name given; the pack installed is kept as it is, and nothing in Commerce changes.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },

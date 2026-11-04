@@ -1,86 +1,111 @@
 /**
- * DatapackCatalogView — "Save store changes to this pack" (datapack-engine step 05).
+ * DatapackCatalogView — the demo's datapack, pinned above the catalog, and Save / Save As from it
+ * (`ProjectPackSection`, owner 2026-11-03, `.rptc/plans/datapack-save-as/`).
  *
- * Offered only in the flyout of the pack the open project holds, with Demo Builder's engine
- * chosen: that is the only pack whose store copy Demo Builder can read back. Pressing it opens the
- * pick screen (step 14), whose Save starts the save through the house progress window the VIEW
- * hosts (as it hosts the import modal), so neither is a dialog inside the drawer.
+ * Save appears only for a pack that is the SC's own; Save As always, with Demo Builder's engine,
+ * which is the one that can read the store back. Each opens the pick screens, whose last button
+ * starts the save through the house progress window the VIEW hosts, so neither is a dialog inside
+ * the drawer.
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { press, settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
-import { CATALOG, DatapackCatalogView, INVENTORY_COMPLETE, mockPost, mockRequest } from './DatapackCatalogView.testUtils';
+import { CATALOG, DatapackCatalogView, makeSummary, mockPost, mockRequest } from './DatapackCatalogView.testUtils';
 
-const LABEL = 'Save Store Changes to This Datapack';
+/** Bodea as the SC's own library pack, in place of the team's. */
+const MINE = [makeSummary('bodea', 'main', { displayName: 'Acme Bodea', store: 'library', mine: true }), ...CATALOG.slice(2)];
 
-/** The catalog, the detail of bodea@main, and the open project's recorded pack. */
-function store(engine: 'demo-builder' | 'service', datapack: { name: string; version: string } | undefined) {
+/** The catalog, and the open project's recorded pack; the pick screens answer with nothing to pick. */
+function store(engine: 'demo-builder' | 'service', datapack: { name: string; version: string; store?: 'library' | 'installer' } | undefined, items = CATALOG) {
     mockRequest.mockImplementation((type: string) => {
-        if (type === 'find-datapacks') {
-            return Promise.resolve({ success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine } });
-        }
-        if (type === 'get-datapack-detail') {
-            return Promise.resolve({ success: true, data: { detail: CATALOG[0], inventory: INVENTORY_COMPLETE } });
-        }
-        if (type === 'get-datapack-import-target') {
-            return Promise.resolve({ success: true, data: { instance: 'inst', projectName: 'acme', datapack } });
-        }
+        if (type === 'find-datapacks') return Promise.resolve({ success: true, data: { items, count: items.length, total: items.length, engine } });
+        if (type === 'get-datapack-import-target') return Promise.resolve({ success: true, data: { instance: 'inst', projectName: 'acme', datapack } });
+        if (type === 'list-datapack-export-items') return Promise.resolve({ success: true, data: { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 } });
         return Promise.resolve({ success: true, data: null });
     });
 }
 
-async function openBodea(): Promise<void> {
+async function renderView(): Promise<void> {
     render(<DatapackCatalogView />);
     await settle();
-    const cards = await screen.findAllByTestId('datapack-card');
-    await press(cards[0]);
-    await waitFor(() => expect(screen.getByRole('dialog')).toHaveClass('open'));
-    await screen.findByRole('button', { name: 'Import' });
+    await screen.findAllByTestId('datapack-card');
 }
+
+const section = () => screen.queryByRole('region', { name: "This Demo's Datapack" });
 
 beforeEach(() => {
     mockPost.mockClear();
 });
 
-describe('Save Store Changes to This Datapack', () => {
-    // Step 14: it opens the pick screen first, so what the SC added by hand can go in too.
-    it('is offered for the pack the project holds, picks first, then starts the save in the progress window', async () => {
+describe("the demo's datapack", () => {
+    it("pins the pack the project uses above the catalog, offering Save As only when it is not the SC's", async () => {
         store('demo-builder', { name: 'bodea', version: 'main' });
-        await openBodea();
+        await renderView();
 
-        await press(screen.getByRole('menuitem', { name: LABEL }));
-        expect(await screen.findByRole('heading', { name: 'Save Store Changes' })).toBeInTheDocument();
-        expect(mockPost).not.toHaveBeenCalled();
+        expect(section()).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save As' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Save Bodea/ })).not.toBeInTheDocument();
+    });
+
+    it('Save As asks the new name, starting from the pack\'s, then saves under it', async () => {
+        store('demo-builder', { name: 'bodea', version: 'main' });
+        await renderView();
+
+        await press(screen.getByRole('button', { name: 'Save As' }));
+        expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
+        const name = screen.getByRole('textbox', { name: /Datapack Name/ });
+        expect(name).toHaveValue('bodea Copy');
+        fireEvent.change(name, { target: { value: 'My Bodea' } });
+        await press(screen.getByRole('button', { name: 'Continue' }));
+        await settle();
+        await press(screen.getByRole('button', { name: 'Create' }));
+
+        expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
+            datapackName: 'bodea',
+            version: 'main',
+            source: 'installer',
+            saveAs: { displayName: 'My Bodea' },
+            confirm: true,
+            id: 'datapack-save',
+            progress: 'modal',
+        });
+        expect(await screen.findByText('Creating My Bodea')).toBeInTheDocument();
+    });
+
+    it("offers Save, named for the pack, when it is the SC's own, and saves into it with no name", async () => {
+        store('demo-builder', { name: 'bodea', version: 'main', store: 'library' }, MINE);
+        await renderView();
+
+        await press(screen.getByRole('button', { name: 'Save Acme Bodea' }));
+        expect(await screen.findByRole('heading', { name: 'Save Acme Bodea' })).toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Save' }));
 
         expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
             datapackName: 'bodea',
             version: 'main',
-            // The flyout's own store, so the save reads the installed version's rows from there.
-            source: 'installer',
+            source: 'library',
             confirm: true,
             id: 'datapack-save',
             progress: 'modal',
         });
-        expect(await screen.findByText('Saving Store Changes')).toBeInTheDocument();
+        expect(await screen.findByText('Saving Acme Bodea')).toBeInTheDocument();
     });
 
-    it('is not offered for a pack the project does not hold', async () => {
-        store('demo-builder', { name: 'wknd', version: 'main' });
-        await openBodea();
+    it('offers Create Datapack on a demo with no pack yet', async () => {
+        store('demo-builder', undefined);
+        await renderView();
 
-        // The control: the menu is there, only this row is not.
-        expect(screen.getByRole('menuitem', { name: 'Save as File' })).toBeInTheDocument();
-        expect(screen.queryByRole('menuitem', { name: LABEL })).not.toBeInTheDocument();
+        expect(section()).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Create Datapack' })).toBeInTheDocument();
     });
 
-    it('is not offered when the service engine is chosen, which keeps no record to read back', async () => {
+    it('offers no save with the service engine, which keeps no record to read back', async () => {
         store('service', { name: 'bodea', version: 'main' });
-        await openBodea();
+        await renderView();
 
-        // The control: the menu is there, only this row is not.
-        expect(screen.getByRole('menuitem', { name: 'Save as File' })).toBeInTheDocument();
-        expect(screen.queryByRole('menuitem', { name: LABEL })).not.toBeInTheDocument();
+        // CONTROL: the demo's pack is still shown.
+        expect(section()).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save As' })).not.toBeInTheDocument();
     });
 });

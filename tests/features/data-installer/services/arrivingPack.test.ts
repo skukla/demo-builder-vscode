@@ -33,7 +33,7 @@ const readable = (over: Partial<Extract<RecordedPackCheck, { verdict: 'readable'
 });
 
 describe('settleArrivingPack', () => {
-    it("copies a colleague's own pack into this SC's library as this demo's pack, then records it", async () => {
+    it("copies a colleague's private pack into this SC's library under its own name, then records it", async () => {
         const p = project();
         const d = deps(readable());
 
@@ -41,11 +41,10 @@ describe('settleArrivingPack', () => {
 
         expect(d.copy).toHaveBeenCalledWith(
             { name: COLLEAGUES.name, version: COLLEAGUES.version },
-            { id: { name: expect.stringMatching(/^acme-[0-9a-f]{6}$/u), version: '20261029-183005' }, displayName: 'Acme', origin: COLLEAGUES.origin },
+            { id: { name: expect.stringMatching(/^priya-acme-[0-9a-f]{6}$/u), version: '20261029-183005' }, displayName: 'Priya Acme', origin: COLLEAGUES.origin },
         );
         expect(p.datapack).toEqual({ ...d.copy.mock.calls[0][1].id, store: 'library', origin: COLLEAGUES.origin });
-        expect(p.ownDatapack?.name).toBe(p.datapack?.name);
-        expect(result).toEqual({ changed: true, note: "Copied Priya Acme into your datapacks as this demo's own pack." });
+        expect(result).toEqual({ changed: true, note: 'Copied Priya Acme into your datapacks, and this demo uses your copy.' });
     });
 
     it('leaves the SC\'s own pack, a shared one, and a Data Installer one as recorded', async () => {
@@ -67,7 +66,6 @@ describe('settleArrivingPack', () => {
         const result = await settleArrivingPack(p, d);
 
         expect(p.datapack).toEqual(COLLEAGUES);
-        expect(p.ownDatapack).toBeUndefined();
         expect(result).toEqual({ changed: false, note: 'Priya Acme could not be copied into your datapacks (library refused), so it is installed from where it is.' });
     });
 

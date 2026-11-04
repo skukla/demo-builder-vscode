@@ -65,8 +65,10 @@ interface StartImportPayload {
     confirm?: boolean;
     /** Which store holds the pack: `installer` (absent) or `library` (DI-5). */
     source?: string;
-    /** Reset only: save the SC's changes to the demo's own pack first, or lose them. */
+    /** Reset only: save the SC's changes first (into the demo's pack when it is theirs, else as `saveAs`), or lose them. */
     changes?: string;
+    /** Reset only, with `changes: "keep"`: the name of a new datapack to save them as, when the demo's pack is not the SC's. */
+    saveAs?: { displayName?: unknown };
     /** Reset only, and only ever the confirm's box: turn on "always save" once a save has worked. */
     alwaysSave?: boolean;
 }
@@ -246,6 +248,7 @@ async function settleBeforeReset(
             ...(answer ? { answer } : {}),
             unanswered: 'refuse',
             ...(payload?.alwaysSave === true ? { rememberAlways: true } : {}),
+            ...(payload?.saveAs ? { saveAs: payload.saveAs } : {}),
         },
         stage,
     );

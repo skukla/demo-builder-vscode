@@ -32,7 +32,7 @@ function idle<T>(over: Partial<DataInstallerRequest<T>> = {}): DataInstallerRequ
 
 function renderToTheTypes(types: Partial<DataInstallerRequest<unknown>>) {
     mockRequestState.mockImplementation((type: string) => (type === 'list-datapack-data-types' ? idle(types) : idle()));
-    render(<CreateDatapackModal engine="service" onClose={jest.fn()} onSaveFromStore={jest.fn()} />);
+    render(<CreateDatapackModal engine="service" onClose={jest.fn()} />);
 }
 
 beforeEach(() => {

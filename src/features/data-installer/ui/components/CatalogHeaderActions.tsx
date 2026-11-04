@@ -6,11 +6,10 @@
  * glyphs from `renderMenuIcon`, so "delete" is one glyph everywhere). They were blue text links,
  * which read as navigation when every one is an action.
  *
- * Create datapack replaced "Export from this instance" and "Save from this store", which
- * overlapped, and named a store where they read an instance. Its dialog asks the pack type and
- * walks that pack's screens (`CreateDatapackModal`): a Commerce pack with Demo Builder's engine ends
- * in a save, which the view hosts with its progress window (`useHeldPack`), so it is raised as
- * `onSaveFromStore`. Clear demo data clears the stores the SC ticks of what Demo Builder did
+ * Create datapack is here only with the service's engine, where it exports into the shared
+ * catalog (`CreateDatapackModal`). With Demo Builder's engine a pack is made from the demo's own
+ * card instead, Save As (`ProjectPackSection`, owner 2026-11-03): two doors to one save were how the
+ * owner lost track of where it went. Clear demo data clears the stores the SC ticks of what Demo Builder did
  * not install (datapack-engine step 10), after its own confirmation, in the screen's progress
  * window.
  *
@@ -21,7 +20,6 @@
 
 import { ActionButton, Divider, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
-import type { StorePicks } from '../../pickableKinds';
 import { useClearDemoData } from '../hooks/useClearDemoData';
 import { ClearDemoDataModal } from './ClearDemoDataModal';
 import { CreateDatapackModal } from './CreateDatapackModal';
@@ -32,10 +30,8 @@ import type { WipeStoreChoice } from '@/types/demoDataWipe';
 export interface CatalogHeaderActionsProps {
     /** A file was loaded (or the load modal closed): the catalog may have changed. Stable. */
     onCatalogChanged: () => void;
-    /** The engine chosen, which decides where a Commerce pack is made (`CreateDatapackModal`). */
+    /** The engine chosen: Create Datapack is here only with the service's. */
     engine?: 'service' | 'demo-builder';
-    /** Demo Builder's engine, a Commerce pack: start the save with these picks. Stable. */
-    onSaveFromStore: (picks: StorePicks) => void;
 }
 
 /** Which dialog the header has open. */
@@ -44,7 +40,6 @@ type Open = 'create' | 'load' | 'clear' | null;
 export function CatalogHeaderActions({
     onCatalogChanged,
     engine,
-    onSaveFromStore,
 }: CatalogHeaderActionsProps): React.JSX.Element {
     const [open, setOpen] = useState<Open>(null);
     const { clear, progressWindow } = useClearDemoData(onCatalogChanged);
@@ -65,10 +60,12 @@ export function CatalogHeaderActions({
 
     return (
         <>
-            <ActionButton isQuiet onPress={() => setOpen('create')}>
-                {renderMenuIcon('add')}
-                <Text>Create Datapack</Text>
-            </ActionButton>
+            {engine !== 'demo-builder' ? (
+                <ActionButton isQuiet onPress={() => setOpen('create')}>
+                    {renderMenuIcon('add')}
+                    <Text>Create Datapack</Text>
+                </ActionButton>
+            ) : null}
             <ActionButton isQuiet onPress={() => setOpen('load')}>
                 {renderMenuIcon('openFile')}
                 <Text>Load from File</Text>
@@ -78,7 +75,7 @@ export function CatalogHeaderActions({
                 {renderMenuIcon('delete')}
                 <Text>Clear Demo Data</Text>
             </ActionButton>
-            {open === 'create' ? <CreateDatapackModal engine={engine} onClose={close} onSaveFromStore={onSaveFromStore} /> : null}
+            {open === 'create' ? <CreateDatapackModal engine={engine} onClose={close} /> : null}
             {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} /> : null}
             {open === 'clear' ? <ClearDemoDataModal onClose={close} onClear={startClear} /> : null}
             {progressWindow}

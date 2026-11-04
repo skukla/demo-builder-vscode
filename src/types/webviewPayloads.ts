@@ -127,11 +127,6 @@ export interface DashboardInitialData {
     initialEdsStorefrontStatus?: Project['edsStorefrontStatusSummary'];
     /** Whether the project has an Adobe org (drives the "Checking organization" telegraph) */
     hasAdobeContext: boolean;
-    /**
-     * This demo's own library pack, by the name the SC sees (step 07), for the Datapacks
-     * tile's line. Absent when the demo has none.
-     */
-    ownDatapackName?: string;
     /** Keyed appBuilderComponents map (drives the summary tile's count + dot). */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     /**

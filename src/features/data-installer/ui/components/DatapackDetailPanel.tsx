@@ -71,8 +71,6 @@ export interface DatapackDetailPanelProps {
      * so with it chosen a library pack offers Copy to the Data Installer instead (DI-5).
      */
     installsFromLibrary: boolean;
-    /** "Save store changes to this pack" (step 05), for the pack the project holds by Demo Builder's engine. */
-    onSaveStoreChanges?: (id: DatapackId) => void;
     /** That pack's Admin step (step 12) as one line; its dialog is mounted beside the flyout (`usePackSetupStep`). */
     setupStep?: React.ReactNode;
     /**
@@ -99,7 +97,6 @@ export function DatapackDetailPanel({
     onImport,
     onRemoved,
     installsFromLibrary,
-    onSaveStoreChanges,
     setupStep,
     onRename,
     sharedInFile,
@@ -137,7 +134,6 @@ export function DatapackDetailPanel({
                                 onImport={onImport}
                                 onRemoved={onRemoved}
                                 installsFromLibrary={installsFromLibrary}
-                                onSaveStoreChanges={onSaveStoreChanges}
                                 sharedInFile={sharedInFile}
                                 onSharingChanged={onSharingChanged}
                                 settingsLayer={settingsLayer}

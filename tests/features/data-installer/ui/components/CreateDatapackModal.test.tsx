@@ -1,6 +1,7 @@
 /**
- * "Create datapack": one window, one question per screen (owner, 2026-11-02). The first screen,
- * which screen each engine opens on, and Demo Builder's engine through to the save. The
+ * "Create datapack": one window, one question per screen (owner, 2026-11-02). The first screen and
+ * which screen each engine opens on. The header offers it with the service's engine only; with
+ * Demo Builder's a pack is made from the demo's own card (Save As, `ProjectPackSection`). The
  * export routes have their own suites; the screens that pick from the store are also pinned by
  * SaveFromStoreModal.test.tsx, which starts on them.
  */
@@ -57,36 +58,22 @@ describe('which screen each engine opens on', () => {
     });
 
     it.each([['service'], [undefined]] as const)("the %s engine opens on the service's data types", async (engine) => {
-        const { onSaveFromStore } = await renderCreate(engine);
+        await renderCreate(engine);
 
         expect(mockRequest.mock.calls.some((c) => c[0] === 'list-datapack-data-types')).toBe(true);
         expect(check('Attribute Sets')).not.toBeChecked();
         expect(screen.queryByRole('button', { name: /^Products/ })).not.toBeInTheDocument();
-        expect(onSaveFromStore).not.toHaveBeenCalled();
-    });
-});
-
-describe("Commerce with Demo Builder's engine", () => {
-    it('Create starts the save with what is selected, then closes', async () => {
-        const { onClose, onSaveFromStore } = await renderCreate('demo-builder');
-        expect(isOff('Create')).toBe(true);
-
-        await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
-        await press(button('Create'));
-
-        expect(onSaveFromStore).toHaveBeenCalledWith({ products: ['VR-Rack'] });
-        expect(onClose).toHaveBeenCalledTimes(1);
     });
 });
 
 describe('closing and reopening', () => {
     it('closes without making anything', async () => {
-        const { onClose, onSaveFromStore } = await renderCreate('demo-builder');
+        const { onClose } = await renderCreate('service');
 
         await press(button('Cancel'));
 
         expect(onClose).toHaveBeenCalledTimes(1);
-        expect(onSaveFromStore).not.toHaveBeenCalled();
+        expect(mockRequest.mock.calls.some((c) => c[0] === 'start-datapack-export')).toBe(false);
     });
 
     it('starts again with nothing picked when reopened', async () => {
@@ -94,7 +81,7 @@ describe('closing and reopening', () => {
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
         unmount();
 
-        render(<CreateDatapackModal engine="demo-builder" onClose={jest.fn()} onSaveFromStore={jest.fn()} />);
+        render(<CreateDatapackModal engine="demo-builder" onClose={jest.fn()} />);
         await settle();
 
         expect(screen.getByRole('checkbox', { name: /VR Rack/ })).not.toBeChecked();

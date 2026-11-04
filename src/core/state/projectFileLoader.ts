@@ -95,7 +95,6 @@ export interface ProjectManifest {
     selectedPackage?: string;
     demo?: Project['demo'];
     datapack?: Project['datapack'];
-    ownDatapack?: Project['ownDatapack'];
     commerceAdminExperience?: Project['commerceAdminExperience'];
     selectedStack?: string;
     selectedAddons?: string[];
@@ -199,7 +198,6 @@ export class ProjectFileLoader {
                 selectedPackage: normalizePackageId(manifest.selectedPackage),
                 demo: manifest.demo,
                 datapack: manifest.datapack,
-                ownDatapack: manifest.ownDatapack,
                 commerceAdminExperience: manifest.commerceAdminExperience,
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,

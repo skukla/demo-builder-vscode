@@ -142,6 +142,12 @@ export function buildActions(a: {
     goBack: () => void;
     /** The confirm's main button: `removeLabel`. */
     removeLabel?: string;
+    /** With changes to keep: the confirm's second way on, which loses them. */
+    removeWithoutSaving?: () => void;
+    /** Saving first makes a new pack (Save As), since the demo's pack is not the SC's. */
+    removeSavesAs?: boolean;
+    /** The main button waits on a Save As name. */
+    removeDisabled?: boolean;
     /** A removal takes all the record lists, whatever is ticked, so the form's button says all. */
     removesAll?: boolean;
     /** Whether the form's removal may be pressed; as `canStart` when it does not say. */
@@ -159,6 +165,15 @@ export function buildActions(a: {
     if (a.view === 'confirm-reset') {
         // Cancel stands in for Close here (the frame hides Close): two buttons that both
         // backed out was one too many (dialog design rules).
+        if (a.removeWithoutSaving) {
+            // Changes to keep: saving is the likely intent, so it is the main button; losing them
+            // is its own button rather than a box to untick (owner, 2026-11-03).
+            return [
+                { label: 'Cancel', variant: 'secondary', onPress: a.disarmReset },
+                { label: 'Remove Without Saving', variant: 'negative', onPress: a.removeWithoutSaving },
+                { label: a.removeSavesAs ? 'Save As New and Remove' : 'Save and Remove', variant: 'accent', onPress: a.confirmReset, isDisabled: a.removeDisabled === true },
+            ];
+        }
         return [
             { label: 'Cancel', variant: 'secondary', onPress: a.disarmReset },
             { label: a.removeLabel ?? 'Remove', variant: 'negative', onPress: a.confirmReset },

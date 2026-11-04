@@ -409,11 +409,11 @@ describe('DatapackDetailPanel', () => {
  */
 describe('DatapackDetailPanel — actions', () => {
     it('puts Import and the menu for this pack in the flyout', () => {
-        renderPanel({ onSaveStoreChanges: jest.fn() });
+        renderPanel({});
 
         expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'More actions for Bodea' })).toBeInTheDocument();
-        expect(screen.getByRole('menuitem', { name: 'Save Store Changes to This Datapack' })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: 'Save as File' })).toBeInTheDocument();
     });
 
     it('offers no menu while the detail is loading', () => {

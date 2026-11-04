@@ -7174,7 +7174,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 315,
+            "line": 311,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
@@ -7472,7 +7472,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 229,
+            "line": 231,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -7485,7 +7485,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 230,
+            "line": 232,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -10931,7 +10931,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 286,
+            "line": 281,
             "mutants": 1,
             "category": "block",
             "reason": "The else branch contains a single logger.warn and nothing else \u2014 no state change, no return, no call the caller can observe. Emptying it leaves the rename result, the project object and every collaborator call identical.",
@@ -10944,7 +10944,7 @@
             "anchors": [
                 "} catch (rollbackError) {"
             ],
-            "line": 342,
+            "line": 337,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch drops a logger.error and a 'return false'; falling off the end returns undefined instead, and the caller's guard is 'if (!undone)' \u2014 falsy either way. Same branch, same message, same result.",
@@ -11048,7 +11048,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 292,
+            "line": 287,
             "mutants": 1,
             "category": "block",
             "reason": "The remote-sync catch body is a single logger.warn. Emptying it still swallows the Console failure, still leaves the local rename successful and its result unchanged, and still leaves adobe.projectTitle recording the title that was never applied \u2014 the only difference is whether a line reaches the log channel.",
@@ -11073,7 +11073,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 212,
+            "line": 214,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11086,7 +11086,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 213,
+            "line": 215,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11099,7 +11099,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 220,
+            "line": 222,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11112,7 +11112,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 221,
+            "line": 223,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",

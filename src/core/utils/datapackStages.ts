@@ -1,22 +1,22 @@
 /**
- * "Save store changes to this pack", in the one stage table (`operationStages.ts`, which
+ * A datapack save (Save and Save As), in the one stage table (`operationStages.ts`, which
  * spreads them into `OPERATION_STAGES`). The same rules hold: a label of at most 25
- * characters, an expectation and a detail.
+ * characters, an expectation and a detail. Plain words for what the software does (owner,
+ * 2026-11-03: "Reading the store" read as an AI talking).
  *
- * Datapack-engine step 05: a pack's flyout saves the store's copy of it as a new version in the
- * datapack library. FIRST ESTIMATE, NOT MEASURED: it has not yet run against a live store.
+ * Reading measured once on a live store, 2026-11-03: 1 minute 5 seconds for about 200 items.
  */
 
 export const DATAPACK_STAGES = {
     readingStoreChanges: {
-        label: 'Reading the store',
-        expectation: 'Usually under a minute',
-        detail: 'What the pack made, and what it uses',
+        label: 'Reading from Commerce',
+        expectation: 'Usually about a minute',
+        detail: 'The data you selected',
     },
     savingToLibrary: {
-        label: 'Saving to the library',
+        label: 'Saving the datapack',
         expectation: 'Usually a few seconds',
-        detail: 'The pack, as the store has it now',
+        detail: 'To the datapack library',
     },
     // "Also delete its pack" on a project delete (step 07): one library delete per version.
     // FIRST ESTIMATE, NOT MEASURED.

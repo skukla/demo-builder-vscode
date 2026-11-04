@@ -183,6 +183,8 @@ export interface ExportPayload {
     selections?: Selections;
     /** Demo Builder's engine: the save must be confirmed, as `save-store-changes-to-pack`'s is. */
     confirm?: boolean;
+    /** Demo Builder's engine, Save As: a new datapack of the user's under this name. */
+    saveAs?: { displayName?: string };
     /** Make an ACO pack from this store, into the library (`acoExportHandler.ts`). */
     aco?: boolean;
     /** ACO only: the store views to make it for; omitted means every one. */

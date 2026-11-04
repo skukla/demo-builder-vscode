@@ -8,7 +8,7 @@
 import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ServiceDefinition } from './components';
-import type { OwnDatapack, ProjectDatapack } from './datapack';
+import type { ProjectDatapack } from './datapack';
 import type { ErpAssignmentRecord, ErpOwnerSetsRecord } from './erpAssign';
 import type { AddedDemo } from './projectFile';
 import type { CommerceConfigChangeRecord, StorePreparationRecord } from './storePreparation';
@@ -121,15 +121,13 @@ export interface Project {
      *
      * Chosen on the wizard's Datapacks step and installed by creation itself
      * (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data
-     * Installer screen and by "Save store changes", and cleared by a reset once it finishes
+     * Installer screen and by a save (Save and Save As, `demoPack.ts`), and cleared by a reset once it finishes
      * having taken out everything the pack put there (a reset that stops, or keeps containers
      * holding the SC's things, leaves it). `configure_project` records it without installing.
      */
     datapack?: ProjectDatapack;
     /** The Commerce Admin interface chosen on Configure. Absent: the setting's. */
     commerceAdminExperience?: CommerceAdminExperience;
-    /** This demo's own library pack, once its first save made one (step 07). */
-    ownDatapack?: OwnDatapack;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
     selectedStack?: string;
     /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */

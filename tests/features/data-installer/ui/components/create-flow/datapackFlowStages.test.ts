@@ -13,7 +13,7 @@ import {
     stageOrder,
 } from '@/features/data-installer/ui/components/create-flow/datapackFlowStages';
 
-const NOTHING: FlowGates = { packTypeChosen: false, canSave: false, viewsChosen: false, kindsChosen: false, typesChosen: false, named: false };
+const NOTHING: FlowGates = { packTypeChosen: false, canSave: false, viewsChosen: false, kindsChosen: false, typesChosen: false, named: false, saveAsNamed: false };
 
 describe('routeOf', () => {
     it.each([

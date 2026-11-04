@@ -48,7 +48,7 @@ export function DatapackCatalogGrid({
         return (
             <EmptyState
                 title="No Datapacks Yet"
-                description="Load a datapack file or create one from a store."
+                description="Load a datapack .zip file, or save one from your demo's Commerce instance."
             />
         );
     }

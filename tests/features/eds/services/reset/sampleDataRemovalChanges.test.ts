@@ -41,6 +41,40 @@ beforeEach(() => {
     mockedRemove.mockResolvedValue({ ran: true, outcome: 'success' });
 });
 
+describe("removeProjectSampleData, when the demo's pack is not the SC's (Save As, 2026-11-03)", () => {
+    const needsName = { response: { success: false, error: 'Name it.', code: ErrorCode.CHANGES_NEED_ANSWER, data: { suggestedName: 'Bodea Copy' } } };
+
+    it('asks for a name, starting from the suggested one, then saves under it and removes', async () => {
+        mockedSettle.mockResolvedValueOnce(needsName).mockResolvedValueOnce({});
+        const askName = jest.fn().mockResolvedValue('  My Bodea ');
+
+        await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), askName);
+
+        expect(askName).toHaveBeenCalledWith('Bodea Copy');
+        expect(mockedSettle.mock.calls[1][1]).toMatchObject({ answer: 'keep', saveAs: { displayName: 'My Bodea' } });
+        expect(mockedRemove).toHaveBeenCalledTimes(1);
+    });
+
+    it('loses the changes when no name is given, as the question says, and still removes', async () => {
+        mockedSettle.mockResolvedValueOnce(needsName).mockResolvedValueOnce({});
+
+        await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), jest.fn().mockResolvedValue(undefined));
+
+        expect(mockedSettle.mock.calls[1][1]).toMatchObject({ answer: 'drop' });
+        expect(mockedRemove).toHaveBeenCalledTimes(1);
+    });
+
+    it('removes nothing with no way to ask, and says so', async () => {
+        mockedSettle.mockResolvedValueOnce(needsName);
+        const logger = createMockLogger();
+
+        await removeProjectSampleData(project(), createMockHandlerContext({ logger }), jest.fn());
+
+        expect(mockedRemove).not.toHaveBeenCalled();
+        expect(logger.error).toHaveBeenCalledTimes(1);
+    });
+});
+
 describe('removeProjectSampleData', () => {
     it('settles the changes first, with no answer needed, then removes', async () => {
         const order: string[] = [];
@@ -85,7 +119,7 @@ describe('the question these doors ask', () => {
 
         await confirmSampleDataRemoval(project(), vscode, Promise.resolve(true));
 
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining("Anything you changed in it goes to this demo's own pack first."), expect.anything(), expect.anything(), expect.anything());
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('Anything you changed in it is saved first.'), expect.anything(), expect.anything(), expect.anything());
     });
 
     it('says nothing of it for a pack the service installed, which has no record of changes', async () => {

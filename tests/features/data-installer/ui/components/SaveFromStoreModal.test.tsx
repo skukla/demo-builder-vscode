@@ -1,6 +1,6 @@
 /**
- * The screen that selects from the store, as "Save store changes to this pack" opens it (datapack-engine
- * step 14). The kinds on the left; clicking one shows its checklist on the right, its items asked of
+ * The screen that selects from the store, as Save and Save As open it (datapack-engine step 14,
+ * `.rptc/plans/datapack-save-as/`). The kinds on the left; clicking one shows its checklist on the right, its items asked of
  * `list-datapack-export-items` (less what the pack being saved holds); selections kept across kinds
  * and counted on each row; Save hands them on.
  *
@@ -56,9 +56,10 @@ beforeEach(() => mockRequest.mockReset());
 describe('the screen', () => {
     it('has its own title, and one row per kind in order', async () => {
         answer({ products: PRODUCTS });
-        await open();
+        await open({ pack: PACK });
 
-        expect(screen.getByRole('heading', { name: 'Save Store Changes' })).toBeInTheDocument();
+        // Save names the pack it writes into (2026-11-03).
+        expect(screen.getByRole('heading', { name: 'Save Bodea' })).toBeInTheDocument();
         const names = screen.getAllByRole('button').filter((b) => b.classList.contains('datapack-picks-kind')).map((b) => b.firstChild?.textContent);
         expect(names).toEqual(PICKABLE_KINDS.map(dataTypeLabel));
         expect(screen.queryByRole('button', { name: /Commerce Datapack/ })).not.toBeInTheDocument();
@@ -110,7 +111,7 @@ describe('the screen', () => {
     it('says what saving a held pack does, and not otherwise', async () => {
         answer({ products: PRODUCTS });
         await open({ pack: PACK });
-        expect(screen.getByText(/Saves a new version of this project's datapack from Bodea/)).toBeInTheDocument();
+        expect(screen.getByText(/Includes what Bodea put in Commerce/)).toBeInTheDocument();
     });
 
     it('has no opening paragraph for a store with no pack', async () => {
@@ -311,5 +312,30 @@ describe('Save', () => {
         await press(button('Save'));
 
         expect(onSave).toHaveBeenCalledWith({});
+    });
+});
+
+describe('Save As', () => {
+    it('asks the new pack\'s name first, starting from the one given, then the picks, and hands both on', async () => {
+        answer({ products: PRODUCTS });
+        const onSave = await open({ pack: PACK, saveAsName: 'Bodea Copy' });
+
+        expect(screen.getByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
+        const name = screen.getByRole('textbox', { name: /Datapack Name/ });
+        expect(name).toHaveValue('Bodea Copy');
+        fireEvent.change(name, { target: { value: 'My Bodea' } });
+        await press(button('Continue'));
+        await settle();
+        await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
+        await press(button('Create'));
+
+        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'] }, 'My Bodea');
+    });
+
+    it('will not go on without a name', async () => {
+        answer({ products: PRODUCTS });
+        await open({ saveAsName: '' });
+
+        expect(button('Continue')).toHaveAttribute('aria-disabled', 'true');
     });
 });

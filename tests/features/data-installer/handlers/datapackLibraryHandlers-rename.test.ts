@@ -1,8 +1,7 @@
 /**
  * Renaming a library pack (datapack-engine step 07): every version of the SC's own pack takes
- * the new display name, through the library's `update-datapack-metadata`, and when it is this
- * demo's own pack the project records that the SC named it, so its name stops following the
- * project's.
+ * the new display name, through the library's `update-datapack-metadata`. The project is never
+ * written: no pack follows a project's name any more (owner 2026-11-03).
  */
 
 // The shared wall first: it owns the access-guard mock and the subject's import.
@@ -69,19 +68,8 @@ it("renames every version of the SC's own pack, asked of the library by name", a
     expect(result).toEqual({ success: true, data: { datapackName: 'acme-1a2b3c', displayName: 'Acme Q4', versions: 2 } });
 });
 
-it("records on the project that the SC named this demo's own pack", async () => {
-    const project = createMockProject({ name: 'acme', ownDatapack: { name: 'acme-1a2b3c', displayName: 'Acme' } });
-    const context = contextFor(project);
-
-    await rename(context, { datapackName: 'acme-1a2b3c', displayName: 'Acme Q4', confirm: true });
-
-    expect(context.stateManager.saveProject).toHaveBeenCalledWith(
-        expect.objectContaining({ ownDatapack: { name: 'acme-1a2b3c', displayName: 'Acme Q4', renamed: true } }),
-    );
-});
-
-it("leaves the project alone when the pack is not this demo's own", async () => {
-    const context = contextFor(createMockProject({ ownDatapack: { name: 'other-pack' } }));
+it('never writes to the project: no pack follows a project any more', async () => {
+    const context = contextFor(createMockProject({ name: 'acme', datapack: { name: 'acme-1a2b3c', version: '1', store: 'library' } }));
 
     await rename(context, { datapackName: 'acme-1a2b3c', displayName: 'Acme Q4', confirm: true });
 

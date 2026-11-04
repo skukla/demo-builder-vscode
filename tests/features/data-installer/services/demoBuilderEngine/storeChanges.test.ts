@@ -139,7 +139,7 @@ describe('saveStoreChanges', () => {
 
         await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write, (stage) => stages.push(stage));
 
-        expect(stages).toEqual(['Reading the store', 'Saving to the library']);
+        expect(stages).toEqual(['Reading from Commerce', 'Saving the datapack']);
     });
 });
 

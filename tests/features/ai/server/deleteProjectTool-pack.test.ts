@@ -1,5 +1,6 @@
 /**
- * delete_project's `deletePack` (datapack-engine step 07): the agent's "Also delete its pack".
+ * delete_project's `deletePack`: the agent's "Also delete its pack", for the pack the project uses
+ * when it is the SC's and no other local project uses it (`deletablePackOf`, owner 2026-11-03).
  * Off unless asked, never turned on by the cleanupBehavior setting, and run after the local
  * files, as the button runs it. The library call is mocked in the shared wall and asserted by
  * what it is handed; its own suite is `demoPackDeletion.test.ts`.
@@ -16,12 +17,13 @@ import {
 } from './deleteProjectTool.testUtils';
 import { z } from 'zod';
 import { cleanUpProjectCloud } from '@/features/ai/server/agentProjectCleanup';
-import { deleteProjectDemoPack } from '@/features/projects-dashboard/services/demoPackDeletion';
+import { deletablePackOf, deleteProjectDemoPack } from '@/features/projects-dashboard/services/demoPackDeletion';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockProject } from '../../../helpers/projectFake';
 
 const mockedPackDelete = deleteProjectDemoPack as jest.MockedFunction<typeof deleteProjectDemoPack>;
+const mockedDeletable = deletablePackOf as jest.MockedFunction<typeof deletablePackOf>;
 const mockedFiles = deleteProjectFiles as jest.MockedFunction<typeof deleteProjectFiles>;
 const mockedCloud = cleanUpProjectCloud as jest.MockedFunction<typeof cleanUpProjectCloud>;
 
@@ -40,13 +42,14 @@ beforeEach(() => {
     jest.clearAllMocks();
     cleanupBehavior('ask');
     getAllProjects.mockResolvedValue([{ name: 'acme-demo', path: '/p/acme-demo' }]);
-    loadProjectFromPath.mockResolvedValue(createMockProject({ name: 'acme-demo', path: '/p/acme-demo', ownDatapack: OWN }));
+    loadProjectFromPath.mockResolvedValue(createMockProject({ name: 'acme-demo', path: '/p/acme-demo' }));
+    mockedDeletable.mockResolvedValue(OWN);
     mockedFiles.mockResolvedValue(undefined);
     mockedCloud.mockResolvedValue({});
     mockedPackDelete.mockResolvedValue({ type: 'datapack', name: 'Acme Demo', success: true });
 });
 
-describe("delete_project and the demo's own pack", () => {
+describe('delete_project and the pack the project uses', () => {
     it('declares deletePack as an optional boolean', () => {
         const { server } = register();
         const shape = server.schema().inputSchema as Record<string, z.ZodTypeAny>;
@@ -92,13 +95,13 @@ describe("delete_project and the demo's own pack", () => {
         });
     });
 
-    it('says so when asked to delete a pack the project does not have', async () => {
-        loadProjectFromPath.mockResolvedValue(createMockProject({ name: 'acme-demo', path: '/p/acme-demo' }));
+    it('says so when asked to delete a pack that may not go with it', async () => {
+        mockedDeletable.mockResolvedValue(undefined);
 
         const answer = await register().server.call({ ...CONFIRMED, deletePack: true });
 
         expect(mockedPackDelete).not.toHaveBeenCalled();
-        expect(answer.datapack).toEqual({ deleted: false, error: 'This project has no pack of its own.' });
+        expect(answer.datapack).toEqual({ deleted: false, error: 'This project uses no datapack of yours that no other project here uses, so none was deleted.' });
     });
 
     it('refuses the pack under localOnly, and says why', async () => {

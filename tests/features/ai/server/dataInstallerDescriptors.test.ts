@@ -263,7 +263,8 @@ describe('what each row accepts', () => {
             expect(keys(tool)).toEqual(expected);
         }
         // Its one addition: the answer to the changes it names (step 05).
-        expect(keys('reset_datapack')).toEqual([...expected, 'changes'].sort());
+        // And Save As's name, for changes kept when the project's pack is not the user's.
+        expect(keys('reset_datapack')).toEqual([...expected, 'changes', 'saveAs'].sort());
     });
 
     it('lets reset_datapack answer keep or drop, and gives an agent no way to turn on "always"', () => {
@@ -304,17 +305,20 @@ describe('what each row accepts', () => {
 
     it('gives the export the name echo that guards the shared catalog, the picks and the ACO choice', () => {
         expect(keys('start_datapack_export')).toEqual(
-            ['aco', 'commerceInstance', 'confirmName', 'dataTypes', 'datapackName', 'selections', 'storeViews', 'version'].sort(),
+            ['aco', 'commerceInstance', 'confirmName', 'dataTypes', 'datapackName', 'saveAs', 'selections', 'storeViews', 'version'].sort(),
         );
     });
 
-    // Step 14: what the SC added by hand goes in when picked; no pack named saves the project's own, or picks alone.
-    it('gives the save the picks, and lets it name no pack', () => {
-        expect(keys('save_store_changes_to_pack')).toEqual(['datapackName', 'selections', 'source', 'version'].sort());
+    // Step 14: what the SC added by hand goes in when picked; no pack named saves the project's, or picks alone.
+    // Save As's name makes a new pack of the user's (2026-11-03).
+    it('gives the save the picks and the Save As name, and lets it name no pack', () => {
+        expect(keys('save_store_changes_to_pack')).toEqual(['datapackName', 'saveAs', 'selections', 'source', 'version'].sort());
         const schema = row('save_store_changes_to_pack')!.inputSchema!;
         expect(() => schema.datapackName.parse(undefined)).not.toThrow();
         expect(() => schema.selections.parse({ products: { sku: ['VR-Rack'] }, cart_rules: { rule_id: [7] } })).not.toThrow();
         expect(() => schema.selections.parse({ products: ['VR-Rack'] })).toThrow();
+        expect(schema.saveAs.parse({ displayName: 'My Bodea' })).toEqual({ displayName: 'My Bodea' });
+        expect(() => schema.saveAs.parse({ displayName: '' })).toThrow();
     });
 
     it('asks the three project-derived reads for nothing at all', () => {

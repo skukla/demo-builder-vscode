@@ -16,6 +16,7 @@
 import * as vscode from 'vscode';
 import { askForDetailsDuringOperation, withModalAsking } from '@/core/vscode/operationPrompt';
 import type { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
+import type { DeletablePack } from '@/features/projects-dashboard/services/demoPackDeletion';
 import type { Project } from '@/types/base';
 
 /**
@@ -104,9 +105,9 @@ async function askCleanupInModal(
 
 /**
  * One row per thing the project has that can go with it, all unticked: the repository,
- * the DA.live site, then the demo's own pack.
+ * the DA.live site, then the pack it uses when that can go too (`deletablePackOf`).
  */
-function cleanupItems(project: Project, edsMetadata: ReturnType<typeof extractEdsMetadata>): CleanupQuickPickItem[] {
+function cleanupItems(edsMetadata: ReturnType<typeof extractEdsMetadata>, pack: DeletablePack | undefined): CleanupQuickPickItem[] {
     const items: CleanupQuickPickItem[] = [];
     if (edsMetadata?.githubRepo) {
         items.push({
@@ -127,12 +128,12 @@ function cleanupItems(project: Project, edsMetadata: ReturnType<typeof extractEd
             picked: false,
         });
     }
-    if (project.ownDatapack) {
+    if (pack) {
         items.push({
             id: 'datapack',
             label: '$(package) Delete Its Pack',
-            description: project.ownDatapack.displayName ?? project.ownDatapack.name,
-            detail: "Every version of this demo's own datapack",
+            description: pack.displayName,
+            detail: 'Every version of the datapack this demo uses',
             picked: false,
         });
     }
@@ -154,6 +155,7 @@ export async function showCleanupConfirmation(
     project: Project,
     edsMetadata: ReturnType<typeof extractEdsMetadata>,
     modalId?: string,
+    pack?: DeletablePack,
 ): Promise<CleanupOptions | null> {
     // Check cleanup behavior configuration setting
     const config = vscode.workspace.getConfiguration('demoBuilder');
@@ -177,7 +179,7 @@ export async function showCleanupConfirmation(
         return confirmLocalOnly(project);
     }
 
-    const items = cleanupItems(project, edsMetadata);
+    const items = cleanupItems(edsMetadata, pack);
 
     // If no external resources, skip the dialog and show standard confirmation
     if (items.length === 0) {

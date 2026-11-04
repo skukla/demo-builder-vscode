@@ -1,6 +1,7 @@
 /**
- * "Also delete its pack" (datapack-engine step 07): a project with its own library pack is
- * asked, beside the GitHub repository and DA.live site, whether that pack goes too. Unticked,
+ * "Also delete its pack": a project whose pack may go with it (`deletablePackOf`: the SC's own,
+ * used by no other local project, owner 2026-11-03) is asked, beside the GitHub repository and
+ * DA.live site, whether that pack goes too. Unticked,
  * because keeping a pack is reversible and deleting one is not; and never answered by the
  * `cleanupBehavior` setting, for the same reason. A ticked box deletes the pack after the
  * project's own files, and what happened goes on the cleanup results.
@@ -12,6 +13,7 @@
 import {
     deleteProject,
     mockCreateQuickPick,
+    mockDeletablePackOf,
     mockDeleteProjectDemoPack,
     mockDeleteRepository,
     mockGetConfiguration,
@@ -38,13 +40,14 @@ beforeEach(() => {
     mockGetToken.mockResolvedValue('gh-token');
     mockDeleteRepository.mockResolvedValue(undefined);
     mockDeleteProjectDemoPack.mockResolvedValue(PACK_RESULT);
+    mockDeletablePackOf.mockResolvedValue(OWN);
 });
 
-describe('a project with its own pack is asked about it', () => {
+describe('a project whose pack may go with it is asked about it', () => {
     it('offers the pack, unticked, even on a project with nothing online', async () => {
         const pick = armQuickPick('accept', []);
 
-        await deleteProject(context(), plainProject({ ownDatapack: OWN }), SERVICES);
+        await deleteProject(context(), plainProject(), SERVICES);
 
         expect(pick.items().map((item) => item.id)).toEqual(['datapack']);
         expect(pick.selectedAtShow()).toStrictEqual([]);
@@ -54,7 +57,7 @@ describe('a project with its own pack is asked about it', () => {
     it('offers it after the repository and the site on an EDS project', async () => {
         const pick = armQuickPick('accept', []);
 
-        await deleteProject(context(), edsProject({ ownDatapack: OWN }), SERVICES);
+        await deleteProject(context(), edsProject(), SERVICES);
 
         expect(pick.items().map((item) => item.id)).toEqual(['github', 'daLive', 'datapack']);
     });
@@ -62,7 +65,7 @@ describe('a project with its own pack is asked about it', () => {
     it('keeps the pack when the box is left unticked', async () => {
         armQuickPick('accept', []);
 
-        const result = await deleteProject(context(), plainProject({ ownDatapack: OWN }), SERVICES);
+        const result = await deleteProject(context(), plainProject(), SERVICES);
 
         expect(mockRm).toHaveBeenCalled();
         expect(mockDeleteProjectDemoPack).not.toHaveBeenCalled();
@@ -76,7 +79,7 @@ describe('a project with its own pack is asked about it', () => {
         mockRm.mockImplementation(async () => { order.push('files'); });
         mockDeleteProjectDemoPack.mockImplementation(async () => { order.push('pack'); return PACK_RESULT; });
 
-        const result = await deleteProject(ctx, plainProject({ ownDatapack: OWN }), SERVICES);
+        const result = await deleteProject(ctx, plainProject(), SERVICES);
 
         expect(mockDeleteProjectDemoPack).toHaveBeenCalledWith(ctx, OWN);
         expect(order).toEqual(['files', 'pack']);
@@ -86,7 +89,7 @@ describe('a project with its own pack is asked about it', () => {
     it('cancels without deleting anything when the question is dismissed', async () => {
         armQuickPick('escape', ['datapack']);
 
-        await deleteProject(context(), plainProject({ ownDatapack: OWN }), SERVICES);
+        await deleteProject(context(), plainProject(), SERVICES);
 
         expect(mockRm).not.toHaveBeenCalled();
         expect(mockDeleteProjectDemoPack).not.toHaveBeenCalled();
@@ -97,7 +100,7 @@ describe('the cleanupBehavior setting never deletes a pack', () => {
     it('deleteAll takes the online resources and keeps the pack', async () => {
         mockGetConfiguration.mockReturnValue({ get: () => 'deleteAll' });
 
-        await deleteProject(context(), edsProject({ ownDatapack: OWN }), SERVICES);
+        await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockDeleteRepository).toHaveBeenCalled();
         expect(mockDeleteProjectDemoPack).not.toHaveBeenCalled();
@@ -108,7 +111,7 @@ describe('the cleanupBehavior setting never deletes a pack', () => {
         mockGetConfiguration.mockReturnValue({ get: () => 'localOnly' });
         mockShowWarningMessage.mockResolvedValue('Delete');
 
-        await deleteProject(context(), plainProject({ ownDatapack: OWN }), SERVICES);
+        await deleteProject(context(), plainProject(), SERVICES);
 
         expect(mockShowWarningMessage).toHaveBeenCalled();
         expect(mockRm).toHaveBeenCalled();
@@ -121,7 +124,7 @@ describe('the same question in the progress modal', () => {
 
     it('asks with one unticked box naming the pack, and deletes it when ticked', async () => {
         const ctx = context();
-        const done = deleteProject(ctx, plainProject({ ownDatapack: OWN }), SERVICES, { progress: 'modal', operationId: ID });
+        const done = deleteProject(ctx, plainProject(), SERVICES, { progress: 'modal', operationId: ID });
         for (let i = 0; i < 50 && !isAwaitingAnswer(ID); i++) await Promise.resolve();
         const fields = heldProgress(ID)?.prompt?.fields;
         answerOperationPrompt(ID, 'Delete', { datapack: 'true' });
@@ -132,5 +135,17 @@ describe('the same question in the progress modal', () => {
         ]);
         expect(fields?.[0]?.label).toBe('Also delete its pack');
         expect(mockDeleteProjectDemoPack).toHaveBeenCalledWith(ctx, OWN);
+    });
+});
+
+describe('a project whose pack may not go with it', () => {
+    it('is not asked about a pack at all', async () => {
+        mockDeletablePackOf.mockResolvedValue(undefined);
+        mockShowWarningMessage.mockResolvedValue('Delete');
+
+        await deleteProject(context(), plainProject(), SERVICES);
+
+        expect(mockCreateQuickPick).not.toHaveBeenCalled();
+        expect(mockDeleteProjectDemoPack).not.toHaveBeenCalled();
     });
 });

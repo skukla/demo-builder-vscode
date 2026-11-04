@@ -72,6 +72,12 @@ const DATAPACK_ID = {
  * `{<kind>: {<field>: [ids]}}`, each kind's field in `pickableKinds.ts`. The ids are the ones
  * list_datapack_export_items answers.
  */
+/** Save As: a new datapack of the user's, by the name they gave (`demoPack.ts`). */
+const SAVE_AS = z
+    .object({ displayName: z.string().min(1).describe('The name the user gave the new datapack, e.g. My Bodea') })
+    .optional()
+    .describe("Save As: a new datapack of the user's under this name, which the project then uses. Needed when the project's pack is not theirs");
+
 const SELECTIONS = z
     .record(z.record(z.array(z.union([z.string(), z.number()]))))
     .optional()
@@ -285,14 +291,17 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Save the store\'s copy of a datapack Demo Builder installed in this project as a NEW version of this ' +
-            'demo\'s own pack in the datapack library (made at the first save and named for the project), with the ' +
-            'categories, set, attributes and quantities its products need. Things added by hand in the Admin go in ' +
-            'too when picked in selections (list_datapack_export_items lists them). No pack named: the project\'s own ' +
-            'when Demo Builder installed it, else none, and the version holds only what is picked (a store Demo ' +
-            'Builder did not fill). The pack installed is never changed, and nothing picked is ever removed with it; ' +
+            'Save the store\'s copy of the datapack this project uses into the datapack library, with the categories, ' +
+            'set, attributes and quantities its products need: Save or Save As. Without saveAs (Save) it is a NEW version of ' +
+            'the pack the project uses, only when that pack is the user\'s own; when it is not (a team pack such as ' +
+            'Bodea, or a colleague\'s), nothing is written and the answer has data.needsName with data.suggestedName: ' +
+            'ask the user for a name, then call again with saveAs.displayName (Save As), which makes a NEW pack of ' +
+            'theirs. Either way the project then uses the new version. Things added by hand in the Admin go in too ' +
+            'when picked in selections (list_datapack_export_items lists them). No pack named: the project\'s when ' +
+            'Demo Builder installed it, else none, and the version holds only what is picked (a store Demo Builder ' +
+            'did not fill; send saveAs). The pack installed is never changed, and nothing picked is ever removed with it; ' +
             'undo by deleting the new version with delete_library_datapack. Store settings a pack does not hold ' +
-            'itself go to a settings layer beside the new version, not into it (settingsLayer). Answers the demo\'s pack and its new ' +
+            'itself go to a settings layer beside the new version, not into it (settingsLayer). Answers the pack saved into and its new ' +
             'version, unnamed (ids kept because the store could not name them) and leftOut (what the store has, of ' +
             'products, gift cards, categories, cart rules, customers and companies, that the version does not ' +
             'hold); its message says both. A version the install would refuse is not saved, and the message says ' +
@@ -303,10 +312,11 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         // satisfies the handler's own confirm check.
         confirm: true,
         inputSchema: {
-            datapackName: z.string().optional().describe("The pack installed, from find_datapacks. Omit for the project's own"),
+            datapackName: z.string().optional().describe("The pack installed, from find_datapacks. Omit for the project's"),
             version: z.string().optional().describe('Its version, e.g. main (required with datapackName)'),
             source: PACK_SOURCE,
             selections: SELECTIONS,
+            saveAs: SAVE_AS,
         },
     },
 
@@ -405,8 +415,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'is refused and nothing is removed by name; check_demo_data then clear_demo_data clears what an ' +
             'earlier install left. With the demo-builder engine, if the user changed anything the pack made ' +
             'since it was installed, this names the changes and removes nothing until changes answers: keep ' +
-            "saves them to the demo's own pack first (a new version; the previous one is kept; if the save " +
-            'fails nothing is removed), drop loses them. When changes is omitted and the setting ' +
+            "saves them first, into the user's own pack or as a new one named by saveAs (the answer says which; " +
+            'if the save fails nothing is removed), drop loses them. When changes is omitted and the setting ' +
             'demoBuilder.dataInstaller.changesOnRemoval is save, it saves without asking. Ask the user; ' +
             'preview_datapack_changes shows them beforehand (keep). Packs the service installed have no ' +
             'record of changes, so none of this applies to them.',
@@ -421,7 +431,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             ...DATAPACK_ID,
             ...IMPORT_TARGET,
             dataTypes: z.array(z.string()).min(1).optional().describe('Only for a pack the service installed: the data types to remove, from list_datapack_data_types'),
-            changes: z.enum(['keep', 'drop']).optional().describe("The user's changes since install: keep saves them to the demo's own pack first, drop loses them"),
+            changes: z.enum(['keep', 'drop']).optional().describe("The user's changes since install: keep saves them first (into their own pack, or as saveAs), drop loses them"),
+            saveAs: SAVE_AS,
         },
     },
     {
@@ -430,9 +441,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Capture data from a Commerce instance into a datapack. With the demo-builder engine (the ' +
-            "default): saves what is picked in selections from this project's store as a new version of this " +
-            "demo's own library pack, with the project's own pack when Demo Builder installed it; the same save " +
-            'as save_store_changes_to_pack, answering the same way. Send only selections and confirm. With the ' +
+            "default): saves what is picked in selections from this project's store into the datapack library, " +
+            "with the project's pack when Demo Builder installed it; the same save as save_store_changes_to_pack " +
+            '(Save, or Save As with saveAs), answering the same way. Send selections, saveAs and confirm. With the ' +
             'service engine: **writes into the SHARED catalog other teams depend on** — requires confirm:true ' +
             'and confirmName equal to the datapack name. List what it would contain first. aco:true (an Adobe ' +
             'Commerce Optimizer pack) is refused in this release: ACO datapacks arrive with ACO support.',
@@ -452,6 +463,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 .optional()
                 .describe(`Data types to capture; at least one${SERVICE_OR_ACO}. With aco, ACO kinds (omit for all five)`),
             selections: SELECTIONS,
+            saveAs: SAVE_AS,
             aco: z.boolean().optional().describe('Refused in this release: ACO datapacks arrive with ACO support'),
             storeViews: z
                 .array(z.string())
@@ -551,8 +563,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "it; the Data Installer's shared catalog is never touched. When you shared the pack " +
             'in a project file, the answer carries `warning` (without confirm, `sharedInFile`): ' +
             "anyone who has not created that project yet gets the pack it was made from instead. " +
-            "Deleting the last version of this demo's own pack also stops the project naming it " +
-            '(`ownPackCleared: true`); its next save makes the pack again. A version takes your settings layer of ' +
+            'A version takes your settings layer of ' +
             'the same version with it (`settingsLayerDeleted: true`).',
         map: importHandlers,
         type: 'delete-library-datapack',
@@ -567,8 +578,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Rename one of your own datapack library packs: every version takes the new display ' +
-            "name (its datapackName, from find_datapacks, never changes). On this demo's own pack, " +
-            "its name stops following the project's. Answers how many versions were renamed.",
+            "name (its datapackName, from find_datapacks, never changes). Answers how many versions were renamed.",
         map: importHandlers,
         type: 'rename-library-datapack',
         // Gated twice, as delete_library_datapack is: the row refuses before dispatch, and the

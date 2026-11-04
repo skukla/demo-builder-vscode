@@ -12,10 +12,12 @@
  * @module features/project-creation/handlers/executorEditDatapack
  */
 
+import * as vscode from 'vscode';
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import type { ProgressTracker } from './shared';
 import {
     beginSampleDataRemovalCheck,
+    askSaveAsNameWith,
     removeProjectSampleData,
 } from '@/features/eds/services/reset/edsResetSampleData';
 import {
@@ -85,7 +87,7 @@ export async function applyDatapackChange(
 ): Promise<void> {
     if (!plan.changes) return;
     if (plan.removeOld) {
-        await removeProjectSampleData(project, context, (stage, step) => progressTracker(stage, 90, step ?? ''));
+        await removeProjectSampleData(project, context, (stage, step) => progressTracker(stage, 90, step ?? ''), askSaveAsNameWith(vscode));
     }
     project.datapack = config.datapack;
     await context.stateManager.saveProject(project);

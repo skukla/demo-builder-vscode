@@ -18,8 +18,8 @@ export interface PackTypeStageProps {
 }
 
 const COMMERCE_LINE: Record<DatapackEngine, string> = {
-    'demo-builder': "Save selected data from this store to this project's datapack.",
-    service: 'Export data types from this store to the shared catalog.',
+    'demo-builder': 'Save selected data from this Commerce instance to a datapack of yours.',
+    service: 'Export data types from this Commerce instance to the shared catalog.',
 };
 
 export function PackTypeStage({ engine = 'service', packType, onPick }: PackTypeStageProps): React.ReactElement {

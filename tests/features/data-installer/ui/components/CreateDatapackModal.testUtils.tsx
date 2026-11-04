@@ -70,7 +70,7 @@ export const button = (name: string) => screen.getByRole('button', { name });
 
 /** The first screen, with nothing pressed. */
 export async function renderCreate(engine?: 'service' | 'demo-builder') {
-    const props = { onClose: jest.fn(), onSaveFromStore: jest.fn() };
+    const props = { onClose: jest.fn() };
     const result = render(<CreateDatapackModal engine={engine} {...props} />);
     await settle();
     return { ...props, ...result };

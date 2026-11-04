@@ -230,7 +230,7 @@ describe('choosing types', () => {
 describe('before the list arrives, and when it cannot', () => {
     it('shows only the wait while it reads, with no words', async () => {
         mockRequest.mockImplementation(() => new Promise(() => undefined));
-        render(<CreateDatapackModal engine="service" onClose={jest.fn()} onSaveFromStore={jest.fn()} />);
+        render(<CreateDatapackModal engine="service" onClose={jest.fn()} />);
         await settle();
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();

@@ -198,10 +198,6 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
             edsDaLiveUrl,
             initialEdsStorefrontStatus,
             hasAdobeContext,
-            // This demo's own pack (step 07), as the Datapacks tile names it.
-            ...(project?.ownDatapack
-                ? { ownDatapackName: project.ownDatapack.displayName ?? getProjectDisplayName(project) }
-                : {}),
             // The keyed map drives the integrations SUMMARY tile (count + dot).
             // No catalog seed: the add-integration picker lives on the dedicated
             // integrations surface, whose own payload carries the catalog.

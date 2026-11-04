@@ -60,7 +60,6 @@ const FIELDS: { [K in keyof Required<Project>]: Decision<Project[K]> } = {
             origin: { name: 'bodea', version: '1.0.0', store: 'installer' },
         },
     },
-    ownDatapack: { roundTrips: { name: 'acme-demo-1a2b3c', renamed: true } },
     commerceAdminExperience: { roundTrips: 'classic' },
     selectedStack: { roundTrips: 'eds-accs' },
     selectedAddons: { roundTrips: ['adobe-commerce-aco'] },

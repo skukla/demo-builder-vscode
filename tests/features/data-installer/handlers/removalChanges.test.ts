@@ -113,6 +113,17 @@ function setting(value: 'ask' | 'save'): void {
     });
 }
 
+/** Keep the changes: the demo's pack is Bodea, not the SC's, so they go to a new pack by this name. */
+const KEEP = { changes: 'keep', saveAs: { displayName: 'My Bodea' } };
+
+/** The SC's own pack, as the library lists it: Save writes into it, with no name to give. */
+function ownedByTheSc(id: DatapackId, displayName: string): void {
+    jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({
+        items: [{ id, displayName, shared: false, dataTypes: [], art: {}, mine: true }],
+        count: 1,
+    });
+}
+
 const reset = (over: Record<string, unknown> = {}, project: Partial<Project> = PROJECT) =>
     importHandlers['reset-datapack'](makeImportHarness({ ...project }).context, { ...REQUEST, ...over });
 
@@ -135,6 +146,9 @@ beforeEach(() => {
         client: new DataInstallerClient({ baseUrl: `https://example.invalid/${store}`, getToken: async () => 'tok' }),
     }));
     recordsFor(BODEA);
+    // The library's two reads a save makes: Bodea is a team pack, never the SC's.
+    jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({ items: [], count: 0 });
+    jest.spyOn(DataInstallerClient.prototype, 'getDatapackDetail').mockResolvedValue({ id: BODEA, displayName: 'Bodea', shared: true, dataTypes: [], art: {} });
     mockedPreview.mockResolvedValue(CHANGED);
     mockedSave.mockImplementation(async () => {
         events.push('save');
@@ -183,7 +197,7 @@ describe('no answer, and something changed', () => {
 
 describe('keep', () => {
     it('saves, then removes the version the save made: the install record has moved onto it', async () => {
-        const result = await reset({ changes: 'keep' });
+        const result = await reset(KEEP);
 
         expect(events).toEqual(['save', 'remove acme-1a2b3c@20261102-120000']);
         // The caller has already chosen, so nothing reads first.
@@ -193,33 +207,34 @@ describe('keep', () => {
     });
 
     it('asks the removal only for the kinds the saved version holds: a kind it lacks is refused', async () => {
-        await reset({ changes: 'keep' });
+        await reset(KEEP);
 
         expect(startDelete.mock.calls[0][0].dataTypes).toEqual(['categories', 'products']);
     });
 
-    it('saves the pack named, into the demo\'s own pack, as a new version', async () => {
-        await reset({ changes: 'keep', source: 'installer' });
+    it('saves the pack named, as a new pack under the name given', async () => {
+        await reset({ ...KEEP, source: 'installer' });
 
         const [, target] = mockedSave.mock.calls[0];
         expect(target).toMatchObject({ pack: BODEA, source: 'installer' });
-        expect(target.saveAs.id.name).toMatch(/^acme-[0-9a-f]{6}$/u);
+        expect(target.saveAs.id.name).toMatch(/^my-bodea-[0-9a-f]{6}$/u);
+        expect(target.saveAs.displayName).toBe('My Bodea');
         expect(target.saveAs.id.version).toMatch(/^\d{8}-\d{6}$/u);
     });
 
     it('turns the setting on only when asked, and only once the save worked', async () => {
-        await reset({ changes: 'keep' });
+        await reset(KEEP);
         expect(settingUpdate).not.toHaveBeenCalled();
 
         recordsFor(BODEA);
-        await reset({ changes: 'keep', alwaysSave: true });
+        await reset({ ...KEEP, alwaysSave: true });
         expect(settingUpdate).toHaveBeenCalledWith('changesOnRemoval', 'save', vscode.ConfigurationTarget.Global);
     });
 
     it('still removes when the setting will not write: the save it was about has worked', async () => {
         settingUpdate.mockRejectedValue(new Error('read-only settings'));
 
-        const result = await reset({ changes: 'keep', alwaysSave: true });
+        const result = await reset({ ...KEEP, alwaysSave: true });
 
         expect(result.success).toBe(true);
         expect(events).toEqual(['save', 'remove acme-1a2b3c@20261102-120000']);
@@ -228,7 +243,7 @@ describe('keep', () => {
     it('says the changes are safe when the removal then cannot start', async () => {
         mockedRun.mockResolvedValue({ success: false, error: 'The library is not answering.' });
 
-        const result = await reset({ changes: 'keep' });
+        const result = await reset(KEEP);
 
         expect(result.success).toBe(false);
         expect(result.error).toBe(`The library is not answering. Your changes are safe: ${SAVED.sentence}`);
@@ -241,7 +256,7 @@ describe('a save that fails', () => {
     });
 
     it('removes nothing, and says why', async () => {
-        const result = await reset({ changes: 'keep' });
+        const result = await reset(KEEP);
 
         expect(result).toMatchObject({ success: false, code: ErrorCode.CHANGES_NOT_SAVED, error: 'The library did not take all of it. Delete that version and try again.' });
         expect(events).toStrictEqual([]);
@@ -249,7 +264,7 @@ describe('a save that fails', () => {
     });
 
     it('leaves the setting alone', async () => {
-        await reset({ changes: 'keep', alwaysSave: true });
+        await reset({ ...KEEP, alwaysSave: true });
 
         expect(settingUpdate).not.toHaveBeenCalled();
     });
@@ -257,7 +272,7 @@ describe('a save that fails', () => {
     it('removes nothing when the sign-in is in the wrong org either', async () => {
         mockedGuard.mockResolvedValue({ error: 'Use "Switch IMS Org" to continue.' });
 
-        const result = await reset({ changes: 'keep' });
+        const result = await reset(KEEP);
 
         expect(result).toMatchObject({ success: false, code: ErrorCode.CHANGES_NOT_SAVED, error: 'Use "Switch IMS Org" to continue.' });
         expect(mockedSave).not.toHaveBeenCalled();
@@ -279,11 +294,22 @@ describe('drop', () => {
 describe('the setting answers', () => {
     beforeEach(() => setting('save'));
 
-    it('saves without asking when something changed', async () => {
-        const result = await reset();
+    it("saves without asking when something changed and the demo's pack is the SC's", async () => {
+        const mine: Partial<Project> = { ...PROJECT, datapack: { ...BODEA, store: 'library' } };
+        ownedByTheSc(BODEA, 'Acme Bodea');
+
+        const result = await reset({}, mine);
 
         expect(events).toEqual(['save', 'remove acme-1a2b3c@20261102-120000']);
+        expect(mockedSave.mock.calls[0][1].saveAs).toMatchObject({ id: { name: 'bodea' }, displayName: 'Acme Bodea' });
         expect(result.success).toBe(true);
+    });
+
+    it("still asks when the demo's pack is not the SC's: there is nowhere to save without a name", async () => {
+        const result = await reset();
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.CHANGES_NEED_ANSWER, data: { suggestedName: 'Bodea Copy' } });
+        expect(events).toStrictEqual([]);
     });
 
     it('saves nothing when nothing changed', async () => {
@@ -339,7 +365,7 @@ describe('a pack the service installed', () => {
     });
 
     it('ignores keep: there is nothing to save', async () => {
-        await reset({ changes: 'keep' });
+        await reset(KEEP);
 
         expect(mockedSave).not.toHaveBeenCalled();
         expect(events).toEqual(['remove bodea@main']);
@@ -377,11 +403,10 @@ describe('a pack the service installed', () => {
     });
 });
 
-describe('a pack whose record has moved onto the demo\'s own pack', () => {
+describe('a pack whose record has moved onto a pack saved from it', () => {
     const own: Partial<Project> = {
         ...PROJECT,
         datapack: { ...SAVED_ID, store: 'library', origin: BODEA },
-        ownDatapack: { name: SAVED_ID.name, displayName: 'Acme Demo' },
     };
 
     it('refuses by name, rather than ask the service to delete Bodea from the store', async () => {
@@ -390,7 +415,7 @@ describe('a pack whose record has moved onto the demo\'s own pack', () => {
         const result = await reset({}, own);
 
         expect(result.success).toBe(false);
-        expect(result.error).toContain('saved to the Acme Demo pack');
+        expect(result.error).toContain('saved to acme-1a2b3c@20261102-120000');
         expect(mockedRun).not.toHaveBeenCalled();
     });
 
@@ -409,14 +434,14 @@ describe('what is refused before anything is saved', () => {
         ['half a target', { storeCode: undefined }],
         ['an answer that is neither', { changes: 'maybe' }],
     ])('%s', async (_name, over) => {
-        const result = await reset({ changes: 'keep', ...over });
+        const result = await reset({ ...KEEP, ...over });
 
         expect(result.success).toBe(false);
         expect(mockedSave).not.toHaveBeenCalled();
     });
 
     it('CONTROL: the same request with an instance saves', async () => {
-        await reset({ changes: 'keep' });
+        await reset(KEEP);
 
         expect(mockedSave).toHaveBeenCalledTimes(1);
     });
@@ -438,7 +463,7 @@ describe('the save\'s stages', () => {
             return SAVED;
         });
 
-        await importHandlers['reset-datapack'](context, { ...REQUEST, changes: 'keep' });
+        await importHandlers['reset-datapack'](context, { ...REQUEST, ...KEEP });
 
         const stages = (context.sendMessage as jest.Mock).mock.calls.filter(([type, payload]) => type === 'operationProgress' && payload.id === DATAPACK_OPERATION_ID).map(([, payload]) => payload.stage);
         expect(stages).toEqual(['Saving to the library', 'Removing the sample data']);
@@ -458,24 +483,28 @@ describe('get-datapack-removal-changes', () => {
     const read = (payload: StoreChangesPayload = { datapackName: 'bodea', version: 'main' }, project: Partial<Project> = PROJECT) =>
         importHandlers['get-datapack-removal-changes'](makeImportHarness({ ...project }).context, payload);
 
-    it('answers the sentence, the demo\'s own pack by name, and how the setting stands', async () => {
-        const result = await read(undefined, { ...PROJECT, ownDatapack: { name: 'acme-1a2b3c', displayName: 'Acme Demo', renamed: true } });
+    it("answers the sentence, the demo's pack by name when it is the SC's, and how the setting stands", async () => {
+        ownedByTheSc(BODEA, 'Acme Bodea');
+
+        const result = await read(undefined, { ...PROJECT, datapack: { ...BODEA, store: 'library' } });
 
         expect(result).toMatchObject({
             success: true,
             data: {
                 count: 3,
                 sentence: '3 items changed since install: the category Critical Power, and 2 products.',
-                ownPackName: 'Acme Demo',
+                packName: 'Acme Bodea',
                 alwaysSave: false,
             },
         });
+        expect(result.data).not.toHaveProperty('suggestedName');
     });
 
-    it('names a pack not made yet the way the first save will: after the project', async () => {
+    it("answers the name Save As starts with when the demo's pack is not the SC's", async () => {
         const result = await read();
 
-        expect(result.data).toMatchObject({ ownPackName: 'acme' });
+        expect(result.data).toMatchObject({ suggestedName: 'Bodea Copy' });
+        expect(result.data).not.toHaveProperty('packName');
     });
 
     it('answers no sentence with nothing changed', async () => {
@@ -519,7 +548,11 @@ describe('a door whose own question was already asked', () => {
     it('saves what it finds, with no answer needed, on the project it was handed', async () => {
         const { context } = makeImportHarness({ ...PROJECT, path: '/nonexistent/projects/other', name: 'other' });
 
-        const settled = await settleChangesBeforeRemoval(contextForProject(context, project), { pack: BODEA, unanswered: 'keep' }, jest.fn());
+        const settled = await settleChangesBeforeRemoval(
+            contextForProject(context, project),
+            { pack: BODEA, unanswered: 'keep', saveAs: { displayName: 'My Bodea' } },
+            jest.fn(),
+        );
 
         expect(settled).toMatchObject({ saved: { id: SAVED_ID } });
         expect(mockedPreview).toHaveBeenCalledWith(expect.objectContaining({ projectPath: project.path }), BODEA, 'installer');

@@ -37,6 +37,7 @@ import {
 import {
     beginSampleDataRemovalCheck,
     confirmSampleDataRemoval,
+    askSaveAsNameWith,
     removeProjectSampleData,
 } from './edsResetSampleData';
 import { executeEdsReset } from './edsResetService';
@@ -332,7 +333,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 // was asked for, and a data step that refuses is reported while
                 // the reset still stands.
                 if (removeData) {
-                    await removeProjectSampleData(project, context, report);
+                    await removeProjectSampleData(project, context, report, askSaveAsNameWith(vscode));
                 }
                 // After the pack's removal, so what it took is gone from the list, never added to it.
                 if (clearOther && otherPlan) {

@@ -37,7 +37,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RecordedPackNotice, isListed, isPack } from './RecordedPackNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
-import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { cn } from '@/core/ui/utils/classNames';
@@ -219,7 +218,6 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                 </CenteredFeedbackContainer>
             ) : (
                 <>
-                    <LeadText>Your changes to this data are kept in this demo&apos;s own pack.</LeadText>
                     {arrived && stillArrived && !arrivedListed ? (
                         <RecordedPackNotice recorded={arrived} onUse={useInstead} />
                     ) : null}

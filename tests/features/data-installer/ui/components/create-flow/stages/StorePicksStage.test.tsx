@@ -137,7 +137,7 @@ describe('the kind shown', () => {
         await open();
 
         expect(shown()).toBeUndefined();
-        expect(screen.getByText('This store has no data to select.')).toBeInTheDocument();
+        expect(screen.getByText('This Commerce instance has no data to select.')).toBeInTheDocument();
         expect(callsOf(LIST).filter((c) => c[1].dataType !== 'products')).toHaveLength(0);
     });
 });

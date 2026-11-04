@@ -12,6 +12,7 @@
  * @module features/data-installer/handlers/importTargetHandlers
  */
 
+import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { deriveImportInstance } from '../services/importInstance';
 import {
     buildScopeDiscoveryParams,
@@ -76,14 +77,18 @@ export const importTargetHandlers = defineHandlers({
         // Two derivations would let the same pack land in different places
         // depending on which surface asked, with nothing to report the difference.
         const instance = deriveImportInstance(configs);
+        // When Demo Builder's engine installed the pack: so the demo's card can tell a team pack
+        // updated in place since (owner, 2026-11-03, `.rptc/plans/datapack-save-as/`).
+        const installedAt = await installedAtOf(project, datapack);
+        const held = { datapack, ...(installedAt ? { installedAt } : {}) };
         if (instance) {
             return {
                 success: true,
-                data: { instance, projectName, datapack, ...(scope && { scope }) },
+                data: { instance, projectName, ...held, ...(scope && { scope }) },
             };
         }
 
-        return { success: true, data: { datapack, ...(scope && { scope }) } };
+        return { success: true, data: { ...held, ...(scope && { scope }) } };
     },
 
     /**
@@ -123,3 +128,13 @@ export const importTargetHandlers = defineHandlers({
         return { success: true, data: { websites: groupStoreViewsByWebsite(result.data) } };
     },
 });
+
+/** When Demo Builder's engine installed the project's pack; none without a record, or one that cannot be read. */
+async function installedAtOf(project: Project | undefined, datapack: Project['datapack']): Promise<string | undefined> {
+    if (!project?.path || !datapack) return undefined;
+    try {
+        return (await readInstallRecord(nodeRecordFiles, project.path, datapack))?.startedAt;
+    } catch {
+        return undefined;
+    }
+}

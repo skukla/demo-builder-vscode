@@ -188,13 +188,16 @@ export const mockSleep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));
 
 /**
- * Deleting the project's own library pack ("Also delete its pack", step 07). Its real module
- * reaches the datapack library; every delete suite asserts only whether, and with what, it is
- * called.
+ * Deleting the pack the project uses ("Also delete its pack"), and whether it may go with it
+ * (`deletablePackOf`: the SC's own, and no other local project uses it). The real module reaches
+ * the datapack library; every delete suite asserts only whether, and with what, they are called.
+ * Offers no pack unless a suite says so.
  */
 export const mockDeleteProjectDemoPack = jest.fn();
+export const mockDeletablePackOf = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/projects-dashboard/services/demoPackDeletion', () => ({
     deleteProjectDemoPack: (...a: unknown[]) => mockDeleteProjectDemoPack(...a),
+    deletablePackOf: (...a: unknown[]) => mockDeletablePackOf(...a),
 }));
 
 // Below the mocks on purpose — see the note above about hoisting.

@@ -6,13 +6,11 @@
  *   undo of loading a file into the library. Library only, by construction: the
  *   library lets only a pack's owner delete it, and the Data Installer has no such
  *   check, so deleting there is offered nowhere in the extension. A pack this SC shared
- *   in a project file says so, without confirm and with it (`sharedInFiles.ts`). Deleting the
- *   last version of this demo's own pack clears `project.ownDatapack` (`ownPackCleared`). A
- *   version takes its settings layer of the same version with it (step 09): "save store changes"
- *   writes the two together, and is undone by deleting the version.
+ *   in a project file says so, without confirm and with it (`sharedInFiles.ts`). A version takes
+ *   its settings layer of the same version with it (step 09): a save writes the two together, and
+ *   is undone by deleting the version.
  * - `rename-library-datapack` — change the display name of every version of one of the
- *   caller's own packs (the name in the library cannot change). When it is this demo's
- *   own pack, the project records that the SC named it (datapack-engine step 07).
+ *   caller's own packs (the name in the library cannot change).
  * - `share-library-datapack` — share every version of one of the caller's own packs with everyone
  *   the library admits, or stop sharing it (owner, 2026-10-30): the library's owner-only
  *   `update-datapack-metadata`, its `shared` field. Confirm-gated, since a shared pack is seen and
@@ -91,40 +89,6 @@ function idOf(payload?: { datapackName?: string; version?: string }): DatapackId
 /** The warning a delete of this pack carries, when this SC shared it in a project file. */
 function sharedWarning(context: HandlerContext, id: DatapackId): Promise<string | undefined> {
     return sharedInFileWarningFor(context.context.globalState, id, packReadsFor(context));
-}
-
-/** When the renamed pack is this demo's own, the project records that the SC named it. */
-async function recordRename(context: HandlerContext, name: string, displayName: string): Promise<void> {
-    const project = await context.stateManager.getCurrentProject();
-    if (project?.ownDatapack?.name !== name) return;
-    project.ownDatapack = { name, displayName, renamed: true };
-    await context.stateManager.saveProject(project);
-}
-
-/**
- * After a delete: when it was this demo's own pack and the library now holds no version of it
- * that is the SC's, the project stops naming it, so the dashboard's Datapacks tile drops its
- * "This demo's pack" line. The next save makes the pack again. A library that cannot be asked
- * leaves the project as it was; the delete itself already happened.
- *
- * @returns true when the project's own pack was cleared
- */
-async function clearOwnPackIfGone(
-    context: HandlerContext,
-    client: Parameters<typeof myVersions>[0],
-    name: string,
-): Promise<boolean> {
-    const project = await context.stateManager.getCurrentProject();
-    if (project?.ownDatapack?.name !== name) return false;
-    try {
-        if ((await myVersions(client, name)).length > 0) return false;
-    } catch (error) {
-        context.debugLogger.debug(`${LOG_PREFIX} Could not check what is left of ${name}: ${String(error)}`);
-        return false;
-    }
-    delete project.ownDatapack;
-    await context.stateManager.saveProject(project);
-    return true;
 }
 
 /** Check the payload: a name, a non-blank new name, and confirm. */
@@ -220,7 +184,6 @@ export const datapackLibraryHandlers = defineHandlers({
             context.logger.info(
                 `${LOG_PREFIX} Deleted ${id.name}@${id.version} from the datapack library`,
             );
-            const ownPackCleared = await clearOwnPackIfGone(context, access.client, id.name);
             const layer = await deleteLayerOf(context, access, id);
             return {
                 success: true,
@@ -229,7 +192,6 @@ export const datapackLibraryHandlers = defineHandlers({
                     version: id.version,
                     deleted: true,
                     ...(warning ? { warning } : {}),
-                    ...(ownPackCleared ? { ownPackCleared } : {}),
                     ...layer,
                 },
             };
@@ -257,7 +219,6 @@ export const datapackLibraryHandlers = defineHandlers({
             }
             const writer = writerFor(context, access);
             for (const version of versions) await writer.updateDisplayName(version, input.displayName);
-            await recordRename(context, input.name, input.displayName);
             context.logger.info(`${LOG_PREFIX} Renamed ${input.name} (${versions.length} versions) in the datapack library`);
             return { success: true, data: { datapackName: input.name, displayName: input.displayName, versions: versions.length } };
         } catch (error) {

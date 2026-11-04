@@ -60,7 +60,7 @@ export function StorePicksStage({ pack, store }: StorePicksStageProps): React.Re
         <>
             {pack ? (
                 <p className="datapack-export-intro">
-                    Saves a new version of this project&apos;s datapack from {pack.displayName}. Select anything you added in the Admin to include it.
+                    Includes what {pack.displayName} put in Commerce. Select anything you added in the Admin to include it too.
                 </p>
             ) : null}
             <div className="datapack-picks">
@@ -79,7 +79,7 @@ export function StorePicksStage({ pack, store }: StorePicksStageProps): React.Re
                             onAnswered={store.answered}
                         />
                     ) : (
-                        <p className="datapack-export-note">This store has no data to select.</p>
+                        <p className="datapack-export-note">This Commerce instance has no data to select.</p>
                     )}
                 </div>
             </div>

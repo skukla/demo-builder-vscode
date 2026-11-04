@@ -1,6 +1,7 @@
 /**
- * The removal confirm's decisions, without React: what it shows for what the read found, what the
- * boxes do, and what the Remove press sends.
+ * The removal confirm's decisions, without React: what it shows for what the read found, and what
+ * each of its buttons sends (Save and Remove, Remove Without Saving), with the Save As name when
+ * the demo's pack is not the SC's (`.rptc/plans/datapack-save-as/`).
  */
 
 import type { DatapackRemovalChanges } from '@/features/data-installer/removalChanges';
@@ -10,19 +11,17 @@ import {
     recordedRemovalLines,
     removalAnswer,
     removeLabel,
+    saveAsNameOf,
     toggleAlways,
-    toggleSave,
 } from '@/features/data-installer/ui/components/removalConfirm';
 import type { DataInstallerFailure } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
 
-const CHANGED: DatapackRemovalChanges = {
-    count: 3,
-    kinds: [],
-    sentence: '3 items changed since install: the category Critical Power, and 2 products.',
-    ownPackName: 'Acme Demo',
-    alwaysSave: false,
-};
-const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], ownPackName: 'Acme Demo', alwaysSave: false };
+const SENTENCE = '3 items changed since install: the category Critical Power, and 2 products.';
+/** The demo's pack is the SC's own: saving goes into it. */
+const CHANGED_MINE: DatapackRemovalChanges = { count: 3, kinds: [], sentence: SENTENCE, packName: 'Acme Bodea', alwaysSave: false };
+/** The demo's pack is a team pack: saving makes a new pack, starting from this name. */
+const CHANGED_TEAM: DatapackRemovalChanges = { count: 3, kinds: [], sentence: SENTENCE, suggestedName: 'Bodea Copy', alwaysSave: false };
+const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], alwaysSave: false };
 const FAILED: DataInstallerFailure = { message: 'The store could not be read.' };
 
 describe('confirmContent', () => {
@@ -34,12 +33,20 @@ describe('confirmContent', () => {
         expect(confirmContent({ ...NOTHING, alwaysSave: true }, null)).toEqual({ kind: 'plain' });
     });
 
-    it('offers the box when something changed', () => {
-        expect(confirmContent(CHANGED, null)).toEqual({ kind: 'changes', sentence: CHANGED.sentence, packName: 'Acme Demo' });
+    it("names the SC's pack the changes go into", () => {
+        expect(confirmContent(CHANGED_MINE, null)).toEqual({ kind: 'changes', sentence: SENTENCE, packName: 'Acme Bodea', suggestedName: '' });
     });
 
-    it('says only that they will be saved when the setting answers', () => {
-        expect(confirmContent({ ...CHANGED, alwaysSave: true }, null)).toEqual({ kind: 'will-save', packName: 'Acme Demo' });
+    it("starts Save As's name when the pack is not the SC's", () => {
+        expect(confirmContent(CHANGED_TEAM, null)).toEqual({ kind: 'changes', sentence: SENTENCE, suggestedName: 'Bodea Copy' });
+    });
+
+    it("says only that they will be saved when the setting answers and the pack is the SC's", () => {
+        expect(confirmContent({ ...CHANGED_MINE, alwaysSave: true }, null)).toEqual({ kind: 'will-save', packName: 'Acme Bodea' });
+    });
+
+    it("still asks when the setting answers but the pack is not the SC's: a save needs a name", () => {
+        expect(confirmContent({ ...CHANGED_TEAM, alwaysSave: true }, null).kind).toBe('changes');
     });
 
     it('never reads a failed read as nothing changed', () => {
@@ -51,60 +58,69 @@ describe('confirmContent', () => {
     });
 
     it('believes the failure over an answer left by an earlier read', () => {
-        expect(confirmContent(CHANGED, FAILED).kind).toBe('read-failed');
+        expect(confirmContent(CHANGED_MINE, FAILED).kind).toBe('read-failed');
     });
 });
 
-describe('the boxes', () => {
-    it('start with the save ticked and the always not', () => {
-        expect(FRESH_CHOICE).toEqual({ saveFirst: true, always: false });
+describe('the box and the name', () => {
+    it('start with always off and no name typed', () => {
+        expect(FRESH_CHOICE).toEqual({ always: false });
     });
 
-    it('unticking the save takes the always with it: it cannot always do what it is not doing', () => {
-        const ticked = toggleAlways(FRESH_CHOICE);
-
-        expect(ticked).toEqual({ saveFirst: true, always: true });
-        expect(toggleSave(ticked)).toEqual({ saveFirst: false, always: false });
+    it('turns always on and off', () => {
+        expect(toggleAlways(toggleAlways(FRESH_CHOICE))).toEqual({ always: false });
+        expect(toggleAlways(FRESH_CHOICE)).toEqual({ always: true });
     });
 
-    it('ticking the save again leaves the always off', () => {
-        expect(toggleSave({ saveFirst: false, always: false })).toEqual({ saveFirst: true, always: false });
+    it('takes the name typed, else the one it started with, trimmed', () => {
+        const team = confirmContent(CHANGED_TEAM, null);
+        expect(saveAsNameOf(team, FRESH_CHOICE)).toBe('Bodea Copy');
+        expect(saveAsNameOf(team, { always: false, saveAsName: '  My Bodea ' })).toBe('My Bodea');
+        expect(saveAsNameOf(team, { always: false, saveAsName: '' })).toBe('');
     });
 });
 
 describe('removalAnswer', () => {
-    const changes = confirmContent(CHANGED, null);
+    const mine = confirmContent(CHANGED_MINE, null);
+    const team = confirmContent(CHANGED_TEAM, null);
 
-    it('keeps with the box ticked', () => {
-        expect(removalAnswer(changes, FRESH_CHOICE)).toEqual({ changes: 'keep' });
+    it("keeps into the SC's pack on Save and Remove", () => {
+        expect(removalAnswer(mine, FRESH_CHOICE, true)).toEqual({ changes: 'keep' });
     });
 
-    it('drops with the box unticked', () => {
-        expect(removalAnswer(changes, { saveFirst: false, always: false })).toEqual({ changes: 'drop' });
+    it('drops on Remove Without Saving', () => {
+        expect(removalAnswer(mine, { always: true }, false)).toEqual({ changes: 'drop' });
     });
 
-    it('asks for the setting only when always is ticked', () => {
-        expect(removalAnswer(changes, { saveFirst: true, always: true })).toEqual({ changes: 'keep', alwaysSave: true });
+    it("asks for the setting only when always is ticked, and only for the SC's own pack", () => {
+        expect(removalAnswer(mine, { always: true }, true)).toEqual({ changes: 'keep', alwaysSave: true });
+        expect(removalAnswer(team, { always: true }, true)).not.toHaveProperty('alwaysSave');
     });
 
-    it('keeps when the setting already answers, whatever the boxes hold', () => {
-        expect(removalAnswer({ kind: 'will-save', packName: 'Acme Demo' }, { saveFirst: false, always: false })).toEqual({ changes: 'keep' });
+    it("keeps as a new pack by the name given when the pack is not the SC's", () => {
+        expect(removalAnswer(team, { always: false, saveAsName: 'My Bodea' }, true)).toEqual({ changes: 'keep', saveAs: { displayName: 'My Bodea' } });
+        expect(removalAnswer(team, FRESH_CHOICE, true)).toEqual({ changes: 'keep', saveAs: { displayName: 'Bodea Copy' } });
+    });
+
+    it('keeps when the setting already answers, whichever button', () => {
+        expect(removalAnswer({ kind: 'will-save', packName: 'Acme Bodea' }, FRESH_CHOICE, false)).toEqual({ changes: 'keep' });
     });
 
     it('has nothing to keep with nothing changed', () => {
-        expect(removalAnswer({ kind: 'plain' }, FRESH_CHOICE)).toEqual({ changes: 'drop' });
+        expect(removalAnswer({ kind: 'plain' }, FRESH_CHOICE, true)).toEqual({ changes: 'drop' });
     });
 
     it('drops after a failed read: Remove Anyway is that choice', () => {
-        expect(removalAnswer({ kind: 'read-failed', reason: 'x' }, FRESH_CHOICE)).toEqual({ changes: 'drop' });
+        expect(removalAnswer({ kind: 'read-failed', reason: 'x' }, FRESH_CHOICE, true)).toEqual({ changes: 'drop' });
     });
 });
 
 describe('removeLabel', () => {
-    it('says Remove Anyway only after a failed read', () => {
+    it('names what the main button does', () => {
         expect(removeLabel({ kind: 'read-failed', reason: 'x' })).toBe('Remove Anyway');
         expect(removeLabel({ kind: 'plain' })).toBe('Remove');
-        expect(removeLabel({ kind: 'changes', sentence: 's', packName: 'p' })).toBe('Remove');
+        expect(removeLabel({ kind: 'changes', sentence: 's', packName: 'p', suggestedName: '' })).toBe('Save and Remove');
+        expect(removeLabel({ kind: 'changes', sentence: 's', suggestedName: 'Bodea Copy' })).toBe('Save As New and Remove');
     });
 });
 

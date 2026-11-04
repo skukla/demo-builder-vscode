@@ -15,6 +15,7 @@ import { engineThatInstalled } from '@/features/data-installer/services/buildDat
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import type { Project } from '@/types/base';
+import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -87,7 +88,7 @@ export async function confirmSampleDataRemoval(
     // 2026-08-17-what-does-a-datapack-removal-actually-delete, now archived).
     // Only Demo Builder's engine keeps a record of what changed, so only it can say the next part.
     const engine = await engineThatInstalled(project.path, { name: datapack.name, version: datapack.version });
-    const saved = engine === 'demo-builder' ? "Anything you changed in it goes to this demo's own pack first. " : '';
+    const saved = engine === 'demo-builder' ? 'Anything you changed in it is saved first. ' : '';
     const answer = await vscode.window.showWarningMessage(
         `Also remove the datapack this project imported (${datapack.name}@${datapack.version})? ` +
             'This deletes the data this pack imported from the Commerce instance — ' +
@@ -114,32 +115,58 @@ export async function confirmSampleDataRemoval(
  * empty, which is a worse state than the user started in and the one case where
  * they must go and do something about it.
  */
+/**
+ * Asks for the name of a new datapack the SC's changes go into (Save As), when the demo's pack is
+ * not theirs; nothing (or empty) loses the changes. The reset's own question was already asked.
+ */
+export type AskSaveAsName = (suggestedName: string) => Promise<string | undefined>;
+
+/**
+ * The SC's changes, before the reset removes the pack: saved into the demo's pack when it is
+ * theirs, else as a new pack under the name `askName` gets (Save As, owner 2026-11-03), else lost.
+ * A save that fails removes nothing.
+ */
+async function settleBeforeReset(
+    project: Project,
+    context: HandlerContext,
+    report: ReportStage,
+    askName: AskSaveAsName | undefined,
+): Promise<boolean> {
+    const datapack = project.datapack;
+    if (!datapack) return true;
+    const { contextForProject, settleChangesBeforeRemoval } = await import('@/features/data-installer/handlers/removalChanges');
+    const forProject = contextForProject(context, project);
+    const request = {
+        pack: { name: datapack.name, version: datapack.version },
+        ...(datapack.store ? { source: datapack.store } : {}),
+        unanswered: 'keep' as const,
+    };
+    let settled = await settleChangesBeforeRemoval(forProject, request, (stage) => report(stage));
+    const suggested = 'response' in settled ? (settled.response.data as { suggestedName?: string } | undefined)?.suggestedName : undefined;
+    if ('response' in settled && settled.response.code === ErrorCode.CHANGES_NEED_ANSWER && askName) {
+        const name = (await askName(suggested ?? ''))?.trim();
+        const answer = name ? { answer: 'keep' as const, saveAs: { displayName: name } } : { answer: 'drop' as const };
+        settled = await settleChangesBeforeRemoval(forProject, { ...request, ...answer }, (stage) => report(stage));
+    }
+    if ('response' in settled) {
+        context.logger.error(`[EdsReset] Sample data was NOT removed: ${settled.response.error ?? 'no reason given'}`);
+        return false;
+    }
+    return true;
+}
+
 export async function removeProjectSampleData(
     project: Project,
     context: HandlerContext,
     report: ReportStage,
+    askName?: AskSaveAsName,
 ): Promise<void> {
     try {
-        // The SC's changes first: this door's question was already asked, and keeping the work is the
-        // likely intent, so they go to the demo's own pack (datapack-engine step 05). Reported, as
-        // everything here is: a save that fails removes nothing and the reset stands.
-        const { contextForProject, settleChangesBeforeRemoval } = await import(
-            '@/features/data-installer/handlers/removalChanges'
-        );
+        // The SC's changes first: this door's question was already asked, and keeping the work is
+        // the likely intent. Reported, as everything here is: a save that fails removes nothing and
+        // the reset stands.
         if (project.datapack) {
-            const settled = await settleChangesBeforeRemoval(
-                contextForProject(context, project),
-                {
-                    pack: { name: project.datapack.name, version: project.datapack.version },
-                    ...(project.datapack.store ? { source: project.datapack.store } : {}),
-                    unanswered: 'keep',
-                },
-                (stage) => report(stage),
-            );
-            if ('response' in settled) {
-                context.logger.error(`[EdsReset] Sample data was NOT removed: ${settled.response.error ?? 'no reason given'}`);
-                return;
-            }
+            if (!(await settleBeforeReset(project, context, report, askName))) return;
         }
 
         report(OPERATION_STAGES.removingDatapack.label);
@@ -179,4 +206,22 @@ export async function removeProjectSampleData(
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);
     }
+}
+
+/**
+ * The reset's Save As question, as a VS Code input box: the name starts as the suggested one, and
+ * leaving it empty or pressing Escape loses the changes, as the prompt says.
+ *
+ * @param vscode - the VS Code API
+ */
+export function askSaveAsNameWith(vscode: typeof import('vscode')): AskSaveAsName {
+    return (suggestedName) =>
+        Promise.resolve(
+            vscode.window.showInputBox({
+                title: 'Save Your Changes As',
+                prompt: 'This demo uses a datapack that is not yours. Name a new one of yours to keep your changes, or leave it empty to lose them.',
+                value: suggestedName,
+                ignoreFocusOut: true,
+            }),
+        );
 }

@@ -82,11 +82,17 @@ beforeEach(() => {
         getToken: async () => 'tok',
         client: new DataInstallerClient({ baseUrl: LIBRARY, getToken: async () => 'tok' }),
     });
+    // The library's two reads a Save makes: whose the pack is, and what it is called.
+    jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({ items: [], count: 0 });
+    jest.spyOn(DataInstallerClient.prototype, 'getDatapackDetail').mockResolvedValue({ id: BODEA, displayName: 'Bodea', shared: true, dataTypes: [], art: {} });
 });
+
+/** Save As, which every save here is: the project's pack is a team pack, never the SC's. */
+const SAVE_AS = { displayName: 'Hand Built' };
 
 describe('save-store-changes-to-pack with picks', () => {
     it('hands the save the picks, by kind, as strings', async () => {
-        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { datapackName: 'bodea', version: 'main', selections: PICKS, confirm: true });
+        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { datapackName: 'bodea', version: 'main', selections: PICKS, saveAs: SAVE_AS, confirm: true });
 
         expect(mockedSave.mock.calls[0][1]).toMatchObject({ pack: BODEA, picks: { products: ['VR-Rack'], cart_rules: ['7'] } });
     });
@@ -98,25 +104,23 @@ describe('save-store-changes-to-pack with picks', () => {
         expect(mockedSave).not.toHaveBeenCalled();
     });
 
-    it("with no pack named, saves the project's own pack when Demo Builder installed it", async () => {
+    it("with no pack named, saves the project's pack when Demo Builder installed it", async () => {
         mockedRecord.mockResolvedValue(RECORD);
 
-        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { selections: PICKS, confirm: true });
+        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { selections: PICKS, saveAs: SAVE_AS, confirm: true });
 
         expect(mockedRecord).toHaveBeenCalledWith(expect.anything(), '/nonexistent/projects/acme', BODEA);
         expect(mockedSave.mock.calls[0][1]).toMatchObject({ pack: BODEA, source: 'library' });
     });
 
-    it('with no pack named and none Demo Builder installed, saves the picks alone and records only the own pack', async () => {
+    it('with no pack named and none Demo Builder installed, saves the picks alone as the new pack the project uses', async () => {
         const { context } = makeImportHarness(project());
 
-        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { selections: PICKS, confirm: true });
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { selections: PICKS, saveAs: SAVE_AS, confirm: true });
 
         expect(mockedSave.mock.calls[0][1]).not.toHaveProperty('pack');
         const recorded = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
-        // The pack the project installs from is left as it was: the store is not the new version.
-        expect(recorded.datapack).toEqual({ ...BODEA, store: 'library' });
-        expect(recorded.ownDatapack).toEqual({ name: expect.stringMatching(/^acme-[0-9a-f]{6}$/u), displayName: 'acme' });
+        expect(recorded.datapack).toEqual({ name: expect.stringMatching(/^hand-built-[0-9a-f]{6}$/u), version: expect.any(String), store: 'library' });
         expect(result).toMatchObject({ success: true, data: expect.not.objectContaining({ previous: expect.anything() }) });
     });
 });
@@ -125,7 +129,7 @@ describe('the export door with Demo Builder engine', () => {
     it('saves what is picked through the same save, confirmed by the same flag', async () => {
         const { context } = makeImportHarness(project());
 
-        const result = await exportHandlers['start-datapack-export'](context, { selections: PICKS, confirm: true });
+        const result = await exportHandlers['start-datapack-export'](context, { selections: PICKS, saveAs: SAVE_AS, confirm: true });
 
         expect(result.success).toBe(true);
         expect(mockedSave.mock.calls[0][1]).toMatchObject({ picks: { products: ['VR-Rack'], cart_rules: ['7'] } });

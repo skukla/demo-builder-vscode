@@ -9,7 +9,8 @@
  * | `aco` | ACO, either | store views, ACO data types, name |
  * | `service` | Commerce, the service's (or none chosen) | data types, name |
  *
- * "Save store changes to this pack" is that one screen, with no pack type to ask.
+ * Save is that one screen, with no pack type to ask. Save As (`savesAs`) asks the new pack's name
+ * first, then that screen (`.rptc/plans/datapack-save-as/`).
  *
  * @module features/data-installer/ui/components/create-flow/datapackFlowStages
  */
@@ -30,7 +31,8 @@ export type DatapackFlowStage =
     | 'aco-views'
     | 'aco-kinds'
     | 'service-types'
-    | 'pack-name';
+    | 'pack-name'
+    | 'save-as-name';
 
 /** What the main button does on a stage. */
 export type MainAction = 'continue' | 'save' | 'export';
@@ -51,6 +53,8 @@ export interface FlowGates {
     kindsChosen: boolean;
     typesChosen: boolean;
     named: boolean;
+    /** Save As's name is typed. */
+    saveAsNamed: boolean;
 }
 
 const ROUTE_STAGES: Record<DatapackRoute, DatapackFlowStage[]> = {
@@ -66,6 +70,7 @@ const MAIN_ACTIONS: Record<DatapackFlowStage, MainAction> = {
     'aco-kinds': 'continue',
     'service-types': 'continue',
     'pack-name': 'export',
+    'save-as-name': 'continue',
 };
 
 const GATES: Record<DatapackFlowStage, (gates: FlowGates) => boolean> = {
@@ -75,6 +80,7 @@ const GATES: Record<DatapackFlowStage, (gates: FlowGates) => boolean> = {
     'aco-kinds': (gates) => gates.kindsChosen,
     'service-types': (gates) => gates.typesChosen,
     'pack-name': (gates) => gates.named,
+    'save-as-name': (gates) => gates.saveAsNamed,
 };
 
 /** Which route a pack type takes with the engine chosen. */
@@ -87,9 +93,11 @@ export function routeOf(packType: PackType, engine: DatapackEngine | undefined):
  * The screens, in order.
  *
  * @param route - the route, once a pack type is chosen
- * @param startsAtPicks - "Save store changes to this pack", which has no pack type to ask
+ * @param startsAtPicks - Save, which has no pack type to ask
+ * @param savesAs - Save As: the new pack's name, then what goes in it
  */
-export function stageOrder(route: DatapackRoute | undefined, startsAtPicks: boolean): DatapackFlowStage[] {
+export function stageOrder(route: DatapackRoute | undefined, startsAtPicks: boolean, savesAs = false): DatapackFlowStage[] {
+    if (savesAs) return ['save-as-name', ...ROUTE_STAGES.store];
     if (startsAtPicks) return ROUTE_STAGES.store;
     // No pack-type screen while ACO packs are held back (owner, 2026-11-03): Commerce is the one
     // type. The ACO line reverts this, and the screen asks again.

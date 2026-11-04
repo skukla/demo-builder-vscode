@@ -66,7 +66,6 @@ function EditTile({
 export function BuildZone({
     canEdit,
     isMeshActionDisabled,
-    ownDatapackName,
     handleEditProject,
     handleConfigure,
     handleOpenAemAssets,
@@ -76,8 +75,6 @@ export function BuildZone({
 }: {
     canEdit: boolean;
     isMeshActionDisabled: boolean;
-    /** This demo's own pack, as the SC sees it named (step 07); absent when it has none. */
-    ownDatapackName?: string;
     handleOpenAemAssets: () => void;
     handleEditProject?: () => void;
     handleConfigure: () => void;
@@ -98,7 +95,7 @@ export function BuildZone({
             />
 
             {/* Datapacks — the global catalog, opened beside the dashboard. */}
-            <DataInstallerTile ownPackName={ownDatapackName} />
+            <DataInstallerTile />
 
             {/* AEM Assets (EDS-21) — where the SC gives the demo's products their
                 images. Every project type: the bound AEM is a Demo Builder

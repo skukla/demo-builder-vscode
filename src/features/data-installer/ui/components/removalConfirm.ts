@@ -14,8 +14,11 @@ import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 export type ConfirmContent =
     /** Nothing changed: the confirm as it always was. */
     | { kind: 'plain' }
-    /** The SC's changes, and the two boxes. */
-    | { kind: 'changes'; sentence: string; packName: string }
+    /**
+     * The SC's changes: saved into the demo's pack when it is theirs (`packName`), else as a new
+     * pack under a name they give (`suggestedName` is where the name starts).
+     */
+    | { kind: 'changes'; sentence: string; packName?: string; suggestedName: string }
     /** The setting answers: the one line, and no boxes. */
     | { kind: 'will-save'; packName: string }
     /** The read failed, so nothing is known; never the same as nothing changed. */
@@ -42,20 +45,23 @@ export function recordedRemovalLines(displayName: string, recordedKinds: readonl
     return sentences.filter((line): line is string => line !== undefined);
 }
 
-/** The two boxes. */
+/** The confirm's one box, and the name a save as a new pack goes under. */
 export interface RemovalChoice {
-    saveFirst: boolean;
     always: boolean;
+    /** Save As's name, when the demo's pack is not the SC's; starts as `suggestedName`. */
+    saveAsName?: string;
 }
 
-/** Keeping the work is the likely intent; stopping the question is a choice of its own. */
-export const FRESH_CHOICE: RemovalChoice = { saveFirst: true, always: false };
+/** Stopping the question is a choice of its own. */
+export const FRESH_CHOICE: RemovalChoice = { always: false };
 
-/** What the Remove press adds to the request. */
+/** What a press of one of the confirm's buttons adds to the request. */
 export interface RemovalAnswer {
     changes: ChangesAnswer;
     /** Turn on "always save": only ever said by this confirm's box, never by an agent. */
     alwaysSave?: true;
+    /** The name of the new datapack the changes go into, when the demo's pack is not the SC's. */
+    saveAs?: { displayName: string };
 }
 
 /** What the confirm shows, from the read's answer or its failure. */
@@ -63,27 +69,41 @@ export function confirmContent(answer: DatapackRemovalChanges | null, failure: D
     // No answer at all has only transport text to show, which is not words for the SC.
     if (failure) return { kind: 'read-failed', reason: failure.unanswered ? 'The check took too long to answer.' : failure.message };
     if (!answer || answer.count === 0 || answer.sentence === undefined) return { kind: 'plain' };
-    if (answer.alwaysSave) return { kind: 'will-save', packName: answer.ownPackName };
-    return { kind: 'changes', sentence: answer.sentence, packName: answer.ownPackName };
-}
-
-/** Unticking the save takes "always" with it: it cannot always do what it is not doing. */
-export function toggleSave(choice: RemovalChoice): RemovalChoice {
-    return choice.saveFirst ? { saveFirst: false, always: false } : { saveFirst: true, always: false };
+    // "Always save" needs somewhere to save without asking: only the SC's own pack is that.
+    if (answer.alwaysSave && answer.packName) return { kind: 'will-save', packName: answer.packName };
+    return {
+        kind: 'changes',
+        sentence: answer.sentence,
+        ...(answer.packName ? { packName: answer.packName } : {}),
+        suggestedName: answer.suggestedName ?? '',
+    };
 }
 
 export function toggleAlways(choice: RemovalChoice): RemovalChoice {
     return { ...choice, always: !choice.always };
 }
 
-/** What Remove sends. With nothing to keep, or nothing known, there is nothing to save. */
-export function removalAnswer(content: ConfirmContent, choice: RemovalChoice): RemovalAnswer {
-    if (content.kind === 'will-save') return { changes: 'keep' };
-    if (content.kind !== 'changes' || !choice.saveFirst) return { changes: 'drop' };
-    return choice.always ? { changes: 'keep', alwaysSave: true } : { changes: 'keep' };
+/** The name Save As would use: what the SC typed, else where it started. */
+export function saveAsNameOf(content: ConfirmContent, choice: RemovalChoice): string {
+    if (content.kind !== 'changes') return '';
+    return (choice.saveAsName ?? content.suggestedName).trim();
 }
 
-/** The confirm's main button. */
+/**
+ * What a press sends. `save` keeps the changes (into the SC's pack, or as a new one by the name
+ * given); `drop` loses them. With nothing to keep, or nothing known, there is nothing to save.
+ */
+export function removalAnswer(content: ConfirmContent, choice: RemovalChoice, save: boolean): RemovalAnswer {
+    if (content.kind === 'will-save') return { changes: 'keep' };
+    if (content.kind !== 'changes' || !save) return { changes: 'drop' };
+    const always = choice.always && content.packName ? { alwaysSave: true as const } : {};
+    if (content.packName) return { changes: 'keep', ...always };
+    return { changes: 'keep', saveAs: { displayName: saveAsNameOf(content, choice) } };
+}
+
+/** The confirm's main button: it names what pressing it does. */
 export function removeLabel(content: ConfirmContent): string {
-    return content.kind === 'read-failed' ? 'Remove Anyway' : 'Remove';
+    if (content.kind === 'read-failed') return 'Remove Anyway';
+    if (content.kind === 'changes') return content.packName ? 'Save and Remove' : 'Save As New and Remove';
+    return 'Remove';
 }

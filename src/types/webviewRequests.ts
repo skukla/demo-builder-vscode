@@ -915,6 +915,11 @@ export interface SaveStoreChangesRequest {
     version?: string;
     /** Things the SC made by hand to save too, as `{<kind>: {<field>: [ids]}}` (`pickableKinds.ts`). */
     selections?: Selections;
+    /**
+     * Save As: a new datapack of the SC's under this name, which the demo then uses. Absent: Save,
+     * a new version of the demo's datapack, when it is the SC's (else the answer asks for a name).
+     */
+    saveAs?: { displayName: string };
     /** Must be true: nothing is saved by default. */
     confirm: true;
     /** Which store holds the pack, so the save reads the installed version's own rows there. */
@@ -924,14 +929,14 @@ export interface SaveStoreChangesRequest {
 }
 
 /**
- * What a save answers on success: the new version of the demo's own pack (step 07), the pack it
- * was saved from, and one sentence.
+ * What a save answers on success: the new version (of the demo's pack, or of a new one, `demoPack.ts`),
+ * the pack it was saved from, and one sentence.
  */
 export interface SaveStoreChangesResult {
-    /** The demo's own pack, in the library. */
+    /** The pack saved into, in the library; the demo now uses it. */
     datapackName: string;
     version: string;
-    /** What the SC sees the demo's pack called. */
+    /** What the SC sees it called. */
     displayName: string;
     /** The pack installed before the save, which the save left as it was; none for a save of picks alone. */
     previous?: { name: string; version: string };

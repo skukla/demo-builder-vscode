@@ -121,11 +121,19 @@ types. You do not have to reason about what to remove first.
 
 ## Saving the store into a pack (Demo Builder's engine, the default)
 
-`save_store_changes_to_pack` saves the project's store into a NEW version of this demo's own
-pack in the datapack library: the pack Demo Builder installed here, plus anything you pick in
-`selections`. With no pack named it uses the project's own when Demo Builder installed it, else
-it saves only what is picked, which is how a store built by hand in the Admin becomes a pack.
-`start_datapack_export` is the same save with this engine: send only `selections` and `confirm`.
+`save_store_changes_to_pack` saves the project's store into the datapack library, as Save or
+Save As: the pack Demo Builder installed here, plus anything you pick in `selections`.
+
+- **Save** (no `saveAs`): a NEW version of the pack the project uses, only when that pack is the
+  user's own. When it is not (a team pack such as Bodea, or a colleague's), nothing is written and
+  the answer carries `data.needsName` and `data.suggestedName`.
+- **Save As** (`saveAs: { displayName }`): a NEW pack of the user's, under the name they give.
+  Ask the user for the name; offer `suggestedName`.
+
+Either way the project then uses the new version: it installs from it and resets to it. With no
+pack named it saves only what is picked, which is how a store built by hand in the Admin becomes
+a pack (send `saveAs`). `start_datapack_export` is the same save with this engine: send
+`selections`, `saveAs` and `confirm`.
 
 - **Pick with `list_datapack_export_items`** (`dataType`: products, giftcards, categories,
   cart_rules, customers, b2b_companies, customer_groups, b2b_shared_catalogs,

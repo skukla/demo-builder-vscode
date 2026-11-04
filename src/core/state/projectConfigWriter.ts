@@ -26,9 +26,6 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     if (project.datapack !== undefined) {
         manifest.datapack = project.datapack;
     }
-    if (project.ownDatapack) {
-        manifest.ownDatapack = project.ownDatapack;
-    }
     if (project.commerceAdminExperience) {
         manifest.commerceAdminExperience = project.commerceAdminExperience;
     }

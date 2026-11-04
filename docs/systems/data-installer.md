@@ -111,10 +111,12 @@ which lists every object the install made. It never removes by name.
   With no record the service removes the types it is sent, and the form and confirm stay as they were.
 - **Anything the SC changed since the install is settled first** (step 05,
   `handlers/removalChanges.ts`). The confirm reads it (`get-datapack-removal-changes`, the
-  preview's own read) and, when there is something to lose, says what and offers "Save my changes
-  to the Acme Demo pack first", ticked, and "Always do this, and stop asking", which sets
-  `demoBuilder.dataInstaller.changesOnRemoval` to `save`. Saving is "Save store changes" itself: a
-  new version of the demo's own pack, the previous one kept. The removal is then of that version,
+  preview's own read) and, when there is something to lose, says what and offers two buttons:
+  **Save and Remove** and **Remove Without Saving**. When the demo's pack is the SC's own, saving is
+  Save, a new version of it, the previous one kept, and "Always Save Without Asking" sets
+  `demoBuilder.dataInstaller.changesOnRemoval` to `save`. When it is not (a team pack), saving is
+  Save As: the confirm asks the new pack's name, starting from "{pack} Copy", and the main button
+  says **Save As New and Remove**. The removal is then of the saved version,
   since the install record moved onto it. A save that fails removes nothing. A read that fails says
   so and offers Remove anyway. A project reset or an Edit that removes the pack saves first without
   a second question; `reset_datapack` names the changes and refuses until `changes` is `keep` or
@@ -168,7 +170,7 @@ judgement in this feature:
   entries other teams depend on, `delete-datapack` cascades, there is no undo and no
   ownership guard. One agent typo removes a colleague's demo. Creating a NEW pack is
   offered in two ways, both of which only add: `start_datapack_export` (with the service
-  engine; with Demo Builder's it saves into the demo's own library pack instead) and
+  engine; with Demo Builder's it saves into the SC's datapack library instead, Save or Save As) and
   `load_datapack_zip`. Each needs the pack's name typed back, and loading a file
   never updates an existing pack in this catalog. The datapack library does have an
   ownership check, so updating your own pack is offered there.
@@ -179,23 +181,37 @@ judgement in this feature:
 
 ## Saving a store into a pack, with Demo Builder's engine (datapack-engine step 14)
 
-The export door is Demo Builder's own with its engine chosen (the default). "Create datapack" in
-the catalog's header, with its Commerce card (`CreateDatapackModal`), and "Save store changes to
-this pack" in the flyout's menu for the pack the project holds (`SaveFromStoreModal`), walk the same
-screens (`create-flow/DatapackFlowDialog`): a card per kind (products, gift cards, categories, cart
-rules, customers, companies, customer groups, shared catalogs, attributes, attribute sets), and
-clicking one opens that kind's checklist. Each kind is listed when first opened, from the project's
-store with its own credential (`list-datapack-export-items`, `storeItems.ts`), scoped to its website
-where Commerce scopes the thing, Commerce's own left out. The cards show at once, and a kind with none
-is greyed out without a click: `count-datapack-export-items` reads all ten kinds' `total_count` at once
-(`pageSize=1`, `storeItems.ts`), reads only, with no agent tool since `list_datapack_export_items`
-answers per kind. Only a count of none is shown or acted on. Cart rules and companies are scoped in
-code after their read, so theirs count the whole store and grey only when the whole store has none; a
-failed count says nothing. Any other card stays clickable until its list answers, and greys then if
-nothing was left to pick. In the flyout the list leaves off what the pack
-holds already, so what is left is what the SC made by hand. Save writes a new version of this demo's own library pack
-(`saveStore.ts`): the pack Demo Builder installed here when there is one, plus what was picked; with
-none, a store Demo Builder did not fill, what was picked alone. A pick brings what it needs (a
+**Save and Save As** (owner, 2026-11-03, `.rptc/plans/datapack-save-as/`). There is no automatic pack
+per demo. The open demo's pack (`project.datapack`, the pack it installs from and resets to) is pinned
+above the catalog as its own card (`ProjectPackSection`), and that card is the one way into a save:
+
+- **Save {pack}**, only when the pack is the SC's own (the library lists it as `mine`): a new version
+  of it.
+- **Save As** (or **Create Datapack** with no pack yet): the new pack's name first, starting from
+  "{pack} Copy", then the item picker. It makes a new pack of the SC's, whose library name is
+  generated from the name typed (`packIdFor`: a slug and a random suffix, so it can never land on a
+  colleague's). The demo then uses it.
+- **Newer Version: {date}**, when the library has a later version of the pack, or the version
+  installed changed since (`updatedAt` after the install record's `startedAt`; team packs are updated
+  in place as `main`). Pressing it opens that version's panel. It is deliberately not an update in
+  the Updates window: a demo may stay on an older version on purpose.
+
+With the service's engine the header's "Create datapack" exports into the shared catalog instead.
+
+Both doors walk the same screens (`create-flow/DatapackFlowDialog`): a card per kind (products, gift
+cards, categories, cart rules, customers, companies, customer groups, shared catalogs, attributes,
+attribute sets), and clicking one opens that kind's checklist. Each kind is listed when first opened,
+from the project's store with its own credential (`list-datapack-export-items`, `storeItems.ts`),
+scoped to its website where Commerce scopes the thing, Commerce's own left out. The cards show at
+once, and a kind with none is greyed out without a click: `count-datapack-export-items` reads all ten
+kinds' `total_count` at once (`pageSize=1`, `storeItems.ts`), reads only, with no agent tool since
+`list_datapack_export_items` answers per kind. Only a count of none is shown or acted on. Cart rules
+and companies are scoped in code after their read, so theirs count the whole store and grey only when
+the whole store has none; a failed count says nothing. Any other card stays clickable until its list
+answers, and greys then if nothing was left to pick. The list leaves off what the pack holds already,
+so what is left is what the SC made by hand. The save (`packSave.ts`, `saveStore.ts`) writes the pack
+Demo Builder installed here when there is one, plus what was picked; with none, a store Demo Builder
+did not fill, what was picked alone. A pick brings what it needs (a
 product its categories, set, attributes and quantities; a rule its coupons; a company its admin),
 and never joins the install record, so removing the pack leaves it.
 
@@ -283,8 +299,8 @@ still lists every row: an agent can tell a layer by its name and `get_datapack`'
 
 **Saving.** "Save store changes" never writes a layer's settings into the new version, which would
 make that version hold settings and win over its layer for good, and never onto the layer installed,
-which may be a colleague's. They go to a new layer beside the new version, named for the demo's own
-pack at the same version, read at their values now. A pack holding its own settings keeps them.
+which may be a colleague's. They go to a new layer beside the new version, named for the pack saved
+into, at the same version, read at their values now. A pack holding its own settings keeps them.
 Deleting a version takes your layer of the same version with it, so the save is still undone in one
 step. Sharing a pack shares its layer.
 

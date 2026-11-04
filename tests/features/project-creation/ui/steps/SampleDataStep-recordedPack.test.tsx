@@ -33,11 +33,13 @@ const LIBRARY_ROW = {
 
 beforeEach(() => resetDataInstallerMocks());
 
-describe('SampleDataStep — the line that says where changes go', () => {
-    it("says the demo's changes are kept in its own pack", async () => {
+describe('SampleDataStep — no line about an automatic pack', () => {
+    // There is no pack made for a demo without being asked any more (owner, 2026-11-03).
+    it('says nothing about where changes go', async () => {
         renderStep({});
 
-        expect(await screen.findByText("Your changes to this data are kept in this demo's own pack.")).toBeInTheDocument();
+        await screen.findByRole('searchbox', { name: /filter datapacks/i });
+        expect(screen.queryByText(/own pack/)).not.toBeInTheDocument();
     });
 });
 
@@ -94,7 +96,7 @@ describe('SampleDataStep — a pack the project arrived with', () => {
 
         renderStep({ datapack: OWN });
 
-        await screen.findByText("Your changes to this data are kept in this demo's own pack.");
+        await screen.findByRole('searchbox', { name: /filter datapacks/i });
         expect(screen.queryByTestId('recorded-datapack-notice')).not.toBeInTheDocument();
     });
 

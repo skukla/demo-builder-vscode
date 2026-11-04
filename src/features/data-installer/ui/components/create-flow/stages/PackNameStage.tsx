@@ -11,6 +11,24 @@ import React from 'react';
 import type { ExportAnswers } from '../useExportAnswers';
 import { FormField } from '@/core/ui/components/forms/FormField';
 
+/**
+ * Save As's first screen: the new datapack's name, which the SC sees it called (the library's own
+ * name for it is generated, `packIdFor`). Starts as the demo's pack's name with "Copy".
+ */
+export function SaveAsNameStage({ name, onChange }: { name: string; onChange: (name: string) => void }): React.ReactElement {
+    return (
+        <FormField
+            fieldKey="saveAsName"
+            label="Datapack Name"
+            type="text"
+            value={name}
+            onChange={onChange}
+            required
+            placeholder="e.g. My Bodea"
+        />
+    );
+}
+
 export function PackNameStage({ answers, sharedCatalog }: {
     answers: ExportAnswers;
     /** The pack goes in the shared catalog. */

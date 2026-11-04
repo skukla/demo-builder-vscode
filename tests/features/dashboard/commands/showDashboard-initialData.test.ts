@@ -273,21 +273,9 @@ describe('ProjectDashboardWebviewCommand - getInitialData', () => {
             expect(await initialData(createMockProject())).not.toHaveProperty('dataInstallerAvailable');
         });
 
-        // Step 07: the Datapacks tile names this demo's own pack.
-        it("sends this demo's own pack by the name the SC sees", async () => {
-            const project = createMockProject({ ownDatapack: { name: 'acme-demo-1a2b3c', displayName: 'Acme Q4' } });
-
-            expect((await initialData(project)).ownDatapackName).toBe('Acme Q4');
-        });
-
-        it("falls back to the project's name for a pack recorded with no display name", async () => {
-            const project = createMockProject({ title: 'Acme Demo', ownDatapack: { name: 'acme-demo-1a2b3c' } });
-
-            expect((await initialData(project)).ownDatapackName).toBe('Acme Demo');
-        });
-
-        it('sends no pack name for a demo with no pack of its own', async () => {
-            expect(await initialData(createMockProject())).not.toHaveProperty('ownDatapackName');
+        // There is no automatic pack per demo to name any more (owner, 2026-11-03).
+        it('sends no pack name for the Datapacks tile', async () => {
+            expect(await initialData(createMockProject({ datapack: { name: 'my-bodea-1a2b3c', version: '1', store: 'library' } }))).not.toHaveProperty('ownDatapackName');
         });
     });
 

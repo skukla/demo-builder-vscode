@@ -2,9 +2,9 @@
  * The flyout's actions (owner, 2026-10-30): Import is the one button on view, and everything else
  * is behind a "More" button (`CardActionsMenu` with a label, owner 2026-10-31: a bare ⋯ beside
  * Import read as unclear; icons from `renderMenuIcon`), where it was five buttons
- * on three rows. In the menu, in order: Save as file; Save store changes to this pack, for the
- * pack the open project holds by Demo Builder's engine; Share or Stop sharing, on the SC's own
+ * on three rows. In the menu, in order: Save as file; Share or Stop sharing, on the SC's own
  * library pack; and Remove from library, the same pack only, in its own section at the bottom.
+ * Saving the store into a pack is on the demo's own card (`ProjectPackSection`), not here.
  * A pack whose settings layer is the SC's own also offers "Remove its store settings" there, since a
  * layer has no card of its own to remove it from (datapack-engine step 09).
  *
@@ -39,8 +39,6 @@ export interface PackActionsProps {
     onRemoved: () => void;
     /** Demo Builder's engine is chosen, which installs a library pack where it is. */
     installsFromLibrary: boolean;
-    /** "Save store changes to this pack": only for the pack the project holds by Demo Builder's engine. */
-    onSaveStoreChanges?: (id: DatapackId) => void;
     /** The warning a delete carries when this SC shared the pack in a project file. */
     sharedInFile?: string;
     /** The SC's own pack was shared or stopped being shared, or its settings layer was removed. Stable. */
@@ -57,9 +55,8 @@ interface Row {
 }
 
 /** The menu's upper section: what any pack offers, then what the SC's own library pack adds. */
-function packRows(detail: DatapackDetail, saveStore: boolean): Row[] {
+function packRows(detail: DatapackDetail): Row[] {
     const rows: Row[] = [{ key: 'save-file', label: 'Save as File', icon: 'saveFile' }];
-    if (saveStore) rows.push({ key: 'save-store', label: 'Save Store Changes to This Datapack', icon: 'capture' });
     if (detail.store === 'library' && detail.mine) {
         rows.push({ key: 'share', label: detail.shared ? 'Stop Sharing' : 'Share', icon: 'share' });
     }
@@ -82,7 +79,6 @@ export function PackActions({
     onImport,
     onRemoved,
     installsFromLibrary,
-    onSaveStoreChanges,
     sharedInFile,
     onSharingChanged,
     settingsLayer,
@@ -96,7 +92,6 @@ export function PackActions({
 
     const onAction = (key: React.Key): void => {
         if (key === 'save-file') saveFile.start();
-        else if (key === 'save-store') onSaveStoreChanges?.(detail.id);
         else if (key === 'share') setAsking('share');
         else if (key === 'remove-settings') layerRemoval.start();
         else if (key === 'remove') {
@@ -128,7 +123,7 @@ export function PackActions({
                     </Button>
                 ) : null}
                 <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
-                    <Section key="pack">{packRows(detail, onSaveStoreChanges !== undefined).map(renderRow)}</Section>
+                    <Section key="pack">{packRows(detail).map(renderRow)}</Section>
                     {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
                 </CardActionsMenu>
             </div>

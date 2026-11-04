@@ -193,11 +193,7 @@
         },
         "datapack": {
           "$ref": "#/definitions/ProjectDatapack",
-          "description": "The datapack this demo's store holds, and the store that holds the pack.\n\nChosen on the wizard's Datapacks step and installed by creation itself (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data Installer screen and by \"Save store changes\", and cleared by a reset once it finishes having taken out everything the pack put there (a reset that stops, or keeps containers holding the SC's things, leaves it). `configure_project` records it without installing."
-        },
-        "ownDatapack": {
-          "$ref": "#/definitions/OwnDatapack",
-          "description": "This demo's own library pack, once its first save made one (step 07)."
+          "description": "The datapack this demo's store holds, and the store that holds the pack.\n\nChosen on the wizard's Datapacks step and installed by creation itself (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data Installer screen and by a save (Save and Save As, `demoPack.ts`), and cleared by a reset once it finishes having taken out everything the pack put there (a reset that stops, or keeps containers holding the SC's things, leaves it). `configure_project` records it without installing."
         },
         "commerceAdminExperience": {
           "$ref": "#/definitions/CommerceAdminExperience",
@@ -1699,27 +1695,6 @@
         "version"
       ],
       "description": "The pack a project holds: a reference whose version is known."
-    },
-    "OwnDatapack": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The pack's name in the library. Immutable there."
-        },
-        "displayName": {
-          "type": "string",
-          "description": "What the SC sees it called, as last saved or renamed."
-        },
-        "renamed": {
-          "type": "boolean",
-          "description": "True once the SC renamed the pack themselves; until then its display name follows the project's."
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "description": "This demo's own pack (step 07): the library pack every save from this project goes into, made at the first save. Never in a project file, so a copy or an import starts from the original's pack and makes its own at its first save."
     },
     "CommerceAdminExperience": {
       "type": "string",

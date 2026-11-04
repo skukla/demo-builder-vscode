@@ -81,23 +81,11 @@ describe('a Data Installer pack', () => {
     });
 });
 
-describe('Save Store Changes to This Datapack', () => {
-    it('is in the menu only when the catalog offers it', () => {
-        renderActions();
-        expect(menuLabels()).not.toContain('Save Store Changes to This Datapack');
-    });
+// Saving the store into a pack is on the demo's own card now (ProjectPackSection, 2026-11-03).
+it('never offers Save Store Changes in the menu', () => {
+    renderActions({ detail: OWN, installsFromLibrary: true });
 
-    it.each([
-        ['a Data Installer pack', makeDetail()],
-        ['a library pack', OWN],
-    ])('raises the pack it was chosen for, on %s', async (_label, detail) => {
-        const onSaveStoreChanges = jest.fn();
-        renderActions({ detail, installsFromLibrary: true, onSaveStoreChanges });
-
-        await press(row('Save Store Changes to This Datapack'));
-
-        expect(onSaveStoreChanges).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
-    });
+    expect(menuLabels()).not.toContain('Save Store Changes to This Datapack');
 });
 
 describe('a library pack', () => {
@@ -124,8 +112,8 @@ describe('a library pack', () => {
     });
 
     it('lists Share on a private pack of the SC, Stop sharing on a shared one, and Remove Datapack at the bottom', () => {
-        renderActions({ detail: OWN, onSaveStoreChanges: jest.fn() });
-        expect(menuLabels()).toEqual(['Save as File', 'Save Store Changes to This Datapack', 'Share', 'Remove Datapack']);
+        renderActions({ detail: OWN });
+        expect(menuLabels()).toEqual(['Save as File', 'Share', 'Remove Datapack']);
     });
 
     it('lists Stop sharing on a shared pack of the SC', () => {

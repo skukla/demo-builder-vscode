@@ -217,7 +217,7 @@ async function datapackNote(ctx: HandlerContext, pack: ProjectDatapack | undefin
     const check = await checkRecordedPack(packReadsFor(ctx), pack);
     if (check.verdict === 'fallback' || check.verdict === 'none') return { datapackNote: check.note };
     if (check.verdict === 'readable' && storeOf(pack) === 'library' && !check.mine && !check.shared) {
-        return { datapackNote: `Copies ${check.displayName} into your datapack library as this demo's own pack, then installs it from there.` };
+        return { datapackNote: `Copies ${check.displayName} into your datapack library as a pack of yours, then installs it from there.` };
     }
     return {};
 }

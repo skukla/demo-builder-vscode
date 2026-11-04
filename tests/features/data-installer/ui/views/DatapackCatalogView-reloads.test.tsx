@@ -251,8 +251,9 @@ describe('the two doors out of the catalog', () => {
     });
 
     // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save
-    // from this store", quiet buttons rather than links, with every engine; Clear demo data last.
-    it.each([['demo-builder'], [undefined], ['service']] as const)(
+    // from this store", quiet buttons rather than links; Clear demo data last. With Demo Builder's
+    // engine a pack is made from the demo's own card instead (Save As, 2026-11-03).
+    it.each([[undefined], ['service']] as const)(
         'with the %s engine, offers Create Datapack, Load from File and, last, Clear Demo Data',
         async (engine) => {
             mockRequest.mockResolvedValue({
@@ -272,24 +273,15 @@ describe('the two doors out of the catalog', () => {
         },
     );
 
-    // One dialog (owner, 2026-10-31): the pick screens are Create datapack's own.
-    it("walks to the pick screens inside Create Datapack with Demo Builder's engine, with no pack", async () => {
-        mockRequest.mockImplementation(async (type: string) =>
-            type === 'list-datapack-export-items'
-                ? { success: true, data: { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 } }
-                : { success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine: 'demo-builder' } },
-        );
+    it("offers no Create Datapack in the header with Demo Builder's engine: the demo's card is the way in", async () => {
+        mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine: 'demo-builder' } });
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        await press(screen.getByRole('button', { name: 'Create Datapack' }));
-
-        expect(screen.getByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
-
-        expect(screen.getByRole('button', { name: /^Products/ })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
-        expect(screen.queryByRole('heading', { name: 'Save Store Changes' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Create Datapack' })).not.toBeInTheDocument();
+        // CONTROL: the header's other actions are there.
+        expect(screen.getByRole('button', { name: 'Load from File' })).toBeInTheDocument();
     });
 
     it("opens the service's export from Create Datapack with the service engine, and closes it again", async () => {

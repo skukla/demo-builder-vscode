@@ -162,10 +162,10 @@ describe('BuildZone', () => {
             expect(buttonFor('Datapacks')).toBeInTheDocument();
         });
 
-        it("names this demo's own pack on its line when there is one", () => {
-            render(<BuildZone {...props({ ownDatapackName: 'Acme Demo' })} />);
+        it('carries no pack line: the demo\u2019s pack is on the Datapacks screen', () => {
+            render(<BuildZone {...props()} />);
 
-            expect(screen.getByText('This demo\u2019s pack: Acme Demo').closest('button')).toBe(buttonFor('Datapacks'));
+            expect(screen.queryByText(/This demo\u2019s pack/)).not.toBeInTheDocument();
         });
     });
 
