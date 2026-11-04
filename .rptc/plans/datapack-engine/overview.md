@@ -117,6 +117,9 @@ wipe left the ERP's price lists flat after the seed fix.
 
 ## Before beta.153 ships (owner, 2026-10-30: "I don't want to lose the merging of those branches")
 
+Live tests 1 to 5 and every other check before the cut are tracked, row by row, in
+[the beta.153 release tests](../beta-153-release-tests/overview.md).
+
 The store wipe and the ERP reset depend on code that is deployed on JustRite but lives only on
 branches. Merge each into its repository's `main` (plain merge, no trailers), push, then let
 Demo Builder's update check offer it to SCs — merging to `main` IS releasing it to every SC with the
