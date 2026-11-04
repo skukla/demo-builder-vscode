@@ -7,8 +7,8 @@
  * which read as navigation when every one is an action.
  *
  * Create datapack: with Demo Builder's engine it is Save As with no name yet (`onCreate`): the
- * new pack's name, then what goes in it, and the demo then uses it; once a demo has a pack, its own
- * card above the catalog saves it (`ProjectPackSection`, owner 2026-11-03). With the service's
+ * new pack's name, then what goes in it, and the demo then uses it; once a demo has a pack of the
+ * SC's, its flyout's Save Changes saves it (owner, 2026-11-04). With the service's
  * engine it exports into the shared catalog (`CreateDatapackModal`). Clear demo data clears the stores the SC ticks of what Demo Builder did
  * not install (datapack-engine step 10), after its own confirmation, in the screen's progress
  * window.

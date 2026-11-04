@@ -63,6 +63,8 @@ export interface DatapackDetailPanelProps {
      * list and keeps its detail flyout view-only; this now matches.
      */
     onImport: (id: DatapackId) => void;
+    /** Save Changes: given only for the demo's own pack when it is the SC's (`useHeldPack`). */
+    onSaveChanges?: () => void;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
     /**
@@ -95,6 +97,7 @@ export function DatapackDetailPanel({
     onClose,
     onRetry,
     onImport,
+    onSaveChanges,
     onRemoved,
     installsFromLibrary,
     setupStep,
@@ -132,6 +135,7 @@ export function DatapackDetailPanel({
                             <PackActions
                                 detail={detail}
                                 onImport={onImport}
+                                onSaveChanges={onSaveChanges}
                                 onRemoved={onRemoved}
                                 installsFromLibrary={installsFromLibrary}
                                 sharedInFile={sharedInFile}

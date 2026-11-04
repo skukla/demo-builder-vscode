@@ -29,7 +29,9 @@ import { Badge, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
 import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackSummary } from '../../types';
+import { shortDate } from './projectPackNewer';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
+import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -69,6 +71,12 @@ export interface DatapackCardProps {
      * was not, and then needed a link to point back at it.
      */
     isInstalled?: boolean;
+    /**
+     * When a newer version of the demo's own pack arrived, if one has (`newerVersionOf`). The card
+     * marks it with the house amber dot beside the version, the dashboard's "due" mark, and says
+     * when on hover; taking it is the SC's choice, from the version picker (owner, 2026-11-04).
+     */
+    newerAt?: string;
 }
 
 /**
@@ -86,6 +94,7 @@ export function DatapackCard({
     onOpen,
     selected,
     isInstalled,
+    newerAt,
 }: DatapackCardProps): React.JSX.Element {
     // Checked for PRESENCE: `false` means selectable-and-unselected, which is
     // still a radio. Truthiness here would silently make every unselected card
@@ -160,7 +169,7 @@ export function DatapackCard({
                     and its options are the parts that escape. */}
                 {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child Picker (InlineRenameField precedent) */}
                 <span
-                    className="datapack-card-version"
+                    className={newerAt ? 'datapack-card-version datapack-card-version--newer' : 'datapack-card-version'}
                     onClick={stopPropagation}
                     onKeyDown={stopPropagation}
                 >
@@ -173,12 +182,23 @@ export function DatapackCard({
                             <Item key={candidate.id.version}>{candidate.id.version}</Item>
                         ))}
                     </Picker>
+                    {newerAt ? <NewerMark at={newerAt} /> : null}
                 </span>
                 <span className="datapack-card-types">
                     {typeCount} {typeCount === 1 ? 'data type' : 'data types'}
                 </span>
             </div>
         </div>
+    );
+}
+
+/** The amber dot beside the version: a newer one is in the library, from this day. */
+function NewerMark({ at }: { at: string }): React.JSX.Element {
+    const said = `Newer version: ${shortDate(at)}`;
+    return (
+        <span className="datapack-card-newer" role="img" aria-label={said} title={said}>
+            <StatusDot variant="warning" />
+        </span>
     );
 }
 

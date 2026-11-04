@@ -10852,11 +10852,11 @@
         {
             "module": "src/features/data-installer/ui/components/DatapackCatalogGrid.tsx",
             "anchors": [
-                "return group.store === 'installer' && (installedPacks?.has(group.name) ?? false);"
+                "return isHeld(group, held) || (group.store === 'installer' && (installedPacks?.has(group.name) ?? false));"
             ],
             "mutants": 2,
             "category": "optionalChain",
-            "reason": "`installedPacks` is optional on renderBody's argument type (and on `installedHere`, which it now feeds \u2014 moved there 2026-10-01 when library cards stopped wearing the installed check) but the view is its only caller and always passes the memoised set, so neither the `?.` nor the `?? false` it feeds can be reached: the left side is never nullish. renderBody is module-private, so there is no way to call it without the set short of exporting a function nothing else needs. Both planted: all 38 tests pass. Moved with renderBody, now the DatapackCatalogGrid component, to DatapackCatalogGrid.tsx (datapack-engine step 05, 2026-10-29): `installedPacks` stays an optional prop and the view, still its only caller, always passes the set, so both remain unreachable.",
+            "reason": "`installedPacks` is optional on renderBody's argument type (and on `installedHere`, which it now feeds \u2014 moved there 2026-10-01 when library cards stopped wearing the installed check) but the view is its only caller and always passes the memoised set, so neither the `?.` nor the `?? false` it feeds can be reached: the left side is never nullish. renderBody is module-private, so there is no way to call it without the set short of exporting a function nothing else needs. Both planted: all 38 tests pass. Moved with renderBody, now the DatapackCatalogGrid component, to DatapackCatalogGrid.tsx (datapack-engine step 05, 2026-10-29): `installedPacks` stays an optional prop and the view, still its only caller, always passes the set, so both remain unreachable. The demo's own pack joined the check in front of it (2026-11-04, `isHeld`), which leaves the right side's set always passed, so both stay unreachable.",
             "decision": "none \u2014 the parameter is optional in the type and the fallback is the safe direction for a checkmark",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"

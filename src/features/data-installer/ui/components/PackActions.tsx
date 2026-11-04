@@ -4,7 +4,9 @@
  * Import read as unclear; icons from `renderMenuIcon`), where it was five buttons
  * on three rows. In the menu, in order: Save as file; Share or Stop sharing, on the SC's own
  * library pack; and Remove from library, the same pack only, in its own section at the bottom.
- * Saving the store into a pack is on the demo's own card (`ProjectPackSection`), not here.
+ * The demo's own pack, when it is the SC's, leads with Save Changes, which writes what its store now
+ * holds as a new version, with Import beside it (owner, 2026-11-04); a new pack is the header's
+ * Create Datapack.
  * A pack whose settings layer is the SC's own also offers "Remove its store settings" there, since a
  * layer has no card of its own to remove it from (datapack-engine step 09).
  *
@@ -35,6 +37,8 @@ import type { DatapackId } from '@/types/datapack';
 export interface PackActionsProps {
     detail: DatapackDetail;
     onImport: (id: DatapackId) => void;
+    /** Save Changes: given only for the demo's own pack when it is the SC's. */
+    onSaveChanges?: () => void;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
     /** Demo Builder's engine is chosen, which installs a library pack where it is. */
@@ -77,6 +81,7 @@ type Asking = 'share' | 'remove' | null;
 export function PackActions({
     detail,
     onImport,
+    onSaveChanges,
     onRemoved,
     installsFromLibrary,
     sharedInFile,
@@ -117,8 +122,13 @@ export function PackActions({
         <>
             {library && !installsFromLibrary ? <CopyToInstallerButton id={detail.id} onImport={onImport} /> : null}
             <div className="db-drawer-actions">
+                {onSaveChanges ? (
+                    <Button variant="accent" onPress={onSaveChanges}>
+                        Save Changes
+                    </Button>
+                ) : null}
                 {showImport ? (
-                    <Button variant="accent" onPress={() => onImport(detail.id)}>
+                    <Button variant={onSaveChanges ? 'secondary' : 'accent'} onPress={() => onImport(detail.id)}>
                         Import
                     </Button>
                 ) : null}

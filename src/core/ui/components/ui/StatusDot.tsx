@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/core/ui/utils/classNames';
 
 export type StatusDotVariant = 'success' | 'error' | 'warning' | 'info' | 'neutral';
 
@@ -44,20 +45,13 @@ export function StatusDot({ variant, size = 8, className, testId }: StatusDotPro
     // component renders it. It used to be a class each caller applied, so the
     // integration card pulsed while the dashboard tile showed the same blue dot
     // sitting still (reported 2026-08-04). A caller cannot forget this one.
-    const dotClasses = [
-        'status-dot',
-        'inline-block',
-        'rounded-full',
-        'shrink-0',
-        variant === 'info' && 'status-dot--pulse',
-        className,
-    ]
-        .filter(Boolean)
-        .join(' ');
-
+    //
+    // Written inline through `cn`, so the stylesheet check can read the class list
+    // (tests/sop/stylesheet-bundles.test.ts); a list built into a variable first is
+    // one it cannot.
     return (
         <span
-            className={dotClasses}
+            className={cn('status-dot', 'inline-block', 'rounded-full', 'shrink-0', variant === 'info' && 'status-dot--pulse', className)}
             style={{ '--status-dot-size': typeof size === 'number' ? `${size}px` : size } as React.CSSProperties}
             role="presentation"
             data-variant={variant}

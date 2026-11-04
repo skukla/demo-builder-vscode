@@ -81,11 +81,23 @@ describe('a Data Installer pack', () => {
     });
 });
 
-// Saving the store into a pack is on the demo's own card now (ProjectPackSection, 2026-11-03).
+// Saving the store into a pack is Save Changes, given only for the demo's own pack (2026-11-04).
 it('never offers Save Store Changes in the menu', () => {
     renderActions({ detail: OWN, installsFromLibrary: true });
 
     expect(menuLabels()).not.toContain('Save Store Changes to This Datapack');
+    expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
+});
+
+it('leads with Save Changes when given it, Import beside it', async () => {
+    const onSaveChanges = jest.fn();
+    renderActions({ detail: OWN, installsFromLibrary: true, onSaveChanges });
+
+    const [first, second] = screen.getAllByRole('button');
+    expect(first).toHaveTextContent('Save Changes');
+    expect(second).toHaveTextContent('Import');
+    await press(first);
+    expect(onSaveChanges).toHaveBeenCalledTimes(1);
 });
 
 describe('a library pack', () => {

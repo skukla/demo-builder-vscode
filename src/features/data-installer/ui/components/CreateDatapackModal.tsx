@@ -1,8 +1,8 @@
 /**
  * "Create datapack" in the catalog header, with the service's engine: a guided flow in one window
  * (`DatapackFlowDialog`) that exports from this project's Commerce instance into the shared
- * catalog. With Demo Builder's engine a pack is made from the demo's own card instead (Save As,
- * `ProjectPackSection`), so the header does not offer this then.
+ * catalog. With Demo Builder's engine the header's Create Datapack opens the save's own screens
+ * instead (`useSaveStoreChanges`), so the header does not offer this then.
  *
  * | Pack type | Engine        | Where the pack goes |
  * |-----------|---------------|---------------------|

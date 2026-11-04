@@ -1,7 +1,7 @@
 /**
  * "Create datapack": one window, one question per screen (owner, 2026-11-02). The first screen and
  * which screen each engine opens on. The header offers it with the service's engine only; with
- * Demo Builder's a pack is made from the demo's own card (Save As, `ProjectPackSection`). The
+ * Demo Builder's the header's Create Datapack opens the save's own screens (`useSaveStoreChanges`). The
  * export routes have their own suites; the screens that pick from the store are also pinned by
  * SaveFromStoreModal.test.tsx, which starts on them.
  */

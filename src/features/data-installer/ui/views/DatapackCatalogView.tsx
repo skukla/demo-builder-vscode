@@ -44,8 +44,8 @@ import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack,
 import { CatalogCountRow } from '../components/CatalogCountRow';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
+import { DatapackSourceNotice } from '../components/DatapackSourceNotice';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
-import { CatalogLead } from '../components/ProjectPackSection';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useHeldPack } from '../hooks/useHeldPack';
@@ -243,9 +243,9 @@ export function DatapackCatalogView(): React.JSX.Element {
     }, [loadProjectContext, loadInstalled, commerceInstance]);
 
     /**
-     * The held pack's actions (`useHeldPack`): "Save store changes to this pack" and "Save from
-     * this store" (steps 05 and 14), and its one Admin step (step 12). Closing a save's progress
-     * window reads the catalog and the project again, since the library now holds a new version.
+     * The held pack's actions (`useHeldPack`): Save Changes in its flyout, Create Datapack in the
+     * header, and its one Admin step (step 12). A finished save reads the catalog and the project
+     * again, since the library now holds a new version and the demo uses it.
      */
     const afterSave = useCallback((): void => {
         loadProjectContext({});
@@ -261,7 +261,7 @@ export function DatapackCatalogView(): React.JSX.Element {
     });
 
     // The header's Create Datapack with Demo Builder's engine: Save As, the name first and empty.
-    const offerSaveAs = heldPack.saves.offerSaveAs;
+    const offerSaveAs = heldPack.offerSaveAs;
     const createDatapack = useCallback((): void => offerSaveAs(''), [offerSaveAs]);
 
     const retryDetail = useCallback((): void => {
@@ -350,15 +350,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                     />
                 }
             >
-                <CatalogLead
-                    page={noticePage}
-                    onDismissNotice={dismissNoAccess}
-                    project={projectContext.value ?? undefined}
-                    groups={groups}
-                    canSave={value?.engine === 'demo-builder'}
-                    saves={heldPack.saves}
-                    onOpen={openDetail}
-                />
+                <DatapackSourceNotice page={noticePage} onDismiss={dismissNoAccess} />
                 <DatapackCatalogGrid
                     groups={groups}
                     filtered={filtered}
@@ -367,6 +359,8 @@ export function DatapackCatalogView(): React.JSX.Element {
                     pickVersion={pickVersion}
                     openDetail={openDetail}
                     installedPacks={installedPacks}
+                    held={projectContext.value?.datapack}
+                    installedAt={projectContext.value?.installedAt}
                 />
             </FullScreenSurface>
 
@@ -379,6 +373,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onClose={closeDetail}
                 onRetry={retryDetail}
                 onImport={openImport}
+                onSaveChanges={heldPack.saveChanges}
                 onRemoved={removedFromLibrary}
                 installsFromLibrary={value?.engine === 'demo-builder'}
                 setupStep={heldPack.setupStepLine}

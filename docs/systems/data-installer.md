@@ -181,21 +181,27 @@ judgement in this feature:
 
 ## Saving a store into a pack, with Demo Builder's engine (datapack-engine step 14)
 
-**Save and Save As** (owner, 2026-11-03, `.rptc/plans/datapack-save-as/`). There is no automatic pack
-per demo. **Create Datapack** in the catalog's header makes one: the new pack's name, then what goes
-in it, and the demo then uses it. Once the demo has a pack the catalog lists (`project.datapack`, the
-pack it installs from and resets to), it is pinned above the catalog as its own card
-(`ProjectPackSection`), which saves it; with none, nothing is pinned:
+**Create Datapack and Save Changes** (owner, 2026-11-03 and 2026-11-04, `.rptc/plans/datapack-save-as/`).
+There is no automatic pack per demo. The demo's pack (`project.datapack`, the pack it installs from
+and resets to) is one of the library's cards, wearing the check wherever it lives, the SC's library
+included, and opening on the version the demo uses (`DatapackCatalogGrid`):
 
-- **Save {pack}**, only when the pack is the SC's own (the library lists it as `mine`): a new version
-  of it.
-- **Save As**: the new pack's name first, starting from "{pack} Copy", then the item picker. It makes a new pack of the SC's, whose library name is
-  generated from the name typed (`packIdFor`: a slug and a random suffix, so it can never land on a
-  colleague's). The demo then uses it.
-- **Newer Version: {date}**, when the library has a later version of the pack, or the version
-  installed changed since (`updatedAt` after the install record's `startedAt`; team packs are updated
-  in place as `main`). Pressing it opens that version's panel. It is deliberately not an update in
-  the Updates window: a demo may stay on an older version on purpose.
+- **Create Datapack**, in the catalog's header: the new pack's name, then what goes in it. It makes a
+  new pack of the SC's, whose library name is generated from the name typed (`packIdFor`: a slug and
+  a random suffix, so it can never land on a colleague's). The demo then uses it.
+- **Save Changes**, leading the flyout of the demo's pack, only when the pack is the SC's own (the
+  library lists it as `mine`): a new version of it.
+- **The newer-version dot**, the house amber dot beside the card's version picker, when the library
+  has a later version of the pack, or the version installed changed since (`updatedAt` after the
+  install record's `startedAt`; team packs are updated in place as `main`). Its label says from when;
+  the version picker takes it. It is deliberately not an update in the Updates window: a demo may
+  stay on an older version on purpose.
+
+A finished save reads the catalog again at once (`useSaveStoreChanges`), so closing its window
+only closes it. A pinned section above the grid with Save and Save As beside the demo's card
+shipped for one day and was removed (owner, 2026-11-04): it looked like no other screen, Save As
+was the header's Create Datapack a second time, and the card already had a selected look that a
+library pack had never been given.
 
 With the service's engine the header's Create Datapack exports into the shared catalog instead.
 

@@ -19,6 +19,22 @@ In the release walk, the owner (who designed it):
 A review that was not shown this plan reached the same diagnosis on its own. The SC is never
 shown which pack the demo installs from, resets to and saves into. It also reached the same model.
 
+## Pivot, 2026-11-04: no pinned card
+
+Walked live, the pinned card above the library was wrong (owner: it looked like nothing else in
+the extension, and Save beside Save As did not explain itself). Replaced, before release, by:
+
+- the demo's pack is one of the library's cards, wearing the blue check and outline cards already
+  had (a library pack had never been given it: `installedHere` required the service's store);
+- **Save Changes** leads that pack's flyout, only when the pack is yours;
+- **Save As is removed** as a button: it was the header's Create Datapack a second time. Removal
+  and reset still ask a new name when the pack is not yours;
+- the newer-version mark is the house amber dot beside the card's version picker;
+- a finished save re-reads the library at once, so Close only closes.
+
+The sections below record the model as first designed; where they say "pinned card", read the
+above.
+
 ## The model
 
 The demo's pack works like an open file: **Save** and **Save As**.

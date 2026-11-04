@@ -125,6 +125,17 @@
 .datapack-card-version {
     align-self: flex-start;
 }
+
+/* The demo's pack, with a newer version in the library: the amber dot beside the picker. */
+.datapack-card-version--newer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.datapack-card-newer {
+    display: inline-flex;
+}
 }
 
 @layer theme {

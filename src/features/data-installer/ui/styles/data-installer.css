@@ -99,34 +99,6 @@
     gap: 24px;
     padding: 8px;
 }
-
-/* The open demo's datapack, pinned above the grid (`ProjectPackSection`, owner 2026-11-03): its
-   card at the grid's own card width, with Save and Save As beside it, and a rule under it so the
-   catalog reads as a separate list. */
-.datapack-project-pack {
-    padding: 8px 8px 24px;
-    margin-bottom: 16px;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
-}
-
-.datapack-project-pack-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 24px;
-    margin-top: 8px;
-}
-
-.datapack-project-pack-card {
-    flex: 0 0 240px;
-    width: 240px;
-}
-
-.datapack-project-pack-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-}
 }
 
 /* ===========================================

@@ -1,26 +1,36 @@
 /**
- * DatapackCatalogView — the demo's datapack, pinned above the catalog, and Save / Save As from it
- * (`ProjectPackSection`, owner 2026-11-03, `.rptc/plans/datapack-save-as/`).
+ * DatapackCatalogView — the demo's own datapack in the library, and Save Changes from its flyout
+ * (owner, 2026-11-04, `.rptc/plans/datapack-save-as/`).
  *
- * Save appears only for a pack that is the SC's own; Save As always, with Demo Builder's engine,
- * which is the one that can read the store back. Each opens the pick screens, whose last button
- * starts the save through the house progress window the VIEW hosts, so neither is a dialog inside
- * the drawer.
+ * The pack the project installs from and resets to is one of the library's cards, wearing the
+ * check, wherever it lives. Its flyout leads with Save Changes when the pack is the SC's own and
+ * Demo Builder's engine, which reads the store back, is chosen. A new pack is the header's Create
+ * Datapack. A finished save reads the catalog again at once, so Close only closes.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { press, settle } from '../../../../helpers/reactSettle';
+import { mockOnMessage } from '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
-import { CATALOG, DatapackCatalogView, makeSummary, mockPost, mockRequest } from './DatapackCatalogView.testUtils';
+import { CATALOG, DatapackCatalogView, INVENTORY_COMPLETE, makeSummary, mockPost, mockRequest } from './DatapackCatalogView.testUtils';
+import type { DatapackSummary } from '@/features/data-installer/types';
 
-/** Bodea as the SC's own library pack, in place of the team's. */
-const MINE = [makeSummary('bodea', 'main', { displayName: 'Acme Bodea', store: 'library', mine: true }), ...CATALOG.slice(2)];
+/** The SC's own library pack, in two versions; the demo uses the older. */
+const OLDER = makeSummary('acme-1a2b3c', '20261101-090000', { displayName: 'Acme Bodea', store: 'library', mine: true });
+const NEWER = makeSummary('acme-1a2b3c', '20261103-120000', { displayName: 'Acme Bodea', store: 'library', mine: true });
+const MINE = [OLDER, NEWER, ...CATALOG];
 
-/** The catalog, and the open project's recorded pack; the pick screens answer with nothing to pick. */
-function store(engine: 'demo-builder' | 'service', datapack: { name: string; version: string; store?: 'library' | 'installer' } | undefined, items = CATALOG) {
-    mockRequest.mockImplementation((type: string) => {
+type Held = { name: string; version: string; store?: 'library' | 'installer' } | undefined;
+
+/** The catalog, the open project's recorded pack, and the flyout's detail for whichever card opens. */
+function store(engine: 'demo-builder' | 'service', datapack: Held, items: DatapackSummary[] = MINE) {
+    mockRequest.mockImplementation((type: string, payload?: { datapackName?: string; version?: string }) => {
         if (type === 'find-datapacks') return Promise.resolve({ success: true, data: { items, count: items.length, total: items.length, engine } });
         if (type === 'get-datapack-import-target') return Promise.resolve({ success: true, data: { instance: 'inst', projectName: 'acme', datapack } });
+        if (type === 'get-datapack-detail') {
+            const detail = items.find((item) => item.id.name === payload?.datapackName && item.id.version === payload.version) ?? items[0];
+            return Promise.resolve({ success: true, data: { detail: { store: 'installer', ...detail }, inventory: INVENTORY_COMPLETE } });
+        }
         if (type === 'list-datapack-export-items') return Promise.resolve({ success: true, data: { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 } });
         return Promise.resolve({ success: true, data: null });
     });
@@ -32,87 +42,92 @@ async function renderView(): Promise<void> {
     await screen.findAllByTestId('datapack-card');
 }
 
-const section = () => screen.queryByRole('region', { name: "This Demo's Datapack" });
+const card = (name: string) => screen.getAllByTestId('datapack-card').find((each) => each.getAttribute('data-datapack') === name) as HTMLElement;
+const catalogReads = () => mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks').length;
+
+/** Hand a progress push to everything listening for one. */
+async function push(data: { id: string; state: string }): Promise<void> {
+    await act(async () => {
+        for (const [type, handler] of mockOnMessage.mock.calls) if (type === 'operationProgress') handler(data);
+    });
+}
 
 beforeEach(() => {
     mockPost.mockClear();
+    mockOnMessage.mockClear();
 });
 
-describe("the demo's datapack", () => {
-    it("pins the pack the project uses above the catalog, offering Save As only when it is not the SC's", async () => {
-        store('demo-builder', { name: 'bodea', version: 'main' });
+describe("the demo's datapack in the library", () => {
+    it('wears the check on its own card, opening on the version the demo uses, with no section above the grid', async () => {
+        store('demo-builder', { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
         await renderView();
 
-        expect(section()).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Save As' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /^Save Bodea/ })).not.toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).getByTestId('datapack-card-project-check')).toBeInTheDocument();
+        expect(card('acme-1a2b3c')).toHaveAccessibleName(`Acme Bodea, version ${OLDER.id.version}`);
+        // CONTROL: a pack the demo does not use wears none.
+        expect(within(card('wknd')).queryByTestId('datapack-card-project-check')).not.toBeInTheDocument();
+        expect(screen.queryByRole('region', { name: "This Demo's Datapack" })).not.toBeInTheDocument();
     });
 
-    it('Save As asks the new name, starting from the pack\'s, then saves under it', async () => {
-        store('demo-builder', { name: 'bodea', version: 'main' });
+    it('marks a newer version on the card, and says from when', async () => {
+        const items = [{ ...OLDER, createdAt: '2026-11-01T09:00:00Z' }, { ...NEWER, createdAt: '2026-11-03T12:00:00Z' }];
+        store('demo-builder', { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, items);
         await renderView();
 
-        await press(screen.getByRole('button', { name: 'Save As' }));
-        expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
-        const name = screen.getByRole('textbox', { name: /Datapack Name/ });
-        expect(name).toHaveValue('bodea Copy');
-        fireEvent.change(name, { target: { value: 'My Bodea' } });
-        await press(screen.getByRole('button', { name: 'Continue' }));
-        await settle();
-        await press(screen.getByRole('button', { name: 'Create' }));
-
-        expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
-            datapackName: 'bodea',
-            version: 'main',
-            source: 'installer',
-            saveAs: { displayName: 'My Bodea' },
-            confirm: true,
-            id: 'datapack-save',
-            progress: 'modal',
-        });
-        expect(await screen.findByText('Creating My Bodea')).toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).getByRole('img', { name: 'Newer version: Nov 3' })).toBeInTheDocument();
     });
+});
 
-    it("offers Save, named for the pack, when it is the SC's own, and saves into it with no name", async () => {
-        store('demo-builder', { name: 'bodea', version: 'main', store: 'library' }, MINE);
+describe('Save Changes, in the flyout', () => {
+    it("leads the flyout of the demo's own pack, and saves into it with no name", async () => {
+        store('demo-builder', { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
         await renderView();
+        await press(card('acme-1a2b3c'));
 
-        await press(screen.getByRole('button', { name: 'Save Acme Bodea' }));
+        await press(await screen.findByRole('button', { name: 'Save Changes' }));
         expect(await screen.findByRole('heading', { name: 'Save Acme Bodea' })).toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Save' }));
 
         expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
-            datapackName: 'bodea',
-            version: 'main',
+            datapackName: 'acme-1a2b3c',
+            version: OLDER.id.version,
             source: 'library',
             confirm: true,
             id: 'datapack-save',
             progress: 'modal',
         });
-        expect(await screen.findByText('Saving Acme Bodea')).toBeInTheDocument();
     });
 
-    it('pins nothing on a demo with no pack yet: the header\'s Create Datapack makes one', async () => {
-        store('demo-builder', undefined);
+    it("is not offered on a pack that is not the SC's", async () => {
+        store('demo-builder', { name: 'bodea', version: 'main' });
         await renderView();
+        await press(card('bodea'));
 
-        expect(section()).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Create Datapack' })).toBeInTheDocument();
+        // CONTROL: the flyout is open, with Import.
+        expect(await screen.findByRole('button', { name: 'Import' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
     });
 
-    it('pins nothing for a pack the catalog does not list, rather than bare buttons', async () => {
-        store('demo-builder', { name: 'gone-pack', version: '1', store: 'library' });
+    it('is not offered with the service engine, which keeps no record to read back', async () => {
+        store('service', { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
         await renderView();
+        await press(card('acme-1a2b3c'));
 
-        expect(section()).not.toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: 'Copy to the Data Installer' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
     });
 
-    it('offers no save with the service engine, which keeps no record to read back', async () => {
-        store('service', { name: 'bodea', version: 'main' });
+    it('reads the catalog again when the save finishes, once, without waiting for Close', async () => {
+        store('demo-builder', { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
         await renderView();
+        await press(card('acme-1a2b3c'));
+        await press(await screen.findByRole('button', { name: 'Save Changes' }));
+        await press(await screen.findByRole('button', { name: 'Save' }));
+        const before = catalogReads();
 
-        // CONTROL: the demo's pack is still shown.
-        expect(section()).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Save As' })).not.toBeInTheDocument();
+        await push({ id: 'datapack-save', state: 'succeeded' });
+        await push({ id: 'datapack-save', state: 'succeeded' });
+
+        await waitFor(() => expect(catalogReads()).toBe(before + 1));
     });
 });
