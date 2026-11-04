@@ -37,6 +37,29 @@
         font-size: 11px;
         color: var(--spectrum-global-color-gray-600);
     }
+    /* A row still working out what ticking it means (`CheckboxRow` `pending`): the house spinner in
+       the box's place, at the box's size, the box itself kept for its space, so the label never
+       moves (owner, 2026-11-03). Spectrum's box is size-175 square, centred in the size-400 row. */
+    .checkbox-row--pending {
+        position: relative;
+    }
+
+    .checkbox-row--pending [class*='spectrum-Checkbox-box'] {
+        visibility: hidden;
+    }
+
+    .checkbox-row-pending {
+        position: absolute;
+        top: 2px;
+        left: 0;
+        width: var(--spectrum-global-dimension-size-175);
+        height: var(--spectrum-global-dimension-size-400);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+
     /* "Select All" over a list (`selection/SelectAllRow`): a thin rule under it, so it reads as
        a control over the boxes, as a table's header checkbox does, not one more of them
        (owner, 2026-11-03: "it gets lost"). */
