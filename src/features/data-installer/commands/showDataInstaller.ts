@@ -57,7 +57,7 @@ export class ShowDataInstallerCommand extends StandalonePanelCommand<DataInstall
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading Data Installer';
+        return 'Loading Datapacks';
     }
 
     /**

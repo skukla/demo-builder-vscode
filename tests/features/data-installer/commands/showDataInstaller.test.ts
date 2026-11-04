@@ -97,8 +97,9 @@ describe('ShowDataInstallerCommand', () => {
             expect(makeCommand().getWebviewTitle()).toBe('Datapacks');
         });
 
-        it('has a loading message', () => {
-            expect(makeCommand().getLoadingMessage()).toMatch(/data installer/i);
+        // The screen's own name: the list is not only the Data Installer's (2026-11-04).
+        it('has a loading message naming the screen', () => {
+            expect(makeCommand().getLoadingMessage()).toBe('Loading Datapacks');
         });
     });
 
