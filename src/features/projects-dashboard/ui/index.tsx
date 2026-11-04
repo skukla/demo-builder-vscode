@@ -8,7 +8,9 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { ProjectActions } from './components/ProjectActionsMenu';
+import { ProjectsBatchModal } from './components/ProjectsBatchModal';
 import { UpdatesModal } from './components/UpdatesModal';
+import { useProjectsBatch } from './hooks/useProjectsBatch';
 import { useUpdatesModal } from './hooks/useUpdatesModal';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
@@ -48,6 +50,8 @@ import '@/core/ui/styles/interaction.css';
 import './styles/project-cards.css';
 // The Updates modal's project headings (PL-80). This entry alone draws it.
 import './styles/updates-modal.css';
+// Selection mode and the Reset Selected / Delete Selected window. This entry alone draws them.
+import './styles/projects-batch.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
 // `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
@@ -233,8 +237,12 @@ function ProjectsDashboardApp() {
     const operations = useOperationRunner();
     const startOperation = operations.startWhenItBegins;
     // Check for Updates (PL-80): its list, and then its run, in the Updates modal.
-    const refreshAfterUpdates = useCallback(() => void fetchProjects(true), [fetchProjects]);
-    const updates = useUpdatesModal(refreshAfterUpdates);
+    const refreshList = useCallback(() => void fetchProjects(true), [fetchProjects]);
+    const updates = useUpdatesModal(refreshList);
+    // Reset Selected and Delete Selected (owner, 2026-11-04): one window, run row by row.
+    const batch = useProjectsBatch(refreshList);
+    const batchOpen = batch.view.phase !== 'closed';
+    const listBatch = useMemo(() => ({ start: batch.start, isOpen: batchOpen, runs: batch.runs }), [batch.start, batchOpen, batch.runs]);
 
     // Copy from a project: the modal asks which one, then the wizard opens with
     // its settings (picker-to-modal).
@@ -506,6 +514,7 @@ function ProjectsDashboardApp() {
             hasLoadedOnce={hasLoadedOnce}
             initialViewMode={viewMode}
             onViewModeOverride={chooseViewMode}
+            batch={listBatch}
         />
         <OperationProgressModal
             operation={operations.open}
@@ -513,6 +522,7 @@ function ProjectsDashboardApp() {
             onClose={operations.close}
         />
         <UpdatesModal controls={updates} />
+        <ProjectsBatchModal controls={batch} />
         </>
     );
 }

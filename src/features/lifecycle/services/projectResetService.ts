@@ -392,6 +392,19 @@ function asHandlerResponse({ success, error }: ProjectResetOutcome): HandlerResp
     return { success, ...(error ? { error } : {}) };
 }
 
+/**
+ * The same reset, answered up front by a batch (the projects list's Reset Selected, owner
+ * 2026-11-04): no question, and it reports into the batch's window. A running demo is stopped
+ * first, as the single reset stops it: only one demo runs at a time, so it is this one.
+ */
+export async function runProjectResetAnswered(deps: ProjectResetDeps, report: ReportStage): Promise<HandlerResponse> {
+    const vscode = await import('vscode');
+    if (deps.project.status === 'running' || deps.project.status === 'starting') {
+        await vscode.commands.executeCommand('demoBuilder.stopDemo');
+    }
+    return whileResetting(deps, async () => asHandlerResponse(await runResetSteps(deps, report)));
+}
+
 // ==========================================================
 // Full Reset with UI
 // ==========================================================

@@ -71,8 +71,8 @@ beforeEach(() => {
         previewFailed: 0,
     });
     mockDeleteAdminApiKey.mockResolvedValue({ success: true });
-    // 'ask' is the shipped default and the only value that reaches the dialog;
-    // 'deleteAll' skips the prompt entirely.
+    // 'ask' is the shipped default; 'deleteAll' asks the same question with the
+    // repository and the site ticked (owner, 2026-11-04).
     mockGetConfiguration.mockReturnValue({ get: () => 'ask' });
 });
 
@@ -149,23 +149,27 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
         });
     });
 
-    it('asks NOTHING when the user has configured delete-all', async () => {
-        // Pinned deliberately, because it is the one path with no confirmation
-        // at all: `cleanupBehavior: 'deleteAll'` removes the project AND its
-        // GitHub repo AND its DA.live site without a prompt. That is what the
-        // setting means, and this test is what stops it becoming true of the
-        // default 'ask' by accident.
+    // Until 2026-11-04 delete-all was the one path with no confirmation at all: it removed the
+    // project, its repository and its DA.live site without a prompt. It now asks like 'ask', with
+    // those two ticked, so leaving the question is as safe as leaving any other.
+    it('still asks under delete-all, with the repository and the site ticked', async () => {
         mockGetConfiguration.mockReturnValue({ get: () => 'deleteAll' });
+        const pick = armQuickPick('accept');
 
         await deleteProject(context(), edsProject(), SERVICES);
 
-        expect(mockCreateQuickPick).not.toHaveBeenCalled();
-        // No CONFIRMATION. Downstream prompts (GitHub sign-in) are a different
-        // question and may still appear, so match the confirmation text rather
-        // than asserting the modal was never used for anything at all.
-        const asked = mockShowWarningMessage.mock.calls.map((c) => String(c[0]));
-        expect(asked.filter((t) => /Are you sure/.test(t))).toStrictEqual([]);
+        expect(pick.selectedAtShow().map((item) => item.id)).toStrictEqual(['github', 'daLive']);
         expect(mockRm).toHaveBeenCalled();
+    });
+
+    it('deletes nothing under delete-all when the question is left with Escape', async () => {
+        mockGetConfiguration.mockReturnValue({ get: () => 'deleteAll' });
+        armQuickPick('escape');
+
+        const result = await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(mockRm).not.toHaveBeenCalled();
+        expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
     });
 
     it('reports a cancel as a SUCCESSFUL call that did not delete', () => {

@@ -35,6 +35,11 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     }),
 }));
 jest.mock('@/core/utils/sleep');
+// The datapack's removal is its own suite's (sampleDataRemovalChanges); here only what it is handed.
+jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetSampleData'),
+    removeProjectSampleData: jest.fn(),
+}));
 const mockReport = jest.fn();
 jest.mock('@/core/vscode/withOperationProgress', () => ({
     withOperationProgress: jest.fn(
@@ -46,6 +51,7 @@ import { runningWork } from '@/core/state/projectWorkRunning';
 import { resetOperationId } from '@/core/utils/operationIds';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
+import { removeProjectSampleData } from '@/features/eds/services/reset/edsResetSampleData';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -332,5 +338,51 @@ describe('resetEdsProjectWithUI — within an Edit', () => {
         );
 
         expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+    });
+});
+
+// Reset Selected on the projects list (owner, 2026-11-04): the batch asked its questions before
+// anything ran, and the reset reports into the batch's window with those answers.
+describe('resetEdsProjectWithUI — answered by a batch', () => {
+    const withPack = (): Project => ({
+        ...createProject(),
+        datapack: { name: 'bodea', version: 'main', store: 'library' },
+        componentSelections: { backend: 'adobe-commerce-accs' },
+    });
+
+    it("asks nothing, removes the datapack as answered, and hands the batch's answer to the changes", async () => {
+        mockedReset.mockResolvedValue({ success: true });
+        const report = jest.fn();
+
+        const result = await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project: withPack(),
+            context: createContext(),
+            withinEdit: { report },
+            answered: { removeDatapack: true, changes: { saveAs: 'My Bodea' } },
+        });
+
+        expect(result.success).toBe(true);
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(withOperationProgress).not.toHaveBeenCalled();
+        const askName = (removeProjectSampleData as jest.Mock).mock.calls[0][3] as () => Promise<unknown>;
+        await expect(askName()).resolves.toStrictEqual({ saveAs: 'My Bodea' });
+    });
+
+    it('keeps the datapack when the batch said not to remove it', async () => {
+        mockedReset.mockResolvedValue({ success: true });
+
+        await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project: withPack(),
+            context: createContext(),
+            withinEdit: { report: jest.fn() },
+            answered: { removeDatapack: false },
+        });
+
+        expect(removeProjectSampleData).not.toHaveBeenCalled();
+        expect(mockedReset).toHaveBeenCalledTimes(1);
     });
 });

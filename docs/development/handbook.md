@@ -901,6 +901,20 @@ check says so and names the file.
 > Enforced by `tests/sop/ui-label-case.test.ts`, which reads every webview bundle with the compiler,
 > holds strings it cannot read to a pin, and proves itself on planted defects.
 
+> **Convention.** A window's header names the kind of thing and what happened to it, generically:
+> "Couldn't Create Datapack", "Projects Deleted", "Couldn't Read Projects", "Deleting Projects".
+> The specific thing (a pack's or a project's name, a count) goes in the details beneath it:
+> "Couldn't create Kukla Justrite: <the reason>", or a row per project. A header is a statement of
+> what happened or what the window does, never the reason for it, and carries no comma. A button
+> may carry a count ("Delete 3 Projects"). **One exception:** what an AGENT is doing names its
+> target ("Agent Deleting the Acme project", `toolNarration.ts`): nobody pressed anything, so the
+> notification is the SC's only way to see what the agent is touching (owner, 2026-11-04).
+> *Why:* the owner, 2026-11-04: headers like "Some Projects Weren't Deleted" read as the reason for
+> the header rather than the header, and a name in the header makes each window's title different
+> for the same event.
+> **Not enforced** yet: the batch window follows it; an audit of every other window header is
+> under way and will decide whether a check can tell a name from a kind.
+
 > **Convention.** A dialog that is waiting shows nothing else: the title, a medium spinner centred
 > both ways in the space between the rule and the buttons, and the way out. `Modal`'s `waiting` prop
 > does it. A flyout waits the same way: its title and a medium centred spinner, with no words
@@ -1884,7 +1898,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 135 conventions. 133 of them are enforced; 2 are not.**
+**This handbook states 136 conventions. 133 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

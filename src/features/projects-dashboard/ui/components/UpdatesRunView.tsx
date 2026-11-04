@@ -31,7 +31,8 @@ import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { localCopyRowId, type PendingUpdateRow, type UpdateRowState, type UpdateRowStatus } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
-const ICON_OF: Record<UpdateRowState, StepStatus> = {
+/** A row's state as its icon; the projects batch run draws its rows with it too. */
+export const ICON_OF: Record<UpdateRowState, StepStatus> = {
     waiting: 'pending',
     running: 'checking',
     done: 'success',
@@ -74,7 +75,7 @@ interface Live {
 }
 
 /** A question in the list: its sentence, and any fields it needs typed. Its answers are the buttons. */
-function RunQuestion({ prompt, onTyped }: { prompt: OperationPrompt; onTyped: Live['onTyped'] }) {
+export function RunQuestion({ prompt, onTyped }: { prompt: OperationPrompt; onTyped: Live['onTyped'] }) {
     return (
         <div className="updates-run-question" role="group" aria-label="Question">
             <p className="updates-run-question-text">{prompt.message}</p>

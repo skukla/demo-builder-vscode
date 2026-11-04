@@ -247,6 +247,29 @@ describe('the two cloud choices', () => {
         });
     });
 
+    // What another project here still uses is kept, as the button never offers it (owner, 2026-11-04).
+    it('keeps the repository and the site another local project uses, and says so', async () => {
+        const storefront = (name: string, path: string) => ({
+            name,
+            path,
+            componentInstances: {
+                'eds-storefront': { id: 'eds-storefront', metadata: { githubRepo: 'acme/demo', daLiveOrg: 'acme', daLiveSite: 'demo' } },
+            },
+        });
+        getAllProjects.mockResolvedValue([{ name: 'alpha', path: '/p/alpha' }, { name: 'beta', path: '/p/beta' }]);
+        loadProjectFromPath.mockImplementation(async (path: string) => (path === '/p/beta' ? storefront('beta', '/p/beta') : storefront('alpha', '/p/alpha')));
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        const answer = await s.call({ ...CONFIRMED, deleteGithubRepo: true, deleteDaLiveSite: true });
+
+        expect(cleanUpProjectCloudMock.mock.calls[0][2]).toMatchObject({ deleteGithubRepo: false, deleteDaLiveSite: false });
+        expect(answer).toMatchObject({
+            deleted: true,
+            kept: ['Kept the GitHub repository: beta also uses it.', 'Kept the DA.live site: beta also uses it.'],
+        });
+    });
+
     it('asks for the site alone when only that is ticked', async () => {
         const s = fakeServer();
         registerDeleteProjectTool(s, ctxFactory);

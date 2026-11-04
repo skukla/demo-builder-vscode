@@ -16,6 +16,8 @@ import { DashboardEmptyState } from './components/DashboardEmptyState';
 import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
+import { SelectionActions, SelectionCount, type ListBatch } from './components/SelectionActions';
+import { useProjectSelection } from './hooks/useProjectSelection';
 import { buildMenuItems } from './projectsDashboardHelpers';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
@@ -58,6 +60,8 @@ export interface ProjectsDashboardProps {
     initialViewMode?: ViewMode;
     /** Callback when user overrides view mode (persists for session) */
     onViewModeOverride?: (mode: ViewMode) => void;
+    /** Reset Selected and Delete Selected; with none, the list offers no Select (owner, 2026-11-04). */
+    batch?: ListBatch;
 }
 
 /**
@@ -84,6 +88,7 @@ export function ProjectsDashboard({
     hasLoadedOnce = true,
     initialViewMode = 'cards',
     onViewModeOverride,
+    batch,
 }: ProjectsDashboardProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
@@ -116,6 +121,9 @@ export function ProjectsDashboard({
         () => projects.filter((project) => matchesSearchFields(project, ['name'], searchQuery)),
         [projects, searchQuery],
     );
+
+    const selection = useProjectSelection(filteredProjects, !batch?.isOpen, batch?.runs ?? 0);
+    const listSelection = selection.selecting ? { selected: selection.selected, onToggle: selection.toggle } : undefined;
 
     const hasProjects = projects.length > 0;
     const isFiltering = searchQuery.trim().length > 0;
@@ -155,7 +163,7 @@ export function ProjectsDashboard({
     // menu the header's New button used to: adding a project is a choice of three.
     // Hidden while a filter narrows the list — it is not a project and cannot match.
     const addCard = (cardClassName: string): React.ReactElement | null =>
-        isFiltering ? null : (
+        isFiltering || selection.selecting ? null : (
             <AddCard
                 name="New Project"
                 cardClassName={cardClassName}
@@ -197,6 +205,10 @@ export function ProjectsDashboard({
                                     onViewModeChange={handleViewModeChange}
                                     hasLoadedOnce={hasLoadedOnce}
                                     alwaysShowCount={true}
+                                    countLead={selection.selecting ? <SelectionCount selection={selection} /> : undefined}
+                                    countTrailing={
+                                        batch ? <SelectionActions selection={selection} onBatch={batch.start} /> : undefined
+                                    }
                                 />
                             </View>
                         </Flex>
@@ -210,6 +222,7 @@ export function ProjectsDashboard({
                             onSelectProject={onSelectProject}
                             actions={actions}
                             addCard={addCard('project-card-spectrum')}
+                            selection={listSelection}
                         />
                     )}
                     {viewMode === 'rows' && (
@@ -219,6 +232,7 @@ export function ProjectsDashboard({
                             onSelectProject={onSelectProject}
                             actions={actions}
                             addCard={addCard('project-row')}
+                            selection={listSelection}
                         />
                     )}
 

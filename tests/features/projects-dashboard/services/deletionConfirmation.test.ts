@@ -146,6 +146,28 @@ describe('a confirmed plain delete', () => {
 });
 
 describe('the cleanup dialog it builds', () => {
+    // Deleting what another project uses would take its storefront down too (owner, 2026-11-04).
+    it('offers neither the repository nor the site another local project uses', async () => {
+        const pick = armQuickPick('accept', []);
+        const ctx = context();
+        const other = edsProject({ name: 'other-demo', path: '/projects/other' });
+        (ctx.stateManager.getAllProjects as jest.Mock).mockResolvedValue([
+            { name: 'demo-project', path: '/projects/demo', lastModified: new Date(0) },
+            { name: 'other-demo', path: '/projects/other', lastModified: new Date(0) },
+        ]);
+        (ctx.stateManager.loadProjectFromPath as jest.Mock).mockImplementation(async (path: string) =>
+            path === '/projects/other' ? other : edsProject(),
+        );
+        mockShowWarningMessage.mockResolvedValue('Delete');
+
+        await deleteProject(ctx, edsProject(), SERVICES);
+
+        // CONTROL: a project of its own is offered both (the next test); here neither row exists.
+        expect(pick.items()).toStrictEqual([]);
+        expect(mockDeleteRepository).not.toHaveBeenCalled();
+        expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
+    });
+
     it('offers a row per available resource and pre-ticks NOTHING', async () => {
         const pick = armQuickPick('accept', []);
 
@@ -267,7 +289,7 @@ describe('the cleanup dialog it builds', () => {
     });
 });
 
-describe('cleanupBehavior: deleteAll picks the resources itself', () => {
+describe('cleanupBehavior: deleteAll ticks the resources, and the SC confirms', () => {
     beforeEach(() => {
         mockGetConfiguration.mockReturnValue({ get: () => 'deleteAll' });
     });

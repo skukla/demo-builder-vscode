@@ -33,7 +33,9 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
         params: { repoOwner: 'test-owner', repoName: 'test-repo' },
     }),
 }));
+// The check is faked; the keep-content question that lives beside it stays real.
 jest.mock('@/features/eds/services/reset/demoSourceCheck', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/demoSourceCheck'),
     checkDemoSource: jest.fn(),
 }));
 jest.mock('@/core/utils/sleep');

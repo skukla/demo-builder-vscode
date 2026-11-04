@@ -11,9 +11,9 @@
 import { Flex, Text } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
 import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
-import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
-import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
-import { PinToggle } from '@/core/ui/components/ui/PinToggle';
+import type { ProjectActions } from './ProjectActionsMenu';
+import { ProjectSelectBox, type TileSelection } from './ProjectSelectBox';
+import { ProjectTileName, ProjectTileTools } from './ProjectTileTools';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -36,6 +36,11 @@ export interface ProjectCardProps {
     onSelect: (project: Project, opts?: { forceNewWindow?: boolean }) => void;
     /** Bundled action callbacks for the kebab menu */
     actions?: ProjectActions;
+    /**
+     * While the list is selecting: the card shows a box, a click ticks it rather than opening the
+     * project, and the menu, the pin and rename are hidden (owner, 2026-11-04).
+     */
+    selection?: TileSelection;
 }
 
 /**
@@ -48,8 +53,9 @@ export function ProjectCard({
     isRunning = false,
     onSelect,
     actions = {},
+    selection,
 }: ProjectCardProps) {
-    const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect);
+    const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect, selection?.onToggle);
 
     const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
     // Two axes, one line each. Runtime is the LOCAL dev server, so EDS projects —
@@ -79,6 +85,7 @@ export function ProjectCard({
             role="button"
             tabIndex={0}
             aria-label={ariaLabel}
+            aria-pressed={selection ? selection.selected : undefined}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
             className="project-card-spectrum"
@@ -87,37 +94,20 @@ export function ProjectCard({
                 beside the menu (owner, 2026-10-28): it was a menu row. */}
             <Flex alignItems="center" justifyContent="space-between" gap="size-100">
                 <Flex alignItems="center" gap="size-75" minWidth={0}>
-                    {/* Rename-in-place: the pencil (hover-revealed) swaps the name
-                        for an input; hidden while running (backend rejects) or
-                        when the rename callback isn't wired. */}
-                    <InlineRenameField
-                        name={getProjectDisplayName(project)}
-                        textClassName="project-card-spectrum-name"
-                        disabled={isRunning || project.status === 'creating' || !actions.onRenameSubmit}
-                        // No `normalize`: the field takes the TITLE as typed.
-                        // `renameProjectCore` derives the slug from it and moves
-                        // the folder to match, so rewriting keystrokes to hyphens
-                        // here would only put the enforcement back in the one
-                        // place the user has to look at.
-                        onRename={(newName) =>
-                            actions.onRenameSubmit
-                                ? actions.onRenameSubmit(project, newName)
-                                : Promise.resolve(null)
-                        }
-                    />
-                </Flex>
-                <Flex alignItems="center" gap="size-50">
-                    <PinToggle
-                        pinned={Boolean(project.pinned)}
-                        subject="project"
-                        onToggle={actions.onPinToggle ? () => actions.onPinToggle?.(project) : undefined}
-                    />
-                    <ProjectActionsMenu
+                    {selection && <ProjectSelectBox project={project} selection={selection} />}
+                    <ProjectTileName
                         project={project}
                         isRunning={isRunning}
                         actions={actions}
+                        textClassName="project-card-spectrum-name"
+                        selecting={Boolean(selection)}
                     />
                 </Flex>
+                {!selection && (
+                    <Flex alignItems="center" gap="size-50">
+                        <ProjectTileTools project={project} isRunning={isRunning} actions={actions} />
+                    </Flex>
+                )}
             </Flex>
 
             {/* Brand & Stack Summary */}

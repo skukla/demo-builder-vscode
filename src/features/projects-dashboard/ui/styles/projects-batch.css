@@ -1,0 +1,143 @@
+/**
+ * Selection mode on the projects list, and the Reset Selected / Delete Selected window (owner,
+ * 2026-11-04): .projects-select-bar (the count row while selecting), .project-select-box (a tile's
+ * box), .batch-delete-* (Delete Selected's table), .batch-reset-* (Reset Selected's questions) and
+ * .projects-batch-run (the run's rows).
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `projectsList` entry alone (ui/index.tsx), the one
+ * bundle that draws them. The rows' own look is the house `checkbox-row.css` and `work-row.css`.
+ */
+
+@layer theme {
+    /* Select All, the count and the buttons, on the count row's one line. */
+    .projects-select-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--spectrum-global-dimension-size-150);
+    }
+
+    /* On this row Select All sits beside the count, not over a list, so it takes no rule under it. */
+    .projects-select-bar .select-all-row {
+        padding: 0;
+        margin: 0;
+        border-bottom: 0;
+    }
+
+    .project-select-box {
+        display: inline-flex;
+        flex-shrink: 0;
+    }
+
+    /* Delete Selected: a project per row, a column per online resource. Stacked when too narrow. */
+    .batch-delete {
+        container-type: inline-size;
+    }
+
+    .batch-delete-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    .batch-delete-table th,
+    .batch-delete-table td {
+        padding: 0 var(--spectrum-global-dimension-size-150) 0 0;
+        text-align: left;
+        font-weight: normal;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    /* The name column takes what is left, and its names may wrap; the labels never do. */
+    .batch-delete-table tbody th {
+        width: 100%;
+        white-space: normal;
+    }
+
+    .batch-delete-table thead th {
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+    }
+
+    /* A box's own label: the column header says it while there are columns. */
+    .batch-delete-option-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    @container (max-width: 520px) {
+        .batch-delete-table,
+        .batch-delete-table thead,
+        .batch-delete-table tbody,
+        .batch-delete-table tr,
+        .batch-delete-table th,
+        .batch-delete-table td {
+            display: block;
+            width: auto;
+        }
+
+        /* The column Select Alls on their own lines, the rule under the last. */
+        .batch-delete-table thead {
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+        }
+
+        .batch-delete-table thead th {
+            padding-bottom: 0;
+            border-bottom: 0;
+        }
+
+        /* Each project's boxes under its name, each with its label. */
+        .batch-delete-table tbody tr {
+            margin-bottom: 8px;
+        }
+
+        .batch-delete-table tbody td {
+            padding-left: 28px;
+        }
+
+        .batch-delete-table tbody td:empty {
+            display: none;
+        }
+
+        .batch-delete-option-label {
+            position: static;
+            width: auto;
+            height: auto;
+            overflow: visible;
+            clip-path: none;
+        }
+    }
+
+    /* Reset Selected: Remove Datapack, then a line per project with what its pack needs. */
+    .batch-reset {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .batch-reset-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .batch-reset-changes {
+        display: flex;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: var(--spectrum-global-dimension-size-200);
+    }
+
+    /* The run: a row per project, as tall as its rows, then it scrolls, as the Updates run does. */
+    .projects-batch-run {
+        display: flex;
+        flex-direction: column;
+        max-height: min(440px, 55vh);
+        overflow-y: auto;
+    }
+}

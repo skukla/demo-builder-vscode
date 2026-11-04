@@ -77,3 +77,6 @@ export function deleteOperationId(projectName: string): string {
  * across every project, so it names the operation rather than a target.
  */
 export const UPDATES_OPERATION_ID = 'apply-updates';
+
+/** Resetting or deleting several projects at once from the projects list: one run at a time. */
+export const PROJECTS_BATCH_OPERATION_ID = 'projects-batch';

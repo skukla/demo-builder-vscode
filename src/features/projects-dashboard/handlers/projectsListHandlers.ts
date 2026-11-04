@@ -29,6 +29,7 @@ import {
     handleOpenAiForProject,
     handleSetProjectPinned,
 } from './dashboardHandlers';
+import { handlePrepareProjectsBatch, handleRunProjectsBatch } from './projectsBatchHandlers';
 import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import {
     handleBackgroundOperation,
@@ -63,6 +64,10 @@ export const projectsListHandlers = defineHandlers({
 
     // Project deletion handler
     deleteProject: handleDeleteProject,
+
+    // Reset Selected and Delete Selected: the questions' rows, then the run, a row per project.
+    prepareProjectsBatch: handlePrepareProjectsBatch,
+    runProjectsBatch: handleRunProjectsBatch,
 
     // Demo control handlers
     startDemo: handleStartDemo,

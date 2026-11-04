@@ -7434,45 +7434,9 @@
         {
             "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
             "anchors": [
-                "deleteGitHubRepo: !!edsMetadata?.githubRepo,"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
-            "decision": "none \u2014 equivalent; no call can distinguish it.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "if (edsMetadata?.githubRepo) {"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
-            "decision": "none \u2014 equivalent; no call can distinguish it.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "if (edsMetadata?.daLiveOrg && edsMetadata?.daLiveSite) {"
-            ],
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
-            "decision": "none \u2014 equivalent; no call can distinguish either chain.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 231,
+            "line": 234,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -7485,23 +7449,11 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 232,
+            "line": 235,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
             "decision": "none \u2014 equivalent.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "deleteDaLiveSite: !!edsMetadata?.daLiveOrg && !!edsMetadata?.daLiveSite,"
-            ],
-            "mutants": 4,
-            "category": "branch",
-            "reason": "Turning this true when the pair is incomplete is absorbed downstream: performDaLiveCleanup opens with '!edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite' and returns before touching anything. So a wrongly-true flag produces the same calls and the same cleanupResults as a correctly-false one. The half that CAN be observed \u2014 refusing to delete a site the user did not pick \u2014 is tested. ALSO: edsMetadata cannot be null here: deleteProject computes it as 'isEds ? extractEdsMetadata(project) : null' and calls showCleanupConfirmation only under 'if (isEds && edsMetadata)'. Dropping either '?' cannot throw for any input the module accepts.",
-            "decision": "none \u2014 equivalent; the downstream guard is what makes it so. none \u2014 equivalent; the two chains sit on an already-proven value.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
@@ -11073,7 +11025,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 214,
+            "line": 217,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11086,7 +11038,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 215,
+            "line": 218,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11099,7 +11051,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 222,
+            "line": 225,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11112,7 +11064,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 223,
+            "line": 226,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -15241,7 +15193,7 @@
             "anchors": [
                 "deleteGithubRepo: tickOf(args?.deleteGithubRepo),"
             ],
-            "line": 106,
+            "line": 108,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green. Re-anchored 2026-10-19 (89 -> 94): the line now hands the value to tickOf (AI-71) instead of comparing it to true; the chain is the same read of args, behind the same name guard.",
@@ -15254,7 +15206,7 @@
             "anchors": [
                 "deleteDaLiveSite: tickOf(args?.deleteDaLiveSite),"
             ],
-            "line": 107,
+            "line": 109,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green. Re-anchored 2026-10-19 (90 -> 95): the line now hands the value to tickOf (AI-71) instead of comparing it to true; the chain is the same read of args, behind the same name guard.",

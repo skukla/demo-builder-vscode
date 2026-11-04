@@ -119,6 +119,8 @@ const SPECTRUM_PROPS = [
     'isDisabled',
     'maxValue',
     'minValue',
+    // 2026-11-04: a project tile's selection box stays out of the tab order (the tile is the stop).
+    'excludeFromTabOrder',
 ];
 
 // Helper to filter out Spectrum-specific props

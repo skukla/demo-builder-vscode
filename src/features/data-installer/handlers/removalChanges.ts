@@ -80,6 +80,18 @@ async function readChanges(context: HandlerContext, project: Project, pack: Data
     }
 }
 
+/**
+ * What removing a project's pack would lose, for any project rather than only the open one: what a
+ * batch reset reads before it asks (owner, 2026-11-04). Writes nothing; nothing when the project
+ * has no pack or its store could not be read.
+ */
+export async function readRemovalChangesOf(context: HandlerContext, project: Project): Promise<DatapackRemovalChanges | undefined> {
+    const held = project.datapack;
+    if (!held) return undefined;
+    const changes = await readChanges(contextForProject(context, project), project, { name: held.name, version: held.version }, held.store);
+    return 'response' in changes ? undefined : changes;
+}
+
 /** Where a save of the changes would go: the demo's pack by name (Save); none when it needs a name (Save As). */
 async function whereSaved(context: HandlerContext, store: Parameters<typeof saveIntoFor>[1]): Promise<{ packName?: string }> {
     const into = await saveIntoFor(context, store, undefined);

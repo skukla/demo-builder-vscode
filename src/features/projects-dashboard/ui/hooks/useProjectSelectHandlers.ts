@@ -26,16 +26,28 @@ export type ProjectSelectHandler = (
  * Keyboard deliberately honours SHIFT only: there is no cmd-Enter convention for
  * this in VS Code, and binding meta here would swallow other shortcuts.
  *
+ * While the list is selecting (`onToggle` given), a click or key ticks the tile instead of
+ * opening it (owner, 2026-11-04).
+ *
  * @param project - the project this tile represents
  * @param onSelect - the surface's open-project callback
+ * @param onToggle - while selecting: ticks or unticks the project
  * @returns handlers to spread onto the tile's `onClick` / `onKeyDown`
  */
-export function useProjectSelectHandlers(project: Project, onSelect: ProjectSelectHandler) {
+export function useProjectSelectHandlers(
+    project: Project,
+    onSelect: ProjectSelectHandler,
+    onToggle?: (project: Project) => void,
+) {
     // A project still being created has nothing to open yet; its tile only says so (PL-82).
     const creating = project.status === 'creating';
     const handleClick = useCallback(
         (e: React.MouseEvent) => {
             if (creating) return;
+            if (onToggle) {
+                onToggle(project);
+                return;
+            }
             // Shift-click / Cmd-click → open in a new VS Code window (standard
             // VS Code modifier convention for Open Recent et al.).
             if (e.shiftKey || e.metaKey) {
@@ -44,11 +56,15 @@ export function useProjectSelectHandlers(project: Project, onSelect: ProjectSele
                 onSelect(project);
             }
         },
-        [creating, project, onSelect],
+        [creating, project, onSelect, onToggle],
     );
 
     const handleKeyDown = useActivateOnKey((e) => {
         if (creating) return;
+        if (onToggle) {
+            onToggle(project);
+            return;
+        }
         // SHIFT only: there is no cmd-Enter convention for this in VS Code, and
         // binding meta here would swallow other shortcuts.
         if (e.shiftKey) {

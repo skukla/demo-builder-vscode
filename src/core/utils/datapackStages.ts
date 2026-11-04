@@ -20,7 +20,7 @@ export const DATAPACK_STAGES = {
         // Shown when the save names nothing of its own; it says which version (`savingLine`).
         detail: 'As a new version of the datapack',
     },
-    // "Also delete its pack" on a project delete (step 07): one library delete per version.
+    // "Delete Datapack" on a project delete (step 07): one library delete per version.
     // FIRST ESTIMATE, NOT MEASURED.
     deletingOwnPack: {
         label: 'Deleting its pack',

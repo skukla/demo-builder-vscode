@@ -87,7 +87,12 @@ cut, not coloured (owner, 2026-11-02).
 dangerous main action is solid red. Never two buttons that do the same thing.
 
 **Words:**
-- The title names the thing and the outcome ("Removed ZZ Test Root DB12").
+- The title names the KIND of thing and what happened to it, generically ("Datapack Removed",
+  "Couldn't Create Datapack"); the specific one, by name or count, is in the body ("Removed ZZ Test
+  Root DB12."). A title is a statement, never the reason, and has no comma (owner, 2026-11-04;
+  the handbook's window-header convention). Until 2026-11-04 this line said the opposite, a title
+  naming the thing, and most of the extension's titles still do: see
+  `.rptc/research/window-headers/research.md`.
 - The body never repeats the title.
 - Facts, not commentary. Digits for numbers, with separators (1,284).
 - A warning is a word in the main sentence ("Permanently removes…"), never a

@@ -417,6 +417,46 @@ describe('SearchHeader', () => {
         });
     });
 
+    // A list in selection mode says what is selected where the count was (the projects list).
+    describe('countLead', () => {
+        it("takes the count's place at the row's start, filtering or not", () => {
+            const { container } = render(
+                <SearchHeader
+                    searchQuery="a"
+                    onSearchQueryChange={jest.fn()}
+                    totalCount={10}
+                    filteredCount={3}
+                    itemNoun="project"
+                    hasLoadedOnce
+                    alwaysShowCount
+                    countLead={<span data-testid="lead">1 of 3 selected</span>}
+                    countTrailing={<span data-testid="trailing">Done</span>}
+                />
+            );
+
+            expect(screen.queryByText('3 of 10 projects')).toBeNull();
+            const row = container.querySelector('.search-header-count-row');
+            expect(row?.firstElementChild).toBe(screen.getByTestId('lead'));
+            expect(screen.getByTestId('trailing')).toBeInTheDocument();
+        });
+
+        it('leaves the count alone when absent — control', () => {
+            render(
+                <SearchHeader
+                    searchQuery="a"
+                    onSearchQueryChange={jest.fn()}
+                    totalCount={10}
+                    filteredCount={3}
+                    itemNoun="project"
+                    hasLoadedOnce
+                    alwaysShowCount
+                />
+            );
+
+            expect(screen.getByText('3 of 10 projects')).toBeInTheDocument();
+        });
+    });
+
     describe('countTrailing', () => {
         it('renders at the end of the count row', () => {
             render(

@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **135** conventions, **133** enforced
+- **136** conventions, **133** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -118,6 +118,7 @@ it means the rule rests on somebody noticing.
 | Modals are hosted in one place, not mounted wherever they are opened. |  |  | `modal-hosting.test.ts` |
 | How something stands is drawn by one icon everywhere: `StatusIcon`, the wizard's set. Warning is an orange circle with a `!`, error a red circle with an `X`, done a green check, info a blue info icon. One red and one orange everywhere, with warning and error different shapes so colour is not the only thing telling them apart (owner, 2026-11-02). |  |  | `status-icons.test.ts` |
 | What names a thing is Title Case, across the extension's own UI: titles, buttons, tabs, menu items, headings and field labels ("Run in Background", "Couldn't Load Adobe APIs"). Small words stay small in the middle; product names and identifiers keep their own form. What tells the SC something keeps normal capitals: a sentence, a status note like "3 selected", and a title that is a complete sentence. The Command Palette keeps its own title case. |  |  | `ui-label-case.test.ts` |
+| A window's header names the kind of thing and what happened to it, generically: "Couldn't Create Datapack", "Projects Deleted", "Couldn't Read Projects", "Deleting Projects". The specific thing (a pack's or a project's name, a count) goes in the details beneath it: "Couldn't create Kukla Justrite: <the reason>", or a row per project. A header is a statement of what happened or what the window does, never the reason for it, and carries no comma. A button may carry a count ("Delete 3 Projects"). **One exception:** what an AGENT is doing names its target ("Agent Deleting the Acme project", `toolNarration.ts`): nobody pressed anything, so the notification is the SC's only way to see what the agent is touching (owner, 2026-11-04). |  |  | **—** |
 | A dialog that is waiting shows nothing else: the title, a medium spinner centred both ways in the space between the rule and the buttons, and the way out. `Modal`'s `waiting` prop does it. A flyout waits the same way: its title and a medium centred spinner, with no words (owner, 2026-11-02). |  |  | `modal-waits.test.ts` |
 | A CSS class used in a bundle is styled by that bundle. |  |  | `stylesheet-bundles.test.ts` |
 | Before writing a new UI component, check whether the shared vocabulary already has it. |  |  | `30-reuse-first.rule` |

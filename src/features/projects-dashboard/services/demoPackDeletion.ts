@@ -1,5 +1,5 @@
 /**
- * "Also delete its pack": when the SC ticks it on a project delete, or an agent passes
+ * "Delete Datapack": when the SC ticks it on a project delete, or an agent passes
  * `deletePack: true`, every version of the pack the project uses goes. Offered only when that
  * pack is the SC's own and no other project on this machine uses it (owner, 2026-11-03,
  * `.rptc/plans/datapack-save-as/`), so a delete never takes a pack another demo resets to.
@@ -44,12 +44,13 @@ const errorText = (error: unknown): string => (error instanceof Error ? error.me
  *
  * @param context - the handler context, for the other projects and the library
  * @param project - the project being deleted
+ * @param going - the projects deleted with it, in a batch: a pack only they use can go too
  */
-export async function deletablePackOf(context: HandlerContext, project: Project): Promise<DeletablePack | undefined> {
+export async function deletablePackOf(context: HandlerContext, project: Project, going: readonly string[] = []): Promise<DeletablePack | undefined> {
     const held = project.datapack;
     if (held?.store !== 'library') return undefined;
     try {
-        const others = await loadOtherProjects(context, project.path);
+        const others = (await loadOtherProjects(context, project.path)).filter((other) => !going.includes(other.path));
         if (others.some((other) => other.datapack?.name === held.name)) return undefined;
         const library = await openLibraryWriter(context);
         if (!library.ok) return undefined;

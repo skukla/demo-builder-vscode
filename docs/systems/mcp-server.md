@@ -562,7 +562,7 @@ one IMS refuses or cannot be asked about, the repository is kept (`kept: true` /
 keeps the project too.
 
 **A project's datapack goes only when asked.** `delete_project` takes `deletePack`, the button's
-"Also delete its pack" box: every version of the pack the project uses, in the datapack library,
+"Delete Datapack" box: every version of the pack the project uses, in the datapack library,
 deleted after the project's files, and only when that pack is the user's own and no other project on
 this machine uses it (`deletablePackOf`, 2026-11-03). It is off unless the call asks, `deleteAll`
 never turns it on (keeping a pack can be undone, deleting it cannot), and `localOnly` refuses it with

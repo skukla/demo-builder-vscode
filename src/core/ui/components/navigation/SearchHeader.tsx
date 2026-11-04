@@ -100,6 +100,13 @@ export interface SearchHeaderProps {
      * belongs near the list without spending a row of its own.
      */
     countTrailing?: React.ReactNode;
+
+    /**
+     * Takes the count's place at the START of the count row, filtering or not: a list in
+     * selection mode says what is selected there instead ("3 of 12 selected", with its
+     * Select All), as the projects list does (owner, 2026-11-04).
+     */
+    countLead?: React.ReactNode;
 }
 
 /** Render refresh button */
@@ -251,6 +258,19 @@ export function SearchHeader(props: SearchHeaderProps) {
     // With a search field the action buttons live on its row, so a hidden count leaves nothing here.
     const showCountRow = showCount && !(props.hideCount && showSearch);
 
+    const countLine = props.hideCount ? <span /> : (
+        <span
+            className="search-header-count"
+            data-longest={longestCountText(totalCount, displayNoun, props.countText)}
+        >
+            <Text UNSAFE_className="text-sm text-gray-600">
+                {!isFiltering && props.countText
+                    ? props.countText
+                    : buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
+            </Text>
+        </span>
+    );
+
     const ActionButtons = renderActionButtons(
         renderViewToggle(viewMode, onViewModeChange),
         renderRefreshButton(onRefresh, isRefreshing, refreshAriaLabel),
@@ -277,18 +297,7 @@ export function SearchHeader(props: SearchHeaderProps) {
             {showCountRow && (
                 <div className="search-header-count-row">
                     {/* The row is space-between: an empty span keeps the actions at its end. */}
-                    {props.hideCount ? <span /> : (
-                        <span
-                            className="search-header-count"
-                            data-longest={longestCountText(totalCount, displayNoun, props.countText)}
-                        >
-                            <Text UNSAFE_className="text-sm text-gray-600">
-                                {!isFiltering && props.countText
-                                    ? props.countText
-                                    : buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
-                            </Text>
-                        </span>
-                    )}
+                    {props.countLead ?? countLine}
                     {!showSearch && ActionButtons}
                     {countTrailing}
                 </div>

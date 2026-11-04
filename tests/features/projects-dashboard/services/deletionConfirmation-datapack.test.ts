@@ -97,14 +97,16 @@ describe('a project whose pack may go with it is asked about it', () => {
 });
 
 describe('the cleanupBehavior setting never deletes a pack', () => {
-    it('deleteAll takes the online resources and keeps the pack', async () => {
+    it('deleteAll ticks the online resources, never the pack, and still asks', async () => {
         mockGetConfiguration.mockReturnValue({ get: () => 'deleteAll' });
+        const pick = armQuickPick('accept');
 
         await deleteProject(context(), edsProject(), SERVICES);
 
+        expect(mockCreateQuickPick).toHaveBeenCalled();
+        expect(pick.selectedAtShow().map((item) => item.id)).toStrictEqual(['github', 'daLive']);
         expect(mockDeleteRepository).toHaveBeenCalled();
         expect(mockDeleteProjectDemoPack).not.toHaveBeenCalled();
-        expect(mockCreateQuickPick).not.toHaveBeenCalled();
     });
 
     it('localOnly asks the plain question and keeps the pack', async () => {
@@ -133,8 +135,24 @@ describe('the same question in the progress modal', () => {
         expect(fields?.map(({ id, kind, value, description }) => ({ id, kind, value, description }))).toStrictEqual([
             { id: 'datapack', kind: 'checkbox', value: '', description: 'Acme Demo' },
         ]);
-        expect(fields?.[0]?.label).toBe('Also delete its pack');
+        expect(fields?.[0]?.label).toBe('Delete Datapack');
         expect(mockDeleteProjectDemoPack).toHaveBeenCalledWith(ctx, OWN);
+    });
+
+    it('ticks the repository and the site under deleteAll, never the pack, and leaving it deletes nothing', async () => {
+        mockGetConfiguration.mockReturnValue({ get: () => 'deleteAll' });
+        const done = deleteProject(context(), edsProject(), SERVICES, { progress: 'modal', operationId: ID });
+        for (let i = 0; i < 50 && !isAwaitingAnswer(ID); i++) await Promise.resolve();
+        const fields = heldProgress(ID)?.prompt?.fields;
+        answerOperationPrompt(ID, undefined, {});
+        await done;
+
+        expect(fields?.map(({ id, label, value }) => ({ id, label, value }))).toStrictEqual([
+            { id: 'github', label: 'Delete Repository', value: 'true' },
+            { id: 'daLive', label: 'Delete DA.live Site', value: 'true' },
+            { id: 'datapack', label: 'Delete Datapack', value: '' },
+        ]);
+        expect(mockRm).not.toHaveBeenCalled();
     });
 });
 

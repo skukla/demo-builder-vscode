@@ -37,7 +37,7 @@ import { DisclosureToggle } from '@/core/ui/components/ui/DisclosureToggle';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
-import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 const LIST_TITLE = 'Updates Available';
 const NO_ACTIONS: ActionButton[] = [];
@@ -150,13 +150,7 @@ function runChrome(controls: UpdatesModalControls): Chrome {
     const { progress } = controls;
     const ended = progress?.state === 'succeeded' || progress?.state === 'failed';
     if (!ended && progress?.prompt) {
-        const actions = progress.prompt.actions.map((label, index): ActionButton => ({
-            label,
-            variant: index === 0 ? 'accent' : 'secondary',
-            onPress: () => controls.answer(label),
-        }));
-        // A prompt names its main answer first; a dialog's main button goes last.
-        return { hideClose: true, actions: [...actions.slice(1), ...actions.slice(0, 1)] };
+        return { hideClose: true, actions: promptButtons(progress.prompt, controls.answer) };
     }
     if (!ended) return { closeLabel: 'Run in Background', actions: NO_ACTIONS };
     if (progress?.state !== 'failed') return { closeLabel: 'Close', actions: backTo(controls) };
@@ -166,6 +160,19 @@ function runChrome(controls: UpdatesModalControls): Chrome {
         onPress: () => webviewClient.postMessage('openDebugLogs', {}),
     };
     return { closeLabel: 'Close', actions: [logs] };
+}
+
+/**
+ * A run's question, answered by the window's buttons: the prompt's answers, its main one last as
+ * a dialog's main button goes (a prompt names it first). The projects batch window asks with it too.
+ */
+export function promptButtons(prompt: OperationPrompt, answer: (chosen?: string) => void): ActionButton[] {
+    const actions = prompt.actions.map((label, index): ActionButton => ({
+        label,
+        variant: index === 0 ? 'accent' : 'secondary',
+        onPress: () => answer(label),
+    }));
+    return [...actions.slice(1), ...actions.slice(0, 1)];
 }
 
 /** "Back to updates" beside Close, when rows the SC left unticked are still waiting. */

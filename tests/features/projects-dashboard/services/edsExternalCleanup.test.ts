@@ -247,7 +247,9 @@ describe('the CDN unpublish step', () => {
         armQuickPick('accept', ['daLive']);
         mockListPublishedPaths.mockResolvedValue(['/products/drum/dc-100']);
         const ctx = context();
+        // Its own DA.live site on the shared repository: that site is offered, its product pages are not.
         const other = edsProject({ name: 'other-demo', path: '/projects/other' });
+        metadataOf(other).daLiveSite = 'other-site';
         (ctx.stateManager.getAllProjects as jest.Mock).mockResolvedValue([
             { name: 'demo-project', path: '/projects/demo', lastModified: new Date(0) },
             { name: 'other-demo', path: '/projects/other', lastModified: new Date(0) },

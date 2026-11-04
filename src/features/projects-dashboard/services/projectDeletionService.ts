@@ -19,12 +19,13 @@ import { numberedSteps } from '@/core/utils/numberedSteps';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { deleteOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import { type ReportStage, withOperationProgress } from '@/core/vscode/withOperationProgress';
 import {
     extractEdsMetadata,
     formatCleanupResults,
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
+import { type SharedOnline, sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -46,6 +47,7 @@ async function askBeforeDelete(
     edsMetadata: ReturnType<typeof extractEdsMetadata>,
     options?: DeleteProgressOptions,
     pack?: DeletablePack,
+    shared?: SharedOnline,
 ): Promise<CleanupOptions | null> {
     if (edsMetadata || pack) {
         // Auth is checked lazily in performEdsCleanup when user selects an option
@@ -54,9 +56,69 @@ async function askBeforeDelete(
             edsMetadata,
             options?.progress === 'modal' ? (options.operationId ?? deleteOperationId(project.name)) : undefined,
             pack,
+            shared,
         );
     }
     return (await confirmPlainDelete(project)) ? { deleteGitHubRepo: false, deleteDaLiveSite: false } : null;
+}
+
+/** What a delete runs with once it has been answered. */
+export interface AnsweredDelete {
+    cleanupOptions: CleanupOptions;
+    /** The project's own pack, when it goes too. */
+    ownPack?: DeletablePack;
+    /** Where each cleanup step's result is added. */
+    cleanupResults: CleanupResultItem[];
+    services?: DeletionServices;
+}
+
+/**
+ * The delete itself, answered: the storefront's online resources first, then the files, then the
+ * pack. Shared by a single delete and a batch (`projectsBatch.ts`), which report into their own
+ * windows.
+ *
+ * @returns why it stopped, when the storefront's pages are still live and the project was kept
+ */
+export async function runProjectDelete(
+    context: HandlerContext,
+    project: Project,
+    answered: AnsweredDelete,
+    report: ReportStage,
+): Promise<{ stopped?: string }> {
+    const { cleanupOptions, ownPack, cleanupResults, services } = answered;
+    const edsMetadata = extractEdsMetadata(project);
+    const online = edsMetadata ? edsCleanupSteps(edsMetadata, cleanupOptions) : [];
+    // Numbered "(n of N)": the list is known once the SC has said what to remove
+    // (progress vocabulary slice 2, owner 2026-10-16). A step that is skipped (a
+    // sign-in declined) leaves its number unused and the count moves on.
+    const packStep = ownPack ? [OPERATION_STAGES.deletingOwnPack.label] : [];
+    const step = numberedSteps([...online, OPERATION_STAGES.removingProjectFiles.label, ...packStep], report);
+
+    // EDS cleanup: Perform external resource cleanup first
+    if (edsMetadata) {
+        const stopped = await performEdsCleanup(
+            context,
+            edsMetadata,
+            { ...cleanupOptions, projectPath: project.path },
+            cleanupResults,
+            step,
+            services,
+        );
+        // Pages still live: the project is how a second try finds them (EDS-65).
+        if (stopped) return { stopped };
+    }
+
+    step(OPERATION_STAGES.removingProjectFiles.label);
+
+    // Local deletion (stop demo, remove files, drop from recent, clear current).
+    await deleteProjectFiles(context, project);
+
+    // The demo's own pack, last, and never a reason the delete fails (step 07).
+    if (ownPack) {
+        step(OPERATION_STAGES.deletingOwnPack.label);
+        cleanupResults.push(await deleteProjectDemoPack(context, ownPack));
+    }
+    return {};
 }
 
 /**
@@ -80,7 +142,8 @@ export async function deleteProject(
     // Auth is checked lazily in performEdsCleanup when user actually selects an option
     // This avoids slow auth checks before showing the confirmation dialog
     const deletable = await deletablePackOf(context, project);
-    const cleanupOptions = await askBeforeDelete(project, edsMetadata, options, deletable);
+    const shared = await sharedOnlineOf(context.stateManager, edsMetadata, [project.path]);
+    const cleanupOptions = await askBeforeDelete(project, edsMetadata, options, deletable, shared);
     if (cleanupOptions === null) {
         return { success: true, data: { success: false, error: 'cancelled' } };
     }
@@ -101,44 +164,11 @@ export async function deleteProject(
             inModal: options?.progress === 'modal',
         },
         async (report) => {
-            const online = edsMetadata ? edsCleanupSteps(edsMetadata, cleanupOptions) : [];
-            // Numbered "(n of N)": the list is known once the SC has said what to remove
-            // (progress vocabulary slice 2, owner 2026-10-16). A step that is skipped (a
-            // sign-in declined) leaves its number unused and the count moves on.
-            const packStep = ownPack ? [OPERATION_STAGES.deletingOwnPack.label] : [];
-            const step = numberedSteps([...online, OPERATION_STAGES.removingProjectFiles.label, ...packStep], report);
-
-            // EDS cleanup: Perform external resource cleanup first
-            if (edsMetadata) {
-                const stopped = await performEdsCleanup(
-                    context,
-                    edsMetadata,
-                    { ...cleanupOptions, projectPath: project.path },
-                    cleanupResults,
-                    step,
-                    services,
-                );
-                // Pages still live: the project is how a second try finds them (EDS-65).
-                if (stopped) {
-                    stoppedBecause = stopped;
-                    return { success: false, error: stopped };
-                }
-            }
-
-            step(OPERATION_STAGES.removingProjectFiles.label);
-
-            // Local deletion (stop demo, remove files, drop from recent, clear current).
-            await deleteProjectFiles(context, project);
-
-            // The demo's own pack, last, and never a reason the delete fails (step 07).
-            if (ownPack) {
-                step(OPERATION_STAGES.deletingOwnPack.label);
-                cleanupResults.push(await deleteProjectDemoPack(context, ownPack));
-            }
-
+            const ran = await runProjectDelete(context, project, { cleanupOptions, ownPack, cleanupResults, services }, report);
+            stoppedBecause = ran.stopped;
             // No "deleted" line on a timer: the modal closes itself and a
             // background run ends with "— done" (PL-59 R6).
-            return { success: true };
+            return ran.stopped ? { success: false, error: ran.stopped } : { success: true };
         },
     );
 

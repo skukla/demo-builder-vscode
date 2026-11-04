@@ -46,3 +46,35 @@ export async function projectsSharingRepo(stateManager: StateManager, githubRepo
     const onRepo = await otherProjectsPublishingTo(stateManager, githubRepo);
     return onRepo.length > 1 ? onRepo : [];
 }
+
+/** Which local projects, beyond those being deleted, also use a project's repository and its site. */
+export interface SharedOnline {
+    repo: string[];
+    site: string[];
+}
+
+/**
+ * What a delete must not take: the repository or the DA.live site another local project still
+ * uses (owner, 2026-11-04). Only product pages were protected before; deleting the repository or
+ * the site took a second project's storefront down with it.
+ *
+ * @param stateManager - where the local projects are read from (never saved)
+ * @param metadata - the project's storefront, as `extractEdsMetadata` reads it
+ * @param going - every project being deleted, the one asked about included: none of them counts
+ * @returns the other projects' names, per resource
+ */
+export async function sharedOnlineOf(
+    stateManager: StateManager,
+    metadata: { githubRepo?: string; daLiveOrg?: string; daLiveSite?: string } | null,
+    going: readonly string[],
+): Promise<SharedOnline> {
+    if (!metadata) return { repo: [], site: [] };
+    const same = (a?: string, b?: string): boolean => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+    const others = (await getLinkedEdsProjects(stateManager)).filter((p) => !going.includes(p.path));
+    return {
+        repo: others.filter((p) => same(p.metadata.githubRepo, metadata.githubRepo)).map((p) => p.name),
+        site: others
+            .filter((p) => same(p.metadata.daLiveOrg, metadata.daLiveOrg) && same(p.metadata.daLiveSite, metadata.daLiveSite))
+            .map((p) => p.name),
+    };
+}

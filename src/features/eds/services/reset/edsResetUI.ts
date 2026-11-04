@@ -19,7 +19,7 @@
 
 import type { GitHubAppService } from '../github/githubAppService';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
-import { checkDemoSource, type DemoSourceCheck } from './demoSourceCheck';
+import { checkDemoSource, offerToKeepContent } from './demoSourceCheck';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import { showResetResultNotifications, withModalWarning } from './edsResetNotifications';
 import { beginOtherDataCheck, clearProjectOtherData, confirmClearOtherData } from './edsResetOtherData';
@@ -39,6 +39,7 @@ import {
     confirmSampleDataRemoval,
     askSaveAsNameWith,
     removeProjectSampleData,
+    type SaveAsAnswer,
 } from './edsResetSampleData';
 import { executeEdsReset } from './edsResetService';
 import { whileRunning } from '@/core/state/projectWorkRunning';
@@ -107,6 +108,15 @@ export interface EdsResetWithUIOptions {
      * notification: the Edit reports the outcome.
      */
     withinEdit?: { report: ReportStage };
+    /**
+     * A reset of several projects at once (the projects list's Reset Selected, owner 2026-11-04):
+     * the batch asked its questions before anything ran, so none is asked here, and it reports
+     * through `withinEdit.report` into the batch's one window. `removeDatapack` is the batch's
+     * Remove Datapack; `changes` answers a pack that is not the SC's (a name, or `drop`).
+     * Other store data is never cleared by a batch: a single reset shows what it would clear
+     * before it asks, and a batch could not.
+     */
+    answered?: { removeDatapack: boolean; changes?: SaveAsAnswer };
     /**
      * GitHub repository reads, for the added-demo source check. Injectable for
      * tests; defaults to the cached services built from the context's secrets.
@@ -209,7 +219,8 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     // this project can remove. Gated on the recorded pack, so a project that will
     // never be asked is never checked.
     const withinEdit = options.withinEdit;
-    const canRemoveSampleData = withinEdit ? undefined : beginSampleDataRemovalCheck(project);
+    const answered = options.answered;
+    const canRemoveSampleData = withinEdit && !answered ? undefined : beginSampleDataRemovalCheck(project);
     // What else the demo's website holds (step 10): read beside it, asked after it.
     const otherData = withinEdit ? undefined : beginOtherDataCheck(project, context);
 
@@ -230,7 +241,9 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     // one short credential call (see the function), which is bounded and silent
     // on failure; the older "no network call in front of a modal" phrasing here
     // overstated a rule that was really about not adding failure modes.
-    const removeData = !withinEdit && (await confirmSampleDataRemoval(project, vscode, canRemoveSampleData));
+    const removeData = answered
+        ? answered.removeDatapack && (await canRemoveSampleData) === true
+        : !withinEdit && (await confirmSampleDataRemoval(project, vscode, canRemoveSampleData));
     // Only after "Remove Datapack", or with no datapack: keeping the pack must not clear its data.
     const otherPlan = removeData || !project.datapack ? await otherData : undefined;
     const clearOther = otherPlan !== undefined && (await confirmClearOtherData(vscode, otherPlan));
@@ -333,7 +346,9 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 // was asked for, and a data step that refuses is reported while
                 // the reset still stands.
                 if (removeData) {
-                    await removeProjectSampleData(project, context, report, askSaveAsNameWith(vscode));
+                    // A batch answered the changes already; asking here would stop it mid-run.
+                    const askName = answered ? () => Promise.resolve(answered.changes) : askSaveAsNameWith(vscode);
+                    await removeProjectSampleData(project, context, report, askName);
                 }
                 // After the pack's removal, so what it took is gone from the list, never added to it.
                 if (clearOther && otherPlan) {
@@ -374,24 +389,4 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
             await context.stateManager.saveProject(project);
         }
     });
-}
-
-/**
- * The demo's content site cannot be reached: reset the code only and keep the
- * current content, or stop. Content is not forkable, so there is nothing else
- * to offer. Undefined = cancelled.
- */
-async function offerToKeepContent(
-    vscode: typeof import('vscode'),
-    demoName: string,
-    check: DemoSourceCheck,
-): Promise<boolean | undefined> {
-    const keepButton: import('vscode').MessageItem = { title: 'Keep Current Content' };
-    const answer = await vscode.window.showWarningMessage(
-        `${check.contentMessage ?? `The ${demoName} demo's pages can't be reached right now.`} ` +
-            'You can reset the code and keep the content this site has now.',
-        { modal: true },
-        keepButton,
-    );
-    return answer?.title === keepButton.title ? true : undefined;
 }

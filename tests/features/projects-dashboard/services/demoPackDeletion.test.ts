@@ -96,6 +96,16 @@ describe('deletablePackOf', () => {
         expect(mockFind).not.toHaveBeenCalled();
     });
 
+    // A batch delete (owner, 2026-11-04): a pack only the projects going together use may go with them.
+    it('offers the pack when the only other project using it is being deleted with it', async () => {
+        mockOthers.mockResolvedValue([createMockProject({ name: 'other', path: '/projects/other', datapack: held })]);
+        mockFind.mockResolvedValue({ items: [row(true)], count: 1 });
+
+        await expect(deletablePackOf(createMockHandlerContext(), createMockProject({ datapack: held }), ['/projects/other'])).resolves.toBeDefined();
+        // CONTROL: the same project NOT going keeps the pack.
+        await expect(deletablePackOf(createMockHandlerContext(), createMockProject({ datapack: held }))).resolves.toBeUndefined();
+    });
+
     it("offers nothing for a pack that is not the SC's", async () => {
         mockFind.mockResolvedValue({ items: [row(false)], count: 1 });
 

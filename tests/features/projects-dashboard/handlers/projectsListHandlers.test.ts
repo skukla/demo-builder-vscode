@@ -140,9 +140,10 @@ describe('projectsListHandlers', () => {
         // answerOperationPrompt, openDebugLogs — PL-59; the fourth arrived
         // 2026-09-20, when a question the work is paused on moved into the modal).
         // 28 since 2026-10-22: recheckUpdates, the Updates window's "Back to updates".
-        it('should have exactly 28 handlers', () => {
+        // 30 since 2026-11-04: prepareProjectsBatch and runProjectsBatch, Reset Selected and Delete Selected.
+        it('should have exactly 30 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers) as Array<keyof typeof projectsListHandlers>;
-            expect(types).toHaveLength(28);
+            expect(types).toHaveLength(30);
             expect(hasHandler(projectsListHandlers, 'recheckUpdates')).toBe(true);
         });
 

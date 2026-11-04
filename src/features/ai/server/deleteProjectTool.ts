@@ -13,17 +13,19 @@
  * repository and site too. Until 2026-10-19 a left-out argument was read as `false`
  * before the setting was consulted, so `deleteAll` never applied to an agent (AI-71).
  *
- * `deletePack` is the button's third box, "Also delete its pack" (datapack-engine step 07):
+ * `deletePack` is the button's third box, "Delete Datapack" (datapack-engine step 07):
  * every version of the project's own library pack, after the local files. Off unless asked,
  * and no setting turns it on, because keeping a pack is reversible and deleting one is not.
  */
 
 import { z } from 'zod';
-import { cleanUpProjectCloud, resolveCloudCleanup } from './agentProjectCleanup';
+import { type CloudCleanupChoice, cleanUpProjectCloud, resolveCloudCleanup } from './agentProjectCleanup';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
+import { type SharedOnline, sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { deletablePackOf, deleteProjectDemoPack } from '@/features/projects-dashboard/services/demoPackDeletion';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 import type { Project } from '@/types/base';
@@ -102,11 +104,13 @@ export function registerDeleteProjectTool(
             // found, so deleting it first would strand them (the button orders it
             // the same way).
             // Left out is not "no": the setting decides (AI-71). A word is not a tick either.
-            const choice = resolveCloudCleanup({
+            const asked = resolveCloudCleanup({
                 deleteGithubRepo: tickOf(args?.deleteGithubRepo),
                 deleteDaLiveSite: tickOf(args?.deleteDaLiveSite),
                 deletePack: tickOf(args?.deletePack),
             });
+            // What another project here still uses is never deleted with this one, as the button never offers it.
+            const { choice, kept } = keepShared(asked, await sharedOnlineOf(ctx.stateManager, extractEdsMetadata(project), [project.path]));
             const cloud = await cleanUpProjectCloud(ctx, project, choice);
             // Pages still live: the project is how a second try finds them (EDS-65).
             if (cloud.stopped) {
@@ -123,6 +127,7 @@ export function registerDeleteProjectTool(
                     name,
                     ...cloud,
                     ...(datapack ? { datapack } : {}),
+                    ...(kept.length > 0 ? { kept } : {}),
                     ...(choice.refusedBySetting ? { note: choice.refusedBySetting } : {}),
                 });
             } catch (err) {
@@ -135,6 +140,21 @@ export function registerDeleteProjectTool(
             }
         },
     );
+}
+
+/** The choice with what another project uses taken out, and a sentence for each kept. */
+function keepShared(choice: CloudCleanupChoice, shared: SharedOnline): { choice: CloudCleanupChoice; kept: string[] } {
+    const kept: string[] = [];
+    const out = { ...choice };
+    if (out.deleteGithubRepo && shared.repo.length > 0) {
+        out.deleteGithubRepo = false;
+        kept.push(`Kept the GitHub repository: ${shared.repo.join(', ')} also uses it.`);
+    }
+    if (out.deleteDaLiveSite && shared.site.length > 0) {
+        out.deleteDaLiveSite = false;
+        kept.push(`Kept the DA.live site: ${shared.site.join(', ')} also uses it.`);
+    }
+    return { choice: out, kept };
 }
 
 /** What deleting the project's own pack did, for the agent. */

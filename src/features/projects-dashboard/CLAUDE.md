@@ -6,7 +6,7 @@ the `projectsList` bundle, auto-shown on activation when no project is current.
 ```
 projects-dashboard/
 ├── commands/showProjectsList.ts       the webview command
-├── handlers/projectsListHandlers.ts   28 keys — the source of truth for messages
+├── handlers/projectsListHandlers.ts   30 keys — the source of truth for messages
 └── ui/
     ├── ProjectsDashboard.tsx          container
     └── components/                    ProjectCard · ProjectsGrid · DashboardEmptyState
@@ -33,6 +33,15 @@ and therefore keeps the storefront in it.
 
 **Search is always available here,** as on every list with anything in it: `SearchHeader`
 has no setting to hide it on a short list (owner, 2026-11-02).
+
+## Reset Selected and Delete Selected
+
+Select puts the list in selection mode (`useProjectSelection`); the batch window
+(`useProjectsBatch`, `ProjectsBatchModal`) asks once and then runs the projects ONE AT A
+TIME, a row each, the Updates window's shape. The work is `services/projectsBatch.ts`,
+reusing the single delete (`runProjectDelete`) and each reset's answered run. Only the
+ticked projects the filter shows count. Rationale and decisions:
+`.rptc/research/projects-bulk-actions/research.md`.
 
 ## No workspace anchoring — the always-root home model
 

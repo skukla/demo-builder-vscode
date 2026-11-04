@@ -123,3 +123,24 @@ async function indexReachable(
     if (!contentSource) return true;
     return (await resolveContentIndex(contentSource, fetchImpl, logger)).found;
 }
+
+/**
+ * The demo's content site cannot be reached: reset the code only and keep the
+ * current content, or stop. Content is not forkable, so there is nothing else
+ * to offer. Undefined = cancelled. Asked by `edsResetUI` before a reset runs; moved here, beside
+ * the check that finds the site unreachable, when that file passed its size limit (2026-11-04).
+ */
+export async function offerToKeepContent(
+    vscode: typeof import('vscode'),
+    demoName: string,
+    check: DemoSourceCheck,
+): Promise<boolean | undefined> {
+    const keepButton: import('vscode').MessageItem = { title: 'Keep Current Content' };
+    const answer = await vscode.window.showWarningMessage(
+        `${check.contentMessage ?? `The ${demoName} demo's pages can't be reached right now.`} ` +
+            'You can reset the code and keep the content this site has now.',
+        { modal: true },
+        keepButton,
+    );
+    return answer?.title === keepButton.title ? true : undefined;
+}
