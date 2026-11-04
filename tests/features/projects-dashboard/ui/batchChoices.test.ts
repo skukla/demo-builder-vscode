@@ -14,24 +14,25 @@ import {
     toggleDeleteTick,
 } from '@/features/projects-dashboard/ui/batchChoices';
 import type { BatchDeleteRow, BatchResetRow } from '@/types/projectsBatch';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 const DELETE_ROWS: BatchDeleteRow[] = [
     {
         path: '/p/a',
-        name: 'A',
+        name: asDisplayName('A'),
         repo: { name: 'me/a', ticked: true },
         site: { name: 'me/a', ticked: true },
         datapack: { name: 'Pack A', ticked: false },
     },
-    { path: '/p/b', name: 'B', repo: { name: 'me/b', ticked: false } },
-    { path: '/p/c', name: 'C' },
+    { path: '/p/b', name: asDisplayName('B'), repo: { name: asDisplayName('me/b'), ticked: false } },
+    { path: '/p/c', name: asDisplayName('C') },
 ];
 
 const RESET_ROWS: BatchResetRow[] = [
-    { path: '/p/a', name: 'A', datapack: { name: 'Frescopa', changes: 'asks' } },
-    { path: '/p/b', name: 'B', datapack: { name: 'Mine', changes: 'saves' } },
-    { path: '/p/c', name: 'C', datapack: { name: 'Clean' } },
-    { path: '/p/d', name: 'D' },
+    { path: '/p/a', name: asDisplayName('A'), datapack: { name: asDisplayName('Frescopa'), changes: 'asks' } },
+    { path: '/p/b', name: asDisplayName('B'), datapack: { name: asDisplayName('Mine'), changes: 'saves' } },
+    { path: '/p/c', name: asDisplayName('C'), datapack: { name: asDisplayName('Clean') } },
+    { path: '/p/d', name: asDisplayName('D') },
 ];
 
 describe('delete choices', () => {

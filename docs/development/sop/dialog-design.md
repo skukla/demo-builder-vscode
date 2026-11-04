@@ -81,7 +81,9 @@ cut, not coloured (owner, 2026-11-02).
 **Spacing:** 4 between a label and its field, 8 between rows, 16 under the title,
 24 between groups.
 
-**Lines:** one rule, under the title. No box borders, no rule over the buttons.
+**Lines:** one rule, under the title. In a list of rows (a run, a set of steps, the projects a
+confirm names), a hairline between rows, as the integration flyout draws its rows, never above the
+first or below the last (owner, 2026-11-04). No box borders, no rule over the buttons.
 
 **Buttons:** Close or Cancel first, then the actions, the main one last. A
 dangerous main action is solid red. Never two buttons that do the same thing.
@@ -97,11 +99,22 @@ dangerous main action is solid red. Never two buttons that do the same thing.
 - Facts, not commentary. Digits for numbers, with separators (1,284).
 - A warning is a word in the main sentence ("Permanently removes…"), never a
   muted footnote under it.
+- Never join two phrases with a middle dot ("A · B"): a comma, parentheses or two sentences.
+  The one exception is a progress display's third line, its expectation and its clock
+  ("Usually about a minute · 1 minute, 5 seconds", `expectationLine`), kept on purpose (owner,
+  2026-10-16, again 2026-11-04; the handbook's progress convention).
 - No bullet lists. A list of consequences is a few short sentences, each on its own line
   8 apart and every one a real consequence (owner, 2026-11-02: one long sentence read worse,
   and so did one block of ten lines), or sits on the row it belongs to.
 - A sentence names up to seven kinds in full; past that, three and "and 9 more
   data types".
+
+**A question a run stops on**: a task of its own, such as a sign-in, takes the window, its heading
+the title with the amber icon, its sentence with the how as numbered steps under it, then the
+fields 24 below, with Cancel as the way out. It names no task: a pause asks and the run picks up
+where it stopped. A question about one row of a run is asked under that row with
+the list in view. `feedback/OperationQuestion` draws both (owner, 2026-11-04; the row rule
+2026-10-21).
 
 **Problems sit next to the thing they are about**, as a note line: a store another
 project claims gets its note on its own row, not a box above the list; a check that failed

@@ -243,6 +243,35 @@ describe('a question that needs something typed', () => {
         ],
     };
 
+    // A sign-in is a task of its own (owner, 2026-11-04): its heading takes the window, amber,
+    // and the how is numbered steps over the fields, not one long sentence.
+    it('gives a question with a heading the title, and draws its steps in order', () => {
+        progress = {
+            id: OPERATION.id,
+            state: 'running',
+            prompt: {
+                ...SIGN_IN,
+                title: 'Sign In to DA.live',
+                message: 'Your DA.live session has expired.',
+                steps: ['Open DA.live and run the bookmarklet.', 'Paste the token it copies.'],
+            },
+        };
+
+        renderModal();
+
+        const dialog = screen.getByRole('dialog', { name: 'Sign In to DA.live' });
+        expect(dialog).toHaveAttribute('data-status', 'warning');
+        expect(screen.getByText('Your DA.live session has expired.')).toBeInTheDocument();
+        // The sentence and its steps are one group; the fields another (owner, 2026-11-04: flat
+        // 16px gaps between every line read as noise).
+        const text = screen.getByText('Your DA.live session has expired.').parentElement as HTMLElement;
+        expect(text).toHaveClass('operation-question-text');
+        expect(text.querySelector('ol')).not.toBeNull();
+        const steps = screen.getAllByRole('listitem').map((item) => item.textContent);
+        expect(steps).toEqual(['Open DA.live and run the bookmarklet.', 'Paste the token it copies.']);
+        expect(screen.getByLabelText('Token')).toHaveAttribute('type', 'password');
+    });
+
     it('renders the fields, masking the credential', () => {
         progress = { id: OPERATION.id, state: 'running', prompt: SIGN_IN };
 

@@ -18,6 +18,11 @@ jest.mock('@/features/eds/services/helix/helixService', () => ({
     },
 }));
 
+const mockCodeServed = jest.fn();
+jest.mock('@/features/eds/services/storefront/codeServed', () => ({
+    confirmStorefrontCodeServed: (...args: unknown[]) => mockCodeServed(...args),
+}));
+
 const mockGetUserEmail = jest.fn();
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
@@ -34,9 +39,11 @@ import {
 import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import {
+    confirmResetCodeServed,
     republishCodeIfMissed,
     syncCodeAndPermissions,
 } from '@/features/eds/services/reset/edsResetCodeSyncStep';
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import { ADMIN_API_401_MESSAGE } from '@/features/eds/services/helix/helixAdminErrors';
 import type { EdsResetParams } from '@/features/eds/services/reset/edsResetParams';
 import type { HandlerContext } from '@/types/handlers';
@@ -199,5 +206,37 @@ describe('republishCodeIfMissed — after the site is registered', () => {
         expect(sentence).toMatch(/helix 503/);
         expect(sentence).toMatch(/Republish/);
         expect(steps).toContainEqual([RESET_STEP.publishingCodeAndSettings, `⚠️ ${sentence}`]);
+    });
+});
+
+/**
+ * The check that the live site serves the reset code runs after the content, just before the
+ * last step, so it reports on that step (owner, 2026-11-04: it reported on step 2, and the run
+ * went "10 of 11", "2 of 11", "11 of 11").
+ */
+describe('confirmResetCodeServed', () => {
+    const clients = {
+        githubFileOps: {} as GitHubFileOperations,
+        githubTokenService,
+        tokenProvider,
+        logger: createMockHandlerContext().logger,
+    };
+
+    it('reports on the last step, where the live site is checked', async () => {
+        mockCodeServed.mockResolvedValue(undefined);
+        const steps: Array<[number, string]> = [];
+
+        await confirmResetCodeServed(params, 'sha-1', clients, (s, m) => steps.push([s, m]));
+
+        expect(steps).toStrictEqual([[RESET_STEP.checkingSettings, 'Checking the site serves the new code']]);
+    });
+
+    it('says on the same step when some code did not reach the site', async () => {
+        mockCodeServed.mockResolvedValue('2 files are not live yet.');
+        const steps: Array<[number, string]> = [];
+
+        await confirmResetCodeServed(params, 'sha-1', clients, (s, m) => steps.push([s, m]));
+
+        expect(steps.map(([step]) => step)).toStrictEqual([RESET_STEP.checkingSettings, RESET_STEP.checkingSettings]);
     });
 });

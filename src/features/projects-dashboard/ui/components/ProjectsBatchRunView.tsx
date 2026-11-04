@@ -9,9 +9,11 @@
  */
 
 import React from 'react';
-import type { BatchRowStatuses, BatchRunRow } from '../hooks/useProjectsBatch';
+import type { BatchRowStatuses, BatchRowTimings, BatchRunRow } from '../hooks/useProjectsBatch';
 import { ICON_OF, RunQuestion } from './UpdatesRunView';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
+import { spanValue, tookValue, useRunClock } from '@/core/ui/hooks/useRunClock';
+import type { UpdateRowState } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 interface RunViewProps {
@@ -19,6 +21,7 @@ interface RunViewProps {
     /** Paths in the order the extension first told them. */
     order: string[];
     statuses: BatchRowStatuses;
+    timings: BatchRowTimings;
     progress: OperationProgressPayload | null;
     onTyped: (values: Record<string, string>) => void;
 }
@@ -33,17 +36,32 @@ export function inRunOrder(rows: BatchRunRow[], order: string[]): BatchRunRow[] 
 interface RowProps {
     row: BatchRunRow;
     statuses: BatchRowStatuses;
+    timing?: BatchRowTimings[string];
     asking?: OperationPrompt;
     onTyped: RunViewProps['onTyped'];
 }
 
-function RunRow({ row, statuses, asking, onTyped }: RowProps) {
+/**
+ * The line under a project's name: every row has one, so none changes height as the run goes
+ * (owner, 2026-11-04). A failure's reason takes its place, in its own colour.
+ */
+function lineOf(state: UpdateRowState, message: string | undefined): string | undefined {
+    if (state === 'waiting') return 'Waiting';
+    if (state === 'running') return message ?? 'Starting';
+    if (state === 'done') return 'Finished';
+    return undefined;
+}
+
+function RunRow({ row, statuses, timing, asking, onTyped }: RowProps) {
     const status = statuses[row.path];
     const state = status?.state ?? 'waiting';
+    // The single progress window's clock, per row (owner, 2026-11-04).
+    const clock = useRunClock(state === 'running' ? timing?.startedAt : undefined);
     const question = state === 'running' ? asking : undefined;
-    // The running row says its step beside its name; an ended one says why under it.
-    const detail = state === 'running' && !question ? status?.message : undefined;
-    const note = state !== 'running' ? status?.message : undefined;
+    const detail = question ? undefined : lineOf(state, status?.message);
+    // An ended row says what it has to: under Finished, or in place of it when it failed or was
+    // left alone.
+    const note = state === 'waiting' || state === 'running' ? undefined : status?.message;
     return (
         <WorkRow
             status={question ? 'warning' : ICON_OF[state]}
@@ -52,6 +70,7 @@ function RunRow({ row, statuses, asking, onTyped }: RowProps) {
             note={note}
             why={state === 'failed'}
             state={state}
+            time={state === 'running' ? clock : spanValue(timing?.startedAt, timing?.endedAt)}
         >
             {question && <RunQuestion prompt={question} onTyped={onTyped} />}
         </WorkRow>
@@ -65,20 +84,55 @@ function failureLine(progress: OperationProgressPayload | null, rows: BatchRunRo
     return saidOnARow ? undefined : progress.error;
 }
 
+/** The heading of a project whose file records no org, when the run is headed by org at all. */
+const UNKNOWN_ORG = 'Organization Unknown';
+
+/**
+ * The rows in run order, an org's heading before each org's first row, when the run spans two or
+ * more KNOWN orgs. A project that records no org is not a second org (owner, 2026-11-04: one org
+ * beside one unrecorded drew a heading over half the list); under headings it is headed as unknown.
+ */
+function withOrgHeadings(rows: BatchRunRow[]): Array<{ heading: string } | { row: BatchRunRow }> {
+    const known = new Set(rows.flatMap((row) => (row.org ? [row.org] : [])));
+    if (known.size < 2) return rows.map((row) => ({ row }));
+    return rows.flatMap((row, index) => {
+        const starts = index === 0 || rows[index - 1].org !== row.org;
+        if (!starts) return [{ row }];
+        return [{ heading: row.org ?? UNKNOWN_ORG }, { row }];
+    });
+}
+
 /** Every project of the run and where it is. */
-export function ProjectsBatchRunView({ rows, order, statuses, progress, onTyped }: RunViewProps): React.ReactElement {
+export function ProjectsBatchRunView({ rows, order, statuses, timings, progress, onTyped }: RunViewProps): React.ReactElement {
     const ended = progress?.state === 'failed' || progress?.state === 'succeeded';
     const question = ended ? undefined : progress?.prompt;
     const shown = inRunOrder(rows, order);
-    const rowRunning = shown.some((row) => statuses[row.path]?.state === 'running');
+    // Under the running row only when one is running; with several side by side it is about no
+    // one row we can tell, so it is asked once, above the list (owner, 2026-11-04).
+    const runningCount = shown.filter((row) => statuses[row.path]?.state === 'running').length;
+    const underRow = runningCount === 1;
     const failure = failureLine(progress, rows, statuses);
+    const took = ended && progress?.tookMs !== undefined ? tookValue(progress.tookMs) : undefined;
     return (
         <div className="projects-batch-run">
             {failure && <p className="work-row-why">{failure}</p>}
-            {question && !rowRunning && <RunQuestion prompt={question} onTyped={onTyped} />}
-            {shown.map((row) => (
-                <RunRow key={row.path} row={row} statuses={statuses} asking={question} onTyped={onTyped} />
-            ))}
+            {question && !underRow && <RunQuestion prompt={question} onTyped={onTyped} />}
+            {withOrgHeadings(shown).map((item) =>
+                'heading' in item ? (
+                    <p key={`org:${item.heading}`} className="projects-batch-org">{item.heading}</p>
+                ) : (
+                    <RunRow
+                        key={item.row.path}
+                        row={item.row}
+                        statuses={statuses}
+                        timing={timings[item.row.path]}
+                        asking={underRow ? question : undefined}
+                        onTyped={onTyped}
+                    />
+                ),
+            )}
+            {/* How long the run took, as the single window ends a long one (over a minute). */}
+            {took && <p className="dialog-note projects-batch-took">Took {took}</p>}
         </div>
     );
 }

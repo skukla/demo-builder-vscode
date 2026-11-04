@@ -20,6 +20,33 @@ and "Reset to <pack>" were removed by the save-as pivot; "Save my changes first"
 
 Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: what happened`.
 
+## Found during the walk (fixed together, one branch, at the end)
+
+| # | Seen in | What | Fix |
+|---|---|---|---|
+| F1 | 3.3 | Ticking a row in Updates moves Close: "Apply 1 Update" is wider than "Apply Updates", and the button grows with its label | The button reserves its widest label's width from the start, the way a pending button already keeps its width (`Modal.tsx`). Built on `fix/release-walk-fixes`; owner saw no shift 2026-11-04 |
+| F2 | 2.1 | Entering selection mode made the projects header ~5px taller, dropping every card: Select All carried its list row's padding | Padding removed on that row (`projects-batch.css`). Measured in the harness 2026-11-04: the line under the header at 191.59px in both modes; with the old padding put back, 195.59px |
+| F3 | Q1 | "Select" was vague and quieter than the Datapacks header's buttons in the same place | Select Projects, with icons on it and on Reset Selected and Delete Selected, a divider before Done. Built, owner saw it 2026-11-04 |
+| F4 | 2.2 | The Reset Projects confirm lists names and says nothing of what a reset does; the single reset says "This will reset all code to the template state and re-copy demo content." It also has no amber icon, which the dialog rules give a dangerous confirm | "Each project goes back to how it was first set up, and any changes to its code are lost.", the amber icon on both confirms, Reset N Projects red (owner, 2026-11-04). Built, owner to check |
+| F5 | 2.2 | A question during the run (DA.live sign-in) leaves no way out: the batch window hides its dismiss button, where the single reset's progress window turns it into Cancel (`OperationProgressModal`) | Layout A (owner, 2026-11-04): a sign-in takes the window, its heading the title, naming no project (the pause is the run's, owner 2026-11-04), its sentence with two numbered steps, the fields 24 below, and Cancel, which skips that project; a question about one row stays under it (the 2026-10-21 rule). One view for the progress, Updates and batch windows (`OperationQuestion`). Built, owner to check |
+| F6 | 2.2 | The DA.live sign-in field reads "DA.live namespace"; the rules make a label Title Case. The Title Case enforcer cannot see a label in a `.ts` object | "DA.live Namespace" (`daLiveAuthPrompt.ts`). Built. The enforcer gap is not closed |
+| F7 | 2.2 | The running row was the one row of a different shape (its step beside the name) | Every work row is two lines, its name then where it stands (Waiting, the step, Finished, or why it failed), in the batch run, the Updates run and the ERP setup steps (`WorkRow`, owner 2026-11-04). Built, owner to check |
+| F8 | 2.2 | "Sign in to keep going." read as AI speak; the Adobe sign-in in the batch run had lost its Cancel | "Sign in to continue." (Adobe and DA.live); the question's own Cancel kept when the dismiss is hidden. Built, owner to check |
+| F9 | 2.2 | The confirms listed bare project names | Each name with its card's line under it ("Starter (B2B + B2C), Edge Delivery + ACCS") and its datapack, in the run rows' style, on Reset and Delete Selected (owner, 2026-11-04). Built, owner to check |
+| F10 | 2.2 | Lists of rows in dialogs had nothing between rows, and org grouping was invisible | A hairline between rows (the flyout's), a finished row's name greyed, and an org heading (14 semibold, the Updates group name's style) only when a reset spans several orgs: batch run and confirms, Updates run, ERP setup steps. Dialog rule rewritten to allow the hairline (owner, 2026-11-04). Built, owner to check |
+| F11 | 2.2 | patch-canary-b2b records no IMS org: an agent made it (`create_project`, 2026-10-16), and that tool signs in to Adobe only when a creation deploys something (`adobeIfDeploying`), where the wizard always signs an ACCS project in and records the org. Later Commerce writes then have no credential (the test shopper write was refused that day) | Built (owner, 2026-11-04, this release): `create_project` records the session's org (`select_org`) for every ACCS project, asking for the sign-in or an org first, and says so in its description. Existing agent-made projects judged rare (owner): no on-open repair, but a reset of an ACCS project with no org now signs in and records the org the sign-in lands in (owner, 2026-11-04; `recordSignedInOrg`); patch-canary-b2b given Adobe Demo System by hand (the org of the same Commerce instance's other projects), backup kept |
+| F12 | 2.2 | Pressing Sign In on the Adobe sign-in during a reset showed the reset's own line again ("Checking requirements") until the browser's page was known, so the reset looked as though it went on without the sign-in, then the browser jumped up | The window's Finish Signing In step shows from the press ("Sign in to Adobe in your browser.", Cancel), and gains Open Sign-In Page once the page is known (`browserSignInNotice.ts`). Built, owner to check |
+| F13 | 2.2 | The confirms' second line (package and stack) read the same for two projects of one package; the run's row said its stage without the count the notification gives | Each project named as its card names it ("Patch Canary B2B", `getProjectDisplayName`), not by its folder, held by the branded `ProjectDisplayName` type on the batch rows (a folder name fails to compile, checked by planting one); the confirms draw the storefront's repository ("skukla/patch-canary-b2b") under each name, the summary only for a project with none; a running row says "Warming product pages (9 of 11)" through the notification's own `stageLine` (owner, 2026-11-04). Built, owner to check |
+| F14 | 2.2 | The batch run showed no time, where the single progress window shows a clock and a "Took" | Each row's time right after its name (moved from the dialog's far edge, owner 2026-11-04): counting while it runs (`useRunClock`), kept once it ends (`spanValue`, in the clock module so one wait has one clock); "Took 7 minutes, 20 seconds" under the rows for a run over a minute (`tookValue`) (owner, 2026-11-04). Built, owner to check |
+| F15 | 2.2 | A reset's count went "10 of 11", "2 of 11", "11 of 11": the check that the live site serves the reset code runs after the content but reported on step 2, beside the code publish it lives with (`confirmResetCodeServed`); no test covered it | It reports on step 11, renamed "Checking the live site" (the code and the config), which the republish flow's last step shares; two tests pin the step (owner, 2026-11-04). Built, owner to check |
+| F16 | 2.2 | One reset takes about six minutes and the batch ran them one at a time, where the notification approach let them overlap | Resets run side by side within an IMS org, up to 3 at once; orgs one after another; resets removing a pack's store data take turns; a DA.live sign-in needed by several is asked once (`SingleFlight`, as the Adobe one already was); a window's questions take turns and a run ending clears only its own (`operationPrompt`); a question with several rows running is asked once above the list (owner, 2026-11-04, this release). Deletes stay one at a time. Walked live 2026-11-04: two side by side, 5 minutes 33 seconds |
+
+## Questions raised
+
+| # | Seen in | Question | Answer |
+|---|---|---|---|
+| Q1 | 2.1 | Is a Select button the right way into picking several projects, is it consistent, and is it in the right place? (owner) | Keep the mode (owner, 2026-11-04), with F3 |
+
 ## Summary
 
 | # | Test | Result |
@@ -176,7 +203,7 @@ a dashboard's **All Projects**. Have at least three projects, two of them in dif
 3. Expect **Reset Selected** and **Delete Selected** greyed while nothing shown is ticked.
 4. Click **Done**. Expect selection mode gone and the ticks forgotten. Do it again with Escape.
 
-**Result:** open
+**Result:** passed 2026-11-04 (all five steps). Owner questioned the design: see "Questions raised".
 
 ### 2.2 Reset Selected
 
@@ -189,7 +216,7 @@ a dashboard's **All Projects**. Have at least three projects, two of them in dif
    buttons to become its answers.
 5. Expect **Projects Reset** at the end and **Close**.
 
-**Result:** open
+**Result:** passed 2026-11-04 on the walk's build: confirm, run rows, sign-in pause, end (Projects Reset, times, Took). Two resets side by side in 5 minutes 33 seconds (F16). Org grouping not testable here, one org
 
 ### 2.3 A failure does not stop the rest
 
@@ -283,7 +310,9 @@ Use throwaway projects only.
    updates on the copy. Expect the "Changes from <A>" row unticked, saying the source demo was reset
    to its template.
 
-**Result:** open
+**Result:** steps 2 and 4 passed 2026-11-04 (kmanns/justrite was reset; the row came up unticked
+with the reset text, and the button read Apply Updates, greyed). Step 3 passed for one (Apply 1
+Update); two waiting not seen. Found F1.
 
 ### 3.4 Dialogs
 

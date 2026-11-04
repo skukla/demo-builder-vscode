@@ -20,7 +20,7 @@
  */
 
 import * as vscode from 'vscode';
-import { cancelSignIn, signInLink } from './signInSession';
+import { cancelSignIn, knownSignInLink, signInLink } from './signInSession';
 import { askDuringOperation, modalIsAsking, withdrawQuestion } from '@/core/vscode/operationPrompt';
 
 /** Sign-in. Says where it happens, not that a window opened: that is not ours to know. */
@@ -34,6 +34,9 @@ const IN_MODAL = {
     title: 'Finish Signing In',
     message: 'Sign in to Adobe in your browser. No browser window? Open the sign-in page.',
 };
+
+/** The same step before the sign-in page is known: there is no link to offer yet. */
+const IN_MODAL_NO_LINK = { title: 'Finish Signing In', message: 'Sign in to Adobe in your browser.' };
 const OPEN_PAGE = 'Open Sign-In Page';
 const NO_WINDOW = 'No browser window opened for the Adobe sign-in? Open the sign-in page here.';
 
@@ -81,13 +84,21 @@ async function offerLinkBeside(work: Promise<unknown>): Promise<void> {
 }
 
 /**
- * The sign-in as the modal's step: once the link is printed, the modal asks the SC to
- * finish in their browser, offers the link, and takes the question down itself when
- * the sign-in ends. Its Cancel stops the sign-in.
+ * The sign-in as the modal's step, from the moment it starts (owner, 2026-11-04: until the link
+ * was printed the modal showed the paused run's own line again, "Checking requirements", while
+ * the browser opened, so the run looked as though it had gone on without the sign-in). The step
+ * gains the link once it is known, and the modal takes it down itself when the sign-in ends. Its
+ * Cancel stops the sign-in.
  */
 async function signInInModal<T>(run: () => Promise<T>): Promise<T> {
     let finished = false;
+    let link: string | undefined;
+    // Taken down only to put it back with the link: not an answer.
+    let askingWithoutLink = false;
+    let relinking = false;
     const work = run();
+    // A sign-in that printed its link already opens the step with it.
+    link = knownSignInLink();
     const ended = work.then(
         () => undefined,
         () => undefined,
@@ -96,11 +107,26 @@ async function signInInModal<T>(run: () => Promise<T>): Promise<T> {
         finished = true;
         withdrawQuestion();
     });
-    const link = await Promise.race([signInLink(), ended]);
-    while (link && !finished) {
-        const choice = await askDuringOperation(IN_MODAL, OPEN_PAGE, 'Cancel');
+    void Promise.race([signInLink(), ended]).then((known) => {
+        if (!known || finished) return;
+        link = known;
+        if (askingWithoutLink) {
+            relinking = true;
+            withdrawQuestion();
+        }
+    });
+    while (!finished) {
+        askingWithoutLink = link === undefined;
+        const choice = link
+            ? await askDuringOperation(IN_MODAL, OPEN_PAGE, 'Cancel')
+            : await askDuringOperation(IN_MODAL_NO_LINK, 'Cancel');
+        askingWithoutLink = false;
         if (finished) break;
-        if (choice !== OPEN_PAGE) {
+        if (relinking) {
+            relinking = false;
+            continue;
+        }
+        if (choice !== OPEN_PAGE || !link) {
             cancelSignIn();
             break;
         }

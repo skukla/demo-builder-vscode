@@ -310,17 +310,16 @@ async function signInThroughModal(
     let tokenProblem: string | undefined;
 
     for (;;) {
+        // A task of its own, so its heading takes the window; the how is two steps, not one
+        // sentence that said "sign in" twice (owner, 2026-11-04).
         const asked = await askForDetailsDuringOperation({
-            message: [
-                reason,
-                'Sign in to DA.live: run the bookmarklet on da.live to copy a token, then paste it here.',
-            ]
-                .filter(Boolean)
-                .join(' '),
+            title: 'Sign In to DA.live',
+            message: reason ?? 'Demo Builder needs a DA.live token to go on.',
+            steps: ['Open DA.live and run the bookmarklet.', 'Paste the token it copies below.'],
             fields: [
                 {
                     id: 'orgName',
-                    label: 'DA.live namespace',
+                    label: 'DA.live Namespace',
                     value: orgName,
                     placeholder: 'your GitHub username, or an org you belong to',
                     description: orgProblem,
@@ -329,7 +328,6 @@ async function signInThroughModal(
                     id: 'token',
                     label: 'Token',
                     value: token,
-                    placeholder: 'Paste the token from the bookmarklet',
                     secret: true,
                     description: tokenProblem,
                 },

@@ -253,6 +253,32 @@
     overflow-wrap: anywhere;
 }
 
+/* A run's question (`feedback/OperationQuestion`): two groups 24 apart, the text then the fields
+   (the dialog rules' gap between groups). Flat 16px gaps between every line read as noise (owner,
+   2026-11-04). */
+.operation-question {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* The sentence and its steps: one group, 8 apart, the steps under the sentence they finish. */
+.operation-question-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* The steps numbered (the reset strips a list's markers), a shade quieter than the sentence. */
+.dialog-steps {
+    margin: 0;
+    padding-left: 22px;
+    list-style: decimal;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+}
+
 /* A note: small and muted, for what the SC need only know. */
 .dialog-note {
     margin: 0;
@@ -398,6 +424,22 @@
 
 .modal-button-pending-spinner {
     display: inline-flex;
+}
+
+/* A button whose label changes while open (`sizeLabels`): every label it may show sits hidden in
+   the same cell, so the widest sets its width and its neighbours never move (owner, 2026-11-04). */
+.modal-button-sized {
+    display: inline-grid;
+    justify-items: center;
+}
+
+.modal-button-sized > * {
+    grid-area: 1 / 1;
+    white-space: nowrap;
+}
+
+.modal-button-sizer {
+    visibility: hidden;
 }
 
 /* A question's checkbox detail (what the box deletes), on its own smaller line inside the

@@ -317,7 +317,7 @@ describe('republish, in a notification', () => {
             'Publishing the pages (7 of 10)',
             'Updating the catalog menu (8 of 10)',
             'Warming product pages (9 of 10)',
-            'Checking the settings (10 of 10)',
+            'Checking the live site (10 of 10)',
         ]);
     });
 });

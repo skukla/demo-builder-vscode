@@ -70,6 +70,11 @@ import {
 } from './edsResetService.testUtils';
 import { makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackageFixtures';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { recordSignedInOrg } from '@/features/eds/services/reset/edsResetPreflight';
+import type { HandlerContext } from '@/types/handlers';
 
 
 
@@ -202,5 +207,82 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
                 }),
             }),
         );
+    });
+
+    // An ACCS project with no recorded org signs in too (owner, 2026-11-04, F11): its backend
+    // needs the org's IMS permission, and the reset records the org the sign-in lands in.
+    it('asks an ACCS project with no recorded org to sign in', async () => {
+        const project = createMockProject({
+            ...createProjectWithMesh(),
+            adobe: {},
+            componentSelections: { backend: 'adobe-commerce-accs' },
+        });
+        const context = createResetContext(project);
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Reset Project');
+
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
+
+        expect(mockEnsureAdobeIOAuth).toHaveBeenCalled();
+        expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
+    });
+
+    it('asks a PaaS project with no recorded org nothing (control)', async () => {
+        const project = createMockProject({
+            ...createProjectWithMesh(),
+            adobe: {},
+            componentSelections: { backend: 'adobe-commerce-paas' },
+        });
+        const context = createResetContext(project);
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Reset Project');
+
+        // The run goes on past the Adobe step to the GitHub app check, which this suite does not
+        // set up; it is the Adobe step that is in question, and it comes first.
+        await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages }).catch(() => undefined);
+
+        expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * A reset gives an ACCS project with no recorded Adobe organization the org its sign-in lands in
+ * (owner, 2026-11-04, F11). The org is the TOKEN's (`getOrganizationsSdkOnly()[0]`), never the
+ * CLI's stale selection: the token is org-bound (the `adobe-org-context` model).
+ */
+describe('recordSignedInOrg', () => {
+    const contextFor = (): HandlerContext => createMockHandlerContext({ logger: createMockLogger() });
+    const authLandingIn = (orgs: Array<{ id: string; code: string; name: string }> | undefined) =>
+        createMockAuthenticationService({}, {
+            entities: { orgReads: { getOrganizationsSdkOnly: jest.fn().mockResolvedValue(orgs) } },
+        });
+
+    it('records the org the sign-in reaches, by id and name, and saves the project', async () => {
+        const project = createMockProject({ adobe: {} });
+        const context = contextFor();
+
+        await recordSignedInOrg(project, context, authLandingIn([{ id: 'ORG1@AdobeOrg', code: 'C1', name: 'Adobe Demo System' }]), '[Reset]');
+
+        expect(project.adobe).toMatchObject({ organization: 'ORG1@AdobeOrg', organizationName: 'Adobe Demo System' });
+        expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+    });
+
+    it('records nothing when the SDK cannot say which org, and the reset goes on', async () => {
+        const project = createMockProject({ adobe: {} });
+        const context = contextFor();
+
+        await recordSignedInOrg(project, context, authLandingIn(undefined), '[Reset]');
+
+        expect(project.adobe?.organization).toBeUndefined();
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('leaves an org already recorded alone', async () => {
+        const project = createMockProject({ adobe: { organization: 'ORG-KEPT' } });
+        const context = contextFor();
+
+        await recordSignedInOrg(project, context, authLandingIn([{ id: 'ORG-OTHER', code: 'C2', name: 'Other' }]), '[Reset]');
+
+        expect(project.adobe?.organization).toBe('ORG-KEPT');
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
     });
 });

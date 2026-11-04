@@ -63,6 +63,11 @@ export function beginSignIn(): SignInRun {
     };
 }
 
+/** The running sign-in's link, when it has printed one already. */
+export function knownSignInLink(): string | undefined {
+    return running?.link;
+}
+
 /**
  * The sign-in link, as soon as the running sign-in (or the next one) prints it.
  *

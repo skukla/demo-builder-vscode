@@ -69,8 +69,8 @@
         "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts:406": "Predates the rule (2026-09-11). NOT yet triaged as this extension's own words or a library's - that is the judgement someone makes when they retire the row, and it cannot be read off the call site.",
         "src/features/eds/handlers/storefrontSetup/storefrontSetupPhases.ts:474": "Predates the rule (2026-09-11). NOT yet triaged as this extension's own words or a library's - that is the judgement someone makes when they retire the row, and it cannot be read off the call site.",
         "src/features/eds/ui/hooks/useRepoCreation.ts:190": "Predates the rule (2026-09-11). NOT yet triaged as this extension's own words or a library's - that is the judgement someone makes when they retire the row, and it cannot be read off the call site.",
-        "src/features/ai/server/createProjectTool.ts:387": "Predates the rule (2026-09-11). NOT yet triaged as this extension's own words or a library's - that is the judgement someone makes when they retire the row, and it cannot be read off the call site.",
-        "src/features/ai/server/createProjectTool.ts:578": "Predates the rule (2026-09-11). NOT yet triaged as this extension's own words or a library's - that is the judgement someone makes when they retire the row, and it cannot be read off the call site.",
+        "src/features/ai/server/createProjectTool.ts:420": "Predates the rule (2026-09-11). NOT yet triaged as this extension's own words or a library's - that is the judgement someone makes when they retire the row, and it cannot be read off the call site.",
+        "src/features/ai/server/createProjectTool.ts:611": "Predates the rule (2026-09-11). NOT yet triaged as this extension's own words or a library's - that is the judgement someone makes when they retire the row, and it cannot be read off the call site.",
         "src/features/eds/services/helix/helixPageContent.ts:94": "Predates the rule (2026-09-11). NOT yet triaged as this extension's own words or a library's - that is the judgement someone makes when they retire the row, and it cannot be read off the call site."
     }
 }

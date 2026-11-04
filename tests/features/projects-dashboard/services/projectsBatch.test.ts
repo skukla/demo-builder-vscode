@@ -71,7 +71,7 @@ describe('prepareDeleteBatch', () => {
         const rows = await prepareDeleteBatch(contextWith(a), [a.path]);
 
         expect(rows).toStrictEqual([
-            { path: a.path, name: 'a', repo: { name: 'acme/a', ticked: false }, site: { name: 'acme/a', ticked: false }, datapack: { name: 'A Pack', ticked: false } },
+            { path: a.path, name: 'a', repository: 'acme/a', repo: { name: 'acme/a', ticked: false }, site: { name: 'acme/a', ticked: false }, datapack: { name: 'A Pack', ticked: false } },
         ]);
         // The batch's own projects are going: a pack only they use may go.
         expect(mockedPack).toHaveBeenCalledWith(expect.anything(), a, [a.path]);
@@ -91,11 +91,11 @@ describe('prepareDeleteBatch', () => {
     it('offers nothing under localOnly, and nothing another project still uses', async () => {
         const a = storefront('a');
         setting('localOnly');
-        expect(await prepareDeleteBatch(contextWith(a), [a.path])).toStrictEqual([{ path: a.path, name: 'a' }]);
+        expect(await prepareDeleteBatch(contextWith(a), [a.path])).toStrictEqual([{ path: a.path, name: 'a', repository: 'acme/a' }]);
 
         setting('ask');
         mockedShared.mockResolvedValueOnce({ repo: ['other'], site: ['other'] });
-        expect(await prepareDeleteBatch(contextWith(a), [a.path])).toStrictEqual([{ path: a.path, name: 'a' }]);
+        expect(await prepareDeleteBatch(contextWith(a), [a.path])).toStrictEqual([{ path: a.path, name: 'a', repository: 'acme/a' }]);
     });
 
     it('leaves out a project that no longer loads', async () => {
@@ -131,10 +131,52 @@ describe('prepareResetBatch', () => {
         ]);
     });
 
+    // The card's own line under each name, so the confirm reads like the list (owner, 2026-11-04:
+    // bare names looked pitiful). Read from the real catalog, as the card reads it.
+    it("carries the project's package and stack, as its card says them", async () => {
+        const starter: Project = { ...storefront('starter'), selectedPackage: 'starter', selectedStack: 'eds-accs' };
+
+        const [row] = await prepareResetBatch(contextWith(starter), [starter.path]);
+
+        expect(row.summary).toBe('Starter (B2B + B2C), Edge Delivery + ACCS');
+    });
+
+    // The run heads each org's projects when a batch spans several (owner, 2026-11-04).
+    it("carries the project's IMS organization by its name, its id when it has no name", async () => {
+        const named: Project = { ...storefront('named'), adobe: { organization: 'ORG1', organizationName: 'Adobe Demo Org' } };
+        const bare: Project = { ...storefront('bare'), adobe: { organization: 'ORG2' } };
+
+        const rows = await prepareResetBatch(contextWith(named, bare), [named.path, bare.path]);
+
+        expect(rows.map((row) => row.org)).toStrictEqual(['Adobe Demo Org', 'ORG2']);
+    });
+
+    // A project by the name its card shows, not its folder (owner, 2026-11-04: "patch-canary-b2b"
+    // in the window, "Patch Canary B2B" on the card behind it).
+    it('names each project as its card does', async () => {
+        const titled: Project = { ...storefront('patch-canary-b2b'), title: 'Patch Canary B2B' };
+
+        const [reset] = await prepareResetBatch(contextWith(titled), [titled.path]);
+        const [deleting] = await prepareDeleteBatch(contextWith(titled), [titled.path]);
+
+        expect([reset.name, deleting.name]).toStrictEqual(['Patch Canary B2B', 'Patch Canary B2B']);
+    });
+
+    // The confirm names what a reset overwrites: the storefront's repository (owner, 2026-11-04).
+    it("carries the storefront's repository", async () => {
+        const one = storefront('one');
+
+        const [row] = await prepareResetBatch(contextWith(one), [one.path]);
+
+        expect(row.repository).toBe('acme/one');
+    });
+
     it('offers no datapack for a project without one', async () => {
         const plain = storefront('plain');
 
-        expect(await prepareResetBatch(contextWith(plain), [plain.path])).toStrictEqual([{ path: plain.path, name: 'plain' }]);
+        expect(await prepareResetBatch(contextWith(plain), [plain.path])).toStrictEqual([
+            { path: plain.path, name: 'plain', repository: 'acme/plain', org: 'Acme Demo Org' },
+        ]);
         expect(mockedChanges).not.toHaveBeenCalled();
     });
 });
@@ -207,6 +249,109 @@ describe('runResetBatch', () => {
         await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: false }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
 
         expect(told.at(-1)).toStrictEqual({ path: one.path, state: 'failed', message: 'Sign in to DA.live.' });
+    });
+});
+
+/**
+ * Resets run side by side (owner, 2026-11-04: a reset takes about six minutes, and the notification
+ * approach let two run at once). Up to three at a time within one IMS organization, since the token
+ * reaches one org; orgs one after another; and resets that remove a pack's data from the store take
+ * turns, so two never plan the store's clearing at once.
+ */
+describe('runResetBatch, side by side', () => {
+    /** A reset per project that waits until the test ends it, recording how many run at once. */
+    function heldResets() {
+        const ends = new Map<string, () => void>();
+        let running = 0;
+        let most = 0;
+        const started: string[] = [];
+        const runReset = jest.fn(
+            (_c: unknown, project: Project) =>
+                new Promise<{ success: boolean }>((resolve) => {
+                    running++;
+                    most = Math.max(most, running);
+                    started.push(project.name);
+                    ends.set(project.name, () => {
+                        running--;
+                        resolve({ success: true });
+                    });
+                }),
+        );
+        const settle = async () => {
+            for (let i = 0; i < 10; i++) await Promise.resolve();
+        };
+        return { runReset, ends, started, most: () => most, settle };
+    }
+
+    it('runs up to three at once in one org, the fourth when one ends', async () => {
+        const projects = ['a', 'b', 'c', 'd'].map((n) => storefront(n, 'org-1'));
+        const held = heldResets();
+        const answers = projects.map((p) => ({ path: p.path, removeDatapack: false }));
+
+        const done = runResetBatch(contextWith(...projects), answers, { tell: jest.fn(), report: jest.fn(), runReset: held.runReset });
+        await held.settle();
+        expect(held.started).toStrictEqual(['a', 'b', 'c']);
+
+        held.ends.get('b')?.();
+        await held.settle();
+        expect(held.started).toStrictEqual(['a', 'b', 'c', 'd']);
+
+        ['a', 'c', 'd'].forEach((n) => held.ends.get(n)?.());
+        await expect(done).resolves.toBe(0);
+        expect(held.most()).toBe(3);
+    });
+
+    it("starts an org's projects only once the org before it has finished", async () => {
+        const one = storefront('one', 'org-1');
+        const two = storefront('two', 'org-2');
+        const held = heldResets();
+        const answers = [one, two].map((p) => ({ path: p.path, removeDatapack: false }));
+
+        const done = runResetBatch(contextWith(one, two), answers, { tell: jest.fn(), report: jest.fn(), runReset: held.runReset });
+        await held.settle();
+        expect(held.started).toStrictEqual(['one']);
+
+        held.ends.get('one')?.();
+        await held.settle();
+        expect(held.started).toStrictEqual(['one', 'two']);
+        held.ends.get('two')?.();
+        await done;
+    });
+
+    it('lets resets that remove a pack take turns, and the others run beside them', async () => {
+        const [a, b, c] = ['a', 'b', 'c'].map((n) => storefront(n, 'org-1'));
+        const held = heldResets();
+        const answers = [
+            { path: a.path, removeDatapack: true },
+            { path: b.path, removeDatapack: true },
+            { path: c.path, removeDatapack: false },
+        ];
+
+        const done = runResetBatch(contextWith(a, b, c), answers, { tell: jest.fn(), report: jest.fn(), runReset: held.runReset });
+        await held.settle();
+        expect(held.started).toStrictEqual(['a', 'c']);
+
+        held.ends.get('a')?.();
+        await held.settle();
+        expect(held.started).toStrictEqual(['a', 'c', 'b']);
+        ['b', 'c'].forEach((n) => held.ends.get(n)?.());
+        await done;
+    });
+});
+
+// The row says what the notification says: the stage and how far through it (owner, 2026-11-04).
+describe('a running row', () => {
+    it("says its stage with the count, as the background notification does", async () => {
+        const one = storefront('one');
+        const told: ProjectsBatchRowStatus[] = [];
+        const runReset = jest.fn(async (_c, _p, _a, report) => {
+            report('Warming product pages', undefined, { index: 9, total: 11 });
+            return { success: true };
+        });
+
+        await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: false }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
+
+        expect(told).toContainEqual({ path: one.path, state: 'running', message: 'Warming product pages (9 of 11)' });
     });
 });
 

@@ -14,6 +14,7 @@ import React from 'react';
 import { anyDatapack, fieldOf } from '../batchChoices';
 import type { BatchChoices } from '../hooks/useBatchChoices';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { BatchResetRow } from '@/types/projectsBatch';
 
 interface Props {
@@ -49,9 +50,11 @@ function ResetRow({ row, choices }: { row: BatchResetRow; choices: BatchChoices 
     const removing = choices.removeDatapack && row.datapack !== undefined;
     return (
         <div className="batch-reset-row">
-            <div>
+            {/* The name and what it is under it, as the run draws each row (owner, 2026-11-04). */}
+            <div className="work-row-text">
                 <span className="checkbox-row-label">{row.name}</span>
-                {row.datapack && <span className="checkbox-row-detail">{row.datapack.name}</span>}
+                {(row.repository ?? row.summary) && <div className="work-row-detail">{row.repository ?? row.summary}</div>}
+                {row.datapack && <div className="work-row-detail">Datapack: {row.datapack.name}</div>}
             </div>
             {removing && <ChangesField row={row} choices={choices} />}
         </div>
@@ -62,6 +65,8 @@ function ResetRow({ row, choices }: { row: BatchResetRow; choices: BatchChoices 
 export function BatchResetQuestions({ rows, choices }: Props): React.ReactElement {
     return (
         <div className="batch-reset">
+            {/* What a reset does, as the single reset says it (owner, 2026-11-04: it said nothing). */}
+            <LeadText>Each project goes back to how it was first set up, and any changes to its code are lost.</LeadText>
             {anyDatapack(rows) && (
                 <div className="select-all-row">
                     <CheckboxRow

@@ -1,13 +1,12 @@
 /**
- * .work-row — one item in a list of work (`feedback/WorkRow`): a status icon, the name
- * and a quieter detail beside it, and what to read under it.
+ * .work-row — one item in a list of work (`feedback/WorkRow`): a status icon, the name, and
+ * under it where it stands (a quieter detail, a note, or why it failed).
  *
  * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `projectsList` (the Updates modal's
  * run), `integrations` (the demo setup's confirms), and every bundle that draws the progress
  * modal, for its rows of what a run changed: those two, `dashboard` and `configure`. A
  * new host bundle imports it in its entry, or the rows render unstyled with no error. The
- * name and detail are `.checkbox-row-label` and `-detail`, so the host imports
- * `checkbox-row.css` too.
+ * name is `.checkbox-row-label`, so the host imports `checkbox-row.css` too.
  *
  * Moved unchanged on 2026-10-26 from the projects list's updates-modal.css
  * (.updates-run-icon/-row/-text/-why/-note), in the same layer.
@@ -24,7 +23,31 @@
     .work-row {
         display: flex;
         align-items: flex-start;
-        padding: 3px 0;
+        padding: 8px 0;
+    }
+
+    /* A hairline between rows, as the integration flyout draws its rows (owner, 2026-11-04):
+       between, so nothing follows the last row and nothing sits over the first, whatever comes
+       after the list. The dialog rules' "one rule" names this exception. */
+    .work-row + .work-row,
+    .work-row-list > li + li > .work-row {
+        border-top: 1px solid var(--spectrum-global-color-gray-200);
+    }
+
+    /* How long a row has taken, right after its name, in the row's quiet grey (owner, 2026-11-04:
+       at the dialog's far edge it floated away from the name it times). Nothing follows it on
+       that line, so the clock ticking moves nothing. */
+    .work-row-time {
+        margin-left: 8px;
+        font-size: 12px;
+        color: var(--spectrum-global-color-gray-600);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    /* A finished row steps back: its name in the grey of its line, so what is left leads. */
+    .work-row[data-state='done'] .checkbox-row-label {
+        color: var(--spectrum-global-color-gray-600);
     }
 
     .work-row .work-row-icon {
@@ -34,6 +57,15 @@
     .work-row-text {
         min-width: 0;
         line-height: 20px;
+    }
+
+    /* Where the row stands, under its name (owner, 2026-11-04): the label's grey and size, so the
+       name leads and every row is the same two lines. */
+    .work-row-detail {
+        font-size: 12px;
+        line-height: 16px;
+        margin: 2px 0 0;
+        color: var(--spectrum-global-color-gray-600);
     }
 
     /* Something to read under the name: why it did not apply, or what to know. */

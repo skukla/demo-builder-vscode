@@ -20,6 +20,7 @@ import { useBatchChoices, type BatchChoices } from './useBatchChoices';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { PROJECTS_BATCH_OPERATION_ID } from '@/core/utils/operationIds';
+import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { Project } from '@/types/base';
 import type {
     PrepareProjectsBatchResponse,
@@ -32,7 +33,9 @@ import type { OperationProgressPayload } from '@/types/webviewPayloads';
 /** One project as the run lists it. */
 export interface BatchRunRow {
     path: string;
-    name: string;
+    name: ProjectDisplayName;
+    /** A reset's project's IMS organization: the run heads each org when there are several. */
+    org?: string;
 }
 
 /** What the window shows. */
@@ -53,6 +56,9 @@ interface PrepareEnvelope {
 /** Each running project's status, by path. */
 export type BatchRowStatuses = Readonly<Record<string, ProjectsBatchRowStatus>>;
 
+/** When each project started and ended here, by path: the window times its rows itself. */
+export type BatchRowTimings = Readonly<Record<string, { startedAt?: number; endedAt?: number }>>;
+
 export interface ProjectsBatchControls {
     view: BatchView;
     choices: BatchChoices;
@@ -64,6 +70,7 @@ export interface ProjectsBatchControls {
     /** While running: the rows in the order the extension tells them. */
     order: string[];
     statuses: BatchRowStatuses;
+    timings: BatchRowTimings;
     progress: OperationProgressPayload | null;
     answer: (chosen?: string) => void;
     onTyped: (values: Record<string, string>) => void;
@@ -73,6 +80,20 @@ export interface ProjectsBatchControls {
 
 const CLOSED: BatchView = { phase: 'closed' };
 const NO_STATUSES: BatchRowStatuses = {};
+const NO_TIMINGS: BatchRowTimings = {};
+
+/** A row's times after this push: started when it first runs, ended when it first ends. */
+function timedAfter(previous: BatchRowTimings, status: ProjectsBatchRowStatus, now: number): BatchRowTimings {
+    const held = previous[status.path] ?? {};
+    if (status.state === 'running' && held.startedAt === undefined) {
+        return { ...previous, [status.path]: { startedAt: now } };
+    }
+    const ended = status.state !== 'running' && status.state !== 'waiting';
+    if (ended && held.startedAt !== undefined && held.endedAt === undefined) {
+        return { ...previous, [status.path]: { ...held, endedAt: now } };
+    }
+    return previous;
+}
 const NO_ORDER: string[] = [];
 const COULD_NOT_READ = 'The projects could not be read.';
 
@@ -92,16 +113,19 @@ export function runningTitle(action: ProjectsBatchAction): string {
     return action === 'delete' ? 'Deleting Projects' : 'Resetting Projects';
 }
 
-/** Each pushed row's status, and the order they first arrived in. */
-function useRowPushes(): { order: string[]; statuses: BatchRowStatuses; clear: () => void } {
+/** Each pushed row's status, when it started and ended, and the order they first arrived in. */
+function useRowPushes(): { order: string[]; statuses: BatchRowStatuses; timings: BatchRowTimings; clear: () => void } {
     const [order, setOrder] = useState<string[]>(NO_ORDER);
     const [statuses, setStatuses] = useState<BatchRowStatuses>(NO_STATUSES);
+    const [timings, setTimings] = useState<BatchRowTimings>(NO_TIMINGS);
     useEffect(
         () =>
             webviewClient.onMessage('projectsBatchRow', (data) => {
                 const status = data as ProjectsBatchRowStatus | undefined;
                 if (!status?.path) return;
+                const now = Date.now();
                 setStatuses((previous) => ({ ...previous, [status.path]: status }));
+                setTimings((previous) => timedAfter(previous, status, now));
                 setOrder((previous) => (previous.includes(status.path) ? previous : [...previous, status.path]));
             }),
         [],
@@ -109,8 +133,9 @@ function useRowPushes(): { order: string[]; statuses: BatchRowStatuses; clear: (
     const clear = useCallback(() => {
         setOrder(NO_ORDER);
         setStatuses(NO_STATUSES);
+        setTimings(NO_TIMINGS);
     }, []);
-    return { order, statuses, clear };
+    return { order, statuses, timings, clear };
 }
 
 /**
@@ -124,7 +149,7 @@ export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchCon
     const [runs, setRuns] = useState(0);
     const choices = useBatchChoices();
     const { begin } = choices;
-    const { order, statuses, clear } = useRowPushes();
+    const { order, statuses, timings, clear } = useRowPushes();
     const progress = useOperationProgress(view.phase === 'running' ? PROJECTS_BATCH_OPERATION_ID : null, runs, false);
     /** Which prepare is current: an answer to an earlier one, closed since, is dropped. */
     const reading = useRef(0);
@@ -150,7 +175,11 @@ export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchCon
     const run = useCallback(() => {
         if (view.phase !== 'asking') return;
         const { questions } = view;
-        const rows = questions.rows.map((row) => ({ path: row.path, name: row.name }));
+        const rows = questions.rows.map((row): BatchRunRow => ({
+            path: row.path,
+            name: row.name,
+            ...('org' in row && row.org ? { org: row.org } : {}),
+        }));
         clear();
         setRuns((previous) => previous + 1);
         setView({ phase: 'running', action: questions.action, rows });
@@ -183,7 +212,7 @@ export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchCon
     }, [view, progress, answer, onClosedAfterRun]);
 
     return useMemo(
-        () => ({ view, choices, start, run, close, order, statuses, progress, answer, onTyped, runs }),
-        [view, choices, start, run, close, order, statuses, progress, answer, onTyped, runs],
+        () => ({ view, choices, start, run, close, order, statuses, timings, progress, answer, onTyped, runs }),
+        [view, choices, start, run, close, order, statuses, timings, progress, answer, onTyped, runs],
     );
 }

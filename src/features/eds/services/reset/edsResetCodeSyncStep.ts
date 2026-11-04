@@ -149,10 +149,12 @@ export async function confirmResetCodeServed(
     report: (step: number, message: string) => void,
 ): Promise<string | undefined> {
     const { githubFileOps, githubTokenService, tokenProvider, logger } = clients;
-    report(RESET_STEP.publishingCodeAndSettings, 'Checking the site serves the new code');
+    // On the last step, where the live site is checked: it runs after the content, so on step 2
+    // the run read "10 of 11", "2 of 11", "11 of 11" (owner, 2026-11-04).
+    report(RESET_STEP.checkingSettings, 'Checking the site serves the new code');
     const helix = new HelixService(logger, githubTokenService, tokenProvider);
     const site = { owner: params.repoOwner, repo: params.repoName };
     const sentence = await confirmStorefrontCodeServed(githubFileOps, helix, site, resetCommitSha, logger);
-    if (sentence) report(RESET_STEP.publishingCodeAndSettings, `⚠️ ${sentence}`);
+    if (sentence) report(RESET_STEP.checkingSettings, `⚠️ ${sentence}`);
     return sentence;
 }

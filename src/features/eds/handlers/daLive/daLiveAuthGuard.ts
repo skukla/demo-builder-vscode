@@ -10,6 +10,7 @@
 
 import { getDaLiveAuthService } from '../edsServiceCache';
 import { showDaLiveAuthQuickPick, type DaLiveAuthContext } from './daLiveAuthPrompt';
+import { SingleFlight } from '@/core/utils/singleFlight';
 import { askDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
 
 export interface DaLiveGuardResult {
@@ -20,6 +21,9 @@ export interface DaLiveGuardResult {
     /** Error message if auth failed */
     error?: string;
 }
+
+/** One DA.live sign-in at a time; callers arriving during it share its answer. */
+const signInFlight = new SingleFlight<DaLiveGuardResult>();
 
 /**
  * Ensure DA.live authentication, prompting sign-in if expired or refused.
@@ -59,13 +63,26 @@ export async function ensureDaLiveAuth(
         ? 'Adobe no longer accepts your DA.live sign-in.'
         : 'Your DA.live session has expired.';
 
+    // Callers that find it expired together share one prompt and its answer, as the Adobe guard's
+    // do: resets run side by side (owner, 2026-11-04), and a second prompt would replace the first.
+    return signInFlight.run(
+        () => promptAndSignIn(context, expiry),
+        () => context.logger.info(`${logPrefix} Reusing the in-flight DA.live sign-in`),
+    );
+}
+
+/** The sign-in question, then the sign-in: in the modal's form, or a notification and input boxes. */
+async function promptAndSignIn(
+    context: DaLiveAuthContext,
+    expiry: string,
+): Promise<DaLiveGuardResult> {
     // In a modal the expiry line heads the sign-in FORM: a Sign In button in front
     // of a form the modal was going to show anyway is a click that asks nothing
     // (owner, 2026-09-20). With no modal up, it is the notification it always was,
     // and its answer opens the input-box flow below.
     if (!modalIsAsking()) {
         const selection = await askDuringOperation(
-            { title: 'Sign In to DA.live', message: `${expiry} Sign in to keep going.` },
+            { title: 'Sign In to DA.live', message: `${expiry} Sign in to continue.` },
             'Sign In',
         );
         if (selection !== 'Sign In') {

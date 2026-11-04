@@ -69,7 +69,7 @@ export async function checkAdobeAuth(
             projectId: project.adobe?.projectId,
             workspace: project.adobe?.workspace,
         },
-        warningMessage: 'Your Adobe sign-in has expired. Sign in to keep going.',
+        warningMessage: 'Your Adobe sign-in has expired. Sign in to continue.',
     });
 
     if (result.authenticated) return null;
@@ -82,6 +82,32 @@ export async function checkAdobeAuth(
         errorType: 'ADOBE_AUTH_REQUIRED',
         cancelled: result.cancelled,
     };
+}
+
+/**
+ * Give an ACCS project that records no Adobe organization the org its sign-in reaches (owner,
+ * 2026-11-04, F11). An agent's creation recorded none when it deployed nothing; an ACCS backend
+ * needs the org's IMS permission, and a reset puts a project back to how it was first set up,
+ * which the wizard's Sign-in step records. The token is org-bound, so its one reachable org
+ * (`getOrganizationsSdkOnly()[0]`) is the org, never the CLI's stale selection. Not knowing which
+ * org records nothing and stops nothing: the reset goes on as it did before.
+ */
+export async function recordSignedInOrg(
+    project: Project,
+    context: HandlerContext,
+    authService: AuthenticationService,
+    logPrefix: string,
+): Promise<void> {
+    if (project.adobe?.organization) return;
+    const { orgReads } = await authService.getEntityServices();
+    const org = (await orgReads.getOrganizationsSdkOnly())?.[0];
+    if (!org) {
+        context.logger.debug(`${logPrefix} resetEds: no org to record (the SDK could not say which)`);
+        return;
+    }
+    project.adobe = { ...project.adobe, organization: org.id, organizationName: org.name };
+    await context.stateManager.saveProject(project);
+    context.logger.info(`${logPrefix} resetEds: recorded the Adobe organization ${org.name}`);
 }
 
 /**

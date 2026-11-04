@@ -36,7 +36,13 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
             {children}
             {!hideClose && <button onClick={onClose}>{closeLabel ?? 'Close'}</button>}
             {actionButtons.map((b) => (
-                <button key={b.label} onClick={b.onPress} disabled={b.isDisabled} aria-busy={b.isPending ? 'true' : undefined}>
+                <button
+                    key={b.label}
+                    onClick={b.onPress}
+                    disabled={b.isDisabled}
+                    aria-busy={b.isPending ? 'true' : undefined}
+                    data-size-labels={b.sizeLabels?.join('|')}
+                >
                     {b.label}
                 </button>
             ))}
@@ -164,6 +170,15 @@ describe('UpdatesModal', () => {
         expect(screen.getByRole('button', { name: 'Apply Updates' })).toBeDisabled();
     });
 
+    // Ticking a row changed the label's width and moved Close (owner, 2026-11-04).
+    it('hands Apply every label it can show, so ticking moves nothing', () => {
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
+
+        const unlocked = ROWS.filter((r) => !r.lockedReason).length;
+        const apply = screen.getByRole('button', { name: 'Apply Updates' });
+        expect(apply).toHaveAttribute('data-size-labels', `Apply 1 Update|Apply ${unlocked} Updates`);
+    });
+
     // Each ticked row as the Prerequisites step draws its checks (owner, 2026-10-21).
     it('shows the run row by row: no checkboxes, the running row saying what it is doing', () => {
         const c = running(
@@ -283,6 +298,28 @@ describe('UpdatesModal', () => {
         await user().click(screen.getByRole('button', { name: 'Keep My Blocks' }));
 
         expect(c.answer).toHaveBeenCalledWith('Keep My Blocks');
+    });
+
+    // A sign-in is a task about no one row (owner, 2026-11-04, layout A): it takes the window,
+    // and Cancel is its way out, answering it and keeping the window for the rest.
+    it('gives a sign-in the window: its heading, amber, and Cancel', async () => {
+        const prompt = {
+            title: 'Sign In to DA.live',
+            message: 'Your DA.live session has expired.',
+            steps: ['Open DA.live and run the bookmarklet.', 'Paste the token it copies.'],
+            actions: ['Sign In', 'Open DA.live'],
+            fields: [{ id: 'token', label: 'Token', secret: true }],
+        };
+        const c = running({ 'blockLibrary:0': { id: 'blockLibrary:0', state: 'running' } }, { prompt });
+        const { container } = render(<UpdatesModal controls={c} />);
+
+        expect(screen.getByRole('dialog', { name: 'Sign In to DA.live' })).toHaveAttribute('data-status', 'warning');
+        expect(container.querySelector('.work-row')).toBeNull();
+        expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Cancel', 'Open DA.live', 'Sign In']);
+        await user().click(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(c.answer).toHaveBeenCalledWith(undefined);
+        expect(c.close).not.toHaveBeenCalled();
     });
 
     // A prompt names its main answer first; a dialog's main button goes last.

@@ -73,7 +73,12 @@ export function BatchDeleteQuestions({ rows, choices }: Props): React.ReactEleme
                 <tbody>
                     {rows.map((row) => (
                         <tr key={row.path}>
-                            <th scope="row" className="checkbox-row-label">{row.name}</th>
+                            <th scope="row">
+                                <span className="checkbox-row-label">{row.name}</span>
+                                {(row.repository ?? row.summary) && (
+                                    <div className="work-row-detail">{row.repository ?? row.summary}</div>
+                                )}
+                            </th>
                             {columns.map(({ key }) => (
                                 <OptionCell key={key} row={row} optionKey={key} choices={choices} />
                             ))}

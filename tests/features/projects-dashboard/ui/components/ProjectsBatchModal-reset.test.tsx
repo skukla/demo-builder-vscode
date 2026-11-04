@@ -7,15 +7,16 @@
 
 import { screen } from '@testing-library/react';
 import { openOn, PROJECTS_BATCH_OPERATION_ID, resetBatchMocks, runRequest, type PrepareEnvelope } from './ProjectsBatchModal.testUtils';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 const RESET: PrepareEnvelope = {
     success: true,
     data: {
         action: 'reset',
         rows: [
-            { path: '/p/a', name: 'A', datapack: { name: 'Frescopa', changes: 'asks' } },
-            { path: '/p/b', name: 'B', datapack: { name: 'Mine', changes: 'saves' } },
-            { path: '/p/c', name: 'C' },
+            { path: '/p/a', name: asDisplayName('A'), datapack: { name: asDisplayName('Frescopa'), changes: 'asks' } },
+            { path: '/p/b', name: asDisplayName('B'), datapack: { name: asDisplayName('Mine'), changes: 'saves' } },
+            { path: '/p/c', name: asDisplayName('C') },
         ],
     },
 };
@@ -42,7 +43,7 @@ describe('ProjectsBatchModal: Reset Selected', () => {
         expect(screen.getByRole('textbox', { name: 'Save Changes As' })).toHaveValue('');
         expect(screen.getByText('Saving to your library')).toBeInTheDocument();
         expect(runButton()).toBeDisabled();
-        expect(runButton()).toHaveAttribute('data-variant', 'accent');
+        expect(runButton()).toHaveAttribute('data-variant', 'negative');
     });
 
     it('a blank name keeps the run waiting; a name sends it trimmed', async () => {
@@ -95,10 +96,45 @@ describe('ProjectsBatchModal: Reset Selected', () => {
         ]);
     });
 
+    // A reset replaces each project's code (owner, 2026-11-04): a dangerous confirm, so it says what
+    // happens, carries the amber icon, and its button is red, as Delete Selected's is.
+    it('says what a reset does, amber, with a red button', async () => {
+        await openOn('reset', RESET);
+        const dialog = await screen.findByRole('dialog', { name: 'Reset Projects' });
+
+        expect(dialog).toHaveAttribute('data-status', 'warning');
+        expect(
+            screen.getByText('Each project goes back to how it was first set up, and any changes to its code are lost.'),
+        ).toBeInTheDocument();
+    });
+
+    // Each project as the run draws it: its name, and under it what it is (owner, 2026-11-04).
+    it("draws each project's package and stack under its name", async () => {
+        await openOn('reset', {
+            success: true,
+            data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A'), summary: 'Starter (B2B + B2C), Edge Delivery + ACCS' }] },
+        });
+        await screen.findByRole('dialog', { name: 'Reset Projects' });
+
+        expect(screen.getByText('Starter (B2B + B2C), Edge Delivery + ACCS')).toHaveClass('work-row-detail');
+    });
+
+    // A storefront's repository names what the reset overwrites; it leads over the summary.
+    it("draws a storefront's repository under its name, in place of its summary", async () => {
+        await openOn('reset', {
+            success: true,
+            data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A'), repository: 'skukla/a', summary: 'Starter (B2B + B2C), Edge Delivery + ACCS' }] },
+        });
+        await screen.findByRole('dialog', { name: 'Reset Projects' });
+
+        expect(screen.getByText('skukla/a')).toHaveClass('work-row-detail');
+        expect(screen.queryByText('Starter (B2B + B2C), Edge Delivery + ACCS')).toBeNull();
+    });
+
     it('offers no Remove Datapack when no project has a pack', async () => {
         await openOn('reset', {
             success: true,
-            data: { action: 'reset', rows: [{ path: '/p/a', name: 'A' }, { path: '/p/b', name: 'B' }, { path: '/p/c', name: 'C' }] },
+            data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A') }, { path: '/p/b', name: asDisplayName('B') }, { path: '/p/c', name: asDisplayName('C') }] },
         });
         await screen.findByRole('dialog', { name: 'Reset Projects' });
 

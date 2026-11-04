@@ -2,15 +2,17 @@
  * SelectionActions — the projects list's count row in selection mode (owner, 2026-11-04), in the
  * two slots `SearchHeader` gives it. At the start, in the count's place, the house `SelectAllRow`
  * over the projects the filter shows and "3 of 12 selected". At the end, Reset Selected and Delete
- * Selected (nothing to do with none ticked) and Done. Outside selection mode the end holds Select.
+ * Selected (nothing to do with none ticked) and Done. Outside selection mode the end holds Select
+ * Projects. The buttons wear the house icons the Datapacks header's do, in the same slot.
  *
  * @module features/projects-dashboard/ui/components/SelectionActions
  */
 
-import { ActionButton, Text } from '@adobe/react-spectrum';
+import { ActionButton, Divider, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import type { ProjectSelectionControls } from '../hooks/useProjectSelection';
 import { SelectAllRow } from '@/core/ui/components/selection/SelectAllRow';
+import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import type { Project } from '@/types/base';
 import type { ProjectsBatchAction } from '@/types/projectsBatch';
 
@@ -40,12 +42,13 @@ interface ActionsProps {
     onBatch: ListBatch['start'];
 }
 
-/** Select, or in selection mode what to do with the ticked projects and Done. */
+/** Select Projects, or in selection mode what to do with the ticked projects and Done. */
 export function SelectionActions({ selection, onBatch }: ActionsProps): React.ReactElement {
     if (!selection.selecting) {
         return (
             <ActionButton isQuiet onPress={selection.enter}>
-                Select
+                {renderMenuIcon('selectSeveral')}
+                <Text>Select Projects</Text>
             </ActionButton>
         );
     }
@@ -53,11 +56,14 @@ export function SelectionActions({ selection, onBatch }: ActionsProps): React.Re
     return (
         <div className="projects-select-bar">
             <ActionButton isQuiet isDisabled={none} onPress={() => onBatch('reset', selection.chosen)}>
-                Reset Selected
+                {renderMenuIcon('reset')}
+                <Text>Reset Selected</Text>
             </ActionButton>
             <ActionButton isQuiet isDisabled={none} onPress={() => onBatch('delete', selection.chosen)}>
-                Delete Selected
+                {renderMenuIcon('delete')}
+                <Text>Delete Selected</Text>
             </ActionButton>
+            <Divider orientation="vertical" size="S" />
             <ActionButton isQuiet onPress={selection.done}>
                 Done
             </ActionButton>

@@ -121,6 +121,71 @@ describe('with a modal on screen', () => {
     });
 });
 
+/**
+ * The owner, 2026-11-04: pressing Sign In during a reset showed the reset's own line again ("Checking
+ * requirements") while the browser was still opening, so the reset looked as though it had gone
+ * on without the sign-in. The step is on screen from the press, and gains the page once it is known.
+ */
+describe('with a modal on screen, before the sign-in page is known', () => {
+    beforeEach(() => mockModal.mockReturnValue(true));
+
+    /** A sign-in whose page is known only when the test says so. */
+    function signInWithLateLink(): { run: () => Promise<boolean>; announce: () => void; finish: (ok: boolean) => void } {
+        let session: SignInRun | undefined;
+        let finish: (ok: boolean) => void = () => {};
+        const run = async (): Promise<boolean> => {
+            session = beginSignIn();
+            const ok = await new Promise<boolean>((resolve) => {
+                finish = resolve;
+                session?.signal.addEventListener('abort', () => resolve(false));
+            });
+            session.end();
+            return ok;
+        };
+        return { run, announce: () => session?.announceLink(LINK), finish: (ok) => finish(ok) };
+    }
+
+    it('says at once that the sign-in is in the browser, with Cancel', async () => {
+        const signIn = signInWithLateLink();
+        questionThatWaits();
+
+        const result = withBrowserSignInNotice(signIn.run);
+        await settle();
+
+        expect(mockAsk).toHaveBeenCalledTimes(1);
+        expect(mockAsk).toHaveBeenCalledWith({ title: 'Finish Signing In', message: 'Sign in to Adobe in your browser.' }, 'Cancel');
+        signIn.finish(true);
+        await expect(result).resolves.toBe(true);
+    });
+
+    it('adds the sign-in page once it is known, without cancelling the sign-in', async () => {
+        const signIn = signInWithLateLink();
+        questionThatWaits();
+
+        const result = withBrowserSignInNotice(signIn.run);
+        await settle();
+        signIn.announce();
+        await settle();
+
+        expect(mockAsk).toHaveBeenLastCalledWith(
+            { title: 'Finish Signing In', message: expect.stringMatching(/Open the sign-in page/) },
+            'Open Sign-In Page',
+            'Cancel',
+        );
+        expect(signInWasCancelled()).toBe(false);
+        signIn.finish(true);
+        await expect(result).resolves.toBe(true);
+    });
+
+    it('stops the sign-in on Cancel before the page is known', async () => {
+        const signIn = signInWithLateLink();
+        mockAsk.mockResolvedValue(undefined);
+
+        await expect(withBrowserSignInNotice(signIn.run)).resolves.toBe(false);
+        expect(signInWasCancelled()).toBe(true);
+    });
+});
+
 describe('with no modal', () => {
     beforeEach(() => mockModal.mockReturnValue(false));
 

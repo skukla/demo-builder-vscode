@@ -178,6 +178,19 @@ describe('ensureDaLiveAuth', () => {
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 
+    // Resets run side by side (owner, 2026-11-04): two that find the sign-in expired at once share
+    // one prompt, as the Adobe guard's callers do, and both read its answer.
+    it('asks once for two callers that find the sign-in expired at the same time', async () => {
+        mockCheckSignIn.mockResolvedValue(NOT_SIGNED_IN);
+        showWarningMessageResponse = undefined;
+
+        const [first, second] = await Promise.all([ensureDaLiveAuth(mockContext), ensureDaLiveAuth(mockContext)]);
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(first).toEqual({ authenticated: false, cancelled: true });
+        expect(second).toEqual(first);
+    });
+
     // =========================================================================
     // Expired Token - Sign In Flow
     // =========================================================================
@@ -359,7 +372,7 @@ describe('ensureDaLiveAuth — IMS verdict', () => {
 
         expect(result).toMatchObject({ authenticated: false, cancelled: true });
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'Adobe no longer accepts your DA.live sign-in. Sign in to keep going.',
+            'Adobe no longer accepts your DA.live sign-in. Sign in to continue.',
             'Sign In'
         );
     });
@@ -375,7 +388,7 @@ describe('ensureDaLiveAuth — IMS verdict', () => {
         await ensureDaLiveAuth(mockContext, '[Test]');
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'Your DA.live session has expired. Sign in to keep going.',
+            'Your DA.live session has expired. Sign in to continue.',
             'Sign In'
         );
     });

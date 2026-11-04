@@ -11,10 +11,9 @@
  * @module core/ui/components/feedback/OperationProgressBody
  */
 
-import { Flex, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { OperationPromptForm } from '@/core/ui/components/feedback/OperationPromptForm';
+import { OperationQuestion } from '@/core/ui/components/feedback/OperationQuestion';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
@@ -49,15 +48,10 @@ export function OperationProgressBody({
     // The whole run, from the start the extension stamped on every push. The only
     // thing that moves while a step waits on Adobe.
     const total = useRunClock(progress?.state === 'running' ? progress.startedAt : undefined);
-    if (prompt?.fields?.length) {
+    if (prompt?.fields?.length || prompt?.steps?.length) {
         // The question and what it needs typed, together: the modal owns the form
         // rather than handing off to a VS Code input box (owner, 2026-09-20).
-        return (
-            <Flex direction="column" gap="size-200" width="100%">
-                <Text>{prompt.message}</Text>
-                <OperationPromptForm fields={prompt.fields} onChange={onTyped} />
-            </Flex>
-        );
+        return <OperationQuestion prompt={prompt} onTyped={onTyped} />;
     }
     if (prompt) {
         // The question is the dialog's title (`progressFrame`); its sentence, when it has a
@@ -131,10 +125,14 @@ function EndView({ message, lines, changes, took }: {
     );
 }
 
-/** A question with buttons is its own heading; one with fields sits under the run's title. */
-function questionFrame(prompt: OperationPrompt, runTitle: string): ProgressFrame {
+/**
+ * A question with a heading takes the title, amber; one with fields and no heading sits under the
+ * run's title; one with only buttons is its own sentence as the heading.
+ */
+export function questionFrame(prompt: OperationPrompt, runTitle: string): ProgressFrame {
+    if (prompt.title) return { title: prompt.title, status: 'warning' };
     if (prompt.fields && prompt.fields.length > 0) return { title: runTitle };
-    return { title: prompt.title || prompt.message, status: 'warning' };
+    return { title: prompt.message, status: 'warning' };
 }
 
 /** The dialog around the body: its title and the title's status. */

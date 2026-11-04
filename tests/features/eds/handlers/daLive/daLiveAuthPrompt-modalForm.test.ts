@@ -186,22 +186,25 @@ it('starts with empty fields and offers Sign In and Open DA.live', async () => {
 
     await withModalAsking('op', () => showDaLiveAuthQuickPick(context()));
 
-    expect(asked[0].message).toBe(
-        'Sign in to DA.live: run the bookmarklet on da.live to copy a token, then paste it here.',
-    );
+    // A sign-in is a task of its own: its heading takes the window, the how as two steps
+    // (owner, 2026-11-04: one long sentence that said "sign in" twice).
+    expect(asked[0].title).toBe('Sign In to DA.live');
+    expect(asked[0].message).toBe('Demo Builder needs a DA.live token to go on.');
+    expect(asked[0].steps).toEqual(['Open DA.live and run the bookmarklet.', 'Paste the token it copies below.']);
+    // Step 2 says where it goes; a placeholder saying it again was noise (owner, 2026-11-04).
+    expect(field(0, 'token')?.placeholder).toBeUndefined();
+    expect(field(0, 'orgName')?.label).toBe('DA.live Namespace');
     expect(field(0, 'orgName')?.value).toBe('');
     expect(field(0, 'token')?.value).toBe('');
     expect(asked[0].actions).toEqual(['Sign In', 'Open DA.live']);
 });
 
-it('puts the reason and the instruction one space apart', async () => {
+it('says why it asks, when something expired, in place of the plain sentence', async () => {
     answers = [{ action: undefined, values: {} }];
 
     await withModalAsking('op', () => showDaLiveAuthQuickPick(context(), 'Expired.'));
 
-    expect(asked[0].message).toBe(
-        'Expired. Sign in to DA.live: run the bookmarklet on da.live to copy a token, then paste it here.',
-    );
+    expect(asked[0].message).toBe('Expired.');
 });
 
 it('brings back the token the bookmarklet copied after the trip to da.live', async () => {

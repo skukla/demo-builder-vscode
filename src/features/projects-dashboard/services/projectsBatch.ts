@@ -6,10 +6,14 @@
  * - **prepare** reads what the questions need, for every project picked, and writes nothing: which
  *   online resources a delete may take (none another project still uses, counting the batch's own
  *   projects as going), and whether a reset's datapack has changes that need a name.
- * - **run** takes the answers and works the projects **one at a time**: one IMS identity, one
- *   open-project pointer and one Commerce instance per project's store all rule out side by side.
- *   Each project reports into its own row, and one that fails does not stop the rest. Reset
- *   projects run grouped by IMS organization, so each other organization costs one sign-in switch.
+ * - **run** takes the answers and works the projects: deletes one at a time (each is quick); resets
+ *   side by side within an IMS organization, up to `RESETS_AT_ONCE` (owner, 2026-11-04: a reset
+ *   takes about six minutes). The token reaches one org, so orgs run one after another, each costing
+ *   one sign-in switch; resets that remove a pack's store data take turns, as nothing locks a
+ *   Commerce instance; the open-project pointer never moves (`createNonSwitchingStateManager`); and
+ *   a sign-in needed by several at once is asked once (both guards' `SingleFlight`), the window's
+ *   questions taking turns (`operationPrompt`). Each project reports into its own row, and one that
+ *   fails does not stop the rest.
  *
  * The single delete and reset are reused, not copied: `runProjectDelete`, and each reset's
  * answered run, which asks nothing and reports into this window.
@@ -20,11 +24,14 @@
 import * as vscode from 'vscode';
 import { deletablePackOf } from './demoPackDeletion';
 import { runProjectDelete } from './projectDeletionService';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { stageLine } from '@/core/utils/stageLine';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
+import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type {
@@ -58,7 +65,7 @@ export async function prepareDeleteBatch(context: HandlerContext, paths: readonl
     const projects = await loadAll(context, paths);
     return Promise.all(
         projects.map(async (project): Promise<BatchDeleteRow> => {
-            const row: BatchDeleteRow = { path: project.path, name: project.name };
+            const row: BatchDeleteRow = { path: project.path, name: getProjectDisplayName(project), ...summaryOf(project) };
             if (behavior === 'localOnly') return row;
             const eds = extractEdsMetadata(project);
             const shared = await sharedOnlineOf(context.stateManager, eds, paths);
@@ -73,11 +80,28 @@ export async function prepareDeleteBatch(context: HandlerContext, paths: readonl
 }
 
 /** A reset batch's screen: per project, the datapack the reset could remove and its changes. */
+/**
+ * What the confirm draws under a project's name: its storefront's repository, which a reset
+ * overwrites and a delete can remove, and its card's line for a project with none (owner,
+ * 2026-11-04: two projects of one package read the same).
+ */
+function summaryOf(project: Project): { repository?: string; summary?: string } {
+    const repository = extractEdsMetadata(project)?.githubRepo;
+    const summary = getBrandStackSummary(project);
+    return { ...(repository ? { repository } : {}), ...(summary ? { summary } : {}) };
+}
+
+/** A project's IMS organization as the SC knows it: its name, its id when it has none. */
+function orgOf(project: Project): { org?: string } {
+    const org = project.adobe?.organizationName ?? project.adobe?.organization;
+    return org ? { org } : {};
+}
+
 export async function prepareResetBatch(context: HandlerContext, paths: readonly string[]): Promise<BatchResetRow[]> {
     const projects = await loadAll(context, paths);
     return Promise.all(
         projects.map(async (project): Promise<BatchResetRow> => {
-            const row: BatchResetRow = { path: project.path, name: project.name };
+            const row: BatchResetRow = { path: project.path, name: getProjectDisplayName(project), ...summaryOf(project), ...orgOf(project) };
             if (!project.datapack || commerceBackendOf(project) === undefined) return row;
             const changes = await readRemovalChangesOf(context, project);
             const name = changes?.packName ?? project.datapack.name;
@@ -97,7 +121,8 @@ async function runRow(path: string, tell: TellRow, outer: ReportStage, work: (re
     tell({ path, state: 'running' });
     try {
         const outcome = await work((stage, step, position) => {
-            tell({ path, state: 'running', message: stage });
+            // The stage and how far through it, as the notification says it (owner, 2026-11-04).
+            tell({ path, state: 'running', message: stageLine(stage, position) });
             outer(stage, step, position);
         });
         if (outcome?.error) {
@@ -138,18 +163,76 @@ export async function runDeleteBatch(context: HandlerContext, answers: readonly 
     return failed;
 }
 
-/** The answers in run order: grouped by IMS organization, each group in the order picked. */
-export function byOrganization<T extends { path: string }>(answers: readonly T[], orgOf: (path: string) => string | undefined): T[] {
+/** The answers by IMS organization, in the order each org first appears, each in the order picked. */
+function groupsByOrganization<T extends { path: string }>(answers: readonly T[], orgOf: (path: string) => string | undefined): T[][] {
     const groups = new Map<string, T[]>();
     for (const answer of answers) {
         const org = orgOf(answer.path) ?? '';
         groups.set(org, [...(groups.get(org) ?? []), answer]);
     }
-    return [...groups.values()].flat();
+    return [...groups.values()];
+}
+
+/** The answers in run order: grouped by IMS organization, each group in the order picked. */
+export function byOrganization<T extends { path: string }>(answers: readonly T[], orgOf: (path: string) => string | undefined): T[] {
+    return groupsByOrganization(answers, orgOf).flat();
 }
 
 /**
- * Reset each project as answered, one at a time, grouped by IMS organization.
+ * How many resets run at once within one org (owner, 2026-11-04: a reset takes about six minutes).
+ * Three keeps the DA.live and Helix calls they share within what those services take before they
+ * ask to slow down (both retry a 429, nothing limits across projects).
+ */
+export const RESETS_AT_ONCE = 3;
+
+/**
+ * Run each item, up to `limit` at a time, in order; an item with a lane waits while another of its
+ * lane runs. Resolves with how many failed once every item has ended.
+ */
+function inParallel<T>(items: readonly T[], limit: number, laneOf: (item: T) => string | undefined, work: (item: T) => Promise<boolean>): Promise<number> {
+    const pending = [...items];
+    const busy = new Set<string>();
+    let running = 0;
+    let failed = 0;
+    return new Promise((resolve) => {
+        const next = (): void => {
+            if (pending.length === 0 && running === 0) {
+                resolve(failed);
+                return;
+            }
+            while (running < limit) {
+                const at = pending.findIndex((item) => {
+                    const lane = laneOf(item);
+                    return lane === undefined || !busy.has(lane);
+                });
+                if (at < 0) return;
+                const [item] = pending.splice(at, 1);
+                const lane = laneOf(item);
+                if (lane !== undefined) busy.add(lane);
+                running++;
+                void work(item)
+                    .then((ok) => (ok ? undefined : failed++), () => failed++)
+                    .finally(() => {
+                        running--;
+                        if (lane !== undefined) busy.delete(lane);
+                        next();
+                    });
+            }
+        };
+        next();
+    });
+}
+
+/**
+ * A reset that removes its pack's data plans the store's clearing before it clears; two at once
+ * could each plan before the other removed anything (no lock on a Commerce instance), so they take
+ * turns. A batch never clears other store data, so nothing else shares this lane.
+ */
+const REMOVES_STORE_DATA = 'removes-store-data';
+
+/**
+ * Reset each project as answered, grouped by IMS organization: an org's projects side by side, up to
+ * {@link RESETS_AT_ONCE} at a time, those removing a pack's store data taking turns.
  *
  * @returns how many failed
  */
@@ -160,17 +243,19 @@ export async function runResetBatch(
 ): Promise<number> {
     const { tell, report, runReset } = run;
     const projects = new Map((await loadAll(context, answers.map((answer) => answer.path))).map((project) => [project.path, project]));
-    const ordered = byOrganization(answers, (path) => projects.get(path)?.adobe?.organization);
-    tellWaiting(ordered.map((answer) => answer.path), tell);
-    let failed = 0;
-    for (const answer of ordered) {
-        const ok = await runRow(answer.path, tell, report, async (rowReport) => {
+    const groups = groupsByOrganization(answers, (path) => projects.get(path)?.adobe?.organization);
+    tellWaiting(groups.flat().map((answer) => answer.path), tell);
+    const resetOne = (answer: BatchResetAnswer): Promise<boolean> =>
+        runRow(answer.path, tell, report, async (rowReport) => {
             const project = projects.get(answer.path);
             if (!project) return { error: 'This project is no longer on this computer.' };
             const result = await runReset(context, project, answer, rowReport);
             return result.success ? undefined : { error: result.error ?? 'The reset did not finish.' };
         });
-        if (!ok) failed++;
+    // One org at a time, the token reaching one; within it, side by side (owner, 2026-11-04).
+    let failed = 0;
+    for (const group of groups) {
+        failed += await inParallel(group, RESETS_AT_ONCE, (answer) => (answer.removeDatapack ? REMOVES_STORE_DATA : undefined), resetOne);
     }
     return failed;
 }

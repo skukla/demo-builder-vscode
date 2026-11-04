@@ -36,9 +36,10 @@ has no setting to hide it on a short list (owner, 2026-11-02).
 
 ## Reset Selected and Delete Selected
 
-Select puts the list in selection mode (`useProjectSelection`); the batch window
-(`useProjectsBatch`, `ProjectsBatchModal`) asks once and then runs the projects ONE AT A
-TIME, a row each, the Updates window's shape. The work is `services/projectsBatch.ts`,
+Select Projects puts the list in selection mode (`useProjectSelection`); the batch window
+(`useProjectsBatch`, `ProjectsBatchModal`) asks once and then runs the projects, a row each, the
+Updates window's shape: deletes one at a time, resets side by side within an IMS org, up to three
+at once (owner, 2026-11-04). The work is `services/projectsBatch.ts`,
 reusing the single delete (`runProjectDelete`) and each reset's answered run. Only the
 ticked projects the filter shows count. Rationale and decisions:
 `.rptc/research/projects-bulk-actions/research.md`.

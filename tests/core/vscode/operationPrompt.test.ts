@@ -150,6 +150,27 @@ describe('a modal is hosting the operation', () => {
         expect(steps).toEqual(['checking', 'answered:Cancel']);
     });
 
+    // Resets run side by side in one window (owner, 2026-11-04): a second question waits its turn
+    // rather than taking the first one's place, which left the first never answered.
+    it('asks a second question once the first is answered, and each gets its own answer', async () => {
+        const send = jest.fn();
+        startModalRun('op-q', send);
+
+        const first = withModalAsking('op-q', () => askDuringOperation({ title: 'One', message: 'First?' }, 'Yes'));
+        const second = withModalAsking('op-q', () => askDuringOperation({ title: 'Two', message: 'Second?' }, 'Go'));
+        await settle();
+        const shown = () => send.mock.calls.map(([, payload]) => payload.prompt?.title).filter(Boolean);
+        expect(shown()).toEqual(['One']);
+
+        answerOperationPrompt('op-q', 'Yes');
+        await expect(first).resolves.toBe('Yes');
+        await settle();
+        expect(shown()).toEqual(['One', 'Two']);
+
+        answerOperationPrompt('op-q', 'Go');
+        await expect(second).resolves.toBe('Go');
+    });
+
     // Dismissing is an answer, not a silence: the guard reads undefined as cancelled.
     it('reads a dismissal as no answer', async () => {
         startModalRun('op-3', jest.fn());

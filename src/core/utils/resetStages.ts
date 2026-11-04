@@ -69,10 +69,12 @@ export const RESET_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'A page for each store category',
     },
+    // The live site serves what was written: the reset's code and its config (owner, 2026-11-04;
+    // the code check reported on step 2 until then, after the content had run).
     checkingSettings: {
-        label: 'Checking the settings',
+        label: 'Checking the live site',
         expectation: 'Usually a few seconds',
-        detail: 'The live site has the new config',
+        detail: 'What the live site now serves',
     },
     redeployingMesh: {
         label: 'Redeploying the mesh',

@@ -514,7 +514,8 @@ meant.
 > known before it starts. A count of pages, types, attempts or projects is a count, and
 > counts go on line 2 ("Copying the content: 32 of 64 pages", `countLine`). Line 3 is the
 > step's expectation and the run's clock, joined by the one middle dot this UI keeps on
-> purpose. A surface with one line (a notification, an agent's chat) shows the step
+> purpose ("Usually about a minute · 1 minute, 5 seconds"; kept again 2026-11-04, owner,
+> over the house writing rule that otherwise bans one). A surface with one line (a notification, an agent's chat) shows the step
 > alone, and a count it has no line 2 for is left out rather than moved up. The lines
 > are short by design: line 1 at most 25 characters, line 2 at most 40 of text we
 > write, line 3's expectation at most 25 with the clock after it.

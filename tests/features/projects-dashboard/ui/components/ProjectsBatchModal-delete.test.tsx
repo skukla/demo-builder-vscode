@@ -13,15 +13,16 @@ import {
     runRequest,
     type PrepareEnvelope,
 } from './ProjectsBatchModal.testUtils';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 const DELETE: PrepareEnvelope = {
     success: true,
     data: {
         action: 'delete',
         rows: [
-            { path: '/p/a', name: 'A', repo: { name: 'me/a', ticked: true }, site: { name: 'org/a', ticked: true } },
-            { path: '/p/b', name: 'B', repo: { name: 'me/b', ticked: false } },
-            { path: '/p/c', name: 'C' },
+            { path: '/p/a', name: asDisplayName('A'), repo: { name: asDisplayName('me/a'), ticked: true }, site: { name: asDisplayName('org/a'), ticked: true } },
+            { path: '/p/b', name: asDisplayName('B'), repo: { name: asDisplayName('me/b'), ticked: false } },
+            { path: '/p/c', name: asDisplayName('C') },
         ],
     },
 };
@@ -37,7 +38,8 @@ describe('ProjectsBatchModal: Delete Selected', () => {
         await openOn('delete', DELETE);
 
         expect(mockRequest).toHaveBeenCalledWith('prepareProjectsBatch', { action: 'delete', projectPaths: ['/p/a', '/p/b', '/p/c'] });
-        expect(await screen.findByRole('dialog', { name: 'Delete Projects' })).toBeInTheDocument();
+        // A dangerous confirm carries the amber icon (dialog design rules).
+        expect(await screen.findByRole('dialog', { name: 'Delete Projects' })).toHaveAttribute('data-status', 'warning');
         expect(screen.queryByText('Reading Projects')).toBeNull();
     });
 

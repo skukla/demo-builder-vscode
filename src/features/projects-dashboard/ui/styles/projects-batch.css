@@ -23,6 +23,12 @@
         border-bottom: 0;
     }
 
+    /* Nor the list row's padding: with it the row stood taller than a button, and entering
+       selection mode dropped every card (owner, 2026-11-04). */
+    .projects-select-bar .select-all-row .checkbox-row {
+        padding: 0;
+    }
+
     .project-select-box {
         display: inline-flex;
         flex-shrink: 0;
@@ -51,6 +57,19 @@
     .batch-delete-table tbody th {
         width: 100%;
         white-space: normal;
+    }
+
+    /* A name with its line under it (owner, 2026-11-04): rows the run's rows' distance apart,
+       a hairline between them. */
+    .batch-delete-table tbody th,
+    .batch-delete-table tbody td {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .batch-delete-table tbody tr + tr > th,
+    .batch-delete-table tbody tr + tr > td {
+        border-top: 1px solid var(--spectrum-global-color-gray-200);
     }
 
     .batch-delete-table thead th {
@@ -124,6 +143,30 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
+    }
+
+    /* The confirm's projects apart as the run's rows are: a hairline between (owner, 2026-11-04). */
+    .batch-reset-row + .batch-reset-row {
+        padding-top: 12px;
+        border-top: 1px solid var(--spectrum-global-color-gray-200);
+    }
+
+    /* A reset's org, over its projects, when the run spans several: the Updates window's group
+       name, 24 above its group. */
+    .projects-batch-org {
+        margin: 24px 0 4px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--spectrum-global-color-gray-900);
+    }
+
+    .projects-batch-org:first-child {
+        margin-top: 0;
+    }
+
+    /* "Took 7 minutes, 20 seconds" under the run's rows, set off from the last one. */
+    .projects-batch-took {
+        margin-top: 12px;
     }
 
     .batch-reset-changes {

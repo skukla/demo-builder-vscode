@@ -1,6 +1,6 @@
 /**
  * One setup step as the confirm in front of adding the ERP integration lists it (AB-77,
- * owner 2026-10-22): its icon, its label with its state beside it, and what to read under it.
+ * owner 2026-10-22): its icon, its label with its state under it, and what to read under that.
  * Drawn as the Updates modal draws its run (`WorkRow`).
  *
  * This file held "Prepare this store"'s window and the confirms in front of the setup guide's
@@ -59,7 +59,7 @@ function linesUnder(step: PreparationStepReport): string[] {
 
 /**
  * One step of a preparation preview, drawn as the Updates modal draws its run
- * (`WorkRow`): its icon, its label with its state beside it, then what it changes, what
+ * (`WorkRow`): its icon, its label with its state under it, then what it changes, what
  * Commerce refused, what its check found, and what it leaves by hand. It was bare text, the
  * state run into the note after it (owner, 2026-10-26). The confirm in front of adding the
  * ERP integration lists its steps with it.

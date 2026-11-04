@@ -19,12 +19,29 @@ import { BatchDeleteQuestions } from './BatchDeleteQuestions';
 import { BatchResetQuestions } from './BatchResetQuestions';
 import { ProjectsBatchRunView } from './ProjectsBatchRunView';
 import { promptButtons } from './UpdatesModal';
+import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { ProjectsBatchAction } from '@/types/projectsBatch';
-import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 const NO_ACTIONS: ActionButton[] = [];
+
+/** The question the run is paused on, while it is. A task's heading is the window's title. */
+function askingOf(controls: ProjectsBatchControls): OperationPrompt | undefined {
+    const { view, progress } = controls;
+    if (view.phase !== 'running' || progress?.state !== 'running') return undefined;
+    return progress.prompt;
+}
+
+/**
+ * Whether the dismiss is Cancel. A question with fields (a sign-in) has no answer that does not go
+ * on, so Cancel is its way out: that project stops and the rest go on. One with only buttons
+ * answers with them, its safe one among them (the Updates run's rule, 2026-10-21).
+ */
+function cancels(prompt: OperationPrompt): boolean {
+    return Boolean(prompt.fields?.length);
+}
 
 /** The action and how many projects it is on, whatever the phase. */
 function subjectOf(view: Exclude<BatchView, { phase: 'closed' }>): { action: ProjectsBatchAction; count: number } {
@@ -59,12 +76,15 @@ function titleOf(controls: ProjectsBatchControls): string {
     const { action } = subjectOf(view);
     if (view.phase !== 'running') return action === 'delete' ? 'Delete Projects' : 'Reset Projects';
     if (progress?.state === 'succeeded' || progress?.state === 'failed') return endTitle(action, progress);
-    return runningTitle(action);
+    return askingOf(controls)?.title ?? runningTitle(action);
 }
 
 function statusOf(controls: ProjectsBatchControls): ModalStatus | undefined {
     const { view, progress } = controls;
     if (view.phase === 'unread' || (view.phase === 'running' && progress?.state === 'failed')) return 'error';
+    if (askingOf(controls)?.title) return 'warning';
+    // Both confirms are dangerous: amber, as the dialog rules have it.
+    if (view.phase === 'asking') return 'warning';
     if (view.phase !== 'running' || progress?.state !== 'succeeded') return undefined;
     return progress.warning ? 'warning' : 'success';
 }
@@ -72,7 +92,7 @@ function statusOf(controls: ProjectsBatchControls): ModalStatus | undefined {
 /** The run's dismiss: into the background while it goes, Close once it has ended. */
 function closeLabelOf(controls: ProjectsBatchControls): string {
     const { view, progress } = controls;
-    if (view.phase === 'asking') return 'Cancel';
+    if (view.phase === 'asking' || askingOf(controls)) return 'Cancel';
     const going = view.phase === 'running' && progress?.state !== 'succeeded' && progress?.state !== 'failed';
     return going ? 'Run in Background' : 'Close';
 }
@@ -82,7 +102,12 @@ function actionsOf(controls: ProjectsBatchControls): ActionButton[] {
     const { view, progress, choices } = controls;
     if (view.phase === 'running') {
         const ended = progress?.state === 'succeeded' || progress?.state === 'failed';
-        if (!ended && progress?.prompt) return promptButtons(progress.prompt, controls.answer);
+        // A Cancel among the answers is the dismiss's when the dismiss shows, drawn once (two
+        // Cancels, 2026-10-23); with the dismiss hidden it is the question's own way out.
+        if (!ended && progress?.prompt) {
+            const buttons = promptButtons(progress.prompt, controls.answer);
+            return cancels(progress.prompt) ? buttons.filter((button) => button.label !== 'Cancel') : buttons;
+        }
         if (progress?.state !== 'failed') return NO_ACTIONS;
         return [{ label: 'Open Debug Logs', variant: 'secondary', onPress: () => webviewClient.postMessage('openDebugLogs', {}) }];
     }
@@ -91,7 +116,8 @@ function actionsOf(controls: ProjectsBatchControls): ActionButton[] {
     const label = runLabel(questions.action, questions.rows.length);
     if (questions.action === 'delete') return [{ label, variant: 'negative', onPress: controls.run }];
     const ready = resetIsReady(questions.rows, choices.removeDatapack, choices.fields);
-    return [{ label, variant: 'accent', onPress: controls.run, isDisabled: !ready }];
+    // Red, as Delete's: a reset replaces each project's code (owner, 2026-11-04).
+    return [{ label, variant: 'negative', onPress: controls.run, isDisabled: !ready }];
 }
 
 function BodyOf({ controls }: { controls: ProjectsBatchControls }): React.ReactElement | null {
@@ -102,11 +128,16 @@ function BodyOf({ controls }: { controls: ProjectsBatchControls }): React.ReactE
     }
     if (view.phase === 'asking') return <BatchResetQuestions rows={view.questions.rows} choices={controls.choices} />;
     if (view.phase !== 'running') return null;
+    const asking = askingOf(controls);
+    if (asking && questionTakesWindow(asking)) {
+        return <OperationQuestion prompt={asking} onTyped={controls.onTyped} />;
+    }
     return (
         <ProjectsBatchRunView
             rows={view.rows}
             order={controls.order}
             statuses={controls.statuses}
+            timings={controls.timings}
             progress={controls.progress}
             onTyped={controls.onTyped}
         />
@@ -121,19 +152,21 @@ function waitOf(view: BatchView): { message: string } | false {
 
 /** The batch window; nothing while closed. */
 export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchControls }): React.ReactElement {
-    const { view, progress } = controls;
-    const asking = view.phase === 'running' && progress?.prompt && progress.state === 'running';
+    const { view } = controls;
+    const asking = askingOf(controls);
+    // Cancel on a question answers it and keeps the window: the run goes on to the next project.
+    const dismiss = asking ? () => controls.answer(undefined) : controls.close;
     return (
-        <DialogContainer onDismiss={controls.close}>
+        <DialogContainer onDismiss={dismiss}>
             {view.phase !== 'closed' && (
                 <Modal
                     title={titleOf(controls)}
                     status={statusOf(controls)}
                     size="L"
                     fitContent
-                    onClose={controls.close}
+                    onClose={dismiss}
                     closeLabel={closeLabelOf(controls)}
-                    hideClose={Boolean(asking)}
+                    hideClose={asking ? !cancels(asking) : false}
                     actionButtons={actionsOf(controls)}
                     waiting={waitOf(view)}
                 >

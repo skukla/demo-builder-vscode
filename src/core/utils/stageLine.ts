@@ -45,7 +45,8 @@ export function stepUnder(stage: string, step: string | undefined): string | und
  * Line 3: what to expect, and how long the whole run has been going. Never empty: the
  * row holds its height whether or not either is known, so the display does not resize
  * as stages come and go. The middle dot between the two is deliberate, the one place
- * this UI joins two phrases with one (owner, 2026-10-16; handbook, progress).
+ * this UI joins two phrases with one (owner, 2026-10-16, kept again 2026-11-04; the handbook's
+ * progress convention and `dialog-design.md`'s Words). Do not "fix" it.
  *
  * @param expectation - the stage's expectation from the stage table
  * @param clock - how long the run has been going ("2 minutes, 40 seconds")

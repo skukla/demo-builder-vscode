@@ -32,6 +32,7 @@ import React, { useState } from 'react';
 import { APPLYING_TITLE, type RowStatuses, type UpdatesModalControls } from '../hooks/useUpdatesModal';
 import { groupsOf, type RowGroup } from './updateGroups';
 import { UpdatesRunView } from './UpdatesRunView';
+import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { DisclosureToggle } from '@/core/ui/components/ui/DisclosureToggle';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
@@ -150,7 +151,13 @@ function runChrome(controls: UpdatesModalControls): Chrome {
     const { progress } = controls;
     const ended = progress?.state === 'succeeded' || progress?.state === 'failed';
     if (!ended && progress?.prompt) {
-        return { hideClose: true, actions: promptButtons(progress.prompt, controls.answer) };
+        // A question with fields (a sign-in) has no answer that does not go on: Cancel is its
+        // way out, and a Cancel among its answers is the dismiss's, drawn once (2026-11-04).
+        const buttons = promptButtons(progress.prompt, controls.answer);
+        if (progress.prompt.fields?.length) {
+            return { closeLabel: 'Cancel', actions: buttons.filter((b) => b.label !== 'Cancel') };
+        }
+        return { hideClose: true, actions: buttons };
     }
     if (!ended) return { closeLabel: 'Run in Background', actions: NO_ACTIONS };
     if (progress?.state !== 'failed') return { closeLabel: 'Close', actions: backTo(controls) };
@@ -182,9 +189,20 @@ function backTo(controls: UpdatesModalControls): ActionButton[] {
     return [{ label: 'Back to Updates', variant: 'secondary', onPress: controls.back, isPending: controls.rechecking }];
 }
 
+/** The question the run is paused on, while it is. */
+function askingOf(controls: UpdatesModalControls): OperationPrompt | undefined {
+    const { progress } = controls;
+    return progress?.state === 'running' ? progress.prompt : undefined;
+}
+
 /** What the modal shows: its title, body, dismiss label and the buttons beside it. */
 function contentFor(controls: UpdatesModalControls): Chrome & Heading & { body: React.ReactNode } {
     const { view } = controls;
+    const asking = askingOf(controls);
+    if (view.phase === 'applying' && asking && questionTakesWindow(asking)) {
+        const body = <OperationQuestion prompt={asking} onTyped={controls.onTyped} />;
+        return { title: asking.title ?? APPLYING_TITLE, status: 'warning', body, ...runChrome(controls) };
+    }
     if (view.phase === 'applying') {
         const body = (
             <UpdatesRunView
@@ -203,7 +221,9 @@ function contentFor(controls: UpdatesModalControls): Chrome & Heading & { body: 
     return {
         title: LIST_TITLE,
         body: <UpdateList rows={rows} controls={controls} />,
-        actions: [{ label, variant: 'accent', onPress: controls.apply, isDisabled: count === 0 }],
+        actions: [
+            { label, variant: 'accent', onPress: controls.apply, isDisabled: count === 0, sizeLabels: applyLabelsOf(rows) },
+        ],
     };
 }
 
@@ -211,15 +231,18 @@ function contentFor(controls: UpdatesModalControls): Chrome & Heading & { body: 
 export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): React.ReactElement {
     const open = controls.view.phase !== 'closed';
     const content = open ? contentFor(controls) : undefined;
+    // Cancel on a sign-in answers it and keeps the window for the rest of the run.
+    const signingIn = controls.view.phase === 'applying' && Boolean(askingOf(controls)?.fields?.length);
+    const dismiss = signingIn ? () => controls.answer(undefined) : controls.close;
     return (
-        <DialogContainer onDismiss={controls.close}>
+        <DialogContainer onDismiss={dismiss}>
             {content && (
                 <Modal
                     title={content.title}
                     status={content.status}
                     size="L"
                     fitContent
-                    onClose={controls.close}
+                    onClose={dismiss}
                     closeLabel={content.closeLabel}
                     hideClose={content.hideClose}
                     actionButtons={content.actions}
@@ -229,6 +252,12 @@ export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): 
             )}
         </DialogContainer>
     );
+}
+
+/** The labels Apply can take besides none ticked: one, and every row that can be ticked. */
+function applyLabelsOf(rows: PendingUpdateRow[]): string[] {
+    const tickable = rows.filter((r) => !r.lockedReason).length;
+    return tickable > 1 ? [applyLabel(1), applyLabel(tickable)] : [applyLabel(1)];
 }
 
 /** The Apply button names what it will do; with nothing ticked it names no number (2026-11-03: "Apply 0 Updates"). */

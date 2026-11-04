@@ -484,10 +484,13 @@ export interface OperationPrompt {
      * The heading: what the SC is asked to do ("Sign in to Adobe"). Every question
      * with buttons has its own; one generic heading over all of them, "Waiting for
      * you", said nothing the sentence under it did not (owner, 2026-10-23). A
-     * question with fields sits under the modal's title and needs none.
+     * question with fields sits under the modal's title and needs none, unless it is a
+     * task of its own (a sign-in): then its heading takes the window (owner, 2026-11-04).
      */
     title?: string;
     message: string;
+    /** How to get what the fields ask for, as numbered steps under the sentence. */
+    steps?: string[];
     /** The answers, the first being the one that continues the work. */
     actions: string[];
     /**

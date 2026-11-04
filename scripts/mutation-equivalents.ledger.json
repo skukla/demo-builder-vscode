@@ -8761,10 +8761,10 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 226,
+            "line": 252,
             "mutants": 1,
             "category": "block",
-            "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function. Re-anchored 2026-10-19 (225 -> 226): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function. Re-anchored 2026-10-19 (225 -> 226): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-11-04 (226 -> 252): unchanged code, moved when ACCS creations began recording the Adobe organization (F11).",
             "decision": "none \u2014 the catch assignment and the absent one are indistinguishable to every caller",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
@@ -8774,10 +8774,10 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 241,
+            "line": 267,
             "mutants": 1,
             "category": "block",
-            "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function. Re-anchored 2026-10-19 (240 -> 241): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function. Re-anchored 2026-10-19 (240 -> 241): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-11-04 (241 -> 267): unchanged code, moved when ACCS creations began recording the Adobe organization (F11).",
             "decision": "none \u2014 the catch assignment and the absent one are indistinguishable to every caller",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"

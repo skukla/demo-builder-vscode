@@ -12,6 +12,7 @@ import React from 'react';
 import { ProjectsDashboard, type ProjectsDashboardProps } from '@/features/projects-dashboard/ui/ProjectsDashboard';
 import type { ListBatch } from '@/features/projects-dashboard/ui/components/SelectionActions';
 import { createMockProjects, createProjectsDashboardProject } from '../testUtils';
+import { ruleFor } from '../../../helpers/cssRules';
 
 const PROJECTS = [
     ...createMockProjects(3),
@@ -38,14 +39,14 @@ function renderDashboard(overrides: Partial<ProjectsDashboardProps> = {}) {
 }
 
 const tile = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name},`) });
-const enterSelection = () => fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+const enterSelection = () => fireEvent.click(screen.getByRole('button', { name: 'Select Projects' }));
 const selectAll = () => screen.getByRole('checkbox', { name: 'Select All' });
 
 describe('ProjectsDashboard: selection mode', () => {
     it('offers Select only with a batch window to open', () => {
         renderDashboard({ batch: undefined });
 
-        expect(screen.queryByRole('button', { name: 'Select' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Select Projects' })).toBeNull();
     });
 
     it('Select swaps the count for Select All and the selected count, with the actions', () => {
@@ -168,6 +169,14 @@ describe('ProjectsDashboard: selection mode', () => {
 
         rerenderWith({ batch: { ...batch, runs: 1 } });
 
-        expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Select Projects' })).toBeInTheDocument();
+    });
+});
+
+// Entering selection mode made the count row taller and dropped every card (owner, 2026-11-04):
+// Select All brought its list row's padding. Asserted against the stylesheet: jsdom has no layout.
+describe('the count row in selection mode', () => {
+    it('takes no padding from Select All, so the row keeps a button height', () => {
+        expect(ruleFor('.projects-select-bar .select-all-row .checkbox-row')).toMatch(/padding:\s*0;/);
     });
 });

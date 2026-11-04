@@ -25,6 +25,12 @@ export interface ActionButton {
      * new label rather than as waiting (owner, 2026-10-31).
      */
     isPending?: boolean;
+    /**
+     * Every other label this button can show while the dialog is open. The button holds the
+     * widest one's width from the start, so the buttons beside it never move when its label
+     * changes (owner, 2026-11-04: ticking a row in Updates moved Close).
+     */
+    sizeLabels?: string[];
 }
 
 export interface ModalProps {
@@ -172,6 +178,21 @@ function FocusableButton({ variant, onPress, isDisabled: disabled, isPending, pe
     );
 }
 
+/** The label over every label it may become, drawn hidden in one cell: the widest sets the width. */
+function SizedLabel({ label, sizeLabels }: { label: string; sizeLabels?: string[] }): React.JSX.Element {
+    if (!sizeLabels?.length) return <>{label}</>;
+    return (
+        <span className="modal-button-sized">
+            {sizeLabels.map((other) => (
+                <span key={other} className="modal-button-sizer" aria-hidden="true">
+                    {other}
+                </span>
+            ))}
+            <span>{label}</span>
+        </span>
+    );
+}
+
 /** One footer button, keyed by its place in its group. */
 function renderButton(button: ActionButton, index: number): React.JSX.Element {
     return (
@@ -183,7 +204,7 @@ function renderButton(button: ActionButton, index: number): React.JSX.Element {
             isPending={button.isPending}
             pendingName={button.label}
         >
-            {button.label}
+            <SizedLabel label={button.label} sizeLabels={button.sizeLabels} />
         </FocusableButton>
     );
 }

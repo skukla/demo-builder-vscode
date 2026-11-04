@@ -57,6 +57,7 @@ import {
     isMeshRequired,
 } from '@/features/components/services/demoPackageLoader';
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
+import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { mapBackendToEnvironmentType } from '@/features/eds/services/storefrontConfigParams';
@@ -140,6 +141,31 @@ const NEEDS_ADOBE = {
     message:
         'Adobe sign-in required (this project deploys an API Mesh). Use get_auth_status, then sign_in(provider:"adobe", confirm:true).',
 };
+
+const NEEDS_ADOBE_ORG = {
+    needsAuth: 'adobe',
+    message:
+        'Adobe sign-in required (an ACCS project records its Adobe organization). Use get_auth_status, then sign_in(provider:"adobe", confirm:true).',
+};
+
+const NO_SESSION_ORG = {
+    error: 'An Adobe organization is required for an ACCS project. Select one first: select_org.',
+};
+
+/**
+ * The Adobe organization an ACCS project records, as the wizard records it at its Sign-in step.
+ * Only the MCP session's (`select_org`): the machine's last selection is whatever another window
+ * chose, and recording it is the fiction a mesh-free creation is kept from.
+ */
+async function requireAdobeOrg(ctx: HandlerContext): Promise<{ org: WizardState['adobeOrg'] } | { error: unknown }> {
+    const mgr = ctx.authManager;
+    if (!mgr || !(await mgr.isAuthenticated())) return { error: NEEDS_ADOBE_ORG };
+    const stored = getAdobeTarget();
+    if (!stored?.orgId) return { error: NO_SESSION_ORG };
+    return {
+        org: { id: stored.orgId, code: stored.orgCode ?? '', name: stored.orgName ?? '' } as WizardState['adobeOrg'],
+    };
+}
 
 /** Resolve current Adobe context, or a structured handoff/precondition error. */
 async function requireAdobeWorkspace(ctx: HandlerContext): Promise<
@@ -291,21 +317,28 @@ interface CreateArgs {
 type AdobeContext = Exclude<Awaited<ReturnType<typeof requireAdobeWorkspace>>, { error: unknown }>;
 
 /**
- * The Adobe workspace the creation deploys into, when it deploys anything: a
- * mesh the package + stack requires, or the integrations a project file names.
- * A creation that deploys nothing needs no Adobe sign-in and gets none.
+ * The Adobe context a creation records. One that deploys (a mesh the package + stack requires, or
+ * the integrations a project file names) needs the workspace it deploys into. One on ACCS that
+ * deploys nothing still records its organization, as the wizard's Sign-in step does for every
+ * ACCS project (owner, 2026-11-04: `patch-canary-b2b` was made with none, and a Commerce write on
+ * it later had no credential). Anything else needs no Adobe sign-in and gets none.
  */
 async function adobeIfDeploying(
     ctx: HandlerContext,
     args: CreateArgs,
     pkg: DemoPackage,
-): Promise<{ adobe?: AdobeContext } | { error: unknown }> {
+): Promise<{ adobe?: Partial<AdobeContext> } | { error: unknown }> {
     const deploys =
         isMeshRequired(pkg, args.stackId) ||
         (args.seed?.selectedAppBuilderComponents?.length ?? 0) > 0;
-    if (!deploys) return {};
-    const resolved = await requireAdobeWorkspace(ctx);
-    return 'error' in resolved ? resolved : { adobe: resolved };
+    if (deploys) {
+        const resolved = await requireAdobeWorkspace(ctx);
+        return 'error' in resolved ? resolved : { adobe: resolved };
+    }
+    const backend = getStackById(args.stackId)?.backend;
+    if (commerceBackendOf({ componentSelections: { backend } }) !== 'accs') return {};
+    const org = await requireAdobeOrg(ctx);
+    return 'error' in org ? org : { adobe: { org: org.org } };
 }
 
 /** A file's settings under the call's own: a value the call states wins. */
@@ -712,7 +745,7 @@ export function registerCreateProjectTool(
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project',
             description:
-                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. storeScope sets the store codes at creation, as configure_project does. Can pause for the user mid-run (a new repo needs the AEM Code Sync GitHub App, which only they can install): they are prompted in VS Code and the call resumes by itself, up to 30 minutes — tell them, and do not retry while it runs. Requires confirm:true",
+                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. storeScope sets the store codes at creation, as configure_project does. Can pause for the user mid-run (a new repo needs the AEM Code Sync GitHub App, which only they can install): they are prompted in VS Code and the call resumes by itself, up to 30 minutes — tell them, and do not retry while it runs. An ACCS stack records the session's Adobe organization, as the wizard does: sign in and select_org first. Requires confirm:true",
             inputSchema: {
                 projectName: z.string().describe('Name for the new project'),
                 package: z

@@ -33,6 +33,7 @@ import {
     checkDaLiveAuth,
     checkGitHubAppInstallation,
     checkOrgContext,
+    recordSignedInOrg,
 } from './edsResetPreflight';
 import {
     beginSampleDataRemovalCheck,
@@ -48,6 +49,7 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { resetStageLabel } from '@/core/utils/resetStages';
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
+import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -279,8 +281,10 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 // an Adobe org — that covers mesh (a mesh IS an Adobe I/O project, so
                 // it always has `project.adobe`) AND non-mesh ACCS. This ensures a
                 // reset never runs against the wrong org; the gate aborts with a
-                // "Switch IMS Org" prompt, mirroring DeployMeshCommand.
-                if (project.adobe?.organization) {
+                // "Switch IMS Org" prompt, mirroring DeployMeshCommand. An ACCS project
+                // with NO org signs in too, and gains the org it lands in (F11).
+                const accs = commerceBackendOf(project) === 'accs';
+                if (project.adobe?.organization || accs) {
                     report(OPERATION_STAGES.checkingRequirements.label, 'Your Adobe sign-in');
                     const adobeResult = await checkAdobeAuth(
                         project,
@@ -292,6 +296,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     if (adobeResult) return adobeResult;
 
                     report(OPERATION_STAGES.checkingRequirements.label, 'The Adobe organization');
+                    await recordSignedInOrg(project, context, options.meshDeps.authManager, logPrefix);
                     const orgResult = await checkOrgContext(
                         project,
                         context,

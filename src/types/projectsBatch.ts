@@ -1,12 +1,14 @@
 /**
  * Resetting or deleting several projects at once, from the projects list (owner, 2026-11-04,
  * `.rptc/research/projects-bulk-actions/research.md`): the questions asked once, up front, then one
- * window with a row per project, run one at a time, as the Updates window runs its rows.
+ * window with a row per project, as the Updates window runs its rows: deletes one at a time, resets
+ * side by side within an org (`projectsBatch.ts`).
  *
  * @module types/projectsBatch
  */
 
 import type { UpdateRowState } from './pendingUpdates';
+import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
 
 export type ProjectsBatchAction = 'reset' | 'delete';
 
@@ -27,7 +29,12 @@ export interface BatchDeleteOption {
 /** One project of a delete batch: only the options it has, and none another project still uses. */
 export interface BatchDeleteRow {
     path: string;
-    name: string;
+    /** As its card names it (`getProjectDisplayName`): a folder name fails to compile. */
+    name: ProjectDisplayName;
+    /** Its storefront's GitHub repository ("skukla/bodea"): drawn under the name, over the summary. */
+    repository?: string;
+    /** What the project is, as its card says it ("Bodea, Edge Delivery + ACCS"). */
+    summary?: string;
     repo?: BatchDeleteOption;
     site?: BatchDeleteOption;
     datapack?: BatchDeleteOption;
@@ -48,7 +55,14 @@ export interface BatchResetDatapack {
 /** One project of a reset batch. */
 export interface BatchResetRow {
     path: string;
-    name: string;
+    /** As its card names it (`getProjectDisplayName`): a folder name fails to compile. */
+    name: ProjectDisplayName;
+    /** Its storefront's GitHub repository ("skukla/bodea"): drawn under the name, over the summary. */
+    repository?: string;
+    /** What the project is, as its card says it ("Bodea, Edge Delivery + ACCS"). */
+    summary?: string;
+    /** Its IMS organization, by name (its id without one): the run is grouped by it. */
+    org?: string;
     /** Present when the project has a datapack the reset can remove. */
     datapack?: BatchResetDatapack;
 }

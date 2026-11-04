@@ -32,7 +32,7 @@ Consequences:
 1. Any flow needing an org guard (dashboard status, mesh deploy, new features) calls `detectProjectOrgMismatch` — do NOT write `currentOrg.id !== project.adobe.organization` comparisons.
 2. `ensureOrgContext` NEVER runs `aio console * select`; per-op targeting uses env vars, never mutates the global CLI selection.
 3. Org-switch recovery = **forced** login (`force=true`, user-facing label "Switch IMS Org") → re-run the check to VERIFY the landed org → if still wrong, surface the no-loop hint (another browser tab holds a different org's SSO session). Session-expiry re-auth stays **non-forced** (`handleReAuthenticate`, `ensureAdobeIOAuth`).
-4. Projects store an org **id** only (`project.adobe.organization`) — no org name; don't add one.
+4. A project's org is its **id** (`project.adobe.organization`); `organizationName` beside it is display only, written by the wizard and kept current by the on-open check's self-heal (`orgContextCheck.ts` `selfHealOrgData`). Match orgs by id, never by name. Every ACCS project records its org, the wizard's and an agent's (`create_project`, 2026-11-04).
 5. New Console-API calls that can 403 map the failure to `ErrorCode.ORG_MISMATCH`, not a generic error.
 
 ## Verify

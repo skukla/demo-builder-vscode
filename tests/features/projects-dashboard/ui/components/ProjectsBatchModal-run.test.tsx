@@ -5,7 +5,7 @@
  * Every close after a run refreshes the list.
  */
 
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import {
     mockPostMessage,
     openOn,
@@ -14,20 +14,34 @@ import {
     resetBatchMocks,
     type PrepareEnvelope,
 } from './ProjectsBatchModal.testUtils';
+import type { OperationPrompt } from '@/types/webviewPayloads';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 const DELETE: PrepareEnvelope = {
     success: true,
     data: {
         action: 'delete',
         rows: [
-            { path: '/p/a', name: 'A' },
-            { path: '/p/b', name: 'B' },
-            { path: '/p/c', name: 'C' },
+            { path: '/p/a', name: asDisplayName('A') },
+            { path: '/p/b', name: asDisplayName('B') },
+            { path: '/p/c', name: asDisplayName('C') },
         ],
     },
 };
 
 const ID = PROJECTS_BATCH_OPERATION_ID;
+
+/** The DA.live sign-in as the extension asks it: a heading, two steps, two fields. */
+const SIGN_IN: OperationPrompt = {
+    title: 'Sign In to DA.live',
+    message: 'Your DA.live session has expired.',
+    steps: ['Open DA.live and run the bookmarklet.', 'Paste the token it copies.'],
+    actions: ['Sign In', 'Open DA.live'],
+    fields: [
+        { id: 'orgName', label: 'DA.live Namespace', value: 'acme' },
+        { id: 'token', label: 'Token', secret: true },
+    ],
+};
 
 /** The window open on the questions, then Delete pressed: the run under way. */
 async function running() {
@@ -63,7 +77,9 @@ describe('ProjectsBatchModal: the run', () => {
         ]);
     });
 
-    it("the running row says its step; a failed row says why under its name; a done row says nothing", async () => {
+    // Every row two lines, so none changes height as the run goes (owner, 2026-11-04): waiting,
+    // the step, Finished, or why it failed.
+    it('says under each name where it stands: Waiting, its step, Finished, or why it failed', async () => {
         await running();
         for (const path of ['/p/a', '/p/b', '/p/c']) await push('projectsBatchRow', { path, state: 'waiting' });
 
@@ -77,11 +93,122 @@ describe('ProjectsBatchModal: the run', () => {
             ['C', 'running'],
         ]);
         const [a, b, c] = Array.from(document.querySelectorAll('.work-row')) as HTMLElement[];
-        expect(a.querySelector('.checkbox-row-detail')).toBeNull();
+        expect(within(a).getByText('Finished')).toHaveClass('work-row-detail');
         expect(within(b).getByText('The repository could not be deleted.')).toHaveClass('work-row-why');
-        expect(within(c).getByText('Deleting the DA.live site')).toHaveClass('checkbox-row-detail');
+        expect(b.querySelector('.work-row-detail')).toBeNull();
+        expect(within(c).getByText('Deleting the DA.live site')).toHaveClass('work-row-detail');
     });
 
+    // Org headings only when a batch spans several orgs (owner, 2026-11-04): one org needs none.
+    it('heads each org of a reset only when there is more than one', async () => {
+        const reset: PrepareEnvelope = {
+            success: true,
+            data: {
+                action: 'reset',
+                rows: [
+                    { path: '/p/a', name: asDisplayName('A'), org: 'Demo Org' },
+                    { path: '/p/c', name: asDisplayName('C'), org: 'Demo Org' },
+                    { path: '/p/b', name: asDisplayName('B'), org: 'Sandbox' },
+                ],
+            },
+        };
+        const opened = await openOn('reset', reset);
+        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await opened.user.click(screen.getByRole('button', { name: 'Reset 3 Projects' }));
+        await push('operationProgress', { id: ID, state: 'running' });
+
+        const headings = Array.from(document.querySelectorAll('.projects-batch-org')).map((h) => h.textContent);
+        expect(headings).toEqual(['Demo Org', 'Sandbox']);
+    });
+
+    // A project file can record no org (patch-canary-b2b, owner 2026-11-04): unknown is not a
+    // second org, so one known org beside it draws no heading.
+    it('draws no org heading for one known org beside a project that records none', async () => {
+        const reset: PrepareEnvelope = {
+            success: true,
+            data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A') }, { path: '/p/b', name: asDisplayName('B'), org: 'Demo Org' }] },
+        };
+        const opened = await openOn('reset', reset);
+        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await opened.user.click(screen.getByRole('button', { name: 'Reset 2 Projects' }));
+        await push('operationProgress', { id: ID, state: 'running' });
+
+        expect(document.querySelector('.projects-batch-org')).toBeNull();
+    });
+
+    it('heads an unrecorded org as unknown when there are two known orgs', async () => {
+        const reset: PrepareEnvelope = {
+            success: true,
+            data: {
+                action: 'reset',
+                rows: [{ path: '/p/a', name: asDisplayName('A'), org: 'Demo Org' }, { path: '/p/b', name: asDisplayName('B') }, { path: '/p/c', name: asDisplayName('C'), org: 'Sandbox' }],
+            },
+        };
+        const opened = await openOn('reset', reset);
+        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await opened.user.click(screen.getByRole('button', { name: 'Reset 3 Projects' }));
+        await push('operationProgress', { id: ID, state: 'running' });
+
+        const headings = Array.from(document.querySelectorAll('.projects-batch-org')).map((h) => h.textContent);
+        expect(headings).toEqual(['Demo Org', 'Organization Unknown', 'Sandbox']);
+    });
+
+    it('draws no org heading when every project is in one org', async () => {
+        const reset: PrepareEnvelope = {
+            success: true,
+            data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A'), org: 'Demo Org' }, { path: '/p/b', name: asDisplayName('B'), org: 'Demo Org' }] },
+        };
+        const opened = await openOn('reset', reset);
+        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await opened.user.click(screen.getByRole('button', { name: 'Reset 2 Projects' }));
+        await push('operationProgress', { id: ID, state: 'running' });
+
+        expect(document.querySelector('.projects-batch-org')).toBeNull();
+    });
+
+    // How long each project has taken, as the single progress window keeps its clock (owner,
+    // 2026-11-04): counting on the running row, kept on a finished one, at the row's end.
+    it("counts the running row's time and keeps a finished row's", async () => {
+        await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'running' });
+        await act(async () => {
+            jest.advanceTimersByTime(65_000);
+        });
+
+        const a = () => document.querySelector('.work-row') as HTMLElement;
+        expect(within(a()).getByText('1 minute, 5 seconds')).toHaveClass('work-row-time');
+
+        await push('projectsBatchRow', { path: '/p/a', state: 'done' });
+        await act(async () => {
+            jest.advanceTimersByTime(30_000);
+        });
+        expect(within(a()).getByText('1 minute, 5 seconds')).toHaveClass('work-row-time');
+    });
+
+    it('shows no time on a row not yet started', async () => {
+        await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'waiting' });
+
+        expect(document.querySelector('.work-row-time')).toBeNull();
+    });
+
+    it('says how long a long run took, under the rows, once it ends', async () => {
+        await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'done' });
+        await push('operationProgress', { id: ID, state: 'succeeded', tookMs: 125_000 });
+
+        expect(screen.getByText('Took 2 minutes, 5 seconds')).toHaveClass('dialog-note');
+    });
+
+    it('says Waiting under a project not yet started', async () => {
+        await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'running' });
+
+        const waiting = document.querySelector('.work-row[data-state="waiting"]') as HTMLElement;
+        expect(within(waiting).getByText('Waiting')).toHaveClass('work-row-detail');
+    });
+
+    // A question about the project is asked under its row (the Updates run's rule, 2026-10-21).
     it('asks a question under the running row, its answers the only buttons', async () => {
         await running();
         await push('projectsBatchRow', { path: '/p/a', state: 'running' });
@@ -94,7 +221,67 @@ describe('ProjectsBatchModal: the run', () => {
         const runningRow = document.querySelector('.work-row[data-state="running"]') as HTMLElement;
         expect(within(runningRow).getByText('Stop the demo first?')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Run in Background' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
         expect(screen.getByRole('button', { name: 'Stop It' })).toBeInTheDocument();
+    });
+
+    // The Adobe sign-in asks with buttons only, its way out among them (owner, 2026-11-04: it
+    // showed Sign In alone, the Cancel dropped as though the dismiss carried it).
+    it('keeps a question\'s own Cancel when the dismiss is hidden', async () => {
+        await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'running' });
+        await push('operationProgress', {
+            id: ID,
+            state: 'running',
+            prompt: { title: 'Sign In to Adobe', message: 'Your Adobe sign-in has expired. Sign in to continue.', actions: ['Sign In', 'Cancel'] },
+        });
+
+        const dialog = screen.getByRole('dialog', { name: 'Sign In to Adobe' });
+        expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual(['Cancel', 'Sign In']);
+    });
+
+    // Resets run side by side (owner, 2026-11-04): with two rows running a question is about no one
+    // row we can tell, so it is asked once, above the list, not under every running row.
+    it('asks a question once, above the rows, when several are running', async () => {
+        await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'running' });
+        await push('projectsBatchRow', { path: '/p/b', state: 'running' });
+        await push('operationProgress', {
+            id: ID,
+            state: 'running',
+            prompt: { message: 'Stop the demo first?', actions: ['Stop It', 'Skip'] },
+        });
+
+        expect(screen.getAllByText('Stop the demo first?')).toHaveLength(1);
+        const runningRows = Array.from(document.querySelectorAll('.work-row[data-state="running"]'));
+        runningRows.forEach((row) => expect(row).not.toHaveTextContent('Stop the demo first?'));
+    });
+
+    // A sign-in is a task about no one project (owner, 2026-11-04, layout A): it takes the window.
+    // The question is the run's, not the project's (owner, 2026-11-04): it names no project.
+    it('a sign-in takes the window: its heading, amber, no project named, and Cancel', async () => {
+        await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'running' });
+        await push('operationProgress', { id: ID, state: 'running', prompt: SIGN_IN });
+
+        const dialog = screen.getByRole('dialog', { name: 'Sign In to DA.live' });
+        expect(dialog).toHaveAttribute('data-status', 'warning');
+        expect(document.querySelector('.work-row')).toBeNull();
+        expect(screen.getByRole('group', { name: 'Question' })).not.toHaveTextContent('A, project');
+        const names = within(dialog).getAllByRole('button').map((button) => button.textContent);
+        expect(names).toEqual(['Cancel', 'Open DA.live', 'Sign In']);
+    });
+
+    it('Cancel answers the sign-in as nothing chosen, and the window stays for the rest', async () => {
+        const { user } = await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'running' });
+        await push('operationProgress', { id: ID, state: 'running', prompt: SIGN_IN });
+
+        await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', { id: ID, answer: undefined, values: { orgName: 'acme', token: '' } });
+        expect(mockPostMessage).not.toHaveBeenCalledWith('backgroundOperation', expect.anything());
+        expect(screen.getByRole('dialog', { name: 'Sign In to DA.live' })).toBeInTheDocument();
     });
 
     it('ends as its title says, with its icon, and Close refreshes the list', async () => {

@@ -35,6 +35,7 @@ import Play from '@spectrum-icons/workflow/Play';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Revert from '@spectrum-icons/workflow/Revert';
 import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy';
+import SelectionChecked from '@spectrum-icons/workflow/SelectionChecked';
 import Settings from '@spectrum-icons/workflow/Settings';
 import Share from '@spectrum-icons/workflow/Share';
 import Stop from '@spectrum-icons/workflow/Stop';
@@ -80,6 +81,8 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     capture: <DataUpload size="S" />,
     /** Let others see and use it (a library pack's Share and Stop sharing). */
     share: <Share size="S" />,
+    /** Pick several at once (the projects list's Select Projects). */
+    selectSeveral: <SelectionChecked size="S" />,
 };
 
 /**

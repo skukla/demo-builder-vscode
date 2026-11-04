@@ -94,7 +94,8 @@ ticks it instead of opening it.
 
 ### Both batches
 - One window: the questions first, once for the whole batch; then a row per project, run **one at a
-  time**, the Updates window's shape (`UpdatesRunView`, `WorkRow`). Row state is the house icons only
+  time** (resets side by side within an org since 2026-11-04, owner: a reset takes about six minutes;
+  `projectsBatch.ts` says how each constraint above is met), the Updates window's shape (`UpdatesRunView`, `WorkRow`). Row state is the house icons only
   (pending, running, success, error); the running row shows the step's own label; a failure shows the
   step's own message under its row; the rest carry on. A second batch cannot start while one runs.
 - **Sign-ins pause and ask**, through the house prompt under the running row, exactly as a single
