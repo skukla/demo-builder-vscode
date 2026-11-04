@@ -324,7 +324,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-70` | question | [Could one Adobe credential replace our separate DA.live and publishing sign-ins?](2026-11-03-eds-service-credential-question.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (127)
+### app-builder  (129)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -454,6 +454,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-81` | fix | [An order paid on account leaves the buyer short by its shipping](2026-10-22-erp-invoice-carries-no-shipping.md) | — | med | backlog |
 | `AB-82` | feature | [One place for store setup](2026-10-26-one-place-for-store-setup.md) | — | med | active |
 | `AB-83` | fix | [Undo leaves what changed since](2026-10-27-undo-leaves-what-changed-since.md) | — | med | active |
+| `AB-84` | feature | [The integration catalog row lives outside the extension](2026-11-04-integration-catalog-row-outside-the-extension.md) | AB-85 | med | backlog |
+| `AB-85` | fix | [Five generic paths treat every bound system as an ERP](2026-11-04-generic-paths-treat-every-system-as-an-erp.md) | — | high | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (10)
@@ -480,7 +482,7 @@ each item's own file; what has already landed against an item is in its
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 | `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | active |
 
-### platform  (94)
+### platform  (97)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -578,6 +580,9 @@ each item's own file; what has already landed against an item is in its
 | `PL-88` | feature | [A mesh is released and updated like the other components](2026-11-01-mesh-updates-like-other-components.md) | — | high | active |
 | `PL-89` | feature | [Every component ships as a semantic-version release](2026-11-02-component-semantic-versions.md) | — | high | active |
 | `PL-90` | fix | [Work through the dependency security alerts on the repositories we own](2026-11-02-dependency-security-alerts.md) | — | high | active |
+| `PL-91` | question | [Should the other libraries live outside the extension, the way datapacks now do?](2026-11-04-libraries-outside-the-extension.md) | — | med | spiked |
+| `PL-92` | question | [What plug-in contract lets an SC's own integration bring its extension behaviour?](2026-11-04-integration-plugin-mechanism.md) | — | med | open |
+| `PL-93` | chore | [Colleague first names in tracked files](2026-11-04-colleague-names-in-tracked-files.md) | — | low | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -726,7 +731,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*326 item(s) sit outside the A–G chain.*
+*331 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

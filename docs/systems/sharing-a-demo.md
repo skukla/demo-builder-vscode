@@ -94,7 +94,7 @@ A complete example:
   "requiresMesh": false,
   "datapack": { "name": "isle5" },
   "blockLibraries": ["isle5"],
-  "contentSource": { "org": "jen", "site": "isle5-content", "indexPath": "/sitemap.json" }
+  "contentSource": { "org": "your-github-owner", "site": "isle5-content", "indexPath": "/sitemap.json" }
 }
 ```
 
