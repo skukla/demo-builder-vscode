@@ -1853,6 +1853,10 @@ check says so and names the file.
 > reads the `dirtyPaths` each capture records, so it asks a direct question rather
 > than comparing a capture time against a commit time — captures happen on a dirty
 > tree before the commit, so a timestamp rule would reject the correct workflow.
+> A capture counts when it covered every surface the pushed stylesheets reach
+> (`css-reach.mjs`, from each bundle's esbuild inputs), so a change to one feature's
+> stylesheet needs that surface, not all nine (owner, 2026-11-04); a stylesheet that
+> reaches nothing in the new tree (deleted, moved) needs all of them.
 > It proves a baseline was taken, not that anyone read the diff. Bypass with
 > `CSS_BASELINE_BYPASS="reason"`, which keeps the rest of the gate that
 > `--no-verify` discards.

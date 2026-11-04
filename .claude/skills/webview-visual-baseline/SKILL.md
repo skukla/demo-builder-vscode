@@ -16,9 +16,20 @@ can be proved behaviour-preserving by an empty diff, or shown to move exactly
 the elements it was meant to.
 
 Since 2026-09-08 it captures each surface at **two themes and three widths**
-(PL-47), keyed `surface@theme@width`. That is 9 x 2 x 3 = 54 loads, so budget a
-couple of minutes; pass a narrower matrix to `capture({ surfaces, themes, widths })`
-while iterating on one surface.
+(PL-47), keyed `surface@theme@width`. That is 9 x 2 x 3 = 54 loads for all of them.
+
+**Capture only the surfaces your change reaches** (2026-11-04). A stylesheet reaches only
+the bundles whose entry imports it, so a surface it does not reach cannot have moved:
+
+```bash
+node .claude/skills/webview-visual-baseline/css-reach.mjs --changed   # e.g. ["projectsList"]
+```
+
+and pass that list: `capture({ surfaces: [...], sentinel })`. The pre-push check accepts a
+capture that covers every surface the pushed stylesheets reach, and asks for all of them when
+it cannot tell (a deleted stylesheet). Each surface is read once it has SETTLED (mounted, fonts
+loaded, element count steady for four looks 100ms apart), four at a time, where it used to be a
+fixed 2.6s each, one after another: a full run took over half an hour in a throttled tab.
 
 **The theme axis is an IMPOSITION guard, not a light/dark regression check.** The
 extension forces `vscode-dark` on every webview body and the owner confirmed that
