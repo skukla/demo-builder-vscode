@@ -23,8 +23,10 @@ import { cn } from '@/core/ui/utils/classNames';
 
 const NO_PICKS: string[] = [];
 
-/** Why a row is greyed out, or how many are selected, or nothing. */
+/** Why a row is greyed out, or how many are selected, or that its list did not answer, or nothing. */
 function noteOf(page: StoreItemPage | null | undefined, count: number | undefined, picked: number): string | undefined {
+    // A read that did not answer says so on its row, wherever the SC is (Select All Data reads kinds unopened).
+    if (page === null) return "Couldn't be read";
     if (page && hasNothingToPick(page)) return page.inPackCount > 0 ? 'All in datapack' : 'None available';
     if (isKnownEmpty(page, count)) return 'None available';
     return picked > 0 ? `${picked.toLocaleString('en-US')} selected` : undefined;
@@ -71,7 +73,7 @@ export function StorePicksStage({ pack, store }: StorePicksStageProps): React.Re
                             everything
                             all={store.everything.all}
                             some={store.everything.some}
-                            isDisabled={store.everything.busy}
+                            isPending={store.everything.busy}
                             onToggle={() => void store.selectEverything(!store.everything.all)}
                         />
                     </li>

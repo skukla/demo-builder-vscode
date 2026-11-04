@@ -17,7 +17,7 @@
  * The kind shown is the one the SC chose, until that turns out to have nothing to select: then the
  * next that may have some, so the pane is never empty while anything else could fill it.
  *
- * **Select Everything** (owner, 2026-11-03) ticks every item of every kind that may have some,
+ * **Select All Data** (owner, 2026-11-03) ticks every item of every kind that may have some,
  * reading first any kind not yet opened; unticking it clears every kind. Its box is ticked when every
  * kind read is wholly selected, and dashed when some are.
  *
@@ -49,7 +49,7 @@ export interface StorePicksState {
     open: (kind: PickableKind) => void;
     setPicked: (ids: string[]) => void;
     answered: (kind: PickableKind, page: StoreItemPage | null) => void;
-    /** Select Everything's box: every kind wholly ticked, some ticked, and still reading. */
+    /** Select All Data's box: every kind wholly ticked, some ticked, and still reading. */
     everything: { all: boolean; some: boolean; busy: boolean };
     /** Tick every item of every kind (reading those not opened yet), or clear them all. */
     selectEverything: (on: boolean) => Promise<void>;

@@ -9,7 +9,7 @@
 
 import '../../../../helpers/webviewClientMock';
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { press, settle } from '../../../../helpers/reactSettle';
 
@@ -340,8 +340,8 @@ describe('Save As', () => {
     });
 });
 
-describe('Select Everything (2026-11-03)', () => {
-    const everything = () => screen.getByRole('checkbox', { name: 'Select Everything' });
+describe('Select All Data (2026-11-03)', () => {
+    const everything = () => screen.getByRole('checkbox', { name: 'Select All Data' });
 
     it('reads the kinds not opened yet, ticks every item of every kind, and hands them all to Save', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
@@ -374,5 +374,39 @@ describe('Select Everything (2026-11-03)', () => {
 
         expect(everything()).not.toBeChecked();
         expect(row('Products')).not.toHaveTextContent('selected');
+    });
+
+    it('shows the spinner and waits while it reads, then ticks what answered', async () => {
+        let answerCustomers: (value: unknown) => void = () => undefined;
+        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
+            if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: null });
+            if (payload?.dataType === 'customers') return new Promise((resolve) => (answerCustomers = resolve));
+            return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : NONE });
+        });
+        await open({ pack: PACK });
+
+        await press(screen.getByRole('checkbox', { name: /^Select All Data/ }));
+
+        expect(screen.getByRole('progressbar', { name: 'Reading the data to select' })).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: /^Select All Data/ })).toBeDisabled();
+        await act(async () => answerCustomers({ success: true, data: RULES }));
+        await settle();
+        expect(screen.queryByRole('progressbar', { name: 'Reading the data to select' })).not.toBeInTheDocument();
+        expect(everything()).toBeChecked();
+    });
+
+    it("says on a kind's row when its list could not be read, and ticks the rest", async () => {
+        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
+            if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: null });
+            if (payload?.dataType === 'customers') return Promise.resolve({ success: false, error: 'No answer.' });
+            return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : NONE });
+        });
+        await open({ pack: PACK });
+
+        await press(everything());
+        await settle();
+
+        expect(row('Customers')).toHaveTextContent("Couldn't be read");
+        expect(row('Products')).toHaveTextContent('2 selected');
     });
 });

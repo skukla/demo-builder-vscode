@@ -13,8 +13,9 @@
  * the list's state, where before it a grey button was hard to see and an icon of a ticked box said
  * everything was selected above boxes that were not (owner, 2026-10-31).
  *
- * `everything` is the same row one level up, over a list of lists: Create Datapack's kinds, where it
- * ticks every item of every kind (owner, 2026-11-03, chosen over a footer button because it shows the
+ * `everything` is the same row one level up, over a list of lists: Create Datapack's kinds ("Select
+ * All Data", owner 2026-11-03: "Select Everything" read as an AI talking), where it ticks every item
+ * of every kind, with the spinner while it reads the kinds not opened yet (owner, 2026-11-03, chosen over a footer button because it shows the
  * partial state and sits on what it changes).
  *
  * Styled by `core/ui/styles/checkbox-row.css` (`.select-all-row`), which every host bundle imports.
@@ -31,20 +32,21 @@ export interface SelectAllRowProps {
     /** At least one box is ticked. */
     some: boolean;
     onToggle: () => void;
-    /** Over a list of lists: every item of every one ("Select Everything"). */
+    /** Over a list of lists: every item of every one ("Select All Data"). */
     everything?: boolean;
-    /** Still reading what it would tick. */
-    isDisabled?: boolean;
+    /** Still reading what it would tick: the spinner, and the box waits. */
+    isPending?: boolean;
 }
 
-export function SelectAllRow({ all, some, onToggle, everything = false, isDisabled }: SelectAllRowProps): React.JSX.Element {
+export function SelectAllRow({ all, some, onToggle, everything = false, isPending = false }: SelectAllRowProps): React.JSX.Element {
     return (
         <div className="select-all-row">
             <CheckboxRow
-                label={everything ? 'Select Everything' : 'Select All'}
+                label={everything ? 'Select All Data' : 'Select All'}
                 isSelected={all}
                 isIndeterminate={some && !all}
-                isDisabled={isDisabled}
+                isDisabled={isPending}
+                {...(isPending ? { pending: 'Reading the data to select' } : {})}
                 onChange={onToggle}
             />
         </div>
