@@ -164,6 +164,85 @@ function apiCodesFor(
     return [...new Set<string>([BASELINE_CODE, ...requiredApis, ...picks])];
 }
 
+type CatalogComponent = AppBuilderComponentCatalogEntry & { requirement?: AppBuilderComponentRequirement };
+
+/** The mesh's row, when the architecture has a mesh and it is selected. */
+function meshRowOf(state: AdobeAuthSessionState, meshComponent: CatalogComponent | undefined, needsSetup: boolean): IntegrationRow[] {
+    if (!meshComponent || !isMeshSelected(state, meshComponent.id)) return [];
+    return [
+        {
+            id: meshComponent.id,
+            kind: 'mesh',
+            name: meshComponent.name || MESH_FALLBACK_NAME,
+            sourceLine: meshComponent.description || MESH_FALLBACK_SOURCE_LINE,
+            needsSetup,
+            apis: apiCodesFor(state, meshComponent.id, meshComponent.requiredApis),
+            required: meshComponent.requirement === 'required',
+        },
+    ];
+}
+
+/**
+ * The row for an integration with a source. A source cloning the shell TEMPLATE repo is an
+ * AI-built instance (its own identity): render the user's name, never the template repo. Any other
+ * source is an import; it may still carry a display name (edit round-trip writes name = repo) but
+ * keeps its repo line.
+ */
+function sourcedRowOf(
+    state: AdobeAuthSessionState,
+    id: string,
+    source: NonNullable<AdobeAuthSessionState['appBuilderComponentSources']>[string],
+    template: ReturnType<typeof shellTemplateSource>,
+    needsSetup: boolean,
+): IntegrationRow {
+    const isInstance = isShellInstanceSource(source, template);
+    return {
+        id,
+        kind: isInstance ? 'blank' : 'custom',
+        name: source.name ?? source.repo,
+        sourceLine: isInstance ? AI_INSTANCE_SOURCE_LINE : `Custom integration, ${source.owner}/${source.repo}`,
+        needsSetup,
+        apis: apiCodesFor(state, id),
+        ...(isInstance ? { renamable: true } : {}),
+    };
+}
+
+/**
+ * The blank starter ("Build custom"): a custom app (built out with AI), not a pre-built catalog
+ * integration. Unlike an imported repo it has no source, but it IS a real configured integration
+ * and gets its own row.
+ */
+function blankRowOf(state: AdobeAuthSessionState, entry: CatalogComponent, needsSetup: boolean): IntegrationRow {
+    return {
+        id: entry.id,
+        kind: 'blank',
+        name: entry.name,
+        sourceLine: entry.description || 'Custom integration',
+        needsSetup,
+        apis: apiCodesFor(state, entry.id, entry.requiredApis),
+    };
+}
+
+/** A pre-built catalog integration's row, with its paired companion's names when it has one. */
+function catalogRowOf(state: AdobeAuthSessionState, entry: CatalogComponent, components: CatalogComponent[], needsSetup: boolean): IntegrationRow {
+    const pair = pairRowNames(state, entry, components);
+    const companion = pair?.companion ?? companionOf(entry.id, components);
+    return {
+        id: entry.id,
+        kind: 'catalog',
+        name: pair?.name ?? entry.name,
+        sourceLine: entry.description || `Catalog, ${entry.name}`,
+        needsSetup,
+        apis: apiCodesFor(state, entry.id, entry.requiredApis),
+        // Generic, not mesh-only: a nativeForPackages entry resolves
+        // requirement:'required' in the selection model and gets the same
+        // row/card lock the required mesh does.
+        required: entry.requirement === 'required',
+        ...(companion ? { companion } : {}),
+        ...(pair ? { renamable: true, companionRenamable: true } : {}),
+    };
+}
+
 /**
  * Resolve the configured integrations to result rows (mesh → catalog → custom).
  *
@@ -177,29 +256,12 @@ function apiCodesFor(
  */
 export function resolveIntegrationRows(
     state: AdobeAuthSessionState,
-    meshComponent:
-        | (AppBuilderComponentCatalogEntry & { requirement?: AppBuilderComponentRequirement })
-        | undefined,
-    components: Array<
-        AppBuilderComponentCatalogEntry & { requirement?: AppBuilderComponentRequirement }
-    >,
+    meshComponent: CatalogComponent | undefined,
+    components: CatalogComponent[],
 ): IntegrationRow[] {
     const needsSetup = !destinationCommitted(state);
-    const meshRows: IntegrationRow[] = [];
     const catalogRows: IntegrationRow[] = [];
     const customRows: IntegrationRow[] = [];
-
-    if (meshComponent && isMeshSelected(state, meshComponent.id)) {
-        meshRows.push({
-            id: meshComponent.id,
-            kind: 'mesh',
-            name: meshComponent.name || MESH_FALLBACK_NAME,
-            sourceLine: meshComponent.description || MESH_FALLBACK_SOURCE_LINE,
-            needsSetup,
-            apis: apiCodesFor(state, meshComponent.id, meshComponent.requiredApis),
-            required: meshComponent.requirement === 'required',
-        });
-    }
 
     const ids = state.selectedAppBuilderComponents ?? [];
     const sources = state.appBuilderComponentSources ?? {};
@@ -208,57 +270,14 @@ export function resolveIntegrationRows(
         if (id === RESERVED_EXISTING_KEY || id === meshComponent?.id) continue;
         const source = sources[id];
         if (source) {
-            // A source cloning the shell TEMPLATE repo is an AI-built instance
-            // (its own identity): render the user's name, never the template
-            // repo. Any other source is an import; it may still carry a display
-            // name (edit round-trip writes name = repo) but keeps its repo line.
-            const isInstance = isShellInstanceSource(source, template);
-            customRows.push({
-                id,
-                kind: isInstance ? 'blank' : 'custom',
-                name: source.name ?? source.repo,
-                sourceLine: isInstance
-                    ? AI_INSTANCE_SOURCE_LINE
-                    : `Custom integration, ${source.owner}/${source.repo}`,
-                needsSetup,
-                apis: apiCodesFor(state, id),
-                ...(isInstance ? { renamable: true } : {}),
-            });
+            customRows.push(sourcedRowOf(state, id, source, template, needsSetup));
             continue;
         }
         const entry = components.find((candidate) => candidate.id === id);
         if (!entry || entry.kind === 'mesh') continue;
-        if (entry.blank) {
-            // The blank starter ("Build custom") — a custom app (built out with AI),
-            // not a pre-built catalog integration. Unlike an imported repo it has no
-            // source, but it IS a real configured integration and gets its own row.
-            customRows.push({
-                id,
-                kind: 'blank',
-                name: entry.name,
-                sourceLine: entry.description || 'Custom integration',
-                needsSetup,
-                apis: apiCodesFor(state, id, entry.requiredApis),
-            });
-            continue;
-        }
-        const pair = pairRowNames(state, entry, components);
-        const companion = pair?.companion ?? companionOf(id, components);
-        catalogRows.push({
-            id,
-            kind: 'catalog',
-            name: pair?.name ?? entry.name,
-            sourceLine: entry.description || `Catalog, ${entry.name}`,
-            needsSetup,
-            apis: apiCodesFor(state, id, entry.requiredApis),
-            // Generic, not mesh-only: a nativeForPackages entry resolves
-            // requirement:'required' in the selection model and gets the same
-            // row/card lock the required mesh does.
-            required: entry.requirement === 'required',
-            ...(companion ? { companion } : {}),
-            ...(pair ? { renamable: true, companionRenamable: true } : {}),
-        });
+        if (entry.blank) customRows.push(blankRowOf(state, entry, needsSetup));
+        else catalogRows.push(catalogRowOf(state, entry, components, needsSetup));
     }
 
-    return [...meshRows, ...catalogRows, ...customRows];
+    return [...meshRowOf(state, meshComponent, needsSetup), ...catalogRows, ...customRows];
 }

@@ -710,14 +710,6 @@ div[class*="spectrum"] input[type="search"] {
 }
 
 @layer theme {
-/* VerifiedField's two status messages. Constant colours — nothing dynamic
-   about them at all. */
-.text-positive {
-    color: var(--spectrum-semantic-positive-color-icon);
-}
-}
-
-@layer theme {
 /* SearchHeader's view toggle. Both buttons are rounded; the ACTIVE one is
    filled.
 

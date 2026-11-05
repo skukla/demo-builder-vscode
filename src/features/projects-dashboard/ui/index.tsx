@@ -52,6 +52,7 @@ import './styles/project-cards.css';
 import './styles/updates-modal.css';
 // Selection mode and the Reset Selected / Delete Selected window. This entry alone draws them.
 import './styles/projects-batch.css';
+import './styles/scroll-fade.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
 // `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.

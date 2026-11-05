@@ -1,11 +1,12 @@
 /**
- * Reset Selected's window: "Reading demo data" while it reads, then one Remove Datapack (only when a
- * project has a pack) and a line per project. A pack whose changes are not the SC's own asks for a
- * name, empty to start, or Remove Without Saving, and the run waits for one; a pack that saves to
- * their library says so. The answers carry the name, trimmed, or 'drop'.
+ * Reset Selected's window in two steps (owner, 2026-11-04). Step 1, Reset Projects: a row per
+ * project, its repository under it, and a Remove Datapack box where its pack can go; a pack whose
+ * changes could not be read has no box and says it is kept. Step 2, Datapack Changes, only when a
+ * removed pack is not the SC's and has changes: a new pack's name per pack, or Discard Changes. The
+ * answers carry the name, trimmed, or 'drop'.
  */
 
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { openOn, PROJECTS_BATCH_OPERATION_ID, resetBatchMocks, runRequest, type PrepareEnvelope } from './ProjectsBatchModal.testUtils';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
 
@@ -31,28 +32,32 @@ describe('ProjectsBatchModal: Reset Selected', () => {
     it('says it is reading the demo data while the read is out', async () => {
         await openOn('reset', null);
 
-        expect(screen.getByRole('dialog', { name: 'Reset Projects' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: /^Reset \d+ Projects?\?$/ })).toBeInTheDocument();
         expect(screen.getByText('Reading demo data')).toBeInTheDocument();
     });
 
-    it('asks with Remove Datapack ticked, an empty name, and the run waiting for it', async () => {
+    it('ticks Remove Datapack per project that has a pack, and Continues to the changes a pack needs', async () => {
         await openOn('reset', RESET);
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
 
-        expect(screen.getByRole('checkbox', { name: 'Remove Datapack' })).toBeChecked();
-        expect(screen.getByRole('textbox', { name: 'Save Changes As' })).toHaveValue('');
-        expect(screen.getByText('Saving to your library')).toBeInTheDocument();
-        expect(runButton()).toBeDisabled();
-        expect(runButton()).toHaveAttribute('data-variant', 'negative');
+        expect(screen.getByRole('checkbox', { name: 'Remove Datapack, A' })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Remove Datapack, B' })).toBeChecked();
+        expect(screen.queryByRole('checkbox', { name: 'Remove Datapack, C' })).toBeNull();
+        expect(screen.queryByRole('textbox')).toBeNull();
+        expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute('data-variant', 'accent');
     });
 
-    it('a blank name keeps the run waiting; a name sends it trimmed', async () => {
+    it('asks each pack that needs it for a new name, empty, the run waiting; a name goes trimmed', async () => {
         const { user } = await openOn('reset', RESET);
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
-        const field = screen.getByRole('textbox', { name: 'Save Changes As' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+        await user.click(screen.getByRole('button', { name: 'Continue' }));
 
-        await user.type(field, '   ');
+        expect(screen.getByRole('dialog', { name: 'Datapack Changes' })).toHaveAttribute('data-status', 'warning');
+        expect(screen.getByText('Frescopa')).toBeInTheDocument();
+        const field = screen.getByRole('textbox', { name: 'New datapack name, A' });
+        expect(field).toHaveValue('');
         expect(runButton()).toBeDisabled();
+        expect(runButton()).toHaveAttribute('data-variant', 'negative');
 
         await user.type(field, 'My Copy ');
         await user.click(runButton());
@@ -69,42 +74,93 @@ describe('ProjectsBatchModal: Reset Selected', () => {
         });
     });
 
-    it("Remove Without Saving needs no name, sets the field aside, and sends 'drop'", async () => {
+    it("Discard Changes needs no name, sets the field aside, and sends 'drop'", async () => {
         const { user } = await openOn('reset', RESET);
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+        await user.click(screen.getByRole('button', { name: 'Continue' }));
 
-        await user.click(screen.getByRole('checkbox', { name: 'Remove Without Saving' }));
+        await user.click(screen.getByRole('checkbox', { name: 'Discard Changes, A' }));
 
-        expect(screen.getByRole('textbox', { name: 'Save Changes As' })).toBeDisabled();
+        expect(screen.queryByRole('textbox', { name: 'New datapack name, A' })).toBeNull();
+        expect(screen.getByText('Changes discarded')).toBeInTheDocument();
         await user.click(runButton());
         expect((runRequest() as { answers: unknown[] }).answers[0]).toEqual({ path: '/p/a', removeDatapack: true, changes: 'drop' });
     });
 
-    it('unticking Remove Datapack hides what each pack needs and keeps every pack', async () => {
+    it('goes Back to the projects with their boxes as they were', async () => {
         const { user } = await openOn('reset', RESET);
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+        await user.click(screen.getByRole('checkbox', { name: 'Remove Datapack, B' }));
+        await user.click(screen.getByRole('button', { name: 'Continue' }));
 
-        await user.click(screen.getByRole('checkbox', { name: 'Remove Datapack' }));
+        await user.click(screen.getByRole('button', { name: 'Back' }));
 
-        expect(screen.queryByRole('textbox', { name: 'Save Changes As' })).toBeNull();
-        expect(screen.queryByText('Saving to your library')).toBeNull();
+        expect(screen.getByRole('dialog', { name: /^Reset \d+ Projects?\?$/ })).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: 'Remove Datapack, B' })).not.toBeChecked();
+    });
+
+    it('needs no step 2 once the pack that asks is kept, and keeps what is unticked', async () => {
+        const { user } = await openOn('reset', RESET);
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+
+        await user.click(screen.getByRole('checkbox', { name: 'Remove Datapack, A' }));
         await user.click(runButton());
+
         expect((runRequest() as { answers: Array<{ removeDatapack: boolean }> }).answers.map((a) => a.removeDatapack)).toEqual([
             false,
-            false,
+            true,
             false,
         ]);
+    });
+
+    // Option B (owner, 2026-11-04): a pack whose changes could not be read stays, said on its row.
+    it('keeps a pack whose changes could not be read: no box, and a note on its row', async () => {
+        await openOn('reset', {
+            success: true,
+            data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A'), datapack: { name: asDisplayName('Team'), changes: 'unchecked' } }] },
+        });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+
+        expect(screen.queryByRole('checkbox', { name: 'Remove Datapack, A' })).toBeNull();
+        expect(screen.getByText("Couldn't check for changes. Datapack kept.")).toHaveClass('dialog-problem', 'text-notice');
+    });
+
+    it('refuses two packs saved under one name in the list', async () => {
+        const { user } = await openOn('reset', {
+            success: true,
+            data: {
+                action: 'reset',
+                rows: [
+                    { path: '/p/a', name: asDisplayName('A'), datapack: { name: asDisplayName('Team'), changes: 'asks' } },
+                    { path: '/p/b', name: asDisplayName('B'), datapack: { name: asDisplayName('Team'), changes: 'asks' } },
+                ],
+            },
+        });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+        await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+        await user.type(screen.getByRole('textbox', { name: 'New datapack name, A' }), 'Mine');
+        await user.type(screen.getByRole('textbox', { name: 'New datapack name, B' }), 'mine');
+
+        expect(screen.getByText('Another datapack in this list has that name')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Reset 2 Projects' })).toBeDisabled();
     });
 
     // A reset replaces each project's code (owner, 2026-11-04): a dangerous confirm, so it says what
     // happens, carries the amber icon, and its button is red, as Delete Selected's is.
     it('says what a reset does, amber, with a red button', async () => {
         await openOn('reset', RESET);
-        const dialog = await screen.findByRole('dialog', { name: 'Reset Projects' });
+        const dialog = await screen.findByRole('dialog', { name: 'Reset 3 Projects?' });
 
         expect(dialog).toHaveAttribute('data-status', 'warning');
+        // One column fits large: Reset is not widened.
+        expect(dialog).not.toHaveAttribute('data-wide');
+        // The pack beside its box, the projects under a Project header (owner, 2026-11-05).
+        expect(screen.getByText('Project')).toBeInTheDocument();
+        const cell = screen.getByRole('checkbox', { name: 'Remove Datapack, A' }).closest('td') as HTMLElement;
+        expect(within(cell).getByText('Frescopa')).toBeInTheDocument();
         expect(
-            screen.getByText('Each project goes back to how it was first set up, and any changes to its code are lost.'),
+            screen.getByText('Each project returns to how it was set up. Code changes are lost.'),
         ).toBeInTheDocument();
     });
 
@@ -114,7 +170,7 @@ describe('ProjectsBatchModal: Reset Selected', () => {
             success: true,
             data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A'), summary: 'Starter (B2B + B2C), Edge Delivery + ACCS' }] },
         });
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
 
         expect(screen.getByText('Starter (B2B + B2C), Edge Delivery + ACCS')).toHaveClass('work-row-detail');
     });
@@ -125,7 +181,7 @@ describe('ProjectsBatchModal: Reset Selected', () => {
             success: true,
             data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A'), repository: 'skukla/a', summary: 'Starter (B2B + B2C), Edge Delivery + ACCS' }] },
         });
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
 
         expect(screen.getByText('skukla/a')).toHaveClass('work-row-detail');
         expect(screen.queryByText('Starter (B2B + B2C), Edge Delivery + ACCS')).toBeNull();
@@ -136,9 +192,9 @@ describe('ProjectsBatchModal: Reset Selected', () => {
             success: true,
             data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A') }, { path: '/p/b', name: asDisplayName('B') }, { path: '/p/c', name: asDisplayName('C') }] },
         });
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
 
-        expect(screen.queryByRole('checkbox', { name: 'Remove Datapack' })).toBeNull();
+        expect(screen.queryByRole('checkbox', { name: /Remove Datapack/ })).toBeNull();
         expect(runButton()).toBeEnabled();
     });
 });

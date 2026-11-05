@@ -138,39 +138,6 @@
 }
 }
 
-/* Status indicators */
-@layer theme {
-.status-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-}
-
-@layer theme {
-.status-indicator.success {
-    color: var(--spectrum-semantic-positive-color-icon);
-}
-}
-
-@layer theme {
-.status-indicator.error {
-    color: var(--spectrum-semantic-negative-color-icon);
-}
-}
-
-@layer theme {
-.status-indicator.warning {
-    color: var(--spectrum-semantic-notice-color-icon);
-}
-}
-
-@layer theme {
-.status-indicator.checking {
-    color: var(--spectrum-global-color-blue-600);
-}
-}
-
 /* ===========================================
    Canonical Animation Keyframes
    Other CSS files reference these definitions

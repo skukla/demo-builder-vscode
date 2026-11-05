@@ -27,7 +27,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F1 | 3.3 | Ticking a row in Updates moves Close: "Apply 1 Update" is wider than "Apply Updates", and the button grows with its label | The button reserves its widest label's width from the start, the way a pending button already keeps its width (`Modal.tsx`). Built on `fix/release-walk-fixes`; owner saw no shift 2026-11-04 |
 | F2 | 2.1 | Entering selection mode made the projects header ~5px taller, dropping every card: Select All carried its list row's padding | Padding removed on that row (`projects-batch.css`). Measured in the harness 2026-11-04: the line under the header at 191.59px in both modes; with the old padding put back, 195.59px |
 | F3 | Q1 | "Select" was vague and quieter than the Datapacks header's buttons in the same place | Select Projects, with icons on it and on Reset Selected and Delete Selected, a divider before Done. Built, owner saw it 2026-11-04 |
-| F4 | 2.2 | The Reset Projects confirm lists names and says nothing of what a reset does; the single reset says "This will reset all code to the template state and re-copy demo content." It also has no amber icon, which the dialog rules give a dangerous confirm | "Each project goes back to how it was first set up, and any changes to its code are lost.", the amber icon on both confirms, Reset N Projects red (owner, 2026-11-04). Built, owner to check |
+| F4 | 2.2 | The Reset Projects confirm lists names and says nothing of what a reset does; the single reset says "This will reset all code to the template state and re-copy demo content." It also has no amber icon, which the dialog rules give a dangerous confirm | "Each project returns to how it was set up. Code changes are lost." (shortened to one line, owner 2026-11-05), the amber icon on both confirms, Reset N Projects red (owner, 2026-11-04). Built, owner to check |
 | F5 | 2.2 | A question during the run (DA.live sign-in) leaves no way out: the batch window hides its dismiss button, where the single reset's progress window turns it into Cancel (`OperationProgressModal`) | Layout A (owner, 2026-11-04): a sign-in takes the window, its heading the title, naming no project (the pause is the run's, owner 2026-11-04), its sentence with two numbered steps, the fields 24 below, and Cancel, which skips that project; a question about one row stays under it (the 2026-10-21 rule). One view for the progress, Updates and batch windows (`OperationQuestion`). Built, owner to check |
 | F6 | 2.2 | The DA.live sign-in field reads "DA.live namespace"; the rules make a label Title Case. The Title Case enforcer cannot see a label in a `.ts` object | "DA.live Namespace" (`daLiveAuthPrompt.ts`). Built. The enforcer gap is not closed |
 | F7 | 2.2 | The running row was the one row of a different shape (its step beside the name) | Every work row is two lines, its name then where it stands (Waiting, the step, Finished, or why it failed), in the batch run, the Updates run and the ERP setup steps (`WorkRow`, owner 2026-11-04). Built, owner to check |
@@ -40,6 +40,11 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F14 | 2.2 | The batch run showed no time, where the single progress window shows a clock and a "Took" | Each row's time right after its name (moved from the dialog's far edge, owner 2026-11-04): counting while it runs (`useRunClock`), kept once it ends (`spanValue`, in the clock module so one wait has one clock); "Took 7 minutes, 20 seconds" under the rows for a run over a minute (`tookValue`) (owner, 2026-11-04). Built, owner to check |
 | F15 | 2.2 | A reset's count went "10 of 11", "2 of 11", "11 of 11": the check that the live site serves the reset code runs after the content but reported on step 2, beside the code publish it lives with (`confirmResetCodeServed`); no test covered it | It reports on step 11, renamed "Checking the live site" (the code and the config), which the republish flow's last step shares; two tests pin the step (owner, 2026-11-04). Built, owner to check |
 | F16 | 2.2 | One reset takes about six minutes and the batch ran them one at a time, where the notification approach let them overlap | Resets run side by side within an IMS org, up to 3 at once; orgs one after another; resets removing a pack's store data take turns; a DA.live sign-in needed by several is asked once (`SingleFlight`, as the Adobe one already was); a window's questions take turns and a run ending clears only its own (`operationPrompt`); a question with several rows running is asked once above the list (owner, 2026-11-04, this release). Deletes stay one at a time. Walked live 2026-11-04: two side by side, 5 minutes 33 seconds |
+| F17 | 2.5 | The reset confirm names a datapack by its internal name ("kukla-justrite-a80dca") where the Datapacks screen shows its display name | The display name, as the Datapacks card shows it. Fixed: the reset reads the pack's display name from the library (`prepareResetBatch`) |
+| F18 | 2.5 | The Reset Selected confirm put each pack's save-as name and a discard box under its project, noisy and asking before the SC had chosen what goes | Two steps: Reset N Projects? with a Remove Datapack column, then Datapack Changes (a new name or Discard Changes per pack that asks), Back between them. A pack whose changes could not be read is kept: "Couldn't check for changes. Datapack kept." (owner, 2026-11-04). Built |
+| F19 | 2.7 | The single delete's question named the folder ("patch-canary-b2b"), read "Deleting…" while still asking, and had a blue Delete | "Delete Patch Canary B2B?", "Project files are removed from this machine.", a red Delete; the display name in the QuickPick and plain confirm too (owner, 2026-11-05). Built |
+| F20 | 2.7 | Delete Selected: "Delete Projects" for one, no word that local files go, the repository under the name rather than beside its box, three columns of names squeezed and wrapping, and no cue a long list scrolls | "Delete N Projects?" and "Reset N Projects?"; "Project files are removed from this machine."; each box names what it deletes; a Project header; Delete Selected extra-wide, no cell wrapping; long lists scroll under a fixed header with the Updates window's fade, now one shared style (owner, 2026-11-05). Built |
+| F21 | 2.7 | Colour audit: status text used Spectrum's icon tokens (red text 4.40:1, under AA), and the accent blue's states each used two shades in places | Every status: icon token for icons, text token for text (red text 6.91:1). The blue ramp kept, each state one shade (focus ring 400, selected border 400, link 500, selected hover 200). Both enforced in `status-icons.test.ts` (owner, 2026-11-05). Built |
 
 ## Questions raised
 
@@ -225,7 +230,7 @@ a dashboard's **All Projects**. Have at least three projects, two of them in dif
 3. Expect that row to read "This project is no longer on this computer.", the other to finish, and
    the title **Couldn't Reset Projects** with "1 project(s) not reset."
 
-**Result:** open
+**Result:** passed 2026-11-04: Patch Canary B2B's folder hidden after the confirm, its row failed at once ("This project is no longer on this computer."), Scratch 1028 ran on to Finished, title Couldn't Reset Projects with the amber icon. Folder restored
 
 ### 2.4 The open project never moves
 
@@ -233,7 +238,7 @@ a dashboard's **All Projects**. Have at least three projects, two of them in dif
 2. Reset Y and Z with **Reset Selected**.
 3. Expect X still the current project in the dashboard and the sidebar.
 
-**Result:** open
+**Result:** passed 2026-11-04: the open-project pointer read Scratch 1028 before and after a batch reset of it beside Patch Canary B2B; the batch saves through `createNonSwitchingStateManager` (`projectsBatchHandlers.ts`), whose suite pins "saves without moving the pointer while its project is not the current one". The Bodea walk was skipped to save a reset (owner)
 
 ### 2.5 A datapack in a reset batch
 
@@ -244,7 +249,7 @@ a dashboard's **All Projects**. Have at least three projects, two of them in dif
 4. Expect the run button greyed until the name is filled or **Remove Without Saving** is ticked.
 5. Run it. Expect no other store data cleared.
 
-**Result:** open
+**Result:** passed in part 2026-11-04: Remove Datapack offered only when a picked project has a pack (Bodea has none, JustRite has one), ticked, nothing to save with no changes since install. The save branches (Saving to your library, Save Changes As) not seen live: JustRite's store had no changes. Found F17
 
 ### 2.6 Delete Selected
 
@@ -267,7 +272,7 @@ Use throwaway projects only.
    **Delete Repository** box.
 4. Batch-delete both. Expect the box back, because both are going.
 
-**Result:** open
+**Result:** passed in part (owner, 2026-11-05). Steps 1 and 2 (single delete, its boxes under `ask`) and Delete Selected looked at, then redesigned (F19, F20). Steps 3 and 4 (two projects on one repository) not run yet
 
 ### 2.8 Agent delete
 

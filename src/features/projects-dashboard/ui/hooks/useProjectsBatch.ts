@@ -105,7 +105,7 @@ function hasEnded(progress: OperationProgressPayload | null): boolean {
 function requestOf(questions: PrepareProjectsBatchResponse, choices: BatchChoices): RunProjectsBatchRequest {
     return questions.action === 'delete'
         ? { action: 'delete', answers: deleteAnswers(questions.rows, choices.ticks) }
-        : { action: 'reset', answers: resetAnswers(questions.rows, choices.removeDatapack, choices.fields) };
+        : { action: 'reset', answers: resetAnswers(questions.rows, choices.removeTicks, choices.fields) };
 }
 
 /** The run's header, and the notification's a run closed mid-way goes on in: the kind, never a count. */

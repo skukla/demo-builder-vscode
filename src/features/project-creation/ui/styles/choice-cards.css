@@ -64,7 +64,7 @@
 }
 
 .choice-card:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-500);
+    outline: 2px solid var(--spectrum-global-color-blue-400);
     outline-offset: 2px;
 }
 
@@ -77,7 +77,7 @@
 }
 
 .choice-card[data-selected="true"]:hover {
-    background: var(--spectrum-global-color-blue-100);
+    background: var(--spectrum-global-color-blue-200);
     transform: none;
 }
 

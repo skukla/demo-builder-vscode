@@ -51,9 +51,11 @@
 .text-gray-500 { color: var(--spectrum-global-color-gray-500); }
 .text-gray-600 { color: var(--spectrum-global-color-gray-600); }
 .text-gray-700 { color: var(--spectrum-global-color-gray-700); }
-.text-negative { color: var(--spectrum-semantic-negative-color-icon); }
-.text-positive { color: var(--spectrum-semantic-positive-color-icon); }
-.text-informative { color: var(--spectrum-semantic-informative-color-icon); }
+/* Status TEXT takes Spectrum's text token; its icon token is for icons, dots and borders. Red's icon
+   token is 4.40:1 on the dialog, under AA's 4.5 (measured 2026-11-05). One rule, every status. */
+.text-negative { color: var(--spectrum-semantic-negative-color-text-small); }
+.text-positive { color: var(--spectrum-semantic-positive-color-text-small); }
+.text-informative { color: var(--spectrum-semantic-informative-color-text-small); }
 
 .bg-gray-75 { background-color: var(--spectrum-global-color-gray-75); }
 
@@ -374,6 +376,6 @@ button[class*="spectrum-Button"][disabled],
    different kind of bug from the one being fixed. */
 @layer theme {
 .text-notice {
-    color: var(--spectrum-semantic-notice-color-icon);
+    color: var(--spectrum-semantic-notice-color-text-small);
 }
 }

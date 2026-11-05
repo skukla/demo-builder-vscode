@@ -13,9 +13,10 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import { resetIsReady } from '../batchChoices';
+import { changeRows, resetIsReady } from '../batchChoices';
 import { runningTitle, type BatchView, type ProjectsBatchControls } from '../hooks/useProjectsBatch';
 import { BatchDeleteQuestions } from './BatchDeleteQuestions';
+import { BatchResetChanges } from './BatchResetChanges';
 import { BatchResetQuestions } from './BatchResetQuestions';
 import { ProjectsBatchRunView } from './ProjectsBatchRunView';
 import { promptButtons } from './UpdatesModal';
@@ -68,13 +69,23 @@ function endTitle(action: ProjectsBatchAction, progress: OperationProgressPayloa
     return deleting ? 'Projects Deleted' : 'Projects Reset';
 }
 
-/** The window's header in every phase: the kind of thing, never a name or a count. */
+/** Reset Selected on its second step, the packs' changes (owner, 2026-11-04). */
+function onChangesStep(controls: ProjectsBatchControls): boolean {
+    const { view, choices } = controls;
+    return view.phase === 'asking' && view.questions.action === 'reset' && choices.step === 'changes';
+}
+
+/** The window's header in every phase: the kind of thing, never a name; a confirm adds its count. */
 function titleOf(controls: ProjectsBatchControls): string {
     const { view, progress } = controls;
     if (view.phase === 'closed') return '';
     if (view.phase === 'unread') return "Couldn't Read Projects";
-    const { action } = subjectOf(view);
-    if (view.phase !== 'running') return action === 'delete' ? 'Delete Projects' : 'Reset Projects';
+    const { action, count } = subjectOf(view);
+    if (view.phase !== 'running') {
+        if (onChangesStep(controls)) return 'Datapack Changes';
+        // A confirm asks, its count the button's (owner, 2026-11-05).
+        return `${runLabel(action, count)}?`;
+    }
     if (progress?.state === 'succeeded' || progress?.state === 'failed') return endTitle(action, progress);
     return askingOf(controls)?.title ?? runningTitle(action);
 }
@@ -115,9 +126,16 @@ function actionsOf(controls: ProjectsBatchControls): ActionButton[] {
     const { questions } = view;
     const label = runLabel(questions.action, questions.rows.length);
     if (questions.action === 'delete') return [{ label, variant: 'negative', onPress: controls.run }];
-    const ready = resetIsReady(questions.rows, choices.removeDatapack, choices.fields);
+    // Step 1 Continues to the packs' changes when one needs an answer (owner, 2026-11-04).
+    const needsChanges = changeRows(questions.rows, choices.removeTicks).length > 0;
+    if (choices.step === 'projects' && needsChanges) {
+        return [{ label: 'Continue', variant: 'accent', onPress: () => choices.setStep('changes') }];
+    }
+    const ready = resetIsReady(questions.rows, choices.removeTicks, choices.fields);
     // Red, as Delete's: a reset replaces each project's code (owner, 2026-11-04).
-    return [{ label, variant: 'negative', onPress: controls.run, isDisabled: !ready }];
+    const reset: ActionButton = { label, variant: 'negative', onPress: controls.run, isDisabled: !ready };
+    if (choices.step !== 'changes') return [reset];
+    return [{ label: 'Back', variant: 'secondary', onPress: () => choices.setStep('projects') }, reset];
 }
 
 function BodyOf({ controls }: { controls: ProjectsBatchControls }): React.ReactElement | null {
@@ -125,6 +143,9 @@ function BodyOf({ controls }: { controls: ProjectsBatchControls }): React.ReactE
     if (view.phase === 'unread') return <p className="work-row-why">{view.error}</p>;
     if (view.phase === 'asking' && view.questions.action === 'delete') {
         return <BatchDeleteQuestions rows={view.questions.rows} choices={controls.choices} />;
+    }
+    if (view.phase === 'asking' && onChangesStep(controls)) {
+        return <BatchResetChanges rows={view.questions.rows} choices={controls.choices} />;
     }
     if (view.phase === 'asking') return <BatchResetQuestions rows={view.questions.rows} choices={controls.choices} />;
     if (view.phase !== 'running') return null;
@@ -163,10 +184,15 @@ export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchContro
                     title={titleOf(controls)}
                     status={statusOf(controls)}
                     size="L"
+                    // Delete's table holds up to three columns of names: extra-wide, the next
+                    // step, so a name stays on one line; the same width in every phase (owner,
+                    // 2026-11-05). Reset's one column fits large.
+                    wide={subjectOf(view).action === 'delete'}
                     fitContent
                     onClose={dismiss}
                     closeLabel={closeLabelOf(controls)}
-                    hideClose={asking ? !cancels(asking) : false}
+                    // Step 2's way back is Back; Escape still closes the window.
+                    hideClose={asking ? !cancels(asking) : onChangesStep(controls)}
                     actionButtons={actionsOf(controls)}
                     waiting={waitOf(view)}
                 >

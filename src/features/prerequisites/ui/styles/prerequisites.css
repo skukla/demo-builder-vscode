@@ -43,11 +43,11 @@
 }
 
 .prerequisite-message-error {
-    color: var(--spectrum-semantic-negative-color-icon);
+    color: var(--spectrum-semantic-negative-color-text-small);
 }
 
 .prerequisite-message-warning {
-    color: var(--spectrum-semantic-notice-color-icon);
+    color: var(--spectrum-semantic-notice-color-text-small);
 }
 
 .prerequisite-message-default {

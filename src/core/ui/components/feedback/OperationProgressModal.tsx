@@ -40,7 +40,7 @@ import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { OperationOffer, OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationOffer, OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 /** A success that says something beyond its title (a warning, a note, what it changed) waits to be read. */
 function holdsResult(progress: OperationProgressPayload | null | undefined): boolean {
@@ -118,10 +118,11 @@ function closeLabelFor(ended: boolean, asking: boolean): string {
  * already says Cancel and answers the same way, as nothing chosen (two Cancels side by side,
  * 2026-10-23).
  */
-function answerButtons(actions: string[], answer: (chosen: string) => void): ActionButton[] {
-    const buttons = actions.filter((label) => label !== CANCEL).map((label, index): ActionButton => ({
+function answerButtons(prompt: OperationPrompt, answer: (chosen: string) => void): ActionButton[] {
+    const main = prompt.destructive ? 'negative' : 'accent';
+    const buttons = prompt.actions.filter((label) => label !== CANCEL).map((label, index): ActionButton => ({
         label,
-        variant: index === 0 ? 'accent' : 'secondary',
+        variant: index === 0 ? main : 'secondary',
         onPress: () => answer(label),
     }));
     return buttons.reverse();
@@ -270,7 +271,7 @@ export function OperationProgressModal({
                 holdSize={running}
                 actionButtons={
                     prompt
-                        ? answerButtons(prompt.actions, answer)
+                        ? answerButtons(prompt, answer)
                         : [...failureButtons(failed, onRetry), ...nextStepButtons(offering, onClose)]
                 }
             >

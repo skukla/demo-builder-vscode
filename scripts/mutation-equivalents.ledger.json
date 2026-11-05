@@ -4651,7 +4651,7 @@
             "anchors": [
                 "const ids = state.selectedAppBuilderComponents ?? [];"
             ],
-            "line": 204,
+            "line": 266,
             "mutants": 1,
             "category": "ArrayDeclaration",
             "reason": "Stryker fills the ?? [] fallback with a one-element array of its own marker string. Every id the loop cannot resolve is dropped: no source record is keyed by it, components.find returns undefined, and the iteration hits continue. The marker id therefore adds no row and the result is identical to the empty fallback.",
@@ -7436,7 +7436,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 234,
+            "line": 240,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -7449,7 +7449,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 235,
+            "line": 241,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -9546,14 +9546,14 @@
             "decision": "none \u2014 starting undismissed is what 'the user has seen nothing yet' means",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05",
-            "line": 109
+            "line": 110
         },
         {
             "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
             "anchors": [
                 "}, [loadStatus]);"
             ],
-            "line": 126,
+            "line": 127,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9566,7 +9566,7 @@
             "anchors": [
                 "}, [loadTarget]);"
             ],
-            "line": 131,
+            "line": 132,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9579,7 +9579,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 189,
+            "line": 190,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves.",
@@ -9592,7 +9592,7 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 205,
+            "line": 206,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false. watching only becomes false through the Stop watching button, which buildActions renders solely for the 'watching' view; that view requires a running record, and turning the watch off also stops the poll that could retire it. So while watching is false the modal offers no Remove data affordance to arm, and this call can only ever re-assert a value that is already true.",
@@ -11025,7 +11025,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 217,
+            "line": 223,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11038,7 +11038,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 218,
+            "line": 224,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11051,7 +11051,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 225,
+            "line": 231,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11064,7 +11064,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 226,
+            "line": 232,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",

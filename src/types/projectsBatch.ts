@@ -31,10 +31,6 @@ export interface BatchDeleteRow {
     path: string;
     /** As its card names it (`getProjectDisplayName`): a folder name fails to compile. */
     name: ProjectDisplayName;
-    /** Its storefront's GitHub repository ("skukla/bodea"): drawn under the name, over the summary. */
-    repository?: string;
-    /** What the project is, as its card says it ("Bodea, Edge Delivery + ACCS"). */
-    summary?: string;
     repo?: BatchDeleteOption;
     site?: BatchDeleteOption;
     datapack?: BatchDeleteOption;
@@ -46,10 +42,11 @@ export interface BatchResetDatapack {
     name: string;
     /**
      * The changes since the install: `saves` when they go into the SC's own pack with no question,
-     * `asks` when the pack is not theirs and they need a name or Remove Without Saving.
-     * Absent with no changes, or none that could be read.
+     * `asks` when the pack is not theirs and they need a new pack's name or to be discarded, and
+     * `unchecked` when they could not be read, so the batch keeps the pack (owner, 2026-11-04: a
+     * batch never discards changes nobody could see). Absent with no changes.
      */
-    changes?: 'saves' | 'asks';
+    changes?: 'saves' | 'asks' | 'unchecked';
 }
 
 /** One project of a reset batch. */

@@ -538,8 +538,12 @@ describe('groupStatusOf', () => {
 // Height fits the content (dialog design rules): a set height left 295px empty under two rows.
 // Asserted against the stylesheet: jsdom resolves no layout.
 describe('the Updates list', () => {
+    // The height, scroll and fade are `.scroll-fade`, shared with the projects batch window
+    // (owner, 2026-11-05); the list wears it.
     it('is as tall as its rows, and scrolls past a cap', () => {
-        const rule = ruleFor('.updates-group-list');
+        const { container } = render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
+        expect(container.querySelector('.updates-group-list')).toHaveClass('scroll-fade');
+        const rule = ruleFor('.scroll-fade');
 
         expect(rule).toMatch(/max-height:\s*[^;]+;/);
         expect(rule).not.toMatch(/(^|[;{\s])height:/);
@@ -555,12 +559,12 @@ describe('the Updates list', () => {
 
     // A cut-off panel at the bottom edge did not read as "more below" (owner, 2026-10-20).
     it('fades its bottom edge by how much is left to scroll, and not at all when it fits', () => {
-        const rule = ruleFor('.updates-group-list');
+        const rule = ruleFor('.scroll-fade');
 
-        expect(rule).toMatch(/mask-image:[^;]*var\(--updates-fade\)/);
+        expect(rule).toMatch(/mask-image:[^;]*var\(--scroll-fade\)/);
         expect(rule).toMatch(/animation-timeline:\s*scroll\(self\)/);
         // No scroll, no running animation: the registered starting value is what shows.
-        expect(ruleFor('@property --updates-fade')).toMatch(/initial-value:\s*0px/);
+        expect(ruleFor('@property --scroll-fade')).toMatch(/initial-value:\s*0px/);
     });
 
     // Spectrum's 32px checkbox made the rows tall (owner, 2026-10-20); here alone they

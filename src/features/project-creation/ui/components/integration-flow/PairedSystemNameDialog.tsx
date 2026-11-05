@@ -13,9 +13,9 @@
 
 import { DialogContainer, TextField } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
+import type { IntegrationRow } from './integrationRows';
 import { NAME_IS_FIXED } from './stages/CatalogStage';
 import { Modal } from '@/core/ui/components/ui/Modal';
-import type { IntegrationRow } from './integrationRows';
 import {
     MAX_ERP_NAME,
     erpNameProblem,

@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { ComponentRepositoryResolver } from './componentRepositoryResolver';
 import { isRepoCollaborator } from './collaboratorGate';
+import { ComponentRepositoryResolver } from './componentRepositoryResolver';
 import { buildGitHubHeaders } from './githubApiClient';
 import type { ReleaseInfo, UpdateCheckResult } from './types';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';

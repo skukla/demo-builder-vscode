@@ -9,10 +9,15 @@ jest.mock('@/features/projects-dashboard/services/projectDeletionService', () =>
 jest.mock('@/features/projects-dashboard/services/demoPackDeletion', () => ({ deletablePackOf: jest.fn() }));
 jest.mock('@/features/data-installer/handlers/removalChanges', () => ({ readRemovalChangesOf: jest.fn() }));
 jest.mock('@/features/eds/services/storefront/sharedRepoProjects', () => ({ sharedOnlineOf: jest.fn() }));
+// The library, for a pack's display name: unreachable unless a test says otherwise.
+jest.mock('@/features/data-installer/handlers/libraryWriter', () => ({
+    openLibraryWriter: jest.fn(async () => ({ ok: false, reason: 'not in this test' })),
+}));
 
 import * as vscode from 'vscode';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
+import { openLibraryWriter } from '@/features/data-installer/handlers/libraryWriter';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { deletablePackOf } from '@/features/projects-dashboard/services/demoPackDeletion';
@@ -71,7 +76,7 @@ describe('prepareDeleteBatch', () => {
         const rows = await prepareDeleteBatch(contextWith(a), [a.path]);
 
         expect(rows).toStrictEqual([
-            { path: a.path, name: 'a', repository: 'acme/a', repo: { name: 'acme/a', ticked: false }, site: { name: 'acme/a', ticked: false }, datapack: { name: 'A Pack', ticked: false } },
+            { path: a.path, name: 'a', repo: { name: 'acme/a', ticked: false }, site: { name: 'acme/a', ticked: false }, datapack: { name: 'A Pack', ticked: false } },
         ]);
         // The batch's own projects are going: a pack only they use may go.
         expect(mockedPack).toHaveBeenCalledWith(expect.anything(), a, [a.path]);
@@ -91,11 +96,11 @@ describe('prepareDeleteBatch', () => {
     it('offers nothing under localOnly, and nothing another project still uses', async () => {
         const a = storefront('a');
         setting('localOnly');
-        expect(await prepareDeleteBatch(contextWith(a), [a.path])).toStrictEqual([{ path: a.path, name: 'a', repository: 'acme/a' }]);
+        expect(await prepareDeleteBatch(contextWith(a), [a.path])).toStrictEqual([{ path: a.path, name: 'a' }]);
 
         setting('ask');
         mockedShared.mockResolvedValueOnce({ repo: ['other'], site: ['other'] });
-        expect(await prepareDeleteBatch(contextWith(a), [a.path])).toStrictEqual([{ path: a.path, name: 'a', repository: 'acme/a' }]);
+        expect(await prepareDeleteBatch(contextWith(a), [a.path])).toStrictEqual([{ path: a.path, name: 'a' }]);
     });
 
     it('leaves out a project that no longer loads', async () => {
@@ -129,6 +134,32 @@ describe('prepareResetBatch', () => {
             { name: 'bodea', changes: 'asks' },
             { name: 'bodea' },
         ]);
+    });
+
+    // A pack whose changes could not be read stays installed (owner, 2026-11-04, option B): a
+    // batch never discards changes nobody could see. It read as "no changes" until then, so the
+    // pack was removed and whatever had changed was lost.
+    it('marks a pack whose changes could not be read, so the batch keeps it', async () => {
+        const unread = withPack('unread');
+        mockedChanges.mockResolvedValue(undefined);
+
+        const [row] = await prepareResetBatch(contextWith(unread), [unread.path]);
+
+        expect(row.datapack).toStrictEqual({ name: 'bodea', changes: 'unchecked' });
+    });
+
+    // Step 2 names each pack, so it is the name the Datapacks screen shows, not its id (F17).
+    it("names a library pack by its display name", async () => {
+        const team = withPack('team');
+        mockedChanges.mockResolvedValue({ count: 1, kinds: [], alwaysSave: false });
+        (openLibraryWriter as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            client: { findDatapacks: jest.fn(async () => ({ items: [{ id: { name: 'bodea' }, displayName: 'Team Bodea Pack' }] })) },
+        });
+
+        const [row] = await prepareResetBatch(contextWith(team), [team.path]);
+
+        expect(row.datapack).toStrictEqual({ name: 'Team Bodea Pack', changes: 'asks' });
     });
 
     // The card's own line under each name, so the confirm reads like the list (owner, 2026-11-04:

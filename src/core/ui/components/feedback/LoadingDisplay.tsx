@@ -123,47 +123,74 @@ export function LoadingDisplay({
                     isIndeterminate={!hasDeterminateProgress}
                     aria-label={message}
                 />
-                {/* Only the rows there is something to say on, so the spinner and its words are
-                    centred as they stand: a blank row kept for words that never come left the
-                    spinner sitting high (owner, 2026-11-01). `steady` holds all three, for a run
-                    whose lines change. */}
-                {(message || subMessage || helperText || steady) && (
-                    <Flex
-                        direction="column"
-                        gap="size-50"
-                        alignItems={shouldCenter ? 'center' : 'start'}
-                        UNSAFE_className={steady ? 'w-full' : undefined}
-                    >
-                        {(message || steady) && (
-                            <Text UNSAFE_className={cn(size === 'L' && 'text-lg', size === 'M' && 'text-base', 'font-medium', steady && 'loading-display-row')}>
-                                {rowText(message, steady)}
-                            </Text>
-                        )}
-                        {(subMessage || (steady && !noBlankRows)) && (
-                            <Text
-                                UNSAFE_className={cn('text-sm', 'text-gray-600', steady && 'loading-display-row')}
-                                minHeight="size-200"
-                            >
-                                {subMessage ? rowText(subMessage, steady) : '\u00A0'}
-                            </Text>
-                        )}
-                        {(helperText || (steady && !noBlankRows)) && (
-                            <Text
-                                // No 'italic': that class is defined in no
-                                // stylesheet, so this line has never rendered
-                                // italic. Asking for it again would be a look
-                                // nobody has reviewed — found when the class came
-                                // out of a variable and the bundle scan could read
-                                // it (2026-09-19).
-                                UNSAFE_className={cn('text-xs', 'text-gray-500', steady && 'loading-display-row')}
-                                marginTop="size-100"
-                            >
-                                {helperText ? rowText(helperText, steady) : '\u00A0'}
-                            </Text>
-                        )}
-                    </Flex>
-                )}
+                <LoadingRows
+                    size={size}
+                    message={message}
+                    subMessage={subMessage}
+                    helperText={helperText}
+                    steady={steady}
+                    noBlankRows={noBlankRows}
+                    shouldCenter={shouldCenter}
+                />
             </Flex>
         </div>
+    );
+}
+
+/**
+ * The words under the spinner. Only the rows there is something to say on, so the spinner and its
+ * words are centred as they stand: a blank row kept for words that never come left the spinner
+ * sitting high (owner, 2026-11-01). `steady` holds all three, for a run whose lines change. Moved
+ * out of `LoadingDisplay` unchanged (2026-11-04) to keep that function within the complexity limit.
+ */
+function LoadingRows({
+    size,
+    message,
+    subMessage,
+    helperText,
+    steady,
+    noBlankRows,
+    shouldCenter,
+}: Pick<LoadingDisplayProps, 'size' | 'message' | 'subMessage' | 'helperText'> & {
+    steady: boolean;
+    noBlankRows: boolean;
+    shouldCenter: boolean;
+}): React.ReactElement | null {
+    if (!(message || subMessage || helperText || steady)) return null;
+    return (
+        <Flex
+            direction="column"
+            gap="size-50"
+            alignItems={shouldCenter ? 'center' : 'start'}
+            UNSAFE_className={steady ? 'w-full' : undefined}
+        >
+            {(message || steady) && (
+                <Text UNSAFE_className={cn(size === 'L' && 'text-lg', size === 'M' && 'text-base', 'font-medium', steady && 'loading-display-row')}>
+                    {rowText(message, steady)}
+                </Text>
+            )}
+            {(subMessage || (steady && !noBlankRows)) && (
+                <Text
+                    UNSAFE_className={cn('text-sm', 'text-gray-600', steady && 'loading-display-row')}
+                    minHeight="size-200"
+                >
+                    {subMessage ? rowText(subMessage, steady) : '\u00A0'}
+                </Text>
+            )}
+            {(helperText || (steady && !noBlankRows)) && (
+                <Text
+                    // No 'italic': that class is defined in no
+                    // stylesheet, so this line has never rendered
+                    // italic. Asking for it again would be a look
+                    // nobody has reviewed — found when the class came
+                    // out of a variable and the bundle scan could read
+                    // it (2026-09-19).
+                    UNSAFE_className={cn('text-xs', 'text-gray-500', steady && 'loading-display-row')}
+                    marginTop="size-100"
+                >
+                    {helperText ? rowText(helperText, steady) : '\u00A0'}
+                </Text>
+            )}
+        </Flex>
     );
 }

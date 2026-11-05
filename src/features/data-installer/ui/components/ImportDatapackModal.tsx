@@ -47,7 +47,8 @@ import { useJobPickup } from '../hooks/useJobPickup';
 import { useRemovalConfirm, useRemovalScope } from '../hooks/useRemovalConfirm';
 import { useTypeSelection } from '../hooks/useTypeSelection';
 import { ImportDatapackModalBody, type BodyContext, type ModalView } from './ImportDatapackModalBody';
-import { buildActions, busyMessage, closeLabel, isRemoving, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
+import { backgroundTitle, jobBusyMessage, libraryField } from './importModalJob';
+import { buildActions, closeLabel, isRemoving, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
 import { resolveResult, type LastAction } from './importResult';
 import { removeLabel } from './removalConfirm';
 import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
@@ -178,7 +179,7 @@ export function ImportDatapackModal({
             // Spread: an unchosen target contributes NO keys. See useImportScopes.
             ...scope.targetFields(),
             // Only a library pack names its store; the handler reads absent as the Data Installer.
-            ...(source === 'library' ? { source } : {}),
+            ...libraryField(source),
         }),
         [id, commerceInstance, selected, scope, source],
     );
@@ -210,7 +211,7 @@ export function ImportDatapackModal({
 
     /** The read names only the pack: what a removal would lose does not depend on the ticks. */
     const armReset = (): void => {
-        removal.arm({ datapackName: id.name, version: id.version, ...(source === 'library' ? { source } : {}) });
+        removal.arm({ datapackName: id.name, version: id.version, ...libraryField(source) });
     };
 
     const busy = dryRun.loading || start.loading || reset.loading || pickingUp;
@@ -255,11 +256,7 @@ export function ImportDatapackModal({
         record,
         result,
         // Saving first has stages of its own (step 05), in the same wait, before the removal's.
-        busyMessage: busyMessage(
-            start.loading || (pickingUp && lastAction === 'start'),
-            reset.loading || (pickingUp && lastAction === 'reset'),
-            reset.loading ? removal.stage : undefined,
-        ),
+        busyMessage: jobBusyMessage({ start: start.loading, reset: reset.loading, pickingUp, lastAction, stage: removal.stage }),
         scope,
         removal,
         toggle,
@@ -275,7 +272,7 @@ export function ImportDatapackModal({
         if (running || savingFirst) {
             webviewClient.postMessage('backgroundOperation', {
                 id: DATAPACK_OPERATION_ID,
-                title: `${record?.operation === 'reset' || savingFirst ? 'Removing' : 'Importing'} ${displayName}`,
+                title: backgroundTitle(record?.operation === 'reset' || savingFirst, displayName),
             });
         }
         onClose();

@@ -885,11 +885,24 @@ check says so and names the file.
 > **Convention.** How something stands is drawn by one icon everywhere: `StatusIcon`, the wizard's
 > set. Warning is an orange circle with a `!`, error a red circle with an `X`, done a green check,
 > info a blue info icon. One red and one orange everywhere, with warning and error different shapes
-> so colour is not the only thing telling them apart (owner, 2026-11-02).
+> so colour is not the only thing telling them apart (owner, 2026-11-02). Each colour is Spectrum's
+> status token for its role, the same rule for every status: an icon, dot or border takes
+> `--spectrum-semantic-<status>-color-icon`, text takes `--spectrum-semantic-<status>-color-text-small`
+> (owner, 2026-11-05: consistency first, no one-off rules).
 > *Why:* a triangle meant "needs you" in a dialog and "failed" on the sign-in step, chosen file by
 > file (owner, 2026-11-02: the wizard's iconography, "standardized across the wizard and all of the
-> modals").
+> modals"). Status text had taken the icon token, and red's is 4.40:1 on the dialog background,
+> under the 4.5 WCAG AA asks of text (measured in the real bundle, 2026-11-05).
 > Enforced by `tests/sop/status-icons.test.ts`.
+
+> **Convention.** The accent blue keeps its ramp, and each state keeps one shade: a focus ring is
+> `blue-400`, a selected card's border `blue-400`, a link `blue-500`, a selected card on hover
+> `blue-200`. Hover, pressed and selected differ from rest on purpose; the same state in two
+> shades does not (owner, 2026-11-05: "retain design choices, but enforce consistency in them").
+> *Why:* 17 focus rings were `blue-400` and two `blue-500`; selected cards and links split the
+> same way, with nothing to say which was meant.
+> Enforced by `tests/sop/status-icons.test.ts`: focus rings by their selector, the other states
+> by a list of the rules that draw them.
 
 > **Convention.** What names a thing is Title Case, across the extension's own UI: titles, buttons,
 > tabs, menu items, headings and field labels ("Run in Background", "Couldn't Load Adobe APIs").
@@ -1903,7 +1916,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 136 conventions. 133 of them are enforced; 3 are not.**
+**This handbook states 137 conventions. 134 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

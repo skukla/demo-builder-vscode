@@ -29,8 +29,8 @@ import type {
 } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { parseJSON } from '@/types/typeGuards';
 
 /**

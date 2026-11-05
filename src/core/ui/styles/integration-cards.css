@@ -151,7 +151,7 @@
 }
 
 .integration-card-status--error {
-    color: var(--spectrum-semantic-negative-color-icon);
+    color: var(--spectrum-semantic-negative-color-text-small);
 }
 
 /* A system card's type ("ERP") beside its name; never squeezed by a long name. */
@@ -443,7 +443,11 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-.integration-panel-action.is-danger,
+/* The label is text, so Spectrum's text red; the icon keeps the icon red (2026-11-05). */
+.integration-panel-action.is-danger {
+    color: var(--spectrum-semantic-negative-color-text-small);
+}
+
 .integration-panel-action.is-danger .integration-panel-action-icon {
     color: var(--spectrum-semantic-negative-color-icon);
 }

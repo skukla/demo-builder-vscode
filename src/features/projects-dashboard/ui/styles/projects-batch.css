@@ -1,7 +1,7 @@
 /**
  * Selection mode on the projects list, and the Reset Selected / Delete Selected window (owner,
  * 2026-11-04): .projects-select-bar (the count row while selecting), .project-select-box (a tile's
- * box), .batch-delete-* (Delete Selected's table), .batch-reset-* (Reset Selected's questions) and
+ * box), .batch-delete-* (Delete Selected's table), .batch-confirm (each confirm's sentence and table) and
  * .projects-batch-run (the run's rows).
  *
  * FEATURE-SCOPED (ADR-017 §6). Imported by the `projectsList` entry alone (ui/index.tsx), the one
@@ -53,10 +53,22 @@
         vertical-align: middle;
     }
 
-    /* The name column takes what is left, and its names may wrap; the labels never do. */
+    /* The name column takes what is left; a project's name never wraps (owner, 2026-11-05). Every
+       other cell keeps its own width too, nothing in it wrapping: a cell that may wrap is squeezed
+       to its narrowest by this column, and "skukla/my-commerce-demo" broke at its hyphen beside
+       an empty half-window (owner, 2026-11-05). The window is extra-wide for that; a name too
+       long even for it scrolls the list sideways, and a window too narrow stacks (below). */
     .batch-delete-table tbody th {
         width: 100%;
-        white-space: normal;
+    }
+
+    /* Delete Selected, extra-wide: the names' column takes a quarter (more only if a name needs it)
+       and the box columns share the rest evenly (owner, 2026-11-05). It had taken all the spare
+       width, a hole beside short names; then only its names' width, boxes 12px from them. A share,
+       not a measure of the text, as the dialog rules have widths. Reset's one box column stays at
+       the right edge. */
+    .batch-delete-spread tbody th {
+        width: 25%;
     }
 
     /* A name with its line under it (owner, 2026-11-04): rows the run's rows' distance apart,
@@ -85,6 +97,13 @@
         overflow: hidden;
         clip-path: inset(50%);
         white-space: nowrap;
+    }
+
+    /* What a box deletes, beside it: the repository, the site, the pack (owner, 2026-11-05). */
+    .batch-option-what {
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--spectrum-global-color-gray-600);
     }
 
     @container (max-width: 520px) {
@@ -130,25 +149,47 @@
             overflow: visible;
             clip-path: none;
         }
+
+        /* Stacked, the box's label says what it is, and what it deletes goes under it, wrapping
+           as it must: a stacked cell has the whole width and squeezes nothing. */
+        .batch-option-what {
+            display: block;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .batch-project-head {
+            display: none;
+        }
     }
 
-    /* Reset Selected: Remove Datapack, then a line per project with what its pack needs. */
-    .batch-reset {
+    /* Each confirm, Delete Selected's and Reset Selected's two steps (owner, 2026-11-04): the
+       sentence, then the table, 24 apart, the dialog rules' gap between groups. */
+    .batch-confirm {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 24px;
     }
 
-    .batch-reset-row {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
+    .batch-confirm > .lead-text {
+        margin: 0;
     }
 
-    /* The confirm's projects apart as the run's rows are: a hairline between (owner, 2026-11-04). */
-    .batch-reset-row + .batch-reset-row {
-        padding-top: 12px;
-        border-top: 1px solid var(--spectrum-global-color-gray-200);
+    /* Step 2's column names over the pack and its new name, as the label style a field carries. */
+    .batch-changes-head {
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+        font-size: 12px;
+        color: var(--spectrum-global-color-gray-700);
+    }
+
+    /* Step 2: the pack keeps a third of the row, the new name takes what the box leaves. */
+    .batch-changes-table tbody th {
+        width: 36%;
+    }
+
+    .batch-changes-table tbody td:nth-child(2) {
+        width: 100%;
     }
 
     /* A reset's org, over its projects, when the run spans several: the Updates window's group
@@ -167,13 +208,6 @@
     /* "Took 7 minutes, 20 seconds" under the run's rows, set off from the last one. */
     .projects-batch-took {
         margin-top: 12px;
-    }
-
-    .batch-reset-changes {
-        display: flex;
-        align-items: flex-end;
-        flex-wrap: wrap;
-        gap: var(--spectrum-global-dimension-size-200);
     }
 
     /* The run: a row per project, as tall as its rows, then it scrolls, as the Updates run does. */

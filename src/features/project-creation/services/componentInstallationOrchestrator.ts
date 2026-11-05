@@ -7,12 +7,12 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
 import { installAiDefaultsMcpTools } from './aiBundle/aiDefaultsInstaller';
 import { projectNeedsAppBuilderTooling } from './aiBundle/aiToolingGate';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { ComponentManager } from '@/features/components/services/componentManager';
 import type { Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';

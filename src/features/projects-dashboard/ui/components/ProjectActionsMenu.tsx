@@ -245,7 +245,6 @@ export function ProjectActionsMenu({
     }, [
         isEds,
         isRunning,
-        project,
         onStartDemo,
         onStopDemo,
         onOpenBrowser,

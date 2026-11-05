@@ -181,6 +181,8 @@ export async function askForDetailsDuringOperation(prompt: {
     steps?: string[];
     fields: OperationPromptField[];
     actions: string[];
+    /** The first answer deletes or replaces something: its button is red. */
+    destructive?: boolean;
 }): Promise<PromptAnswer> {
     const id = hosting.getStore();
     if (!id) {

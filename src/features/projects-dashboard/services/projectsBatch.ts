@@ -27,6 +27,7 @@ import { runProjectDelete } from './projectDeletionService';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { stageLine } from '@/core/utils/stageLine';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
+import { openLibraryWriter } from '@/features/data-installer/handlers/libraryWriter';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
@@ -65,7 +66,7 @@ export async function prepareDeleteBatch(context: HandlerContext, paths: readonl
     const projects = await loadAll(context, paths);
     return Promise.all(
         projects.map(async (project): Promise<BatchDeleteRow> => {
-            const row: BatchDeleteRow = { path: project.path, name: getProjectDisplayName(project), ...summaryOf(project) };
+            const row: BatchDeleteRow = { path: project.path, name: getProjectDisplayName(project) };
             if (behavior === 'localOnly') return row;
             const eds = extractEdsMetadata(project);
             const shared = await sharedOnlineOf(context.stateManager, eds, paths);
@@ -81,14 +82,32 @@ export async function prepareDeleteBatch(context: HandlerContext, paths: readonl
 
 /** A reset batch's screen: per project, the datapack the reset could remove and its changes. */
 /**
- * What the confirm draws under a project's name: its storefront's repository, which a reset
- * overwrites and a delete can remove, and its card's line for a project with none (owner,
- * 2026-11-04: two projects of one package read the same).
+ * What Reset Selected draws under a project's name: its storefront's repository, which a reset
+ * overwrites, and its card's line for a project with none (owner, 2026-11-04: two projects of one
+ * package read the same). Delete Selected names the repository in its box instead (2026-11-05).
  */
 function summaryOf(project: Project): { repository?: string; summary?: string } {
     const repository = extractEdsMetadata(project)?.githubRepo;
     const summary = getBrandStackSummary(project);
     return { ...(repository ? { repository } : {}), ...(summary ? { summary } : {}) };
+}
+
+/**
+ * A library pack's display name, as the Datapacks screen shows it (F17: the confirm showed its id,
+ * "kukla-justrite-a80dca"). Undefined for a pack outside the library, or a library that does not
+ * answer: the caller falls back to the id.
+ */
+async function displayNameOf(context: HandlerContext, held: NonNullable<Project['datapack']>): Promise<string | undefined> {
+    if (held.store !== 'library') return undefined;
+    try {
+        const library = await openLibraryWriter(context);
+        if (!library.ok) return undefined;
+        const page = await library.client.findDatapacks({ datapackName: held.name });
+        return page.items.find((item) => item.id.name === held.name)?.displayName;
+    } catch (error) {
+        context.debugLogger.debug(`[ProjectsBatch] Could not read ${held.name}'s display name: ${error instanceof Error ? error.message : String(error)}`);
+        return undefined;
+    }
 }
 
 /** A project's IMS organization as the SC knows it: its name, its id when it has none. */
@@ -104,10 +123,12 @@ export async function prepareResetBatch(context: HandlerContext, paths: readonly
             const row: BatchResetRow = { path: project.path, name: getProjectDisplayName(project), ...summaryOf(project), ...orgOf(project) };
             if (!project.datapack || commerceBackendOf(project) === undefined) return row;
             const changes = await readRemovalChangesOf(context, project);
-            const name = changes?.packName ?? project.datapack.name;
+            const name = changes?.packName ?? (await displayNameOf(context, project.datapack)) ?? project.datapack.name;
             row.datapack = { name };
+            // Unread is not "no changes": the pack stays rather than lose what nobody could see.
+            if (!changes) row.datapack.changes = 'unchecked';
             // Changes go into the SC's own pack with no question; else they need a name.
-            if ((changes?.count ?? 0) > 0) row.datapack.changes = changes?.packName ? 'saves' : 'asks';
+            else if (changes.count > 0) row.datapack.changes = changes.packName ? 'saves' : 'asks';
             return row;
         }),
     );
@@ -183,7 +204,7 @@ export function byOrganization<T extends { path: string }>(answers: readonly T[]
  * Three keeps the DA.live and Helix calls they share within what those services take before they
  * ask to slow down (both retry a 429, nothing limits across projects).
  */
-export const RESETS_AT_ONCE = 3;
+const RESETS_AT_ONCE = 3;
 
 /**
  * Run each item, up to `limit` at a time, in order; an item with a lane waits while another of its

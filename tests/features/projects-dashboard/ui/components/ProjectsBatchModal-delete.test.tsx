@@ -39,14 +39,17 @@ describe('ProjectsBatchModal: Delete Selected', () => {
 
         expect(mockRequest).toHaveBeenCalledWith('prepareProjectsBatch', { action: 'delete', projectPaths: ['/p/a', '/p/b', '/p/c'] });
         // A dangerous confirm carries the amber icon (dialog design rules).
-        expect(await screen.findByRole('dialog', { name: 'Delete Projects' })).toHaveAttribute('data-status', 'warning');
+        const dialog = await screen.findByRole('dialog', { name: 'Delete 3 Projects?' });
+        expect(dialog).toHaveAttribute('data-status', 'warning');
+        // Extra-wide, so three columns of names fit on one line (owner, 2026-11-05).
+        expect(dialog).toHaveAttribute('data-wide', 'true');
         expect(screen.queryByText('Reading Projects')).toBeNull();
     });
 
     it('shows the wait while the read is out', async () => {
         await openOn('delete', null);
 
-        expect(screen.getByRole('dialog', { name: 'Delete Projects' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: /^Delete \d+ Projects?\?$/ })).toBeInTheDocument();
         expect(screen.getByText('Reading Projects')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Delete 3 Projects' })).toBeNull();
     });
@@ -66,7 +69,7 @@ describe('ProjectsBatchModal: Delete Selected', () => {
 
     it('offers a box only where the project has the resource, and no column nobody has', async () => {
         await openOn('delete', DELETE);
-        await screen.findByRole('dialog', { name: 'Delete Projects' });
+        await screen.findByRole('dialog', { name: /^Delete \d+ Projects?\?$/ });
 
         expect(box('Delete Repository, A')).toBeChecked();
         expect(box('Delete DA.live Site, A')).toBeChecked();
@@ -77,9 +80,35 @@ describe('ProjectsBatchModal: Delete Selected', () => {
         expect(screen.queryByText('Delete Datapack')).toBeNull();
     });
 
+    // What goes whatever is ticked, then each box beside what it deletes (owner, 2026-11-05).
+    it('says the files go, names each project alone, and names what each box deletes beside it', async () => {
+        await openOn('delete', DELETE);
+        await screen.findByRole('dialog', { name: 'Delete 3 Projects?' });
+
+        expect(screen.getByText('Project files are removed from this machine.')).toBeInTheDocument();
+        expect(screen.getByText('Project')).toBeInTheDocument();
+        expect(within(box('Delete Repository, A').closest('td') as HTMLElement).getByText('me/a')).toBeInTheDocument();
+        expect(within(box('Delete DA.live Site, A').closest('td') as HTMLElement).getByText('org/a')).toBeInTheDocument();
+        const nameCell = screen.getByText('A').closest('th') as HTMLElement;
+        expect(nameCell).toHaveTextContent(/^A$/);
+        // A long list scrolls under its header with the Updates window's fade (owner, 2026-11-05).
+        expect(nameCell.closest('.batch-delete')).toHaveClass('scroll-fade');
+    });
+
+    it('asks for one project, in the same words', async () => {
+        const one: PrepareEnvelope = {
+            success: true,
+            data: { action: 'delete', rows: [{ path: '/p/a', name: asDisplayName('A'), repo: { name: 'me/a', ticked: false } }] },
+        };
+        await openOn('delete', one);
+
+        expect(await screen.findByRole('dialog', { name: 'Delete 1 Project?' })).toBeInTheDocument();
+        expect(screen.getByText('Project files are removed from this machine.')).toBeInTheDocument();
+    });
+
     it("a column's header shows some, ticks all, then ticks none, over only the rows that have it", async () => {
         const { user } = await openOn('delete', DELETE);
-        await screen.findByRole('dialog', { name: 'Delete Projects' });
+        await screen.findByRole('dialog', { name: /^Delete \d+ Projects?\?$/ });
         const header = box('Delete Repository');
 
         expect(header).toHaveAttribute('aria-checked', 'mixed');
@@ -98,7 +127,7 @@ describe('ProjectsBatchModal: Delete Selected', () => {
 
     it('sends one answer per project from the boxes, on the red button naming the count', async () => {
         const { user } = await openOn('delete', DELETE);
-        await screen.findByRole('dialog', { name: 'Delete Projects' });
+        await screen.findByRole('dialog', { name: /^Delete \d+ Projects?\?$/ });
         await user.click(box('Delete DA.live Site, A'));
         await user.click(box('Delete Repository, B'));
         const run = screen.getByRole('button', { name: 'Delete 3 Projects' });
@@ -121,7 +150,7 @@ describe('ProjectsBatchModal: Delete Selected', () => {
 
     it('Cancel closes the window and runs nothing', async () => {
         const { user, onClosed } = await openOn('delete', DELETE);
-        await screen.findByRole('dialog', { name: 'Delete Projects' });
+        await screen.findByRole('dialog', { name: /^Delete \d+ Projects?\?$/ });
 
         await user.click(screen.getByRole('button', { name: 'Cancel' }));
 

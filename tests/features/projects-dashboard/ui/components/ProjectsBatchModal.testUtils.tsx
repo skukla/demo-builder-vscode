@@ -24,6 +24,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         closeLabel,
         hideClose,
         waiting,
+        wide,
         children,
     }: {
         title: string;
@@ -33,9 +34,10 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         closeLabel?: string;
         hideClose?: boolean;
         waiting?: ModalWait | false;
+        wide?: boolean;
         children: React.ReactNode;
     }) => (
-        <div role="dialog" aria-label={title} data-status={status}>
+        <div role="dialog" aria-label={title} data-status={status} data-wide={wide ? 'true' : undefined}>
             {waiting ? <p>{waiting.message}</p> : children}
             {!hideClose && <button onClick={onClose}>{closeLabel ?? 'Close'}</button>}
             {(waiting ? [] : actionButtons).map((b) => (

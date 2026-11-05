@@ -304,7 +304,7 @@
     margin: 12px 0 0;
     font-size: var(--spectrum-global-dimension-font-size-75);
     line-height: 1.5;
-    color: var(--spectrum-semantic-negative-color-icon);
+    color: var(--spectrum-semantic-negative-color-text-small);
 }
 
 .intflow-api-picker {
@@ -424,7 +424,7 @@
     flex: 1 1 auto;
     font-size: 12px;
     line-height: 1.4;
-    color: var(--spectrum-semantic-negative-color-icon);
+    color: var(--spectrum-semantic-negative-color-text-small);
     overflow-wrap: anywhere;
 }
 }

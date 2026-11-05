@@ -12,7 +12,6 @@
 
 import { resolveDataInstallerAccess, resolveDatapackAccess } from '../handlers/dataInstallerHandlers';
 import { SERVICE_INSTALLS_ONLY_ITS_OWN, SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from '../handlers/libraryReads';
-import type { DatapackStoreName } from '@/types/datapack';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
 import { buildDatapackEngine, engineThatInstalled } from './buildDatapackEngine';
 import { resolveDataInstallerBaseUrl, selectedDatapackEngine } from './dataInstallerConfig';
@@ -22,6 +21,7 @@ import type { SampleDataDeps } from './sampleDataInstall';
 import { PollingService } from '@/core/shell/pollingService';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import type { Project } from '@/types/base';
+import type { DatapackStoreName } from '@/types/datapack';
 import type { HandlerContext } from '@/types/handlers';
 
 /** What this deps set is being built for. */

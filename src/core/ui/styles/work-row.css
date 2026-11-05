@@ -77,7 +77,7 @@
     }
 
     .work-row-why {
-        color: var(--spectrum-semantic-negative-color-icon);
+        color: var(--spectrum-semantic-negative-color-text-small);
     }
 
     .work-row-note {

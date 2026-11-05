@@ -125,6 +125,19 @@ it('offers each answer, the one that continues the work first', () => {
     );
 });
 
+// A delete's question: its main answer is red, as the batch window's Delete (owner, 2026-11-05).
+it('draws a destructive question\'s main answer red', () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { title: 'Delete Bodea?', message: 'Project files are removed from this machine.', actions: ['Delete'], destructive: true },
+    };
+
+    renderModal();
+
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveAttribute('data-variant', 'negative');
+});
+
 // The Adobe sign-in guard asks "Sign In" / "Cancel", and the modal's own dismiss
 // already says Cancel: the reset showed both, side by side (2026-10-23).
 it('shows one Cancel when the question offers its own', () => {

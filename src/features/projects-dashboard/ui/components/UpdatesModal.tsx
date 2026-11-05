@@ -100,7 +100,7 @@ function RowGroupView({ group, controls, startsOpen }: RowGroupViewProps) {
 
 function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: UpdatesModalControls }) {
     return (
-        <div className="updates-group-list">
+        <div className="updates-group-list scroll-fade">
             {groupsOf(rows).map((group) => (
                 <RowGroupView
                     key={group.key}
@@ -174,9 +174,10 @@ function runChrome(controls: UpdatesModalControls): Chrome {
  * a dialog's main button goes (a prompt names it first). The projects batch window asks with it too.
  */
 export function promptButtons(prompt: OperationPrompt, answer: (chosen?: string) => void): ActionButton[] {
+    const main = prompt.destructive ? 'negative' : 'accent';
     const actions = prompt.actions.map((label, index): ActionButton => ({
         label,
-        variant: index === 0 ? 'accent' : 'secondary',
+        variant: index === 0 ? main : 'secondary',
         onPress: () => answer(label),
     }));
     return [...actions.slice(1), ...actions.slice(0, 1)];

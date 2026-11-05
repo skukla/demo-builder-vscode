@@ -15,6 +15,7 @@
  */
 
 import * as vscode from 'vscode';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { askForDetailsDuringOperation, withModalAsking } from '@/core/vscode/operationPrompt';
 import type { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import type { SharedOnline } from '@/features/eds/services/storefront/sharedRepoProjects';
@@ -39,7 +40,7 @@ export interface CleanupOptions {
  */
 export async function confirmPlainDelete(project: Project): Promise<boolean> {
     const confirm = await vscode.window.showWarningMessage(
-        `Are you sure you want to delete "${project.name}"?`,
+        `Are you sure you want to delete "${getProjectDisplayName(project)}"?`,
         {
             modal: true,
             detail: 'This will remove all project files and configuration. This action cannot be undone.',
@@ -95,8 +96,12 @@ async function askCleanupInModal(
     project: Project,
     items: CleanupQuickPickItem[],
 ): Promise<CleanupOptions | null> {
+    // The question takes the window's title while it asks, the button red, as the batch window's
+    // Delete; the boxes say what can go online, so the sentence says only what goes regardless
+    // (owner, 2026-11-05).
     const asked = await askForDetailsDuringOperation({
-        message: `Delete "${project.name}"? Its files are removed from this machine. You can also delete what it created online.`,
+        title: `Delete ${getProjectDisplayName(project)}?`,
+        message: 'Project files are removed from this machine.',
         fields: items.map((item) => ({
             id: item.id,
             label: LABELS[item.id],
@@ -105,6 +110,7 @@ async function askCleanupInModal(
             description: item.description,
         })),
         actions: ['Delete'],
+        destructive: true,
     });
     if (asked.action !== 'Delete') return null;
     return answerFrom((id) => asked.values[id] === 'true');
@@ -201,7 +207,7 @@ export async function showCleanupConfirmation(
 
     // Show QuickPick with cleanup options
     const quickPick = vscode.window.createQuickPick<CleanupQuickPickItem>();
-    quickPick.title = `Delete "${project.name}"`;
+    quickPick.title = `Delete "${getProjectDisplayName(project)}"`;
     quickPick.placeholder = 'Also delete these external resources? (Enter to delete)';
     quickPick.canSelectMany = true;
     quickPick.ignoreFocusOut = true; // Prevent dismissal when webview takes focus

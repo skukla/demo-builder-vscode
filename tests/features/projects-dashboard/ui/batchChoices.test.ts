@@ -5,13 +5,20 @@
  */
 
 import {
+    changeRows,
     columnState,
     deleteAnswers,
+    discardColumnState,
+    duplicateNamePaths,
     initialDeleteTicks,
+    initialRemoveTicks,
+    removeColumnState,
     resetAnswers,
     resetIsReady,
     toggleColumn,
     toggleDeleteTick,
+    toggleDiscardColumn,
+    toggleRemoveColumn,
 } from '@/features/projects-dashboard/ui/batchChoices';
 import type { BatchDeleteRow, BatchResetRow } from '@/types/projectsBatch';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
@@ -33,7 +40,11 @@ const RESET_ROWS: BatchResetRow[] = [
     { path: '/p/b', name: asDisplayName('B'), datapack: { name: asDisplayName('Mine'), changes: 'saves' } },
     { path: '/p/c', name: asDisplayName('C'), datapack: { name: asDisplayName('Clean') } },
     { path: '/p/d', name: asDisplayName('D') },
+    { path: '/p/e', name: asDisplayName('E'), datapack: { name: asDisplayName('Unread'), changes: 'unchecked' } },
 ];
+
+/** Every removable pack ticked, as the window opens. */
+const ALL = initialRemoveTicks(RESET_ROWS);
 
 describe('delete choices', () => {
     it('starts each box where the prepare said, and a box a row does not have unticked', () => {
@@ -74,36 +85,66 @@ describe('delete choices', () => {
     });
 });
 
+// Reset Selected in two steps (owner, 2026-11-04): a Remove Datapack box per project, as Delete
+// Selected's table has, then only the packs that need an answer, each saved as new or discarded.
 describe('reset choices', () => {
-    it('waits for a name, or Remove Without Saving, on a pack that asks', () => {
-        expect(resetIsReady(RESET_ROWS, true, {})).toBe(false);
-        expect(resetIsReady(RESET_ROWS, true, { '/p/a': { saveAs: '   ', drop: false } })).toBe(false);
-        expect(resetIsReady(RESET_ROWS, true, { '/p/a': { saveAs: 'My Copy', drop: false } })).toBe(true);
-        expect(resetIsReady(RESET_ROWS, true, { '/p/a': { saveAs: '', drop: true } })).toBe(true);
+    it("ticks every pack that can go, and offers no box for none or one whose changes weren't read", () => {
+        expect(ALL).toStrictEqual({ '/p/a': true, '/p/b': true, '/p/c': true });
     });
 
-    it('asks nothing while Remove Datapack is unticked', () => {
-        expect(resetIsReady(RESET_ROWS, false, {})).toBe(true);
+    it('reads and toggles the Remove Datapack column over the rows that have a box', () => {
+        expect(removeColumnState(RESET_ROWS, ALL)).toStrictEqual({ offered: true, all: true, some: true });
+        const none = toggleRemoveColumn(RESET_ROWS, ALL);
+        expect(removeColumnState(RESET_ROWS, none)).toStrictEqual({ offered: true, all: false, some: false });
+        expect(toggleRemoveColumn(RESET_ROWS, { ...none, '/p/b': true })).toStrictEqual(ALL);
     });
 
-    it('sends the trimmed name for a pack that asks, and removes the others as they are', () => {
-        expect(resetAnswers(RESET_ROWS, true, { '/p/a': { saveAs: '  My Copy ', drop: false } })).toEqual([
+    it('asks in step 2 only for a removed pack that is not yours and has changes', () => {
+        expect(changeRows(RESET_ROWS, ALL).map((row) => row.path)).toStrictEqual(['/p/a']);
+        expect(changeRows(RESET_ROWS, { ...ALL, '/p/a': false })).toStrictEqual([]);
+    });
+
+    it('waits for a name or Discard Changes on every pack that asks', () => {
+        expect(resetIsReady(RESET_ROWS, ALL, {})).toBe(false);
+        expect(resetIsReady(RESET_ROWS, ALL, { '/p/a': { saveAs: '   ', drop: false } })).toBe(false);
+        expect(resetIsReady(RESET_ROWS, ALL, { '/p/a': { saveAs: 'My Copy', drop: false } })).toBe(true);
+        expect(resetIsReady(RESET_ROWS, ALL, { '/p/a': { saveAs: '', drop: true } })).toBe(true);
+        expect(resetIsReady(RESET_ROWS, { ...ALL, '/p/a': false }, {})).toBe(true);
+    });
+
+    it('refuses two packs in the list saved under one name, whatever its case or spaces', () => {
+        const two: BatchResetRow[] = [
+            RESET_ROWS[0],
+            { path: '/p/z', name: asDisplayName('Z'), datapack: { name: asDisplayName('Frescopa'), changes: 'asks' } },
+        ];
+        const ticks = initialRemoveTicks(two);
+        const fields = { '/p/a': { saveAs: 'My Copy', drop: false }, '/p/z': { saveAs: ' my copy ', drop: false } };
+
+        expect([...duplicateNamePaths(two, ticks, fields)]).toStrictEqual(['/p/z']);
+        expect(resetIsReady(two, ticks, fields)).toBe(false);
+        expect(duplicateNamePaths(two, ticks, { ...fields, '/p/z': { saveAs: 'Other', drop: false } }).size).toBe(0);
+    });
+
+    it('reads and toggles the Discard Changes column over the packs that ask', () => {
+        const rows = changeRows(RESET_ROWS, ALL);
+        expect(discardColumnState(rows, {})).toStrictEqual({ offered: true, all: false, some: false });
+        const dropped = toggleDiscardColumn(rows, { '/p/a': { saveAs: 'typed', drop: false } });
+        expect(dropped['/p/a']).toStrictEqual({ saveAs: 'typed', drop: true });
+        expect(discardColumnState(rows, dropped)).toStrictEqual({ offered: true, all: true, some: true });
+    });
+
+    it('sends a name, a drop, a plain removal or a keep, per project', () => {
+        expect(resetAnswers(RESET_ROWS, { ...ALL, '/p/c': false }, { '/p/a': { saveAs: '  My Copy ', drop: false } })).toStrictEqual([
             { path: '/p/a', removeDatapack: true, changes: { saveAs: 'My Copy' } },
             { path: '/p/b', removeDatapack: true },
-            { path: '/p/c', removeDatapack: true },
+            { path: '/p/c', removeDatapack: false },
             { path: '/p/d', removeDatapack: false },
+            { path: '/p/e', removeDatapack: false },
         ]);
-    });
-
-    it("sends 'drop' for Remove Without Saving, whatever was typed", () => {
-        expect(resetAnswers(RESET_ROWS, true, { '/p/a': { saveAs: 'typed', drop: true } })[0]).toEqual({
+        expect(resetAnswers(RESET_ROWS, ALL, { '/p/a': { saveAs: 'typed', drop: true } })[0]).toStrictEqual({
             path: '/p/a',
             removeDatapack: true,
             changes: 'drop',
         });
-    });
-
-    it('keeps every pack with Remove Datapack unticked', () => {
-        expect(resetAnswers(RESET_ROWS, false, {}).map((answer) => answer.removeDatapack)).toEqual([false, false, false, false]);
     });
 });

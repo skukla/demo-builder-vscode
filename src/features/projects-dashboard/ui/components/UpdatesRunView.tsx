@@ -168,7 +168,7 @@ export function UpdatesRunView({ rows, statuses, progress, onTyped, remaining }:
     const live: Live = { step: progress?.step, question, onTyped };
     const failure = failureLine(progress, rows, statuses);
     return (
-        <div className="updates-group-list">
+        <div className="updates-group-list scroll-fade">
             {failure && <p className="work-row-why">{failure}</p>}
             {progress?.state === 'succeeded' && remaining > 0 && (
                 <p className="work-row-note">{waitingLine(remaining)}</p>

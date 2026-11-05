@@ -339,9 +339,13 @@
     margin-top: 12px;
 }
 
-.dashboard-action-button--danger svg,
-.dashboard-action-button--danger .icon-label {
+.dashboard-action-button--danger svg {
     color: var(--spectrum-semantic-negative-color-icon);
+}
+
+/* Its label is text: Spectrum's text red (one rule for status colours, 2026-11-05). */
+.dashboard-action-button--danger .icon-label {
+    color: var(--spectrum-semantic-negative-color-text-small);
 }
 
 /* ===========================================

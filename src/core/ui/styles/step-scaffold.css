@@ -222,7 +222,7 @@
     align-items: center;
     cursor: pointer;
     text-decoration: underline;
-    color: var(--spectrum-global-color-blue-600);
+    color: var(--spectrum-global-color-blue-500);
     transition: background-color var(--spectrum-global-animation-duration-200) ease, color var(--spectrum-global-animation-duration-200) ease;
 }
 

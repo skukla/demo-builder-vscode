@@ -34,8 +34,8 @@ import { answerOperationPrompt, isAwaitingAnswer } from '@/core/vscode/operation
 const ID = 'delete-demo-project';
 
 /** Start a modal delete and wait until its question is up. */
-async function deleteAndAsk() {
-    const done = deleteProject(context(), edsProject(), SERVICES, { progress: 'modal', operationId: ID });
+async function deleteAndAsk(project = edsProject()) {
+    const done = deleteProject(context(), project, SERVICES, { progress: 'modal', operationId: ID });
     for (let i = 0; i < 50 && !isAwaitingAnswer(ID); i++) {
         await Promise.resolve();
     }
@@ -99,6 +99,17 @@ describe('the cleanup question in the progress modal', () => {
         ]);
         // Every box says what it is; the words themselves are not this test's business.
         expect(prompt?.fields?.every((field) => field.label.length > 0)).toBe(true);
+    });
+
+    it('names the project by its display name in the title, says only what goes regardless, and asks with a red Delete', async () => {
+        const { done } = await deleteAndAsk(edsProject({ title: 'Patch Canary B2B' }));
+        const prompt = heldProgress(ID)?.prompt;
+        answerOperationPrompt(ID, undefined);
+        await done;
+
+        expect(prompt?.title).toBe('Delete Patch Canary B2B?');
+        expect(prompt?.message).toBe('Project files are removed from this machine.');
+        expect(prompt?.destructive).toBe(true);
     });
 
     it('Delete with only the DA.live box ticked takes the site and spares the repository', async () => {

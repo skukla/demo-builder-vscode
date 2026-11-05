@@ -19,9 +19,9 @@
 
 import { extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { CommandResult } from '@/core/shell/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 

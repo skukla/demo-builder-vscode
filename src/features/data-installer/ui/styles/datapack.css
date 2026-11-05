@@ -151,7 +151,7 @@
    selection cards rather than inventing a second selected treatment. */
 @layer theme {
 .datapack-card.is-selected {
-    border-color: var(--spectrum-global-color-blue-500);
+    border-color: var(--spectrum-global-color-blue-400);
     background: var(--spectrum-global-color-gray-75);
 }
 }

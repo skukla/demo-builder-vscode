@@ -8,9 +8,9 @@
 
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { ComponentInstance, Project, type AppBuilderComponentState } from '@/types/base';
 import type { Logger } from '@/types/logger';

@@ -46,7 +46,7 @@ const SIGN_IN: OperationPrompt = {
 /** The window open on the questions, then Delete pressed: the run under way. */
 async function running() {
     const opened = await openOn('delete', DELETE);
-    await screen.findByRole('dialog', { name: 'Delete Projects' });
+    await screen.findByRole('dialog', { name: /^Delete \d+ Projects?\?$/ });
     await opened.user.click(screen.getByRole('button', { name: 'Delete 3 Projects' }));
     await push('operationProgress', { id: ID, state: 'running' });
     return opened;
@@ -113,7 +113,7 @@ describe('ProjectsBatchModal: the run', () => {
             },
         };
         const opened = await openOn('reset', reset);
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
         await opened.user.click(screen.getByRole('button', { name: 'Reset 3 Projects' }));
         await push('operationProgress', { id: ID, state: 'running' });
 
@@ -129,7 +129,7 @@ describe('ProjectsBatchModal: the run', () => {
             data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A') }, { path: '/p/b', name: asDisplayName('B'), org: 'Demo Org' }] },
         };
         const opened = await openOn('reset', reset);
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
         await opened.user.click(screen.getByRole('button', { name: 'Reset 2 Projects' }));
         await push('operationProgress', { id: ID, state: 'running' });
 
@@ -145,7 +145,7 @@ describe('ProjectsBatchModal: the run', () => {
             },
         };
         const opened = await openOn('reset', reset);
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
         await opened.user.click(screen.getByRole('button', { name: 'Reset 3 Projects' }));
         await push('operationProgress', { id: ID, state: 'running' });
 
@@ -159,7 +159,7 @@ describe('ProjectsBatchModal: the run', () => {
             data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A'), org: 'Demo Org' }, { path: '/p/b', name: asDisplayName('B'), org: 'Demo Org' }] },
         };
         const opened = await openOn('reset', reset);
-        await screen.findByRole('dialog', { name: 'Reset Projects' });
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
         await opened.user.click(screen.getByRole('button', { name: 'Reset 2 Projects' }));
         await push('operationProgress', { id: ID, state: 'running' });
 

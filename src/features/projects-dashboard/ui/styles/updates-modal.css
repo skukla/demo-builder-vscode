@@ -11,38 +11,13 @@
  * them separates them now.
  */
 
-/* Registered so it animates as a length; an unregistered property jumps between values. */
-@property --updates-fade {
-    syntax: '<length>';
-    inherits: false;
-    initial-value: 0px;
-}
-
 @layer theme {
     /* Groups 24 apart (dialog design rules). As tall as its rows, so two rows leave no empty
-       space under them, then it scrolls: the cap keeps the buttons on screen in a short editor. */
+       space under them, then it scrolls with a fade: `.scroll-fade` (core/ui/styles). */
     .updates-group-list {
         display: flex;
         flex-direction: column;
         gap: 24px;
-        max-height: min(440px, 55vh);
-        overflow-y: auto;
-        /* The last 32px fade out while there is more below, so a cut-off group reads as
-           "scroll for more" (owner, 2026-10-20). The fade's size follows the scroll: full
-           at the top, gone at the bottom. A list that fits has no scroll, so the
-           animation never runs and the fade keeps its registered 0px. */
-        mask-image: linear-gradient(to bottom, #000 calc(100% - var(--updates-fade)), transparent);
-        animation: updates-list-fade linear both;
-        animation-timeline: scroll(self);
-    }
-
-    @keyframes updates-list-fade {
-        from {
-            --updates-fade: 32px;
-        }
-        to {
-            --updates-fade: 0px;
-        }
     }
 
     .updates-group {

@@ -77,7 +77,7 @@
 }
 
 .vsteplist-step:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-500);
+    outline: 2px solid var(--spectrum-global-color-blue-400);
     outline-offset: 2px;
 }
 
@@ -137,7 +137,7 @@
  * else can carry it. A small negative-500 dot after the label, plus a red-600 label so
  * the signal is not colour-on-a-dot alone. */
 .vsteplist-step.has-error .vsteplist-title {
-    color: var(--spectrum-semantic-negative-color-icon);
+    color: var(--spectrum-semantic-negative-color-text-small);
 }
 
 .vsteplist-error {

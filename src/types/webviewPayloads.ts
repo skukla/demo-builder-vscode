@@ -493,6 +493,8 @@ export interface OperationPrompt {
     steps?: string[];
     /** The answers, the first being the one that continues the work. */
     actions: string[];
+    /** The first answer deletes or replaces something, so its button is red (owner, 2026-11-05). */
+    destructive?: boolean;
     /**
      * What the SC has to type for the work to go on — a namespace, a pasted token.
      * The modal owns these rather than handing off to a VS Code input box, so one
