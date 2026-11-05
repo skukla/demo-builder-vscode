@@ -4,9 +4,6 @@
  * answer arriving after the SC has moved on is dropped rather than taken for another kind's. Its
  * answer goes up to the flow, which keeps it, so the kind's row can say what it found.
  *
- * `FirstKindRead` is the same read with nothing on screen: the dialog waits for the first kind's
- * list, so both columns appear together, and `Modal`'s wait does not mount the body.
- *
  * @module features/data-installer/ui/components/create-flow/stages/StoreItemsStage
  */
 
@@ -42,12 +39,6 @@ function useKindRead({ kind, pack, answered, onAnswered }: KindReadArgs) {
     }, [settled, value, kind, onAnswered]);
 
     return { value, failure, loading: needsRead && !settled };
-}
-
-/** The first kind's read while the dialog waits for it. Draws nothing. */
-export function FirstKindRead(props: Omit<KindReadArgs, 'answered'>): null {
-    useKindRead(props);
-    return null;
 }
 
 export function StoreItemsStage({ kind, pack, answered, picked, onChange, onAnswered }: StoreItemsStageProps): React.ReactElement {

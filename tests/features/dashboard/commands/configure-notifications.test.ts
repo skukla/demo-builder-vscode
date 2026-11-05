@@ -229,7 +229,7 @@ describe('ConfigureProjectWebviewCommand - post-save notifications', () => {
             await notifications(command).showPostSaveNotifications(project, NO, YES);
 
             expect(stubs.handleStorefrontOnlyNotification).not.toHaveBeenCalled();
-            expect(successSpy).toHaveBeenCalledWith('Configuration saved successfully');
+            expect(successSpy).toHaveBeenCalledWith('Configuration saved');
         });
 
         it('routes to the mesh prompt when only mesh changed', async () => {
@@ -272,7 +272,7 @@ describe('ConfigureProjectWebviewCommand - post-save notifications', () => {
 
             await notifications(command).showPostSaveNotifications(project, YES, NO);
 
-            expect(successSpy).toHaveBeenCalledWith('Configuration saved successfully');
+            expect(successSpy).toHaveBeenCalledWith('Configuration saved');
         });
 
         it('suppresses the generic toast when the authoring experience changed', async () => {

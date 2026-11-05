@@ -140,6 +140,7 @@ describe('save-store-changes-to-pack', () => {
         counts: { products: 2 },
         readFrom: 'installer' as const,
         sentence: 'Saved to the acme pack. Bodea is unchanged.',
+        details: [],
         unnamed: [],
         leftOut: [],
     };
@@ -196,8 +197,9 @@ describe('save-store-changes-to-pack', () => {
         });
         expect(result).toEqual({
             success: true,
-            // The same sentence ends the progress window, which reads `note`.
-            note: SAVED.sentence,
+            // The window lists what the pack holds, one line per data type (owner, 2026-11-05); the
+            // agent reads the whole sentence in `data.message`.
+            details: ['2 Products'],
             data: {
                 datapackName: saveAs.id.name,
                 version: saveAs.id.version,
@@ -237,7 +239,10 @@ describe('save-store-changes-to-pack', () => {
         await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true, progress: 'modal' });
 
         expect(context.sendMessage).toHaveBeenCalledWith('operationProgress', expect.objectContaining({ id: 'datapack-save', state: 'running', stage: 'Reading the store' }));
-        expect(context.sendMessage).toHaveBeenCalledWith('operationProgress', expect.objectContaining({ id: 'datapack-save', state: 'succeeded', note: SAVED.sentence }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'operationProgress',
+            expect.objectContaining({ id: 'datapack-save', state: 'succeeded', details: ['2 Products'] }),
+        );
     });
 
     it('answers what stopped it in the SC\'s words, and records nothing on the project', async () => {

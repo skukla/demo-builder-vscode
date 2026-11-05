@@ -340,7 +340,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // demo. Existing projects would keep telling the agent saves go to "this demo's own pack".
 // v54 (2026-11-04, no suggested Save As name): import-datapack stops telling the agent to offer
 // `suggestedName`, which the save no longer answers. Existing projects would keep pointing at it.
-export const AI_CONTEXT_VERSION = 54;
+// v55 (2026-11-05, Data Installer on and off): import-datapack and diagnose-demo name
+// `dataInstaller.enabled` and the `turned-off` reason. Existing projects would keep telling the agent
+// an address alone decides it.
+export const AI_CONTEXT_VERSION = 55;
 
 /**
  * Component IDs for standardized component instance access

@@ -24,10 +24,10 @@
  * cannot be assumed to exist, so three of the eleven curated brands open on
  * `eds-compatible` instead.
  *
- * **The community toggle re-asks the service.** Curation is a server-side filter
- * the handler owns (`shared: true` unless `includeCommunity`), so this asks again
- * rather than fetching everything and hiding half — 17 of the 40 live rows are
- * developer scratch nobody wants shipped down the wire to be discarded.
+ * **It loads everything once and filters what it holds** (`catalogShow.ts`, owner, 2026-11-05).
+ * It used to ask again for Community only when switched on, to save fetching 17 developer rows of
+ * 40, and every switch then showed its wait on the Refresh button. The Show list has nothing to
+ * wait for.
  *
  * The filter is `matchesSearchFields`, not the `useSearchFilter` hook that wraps
  * it: the hook has zero consumers, its `Record<string, unknown>` constraint does
@@ -39,7 +39,6 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { groupDatapacks, withoutLayerCards, type DatapackGroup } from '../../services/datapackCatalog';
 import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack, PackDetailLayer, Page } from '../../types';
 import { CatalogCountRow } from '../components/CatalogCountRow';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
@@ -47,17 +46,15 @@ import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
 import { DatapackSourceNotice } from '../components/DatapackSourceNotice';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
+import { useCatalogShow } from '../hooks/useCatalogShow';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { useDatapackCatalog } from '../hooks/useDatapackCatalog';
 import { useHeldPack } from '../hooks/useHeldPack';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
-import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
-
-/** Fields a query is matched against — the id and the label, nothing else. */
-const SEARCH_FIELDS: ReadonlyArray<keyof DatapackGroup> = ['name', 'displayName'];
 
 /** What `get-datapack-detail` hands back — metadata plus what is actually stored. */
 interface DatapackDetailResponse {
@@ -88,13 +85,18 @@ async function requestDatapackRename(id: DatapackId, displayName: string): Promi
     }
 }
 
+/**
+ * The name the open pack's card shows, for the flyout's title while its detail loads. By version:
+ * a pack's versions can carry different names, and the first one's was shown (2026-11-05).
+ */
+function nameOnCard(page: CatalogPage | null, id: DatapackId | undefined): string | undefined {
+    if (!id) return undefined;
+    const rows = page?.items ?? [];
+    const same = (row: (typeof rows)[number]): boolean => row.id.name === id.name;
+    return (rows.find((row) => same(row) && row.id.version === id.version) ?? rows.find(same))?.displayName;
+}
+
 export function DatapackCatalogView(): React.JSX.Element {
-    const [includeCommunity, setIncludeCommunity] = useState(false);
-    // The Data Installer switch, beside Community (owner, 2026-11-03: not buried in a setting).
-    // Unset, the handler asks it when it is set up. Shown only once it has answered this SC:
-    // an SC with no address, or one it turns away, has nothing to switch (owner, same day).
-    const [includeInstaller, setIncludeInstaller] = useState<boolean | undefined>(undefined);
-    const [installerAnswered, setInstallerAnswered] = useState(false);
     const [query, setQuery] = useState('');
     const [versions, setVersions] = useState<Record<string, string>>({});
     const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
@@ -103,17 +105,12 @@ export function DatapackCatalogView(): React.JSX.Element {
     const [importing, setImporting] = useState<DatapackId | undefined>(undefined);
 
     // The one list: Demo Builder's datapack store, then the Data Installer's if it answers.
-    const { load, loading, value, failure, settled } =
-        useDataInstallerRequest<CatalogPage>('find-datapacks');
+    const { refresh, loading, value, failure, settled } = useDatapackCatalog();
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
     // What the open project was CREATED to hold, recorded by the wizard's Sample
     // Data area. Optional in every direction: no project, or a project that
     // chose nothing, simply shows no banner.
     const projectContext = useDataInstallerRequest<ProjectSampleData>('get-datapack-import-target');
-
-    useEffect(() => {
-        load({ includeCommunity, includeInstaller });
-    }, [load, includeCommunity, includeInstaller]);
 
     const loadProjectContext = projectContext.load;
     useEffect(() => {
@@ -168,17 +165,15 @@ export function DatapackCatalogView(): React.JSX.Element {
         return names;
     }, [installed.value, projectContext.value]);
 
-    // A settings layer is reached from its pack's flyout, not as a demo of its own (step 09).
-    const groups = useMemo(() => groupDatapacks(withoutLayerCards(value?.items ?? [], installedPacks)), [value, installedPacks]);
-    const filtered = useMemo(
-        () => groups.filter((group) => matchesSearchFields(group, SEARCH_FIELDS, query)),
-        [groups, query],
-    );
+    const held = projectContext.value?.datapack;
+    const { show, setShow, installerAnswered, shown, filtered, hideRemoved } = useCatalogShow({
+        page: value,
+        installedPacks,
+        held,
+        query,
+        heldFirst: true,
+    });
 
-    const refresh = useCallback(
-        (): void => load({ includeCommunity, includeInstaller }),
-        [load, includeCommunity, includeInstaller],
-    );
     // The "no access" banner closes at once, and the extension remembers it (2026-11-03).
     const [noAccessClosed, setNoAccessClosed] = useState(false);
     const dismissNoAccess = useCallback((): void => {
@@ -190,10 +185,6 @@ export function DatapackCatalogView(): React.JSX.Element {
         [value, noAccessClosed],
     );
 
-    // Whether it answered, from each list that asked it; a list with it switched off says nothing.
-    useEffect(() => {
-        if (value && value.installerOff !== true) setInstallerAnswered(value.installerMissing === undefined);
-    }, [value]);
     const pickVersion = useCallback(
         (name: string, version: string): void =>
             setVersions((current) => ({ ...current, [name]: version })),
@@ -210,11 +201,13 @@ export function DatapackCatalogView(): React.JSX.Element {
         [loadDetail],
     );
     const closeDetail = useCallback((): void => setSelected(undefined), []);
-    // Removing your own library pack closes its flyout and re-reads the catalog.
+    // Removing your own library pack closes its flyout, takes its card off at once, and re-reads the
+    // catalog, which confirms it.
     const removedFromLibrary = useCallback((): void => {
+        if (selected) hideRemoved(selected);
         setSelected(undefined);
         refresh();
-    }, [refresh]);
+    }, [selected, hideRemoved, refresh]);
 
     // The import modal is mounted HERE, not inside the flyout. As a child of the
     // Drawer it was a dialog nested in a drawer; `IntegrationsScreen` mounts its
@@ -253,7 +246,7 @@ export function DatapackCatalogView(): React.JSX.Element {
     }, [loadProjectContext, refresh]);
     const heldPack = useHeldPack({
         selected,
-        held: projectContext.value?.datapack,
+        held,
         engine: value?.engine,
         detail: detail.value?.detail,
         detailLoading: detail.loading,
@@ -283,7 +276,7 @@ export function DatapackCatalogView(): React.JSX.Element {
         [refresh, retryDetail],
     );
 
-    // Sharing shows on the card (its Shared label) and in the flyout: both are read again.
+    // Sharing shows on the card (its Community tag) and in the flyout: both are read again.
     const sharingChanged = useCallback((): void => {
         refresh();
         retryDetail();
@@ -325,23 +318,22 @@ export function DatapackCatalogView(): React.JSX.Element {
                         searchQuery={query}
                         onSearchQueryChange={setQuery}
                         searchPlaceholder="Filter datapacks"
-                        totalCount={groups.length}
+                        totalCount={shown.length}
                         filteredCount={filtered.length}
                         itemNoun="datapack"
                         onRefresh={refresh}
                         isRefreshing={loading}
                         refreshAriaLabel="Refresh datapacks"
                         hasLoadedOnce={value !== null}
-                        // Always: the toggle lives on this row, and an empty
-                        // curated catalog is exactly when it must be reachable.
+                        // Always: the Show list lives on this row, and an empty view is
+                        // exactly when it must be reachable. Choosing one must not move the row.
                         alwaysShowCount
+                        alwaysShowSearch
                         countTrailing={
                             <CatalogCountRow
-                                includeCommunity={includeCommunity}
-                                onIncludeCommunity={setIncludeCommunity}
-                                {...(installerAnswered
-                                    ? { installer: { on: includeInstaller !== false, onChange: setIncludeInstaller } }
-                                    : {})}
+                                show={show}
+                                onShow={setShow}
+                                installerAnswered={installerAnswered}
                                 onCatalogChanged={refresh}
                                 engine={value?.engine}
                                 onCreate={createDatapack}
@@ -352,20 +344,22 @@ export function DatapackCatalogView(): React.JSX.Element {
             >
                 <DatapackSourceNotice page={noticePage} onDismiss={dismissNoAccess} />
                 <DatapackCatalogGrid
-                    groups={groups}
+                    groups={shown}
                     filtered={filtered}
+                    show={show}
                     query={query}
                     versions={versions}
                     pickVersion={pickVersion}
                     openDetail={openDetail}
                     installedPacks={installedPacks}
-                    held={projectContext.value?.datapack}
+                    held={held}
                     installedAt={projectContext.value?.installedAt}
                 />
             </FullScreenSurface>
 
             <DatapackDetailPanel
                 selected={selected}
+                selectedName={nameOnCard(value, selected)}
                 detail={detail.value?.detail ?? null}
                 inventory={detail.value?.inventory ?? null}
                 loading={detail.loading}

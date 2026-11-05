@@ -240,6 +240,21 @@ describe('ProjectActionsMenu', () => {
     });
 
     describe('Delete isolation', () => {
+        it('offers Rename first under Manage when the tile wires it, and calls it', () => {
+            const onRename = jest.fn();
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={edsProject()}
+                    actions={{ onRename, onEdit: jest.fn() }}
+                />
+            );
+            openMenu();
+
+            expect(menuItemLabels().indexOf('Rename')).toBeLessThan(menuItemLabels().indexOf('Edit'));
+            screen.getByRole('menuitem', { name: 'Rename' }).click();
+            expect(onRename).toHaveBeenCalledTimes(1);
+        });
+
         it('renders Delete as the last menuitem', () => {
             const actions: ProjectActions = {
                 onStartDemo: jest.fn(),

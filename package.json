@@ -348,6 +348,7 @@
                 "title": "Sample Data",
                 "properties": {
                     "demoBuilder.dataInstaller.engine": {
+                        "order": 4,
                         "type": "string",
                         "enum": [
                             "service",
@@ -361,6 +362,7 @@
                         "description": "What installs and removes datapacks. Demo Builder's own by default; the Data Installer service still provides the catalog either way. A pack is always removed by the one that installed it."
                     },
                     "demoBuilder.dataInstaller.changesOnRemoval": {
+                        "order": 3,
                         "type": "string",
                         "enum": [
                             "ask",
@@ -375,12 +377,22 @@
                     },
                     "demoBuilder.dataInstaller.apiBaseUrl": {
                         "scope": "machine",
+                        "order": 1,
                         "type": "string",
                         "default": "",
-                        "format": "uri",
-                        "description": "Data Installer API base URL, without a trailing action segment. Required — set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
+                        "pattern": "^(https://\\S*)?$",
+                        "patternErrorMessage": "Must start with https://, or be empty.",
+                        "description": "Data Installer API base URL, without a trailing action segment. Optional: when set, the Data Installer's datapacks are listed too; empty lists only Demo Builder's. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
+                    },
+                    "demoBuilder.dataInstaller.enabled": {
+                        "scope": "machine",
+                        "order": 2,
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Use the Data Installer at the address above: list its datapacks and install through it. Untick to keep the address and list only Demo Builder's datapacks."
                     },
                     "demoBuilder.datapackStore.apiBaseUrl": {
+                        "order": 5,
                         "scope": "machine",
                         "type": "string",
                         "default": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/datapack-store",

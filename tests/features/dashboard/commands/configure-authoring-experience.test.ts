@@ -472,6 +472,6 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
 
-        expect(successSpy).toHaveBeenCalledWith('Configuration saved successfully');
+        expect(successSpy).toHaveBeenCalledWith('Configuration saved');
     });
 });

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { watchWizardSettings } from './wizardSettingsWatch';
 import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
@@ -16,14 +17,13 @@ import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshE
 // Handler utilities and handlers
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import { formatGroupName as formatGroupNameHelper } from '@/features/project-creation/helpers/formatters';
-import { ADDED_DEMOS_SETTING, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
+import { readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import { parseJSON } from '@/types/typeGuards';
 import type { ComponentSelection } from '@/types/webview';
-import type { BlockLibraryDefaultsUpdatedPayload, AddedDemosUpdatedPayload,
-    CustomBlockLibraryDefaultsUpdatedPayload, WizardInitialData } from '@/types/webviewPayloads';
+import type { WizardInitialData } from '@/types/webviewPayloads';
 import type { EditProjectConfig, ProjectSeed, WizardStepDefinition } from '@/types/wizard';
 
 /**
@@ -454,29 +454,7 @@ export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardIniti
             });
         }
 
-        // Listen for block library settings changes and propagate to webview
-        const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
-            if (e.affectsConfiguration('demoBuilder.blockLibraries.custom')) {
-                const config = vscode.workspace.getConfiguration('demoBuilder');
-                const updated = parseCustomBlockLibrarySettings(
-                    config.get<string[]>('blockLibraries.custom', []),
-                );
-                this.sendMessage('customBlockLibraryDefaultsUpdated', {
-                    customBlockLibraryDefaults: updated,
-                } satisfies CustomBlockLibraryDefaultsUpdatedPayload);
-            }
-            if (e.affectsConfiguration(`demoBuilder.${ADDED_DEMOS_SETTING}`)) {
-                this.sendMessage('addedDemosUpdated', {
-                    addedDemos: readAddedDemos(),
-                } satisfies AddedDemosUpdatedPayload);
-            }
-            if (e.affectsConfiguration('demoBuilder.blockLibraries.defaults')) {
-                const config = vscode.workspace.getConfiguration('demoBuilder');
-                const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
-                this.sendMessage('blockLibraryDefaultsUpdated', { blockLibraryDefaults } satisfies BlockLibraryDefaultsUpdatedPayload);
-            }
-        });
-        this.disposables.add(configListener);
+        this.disposables.add(watchWizardSettings((type, payload) => this.sendMessage(type, payload)));
     }
 
     /**

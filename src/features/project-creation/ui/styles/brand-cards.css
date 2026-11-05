@@ -186,9 +186,8 @@
 }
 
 .expandable-brand-card:hover {
-    background: var(--spectrum-global-color-gray-75);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
 }
 
 .expandable-brand-card:focus-visible {
@@ -209,19 +208,16 @@
     border-color: var(--spectrum-global-color-blue-400);
     outline: 2px solid var(--spectrum-global-color-blue-400);
     outline-offset: 2px;
-    transform: none;
     cursor: pointer;
 }
 
 /* Dimmed state - other cards when one is expanded */
 .expandable-brand-card.dimmed {
     opacity: 0.5;
-    transform: none;
 }
 
 .expandable-brand-card.dimmed:hover {
     opacity: 0.7;
-    transform: none;
     box-shadow: none;
 }
 
@@ -247,9 +243,8 @@
    survives (!important over plain, then later over earlier). */
 /* Expanded card hover - re-open modal */
 .expandable-brand-card.expanded:hover {
-    transform: none;
     box-shadow: none;
-    background: var(--spectrum-global-color-gray-75);
+    background: var(--spectrum-global-color-gray-100);
 }
 }
 

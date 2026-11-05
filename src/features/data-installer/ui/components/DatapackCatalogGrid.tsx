@@ -14,16 +14,12 @@
  */
 
 import React from 'react';
-import { type DatapackGroup, pickDefaultVersion } from '../../services/datapackCatalog';
+import { type DatapackGroup, isHeld, pickDefaultVersion } from '../../services/datapackCatalog';
+import { EMPTY_SHOW_TITLE, type CatalogShow } from '../catalogShow';
 import { DatapackCard } from './DatapackCard';
 import { newerVersionOf } from './projectPackNewer';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
-
-/** Whether a card is the demo's own pack: the same name, in the store the project records. */
-function isHeld(group: DatapackGroup, held?: ProjectDatapack): boolean {
-    return held !== undefined && group.name === held.name && group.store === (held.store ?? 'installer');
-}
 
 /** The version the demo uses, when the library still lists it. */
 function listedVersion(group: DatapackGroup, held?: ProjectDatapack): string | undefined {
@@ -39,8 +35,11 @@ function installedHere(group: DatapackGroup, installedPacks?: ReadonlySet<string
 }
 
 export interface DatapackCatalogGridProps {
+    /** The packs the Show list leaves, before the filter box. */
     groups: DatapackGroup[];
     filtered: DatapackGroup[];
+    /** Which Show choice they came from. */
+    show: CatalogShow;
     query: string;
     versions: Record<string, string>;
     pickVersion: (name: string, version: string) => void;
@@ -57,6 +56,7 @@ export interface DatapackCatalogGridProps {
 export function DatapackCatalogGrid({
     groups,
     filtered,
+    show,
     query,
     versions,
     pickVersion,
@@ -68,8 +68,13 @@ export function DatapackCatalogGrid({
     if (groups.length === 0) {
         return (
             <EmptyState
-                title="No Datapacks Yet"
-                description="Load a datapack .zip file, or save one from your demo's Commerce instance."
+                title={EMPTY_SHOW_TITLE[show] ?? 'No Datapacks Yet'}
+                // Only your own or the whole catalog can be filled from here.
+                description={
+                    show === 'team' || show === 'installer' || show === 'community'
+                        ? 'Choose another view'
+                        : "Load a datapack .zip file, or save one from your demo's Commerce instance."
+                }
             />
         );
     }

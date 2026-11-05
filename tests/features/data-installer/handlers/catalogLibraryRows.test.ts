@@ -7,7 +7,7 @@
  */
 
 import * as vscode from 'vscode';
-import { INSTALLER_OFF, mergedCatalog } from '@/features/data-installer/handlers/catalogLibraryRows';
+import { INSTALLER_OFF, isListable, mergedCatalog } from '@/features/data-installer/handlers/catalogLibraryRows';
 import type { CatalogPage, DatapackSummary } from '@/features/data-installer/types';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse } from '@/types/handlers';
@@ -104,6 +104,20 @@ describe('when one does not answer', () => {
         expect(page(merged).installerMissing).toBe('no-address');
     });
 
+    it('says turned-off when the SC turned it off, keeping its address', () => {
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: (key: string, fallback?: unknown) => {
+                if (key === 'enabled') return false;
+                return key === 'apiBaseUrl' ? 'https://example.test/api' : fallback;
+            },
+        });
+
+        const merged = mergedCatalog(answered(row('ours', { team: true })), refused('Off.', ErrorCode.INVALID_OPERATION), false);
+
+        expect(names(merged)).toEqual(['ours']);
+        expect(page(merged).installerMissing).toBe('turned-off');
+    });
+
     it('says no-answer when it has an address and refused or did not reply', () => {
         expect(page(mergedCatalog(answered(row('ours', { team: true })), refused('down'), false)).installerMissing).toBe('no-answer');
     });
@@ -154,5 +168,31 @@ describe('when neither answers', () => {
         const store = refused('Sign in.', ErrorCode.AUTH_REQUIRED);
 
         expect(mergedCatalog(store, refused('down'), false)).toBe(store);
+    });
+});
+
+// Owner, 2026-11-05: packs nothing can install yet leave every list; the SC's own stay, to be removed.
+describe('isListable', () => {
+    const pack = (dataTypes: string[], over: Partial<DatapackSummary> = {}): DatapackSummary => ({
+        id: { name: 'p', version: 'main' },
+        displayName: 'P',
+        shared: false,
+        dataTypes,
+        art: {},
+        ...over,
+    });
+
+    it('hides an empty pack and an ACO-only pack', () => {
+        expect(isListable(pack([]))).toBe(false);
+        expect(isListable(pack(['aco_price_books', 'aco_products']))).toBe(false);
+    });
+
+    it('lists a pack with a Commerce data type, ACO beside it or not', () => {
+        expect(isListable(pack(['products']))).toBe(true);
+        expect(isListable(pack(['aco_products', 'categories']))).toBe(true);
+    });
+
+    it("always lists the SC's own pack, so they can remove it", () => {
+        expect(isListable(pack([], { store: 'library', mine: true }))).toBe(true);
     });
 });

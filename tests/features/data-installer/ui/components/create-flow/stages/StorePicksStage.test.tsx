@@ -58,11 +58,13 @@ describe('before both columns are ready', () => {
         expect(callsOf(LIST)).toHaveLength(0);
     });
 
-    it('keeps waiting for the first list once the counts are in', async () => {
+    // Owner, 2026-11-05: waiting the whole dialog for the first list too made the wait too long.
+    it('shows every row once the counts are in, and reads the first list in its own pane', async () => {
         mockRequest.mockImplementation((type: string) => (type === COUNT ? Promise.resolve(counted({ products: 2 })) : new Promise(() => undefined)));
         await open();
 
-        expect(noRows()).toHaveLength(0);
+        expect(noRows()).toHaveLength(PICKABLE_KINDS.length);
+        expect(screen.getByRole('progressbar', { name: /Loading the store's products/ })).toBeInTheDocument();
         expect(callsOf(LIST).map((c) => c[1])).toEqual([{ dataType: 'products' }]);
     });
 

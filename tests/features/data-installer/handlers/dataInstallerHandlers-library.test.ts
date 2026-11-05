@@ -80,7 +80,9 @@ describe('the library store', () => {
         });
     });
 
-    it('takes no other setting into account: a leftover enabled:false turns nothing off', async () => {
+    // Owner, 2026-11-05: `enabled` turns the Data Installer off without deleting its address. It
+    // never turns off Demo Builder's own store.
+    it('turns the Data Installer off with enabled:false, and never the store', async () => {
         (vscode.workspace.getConfiguration as jest.Mock).mockImplementation(() => ({
             get: jest.fn((key: string, fallback?: unknown) => {
                 if (key === 'enabled') return false;
@@ -89,7 +91,14 @@ describe('the library store', () => {
         }));
 
         expect(await resolveDataInstallerAccess(makeHeadlessContext(), 'library')).toMatchObject({ ok: true });
-        expect(await resolveDataInstallerAccess(makeHeadlessContext())).toMatchObject({ ok: true });
+        expect(await resolveDataInstallerAccess(makeHeadlessContext())).toEqual({
+            ok: false,
+            response: expect.objectContaining({
+                success: false,
+                code: ErrorCode.INVALID_OPERATION,
+                error: 'The Data Installer is turned off. Turn on demoBuilder.dataInstaller.enabled to use it.',
+            }),
+        });
     });
 
     it('reports sign-in for the library the same way, without prompting', async () => {

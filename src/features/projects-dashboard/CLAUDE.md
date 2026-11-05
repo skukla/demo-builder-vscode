@@ -91,8 +91,10 @@ back. Two worth knowing:
 
 Rename is shared with the project dashboard: `renameProjectCore` does the folder
 rename, path updates, recent-projects fixup and save. Both surfaces rename **in
-place** through `InlineRenameField` — the card's hover pencil here, the title's
-pencil there. No menu items, no dialogs.
+place** through `InlineRenameField` — the menu's Rename here, the title's pencil there. No
+dialogs. A card and row carry no pencil: the name is where an SC aims to open the project, and the
+pencil sat 6px from it (owner, 2026-11-05). For the same reason the pin takes the smallest target
+allowed, 24px.
 
 ## Related
 

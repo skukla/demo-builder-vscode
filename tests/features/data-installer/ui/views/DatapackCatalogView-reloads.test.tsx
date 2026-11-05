@@ -13,7 +13,7 @@
  * link, neither of which had a test.
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 
 import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import { press, settle } from '../../../../helpers/reactSettle';
@@ -28,6 +28,7 @@ import {
     resolveCatalogThenDetail,
     CATALOG,
     INVENTORY_WITH_GAP,
+    showSelect,
 } from './DatapackCatalogView.testUtils';
 
 /** How many times a request of this type has been sent. */
@@ -40,17 +41,13 @@ beforeEach(() => {
     mockPostMessage.mockReset();
 });
 
-describe('refresh re-asks with the toggle as it stands now', () => {
-    it('carries the community setting the user has actually chosen', async () => {
-        // Curation is a SERVER-side filter, so the payload is the whole request.
-        // A refresh built when the toggle was off goes on asking for the curated
-        // list forever, and the button reads as broken with no error anywhere.
+describe('refresh', () => {
+    it('asks for every pack again, whatever the Show list is on', async () => {
         resolveWith(CATALOG);
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        await press(screen.getByRole('checkbox', { name: /community/i }));
         await press(screen.getByRole('button', { name: /refresh datapacks/i }));
 
         await waitFor(() =>
@@ -167,12 +164,12 @@ describe('the flyout’s Retry', () => {
 });
 
 describe('the two doors out of the catalog', () => {
-    // The switch is for an SC the Data Installer answers: one with no address, or one it turns
-    // away, has nothing to switch (owner, 2026-11-03). No address shows no banner either.
+    // The choice is for an SC the Data Installer answers: one with no address, or one it turns
+    // away, has no such packs to choose (owner, 2026-11-03). No address shows no banner either.
     it.each([
         ['has no address', 'no-address', false],
         ['turns the Adobe account away', 'no-access', true],
-    ] as const)('shows no switch while the Data Installer %s', async (_how, missing, banner) => {
+    ] as const)('offers no Data Installer choice while the Data Installer %s', async (_how, missing, banner) => {
         mockRequest.mockResolvedValue({
             success: true,
             data: { items: CATALOG, count: CATALOG.length, installerMissing: missing },
@@ -181,9 +178,10 @@ describe('the two doors out of the catalog', () => {
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        expect(screen.queryByRole('checkbox', { name: /data installer/i })).not.toBeInTheDocument();
-        // CONTROL: the switch beside it is there.
-        expect(screen.getByRole('checkbox', { name: /community/i })).toBeInTheDocument();
+        const choices = within(showSelect());
+        expect(choices.queryByRole('option', { name: 'Data Installer Datapacks', hidden: true })).not.toBeInTheDocument();
+        // CONTROL: the choice beside it is there.
+        expect(choices.getByRole('option', { name: 'Community Datapacks', hidden: true })).toBeInTheDocument();
         expect(Boolean(screen.queryByTestId('datapack-source-notice'))).toBe(banner);
     });
 
@@ -220,34 +218,13 @@ describe('the two doors out of the catalog', () => {
         expect(screen.queryByRole('button', { name: SOURCE_NOTICE_COPY.dismiss })).not.toBeInTheDocument();
     });
 
-    it('keeps the switch, reading off, once the SC switched an answering Data Installer off', async () => {
+    it('offers the Data Installer choice while it answers', async () => {
         resolveWith(CATALOG);
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');
-        mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, installerOff: true } });
 
-        await press(screen.getByRole('checkbox', { name: /data installer/i }));
-
-        await waitFor(() => expect(screen.getByRole('checkbox', { name: /data installer/i })).not.toBeChecked());
-    });
-
-    it('reads on while the Data Installer answers, and switching it off leaves it out', async () => {
-        resolveWith(CATALOG);
-        render(<DatapackCatalogView />);
-        await settle();
-        await screen.findAllByTestId('datapack-card');
-        const toggle = screen.getByRole('checkbox', { name: /data installer/i });
-        expect(toggle).toBeChecked();
-
-        await press(toggle);
-
-        await waitFor(() =>
-            expect(requestOfType('find-datapacks')).toEqual({
-                type: 'find-datapacks',
-                payload: { includeCommunity: false, includeInstaller: false },
-            }),
-        );
+        expect(within(showSelect()).getByRole('option', { name: 'Data Installer Datapacks', hidden: true })).toBeInTheDocument();
     });
 
     // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save

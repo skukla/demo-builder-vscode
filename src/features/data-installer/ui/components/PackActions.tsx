@@ -10,11 +10,12 @@
  * A pack whose settings layer is the SC's own also offers "Remove its store settings" there, since a
  * layer has no card of its own to remove it from (datapack-engine step 09).
  *
- * Every action keeps the condition and confirmation it had as a button. Share and Stop sharing
- * ask before they change anything (`ShareLibraryPackConfirm`); Remove asks only when the pack was
- * shared in a project file, with the warning `get-datapack-detail` carries, else removes on the
- * one choice, as the button did. What each one says afterwards (where the file went, that the
- * pack was removed, why not) shows under the actions.
+ * **Share, Stop sharing and both removes ask in a dialog** (`ConfirmActionDialog`, owner,
+ * 2026-11-05). Remove used to ask only when the pack was shared in a project file, though it cannot
+ * be undone either way. **While a menu row's work runs, the flyout waits**: its title and the medium
+ * spinner its load shows, nothing else (dialog design rules), since the menu has closed and has no
+ * button to spin. What each one says afterwards (where the file went, why it could not) shows under
+ * the actions.
  *
  * By store: a Data Installer pack offers Import. A library pack offers Import when Demo Builder's
  * engine is chosen (it reads the library itself), else Copy to the Data Installer, above, which
@@ -24,13 +25,16 @@
  */
 
 import { Button, Item, Section, Text } from '@adobe/react-spectrum';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
+import { SHARE_CONSENT } from '../../shareWording';
 import type { DatapackDetail, PackDetailLayer } from '../../types';
+import { useLibrarySharing } from '../hooks/useLibrarySharing';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
 import { useSaveDatapackFile } from './SaveDatapackFileButton';
-import { ShareLibraryPackConfirm } from './ShareLibraryPackConfirm';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
+import { ConfirmActionDialog, type ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import type { DatapackId } from '@/types/datapack';
 
@@ -49,6 +53,8 @@ export interface PackActionsProps {
     onSharingChanged?: () => void;
     /** The settings layer Import will apply after the pack's data (step 09). */
     settingsLayer?: PackDetailLayer;
+    /** Whether a menu row's work is running: the flyout hides its other content. Stable. */
+    onWorking?: (working: boolean) => void;
 }
 
 /** One menu row: its icon and label. */
@@ -75,8 +81,40 @@ function removeRows(ownPack: boolean, ownLayer: boolean): Row[] {
     ];
 }
 
-/** The inline confirm open under the actions, if any. */
-type Asking = 'share' | 'remove' | null;
+/** The dialog open over the flyout, if any. */
+type Asking = 'share' | 'remove' | 'remove-settings' | null;
+
+type ConfirmCopy = Pick<ConfirmActionDialogProps, 'title' | 'actionLabel' | 'actionVariant' | 'children'>;
+
+/** What a dialog asks. The title of a closed one is never drawn. */
+function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: string): ConfirmCopy {
+    const name = detail.displayName;
+    if (asking === 'share' && !detail.shared) {
+        return { title: `Share ${name}?`, actionLabel: 'Share', actionVariant: 'accent', children: SHARE_CONSENT };
+    }
+    if (asking === 'share') {
+        return {
+            title: `Stop Sharing ${name}?`,
+            actionLabel: 'Stop Sharing',
+            actionVariant: 'accent',
+            children: 'Other people can no longer see or install it.',
+        };
+    }
+    if (asking === 'remove-settings') {
+        return {
+            title: `Remove ${name}'s Store Settings?`,
+            actionLabel: 'Remove',
+            actionVariant: 'negative',
+            children: "This removes the store settings saved with it, and it can't be undone.",
+        };
+    }
+    return {
+        title: `Remove ${name}?`,
+        actionLabel: 'Remove',
+        actionVariant: 'negative',
+        children: [`This removes version ${detail.id.version}, and it can't be undone.`, sharedInFile],
+    };
+}
 
 export function PackActions({
     detail,
@@ -87,26 +125,35 @@ export function PackActions({
     sharedInFile,
     onSharingChanged,
     settingsLayer,
+    onWorking,
 }: PackActionsProps): React.JSX.Element {
     const library = detail.store === 'library';
     const [asking, setAsking] = useState<Asking>(null);
     const saveFile = useSaveDatapackFile(detail.id, library ? 'library' : 'installer');
     const removal = useLibraryRemoval(detail.id, onRemoved);
     const layerRemoval = useLibraryRemoval(settingsLayer?.id ?? detail.id, onSharingChanged);
+    const sharing = useLibrarySharing(detail.id, detail.shared, onSharingChanged);
     const doneAsking = useCallback((): void => setAsking(null), []);
+    // Still waiting once the pack is gone, as the flyout closes: its rows must not flash back.
+    const working =
+        saveFile.saving || sharing.working || removal.removing || removal.removed || layerRemoval.removing;
+
+    // Before the paint, or the flyout's rows would show for a frame beside the spinner. The cleanup is
+    // for a flyout closed during the wait, which unmounts this with the work still running.
+    useLayoutEffect(() => {
+        onWorking?.(working);
+        return () => onWorking?.(false);
+    }, [working, onWorking]);
 
     const onAction = (key: React.Key): void => {
         if (key === 'save-file') saveFile.start();
-        else if (key === 'share') setAsking('share');
-        else if (key === 'remove-settings') layerRemoval.start();
-        else if (key === 'remove') {
-            if (sharedInFile) setAsking('remove');
-            else removal.start();
-        }
+        else if (key === 'share' || key === 'remove' || key === 'remove-settings') setAsking(key);
     };
-    const confirmRemove = (): void => {
+    const confirm = (): void => {
         setAsking(null);
-        removal.start();
+        if (asking === 'share') sharing.start();
+        else if (asking === 'remove') removal.start();
+        else if (asking === 'remove-settings') layerRemoval.start();
     };
 
     // An inferred return type keeps the row assignable to Spectrum's Item collection type.
@@ -120,34 +167,49 @@ export function PackActions({
     const removing = removeRows(library && detail.mine === true, settingsLayer?.mine === true);
     return (
         <>
-            {library && !installsFromLibrary ? <CopyToInstallerButton id={detail.id} onImport={onImport} /> : null}
-            <div className="db-drawer-actions">
-                {onSaveChanges ? (
-                    <Button variant="accent" onPress={onSaveChanges}>
-                        Save Changes
-                    </Button>
-                ) : null}
-                {showImport ? (
-                    <Button variant={onSaveChanges ? 'secondary' : 'accent'} onPress={() => onImport(detail.id)}>
-                        Import
-                    </Button>
-                ) : null}
-                <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
-                    <Section key="pack">{packRows(detail).map(renderRow)}</Section>
-                    {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
-                </CardActionsMenu>
-            </div>
-            <PackActionNotes>
-                {saveFile.note}
-                {asking === 'share' ? (
-                    <ShareLibraryPackConfirm id={detail.id} shared={detail.shared} onChanged={onSharingChanged} onDone={doneAsking} />
-                ) : null}
-                {asking === 'remove' && sharedInFile ? (
-                    <RemoveConfirm warning={sharedInFile} onRemove={confirmRemove} onCancel={doneAsking} />
-                ) : null}
-                {removal.note}
-                {layerRemoval.note}
-            </PackActionNotes>
+            {working ? (
+                <div className="datapack-panel-loading">
+                    <LoadingDisplay size="M" centered message="" />
+                </div>
+            ) : null}
+            {/* Kept mounted through a wait: a copy's own result would be lost with it. */}
+            {library && !installsFromLibrary ? (
+                <div hidden={working}>
+                    <CopyToInstallerButton id={detail.id} onImport={onImport} />
+                </div>
+            ) : null}
+            {working ? null : (
+                <>
+                    <div className="db-drawer-actions">
+                        {onSaveChanges ? (
+                            <Button variant="accent" onPress={onSaveChanges}>
+                                Save Changes
+                            </Button>
+                        ) : null}
+                        {showImport ? (
+                            <Button variant={onSaveChanges ? 'secondary' : 'accent'} onPress={() => onImport(detail.id)}>
+                                Import
+                            </Button>
+                        ) : null}
+                        <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
+                            <Section key="pack">{packRows(detail).map(renderRow)}</Section>
+                            {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
+                        </CardActionsMenu>
+                    </div>
+                    <PackActionNotes>
+                        {saveFile.note}
+                        {sharing.note}
+                        {removal.note}
+                        {layerRemoval.note}
+                    </PackActionNotes>
+                </>
+            )}
+            <ConfirmActionDialog
+                isOpen={asking !== null}
+                {...confirmCopy(asking, detail, sharedInFile)}
+                onConfirm={confirm}
+                onClose={doneAsking}
+            />
         </>
     );
 }
@@ -156,19 +218,4 @@ export function PackActions({
 function PackActionNotes({ children }: { children: React.ReactNode }): React.JSX.Element | null {
     const said = React.Children.toArray(children);
     return said.length > 0 ? <div className="datapack-action-notes">{said}</div> : null;
-}
-
-/** Remove's warning for a pack shared in a project file: Remove does it, Cancel keeps it. */
-function RemoveConfirm({ warning, onRemove, onCancel }: { warning: string; onRemove: () => void; onCancel: () => void }): React.JSX.Element {
-    return (
-        <div className="datapack-save-file">
-            <p className="datapack-export-note">{warning}</p>
-            <Button variant="negative" onPress={onRemove}>
-                Remove
-            </Button>
-            <Button variant="secondary" onPress={onCancel}>
-                Cancel
-            </Button>
-        </div>
-    );
 }

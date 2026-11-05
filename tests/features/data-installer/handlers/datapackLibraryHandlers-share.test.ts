@@ -78,7 +78,7 @@ it('refuses without confirm, saying who will see it', async () => {
 
     expect(result).toEqual({
         success: false,
-        error: 'Everyone using Demo Builder can see and install this pack, when they include Community datapacks. Send confirm:true to proceed.',
+        error: 'Everyone can find and install it under Community Datapacks. Send confirm:true to proceed.',
         code: ErrorCode.INVALID_OPERATION,
     });
     expect(fetchMock).not.toHaveBeenCalled();

@@ -103,6 +103,36 @@ describe('ShowDataInstallerCommand', () => {
         });
     });
 
+    describe('the settings the list depends on', () => {
+        const changeOf = (setting: string): vscode.ConfigurationChangeEvent => ({
+            affectsConfiguration: (section: string) => section === setting,
+        });
+
+        function watch(): { command: ReturnType<typeof makeCommand>; fire: (setting: string) => void } {
+            const command = makeCommand();
+            command.sendMessage = jest.fn().mockResolvedValue(undefined);
+            command.initializeMessageHandlers({ onStreaming: jest.fn() });
+            const listener = (vscode.workspace.onDidChangeConfiguration as jest.Mock).mock.calls.at(-1)?.[0];
+            return { command, fire: (setting) => listener(changeOf(setting)) };
+        }
+
+        it('tells the screen when the Data Installer address changes', () => {
+            const { command, fire } = watch();
+
+            fire('demoBuilder.dataInstaller.apiBaseUrl');
+
+            expect(command.sendMessage).toHaveBeenCalledWith('datapack-settings-changed');
+        });
+
+        it('says nothing about a setting the list does not read', () => {
+            const { command, fire } = watch();
+
+            fire('demoBuilder.blockLibraries.custom');
+
+            expect(command.sendMessage).not.toHaveBeenCalled();
+        });
+    });
+
     describe('message registration', () => {
         it('registers EVERY type in the handler map', () => {
             // Pinned against the map, not a literal list: an unregistered type

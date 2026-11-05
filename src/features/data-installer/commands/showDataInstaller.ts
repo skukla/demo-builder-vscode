@@ -9,12 +9,16 @@
  * @module features/data-installer/commands/showDataInstaller
  */
 
+import * as vscode from 'vscode';
 import { StandalonePanelCommand } from '@/commands/standalonePanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { handleGetOperationProgress, handleOpenDebugLogs } from '@/core/vscode/operationProgress';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
+import { affectsDatapackList } from '@/features/data-installer/services/dataInstallerConfig';
+import { DATAPACK_SETTINGS_CHANGED_MESSAGE } from '@/features/data-installer/types';
 import type { HandlerMap } from '@/types/handlers';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 
@@ -67,6 +71,16 @@ export class ShowDataInstallerCommand extends StandalonePanelCommand<DataInstall
      */
     protected handlerMaps(): readonly HandlerMap[] {
         return [dataInstallerHandlers, importHandlers, settingsHandlers, progressWindowHandlers];
+    }
+
+    /** The list follows the settings it depends on, as the wizard and Configure follow theirs. */
+    protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
+        super.initializeMessageHandlers(comm);
+        this.disposables.add(
+            vscode.workspace.onDidChangeConfiguration((event) => {
+                if (affectsDatapackList(event)) void this.sendMessage(DATAPACK_SETTINGS_CHANGED_MESSAGE);
+            }),
+        );
     }
 
     /**

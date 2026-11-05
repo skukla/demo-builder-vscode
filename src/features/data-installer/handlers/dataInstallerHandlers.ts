@@ -27,8 +27,8 @@ import { orgNumberOf } from '../services/dataInstallerSignIn';
 import { packReadsVia } from '../services/recordedPack';
 import { layerForDetail } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
-import type { CatalogPage, OperationMode } from '../types';
-import { INSTALLER_OFF, LIBRARY_LIST_FAILED, listLibrary, mergedCatalog } from './catalogLibraryRows';
+import type { CatalogPage, DatapackSummary, OperationMode, Page } from '../types';
+import { INSTALLER_OFF, LIBRARY_LIST_FAILED, isListable, listLibrary, mergedCatalog } from './catalogLibraryRows';
 import { activityFromBoth, installedFromBoth } from './engineHistoryReads';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -69,6 +69,22 @@ function refuse(
     return { ok: false, response: { success: false, error, code, ...extra } };
 }
 
+/** Why the Data Installer cannot be asked: the log line and the refusal, by reason. */
+const INSTALLER_REFUSALS: Record<'not-configured' | 'turned-off' | 'invalid-url', { log: string; message: string }> = {
+    'not-configured': {
+        log: 'demoBuilder.dataInstaller.apiBaseUrl is not set. It has no default, so every SC sets their own.',
+        message: 'No Data Installer API URL is configured. Set demoBuilder.dataInstaller.apiBaseUrl.',
+    },
+    'turned-off': {
+        log: 'the Data Installer is turned off (demoBuilder.dataInstaller.enabled).',
+        message: 'The Data Installer is turned off. Turn on demoBuilder.dataInstaller.enabled to use it.',
+    },
+    'invalid-url': {
+        log: 'invalid demoBuilder.dataInstaller.apiBaseUrl',
+        message: 'The configured Data Installer API URL is not usable. It must be an https:// URL.',
+    },
+};
+
 /**
  * Resolve an authorized client, or the reason we cannot have one.
  *
@@ -107,18 +123,10 @@ export async function resolveDataInstallerAccess(
 
     const resolved = resolveDataInstallerBaseUrl();
     if (!resolved.ok) {
+        const why = INSTALLER_REFUSALS[resolved.reason];
         // Fingerprint only: a rejected URL may carry a secret in its query string.
-        context.logger.warn(
-            resolved.reason === 'not-configured'
-                ? `${LOG_PREFIX} Refused: demoBuilder.dataInstaller.apiBaseUrl is not set. It has no default — every install needs it set once.`
-                : `${LOG_PREFIX} Refused: invalid demoBuilder.dataInstaller.apiBaseUrl (${resolved.fingerprint ?? 'unreadable'}). Expected https://.`,
-        );
-        return refuse(
-            resolved.reason === 'not-configured'
-                ? 'No Data Installer API URL is configured. Set demoBuilder.dataInstaller.apiBaseUrl.'
-                : 'The configured Data Installer API URL is not usable. It must be an https:// URL.',
-            ErrorCode.INVALID_OPERATION,
-        );
+        context.logger.warn(`${LOG_PREFIX} Refused: ${why.log}${resolved.fingerprint ? ` (${resolved.fingerprint})` : ''}`);
+        return refuse(why.message, ErrorCode.INVALID_OPERATION);
     }
     return authorize(context, resolved.baseUrl);
 }
@@ -318,6 +326,14 @@ interface DatapackRefPayload {
 /** globalState: the SC dismissed the Datapacks screen's "no access" banner on this machine. */
 export const NO_ACCESS_DISMISSED_KEY = 'demoBuilder.datapacks.noAccessNoticeDismissed';
 
+/** One store's list, without the packs nothing can install yet (`isListable`). */
+function onlyListable(response: HandlerResponse): HandlerResponse {
+    if (!response.success) return response;
+    const page = response.data as Page<DatapackSummary>;
+    const items = page.items.filter(isListable);
+    return { ...response, data: { ...page, items, count: items.length } };
+}
+
 /**
  * Say whether the "no access" banner was dismissed, and forget the dismissal once the Data
  * Installer answers this SC: access that comes back and is lost again shows the banner again.
@@ -358,8 +374,8 @@ export const dataInstallerHandlers = defineHandlers({
                     ...paging,
                 }),
             );
-        if (payload?.store === 'library') return askLibrary();
-        if (payload?.store === 'installer') return askInstaller();
+        if (payload?.store === 'library') return onlyListable(await askLibrary());
+        if (payload?.store === 'installer') return onlyListable(await askInstaller());
         // One after the other: either may prompt for the one Adobe sign-in they share.
         const library = await askLibrary();
         const installer = payload?.includeInstaller === false ? INSTALLER_OFF : await askInstaller();

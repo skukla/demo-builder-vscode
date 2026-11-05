@@ -97,6 +97,30 @@ describe('InlineRenameField', () => {
         });
     });
 
+    // A project card: its menu's Rename asks, and no pencil sits beside the name (owner, 2026-11-05).
+    describe('when the host offers Rename itself', () => {
+        const field = (editRequest: number) => (
+            <Provider theme={defaultTheme} colorScheme="light">
+                <InlineRenameField name="My Project" onRename={jest.fn()} noPencil editRequest={editRequest} />
+            </Provider>
+        );
+
+        it('shows no pencil', () => {
+            render(field(0));
+            expect(screen.queryByRole('button', { name: 'Rename My Project' })).not.toBeInTheDocument();
+        });
+
+        it('starts editing on each request, not before', () => {
+            const { rerender } = render(field(0));
+            expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+
+            rerender(field(1));
+
+            expect(screen.getByRole('textbox')).toHaveFocus();
+            expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('My Project');
+        });
+    });
+
     // The pencil's own label follows `name`, so a stale closure inside
     // `startEditing` shows up only in what the input is PREFILLED with.
     it('prefills the name the parent currently shows, not the one it mounted with', () => {

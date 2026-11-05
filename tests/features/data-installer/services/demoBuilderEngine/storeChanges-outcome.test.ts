@@ -9,7 +9,7 @@
 
 import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { packRowRefusals } from '@/features/data-installer/services/demoBuilderEngine/runPack';
-import { savingLine } from '@/features/data-installer/services/demoBuilderEngine/saveOutcome';
+import { heldLines, resultLines, savingLine } from '@/features/data-installer/services/demoBuilderEngine/saveOutcome';
 import { PACK } from './demoBuilderEngine.testUtils';
 import { SAVE_AS, deps } from './storeChanges.testUtils';
 
@@ -72,8 +72,38 @@ describe('packRowRefusals, as a save checks a version', () => {
 });
 
 describe("the saving step's own line", () => {
-    it("says whether the save is a new pack's first version or a new version", () => {
-        expect(savingLine(true)).toBe('As its first version');
-        expect(savingLine(false)).toBe('As a new version');
+    it('names what is going into the pack', () => {
+        expect(savingLine(['customer_groups'])).toBe('Customer Groups');
+        expect(savingLine(['products', 'categories', 'customer_groups'])).toBe('Products, Categories, Customer Groups');
+    });
+
+    it('counts once the names would not read at a glance', () => {
+        expect(savingLine(['products', 'categories', 'customer_groups', 'source_items'])).toBe('4 data types');
+    });
+});
+
+// Owner, 2026-11-05: the result named every item the SC had not picked; a new pack holds what was
+// picked, and a save into the demo's own pack says what it left out by count.
+describe("the result window's lines", () => {
+    const LEFT = [{ kind: 'products' as const, count: 139, names: ['NFPA 704'] }, { kind: 'categories' as const, count: 1, names: ['Signs'] }];
+
+    it('counts what was left out, with no names', () => {
+        expect(resultLines(LEFT, undefined, [])).toEqual(['Left out, because nothing selected them: 139 products, 1 category.']);
+    });
+
+    it('says nothing for a save that left nothing out', () => {
+        expect(resultLines([], undefined, [])).toStrictEqual([]);
+    });
+});
+
+// Owner, 2026-11-05: the result lists what the pack holds, one data type per line, count first.
+describe('heldLines', () => {
+    it('counts each data type in the pick list order, one for one of it', () => {
+        expect(heldLines({ customer_groups: 4, products: 150, attribute_sets: 1, categories: 1 })).toEqual([
+            '150 Products',
+            '1 Category',
+            '4 Customer Groups',
+            '1 Attribute Set',
+        ]);
     });
 });

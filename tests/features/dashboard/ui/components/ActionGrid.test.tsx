@@ -92,16 +92,18 @@ describe('ActionGrid', () => {
                 'Author Content',
                 'Manage Commerce',
                 'Integrations',
+                'Datapacks',
             ]);
             expect(cards.map((n) => n.querySelector('.dashboard-tile-description')?.textContent)).toEqual([
                 'The live storefront',
                 'Edit storefront pages',
                 'The Commerce Admin',
                 'Connected systems',
+                'Sample data',
             ]);
         });
 
-        it('makes Integrations the last card, not a Build line, with or without an Adobe org', () => {
+        it('makes Integrations an Open card, not a Build line, with or without an Adobe org', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const cards = Array.from(
@@ -112,21 +114,20 @@ describe('ActionGrid', () => {
                 'Author Content',
                 'Manage Commerce',
                 'Integrations',
+                'Datapacks',
             ]);
             expect(cards[3].querySelector('.dashboard-tile-description')?.textContent).toBe('Connected systems');
             expect(within(getZone(container, 'build')).queryByText('Integrations')).not.toBeInTheDocument();
         });
 
-        it('puts AEM Assets in Build after Datapacks, and nothing beside the Open cards', () => {
+        it('keeps AEM Assets in Build, Datapacks out of it, and nothing beside the Open cards', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const build = Array.from(getZone(container, 'build').querySelectorAll('.icon-label')).map(
                 (n) => n.textContent
             );
-            expect(build.slice(build.indexOf('Datapacks'), build.indexOf('Datapacks') + 2)).toEqual([
-                'Datapacks',
-                'AEM Assets',
-            ]);
+            expect(build).toContain('AEM Assets');
+            expect(build).not.toContain('Datapacks');
             expect(getZone(container, 'open').querySelector('.dashboard-compact-list')).toBeNull();
         });
 

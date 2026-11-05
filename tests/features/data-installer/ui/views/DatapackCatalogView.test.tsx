@@ -4,7 +4,7 @@
  * The catalog is one row per `(name, version)` — 40 rows for 25 names live — so
  * the view's first job is to render one CARD per name, not per row. Curation is
  * the second: 23 of the 40 live rows are `shared`, the rest developer scratch, so
- * the view asks for shared-only and the community toggle re-asks the SERVICE
+ * the view asks once for every pack and the Show list filters what it holds, with no second request
  * rather than filtering what it already has (the handler owns that filter).
  *
  * `DatapackCard` renders for real here; only the transport is mocked. That is
@@ -14,9 +14,10 @@
  * Strict TDD: written BEFORE the view exists.
  */
 
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 
 import { change, press, settle } from '../../../../helpers/reactSettle';
+import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
 
 import {
@@ -31,6 +32,7 @@ import {
     INVENTORY_COMPLETE,
     INVENTORY_WITH_GAP,
     SOURCE_NOTICE_COPY,
+    showSelect,
 } from './DatapackCatalogView.testUtils';
 
 describe('DatapackCatalogView', () => {
@@ -60,7 +62,7 @@ describe('DatapackCatalogView', () => {
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
-                payload: { includeCommunity: false },
+                payload: { includeCommunity: true },
             })
         );
     });
@@ -106,24 +108,65 @@ describe('DatapackCatalogView', () => {
         expect(within(cards[1]).getByTestId('spectrum-picker')).toHaveTextContent('main');
     });
 
-    describe('community toggle', () => {
-        it('re-asks the service instead of filtering locally', async () => {
-            resolveWith(CATALOG);
-
+    // Owner, 2026-11-05: the Show list replaced two switches, each of which asked again and showed
+    // its wait on Refresh. The rules themselves are `catalogShow.test.ts`.
+    describe('the Show list', () => {
+        it('says a choice with nothing in it is empty, and what to do', async () => {
+            resolveWith([makeSummary('mine', 'main', { store: 'library', mine: true })]);
             render(<DatapackCatalogView />);
-            // Mount effects fire requests; settle so their responses commit inside
-            // act() rather than in the next query's wait loop.
             await settle();
             await screen.findAllByTestId('datapack-card');
 
-            await press(screen.getByRole('checkbox', { name: /community/i }));
+            fireEvent.change(showSelect(), { target: { value: 'team' } });
 
-            await waitFor(() =>
-                expect(lastRequest()).toEqual({
-                    type: 'find-datapacks',
-                    payload: { includeCommunity: true },
-                })
-            );
+            expect(await screen.findByText('No Demo Builder Datapacks')).toBeInTheDocument();
+            expect(screen.getByText('Choose another view')).toBeInTheDocument();
+        });
+
+        it('reads the catalog again when a setting it depends on changes, with no Refresh', async () => {
+            resolveWith(CATALOG);
+            render(<DatapackCatalogView />);
+            await settle();
+            const asked = () => mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks').length;
+            const before = asked();
+
+            act(() => webviewClientHandlers.get('datapack-settings-changed')?.(undefined));
+            await settle();
+
+            expect(asked()).toBe(before + 1);
+        });
+
+        it('keeps the filter box on an empty view, so choosing one moves nothing', async () => {
+            resolveWith([makeSummary('mine', 'main', { store: 'library', mine: true })]);
+            render(<DatapackCatalogView />);
+            await settle();
+            await screen.findAllByTestId('datapack-card');
+
+            fireEvent.change(showSelect(), { target: { value: 'team' } });
+
+            await screen.findByText('No Demo Builder Datapacks');
+            expect(screen.getByRole('searchbox', { name: 'Filter datapacks' })).toBeInTheDocument();
+        });
+
+        const PACKS = [
+            makeSummary('mine', 'main', { store: 'library', mine: true }),
+            makeSummary('colleague', 'main', { store: 'library' }),
+            makeSummary('curated', 'main', { shared: true }),
+        ];
+        const cardNames = () => screen.getAllByTestId('datapack-card').map((card) => card.textContent);
+
+        it('opens on Recommended, leaving Community out, and switches with no second request', async () => {
+            resolveWith(PACKS);
+            render(<DatapackCatalogView />);
+            await settle();
+            await screen.findAllByTestId('datapack-card');
+            expect(cardNames()).toHaveLength(2);
+            const asked = mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks').length;
+
+            fireEvent.change(showSelect(), { target: { value: 'yours' } });
+
+            await waitFor(() => expect(cardNames()).toHaveLength(1));
+            expect(mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks')).toHaveLength(asked);
         });
     });
 
@@ -340,7 +383,7 @@ describe('DatapackCatalogView', () => {
     });
 
     describe('states', () => {
-        it('shows an empty state for an empty catalog, keeping the toggle reachable', async () => {
+        it('shows an empty state for an empty catalog, keeping the Show list reachable', async () => {
             resolveWith([]);
 
             render(<DatapackCatalogView />);
@@ -349,7 +392,7 @@ describe('DatapackCatalogView', () => {
             await settle();
 
             expect(await screen.findByText('No Datapacks Yet')).toBeInTheDocument();
-            expect(screen.getByRole('checkbox', { name: /community/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /show/i })).toBeInTheDocument();
         });
 
         // A refusal from the guard RETURNS rather than throws, so this is the
@@ -428,7 +471,7 @@ describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Inst
 
     it('shows a library pack on its own card even when the Data Installer has one of the same name', async () => {
         resolveWith([
-            makeSummary('bodea', 'main'),
+            makeSummary('bodea', 'main', { shared: true }),
             makeSummary('bodea', 'v1', { store: 'library', shared: false, mine: true }),
         ]);
 
@@ -436,7 +479,7 @@ describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Inst
         await settle();
 
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(2));
-        expect(screen.getByText('Yours')).toBeInTheDocument();
+        expect(screen.getAllByTestId('datapack-card')[0]).toHaveTextContent('Mine');
     });
 
     // The banner says what IS on screen, then why the rest is not (owner, 2026-11-03).
@@ -447,7 +490,7 @@ describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Inst
         mockRequest.mockResolvedValue({
             success: true,
             data: {
-                items: [makeSummary('bodea', 'v1', { store: 'library', shared: true })],
+                items: [makeSummary('bodea', 'v1', { store: 'library', mine: true })],
                 count: 1,
                 installerMissing: missing,
             },

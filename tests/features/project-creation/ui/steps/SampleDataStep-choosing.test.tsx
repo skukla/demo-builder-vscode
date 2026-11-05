@@ -14,10 +14,11 @@
  */
 
 import React from 'react';
-import { screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, screen, fireEvent, waitFor, within } from '@testing-library/react';
 
 import {
     mockExecute,
+    mockMessageHandlers,
     envelope,
     notYetAsked,
     refusal,
@@ -44,22 +45,80 @@ function versionShownOn(displayName: string): string {
     return versionSelect(displayName).value;
 }
 
+/** The same list the Datapacks screen has: its hidden select, in the Picker mock. */
+function showSelect(): HTMLSelectElement {
+    const select = screen.getByRole('button', { name: 'Show' }).parentElement?.querySelector('select');
+    if (!select) throw new Error('The Show list has no select');
+    return select;
+}
+
+describe('SampleDataStep — the Show list', () => {
+    const COLLEAGUE = {
+        id: { name: 'colleague', version: 'main' },
+        displayName: 'Colleague Pack',
+        dataTypes: [],
+        art: {},
+        store: 'library' as const,
+    };
+
+    it("opens on Recommended, leaving a colleague's pack out until asked for", async () => {
+        setMockState(envelope({ ...CATALOG, items: [...CATALOG.items, COLLEAGUE] }));
+        renderStep();
+
+        await screen.findAllByTestId('datapack-card');
+        expect(screen.queryByText('Colleague Pack')).not.toBeInTheDocument();
+
+        fireEvent.change(showSelect(), { target: { value: 'community' } });
+
+        expect(await screen.findByText('Colleague Pack')).toBeInTheDocument();
+        expect(screen.queryByText('Bodea')).not.toBeInTheDocument();
+    });
+
+    it("keeps a chosen colleague's pack on view in Recommended", async () => {
+        const chosen = { name: 'colleague', version: 'main', store: 'library' as const };
+        setMockState(envelope({ ...CATALOG, items: [...CATALOG.items, COLLEAGUE] }));
+        renderStep({ datapack: chosen });
+
+        await waitFor(() => expect(cardFor('Colleague Pack')).toHaveAttribute('aria-checked', 'true'));
+    });
+
+    it('reads the catalog again when a setting it depends on changes', async () => {
+        renderStep();
+        await waitFor(() => expect(mockExecute).toHaveBeenCalledTimes(1));
+
+        act(() => mockMessageHandlers.get('datapack-settings-changed')?.(undefined));
+
+        expect(mockExecute).toHaveBeenCalledTimes(2);
+        expect(mockExecute).toHaveBeenLastCalledWith({ includeCommunity: true });
+    });
+
+    it('says a choice with nothing in it is empty, and keeps None to choose', async () => {
+        renderStep();
+        await screen.findAllByTestId('datapack-card');
+
+        fireEvent.change(showSelect(), { target: { value: 'team' } });
+
+        expect(await screen.findByText('No Demo Builder Datapacks. Choose another view.')).toBeInTheDocument();
+        expect(screen.getByRole('radio', { name: 'None' })).toBeInTheDocument();
+    });
+});
+
 describe('SampleDataStep — the catalog request', () => {
-    it('asks for the curated catalog only', async () => {
+    it('asks for the whole catalog, which the Show list narrows', async () => {
         renderStep();
 
         await waitFor(() => expect(mockExecute).toHaveBeenCalledTimes(1));
-        expect(mockExecute).toHaveBeenCalledWith({ includeCommunity: false });
+        expect(mockExecute).toHaveBeenCalledWith({ includeCommunity: true });
     });
 
-    it('retries with the same curated request after a failure', async () => {
+    it('retries with the same request after a failure', async () => {
         setMockState(refusal('The Data Installer service is unreachable.'));
         renderStep();
 
         fireEvent.click(await screen.findByRole('button', { name: /retry/i }));
 
         await waitFor(() => expect(mockExecute).toHaveBeenCalledTimes(2));
-        expect(mockExecute).toHaveBeenLastCalledWith({ includeCommunity: false });
+        expect(mockExecute).toHaveBeenLastCalledWith({ includeCommunity: true });
     });
 
     it('fills the grid when the catalog lands after the first frame', async () => {

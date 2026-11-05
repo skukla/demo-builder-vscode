@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { ConfirmActionDialog } from './ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
 
 export interface AppBuilderComponentRemoveDialogProps {
     /** Whether the confirm dialog is shown. */

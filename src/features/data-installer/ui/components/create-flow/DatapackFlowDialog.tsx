@@ -25,7 +25,6 @@ import { AcoViewsStage } from './stages/AcoViewsStage';
 import { PackNameStage, SaveAsNameStage } from './stages/PackNameStage';
 import { PackTypeStage } from './stages/PackTypeStage';
 import { ServiceTypesStage } from './stages/ServiceTypesStage';
-import { FirstKindRead } from './stages/StoreItemsStage';
 import { StorePicksStage } from './stages/StorePicksStage';
 import { type CreateDatapackFlow, useCreateDatapackFlow } from './useCreateDatapackFlow';
 import { type ActionButton, Modal, type ModalProps, type ModalWait } from '@/core/ui/components/ui/Modal';
@@ -46,9 +45,10 @@ export interface DatapackFlowDialogProps {
 /** A read of what the screen will show says nothing. */
 const SILENT_WAIT: ModalWait = {};
 
-function frameOf(result: ResultContent | null, title: string): Pick<ModalProps, 'size' | 'title' | 'status'> {
+function frameOf(result: ResultContent | null, title: string, stage: string): Pick<ModalProps, 'size' | 'title' | 'status' | 'wide'> {
     if (result) return { size: 'S', title: result.title, status: resultStatus(result) };
-    return { size: 'L', title };
+    // The pick step is the extra-wide step (owner, 2026-11-05): a product's name fits on one line.
+    return { size: 'L', title, wide: stage === 'store-picks' };
 }
 
 function footerOf(flow: CreateDatapackFlow): ActionButton[] {
@@ -74,13 +74,11 @@ function StageBody({ flow, engine, pack }: Pick<DatapackFlowDialogProps, 'engine
 export function DatapackFlowDialog({ title, engine, startsAtPicks, pack, saveAsName, onClose, onSave }: DatapackFlowDialogProps): React.ReactElement {
     const flow = useCreateDatapackFlow({ engine, startsAtPicks, pack, saveAsName, onSave });
     const { result, savable } = flow.answers;
-    const { firstRead } = flow.store;
     return (
         <>
-        {firstRead ? <FirstKindRead key={firstRead} kind={firstRead} pack={pack} onAnswered={flow.store.answered} /> : null}
         <DialogContainer onDismiss={onClose}>
             <Modal
-                {...frameOf(result, title)}
+                {...frameOf(result, title, flow.stage)}
                 fitContent
                 onClose={onClose}
                 closeLabel={result ? 'Close' : 'Cancel'}

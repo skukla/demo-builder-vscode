@@ -30,14 +30,14 @@
 import { type LeftOut, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../pickableKinds';
 import { STORE_CONFIG_KIND, settingsLayerName } from '../datapackCatalog';
 import type { PackWriteOutcome } from '../datapackTransfer';
-import { phaseLine } from '../datapackTypesLine';
 import type { DatapackFile } from '../datapackZip';
-import { CAPTURE_PHASES, capturePack } from './capture';
+import { capturePack } from './capture';
+import { captureLines } from './capturePhases';
 import { type InstallRecord, type RecordFiles, forgetInstallRecord, nodeRecordFiles, readInstallRecord, writeInstallRecord } from './installRecord';
 import { lookUpLayer } from './layerStep';
 import { rebaseRecord } from './recordFingerprints';
 import { packRowRefusals } from './runPack';
-import { layerLine, leftOutLine, savedSentence, saveSentence, savingLine, unnamedLine } from './saveOutcome';
+import { layerLine, leftOutLine, resultLines, savedSentence, saveSentence, savingLine, unnamedLine } from './saveOutcome';
 import { type StoreChangesDeps, StoreChangesError, labelPack, openStore } from './storeAccess';
 import { countStoreItems, holdsOf, leftOutOf, listStoreItems, seedsOf } from './storeItems';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -92,8 +92,14 @@ export interface SaveResult {
     counts: Record<string, number>;
     /** The store the installed version's own rows were read from; none for a save of picks alone. */
     readFrom?: DatapackStoreName;
-    /** The one sentence the SC reads. */
+    /** The whole outcome in one sentence, names and all: what an agent reads. */
     sentence: string;
+    /**
+     * The result window's lines under the pack's data types: what a save into the demo's own pack
+     * left out, counted, and the settings and ids it kept. A new pack holds what was picked, so
+     * nothing it left out is worth a line.
+     */
+    details: string[];
     /** Each id kept because the store could not name it, as "category 57" (step 14). */
     unnamed: string[];
     /** What the store has, of the kinds an SC adds by hand, that the new version does not hold. */
@@ -181,11 +187,13 @@ export async function saveStoreChanges(
     const { pack, saveAs } = target;
     const files = deps.files ?? nodeRecordFiles;
     const { record, installed } = await startSave(deps, target, files);
-    const reading = (at: number): void => report(OPERATION_STAGES.readingStoreChanges.label, phaseLine(CAPTURE_PHASES, at));
+    const seeds = [...(record?.created ?? []), ...seedsOf(target.picks ?? {})];
+    const lineFor = captureLines([...seeds.map((seed) => seed.kind), ...Object.keys(installed.rows)]);
+    const reading = (at: number): void => report(OPERATION_STAGES.readingStoreChanges.label, lineFor(at));
     reading(0);
     const ctx = await openStore(deps, pack ?? saveAs.id, record);
     const named = await namedByInstalled(deps, pack, installed.rows);
-    const captured = await capturePack(ctx, [...(record?.created ?? []), ...seedsOf(target.picks ?? {})], named, reading);
+    const captured = await capturePack(ctx, seeds, named, reading);
     const { rows, layerRows } = splitSettings(captured.items, STORE_CONFIG_KIND in installed.rows);
     if (Object.keys(rows).length === 0) {
         throw new StoreChangesError(pack ? `The store no longer holds anything ${labelPack(pack)} made, so there is nothing to save.` : 'The store holds none of what was picked, so there is nothing to save.');
@@ -193,7 +201,7 @@ export async function saveStoreChanges(
     refuseUninstallable(captured.items);
     const leftOut = await leftOutOf(ctx, captured.items);
     const about = pack ? await deps.describe(pack) : undefined;
-    report(OPERATION_STAGES.savingToLibrary.label, savingLine(saveAs.id.name !== pack?.name));
+    report(OPERATION_STAGES.savingToLibrary.label, savingLine(Object.keys(rows)));
     const items = Object.entries(rows).map(([dataType, records]) => ({ dataType, records }));
     const exportedAt = (deps.now ?? (() => new Date()))().toISOString();
     await writeVersion(write, { id: saveAs.id, displayName: saveAs.displayName, ...(about?.description ? { description: about.description } : {}), items, source: 'library', exportedAt });
@@ -212,6 +220,7 @@ export async function saveStoreChanges(
         counts,
         ...(installed.source ? { readFrom: installed.source } : {}),
         sentence: saveSentence(savedSentence(saveAs, installedAs), layerLine(settingsLayer), leftOutLine(leftOut), unnamedLine(captured.unnamed)),
+        details: resultLines(pack !== undefined && saveAs.id.name === pack.name ? leftOut : [], settingsLayer, captured.unnamed),
         unnamed: captured.unnamed,
         leftOut,
         ...(settingsLayer ? { settingsLayer } : {}),

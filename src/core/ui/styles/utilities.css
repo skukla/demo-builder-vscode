@@ -295,7 +295,14 @@ button[class*="spectrum-Button"][disabled],
 :root {
     --dashboard-tile-size: 96px;
     --dashboard-tile-gap: 16px;
-    --dashboard-card-width: 210px;
+    /* Holds the longest Open card title on one line, in a Mac's system font, which runs wider than
+       the test browser's (owner, 2026-11-05: 186px wrapped "Manage Commerce"). */
+    --dashboard-card-width: 196px;
+    /* Wider than --content-width, this screen only: five Open cards, with the page's 32px padding
+       either side, so its header and notices end where the cards do. */
+    --dashboard-band-width: calc(
+        5 * var(--dashboard-card-width) + 4 * var(--dashboard-tile-gap) + 64px
+    );
     }
 
 /* Org-mismatch banner — a dark, accent-bordered warning card that matches the

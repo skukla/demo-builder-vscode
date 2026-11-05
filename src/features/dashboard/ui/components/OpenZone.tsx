@@ -8,6 +8,7 @@ import React from 'react';
 import type { OpeningTile } from '../hooks/useDashboardActions';
 import { DashboardTile } from './DashboardTile';
 import { DashboardZone, RemedyTile } from './DashboardZone';
+import { DataInstallerTile } from './DataInstallerTile';
 
 /**
  * Start and Stop as ONE tile — they were always mutually exclusive, and merging
@@ -107,7 +108,7 @@ export function OpenZone({
     handleOpenLiveSite?: () => void;
     handleOpenDaLive?: () => void;
     handleOpenAdminPanel: () => void;
-    /** The Integrations card, built by the caller (it owns the status inputs). Last card. */
+    /** The Integrations card, built by the caller (it owns the status inputs). */
     integrations?: React.ReactNode;
 }): React.ReactElement {
     return (
@@ -133,7 +134,7 @@ export function OpenZone({
                     needed={needsRestart}
                     icon={<Refresh size="L" />}
                     testId="restart-tile"
-                    description="Apply configuration changes"
+                    description="Apply changes"
                     onPress={handleRestartDemo}
                 />
             )}
@@ -175,6 +176,9 @@ export function OpenZone({
             />
 
             {integrations}
+
+            {/* The global catalog, opened beside the dashboard. */}
+            <DataInstallerTile />
         </DashboardZone>
     );
 }

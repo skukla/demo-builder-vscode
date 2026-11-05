@@ -33,7 +33,18 @@ const STORE_SETTINGS_SECTION = 'demoBuilder.datapackStore';
  */
 export function selectedDatapackEngine(): DatapackEngineId {
     const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('engine', 'demo-builder');
-    return raw === 'service' ? 'service' : 'demo-builder';
+    // The service's engine needs the Data Installer: turned off, Demo Builder's installs instead, so
+    // the switch never blocks an install (owner, 2026-11-05).
+    return raw === 'service' && dataInstallerEnabled() ? 'service' : 'demo-builder';
+}
+
+/**
+ * Whether the SC uses the Data Installer (`demoBuilder.dataInstaller.enabled`, owner, 2026-11-05):
+ * the address is pasted once, and this turns it on and off without deleting it. Anything but an
+ * explicit false reads as on, so an SC who never touched it sees no change.
+ */
+export function dataInstallerEnabled(): boolean {
+    return vscode.workspace.getConfiguration(SETTINGS_SECTION).get<boolean>('enabled', true) !== false;
 }
 
 /**
@@ -53,6 +64,23 @@ export async function alwaysSaveChangesOnRemoval(): Promise<void> {
 }
 
 /**
+ * Whether a settings change alters the datapack list: which sources it reads, or what its cards
+ * offer (`engine` decides Import or Copy). A screen showing the list follows these, since an SC who
+ * has just changed one has no reason to know the list needs a Refresh (owner, 2026-11-05).
+ *
+ * @param event - the change
+ * @returns whether to read the list again
+ */
+export function affectsDatapackList(event: vscode.ConfigurationChangeEvent): boolean {
+    return (
+        event.affectsConfiguration(`${SETTINGS_SECTION}.apiBaseUrl`) ||
+        event.affectsConfiguration(`${SETTINGS_SECTION}.enabled`) ||
+        event.affectsConfiguration(`${SETTINGS_SECTION}.engine`) ||
+        event.affectsConfiguration(`${STORE_SETTINGS_SECTION}.apiBaseUrl`)
+    );
+}
+
+/**
  * Outcome of resolving the base URL — success carries the validated value.
  *
  * A rejection carries a `fingerprint` rather than the value, so a caller can log
@@ -61,7 +89,7 @@ export async function alwaysSaveChangesOnRemoval(): Promise<void> {
  */
 export type BaseUrlResolution =
     | { ok: true; baseUrl: string }
-    | { ok: false; reason: 'not-configured' | 'invalid-url'; fingerprint?: string };
+    | { ok: false; reason: 'not-configured' | 'turned-off' | 'invalid-url'; fingerprint?: string };
 
 /**
  * Read and validate the Data Installer base URL.
@@ -72,6 +100,7 @@ export type BaseUrlResolution =
  * @returns The validated base URL with any trailing slash removed, or why not
  */
 export function resolveDataInstallerBaseUrl(): BaseUrlResolution {
+    if (!dataInstallerEnabled()) return { ok: false, reason: 'turned-off' };
     return resolveHttpsBaseUrl(vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('apiBaseUrl', ''));
 }
 

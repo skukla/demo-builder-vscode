@@ -82,7 +82,7 @@ const PROJECT: Partial<Project> = {
 const REQUEST = { datapackName: 'bodea', version: 'main', commerceInstance: 'inst', dataTypes: ['categories', 'products', 'store_config'], websiteCode: 'acme', storeCode: 'acme_en', confirm: true };
 const RECORD: InstallRecord = { format: 1, pack: BODEA, engine: 'demo-builder', startedAt: '2026-11-01T00:00:00.000Z', created: [] };
 const SAVED_ID: DatapackId = { name: 'acme-1a2b3c', version: '20261102-120000' };
-const SAVED: SaveResult = { saved: SAVED_ID, counts: { categories: 1, products: 2 }, readFrom: 'installer', sentence: 'Saved to the acme pack. Bodea is unchanged.', unnamed: [], leftOut: [] };
+const SAVED: SaveResult = { saved: SAVED_ID, counts: { categories: 1, products: 2 }, readFrom: 'installer', sentence: 'Saved to the acme pack. Bodea is unchanged.', unnamed: [], details: [], leftOut: [] };
 
 const NONE = { count: 0, names: [] };
 const keptKind = (kind: string, names: string[]): KindChanges => ({ kind, update: NONE, add: NONE, inStore: NONE, remove: NONE, keep: { count: names.length, names } });

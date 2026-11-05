@@ -26,6 +26,10 @@
  * registered too, and the wizard keeps its handler surface at the single read it
  * needs. Here a card press chooses.
  *
+ * **It has the panel's Show list** (`useCatalogShow`, owner, 2026-11-05): the catalog loads whole,
+ * and the list opens on the same view. Recommended keeps the chosen pack, so a colleague's pack a
+ * project arrived with, or a demo asks for, is on view.
+ *
  * Optional throughout: choosing nothing is a valid project, which is why the
  * sub-step is never locked and never blocks Continue (see `commerceSections`).
  *
@@ -38,54 +42,43 @@ import { RecordedPackNotice, isListed, isPack } from './RecordedPackNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
-import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { cn } from '@/core/ui/utils/classNames';
-import {
-    groupDatapacks,
-    withoutLayerCards,
-    pickDefaultVersion,
-    type DatapackGroup,
-} from '@/features/data-installer/services/datapackCatalog';
-import type { DatapackSummary, Page } from '@/features/data-installer/types';
+import { pickDefaultVersion, type DatapackGroup } from '@/features/data-installer/services/datapackCatalog';
+import { EMPTY_SHOW_TITLE } from '@/features/data-installer/ui/catalogShow';
+import { CatalogShowPicker } from '@/features/data-installer/ui/components/CatalogShowPicker';
 import { DatapackCard } from '@/features/data-installer/ui/components/DatapackCard';
 import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataInstallerFailure';
-import { useDataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
+import { useCatalogShow } from '@/features/data-installer/ui/hooks/useCatalogShow';
+import { useDatapackCatalog } from '@/features/data-installer/ui/hooks/useDatapackCatalog';
 import type { ProjectDatapack } from '@/types/datapack';
 import type { BaseStepProps } from '@/types/wizard';
 
-/**
- * What a query is matched against — the id and the label, nothing else.
- *
- * The same two fields the panel's catalog uses. A second matching rule here
- * would be a second answer to "does this pack match".
- */
-const SEARCH_FIELDS: ReadonlyArray<keyof DatapackGroup> = ['name', 'displayName'];
-
 export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX.Element {
-    // `useDataInstallerRequest`, never the raw `useVSCodeRequest`. A handler's
-    // reply arrives WHOLE — `{success, data, error}` — so `data.items` off the raw
-    // hook reads a field the envelope has not got, and a guard refusal comes back
-    // looking exactly like a success. This step had both bugs: an empty list
-    // forever, with no reason shown.
-    const { load, value, failure, settled } = useDataInstallerRequest<Page<DatapackSummary>>(
-        'find-datapacks',
-    );
+    const { refresh, value, failure, settled } = useDatapackCatalog();
 
-    // The pack an added demo asks for (D26): the catalog is fetched with the
-    // community half included, because a colleague's pack is rarely curated.
+    // The pack an added demo asks for (D26).
     const asked = state.demo?.datapack;
-    // The pack the step OPENED with (an imported, copied or edited project's). Held
-    // once: a pack the SC presses later must not refetch the catalog.
+    // The pack the step OPENED with (an imported, copied or edited project's).
     const [arrived] = useState<ProjectDatapack | undefined>(() => state.datapack);
-    const includeCommunity = Boolean(asked) || Boolean(arrived);
-    useEffect(() => {
-        // The one list, without a colleague's packs unless a demo asks for a pack or the
-        // project arrived with one: this is a first-run choice, not a browsing surface.
-        load({ includeCommunity });
-    }, [load, includeCommunity]);
 
+    /**
+     * Filtered locally, because the service offers nothing else. Its
+     * `datapack_name` is half of an IDENTITY — `(datapack_name, version)`, and
+     * the docs are explicit that "a lookup by name alone has no answer" — so
+     * there is no search endpoint to call. The catalog is 40 rows for 25 names
+     * and already fetched whole, so a local filter is both possible and instant.
+     */
+    const [query, setQuery] = useState('');
+    const chosen = state.datapack;
     // A settings layer is applied with its pack, never chosen as a demo (datapack-engine step 09).
-    const groups = useMemo(() => groupDatapacks(withoutLayerCards(value?.items ?? [], new Set(arrived ? [arrived.name] : []))), [value, arrived]);
+    const arrivedNames = useMemo(() => new Set(arrived ? [arrived.name] : []), [arrived]);
+    const { show, setShow, installerAnswered, groups, shown, filtered: visible } = useCatalogShow({
+        page: value,
+        installedPacks: arrivedNames,
+        held: chosen,
+        query,
+        heldFirst: false,
+    });
     const arrivedListed = useMemo(() => arrived !== undefined && isListed(groups, arrived), [groups, arrived]);
     const askedGroup = useMemo(
         () => (asked ? groups.find((group) => group.name === asked.name) : undefined),
@@ -110,20 +103,6 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
         if (version) updateState({ datapack: { name: askedGroup.name, version, store: askedGroup.store } });
     }, [editing, settled, askedGroup, askedName, askedVersion, chosenName, updateState]);
 
-
-    /**
-     * Filtered locally, because the service offers nothing else. Its
-     * `datapack_name` is half of an IDENTITY — `(datapack_name, version)`, and
-     * the docs are explicit that "a lookup by name alone has no answer" — so
-     * there is no search endpoint to call. The catalog is 40 rows for 25 names
-     * and already fetched whole, so a local filter is both possible and instant.
-     */
-    const [query, setQuery] = useState('');
-    const visible = useMemo(
-        () => groups.filter((group) => matchesSearchFields(group, SEARCH_FIELDS, query)),
-        [groups, query],
-    );
-    const chosen = state.datapack;
     const isChosen = useCallback((group: DatapackGroup): boolean => isPack(group, chosen), [chosen]);
     // Only while the project still holds the pack it arrived with: once the SC
     // chooses another, the note about the old one is no longer true of anything.
@@ -189,7 +168,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                 <CenteredFeedbackContainer>
                     {renderDataInstallerFailure(
                         failure,
-                        () => load({ includeCommunity: false }),
+                        refresh,
                         {
                             unreachableTitle: "Datapacks Aren't Available",
                             extraDetail: 'You can create this project without a datapack.',
@@ -221,13 +200,16 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                     {arrived && stillArrived && !arrivedListed ? (
                         <RecordedPackNotice recorded={arrived} onUse={useInstead} />
                     ) : null}
-                    <SearchField
-                        aria-label="Filter datapacks"
-                        placeholder="Filter datapacks"
-                        value={query}
-                        onChange={setQuery}
-                        width="100%"
-                    />
+                    <div className="sample-data-filters">
+                        <SearchField
+                            aria-label="Filter datapacks"
+                            placeholder="Filter datapacks"
+                            value={query}
+                            onChange={setQuery}
+                            width="100%"
+                        />
+                        <CatalogShowPicker show={show} onShow={setShow} installerAnswered={installerAnswered} />
+                    </div>
                     {asked ? (
                         <p className="sample-data-note" data-testid="demo-datapack-note">
                             {askedGroup
@@ -257,6 +239,9 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                         <p className="sample-data-note">
                             No datapacks match “{query}”.
                         </p>
+                    ) : null}
+                    {groups.length > 0 && shown.length === 0 && EMPTY_SHOW_TITLE[show] ? (
+                        <p className="sample-data-note">{EMPTY_SHOW_TITLE[show]}. Choose another view.</p>
                     ) : null}
                     {settled && groups.length === 0 ? (
                         <p className="sample-data-note">No Datapacks Yet. You can add one after the project is created.</p>

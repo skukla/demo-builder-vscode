@@ -152,7 +152,7 @@ describe('AI_CONTEXT_VERSION', () => {
     // 52: datapacks come from Demo Builder's datapack store first. 53: datapack Save and Save As.
     // 54: import-datapack no longer offers a suggested Save As name.
     it('is 54 (import-datapack no longer offers a suggested Save As name)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(54);
+        expect(AI_CONTEXT_VERSION).toBe(55);
     });
 });
 

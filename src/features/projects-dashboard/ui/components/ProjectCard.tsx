@@ -3,13 +3,13 @@
  *
  * Displays a single project as a clickable card with Spectrum styling.
  * Uses gray-50/gray-75 layered backgrounds matching the project wizard.
- * Features lift animation on hover and uppercase status text.
+ * Changes colour on hover, with no movement (owner, 2026-11-05), and has uppercase status text.
  * Shows installed components as a text list.
  * Includes a kebab menu for additional actions like Export.
  */
 
 import { Flex, Text } from '@adobe/react-spectrum';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import type { ProjectActions } from './ProjectActionsMenu';
 import { ProjectSelectBox, type TileSelection } from './ProjectSelectBox';
@@ -46,7 +46,7 @@ export interface ProjectCardProps {
 /**
  * ProjectCard - Displays a project as a clickable card with Spectrum styling
  *
- * Layout: Gray-50 base with gray-75 hover, lift animation, and uppercase status
+ * Layout: Gray-50 base with gray-75 hover and uppercase status
  */
 export function ProjectCard({
     project,
@@ -55,6 +55,8 @@ export function ProjectCard({
     actions = {},
     selection,
 }: ProjectCardProps) {
+    const [renameRequest, setRenameRequest] = useState(0);
+    const askRename = useCallback((): void => setRenameRequest((count) => count + 1), []);
     const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect, selection?.onToggle);
 
     const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
@@ -100,12 +102,13 @@ export function ProjectCard({
                         isRunning={isRunning}
                         actions={actions}
                         textClassName="project-card-spectrum-name"
+                        editRequest={renameRequest}
                         selecting={Boolean(selection)}
                     />
                 </Flex>
                 {!selection && (
                     <Flex alignItems="center" gap="size-50">
-                        <ProjectTileTools project={project} isRunning={isRunning} actions={actions} />
+                        <ProjectTileTools project={project} isRunning={isRunning} actions={actions} onRename={askRename} />
                     </Flex>
                 )}
             </Flex>

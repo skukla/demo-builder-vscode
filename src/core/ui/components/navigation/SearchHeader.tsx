@@ -76,6 +76,11 @@ export interface SearchHeaderProps {
     /** Show the count on an empty list too (default: false) */
     alwaysShowCount?: boolean;
     /**
+     * Keep the filter box on an empty list too (default: false). For a list whose total changes with
+     * a choice on the header, where an empty view would otherwise move the rows around it.
+     */
+    alwaysShowSearch?: boolean;
+    /**
      * Say no count at all: in a dialog, a count of what the SC can see is cut (dialog design
      * rules). With no search field the row stays, since the action buttons live on it.
      */
@@ -228,7 +233,7 @@ function computeDisplayValues(props: SearchHeaderProps) {
     const nounPlural = props.itemNounPlural || `${itemNoun}s`;
 
     return {
-        showSearch: props.totalCount > 0,
+        showSearch: (props.alwaysShowSearch ?? false) || props.totalCount > 0,
         showCount: props.hasLoadedOnce && (alwaysShowCount || props.totalCount > 0),
         nounPlural,
         displayNoun: props.totalCount === 1 ? itemNoun : nounPlural,

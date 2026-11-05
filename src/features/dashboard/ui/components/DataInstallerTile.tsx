@@ -1,8 +1,6 @@
 /**
- * Build-zone tile that opens the Data Installer.
- *
- * Routes to a dedicated surface, like the Integrations card in the Open row
- * (which sat beside it in Build until 2026-10-06).
+ * Open-row card that opens the Datapacks screen, beside Integrations (owner, 2026-11-05: it had been
+ * in Build, as Integrations was until 2026-10-06).
  *
  * **Not a tab replacement, unlike Integrations.** `openIntegrations` disposes
  * the dashboard panel and opens in place, because that surface is scoped to the
@@ -26,6 +24,7 @@ export function DataInstallerTile(): React.ReactElement {
     return (
         <DashboardTile
             label="Datapacks"
+            description="Sample data"
             icon={<Box size="L" />}
             onPress={() => webviewClient.postMessage('openDataInstaller')}
             action="dataInstaller"

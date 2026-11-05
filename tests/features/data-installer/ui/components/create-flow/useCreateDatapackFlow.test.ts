@@ -77,11 +77,17 @@ describe('the store route', () => {
         expect(result.current.store.kind).toBe('cart_rules');
     });
 
-    it('waits for the first kind, and never again for another', async () => {
-        const { result, step } = await onThePicks();
-        expect(result.current.waiting).toBe(true);
+    // Owner, 2026-11-05: only the counts hold the dialog; each kind's list loads in its own pane.
+    it('waits for the counts alone, and never for a kind\'s list', async () => {
+        const counts = mockRequest.getMockImplementation();
+        mockRequest.mockImplementation(async (type: string, payload?: unknown) =>
+            type === 'count-datapack-export-items' ? new Promise(() => undefined) : counts?.(type, payload),
+        );
+        const waitingForCounts = await onThePicks();
+        expect(waitingForCounts.result.current.waiting).toBe(true);
 
-        await step(() => result.current.store.answered('products', PAGE));
+        mockRequest.mockImplementation(counts);
+        const { result, step } = await onThePicks();
         expect(result.current.waiting).toBe(false);
 
         await step(() => result.current.store.open('cart_rules'));

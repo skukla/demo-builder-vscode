@@ -59,6 +59,18 @@ export const KIND_NOUNS: Readonly<Record<PickableKind, readonly [string, string]
     attribute_sets: ['attribute set', 'attribute sets'],
 };
 
+/**
+ * Data types in the order the pick list offers them, the rest after in name order: one order
+ * wherever a pack's types are listed, so a type is where the eye last saw it (owner, 2026-11-05).
+ */
+export function inPickOrder(kinds: readonly string[]): string[] {
+    const rank = (kind: string): number => {
+        const at = (PICKABLE_KINDS as readonly string[]).indexOf(kind);
+        return at === -1 ? PICKABLE_KINDS.length : at;
+    };
+    return [...kinds].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+}
+
 export const isPickableKind = (kind: string): kind is PickableKind => (PICKABLE_KINDS as readonly string[]).includes(kind);
 
 /**

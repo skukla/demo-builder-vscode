@@ -76,16 +76,11 @@ describe('DatapackCard', () => {
         expect(screen.getByText('Bodea')).toBeInTheDocument();
     });
 
-    it('renders the data-type count for the selected version', () => {
+    // Owner, 2026-11-05: the tile was crowded; the flyout names a pack's data types.
+    it('says no count of data types', () => {
         renderCard(makeGroup());
 
-        expect(screen.getByText('2 data types')).toBeInTheDocument();
-    });
-
-    it('renders the singular noun for a one-type version', () => {
-        renderCard(makeGroup({ versions: [makeVersion({ dataTypes: ['products'] })] }));
-
-        expect(screen.getByText('1 data type')).toBeInTheDocument();
+        expect(screen.queryByText(/data types?$/)).not.toBeInTheDocument();
     });
 
     // The catalog service groups by pack name, so an empty version list should not
@@ -95,7 +90,6 @@ describe('DatapackCard', () => {
     it('survives a group carrying no versions at all', () => {
         renderCard(makeGroup({ versions: [] }), 'main');
 
-        expect(screen.getByText('0 data types')).toBeInTheDocument();
         expect(screen.getByTestId('datapack-card-tile')).toBeInTheDocument();
     });
 
@@ -252,11 +246,10 @@ describe('DatapackCard', () => {
             expect(within(card).getByTestId('spectrum-picker')).toHaveTextContent('tierpricingfix');
         });
 
-        it('renders the SELECTED version art and data types', () => {
+        it('renders the SELECTED version art', () => {
             const { card } = renderCard(multi, 'tierpricingfix');
 
             expect(within(card).getByTestId('datapack-card-art')).toHaveAttribute('src', THUMB);
-            expect(within(card).getByText('1 data type')).toBeInTheDocument();
         });
 
         // A failed cover must not poison the next version's art: the fallback
@@ -370,15 +363,10 @@ describe('DatapackCard', () => {
     });
 
     describe('curation', () => {
-        it('marks a community pack', () => {
+        // Owner, 2026-11-05: tagged by where it lives, curated or not.
+        it('marks every Data Installer pack as the Data Installer\'s, curated or not', () => {
             renderCard(makeGroup({ shared: false }));
-
-            expect(screen.getByText('Community')).toBeInTheDocument();
-        });
-
-        it('leaves a curated pack unmarked', () => {
-            renderCard(makeGroup());
-
+            expect(screen.getByText('Data Installer')).toBeInTheDocument();
             expect(screen.queryByText('Community')).not.toBeInTheDocument();
         });
     });
@@ -510,19 +498,19 @@ describe('DatapackCard — where the pack lives', () => {
 
         render(
             <DatapackCard
-                group={makeGroup({ key: 'library:bodea', store: 'library', mine: true })}
+                group={makeGroup({ key: 'library:bodea', store: 'library', mine: true, shared: false })}
                 selectedVersion="main"
                 onVersionChange={jest.fn()}
                 onOpen={jest.fn()}
             />,
         );
-        expect(screen.getByText('Yours')).toBeInTheDocument();
+        expect(screen.getByText('Mine')).toBeInTheDocument();
         // Spectrum's grey badge, as the integration card's type label (owner, 2026-10-31).
-        expect(screen.getByText('Yours').closest('[data-variant]')).toHaveAttribute('data-variant', 'neutral');
+        expect(screen.getByText('Mine').closest('[data-variant]')).toHaveAttribute('data-variant', 'neutral');
     });
 
     // A team pack is the library's, whoever uploaded it (owner, 2026-11-03): the SC who loaded the
-    // team's packs saw "Yours" on all of them.
+    // team's packs saw "Mine" on all of them.
     it('tags a team pack nothing even for the SC who uploaded it', () => {
         render(
             <DatapackCard
@@ -533,7 +521,7 @@ describe('DatapackCard — where the pack lives', () => {
             />,
         );
 
-        expect(screen.queryByText('Yours')).not.toBeInTheDocument();
+        expect(screen.queryByText('Mine')).not.toBeInTheDocument();
         expect(screen.queryByText('Community')).not.toBeInTheDocument();
         // CONTROL: the card itself rendered.
         expect(screen.getByTestId('datapack-card')).toBeInTheDocument();
@@ -546,11 +534,29 @@ describe('DatapackCard — a pack the SC shared', () => {
     const own = (shared: boolean) =>
         makeGroup({ key: 'library:acme', name: 'acme', displayName: 'Acme Demo', store: 'library', shared, mine: true, versions: [makeVersion({ id: { name: 'acme', version: 'main' }, shared, store: 'library', mine: true })] });
 
-    it('shows a small Shared label beside Yours when the pack is shared', () => {
+    // One word per fact (owner, 2026-11-05): Mine for whose it is, Community for who sees it.
+    it('says Mine and Community once the pack is shared, and never Shared', () => {
         renderCard(own(true));
 
-        expect(screen.getByText('Yours')).toBeInTheDocument();
-        expect(screen.getByText('Shared')).toBeInTheDocument();
+        expect(screen.getByText('Mine')).toBeInTheDocument();
+        expect(screen.getByText('Community')).toBeInTheDocument();
+        expect(screen.queryByText('Shared')).not.toBeInTheDocument();
+    });
+
+    // Owner, 2026-11-05: the pack a demo had just saved wore the check and no Mine.
+    it("keeps the tag beside the check on the demo's own pack", () => {
+        render(
+            <DatapackCard
+                group={own(false)}
+                selectedVersion="main"
+                onVersionChange={jest.fn()}
+                onOpen={jest.fn()}
+                isInstalled
+            />,
+        );
+
+        expect(screen.getByTestId('datapack-card-project-check')).toBeInTheDocument();
+        expect(screen.getByText('Mine')).toBeInTheDocument();
     });
 
     it('shows nothing extra on a private pack', () => {

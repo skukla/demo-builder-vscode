@@ -100,12 +100,12 @@ describe('SampleDataStep — a pack the project arrived with', () => {
         expect(screen.queryByTestId('recorded-datapack-notice')).not.toBeInTheDocument();
     });
 
-    it('fetches the curated catalog only, and asks nothing, for a project that arrived with no pack', () => {
+    it('asks nothing about a recorded pack for a project that arrived with no pack', () => {
         const check = answerFor('check-recorded-datapack', envelope(null));
 
         renderStep({});
 
-        expect(mockExecute).toHaveBeenCalledWith({ includeCommunity: false });
+        expect(mockExecute).toHaveBeenCalledWith({ includeCommunity: true });
         expect(check).not.toHaveBeenCalled();
     });
 });

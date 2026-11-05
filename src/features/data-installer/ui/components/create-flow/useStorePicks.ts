@@ -10,9 +10,10 @@
  * of them (`count-datapack-export-items`). It only ever adds a grey: a count of none. A failed count
  * says nothing and the row stays clickable, and a kind's list, once it has answered, decides.
  *
- * The screen is not shown until the counts have settled and the first kind with anything to select
- * has answered (owner, 2026-11-02: rows drew bright, then filled in and greyed out one at a time).
- * After that it stays shown: another kind's read waits in its own pane.
+ * The screen is not shown until the counts have settled, so every row draws in its final state
+ * (owner, 2026-11-02: rows drew bright, then greyed out one at a time). The first kind's list then
+ * loads in its own pane, as every other kind's does (owner, 2026-11-05: waiting the whole dialog for
+ * it as well made the wait too long).
  *
  * The kind shown is the one the SC chose, until that turns out to have nothing to select: then the
  * next that may have some, so the pane is never empty while anything else could fill it.
@@ -42,10 +43,8 @@ export interface StorePicksState {
     reads: KindReads;
     /** How many of each kind the store has; empty until the counts answer. */
     counts: StoreKindCounts;
-    /** Both columns can show what they are meant to. Once true, stays true. */
+    /** The counts are in, so every row can draw in its final state. Once true, stays true. */
     ready: boolean;
-    /** The kind to read while the screen is not ready yet, if one is due. */
-    firstRead: PickableKind | undefined;
     open: (kind: PickableKind) => void;
     setPicked: (ids: string[]) => void;
     answered: (kind: PickableKind, page: StoreItemPage | null) => void;
@@ -114,9 +113,6 @@ export function useStorePicks(countsWanted: boolean, pack?: PackBeingSaved): Sto
 
     const known = counts ?? NO_COUNTS;
     const kind = kindToShow(chosen, reads, known);
-    const shown = useRef(false);
-    if (countsSettled && (kind === undefined || reads[kind] !== undefined)) shown.current = true;
-    const firstRead = countsSettled && !shown.current ? kind : undefined;
 
     const open = useCallback((next: PickableKind): void => {
         setChosen(next);
@@ -160,8 +156,7 @@ export function useStorePicks(countsWanted: boolean, pack?: PackBeingSaved): Sto
         count: pickCount(picks),
         reads,
         counts: known,
-        ready: shown.current,
-        firstRead,
+        ready: countsSettled,
         open,
         setPicked,
         answered,

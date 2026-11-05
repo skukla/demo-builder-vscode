@@ -29,6 +29,7 @@ import { Badge, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
 import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackSummary } from '../../types';
+import { packSource, type PackSource } from '../catalogShow';
 import { shortDate } from './projectPackNewer';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
@@ -101,7 +102,6 @@ export function DatapackCard({
     // in a choice grid announce itself as a button.
     const choosing = selected !== undefined;
     const version = selectVersion(group, selectedVersion);
-    const typeCount = version?.dataTypes.length ?? 0;
 
     const handleOpen = useCallback(
         (): void => onOpen({ name: group.name, version: selectedVersion }, group.store),
@@ -150,18 +150,11 @@ export function DatapackCard({
                         Integrations card renders it inline for the same kind of
                         reason (its corner holds a button).
 
-                        It takes the tag's slot: the two never need to be read at
-                        once, and side by side in a row this narrow they wrap the
-                        title. */}
-                    {isInstalled ? (
-                        <SelectionCheck testId="datapack-card-project-check" />
-                    ) : (
-                        renderTag(cardTag(group))
-                    )}
-                    {/* The SC's own pack, shared with the team (owner, 2026-10-30): a private
-                        one shows nothing extra, and a colleague's is listed only because it is shared. */}
-                    {group.store === 'library' && group.mine && group.shared ? renderTag('Shared') : null}
+                        The tags live on the version line (owner, 2026-11-05): beside a
+                        name that wrapped, they moved with it. */}
+                    {isInstalled ? <SelectionCheck testId="datapack-card-project-check" /> : null}
                 </div>
+                <div className="datapack-card-version-row">
                 {/* Containment: the picker's press must not bubble to the card,
                     or choosing a version would also open the flyout — the
                     conflicting-nested-action problem the integrations grid hit.
@@ -184,9 +177,10 @@ export function DatapackCard({
                     </Picker>
                     {newerAt ? <NewerMark at={newerAt} /> : null}
                 </span>
-                <span className="datapack-card-types">
-                    {typeCount} {typeCount === 1 ? 'data type' : 'data types'}
-                </span>
+                {/* No count of data types (owner, 2026-11-05: the tile was crowded); the flyout
+                    names them. */}
+                <CardTags tags={cardTags(group)} />
+                </div>
             </div>
         </div>
     );
@@ -260,35 +254,48 @@ function initial(displayName: string): string {
     return displayName.trim().charAt(0).toUpperCase() || '?';
 }
 
-/** Keep a nested control's events inside the control. */
 /**
- * The one word beside the title, if any. A team pack says nothing: it is the normal case, and an SC
+ * The words for where a pack comes from. A team pack says nothing: it is the normal case, and an SC
  * has no need to learn where it lives. Everything else says what makes it different.
- *
- * Team before Yours (owner, 2026-11-03): a team pack is the library's, whoever uploaded it, so the
- * SC who loaded the team's packs saw "Yours" on every one of them.
  */
-function cardTag(group: DatapackGroup): string | undefined {
-    if (group.store === 'library') {
-        if (group.team) return undefined;
-        return group.mine ? 'Yours' : 'Community';
-    }
-    return group.shared ? 'Data Installer' : 'Community';
+const CARD_TAG: Record<PackSource, string | undefined> = {
+    yours: 'Mine',
+    team: undefined,
+    installer: 'Data Installer',
+    community: 'Community',
+};
+
+/**
+ * One word per fact (owner, 2026-11-05): where it comes from, then Community when everyone can see
+ * it. The SC's own shared pack is both Mine and Community; "Shared" said the same as Community.
+ */
+export function cardTags(group: DatapackGroup): string[] {
+    const source = packSource(group);
+    const tags: string[] = [];
+    const where = CARD_TAG[source];
+    if (where) tags.push(where);
+    if (source === 'yours' && group.shared) tags.push('Community');
+    return tags;
 }
 
 /**
- * Spectrum's grey badge, as the integration card's type label ("ERP") and a setup step's
- * "Optional" draw theirs (owner, 2026-10-31). It was a hand-made outline, the faintest thing on
- * the card. Grey, not blue: blue on these cards means selected.
+ * Spectrum's grey badges, as the integration card's type label ("ERP") and a setup step's
+ * "Optional" draw theirs (owner, 2026-10-31). Grey, not blue: blue on these cards means selected.
  */
-function renderTag(tag: string | undefined): React.JSX.Element | null {
-    return tag ? (
-        <Badge variant="neutral" UNSAFE_className="datapack-card-tag">
-            {tag}
-        </Badge>
-    ) : null;
+function CardTags({ tags }: { tags: string[] }): React.JSX.Element | null {
+    if (tags.length === 0) return null;
+    return (
+        <span className="datapack-card-tags">
+            {tags.map((tag) => (
+                <Badge key={tag} variant="neutral" UNSAFE_className="datapack-card-tag">
+                    {tag}
+                </Badge>
+            ))}
+        </span>
+    );
 }
 
+/** Keep a nested control's events inside the control. */
 function stopPropagation(event: React.SyntheticEvent): void {
     event.stopPropagation();
 }

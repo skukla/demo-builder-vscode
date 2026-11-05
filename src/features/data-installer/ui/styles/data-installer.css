@@ -488,7 +488,8 @@
 .datapack-picks {
     display: grid;
     grid-template-columns: 248px minmax(0, 1fr);
-    height: 400px;
+    /* Taller with the extra-wide step (owner, 2026-11-05: it felt cramped). */
+    height: 480px;
 }
 
 .datapack-picks-rail {

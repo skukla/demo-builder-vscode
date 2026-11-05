@@ -35,7 +35,8 @@
 
 @layer theme {
 .service-card:hover {
-    background: var(--spectrum-global-color-gray-75);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
 }
 }
 

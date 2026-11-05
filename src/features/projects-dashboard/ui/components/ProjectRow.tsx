@@ -8,7 +8,7 @@
 
 import { Flex, Text } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import type { ProjectActions } from './ProjectActionsMenu';
 import { ProjectSelectBox, type TileSelection } from './ProjectSelectBox';
@@ -46,6 +46,8 @@ export function ProjectRow({
     actions = {},
     selection,
 }: ProjectRowProps) {
+    const [renameRequest, setRenameRequest] = useState(0);
+    const askRename = useCallback((): void => setRenameRequest((count) => count + 1), []);
     const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect, selection?.onToggle);
 
     const { statusText, statusVariant, statusExplanation } = getProjectStatusDisplay(project);
@@ -73,6 +75,7 @@ export function ProjectRow({
                         isRunning={isRunning}
                         actions={actions}
                         textClassName="project-row-name"
+                        editRequest={renameRequest}
                         selecting={Boolean(selection)}
                     />
                     {componentSummary && (
@@ -83,7 +86,7 @@ export function ProjectRow({
                 {/* Right: Pin + More menu + Status text + Chevron. The pin is a button
                     beside the menu, as on the card (owner, 2026-10-28). */}
                 <Flex alignItems="center" gap="size-150">
-                    {!selection && <ProjectTileTools project={project} isRunning={isRunning} actions={actions} />}
+                    {!selection && <ProjectTileTools project={project} isRunning={isRunning} actions={actions} onRename={askRename} />}
                     <span title={statusExplanation} data-testid="project-row-status">
                         <Text UNSAFE_className="project-row-status">{statusText}</Text>
                     </span>

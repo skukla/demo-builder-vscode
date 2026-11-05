@@ -943,7 +943,7 @@ are left open. The store list never offers Commerce's own Admin website (`admin`
 version of one of the SC's own library packs with everyone the library admits, or stops sharing it
 (`shared: false`), through the library's owner-only `update-datapack-metadata` (`shared`). It answers
 `{datapackName, shared, versions}`. The flyout of the SC's own pack offers the same action, reading
-Share or Stop sharing, and the pack's card says Shared when it is. A project file names its pack by
+Share or Stop sharing, and the pack's card adds the Community tag when it is. A project file names its pack by
 reference, so `export_project_settings` and `export_demo_bundle` (with its setup part) answer
 `packNote` when the project's pack is the SC's own private library pack: "Your teammates can't use
 this pack's data. Share it? …"; a person exporting from the projects list or the dashboard is asked

@@ -55,6 +55,27 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F26 | 3.3 | The Updates window's details sat beside each name at 11px, hard to read, a long one wrapping back under the name; "updates the live site" repeated on most rows; an open group said "1 needs attention" over the row itself, and the note was always singular | Each detail on its own line at 12px, as a run's rows and the delete window's boxes have it. "Storefront updates go to the live site." once under the title, only when one is listed. Shorter details ("Source was reset. Replaces this storefront.", "Verified version" for "Tested version"). The note only on a closed group, "2 need attention" when it is two (owner, 2026-11-05). Built |
 | F27 | 2.3, 2.4 | The patch canary went red on 2026-11-05: the walk's resets of Patch Canary B2B on 2026-11-04 removed its test page for a missing product, and the check called a working patch "broken" | The page republished (owner's go), all three checks and the self-test pass against the live canary. The check now says "could not check: the test page is gone" (`skukla/eds-demo-patches@eb86ddb`). This plan's rules keep resets off that project. Done |
 | F28 | 3.4 | The Adobe destination line said "Deploys To", and two names and a comma. A two-row version, with Workspace in the wizard, rested on a wrong claim: integrations get their own workspace in the wizard too, and only a mesh uses the chosen one | One row everywhere, "Adobe Project", the name and Change; the Review step still lists the workspace (owner, 2026-11-05). Built |
+| F29 | 3.5 | "Configuration saved successfully" said more than it needed | "Configuration saved", as Configure's other save messages read (owner, 2026-11-05). Built |
+| F30 | 1.5 | Remove Datapack, Remove Its Store Settings and Save as File showed no wait in the flyout, since the menu they run from has closed; Remove could be chosen twice; Share's button only greyed | A spinner where the answer lands, a second Remove ignored, a spinner on Share's button (owner, 2026-11-05). Built |
+| F31 | 1.5 | "As its first version" and "Saving to your library" | "New datapack", "New version", "Saving to your datapacks", "Deleting its datapack" (owner, 2026-11-05). Built |
+| F32 | 1.5 | The Community and Data Installer switches each asked the servers again, with the wait on the Refresh button, and there was no way to see only your own packs | One **Show** list: Recommended, My Datapacks, Demo Builder Datapacks, Data Installer Datapacks, Community Datapacks, All Datapacks. It loads once and filters at once. This demo's pack first, then Yours, then A to Z (owner, 2026-11-05). Built |
+| F33 | Projects list | Clicks meant to open a project hit the pencil beside its name or the pin | Rename is in the card's menu, the name opens the project, and the pin takes a 24px target (owner, 2026-11-05). Built |
+| F34 | 1.5 | The save's progress said "0 of 12 data types: Products, Gift Cards" for a pack of two customer groups; the card with the blue check sat its rows higher than its neighbours' | The line counts what this save is about ("0 of 1 data type: Customer Groups"); the title row keeps the tag's height with the check too (owner, 2026-11-05). Built |
+| F35 | Projects list | The 2px hover lift on project cards was irritating, and four other kinds of card and tile did the same | No lift and no hover shadow on any of them: hover changes colour only, as datapack cards always did. Snapshot: nothing moved at rest on 54 captures; on hover and focus only the transform and shadow changed (owner, 2026-11-05). Built |
+| F36 | Wizard Datapacks step, Datapacks screen | The wizard had no Show list; Show's label was smaller than its choice; choosing an empty view removed the filter box and moved the row; Recommended could hide a colleague's pack the demo uses | One Show list on both surfaces, and the step loads the whole catalog. The label matches the choice's size. The filter box stays. Recommended keeps the held or chosen pack (owner, 2026-11-05). Built |
+| F37 | Every card | With the lift gone, hover barely showed on a black card | Fill one step lighter and outline one step brighter, on every kind of card and tile. Seen on real cards by the owner (2026-11-05). Built |
+| F38 | Project dashboard | Datapacks sat in Build, though it is a place an SC goes to use a demo | A fifth Open card, "Sample data". Cards 196px with titles held to one line; the dashboard's header and notices widen to end with them, this screen only. Restart says "Apply changes" (owner, 2026-11-05). Built; the owner's reload after the widening is the fit check |
+| F39 | Wizard Integrations, empty | It said integrations deploy "to a shared Adobe I/O project and workspace", which is false: each gets its own | The sentence ends at "your own custom integration." (2026-11-05). Built |
+| F40 | 1.5, Create Datapack | The saving step said "New datapack" or "New version", which the window's title already says | It names what is going in ("Customer Groups"), or the count past three kinds ("14 data types") (owner, 2026-11-05). Built |
+| F41 | Datapack flyout | Share asked inline under the actions; Save as File and Remove showed a small spinner under them; Remove usually deleted without asking, though it cannot be undone and takes only the version on screen | Share, Stop Sharing, Remove Datapack and Remove Its Store Settings ask in the house confirm dialog, every time. While a menu row works, the flyout shows its title and the medium spinner, no words (owner, 2026-11-05). Built |
+| F42 | Settings | The Data Installer address could not be cleared on the settings screen: an empty box failed its "URI expected" check and was never saved. Its description also called it required, which stopped being true when the store became the default | It takes an https address or nothing, and the description says optional (owner, 2026-11-05). Built |
+| F43 | Datapacks screen, wizard Datapacks step | Changing the Data Installer address, the store address or the engine did nothing until a Refresh, which an SC would not know to press | Both surfaces read the list again when one of those changes (owner, 2026-11-05). Built |
+| F44 | Settings | Turning the Data Installer off meant deleting its address, and pasting it again to turn it back on | A "Data Installer: Enabled" checkbox under the address. Off, it is not asked anywhere, its packs leave every view, and the service engine falls back to Demo Builder's; the address stays (owner, 2026-11-05). Built |
+| F45 | Datapack flyout | Its title showed the pack's id while the detail loaded (wrapping to two lines), then jumped to the name; a removed pack's card stayed for seconds after the flyout closed | The title is the card's name from the start; the removed version leaves the list as the flyout closes, and the next list confirms it (owner, 2026-11-05). Built |
+| F46 | Create Datapack, Datapacks screen | The pick step felt cramped and waited for the first list as well as the counts; a new pack wore the check and no Mine; a shared pack was missing from Community; the Share sentence was long | The pick step is extra-wide with taller lists and waits only for the counts, the first list loading in its pane. The check sits before the one tag (Mine, or Shared). An SC's shared pack is in Community too. Share says "Everyone can find and install it under Community Datapacks." (owner, 2026-11-05). Built |
+| F47 | Create Datapack, Save Changes | The result was a wall of text naming every item the SC had not picked | One line per data type it holds, count first ("4 Customer Groups"), in the pick list's order (the flyout's labels follow it too). A save into the demo's own pack adds what it left out, by count. The agent keeps the whole sentence (owner, 2026-11-05). Built |
+| F48 | Datapacks screen | The Data Installer's uncurated packs (test packs, ACO exports, a sample) were tagged Community, and only 2 of its packs showed under Data Installer | Tagged by where a pack lives: every Data Installer pack says Data Installer; Community is colleagues' packs. Empty packs and ACO-only packs are not listed, the SC's own excepted. The 9 hidden curated packs are the SC's own copies, shown once as the store's (owner, 2026-11-05). Built |
+| F49 | Datapack cards | "Shared" and "Community" read as the same thing; a tag beside a wrapped name moved with it; the tile was crowded | One word per fact: Mine, Data Installer, Community (an SC's own shared pack is Mine and Community). The tags sit at the right of the version line, pinned to the card's foot. No data type count on the card; the flyout names the types (owner, 2026-11-05). Built |
 
 ## Questions raised
 
@@ -67,15 +88,19 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | # | Test | Result |
 |---|---|---|
 | 1.1 | Throwaway pack with every kind of data (live test 1) | passed 2026-11-03 |
-| 1.2 | Real packs: `wknd` and Bodea (live test 2) | `wknd` passed 2026-11-03; Bodea open |
+| 1.2 | Real packs: `wknd` and Bodea (live test 2) | `wknd` passed 2026-11-03; Bodea moved out 2026-11-05 (no second sandbox) |
 | 1.3 | Settings layer beside a pack | passed 2026-11-03 |
 | 1.4 | Shared root: the one Admin step (live test 3) | open |
 | 1.5 | The Datapacks screen by hand (live test 4) | open |
 | 1.6 | A datapack travels with a project (live test 5) | open |
 | 1.7 | Save Changes, Newer Version, reset and delete with a pack | open |
 | 1.8 | Colour swatches | open |
-| 2.1 to 2.8 | Projects list: select, reset and delete several | open |
-| 3.1 to 3.5 | Smaller changes since the last walk | open |
+| 2.1 to 2.4 | Projects list: select, reset several, failures, the open project | passed 2026-11-04 |
+| 2.5 | A datapack in a reset batch | passed in part 2026-11-04 |
+| 2.6 | Delete Selected | open |
+| 2.7 | Single delete | passed in part 2026-11-05 |
+| 2.8 | Agent delete | open |
+| 3.1 to 3.5 | Smaller changes since the last walk | passed 2026-11-05 |
 | 4.1 to 4.5 | Before the cut | open |
 
 ---
@@ -94,7 +119,7 @@ Needs a store without Bodea's data already on it.
 3. **Import** again, then **Remove All Data**, then confirm in **Remove from <store>?**.
 4. Expect the store back as it was.
 
-**Result:** open
+**Result:** moved out of beta.153 on 2026-11-05: the owner has no second sandbox, and the one instance already holds Bodea's data for the real Bodea project, so clearing it there is not an option. Not proved live: this pack on a clean store. Say so if it comes up
 
 ### 1.4 Shared root: the one Admin step (live test 3)
 
@@ -131,7 +156,7 @@ shared with another store, on the pack's first install there.
 5. Untick it, open one kind, use that list's own **Select All**, then pick a few items by hand.
 6. Click **Create**. Expect a window **Creating <name>**, then **Datapack Created** and
    "Saved to the <name> pack."
-7. Close. Expect a new card tagged **Yours**, with the blue check (this demo now uses it).
+7. Close. Expect a new card with the blue check where its **Mine** tag would be (this demo now uses it).
 8. Click the card. In the flyout expect Description, Owner "You", Visible To, Updated, Data.
 9. Change something in the Admin (one product's name), then click **Save Changes** in the flyout.
    Expect the dialog **Save <name>**, the **Save** button enabled with nothing extra picked, then
@@ -139,7 +164,7 @@ shared with another store, on the pack's first install there.
 10. In the flyout, **More**, then **Remove Datapack**. Expect "Removed." and the card gone.
     Commerce is not touched.
 11. No Data Installer address: in Settings, empty `demoBuilder.dataInstaller.apiBaseUrl`. Reopen
-    Datapacks. Expect your packs, no banner, no **Include Data Installer Datapacks** switch, and
+    Datapacks. Expect your packs, no banner, no **Data Installer Datapacks** choice in **Show**, and
     no error. Put the address back.
 
 **Result:** open
@@ -198,9 +223,9 @@ button and "Reset to <pack>" removed by its own pivot. Uses the Bodea demo.
 
 **Result:** open
 
-Known limit: the Data Installer refuses the owner's sign-in (`ERR1201`, missing product profile)
-since 2026-11-03. Anything that lists or copies its packs cannot be tested. The store's own packs do
-not depend on it. Not a release blocker (owner, 2026-11-03).
+The Data Installer refused the owner's sign-in (`ERR1201`, missing product profile) from 2026-11-03.
+It answers again as of 2026-11-05: its packs list on the Datapacks screen. The store's own packs do
+not depend on it.
 
 ---
 
@@ -347,7 +372,7 @@ Update seen 2026-11-04, Apply 2, 4 and 5 Updates seen 2026-11-05 on the redesign
    **Manage Commerce**. Expect a private window.
 3. Set it back to **Unified Shell** and **Save**.
 
-**Result:** open
+**Result:** passed 2026-11-05 on Bodea: Unified Shell in normal Chrome, signed in; Classic UI in an Incognito window at Adobe's Sign In page; set back to Unified Shell
 
 ---
 

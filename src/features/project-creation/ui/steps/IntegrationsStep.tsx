@@ -147,8 +147,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }): React.ReactElement {
         <div className="int-results-empty">
             <div className="int-results-empty-title">No integrations yet.</div>
             <div className="int-results-empty-copy">
-                Add an API Mesh, a pre-built integration, or your own custom integration — each
-                deploys to a shared Adobe I/O project and workspace.
+                Add an API Mesh, a pre-built integration, or your own custom integration.
             </div>
             <div className="int-results-empty-action">
                 <Button variant="accent" onPress={onAdd}>

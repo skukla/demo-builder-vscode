@@ -45,17 +45,15 @@ describe('a project being created', () => {
         inProvider(<ProjectCard project={creating} onSelect={jest.fn()} actions={ALL_ACTIONS} />);
 
         expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Rename canary' })).not.toBeInTheDocument();
     });
 
     it('offers neither in the list view either', () => {
         inProvider(<ProjectRow project={creating} onSelect={jest.fn()} actions={ALL_ACTIONS} />);
 
         expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Rename canary' })).not.toBeInTheDocument();
     });
 
-    it('CONTROL: the same project at rest opens and offers both', () => {
+    it('CONTROL: the same project at rest opens and offers both', async () => {
         const atRest = { ...creating, status: 'stopped' as const };
         const onSelect = jest.fn();
         inProvider(<ProjectCard project={atRest} onSelect={onSelect} actions={ALL_ACTIONS} />);
@@ -63,7 +61,7 @@ describe('a project being created', () => {
         fireEvent.click(screen.getByRole('button', { name: /^canary,/ }));
 
         expect(onSelect).toHaveBeenCalled();
-        expect(screen.getByRole('button', { name: 'More actions' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Rename canary' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+        expect(await screen.findByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
     });
 });

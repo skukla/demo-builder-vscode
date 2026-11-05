@@ -462,20 +462,21 @@ describe('the feature turned off mid-import', () => {
      * "watching".)
      */
     it('keeps watching the job the engine started', async () => {
-        let enabledReads = 0;
+        // On for the start; the SC turns it off (`dataInstaller.enabled`) before the watch runs.
+        let on = true;
         (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-            get: jest.fn((key: string) => {
+            get: jest.fn((key: string, fallback?: unknown) => {
                 if (key === 'apiBaseUrl') {
                     return 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
                 }
-                enabledReads += 1;
-                return enabledReads === 1;
+                return key === 'enabled' ? on : fallback;
             }),
         });
         const { context } = makeImportHarness();
         happyClient();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
+        on = false;
         await new Promise((resolve) => setImmediate(resolve));
 
         expect(result.success).toBe(true);

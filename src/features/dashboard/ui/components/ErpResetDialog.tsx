@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { ConfirmActionDialog } from './ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
 import { andList } from '@/core/utils/andList';
 
 export interface ErpResetDialogProps {

@@ -21,20 +21,29 @@ Every surface lists the store first and adds the Data Installer's packs when it
 answers, asked at each load (`handlers/catalogLibraryRows.ts`). A pack in both shows
 once, as the store's. Nothing gates on the Data Installer any more: the wizard's
 Datapacks step and the dashboard tile always show, and the panel is titled
-**Datapacks**. An **Include Data Installer Datapacks** switch sits beside Include
-Community, shown only once the Data Installer has answered this SC (an address is set
-and it accepts their sign-in). It starts on; off leaves it unasked (`includeInstaller:
-false`, answered with `installerOff`). When it is asked and missing, a blue house banner
+**Datapacks**. That screen and the wizard's Datapacks step load every pack once, and their
+**Show** list filters what they hold (`ui/catalogShow.ts`, owner, 2026-11-05): **Recommended** (the default: your packs, the team's and the Data Installer's curated ones),
+**My Datapacks**, **Demo Builder Datapacks** (the team packs), **Data Installer Datapacks**,
+**Community Datapacks** and **All Datapacks**. Both surfaces read the list again when
+`dataInstaller.apiBaseUrl`, `dataInstaller.enabled`, `dataInstaller.engine` or `datapackStore.apiBaseUrl` changes
+(`affectsDatapackList`), with no Refresh. The Data Installer choice
+appears only once the Data Installer has answered this SC (an address is set and it accepts
+their sign-in). Agents can still leave it unasked (`includeInstaller: false`, answered with
+`installerOff`). When it is asked and missing, a blue house banner
 above the cards says only Demo Builder's datapacks are shown, and why (`installerMissing`:
 `no-access` when it turned the SC's sign-in away, `no-answer` when it is down). No address
-(`no-address`) shows nothing: that is most SCs (owner, 2026-11-03). When the store does not
+(`no-address`) shows nothing: that is most SCs (owner, 2026-11-03). Neither does `turned-off`:
+`demoBuilder.dataInstaller.enabled` turns the Data Installer off without deleting its address
+(owner, 2026-11-05), and the service engine then falls back to Demo Builder's. When the store does not
 answer, an amber banner says so (`storeMissing`). Only when neither
 answers does the list fail, with the store's reason, and its title is "Datapacks
 Aren't Available".
 
 The store's default list is its **team** packs (marked with `mark_team_datapack`)
-and the SC's own; a colleague's shared pack is **Community**, behind the same Include
-Community switch as the Data Installer's non-curated packs. Removed with this: the
+and the SC's own; a colleague's shared pack is **Community**. Every Data Installer pack is tagged
+the Data Installer's, curated or not (owner, 2026-11-05); Recommended leaves out its uncurated ones.
+Packs nothing can install yet, empty ones and Adobe Commerce Optimizer ones, are not listed, except
+the SC's own (`isListable`). Removed with this: the
 on/off setting that gated the whole feature, the check that read it, and the Open
 Settings button that both surfaces offered when it was off.
 
@@ -334,7 +343,7 @@ The Data Installer screen's catalog shows both stores: one request
 (`find-datapacks` with `includeLibrary`) returns the Data Installer's packs and then
 the library's, each library row tagged `store: 'library'`. Cards are grouped by store
 AND name, so a library pack never folds into a Data Installer pack of the same name.
-A library card is tagged "Library", or "Yours" when the SC owns it — the library says
+A library card is tagged "Library", or "Mine" when the SC owns it — the library says
 so itself (`mine`), because only it knows the caller's verified email.
 
 A library pack's flyout offers Import, with Save as file and, when it is yours, Share or Stop

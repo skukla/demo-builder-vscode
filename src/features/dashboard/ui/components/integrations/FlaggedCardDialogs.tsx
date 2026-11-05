@@ -16,9 +16,9 @@
  */
 
 import React, { useCallback } from 'react';
-import { ConfirmActionDialog } from '../ConfirmActionDialog';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import type { FlaggedCardDialog } from './useFlaggedCardDialog';
+import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
 
 /** Start a confirmed action on the screen's runner: the id it runs on, the card's name, the action. */
 export type RunFlaggedAction = (id: string, name: string, action: CardAction) => void;

@@ -54,7 +54,7 @@ destination the integrations deploy to.
 | The mesh, demo stopped | Redeploy mesh to apply changes | Redeploys the mesh |
 | The mesh, demo running | Redeploy mesh and restart demo | Redeploys the mesh, then restarts the demo |
 | Neither, demo running | Restart the demo to apply changes | Restarts the demo |
-| Nothing that needs a follow-up | Configuration saved successfully | — |
+| Nothing that needs a follow-up | Configuration saved | — |
 
 Every prompt has Later. Later on a mesh or storefront prompt is recorded on the project,
 so the dashboard shows the update as declined. Each prompt is offered once per change:

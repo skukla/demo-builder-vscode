@@ -140,26 +140,27 @@ describe('saveStoreChanges', () => {
         await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write, (stage, step) => stages.push([stage, step]));
 
         expect(stages).toEqual([
-            ['Reading from Commerce', '0 of 12 data types: Products, Gift Cards'],
-            ['Reading from Commerce', '0 of 12 data types: Products, Gift Cards'],
-            ['Reading from Commerce', '2 of 12 data types: Categories'],
-            ['Reading from Commerce', '3 of 12 data types: Product Attributes'],
-            ['Reading from Commerce', '4 of 12 data types: Attribute Sets'],
-            ['Reading from Commerce', '5 of 12 data types: Source Items'],
-            ['Reading from Commerce', '6 of 12 data types: Customer Groups, Customers, B2B Companies, B2B Shared Catalogs'],
-            ['Reading from Commerce', '10 of 12 data types: Cart Rules'],
-            ['Reading from Commerce', '11 of 12 data types: Store Config'],
-            ['Saving to your library', 'As its first version'],
+            // This pack holds categories alone, so the line counts that (`capturePhases.test.ts`).
+            ['Reading from Commerce', '0 of 1 data type: Categories'],
+            ['Reading from Commerce', '0 of 1 data type: Categories'],
+            ['Reading from Commerce', '0 of 1 data type: Categories'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Saving to your datapacks', 'Categories'],
         ]);
     });
 
-    it("says a save into the demo's own pack is a new version of it", async () => {
+    it("names what goes in when a save is into the demo's own pack, too", async () => {
         const { d, write } = await deps();
         const steps: Array<string | undefined> = [];
 
         await saveStoreChanges(d, { pack: PACK, saveAs: { ...SAVE_AS, id: { name: PACK.name, version: '20261104-051753' } } }, write, (_stage, step) => steps.push(step));
 
-        expect(steps.at(-1)).toBe('As a new version');
+        expect(steps.at(-1)).toBe('Categories');
     });
 });
 

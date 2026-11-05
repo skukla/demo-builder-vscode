@@ -22,6 +22,21 @@
    renders unstyled anywhere else — the same rule that put db-drawer-* here.
    ========================================================================== */
 /* ===========================================
+   The Show list: on the panel and in the wizard, so it lives here
+   =========================================== */
+@layer theme {
+.datapack-show {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    /* The size of the choice beside it, which Spectrum's own side label is not. */
+    font-size: var(--spectrum-global-dimension-font-size-100);
+    color: var(--spectrum-global-color-gray-700);
+}
+}
+
+/* ===========================================
    Datapack card
    =========================================== */
 @layer theme {
@@ -45,8 +60,8 @@
 
 @layer theme {
 .datapack-card:hover {
-    background: var(--spectrum-global-color-gray-75);
-    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
 }
 }
 
@@ -88,6 +103,7 @@
 @layer theme {
 .datapack-card-body {
     display: flex;
+    flex: 1;
     flex-direction: column;
     gap: var(--card-gap);
     box-sizing: border-box;
@@ -99,7 +115,6 @@
 .datapack-card-title-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
 }
 }
@@ -139,10 +154,21 @@
 }
 
 @layer theme {
-.datapack-card-types {
-    font-size: 12px;
-    line-height: 1.4;
-    color: var(--spectrum-global-color-gray-600);
+/* The version and the tags, on the card's last line: pinned to the bottom, so the tags sit in one
+   place on every card in a row however long a name runs (owner, 2026-11-05). */
+.datapack-card-version-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.datapack-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 }
 

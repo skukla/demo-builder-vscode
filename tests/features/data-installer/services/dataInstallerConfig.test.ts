@@ -12,6 +12,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import {
+    affectsDatapackList,
+    dataInstallerEnabled,
     DATA_INSTALLER_MAX_URL_LENGTH,
     actionUrl,
     fingerprintUrl,
@@ -261,5 +263,85 @@ describe('dataInstallerConfig, the datapack store', () => {
             setupConfig({ apiBaseUrl: '  ' });
             expect(resolveDatapackStoreBaseUrl()).toEqual({ ok: false, reason: 'not-configured' });
         });
+    });
+});
+
+// VS Code's settings screen refuses to save what fails a setting's check, and `format: uri` fails an
+// empty box, so a setting whose default is empty could be set and never cleared there (owner,
+// 2026-11-05: found clearing the Data Installer's address).
+describe('a setting that defaults to empty', () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
+    const sections: Array<{ properties?: Record<string, { default?: unknown; format?: string; pattern?: string }> }> =
+        [manifest.contributes.configuration].flat();
+    const settings = sections.flatMap((section) => Object.entries(section.properties ?? {}));
+
+    it('can be emptied again on the settings screen', () => {
+        const unclearable = settings
+            .filter(([, setting]) => setting.default === '' && setting.format === 'uri')
+            .map(([key]) => key);
+
+        expect(unclearable).toStrictEqual([]);
+    });
+
+    it('takes an https address or nothing, for the Data Installer', () => {
+        const setting = settings.find(([key]) => key === 'demoBuilder.dataInstaller.apiBaseUrl')?.[1];
+        const check = new RegExp(setting?.pattern ?? 'no pattern');
+
+        expect(check.test('')).toBe(true);
+        expect(check.test('https://example.test/api')).toBe(true);
+        expect(check.test('http://example.test/api')).toBe(false);
+    });
+});
+
+describe('affectsDatapackList', () => {
+    const changing = (changed: string): vscode.ConfigurationChangeEvent => ({
+        affectsConfiguration: (section: string) => section === changed,
+    });
+
+    it.each([
+        'demoBuilder.dataInstaller.apiBaseUrl',
+        'demoBuilder.dataInstaller.engine',
+        'demoBuilder.datapackStore.apiBaseUrl',
+    ])('follows %s', (setting) => {
+        expect(affectsDatapackList(changing(setting))).toBe(true);
+    });
+
+    it('ignores a setting the list does not read', () => {
+        expect(affectsDatapackList(changing('demoBuilder.dataInstaller.changesOnRemoval'))).toBe(false);
+    });
+});
+
+// Owner, 2026-11-05: the address is pasted once, and `enabled` turns the Data Installer on and off.
+describe('the Data Installer turned off', () => {
+    const settings = (values: Record<string, unknown>): void => {
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: jest.fn((key: string, fallback?: unknown) => (key in values ? values[key] : fallback)),
+        });
+    };
+    const ADDRESS = 'https://example.test/api';
+
+    it('is not asked, though its address is kept', () => {
+        settings({ apiBaseUrl: ADDRESS, enabled: false });
+
+        expect(resolveDataInstallerBaseUrl()).toEqual({ ok: false, reason: 'turned-off' });
+    });
+
+    it('is on when the setting was never touched', () => {
+        settings({ apiBaseUrl: ADDRESS });
+
+        expect(dataInstallerEnabled()).toBe(true);
+        expect(resolveDataInstallerBaseUrl()).toEqual({ ok: true, baseUrl: ADDRESS });
+    });
+
+    it("hands the service's installs to Demo Builder's engine, so turning it off never blocks one", () => {
+        settings({ engine: 'service', enabled: false });
+        expect(selectedDatapackEngine()).toBe('demo-builder');
+
+        settings({ engine: 'service' });
+        expect(selectedDatapackEngine()).toBe('service');
+    });
+
+    it('is a setting the list follows', () => {
+        expect(affectsDatapackList({ affectsConfiguration: (section: string) => section === 'demoBuilder.dataInstaller.enabled' })).toBe(true);
     });
 });

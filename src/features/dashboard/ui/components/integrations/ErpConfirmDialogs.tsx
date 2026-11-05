@@ -15,8 +15,8 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import type { ComponentOperationControls } from '../../hooks/useComponentOperation';
-import { ConfirmActionDialog } from '../ConfirmActionDialog';
 import { ErpResetDialog } from '../ErpResetDialog';
+import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
 
 /** A reset waiting on its confirm: the INTEGRATION's id (it runs through it), every ERP's name. */
 export interface PendingReset {

@@ -28,15 +28,30 @@ export async function listLibrary(
     return { ...listed, items: listed.items.map((item) => ({ ...item, store: 'library' as const })) };
 }
 
+/**
+ * Whether a pack can be installed into a Commerce store at all, as far as its row says: it holds a
+ * data type, and not only Adobe Commerce Optimizer ones, which wait on ACO support (owner,
+ * 2026-11-05). The SC's own always shows, so they can remove it.
+ */
+export function isListable(item: DatapackSummary): boolean {
+    if (item.store === 'library' && item.mine) return true;
+    const types = item.dataTypes;
+    // A row that does not say what it holds is shown: hiding it would be a guess, and a crash on a
+    // row the service sent short would take the whole list with it.
+    if (!Array.isArray(types)) return true;
+    return types.length > 0 && !types.every((type) => type.startsWith('aco_'));
+}
+
 /** Whether a store row is in the default list: a team pack or the SC's own. */
 function inDefaultList(item: DatapackSummary): boolean {
     return item.team === true || item.mine === true;
 }
 
-/** Why the Data Installer's rows are absent: never asked, the SC's sign-in turned away, or no answer. */
+/** Why the Data Installer's rows are absent: never asked (no address, or turned off), the SC's sign-in turned away, or no answer. */
 function whyMissing(installer: HandlerResponse): NonNullable<CatalogPage['installerMissing']> {
     const address = resolveDataInstallerBaseUrl();
     if (!address.ok && address.reason === 'not-configured') return 'no-address';
+    if (!address.ok && address.reason === 'turned-off') return 'turned-off';
     return installer.code === ErrorCode.AUTH_FORBIDDEN ? 'no-access' : 'no-answer';
 }
 
@@ -65,7 +80,7 @@ export function mergedCatalog(
     const items = [
         ...own.filter((item) => includeCommunity || inDefaultList(item)),
         ...theirs.filter((item) => !names.has(item.id.name)),
-    ];
+    ].filter(isListable);
     const page: CatalogPage = {
         items,
         // No `total`: the two stores' totals do not add up to anything a caller can use.

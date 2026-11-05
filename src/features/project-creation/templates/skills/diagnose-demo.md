@@ -22,7 +22,7 @@ distinguishes causes; the sections below say how to read each answer.
 | Your change is not on the site — did work get lost? | `git log` in the storefront | Git is the record, not the rendered page. See "Is your work still there?" — check it BEFORE concluding anything, and before re-applying anything |
 | Mesh behaves unexpectedly | `check_mesh` | Reports both deployed AND up-to-date — they differ |
 | A setting change had no effect | `get_project` | Compare what is saved against what you expected to save |
-| A whole FEATURE seems absent | `get_settings` | Some keys are functional gates rather than preferences: the Data Installer's own packs are listed only when `dataInstaller.apiBaseUrl` is set and it answers. Datapacks themselves need no setup. "Off" and "broken" look identical until you look |
+| A whole FEATURE seems absent | `get_settings` | Some keys are functional gates rather than preferences: the Data Installer's own packs are listed only when `dataInstaller.apiBaseUrl` is set, `dataInstaller.enabled` is on, and it answers. Datapacks themselves need no setup. "Off" and "broken" look identical until you look |
 | Setup fails before anything runs | `check_prerequisites` | Needs a stack id. Reports per tool whether it is installed and at what version |
 | EDS publishing silently fails | `check_github_app` | The AEM Code Sync app not being installed on the repo is silent everywhere else |
 | A repo will not serve a storefront | `check_repo_readiness` | Returns a verdict, or `undetermined` WITH a reason — which is a different answer from "not ready" |

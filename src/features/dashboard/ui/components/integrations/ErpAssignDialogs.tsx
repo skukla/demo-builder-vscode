@@ -16,8 +16,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import type { ComponentOperationControls } from '../../hooks/useComponentOperation';
 import { AssignErpProductsModal } from '../AssignErpProductsModal';
-import { ConfirmActionDialog } from '../ConfirmActionDialog';
 import type { ProgressModalNextStep } from '@/core/ui/components/feedback/OperationProgressModal';
+import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
 import type { ErpDemoControlTarget } from '@/features/dashboard/ui/hooks/useErpDemoControls';
 import type { ErpProductSelection } from '@/types/erpAssign';
 import type { OperationOffer } from '@/types/webviewPayloads';

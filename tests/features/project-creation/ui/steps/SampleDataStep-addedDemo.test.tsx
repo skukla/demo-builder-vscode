@@ -1,7 +1,6 @@
 /**
  * The Sample Data step when an added demo asks for a datapack (D26, D31): the
- * catalog is fetched with the community half, the pack starts selected, and a
- * line says why — or says the pack is not published yet.
+ * pack starts selected, and a line says why — or says the pack is not published yet.
  */
 
 import React from 'react';
@@ -35,7 +34,7 @@ describe('SampleDataStep — a demo that asks for a pack', () => {
         setMockState(envelope(CATALOG));
     });
 
-    it('fetches the catalog with the community half, pre-selects the pack at the asked version, and says why', async () => {
+    it('pre-selects the pack at the asked version, and says why', async () => {
         const { updateState } = renderStep({ demo: demo({ name: 'bodea', version: 'hold' }) });
 
         expect(mockExecute).toHaveBeenCalledWith({ includeCommunity: true });
@@ -100,8 +99,8 @@ describe('SampleDataStep — a demo that asks for a pack', () => {
         ).toBeInTheDocument();
     });
 
-    it('fetches the curated catalog only when no demo asks', () => {
+    it('fetches the same catalog when no demo asks', () => {
         renderStep({});
-        expect(mockExecute).toHaveBeenCalledWith({ includeCommunity: false });
+        expect(mockExecute).toHaveBeenCalledWith({ includeCommunity: true });
     });
 });

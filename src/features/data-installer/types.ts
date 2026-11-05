@@ -154,11 +154,12 @@ export type CatalogPage = Page<DatapackSummary> & {
     storeMissing?: boolean;
     /**
      * The Data Installer's rows are not here, though they were asked for. `no-address`: none is
-     * set, so it was not asked. `no-access`: it turned the SC's Adobe sign-in away (not in its
+     * set, so it was not asked. `turned-off`: the SC turned it off (`dataInstaller.enabled`), so it
+     * was not asked either. `no-access`: it turned the SC's Adobe sign-in away (not in its
      * product profile). `no-answer`: it failed or did not reply. Told apart since 2026-11-03,
      * so the screen can say which; one "no answer" left a refused SC reading "try again".
      */
-    installerMissing?: 'no-address' | 'no-access' | 'no-answer';
+    installerMissing?: 'no-address' | 'turned-off' | 'no-access' | 'no-answer';
     /** The SC switched the Data Installer's datapacks off, so it was not asked. */
     installerOff?: boolean;
     /**
@@ -205,6 +206,9 @@ export type DataTypeStatus = 'pending' | 'processing' | 'success' | 'error';
  * modal's hook subscribes to it.
  */
 export const IMPORT_PROGRESS_MESSAGE = 'datapack-import-progress';
+
+/** A setting the datapack list depends on changed: a screen showing the list reads it again. */
+export const DATAPACK_SETTINGS_CHANGED_MESSAGE = 'datapack-settings-changed';
 
 /** One poll, as it reaches the webview. */
 export interface ImportProgressMessage {

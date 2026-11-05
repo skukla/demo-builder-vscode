@@ -196,8 +196,8 @@ describe('one status icon on every surface', () => {
     it('draws every focus ring in one blue', () => {
         const rings = rulesOf(allCss()).filter(({ selector, body }) => /:focus/.test(selector) && blueOf(body, 'outline'));
 
-        // Positive control on the real tree: there were 19 when this was written.
-        expect(rings.length).toBeGreaterThan(15);
+        // Positive control on the real tree: 15 once the unused project cards' rings were deleted.
+        expect(rings.length).toBeGreaterThan(10);
         expect(offFocusRings(allCss())).toStrictEqual([]);
     });
 

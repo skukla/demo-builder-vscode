@@ -7,7 +7,7 @@
  * Actions are grouped into labeled sections rather than a flat list:
  * - USE: open/run the demo (Start/Stop or Open in Browser, Author Content,
  *   Manage Commerce, Open AI).
- * - MANAGE: project-entry actions (Edit, Integrations, Pin/Unpin, Reset, Export).
+ * - MANAGE: project-entry actions (Rename, Edit, Integrations, Pin/Unpin, Reset, Export).
  *   There is NO Rename item: renaming happens in place on the card name /
  *   dashboard title (InlineRenameField).
  *
@@ -80,10 +80,11 @@ export interface ProjectActions {
     onEdit?: (project: Project) => void;
     /**
      * Commit an inline rename (consumed by the CARD's InlineRenameField, not
-     * by this menu): resolve null on success or an error message to show
-     * inline. There is deliberately no menu Rename item.
+     * by this menu): resolve null on success or an error message to show inline.
      */
     onRenameSubmit?: (project: Project, newName: string) => Promise<string | null>;
+    /** The menu's Rename: starts that field. The tile wires it, when the project can be renamed. */
+    onRename?: () => void;
     onExport?: (project: Project) => void;
     onOpenAi?: (project: Project) => void;
     /**
@@ -132,6 +133,7 @@ export function ProjectActionsMenu({
         onExport,
         onOpenAi,
         onDelete,
+        onRename,
     } = actions;
 
     const isEds = isEdsProject(project);
@@ -153,6 +155,7 @@ export function ProjectActionsMenu({
             export: onExport,
             openAi: onOpenAi,
             delete: onDelete,
+            rename: onRename ? () => onRename() : undefined,
         }),
         [
             onStartDemo,
@@ -167,6 +170,7 @@ export function ProjectActionsMenu({
             onExport,
             onOpenAi,
             onDelete,
+            onRename,
         ],
     );
 
@@ -215,6 +219,9 @@ export function ProjectActionsMenu({
         }
 
         // MANAGE — project-entry actions
+        if (onRename) {
+            manage.push({ key: 'rename', label: 'Rename', icon: 'edit' });
+        }
         // Edit needs the demo stopped for non-EDS; EDS has no running state.
         if (isEds ? onEdit : !isRunning && onEdit) {
             manage.push({ key: 'edit', label: 'Edit', icon: 'edit' });
@@ -256,6 +263,7 @@ export function ProjectActionsMenu({
         onEdit,
         onExport,
         onOpenAi,
+        onRename,
     ]);
 
     // Nothing to show — render no trigger at all. A project still being created has

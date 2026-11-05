@@ -2623,11 +2623,11 @@
             "source": "PL-22 MUT-02, 2026-09-04"
         },
         {
-            "module": "src/features/project-creation/commands/createProject.ts",
+            "module": "src/features/project-creation/commands/wizardSettingsWatch.ts",
             "anchors": [
-                "const updated = parseCustomBlockLibrarySettings("
+                "const updated = parseCustomBlockLibrarySettings(config.get<string[]>('blockLibraries.custom', []));"
             ],
-            "line": 461,
+            "line": 30,
             "mutants": 1,
             "category": "other",
             "reason": "Same as the getInitialData read: the fallback fires only for an unset setting, and the value is parsed by parseCustomBlockLibrarySettings before it is pushed to the webview. A placeholder string resolves to no owner and repo, so it is filtered out and the pushed payload holds the same empty array \u2014 which the settings-listener suite asserts directly.",
@@ -2666,7 +2666,7 @@
             "anchors": [
                 "if (panel) {"
             ],
-            "line": 488,
+            "line": 466,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true calls dispose on undefined when no wizard panel is open \u2014 and that call sits inside the try whose catch is deliberately empty, so the TypeError is swallowed and disposeActivePanel still returns having done nothing. The no-panel test passes under both, because the guard and the catch cover the same case.",
@@ -2679,7 +2679,7 @@
             "anchors": [
                 "if (this.importedSettings) {"
             ],
-            "line": 505,
+            "line": 483,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is a single this.logger.debug naming the import source. importedSettings is assigned on the line above and read by getInitialData from the field, never from this branch, so forcing the condition either way or emptying the block leaves the wizard's initial data identical.",
@@ -2692,7 +2692,7 @@
             "anchors": [
                 "if (this.editProject.settings?.selections) {"
             ],
-            "line": 520,
+            "line": 498,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing this optional read would throw only for an edit project whose settings is undefined, and EditProjectConfig declares settings as required \u2014 no caller can construct that value without deliberately defeating the type. The guard is defensive against a shape the compiler already refuses.",
@@ -3243,7 +3243,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 196,
+            "line": 195,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -3256,7 +3256,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 206,
+            "line": 205,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -3978,9 +3978,9 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
+            "module": "src/features/data-installer/ui/hooks/useDatapackCatalog.ts",
             "anchors": [
-                "}, [load, includeCommunity]);"
+                "}, [refresh]);"
             ],
             "mutants": 1,
             "category": "other",
@@ -13178,7 +13178,7 @@
             "anchors": [
                 "return `scheme=\"${parsed.protocol.replace(/:$/, '')}\", host=\"${parsed.hostname}\"`;"
             ],
-            "line": 164,
+            "line": 193,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker drops the end anchor, so /:$/ becomes /:/. Both are non-global and replace the FIRST colon, and a URL protocol has exactly one: the WHATWG scheme grammar allows no colon inside a scheme. Checked seven shapes (https, data, javascript, a+b-c.d, file, mailto, urn:isbn:...) \u2014 in every case the only colon in .protocol is its last character. Planted the mutation and re-ran the suite (2026-09-06): all 30 tests pass, and no reachable value could separate the two regexes.",
@@ -14686,7 +14686,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 202,
+            "line": 201,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs. Same argument as the row for line 202: this is openAdd's array, that one openDestination's.",

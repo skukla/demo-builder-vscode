@@ -21,7 +21,7 @@
  */
 
 import type { DatapackSummary } from '../types';
-import type { DatapackStoreName } from '@/types/datapack';
+import type { DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
 /** Every version of one datapack, ready to render as a single card. */
 export interface DatapackGroup {
@@ -43,6 +43,17 @@ export interface DatapackGroup {
     team: boolean;
     /** Ordered by {@link orderVersions}: live first, archived last. */
     versions: DatapackSummary[];
+}
+
+/**
+ * Whether a card is the demo's own pack: the same name, in the store the project records.
+ *
+ * @param group - the card's pack
+ * @param held - the pack the open project records
+ * @returns whether it is that pack
+ */
+export function isHeld(group: DatapackGroup, held?: ProjectDatapack): boolean {
+    return held !== undefined && group.name === held.name && group.store === (held.store ?? 'installer');
 }
 
 const MAIN = 'main';

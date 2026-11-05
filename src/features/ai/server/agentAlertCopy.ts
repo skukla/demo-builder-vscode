@@ -483,7 +483,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     },
     share_datapack: {
         action: 'Share or stop sharing a library datapack',
-        consequence: 'Shared, everyone using Demo Builder can see and install every version of this pack, when they include Community datapacks; stopped, only you can.',
+        consequence: 'Shared, everyone using Demo Builder can see and install every version of this pack, under Community Datapacks; stopped, only you can.',
         target: ['datapackName', 'shared'],
         sessionGrant: false,
     },

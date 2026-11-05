@@ -650,7 +650,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             "The datapacks this SC can install: Demo Builder's datapack store (team packs and your own, " +
             "store:\"library\"), then whatever the Data Installer adds if it answers (store:\"installer\"). A pack in both " +
             'shows once, as the store\'s. One row per (name, version). installerMissing says the Data Installer\'s packs ' +
-            'are absent: no-address (none set), no-access (it turned this Adobe account away; an admin of the org can ' +
+            'are absent: no-address (none set), turned-off (demoBuilder.dataInstaller.enabled is off), no-access (it turned this Adobe account away; an admin of the org can ' +
             'add it to the Data Installer\'s product profile) or no-answer (down). includeInstaller:false leaves the ' +
             'Data Installer out (installerOff says so). ' +
             'includeCommunity adds colleagues\' shared packs and non-curated Data Installer packs. store lists one alone. ' +

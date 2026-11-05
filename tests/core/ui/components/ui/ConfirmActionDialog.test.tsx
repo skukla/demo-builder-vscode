@@ -9,7 +9,7 @@ import '@testing-library/jest-dom';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
-import { ConfirmActionDialog, type ConfirmActionDialogProps } from '@/features/dashboard/ui/components/ConfirmActionDialog';
+import { ConfirmActionDialog, type ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
 
 function renderConfirm(props: Partial<ConfirmActionDialogProps> = {}) {
     const onConfirm = jest.fn();

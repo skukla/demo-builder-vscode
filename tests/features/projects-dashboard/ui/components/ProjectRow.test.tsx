@@ -22,8 +22,14 @@ const renderWithProvider = (ui: React.ReactElement) => {
     );
 };
 
+/** Rename is the menu's now (owner, 2026-11-05): the pencil sat 6px from the name. */
+async function chooseRename(): Promise<void> {
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }));
+}
+
 describe('ProjectRow — inline rename', () => {
-    it('renders the rename pencil beside the name when onRenameSubmit is wired', () => {
+    it('offers Rename in the menu, with no pencil beside the name, when onRenameSubmit is wired', async () => {
         const project = createProjectsDashboardProject({ name: 'Row Project' });
         renderWithProvider(
             <ProjectRow
@@ -33,10 +39,12 @@ describe('ProjectRow — inline rename', () => {
             />
         );
 
-        expect(screen.getByRole('button', { name: 'Rename Row Project' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Rename Row Project' })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+        expect(await screen.findByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
     });
 
-    it('hides the pencil while the demo is running', () => {
+    it('offers no Rename while the demo is running', () => {
         const project = createRunningProject({ name: 'Running Row' });
         renderWithProvider(
             <ProjectRow
@@ -48,7 +56,7 @@ describe('ProjectRow — inline rename', () => {
         );
 
         expect(
-            screen.queryByRole('button', { name: 'Rename Running Row' })
+            screen.queryByRole('button', { name: 'More actions' })
         ).not.toBeInTheDocument();
     });
 
@@ -59,8 +67,8 @@ describe('ProjectRow — inline rename', () => {
             <ProjectRow project={project} onSelect={jest.fn()} actions={{ onRenameSubmit }} />
         );
 
-        fireEvent.click(screen.getByRole('button', { name: 'Rename Old Row' }));
-        const input = screen.getByRole('textbox');
+        await chooseRename();
+        const input = await screen.findByRole('textbox');
         fireEvent.change(input, { target: { value: 'New Row' } });
         fireEvent.keyDown(input, { key: 'Enter' });
 
@@ -71,7 +79,7 @@ describe('ProjectRow — inline rename', () => {
         expect(onRenameSubmit).toHaveBeenCalledWith(project, 'New Row');
     });
 
-    it('never opens the project while interacting with the rename editor', () => {
+    it('never opens the project while interacting with the rename editor', async () => {
         const project = createProjectsDashboardProject({ name: 'Contained Row' });
         const onSelect = jest.fn();
         renderWithProvider(
@@ -82,8 +90,8 @@ describe('ProjectRow — inline rename', () => {
             />
         );
 
-        fireEvent.click(screen.getByRole('button', { name: 'Rename Contained Row' }));
-        const input = screen.getByRole('textbox');
+        await chooseRename();
+        const input = await screen.findByRole('textbox');
         fireEvent.click(input);
         fireEvent.keyDown(input, { key: 'Enter' });
         expect(onSelect).not.toHaveBeenCalled();

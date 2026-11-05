@@ -579,7 +579,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         // An authoring-experience change shows its own progress toast (the
         // confirmation), so skip the generic "saved" toast to avoid doubling up.
         if (!contextualNotificationShown && !authoringChanged) {
-            this.showSuccessMessage('Configuration saved successfully');
+            this.showSuccessMessage('Configuration saved');
         }
     }
 

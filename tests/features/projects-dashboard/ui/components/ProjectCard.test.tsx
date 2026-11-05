@@ -14,6 +14,12 @@ const renderWithProvider = (ui: React.ReactElement) => {
     );
 };
 
+/** Rename is the menu's now (owner, 2026-11-05): the pencil sat 6px from the name. */
+async function chooseRename(): Promise<void> {
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }));
+}
+
 describe('ProjectCard', () => {
     describe('rendering', () => {
         it('should render project name', () => {
@@ -560,8 +566,17 @@ describe('ProjectCard', () => {
         });
     });
 
+    // Most clicks on a card are to open it (owner, 2026-11-05), so the pin takes the smallest target.
+    describe('the pin leaves the card its clicks', () => {
+        it('takes a 24px target', () => {
+            const rule = ruleFor('.project-card-spectrum .pin-toggle button, .project-row .pin-toggle button');
+            expect(rule).toMatch(/width:\s*24px/);
+            expect(rule).toMatch(/height:\s*24px/);
+        });
+    });
+
     describe('inline rename', () => {
-        it('renders the rename pencil beside the name when onRenameSubmit is wired', () => {
+        it('offers Rename in the menu, with no pencil beside the name, when onRenameSubmit is wired', async () => {
             const project = createProjectsDashboardProject({ name: 'Renamable' });
             renderWithProvider(
                 <ProjectCard
@@ -571,10 +586,12 @@ describe('ProjectCard', () => {
                 />
             );
 
-            expect(screen.getByRole('button', { name: 'Rename Renamable' })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Rename Renamable' })).not.toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+            expect(await screen.findByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
         });
 
-        it('hides the pencil while the demo is running (backend rejects renames)', () => {
+        it('offers no Rename while the demo is running (backend rejects renames)', () => {
             const project = createRunningProject({ name: 'Running Project' });
             renderWithProvider(
                 <ProjectCard
@@ -586,11 +603,11 @@ describe('ProjectCard', () => {
             );
 
             expect(
-                screen.queryByRole('button', { name: 'Rename Running Project' })
+                screen.queryByRole('button', { name: 'More actions' })
             ).not.toBeInTheDocument();
         });
 
-        it('hides the pencil when no rename callback is wired', () => {
+        it('offers no Rename when no rename callback is wired', () => {
             // The other half of `disabled={isRunning || !actions.onRenameSubmit}`.
             // The component's own comment names both reasons; only the running one
             // was covered, so nothing here distinguished the card's default
@@ -599,7 +616,7 @@ describe('ProjectCard', () => {
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
             expect(
-                screen.queryByRole('button', { name: 'Rename Unwired' })
+                screen.queryByRole('button', { name: 'More actions' })
             ).not.toBeInTheDocument();
         });
 
@@ -610,8 +627,8 @@ describe('ProjectCard', () => {
                 <ProjectCard project={project} onSelect={jest.fn()} actions={{ onRenameSubmit }} />
             );
 
-            fireEvent.click(screen.getByRole('button', { name: 'Rename Old Name' }));
-            const input = screen.getByRole('textbox');
+            await chooseRename();
+            const input = await screen.findByRole('textbox');
             fireEvent.change(input, { target: { value: 'New Name' } });
             fireEvent.keyDown(input, { key: 'Enter' });
 
@@ -624,7 +641,7 @@ describe('ProjectCard', () => {
             expect(onRenameSubmit).toHaveBeenCalledWith(project, 'New Name');
         });
 
-        it('never opens the project while interacting with the rename editor', () => {
+        it('never opens the project while interacting with the rename editor', async () => {
             const project = createProjectsDashboardProject({ name: 'Contained' });
             const onSelect = jest.fn();
             renderWithProvider(
@@ -635,8 +652,8 @@ describe('ProjectCard', () => {
                 />
             );
 
-            fireEvent.click(screen.getByRole('button', { name: 'Rename Contained' }));
-            const input = screen.getByRole('textbox');
+            await chooseRename();
+            const input = await screen.findByRole('textbox');
             fireEvent.click(input);
             fireEvent.keyDown(input, { key: 'Enter' });
             expect(onSelect).not.toHaveBeenCalled();

@@ -68,6 +68,20 @@ describe('SearchHeader', () => {
     });
 
     describe('search field visibility', () => {
+        it('keeps the search field on an empty list when asked to', () => {
+            renderWithProvider(
+                <SearchHeader {...defaultProps} totalCount={0} filteredCount={0} alwaysShowSearch />,
+            );
+
+            expect(screen.getByRole('searchbox')).toBeInTheDocument();
+        });
+
+        it('CONTROL: without it an empty list has no search field', () => {
+            renderWithProvider(<SearchHeader {...defaultProps} totalCount={0} filteredCount={0} />);
+
+            expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+        });
+
         it('should show search field on a short list', () => {
             renderWithProvider(
                 <SearchHeader

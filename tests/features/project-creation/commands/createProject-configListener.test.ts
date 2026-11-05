@@ -230,6 +230,16 @@ describe('CreateProjectWebviewCommand - Config Change Listener', () => {
         expect(vscode.workspace.onDidChangeConfiguration).toHaveBeenCalled();
     });
 
+    it("tells the wizard's Datapacks step when a setting the list depends on changes", async () => {
+        await command.execute();
+
+        configChangeCallback!({
+            affectsConfiguration: (section: string) => section === 'demoBuilder.dataInstaller.apiBaseUrl',
+        });
+
+        expect(mockSendMessage).toHaveBeenCalledWith('datapack-settings-changed', undefined);
+    });
+
     it('should send updated custom block library defaults when settings change', async () => {
         // Given: The command is executed
         await command.execute();

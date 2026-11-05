@@ -13,6 +13,7 @@
 
 import '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
+import { screen } from '@testing-library/react';
 
 // Below the mock on purpose (see useDataInstallerRequest's suite).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -156,6 +157,13 @@ const INVENTORY_WITH_GAP = {
 };
 
 // Shared with the split suites.
+/** The Show list: the test stack's Picker keeps a hidden select beside its labelled button. */
+export function showSelect(): HTMLSelectElement {
+    const select = screen.getByRole('button', { name: 'Show' }).parentElement?.querySelector('select');
+    if (!select) throw new Error('The Show list has no select');
+    return select;
+}
+
 export { DatapackCatalogView } from '@/features/data-installer/ui/views/DatapackCatalogView';
 export { SOURCE_NOTICE_COPY } from '@/features/data-installer/ui/components/DatapackSourceNotice';
 export {

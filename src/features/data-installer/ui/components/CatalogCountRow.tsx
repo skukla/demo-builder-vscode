@@ -1,47 +1,28 @@
 /**
- * What sits after the count on the datapack catalog's header: the two list switches, then the
- * catalog's actions (`CatalogHeaderActions`). Split out of `DatapackCatalogView` when the Data
- * Installer switch joined Community (owner, 2026-11-03), which took that view past its import limit.
- *
- * The Data Installer switch shows only once the Data Installer has answered this SC: one with no
- * address, or one it turns away, has nothing to switch (owner, same day).
+ * What sits after the count on the datapack catalog's header: the Show list, then the catalog's
+ * actions (`CatalogHeaderActions`). The list (`CatalogShowPicker`, owner, 2026-11-05) replaced the
+ * Community and Data Installer switches.
  *
  * @module features/data-installer/ui/components/CatalogCountRow
  */
 
-import { Flex, Switch } from '@adobe/react-spectrum';
+import { Flex } from '@adobe/react-spectrum';
 import React from 'react';
 import { CatalogHeaderActions, type CatalogHeaderActionsProps } from './CatalogHeaderActions';
+import { CatalogShowPicker, type CatalogShowPickerProps } from './CatalogShowPicker';
 
-export interface CatalogCountRowProps extends CatalogHeaderActionsProps {
-    includeCommunity: boolean;
-    onIncludeCommunity: (on: boolean) => void;
-    /** The Data Installer switch, or undefined while it has not answered this SC. */
-    installer?: { on: boolean; onChange: (on: boolean) => void };
-}
+export interface CatalogCountRowProps extends CatalogHeaderActionsProps, CatalogShowPickerProps {}
 
 /**
- * The switches and the actions, in one row.
+ * The Show list and the actions, in one row.
  *
- * @param props - the two switches and the actions' own props
+ * @param props - the list and the actions' own props
  * @returns the row
  */
-export function CatalogCountRow({
-    includeCommunity,
-    onIncludeCommunity,
-    installer,
-    ...actions
-}: CatalogCountRowProps): React.JSX.Element {
+export function CatalogCountRow({ show, onShow, installerAnswered, ...actions }: CatalogCountRowProps): React.JSX.Element {
     return (
         <Flex gap="size-200" alignItems="center">
-            <Switch isSelected={includeCommunity} onChange={onIncludeCommunity}>
-                Include Community Datapacks
-            </Switch>
-            {installer ? (
-                <Switch isSelected={installer.on} onChange={installer.onChange}>
-                    Include Data Installer Datapacks
-                </Switch>
-            ) : null}
+            <CatalogShowPicker show={show} onShow={onShow} installerAnswered={installerAnswered} />
             {/* Create datapack, Load from file, then Clear demo data set apart. */}
             <CatalogHeaderActions {...actions} />
         </Flex>

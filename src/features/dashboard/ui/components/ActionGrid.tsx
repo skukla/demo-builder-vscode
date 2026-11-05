@@ -9,14 +9,14 @@
  *
  *  - Open (cards): where you go to use the project. Start/Stop + Restart
  *    (non-EDS), Open in Browser, Author Content (EDS), Manage Commerce,
- *    Integrations, each saying where it leads. Every one opens a surface; none
- *    changes the project.
- *    Integrations moved up from Build on 2026-10-06 (owner): it is a
- *    destination of the same weight as the other three.
+ *    Integrations, Datapacks, each saying where it leads. Every one opens a
+ *    surface; none changes the project.
+ *    Integrations moved up from Build on 2026-10-06 and Datapacks on 2026-11-05
+ *    (owner): each is a destination of the same weight as the others.
  *  - Storefront (EDS only): keeping the site itself in shape. Republish (the
  *    remedy carrying the drift dot), Sync Storefront, Refresh Blocks, Site Access.
  *  - Build: what the demo contains. Edit (what it HAS), Configure (their
- *    values), Datapacks and AEM Assets (the products, then their images), then
+ *    values), AEM Assets (the products' images), then
  *    — set apart — Reset (a "Needs reset" dot when the storefront is behind how
  *    Demo Builder builds storefronts now) and Delete.
  *  - Share: moving a demo between people. Share Demo (one dialog, a link or a
@@ -26,7 +26,7 @@
  * AEM Assets and Dev Console sat beside the Open cards until Integrations made
  * a fourth card and they ran past the content band (owner, 2026-10-06). They
  * were never one job: AEM Assets prepares demo data (images for SKUs), so it
- * joined Datapacks in Build; Dev Console shows how an integration works, which
+ * went to Build; Dev Console shows how an integration works, which
  * each integration card's Open already does at THAT integration's workspace —
  * the dashboard link reached only the project's main one — so it left the
  * dashboard.

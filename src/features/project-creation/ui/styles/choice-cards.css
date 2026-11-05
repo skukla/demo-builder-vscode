@@ -58,9 +58,8 @@
 }
 
 .choice-card:hover:not(:disabled) {
-    background: var(--spectrum-global-color-gray-75);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
 }
 
 .choice-card:focus-visible {
@@ -73,12 +72,10 @@
     outline: 1px solid var(--spectrum-global-color-blue-400);
     outline-offset: -1px;
     background: var(--spectrum-global-color-blue-100);
-    transform: none;
 }
 
 .choice-card[data-selected="true"]:hover {
     background: var(--spectrum-global-color-blue-200);
-    transform: none;
 }
 
 .choice-card:disabled {
@@ -166,9 +163,6 @@
 @media (prefers-reduced-motion: reduce) {
 .choice-card {
     transition: none;
-}
-.choice-card:hover:not(:disabled) {
-    transform: none;
 }
 }
 }

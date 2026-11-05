@@ -301,6 +301,14 @@
 }
 
 @layer theme {
+.sample-data-filters {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+}
+
+@layer theme {
 .sample-data-note {
     margin: 0;
     font-size: 12px;
@@ -352,7 +360,8 @@
 
 @layer theme {
 .sample-data-none:hover {
-    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
 }
 }
 

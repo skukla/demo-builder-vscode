@@ -66,6 +66,13 @@ export interface InlineRenameFieldProps {
      * Omitted ⇒ raw input (the component stays name-agnostic).
      */
     normalize?: (raw: string) => string;
+    /**
+     * The host offers Rename itself, so no pencil appears beside the name. A project card does: the
+     * name is where an SC aims to open it, and the pencil sat 6px from it (owner, 2026-11-05).
+     */
+    noPencil?: boolean;
+    /** Each new value above 0 starts editing: how a host's own Rename asks. */
+    editRequest?: number;
 }
 
 /**
@@ -81,6 +88,8 @@ export function InlineRenameField({
     disabled = false,
     textClassName,
     normalize = IDENTITY,
+    noPencil = false,
+    editRequest = 0,
 }: InlineRenameFieldProps): React.ReactElement {
     const [editing, setEditing] = useState(false);
     const [value, setValue] = useState('');
@@ -114,6 +123,12 @@ export function InlineRenameField({
         setEditing(false);
         setError(undefined);
     }, []);
+
+    useEffect(() => {
+        if (editRequest > 0) startEditing();
+        // Each request once; a rename that changes `name` must not reopen the field.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [editRequest]);
 
     const commit = useCallback(async (): Promise<void> => {
         if (busyRef.current) return;
@@ -156,7 +171,7 @@ export function InlineRenameField({
         return (
             <span className="inline-rename">
                 <span className={cn('inline-rename-text', textClassName)} title={name}>{name}</span>
-                {!disabled && (
+                {!disabled && !noPencil && (
                     // The SLOT, not the button, is what collapses while hidden —
                     // clipping a Spectrum ActionButton's own box would mean
                     // re-declaring its padding to restore it. See the

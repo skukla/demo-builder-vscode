@@ -6,9 +6,8 @@
  *   existing pack is not offered it: deleting would also remove what the pack held before).
  *   That is this button, removed on the one press;
  * - in the flyout of a library pack the SC owns, as the menu's "Remove from library"
- *   (`PackActions`), through the same request (`useLibraryRemoval`). A pack this SC shared in a
- *   project file (datapack-engine step 07) asks there first, with the warning
- *   `get-datapack-detail` carries.
+ *   (`PackActions`), through the same request (`useLibraryRemoval`). It asks there first, with
+ *   the warning `get-datapack-detail` carries when this SC shared the pack in a project file.
  *
  * The library itself only lets a pack's owner delete it, so a stale `mine` cannot
  * remove anyone else's pack. Nothing here ever deletes from the Data Installer.
@@ -17,7 +16,7 @@
  */
 
 import { Button } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useLayoutEffect } from 'react';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import type { DatapackId } from '@/types/datapack';
 
@@ -43,7 +42,8 @@ export function useLibraryRemoval(id: DatapackId, onRemoved?: () => void): Libra
     }, [run, id.name, id.version]);
 
     const removed = remove.value?.deleted === true;
-    useEffect(() => {
+    // Before the paint: the flyout goes from this wait to closing, or its reload, with nothing between.
+    useLayoutEffect(() => {
         if (removed) onRemoved?.();
     }, [removed, onRemoved]);
 

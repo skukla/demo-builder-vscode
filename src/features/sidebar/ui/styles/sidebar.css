@@ -116,8 +116,8 @@
 
 .sidebar-action-tile:hover,
 .sidebar-action-tile:focus {
-    background: var(--spectrum-global-color-gray-75);
-    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
     outline: none;
 }
 
@@ -131,19 +131,6 @@
 .sidebar-action-tile:focus * {
     background: transparent;
     background-color: transparent;
-}
-
-/* Sidebar loading state */
-.sidebar-loading {
-    padding: 16px;
-    color: var(--spectrum-global-color-gray-800);
-}
-
-/* Sidebar nav item base styles (static parts) */
-.sidebar-nav-item {
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
 }
 
 /* Sidebar provider - use Spectrum gray-75 for consistency */
@@ -219,72 +206,4 @@
     justify-content: center;
 }
 
-/* Sidebar icon buttons - no background */
-.sidebar-icon-btn {
-    background: transparent;
-}
-
-.sidebar-icon-btn:hover {
-    background: var(--spectrum-global-color-gray-200);
-}
-
-/* Sidebar project view - full height with padding */
-.sidebar-project-view {
-    padding: 12px;
-    min-height: calc(100vh - 40px);
-}
-
-/* Sidebar project card - compact status display */
-.sidebar-project-card {
-    padding: 12px;
-    background: var(--spectrum-global-color-gray-100);
-    border: 1px solid var(--spectrum-global-color-gray-300);
-    border-radius: 6px;
-}
-
-/* Project name in sidebar */
-.sidebar-project-name {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 4px;
-    display: block;
-}
-
-/* Status indicator dot */
-.sidebar-status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-/* Status text */
-.sidebar-status-text {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-700);
-}
-
-/* Section header in sidebar */
-.sidebar-section-header {
-    font-size: 11px;
-    text-transform: uppercase;
-    color: var(--spectrum-global-color-gray-600);
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-/* Sidebar wizard view - use Spectrum gray-75 for consistency */
-.sidebar-wizard-view {
-    min-height: calc(100vh - 40px);
-    background: var(--spectrum-global-color-gray-75);
-    /* No padding here - TimelineNav handles its own padding */
-}
-
-.sidebar-utility-footer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 96px;
-    flex-shrink: 0;
-}
 }

@@ -63,12 +63,7 @@ export function OperationProgressBody({
     }
     if (succeeded) {
         return (
-            <EndView
-                message={successMessage}
-                lines={progress?.details}
-                changes={progress?.changes}
-                took={tookWorthSaying(progress)}
-            />
+            <EndView message={successMessage} outcome={progress} took={tookWorthSaying(progress)} />
         );
     }
     // Size L, as every other progress display here: M left-aligns and shrinks
@@ -103,12 +98,13 @@ function tookWorthSaying(progress?: OperationProgressPayload | null): string | u
  * title says everything. It was a status box repeating the title over the same lines, which read
  * as machine-made (dialog design rules, owner 2026-10-31).
  */
-function EndView({ message, lines, changes, took }: {
+function EndView({ message, outcome, took }: {
     message?: string;
-    lines?: string[];
-    changes?: OperationChange[];
+    /** A success's lines and changes; none on a failure, whose reason is the message. */
+    outcome?: Pick<OperationProgressPayload, 'details' | 'changes'> | null;
     took?: string;
 }): React.ReactElement | null {
+    const { details: lines, changes } = outcome ?? {};
     const hasChanges = Boolean(changes && changes.length > 0);
     if (!message && !lines?.length && !hasChanges && took === undefined) return null;
     return (

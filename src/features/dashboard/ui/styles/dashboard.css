@@ -12,6 +12,11 @@
  */
 
 @layer theme {
+/* The band the five Open cards need: the header's "All Projects" and the notices end where they do. */
+.dashboard-control-panel .page-container-padded {
+    max-width: var(--dashboard-band-width);
+}
+
 /* Dashboard status header - middle layer between header and content for depth */
 .dashboard-status-header {
     background-color: var(--spectrum-global-color-gray-50);
@@ -130,7 +135,7 @@
 .dashboard-grid-container {
     display: flex;
     justify-content: flex-start;
-    padding: 8px; /* Shadow overflow padding */
+    padding: 8px 0;
 }
 
 /* Two tiers: the Open zone's big tiles on top, then the secondary groups
@@ -151,8 +156,8 @@
 }
 
 /* Each compact group is exactly one card wide, so on a wide panel the lists
-   sit as columns under the Open cards. Four cards are exactly the 960px content
-   band whose right edge "All Projects" marks; nothing may sit beside them. */
+   sit as columns under the Open cards. Five cards end exactly at the right edge
+   of "All Projects"; nothing may sit beside them. */
 .dashboard-zone-section--compact {
     width: var(--dashboard-card-width);
 }
@@ -193,10 +198,10 @@
     width: var(--dashboard-card-width);
     height: 72px;
     aspect-ratio: auto;
-    padding: 12px 14px;
+    padding: 12px;
     flex-direction: row;
     justify-content: flex-start;
-    gap: 12px;
+    gap: 10px;
     text-align: left;
     position: relative;
 }
@@ -225,9 +230,20 @@
 
 .dashboard-card-row > .dashboard-action-button .icon-label {
     margin-top: 0;
-    -webkit-line-clamp: 1;
+    /* `.dashboard-action-button .icon-label` centres a square tile's label. */
+    text-align: left;
+    /* One line, always: a second one lands on the description under it. */
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 13px;
     font-weight: 600;
+}
+
+.dashboard-card-row > .dashboard-action-button .dashboard-tile-description {
+    /* Spectrum pads a slotted Text's right side, which only takes room from the line. */
+    padding-right: 0;
 }
 
 .dashboard-tile-description {
@@ -281,7 +297,6 @@
 .dashboard-compact-list .dashboard-action-button:focus {
     background: var(--spectrum-global-color-gray-100);
     border-color: transparent;
-    transform: none;
     box-shadow: none;
 }
 
@@ -424,15 +439,8 @@
 .dashboard-action-button:hover,
 .dashboard-action-button:focus {
     /* Layered depth matching cards */
-    background: var(--spectrum-global-color-gray-75);
-    border-color: var(--spectrum-global-color-gray-400);
-
-    /* Lift animation matching cards */
-    transform: translateY(-2px);
-
-    /* Shadow matching cards */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
     outline: none;
 }
 

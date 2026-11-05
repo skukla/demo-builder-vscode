@@ -1,10 +1,9 @@
 /**
  * The flyout's actions (owner, 2026-10-30): Import is the one button on view; everything else is
- * in the house kebab (`CardActionsMenu`): Save as file, Save store changes to this pack, Share or
- * Stop sharing, and Remove from library in its own section at the bottom. Every action keeps the
- * conditions and confirmations it had as a button: Share and Remove only on the SC's own library
- * pack, Share asks with the owner's sentence, Remove asks only when the pack was shared in a
- * project file, and a library pack offers Copy to the Data Installer with the service's engine.
+ * in the house kebab (`CardActionsMenu`): Save as file, Share or Stop sharing, and Remove from
+ * library in its own section at the bottom. Share and Remove show only on the SC's own library pack,
+ * each asks in a dialog, the flyout waits while a row works, and a library pack offers Copy to the
+ * Data Installer with the service's engine.
  *
  * Moved here from DatapackDetailPanel.test.tsx with the actions, from buttons to menu rows.
  */
@@ -18,6 +17,7 @@ import { press, settle } from '../../../../helpers/reactSettle';
 // Below the mocks on purpose: they hoist above these imports.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { DatapackDetail } from '@/features/data-installer/types';
+import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
 import { PackActions } from '@/features/data-installer/ui/components/PackActions';
 import { SHARE_CONSENT } from '@/features/data-installer/shareWording';
 
@@ -134,13 +134,14 @@ describe('a library pack', () => {
     });
 });
 
-describe('Share and Stop sharing keep their confirmation', () => {
-    it("Share asks with the owner's sentence, and shares every version only on the second press", async () => {
+describe('Share and Stop sharing ask in a dialog', () => {
+    it("Share asks with the owner's sentence, and shares every version only when the dialog says so", async () => {
         const onSharingChanged = jest.fn();
         mockRequest.mockResolvedValue({ success: true, data: { shared: true } });
         renderActions({ detail: OWN, onSharingChanged });
 
         await press(row('Share'));
+        expect(screen.getByRole('heading', { name: 'Share Bodea?' })).toBeInTheDocument();
         expect(screen.getByText(SHARE_CONSENT)).toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalled();
 
@@ -150,42 +151,56 @@ describe('Share and Stop sharing keep their confirmation', () => {
         expect(onSharingChanged).toHaveBeenCalled();
     });
 
-    it('Stop sharing asks with no explanation; Cancel changes nothing', async () => {
+    it('Stop sharing says what changes; Cancel changes nothing', async () => {
         renderActions({ detail: { ...OWN, shared: true } });
 
         await press(row('Stop Sharing'));
-        expect(screen.queryByText(SHARE_CONSENT)).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Stop Sharing Bodea?' })).toBeInTheDocument();
+        expect(screen.getByText('Other people can no longer see or install it.')).toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Cancel' }));
 
         expect(mockRequest).not.toHaveBeenCalled();
-        expect(screen.queryByRole('button', { name: 'Stop Sharing' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Stop Sharing Bodea?' })).not.toBeInTheDocument();
+    });
+
+    it('says why when the library refuses, with the actions back', async () => {
+        mockRequest.mockResolvedValue({ success: false, error: 'No.' });
+        renderActions({ detail: OWN });
+
+        await press(row('Share'));
+        await press(screen.getByRole('button', { name: 'Share' }));
+
+        expect(await screen.findByText('It could not be changed: No.')).toBeInTheDocument();
+        expect(row('Share')).toBeInTheDocument();
     });
 });
 
-describe('Remove Datapack keeps its confirmation', () => {
-    it('removes on the one choice when there is nothing to warn about, then says so', async () => {
+describe('Remove Datapack asks in a dialog, every time', () => {
+    it('names the version, says it cannot be undone, and removes only when the dialog says so', async () => {
         const props = renderActions({ detail: OWN });
         mockRequest.mockResolvedValue({ success: true, data: { deleted: true } });
 
         await press(row('Remove Datapack'));
-
-        expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'bodea', version: 'main', confirm: true }, undefined);
-        expect(await screen.findByText('Removed.')).toBeInTheDocument();
-        expect(props.onRemoved).toHaveBeenCalled();
-    });
-
-    it('shows the warning first, and removes only on the Remove press', async () => {
-        renderActions({ detail: OWN, sharedInFile: WARNING });
-
-        await press(row('Remove Datapack'));
-        expect(screen.getByText(WARNING)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Remove Bodea?' })).toBeInTheDocument();
+        expect(screen.getByText("This removes version main, and it can't be undone.")).toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalled();
 
         await press(screen.getByRole('button', { name: 'Remove' }));
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'bodea', version: 'main', confirm: true }, undefined);
+        await settle();
+        expect(props.onRemoved).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps the pack when the warning is cancelled', async () => {
+    it('adds the warning for a pack shared in a project file', async () => {
+        renderActions({ detail: OWN, sharedInFile: WARNING });
+
+        await press(row('Remove Datapack'));
+
+        expect(screen.getByText(WARNING)).toBeInTheDocument();
+        expect(screen.getByText("This removes version main, and it can't be undone.")).toBeInTheDocument();
+    });
+
+    it('keeps the pack when cancelled', async () => {
         renderActions({ detail: OWN, sharedInFile: WARNING });
 
         await press(row('Remove Datapack'));
@@ -200,8 +215,94 @@ describe('Remove Datapack keeps its confirmation', () => {
         renderActions({ detail: OWN });
 
         await press(row('Remove Datapack'));
+        await press(screen.getByRole('button', { name: 'Remove' }));
 
         expect(await screen.findByText('It could not be removed: Only the owner can delete this pack.')).toBeInTheDocument();
+    });
+});
+
+// The dialog design rules: a flyout waits with its title and a medium spinner, nothing else. The menu
+// a row was chosen from has closed, so it has no button to spin (owner, 2026-11-05).
+describe('while a menu row works, the flyout waits', () => {
+    const waiting = () => document.querySelector('.datapack-panel-loading');
+    const pendingRequest = (): ((value: unknown) => void) => {
+        let finish: (value: unknown) => void = () => undefined;
+        mockRequest.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+        return (value) => finish(value);
+    };
+
+    it('tells the flyout, and shows only the spinner, through a Save as File', async () => {
+        const onWorking = jest.fn();
+        renderActions({ onWorking });
+        const finish = pendingRequest();
+
+        await press(row('Save as File'));
+
+        expect(waiting()).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(onWorking).toHaveBeenLastCalledWith(true);
+
+        finish({ success: true, data: { path: '/tmp/bodea.zip' } });
+        expect(await screen.findByText('Saved to /tmp/bodea.zip')).toBeInTheDocument();
+        expect(waiting()).not.toBeInTheDocument();
+        expect(onWorking).toHaveBeenLastCalledWith(false);
+    });
+
+    it('stays waiting once a pack is removed, as the flyout closes', async () => {
+        const props = renderActions({ detail: OWN });
+        const finish = pendingRequest();
+
+        await press(row('Remove Datapack'));
+        await press(screen.getByRole('button', { name: 'Remove' }));
+        expect(waiting()).toBeInTheDocument();
+
+        finish({ success: true, data: { deleted: true } });
+        await settle();
+
+        expect(props.onRemoved).toHaveBeenCalledTimes(1);
+        expect(waiting()).toBeInTheDocument();
+    });
+
+    it("takes the flyout's rows away during the wait, and gives them back", async () => {
+        render(
+            <DatapackDetailPanel
+                selected={{ name: 'bodea', version: 'main' }}
+                detail={makeDetail({ owner: 'CoreTech' })}
+                inventory={{ present: ['products'], missing: [], presentCount: 1, missingCount: 0, requestedCount: 1 }}
+                loading={false}
+                failure={null}
+                onClose={jest.fn()}
+                onRetry={jest.fn()}
+                onImport={jest.fn()}
+                onRemoved={jest.fn()}
+                installsFromLibrary={false}
+            />,
+        );
+        expect(screen.getByText('CoreTech')).toBeInTheDocument();
+        const finish = pendingRequest();
+
+        await press(row('Save as File'));
+
+        expect(screen.queryByText('CoreTech')).not.toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Bodea details' })).toHaveTextContent('Bodea');
+        expect(waiting()).toBeInTheDocument();
+
+        finish({ success: true, data: { path: '/tmp/bodea.zip' } });
+        expect(await screen.findByText('CoreTech')).toBeInTheDocument();
+    });
+
+    it('lets the flyout go when it is closed during the wait', async () => {
+        const onWorking = jest.fn();
+        const { unmount } = render(
+            <PackActions detail={makeDetail()} onImport={jest.fn()} onRemoved={jest.fn()} installsFromLibrary={false} onWorking={onWorking} />,
+        );
+        pendingRequest();
+        await press(row('Save as File'));
+        expect(onWorking).toHaveBeenLastCalledWith(true);
+
+        unmount();
+
+        expect(onWorking).toHaveBeenLastCalledWith(false);
     });
 });
 
@@ -215,6 +316,9 @@ describe('a pack with a settings layer (datapack-engine step 09)', () => {
 
         expect(menuLabels()).toEqual(['Save as File', 'Remove Its Store Settings']);
         await press(row('Remove Its Store Settings'));
+        expect(screen.getByRole('heading', { name: "Remove Bodea's Store Settings?" })).toBeInTheDocument();
+        expect(mockRequest).not.toHaveBeenCalled();
+        await press(screen.getByRole('button', { name: 'Remove' }));
 
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'bodea-settings', version: '2', confirm: true }, undefined);
         expect(await screen.findByText('Removed.')).toBeInTheDocument();

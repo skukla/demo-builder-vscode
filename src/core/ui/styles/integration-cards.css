@@ -45,9 +45,9 @@
     transition: all var(--spectrum-global-animation-duration-600) ease;
 }
 
-/* Pointer + hover lift only where a press DOES something. A card renders without
+/* Pointer + hover colour only where a press DOES something. A card renders without
    `role="button"` when its host passed no `onOpen` (the wizard's mesh and catalog
-   cards have no editable detail), and a cursor and a lift on something inert
+   cards have no editable detail), and a cursor and a hover on something inert
    promise a click that never lands. Dashboard cards always pass `onOpen`, so this
    scoping leaves them exactly as they were. */
 .integration-card[role='button'] {
@@ -56,14 +56,12 @@
 
 .integration-card[role='button']:hover,
 .integration-card[role='button']:focus {
-    background: var(--spectrum-global-color-gray-75);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
     outline: none;
 }
 
-/* Scoped to `[role='button']` for the SAME reason as the lift above, but also to
+/* Scoped to `[role='button']` for the SAME reason as the hover above, but also to
    keep specificity level with it. `:focus` there sets `outline: none`; if only
    that rule carried the attribute selector it would score (0,3,0) against this
    rule's (0,2,0) and win outright, silently removing the keyboard focus ring
@@ -466,7 +464,7 @@
 /* ---- Rows: the list view of the same cards --------------------------------------
  * The integrations screen's List view (owner, 2026-09-24), the twin of the projects
  * list's `.project-row`: the same name, status line and kebab as the card, laid out
- * as one full-width row per integration. Same gray-50 base, hover lift and focus
+ * as one full-width row per integration. Same gray-50 base, hover and focus
  * ring as the card so switching views moves nothing but the shape. */
 .integration-row-list {
     display: flex;
@@ -491,8 +489,8 @@
 
 .integration-row:hover,
 .integration-row:focus {
-    background: var(--spectrum-global-color-gray-75);
-    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     outline: none;
 }

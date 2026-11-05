@@ -28,7 +28,8 @@
 
 import { ActionButton } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
-import React from 'react';
+import React, { useState } from 'react';
+import { inPickOrder } from '../../pickableKinds';
 import type { DataItemInventory, DatapackDetail, PackDetailLayer } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
@@ -42,6 +43,8 @@ import type { DatapackId } from '@/types/datapack';
 export interface DatapackDetailPanelProps {
     /** The pack whose detail is showing; undefined closes the drawer. */
     selected?: DatapackId;
+    /** The name its card shows, so the title does not change when the detail arrives. */
+    selectedName?: string;
     /** Loaded detail, or null while loading or failed. */
     detail: DatapackDetail | null;
     /** Which declared types the service actually holds. */
@@ -90,6 +93,7 @@ export interface DatapackDetailPanelProps {
 
 export function DatapackDetailPanel({
     selected,
+    selectedName,
     detail,
     inventory,
     loading,
@@ -106,7 +110,9 @@ export function DatapackDetailPanel({
     onSharingChanged,
     settingsLayer,
 }: DatapackDetailPanelProps): React.JSX.Element {
-    const title = detail?.displayName ?? selected?.name ?? 'Datapack';
+    const title = detail?.displayName ?? selectedName ?? selected?.name ?? 'Datapack';
+    // A menu row's work is running: the flyout waits as its load does (`PackActions`).
+    const [working, setWorking] = useState(false);
 
     // What you can import is what the service HOLDS, not what the pack declares:
     // a pack can declare a type it stores no item for, and offering an import of
@@ -121,7 +127,7 @@ export function DatapackDetailPanel({
                 <>
                     <div className="db-drawer-head">
                         <div className="datapack-panel-title">
-                            <DatapackPanelTitle title={title} detail={loading || failure ? null : detail} onRename={onRename} />
+                            <DatapackPanelTitle title={title} detail={loading || failure || working ? null : detail} onRename={onRename} />
                             <span className="datapack-panel-version">{selected.version}</span>
                         </div>
                         <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
@@ -129,8 +135,8 @@ export function DatapackDetailPanel({
                         </ActionButton>
                     </div>
                     <div className="db-drawer-body">
-                        {renderPanelBody({ detail, inventory, loading, failure, onRetry, settingsLayer })}
-                        {detail && !loading ? setupStep : null}
+                        {working ? null : renderPanelBody({ detail, inventory, loading, failure, onRetry, settingsLayer })}
+                        {detail && !loading && !working ? setupStep : null}
                         {canImport({ importable, loading, failure }) && detail ? (
                             <PackActions
                                 detail={detail}
@@ -141,6 +147,7 @@ export function DatapackDetailPanel({
                                 sharedInFile={sharedInFile}
                                 onSharingChanged={onSharingChanged}
                                 settingsLayer={settingsLayer}
+                                onWorking={setWorking}
                             />
                         ) : null}
                     </div>
@@ -233,7 +240,7 @@ function DetailRows({
             ) : null}
             <PanelRow label="Data">
                 <span className="datapack-panel-types">
-                    {present.map((dataType) => (
+                    {inPickOrder(present).map((dataType) => (
                         <span key={dataType} className="datapack-panel-type">
                             {dataTypeLabel(dataType)}
                         </span>
@@ -243,7 +250,7 @@ function DetailRows({
             {missing.length > 0 ? (
                 <PanelRow label="Declared, Not Stored">
                     <span className="datapack-panel-types" data-testid="datapack-detail-missing">
-                        {missing.map((dataType) => (
+                        {inPickOrder(missing).map((dataType) => (
                             <span key={dataType} className="datapack-panel-type is-missing">
                                 {dataTypeLabel(dataType)}
                             </span>

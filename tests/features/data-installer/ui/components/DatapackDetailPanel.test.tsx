@@ -159,7 +159,8 @@ describe('DatapackDetailPanel', () => {
             expect(screen.getByText('Data')).toBeInTheDocument();
             expect(screen.queryByText(/^Data \(/)).not.toBeInTheDocument();
             const stored = container.querySelectorAll('.datapack-panel-type:not(.is-missing)');
-            expect(Array.from(stored).map((chip) => chip.textContent)).toEqual(['Categories', 'Products']);
+            // In the pick list's order, wherever a pack's types are listed (owner, 2026-11-05).
+            expect(Array.from(stored).map((chip) => chip.textContent)).toEqual(['Products', 'Categories']);
         });
 
         // "Visible to", in plain words: it replaced a Curation row reading "Library, only you"
@@ -322,6 +323,14 @@ describe('DatapackDetailPanel', () => {
          * just navigated away from. Hiding the button while loading closes the
          * window in which the wrong pack can be imported.
          */
+        // Owner, 2026-11-05: the title showed the pack's id while it loaded, then jumped to its name.
+        it("names the pack as its card does while the detail loads, not by its id", () => {
+            renderPanel({ loading: true, detail: null, selectedName: 'Data Pack for Khalil' });
+
+            expect(screen.getByText('Data Pack for Khalil')).toBeInTheDocument();
+            expect(screen.queryByText('bodea')).not.toBeInTheDocument();
+        });
+
         it('withholds Import while a detail is loading, stale detail and all', () => {
             renderPanel({ loading: true });
 

@@ -79,9 +79,10 @@ describe('DataInstallerTile', () => {
         expect(posted.postMessage).toHaveBeenCalledTimes(1);
     });
 
-    it('carries no second line: the demo\u2019s pack is on the Datapacks screen (2026-11-03)', () => {
+    it('says where it leads, and not which pack: that is on the Datapacks screen (2026-11-03)', () => {
         render(<DataInstallerTile />);
 
+        expect(screen.getByText('Sample data')).toBeInTheDocument();
         expect(screen.queryByText(/This demo\u2019s pack/)).not.toBeInTheDocument();
     });
 });

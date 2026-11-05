@@ -65,7 +65,7 @@ function project(): Partial<Project> {
 const RECORD: InstallRecord = { format: 1, pack: BODEA, engine: 'demo-builder', startedAt: '2026-10-30T00:00:00.000Z', created: [] };
 
 function saved(target: { saveAs: { id: { name: string; version: string } } }): SaveResult {
-    return { saved: target.saveAs.id, counts: { products: 1 }, sentence: 'Saved to the acme pack.', unnamed: [], leftOut: [] };
+    return { saved: target.saveAs.id, counts: { products: 1 }, sentence: 'Saved to the acme pack.', unnamed: [], details: [], leftOut: [] };
 }
 
 const PICKS = { products: { sku: ['VR-Rack'] }, cart_rules: { rule_id: [7] } };

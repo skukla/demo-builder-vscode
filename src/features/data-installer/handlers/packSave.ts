@@ -15,6 +15,7 @@
 
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { writePackToStore } from '../services/datapackTransfer';
+import { heldLines } from '../services/demoBuilderEngine/saveOutcome';
 import { saveStoreChanges } from '../services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '../services/demoBuilderEngine/storeAccess';
 import { type SaveInto, planSave, recordSave } from '../services/demoPack';
@@ -111,7 +112,9 @@ export async function saveToPack(
             leftOut: result.leftOut,
             ...(result.settingsLayer ? { settingsLayer: result.settingsLayer } : {}),
         };
-        return { success: true, note: result.sentence, data };
+        // The window lists what the pack holds, one data type per line with its count, and nothing
+        // the SC did not pick (owner, 2026-11-05). The agent keeps the whole sentence, in `data.message`.
+        return { success: true, details: [...heldLines(result.counts), ...result.details], data };
     } catch (error) {
         return failure(context, error, 'The store changes could not be saved.');
     }

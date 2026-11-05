@@ -1,5 +1,5 @@
 /**
- * The confirm in front of a consequential integration action, drawn the one way the dialog design
+ * The confirm in front of a consequential action, drawn the one way the dialog design
  * rules draw a confirm (`docs/development/sop/dialog-design.md`): the question as the title with
  * the amber icon before it, what changes as a few short lines, Cancel and the action. A dangerous
  * action is solid red; each caller says which it is, so a new one has to decide.
@@ -8,10 +8,11 @@
  * `isOpen`. It does not post: the consumer wires `onConfirm`, so cancelling is a pure no-op.
  *
  * Shared by Remove, Remove anyway, Reset ERPs, Fill from Commerce, Reinstall in Commerce, Undo last
- * assignment, and adding erp_owner to the attribute sets and taking it out. Kept in the dashboard
- * feature because nothing else confirms this way.
+ * assignment, adding erp_owner to the attribute sets and taking it out, and a datapack flyout's Share,
+ * Stop Sharing and Remove. Moved here from the dashboard feature when the flyout became its second
+ * feature (owner, 2026-11-05).
  *
- * @module features/dashboard/ui/components/ConfirmActionDialog
+ * @module core/ui/components/ui/ConfirmActionDialog
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
