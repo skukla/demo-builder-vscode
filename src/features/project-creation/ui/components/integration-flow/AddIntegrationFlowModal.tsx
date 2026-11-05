@@ -71,14 +71,6 @@ export interface AddIntegrationFlowModalProps {
     mode: FlowMode;
     /** The integration whose API picks are being re-edited (mode 'api-edit' only). */
     editTarget?: ApiEditTarget;
-    /**
-     * The Integrations screen's adds, each of which gets a workspace of its own (AB-23): the line
-     * names the Adobe project alone, the workspace being one this add will not use. A mesh does
-     * use the project's workspace, and still shows one row: the line sits above the Start From
-     * cards, so a second row on picking API Mesh would move them under the pointer (owner,
-     * 2026-11-05). The wizard builds everything into the workspace it picked, so it omits this.
-     */
-    workspacePerAdd?: boolean;
     state: AdobeAuthSessionState;
     updateState: (updates: Partial<WizardState>) => void;
     /**
@@ -151,12 +143,10 @@ const DEST_PICKER_STAGES: ReadonlySet<string> = new Set([
 function DestinationContext({
     state,
     stage,
-    projectOnly,
     onChange,
 }: {
     state: AdobeAuthSessionState;
     stage: FlowStageId;
-    projectOnly: boolean;
     onChange: () => void;
 }): React.ReactElement | null {
     // The stage gate stays HERE, not in the shared component: hiding the line
@@ -165,8 +155,6 @@ function DestinationContext({
     return (
         <SharedDestinationContext
             project={state.adobeProject?.title || state.adobeProject?.name || ''}
-            workspace={state.adobeWorkspace?.title || state.adobeWorkspace?.name || ''}
-            projectOnly={projectOnly}
             onChange={onChange}
             className="dest-context--block"
         />
@@ -279,7 +267,6 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
                             <DestinationContext
                                 state={props.state}
                                 stage={flow.stage}
-                                projectOnly={Boolean(props.workspacePerAdd)}
                                 onChange={flow.changeDestination}
                             />
                             <FlowStageBody

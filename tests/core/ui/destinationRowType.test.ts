@@ -63,11 +63,6 @@ describe('destination row type', () => {
         expect(() => ruleFor('.page-destination-row .dest-context')).toThrow(/no rule for/);
     });
 
-    it('lays two rows out as a grid, so the labels and values line up', () => {
-        expect(ruleFor('.dest-context--rows')).toMatch(/display:\s*grid/);
-        expect(ruleFor('.dest-context-row-start')).toMatch(/grid-column:\s*1/);
-    });
-
     it('reads as a phrase, not a badge label', () => {
         const label = ruleFor('.dest-context-label');
 

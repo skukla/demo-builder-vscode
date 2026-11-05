@@ -177,12 +177,11 @@ describe('IntegrationsStep — result cards from state', () => {
     // The destination is ONE project and ONE workspace for the whole build. It
     // used to print on every card, identically. `getByText` throws on a second
     // match, so these two assertions fail if the repetition returns.
-    it('labels the Adobe project and its workspace, a row each', async () => {
+    it('labels the Adobe project, and names no workspace', async () => {
         await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
         const line = within(destinationLine());
         expect(line.getByText('Adobe Project')).toBeInTheDocument();
-        expect(line.getByText('Workspace')).toBeInTheDocument();
-        expect(line.getByText('Stage')).toBeInTheDocument();
+        expect(line.queryByText('Stage')).not.toBeInTheDocument();
     });
 
     it('shows the committed destination ONCE, above the cards, with Change', async () => {

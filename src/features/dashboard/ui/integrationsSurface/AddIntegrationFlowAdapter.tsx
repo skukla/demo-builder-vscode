@@ -288,7 +288,6 @@ export function AddIntegrationFlowAdapter({
             isOpen={isOpen}
             onClose={onClose}
             mode={mode}
-            workspacePerAdd
             state={state}
             updateState={updateState}
             meshComponent={meshComponent}

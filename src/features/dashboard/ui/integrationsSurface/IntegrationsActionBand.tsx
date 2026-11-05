@@ -106,7 +106,6 @@ export function IntegrationsActionBand({
                             <div className="page-destination-row" data-testid="page-destination">
                                 <DestinationContext
                                     project={destinationLabel}
-                                    projectOnly
                                     onChange={onChangeDestination}
                                     unsetLabel="Not chosen yet"
                                 />

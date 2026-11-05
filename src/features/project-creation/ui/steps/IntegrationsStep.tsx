@@ -97,14 +97,13 @@ function sameName(a: string, b: string): boolean {
  * The destination for the whole surface, shown ONCE above the list.
  *
  * It used to repeat on every card, always printing the same string — there is one
- * Adobe project and one workspace for the entire build, so three integrations
- * printed it three times. `DestinationContext`
+ * Adobe project for the entire build, so three integrations printed it three times. `DestinationContext`
  * says so in its own docstring ("one line for the whole surface, never per
  * card") and is the same control the Add-Integration modal and the dashboard's
  * integrations page already use.
  *
- * It renders nothing when either half is missing, so the uncommitted case keeps
- * its own branch rather than silently disappearing.
+ * It renders nothing with no project, so the uncommitted case keeps its own branch rather
+ * than silently disappearing.
  */
 function DestinationLine({
     state,
@@ -122,13 +121,11 @@ function DestinationLine({
     onOpenDestination: () => void;
 }): React.ReactElement {
     const project = state.adobeProject;
-    const workspace = state.adobeWorkspace;
     return (
         <div className="int-destination">
             {!needsSetup ? (
                 <DestinationContext
                     project={project?.title ?? project?.name}
-                    workspace={workspace?.title ?? workspace?.name}
                     onChange={onOpenDestination}
                 />
             ) : (

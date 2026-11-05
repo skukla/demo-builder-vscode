@@ -394,20 +394,6 @@
     padding: 0 0 10px;
     border-bottom: 1px solid var(--spectrum-global-color-gray-300);
 }
-
-/* Adobe Project and Workspace, a row each, where a workspace is really in use. After the block
-   variant on purpose: the modal's line takes this grid and keeps that variant's rule under it. */
-.dest-context--rows {
-    display: grid;
-    grid-template-columns: max-content max-content max-content;
-    justify-content: start;
-    row-gap: 4px;
-}
-
-/* Starts its own row whether or not Change filled the third cell of the one above. */
-.dest-context-row-start {
-    grid-column: 1;
-}
 }
 
 /* Search header - padding provides space for focus ring (2px outline + 2px offset) */

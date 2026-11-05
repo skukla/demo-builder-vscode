@@ -109,43 +109,29 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         expect(screen.queryByText('Demo Project')).not.toBeInTheDocument();
     });
 
-    // The wizard builds everything into the workspace it picked, so its line says which.
-    it('shows the workspace on a row of its own from the wizard', () => {
+    // One row whatever is picked: a second one on picking API Mesh would move the Start From cards
+    // under the pointer, and no integration deploys to the project's workspace (owner, 2026-11-05).
+    it('names the Adobe project alone, with API Mesh picked too', async () => {
         renderModal({ initial: COMMITTED_DEST });
-
         expect(screen.getByText('Adobe Project')).toBeInTheDocument();
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
-        expect(screen.getByText('Workspace')).toBeInTheDocument();
-        expect(screen.getByText('Stage')).toBeInTheDocument();
-    });
-
-    // The line sits above the Start From cards, so a row appearing on picking API Mesh would
-    // move them under the pointer (owner, 2026-11-05).
-    it('keeps one row from the Integrations screen, with API Mesh picked too', async () => {
-        renderModal({ initial: COMMITTED_DEST, workspacePerAdd: true });
-        expect(screen.getByText('Demo Project')).toBeInTheDocument();
-        expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+        expect(screen.queryByText('Stage')).not.toBeInTheDocument();
 
         await click(/API Mesh/);
 
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
-        expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
         expect(screen.queryByText('Stage')).not.toBeInTheDocument();
     });
 
-    it('names a workspace by its NAME when Console gave it no title', async () => {
-        // Console returns a title for most workspaces and not all of them; the
-        // line must still name the workspace rather than trailing off after the
-        // project.
+    it('names a project by its NAME when Console gave it no title', () => {
         renderModal({
             initial: {
                 ...COMMITTED_DEST,
-                adobeWorkspace: { id: 'ws-1', name: 'Stage' },
+                adobeProject: { id: 'p-1', name: 'Named Only' },
             },
         });
-        await click(/API Mesh/);
 
-        expect(screen.getByText('Stage')).toBeInTheDocument();
+        expect(screen.getByText('Named Only')).toBeInTheDocument();
     });
 });
 

@@ -3241,21 +3241,9 @@
         {
             "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
             "anchors": [
-                "workspace={workspace?.title ?? workspace?.name}"
-            ],
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "Same branch, same guarantee: DestinationContext is rendered only when needsSetup is false, which the resolver defines as both adobeProject.id and adobeWorkspace.id being present. Neither optional chain on workspace can short-circuit there; they answer the optional state type rather than a value that can be missing.",
-            "decision": "none \u2014 the guarded value is guaranteed by the branch that renders it",
-            "recorded": "2026-09-04",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
-            "anchors": [
                 "[],"
             ],
-            "line": 199,
+            "line": 196,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -3268,7 +3256,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 209,
+            "line": 206,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -14698,7 +14686,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 205,
+            "line": 202,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs. Same argument as the row for line 202: this is openAdd's array, that one openDestination's.",

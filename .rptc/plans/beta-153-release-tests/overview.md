@@ -54,6 +54,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F25 | 3.2 | The Business Structure step's wait said "Detecting store structure", the old name | "Loading business structure", the wizard's verb for its waits, on the wizard and Configure (owner, 2026-11-05). Built |
 | F26 | 3.3 | The Updates window's details sat beside each name at 11px, hard to read, a long one wrapping back under the name; "updates the live site" repeated on most rows; an open group said "1 needs attention" over the row itself, and the note was always singular | Each detail on its own line at 12px, as a run's rows and the delete window's boxes have it. "Storefront updates go to the live site." once under the title, only when one is listed. Shorter details ("Source was reset. Replaces this storefront.", "Verified version" for "Tested version"). The note only on a closed group, "2 need attention" when it is two (owner, 2026-11-05). Built |
 | F27 | 2.3, 2.4 | The patch canary went red on 2026-11-05: the walk's resets of Patch Canary B2B on 2026-11-04 removed its test page for a missing product, and the check called a working patch "broken" | The page republished (owner's go), all three checks and the self-test pass against the live canary. The check now says "could not check: the test page is gone" (`skukla/eds-demo-patches@eb86ddb`). This plan's rules keep resets off that project. Done |
+| F28 | 3.4 | The Adobe destination line said "Deploys To", and two names and a comma. A two-row version, with Workspace in the wizard, rested on a wrong claim: integrations get their own workspace in the wizard too, and only a mesh uses the chosen one | One row everywhere, "Adobe Project", the name and Change; the Review step still lists the workspace (owner, 2026-11-05). Built |
 
 ## Questions raised
 
@@ -324,9 +325,10 @@ Use throwaway projects only.
    updates on the copy. Expect the "Changes from <A>" row unticked, saying the source demo was reset
    to its template.
 
-**Result:** steps 2 and 4 passed 2026-11-04 (kmanns/justrite was reset; the row came up unticked
-with the reset text, and the button read Apply Updates, greyed). Step 3 passed for one (Apply 1
-Update); two waiting not seen. Found F1.
+**Result:** passed 2026-11-05. Steps 2 and 4 passed 2026-11-04 (kmanns/justrite was reset; the row
+came up unticked with the reset text, and the button read Apply Updates, greyed). Step 3: Apply 1
+Update seen 2026-11-04, Apply 2, 4 and 5 Updates seen 2026-11-05 on the redesigned window (F26), with
+"1 needs attention" on the closed group only. Found F1.
 
 ### 3.4 Dialogs
 
@@ -335,7 +337,7 @@ Update); two waiting not seen. Found F1.
    trackpad swipe.
 3. The checkbox spinner is covered by 1.5 step 4.
 
-**Result:** open
+**Result:** passed 2026-11-05: the focus ring whole, on Updates and Add Integration; Manage APIs has no sideways scrollbar and no sideways swipe. Step 3 follows 1.5
 
 ### 3.5 Commerce Admin
 
