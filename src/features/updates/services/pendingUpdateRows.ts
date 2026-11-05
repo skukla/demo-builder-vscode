@@ -81,7 +81,7 @@ const PROJECT_KINDS: { [K in ProjectSelectionKind]: (entry: UpdateSelections[K][
                   detail: t.version ? `Version ${t.version}` : NO_DETAIL,
               },
     // Adobe's half of a colleague's storefront, to the version our daily gate tested (EDS-56).
-    boilerplate: () => ({ label: 'Adobe boilerplate', detail: 'Tested version' }),
+    boilerplate: () => ({ label: 'Adobe boilerplate', detail: 'Verified version' }),
     // A clash kept to fix with AI (EDS-57): applying it checks the fix and pushes it.
     finish: (f) => ({
         label: f.clash.track === 'boilerplate' ? 'Finish the Adobe boilerplate update' : `Finish: ${templateLabel(f.project)}`,

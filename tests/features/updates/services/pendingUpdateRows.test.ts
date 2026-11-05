@@ -305,7 +305,7 @@ describe('a colleague\'s storefront that follows both (EDS-56)', () => {
 
         expect(rows.map((r) => [r.group.title, r.label, r.detail, r.ticked])).toEqual([
             ['JustRite', 'Changes from kmanns/justrite', LIVE, true],
-            ['JustRite', 'Adobe boilerplate', 'Tested version', true],
+            ['JustRite', 'Adobe boilerplate', 'Verified version', true],
         ]);
     });
 
