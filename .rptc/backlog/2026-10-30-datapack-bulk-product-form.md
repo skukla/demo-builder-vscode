@@ -4,8 +4,7 @@ kind: feature
 area: data-installer
 needs: []
 value: med
-status: gated
-waiting-on: the owner reading the four `product_export` items from the service's database (tabled 2026-10-27)
+status: backlog
 ---
 
 # `product_export`: the bulk product form Luma and Venia carry
@@ -45,3 +44,58 @@ its own, so its undo could only be the bulk delete by SKU, which would take prod
 already had.
 
 Waits on: reading the four items at all.
+
+## 2026-11-05: a route that needs no database
+
+The owner has no access to the service's database, and its documentation does not help: the
+internal wiki's Data Installer API Reference and Data Packs pages (searched through FluffyJaws)
+never mention `product_export` or `customers_export`. They do document `batch-get-data-items`, but
+it returns the same payloads `get-data-item` does, so it should meet the same size limit (not
+tried). The service's own type list, read live the same day, has 21 import types; Demo Builder's
+engine installs every one except these two.
+
+The rows exist where the packs came from. The internal wiki's Sample Data Packs page names each
+brand's source repository, Luma's included, and the owner's GitHub account can read them (the
+names stay in a private note, never in this public repo). A rebuild tool outside this repo already
+turns those sources into `products`-form packs, and a rebuilt Frescopa installed and removed
+cleanly from the library on 2026-11-03. So the way through is to rebuild Luma and Venia from their
+sources, as `products`, and keep the results in the library, rather than read the service's copy.
+Their sources are in the older format only, so the rebuild needs that path proven first.
+
+This is what deleting the service engine waits on ([[DI-12]]).
+
+## 2026-11-05: the format is Commerce's own, and documented
+
+As the owner pointed out, these are Commerce's formats, not the service's. Commerce's Import API
+(https://developer.adobe.com/commerce/webapi/rest/modules/import/, read 2026-11-05) documents both:
+`POST /V1/import/json` takes `entity` (`catalog_product` for products; `customer`,
+`customer_address` or `customer_composite` for customers), `behavior` (`append`, `replace` or
+`delete` for products; `add_update`, `delete` or `custom` for customers), a validation strategy,
+and `items`: one JSON object per row, with the same columns as the Admin's import CSV (`sku`,
+`store_view_code`, `attribute_set_code`, `product_type`, `categories` as paths, `product_websites`,
+prices, stock fields, `additional_attributes`, image paths, `configurable_variations` and
+`configurable_variation_labels`, `bundle_values`, and the rest). The page also says ACCS takes only
+the JSON endpoint, and that the Admin's Import page offers a sample file per entity.
+
+So the conversion to `products` rows can be written from that documentation. It is the same
+column set as the brand sources' older CSV format, so one converter serves both. What the
+documentation cannot supply is Luma's and Venia's actual rows: the service still cannot hand its
+copy over (the size limit above), which is why the rebuild reads them from the sources.
+
+## 2026-11-05: the sources read, and what they hold
+
+Both brands' sources were read through the owner's GitHub account the same day (into a scratch
+folder outside this repo; nothing copied in). Both are Commerce's export format, the same columns
+the Import API documents:
+
+| Brand | Rows | Products | Types |
+|---|---|---|---|
+| Luma | 2,060 (12 are a store view's) | 2,048 | 1,891 simple, 159 configurable, 6 downloadable, 2 gift cards, 1 bundle, 1 grouped |
+| Venia | 1,162 | 1,162 | 1,092 simple, 70 configurable |
+
+Not yet checked: that these are the rows the service's Luma and Venia packs hold (the service cannot
+return its copy to compare), and whether the engine's products step handles the downloadable,
+bundle and grouped types (it handles simple, configurable and gift cards).
+
+So the item no longer waits on anyone: convert these rows to `products`, rebuild the two packs, and
+prove one with a live install and removal.

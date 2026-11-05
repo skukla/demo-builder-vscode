@@ -29,10 +29,24 @@ Research, with all 62 decision points measured: `.rptc/research/datapack-source-
    Data Installer's owners accept outside writes, so the store is always on and the Data Installer
    keeps its checkbox (owner, 2026-11-05). The engine stops being a choice the SC makes.
 
-## Waiting on the owner
+## The service engine: delete it once nothing is lost (owner, 2026-11-05)
 
-- Whether the service engine is deleted (it has installed nothing for us since 2026-10-27) or made
-  automatic. Deleting it removes 14 install-path sites and the Copy to the Data Installer action.
+The owner's condition: delete it as long as no functionality is lost. Checked the same day against
+`.rptc/research/datapack-engine/service-parity-import-delete.md`. Nothing that WORKS today is lost
+(the code records the service ignoring our Commerce credentials since 2026-10-27, so it installs
+nothing for us), but two things exist only on the service's side on paper:
+
+1. **`product_export` and `customers_export`**, the bulk forms of products and customers. Demo
+   Builder's engine installs 19 of the service's 21 data types and refuses these two. Luma's
+   products exist only as `product_export`, and DI-8 says Venia's do too. So the deletion waits on
+   [[DI-8]], which is itself gated on the owner reading those items from the service's database.
+2. **Removing a pack the service installed.** Ours refuses a pack it has no record of. Clear Demo
+   Data covers products, categories, customers and cart rules; the rest has no route either way
+   while the service refuses our credentials.
+
+Not checked live: whether the service's export, behind the service engine's Create route, still
+works today. Check it before deleting that route. Reading the service's job history for the
+Activity tab is not part of the engine and stays.
 
 ## Size
 
