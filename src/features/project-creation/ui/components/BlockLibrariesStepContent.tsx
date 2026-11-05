@@ -10,9 +10,10 @@
  * Pure presentational component — all state and handlers live in the Project Builder step.
  */
 
-import { Text, Divider, Link } from '@adobe/react-spectrum';
+import { Text, Link } from '@adobe/react-spectrum';
 import React from 'react';
 import { ChoiceCard } from './ChoiceCard';
+import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
 import type { BlockLibrary, CustomBlockLibrary } from '@/types/blockLibraries';
 
 /** One block-library selection card (a multi-select toggle; disabled = locked native). */
@@ -93,64 +94,65 @@ export function BlockLibrariesStepContent({
 }: BlockLibrariesStepContentProps) {
     return (
         <>
-            <Text UNSAFE_className="description-block">
-                Add blocks from these libraries to the storefront. Ticked libraries are included.
-            </Text>
-            <div className="choice-grid choice-grid--columns" role="group" aria-label="Block libraries">
-                {includedBlockLibraries.map((lib) => (
-                    <LibraryCard
-                        key={lib.id}
-                        name={lib.name}
-                        description="Included with every storefront"
-                        selected
-                        disabled
-                    />
-                ))}
-                {nativeBlockLibraries.map((lib) => (
-                    <LibraryCard
-                        key={lib.id}
-                        name={lib.name}
-                        description="Included with your storefront"
-                        selected
-                        disabled
-                    />
-                ))}
-                {availableBlockLibraries.map((lib) => (
-                    <LibraryCard
-                        key={lib.id}
-                        name={lib.name}
-                        description={lib.description}
-                        selected={selectedBlockLibraries.includes(lib.id)}
-                        onToggle={(next) => onBlockLibraryToggle(lib.id, next)}
-                    />
-                ))}
-            </div>
-
-            {/* Custom block libraries from VS Code settings: shown even when there are none, so
-                an SC can find where to add one. */}
-            <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-            <Text UNSAFE_className="description-block-sm">Custom Libraries</Text>
-            {customBlockLibraryDefaults.length > 0 ? (
-                <div className="choice-grid choice-grid--columns" role="group" aria-label="Custom block libraries">
-                    {customBlockLibraryDefaults.map((lib) => (
+            {/* Both groups headed as the wizard's other steps head theirs (owner, 2026-11-05):
+                a small grey description style had stood in for a heading here. No sentence: the
+                heading and the ticked cards say it (owner, 2026-11-05). */}
+            <ConfigSection id="block-libraries" label="Block Libraries">
+                <div className="choice-grid choice-grid--columns" role="group" aria-label="Block libraries">
+                    {includedBlockLibraries.map((lib) => (
                         <LibraryCard
-                            key={`${lib.source.owner}/${lib.source.repo}`}
+                            key={lib.id}
                             name={lib.name}
-                            description={`${lib.source.owner}/${lib.source.repo}`}
-                            selected={customBlockLibraries.some(
-                                (c) =>
-                                    c.source.owner === lib.source.owner &&
-                                    c.source.repo === lib.source.repo,
-                            )}
-                            onToggle={(next) => onCustomLibraryToggle(lib, next)}
+                            description="Included with every storefront"
+                            selected
+                            disabled
+                        />
+                    ))}
+                    {nativeBlockLibraries.map((lib) => (
+                        <LibraryCard
+                            key={lib.id}
+                            name={lib.name}
+                            description="Included with your storefront"
+                            selected
+                            disabled
+                        />
+                    ))}
+                    {availableBlockLibraries.map((lib) => (
+                        <LibraryCard
+                            key={lib.id}
+                            name={lib.name}
+                            description={lib.description}
+                            selected={selectedBlockLibraries.includes(lib.id)}
+                            onToggle={(next) => onBlockLibraryToggle(lib.id, next)}
                         />
                     ))}
                 </div>
-            ) : null}
-            <CustomLibrariesNote
-                hasLibraries={customBlockLibraryDefaults.length > 0}
-                onOpenSettings={onOpenCustomSettings}
-            />
+            </ConfigSection>
+            {/* Custom block libraries from VS Code settings: shown even when there are none, so
+                an SC can find where to add one. */}
+            <ConfigSection id="custom-block-libraries" label="Custom Block Libraries">
+                {customBlockLibraryDefaults.length > 0 ? (
+                    <div className="choice-grid choice-grid--columns" role="group" aria-label="Custom block libraries">
+                        {customBlockLibraryDefaults.map((lib) => (
+                            <LibraryCard
+                                key={`${lib.source.owner}/${lib.source.repo}`}
+                                name={lib.name}
+                                description={`${lib.source.owner}/${lib.source.repo}`}
+                                selected={customBlockLibraries.some(
+                                    (c) =>
+                                        c.source.owner === lib.source.owner &&
+                                        c.source.repo === lib.source.repo,
+                                )}
+                                onToggle={(next) => onCustomLibraryToggle(lib, next)}
+                            />
+                        ))}
+                    </div>
+                ) : null}
+                <CustomLibrariesNote
+                    hasLibraries={customBlockLibraryDefaults.length > 0}
+                    onOpenSettings={onOpenCustomSettings}
+                />
+            </ConfigSection>
         </>
     );
 }

@@ -324,7 +324,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-70` | question | [Could one Adobe credential replace our separate DA.live and publishing sign-ins?](2026-11-03-eds-service-credential-question.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (129)
+### app-builder  (130)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -456,6 +456,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-83` | fix | [Undo leaves what changed since](2026-10-27-undo-leaves-what-changed-since.md) | — | med | active |
 | `AB-84` | feature | [The integration catalog row lives outside the extension](2026-11-04-integration-catalog-row-outside-the-extension.md) | AB-85 | med | backlog |
 | `AB-85` | fix | [Five generic paths treat every bound system as an ERP](2026-11-04-generic-paths-treat-every-system-as-an-erp.md) | — | high | backlog |
+| `AB-86` | feature | [Bulk selection on the Integrations screen](2026-11-05-integrations-bulk-selection.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (10)
@@ -731,7 +732,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*331 item(s) sit outside the A–G chain.*
+*332 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

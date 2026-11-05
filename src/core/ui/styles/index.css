@@ -239,7 +239,7 @@
     padding-bottom: 24px;
 }
 
-/* Integrations band, context row: "Deploys to <project> · <workspace>  Change".
+/* Integrations band, context row: "Adobe Project <project>  Change".
    Rides the END of SearchHeader's count row, which is space-between and has an
    empty right half once a search field shows. Costs the band no extra line for
    what is the least-used fact on the screen. The label is what distinguishes
@@ -250,16 +250,6 @@
     display: flex;
     align-items: center;
     gap: 6px;
-}
-
-/* One size for the whole row — it sits beside SearchHeader's 12px count, and
-   11px uppercase (borrowed from the dashboard's badge rows, where it stands
-   alone) read as a mismatch rather than a hierarchy. Sentence case, so the row
-   reads as a phrase: "Deploys to Kukla Mesh · Stage". The three roles separate by
-   COLOUR now that size does not: dim label, darker value, blue action. */
-.page-destination-label {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-500);
 }
 
 /* Canonical page header — one tight single row (title · subtitle crumb … action),

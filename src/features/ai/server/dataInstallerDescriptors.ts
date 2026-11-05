@@ -595,7 +595,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Share one of your own datapack library packs with your team, or stop sharing it: every version. ' +
-            'Shared, everyone with access to the datapack library can see and install it, and a colleague can ' +
+            'Shared, everyone using Demo Builder can see and install it under Community datapacks, and a colleague can ' +
             'create a project from a file that names it; stopped, only you can. Its settings layer goes with it. Answers how many versions changed. ' +
             "Ask the user first. export_project_settings's packNote says when the project's pack is private.",
         map: importHandlers,

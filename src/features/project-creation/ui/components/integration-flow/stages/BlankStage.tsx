@@ -29,7 +29,7 @@ const SEED_DESCRIPTION_MAX = 110;
 
 /** The Blank card's copy. */
 export const BLANK_CARD_NAME = 'Blank';
-export const BLANK_CARD_DESCRIPTION = 'An empty custom integration.';
+export const BLANK_CARD_DESCRIPTION = 'An empty custom integration';
 
 function clampDescription(text: string): string {
     if (text.length <= SEED_DESCRIPTION_MAX) return text;

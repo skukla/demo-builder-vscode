@@ -1,8 +1,8 @@
 /**
  * Share / Stop sharing — the confirmation the flyout's menu row opens, for the SC's own library
  * pack (owner, 2026-10-30). The house inline confirm: the menu row asks, the button here does it,
- * Cancel puts it back. Share asks with the owner's sentence ("Everyone with access to the
- * datapack library can see and install this pack."); Stop sharing asks the confirm alone. Either
+ * Cancel puts it back. Share asks with the owner's sentence (`SHARE_CONSENT`); Stop sharing
+ * asks the confirm alone. Either
  * sends `share-library-datapack`, confirmed, for every version of the pack.
  *
  * It was a button in the flyout that asked on its first press; the first press is the menu row

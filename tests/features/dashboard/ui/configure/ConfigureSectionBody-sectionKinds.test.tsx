@@ -118,13 +118,15 @@ describe('the Block Libraries section', () => {
             blockLibraries: blockLibrariesOf(),
         });
 
-        // Its own tab, so nothing above it to divide from: the one rule is the picker's own, over
-        // Custom Libraries, which shows even when there are none (2026-11-03).
-        const rules = container.querySelectorAll('hr');
-        expect(rules).toHaveLength(1);
-        expect(rules[0].nextElementSibling).toHaveTextContent('Custom Libraries');
-
-        expect(screen.getByText('Block Libraries')).toBeInTheDocument();
+        // Two groups, each headed as the wizard's steps head theirs, once each (owner, 2026-11-05):
+        // the picker's own headings, so Configure's tab draws no third. Custom Block Libraries
+        // shows even when there are none (2026-11-03).
+        expect(container.querySelectorAll('hr')).toHaveLength(0);
+        const headings = screen.getAllByRole('heading').map((heading) => heading.textContent);
+        expect(headings.filter((text) => /Block Libraries/.test(text ?? ''))).toEqual([
+            'Block Libraries',
+            'Custom Block Libraries',
+        ]);
         expect(card('Demo Team Block Collection')).toHaveAttribute('aria-pressed', 'true');
         expect(card('Demo Builder Blocks')).toHaveAttribute('aria-pressed', 'false');
         expect(card('Bodea Blocks')).toBeDisabled();

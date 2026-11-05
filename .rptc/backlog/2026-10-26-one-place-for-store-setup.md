@@ -148,3 +148,5 @@ These landed first and this item builds on them:
 - 2026-10-27  feat(dashboard): the setup guide applies and undoes the demo setup in place (`92970b746`)
 - 2026-10-27  chore: the setup guide is AB-82; AB-81 was already the ERP invoice item (`9798e5b51`)
 - 2026-10-28  fix(setup-guide): steady layout, green Done, plain step copy, named undo refusal (`0aa3116be`)
+- 2026-11-03  fix(setup-guide): Check All Steps empties the steps it will check, then fills each in as it answers (`763d64ddf`)
+- 2026-11-03  fix(setup-guide): Check All Steps sits in the footer, under the list, where a long list cannot clip it (`ba9765a04`)

@@ -70,7 +70,7 @@ describe('offerToShareBeforeExport', () => {
 
         expect(await offerToShareBeforeExport(context, PROJECT, deps)).toBe('shared');
         expect(deps.ask).toHaveBeenCalledTimes(1);
-        expect(deps.ask).toHaveBeenCalledWith(PRIVATE_PACK_QUESTION, 'Everyone with access to the datapack library can see and install this pack.');
+        expect(deps.ask).toHaveBeenCalledWith(PRIVATE_PACK_QUESTION, 'Everyone using Demo Builder can see and install this pack, when they include Community datapacks.');
         expect(PRIVATE_PACK_QUESTION).toBe("Your teammates can't use this pack's data. Share it?");
         expect(deps.share).toHaveBeenCalledWith(context, 'acme-1a2b3c');
     });

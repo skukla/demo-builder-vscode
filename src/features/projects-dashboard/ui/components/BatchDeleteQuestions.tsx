@@ -59,7 +59,7 @@ export function BatchDeleteQuestions({ rows, choices }: Props): React.ReactEleme
     return (
         <div className="batch-confirm">
             <LeadText>Project files are removed from this machine.</LeadText>
-            <div className="batch-delete scroll-fade">
+            <div className="batch-delete scroll-fade scroll-fade--capped">
                 <table className="batch-delete-table batch-delete-spread">
                     <thead>
                         <tr>

@@ -17,7 +17,7 @@ import '@testing-library/jest-dom';
 import { ShareLibraryPackConfirm } from '@/features/data-installer/ui/components/ShareLibraryPackConfirm';
 
 const ID = { name: 'acme-1a2b3c', version: '20261029-183005' };
-const SENTENCE = 'Everyone with access to the datapack library can see and install this pack.';
+const SENTENCE = 'Everyone using Demo Builder can see and install this pack, when they include Community datapacks.';
 
 beforeEach(() => {
     jest.clearAllMocks();

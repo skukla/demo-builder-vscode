@@ -112,10 +112,6 @@ async function renderStep(state: WizardState, updateState = jest.fn()) {
     return { updateState };
 }
 
-
-
-
-
 beforeEach(() => {
     jest.clearAllMocks();
     mockRequest.mockResolvedValue({ success: true, data: { apis: [] } });
@@ -181,9 +177,17 @@ describe('IntegrationsStep — result cards from state', () => {
     // The destination is ONE project and ONE workspace for the whole build. It
     // used to print on every card, identically. `getByText` throws on a second
     // match, so these two assertions fail if the repetition returns.
+    it('labels the Adobe project and its workspace, a row each', async () => {
+        await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
+        const line = within(destinationLine());
+        expect(line.getByText('Adobe Project')).toBeInTheDocument();
+        expect(line.getByText('Workspace')).toBeInTheDocument();
+        expect(line.getByText('Stage')).toBeInTheDocument();
+    });
+
     it('shows the committed destination ONCE, above the cards, with Change', async () => {
         await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
-        expect(screen.getByText('Demo Project, Stage')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
         expect(
             within(destinationLine()).getByRole('button', { name: 'Change' })
         ).toBeInTheDocument();
@@ -197,7 +201,7 @@ describe('IntegrationsStep — result cards from state', () => {
                 appBuilderComponentSources: { 'acme-widget': { owner: 'acme', repo: 'widget' } },
             })
         );
-        expect(screen.getAllByText('Demo Project, Stage')).toHaveLength(1);
+        expect(screen.getAllByText('Demo Project')).toHaveLength(1);
         expect(document.querySelectorAll('.integration-card').length).toBeGreaterThan(1);
     });
 
@@ -497,7 +501,10 @@ describe('IntegrationsStep — the ERP pair before creation', () => {
     const ERP_NAMED = baseState({
         selectedAppBuilderComponents: ['erp-integration'],
         componentConfigs: {
-            'erp-integration': { INTEGRATION_DISPLAY_NAME: 'ERP Integration', ERP_DISPLAY_NAME: 'Acme ERP' },
+            'erp-integration': {
+                INTEGRATION_DISPLAY_NAME: 'ERP Integration',
+                ERP_DISPLAY_NAME: 'Acme ERP',
+            },
         },
     });
 
@@ -512,7 +519,10 @@ describe('IntegrationsStep — the ERP pair before creation', () => {
 
         expect(updateState).toHaveBeenCalledWith({
             componentConfigs: {
-                'erp-integration': { INTEGRATION_DISPLAY_NAME: 'ERP Integration', ERP_DISPLAY_NAME: 'Justrite ERP' },
+                'erp-integration': {
+                    INTEGRATION_DISPLAY_NAME: 'ERP Integration',
+                    ERP_DISPLAY_NAME: 'Justrite ERP',
+                },
             },
         });
         // Saving closes the Settings dialog; it does not wait for a second press.

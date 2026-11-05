@@ -1,7 +1,7 @@
 /**
  * Sharing a library pack (owner, 2026-10-30): every version of the SC's own pack is shared, or
  * stops being shared, through the library's owner-only `update-datapack-metadata` (`shared`).
- * Confirm-gated: shared, everyone with access to the datapack library can see and install it.
+ * Confirm-gated: shared, everyone using Demo Builder can see and install it.
  */
 
 // The shared wall first: it owns the access-guard mock and the subject's import.
@@ -78,7 +78,7 @@ it('refuses without confirm, saying who will see it', async () => {
 
     expect(result).toEqual({
         success: false,
-        error: 'Everyone with access to the datapack library can see and install this pack. Send confirm:true to proceed.',
+        error: 'Everyone using Demo Builder can see and install this pack, when they include Community datapacks. Send confirm:true to proceed.',
         code: ErrorCode.INVALID_OPERATION,
     });
     expect(fetchMock).not.toHaveBeenCalled();

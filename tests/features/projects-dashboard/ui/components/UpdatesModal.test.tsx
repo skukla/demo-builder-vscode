@@ -378,11 +378,10 @@ describe('UpdatesModal', () => {
         expect(screen.getByText('Left as it is — it has commits GitHub does not have.')).toHaveClass('work-row-note');
     });
 
-    // No sentence under the title: the ticks and the Apply count say it, and what cannot
-    // be undone says so on its own row (owner, 2026-10-20). Large, so the longest row
-    // ("…, Newer version, redeploys to Adobe") keeps to one line.
+    // No sentence under the title unless a listed update reaches the live site, and the extension's
+    // own update does not (below; owner, 2026-11-05).
     it('opens large, titled "Updates Available", straight onto the list', () => {
-        const { container } = render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
+        const { container } = render(<UpdatesModal controls={controls({ phase: 'list', rows: [ROWS[0]] })} />);
 
         const dialog = screen.getByRole('dialog', { name: 'Updates Available' });
         expect(dialog).toHaveAttribute('data-size', 'L');
@@ -434,15 +433,38 @@ describe('UpdatesModal', () => {
 
     // A row that starts unticked is the one a closed project must not hide: the redeploy,
     // or one locked in another org. Once ticked, it no longer waits.
-    it('says how many rows in a project wait for the SC, until they are ticked', () => {
+    it('says how many rows in a closed project wait for the SC, until they are ticked', () => {
         const redeploy: PendingUpdateRow = { ...ROWS[2], id: 'integration:1', lockedReason: undefined };
-        const rows = [ROWS[0], ROWS[1], redeploy];
+        const rows = [...ROWS, redeploy];
         const { rerender } = render(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension'])} />);
 
-        expect(screen.getByText('1 needs attention')).toBeInTheDocument();
+        expect(screen.getByText('2 need attention')).toBeInTheDocument();
 
         rerender(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension', 'integration:1'])} />);
-        expect(screen.queryByText(/waiting for you/)).not.toBeInTheDocument();
+        expect(screen.getByText('1 needs attention')).toBeInTheDocument();
+    });
+
+    // An open project shows the unticked row itself, so the note would say it twice.
+    it('says nothing about waiting rows in an open project', () => {
+        const rows = [ROWS[0], ROWS[1], ROWS[2]];
+        render(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension'])} />);
+
+        expect(screen.queryByText(/needs? attention/)).not.toBeInTheDocument();
+    });
+
+    // It was on every such row (owner, 2026-11-05): the window says it once, and only then.
+    it('says once that storefront updates go to the live site, when one is listed', () => {
+        const template: PendingUpdateRow = { ...ROWS[1], id: 'template:0', kind: 'template', label: 'EDS template' };
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: [template] })} />);
+
+        expect(screen.getByText('Storefront updates go to the live site.')).toHaveClass('lead-text');
+    });
+
+    it('draws a row with nothing to add as its name alone', () => {
+        const noDetail: PendingUpdateRow = { ...ROWS[1], detail: '' };
+        const { container } = render(<UpdatesModal controls={controls({ phase: 'list', rows: [noDetail] })} />);
+
+        expect(container.querySelector('.checkbox-row-detail')).toBeNull();
     });
 
     it('shows a project partly ticked as mixed', () => {
@@ -456,7 +478,7 @@ describe('UpdatesModal', () => {
 
     // The checkbox shows all, some or none ticked, so a count beside the name said it twice.
     it("shows no ticked count beside a project's name", () => {
-        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: MANY }, ['extension', 'blockLibrary:0'])} />);
 
         expect(screen.queryByText(/\d+ of \d+/)).not.toBeInTheDocument();
         expect(screen.getByText('1 needs attention')).toBeInTheDocument();
@@ -538,12 +560,12 @@ describe('groupStatusOf', () => {
 // Height fits the content (dialog design rules): a set height left 295px empty under two rows.
 // Asserted against the stylesheet: jsdom resolves no layout.
 describe('the Updates list', () => {
-    // The height, scroll and fade are `.scroll-fade`, shared with the projects batch window
-    // (owner, 2026-11-05); the list wears it.
+    // The fade is `.scroll-fade` and the height and scroll `.scroll-fade--capped`, shared with
+    // the projects batch window and (the fade) the API picker (owner, 2026-11-05).
     it('is as tall as its rows, and scrolls past a cap', () => {
         const { container } = render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
-        expect(container.querySelector('.updates-group-list')).toHaveClass('scroll-fade');
-        const rule = ruleFor('.scroll-fade');
+        expect(container.querySelector('.updates-group-list')).toHaveClass('scroll-fade', 'scroll-fade--capped');
+        const rule = ruleFor('.scroll-fade--capped');
 
         expect(rule).toMatch(/max-height:\s*[^;]+;/);
         expect(rule).not.toMatch(/(^|[;{\s])height:/);

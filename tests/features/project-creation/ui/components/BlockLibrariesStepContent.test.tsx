@@ -84,12 +84,13 @@ describe('BlockLibrariesStepContent', () => {
 
     // --- Header ---
 
-    it('should render the header text', () => {
+    // The heading and the ticked cards say it: no sentence over them (owner, 2026-11-05).
+    it('heads its two groups, with no sentence over them', () => {
         render(<BlockLibrariesStepContent {...defaultProps} />);
 
-        expect(
-            screen.getByText('Add blocks from these libraries to the storefront. Ticked libraries are included.'),
-        ).toBeInTheDocument();
+        expect(screen.getByText('Block Libraries')).toBeInTheDocument();
+        expect(screen.getByText('Custom Block Libraries')).toBeInTheDocument();
+        expect(screen.queryByText(/Add blocks from these libraries/)).toBeNull();
     });
 
     // --- Every storefront's libraries: shown, so the SC can see the storefront has them (2026-11-03) ---
@@ -170,7 +171,7 @@ describe('BlockLibrariesStepContent', () => {
         });
     });
 
-    // --- Custom Libraries ---
+    // --- Custom Block Libraries ---
 
     describe('custom libraries', () => {
         it('should render custom libraries section when customBlockLibraryDefaults is non-empty', () => {
@@ -181,7 +182,7 @@ describe('BlockLibrariesStepContent', () => {
                 />
             );
 
-            expect(screen.getByText('Custom Libraries')).toBeInTheDocument();
+            expect(screen.getByText('Custom Block Libraries')).toBeInTheDocument();
             expect(screen.getByText('My Custom Lib')).toBeInTheDocument();
         });
 
@@ -189,7 +190,7 @@ describe('BlockLibrariesStepContent', () => {
             const onOpenCustomSettings = jest.fn();
             render(<BlockLibrariesStepContent {...defaultProps} onOpenCustomSettings={onOpenCustomSettings} />);
 
-            expect(screen.getByText('Custom Libraries')).toBeInTheDocument();
+            expect(screen.getByText('Custom Block Libraries')).toBeInTheDocument();
             expect(screen.getByText(/None added yet\. Add them in/)).toBeInTheDocument();
             expect(screen.queryByRole('group', { name: 'Custom block libraries' })).not.toBeInTheDocument();
             fireEvent.click(screen.getByText('Block Library Settings'));

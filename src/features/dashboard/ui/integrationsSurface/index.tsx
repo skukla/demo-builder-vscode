@@ -57,6 +57,8 @@ import '@/features/project-creation/ui/styles/choice-cards.css';
 import '@/core/ui/styles/drawer.css';
 // .inline-notice-*, .inline-rename-* — two small shared components.
 import '@/core/ui/styles/inline-controls.css';
+// A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
+import '@/core/ui/styles/scroll-fade.css';
 
 const container = document.getElementById('root');
 if (!container) {

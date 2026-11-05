@@ -70,7 +70,7 @@ describe('AddIntegrationFlowModal — while it reads the APIs', () => {
         expect(screen.getByRole('heading', { name: 'Edit API Access' })).toBeInTheDocument();
         expect(screen.getByRole('dialog').querySelector('.modal-wait')).not.toBeNull();
         expect(screen.queryByText(/Loading Adobe APIs/)).not.toBeInTheDocument();
-        expect(screen.queryByText('Demo Project, Stage')).not.toBeInTheDocument();
+        expect(screen.queryByText('Demo Project')).not.toBeInTheDocument();
         expect(screen.queryByTestId('api-picker-stage')).not.toBeInTheDocument();
         expect(footerButtons()).toEqual(['Cancel']);
     });
@@ -79,7 +79,7 @@ describe('AddIntegrationFlowModal — while it reads the APIs', () => {
         renderEdit();
 
         expect(await screen.findByTestId('api-picker-stage')).toBeInTheDocument();
-        expect(screen.getByText('Demo Project, Stage')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
         expect(footerButtons()).toEqual(['Cancel', 'Back', 'Save']);
     });
 });
@@ -92,7 +92,7 @@ describe('AddIntegrationFlowModal — a failed read of the APIs', () => {
         const title = await screen.findByRole('heading', { name: "Couldn't Load Adobe APIs" });
         expect(title.innerHTML).toContain('text-negative');
         expect(screen.getByTestId('api-access-problem')).toHaveTextContent('Adobe API catalog unavailable.');
-        expect(screen.queryByText('Demo Project, Stage')).not.toBeInTheDocument();
+        expect(screen.queryByText('Demo Project')).not.toBeInTheDocument();
         expect(footerButtons()).toEqual(['Cancel', 'Back', 'Retry']);
     });
 

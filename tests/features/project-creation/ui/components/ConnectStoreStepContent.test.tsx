@@ -393,7 +393,7 @@ describe('ConnectStoreStepContent', () => {
                 />,
             );
 
-            expect(screen.getByText(/detecting store structure/i)).toBeInTheDocument();
+            expect(screen.getByText(/loading business structure/i)).toBeInTheDocument();
         });
     });
 

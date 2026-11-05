@@ -133,7 +133,7 @@ export function StoreConfigFieldRow({
         if (isFetching || !hasStoreData) {
             return (
                 <Flex marginTop="size-300" marginBottom="size-300" justifyContent="center">
-                    <LoadingDisplay size="M" message="Detecting store structure" />
+                    <LoadingDisplay size="M" message="Loading business structure" />
                 </Flex>
             );
         }

@@ -79,6 +79,8 @@ import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/menu-trigger.css';
 // .icon-* — the icon-above-label pattern.
 import '@/core/ui/styles/icon-label.css';
+// A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
+import '@/core/ui/styles/scroll-fade.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element

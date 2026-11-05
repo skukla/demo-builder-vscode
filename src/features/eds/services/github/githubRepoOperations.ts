@@ -70,7 +70,9 @@ export class GitHubRepoOperations extends GitHubAuthenticatedOperations {
             const apiError = error as GitHubApiError;
 
             if (apiError.status === 404) {
-                throw new Error('Repository not found');
+                // The status rides along: "GitHub says it does not exist" is an answer, where a
+                // network or sign-in failure is not one, and callers tell them apart by it.
+                throw Object.assign(new Error('Repository not found'), { status: 404 });
             }
 
             if (apiError.status === 403) {

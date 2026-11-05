@@ -66,7 +66,7 @@ describe('BlankStage — starting-point cards', () => {
     it('always offers Blank, with the owner-approved copy (no "build it out with AI")', () => {
         renderStage();
         expect(screen.getByText('Blank')).toBeInTheDocument();
-        expect(screen.getByText('An empty custom integration.')).toBeInTheDocument();
+        expect(screen.getByText('An empty custom integration')).toBeInTheDocument();
         expect(screen.queryByText(/build it out with AI/i)).not.toBeInTheDocument();
     });
 

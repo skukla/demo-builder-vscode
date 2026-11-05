@@ -230,7 +230,7 @@ describe('IntegrationsScreen', () => {
                 );
                 settleStatus(handlers);
 
-                expect(screen.getByTestId('page-destination')).toHaveTextContent(/deploys to/i);
+                expect(screen.getByTestId('page-destination')).toHaveTextContent('Adobe Project');
             });
 
             // 2026-10-15: with no Adobe project the row used to vanish, so an SC on a

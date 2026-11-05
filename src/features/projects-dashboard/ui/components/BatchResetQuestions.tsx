@@ -47,7 +47,7 @@ export function BatchResetQuestions({ rows, choices }: Props): React.ReactElemen
     return (
         <div className="batch-confirm">
             <LeadText>Each project returns to how it was set up. Code changes are lost.</LeadText>
-            <div className="batch-delete scroll-fade">
+            <div className="batch-delete scroll-fade scroll-fade--capped">
                 <table className="batch-delete-table">
                     {column.offered && (
                         <thead>

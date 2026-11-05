@@ -16,6 +16,9 @@ and "Reset to <pack>" were removed by the save-as pivot; "Save my changes first"
 - Each run that writes to Commerce, GitHub or DA.live starts on the owner's go.
 - Back to zero after every run: `justrite_test_store` has root Default Category (id 2), no ZZ
   categories, and the library holds no test packs.
+- Never reset or delete Patch Canary B2B (`skukla/patch-canary-b2b`). The daily patch canary reads
+  it, and a reset removes the test page it needs, `/products/ghost-check/canary-ghost-sku` (F27). Use
+  a throwaway project instead.
 - A failure is written here with what was seen, then fixed, then the test is walked again.
 
 Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: what happened`.
@@ -45,6 +48,12 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F19 | 2.7 | The single delete's question named the folder ("patch-canary-b2b"), read "Deleting…" while still asking, and had a blue Delete | "Delete Patch Canary B2B?", "Project files are removed from this machine.", a red Delete; the display name in the QuickPick and plain confirm too (owner, 2026-11-05). Built |
 | F20 | 2.7 | Delete Selected: "Delete Projects" for one, no word that local files go, the repository under the name rather than beside its box, three columns of names squeezed and wrapping, and no cue a long list scrolls | "Delete N Projects?" and "Reset N Projects?"; "Project files are removed from this machine."; each box names what it deletes; a Project header; Delete Selected extra-wide, no cell wrapping; long lists scroll under a fixed header with the Updates window's fade, now one shared style (owner, 2026-11-05). Built |
 | F21 | 2.7 | Colour audit: status text used Spectrum's icon tokens (red text 4.40:1, under AA), and the accent blue's states each used two shades in places | Every status: icon token for icons, text token for text (red text 6.91:1). The blue ramp kept, each state one shade (focus ring 400, selected border 400, link 500, selected hover 200). Both enforced in `status-icons.test.ts` (owner, 2026-11-05). Built |
+| F22 | 3.1 | JustRite's dashboard showed "This demo's source can't be reached" one night and not the next morning: any failed read of the demo's repository (offline, a sign-in, a rate limit, an outage) raised the gone-for-good notice | Only GitHub's 404 raises it. Any other failure says "Couldn't check the <name> demo's repository. Try again in a moment." at reset and shows no notice on the dashboard; the next open checks again (owner, 2026-11-05). Built |
+| F23 | 3.2 | The summary said "Block Libraries: 1 selected" beside two ticked cards: it left out the locked library the picker shows | Counts every library the picker shows ticked, locked ones once each, as "N included" (owner, 2026-11-05). Built |
+| F24 | 3.2 | Block Libraries headed its second group with a small grey description style, under a divider, and carried a sentence the ticks already said; on Configure the sentence sat under Authoring | Both groups headed the wizard's way (`ConfigSection`): Block Libraries, Custom Block Libraries; no sentence; Configure's outer heading removed, so the picker's own are the only ones (owner, 2026-11-05). Built |
+| F25 | 3.2 | The Business Structure step's wait said "Detecting store structure", the old name | "Loading business structure", the wizard's verb for its waits, on the wizard and Configure (owner, 2026-11-05). Built |
+| F26 | 3.3 | The Updates window's details sat beside each name at 11px, hard to read, a long one wrapping back under the name; "updates the live site" repeated on most rows; an open group said "1 needs attention" over the row itself, and the note was always singular | Each detail on its own line at 12px, as a run's rows and the delete window's boxes have it. "Storefront updates go to the live site." once under the title, only when one is listed. Shorter details ("Source was reset. Replaces this storefront."). The note only on a closed group, "2 need attention" when it is two (owner, 2026-11-05). Built |
+| F27 | 2.3, 2.4 | The patch canary went red on 2026-11-05: the walk's resets of Patch Canary B2B on 2026-11-04 removed its test page for a missing product, and the check called a working patch "broken" | The page republished (owner's go), all three checks and the self-test pass against the live canary. The check now says "could not check: the test page is gone" (`skukla/eds-demo-patches@eb86ddb`). This plan's rules keep resets off that project. Done |
 
 ## Questions raised
 
@@ -272,7 +281,7 @@ Use throwaway projects only.
    **Delete Repository** box.
 4. Batch-delete both. Expect the box back, because both are going.
 
-**Result:** passed in part (owner, 2026-11-05). Steps 1 and 2 (single delete, its boxes under `ask`) and Delete Selected looked at, then redesigned (F19, F20). Steps 3 and 4 (two projects on one repository) not run yet
+**Result:** passed in part (owner, 2026-11-05). Steps 1 and 2 (single delete, its boxes under `ask`) and Delete Selected looked at, then redesigned (F19, F20). Steps 3 and 4 (two projects on one repository) counted as covered by tests, not run live (owner, 2026-11-05): Delete Selected drops the repository and site boxes another project still uses (`projectsBatch.test.ts`), the single delete takes the same shared check, and the shared site is pinned in `edsExternalCleanup.test.ts`. A live run would only add the real lookup finding a real second project
 
 ### 2.8 Agent delete
 
@@ -292,7 +301,7 @@ Use throwaway projects only.
 3. Click it. Expect every checked step to empty at once, then fill in one by one, with no
    "Checking 2 of 5" text.
 
-**Result:** open
+**Result:** passed 2026-11-05: Check All Steps at the footer's left; the checked steps emptied at once and filled one by one, no count text
 
 ### 3.2 Block libraries
 
@@ -304,7 +313,7 @@ Use throwaway projects only.
 4. On a project: **Configure**, the **Storefront** tab, **Block Libraries**. Expect the same
    locked cards ("Included with every storefront", "Included with your storefront") as the wizard.
 
-**Result:** open
+**Result:** passed 2026-11-05 (owner): cards a fixed width, the empty line with only Block Library Settings as a link, the same locked cards on Configure. Found F23 and F24
 
 ### 3.3 Updates
 

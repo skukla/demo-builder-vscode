@@ -187,6 +187,7 @@ interface HarnessProps {
     updateSpy: jest.Mock;
     confirmation?: React.ReactNode;
     onSignIn?: () => Promise<unknown>;
+    workspacePerAdd?: boolean;
 }
 
 /** Hosts the modal over a REAL useState wizard state (commits re-render the tree). */
@@ -203,6 +204,7 @@ function Harness({
     updateSpy,
     confirmation,
     onSignIn,
+    workspacePerAdd,
 }: HarnessProps): React.ReactElement {
     const [state, setState] = useState<WizardState>(() => makeState(initial));
     const updateState = useCallback(
@@ -217,6 +219,7 @@ function Harness({
             isOpen={isOpen}
             onClose={onClose}
             mode={mode}
+            workspacePerAdd={workspacePerAdd}
             state={state}
             updateState={updateState}
             meshComponent={meshComponent}
@@ -244,6 +247,8 @@ export interface RenderOptions {
     confirmation?: React.ReactNode;
     /** The host's Adobe sign-in, which only some hosts offer. */
     onSignIn?: () => Promise<unknown>;
+    /** The Integrations screen's adds: the line names the Adobe project alone. */
+    workspacePerAdd?: boolean;
 }
 
 export function renderFlowModal(options: RenderOptions) {
@@ -274,6 +279,7 @@ export function renderFlowModal(options: RenderOptions) {
                 updateSpy={updateSpy}
                 confirmation={options.confirmation}
                 onSignIn={options.onSignIn}
+                workspacePerAdd={options.workspacePerAdd}
             />
         </Provider>
     );

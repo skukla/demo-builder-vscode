@@ -54,7 +54,7 @@ export function BatchResetChanges({ rows, choices }: Props): React.ReactElement 
     return (
         <div className="batch-confirm">
             <LeadText>Changed since installed. Save each as a new datapack, or discard its changes.</LeadText>
-            <div className="batch-delete scroll-fade">
+            <div className="batch-delete scroll-fade scroll-fade--capped">
                 <table className="batch-delete-table batch-changes-table">
                     <thead>
                         <tr>

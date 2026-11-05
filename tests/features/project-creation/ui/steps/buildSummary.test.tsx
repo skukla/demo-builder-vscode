@@ -345,18 +345,22 @@ describe('storefrontSummaryGroup', () => {
         );
         const libs = some.rows.find((r) => r.label === 'Block Libraries');
         expect(libs?.done).toBe(true);
-        expect(libs?.value).toBe('3 selected');
+        expect(libs?.value).toBe('3 included');
     });
 
-    // Demo Builder Blocks comes with every storefront and is kept out of the picker.
-    // A built project records it, so Edit counted 2 beside a picker showing 1
-    // (owner, 2026-10-17). The count is what the picker shows.
-    it('leaves the always-included library out of the count, as the picker does', () => {
-        const group = storefrontSummaryGroup(
-            state({ selectedBlockLibraries: ['demo-builder-blocks', 'demo-team-blocks'] }),
+    // The count is what the picker shows (owner, 2026-10-17). The picker shows the locked
+    // libraries since 2026-11-03, so they count, once each, and the row says "included"
+    // (owner, 2026-11-05: "1 selected" beside two ticked cards).
+    it('counts the locked libraries the picker shows, once each, as included', () => {
+        const stack = 'eds-accs';
+        const pkg = 'citisignal';
+        const shownLocked = storefrontSummaryGroup(state({ selectedStack: stack, selectedPackage: pkg }));
+        const recorded = storefrontSummaryGroup(
+            state({ selectedStack: stack, selectedPackage: pkg, selectedBlockLibraries: ['demo-builder-blocks', 'demo-team-blocks'] }),
         );
 
-        expect(group.rows.find((r) => r.label === 'Block Libraries')?.value).toBe('1 selected');
+        expect(shownLocked.rows.find((r) => r.label === 'Block Libraries')?.value).toBe('1 included');
+        expect(recorded.rows.find((r) => r.label === 'Block Libraries')?.value).toBe('2 included');
     });
 
     it('leaves not-yet-configured rows undone with no value', () => {

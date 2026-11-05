@@ -54,8 +54,8 @@ const pair = (project: Project, otherOrg: boolean) => ({
     otherOrg,
 });
 
-/** A row that commits to the storefront repository, which the live site serves. */
-const LIVE = 'Updates the live site';
+/** A row with no version to name: its name alone; the window's sentence says it goes live. */
+const LIVE = '';
 
 /** A storefront whose template is followed through our patches repo's tested pointer. */
 function storefront(metadata: Record<string, unknown>): Project {
@@ -138,8 +138,8 @@ describe('toPendingUpdateRows', () => {
             ['Bodea', 'eds-storefront', '6.0.0 → 6.1.0', true],
             ['Bodea', 'Adobe MCP', '1.0.0 → 1.1.0', true],
             ['Bodea', 'Demo Builder Blocks', LIVE, true],
-            ['Bodea', 'Bodea Blocks', 'install, updates the live site', true],
-            ['Bodea', 'ERP Integration and Justrite ERP', 'Newer version, redeploys to Adobe', false],
+            ['Bodea', 'Bodea Blocks', 'Install', true],
+            ['Bodea', 'ERP Integration and Justrite ERP', 'Newer version. Redeploys to Adobe', false],
         ]);
     });
 
@@ -156,7 +156,7 @@ describe('toPendingUpdateRows', () => {
             undefined,
         );
 
-        expect(row.detail).toBe('version 0.2.0, updates the live site');
+        expect(row.detail).toBe('Version 0.2.0');
     });
 
     it('says which version a storefront moves to, when the release can be read', () => {
@@ -166,7 +166,7 @@ describe('toPendingUpdateRows', () => {
             undefined,
         );
 
-        expect(row.detail).toBe('version 1.2.0, updates the live site');
+        expect(row.detail).toBe('Version 1.2.0');
     });
 
     it('says which version a released component moves to', () => {
@@ -182,14 +182,14 @@ describe('toPendingUpdateRows', () => {
         const [oneRow] = toPendingUpdateRows({ ...empty(), integration: [one] }, undefined, undefined);
         const [twoRow] = toPendingUpdateRows({ ...empty(), integration: [two] }, undefined, undefined);
 
-        expect(oneRow.detail).toBe('version 0.2.0, redeploys to Adobe');
-        expect(twoRow.detail).toBe('ERP Integration 0.2.0, Justrite ERP 0.3.0, redeploys to Adobe');
+        expect(oneRow.detail).toBe('Version 0.2.0. Redeploys to Adobe');
+        expect(twoRow.detail).toBe('ERP Integration 0.2.0, Justrite ERP 0.3.0. Redeploys to Adobe');
     });
 
     it('starts an integration pair unticked, saying it redeploys, and leaves it tickable', () => {
         const [row] = toPendingUpdateRows({ ...empty(), integration: [pair(bodea, false)] }, undefined, undefined);
 
-        expect(row).toMatchObject({ ticked: false, detail: 'Newer version, redeploys to Adobe' });
+        expect(row).toMatchObject({ ticked: false, detail: 'Newer version. Redeploys to Adobe' });
         expect(row.lockedReason).toBeUndefined();
         expect(selectionsForIds({ ...empty(), integration: [pair(bodea, false)] }, [row.id]).selections.integration)
             .toHaveLength(1);
@@ -209,7 +209,7 @@ describe('toPendingUpdateRows', () => {
 
         const [row] = toPendingUpdateRows(sel, undefined, undefined);
 
-        expect([row.label, row.detail]).toEqual(['EDS Storefront', 'version 6.1.0']);
+        expect([row.label, row.detail]).toEqual(['EDS Storefront', 'Version 6.1.0']);
     });
 
     // The order they apply (owner, 2026-10-21): the repositories a template update reads
@@ -305,7 +305,7 @@ describe('a colleague\'s storefront that follows both (EDS-56)', () => {
 
         expect(rows.map((r) => [r.group.title, r.label, r.detail, r.ticked])).toEqual([
             ['JustRite', 'Changes from kmanns/justrite', LIVE, true],
-            ['JustRite', 'Adobe boilerplate', 'Tested version, updates the live site', true],
+            ['JustRite', 'Adobe boilerplate', 'Tested version', true],
         ]);
     });
 
@@ -339,8 +339,8 @@ describe('a storefront update kept to fix with AI (EDS-57)', () => {
         );
 
         expect(rows.map((r) => [r.kind, r.label, r.detail, r.ticked])).toEqual([
-            ['finish', 'Finish the Adobe boilerplate update', 'Kept to fix with AI, updates the live site', true],
-            ['finish', 'Finish: Changes from kmanns/justrite', 'Kept to fix with AI, updates the live site', true],
+            ['finish', 'Finish the Adobe boilerplate update', 'Kept to fix with AI', true],
+            ['finish', 'Finish: Changes from kmanns/justrite', 'Kept to fix with AI', true],
         ]);
     });
 

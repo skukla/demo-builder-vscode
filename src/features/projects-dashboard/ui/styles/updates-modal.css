@@ -13,7 +13,7 @@
 
 @layer theme {
     /* Groups 24 apart (dialog design rules). As tall as its rows, so two rows leave no empty
-       space under them, then it scrolls with a fade: `.scroll-fade` (core/ui/styles). */
+       space under them, then it scrolls with a fade: `.scroll-fade--capped` (core/ui/styles). */
     .updates-group-list {
         display: flex;
         flex-direction: column;
@@ -48,6 +48,17 @@
 
     .updates-group-rows .checkbox-row label[class*='spectrum-Checkbox'] {
         min-height: 24px;
+    }
+
+    /* A row's detail on a line of its own under its name, as a run's rows and the delete window's
+       boxes have it, at their 12px (owner, 2026-11-05). Beside the name at 11px it was hard to
+       read, and a long one wrapped back under the name. */
+    .updates-group-rows .checkbox-row-detail,
+    .updates-group-rows .checkbox-row-reason {
+        display: block;
+        margin-left: 0;
+        font-size: 12px;
+        line-height: 16px;
     }
 
     /* The run (UpdatesRunView, 2026-10-21): an icon where the checkbox was, in a 28px

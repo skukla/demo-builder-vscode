@@ -36,7 +36,11 @@ import { apiAccessProblemOf, type ApiAccessProblem } from './apiAccessProblem';
 import { FlowStageBody } from './FlowStageBody';
 import { type FlowMode, FlowStageId } from './flowStages';
 import type { UnavailableEntries } from './stages/CatalogStage';
-import { useIntegrationFlow, type ApiEditTarget, type UseIntegrationFlowReturn } from './useIntegrationFlow';
+import {
+    useIntegrationFlow,
+    type ApiEditTarget,
+    type UseIntegrationFlowReturn,
+} from './useIntegrationFlow';
 import { useOrgApis } from './useOrgApis';
 import { ADOBE_APIS_WAIT } from '@/core/ui/components/feedback/adobeApisWait';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
@@ -67,6 +71,14 @@ export interface AddIntegrationFlowModalProps {
     mode: FlowMode;
     /** The integration whose API picks are being re-edited (mode 'api-edit' only). */
     editTarget?: ApiEditTarget;
+    /**
+     * The Integrations screen's adds, each of which gets a workspace of its own (AB-23): the line
+     * names the Adobe project alone, the workspace being one this add will not use. A mesh does
+     * use the project's workspace, and still shows one row: the line sits above the Start From
+     * cards, so a second row on picking API Mesh would move them under the pointer (owner,
+     * 2026-11-05). The wizard builds everything into the workspace it picked, so it omits this.
+     */
+    workspacePerAdd?: boolean;
     state: AdobeAuthSessionState;
     updateState: (updates: Partial<WizardState>) => void;
     /**
@@ -139,10 +151,12 @@ const DEST_PICKER_STAGES: ReadonlySet<string> = new Set([
 function DestinationContext({
     state,
     stage,
+    projectOnly,
     onChange,
 }: {
     state: AdobeAuthSessionState;
     stage: FlowStageId;
+    projectOnly: boolean;
     onChange: () => void;
 }): React.ReactElement | null {
     // The stage gate stays HERE, not in the shared component: hiding the line
@@ -152,6 +166,7 @@ function DestinationContext({
         <SharedDestinationContext
             project={state.adobeProject?.title || state.adobeProject?.name || ''}
             workspace={state.adobeWorkspace?.title || state.adobeWorkspace?.name || ''}
+            projectOnly={projectOnly}
             onChange={onChange}
             className="dest-context--block"
         />
@@ -163,8 +178,17 @@ function DestinationContext({
  * picks are optional and can change later in Manage APIs, so the put-it-right button sits before
  * it. Editing picks has nothing to save without the list.
  */
-function footerOf(flow: UseIntegrationFlowReturn, mode: FlowMode, problem: ApiAccessProblem | undefined): ActionButton[] {
-    const back: ActionButton = { label: 'Back', variant: 'secondary', onPress: flow.onBack, isDisabled: !flow.canGoBack };
+function footerOf(
+    flow: UseIntegrationFlowReturn,
+    mode: FlowMode,
+    problem: ApiAccessProblem | undefined,
+): ActionButton[] {
+    const back: ActionButton = {
+        label: 'Back',
+        variant: 'secondary',
+        onPress: flow.onBack,
+        isDisabled: !flow.canGoBack,
+    };
     const main: ActionButton = {
         label: flow.continueLabel,
         variant: 'accent',
@@ -182,11 +206,13 @@ function outcomeFooter(flow: UseIntegrationFlowReturn, outcome: DialogOutcome): 
     const { actions } = outcome;
     return [
         { label: 'Back', variant: 'secondary', onPress: flow.onBack, isDisabled: !flow.canGoBack },
-        ...actions.map(({ label, onPress }, index): ActionButton => ({
-            label,
-            onPress,
-            variant: index === actions.length - 1 ? 'accent' : 'secondary',
-        })),
+        ...actions.map(
+            ({ label, onPress }, index): ActionButton => ({
+                label,
+                onPress,
+                variant: index === actions.length - 1 ? 'accent' : 'secondary',
+            }),
+        ),
     ];
 }
 
@@ -206,7 +232,10 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
     // JourneyProps is structurally UseIntegrationFlowArgs — the hook takes it whole.
     const flow = useIntegrationFlow(props);
     const onApiStage = flow.stage === 'api-access';
-    const orgApis = useOrgApis(onApiStage, props.state.selectedAppBuilderComponents ?? NO_COMPONENT_IDS);
+    const orgApis = useOrgApis(
+        onApiStage,
+        props.state.selectedAppBuilderComponents ?? NO_COMPONENT_IDS,
+    );
     const problem = onApiStage ? apiAccessProblemOf(orgApis, props.onSignIn) : undefined;
     const [outcome, setOutcome] = React.useState<DialogOutcome | null>(null);
     const [stageWaiting, setStageWaiting] = React.useState(false);
@@ -225,7 +254,10 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
             closeLabel="Cancel"
             // A stage's wait keeps the box it found, and stays mounted: it holds the read.
             holdSize={stageWaiting}
-            actionButtons={journeyFooter(flow, props.mode, problem, { waiting: stageWaiting, outcome })}
+            actionButtons={journeyFooter(flow, props.mode, problem, {
+                waiting: stageWaiting,
+                outcome,
+            })}
         >
             {/* Five stages, five natural heights. The dialog jumped at every step
                 without a floor under them (owner, 2026-09-20). Pinned to the top: a
@@ -233,25 +265,34 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
                 list) floated mid-window when centred (owner, 2026-10-17). Its
                 spinners centre themselves in their own containers. */}
             <SteadyHeight align="start">
-            <div className="intflow-stage-body">
-                {problem ? (
-                    <div className="dialog-stack" data-testid="api-access-problem">
-                        {problem.lines.map((line) => (
-                            <p key={line} className="dialog-line">{line}</p>
-                        ))}
-                    </div>
-                ) : (
-                    <>
-                        <DestinationContext
-                            state={props.state}
-                            stage={flow.stage}
-                            onChange={flow.changeDestination}
-                        />
-                        <FlowStageBody flow={flow} props={props} apis={orgApis.apis} onOutcome={setOutcome} onWaiting={setStageWaiting} />
-                    </>
-                )}
-            </div>
-        </SteadyHeight>
+                <div className="intflow-stage-body">
+                    {problem ? (
+                        <div className="dialog-stack" data-testid="api-access-problem">
+                            {problem.lines.map((line) => (
+                                <p key={line} className="dialog-line">
+                                    {line}
+                                </p>
+                            ))}
+                        </div>
+                    ) : (
+                        <>
+                            <DestinationContext
+                                state={props.state}
+                                stage={flow.stage}
+                                projectOnly={Boolean(props.workspacePerAdd)}
+                                onChange={flow.changeDestination}
+                            />
+                            <FlowStageBody
+                                flow={flow}
+                                props={props}
+                                apis={orgApis.apis}
+                                onOutcome={setOutcome}
+                                onWaiting={setStageWaiting}
+                            />
+                        </>
+                    )}
+                </div>
+            </SteadyHeight>
         </Modal>
     );
 }

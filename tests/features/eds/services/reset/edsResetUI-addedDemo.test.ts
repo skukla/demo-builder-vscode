@@ -59,9 +59,9 @@ const mockedCheck = checkDemoSource as jest.MockedFunction<typeof checkDemoSourc
 const meshDeps = createMeshDepsFake();
 const RESET = 'Reset Project';
 const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
-const REACHABLE: DemoSourceCheck = { reachable: true, message: '', contentReachable: true };
+const REACHABLE: DemoSourceCheck = { reachable: true, checked: true, message: '', contentReachable: true };
 const CONTENT_GONE: DemoSourceCheck = {
-    reachable: true,
+    reachable: true, checked: true,
     message: '',
     contentReachable: false,
     contentMessage: "The Isle5 by Jen demo's pages can't be reached right now.",
@@ -132,7 +132,7 @@ describe('reset of a project built on an added demo — the source check', () =>
     });
 
     it('refuses in one sentence, before the confirmation, when the source is unreachable', async () => {
-        mockedCheck.mockResolvedValue({ reachable: false, message: UNREACHABLE, contentReachable: false });
+        mockedCheck.mockResolvedValue({ reachable: false, checked: true, message: UNREACHABLE, contentReachable: false });
 
         const result = await run();
 

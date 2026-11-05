@@ -17,7 +17,11 @@ import { STOREFRONT_SECTION_TITLES } from './storefrontSections';
 import { isAdobeSignedIn, meshComponentForStack } from './tileStatus';
 import { ACCS_STORE_VIEW_CODE, PAAS_STORE_VIEW_CODE } from '@/core/config/envVarKeys';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { isAlwaysIncludedBlockLibrary } from '@/features/components/services/blockLibraryLoader';
+import {
+    getAlwaysIncludedBlockLibraries,
+    getNativeBlockLibraries,
+} from '@/features/components/services/blockLibraryLoader';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { AddedDemo } from '@/types/projectFile';
@@ -110,12 +114,7 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
     const accountsDone =
         Boolean(eds?.githubAuth?.isAuthenticated) && Boolean(eds?.daLiveAuth?.isAuthenticated);
     const repoDone = state.storefrontRepoValid === true;
-    // What the picker shows: the always-included library is kept out of it, though a
-    // built project records it, so Edit counted 2 beside 1 card (owner, 2026-10-17).
-    const chosen = (state.selectedBlockLibraries ?? []).filter(
-        (id) => !isAlwaysIncludedBlockLibrary(id),
-    );
-    const libCount = chosen.length + (state.customBlockLibraries?.length ?? 0);
+    const libCount = includedLibraryCount(state);
 
     const rows: SummaryRow[] = [
         // An added demo names itself first (D21): the card is far away by now.
@@ -133,10 +132,27 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
     ];
     rows.push({
         label: STOREFRONT_SECTION_TITLES['block-libraries'],
-        value: libCount > 0 ? `${libCount} selected` : undefined,
+        value: libCount > 0 ? `${libCount} included` : undefined,
         done: libCount > 0,
     });
     return { heading: 'Storefront', rows };
+}
+
+/**
+ * How many libraries the storefront gets: the cards the picker shows ticked, the locked ones
+ * with them, each once, plus the custom ones. The count is what the picker shows (owner,
+ * 2026-10-17); since the picker shows the locked cards (2026-11-03), they count, and the row
+ * says "included" (owner, 2026-11-05: "1 selected" beside two ticks).
+ */
+function includedLibraryCount(state: WizardState): number {
+    const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
+    const packageId = state.selectedPackage;
+    const locked =
+        stack && packageId
+            ? [...getAlwaysIncludedBlockLibraries(stack, packageId), ...getNativeBlockLibraries(stack, packageId)]
+            : [];
+    const ids = new Set([...(state.selectedBlockLibraries ?? []), ...locked.map((library) => library.id)]);
+    return ids.size + (state.customBlockLibraries?.length ?? 0);
 }
 
 /** "Demo — Isle5 by Jen · Edge Delivery", with a note when it has no pages to copy. */

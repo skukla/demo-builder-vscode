@@ -118,3 +118,5 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-11-02  fix(commerce): a write that hit a database deadlock is sent again (`b86d11130`)
 - 2026-11-03  fix(data-installer): products keep installing when a pack's root is not made (`01e13e311`)
 - 2026-11-03  feat(data-installer): datapacks work with or without the Data Installer (`88475c876`)
+- 2026-11-03  feat(data-installer): the "no access" banner can be dismissed, and a team pack is never tagged Yours (`1884a7e2e`)
+- 2026-11-03  fix(data-installer): say what the Datapacks screen lists, and switch the Data Installer on or off (`d116d2f5f`)

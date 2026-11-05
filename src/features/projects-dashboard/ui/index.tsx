@@ -52,7 +52,6 @@ import './styles/project-cards.css';
 import './styles/updates-modal.css';
 // Selection mode and the Reset Selected / Delete Selected window. This entry alone draws them.
 import './styles/projects-batch.css';
-import './styles/scroll-fade.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
 // `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
@@ -74,6 +73,8 @@ import '@/core/ui/styles/work-row.css';
 // SectionLabel and LeadText (ADR-017 §6).
 import '@/core/ui/styles/modal-text.css';
 import '@/core/ui/styles/disclosure-toggle.css';
+// A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
+import '@/core/ui/styles/scroll-fade.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts

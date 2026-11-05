@@ -37,7 +37,17 @@ export interface DestinationContextProps {
 }
 
 /**
- * Render `{project}, {workspace}` with an optional `Change` action.
+ * What the line is, before it: the Console's own term, so "Kukla ACO test" reads as an Adobe
+ * project and not the SC's demo (owner, 2026-11-05). Every host shows it, in one style.
+ */
+export const DESTINATION_LABEL = 'Adobe Project';
+
+/**
+ * Render "Adobe Project  {project}" with an optional `Change` action, and "Workspace
+ * {workspace}" on a row under it unless `projectOnly`. Change sits on the first row and covers
+ * both: it opens the picker for the project and then its workspace. Its own small grid rather
+ * than `ui/FactList`, which has no third column for Change and reaches only the bundles that
+ * import `fact-list.css`, the wizard not among them.
  *
  * @param props - the destination parts and the optional change action
  * @returns the line, or null when either half is missing (a half-known
@@ -56,6 +66,7 @@ export function DestinationContext({
     if (isUnset) {
         return (
             <span className={cn('dest-context', className)}>
+                <span className="dest-context-label">{DESTINATION_LABEL}</span>
                 <span className="dest-context-value">{unsetLabel}</span>
                 {onChange ? (
                     <button type="button" className="inline-action-link" onClick={onChange}>
@@ -66,10 +77,9 @@ export function DestinationContext({
         );
     }
     return (
-        <span className={cn('dest-context', className)}>
-            <span className="dest-context-value">
-                {projectOnly ? project : `${project}, ${workspace}`}
-            </span>
+        <span className={cn('dest-context', !projectOnly && 'dest-context--rows', className)}>
+            <span className="dest-context-label">{DESTINATION_LABEL}</span>
+            <span className="dest-context-value">{project}</span>
             {onChange ? (
                 /* `.inline-action-link` (utilities.css), NOT EDS's
                    `.service-action-link` — that class lives in connect-services.css and
@@ -78,6 +88,13 @@ export function DestinationContext({
                 <button type="button" className="inline-action-link" onClick={onChange}>
                     Change
                 </button>
+            ) : null}
+            {!projectOnly ? (
+                <>
+                    {/* A row's own: without Change above, the grid's third cell is simply empty. */}
+                    <span className="dest-context-label dest-context-row-start">Workspace</span>
+                    <span className="dest-context-value">{workspace}</span>
+                </>
             ) : null}
         </span>
     );

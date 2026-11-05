@@ -380,6 +380,12 @@
     color: var(--spectrum-global-color-gray-700);
 }
 
+/* "Adobe Project" before the value: dim label, darker value, blue action. One style where the
+   screen and the wizard each had their own (`page-destination-label`, `int-destination-label`). */
+.dest-context-label {
+    color: var(--spectrum-global-color-gray-500);
+}
+
 /* The MODAL's variant: a full-width line with a rule under it. The page header
    uses the inline base above — same fact, two placements. */
 .dest-context--block {
@@ -387,6 +393,20 @@
     margin: 0 0 14px;
     padding: 0 0 10px;
     border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+/* Adobe Project and Workspace, a row each, where a workspace is really in use. After the block
+   variant on purpose: the modal's line takes this grid and keeps that variant's rule under it. */
+.dest-context--rows {
+    display: grid;
+    grid-template-columns: max-content max-content max-content;
+    justify-content: start;
+    row-gap: 4px;
+}
+
+/* Starts its own row whether or not Change filled the third cell of the one above. */
+.dest-context-row-start {
+    grid-column: 1;
 }
 }
 

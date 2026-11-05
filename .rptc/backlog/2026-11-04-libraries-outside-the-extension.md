@@ -61,3 +61,7 @@ not to pick one answer for all of them.
 The audit is written and the owner has chosen a direction per library. The work
 that follows is filed as its own epic and features; this item is the reason they
 exist.
+
+## Shipped so far
+
+- 2026-11-04  docs(backlog): the libraries audit and its decisions, filed as plan items (`c5e47a99e`)

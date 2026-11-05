@@ -38,6 +38,13 @@ describe('ApiAccessPicker', () => {
     });
 
     describe('flat list', () => {
+        // 44 APIs and seven showed, and nothing said the list went on (owner, 2026-11-05).
+        it('fades its list at the bottom, the scrolling-list cue the Updates window uses', () => {
+            const { container } = renderPicker();
+
+            expect(container.querySelector('.intflow-api-scroll')).toHaveClass('scroll-fade');
+        });
+
         it('renders one flat list with no category headers', () => {
             const { container } = renderPicker();
             expect(container.querySelectorAll('.intflow-api-group-title')).toHaveLength(0);

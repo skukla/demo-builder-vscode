@@ -18,7 +18,6 @@
  */
 
 import React from 'react';
-import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { BlockLibrariesStepContent } from '@/features/project-creation/ui/components/BlockLibrariesStepContent';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -70,18 +69,18 @@ export function BlockLibrariesSection({
     const { included, native, available, customDefaults } = choices;
 
     return (
-        <ConfigSection id="block-libraries" label="Block Libraries" showDivider={false}>
-            <BlockLibrariesStepContent
-                includedBlockLibraries={included}
-                nativeBlockLibraries={native}
-                availableBlockLibraries={available}
-                selectedBlockLibraries={selectedBlockLibraries}
-                onBlockLibraryToggle={onBlockLibraryToggle}
-                customBlockLibraryDefaults={customDefaults}
-                customBlockLibraries={customBlockLibraries}
-                onCustomLibraryToggle={onCustomLibraryToggle}
-                onOpenCustomSettings={openCustomLibrarySettings}
-            />
-        </ConfigSection>
+        // The picker heads its own two groups (Block Libraries, Custom Block Libraries), as in
+        // the wizard: wrapped in a section here, the heading appeared twice (2026-11-05).
+        <BlockLibrariesStepContent
+            includedBlockLibraries={included}
+            nativeBlockLibraries={native}
+            availableBlockLibraries={available}
+            selectedBlockLibraries={selectedBlockLibraries}
+            onBlockLibraryToggle={onBlockLibraryToggle}
+            customBlockLibraryDefaults={customDefaults}
+            customBlockLibraries={customBlockLibraries}
+            onCustomLibraryToggle={onCustomLibraryToggle}
+            onOpenCustomSettings={openCustomLibrarySettings}
+        />
     );
 }

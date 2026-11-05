@@ -253,7 +253,7 @@ export function ConnectStoreStepContent({
             <CenteredFeedbackContainer>
                 <LoadingDisplay
                     size="L"
-                    message="Detecting store structure"
+                    message="Loading business structure"
                     helperText="This may take up to 30 seconds"
                 />
             </CenteredFeedbackContainer>

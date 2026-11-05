@@ -66,7 +66,7 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         // LINE, so picking the kind lands straight on the commit.
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
         await click(/API Mesh/);
-        expect(screen.getByText('Demo Project, Stage')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
         // The modal provisions nothing — Add commits + closes in one press.
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         expectEnabled('Add Integration');
@@ -83,7 +83,7 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
     it('catalog later-add finishes on the SOURCE stage (no dest step, no api-access)', async () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
         await walkCatalogToPick(); // kind → source-catalog → pick (terminal — dest is a line)
-        expect(screen.getByText('Demo Project, Stage')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         await click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
@@ -100,13 +100,37 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
     it('hides the destination line on the picker stages, where it would be redundant', async () => {
         renderModal({ initial: COMMITTED_DEST });
         await click(/API Mesh/);
-        expect(screen.getByText('Demo Project, Stage')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
 
         await click('Change');
 
         // dest-project IS the destination picker; restating the destination
         // above the control that changes it says the same thing twice.
-        expect(screen.queryByText('Demo Project, Stage')).not.toBeInTheDocument();
+        expect(screen.queryByText('Demo Project')).not.toBeInTheDocument();
+    });
+
+    // The wizard builds everything into the workspace it picked, so its line says which.
+    it('shows the workspace on a row of its own from the wizard', () => {
+        renderModal({ initial: COMMITTED_DEST });
+
+        expect(screen.getByText('Adobe Project')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
+        expect(screen.getByText('Workspace')).toBeInTheDocument();
+        expect(screen.getByText('Stage')).toBeInTheDocument();
+    });
+
+    // The line sits above the Start From cards, so a row appearing on picking API Mesh would
+    // move them under the pointer (owner, 2026-11-05).
+    it('keeps one row from the Integrations screen, with API Mesh picked too', async () => {
+        renderModal({ initial: COMMITTED_DEST, workspacePerAdd: true });
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
+        expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+
+        await click(/API Mesh/);
+
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
+        expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+        expect(screen.queryByText('Stage')).not.toBeInTheDocument();
     });
 
     it('names a workspace by its NAME when Console gave it no title', async () => {
@@ -121,7 +145,7 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         });
         await click(/API Mesh/);
 
-        expect(screen.getByText('Demo Project, Stage')).toBeInTheDocument();
+        expect(screen.getByText('Stage')).toBeInTheDocument();
     });
 });
 
@@ -213,7 +237,7 @@ describe('AddIntegrationFlowModal — custom integration', () => {
         // No dest step: source-custom advances straight to api-access, with the
         // committed destination riding along as the context line.
         await click('Continue');
-        expect(screen.getByText('Demo Project, Stage')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project')).toBeInTheDocument();
         // Custom/import gets the INTERACTIVE picker (it can add any entitled API),
         // which fetches the org's list — not the informational deterministic panel.
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
@@ -365,10 +389,17 @@ describe('AddIntegrationFlowModal — phase-running bridge', () => {
  */
 describe('a confirmation the add waits on', () => {
     it('takes the flow window over, once, even after the flow itself has closed', () => {
-        renderModal({ isOpen: false, confirmation: <div role="dialog" aria-label="Add ERP Integration and prepare the store" /> });
+        renderModal({
+            isOpen: false,
+            confirmation: (
+                <div role="dialog" aria-label="Add ERP Integration and prepare the store" />
+            ),
+        });
 
         expect(screen.getAllByRole('dialog')).toHaveLength(1);
-        expect(screen.getByRole('dialog', { name: 'Add ERP Integration and prepare the store' })).toBeInTheDocument();
+        expect(
+            screen.getByRole('dialog', { name: 'Add ERP Integration and prepare the store' })
+        ).toBeInTheDocument();
     });
 
     it('shows the flow as usual when nothing waits', () => {

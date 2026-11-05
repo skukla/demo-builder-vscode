@@ -41,8 +41,10 @@ const size = (rule: string): string =>
         .trim();
 
 describe('destination row type', () => {
-    it('sets the label to the count size', () => {
-        expect(size(ruleFor('.page-destination-label'))).toBe('12px');
+    // The label is the line's own since 2026-11-05 ("Adobe Project", one style on every host):
+    // it takes the line's size rather than setting one.
+    it('sets the label to the line size, by setting none of its own', () => {
+        expect(ruleFor('.dest-context-label')).not.toMatch(/font-size/);
     });
 
     it('puts the destination value on the type scale via the token', () => {
@@ -61,15 +63,20 @@ describe('destination row type', () => {
         expect(() => ruleFor('.page-destination-row .dest-context')).toThrow(/no rule for/);
     });
 
+    it('lays two rows out as a grid, so the labels and values line up', () => {
+        expect(ruleFor('.dest-context--rows')).toMatch(/display:\s*grid/);
+        expect(ruleFor('.dest-context-row-start')).toMatch(/grid-column:\s*1/);
+    });
+
     it('reads as a phrase, not a badge label', () => {
-        const label = ruleFor('.page-destination-label');
+        const label = ruleFor('.dest-context-label');
 
         expect(label).not.toMatch(/text-transform:\s*uppercase/);
         expect(label).not.toMatch(/letter-spacing/);
     });
 
     it('separates the three roles by colour, since size no longer does', () => {
-        expect(ruleFor('.page-destination-label')).toMatch(/gray-500/);
+        expect(ruleFor('.dest-context-label')).toMatch(/gray-500/);
         expect(ruleFor('.dest-context-value')).toMatch(/gray-700/);
         expect(size(ruleFor('.inline-action-link'))).toBe('12px');
     });

@@ -5,7 +5,7 @@
     {
       "id": "commerce-integration-starter-kit",
       "name": "Commerce Integration Starter Kit",
-      "description": "Adobe's Commerce integration starter kit (App Management generation): scaffolding for bidirectional product, customer, order and stock sync, declared in app.commerce.config.ts and installed into Commerce through the app's own generated install API",
+      "description": "Adobe's starter kit for two-way product, customer, order and stock sync with Commerce",
       "kind": "integration",
       "seed": true,
       "layout": "extension",

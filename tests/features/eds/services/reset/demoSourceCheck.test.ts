@@ -73,23 +73,39 @@ describe('checkDemoSource', () => {
             'https://main--isle5-content--jen.aem.live/full-index.json',
             expect.objectContaining({ method: 'GET' }),
         );
-        expect(check).toEqual({ reachable: true, message: '', contentReachable: true });
+        expect(check).toEqual({ reachable: true, checked: true, message: '', contentReachable: true });
     });
 
-    it("refuses in a sentence that names whose demo it is when the repository can't be read", async () => {
-        const check = await checkDemoSource(
-            project(),
-            repoOps(Promise.reject(new Error('404'))),
-            context(),
-            okFetch,
-        );
+    // The error `GitHubRepoOperations.getRepository` throws for a 404, its status riding along.
+    const notFound = () => Object.assign(new Error('Repository not found'), { status: 404 });
+
+    it("refuses in a sentence that names whose demo it is when GitHub says the repository is gone", async () => {
+        const check = await checkDemoSource(project(), repoOps(Promise.reject(notFound())), context(), okFetch);
 
         expect(check).toEqual({
             reachable: false,
+            checked: true,
             contentReachable: false,
             message: "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.",
         });
         expect(okFetch).not.toHaveBeenCalled();
+    });
+
+    // Owner, 2026-11-05: a dropped network one night showed JustRite's "can't be reached" notice,
+    // gone the next morning. A read that failed says it could not check, and nothing more.
+    it.each([
+        ['a network failure', new Error('getaddrinfo ENOTFOUND api.github.com')],
+        ['a sign-in GitHub refused', Object.assign(new Error('Bad credentials'), { status: 401 })],
+        ['a GitHub outage', Object.assign(new Error('Server Error'), { status: 502 })],
+    ])('says it could not check, not that the source is gone, on %s', async (_what, error) => {
+        const check = await checkDemoSource(project(), repoOps(Promise.reject(error)), context(), okFetch);
+
+        expect(check).toEqual({
+            reachable: false,
+            checked: false,
+            contentReachable: false,
+            message: "Couldn't check the Isle5 by Jen demo's repository. Try again in a moment.",
+        });
     });
 
     it('follows a rename into the row, the instance metadata and the remembered setting, and saves', async () => {
@@ -161,6 +177,7 @@ describe('checkDemoSource', () => {
         const ops = repoOps(Promise.resolve(REPO));
         expect(await checkDemoSource(project({ demo: undefined }), ops, context(), goneFetch)).toEqual({
             reachable: true,
+            checked: true,
             message: '',
             contentReachable: true,
         });

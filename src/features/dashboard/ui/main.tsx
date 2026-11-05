@@ -67,6 +67,8 @@ import '@/core/ui/styles/modal-text.css';
 import '@/core/ui/styles/fact-list.css';
 import '@/features/project-creation/ui/styles/build-summary.css';
 import '@/features/project-creation/ui/styles/choice-cards.css';
+// A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
+import '@/core/ui/styles/scroll-fade.css';
 
 // Get root element
 const container = document.getElementById('root');

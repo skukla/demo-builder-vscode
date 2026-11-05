@@ -50,25 +50,22 @@ const LOCKED_OTHER_ORG = `This project ${OTHER_ORG_NOTE}`;
  * is the developer's measure, and tells an SC nothing they would act on (owner, 2026-10-20).
  */
 const NEWER = 'Newer version';
-/**
- * Said on every row whose apply commits to the storefront repository, which the live site
- * serves, as the integration row says it redeploys (owner, 2026-10-20). The Inspector SDK
- * row does not say it: its apply only records the new version.
- */
-const LIVE_SITE = 'updates the live site';
-
 /** A pair's new versions. One release needs no name: the row's label already says what it is. */
 function pairVersions(releases?: Array<{ name: string; version: string }>): string | undefined {
     if (!releases?.length) return undefined;
-    if (releases.length === 1) return `version ${releases[0].version}`;
+    if (releases.length === 1) return `Version ${releases[0].version}`;
     return releases.map((r) => `${r.name} ${r.version}`).join(', ');
 }
 
-/** "Newer version" dropped where it is said: it tells the SC nothing (owner, 2026-10-20). */
-const LIVE_SITE_DETAIL = 'Updates the live site';
+/**
+ * What a row with no version to name says: nothing, its name alone. "Newer version" tells the SC
+ * nothing (owner, 2026-10-20), and that it reaches the live site is the window's one sentence, not
+ * every row's (`updatesLiveSite`, owner, 2026-11-05).
+ */
+const NO_DETAIL = '';
 
 /** A colleague's demo that was reset since this storefront took from it. */
-export const SOURCE_RESET_DETAIL = 'The source demo was reset to its template. Applying replaces this storefront with it';
+export const SOURCE_RESET_DETAIL = 'Source was reset. Replaces this storefront.';
 
 /** `ticked: false` is a row that waits for the SC's tick; a locked row is never ticked. */
 type RowText = Pick<PendingUpdateRow, 'label' | 'detail'> & { lockedReason?: string; ticked?: false };
@@ -81,35 +78,35 @@ const PROJECT_KINDS: { [K in ProjectSelectionKind]: (entry: UpdateSelections[K][
               { label: templateLabel(t.project), detail: SOURCE_RESET_DETAIL, ticked: false }
             : {
                   label: templateLabel(t.project),
-                  detail: t.version ? `version ${t.version}, ${LIVE_SITE}` : LIVE_SITE_DETAIL,
+                  detail: t.version ? `Version ${t.version}` : NO_DETAIL,
               },
     // Adobe's half of a colleague's storefront, to the version our daily gate tested (EDS-56).
-    boilerplate: () => ({ label: 'Adobe boilerplate', detail: `Tested version, ${LIVE_SITE}` }),
+    boilerplate: () => ({ label: 'Adobe boilerplate', detail: 'Tested version' }),
     // A clash kept to fix with AI (EDS-57): applying it checks the fix and pushes it.
     finish: (f) => ({
         label: f.clash.track === 'boilerplate' ? 'Finish the Adobe boilerplate update' : `Finish: ${templateLabel(f.project)}`,
-        detail: `Kept to fix with AI, ${LIVE_SITE}`,
+        detail: 'Kept to fix with AI',
     }),
     component: (c) => ({
         label: c.project.componentInstances?.[c.componentId]?.name ?? c.componentId,
         detail: c.currentVersion
             ? `${c.currentVersion} → ${c.latestVersion}`
-            : `version ${c.latestVersion}`,
+            : `Version ${c.latestVersion}`,
     }),
     adobeMcp: (a) => ({
         label: 'Adobe MCP',
         detail: a.currentVersion
             ? `${a.currentVersion} → ${a.latestVersion}`
-            : `version ${a.latestVersion}`,
+            : `Version ${a.latestVersion}`,
     }),
     blockLibrary: (b) => ({
         label: b.library.name,
-        detail: b.version ? `version ${b.version}, ${LIVE_SITE}` : LIVE_SITE_DETAIL,
+        detail: b.version ? `Version ${b.version}` : NO_DETAIL,
     }),
-    blockLibraryInstall: (b) => ({ label: b.library.name, detail: `install, ${LIVE_SITE}` }),
+    blockLibraryInstall: (b) => ({ label: b.library.name, detail: 'Install' }),
     integration: (p) => ({
         label: p.label,
-        detail: `${pairVersions(p.releases) ?? NEWER}, redeploys to Adobe`,
+        detail: `${pairVersions(p.releases) ?? NEWER}. Redeploys to Adobe`,
         ticked: false,
         ...(p.otherOrg ? { lockedReason: LOCKED_OTHER_ORG } : {}),
     }),

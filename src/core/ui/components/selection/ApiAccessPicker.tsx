@@ -261,7 +261,7 @@ export function ApiAccessPicker({
             {/* The row area is always its own element so a HOST can make it the
                 one scroll region (see .manage-apis-body). Unconstrained — as in
                 the wizard stage — it simply stacks and the page scrolls. */}
-            <div className="intflow-api-scroll">
+            <div className="intflow-api-scroll scroll-fade">
                 {list.length === 0 ? (
                     <div className="intflow-api-empty">No APIs match “{query}”.</div>
                 ) : (

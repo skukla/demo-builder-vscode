@@ -75,10 +75,6 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-.int-destination-label {
-    color: var(--spectrum-global-color-gray-600);
-}
-
 .int-destination-unset {
     color: var(--spectrum-global-color-gray-500);
     font-style: italic;

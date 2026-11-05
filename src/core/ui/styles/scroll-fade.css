@@ -1,0 +1,59 @@
+/**
+ * .scroll-fade — a list that scrolls on its own, its last 32px fading out while there is more
+ * below, so a cut-off row reads as "scroll for more" (owner, 2026-10-20). A dialog is not seen as
+ * something that scrolls without a cue (owner, 2026-11-05). The fade's size follows the scroll:
+ * full at the top, gone at the bottom. A list that fits has no scroll, so the animation never
+ * runs and the fade keeps its registered 0px. It goes on the element that scrolls.
+ *
+ * `.scroll-fade--capped` also makes it the scroller, stopped short enough to keep the buttons on
+ * screen in a short editor (the Updates window, the projects batch window). A list whose dialog
+ * already bounds it (the API picker) takes the fade alone. A table's header row inside it stays
+ * put while the rows scroll.
+ *
+ * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `projectsList` (Updates, the batch
+ * window), and `wizard`, `dashboard` and `integrations` (the API picker: Manage APIs and the Add
+ * Integration flow). A new host bundle imports it in its entry, or its list scrolls with nothing
+ * to say so.
+ *
+ * Moved to core on 2026-11-05 from the projects list's own copy, when the API picker became its
+ * second feature; that copy came from updates-modal.css the same day.
+ */
+
+/* Registered so it animates as a length; an unregistered property jumps between values. */
+@property --scroll-fade {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+}
+
+@layer theme {
+    .scroll-fade {
+        mask-image: linear-gradient(to bottom, #000 calc(100% - var(--scroll-fade)), transparent);
+        animation: scroll-fade linear both;
+        animation-timeline: scroll(self);
+    }
+
+    @keyframes scroll-fade {
+        from {
+            --scroll-fade: 32px;
+        }
+        to {
+            --scroll-fade: 0px;
+        }
+    }
+
+    .scroll-fade--capped {
+        max-height: min(440px, 55vh);
+        overflow-y: auto;
+    }
+
+    /* The header row, its Select Alls with it, stays at the top while the rows go under it. */
+    .scroll-fade thead th,
+    .scroll-fade thead td {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        /* The dialog's own, as its pinned footer has: the rows pass under it unseen. */
+        background: var(--spectrum-global-color-gray-100);
+    }
+}

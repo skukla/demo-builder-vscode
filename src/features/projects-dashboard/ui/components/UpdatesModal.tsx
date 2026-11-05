@@ -17,11 +17,13 @@
  * fewer in all, every group starts open, since they fit and a closed one hid what the SC
  * was approving (owner, 2026-10-24); with more, a group starts closed and says what it holds: its name in its own casing, and how many rows wait for the SC (one that
  * started unticked: the redeploy, or one locked in another org), so a closed group cannot
- * hide the row that needs a decision. Its checkbox already shows all, some or none ticked. The rest of its line opens it.
+ * hide the row that needs a decision; an open one shows that row, so it says nothing more. Its checkbox already shows all, some or none ticked. The rest of its line opens it.
  * Its checkbox ticks or unticks the whole group (mixed while some rows are ticked; never a
  * locked row), and sits beside the opening button rather than in it, so ticking a group
  * does not open it. The list is as tall as its rows and scrolls past a cap
- * (`.updates-group-list`). No sentence under the title: the ticks and the Apply count say it.
+ * (`.updates-group-list`). One sentence under the title, only when a listed update reaches the
+ * live site: it was on every such row, and read as noise (owner, 2026-11-05). Each row's detail
+ * has a line of its own under its name, as a run's rows and the delete window's boxes do.
  * How a run ended is the title with its status icon.
  *
  * @module features/projects-dashboard/ui/components/UpdatesModal
@@ -30,17 +32,19 @@
 import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
 import { APPLYING_TITLE, type RowStatuses, type UpdatesModalControls } from '../hooks/useUpdatesModal';
-import { groupsOf, type RowGroup } from './updateGroups';
+import { groupsOf, updatesLiveSite, type RowGroup } from './updateGroups';
 import { UpdatesRunView } from './UpdatesRunView';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { DisclosureToggle } from '@/core/ui/components/ui/DisclosureToggle';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 const LIST_TITLE = 'Updates Available';
+const LIVE_SITE_SENTENCE = 'Storefront updates go to the live site.';
 const NO_ACTIONS: ActionButton[] = [];
 /** The most updates the list opens every group for: two lines each, they fit unscrolled. */
 export const OPEN_UP_TO = 3;
@@ -54,7 +58,12 @@ function summaryOf(group: RowGroup, ticked: ReadonlySet<string>): { open: string
     const open = group.rows.filter((r) => !r.lockedReason).map((r) => r.id);
     const tickedCount = open.filter((id) => ticked.has(id)).length;
     const waiting = group.rows.filter((r) => !r.ticked && !ticked.has(r.id)).length;
-    return { open, tickedCount, text: waiting > 0 ? `${waiting} needs attention` : '' };
+    return { open, tickedCount, text: waitingText(waiting) };
+}
+
+function waitingText(waiting: number): string {
+    if (waiting === 0) return '';
+    return waiting === 1 ? '1 needs attention' : `${waiting} need attention`;
 }
 
 interface RowGroupViewProps {
@@ -77,7 +86,7 @@ function RowGroupView({ group, controls, startsOpen }: RowGroupViewProps) {
                     isDisabled={open.length === 0}
                     onChange={() => controls.toggleGroup(open)}
                 />
-                <DisclosureToggle isOpen={isOpen} onToggle={() => setOpen(!isOpen)} note={text || undefined}>
+                <DisclosureToggle isOpen={isOpen} onToggle={() => setOpen(!isOpen)} note={(!isOpen && text) || undefined}>
                     {group.title}
                 </DisclosureToggle>
             </div>
@@ -86,7 +95,7 @@ function RowGroupView({ group, controls, startsOpen }: RowGroupViewProps) {
                     <CheckboxRow
                         key={row.id}
                         label={row.label}
-                        detail={row.detail}
+                        detail={row.detail || undefined}
                         reason={row.lockedReason}
                         isSelected={controls.ticked.has(row.id) && !row.lockedReason}
                         isDisabled={Boolean(row.lockedReason)}
@@ -100,16 +109,19 @@ function RowGroupView({ group, controls, startsOpen }: RowGroupViewProps) {
 
 function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: UpdatesModalControls }) {
     return (
-        <div className="updates-group-list scroll-fade">
-            {groupsOf(rows).map((group) => (
-                <RowGroupView
-                    key={group.key}
-                    group={group}
-                    controls={controls}
-                    startsOpen={rows.length <= OPEN_UP_TO}
-                />
-            ))}
-        </div>
+        <>
+            {updatesLiveSite(rows) && <LeadText>{LIVE_SITE_SENTENCE}</LeadText>}
+            <div className="updates-group-list scroll-fade scroll-fade--capped">
+                {groupsOf(rows).map((group) => (
+                    <RowGroupView
+                        key={group.key}
+                        group={group}
+                        controls={controls}
+                        startsOpen={rows.length <= OPEN_UP_TO}
+                    />
+                ))}
+            </div>
+        </>
     );
 }
 

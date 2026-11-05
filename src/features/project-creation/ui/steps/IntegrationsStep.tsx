@@ -50,7 +50,7 @@ import { useProjectBuilder } from './useProjectBuilder';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import type { CardAction, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
-import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
+import { DESTINATION_LABEL, DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
@@ -125,7 +125,6 @@ function DestinationLine({
     const workspace = state.adobeWorkspace;
     return (
         <div className="int-destination">
-            <span className="int-destination-label">Deploys To</span>
             {!needsSetup ? (
                 <DestinationContext
                     project={project?.title ?? project?.name}
@@ -134,6 +133,7 @@ function DestinationLine({
                 />
             ) : (
                 <>
+                    <span className="dest-context-label">{DESTINATION_LABEL}</span>
                     <span className="int-destination-unset">Not set</span>
                     <ActionButton isQuiet onPress={onOpenDestination}>
                         Set Up
