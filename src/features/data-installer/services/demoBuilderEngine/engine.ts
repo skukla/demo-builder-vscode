@@ -96,6 +96,8 @@ interface Job {
     reason?: string;
     /** What installing again kept because the SC had changed it (step 05), in one line. */
     note?: string;
+    /** How far the kind in progress has got, when it can say ("450 of 2,046 products"). */
+    detail?: string;
     /** A removal kept containers holding the SC's things, so part of the pack is still in the store. */
     leftInStore?: boolean;
     /** The kept root's Admin step (step 12), for the result's rows. */
@@ -171,12 +173,15 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     const now = deps.now ?? (() => new Date());
     const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString(), request.target);
     let current: string | undefined;
-    const ctx = { ...commerce, recorder, session, log: deps.log, asker: deps.asker };
+    const progress = (line: string): void => void (job.detail = line);
+    const ctx = { ...commerce, recorder, session, log: deps.log, asker: deps.asker, progress };
     const outcome = await installPack(ctx, items, (kind) => {
         if (current) job.perType[current] = 'success';
         current = kind;
         job.perType[kind] = 'processing';
+        job.detail = undefined;
     });
+    job.detail = undefined;
     // The last kind stays in progress through the layer: the watcher ends when every kind asked for
     // has, and the note says what the layer did (step 09).
     const layerStopped = await applySettingsLayer(ctx, lookup);
@@ -268,7 +273,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
         startImport: async (request) => start(deps, jobs, request, 'import', (job) => runInstall(deps, request, job)),
         startDelete: async (request) =>
             start(deps, jobs, request, 'delete', async (job) => {
-                const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id });
+                const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log });
                 if (result.noRecord) throw new Error(NO_RECORD);
                 job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
                 if (result.kept.length > 0) job.leftInStore = true;
@@ -282,6 +287,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 perType: { ...(job?.perType ?? {}) },
                 hasRecord: job !== undefined,
                 ...(job?.note ? { note: job.note } : {}),
+                ...(job?.detail ? { detail: job.detail } : {}),
                 ...(job?.leftInStore ? { leftInStore: true } : {}),
                 ...(job?.keptRoot ? { keptRoot: job.keptRoot } : {}),
                 ...(job?.finishedAt !== undefined ? { processingTimeMs: job.finishedAt - job.startedAt } : {}),

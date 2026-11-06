@@ -150,7 +150,7 @@ function WatchProgress({ record }: { record: ImportJobRecord }): React.JSX.Eleme
     // what left the spinner saying nothing for minutes at a time.
     const live = useImportProgress(record.activationId);
     const progress = summarizeProgress(live?.perType ?? record.perType, record.dataTypes);
-    const label = progressLabel(progress);
+    const label = progressLabel(progress, live?.detail);
 
     // The dialog's own wait spacing, so the spinner sits level between the rule and the buttons.
     return (

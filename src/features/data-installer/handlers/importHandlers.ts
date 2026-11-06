@@ -35,6 +35,8 @@ import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapack
 import { datapackZipHandlers } from './datapackZipHandlers';
 import { demoDataHandlers } from './demoDataHandlers';
 import { exportHandlers } from './exportHandlers';
+import { exportPackHandlers } from './exportPackHandlers';
+import { waitForJob, waitMsOf } from './importJobWait';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
 import { SERVICE_INSTALLS_ONLY_ITS_OWN, SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from './libraryReads';
@@ -71,6 +73,20 @@ interface StartImportPayload {
     saveAs?: { displayName?: unknown };
     /** Reset only, and only ever the confirm's box: turn on "always save" once a save has worked. */
     alwaysSave?: boolean;
+    /** Agent: wait up to this many seconds (at most 60) for the job to end, saying its progress (`importJobWait.ts`). */
+    waitSeconds?: number;
+}
+
+/**
+ * A started job's answer, after waiting on it when asked: the job's record rides along as `job`, so
+ * a job that ends inside the wait needs no second call.
+ */
+async function afterWait(context: HandlerContext, response: HandlerResponse, waitSeconds: unknown): Promise<HandlerResponse> {
+    const waitMs = waitMsOf(waitSeconds);
+    if (!response.success || waitMs === 0) return response;
+    const transient = new TransientStateManager(context.context);
+    const job = await waitForJob(() => transient.get<ImportJobRecord | null>(JOB_KEY, null), waitMs);
+    return { ...response, data: { ...(response.data as object), job } };
 }
 
 export const importHandlers = defineHandlers({
@@ -87,6 +103,7 @@ export const importHandlers = defineHandlers({
     ...importTargetHandlers,
     // Datapack files (save a pack to a zip, load one back), same reason.
     ...datapackZipHandlers,
+    ...exportPackHandlers,
     // Library pack actions: remove your own, copy one into the Data Installer.
     ...datapackLibraryHandlers,
     // What installing again would change, and saving the store's copy as a new version (step 05).
@@ -107,13 +124,14 @@ export const importHandlers = defineHandlers({
 
         // The sync twin is the only thing that will tell us this request is
         // malformed. A 202 from the async entry point would not.
-        return runAndWatch(context, engine, request, {
+        const started = await runAndWatch(context, engine, request, {
             operation: 'import',
             validate: () => engine.validateImport(request),
             begin: () => engine.startImport(request),
             rejected: 'The Data Installer rejected this import request.',
             failed: 'The import could not be started.',
         });
+        return afterWait(context, started, payload?.waitSeconds);
     },
 
     /**
@@ -203,21 +221,24 @@ export const importHandlers = defineHandlers({
         }
         const { engine, request } = prepared;
 
-        return withSavedNote(
-            await runAndWatch(context, engine, request, {
-                operation: 'reset',
-                validate: () => engine.validateRemoval(request),
-                begin: () => engine.startDelete(request),
-                rejected: 'The Data Installer rejected this reset request.',
-                failed: 'The reset could not be started.',
-            }),
-            saved,
-        );
+        const started = await runAndWatch(context, engine, request, {
+            operation: 'reset',
+            validate: () => engine.validateRemoval(request),
+            begin: () => engine.startDelete(request),
+            rejected: 'The Data Installer rejected this reset request.',
+            failed: 'The reset could not be started.',
+        });
+        return withSavedNote(await afterWait(context, started, payload?.waitSeconds), saved);
     },
 
-    'get-datapack-import-status': async (context: HandlerContext): Promise<HandlerResponse> => {
+    /** The running or last job, live while it runs; with `waitSeconds`, once it ends or the wait is up. */
+    'get-datapack-import-status': async (
+        context: HandlerContext,
+        payload?: { waitSeconds?: number },
+    ): Promise<HandlerResponse> => {
         const transient = new TransientStateManager(context.context);
-        const record = await transient.get<ImportJobRecord | null>(JOB_KEY, null);
+        const read = () => transient.get<ImportJobRecord | null>(JOB_KEY, null);
+        const record = await waitForJob(read, waitMsOf(payload?.waitSeconds));
         return { success: true, data: record };
     },
 });

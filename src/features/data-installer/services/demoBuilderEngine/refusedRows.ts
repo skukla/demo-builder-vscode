@@ -113,10 +113,19 @@ export async function tryRow<T>(
     }
 }
 
-/** The one line an install says about what it skipped, naming each row, or nothing. */
+/**
+ * How many skipped rows the line names. A bulk install can skip hundreds for one reason, and the line
+ * reaches the window and every agent's status read (2026-11-05); Debug Logs names each one (`skipRow`).
+ */
+const NAMED_SKIPS = 10;
+
+/** The one line an install says about what it skipped, naming the first rows and counting the rest, or nothing. */
 export function skippedLine(skipped: readonly SkippedRow[] | undefined): string | undefined {
     if (!skipped || skipped.length === 0) return undefined;
-    const rows = skipped.map((row) => `${dataTypeLabel(row.kind).toLowerCase()} ${row.key} (${row.reason.replace(/\.$/u, '')})`);
+    const rows = skipped
+        .slice(0, NAMED_SKIPS)
+        .map((row) => `${dataTypeLabel(row.kind).toLowerCase()} ${row.key} (${row.reason.replace(/\.$/u, '')})`);
     const count = skipped.length === 1 ? '1 row' : `${skipped.length} rows`;
-    return `Skipped ${count}, and installed the rest: ${rows.join('; ')}.`;
+    const more = skipped.length > NAMED_SKIPS ? `; and ${skipped.length - NAMED_SKIPS} more, each named in Debug Logs` : '';
+    return `Skipped ${count}, and installed the rest: ${rows.join('; ')}${more}.`;
 }

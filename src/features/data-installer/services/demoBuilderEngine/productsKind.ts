@@ -2,8 +2,9 @@
  * The `products` kind: each product the store lacks, made with this store's ids, and removed
  * again by its SKU (DI-5; catalog spec §8).
  *
- * Rows arrive in the order the export wrote them, simple and virtual before the configurable,
- * grouped and bundle products that name them, so a child exists before its parent is made.
+ * Products go through Commerce's bulk queue in two waves (`bulkProducts.ts`): everything that
+ * links nothing, then the configurable, bundle and grouped products that link them, so a child
+ * exists before its parent is made whatever order the pack holds them in.
  *
  * Where this deliberately differs from the service: a SKU the store already has is left alone
  * and never recorded, so removal cannot delete it. The service posts every row, which
@@ -12,14 +13,16 @@
  * Not handled here: images. A row names image files by path, and nothing in a pack carries
  * the files; the service sends the paths as they are, and so does this.
  *
- * Endpoints (spec §8): `GET products/{sku}`, `POST products`, `DELETE products/{sku}`.
+ * Endpoints (spec §8): `GET products` filtered to the pack's SKUs, `POST V1/async/bulk/products`
+ * (and `POST products` for a row the queue did not finish), `DELETE products/{sku}`.
  *
  * @module features/data-installer/services/demoBuilderEngine/productsKind
  */
 
 import { z } from 'zod';
+import { BULK_WAIT, type BulkRun, type BulkWait, createProductsInBulk, productIdsInStore, type ProductToMake } from './bulkProducts';
 import { amountsForStore, withoutAmounts } from './giftCardAmounts';
-import { deleteIfPresent, type KindContext, readOrNull } from './kindContext';
+import { deleteIfPresent, type KindContext } from './kindContext';
 import { createOne } from './pendingCreates';
 import { isNumeric, type ProductLookups, productLookups } from './productLookups';
 import { tryRow } from './refusedRows';
@@ -194,12 +197,35 @@ export async function toCommerceProduct(
     };
 }
 
+/** Products that link others, made in a second wave once the ones they link exist. */
+const LINKING_TYPES = new Set(['configurable', 'bundle', 'grouped']);
+
+/** The rows in waves: everything that links nothing, then everything that links (`bulkProducts.ts`). */
+function waves(rows: readonly ProductRow[]): ProductRow[][] {
+    const leaves = rows.filter((row) => !LINKING_TYPES.has(row.type_id));
+    const parents = rows.filter((row) => LINKING_TYPES.has(row.type_id));
+    return [leaves, parents].filter((wave) => wave.length > 0);
+}
+
+/** One product on its own through `POST products`: a row the bulk queue did not finish, or a batch it refused. */
+async function createSingle(ctx: KindContext, kind: string, product: ProductToMake): Promise<void> {
+    // Step 14 item 3: a product Commerce refuses is skipped, and the install carries on.
+    const made = await tryRow(ctx, { kind, key: product.sku }, () =>
+        createOne(ctx, { kind, key: product.sku, id: product.sku }, async () => {
+            await ctx.send('POST', 'products', product.body);
+            return { kind, id: product.sku };
+        }),
+    );
+    if (made) ctx.log(`created product ${product.sku}`);
+}
+
 /**
- * Make each product the store lacks, in the pack's order, and record it.
+ * Make each product the store lacks and record it, through the bulk queue (`bulkProducts.ts`).
  *
  * @param kind - the kind it is recorded under: `products`, or `giftcards` for a pack's gift cards
+ * @param wait - how a batch is waited on (injected for tests)
  */
-export async function installProducts(ctx: KindContext, rows: readonly ProductRow[], kind = PRODUCT_KIND): Promise<void> {
+export async function installProducts(ctx: KindContext, rows: readonly ProductRow[], kind = PRODUCT_KIND, wait: BulkWait = BULK_WAIT): Promise<void> {
     const websiteId = ctx.session.websiteId;
     if (websiteId === undefined) throw new Error('The install target names no website, so the pack\'s products have nowhere to be sold.');
     const lk = productLookups(ctx);
@@ -210,21 +236,28 @@ export async function installProducts(ctx: KindContext, rows: readonly ProductRo
         told.add(key);
         ctx.log(`left ${code} "${value}" at the store's default: the store does not offer it`);
     };
-    for (const row of rows) {
-        if (PRODUCT_KINDS.some((k) => ctx.recorder.has(k, row.sku))) continue;
-        if (await readOrNull(ctx.get, `products/${encodeURIComponent(row.sku)}`)) {
-            ctx.log(`left ${row.sku} alone: the store already has it`);
-            continue;
+    const todo = rows.filter((row) => !PRODUCT_KINDS.some((k) => ctx.recorder.has(k, row.sku)));
+    const there = await productIdsInStore(ctx.get, todo.map((row) => row.sku));
+    const known = (ctx.session.productIds ??= new Map());
+    for (const [sku, id] of there) known.set(sku, id);
+    const fresh = todo.filter((row) => !there.has(row.sku.toLowerCase()));
+    for (const row of todo) if (there.has(row.sku.toLowerCase())) ctx.log(`left ${row.sku} alone: the store already has it`);
+    const run: BulkRun = {
+        kind,
+        noun: kind === GIFT_CARD_KIND ? 'gift cards' : 'products',
+        total: fresh.length,
+        done: 0,
+        single: (product) => createSingle(ctx, kind, product),
+    };
+    for (const wave of waves(fresh)) {
+        const prepared: ProductToMake[] = [];
+        for (const row of wave) {
+            // A row naming something the store lacks, or a row that was skipped, is skipped too.
+            const body = await tryRow(ctx, { kind, key: row.sku }, () => toCommerceProduct(lk, row, websiteId, leftAtDefault));
+            if (body) prepared.push({ sku: row.sku, body });
+            else run.total -= 1;
         }
-        // Step 14 item 3: a product Commerce refuses, or that needs a row skipped, is skipped too.
-        const made = await tryRow(ctx, { kind, key: row.sku }, () =>
-            createOne(ctx, { kind, key: row.sku, id: row.sku }, async () => {
-                await ctx.send('POST', 'products', await toCommerceProduct(lk, row, websiteId, leftAtDefault));
-                return { kind, id: row.sku };
-            }),
-        );
-        if (!made) continue;
-        ctx.log(`created product ${row.sku}`);
+        await createProductsInBulk(ctx, run, prepared, wait);
     }
 }
 

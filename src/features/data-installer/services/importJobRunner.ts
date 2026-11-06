@@ -42,12 +42,14 @@ import type { PollingService } from '@/core/shell/pollingService';
  * move**: raising `timeout` alone leaves `maxAttempts` binding first, and the
  * raised timeout never fires.
  *
- * 120 attempts reaches ~580s; the 600s timeout is the real bound, with the
- * attempt count kept just above it so neither silently truncates the other.
+ * An hour since 2026-11-05: Demo Builder's engine installs Luma's 2,046 products in batches that
+ * can run past the ten minutes this once allowed, and a watch that stops early leaves the record
+ * saying "still running" for a job that finished. 725 attempts reach ~3,605s, so the hour's
+ * timeout is the real bound, the attempt count kept just above it so neither truncates the other.
  */
 export const IMPORT_POLL = {
-    maxAttempts: 120,
-    timeout: 600_000,
+    maxAttempts: 725,
+    timeout: 3_600_000,
 } as const;
 
 /** How long an empty status map is treated as "still starting". */
@@ -100,11 +102,12 @@ export interface JobStatusSource {
  * and the only thing a propagated error would achieve is a wrong verdict.
  */
 function report(
-    onProgress: ((perType: Record<string, DataTypeStatus>) => void) | undefined,
+    onProgress: ((perType: Record<string, DataTypeStatus>, detail?: string) => void) | undefined,
     perType: Record<string, DataTypeStatus>,
+    detail: string | undefined,
 ): void {
     try {
-        onProgress?.(perType);
+        onProgress?.(perType, detail);
     } catch {
         // Deliberately swallowed — see above.
     }
@@ -128,14 +131,15 @@ export async function watchImportJob(args: {
     now?: () => number;
     /**
      * Called with each poll's per-type map, so a watcher can show progress while
-     * it happens rather than only once the job ends.
+     * it happens rather than only once the job ends, and the engine's count for the
+     * type in progress when it has one ("450 of 2,046 products").
      *
      * The map was always built here — `isTerminal` needs it — and simply never
      * left, which is why the modal sat on a bare "Importing…" for minutes.
      * Never called with an empty map: that shape means "no record yet", not
      * progress.
      */
-    onProgress?: (perType: Record<string, DataTypeStatus>) => void;
+    onProgress?: (perType: Record<string, DataTypeStatus>, detail?: string) => void;
 }): Promise<ImportJobResult> {
     const { client, activationId, requestedTypes, polling, abortSignal } = args;
     const graceMs = args.graceMs ?? DEFAULT_GRACE_MS;
@@ -158,7 +162,7 @@ export async function watchImportJob(args: {
             return true;
         }
 
-        report(args.onProgress, latest.perType);
+        report(args.onProgress, latest.perType, latest.detail);
         return isTerminal(latest, requestedTypes);
     };
 

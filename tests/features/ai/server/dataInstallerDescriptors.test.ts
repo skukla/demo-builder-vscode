@@ -21,10 +21,11 @@ import type { HandlerResponse } from '@/types/handlers';
 
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
 
-// Twenty since mark_team_datapack (beta.153); nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
+// Twenty-one since build_datapack_from_export (2026-11-05); twenty since mark_team_datapack (beta.153); nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
 // check_demo_data and clear_demo_data (sixteen since step 07 added rename_datapack, fifteen since step 05).
-it('registers the twenty tools, and only those', () => {
+it('registers the twenty-one tools, and only those', () => {
     expect(DATA_INSTALLER_DESCRIPTORS.map((d) => d.tool).sort()).toEqual([
+        'build_datapack_from_export',
         'check_demo_data',
         'clear_demo_data',
         'copy_library_datapack_to_installer',
@@ -200,16 +201,17 @@ describe('list_datapack_export_items paging', () => {
 // any handler runs — which sign-in is required, whether the tool is exposed as a
 // read, and what a caller may send. Nothing else checks them.
 describe('what each row declares', () => {
-    // open_datapack_zip only reads a local file, so it is the one row with no sign-in.
+    // open_datapack_zip and build_datapack_from_export only touch local files, so they need no sign-in.
     it('requires an Adobe sign-in on every row that reaches a service', () => {
+        const local = new Set(['open_datapack_zip', 'build_datapack_from_export']);
         for (const d of DATA_INSTALLER_DESCRIPTORS) {
-            expect(d.needsAuth).toStrictEqual(d.tool === 'open_datapack_zip' ? [] : ['adobe']);
+            expect(d.needsAuth).toStrictEqual(local.has(d.tool) ? [] : ['adobe']);
         }
     });
 
     // readOnly is what the write-gating machinery reads. The dry run is a read;
     // the three that touch a live instance or the shared catalog are not.
-    it('exposes eight reads and twelve writes', () => {
+    it('exposes eight reads and thirteen writes', () => {
         const byFlag = (readOnly: boolean) =>
             DATA_INSTALLER_DESCRIPTORS.filter((d) => d.readOnly === readOnly)
                 .map((d) => d.tool)
@@ -226,6 +228,7 @@ describe('what each row declares', () => {
             'validate_datapack_import',
         ]);
         expect(byFlag(false)).toEqual([
+            'build_datapack_from_export',
             'clear_demo_data',
             'copy_library_datapack_to_installer',
             'delete_library_datapack',
@@ -259,12 +262,12 @@ describe('what each row accepts', () => {
             'websiteCode',
         ].sort();
 
-        for (const tool of ['validate_datapack_import', 'start_datapack_import']) {
-            expect(keys(tool)).toEqual(expected);
-        }
+        expect(keys('validate_datapack_import')).toEqual(expected);
+        // The start may wait on the job it began, rather than an agent polling it (2026-11-05).
+        expect(keys('start_datapack_import')).toEqual([...expected, 'waitSeconds'].sort());
         // Its one addition: the answer to the changes it names (step 05).
-        // And Save As's name, for changes kept when the project's pack is not the user's.
-        expect(keys('reset_datapack')).toEqual([...expected, 'changes', 'saveAs'].sort());
+        // And Save As's name, for changes kept when the project's pack is not the user's; and the wait.
+        expect(keys('reset_datapack')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
     });
 
     it('lets reset_datapack answer keep or drop, and gives an agent no way to turn on "always"', () => {
@@ -321,14 +324,17 @@ describe('what each row accepts', () => {
         expect(() => schema.saveAs.parse({ displayName: '' })).toThrow();
     });
 
-    it('asks the three project-derived reads for nothing at all', () => {
-        for (const tool of [
-            'get_datapack_import_target',
-            'list_datapack_import_scopes',
-            'get_datapack_import_status',
-        ]) {
+    it('asks the two project-derived reads for nothing at all', () => {
+        for (const tool of ['get_datapack_import_target', 'list_datapack_import_scopes']) {
             expect(row(tool)!.inputSchema).toBeUndefined();
         }
+    });
+
+    it('asks the status read only how long it may wait, at most a minute', () => {
+        expect(keys('get_datapack_import_status')).toEqual(['waitSeconds']);
+        const schema = row('get_datapack_import_status')!.inputSchema!;
+        expect(schema.waitSeconds.parse(60)).toBe(60);
+        expect(() => schema.waitSeconds.parse(61)).toThrow();
     });
 
     // An empty dataTypes is a request that would do nothing, and an agent that

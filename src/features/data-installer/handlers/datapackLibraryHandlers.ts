@@ -39,7 +39,7 @@ import { SHARE_CONSENT } from '../shareWording';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { failure, installerEchoRefusal } from './datapackZipHandlers';
 import { packReadsFor } from './recordedPackHandlers';
-import type { DatapackId } from '@/types/datapack';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -120,12 +120,15 @@ function readShare(payload?: ShareLibraryDatapackPayload): { name: string; share
 function writerFor(
     context: HandlerContext,
     access: { baseUrl: string; getToken: () => Promise<string>; orgCode?: string },
+    store: DatapackStoreName,
 ) {
     return new DatapackStoreWriter({
         baseUrl: access.baseUrl,
         getToken: access.getToken,
         ...(access.orgCode ? { orgCode: access.orgCode } : {}),
         log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
+        // Only Demo Builder's own store takes a large list in parts (`itemParts.ts`).
+        inParts: store === 'library',
     });
 }
 
@@ -141,7 +144,7 @@ async function deleteLayerOf(
     try {
         const same = (await myLayerVersions(access.client, id.name)).find((row) => row.id.version === id.version);
         if (!same) return {};
-        await writerFor(context, access).deleteDatapack(same.id);
+        await writerFor(context, access, 'library').deleteDatapack(same.id);
         return { settingsLayerDeleted: true };
     } catch (error) {
         context.debugLogger.debug(`${LOG_PREFIX} Could not delete the settings layer of ${id.name}@${id.version}: ${String(error)}`);
@@ -173,7 +176,7 @@ export const datapackLibraryHandlers = defineHandlers({
         const access = await resolveDataInstallerAccess(context, 'library');
         if (!access.ok) return access.response;
         try {
-            const result = await writerFor(context, access).deleteDatapack(id);
+            const result = await writerFor(context, access, 'library').deleteDatapack(id);
             if (result === 'not-found') {
                 return {
                     success: false,
@@ -217,7 +220,7 @@ export const datapackLibraryHandlers = defineHandlers({
                     code: ErrorCode.INVALID_OPERATION,
                 };
             }
-            const writer = writerFor(context, access);
+            const writer = writerFor(context, access, 'library');
             for (const version of versions) await writer.updateDisplayName(version, input.displayName);
             context.logger.info(`${LOG_PREFIX} Renamed ${input.name} (${versions.length} versions) in the datapack library`);
             return { success: true, data: { datapackName: input.name, displayName: input.displayName, versions: versions.length } };
@@ -239,7 +242,7 @@ export const datapackLibraryHandlers = defineHandlers({
             if (versions.length === 0) {
                 return { success: false, error: `The datapack library has no pack of yours named ${input.name}.`, code: ErrorCode.INVALID_OPERATION };
             }
-            const writer = writerFor(context, access);
+            const writer = writerFor(context, access, 'library');
             for (const version of versions) await writer.updateShared(version, input.shared);
             const layers = await myLayerVersions(access.client, input.name);
             for (const layer of layers) await writer.updateShared(layer.id, input.shared);
@@ -265,7 +268,7 @@ export const datapackLibraryHandlers = defineHandlers({
             if (versions.length === 0) {
                 return { success: false, error: `Demo Builder's datapack store has no pack of yours named ${name}.`, code: ErrorCode.INVALID_OPERATION };
             }
-            const writer = writerFor(context, access);
+            const writer = writerFor(context, access, 'library');
             for (const version of versions) await writer.updateTeam(version, payload.team);
             context.logger.info(`${LOG_PREFIX} ${payload.team ? 'Marked' : 'Unmarked'} ${name} as a team datapack (${versions.length} versions).`);
             return { success: true, data: { datapackName: name, team: payload.team, versions: versions.length } };
@@ -297,7 +300,7 @@ export const datapackLibraryHandlers = defineHandlers({
         try {
             const pack = await readPackFromStore(library.client, id, 'library');
             // No `update`: an existing pack in the shared catalog is refused, never replaced.
-            const outcome = await writePackToStore(writerFor(context, installer), pack);
+            const outcome = await writePackToStore(writerFor(context, installer, 'installer'), pack);
             const label = `${id.name}@${id.version}`;
             context.logger.info(
                 `${LOG_PREFIX} Copied ${label} from the datapack library into the Data Installer: ${outcome.stored.length} of ${pack.items.length} data types`,

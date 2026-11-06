@@ -140,6 +140,16 @@ const IMPORT_TARGET = {
     source: z.enum(['installer', 'library']).optional().describe('Which store holds the pack: installer (default) or library. A library pack needs the demo-builder engine'),
 };
 
+/** An agent's call that waits on the job it started rather than polling it (`importJobWait.ts`). */
+const WAIT_FOR_JOB = {
+    waitSeconds: z
+        .number()
+        .min(0)
+        .max(60)
+        .optional()
+        .describe('Wait up to this many seconds (at most 60) for the job to end, its progress shown; the answer then carries job'),
+};
+
 /**
  * Page the export item list.
  *
@@ -202,10 +212,21 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'Progress of the running or most recent datapack import/reset. Poll this after ' +
-            'start_datapack_import — that call returns as soon as the job starts, not when it ends.',
+            'Progress of the running or most recent datapack import/reset: its outcome (watching while it runs), ' +
+            "each data type's state, and while products go in a count as detail (\"450 of 2,046 products\"). " +
+            'With waitSeconds (up to 60) it answers when the job ends or the wait is up, showing progress as it goes: ' +
+            'call it with waitSeconds 60 while outcome is watching, rather than polling quickly. A pack of 2,000 ' +
+            'products takes several minutes.',
         map: importHandlers,
         type: 'get-datapack-import-status',
+        inputSchema: {
+            waitSeconds: z
+                .number()
+                .min(0)
+                .max(60)
+                .optional()
+                .describe('Wait up to this many seconds (at most 60) for the job to end, its progress shown; omit to answer at once'),
+        },
     },
     {
         tool: 'list_datapack_export_items',
@@ -374,8 +395,11 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Import a datapack into a live Commerce instance. Returns an activationId as soon as ' +
-            'the job starts — poll get_datapack_import_status for the outcome. Validate first. ' +
+            'Import a datapack into a live Commerce instance. Returns an activationId once the job starts. ' +
+            'With waitSeconds (up to 60) it waits for the job to end, showing its progress, and the answer carries ' +
+            'the outcome as job. A small pack ends inside the wait; a large one (2,000 products) takes several ' +
+            'minutes: then call get_datapack_import_status with waitSeconds 60 until outcome is no longer watching. ' +
+            'Validate first. ' +
             'With the demo-builder engine only the dataTypes named install, with what they need. ' +
             'A kind left out is left alone: not installed, not removed, not put back. ' +
             'Installing a pack again updates and removes what it made before, of the kinds named, and keeps what was ' +
@@ -397,7 +421,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         map: importHandlers,
         type: 'start-datapack-import',
         confirm: true,
-        inputSchema: { ...DATAPACK_ID, ...IMPORT_TARGET },
+        inputSchema: { ...DATAPACK_ID, ...IMPORT_TARGET, ...WAIT_FOR_JOB },
     },
     {
         tool: 'reset_datapack',
@@ -405,7 +429,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             "Remove a datapack's data from the Commerce instance so the project can be reused. " +
-            'Cannot be undone. Returns an activationId; poll get_datapack_import_status. With the ' +
+            'Cannot be undone. Returns an activationId; with waitSeconds (up to 60) it waits for the removal to end, ' +
+            'showing its progress, and carries the outcome as job; else follow with get_datapack_import_status. With the ' +
             'demo-builder engine it takes everything the install record lists, whatever dataTypes names (it may be ' +
             'omitted; the service needs it). A category, set, company, shared catalog or customer group the pack made ' +
             "that holds things it did not make is kept (a kept company with its admin and its catalog), and " +
@@ -430,6 +455,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         inputSchema: {
             ...DATAPACK_ID,
             ...IMPORT_TARGET,
+            ...WAIT_FOR_JOB,
             dataTypes: z.array(z.string()).min(1).optional().describe('Only for a pack the service installed: the data types to remove, from list_datapack_data_types'),
             changes: z.enum(['keep', 'drop']).optional().describe("The user's changes since install: keep saves them first (into their own pack, or as saveAs), drop loses them"),
             saveAs: SAVE_AS,
@@ -514,6 +540,48 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                     'Where to write the file, inside the project; folders it names are made if missing. ' +
                         'A path not ending in .zip is a folder and gets <name>-<version>.datapack.zip',
                 ),
+            dataTypes: z
+                .array(z.string())
+                .min(1)
+                .optional()
+                .describe(
+                    'Save only these data types (get_datapack lists them); omit to save all. Use it to leave ' +
+                        'out an item the store cannot return, such as one too large to send',
+                ),
+        },
+    },
+    {
+        tool: 'build_datapack_from_export',
+        needsAuth: [],
+        // Reads and writes files inside the project and nothing else: no store, no Commerce.
+        readOnly: false,
+        description:
+            'Build a datapack file from a Commerce product export (the CSV System > Data Transfer > Export writes, ' +
+            'or the same table as JSON): products, gift cards, the categories they name, and stock. An export ' +
+            'defines no attributes, so name basePath, a datapack file (save_datapack_zip makes one) whose ' +
+            'attributes, attribute sets and other kinds the new pack keeps; its products and stock are replaced ' +
+            'by the export\'s, and its categories kept when it has them. Without one, categories hang from a root ' +
+            'named <displayName> Catalog and products keep Commerce\'s own fields; leftOutAttributes names the rest. ' +
+            'SKUs are kept as exported. The pack is checked with ' +
+            "the install's own checks first and not written if it would be refused. Load it with load_datapack_zip.",
+        map: importHandlers,
+        type: 'build-datapack-from-export',
+        inputSchema: {
+            exportPath: z.string().describe('The export file, inside the project'),
+            path: z
+                .string()
+                .optional()
+                .describe(
+                    'Where to write the pack, inside the project (default the project folder); a path not ending in .zip is a folder and gets <name>-<version>.datapack.zip',
+                ),
+            datapackName: z.string().describe('The new pack name: letters, digits, - and _'),
+            version: z.string().describe('The new pack version, e.g. main'),
+            displayName: z.string().describe('The name SCs see, e.g. Luma'),
+            description: z.string().optional().describe('One line about the pack'),
+            basePath: z
+                .string()
+                .optional()
+                .describe('A datapack file, inside the project, whose attributes, sets and other kinds the new pack keeps'),
         },
     },
     {

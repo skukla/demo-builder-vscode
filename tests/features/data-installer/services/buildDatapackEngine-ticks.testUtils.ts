@@ -125,8 +125,8 @@ export function ticksHarness(): TicksHarness {
     const settings = configStore({ default: { [GRID]: '12' } });
     mockCommerceClientForProject.mockResolvedValue({
         get: (route: string) => (route.startsWith('system/config') ? settings.get(route) : store.get(route)),
-        send: async (method: 'POST' | 'PUT' | 'DELETE', route: string, body: unknown) => {
-            if (route !== 'system/config') return store.send(method, route, body);
+        send: async (method: 'POST' | 'PUT' | 'DELETE', route: string, body: unknown, via?: { bulk?: boolean }) => {
+            if (route !== 'system/config') return store.send(method, route, body, via);
             store.sent.push({ method, path: route, body });
             return settings.put(body as { items: CommerceSystemConfigWrite[] });
         },

@@ -9,7 +9,8 @@
  * this writes into the store's own catalog.
  *
  * Each data type is one request, so a type too large for one request is refused on
- * its own and the caller can carry on with the rest.
+ * its own and the caller can carry on with the rest. Demo Builder's own store also takes a list
+ * too large for one request in parts (`inParts`, `itemParts.ts`); the Data Installer does not.
  *
  * @module features/data-installer/services/datapackStoreWriter
  */
@@ -17,6 +18,7 @@
 import { actionUrl } from './dataInstallerConfig';
 import { DataInstallerApiError } from './dataInstallerErrors';
 import { type DataInstallerSignIn, signInHeaders } from './dataInstallerSignIn';
+import { itemsTooLarge, partsOf, splittable } from './itemParts';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { DatapackId } from '@/types/datapack';
 
@@ -31,6 +33,11 @@ export interface DatapackStoreWriterDeps extends DataInstallerSignIn {
     timeoutMs?: number;
     /** One line per call: route and status. Never the rows. */
     log?: (line: string) => void;
+    /**
+     * The store takes a list too large for one request in parts (`append`): Demo Builder's own store
+     * since 2026-11-05. Never the Data Installer, which would keep only the last part.
+     */
+    inParts?: boolean;
 }
 
 /** What a new pack's catalog entry says about it. */
@@ -88,13 +95,23 @@ export class DatapackStoreWriter {
      * @throws DataInstallerApiError naming the type, with the store's own reason
      */
     async addDataItem(id: DatapackId, dataType: string, records: unknown): Promise<void> {
-        const response = await this.post('add-data-item', {
-            datapack_name: id.name,
-            version: id.version,
-            data_type: dataType,
-            data: JSON.stringify(records),
-        });
-        await this.check(response, 'add-data-item', dataType);
+        const parts = this.deps.inParts && splittable(records) ? partsOf(records) : [records];
+        for (const [index, part] of parts.entries()) {
+            const response = await this.post('add-data-item', {
+                datapack_name: id.name,
+                version: id.version,
+                data_type: dataType,
+                data: JSON.stringify(part),
+                // The first part replaces what the type held; each after it adds to it.
+                ...(index > 0 ? { append: true } : {}),
+            });
+            await this.check(response, 'add-data-item', dataType);
+        }
+    }
+
+    /** The data types this store could not take, said before anything is written (`itemParts.ts`). */
+    oversized(items: ReadonlyArray<{ dataType: string; records: unknown }>): string[] {
+        return itemsTooLarge(items, this.deps.inParts === true);
     }
 
     /**

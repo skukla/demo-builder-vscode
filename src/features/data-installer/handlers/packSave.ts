@@ -87,6 +87,7 @@ export async function saveToPack(
         getToken: library.getToken,
         ...(library.orgCode ? { orgCode: library.orgCode } : {}),
         log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
+        inParts: true,
     });
     try {
         // No `update`: the version saved is always new, so nothing in the library is written over.

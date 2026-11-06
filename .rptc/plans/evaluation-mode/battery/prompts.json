@@ -1429,6 +1429,15 @@
         "why": "Datapack files (owner, 2026-10-01: an optional export to zip from either store, import the same way). Neither store has a file form, so without these tools an agent pages every data type over curl and hand-builds a zip. Tier 2: it writes a local file and a private pack into the team library. The ask contains its own undo (delete_library_datapack), so the journey ends at zero."
     },
     {
+        "id": "t2-datapack-from-export",
+        "prompt": "I exported our products from Commerce to products.csv in this project. Save the Data Installer's luma datapack, version eds-compatible, as a file, then build a new datapack called luma-from-export from the CSV using that file for the attributes, and tell me what it holds and anything it left out.",
+        "expect": [
+            "save_datapack_zip",
+            "build_datapack_from_export"
+        ],
+        "why": "Building a pack from a Commerce product export (owner, 2026-11-05: the Luma and Venia rebuilds took one-off scripts, and a missing tool is the finding). Without it an agent hand-writes a converter. Tier 2: it reads the store and writes two local files, nothing else; deleting the files is the undo."
+    },
+    {
         "id": "t3-copy-library-pack-to-installer",
         "prompt": "Our datapack library has my justrite pack, version v1. Make it installable by copying it into the Data Installer.",
         "expect": [

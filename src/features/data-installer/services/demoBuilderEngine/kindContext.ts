@@ -94,6 +94,11 @@ export interface CatalogSession {
      * item 3, `refusedRows.ts`): the install carries on, and its note names each.
      */
     skipped?: SkippedRow[];
+    /**
+     * Product ids this install already knows, by lowercased SKU (`bulkProducts.ts`): the ones it
+     * found or made in bulk. A parent's links read them here rather than one product at a time.
+     */
+    productIds?: Map<string, number>;
 }
 
 /** A pack row the install skipped, by kind and the pack's name for it, and why. */
@@ -140,7 +145,11 @@ export function ownedKey(kind: string, key: string): string {
  * What this engine made for a pack row, from a repeat install's plan: its id, `null` when the
  * SC has deleted it since (leave it deleted), or `undefined` when nothing is recorded.
  */
-export function ownedId(session: CatalogSession, kind: string, key: string): string | null | undefined {
+export function ownedId(
+    session: CatalogSession,
+    kind: string,
+    key: string,
+): string | null | undefined {
     return session.owned?.get(ownedKey(kind, key));
 }
 
@@ -152,6 +161,8 @@ export interface KindContext {
     session: CatalogSession;
     /** One line per object, for Debug Logs. */
     log: (line: string) => void;
+    /** How far a long kind has got, in one line for the progress window ("450 of 2,046 products"); absent, unsaid. */
+    progress?: (line: string) => void;
     /** How an install asks the SC for the one Admin step a pack can leave (step 12); absent, it is left open. */
     asker?: RootStepAsker;
 }
@@ -161,7 +172,12 @@ const DEFAULT_ROOT_CATEGORY = { id: 2, name: 'Default Category' };
 
 /** A fresh session for one install, before any kind has run. */
 export function newCatalogSession(storeId = 1): CatalogSession {
-    return { setIds: new Map(), groupIds: new Map(), storeId, rootCategory: { ...DEFAULT_ROOT_CATEGORY } };
+    return {
+        setIds: new Map(),
+        groupIds: new Map(),
+        storeId,
+        rootCategory: { ...DEFAULT_ROOT_CATEGORY },
+    };
 }
 
 /**
@@ -219,7 +235,10 @@ export async function deleteIfPresent(send: CommerceSend, path: string): Promise
  * The store's copy of each recorded object, read one at a time, by recorded id; an object the
  * store no longer has (the read answers undefined) is left out. Every kind's store copies use it.
  */
-export async function eachCopy(objects: readonly CreatedObject[], read: (o: CreatedObject) => Promise<unknown>): Promise<Map<string, unknown>> {
+export async function eachCopy(
+    objects: readonly CreatedObject[],
+    read: (o: CreatedObject) => Promise<unknown>,
+): Promise<Map<string, unknown>> {
     const copies = new Map<string, unknown>();
     for (const object of objects) {
         const copy = await read(object);
@@ -236,6 +255,9 @@ export async function eachCopy(objects: readonly CreatedObject[], read: (o: Crea
  */
 export function parseRows<T>(schema: z.ZodType<T>, records: unknown, what: string): T {
     const parsed = schema.safeParse(records);
-    if (!parsed.success) throw new Error(`The pack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+    if (!parsed.success)
+        throw new Error(
+            `The pack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`,
+        );
     return parsed.data;
 }

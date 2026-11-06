@@ -18,12 +18,13 @@ function reply(status: number, body: unknown): Response {
     } as Response;
 }
 
-function writer(fetchImpl: jest.Mock, log?: jest.Mock): DatapackStoreWriter {
+function writer(fetchImpl: jest.Mock, log?: jest.Mock, inParts?: boolean): DatapackStoreWriter {
     return new DatapackStoreWriter({
         baseUrl: BASE,
         getToken: async () => 'sc-token',
         fetchImpl: fetchImpl as unknown as typeof fetch,
         ...(log ? { log } : {}),
+        ...(inParts ? { inParts } : {}),
     });
 }
 
@@ -280,5 +281,35 @@ describe('the org a write names', () => {
 
         const [, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
         expect(init.headers).toEqual({ Authorization: 'Bearer sc-token', 'x-gw-ims-org-id': 'ORG@AdobeOrg' });
+    });
+});
+
+// 2026-11-05: App Builder takes at most 1 MB a request; Luma's products are about 5 MB.
+describe('a list too large for one request', () => {
+    const big = Array.from({ length: 40 }, (_, i) => ({ product: { sku: `s${i}`, description: 'd'.repeat(60 * 1024) } }));
+    const id = { name: 'luma', version: 'main' };
+
+    it('goes to a store that takes parts as several requests, each after the first appending, rows in order', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(201, { success: true }));
+
+        await writer(fetchImpl, undefined, true).addDataItem(id, 'products', big);
+
+        const bodies = fetchImpl.mock.calls.map((_, n) => sent(fetchImpl, n).body);
+        expect(bodies.length).toBeGreaterThan(1);
+        expect(bodies[0]).not.toHaveProperty('append');
+        expect(bodies.slice(1).every((b) => b.append === true)).toBe(true);
+        expect(bodies.flatMap((b) => JSON.parse(String(b.data)) as unknown[])).toEqual(big);
+        expect(bodies.every((b) => Buffer.byteLength(JSON.stringify(b)) < 1024 * 1024)).toBe(true);
+    });
+
+    it('goes whole to a store that does not, and is named by oversized before anything is sent', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(201, { success: true }));
+        const items = [{ dataType: 'products', records: big }, { dataType: 'categories', records: [] }];
+
+        await writer(fetchImpl).addDataItem(id, 'products', big);
+
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+        expect(writer(fetchImpl).oversized(items)).toEqual(['products']);
+        expect(writer(fetchImpl, undefined, true).oversized(items)).toStrictEqual([]);
     });
 });

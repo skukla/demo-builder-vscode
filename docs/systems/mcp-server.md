@@ -937,6 +937,42 @@ integration's counts with its own and names the ERPs the orders were removed fro
 asked, is never called: `data.preview.erp.held` says why (with the update to run) and those orders
 are left open. The store list never offers Commerce's own Admin website (`admin`, id 0).
 
+### Waiting on a datapack job instead of polling it (owner, 2026-11-05)
+
+No new tool. `start_datapack_import`, `reset_datapack` and `get_datapack_import_status` take
+`waitSeconds`, at most 60 (`importJobWait.ts`). The call waits for the job to end. While it waits,
+it sends each change of progress into the agent's chat as a phase line, for example "Installing the
+datapack: 450 of 2,046 products". It answers when the job ends, or when the wait is up with
+`outcome` still `watching`. The start and the removal then carry the job's record as `job`, so a
+small pack needs one call. Without `waitSeconds` every call answers at once, as before.
+
+`get_datapack_import_status` is live while a job runs: the watch writes each poll's per-type states
+to the record it reads, and while products go in, Demo Builder's engine adds a count as `detail`.
+Until 2026-11-05 the record said only `watching` until the job ended, while the window counted
+products. Its note names at most ten skipped rows and counts the rest (`skippedLine`; Debug Logs
+names each): a 2,000-row skip would otherwise put about 180,000 characters into every status read. The watch now follows a job for up to an hour, up from ten minutes, because a 2,000-product
+install can run past ten.
+
+A minute, not the whole job: each agent client limits how long one call may run, and those limits
+are not measured here. The MCP "tasks" feature, where the client does the waiting, is the fuller
+answer; it is a backlog question until Claude Code and Copilot support it.
+
+### A datapack from a Commerce product export (owner, 2026-11-05)
+
+`build_datapack_from_export` (local files only, no sign-in) reads a Commerce product export inside
+the project (`exportPath`) and writes a datapack file there (`path`, as every file-writing tool names
+its output; default the project folder). The export is the CSV System > Data Transfer > Export writes,
+or the same table as JSON. The file holds products, gift cards, the categories they name, and stock
+(`exportPack/`, `exportPackHandlers.ts`). An export defines no attributes, so `basePath` names a
+datapack file (`save_datapack_zip` makes one): the new pack keeps that pack's attributes, attribute
+sets, categories and other kinds, and replaces its products and stock. This is how Luma and Venia
+were rebuilt on 2026-11-05. Without a base pack, categories hang from a root named `<displayName>
+Catalog`, and products keep Commerce's own fields. The answer says what was left out:
+`leftOutAttributes` and `unmatchedCategories` (each cut at 50 entries, with a count past that). SKUs
+are kept exactly as exported: the storefront takes any SKU (`pdpPath.ts`, ADR-024). The pack is
+checked with the install's own row checks and is not written if the install would refuse it.
+The CSV reader is our own (`csvTable.ts`), not an npm package (PL-94).
+
 ### Sharing a library pack (owner, 2026-10-30)
 
 `share_datapack` (confirm-gated; the consent names the pack and whether it is shared) shares every

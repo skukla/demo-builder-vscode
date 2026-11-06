@@ -86,6 +86,32 @@ describe('progress push', () => {
         );
     });
 
+    // Owner, 2026-11-05: an agent reading the status saw only "watching" while the window counted products.
+    it('writes each poll to the record, so the status an agent reads shows it while the job runs', async () => {
+        happyClient();
+        let finish: (value: Awaited<ReturnType<typeof mockedWatch>>) => void = () => undefined;
+        mockedWatch.mockImplementation(async ({ onProgress }) => {
+            onProgress?.({ categories: 'success', products: 'processing' }, '50 of 330 products');
+            return new Promise((resolve) => (finish = resolve));
+        });
+        const { context } = makeImportHarness();
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await settleWatch();
+        const running = await importHandlers['get-datapack-import-status'](context);
+        finish({ outcome: 'success', perType: { categories: 'success', products: 'success' } });
+        await settleWatch();
+        const ended = await importHandlers['get-datapack-import-status'](context);
+
+        expect(running.data).toMatchObject({
+            outcome: 'watching',
+            perType: { categories: 'success', products: 'processing' },
+            detail: '50 of 330 products',
+        });
+        expect(ended.data).toMatchObject({ outcome: 'success', perType: { products: 'success' } });
+        expect(ended.data).not.toHaveProperty('detail');
+    });
+
     /** A reset watches the same way and must say so, for the wording. */
     it('names the operation, so a reset is not worded as an import', async () => {
         happyClient();
@@ -222,7 +248,7 @@ describe('the shared progress channel', () => {
                 state: 'running',
                 stage: OPERATION_STAGES.removingDatapack.label,
                 step: '0 of 2 data types: Categories',
-            }),
+            })
         );
     });
 
@@ -256,18 +282,30 @@ describe('the shared progress channel', () => {
 
     it('closes the notice with the line about what it kept, so a backgrounded install still says it', async () => {
         happyClient();
-        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {}, note: 'Kept 1 item changed in the Admin.' });
+        mockedWatch.mockResolvedValue({
+            outcome: 'success',
+            perType: {},
+            note: 'Kept 1 item changed in the Admin.',
+        });
         const { context } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
         await new Promise((r) => setTimeout(r, 25));
 
-        expect(pushes()).toContainEqual({ id: DATAPACK_OPERATION_ID, state: 'succeeded', note: 'Kept 1 item changed in the Admin.' });
+        expect(pushes()).toContainEqual({
+            id: DATAPACK_OPERATION_ID,
+            state: 'succeeded',
+            note: 'Kept 1 item changed in the Admin.',
+        });
     });
 
     it('closes the notice as failed with the runner reason', async () => {
         happyClient();
-        mockedWatch.mockResolvedValue({ outcome: 'error', perType: {}, reason: 'two types failed' });
+        mockedWatch.mockResolvedValue({
+            outcome: 'error',
+            perType: {},
+            reason: 'two types failed',
+        });
         const { context } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -413,15 +451,21 @@ describe('what the finished watch records', () => {
         });
     });
 
-    it('keeps the engine\'s line about what it kept, so the window and get_datapack_import_status say it', async () => {
+    it("keeps the engine's line about what it kept, so the window and get_datapack_import_status say it", async () => {
         const { context, stores } = makeImportHarness();
         happyClient();
-        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {}, note: 'Kept 2 items changed in the Admin.' });
+        mockedWatch.mockResolvedValue({
+            outcome: 'success',
+            perType: {},
+            note: 'Kept 2 items changed in the Admin.',
+        });
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
         await new Promise((resolve) => setImmediate(resolve));
 
-        expect(stores.peek('dataInstaller.import.current')).toMatchObject({ note: 'Kept 2 items changed in the Admin.' });
+        expect(stores.peek('dataInstaller.import.current')).toMatchObject({
+            note: 'Kept 2 items changed in the Admin.',
+        });
     });
 
     it('omits both fields when the runner reported neither', async () => {
@@ -447,7 +491,7 @@ describe('what the finished watch records', () => {
         await new Promise((resolve) => setImmediate(resolve));
 
         expect(mockedWatch).toHaveBeenCalledWith(
-            expect.objectContaining({ operation: 'reset', activationId: 'act-9' }),
+            expect.objectContaining({ operation: 'reset', activationId: 'act-9' })
         );
     });
 });
@@ -480,10 +524,11 @@ describe('the feature turned off mid-import', () => {
         await new Promise((resolve) => setImmediate(resolve));
 
         expect(result.success).toBe(true);
-        expect(mockedWatch).toHaveBeenCalledWith(expect.objectContaining({ activationId: 'act-1' }));
+        expect(mockedWatch).toHaveBeenCalledWith(
+            expect.objectContaining({ activationId: 'act-1' })
+        );
     });
 });
-
 
 describe('a start the service refuses', () => {
     it('reports the service reason and records no job', async () => {
@@ -551,19 +596,24 @@ describe('recording the datapack on the project', () => {
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(
-            expect.objectContaining({ datapack: { name: 'bodea', version: 'main', store: 'installer' } }),
+            expect.objectContaining({
+                datapack: { name: 'bodea', version: 'main', store: 'installer' },
+            })
         );
     });
 
     it('CLEARS it once a reset finishes, so removal is not offered for data that is gone', async () => {
-        const { context } = makeImportHarness({ ...PAAS_PROJECT, datapack: { name: 'bodea', version: 'main' } });
+        const { context } = makeImportHarness({
+            ...PAAS_PROJECT,
+            datapack: { name: 'bodea', version: 'main' },
+        });
         happyClient();
 
         await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
         await new Promise((resolve) => setImmediate(resolve));
 
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(
-            expect.objectContaining({ datapack: undefined }),
+            expect.objectContaining({ datapack: undefined })
         );
     });
 
@@ -572,7 +622,10 @@ describe('recording the datapack on the project', () => {
      * stopped, so the half-removed store's project named no pack while the record listed 8 objects.
      */
     it('leaves it while a reset is still running', async () => {
-        const { context } = makeImportHarness({ ...PAAS_PROJECT, datapack: { name: 'bodea', version: 'main' } });
+        const { context } = makeImportHarness({
+            ...PAAS_PROJECT,
+            datapack: { name: 'bodea', version: 'main' },
+        });
         happyClient();
         mockedWatch.mockReturnValue(new Promise(() => undefined));
 
@@ -582,19 +635,28 @@ describe('recording the datapack on the project', () => {
         expect(context.stateManager.saveProject).not.toHaveBeenCalled();
     });
 
-    it.each(['error', 'partial', 'stopped', 'still-running'] as const)('leaves it when a reset ends %s', async (outcome) => {
-        const { context } = makeImportHarness({ ...PAAS_PROJECT, datapack: { name: 'bodea', version: 'main' } });
-        happyClient();
-        mockedWatch.mockResolvedValue({ outcome, perType: {} });
+    it.each(['error', 'partial', 'stopped', 'still-running'] as const)(
+        'leaves it when a reset ends %s',
+        async (outcome) => {
+            const { context } = makeImportHarness({
+                ...PAAS_PROJECT,
+                datapack: { name: 'bodea', version: 'main' },
+            });
+            happyClient();
+            mockedWatch.mockResolvedValue({ outcome, perType: {} });
 
-        await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
-        await new Promise((resolve) => setImmediate(resolve));
+            await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
+            await new Promise((resolve) => setImmediate(resolve));
 
-        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
-    });
+            expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        }
+    );
 
     it('leaves it when a reset finished but left part of the pack in the store', async () => {
-        const { context } = makeImportHarness({ ...PAAS_PROJECT, datapack: { name: 'bodea', version: 'main' } });
+        const { context } = makeImportHarness({
+            ...PAAS_PROJECT,
+            datapack: { name: 'bodea', version: 'main' },
+        });
         happyClient();
         mockedWatch.mockResolvedValue({ outcome: 'success', perType: {}, leftInStore: true });
 
@@ -605,10 +667,19 @@ describe('recording the datapack on the project', () => {
     });
 
     it('leaves another project alone when the SC switched projects before the reset finished', async () => {
-        const { context } = makeImportHarness({ ...PAAS_PROJECT, datapack: { name: 'bodea', version: 'main' } });
+        const { context } = makeImportHarness({
+            ...PAAS_PROJECT,
+            datapack: { name: 'bodea', version: 'main' },
+        });
         happyClient();
-        const other = { ...PAAS_PROJECT, name: 'demo-b', path: '/nonexistent/projects/demo-b', datapack: { name: 'other', version: '1' } };
-        let finish: (value: { outcome: 'success'; perType: Record<string, never> }) => void = () => undefined;
+        const other = {
+            ...PAAS_PROJECT,
+            name: 'demo-b',
+            path: '/nonexistent/projects/demo-b',
+            datapack: { name: 'other', version: '1' },
+        };
+        let finish: (value: { outcome: 'success'; perType: Record<string, never> }) => void = () =>
+            undefined;
         mockedWatch.mockReturnValue(new Promise((resolve) => (finish = resolve)));
 
         await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
@@ -626,7 +697,7 @@ describe('recording the datapack on the project', () => {
         const { context } = makeImportHarness();
         happyClient();
         (context.stateManager.saveProject as jest.Mock).mockRejectedValue(
-            new Error('manifest locked'),
+            new Error('manifest locked')
         );
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);

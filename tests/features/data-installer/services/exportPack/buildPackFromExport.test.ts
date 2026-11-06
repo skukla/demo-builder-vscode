@@ -1,0 +1,79 @@
+/**
+ * buildPackFromExport — a datapack from a Commerce product export, with and without a base pack.
+ *
+ * The export is Luma's own, trimmed (tests/fixtures/data-installer/commerce-product-export-luma.csv;
+ * Luma's source repo is public). On the full Luma and Venia exports the products, gift cards and
+ * stock it makes matched the converter that rebuilt both packs row for row (2026-11-05, 3,208
+ * products, website ids and SKU case aside: the converter lowercased SKUs to match the Data
+ * Installer's packs); these pin the behaviour on a few rows.
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { packRowProblems } from '@/features/data-installer/services/demoBuilderEngine/runPack';
+import type { DatapackFile } from '@/features/data-installer/services/datapackZip';
+import { buildPackFromExport } from '@/features/data-installer/services/exportPack/buildPackFromExport';
+
+const CSV = fs.readFileSync(path.join(__dirname, '../../../../fixtures/data-installer/commerce-product-export-luma.csv'), 'utf8');
+const ID = { name: 'luma-from-export', version: 'main' };
+
+const itemOf = (pack: DatapackFile, kind: string) => pack.items.find((i) => i.dataType === kind)?.records;
+type Row = { product: Record<string, any> };
+const product = (pack: DatapackFile, sku: string) => (itemOf(pack, 'products') as Row[]).find((r) => r.product.sku === sku)!.product;
+
+/** A base pack defining the attributes the export's products name, as the Data Installer's Luma does. */
+const BASE: DatapackFile = {
+    id: { name: 'luma', version: 'eds-compatible' },
+    displayName: 'Luma',
+    items: [
+        { dataType: 'product_attributes', records: ['color', 'size', 'eco_collection'].map((code) => ({ attribute: { attribute_code: code } })) },
+        { dataType: 'cart_rules', records: [{ rule: { name: 'Spend $50' } }] },
+        { dataType: 'products', records: [{ product: { sku: 'old' } }] },
+    ],
+};
+
+describe('buildPackFromExport', () => {
+    it('makes products, gift cards, categories and stock, children before the products that link them', () => {
+        const { pack, products, giftCards } = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma' });
+
+        expect(pack.items.map((i) => i.dataType)).toEqual(['categories', 'products', 'giftcards', 'source_items', 'stock_source_links']);
+        expect([products, giftCards]).toEqual([6, 1]);
+        const types = (itemOf(pack, 'products') as Row[]).map((r) => r.product.type_id);
+        expect(types.indexOf('configurable')).toBeGreaterThan(types.lastIndexOf('simple'));
+        expect(product(pack, 'MH01').extension_attributes.configurable_product_links).toEqual(['MH01-XS-Black', 'MH01-XS-Gray']);
+        expect(product(pack, '24-WG085_Group').product_links.map((l: any) => l.linked_product_sku)).toEqual(['24-WG085', '24-WG086']);
+        const gift = (itemOf(pack, 'giftcards') as Row[])[0].product;
+        expect(gift.extension_attributes.giftcard_amounts).toEqual([{ value: 10 }, { value: 20 }]);
+        expect((itemOf(pack, 'source_items') as { sourceItems: unknown[] }).sourceItems).toHaveLength(6);
+    });
+
+    it('passes the install\'s own row checks', () => {
+        const { pack } = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma' });
+        expect(packRowProblems(Object.fromEntries(pack.items.map((i) => [i.dataType, i.records])), undefined)).toStrictEqual([]);
+    });
+
+    it('without a base pack keeps Commerce\'s own fields and names every attribute it left out', () => {
+        const result = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma' });
+        const codes = product(result.pack, 'MH01-XS-Black').custom_attributes.map((a: any) => a.attribute_code);
+
+        expect(codes).not.toContain('color');
+        expect(result.leftOutAttributes).toEqual(expect.arrayContaining(['color', 'size', 'eco_collection']));
+        expect(result.leftOutAttributes).not.toContain('giftcard_type');
+        // The storefront takes any SKU (ADR-024), so the export's are kept exactly.
+        expect(product(result.pack, 'MH01-XS-Black').sku).toBe('MH01-XS-Black');
+    });
+
+    it('with a base pack keeps its attributes and other kinds, and replaces its products', () => {
+        const { pack, leftOutAttributes } = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma', base: BASE });
+        const codes = product(pack, 'MH01-XS-Black').custom_attributes.map((a: any) => a.attribute_code);
+
+        expect(codes).toEqual(expect.arrayContaining(['color', 'size']));
+        expect(leftOutAttributes).not.toContain('color');
+        expect(itemOf(pack, 'cart_rules')).toEqual(BASE.items[1].records);
+        expect((itemOf(pack, 'products') as Row[]).some((r) => r.product.sku === 'old')).toBe(false);
+    });
+
+    it('refuses a file that holds no products', () => {
+        expect(() => buildPackFromExport({ exportText: 'sku,name\n', exportName: 'p.csv', id: ID, displayName: 'Luma' })).toThrow(/holds no products/);
+    });
+});

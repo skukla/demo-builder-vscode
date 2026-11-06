@@ -264,6 +264,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     clear_demo_data: "Clearing the demo's store data",
     save_datapack_zip: 'Saving the datapack as a file',
     open_datapack_zip: 'Reading the datapack file',
+    build_datapack_from_export: 'Building a datapack file',
     load_datapack_zip: 'Loading a datapack file',
     delete_library_datapack: 'Deleting a library datapack',
     rename_datapack: 'Renaming the datapack',

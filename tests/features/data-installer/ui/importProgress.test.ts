@@ -146,6 +146,15 @@ describe('progressLabel', () => {
         expect(line({ ...firstFive, customer_groups: 'processing' }, FOURTEEN)).toBe('5 of 14 data types: Customer Groups');
     });
 
+    it('says the engine\'s count in place of the type\'s name while that type is in flight', () => {
+        const counted = (perType: Record<string, DataTypeStatus>, requested: string[]) =>
+            progressLabel(summarizeProgress(perType, requested), '450 of 2,046 products');
+        expect(counted({ products: 'processing' }, ['products'])).toBe('450 of 2,046 products');
+        expect(counted({ ...firstFive, customer_groups: 'processing' }, FOURTEEN)).toBe('5 of 14 data types: 450 of 2,046 products');
+        // Between polls nothing is in flight, so a count left over names nothing: the next type it is.
+        expect(counted(firstFive, FOURTEEN)).toBe('5 of 14 data types: Customer Groups');
+    });
+
     it('names the next type between polls, never a bare count', () => {
         expect(line(firstFive, FOURTEEN)).toBe('5 of 14 data types: Customer Groups');
     });

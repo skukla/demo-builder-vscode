@@ -292,6 +292,14 @@ export const TIMEOUTS = {
      */
     COMMERCE_BULK_MAX: 10 * 60 * 1000,
 
+    /**
+     * How often a datapack job's record is read while an agent's call waits on it (owner,
+     * 2026-11-05: the wait replaces blind polling), and the longest such a wait may be: one
+     * minute, well inside any agent client's limit on one call.
+     */
+    DATAPACK_JOB_WAIT_POLL: 2000,
+    DATAPACK_JOB_WAIT_MAX: 60 * 1000,
+
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
 

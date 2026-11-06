@@ -216,6 +216,8 @@ export interface ImportProgressMessage {
     activationId: string;
     operation?: 'import' | 'reset';
     perType: Record<string, DataTypeStatus>;
+    /** How far the type in progress has got (`JobStatusSnapshot.detail`). */
+    detail?: string;
 }
 
 /**
@@ -245,6 +247,8 @@ export interface JobStatusSnapshot {
     hasRecord: boolean;
     /** What the job kept and why, in one line: Demo Builder's engine on a repeat install (step 05). */
     note?: string;
+    /** How far the type in progress has got, when the engine can say: "450 of 2,046 products". */
+    detail?: string;
     /**
      * A removal that finished but left part of the pack in the store on purpose: Demo Builder's
      * engine kept containers holding the SC's things, and its install record still lists them.
@@ -311,6 +315,8 @@ export interface ImportJobRecord {
     reason?: string;
     /** What it kept and why, in one line ("Kept 2 things you had changed in the Admin."). */
     note?: string;
+    /** While it runs: how far the type in progress has got ("450 of 2,046 products"). */
+    detail?: string;
     /** The kept root category's Admin step (`JobStatusSnapshot.keptRoot`). */
     keptRoot?: KeptRootStep;
     processingTimeMs?: number;

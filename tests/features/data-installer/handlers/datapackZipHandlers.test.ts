@@ -121,6 +121,31 @@ describe('save-datapack-zip', () => {
         });
     });
 
+    // DI-8, 2026-11-05: the Data Installer answers 400 for Luma's product_export, too large to send,
+    // so the rest of that pack could only be saved by leaving it out.
+    it('saves only the data types named, and refuses one the pack does not hold', async () => {
+        catalog.getDatapackDetail.mockResolvedValue({ ...DETAIL, dataTypes: ['categories', 'product_export'] });
+        const context = contextFor(createMockProject({ path: dir }), false);
+
+        const saved = await save(context, {
+            datapackName: 'justrite',
+            version: 'v1',
+            path: 'out.zip',
+            dataTypes: ['categories'],
+        });
+        const refused = await save(context, {
+            datapackName: 'justrite',
+            version: 'v1',
+            path: 'other.zip',
+            dataTypes: ['customers'],
+        });
+
+        expect(saved).toMatchObject({ success: true, data: { dataTypes: ['categories'] } });
+        expect(catalog.getDataItem.mock.calls).toEqual([[ID, 'categories']]);
+        expect(refused).toMatchObject({ success: false, error: expect.stringContaining('holds no customers') });
+        expect(fs.existsSync(path.join(dir, 'other.zip'))).toBe(false);
+    });
+
     it('names the file after the pack when an agent gives a folder', async () => {
         await save(contextFor(createMockProject({ path: dir }), false), {
             datapackName: 'justrite',

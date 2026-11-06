@@ -15,13 +15,16 @@
 
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { CommerceBulkAccepted, CommerceBulkStatus, CommerceGet, CommerceSend } from '@/types/commerceWire';
+import type {
+    CommerceBulkAccepted,
+    CommerceBulkStatus,
+    CommerceGet,
+    CommerceSend,
+} from '@/types/commerceWire';
 import type { CommerceBulkOutcome } from '@/types/erpAssign';
-
 
 const COMPLETE = 1;
 const OPEN = 4;
-
 
 /**
  * Send one bulk call.
@@ -34,12 +37,15 @@ const OPEN = 4;
  */
 export async function startBulk(
     send: CommerceSend,
-    method: 'POST' | 'PUT',
+    method: 'POST' | 'PUT' | 'DELETE',
     path: string,
     bodies: readonly unknown[],
 ): Promise<string> {
-    const accepted = (await send(method, path, bodies, { bulk: true })) as CommerceBulkAccepted | null;
-    if (!accepted?.bulk_uuid) throw new Error('Commerce did not accept the bulk write (no bulk id came back).');
+    const accepted = (await send(method, path, bodies, {
+        bulk: true,
+    })) as CommerceBulkAccepted | null;
+    if (!accepted?.bulk_uuid)
+        throw new Error('Commerce did not accept the bulk write (no bulk id came back).');
     return accepted.bulk_uuid;
 }
 
@@ -68,7 +74,11 @@ export function productBulkFollow(onProgress: (step: string) => void): BulkFollo
 }
 
 /** One status read, as counts. */
-function outcomeOf(uuid: string, status: CommerceBulkStatus, expected: number): CommerceBulkOutcome {
+function outcomeOf(
+    uuid: string,
+    status: CommerceBulkStatus,
+    expected: number,
+): CommerceBulkOutcome {
     const operations = status.operations_list ?? [];
     const total = Math.max(expected, Number(status.operation_count ?? operations.length));
     const failed = operations
@@ -78,6 +88,63 @@ function outcomeOf(uuid: string, status: CommerceBulkStatus, expected: number): 
     // An operation not listed yet is still queued.
     const open = total - complete - failed.length;
     return { uuid, total, complete, failed, open, timedOut: false };
+}
+
+/** How one request in a bulk ended: made, refused for good, worth sending again, or not run yet. */
+export type BulkRowState = 'done' | 'refused' | 'retry' | 'open';
+
+/** One request's end, by its index in the call, with Commerce's words. */
+export interface BulkRow {
+    index: number;
+    state: BulkRowState;
+    message: string;
+}
+
+const STATE_OF: Record<number, BulkRowState> = {
+    1: 'done',
+    2: 'retry',
+    3: 'refused',
+    4: 'open',
+    5: 'refused',
+};
+
+/** What a request's state says when Commerce gave no words of its own. */
+const UNSAID: Record<BulkRowState, string> = {
+    done: 'made',
+    retry: 'failed, worth trying again',
+    refused: 'refused',
+    open: 'still queued',
+};
+
+/**
+ * Each request's end, by its index in the call. An operation's `id` is that index: a live status
+ * from the Justrite ACCS store (2026-10-09) numbers a three-product call 0, 1, 2
+ * (tests/fixtures/commerce-rest/bulk-status-products.json). A request not listed yet is open.
+ *
+ * @param get - the signed Commerce GET
+ * @param uuid - the bulk's uuid
+ * @param count - how many requests the call carried
+ */
+export async function readBulkRows(
+    get: CommerceGet,
+    uuid: string,
+    count: number,
+): Promise<BulkRow[]> {
+    const status = ((await get(`bulk/${uuid}/status`)) ?? {}) as CommerceBulkStatus;
+    const rows: BulkRow[] = Array.from({ length: count }, (_, index) => ({
+        index,
+        state: 'open',
+        message: UNSAID.open,
+    }));
+    for (const op of status.operations_list ?? []) {
+        if (!Number.isInteger(op.id) || op.id < 0 || op.id >= count) continue;
+        rows[op.id] = {
+            index: op.id,
+            state: STATE_OF[op.status] ?? 'refused',
+            message: op.result_message || UNSAID[STATE_OF[op.status] ?? 'refused'],
+        };
+    }
+    return rows;
 }
 
 /**

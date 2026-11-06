@@ -41,10 +41,20 @@ export const JOB_KEY = 'dataInstaller.import.current';
 function datapackStage(
     record: ImportJobRecord,
     perType: ImportJobRecord['perType'],
+    detail: string | undefined,
 ): { stage: string; step: string; expectation?: string } {
     const stage = progressStep(record.operation === 'reset' ? 'reset' : 'import');
-    const step = progressLabel(summarizeProgress(perType ?? {}, record.dataTypes)) ?? detailFor(stage) ?? '';
+    const step = progressLabel(summarizeProgress(perType ?? {}, record.dataTypes), detail) ?? detailFor(stage) ?? '';
     return { stage, step, expectation: expectationFor(stage) };
+}
+
+/**
+ * The job's progress as one line for an agent's chat: the step, then where it has got, as the
+ * notification words it ("Installing the datapack: 450 of 2,046 products").
+ */
+export function datapackProgressLine(record: ImportJobRecord): string {
+    const { stage, step } = datapackStage(record, record.perType, record.detail);
+    return step ? `${stage}: ${step}` : stage;
 }
 
 /**
@@ -68,6 +78,13 @@ async function watchAndRecord(
     engine: DatapackEngine,
     resetOf: string | undefined,
 ): Promise<void> {
+    // Each poll is also written to the record, so an agent reading the status sees it while it
+    // runs (owner, 2026-11-05). Writes go in order, and the outcome waits for the last of them.
+    let progressWritten: Promise<unknown> = Promise.resolve();
+    const writeProgress = (perType: ImportJobRecord['perType'], detail: string | undefined): void => {
+        const live = { ...record, perType, ...(detail ? { detail } : {}) };
+        progressWritten = progressWritten.then(() => transient.set(JOB_KEY, live)).catch(() => undefined);
+    };
     try {
         // The engine that started the job is the one asked how it is going: only it knows.
         const result = await watchImportJob({
@@ -79,11 +96,12 @@ async function watchAndRecord(
             // Each poll goes straight to the modal. Without this the webview
             // learns nothing until the job ends, which on a fourteen-type pack
             // is minutes of an unexplained spinner.
-            onProgress: (perType) => {
+            onProgress: (perType, detail) => {
                 void context.sendMessage(IMPORT_PROGRESS_MESSAGE, {
                     activationId: record.activationId,
                     operation: record.operation,
                     perType,
+                    ...(detail ? { detail } : {}),
                 });
                 // The SAME progress on the shared channel, so closing the modal
                 // can hand the job to a notification that keeps narrating
@@ -92,10 +110,12 @@ async function watchAndRecord(
                 void pushOperationProgress({
                     id: DATAPACK_OPERATION_ID,
                     state: 'running',
-                    ...datapackStage(record, perType),
+                    ...datapackStage(record, perType, detail),
                 });
+                writeProgress(perType, detail);
             },
         });
+        await progressWritten;
         // What a repeat install kept goes with the success, for a notification to say too.
         const kept = result.note ? { note: result.note } : {};
         await pushOperationProgress(
@@ -126,6 +146,7 @@ async function watchAndRecord(
         context.logger.warn(
             `[Data Installer] Stopped watching import ${record.activationId}: ${reason}`,
         );
+        await progressWritten;
         await stopWatching(transient, record, reason);
     }
 }

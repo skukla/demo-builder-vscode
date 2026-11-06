@@ -22,12 +22,14 @@ import type { KeptRootStep } from '../../types';
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
 import { installAttributes, parseAttributeRows } from './attributesKind';
 import { ASSIGNMENT_KINDS, CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
+import { removeProductsInBulk } from './bulkRemoval';
 import { CART_RULE_KIND, installCartRules, parseCartRuleRows } from './cartRulesKind';
 import { installCategories, parseCategoryPack } from './categoriesKind';
 import { installCompanies, parseCompanyRows } from './companiesKind';
 import { COUPON_KIND, installCoupons, parseCouponRows } from './couponsKind';
 import { installCustomerGroups, installCustomers, parseCustomerGroupRows, parseCustomerRows } from './customerKinds';
 import {
+    type CreatedObject,
     type InstallRecord,
     type RecordFiles,
     forgetInstallRecord,
@@ -261,6 +263,17 @@ export function kindsOnRecord(record: Pick<InstallRecord, 'created' | 'pending'>
     return [...INSTALLABLE_KINDS.filter((kind) => kinds.has(kind)), ...[...kinds].filter((kind) => !INSTALLABLE_KINDS.includes(kind))];
 }
 
+/** The objects in order, split where they change between products and everything else. */
+function productRuns(objects: readonly CreatedObject[]): CreatedObject[][] {
+    const runs: CreatedObject[][] = [];
+    for (const object of objects) {
+        const last = runs[runs.length - 1];
+        if (last && PRODUCT_KINDS.includes(last[0].kind) === PRODUCT_KINDS.includes(object.kind)) last.push(object);
+        else runs.push([object]);
+    }
+    return runs;
+}
+
 /**
  * Take back everything the record lists, newest first, dropping each from the record as it
  * goes; keep a container that holds what the engine did not make, and what stays with it
@@ -274,7 +287,7 @@ export function kindsOnRecord(record: Pick<InstallRecord, 'created' | 'pending'>
 export async function removePack(
     commerce: RemovalAccess,
     files: RecordFiles,
-    target: { projectPath: string; pack: DatapackId },
+    target: { projectPath: string; pack: DatapackId; log?: (line: string) => void },
 ): Promise<RemovalResult> {
     const record = await readInstallRecord(files, target.projectPath, target.pack);
     if (!record) return { removed: 0, noRecord: true, kept: [] };
@@ -286,9 +299,14 @@ export async function removePack(
     const settingObjects = created.filter((o) => o.kind === STORE_CONFIG_KIND);
     const settings = settingObjects.length > 0 ? await putBackSettings(commerce, settingObjects, (o) => recorder.drop(o)) : undefined;
     const { take, kept } = await decideRemovals(commerce.get, removalOrder({ ...record, created: [...created] }).filter((o) => o.kind !== STORE_CONFIG_KIND));
-    for (const object of take) {
+    const one = async (object: CreatedObject): Promise<void> => {
         await takeBack(commerce, object);
         await recorder.drop(object);
+    };
+    // Products go back through the bulk queue, a run of them at a time, in the record's order.
+    for (const run of productRuns(take)) {
+        if (PRODUCT_KINDS.includes(run[0].kind)) await removeProductsInBulk({ ...commerce, log: target.log }, recorder, run, one);
+        else for (const object of run) await one(object);
     }
     if (kept.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
     const keptRoot = await keptRootStep(commerce.get, kept, record.rootStep?.storeRootId);

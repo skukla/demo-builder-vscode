@@ -31,6 +31,7 @@ export async function openLibraryWriter(context: HandlerContext): Promise<Opened
         getToken: access.getToken,
         ...(access.orgCode ? { orgCode: access.orgCode } : {}),
         log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
+        inParts: true,
     });
     return { ok: true, client: access.client, writer };
 }

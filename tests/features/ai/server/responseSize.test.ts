@@ -424,6 +424,9 @@ describe('rows with no output safety net are classified', () => {
         'save_datapack_zip',
         'open_datapack_zip',
         'load_datapack_zip',
+        // `{path, bytes, dataTypes, products, giftCards, categories}` and three short lists, at most a
+        // few dozen attribute codes and paths (`exportPackHandlers.ts`).
+        'build_datapack_from_export',
         // `{datapackName, version, deleted}` on success.
         'delete_library_datapack',
         // `{datapackName, version, target, pack, stored, failed}`, as load answers.

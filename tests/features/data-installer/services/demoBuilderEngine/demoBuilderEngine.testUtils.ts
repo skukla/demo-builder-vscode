@@ -3,6 +3,7 @@
  * whose Commerce reads answer from a table of paths and whose writes are recorded in order.
  */
 
+import { withBulkQueue } from './bulkQueue.testUtils';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import { type RecordFiles, openInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { type KindContext, newCatalogSession } from '@/features/data-installer/services/demoBuilderEngine/kindContext';
@@ -42,22 +43,26 @@ export async function fakeContext(
     const sent: SentCall[] = [];
     const logged: string[] = [];
     const recorder = await openInstallRecord(memoryFiles(), PROJECT, PACK, NOW);
+    // Commerce's bulk queue runs each request through the single route below (`bulkQueue.testUtils.ts`).
+    const store = withBulkQueue(
+        async (path) => {
+            if (!(path in reads)) throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
+            const answer = reads[path];
+            return typeof answer === 'function' ? (answer as () => unknown)() : answer;
+        },
+        async (method, path, body) => {
+            const call = { method, path, body };
+            sent.push(call);
+            return answers(call);
+        },
+    );
     return {
         sent,
         logged,
         recorder,
         session: newCatalogSession(),
         log: (line) => void logged.push(line),
-        get: async (path) => {
-            if (!(path in reads)) throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
-            const answer = reads[path];
-            return typeof answer === 'function' ? (answer as () => unknown)() : answer;
-        },
-        send: async (method, path, body) => {
-            const call = { method, path, body };
-            sent.push(call);
-            return answers(call);
-        },
+        ...store,
     };
 }
 

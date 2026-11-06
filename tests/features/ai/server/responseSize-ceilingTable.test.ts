@@ -29,6 +29,8 @@ describe('the ceiling table tracks the tool surface', () => {
         'save_datapack_zip',
         'open_datapack_zip',
         'load_datapack_zip',
+        // Counts, and two lists cut at 50 entries with a count past that (`exportPackHandlers.ts`).
+        'build_datapack_from_export',
         'delete_library_datapack',
         'copy_library_datapack_to_installer',
         'regenerate_ai_files',
@@ -87,11 +89,14 @@ describe('the ceiling table tracks the tool surface', () => {
         'install_prerequisite',
         // Group 8's three job-handle writes. Each returns an activation id or
         // a short per-type outcome list — bounded by the number of DATA TYPES
-        // in one datapack, not by how much data moved.
+        // in one datapack, not by how much data moved. Since 2026-11-05 the start
+        // and the removal may carry the job record (`waitSeconds`), whose note names
+        // at most ten skipped rows (`skippedLine`), so that stays bounded too.
         'start_datapack_import',
         'reset_datapack',
         'start_datapack_export',
-        // A target reference and a status record. Both fixed-shape.
+        // A target reference and a status record. Both fixed-shape; the record's note
+        // names at most ten skipped rows (`skippedLine`, 2026-11-05).
         'get_datapack_import_target',
         'get_datapack_import_status',
         // AB-5 pair. `install_integration` returns one three-field install

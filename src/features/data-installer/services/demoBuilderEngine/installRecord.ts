@@ -130,7 +130,8 @@ export interface InstallRecorder {
     update(update: ObjectUpdate): Promise<void>;
     /** The object of a kind the pack names `key`; an object recorded with no key answers by its id. */
     byKey(kind: string, key: string): CreatedObject | undefined;
-    drop(object: Pick<CreatedObject, 'kind' | 'id'>): Promise<void>;
+    /** Take objects off the record in one write, in place (a caller may hold `created`): one, or a bulk removal's batch. */
+    drop(...objects: Pick<CreatedObject, 'kind' | 'id'>[]): Promise<void>;
     /** Creates whose answer has not come back. */
     readonly pending: readonly PendingObject[];
     /** Write these down as about to be created, before the create is sent. */
@@ -317,10 +318,10 @@ export async function openInstallRecord(
             await save();
         },
         byKey: (kind, key) => record.created.find((o) => o.kind === kind && (o.key ?? o.id) === key),
-        async drop({ kind, id }) {
-            const index = indexOf(kind, id);
-            if (index < 0) return;
-            record.created.splice(index, 1);
+        async drop(...gone) {
+            const kept = record.created.filter((o) => !gone.some((g) => g.kind === o.kind && g.id === o.id));
+            if (kept.length === record.created.length) return;
+            record.created.splice(0, record.created.length, ...kept);
             await save();
         },
         pending,

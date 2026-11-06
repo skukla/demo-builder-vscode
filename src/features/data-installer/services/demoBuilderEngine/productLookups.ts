@@ -22,7 +22,13 @@
  */
 
 import { loadStoreSets } from './attributeSetsKind';
-import { type AmbiguousCategoryKey, type KindContext, MissingNameError, readOrNull, segment } from './kindContext';
+import {
+    type AmbiguousCategoryKey,
+    type KindContext,
+    MissingNameError,
+    readOrNull,
+    segment,
+} from './kindContext';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 
 /** What the store holds for an attribute: how it is entered and its options. */
@@ -36,10 +42,16 @@ export interface StoreAttribute {
 }
 
 /** The names Commerce gives two groups that packs spell another way (the service's aliases). */
-const GROUP_ALIASES: Record<string, string> = { General: 'Default (General)', 'NOT LOGGED IN': 'Guest' };
+const GROUP_ALIASES: Record<string, string> = {
+    General: 'Default (General)',
+    'NOT LOGGED IN': 'Guest',
+};
 
 /** The same two groups the other way round, tried when the pack's own spelling finds nothing (step 08). */
-const OTHER_SPELLING: Record<string, string> = { 'Default (General)': 'General', Guest: 'NOT LOGGED IN' };
+const OTHER_SPELLING: Record<string, string> = {
+    'Default (General)': 'General',
+    Guest: 'NOT LOGGED IN',
+};
 
 export const isNumeric = (value: unknown): boolean => /^\d+$/u.test(String(value));
 
@@ -103,13 +115,18 @@ function cached<T>(read: (key: string) => Promise<T>): (key: number | string) =>
 }
 
 /** The url key a category carries among its custom attributes. */
-export function urlKeyOf(category: StoreCategory): string | undefined {
+export function urlKeyOf(category: Pick<StoreCategory, 'custom_attributes'>): string | undefined {
     const value = category.custom_attributes?.find((a) => a.attribute_code === 'url_key')?.value;
     return typeof value === 'string' ? value : undefined;
 }
 
 /** The first item of a search filtered on one field, or undefined. */
-async function firstWhere<T>(ctx: KindContext, path: string, field: string, value: string): Promise<T | undefined> {
+async function firstWhere<T>(
+    ctx: KindContext,
+    path: string,
+    field: string,
+    value: string,
+): Promise<T | undefined> {
     return (await readAllPages<T>(ctx.get, path, `&${search(field, value)}`))[0];
 }
 
@@ -119,7 +136,12 @@ function setLookups(ctx: KindContext): Pick<ProductLookups, 'setId' | 'setName'>
         setId: cached(async (name) => {
             await loadStoreSets(ctx);
             const id = ctx.session.setIds.get(name);
-            if (id === undefined) throw new MissingNameError('attribute_sets', name, `The store has no attribute set named ${name}.`);
+            if (id === undefined)
+                throw new MissingNameError(
+                    'attribute_sets',
+                    name,
+                    `The store has no attribute set named ${name}.`,
+                );
             return id;
         }),
         setName: async (id) => {
@@ -138,7 +160,11 @@ interface FoundCategory {
 }
 
 /** Record a url key that matched more than one category, for the install's result (DI-9). */
-function noteAmbiguousKey(session: KindContext['session'], urlKey: string, candidates: FoundCategory[]): void {
+function noteAmbiguousKey(
+    session: KindContext['session'],
+    urlKey: string,
+    candidates: FoundCategory[],
+): void {
     const names = candidates.map((c) => c.name ?? String(c.id));
     if (!session.ambiguousCategoryKeys) session.ambiguousCategoryKeys = new Map();
     session.ambiguousCategoryKeys.set(urlKey, { chosen: names[0], names });
@@ -148,24 +174,42 @@ function noteAmbiguousKey(session: KindContext['session'], urlKey: string, candi
  * The install result's line for the url keys that matched more than one category (DI-9): which
  * key, which categories, and where everything linking it went. Nothing when every key was unique.
  */
-export function ambiguousKeysLine(keys: ReadonlyMap<string, AmbiguousCategoryKey> | undefined): string | undefined {
+export function ambiguousKeysLine(
+    keys: ReadonlyMap<string, AmbiguousCategoryKey> | undefined,
+): string | undefined {
     if (!keys || keys.size === 0) return undefined;
     return [...keys]
-        .map(([key, { chosen, names }]) => `The url key ${key} names ${names.length} categories (${names.join(', ')}), so everything linking it went into ${chosen}.`)
+        .map(
+            ([key, { chosen, names }]) =>
+                `The url key ${key} names ${names.length} categories (${names.join(', ')}), so everything linking it went into ${chosen}.`,
+        )
         .join(' ');
 }
 
-function categoryLookups(ctx: KindContext): Pick<ProductLookups, 'categoryId' | 'categoryUrlKey' | 'category'> {
-    const category = cached((id) => readOrNull<StoreCategory>(ctx.get, `categories/${segment(id)}`));
+function categoryLookups(
+    ctx: KindContext,
+): Pick<ProductLookups, 'categoryId' | 'categoryUrlKey' | 'category'> {
+    const category = cached((id) =>
+        readOrNull<StoreCategory>(ctx.get, `categories/${segment(id)}`),
+    );
     return {
         categoryId: cached(async (urlKey) => {
-            const found = await readAllPages<FoundCategory>(ctx.get, 'categories/list', `&${search('url_key', urlKey)}`);
+            const found = await readAllPages<FoundCategory>(
+                ctx.get,
+                'categories/list',
+                `&${search('url_key', urlKey)}`,
+            );
             const root = `/${ctx.session.rootCategory.id}/`;
             // Under the target's root first; anywhere when nothing there matches.
             const underRoot = found.filter((c) => `${c.path ?? ''}/`.includes(root));
             const candidates = underRoot.length > 0 ? underRoot : found;
             const pick = candidates[0];
-            if (!pick) throw new MissingNameError('categories', urlKey, `The store has no category with the url key ${urlKey}.`);
+            if (!pick)
+                throw new MissingNameError(
+                    'categories',
+                    urlKey,
+                    `The store has no category with the url key ${urlKey}.`,
+                );
             if (candidates.length > 1) noteAmbiguousKey(ctx.session, urlKey, candidates);
             return String(pick.id);
         }),
@@ -178,25 +222,54 @@ function categoryLookups(ctx: KindContext): Pick<ProductLookups, 'categoryId' | 
 }
 
 /** Attributes and their options: code to attribute and back, label to option id and back. */
-function attributeLookups(ctx: KindContext): Pick<ProductLookups, 'attribute' | 'attributeCode' | 'optionId' | 'optionLabel'> {
+function attributeLookups(
+    ctx: KindContext,
+): Pick<ProductLookups, 'attribute' | 'attributeCode' | 'optionId' | 'optionLabel'> {
     const attribute = cached(async (code) => {
-        const found = await readOrNull<StoreAttribute>(ctx.get, `products/attributes/${encodeURIComponent(code)}`);
-        if (!found) throw new MissingNameError('product_attributes', code, `The store has no attribute ${code}.`);
+        const found = await readOrNull<StoreAttribute>(
+            ctx.get,
+            `products/attributes/${encodeURIComponent(code)}`,
+        );
+        if (!found)
+            throw new MissingNameError(
+                'product_attributes',
+                code,
+                `The store has no attribute ${code}.`,
+            );
         return found;
     });
     return {
         attribute,
-        attributeCode: cached(async (id) => (await firstWhere<{ attribute_code?: string }>(ctx, 'products/attributes', 'attribute_id', id))?.attribute_code),
+        attributeCode: cached(
+            async (id) =>
+                (
+                    await firstWhere<{ attribute_code?: string }>(
+                        ctx,
+                        'products/attributes',
+                        'attribute_id',
+                        id,
+                    )
+                )?.attribute_code,
+        ),
         optionId: async (code, label) => {
             // By label first; then by the option's own code, which is what a layout field
             // stores and a pack sends (`1column`, never "1 column").
             const options = (await attribute(code)).options ?? [];
-            const option = options.find((o) => equalLabel(o.label, label)) ?? options.find((o) => o.value === label);
-            if (!option?.value) throw new MissingNameError('product_attributes', code, `The attribute ${code} has no option "${label}".`);
+            const option =
+                options.find((o) => equalLabel(o.label, label)) ??
+                options.find((o) => o.value === label);
+            if (!option?.value)
+                throw new MissingNameError(
+                    'product_attributes',
+                    code,
+                    `The attribute ${code} has no option "${label}".`,
+                );
             return option.value;
         },
         optionLabel: async (code, id) => {
-            const option = ((await attribute(code)).options ?? []).find((o) => o.value === String(id));
+            const option = ((await attribute(code)).options ?? []).find(
+                (o) => o.value === String(id),
+            );
             return option?.label?.trim() || undefined;
         },
     };
@@ -211,13 +284,25 @@ function groupLookups(ctx: KindContext): Pick<ProductLookups, 'groupId' | 'group
             const first = GROUP_ALIASES[code] ?? code;
             for (const wanted of first === code ? [code, OTHER_SPELLING[code]] : [first, code]) {
                 if (wanted === undefined) continue;
-                const found = await readAllPages<{ id: number; code: string }>(ctx.get, 'customerGroups/search', `&${search('customer_group_code', wanted)}`);
+                const found = await readAllPages<{ id: number; code: string }>(
+                    ctx.get,
+                    'customerGroups/search',
+                    `&${search('customer_group_code', wanted)}`,
+                );
                 const pick = found.find((g) => g.code === wanted);
                 if (pick) return pick.id;
             }
-            throw new MissingNameError('customer_groups', code, `The store has no customer group ${code}.`);
+            throw new MissingNameError(
+                'customer_groups',
+                code,
+                `The store has no customer group ${code}.`,
+            );
         }),
-        groupCode: cached(async (id) => (await readOrNull<{ code?: string }>(ctx.get, `customerGroups/${segment(id)}`))?.code),
+        groupCode: cached(
+            async (id) =>
+                (await readOrNull<{ code?: string }>(ctx.get, `customerGroups/${segment(id)}`))
+                    ?.code,
+        ),
     };
 }
 
@@ -225,11 +310,20 @@ function groupLookups(ctx: KindContext): Pick<ProductLookups, 'groupId' | 'group
 function productIdLookups(ctx: KindContext): Pick<ProductLookups, 'productId' | 'productSku'> {
     return {
         productId: cached(async (sku) => {
-            const found = await readOrNull<{ id?: number }>(ctx.get, `products/${encodeURIComponent(sku)}`);
-            if (found?.id === undefined) throw new MissingNameError('products', sku, `The store has no product ${sku}.`);
+            const known = ctx.session.productIds?.get(sku.toLowerCase());
+            if (known !== undefined) return known;
+            const found = await readOrNull<{ id?: number }>(
+                ctx.get,
+                `products/${encodeURIComponent(sku)}`,
+            );
+            if (found?.id === undefined)
+                throw new MissingNameError('products', sku, `The store has no product ${sku}.`);
             return found.id;
         }),
-        productSku: cached(async (id) => (await firstWhere<{ sku?: string }>(ctx, 'products', 'entity_id', id))?.sku),
+        productSku: cached(
+            async (id) =>
+                (await firstWhere<{ sku?: string }>(ctx, 'products', 'entity_id', id))?.sku,
+        ),
     };
 }
 

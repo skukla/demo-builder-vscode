@@ -24,20 +24,32 @@ export class DatapackTransferError extends Error {
     }
 }
 
+/** How to read a pack: all of it unless some data types are named. */
+export interface ReadPackOptions {
+    /** Read only these data types, in this order. Each must be one the pack holds. */
+    dataTypes?: string[];
+    /** When it was read (injected for tests). */
+    now?: () => Date;
+}
+
 /**
- * Read a pack and every data type it holds.
+ * Read a pack and every data type it holds, or only the ones named.
+ *
+ * Naming types is how a pack with one item the store cannot return (the Data Installer answers 400
+ * for an item too large to send) can still be saved without it.
  *
  * @param client - A catalog client on the store to read from
  * @param id - The pack
  * @param source - Which store that is, recorded in the file
- * @param now - When it was read (injected for tests)
- * @throws DatapackTransferError when the pack holds nothing, or a type's rows do not parse
+ * @param opts - Which data types to read, and the clock
+ * @throws DatapackTransferError when the pack holds nothing, a named type is not in it, or a type's
+ *   rows do not parse
  */
 export async function readPackFromStore(
     client: Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'>,
     id: DatapackId,
     source: DatapackStoreName,
-    now: () => Date = () => new Date(),
+    opts: ReadPackOptions = {},
 ): Promise<DatapackFile> {
     const detail = await client.getDatapackDetail(id);
     if (detail.dataTypes.length === 0) {
@@ -45,8 +57,9 @@ export async function readPackFromStore(
             `${id.name}@${id.version} holds no data yet, so there is nothing to save.`,
         );
     }
+    const wanted = typesToRead(id, detail.dataTypes, opts.dataTypes);
     const items: DatapackFile['items'] = [];
-    for (const dataType of detail.dataTypes) {
+    for (const dataType of wanted) {
         const item = await client.getDataItem(id, dataType);
         if (item.records === undefined) {
             throw new DatapackTransferError(
@@ -61,8 +74,23 @@ export async function readPackFromStore(
         ...(detail.description ? { description: detail.description } : {}),
         items,
         source,
-        exportedAt: now().toISOString(),
+        exportedAt: (opts.now ?? (() => new Date()))().toISOString(),
     };
+}
+
+/** The named types, refused when one is not in the pack; every type when none are named. */
+function typesToRead(id: DatapackId, held: string[], named: string[] | undefined): string[] {
+    if (named === undefined) return held;
+    if (named.length === 0) {
+        throw new DatapackTransferError('Name at least one data type to save, or leave dataTypes out to save them all.');
+    }
+    const missing = named.filter((dataType) => !held.includes(dataType));
+    if (missing.length > 0) {
+        throw new DatapackTransferError(
+            `${id.name}@${id.version} holds no ${missing.join(', ')}. It holds ${held.join(', ')}.`,
+        );
+    }
+    return named;
 }
 
 /** What a write into a store did. */
@@ -78,16 +106,25 @@ export interface PackWriteOutcome {
  *
  * An existing pack with the same name and version is refused unless `update` is set;
  * then the types this file carries replace the stored ones and the rest are left as
- * they are. Each type is its own request: one that is refused (too large, say) is
- * reported by name, and the others still land.
+ * they are. Each type is its own request: one the store refuses is reported by name, and the
+ * others still land.
  *
- * @throws DatapackTransferError when the pack exists and `update` is not set
+ * @throws DatapackTransferError when the pack exists and `update` is not set, or a type is too large
+ *   for that store (`DatapackStoreWriter.oversized`), before anything is written
  */
 export async function writePackToStore(
-    writer: Pick<DatapackStoreWriter, 'createDatapack' | 'addDataItem'>,
+    writer: Pick<DatapackStoreWriter, 'createDatapack' | 'addDataItem'> & Partial<Pick<DatapackStoreWriter, 'oversized'>>,
     pack: DatapackFile,
     opts: { update?: boolean } = {},
 ): Promise<PackWriteOutcome> {
+    // Before anything is written: a type the store cannot take would leave half a pack behind.
+    const tooLarge = writer.oversized?.(pack.items) ?? [];
+    if (tooLarge.length > 0) {
+        throw new DatapackTransferError(
+            `${tooLarge.join(', ')} ${tooLarge.length === 1 ? 'is' : 'are'} too large to send to that store, so nothing was written. ` +
+                'Demo Builder\'s datapack store takes large data types in parts; the Data Installer does not.',
+        );
+    }
     const created = await writer.createDatapack({
         id: pack.id,
         displayName: pack.displayName,

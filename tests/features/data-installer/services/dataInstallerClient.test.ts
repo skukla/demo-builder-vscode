@@ -160,6 +160,35 @@ describe('DataInstallerClient', () => {
             expect(typeof item.records).toBe('object');
         });
 
+        // 2026-11-05: Demo Builder's store answers a large item in pages under App Builder's 1 MB result.
+        it('reads an item a page at a time from a store that pages it, joining the pages in order', async () => {
+            const pageOf = (rows: number[], next: number | null) => ({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                text: async () => JSON.stringify({ count: 1, data: JSON.stringify(rows), next_row: next }),
+            });
+            const f = jest.fn().mockResolvedValueOnce(pageOf([1, 2], 2)).mockResolvedValueOnce(pageOf([3], null));
+
+            const item = await makeClient(f).getDataItem({ name: 'luma', version: 'main' }, 'products');
+
+            expect(item.records).toEqual([1, 2, 3]);
+            expect(callArgs(f, 0).url).toContain('rows_from=0');
+            expect(callArgs(f, 1).url).toContain('rows_from=2');
+        });
+
+        it('takes a whole answer in one call from a store that does not page, and never pages backwards', async () => {
+            const whole = jsonFetch(load('get-data-item.json'));
+            const backwards = jsonFetch({ count: 1, data: '[1]', next_row: 0 });
+
+            await makeClient(whole).getDataItem({ name: 'citisignal_new', version: 'main' }, 'categories');
+            const item = await makeClient(backwards).getDataItem({ name: 'luma', version: 'main' }, 'products');
+
+            expect(whole).toHaveBeenCalledTimes(1);
+            expect(backwards).toHaveBeenCalledTimes(1);
+            expect(item.records).toEqual([1]);
+        });
+
         it('reads a job status as a per-type map with hasRecord', async () => {
             const snap = await makeClient(jsonFetch(load('datapack-process-status-complete.json'))).getJobStatus('a');
             expect(snap.hasRecord).toBe(true);

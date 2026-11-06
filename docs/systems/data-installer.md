@@ -174,6 +174,23 @@ When an install hits trouble (step 14 items 1 to 3):
   not found, the entry goes. The record's `pending` field is optional and only written
   while something is pending, so records from earlier versions read unchanged.
 
+**Products and gift cards go through Commerce's bulk queue** (`bulkProducts.ts`,
+`bulkRemoval.ts`; owner, 2026-11-05). One product per call took 13 to 25 seconds on ACCS, so
+Luma's 2,046 would have taken hours. Now:
+
+- One read per 100 SKUs finds which ones the store already has.
+- Products go 50 to a call to `V1/async/bulk/products`, in two waves: everything that links
+  nothing, then the configurable, bundle and grouped products that link them. That way a child
+  exists first whatever order the pack holds them in.
+- Each batch is followed to its end and read back row by row (`readBulkRows`). A row Commerce made
+  is recorded. A row it refused is skipped with its words, as above. A row it marks worth retrying,
+  or that is still queued after ten minutes, is sent again on its own.
+- A call refused for its shape (400, 404, 413) sends that batch one at a time. Not signed in, too
+  many calls, a 5xx or no answer stops the install, as for a single create.
+- The progress window counts them: "450 of 2,046 products".
+- Removal deletes products 50 to a call through `DELETE V1/async/bulk/products/bySku`, with the
+  same fallback to one at a time. That route has not been run against an ACCS store from here.
+
 ## What agents are not given
 
 Six read tools. Three groups are held back deliberately — the most reviewable
@@ -407,11 +424,12 @@ A zip whose files sit under one root folder reads the same.
 
 | | Panel | Agent tool |
 |---|---|---|
-| Save a pack from either store | "Save as file" in a pack's flyout menu, and after an export | `save_datapack_zip` |
+| Save a pack from either store | "Save as file" in a pack's flyout menu, and after an export | `save_datapack_zip`; `dataTypes` saves only the types named (to leave out one the store cannot send) |
 | Remove your own library pack | "Remove from library" in its flyout menu | `delete_library_datapack` |
 | Install a library pack | "Import" in its flyout | `start_datapack_import` with `source: "library"` |
 | Put a library pack in the Data Installer's catalog (service engine only) | "Copy to the Data Installer" in its flyout | `copy_library_datapack_to_installer` |
 | See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
+| Build a pack file from a Commerce product export | none (agent only) | `build_datapack_from_export` |
 | Write it into a store | "Load from file", library by default | `load_datapack_zip` |
 | Undo a load into the library | "Remove it from the library", in the load result | `delete_library_datapack` |
 

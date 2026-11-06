@@ -58,7 +58,7 @@ function runWith(
         failureReason?: { error: string };
         graceMs?: number;
         abortSignal?: AbortSignal;
-        onProgress?: (perType: JobStatusSnapshot['perType']) => void;
+        onProgress?: (perType: JobStatusSnapshot['perType'], detail?: string) => void;
     } = {}
 ) {
     let call = 0;
@@ -191,6 +191,22 @@ describe('watchImportJob', () => {
                 categories: 'success',
                 products: 'success',
             });
+        });
+
+        it('hands on the engine\'s count for the type in progress, and nothing when it has none', async () => {
+            const details: Array<string | undefined> = [];
+            const { promise } = runWith(
+                [
+                    snap({ categories: 'success', products: 'processing' }, { detail: '450 of 2,046 products' }),
+                    snap({ categories: 'success', products: 'success' }),
+                ],
+                { onProgress: (_perType, detail) => details.push(detail) }
+            );
+
+            await promise;
+
+            expect(details[0]).toBe('450 of 2,046 products');
+            expect(details.at(-1)).toBeUndefined();
         });
 
         /** An empty map is "not started", not progress. Reporting it would blank the line. */

@@ -12,6 +12,7 @@
  * a removal can be read from the store. Any other route answers 404.
  */
 
+import { withBulkQueue } from './bulkQueue.testUtils';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { StoreAttribute, StoreCategory } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
 import type { CommerceGet, CommerceProduct, CommerceSend } from '@/types/commerceWire';
@@ -142,5 +143,6 @@ export function memoryStore(): MemoryStore {
         return {};
     };
 
-    return { get, send, categories, products, sourceItems, sent };
+    // Commerce's bulk queue runs each request through the single route above (`bulkQueue.testUtils.ts`).
+    return { ...withBulkQueue(get, send), categories, products, sourceItems, sent };
 }

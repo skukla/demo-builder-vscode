@@ -86,15 +86,20 @@ export function progressStep(operation: 'import' | 'reset' = 'import'): string {
  *   datapack surface words it (`datapackTypesLine`). Between polls, nothing is in flight, so it
  *   names the next one.
  * - Every type finished and the job not yet closed: "Finishing up".
+ * - When the engine counts the rows of the type in progress, the count takes the type's name:
+ *   "450 of 2,046 products", or "5 of 14 data types: 450 of 2,046 products" (owner, 2026-11-05:
+ *   a bulk install must still say what it is installing).
  *
  * Before the first poll of a job with several types, no count is meaningful: "0 of 14" beside a
  * spinner reads as stalled rather than starting.
  */
-export function progressLabel(progress: ImportProgress): string | undefined {
+export function progressLabel(progress: ImportProgress, detail?: string): string | undefined {
     const { done, total, processing, requested, waiting } = progress;
-    if (total === 1) return dataTypeLabel(requested[0]);
+    const counting = detail !== undefined && processing.length > 0;
+    if (total === 1) return counting ? detail : dataTypeLabel(requested[0]);
     if (done === 0 && processing.length === 0) return undefined;
     if (done === total) return 'Finishing up';
+    if (counting) return typesLine(done, total, [detail]);
     const current = processing.length > 0 ? processing : waiting.slice(0, 1);
     return typesLine(done, total, current.map(dataTypeLabel));
 }

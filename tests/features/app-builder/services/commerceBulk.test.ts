@@ -6,7 +6,7 @@
 
 import recordedStatus from '../../../fixtures/commerce-rest/bulk-status-products.json';
 import { bulkAccepted, bulkStatus } from '../../../helpers/commerceAssignFixtures';
-import { followBulk, startBulk, type BulkFollowDeps } from '@/features/app-builder/services/commerceBulk';
+import { followBulk, readBulkRows, startBulk, type BulkFollowDeps } from '@/features/app-builder/services/commerceBulk';
 import type { CommerceBulkStatus } from '@/types/commerceWire';
 
 /** Typed, so a recorded answer the wire type no longer describes fails typecheck:tests. */
@@ -94,5 +94,27 @@ describe('followBulk', () => {
         const get = jest.fn(async () => bulkStatus([1, 4]));
         const outcome = await followBulk(get, 'u-4', 2, { ...clock(5000), intervalMs: 5000, deadlineMs: 10_000 });
         expect(outcome).toMatchObject({ complete: 1, open: 1, timedOut: true });
+    });
+});
+
+describe('readBulkRows', () => {
+    it('reads the recorded answer as three made rows, by index', async () => {
+        const get = jest.fn(async () => RECORDED);
+        const rows = await readBulkRows(get, 'u-1', 3);
+        expect(get).toHaveBeenCalledWith('bulk/u-1/status');
+        expect(rows.map((r) => [r.index, r.state])).toEqual([[0, 'done'], [1, 'done'], [2, 'done']]);
+    });
+
+    it('says how each request ended, with Commerce\'s words, and a request not listed yet is open', async () => {
+        const status = bulkStatus([1, 2, 3, 5], { 2: 'URL key for specified store already exists.', 3: 'rejected' });
+        const rows = await readBulkRows(async () => status, 'u-1', 5);
+        expect(rows.map((r) => r.state)).toEqual(['done', 'retry', 'refused', 'refused', 'open']);
+        expect(rows[2].message).toBe('URL key for specified store already exists.');
+    });
+
+    it('ignores an operation whose id is not a position in the call', async () => {
+        const status: CommerceBulkStatus = { operations_list: [{ id: 7, status: 1 }, { id: 0, status: 3, result_message: 'no' }] };
+        const rows = await readBulkRows(async () => status, 'u-1', 2);
+        expect(rows.map((r) => r.state)).toEqual(['refused', 'open']);
     });
 });
