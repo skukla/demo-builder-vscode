@@ -296,6 +296,60 @@ describe('things the SC renamed or deleted in the Admin', () => {
     });
 });
 
+// 2026-11-06, live: a Luma reinstall took 40 attributes out of their sets, saying the pack no
+// longer had them, and Commerce blanked 271 product values with them. Each was recorded by the
+// set's id ("155/size") and the pack names it by the set's name ("Top/size"), so no row matched.
+describe('an attribute this engine put in a set, installed again', () => {
+    const ROW = { attributeSetId: 'Default', attributeCode: 'bodea_fabric', sortOrder: 10 };
+    const COPY = { attributeSetId: 'Default', attributeCode: 'bodea_fabric' };
+    const GROUPS = page(
+        'products/attribute-sets/groups/list',
+        '&searchCriteria[filter_groups][0][filters][0][field]=attribute_set_id&searchCriteria[filter_groups][0][filters][0][value]=4',
+    );
+
+    async function assigned(key: string) {
+        const ctx = await fakeContext({
+            ...SETS,
+            'products/attribute-sets/4/attributes': [{ attribute_code: 'bodea_fabric' }],
+            [GROUPS]: { items: [{ attribute_group_id: 7, attribute_group_name: 'General' }] },
+        });
+        await ctx.recorder.record({
+            kind: 'attribute_assign_to_set',
+            id: '4/bodea_fabric',
+            key,
+            fingerprint: fingerprintRow(COPY),
+            wrote: packedFingerprint('attribute_assign_to_set', ROW),
+        });
+        return ctx;
+    }
+
+    it('is left in its set while the pack still has it', async () => {
+        const ctx = await assigned('Default/bodea_fabric');
+
+        await installPack(ctx, { attribute_assign_to_set: [ROW] });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.has('attribute_assign_to_set', '4/bodea_fabric')).toBe(true);
+    });
+
+    it('is left in its set when an earlier version recorded it by the set\'s id', async () => {
+        const ctx = await assigned('4/bodea_fabric');
+
+        await installPack(ctx, { attribute_assign_to_set: [ROW] });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.has('attribute_assign_to_set', '4/bodea_fabric')).toBe(true);
+    });
+
+    it('is taken out once the pack no longer has it', async () => {
+        const ctx = await assigned('4/bodea_fabric');
+
+        await installPack(ctx, { attribute_assign_to_set: [] });
+
+        expect(writes(ctx.sent)).toEqual(['DELETE products/attribute-sets/4/attributes/bodea_fabric']);
+    });
+});
+
 describe('keptLine', () => {
     it('says what was kept in one plain line', () => {
         expect(keptLine([])).toBeUndefined();

@@ -71,7 +71,7 @@ const CASES: Record<string, Case> = {
             ctx.session.groupIds.set('Racks', 80);
             return installAssignments(ctx, parseAssignmentRows([{ attributeSetId: 'Racks', attributeCode: 'fabric' }]));
         },
-        pending: { kind: 'attribute_assign_to_set', key: '12/fabric', id: '12/fabric' },
+        pending: { kind: 'attribute_assign_to_set', key: 'Racks/fabric', id: '12/fabric' },
     },
     'a category': {
         reads: { [childSearch(2, 'Sale')]: { items: [] } },

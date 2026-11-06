@@ -173,7 +173,8 @@ async function assign(ctx: KindContext, row: AssignmentRow, inSet: Map<number, S
     const groupId = await groupInSet(ctx, row.attributeSetId, setId);
     if (groupId === undefined) throw new Error(`The attribute set ${row.attributeSetId} has no group to put ${row.attributeCode} in.`);
     const id = `${setId}/${row.attributeCode}`;
-    await createOne(ctx, { kind: ASSIGNMENT_KIND, key: id, id }, async () => {
+    // Keyed by the pack's name for it, which a reinstall looks it up by; the id is what removal sends.
+    await createOne(ctx, { kind: ASSIGNMENT_KIND, key: `${row.attributeSetId}/${row.attributeCode}`, id }, async () => {
         await ctx.send('POST', 'products/attribute-sets/attributes', {
             attributeSetId: setId,
             attributeGroupId: groupId,

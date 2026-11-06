@@ -25,6 +25,7 @@
  * @module features/data-installer/services/demoBuilderEngine/repeatInstall
  */
 
+import { ASSIGNMENT_KIND } from './attributeSetsKind';
 import { addMissingOptions, parseAttributeRows } from './attributesKind';
 import { updateCartRule } from './cartRulesKind';
 import { updateCompany } from './companiesKind';
@@ -33,6 +34,7 @@ import { updateCustomer, updateCustomerGroup } from './customerKinds';
 import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, ownedKey, segment } from './kindContext';
+import { keyOf } from './packForm';
 import { type ExportRow, PRODUCT_EXPORT_KIND, updateProductRows } from './productExportKind';
 import { productLookups } from './productLookups';
 import { parseProductRows, toCommerceProduct } from './productsKind';
@@ -75,9 +77,20 @@ function wantedOf(kind: string, object: CreatedObject, row: unknown, current: st
     return packed === object.wrote && current !== undefined ? current : packed;
 }
 
-async function planKind(ctx: KindContext, kind: string, objects: CreatedObject[], records: unknown): Promise<Omit<KindPlan, 'packKind'>> {
-    const copies = await readCopies(ctx, productLookups(ctx), kind, objects);
+/**
+ * An attribute put in a set was recorded by the set's id ("155/size") until 2026-11-06, and the
+ * pack names it by the set's name ("Top/size"); the store's copy carries the name. Every other
+ * record is keyed as the pack names it.
+ */
+function packKeyOf(kind: string, object: CreatedObject, copy: unknown): CreatedObject {
+    if (kind !== ASSIGNMENT_KIND || copy === undefined) return object;
+    return { ...object, key: keyOf(kind, copy) ?? object.key };
+}
+
+async function planKind(ctx: KindContext, kind: string, recorded: CreatedObject[], records: unknown): Promise<Omit<KindPlan, 'packKind'>> {
+    const copies = await readCopies(ctx, productLookups(ctx), kind, recorded);
     const rows = rowsByKey(kind, records);
+    const objects = recorded.map((object) => (object.key === undefined ? object : packKeyOf(kind, object, copies.get(object.id))));
     const planned = objects.map((object): PlannedObject => {
         const row = object.key === undefined ? undefined : rows.get(object.key);
         if (object.key === undefined || object.fingerprint === undefined) return { object, outcome: 'leave-not-ours', row };

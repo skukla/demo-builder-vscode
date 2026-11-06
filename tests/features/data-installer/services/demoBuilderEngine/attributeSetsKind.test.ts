@@ -121,7 +121,8 @@ describe('installAssignments', () => {
                 body: { attributeSetId: 4, attributeGroupId: 9, attributeCode: 'bodea_fabric', sortOrder: 10 },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: ASSIGNMENT_KIND, id: '4/bodea_fabric', key: '4/bodea_fabric' }]);
+        // Keyed by the pack's name for it, as a reinstall looks it up; the id is what removal sends.
+        expect(ctx.recorder.created).toEqual([{ kind: ASSIGNMENT_KIND, id: '4/bodea_fabric', key: 'Default/bodea_fabric' }]);
     });
 
     it('reads each set once for many assignments sent together, and adds a repeated row once', async () => {
