@@ -118,10 +118,10 @@ describe('demoBuilderEngine install', () => {
         expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
         expect(status.note).toBe('Skipped 1 row, and installed the rest: categories Sale (URL key for specified store already exists).');
         expect(await engine.getJobFailureReason(activationId)).toBeUndefined();
-        // 2026-11-06: the note names ten; the status carries every skipped row whole, and each kind's seconds.
+        // 2026-11-06: the note names ten; the status carries every skipped row whole, and each kind's seconds
+        // (their values: engine-timings.test.ts, on a clock it controls).
         expect(status.skipped).toEqual([{ kind: 'categories', key: 'Sale', reason: 'URL key for specified store already exists.' }]);
         expect(Object.keys(status.timings ?? {})).toEqual(['attribute_sets', 'categories']);
-        expect(Object.values(status.timings ?? {}).every((seconds) => seconds >= 0)).toBe(true);
     });
 
     it('marks the failing kind and every later one as failed, and says why', async () => {

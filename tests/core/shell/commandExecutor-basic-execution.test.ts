@@ -27,6 +27,8 @@ describe('CommandExecutor - Basic Execution', () => {
         it('should execute a basic command successfully', async () => {
             const mockSubprocess = createMockExecaSubprocess();
             mockExeca.mockReturnValue(mockSubprocess);
+            // The clock starts at 1,000 and reads 1,250 once the process has exited: 250ms.
+            const clock = jest.spyOn(Date, 'now').mockReturnValueOnce(1_000).mockReturnValue(1_250);
 
             const promise = commandExecutor.execute('echo hello');
 
@@ -38,7 +40,8 @@ describe('CommandExecutor - Basic Execution', () => {
             expect(result.stdout).toBe('hello\n');
             expect(result.stderr).toBe('');
             expect(result.code).toBe(0);
-            expect(result.duration).toBeGreaterThanOrEqual(0);
+            expect(result.duration).toBe(250);
+            clock.mockRestore();
         });
 
         it('should handle command with non-zero exit code', async () => {

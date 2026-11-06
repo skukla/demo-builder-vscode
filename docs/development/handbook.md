@@ -1507,7 +1507,12 @@ breaks the code on purpose and reports what nothing noticed.
 > came back by identity, "generates nonces efficiently" meant a thousand nonces are a
 > thousand DISTINCT nonces — a property the timing version would have passed on a
 > constant. A deadline with an order-of-magnitude margin is not a performance bound and
-> is ledgered with its reason.
+> is ledgered with its reason. The same enforcer refuses the opposite mistake, a measured
+> time checked only against zero: a difference of two clock readings is never negative, so
+> the check proves the field is there and nothing about its value. On 2026-11-06 a datapack
+> install charged coupons 20.1 s, then 39.2 s, of time that belonged to the work after it,
+> under a `seconds >= 0` check that stayed green. Stub the clock and assert the value; a
+> floor with an upper bound beside it ("a duration, not a clock reading") is left alone.
 > Enforced by `tests/sop/no-wall-clock-bounds.test.ts`.
 
 > **Convention.** Assert emptiness with `toStrictEqual`, never `toEqual`.
