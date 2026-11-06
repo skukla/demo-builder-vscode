@@ -10,6 +10,7 @@
 
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import {
+    PARENTS_PER_IMPORT,
     parseProductExport,
     installProductExport,
     PRODUCTS_PER_IMPORT,
@@ -55,6 +56,7 @@ async function store(existing: string[] = []) {
         return {};
     });
     ctx.session.websiteCode = 'justrite_test_website';
+    ctx.session.storeCode = 'justrite_test_store_us';
     ctx.session.rootCategory = { id: 2, name: 'Default Category' };
     const takes = (row: Row) =>
         !String(row.additional_attributes ?? '').includes(BAD) &&
@@ -191,6 +193,21 @@ describe('installProductExport', () => {
 
         expect(imports.map((call) => call.items.length)).toEqual([100, 50]);
         expect(progressed).toEqual(['100 of 150 products', '150 of 150 products']);
+    });
+
+    it(`sends parents ${PARENTS_PER_IMPORT} to a call, and keeps a product's store-view row in its product's call`, async () => {
+        const { ctx, imports } = await store();
+        const kids = Array.from({ length: 101 }, (_, i) => child(`K${i}`, { categories: undefined }));
+        const viewRow = { ...child('K100', { categories: undefined }), store_view_code: 'luma_fr', name: 'K100 FR' };
+        const parents = Array.from({ length: 30 }, (_, i) => ({ ...parent(`P${i}`, ['K0']), categories: undefined }));
+
+        await installProductExport(ctx, parseProductExport(pack([...kids, viewRow, ...parents])));
+
+        expect(imports.map((call) => call.items.length)).toEqual([100, 2, PARENTS_PER_IMPORT, 10]);
+        expect(imports[1].items.map((r) => [r.sku, r.store_view_code ?? ''])).toEqual([
+            ['K100', ''],
+            ['K100', 'justrite_test_store_us'],
+        ]);
     });
 
     it('leaves the products pending when the import call gets no answer, for the next run to settle', async () => {

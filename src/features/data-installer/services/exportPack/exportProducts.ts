@@ -241,8 +241,11 @@ function bundleOptions(
     return [...options.values()];
 }
 
-/** A configurable's options, by the attribute codes its variations name, and its children. */
-function configurableParts(row: ExportRow): { options: unknown[]; children: string[] } {
+/**
+ * A configurable's options, by the attribute codes its variations name, each value the option it names
+ * (Luma's variations say size "32" where the option is "Size 32"), and its children.
+ */
+function configurableParts(row: ExportRow, labelsOf: OptionLabels): { options: unknown[]; children: string[] } {
     const labels = pairs(row.fields.configurable_variation_labels);
     const codes = [
         ...new Set(row.variations.flatMap((v) => Object.keys(v).filter((code) => code !== 'sku'))),
@@ -252,7 +255,7 @@ function configurableParts(row: ExportRow): { options: unknown[]; children: stri
         label: labels[code] || code.replace(/_/gu, ' ').replace(/\b\w/gu, (c) => c.toUpperCase()),
         position,
         values: [...new Set(row.variations.filter((v) => code in v).map((v) => v[code]))].map(
-            (value) => ({ value_index: value }),
+            (value) => ({ value_index: asOption(labelsOf, code, value) }),
         ),
     }));
     return { options, children: row.variations.map((v) => (v.sku ?? '').trim()) };
@@ -289,7 +292,7 @@ function extensionAttributes(
     };
     if (kind === 'bundle') ext.bundle_product_options = bundleOptions(row, sku, ctx.prices);
     if (kind === 'configurable') {
-        const { options, children } = configurableParts(row);
+        const { options, children } = configurableParts(row, ctx.options);
         ext.configurable_product_options = options;
         ext.configurable_product_links = children;
     }

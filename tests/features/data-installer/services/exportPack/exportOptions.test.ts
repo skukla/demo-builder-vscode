@@ -43,6 +43,14 @@ describe('asOption', () => {
         expect(asOption(options, 'material', 'LumaTech™')).toBe('LumaTech');
     });
 
+    // Luma's export writes "32" where its size option is "Size 32" (2026-11-06).
+    it('names the one option whose last word the label is, and not when two options end the same', () => {
+        const sizes = new Map([['size', ['XS', 'Size 32', 'Size 33']], ['length', ['Short 32', 'Long 32']]]);
+
+        expect(asOption(sizes, 'size', '32')).toBe('Size 32');
+        expect(asOption(sizes, 'length', '32')).toBe('32');
+    });
+
     it('keeps a label that matches no option, and one on an attribute the pack does not define', () => {
         expect(asOption(options, 'material', 'Kevlar')).toBe('Kevlar');
         expect(asOption(options, 'color', 'Black&trade;')).toBe('Black&trade;');

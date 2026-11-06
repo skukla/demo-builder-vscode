@@ -8,6 +8,10 @@
  * (`add-data-item` with `append`, the store's `itemParts.js`); the Data Installer does not, so an
  * item too big for one request cannot go to it, and that is said before anything is written.
  *
+ * A list of rows splits, and so does an Import API body (`{ source: { items } }`, the Data Installer's
+ * `product_export` kind, 2026-11-06), whose `items` are its rows: each part is the same body with some
+ * of them, and the store appends one part's items to the last's (`itemParts.js` there too).
+ *
  * Sizes are measured as sent: the rows travel as a JSON string inside the JSON body, so every quote
  * in them is escaped and the body is larger than the rows.
  *
@@ -30,17 +34,37 @@ export function fitsOneRequest(records: unknown): boolean {
     return sentBytes(records) <= ONE_REQUEST_BYTES;
 }
 
-/** Whether these rows can go in parts: only a list can be split. */
-export function splittable(records: unknown): records is unknown[] {
-    return Array.isArray(records);
+/** An item's rows, and the item again around some of them: a list is its own rows, an import body its `items`. */
+export interface ItemRows {
+    rows: unknown[];
+    wrap: (rows: unknown[]) => unknown;
+}
+
+/** The item's rows, or undefined when it is neither a list nor an Import API body. */
+export function rowsOfItem(records: unknown): ItemRows | undefined {
+    if (Array.isArray(records)) return { rows: records, wrap: (rows) => rows };
+    const source = (records as { source?: { items?: unknown } } | null)?.source;
+    if (!source || !Array.isArray(source.items)) return undefined;
+    return { rows: source.items, wrap: (rows) => ({ ...(records as object), source: { ...source, items: rows } }) };
+}
+
+/** Whether these rows can go in parts: a list, or an Import API body. */
+export function splittable(records: unknown): boolean {
+    return rowsOfItem(records) !== undefined;
 }
 
 /**
- * The rows in parts of at most PART_BYTES as sent, at least one row a part, in order. Rows that fit
- * in one request stay one part.
+ * The item in parts of at most PART_BYTES of rows as sent, at least one row a part, in order, each in
+ * the item's own form. An item that fits in one request, or cannot be split, stays one part.
  */
-export function partsOf(records: unknown[]): unknown[][] {
-    if (fitsOneRequest(records)) return [records];
+export function partsOf(records: unknown): unknown[] {
+    const item = rowsOfItem(records);
+    if (fitsOneRequest(records) || !item) return [records];
+    return rowParts(item.rows).map(item.wrap);
+}
+
+/** Rows in parts of at most PART_BYTES as sent, at least one row a part. */
+function rowParts(records: readonly unknown[]): unknown[][] {
     const parts: unknown[][] = [];
     let part: unknown[] = [];
     let bytes = 2;

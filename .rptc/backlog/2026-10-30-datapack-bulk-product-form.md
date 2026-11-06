@@ -106,3 +106,4 @@ prove one with a live install and removal.
 - 2026-11-06  fix(datapacks): fast product removal, resumable installs, and the live-test fixes (`c59faba63`)
 - 2026-11-06  perf(datapacks): faster installs, and packs from an export install every product (`27c723d7a`)
 - 2026-11-06  perf(datapacks): read back a configurable's children from the products already read (`818e59d13`)
+- 2026-11-06  perf(datapacks): batch removal, parallel bulk batches, and install the service's product_export (`26f6cdb78`)

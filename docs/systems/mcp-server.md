@@ -828,8 +828,11 @@ kind, sent to Commerce's Import API with the service's substitutions (the target
 view, and root category first in every category path). Unlike the service, its category paths are
 made first by the categories kind so they are on the record, a SKU the store already has is left
 alone, each product is read back by SKU (the import's count includes refused rows), and a row that
-did not land is sent alone, stopping on its error, for Commerce's reason. Children go in one call
-and parents in the next, a hundred rows to a call. Removal takes the products back as any pack's.
+did not land is sent alone, stopping on its error, for Commerce's reason. All children go before
+any parent, a hundred products to a call and parents twenty, three calls at once, a product's
+store-view rows in its own call (a configurable costs far more in a big call: 100 took 97 s, 19 in
+small calls 2 s). Luma installs in about 4.5 minutes this way (2026-11-06), against about 7.5 as
+product records. Removal takes the products back as any pack's.
 
 ### Store settings in a pack (datapack-engine step 09, 2026-10-30)
 

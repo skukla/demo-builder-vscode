@@ -27,15 +27,32 @@ import { skusInStore } from './bulkProducts';
 import { installCategories, parseCategoryPack } from './categoriesKind';
 import { importBody, importOneRow } from './importApi';
 import type { CreatedObject } from './installRecord';
-import { type KindContext, readOrNull, segment } from './kindContext';
+import { eachFewAtOnce, type KindContext, readOrNull, segment } from './kindContext';
 import type { PendingObject } from './pendingRecord';
 import { GIFT_CARD_KIND, PRODUCT_KIND } from './productsKind';
 import { skipRow } from './refusedRows';
 
 export const PRODUCT_EXPORT_KIND = 'product_export';
 
-/** Rows per import call: it runs inside the request, and the Commerce client gives up after ten seconds. */
+/** Products per import call: it runs inside the request, and the Commerce client gives up after ten seconds. */
 export const PRODUCTS_PER_IMPORT = 100;
+
+/**
+ * Parents per import call. A configurable costs far more in a big call than in a small one: 100 in one
+ * call took 97 s, 19 in three calls of six or seven took 2 s (ACCS sandbox, 2026-11-06).
+ */
+export const PARENTS_PER_IMPORT = 20;
+
+/** Import calls in flight at once: three ran together and every row landed (2026-11-06). */
+export const IMPORT_CALLS_AT_ONCE = 3;
+
+/** The rows in calls of at most `size` products, a product's store-view rows in the same call as it. */
+function callsOf(rows: readonly ExportRow[], size: number): ExportRow[][] {
+    const bySku = new Map<string, ExportRow[]>();
+    for (const row of rows) bySku.set(row.sku, [...(bySku.get(row.sku) ?? []), row]);
+    const products = [...bySku.values()];
+    return Array.from({ length: Math.ceil(products.length / size) }, (_, i) => products.slice(i * size, (i + 1) * size).flat());
+}
 
 /** Types that link other products, so they go after them. */
 const PARENT_TYPES = new Set(['configurable', 'bundle', 'grouped']);
@@ -199,17 +216,18 @@ export async function installProductExport(
     const todo = rows.filter((r) => !there.has(r.sku.toLowerCase()) && !ours(r));
     const total = new Set(todo.map((r) => r.sku)).size;
     let done = 0;
-    for (const wave of [
-        todo.filter((r) => !PARENT_TYPES.has(r.product_type)),
-        todo.filter((r) => PARENT_TYPES.has(r.product_type)),
-    ]) {
-        for (let start = 0; start < wave.length; start += PRODUCTS_PER_IMPORT) {
-            const call = wave.slice(start, start + PRODUCTS_PER_IMPORT);
-            await importCall(ctx, call, root);
-            done += new Set(call.map((r) => r.sku)).size;
-            ctx.progress?.(
-                `${done.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} products`,
-            );
-        }
+    const leaves = todo.filter((r) => !PARENT_TYPES.has(r.product_type));
+    const parents = todo.filter((r) => PARENT_TYPES.has(r.product_type));
+    // Children first, all of them, then the parents that link them, a few calls at once in each wave.
+    for (const calls of [callsOf(leaves, PRODUCTS_PER_IMPORT), callsOf(parents, PARENTS_PER_IMPORT)]) {
+        await eachFewAtOnce(
+            calls,
+            async (call) => {
+                await importCall(ctx, call, root);
+                done += new Set(call.map((r) => r.sku)).size;
+                ctx.progress?.(`${done.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} products`);
+            },
+            IMPORT_CALLS_AT_ONCE,
+        );
     }
 }

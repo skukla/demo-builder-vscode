@@ -19,7 +19,19 @@ describe('partsOf', () => {
 
         expect(parts.length).toBeGreaterThan(1);
         expect(parts.every((part) => sent(part) <= PART_BYTES)).toBe(true);
-        expect(parts.flat()).toEqual(rows);
+        expect((parts as unknown[][]).flat()).toEqual(rows);
+    });
+
+    // 2026-11-06: the Data Installer's product_export kind is one Import API body; its items are its rows.
+    it('splits an Import API body into the same body with some of its items each, in order', () => {
+        const body = { source: { entity: 'catalog_product', behavior: 'append', items: rowsOf(30, 50 * 1024) } };
+        const parts = partsOf(body) as Array<typeof body>;
+
+        expect(parts.length).toBeGreaterThan(1);
+        expect(parts.every((part) => part.source.entity === 'catalog_product' && sent(part) <= PART_BYTES + 1024)).toBe(true);
+        expect(parts.flatMap((part) => part.source.items)).toEqual(body.source.items);
+        expect(itemsTooLarge([{ dataType: 'product_export', records: body }], true)).toStrictEqual([]);
+        expect(itemsTooLarge([{ dataType: 'product_export', records: body }], false)).toEqual(['product_export']);
     });
 
     it('measures the rows as sent, with their quotes escaped, not as they are', () => {

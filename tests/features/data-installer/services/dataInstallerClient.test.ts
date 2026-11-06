@@ -177,6 +177,21 @@ describe('DataInstallerClient', () => {
             expect(callArgs(f, 1).url).toContain('rows_from=2');
         });
 
+        it("joins an Import API body's pages into one body, its items in order", async () => {
+            const body = (items: string[]) => ({ source: { entity: 'catalog_product', items } });
+            const pageOf = (items: string[], next: number | null) => ({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                text: async () => JSON.stringify({ count: 1, data: JSON.stringify(body(items)), next_row: next }),
+            });
+            const f = jest.fn().mockResolvedValueOnce(pageOf(['a', 'b'], 2)).mockResolvedValueOnce(pageOf(['c'], null));
+
+            const item = await makeClient(f).getDataItem({ name: 'luma', version: 'import-form' }, 'product_export');
+
+            expect(item.records).toEqual(body(['a', 'b', 'c']));
+        });
+
         it('takes a whole answer in one call from a store that does not page, and never pages backwards', async () => {
             const whole = jsonFetch(load('get-data-item.json'));
             const backwards = jsonFetch({ count: 1, data: '[1]', next_row: 0 });

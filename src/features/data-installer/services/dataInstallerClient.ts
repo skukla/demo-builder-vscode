@@ -34,6 +34,7 @@ import {
     parseProcessorOrder,
 } from './dataInstallerParsers';
 import { DataInstallerTransport, type DataInstallerTransportDeps } from './dataInstallerTransport';
+import { rowsOfItem } from './itemParts';
 import type { DatapackId } from '@/types/datapack';
 
 /** Filters for the catalog listing. */
@@ -132,16 +133,18 @@ export class DataInstallerClient {
         let body = await page(0);
         const first = parseDataItem(body, dataType);
         let next = nextRowOf(body, 0);
-        if (next === undefined || !Array.isArray(first.records)) return first;
-        const rows: unknown[] = [...first.records];
+        // A list's pages are lists; an Import API body's are the body with a page of its items.
+        const item = rowsOfItem(first.records);
+        if (next === undefined || !item) return first;
+        const rows: unknown[] = [...item.rows];
         while (next !== undefined) {
             body = await page(next);
-            const more = parseDataItem(body, dataType);
-            if (!Array.isArray(more.records)) return more;
-            rows.push(...more.records);
+            const more = rowsOfItem(parseDataItem(body, dataType).records);
+            if (!more) return parseDataItem(body, dataType);
+            rows.push(...more.rows);
             next = nextRowOf(body, next);
         }
-        return { ...first, records: rows };
+        return { ...first, records: item.wrap(rows) };
     }
 
     /**

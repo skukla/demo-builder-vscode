@@ -19,10 +19,11 @@
  */
 
 import type { CreatedObject } from './installRecord';
-import { eachFewAtOnce, type KindContext, newCatalogSession, readOrNull } from './kindContext';
+import { eachFewAtOnce, type KindContext, newCatalogSession, readOrNull, REQUESTS_AT_ONCE } from './kindContext';
 import { certainlyNotMade } from './pendingCreates';
 import type { PendingObject } from './pendingRecord';
 import { reasonOf, skipRow } from './refusedRows';
+import { runInBatches } from '@/core/utils/promiseUtils';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -92,10 +93,10 @@ function skuFilter(skus: readonly string[]): string {
 async function listedInStore(get: CommerceGet, skus: readonly string[]): Promise<Array<{ id?: number; sku: string }>> {
     const rows: Array<{ id?: number; sku: string }> = [];
     const listable = skus.filter((sku) => !sku.includes(','));
-    for (let start = 0; start < listable.length; start += SKUS_PER_READ) {
-        const page = await readAllPages<{ id?: number; sku?: string }>(get, 'products', skuFilter(listable.slice(start, start + SKUS_PER_READ)));
-        for (const item of page) if (item.sku) rows.push({ sku: item.sku, ...(item.id !== undefined ? { id: item.id } : {}) });
-    }
+    const groups = Array.from({ length: Math.ceil(listable.length / SKUS_PER_READ) }, (_, i) => listable.slice(i * SKUS_PER_READ, (i + 1) * SKUS_PER_READ));
+    // A few reads at once: one after another, Luma's 2,060 SKUs were 21 reads in a row before any write.
+    const pages = await runInBatches(groups, REQUESTS_AT_ONCE, (group) => readAllPages<{ id?: number; sku?: string }>(get, 'products', skuFilter(group)));
+    for (const item of pages.flat()) if (item.sku) rows.push({ sku: item.sku, ...(item.id !== undefined ? { id: item.id } : {}) });
     for (const sku of skus.filter((s) => s.includes(','))) {
         const item = await readOrNull<{ id?: number }>(get, `products/${encodeURIComponent(sku)}`);
         if (item) rows.push({ sku, ...(item.id !== undefined ? { id: item.id } : {}) });

@@ -51,9 +51,20 @@ export function optionLabels(base: DatapackFile | undefined): OptionLabels {
     return labels;
 }
 
-/** The option `label` names on the attribute `code`: itself when it is one, else the one it matches bare. */
+/** The one option whose last word is `label`, bare ("32" in "Size 32"), or undefined when none or several are. */
+function byLastWord(labels: readonly string[], label: string): string | undefined {
+    const matches = labels.filter((option) => bare(option).split(' ').pop() === bare(label));
+    return matches.length === 1 ? matches[0] : undefined;
+}
+
+/**
+ * The option `label` names on the attribute `code`: itself when it is one, else the one it matches
+ * bare, else the one option whose last word it is. Luma's export writes a size as "32" where its
+ * attribute's option is "Size 32": read as an option id, 533 products got the wrong size or none
+ * (2026-11-06).
+ */
 export function asOption(options: OptionLabels, code: string, label: string): string {
     const labels = options.get(code);
     if (!labels || labels.includes(label)) return label;
-    return labels.find((option) => bare(option) === bare(label)) ?? label;
+    return labels.find((option) => bare(option) === bare(label)) ?? byLastWord(labels, label) ?? label;
 }

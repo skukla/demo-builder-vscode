@@ -22,7 +22,7 @@
 import { z } from 'zod';
 import { BULK_WAIT, type BulkRun, type BulkWait, createProductsInBulk, productIdsInStore, type ProductToMake } from './bulkProducts';
 import { amountsForStore, withoutAmounts } from './giftCardAmounts';
-import { deleteIfPresent, type KindContext } from './kindContext';
+import { deleteIfPresent, type KindContext, MissingNameError } from './kindContext';
 import { createOne } from './pendingCreates';
 import { isNumeric, type ProductLookups, productLookups } from './productLookups';
 import { tryRow } from './refusedRows';
@@ -88,6 +88,21 @@ const labels = (value: unknown): string[] =>
     (Array.isArray(value) ? value : String(value).split(',')).map((v) => String(v).trim()).filter(Boolean);
 
 /**
+ * The option id for one value: by label (or the option's own id) first, and a number Commerce has no
+ * option for kept as it was, an id from the store the pack came from. A number used to be taken as an
+ * id outright, so Luma's size "32" set option 32 where its option was "Size 32" (2026-11-06).
+ */
+async function optionOf(lk: ProductLookups, code: string, label: string): Promise<string> {
+    if (!isNumeric(label)) return lk.optionId(code, label);
+    try {
+        return await lk.optionId(code, label);
+    } catch (error) {
+        if (error instanceof MissingNameError) return label;
+        throw error;
+    }
+}
+
+/**
  * A custom attribute's value with labels and url keys turned into this store's ids, or null
  * for a layout field whose value the store does not offer.
  */
@@ -100,11 +115,18 @@ async function customAttribute(
     if (code === 'category_ids') {
         return { attribute_code: code, value: await Promise.all(labels(value).map((key) => (isNumeric(key) ? key : lk.categoryId(key)))) };
     }
-    if (value === null || value === undefined || isNumeric(value) || typeof value === 'boolean') return attr;
-    const input = (await lk.attribute(code)).frontend_input ?? '';
+    if (value === null || value === undefined || typeof value === 'boolean') return attr;
+    let input: string;
+    try {
+        input = (await lk.attribute(code)).frontend_input ?? '';
+    } catch (error) {
+        // A number on an attribute that cannot be read goes as it is, as every number used to.
+        if (isNumeric(value)) return attr;
+        throw error;
+    }
     if (!OPTION_INPUTS.has(input)) return attr;
     try {
-        const ids = await Promise.all(labels(value).map((label) => (isNumeric(label) ? label : lk.optionId(code, label))));
+        const ids = await Promise.all(labels(value).map((label) => optionOf(lk, code, label)));
         return { attribute_code: code, value: ids.join(',') };
     } catch (error) {
         if (!LAYOUT_FIELDS.has(code)) throw error;
@@ -126,7 +148,7 @@ async function configurableOptions(lk: ProductLookups, options: ConfigurableOpti
             const attributeId = isNumeric(code) ? code : String((await lk.attribute(code)).attribute_id);
             const values = await Promise.all(
                 (option.values ?? []).map(async (v) => ({
-                    value_index: Number(isNumeric(v.value_index) ? v.value_index : await lk.optionId(code, String(v.value_index))),
+                    value_index: Number(await optionOf(lk, code, String(v.value_index))),
                 })),
             );
             return { ...option, attribute_id: attributeId, values };

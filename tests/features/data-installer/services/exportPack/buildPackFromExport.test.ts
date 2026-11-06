@@ -97,7 +97,7 @@ describe('buildPackFromExport', () => {
     });
 
     // 2026-11-06: the service's own import-form kind, installed through the Import API twice as fast.
-    it("carries the export's rows in import form, the base pack's other kinds kept, images and unknown attributes left out", () => {
+    it("carries the export's rows in import form, the base pack's other kinds kept, images left out and every attribute kept", () => {
         const { pack, products, giftCards, leftOutAttributes } = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma', base: BASE, importForm: true });
 
         expect(pack.items.map((i) => i.dataType)).toEqual(['product_attributes', 'cart_rules', 'product_export']);
@@ -108,9 +108,29 @@ describe('buildPackFromExport', () => {
         const mh01 = source.items.find((r) => r.sku === 'MH01') as Record<string, string>;
         expect(mh01.base_image).toBeUndefined();
         expect(mh01.additional_attributes).toContain('climate=All-Weather|Cool|Indoor|Spring|Windy');
-        expect(mh01.additional_attributes).not.toContain('material=');
-        expect(leftOutAttributes).toContain('material');
+        // Commerce's own attributes are not in a base pack's list, so none is dropped against it.
+        expect(mh01.additional_attributes).toContain('material=');
+        expect(leftOutAttributes).toStrictEqual([]);
         expect(packRowProblems(Object.fromEntries(pack.items.map((i) => [i.dataType, i.records])), undefined)).toStrictEqual([]);
+    });
+
+    // Luma's variations say size "32" where the option is "Size 32": 50 configurables refused (2026-11-06).
+    it("names a configurable's option values by the base pack's options, in both forms", () => {
+        const sized: DatapackFile = {
+            ...BASE,
+            items: BASE.items.map((item) =>
+                item.dataType === 'product_attributes'
+                    ? { ...item, records: [{ attribute: { attribute_code: 'size', frontend_input: 'select', options: [{ label: 'Size XS' }] } }] }
+                    : item,
+            ),
+        };
+        const records = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma', base: sized });
+        const imported = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma', base: sized, importForm: true });
+
+        const sizeOption = product(records.pack, 'MH01').extension_attributes.configurable_product_options.find((o: any) => o.attribute_id === 'size');
+        expect(sizeOption.values).toEqual([{ value_index: 'Size XS' }]);
+        const rows = (itemOf(imported.pack, 'product_export') as { source: { items: Array<Record<string, string>> } }).source.items;
+        expect(rows.find((r) => r.sku === 'MH01')?.configurable_variations).toBe('sku=MH01-XS-Black,size=Size XS,color=Black|sku=MH01-XS-Gray,size=Size XS,color=Gray');
     });
 
     it('refuses a file that holds no products', () => {

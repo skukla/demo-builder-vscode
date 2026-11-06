@@ -95,12 +95,7 @@ function definedCodes(base: DatapackFile | undefined, input?: string): Set<strin
  * has them (the install makes any path the rows name that the store lacks), and the export's rows.
  */
 function importFormPack(input: ExportPackInput, table: ReadonlyArray<Record<string, string>>, rows: readonly ExportRow[]): ExportPackResult {
-    const leftOut = new Set<string>();
-    const item = productExportItem(table, {
-        options: optionLabels(input.base),
-        ...(input.base ? { known: definedCodes(input.base) } : {}),
-        leftOut: (code) => leftOut.add(code),
-    });
+    const item = productExportItem(table, optionLabels(input.base));
     const kept = (input.base?.items ?? []).filter((i) => !FROM_EXPORT.has(i.dataType));
     const giftCards = rows.filter((r) => r.fields.product_type === 'giftcard').length;
     const tree = kept.find((i) => i.dataType === 'categories')?.records as PackCategories | undefined;
@@ -109,7 +104,7 @@ function importFormPack(input: ExportPackInput, table: ReadonlyArray<Record<stri
         products: rows.length - giftCards,
         giftCards,
         categories: tree?.categories.length ?? 0,
-        leftOutAttributes: [...leftOut].sort(),
+        leftOutAttributes: [],
         unmatchedCategories: [],
     };
 }
