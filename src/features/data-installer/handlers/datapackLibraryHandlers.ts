@@ -33,6 +33,7 @@ import { settingsLayerName } from '../services/datapackCatalog';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { readPackFromStore, writePackToStore } from '../services/datapackTransfer';
 import { myVersions } from '../services/demoPack';
+import { toInstallerForm } from '../services/installerForm';
 import { myLayerVersions } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import { SHARE_CONSENT } from '../shareWording';
@@ -298,7 +299,8 @@ export const datapackLibraryHandlers = defineHandlers({
         const installer = await resolveDataInstallerAccess(context, 'installer');
         if (!installer.ok) return installer.response;
         try {
-            const pack = await readPackFromStore(library.client, id, 'library');
+            // In the Data Installer's form, or refused, before anything is sent (`installerForm.ts`).
+            const { pack, changes } = toInstallerForm(await readPackFromStore(library.client, id, 'library'));
             // No `update`: an existing pack in the shared catalog is refused, never replaced.
             const outcome = await writePackToStore(writerFor(context, installer, 'installer'), pack);
             const label = `${id.name}@${id.version}`;
@@ -316,6 +318,7 @@ export const datapackLibraryHandlers = defineHandlers({
                     version: id.version,
                     target: 'installer',
                     ...outcome,
+                    ...(changes.length > 0 ? { changed: changes } : {}),
                 },
             };
         } catch (error) {

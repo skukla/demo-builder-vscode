@@ -42,6 +42,7 @@ import {
     DatapackZipError,
     readDatapackZip,
 } from '../services/datapackZip';
+import { InstallerFormError, toInstallerForm } from '../services/installerForm';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { projectPath, readPackFile, writeZip } from './datapackFiles';
 import { fileLayerFacts, loadFileLayer, withFileLayer } from './settingsLayerFile';
@@ -103,6 +104,7 @@ export function failure(
     const known =
         error instanceof DatapackZipError ||
         error instanceof DatapackTransferError ||
+        error instanceof InstallerFormError ||
         error instanceof DataInstallerApiError;
     if (!known)
         context.logger.error(
@@ -236,7 +238,9 @@ export const datapackZipHandlers = defineHandlers({
         try {
             const file = await openSource(context, payload.path);
             if (!file) return { success: false, error: 'Open a datapack file first.' };
-            const pack = readDatapackZip(await readPackFile(context, file));
+            const read = readDatapackZip(await readPackFile(context, file));
+            // In the Data Installer's form, or refused, before anything is sent (`installerForm.ts`).
+            const { pack, changes } = target === 'installer' ? toInstallerForm(read) : { pack: read, changes: [] as string[] };
             if (pack.settingsLayer) fileLayerFacts(pack.settingsLayer);
             if (target === 'installer' && payload.confirmName !== pack.id.name) {
                 return {
@@ -270,7 +274,14 @@ export const datapackZipHandlers = defineHandlers({
             return {
                 success: outcome.stored.length > 0,
                 ...(outcome.stored.length === 0 ? { error: 'No data type could be stored.' } : {}),
-                data: { datapackName: pack.id.name, version: pack.id.version, target, ...outcome, ...(settingsLayer ? { settingsLayer } : {}) },
+                data: {
+                    datapackName: pack.id.name,
+                    version: pack.id.version,
+                    target,
+                    ...outcome,
+                    ...(settingsLayer ? { settingsLayer } : {}),
+                    ...(changes.length > 0 ? { changed: changes } : {}),
+                },
             };
         } catch (error) {
             return failure(context, error, 'The datapack file could not be loaded.');

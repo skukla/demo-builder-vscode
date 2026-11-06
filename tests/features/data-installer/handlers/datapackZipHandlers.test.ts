@@ -471,4 +471,16 @@ describe('load-datapack-zip', () => {
             data: { target: 'installer', pack: 'created' },
         });
     });
+
+    // Into the Data Installer a file goes in its form, or not at all (`installerForm.ts`, 2026-11-06).
+    it('into the Data Installer, refuses a data type it cannot take before anything is written', async () => {
+        const context = contextFor(createMockProject({ path: dir }), false);
+        const file = path.join(dir, 'settings.datapack.zip');
+        fs.writeFileSync(file, buildDatapackZip({ id: ID, displayName: 'Justrite B2B', items: [{ dataType: 'categories', records: ROWS }, { dataType: 'store_config', records: [] }] }));
+
+        const result = await load(context, { path: file, target: 'installer', confirmName: 'justrite' });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringContaining('takes no store_config data, so nothing was sent') });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
 });

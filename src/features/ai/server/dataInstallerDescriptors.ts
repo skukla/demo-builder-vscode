@@ -610,7 +610,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'Into the Data Installer, which other teams share, it needs confirmName equal to the pack ' +
             'name and never updates an existing pack. A settings layer in the file goes into the datapack library, ' +
             'wherever the data goes; settingsLayer says what became of it. A file whose layer holds a path a pack may ' +
-            'not set is refused before any write. This does not install anything into Commerce.',
+            'not set is refused before any write. Into the Data Installer the pack goes in its form, as ' +
+            'copy_library_datapack_to_installer sends it (changed lists each change). This does not install anything into Commerce.',
         map: importHandlers,
         type: 'load-datapack-zip',
         confirm: true,
@@ -706,7 +707,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'it. Not needed to install it here: start_datapack_import takes source:"library". **Writes into the ' +
             'SHARED catalog** — needs confirm:true and ' +
             'confirmName equal to the pack name, never overwrites an existing pack, and cannot be ' +
-            'undone from the extension.',
+            'undone from the extension. The pack goes in the form the Data Installer takes, or not at all: a gift card ' +
+            'goes in the Default attribute set (changed lists each such change), and a data type it takes no data of ' +
+            '(store settings) or one too large for it is refused before anything is sent.',
         map: importHandlers,
         type: 'copy-library-datapack-to-installer',
         confirm: true,

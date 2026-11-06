@@ -275,6 +275,29 @@ describe('copy-library-datapack-to-installer', () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
+    // 2026-11-06: Luma's gift cards name their set "Gift Card", which the Data Installer's schema refuses.
+    it('sends a gift card in the Default set, by its number, and says so', async () => {
+        const card = { product: { sku: '243-mb04', name: 'Gift Card', type_id: 'giftcard', attribute_set_id: 'Gift Card' } };
+        library.getDatapackDetail.mockResolvedValue({ ...DETAIL, dataTypes: ['giftcards'] });
+        library.getDataItem.mockResolvedValue({ dataType: 'giftcards', records: [card] });
+
+        const result = await copy(contextFor(null, false), { datapackName: 'justrite', version: 'v1', confirmName: 'justrite' });
+
+        const sent = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body)) as { data: string };
+        expect(JSON.parse(sent.data)).toEqual([{ product: { ...card.product, attribute_set_id: 4 } }]);
+        expect(result).toMatchObject({ success: true, data: { changed: [expect.stringContaining('1 gift card goes in the Default attribute set')] } });
+    });
+
+    it('refuses a data type the Data Installer cannot take, before anything is written, saying why', async () => {
+        library.getDatapackDetail.mockResolvedValue({ ...DETAIL, dataTypes: ['categories', 'store_config'] });
+        library.getDataItem.mockImplementation(async (_id: unknown, dataType: string) => ({ dataType, records: dataType === 'store_config' ? [] : ROWS.categories }));
+
+        const result = await copy(contextFor(null, false), { datapackName: 'justrite', version: 'v1', confirmName: 'justrite' });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringContaining('takes no store_config data, so nothing was sent') });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it('refuses without a name and version', async () => {
         expect(await copy(contextFor(null, false), { confirmName: 'x' })).toMatchObject({
             success: false,

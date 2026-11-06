@@ -4,7 +4,7 @@ kind: feature
 area: data-installer
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Datapack sources as adapters, and one setting for either or both
@@ -72,3 +72,7 @@ About 4.5 to 5.5 working days, plus review between parts; the engine answer move
 breakdown is in the research.
 
 Not for beta.153: the release behaves sensibly with both sources on.
+
+## Shipped so far
+
+- 2026-11-06  feat(datapacks): Demo Builder installs every datapack itself (`7b6091474`)

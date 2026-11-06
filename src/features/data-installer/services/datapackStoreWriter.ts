@@ -4,9 +4,8 @@
  * The Data Installer and our datapack store answer the same two routes the same
  * way (`create-datapack`, `add-data-item`; pinned by
  * `datapack-store-contract.test.ts`), so this one writer serves both — only the
- * base URL differs. It is separate from `DataInstallerWriteClient` because that
- * client drives `process-datapack` (import, validate, export) into Commerce, while
- * this writes into the store's own catalog.
+ * base URL differs. It writes into the store's own catalog and never into Commerce: Demo
+ * Builder's engine does that (`demoBuilderEngine/engine.ts`).
  *
  * Each data type is one request, so a type too large for one request is refused on
  * its own and the caller can carry on with the rest. Demo Builder's own store also takes a list
@@ -176,14 +175,25 @@ export class DatapackStoreWriter {
     }
 
     /** One `update-datapack-metadata` PUT for one version; the library answers 404 for a pack not the caller's. */
-    private async updateMetadata(id: DatapackId, fields: { display_name?: string; shared?: boolean; team?: boolean }): Promise<'updated' | 'not-found'> {
-        const response = await this.post('update-datapack-metadata', { datapack_name: id.name, version: id.version, ...fields }, 'PUT');
+    private async updateMetadata(
+        id: DatapackId,
+        fields: { display_name?: string; shared?: boolean; team?: boolean },
+    ): Promise<'updated' | 'not-found'> {
+        const response = await this.post(
+            'update-datapack-metadata',
+            { datapack_name: id.name, version: id.version, ...fields },
+            'PUT',
+        );
         if (response.status === 404) return 'not-found';
         await this.check(response, 'update-datapack-metadata');
         return 'updated';
     }
 
-    private async post(route: string, body: Record<string, unknown>, method: 'POST' | 'PUT' = 'POST'): Promise<Response> {
+    private async post(
+        route: string,
+        body: Record<string, unknown>,
+        method: 'POST' | 'PUT' = 'POST',
+    ): Promise<Response> {
         const response = await this.fetchImpl(actionUrl(this.deps.baseUrl, route), {
             method,
             headers: {

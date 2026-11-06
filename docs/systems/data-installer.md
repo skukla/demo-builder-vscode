@@ -293,6 +293,22 @@ the service installed before then has no install record, so its removal points t
 The owner's note: the split between the two sources is to be reconsidered when they become adapters
 (DI-12, part 1).
 
+### A pack in the Data Installer's form
+
+Copy to the Data Installer, and loading a file into it, send the pack in the form the Data Installer
+takes, or nothing (`installerForm.ts`). The service checks every item against its own schema as it
+is written, and a pack there is never replaced, so one refused item would leave half a pack in the
+shared catalog. Checked against every item of all 14 packs in Demo Builder's store on 2026-11-06,
+three things differed:
+
+| What | What the copy does |
+|---|---|
+| A gift card names its attribute set ("Gift Card"); the service takes a number, which differs between stores | Sends the Default set's, 4 on a standard Commerce store, which holds every gift card attribute (owner's choice); the result's `changed` says so |
+| An import-form item's `allowed_error_count` as text | Sends it as a number |
+| An item over the service's 1 MB request limit (Luma's and Venia's products) | Refused before any write (`itemParts.ts`): those packs cannot go to the Data Installer |
+
+A data type the service has no schema for, store settings, is refused before any write too.
+
 ### An ACO pack from a Commerce store
 
 **Held back in beta.153** (owner, 2026-11-03): Create Datapack opens straight on the Commerce
