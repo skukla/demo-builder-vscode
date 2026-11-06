@@ -21,9 +21,10 @@ import {
     onRoot,
     type PackCategories,
 } from './exportCategories';
+import { productExportItem } from './exportImportForm';
 import { optionLabels } from './exportOptions';
 import { numberOf, productRow, TYPE_ORDER } from './exportProducts';
-import { firstRows, openRow, readExportTable } from './exportRows';
+import { type ExportRow, firstRows, openRow, readExportTable } from './exportRows';
 import type { DatapackId } from '@/types/datapack';
 
 /** What to build. */
@@ -36,6 +37,12 @@ export interface ExportPackInput {
     description?: string;
     /** A datapack file whose attributes, sets, categories and other kinds the new pack carries. */
     base?: DatapackFile;
+    /**
+     * Carry the products in Commerce's import form (`product_export`, the service's own kind) rather
+     * than as product records: installed through the Import API, about twice as fast
+     * (`exportImportForm.ts`).
+     */
+    importForm?: boolean;
 }
 
 /** The pack, and what an SC should know about how it was made. */
@@ -51,7 +58,7 @@ export interface ExportPackResult {
 }
 
 /** The kinds the export supplies; a base pack's own rows of these are replaced. */
-const FROM_EXPORT = new Set(['products', 'giftcards', 'source_items', 'stock_source_links']);
+const FROM_EXPORT = new Set(['products', 'product_export', 'giftcards', 'source_items', 'stock_source_links']);
 
 const STOCK_LINKS = {
     stockSourceLinks: [
@@ -84,13 +91,39 @@ function definedCodes(base: DatapackFile | undefined, input?: string): Set<strin
 }
 
 /**
+ * The pack with its products in import form: the base pack's other kinds, its categories too when it
+ * has them (the install makes any path the rows name that the store lacks), and the export's rows.
+ */
+function importFormPack(input: ExportPackInput, table: ReadonlyArray<Record<string, string>>, rows: readonly ExportRow[]): ExportPackResult {
+    const leftOut = new Set<string>();
+    const item = productExportItem(table, {
+        options: optionLabels(input.base),
+        ...(input.base ? { known: definedCodes(input.base) } : {}),
+        leftOut: (code) => leftOut.add(code),
+    });
+    const kept = (input.base?.items ?? []).filter((i) => !FROM_EXPORT.has(i.dataType));
+    const giftCards = rows.filter((r) => r.fields.product_type === 'giftcard').length;
+    const tree = kept.find((i) => i.dataType === 'categories')?.records as PackCategories | undefined;
+    return {
+        pack: { id: input.id, displayName: input.displayName, ...(input.description ? { description: input.description } : {}), items: [...kept, item] },
+        products: rows.length - giftCards,
+        giftCards,
+        categories: tree?.categories.length ?? 0,
+        leftOutAttributes: [...leftOut].sort(),
+        unmatchedCategories: [],
+    };
+}
+
+/**
  * Build the pack.
  *
  * @throws CsvError when the file is not a product export or holds no products
  */
 export function buildPackFromExport(input: ExportPackInput): ExportPackResult {
-    const rows = firstRows(readExportTable(input.exportText, input.exportName).map(openRow));
+    const table = readExportTable(input.exportText, input.exportName);
+    const rows = firstRows(table.map(openRow));
     if (rows.length === 0) throw new CsvError(`${input.exportName} holds no products.`);
+    if (input.importForm) return importFormPack(input, table, rows);
     const baseTree = input.base?.items.find((item) => item.dataType === 'categories')?.records as
         | PackCategories
         | undefined;

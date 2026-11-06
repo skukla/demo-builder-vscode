@@ -14,6 +14,7 @@ import type { z } from 'zod';
 import type { CreatedObject, InstallRecorder } from './installRecord';
 import type { StoreRoot } from './packRoot';
 import type { RootStepAsker } from './packRootStep';
+import { runInBatches } from '@/core/utils/promiseUtils';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
@@ -63,6 +64,8 @@ export interface CatalogSession {
      * stocks cannot be installed.
      */
     websiteCode?: string;
+    /** The target store view's code, for a pack's rows written per store view (`product_export`). */
+    storeCode?: string;
     /** The same website, by id: a pack's products are put on it, whatever website they named. */
     websiteId?: number;
     /**
@@ -239,12 +242,9 @@ export async function eachCopy(
     objects: readonly CreatedObject[],
     read: (o: CreatedObject) => Promise<unknown>,
 ): Promise<Map<string, unknown>> {
-    const copies = new Map<string, unknown>();
-    for (const object of objects) {
-        const copy = await read(object);
-        if (copy !== undefined) copies.set(object.id, copy);
-    }
-    return copies;
+    // A few at once: one after another, each read waited on the last for no reason.
+    const copies = await runInBatches([...objects], REQUESTS_AT_ONCE, async (object) => [object.id, await read(object)] as const);
+    return new Map(copies.filter(([, copy]) => copy !== undefined));
 }
 
 /**
@@ -263,11 +263,11 @@ export function parseRows<T>(schema: z.ZodType<T>, records: unknown, what: strin
 }
 
 /**
- * Creates sent at once where each stands alone (an attribute, an assignment, a category beside its
- * siblings). One at a time, Luma's 600-odd took about two minutes of an eleven-minute install
- * (2026-11-06); five is the number removal already sends at once.
+ * Requests sent at once where each stands alone: a create (an attribute, an assignment, a category
+ * beside its siblings) or a read of one object back. One at a time, Luma's 600-odd creates took about
+ * two minutes of an eleven-minute install (2026-11-06); five is the number removal already sends at once.
  */
-export const CREATES_AT_ONCE = 5;
+export const REQUESTS_AT_ONCE = 5;
 
 /** The items with the first of each key kept: sent at once, two rows for one object would both create it. */
 export function firstOfEach<T>(items: readonly T[], keyOf: (item: T) => string): T[] {
@@ -276,14 +276,15 @@ export function firstOfEach<T>(items: readonly T[], keyOf: (item: T) => string):
 }
 
 /**
- * Do `work` for each item, {@link CREATES_AT_ONCE} at a time. A group is let finish before a failure
- * stops the rest, so no create is still on its way when the caller reports the install stopped.
+ * Do `work` for each item, `atOnce` at a time ({@link REQUESTS_AT_ONCE} unless said). A group is let
+ * finish before a failure stops the rest, so no create is still on its way when the caller reports
+ * the install stopped.
  *
  * @throws the first failure, once its group has finished
  */
-export async function eachFewAtOnce<T>(items: readonly T[], work: (item: T) => Promise<unknown>): Promise<void> {
-    for (let start = 0; start < items.length; start += CREATES_AT_ONCE) {
-        const group = items.slice(start, start + CREATES_AT_ONCE);
+export async function eachFewAtOnce<T>(items: readonly T[], work: (item: T) => Promise<unknown>, atOnce = REQUESTS_AT_ONCE): Promise<void> {
+    for (let start = 0; start < items.length; start += atOnce) {
+        const group = items.slice(start, start + atOnce);
         const results = await Promise.allSettled(group.map((item) => work(item)));
         const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
         if (failed) throw failed.reason;

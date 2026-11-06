@@ -168,10 +168,8 @@ export async function removeStock(commerce: { get: CommerceGet; send: CommerceSe
     });
 }
 
-/** Take a link this engine made back out; `id` is `<stock id>/<source code>`. */
-export async function removeStockSourceLink(send: CommerceSend, id: string): Promise<void> {
-    const slash = id.indexOf('/');
-    await send('POST', 'inventory/stock-source-links-delete', {
-        links: [{ stock_id: Number(id.slice(0, slash)), source_code: id.slice(slash + 1) }],
-    });
+/** Take links this engine made back out, in one call (the route takes a list); each id is `<stock id>/<source code>`. */
+export async function removeStockSourceLinks(send: CommerceSend, ids: readonly string[]): Promise<void> {
+    const links = ids.map((id) => ({ stock_id: Number(id.slice(0, id.indexOf('/'))), source_code: id.slice(id.indexOf('/') + 1) }));
+    await send('POST', 'inventory/stock-source-links-delete', { links });
 }

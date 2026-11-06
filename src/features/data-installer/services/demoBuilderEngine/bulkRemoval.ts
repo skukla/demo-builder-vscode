@@ -21,8 +21,9 @@
  */
 
 import { bulkRefusalWords, skusInStore, refusedForShape } from './bulkProducts';
+import { importBody } from './importApi';
 import type { CreatedObject, InstallRecorder } from './installRecord';
-import { PRODUCT_KINDS, removeProduct } from './productsKind';
+import { removeProduct } from './productsKind';
 import type { RemovalAccess } from './removers';
 
 /** SKUs per delete call: the import runs inside the request, so a call stays well inside its wait. */
@@ -36,19 +37,6 @@ export type BulkRemovalAccess = RemovalAccess & { log?: (line: string) => void }
 
 /** Take one product back on its own (`takeBack`); the record is written by the caller, once per group. */
 export type TakeBackOne = (object: CreatedObject) => Promise<void>;
-
-/** The delete-mode import of these SKUs. Every row is attempted; the read-back decides what went. */
-function deleteImport(skus: readonly string[]): unknown {
-    return {
-        source: {
-            entity: 'catalog_product',
-            behavior: 'delete',
-            validation_strategy: 'validation-skip-errors',
-            allowed_error_count: String(skus.length),
-            items: skus.map((sku) => ({ sku })),
-        },
-    };
-}
 
 /**
  * Delete these SKUs through the Import API, two hundred to a call, and answer which are gone, by
@@ -65,7 +53,7 @@ export async function deleteByImport(
     for (let start = 0; start < skus.length; start += PRODUCTS_PER_IMPORT_DELETE) {
         const batch = skus.slice(start, start + PRODUCTS_PER_IMPORT_DELETE);
         try {
-            await commerce.send('POST', 'import/json', deleteImport(batch));
+            await commerce.send('POST', 'import/json', importBody('catalog_product', 'delete', batch.map((sku) => ({ sku }))));
         } catch (error) {
             if (!refusedForShape(error)) throw error;
             commerce.log?.(
@@ -150,16 +138,4 @@ export async function removeProductsInBulk(
         products.filter((object) => !gone.has(object.id.toLowerCase())),
         one,
     );
-}
-
-/** The objects in order, split where they change between products and everything else. */
-export function productRuns(objects: readonly CreatedObject[]): CreatedObject[][] {
-    const runs: CreatedObject[][] = [];
-    for (const object of objects) {
-        const last = runs[runs.length - 1];
-        if (last && PRODUCT_KINDS.includes(last[0].kind) === PRODUCT_KINDS.includes(object.kind))
-            last.push(object);
-        else runs.push([object]);
-    }
-    return runs;
 }

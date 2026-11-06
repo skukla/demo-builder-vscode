@@ -20,7 +20,7 @@ import {
     parseStocks,
     removeSource,
     removeStock,
-    removeStockSourceLink,
+    removeStockSourceLinks,
 } from '@/features/data-installer/services/demoBuilderEngine/stockKinds';
 import { type SentCall, fakeContext } from './demoBuilderEngine.testUtils';
 
@@ -232,7 +232,7 @@ describe('removal', () => {
     it('takes a link it made back out', async () => {
         const ctx = await fakeContext();
 
-        await removeStockSourceLink(ctx.send, '7/carvelo_broadway');
+        await removeStockSourceLinks(ctx.send, ['7/carvelo_broadway']);
 
         expect(ctx.sent).toEqual([
             { method: 'POST', path: 'inventory/stock-source-links-delete', body: { links: [{ stock_id: 7, source_code: 'carvelo_broadway' }] } },

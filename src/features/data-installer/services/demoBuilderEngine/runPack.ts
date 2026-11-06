@@ -5,8 +5,8 @@
  * The order is the service's (catalog spec §0): sets before the attributes put in them,
  * categories and stock before the products that name them, products before their quantities.
  * A pack holding a kind this engine cannot install is refused before anything is written, so a
- * half-installed pack is never the answer to "we don't do that kind yet" (`product_export`,
- * `customers_export` and the ACO kinds, today). Customers and B2B
+ * half-installed pack is never the answer to "we don't do that kind yet" (`customers_export` and the
+ * ACO kinds, today). Customers and B2B
  * (step 08) come after the catalog, in the service's order: groups before the products whose tier
  * prices name them, customers before the companies that make them admins. Store settings (step 09)
  * come last, once the pack's data is in, and are put back first on removal. Gift cards, cart rules
@@ -22,14 +22,12 @@ import type { KeptRootStep } from '../../types';
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
 import { installAttributes, parseAttributeRows } from './attributesKind';
 import { ASSIGNMENT_KINDS, CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
-import { productRuns, removeProductsInBulk } from './bulkRemoval';
 import { CART_RULE_KIND, installCartRules, parseCartRuleRows } from './cartRulesKind';
 import { installCategories, parseCategoryPack } from './categoriesKind';
 import { installCompanies, parseCompanyRows } from './companiesKind';
 import { COUPON_KIND, installCoupons, parseCouponRows } from './couponsKind';
 import { installCustomerGroups, installCustomers, parseCustomerGroupRows, parseCustomerRows } from './customerKinds';
 import {
-    type CreatedObject,
     type InstallRecord,
     type RecordFiles,
     forgetInstallRecord,
@@ -41,9 +39,11 @@ import type { KindContext, SettingsDone, SkippedRow } from './kindContext';
 import { type RootPlacement, placeCategories, rootPlacement } from './packRoot';
 import { type PackRootStep, keptRootStep, settlePackRoot } from './packRootStep';
 import { settlePending } from './pendingFinders';
+import { PRODUCT_EXPORT_KIND, installProductExport, parseProductExport } from './productExportKind';
 import { GIFT_CARD_KIND, PRODUCT_KINDS, installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
-import { type KeptContainer, type RemovalAccess, decideRemovals, takeBack } from './removers';
+import { takeBackAll } from './removalRuns';
+import { type KeptContainer, type RemovalAccess, decideRemovals } from './removers';
 import { type KeptThing, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat } from './repeatInstall';
 import { flatAssignments, installCatalogs, installAssignments as installCatalogAssignments, parseCatalogRows } from './sharedCatalogKinds';
 import { installSourceItems, parseSourceItems } from './sourceItemsKind';
@@ -90,6 +90,8 @@ const STEPS: readonly KindStep[] = [
     step('sources', parseSources, installSources),
     step('stock_source_links', parseStockSourceLinks, installStockSourceLinks),
     step('products', parseProductRows, installProducts),
+    // Products in Commerce's import form, the service's own kind, in the service's place (`productExportKind.ts`).
+    step(PRODUCT_EXPORT_KIND, parseProductExport, installProductExport),
     // Step 11: gift cards are products, made as products are, after them as the service makes them.
     step(GIFT_CARD_KIND, parseProductRows, (ctx, rows) => installProducts(ctx, rows, GIFT_CARD_KIND)),
     step('source_items', parseSourceItems, installSourceItems),
@@ -288,16 +290,8 @@ export async function removePack(
     const settingObjects = created.filter((o) => o.kind === STORE_CONFIG_KIND);
     const settings = settingObjects.length > 0 ? await putBackSettings(commerce, settingObjects, (o) => recorder.drop(o)) : undefined;
     const { take, kept } = await decideRemovals(commerce.get, removalOrder({ ...record, created: [...created] }).filter((o) => o.kind !== STORE_CONFIG_KIND));
-    const one = async (object: CreatedObject): Promise<void> => {
-        await takeBack(commerce, object);
-        await recorder.drop(object);
-    };
-    // Products go back through Commerce's Import API, a run of them at a time, in the record's order.
-    for (const run of productRuns(take)) {
-        if (PRODUCT_KINDS.includes(run[0].kind)) {
-            await removeProductsInBulk({ ...commerce, log: target.log }, recorder, run, (object) => takeBack(commerce, object));
-        } else for (const object of run) await one(object);
-    }
+    // In the record's order, with as few calls as Commerce allows (`removalRuns.ts`).
+    await takeBackAll({ ...commerce, log: target.log }, recorder, take);
     if (kept.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
     const keptRoot = await keptRootStep(commerce.get, kept, record.rootStep?.storeRootId);
     return { removed: take.length + settingObjects.length, noRecord: false, kept, ...(settings ? { settings } : {}), ...(keptRoot ? { keptRoot } : {}) };

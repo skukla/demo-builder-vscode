@@ -192,6 +192,22 @@ describe('settlePending, for every kind the engine creates', () => {
         expect(never.recorder.pending).toStrictEqual([]);
     });
 
+    // A bulk batch lost to a failed read leaves fifty pending at once; each was read and written alone.
+    it('settles pending products with one search of their SKUs, writing the record once for each outcome', async () => {
+        const ctx = await fakeContext({ 'products/a1': { sku: 'a1' }, 'products/a2': { sku: 'a2' } });
+        await ctx.recorder.markPending(['a1', 'a2', 'a3'].map((sku) => ({ kind: 'products', key: sku, id: sku })));
+        const reads = jest.spyOn(ctx, 'get');
+        const confirm = jest.spyOn(ctx.recorder, 'confirm');
+        const forget = jest.spyOn(ctx.recorder, 'forgetPending');
+
+        const adopted = await settlePending(ctx.get, ctx.recorder, ctx.log);
+
+        expect(adopted.map((o) => o.id)).toEqual(['a1', 'a2']);
+        expect(reads.mock.calls.map(([path]) => path)).toEqual([expect.stringContaining('[conditionType]=in')]);
+        expect([confirm.mock.calls.length, forget.mock.calls.length]).toEqual([1, 1]);
+        expect(ctx.recorder.pending).toStrictEqual([]);
+    });
+
     it('stops, naming the kind, on a pending entry it cannot look for', async () => {
         const ctx = await fakeContext();
         await ctx.recorder.markPending([{ kind: 'aco_products', key: 'x' }]);

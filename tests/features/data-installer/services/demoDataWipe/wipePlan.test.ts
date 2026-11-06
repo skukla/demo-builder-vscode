@@ -85,10 +85,12 @@ describe('planWipe on a store whose website is wholly chosen and whose root is s
 });
 
 describe('planWipe on a whole website with roots of its own (bodea)', () => {
-    it("removes both stores' categories deepest first, leaving one that holds a category Demo Builder installed", async () => {
+    it("removes both stores' categories, top ones first, leaving one that holds a category Demo Builder installed", async () => {
         const plan = await planWipeFor(sandbox({ products: [], customers: [] }).get, [{ websiteCode: 'bodea' }], { records: PROJECT_RECORDS });
 
-        expect(plan.categoryIds).toEqual(['152', '151', '161']);
+        expect(plan.categoryIds).toEqual(['151', '161', '152']);
+        // Commerce deletes 152 with 151, its parent: no request is sent for it.
+        expect(plan.categoryUnder).toEqual({ 152: '151' });
         expect(plan.preview.left).toEqual([{ kind: 'categories', count: 1, names: ['Cables'], why: 'they hold a category Demo Builder installed' }]);
     });
 });
@@ -113,7 +115,8 @@ describe('planWipe on one store of a website with two (bodea_store)', () => {
     it("clears only the chosen store's root, never the other store's", async () => {
         const plan = await planWipeFor(store().get, BODEA_STORE, { records: [] });
 
-        expect(plan.categoryIds).toEqual(['152', '155', '151', '154']);
+        expect(plan.categoryIds).toEqual(['151', '154', '152', '155']);
+        expect(plan.categoryUnder).toEqual({ 152: '151', 155: '154' });
     });
 
     it('removes a customer made in the store, and leaves one made in the other, one who ordered there, and one made in the Admin', async () => {

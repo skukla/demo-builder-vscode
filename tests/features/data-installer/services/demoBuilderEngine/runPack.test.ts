@@ -32,8 +32,8 @@ describe('installPack', () => {
     it('refuses a pack holding a kind it cannot install, before writing anything', async () => {
         const ctx = await fakeContext();
 
-        await expect(installPack(ctx, { categories: { categories: [] }, customers_export: {}, product_export: [] })).rejects.toThrow(
-            new UnsupportedKindsError(['customers_export', 'product_export']),
+        await expect(installPack(ctx, { categories: { categories: [] }, customers_export: {}, aco_products: [] })).rejects.toThrow(
+            new UnsupportedKindsError(['customers_export', 'aco_products']),
         );
         expect(ctx.sent).toStrictEqual([]);
     });
@@ -77,6 +77,8 @@ describe('installPack', () => {
             'sources',
             'stock_source_links',
             'products',
+            // Products in the service's import form, in the service's place (2026-11-06).
+            'product_export',
             // Step 11: gift cards after the products, as the service makes them.
             'giftcards',
             'source_items',
@@ -94,12 +96,13 @@ describe('installPack', () => {
         ]);
     });
 
-    it('installs every kind the five kept packs with cart rules, coupons or gift cards hold, but their bulk product form', () => {
+    it('installs every kind the five kept packs with cart rules, coupons or gift cards hold, their bulk product form too', () => {
         // Health & Beauty, Carvello and wknd main (read 2026-10-30); Luma and Venia eds-compatible (get_datapack).
         const kinds = ['cart_rules', 'coupons', 'giftcards', 'customer_groups', 'customers', 'categories', 'products', 'stocks', 'sources', 'stock_source_links', 'source_items'];
 
         expect(kinds.filter((kind) => !INSTALLABLE_KINDS.includes(kind))).toStrictEqual([]);
-        expect(INSTALLABLE_KINDS).not.toContain('product_export');
+        // The service's import form of products (`productExportKind.ts`, 2026-11-06).
+        expect(INSTALLABLE_KINDS).toContain('product_export');
     });
 
     it("installs every one of Bodea's fourteen kinds", () => {
@@ -137,7 +140,7 @@ describe('removePack', () => {
         await recorder.record({ kind: 'attribute_sets', id: '12' });
         await recorder.record({ kind: 'products', id: 'vrrack' });
         const ctx = await fakeContext({
-            [page('products', '&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=12')]: {
+            [page('products', '&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=12&fields=total_count,items[sku]')]: {
                 items: [{ sku: 'vrrack' }, { sku: 'their-a' }, { sku: 'their-b' }],
                 total_count: 3,
             },
@@ -151,6 +154,43 @@ describe('removePack', () => {
         expect(result.kept).toEqual([expect.objectContaining({ kind: 'set', name: 'Racks', count: 2, holds: 'product' })]);
         // Still on the record, so a later removal takes it once the SC's products are gone.
         expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'attribute_sets', id: '12' }]);
+    });
+
+    describe('an attribute place in a set the removal deletes too', () => {
+        const SET_READS = {
+            [page('products', '&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=12&fields=total_count,items[sku]')]: { items: [], total_count: 0 },
+            'products/attribute-sets/12': { attribute_set_id: 12, attribute_set_name: 'Racks' },
+        };
+        async function setWithPlaces(files: ReturnType<typeof memoryFiles>) {
+            const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+            await recorder.record({ kind: 'attribute_sets', id: '12' });
+            await recorder.record({ kind: 'attribute_assign_to_set', id: '12/color' });
+            await recorder.record({ kind: 'attribute_assign_to_set', id: '12/size' });
+        }
+
+        // Live, 2026-11-06: Luma's removal sent about 540 of these before deleting the sets themselves.
+        it('is not sent on its own: Commerce takes it with the set, and both leave the record', async () => {
+            const files = memoryFiles();
+            await setWithPlaces(files);
+            const ctx = await fakeContext(SET_READS);
+
+            const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+            expect(ctx.sent).toEqual<SentCall[]>([{ method: 'DELETE', path: 'products/attribute-sets/12', body: undefined }]);
+            expect(result).toMatchObject({ removed: 3, kept: [] });
+            expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
+        });
+
+        it('stays on the record when the set is refused, for the next removal to take', async () => {
+            const files = memoryFiles();
+            await setWithPlaces(files);
+            const ctx = await fakeContext(SET_READS, () => {
+                throw new CommerceReadError('Commerce answered 500', 500);
+            });
+
+            await expect(removePack(ctx, files, { projectPath: PROJECT, pack: PACK })).rejects.toThrow('Commerce answered 500');
+            expect((await readInstallRecord(files, PROJECT, PACK))?.created.map((o) => o.id)).toEqual(['12', '12/color', '12/size']);
+        });
     });
 
     it('answers that there is no record when this engine never installed the pack', async () => {

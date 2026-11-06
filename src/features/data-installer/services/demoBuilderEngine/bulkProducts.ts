@@ -19,7 +19,7 @@
  */
 
 import type { CreatedObject } from './installRecord';
-import { type KindContext, newCatalogSession, readOrNull } from './kindContext';
+import { eachFewAtOnce, type KindContext, newCatalogSession, readOrNull } from './kindContext';
 import { certainlyNotMade } from './pendingCreates';
 import type { PendingObject } from './pendingRecord';
 import { reasonOf, skipRow } from './refusedRows';
@@ -41,6 +41,12 @@ import type { CommerceGet } from '@/types/commerceWire';
  * that batch one at a time rather than stopping.
  */
 export const PRODUCTS_PER_BULK = 50;
+
+/**
+ * Bulk calls in flight at once. Commerce works several at a time: three calls of 50 finished together
+ * in 16 s, about 10 products a second, where one call at a time made about 5 (ACCS sandbox, 2026-11-06).
+ */
+export const BULK_CALLS_AT_ONCE = 3;
 
 /** SKUs per read of which ones the store has: short enough for any address. */
 const SKUS_PER_READ = 100;
@@ -157,12 +163,32 @@ async function startBatch(ctx: KindContext, run: BulkRun, batch: readonly Produc
     }
 }
 
+/** Each run's batches in flight, by uuid, with how many of their rows have ended so far. */
+const inFlight = new WeakMap<BulkRun, Map<string, number>>();
+
+/** The run's batches in flight, created on first use. */
+function running(run: BulkRun): Map<string, number> {
+    const known = inFlight.get(run);
+    if (known) return known;
+    const made = new Map<string, number>();
+    inFlight.set(run, made);
+    return made;
+}
+
+/** The progress line: the batches finished and every batch in flight, since several are followed at once. */
+function sayProgress(ctx: KindContext, run: BulkRun): void {
+    const ended = run.done + [...running(run).values()].reduce((sum, n) => sum + n, 0);
+    ctx.progress?.(`${ended.toLocaleString('en-US')} of ${run.total.toLocaleString('en-US')} ${run.noun}`);
+}
+
 /** Follow an accepted batch to its end and read how each row ended. */
 async function followBatch(ctx: KindContext, run: BulkRun, uuid: string, count: number, wait: BulkWait): Promise<BulkRow[]> {
-    const before = run.done;
     await followBulk(ctx.get, uuid, count, {
         ...wait,
-        onProgress: (done) => ctx.progress?.(`${(before + done).toLocaleString('en-US')} of ${run.total.toLocaleString('en-US')} ${run.noun}`),
+        onProgress: (done) => {
+            running(run).set(uuid, done);
+            sayProgress(ctx, run);
+        },
     });
     return readBulkRows(ctx.get, uuid, count, wait);
 }
@@ -208,7 +234,10 @@ async function makeBatch(
         );
         await run.single(product);
     }
+    // Moved from in flight to finished in one step, so the count never dips.
+    running(run).delete(uuid);
     run.done += batch.length;
+    sayProgress(ctx, run);
 }
 
 /**
@@ -224,9 +253,10 @@ export async function createProductsInBulk(
     products: readonly ProductToMake[],
     wait: BulkWait = BULK_WAIT,
 ): Promise<void> {
-    for (let start = 0; start < products.length; start += PRODUCTS_PER_BULK) {
-        await makeBatch(ctx, run, products.slice(start, start + PRODUCTS_PER_BULK), wait);
-    }
+    const batches = Array.from({ length: Math.ceil(products.length / PRODUCTS_PER_BULK) }, (_, i) =>
+        products.slice(i * PRODUCTS_PER_BULK, (i + 1) * PRODUCTS_PER_BULK),
+    );
+    await eachFewAtOnce(batches, (batch) => makeBatch(ctx, run, batch, wait), BULK_CALLS_AT_ONCE);
     const ids = await productIdsInStore(
         ctx.get,
         products.map((p) => p.sku),

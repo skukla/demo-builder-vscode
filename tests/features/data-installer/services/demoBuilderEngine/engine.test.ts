@@ -148,14 +148,14 @@ describe('demoBuilderEngine install', () => {
 
     it('fails every kind, writing nothing, for a kind it cannot install yet', async () => {
         const { engine, ctx } = await engineWith({}, () => ({}), {
-            readPack: async () => ({ ...ITEMS, product_export: [] }),
+            readPack: async () => ({ ...ITEMS, aco_products: [] }),
         });
 
-        const { activationId } = await engine.startImport(request({ dataTypes: ['attribute_sets', 'categories', 'product_export'] }));
+        const { activationId } = await engine.startImport(request({ dataTypes: ['attribute_sets', 'categories', 'aco_products'] }));
         await settle(engine, activationId);
 
         expect((await engine.getJobFailureReason(activationId))?.error).toBe(
-            'Demo Builder does not install product_export yet, so nothing was installed.',
+            'Demo Builder does not install aco_products yet, so nothing was installed.',
         );
         expect(ctx.sent).toStrictEqual([]);
     });

@@ -6,9 +6,10 @@
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import {
     ATTRIBUTE_CODE,
-    CREATES_AT_ONCE,
+    REQUESTS_AT_ONCE,
     SOURCE_CODE,
     deleteIfPresent,
+    eachCopy,
     eachFewAtOnce,
     firstOfEach,
     isAlreadyGone,
@@ -129,7 +130,7 @@ describe('eachFewAtOnce', () => {
         for (let i = 0; i < 5; i += 1) await Promise.resolve();
     };
 
-    it(`sends ${CREATES_AT_ONCE} at a time, starting the next group once the last has finished`, async () => {
+    it(`sends ${REQUESTS_AT_ONCE} at a time, starting the next group once the last has finished`, async () => {
         const h = heldWork();
         const items = Array.from({ length: 7 }, (_, i) => i + 2);
         const done = eachFewAtOnce(items, h.work);
@@ -142,7 +143,7 @@ describe('eachFewAtOnce', () => {
         h.release[7]();
         h.release[8]();
         await done;
-        expect(h.most()).toBe(CREATES_AT_ONCE);
+        expect(h.most()).toBe(REQUESTS_AT_ONCE);
     });
 
     it('lets a failing group finish, then throws its failure and starts no more', async () => {
@@ -168,5 +169,25 @@ describe('firstOfEach', () => {
         const rows = [{ k: 'a', n: 1 }, { k: 'b', n: 2 }, { k: 'a', n: 3 }];
 
         expect(firstOfEach(rows, (r) => r.k)).toEqual([{ k: 'a', n: 1 }, { k: 'b', n: 2 }]);
+    });
+});
+
+describe('eachCopy', () => {
+    it(`reads ${REQUESTS_AT_ONCE} objects at once, keeping each copy by id and leaving out one the store no longer has`, async () => {
+        let inFlight = 0;
+        let most = 0;
+        const objects = Array.from({ length: 12 }, (_, i) => ({ kind: 'categories', id: String(i) }));
+
+        const copies = await eachCopy(objects, async (o) => {
+            inFlight += 1;
+            most = Math.max(most, inFlight);
+            await new Promise((resolve) => setImmediate(resolve));
+            inFlight -= 1;
+            return o.id === '3' ? undefined : { name: `c${o.id}` };
+        });
+
+        expect(most).toBe(REQUESTS_AT_ONCE);
+        expect([...copies.keys()]).toEqual(objects.map((o) => o.id).filter((id) => id !== '3'));
+        expect(copies.get('7')).toEqual({ name: 'c7' });
     });
 });

@@ -76,15 +76,20 @@ async function attributeOrNone(lk: ProductLookups, code: string) {
 }
 
 /**
- * Products by SKU, a page of SKUs at a time; a gift card is one too (step 11). A configurable names
- * its children by id, and the pages just read hold most of them: asked for one at a time, Luma's
- * 1,900 children took two minutes of the read-back (2026-11-06). Only an id not read costs a request.
+ * The lookups, naming a product by id from products already read. A configurable names its children by
+ * id, and the pages just read hold most of them: asked for one at a time, Luma's 1,900 children took
+ * two minutes of the read-back (2026-11-06). Only an id not read costs a request.
  */
+export function knowingSkus(lk: ProductLookups, products: readonly CommerceProduct[]): ProductLookups {
+    const skuOfId = new Map(products.map((p) => [String(p.id), p.sku]));
+    return { ...lk, productSku: async (id) => skuOfId.get(String(id)) ?? lk.productSku(id) };
+}
+
+/** Products by SKU, a page of SKUs at a time; a gift card is one too (step 11). */
 const productReader: Reader = async (ctx, lk, objects) => {
     const products = await readProducts(ctx, objects.map((o) => o.id));
     const bySku = new Map(products.map((p) => [p.sku, p]));
-    const skuOfId = new Map(products.map((p) => [String(p.id), p.sku]));
-    const known: ProductLookups = { ...lk, productSku: async (id) => skuOfId.get(String(id)) ?? lk.productSku(id) };
+    const known = knowingSkus(lk, products);
     return eachCopy(objects, async (o) => {
         const raw = bySku.get(o.id);
         return raw ? productPackForm(known, raw) : undefined;

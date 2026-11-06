@@ -38,6 +38,8 @@ export interface BuildFromExportPayload {
     description?: string;
     /** A datapack file, inside the project, whose attributes and other kinds the new pack carries. */
     basePath?: string;
+    /** Carry the products in Commerce's import form (`product_export`): installed about twice as fast. */
+    importForm?: boolean;
 }
 
 /** The store's rule for a pack name, checked here so a file is never made that no store would take. */
@@ -46,7 +48,7 @@ const PACK_NAME = /^[a-zA-Z0-9_-]+$/u;
 const REQUIRED = ['exportPath', 'datapackName', 'version', 'displayName'] as const;
 
 type Checked = Required<Pick<BuildFromExportPayload, (typeof REQUIRED)[number]>> &
-    Pick<BuildFromExportPayload, 'path' | 'description' | 'basePath'>;
+    Pick<BuildFromExportPayload, 'path' | 'description' | 'basePath' | 'importForm'>;
 
 function checkPayload(payload: BuildFromExportPayload | undefined): Checked | { error: string } {
     const missing = REQUIRED.filter((key) => !payload?.[key]?.trim());
@@ -98,6 +100,7 @@ async function build(context: HandlerContext, given: Checked): Promise<HandlerRe
         displayName: given.displayName,
         ...(given.description ? { description: given.description } : {}),
         ...(base ? { base } : {}),
+        ...(given.importForm ? { importForm: true } : {}),
     });
     const rows = Object.fromEntries(result.pack.items.map((item) => [item.dataType, item.records]));
     const problems = packRowProblems(rows, undefined);

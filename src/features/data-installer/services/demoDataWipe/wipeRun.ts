@@ -230,7 +230,7 @@ function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string): Record<S
             writes: each(plan.ruleTakeOff, (t) => t.id, (t) => takeRuleOff(commerce, t.id, t.websiteIds)),
         },
         ...groupSteps(commerce, plan),
-        categories: { failed: 'remove 1 of the categories', stage: DATAPACK_STAGES.removingCategories.label, writes: each(plan.categoryIds, self, (id) => removeCategory(send, id)) },
+        categories: { failed: 'remove 1 of the categories', stage: DATAPACK_STAGES.removingCategories.label, writes: each(plan.categoryIds, self, async (id) => (plan.categoryUnder[id] ? undefined : removeCategory(send, id)), { key: (id) => `category:${id}`, needs: (id) => (plan.categoryUnder[id] ? [`category:${plan.categoryUnder[id]}`] : []) }) },
         ...attributeSteps(commerce, plan),
     };
 }

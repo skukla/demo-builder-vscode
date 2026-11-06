@@ -42,7 +42,7 @@ import { packRootOf } from './packRoot';
 import { type ProductLookups, type StoreCategory, productLookups } from './productLookups';
 import { GIFT_CARD_KIND } from './productsKind';
 import { captureSettings } from './storeConfigKind';
-import { onceInventory, readBySku, readCopies, readProducts } from './storeCopies';
+import { knowingSkus, onceInventory, readBySku, readCopies, readProducts } from './storeCopies';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
 
 /** The set and the source every store has, which a pack never carries (export spec §1). */
@@ -277,8 +277,10 @@ export async function capturePack(
     const products = uniqueBySku(await readProducts(ctx, skus)).sort((a, b) => typeRank(a) - typeRank(b));
     // A gift card's set, categories and quantities are captured with the products'; its row goes under `giftcards`.
     const isGiftCard = (p: CommerceProduct) => giftCards.has(p.sku.toLowerCase());
-    const productRows = await Promise.all(products.filter((p) => !isGiftCard(p)).map((p) => productPackForm(lk, p)));
-    const giftCardRows = await Promise.all(products.filter(isGiftCard).map((p) => productPackForm(lk, p)));
+    // A configurable's children named from the products just read, not one request each (`knowingSkus`).
+    const known = knowingSkus(lk, products);
+    const productRows = await Promise.all(products.filter((p) => !isGiftCard(p)).map((p) => productPackForm(known, p)));
+    const giftCardRows = await Promise.all(products.filter(isGiftCard).map((p) => productPackForm(known, p)));
     onPhase(1);
     const categories = await captureCategories(lk, idsOf(created, 'categories'), products.flatMap(linkedCategories), ctx.session.rootCategory.id, packRootOf(installed.categories));
     onPhase(2);

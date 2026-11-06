@@ -136,8 +136,9 @@ describe('a customer and B2B pack', () => {
 
         const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
 
+        // No unassign first: deleting a shared catalog returns its companies to the public catalog
+        // (Adobe, "Delete a shared catalog"; `impliedRemovals.ts`).
         expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual([
-            'POST sharedCatalog/41/unassignCompanies',
             'DELETE company/30',
             'DELETE sharedCatalog/41',
             'DELETE customers/52',
@@ -164,8 +165,9 @@ describe('a customer and B2B pack', () => {
         store.state.members = [];
         const emptied = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
 
+        // No unassign first: deleting a shared catalog returns its companies to the public catalog
+        // (Adobe, "Delete a shared catalog"; `impliedRemovals.ts`).
         expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual([
-            'POST sharedCatalog/41/unassignCompanies',
             'DELETE company/30',
             'DELETE sharedCatalog/41',
             'DELETE customers/52',

@@ -54,6 +54,7 @@ export function sessionFor(target: EngineTarget): CatalogSession {
     const session = newCatalogSession(target.storeId);
     session.websiteId = target.websiteId;
     session.websiteCode = target.websiteCode;
+    session.storeCode = target.storeCode;
     session.rootCategory = { id: target.rootCategoryId, name: '' };
     return session;
 }

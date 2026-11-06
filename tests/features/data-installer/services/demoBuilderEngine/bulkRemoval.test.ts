@@ -10,7 +10,6 @@
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import {
     afterImportDelete,
-    productRuns,
     removeProductsInBulk,
     SINGLE_DELETES_AT_ONCE,
 } from '@/features/data-installer/services/demoBuilderEngine/bulkRemoval';
@@ -150,21 +149,5 @@ describe('afterImportDelete', () => {
 
         expect(store.imports).toHaveLength(1);
         expect(single.mock.calls).toEqual([['b']]);
-    });
-});
-
-describe('productRuns', () => {
-    it("splits the record's order where it changes between products and everything else", () => {
-        const objects: CreatedObject[] = [
-            { kind: 'coupons', id: '1' },
-            { kind: 'products', id: 'A' },
-            { kind: 'giftcards', id: 'G' },
-            { kind: 'categories', id: '9' },
-        ];
-        expect(productRuns(objects).map((run) => run.map((o) => o.id))).toEqual([
-            ['1'],
-            ['A', 'G'],
-            ['9'],
-        ]);
     });
 });

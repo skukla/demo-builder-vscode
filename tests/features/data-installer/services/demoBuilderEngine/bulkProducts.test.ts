@@ -11,6 +11,7 @@ import { bulkAccepted, bulkStatus } from '../../../../helpers/commerceAssignFixt
 import { memoryFiles, NOW, PACK, PROJECT } from './demoBuilderEngine.testUtils';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import {
+    BULK_CALLS_AT_ONCE,
     type BulkRun,
     type BulkWait,
     createProductsInBulk,
@@ -107,6 +108,30 @@ describe('createProductsInBulk', () => {
         expect(h.ctx.recorder.pending).toStrictEqual([]);
         expect(h.logged).toContain('created product s119');
         expect(h.progressed.at(-1)).toBe('120 of 120 products');
+    });
+
+    // Live, 2026-11-06: three calls of 50 finished together in 16 s, twice the pace of one at a time.
+    it(`keeps ${BULK_CALLS_AT_ONCE} bulk calls in flight at once, and counts progress across all of them`, async () => {
+        const h = await harness();
+        const send = h.ctx.send;
+        let open = 0;
+        let most = 0;
+        h.ctx.send = async (...args) => {
+            open += 1;
+            most = Math.max(most, open);
+            await new Promise((resolve) => setImmediate(resolve));
+            open -= 1;
+            return send(...args);
+        };
+
+        await createProductsInBulk(h.ctx, runFor(400), products(400), NO_WAIT);
+
+        expect(most).toBe(BULK_CALLS_AT_ONCE);
+        expect(h.bulkSizes).toHaveLength(8);
+        expect(h.ctx.recorder.created).toHaveLength(400);
+        const counts = h.progressed.map((line) => Number(line.split(' ')[0].replace(',', '')));
+        expect(counts.every((n, i) => i === 0 || n >= counts[i - 1])).toBe(true);
+        expect(h.progressed.at(-1)).toBe('400 of 400 products');
     });
 
     it("records a made row, skips a refused one in Commerce's words, and sends a retried or open one again on its own", async () => {

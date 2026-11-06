@@ -17,9 +17,9 @@ import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const inSet = (id: string) =>
-    page('products', `&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=${id}`);
+    page('products', `&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=${id}&fields=total_count,items[sku]`);
 const inCategory = (id: string) =>
-    page('products', `&searchCriteria[filterGroups][0][filters][0][field]=category_id&searchCriteria[filterGroups][0][filters][0][value]=${id}`);
+    page('products', `&searchCriteria[filterGroups][0][filters][0][field]=category_id&searchCriteria[filterGroups][0][filters][0][value]=${id}&fields=total_count,items[sku]`);
 const category = (id: number, name: string, children: string): StoreCategory => ({ id, name, path: `1/2/${id}`, children });
 
 const obj = (kind: string, id: string): CreatedObject => ({ kind, id });

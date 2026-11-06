@@ -32,8 +32,8 @@ import { ROOT_KEY } from './packForm';
 import { storeShowingRoot } from './packRootStep';
 import type { StoreCategory } from './productLookups';
 import { PRODUCT_KINDS, removeProduct } from './productsKind';
-import { removeAssignmentPair, removeCatalog, splitPair } from './sharedCatalogKinds';
-import { removeSource, removeStock, removeStockSourceLink } from './stockKinds';
+import { removeAssignmentPairs, removeCatalog, splitPair } from './sharedCatalogKinds';
+import { removeSource, removeStock, removeStockSourceLinks } from './stockKinds';
 import { andList } from '@/core/utils/andList';
 import { CommerceReadError, readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -55,7 +55,7 @@ const REMOVERS: Record<string, Remover> = {
     categories: (c, o) => removeCategory(c.send, o.id),
     stocks: (c, o) => removeStock(c, o),
     sources: (c, o) => removeSource(c, o.id),
-    stock_source_links: (c, o) => removeStockSourceLink(c.send, o.id),
+    stock_source_links: (c, o) => removeStockSourceLinks(c.send, [o.id]),
     products: (c, o) => removeProduct(c.send, o.id),
     giftcards: (c, o) => removeProduct(c.send, o.id),
     // Step 08.
@@ -63,9 +63,9 @@ const REMOVERS: Record<string, Remover> = {
     customers: (c, o) => removeCustomer(c.send, o.id),
     b2b_shared_catalogs: (c, o) => removeCatalog(c.send, o.id),
     b2b_companies: (c, o) => removeCompany(c.send, o.id),
-    b2b_shared_catalog_company_assignments: (c, o) => removeAssignmentPair(c.send, CATALOG_COMPANIES_KIND, o.id),
-    b2b_shared_catalog_categories: (c, o) => removeAssignmentPair(c.send, CATALOG_CATEGORIES_KIND, o.id),
-    b2b_shared_catalog_products: (c, o) => removeAssignmentPair(c.send, CATALOG_PRODUCTS_KIND, o.id),
+    b2b_shared_catalog_company_assignments: (c, o) => removeAssignmentPairs(c.send, CATALOG_COMPANIES_KIND, [o.id]),
+    b2b_shared_catalog_categories: (c, o) => removeAssignmentPairs(c.send, CATALOG_CATEGORIES_KIND, [o.id]),
+    b2b_shared_catalog_products: (c, o) => removeAssignmentPairs(c.send, CATALOG_PRODUCTS_KIND, [o.id]),
     // Step 11: Commerce deletes a rule's coupons with it.
     cart_rules: (c, o) => removeCartRule(c.send, o.id),
     coupons: (c, o) => removeCoupon(c.send, o.id),
@@ -126,7 +126,8 @@ const keyOfObject = (kind: string, id: string) => `${kind}\u0000${id}`;
 
 /** The products in a set or a category, by SKU; none when the store has no such search. */
 export async function productsWhere(get: CommerceGet, field: 'attribute_set_id' | 'category_id', id: string): Promise<string[]> {
-    const criteria = `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${segment(id)}`;
+    // SKUs only: whole products, a hundred to a page, made Luma's keep decisions take over two minutes (2026-11-06).
+    const criteria = `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${segment(id)}&fields=total_count,items[sku]`;
     try {
         return (await readAllPages<{ sku: string }>(get, 'products', criteria)).map((p) => p.sku);
     } catch (error) {

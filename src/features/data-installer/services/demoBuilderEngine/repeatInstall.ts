@@ -26,7 +26,6 @@
  */
 
 import { addMissingOptions, parseAttributeRows } from './attributesKind';
-import { productRuns, removeProductsInBulk } from './bulkRemoval';
 import { updateCartRule } from './cartRulesKind';
 import { updateCompany } from './companiesKind';
 import { updateCoupon } from './couponsKind';
@@ -35,9 +34,10 @@ import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, ownedKey, segment } from './kindContext';
 import { productLookups } from './productLookups';
-import { PRODUCT_KINDS, parseProductRows, toCommerceProduct } from './productsKind';
+import { parseProductRows, toCommerceProduct } from './productsKind';
 import { tryRow } from './refusedRows';
-import { type KeptContainer, decideRemovals, takeBack } from './removers';
+import { takeBackAll } from './removalRuns';
+import { type KeptContainer, decideRemovals } from './removers';
 import { READABLE_KINDS, packKindOf, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
 import { type OwnedChange, decideOwnedChange } from '@/core/utils/ownedChange';
 
@@ -194,19 +194,8 @@ export async function applyRemovals(ctx: KindContext, plans: readonly KindPlan[]
     for (const { object } of plans.flatMap((p) => p.objects).filter((o) => o.outcome === 'gone')) await ctx.recorder.drop(object);
     const { take, kept } = await decideRemovals(ctx.get, removalsOf(plans));
     const tookOut = (object: CreatedObject): void => ctx.log(`took out ${object.kind} ${object.key ?? object.id}: the pack no longer has it`);
-    for (const run of productRuns(take)) {
-        if (PRODUCT_KINDS.includes(run[0].kind)) {
-            // Through Commerce's Import API, as a removal takes products back (`bulkRemoval.ts`).
-            await removeProductsInBulk(ctx, ctx.recorder, run, (object) => takeBack(ctx, object));
-            run.forEach(tookOut);
-            continue;
-        }
-        for (const object of run) {
-            await takeBack(ctx, object);
-            await ctx.recorder.drop(object);
-            tookOut(object);
-        }
-    }
+    // As a removal takes things back, with as few calls as Commerce allows (`removalRuns.ts`).
+    await takeBackAll(ctx, ctx.recorder, take, (objects) => objects.forEach(tookOut));
     return kept;
 }
 

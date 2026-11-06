@@ -19,7 +19,7 @@ import {
     installAssignments,
     installCatalogs,
     parseCatalogRows,
-    removeAssignmentPair,
+    removeAssignmentPairs,
     removeCatalog,
 } from '@/features/data-installer/services/demoBuilderEngine/sharedCatalogKinds';
 import {
@@ -218,9 +218,9 @@ describe('the assignment kinds', () => {
     it('takes a pair back by unassigning it, and counts a catalog already gone as done', async () => {
         const ctx = await fakeContext({});
 
-        await removeAssignmentPair(ctx.send, CATALOG_COMPANIES_KIND, '1/6');
-        await removeAssignmentPair(ctx.send, CATALOG_CATEGORIES_KIND, '40/41');
-        await removeAssignmentPair(ctx.send, CATALOG_PRODUCTS_KIND, '40/sku/with-slash');
+        await removeAssignmentPairs(ctx.send, CATALOG_COMPANIES_KIND, ['1/6']);
+        await removeAssignmentPairs(ctx.send, CATALOG_CATEGORIES_KIND, ['40/41']);
+        await removeAssignmentPairs(ctx.send, CATALOG_PRODUCTS_KIND, ['40/sku/with-slash']);
 
         expect(ctx.sent).toEqual([
             { method: 'POST', path: 'sharedCatalog/1/unassignCompanies', body: { companies: [{ id: 6 }] } },

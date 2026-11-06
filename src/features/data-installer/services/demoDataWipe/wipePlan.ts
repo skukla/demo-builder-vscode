@@ -38,6 +38,7 @@ import { named } from '../demoBuilderEngine/saveOutcome';
 import { type AttributeDecision, attributesLeft, decideAttributes } from './wipeAttributes';
 import { type CartRuleDecision, decideCartRules } from './wipeCartRules';
 import { type CatalogDecision, catalogsLeft, decideCatalogs } from './wipeCatalogs';
+import { type CategoryDecision, categoryOrder, decideCategories } from './wipeCategories';
 import type { WipeRespects } from './wipeClaims';
 import { type CompanyDecision, companiesLeft, decideCompanies } from './wipeCompanies';
 import { type CustomerDecision, decideCustomers } from './wipeCustomers';
@@ -63,8 +64,13 @@ export interface WipePlan {
     preview: WipePreview;
     deleteSkus: string[];
     takeOff: Array<{ sku: string; websiteId: number }>;
-    /** Deepest first, so no delete takes a category another delete still names. */
+    /** The top categories going first, then each one under them (`categoryUnder`). */
     categoryIds: string[];
+    /**
+     * Each category going with one above it, by id: Commerce deletes a category's children with it, so
+     * no request is sent for these, and each is held back if the one above it could not be removed.
+     */
+    categoryUnder: Record<string, string>;
     /** Customers going, those in a company going after it. */
     customerIds: string[];
     /** Companies going, before their customers: Commerce refuses to delete an admin while the company stands. */
@@ -103,30 +109,6 @@ export const NEVER_TOUCHED =
     "Never touched: what Demo Builder installed (its removal takes that), Commerce's own customer groups and attributes, " +
     'the public catalog and the Default attribute set, stocks and sources, websites, stores, store views and root categories, ' +
     "the default settings and other websites' settings, admin users and the integration's credential. Orders are closed, never deleted.";
-
-interface CategoryDecision {
-    remove: WipeCategory[];
-    shared: Array<{ root: string; under: WipeCategory[]; with: string[] }>;
-    holding: WipeCategory[];
-}
-
-const segmentsOf = (c: WipeCategory): string[] => (c.path ?? '').split('/').filter(Boolean);
-
-/** The categories under each chosen store's root: deleted, or left with the reason. */
-function decideCategories(tree: readonly WipeCategory[], scope: WipeScope, recorded: Set<string>): CategoryDecision {
-    const decided: CategoryDecision = { remove: [], shared: [], holding: [] };
-    const holdsRecorded = new Set(tree.filter((c) => recorded.has(String(c.id))).flatMap((c) => segmentsOf(c).slice(0, -1)));
-    const under = (root: string) => tree.filter((c) => segmentsOf(c)[1] === root && segmentsOf(c).length > 2);
-    for (const [root, others] of scope.sharedRoots) decided.shared.push({ root, under: under(root), with: others });
-    for (const root of scope.clearedRoots) {
-        for (const category of under(root)) {
-            if (recorded.has(String(category.id))) continue;
-            (holdsRecorded.has(String(category.id)) ? decided.holding : decided.remove).push(category);
-        }
-    }
-    decided.remove.sort((a, b) => segmentsOf(b).length - segmentsOf(a).length);
-    return decided;
-}
 
 const skus = (products: readonly CommerceProduct[]) => products.map((p) => p.sku);
 const categoryNames = (categories: readonly WipeCategory[]) => categories.map((c) => c.name ?? String(c.id));
@@ -324,7 +306,7 @@ export async function planWipe(get: CommerceGet, structure: CommerceStoreStructu
     const ids = {
         deleteSkus: skus(decided.products.remove),
         takeOff: decided.products.takeOff.flatMap((t) => t.websiteIds.map((websiteId) => ({ sku: t.product.sku, websiteId }))),
-        categoryIds: decided.categories.remove.map((c) => String(c.id)),
+        ...categoryOrder(decided.categories.remove),
         customerIds: decided.customers.remove.map((c) => String(c.id)),
         companyIds: decided.companies.remove.map((c) => c.id),
         memberOf: Object.fromEntries(decided.companies.remove.flatMap((c) => c.memberIds.map((id) => [id, c.id]))),

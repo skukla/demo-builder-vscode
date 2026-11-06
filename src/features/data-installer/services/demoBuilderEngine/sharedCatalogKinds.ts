@@ -271,12 +271,20 @@ export function splitPair(id: string): { catalogId: string; ref: string } {
     return { catalogId: id.slice(0, slash), ref: id.slice(slash + 1) };
 }
 
-/** Take one assignment this engine made back out; a catalog already gone took it with it. */
-export async function removeAssignmentPair(send: CommerceSend, kind: AssignmentKind, id: string): Promise<void> {
-    const { catalogId, ref } = splitPair(id);
-    try {
-        await send('POST', `sharedCatalog/${segment(catalogId)}/unassign${ROUTES[kind].verb}`, ROUTES[kind].body([ref]));
-    } catch (error) {
-        if (!isAlreadyGone(error)) throw error;
+/**
+ * Take assignments this engine made back out, one call per catalog (the route takes a list); a catalog
+ * already gone took its assignments with it.
+ *
+ * @param ids - recorded pairs, `<catalog id>/<member>`
+ */
+export async function removeAssignmentPairs(send: CommerceSend, kind: AssignmentKind, ids: readonly string[]): Promise<void> {
+    const pairs = ids.map(splitPair);
+    for (const catalogId of new Set(pairs.map((p) => p.catalogId))) {
+        const refs = pairs.filter((p) => p.catalogId === catalogId).map((p) => p.ref);
+        try {
+            await send('POST', `sharedCatalog/${segment(catalogId)}/unassign${ROUTES[kind].verb}`, ROUTES[kind].body(refs));
+        } catch (error) {
+            if (!isAlreadyGone(error)) throw error;
+        }
     }
 }

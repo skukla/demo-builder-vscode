@@ -70,7 +70,8 @@ describe("a pack's root, the store's root its own", () => {
         const ctx = await open();
         const removed = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
         expect(removed).toMatchObject({ removed: 2, kept: [] });
-        expect(store.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['DELETE categories/301', 'DELETE categories/300']);
+        // Espresso (301) goes with Coffee (300), as Commerce deletes a category's children with it.
+        expect(store.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['DELETE categories/300']);
         expect(store.categories).toEqual(before);
         await expect(readInstallRecord(files, PROJECT, PACK)).resolves.toBeUndefined();
     });

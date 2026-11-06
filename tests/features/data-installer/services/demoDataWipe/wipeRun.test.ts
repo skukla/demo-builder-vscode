@@ -44,16 +44,25 @@ describe('runWipe', () => {
         );
     });
 
-    it('deletes categories deepest first', async () => {
+    // 2026-11-06: deleting every category deepest first sent one request each.
+    it('deletes the top category, and counts the one under it, which Commerce deletes with it', async () => {
         const store = sandbox({ products: [], customers: [] });
         const plan = await planWipeFor(store.get, [{ websiteCode: 'bodea', storeCode: 'bodea_store' }], { records: PROJECT_RECORDS });
 
-        await runWipe(store, plan);
+        const outcome = await runWipe(store, plan);
 
-        expect(store.sent).toEqual([
-            { method: 'DELETE', path: 'categories/152' },
-            { method: 'DELETE', path: 'categories/151' },
-        ]);
+        expect(store.sent).toEqual([{ method: 'DELETE', path: 'categories/151' }]);
+        expect(outcome.removed.categories).toBe(2);
+    });
+
+    it('holds back a category under one Commerce refused, naming both', async () => {
+        const store = sandbox({ products: [], customers: [] }, (path) => path === 'categories/151');
+        const plan = await planWipeFor(store.get, [{ websiteCode: 'bodea', storeCode: 'bodea_store' }], { records: PROJECT_RECORDS });
+
+        const outcome = await runWipe(store, plan);
+
+        expect(outcome.removed.categories).toBe(0);
+        expect(outcome.failed).toEqual([expect.objectContaining({ what: 'remove 1 of the categories', count: 2 })]);
     });
 
     it('carries on past a refusal and says exactly what could not be removed', async () => {

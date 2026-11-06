@@ -96,6 +96,23 @@ describe('buildPackFromExport', () => {
         expect([value('eco_collection'), value('new')]).toEqual(['1', '0']);
     });
 
+    // 2026-11-06: the service's own import-form kind, installed through the Import API twice as fast.
+    it("carries the export's rows in import form, the base pack's other kinds kept, images and unknown attributes left out", () => {
+        const { pack, products, giftCards, leftOutAttributes } = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma', base: BASE, importForm: true });
+
+        expect(pack.items.map((i) => i.dataType)).toEqual(['product_attributes', 'cart_rules', 'product_export']);
+        const source = (itemOf(pack, 'product_export') as { source: { entity: string; behavior: string; items: Array<Record<string, string>> } }).source;
+        expect([source.entity, source.behavior]).toEqual(['catalog_product', 'append']);
+        expect(source.items.map((r) => r.sku)).toContain('MH01');
+        expect([products, giftCards]).toEqual([6, 1]);
+        const mh01 = source.items.find((r) => r.sku === 'MH01') as Record<string, string>;
+        expect(mh01.base_image).toBeUndefined();
+        expect(mh01.additional_attributes).toContain('climate=All-Weather|Cool|Indoor|Spring|Windy');
+        expect(mh01.additional_attributes).not.toContain('material=');
+        expect(leftOutAttributes).toContain('material');
+        expect(packRowProblems(Object.fromEntries(pack.items.map((i) => [i.dataType, i.records])), undefined)).toStrictEqual([]);
+    });
+
     it('refuses a file that holds no products', () => {
         expect(() => buildPackFromExport({ exportText: 'sku,name\n', exportName: 'p.csv', id: ID, displayName: 'Luma' })).toThrow(/holds no products/);
     });

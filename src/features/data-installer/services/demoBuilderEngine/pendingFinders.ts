@@ -18,6 +18,7 @@ import { ASSIGNMENT_KIND, ATTRIBUTE_SET_KIND } from './attributeSetsKind';
 import { ATTRIBUTE_KIND, ATTRIBUTE_OPTION_KIND } from './attributesKind';
 import { CATALOG_CATEGORIES_KIND, CATALOG_COMPANIES_KIND, CATALOG_KIND, CATALOG_PRODUCTS_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
 import { companyByName, customerByEmail, groupByCode, readCatalogs, readHeld } from './b2bReads';
+import { skusInStore } from './bulkProducts';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import { CATEGORY_KIND, findChild } from './categoriesKind';
 import { COUPON_KIND, couponByCode } from './couponsKind';
@@ -136,7 +137,7 @@ export const SETTLED_KINDS: readonly string[] = Object.keys(FINDERS);
  *   was written by a later version), and whatever a read throws: an install or removal then stops
  */
 export async function settlePending(get: CommerceGet, recorder: InstallRecorder, log: (line: string) => void): Promise<CreatedObject[]> {
-    const adopted: CreatedObject[] = [];
+    const adopted = await settleProducts(get, recorder, log);
     for (const pending of [...recorder.pending]) {
         const find = FINDERS[pending.kind];
         if (!find) throw new Error(`The install record lists a ${pending.kind} still being made, which Demo Builder cannot look for.`);
@@ -151,4 +152,23 @@ export async function settlePending(get: CommerceGet, recorder: InstallRecorder,
         }
     }
     return adopted;
+}
+
+/**
+ * Settle pending products and gift cards together: their SKUs read a page at a time, and the record
+ * written once for those that landed and once for those that did not. A bulk batch lost to a failed
+ * read leaves fifty pending at once, and each was read and written on its own.
+ */
+async function settleProducts(get: CommerceGet, recorder: InstallRecorder, log: (line: string) => void): Promise<CreatedObject[]> {
+    const products = recorder.pending.filter((p) => (p.kind === PRODUCT_KIND || p.kind === GIFT_CARD_KIND) && p.id !== undefined);
+    if (products.length === 0) return [];
+    const there = await skusInStore(get, products.map((p) => String(p.id)));
+    const landed = products.filter((p) => there.has(String(p.id).toLowerCase()));
+    const never = products.filter((p) => !landed.includes(p));
+    const found = landed.map((p) => ({ kind: p.kind, id: String(p.id) }));
+    if (landed.length > 0) await recorder.confirm(landed, found);
+    if (never.length > 0) await recorder.forgetPending(never);
+    for (const p of landed) log(`took ${p.kind} ${p.key} as the pack's: an earlier install made it and never heard back`);
+    for (const p of never) log(`${p.kind} ${p.key} was never made: an earlier install sent it and never heard back`);
+    return found;
 }

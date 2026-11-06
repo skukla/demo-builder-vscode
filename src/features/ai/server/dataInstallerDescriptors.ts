@@ -582,6 +582,12 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 .string()
                 .optional()
                 .describe('A datapack file, inside the project, whose attributes, sets and other kinds the new pack keeps'),
+            importForm: z
+                .boolean()
+                .optional()
+                .describe(
+                    "Carry the products in Commerce's import form (the Data Installer's product_export kind): installed through the Import API, about twice as fast; a reinstall leaves the products already there as they are",
+                ),
         },
     },
     {

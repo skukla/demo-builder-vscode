@@ -820,8 +820,16 @@ store's ids; a coupon is made on the rule its pack row names by NAME, its code k
 gift card is a product (`POST products`), its amounts sent once on every website. A rule or code
 the store already has by that exact name is left alone and not recorded. Removal, reinstall and
 the preview keep a rule the pack made while it holds a code the pack did not ("Kept the cart rule
-… : it holds 1 coupon you added."). `product_export`, `customers_export` and the ACO kinds are
-still refused before anything is written. Plan: `.rptc/plans/datapack-engine/step-11-later.md`.
+… : it holds 1 coupon you added."). `customers_export` and the ACO kinds are still refused before
+anything is written. Plan: `.rptc/plans/datapack-engine/step-11-later.md`.
+
+`product_export` installs since 2026-11-06 (`productExportKind.ts`): the service's own import-form
+kind, sent to Commerce's Import API with the service's substitutions (the target's website, store
+view, and root category first in every category path). Unlike the service, its category paths are
+made first by the categories kind so they are on the record, a SKU the store already has is left
+alone, each product is read back by SKU (the import's count includes refused rows), and a row that
+did not land is sent alone, stopping on its error, for Commerce's reason. Children go in one call
+and parents in the next, a hundred rows to a call. Removal takes the products back as any pack's.
 
 ### Store settings in a pack (datapack-engine step 09, 2026-10-30)
 
@@ -976,7 +984,11 @@ a yes/no attribute's Yes or No as 1 or 0, and a label written with an HTML mark 
 as the option it names ("LumaTech", `exportOptions.ts`). Commerce refused all three as exported,
 skipping 49, 76 and 86 Luma products in live installs on 2026-11-06. The pack is
 checked with the install's own row checks and is not written if the install would refuse it.
-The CSV reader is our own (`csvTable.ts`), not an npm package (PL-94).
+The CSV reader is our own (`csvTable.ts`), not an npm package (PL-94). With `importForm` the products
+go in Commerce's import form instead, the Data Installer's own `product_export` kind
+(`exportImportForm.ts`): the export's rows as written, image columns and timestamps left out, option
+labels fixed the same way. Such a pack installs through the Import API about twice as fast, and the
+service installs it too; a reinstall leaves the products already there as they are.
 
 ### Sharing a library pack (owner, 2026-10-30)
 
