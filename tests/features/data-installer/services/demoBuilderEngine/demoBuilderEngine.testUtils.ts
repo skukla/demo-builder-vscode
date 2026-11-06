@@ -39,7 +39,7 @@ export interface SentCall {
 export async function fakeContext(
     reads: Record<string, unknown> = {},
     answers: (call: SentCall) => unknown = () => ({}),
-): Promise<KindContext & { sent: SentCall[]; logged: string[] }> {
+): Promise<KindContext & { sent: SentCall[]; logged: string[]; imports: unknown[] }> {
     const sent: SentCall[] = [];
     const logged: string[] = [];
     const recorder = await openInstallRecord(memoryFiles(), PROJECT, PACK, NOW);

@@ -5,8 +5,7 @@
  * The order is the service's (catalog spec §0): sets before the attributes put in them,
  * categories and stock before the products that name them, products before their quantities.
  * A pack holding a kind this engine cannot install is refused before anything is written, so a
- * half-installed pack is never the answer to "we don't do that kind yet" (`customers_export` and the
- * ACO kinds, today). Customers and B2B
+ * half-installed pack is never the answer to "we don't do that kind yet" (the ACO kinds, today). Customers and B2B
  * (step 08) come after the catalog, in the service's order: groups before the products whose tier
  * prices name them, customers before the companies that make them admins. Store settings (step 09)
  * come last, once the pack's data is in, and are put back first on removal. Gift cards, cart rules
@@ -27,6 +26,7 @@ import { installCategories, parseCategoryPack } from './categoriesKind';
 import { installCompanies, parseCompanyRows } from './companiesKind';
 import { COUPON_KIND, installCoupons, parseCouponRows } from './couponsKind';
 import { installCustomerGroups, installCustomers, parseCustomerGroupRows, parseCustomerRows } from './customerKinds';
+import { CUSTOMERS_EXPORT_KIND, installCustomersExport, parseCustomersExport } from './customersExportKind';
 import {
     type InstallRecord,
     type RecordFiles,
@@ -95,6 +95,8 @@ const STEPS: readonly KindStep[] = [
     // Step 11: gift cards are products, made as products are, after them as the service makes them.
     step(GIFT_CARD_KIND, parseProductRows, (ctx, rows) => installProducts(ctx, rows, GIFT_CARD_KIND)),
     step('source_items', parseSourceItems, installSourceItems),
+    // Customers in Commerce's import form, the service's own kind, in the service's place (`customersExportKind.ts`).
+    step(CUSTOMERS_EXPORT_KIND, parseCustomersExport, installCustomersExport),
     // Step 08: customers, then the catalogs and companies, then what is assigned to the catalogs.
     step(CUSTOMER_KIND, parseCustomerRows, installCustomers),
     // Step 11: cart rules, then their coupons, in the service's place: after the groups, categories and

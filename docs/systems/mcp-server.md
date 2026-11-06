@@ -834,6 +834,14 @@ store-view rows in its own call (a configurable costs far more in a big call: 10
 small calls 2 s). Luma installs in about 4.5 minutes this way (2026-11-06), against about 7.5 as
 product records. Removal takes the products back as any pack's.
 
+Customers are made through the Import API too (`customerImport.ts`, `customer_composite`): a pack's
+`customers`, the service's `customers_export` kind (its substitutions: website, store view, group by
+code), and a company's admin. On the Justrite ACCS sandbox every `POST customers`, the bulk route
+included, is refused before anything is saved ("… company_id … The "%company_id%" value's type is
+invalid"), whatever the body, while the same customer imports with its group and address
+(2026-11-06); the cause is on the store's side and was not found. Each customer is pending first,
+read back by email, recorded with the store's id, and a refused one is named in Commerce's words.
+
 ### Store settings in a pack (datapack-engine step 09, 2026-10-30)
 
 No new tool. `start_datapack_import` installs a pack's `store_config` rows (`{path, value, scope,

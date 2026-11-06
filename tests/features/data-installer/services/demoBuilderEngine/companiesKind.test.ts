@@ -120,7 +120,9 @@ describe('installCompanies', () => {
         await installCompanies(ctx, parseCompanyRows([BODEA_COMPANY_ROW]));
 
         expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['POST customers', 'POST company']);
-        expect(ctx.sent[0].body).toEqual({ customer: { email: ADMIN, firstname: 'Alex', lastname: 'Altura', website_id: 3, store_id: 4 } });
+        // Made through the Import API (this store refuses `POST customers`), which the fake runs as its create.
+        expect(ctx.sent[0].body).toEqual({ customer: { email: ADMIN, firstname: 'Alex', lastname: 'Altura' } });
+        expect((ctx.imports[0] as { source: { entity: string } }).source.entity).toBe('customer_composite');
         expect(ctx.recorder.created.map((o) => [o.kind, o.id, o.key])).toEqual([
             [CUSTOMER_KIND, '60', ADMIN],
             [COMPANY_KIND, '30', 'Altura'],

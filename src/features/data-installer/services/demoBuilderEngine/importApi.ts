@@ -14,8 +14,12 @@
 
 import type { CommerceSend } from '@/types/commerceWire';
 
-/** What the import does with its rows: `append` makes or updates them, `delete` removes them. */
-export type ImportBehavior = 'append' | 'delete';
+/**
+ * What the import does with its rows: `append` makes or updates products, `add_update` customers (the
+ * behavior the service's `customers_export` sends, and the one that made a customer live, 2026-11-06),
+ * `delete` removes them.
+ */
+export type ImportBehavior = 'append' | 'add_update' | 'delete';
 
 /** How a refused row is treated: skipped with the rest going in, or stopping the call with its reason. */
 export type ImportStrategy = 'validation-skip-errors' | 'validation-stop-on-errors';

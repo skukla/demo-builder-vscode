@@ -111,25 +111,27 @@ describe('customers', () => {
         );
         ctx.session.websiteId = 3;
         ctx.session.storeId = 4;
+        ctx.session.websiteCode = 'bodea';
+        ctx.session.storeCode = 'bodea_us';
         return ctx;
     }
 
-    it("makes a customer on the install target's website, its group by code, with the pack's password", async () => {
+    /** The rows of every customer import the install sent. */
+    const importedRows = (ctx: { imports: unknown[] }) =>
+        ctx.imports.flatMap((body) => (body as { source: { entity: string; items: Array<Record<string, string>> } }).source.items);
+
+    // 2026-11-06: this store refuses every `POST customers`; the Import API makes them.
+    it("makes a customer through the Import API on the install target's website, its group by code, with the pack's password", async () => {
         const ctx = await storeFor();
 
         await installCustomers(ctx, parseCustomerRows([BODEA_CUSTOMER_ROWS[0]]));
 
-        expect(ctx.sent).toEqual([
-            {
-                method: 'POST',
-                path: 'customers',
-                body: {
-                    customer: { group_id: 31, email: SAVVY, firstname: 'Sam', lastname: 'Savvy', gender: 2, addresses: [], disable_auto_group_change: 0, website_id: 3, store_id: 4 },
-                    password: TEST_PASSWORD,
-                },
-            },
+        expect(importedRows(ctx)).toEqual([
+            { email: SAVVY, _website: 'bodea', _store: 'bodea_us', firstname: 'Sam', lastname: 'Savvy', gender: '2', group_id: '31', disable_auto_group_change: '0', password: TEST_PASSWORD },
         ]);
+        expect((ctx.imports[0] as { source: { entity: string } }).source.entity).toBe('customer_composite');
         expect(ctx.recorder.created).toEqual([{ kind: CUSTOMER_KIND, id: '52', key: 'admin.savvy@example.com' }]);
+        expect(ctx.recorder.pending).toStrictEqual([]);
     });
 
     it('never writes the password into the record or the log', async () => {
@@ -164,9 +166,9 @@ describe('customers', () => {
 
         await installCustomers(ctx, parseCustomerRows([row]));
 
-        const sent = (ctx.sent[0].body as { customer: Record<string, unknown> }).customer;
-        expect(Object.keys(sent).sort()).toEqual(['addresses', 'disable_auto_group_change', 'email', 'firstname', 'gender', 'group_id', 'lastname', 'store_id', 'website_id']);
-        expect(sent).toMatchObject({ website_id: 3, store_id: 4 });
+        const [sent] = importedRows(ctx);
+        expect(Object.keys(sent).sort()).toEqual(['_store', '_website', 'disable_auto_group_change', 'email', 'firstname', 'gender', 'group_id', 'lastname']);
+        expect(sent).toMatchObject({ _website: 'bodea', _store: 'bodea_us' });
     });
 
     it('refuses when the install target names no website, before anything is sent', async () => {

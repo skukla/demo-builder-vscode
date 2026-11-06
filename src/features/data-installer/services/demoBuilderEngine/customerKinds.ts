@@ -32,6 +32,7 @@
 import { z } from 'zod';
 import { CUSTOMER_GROUP_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
 import { customerByEmail, groupByCode } from './b2bReads';
+import { type CustomerToMake, customerImportRows, makeCustomersByImport } from './customerImport';
 import { deleteIfPresent, type KindContext, parseRows, ownedId, readOrNull, segment } from './kindContext';
 import { nameOrId } from './packForm';
 import { createOne } from './pendingCreates';
@@ -128,11 +129,15 @@ async function customerFields(lk: ProductLookups, row: CustomerRow): Promise<Par
     };
 }
 
-/** Make each customer the install target's website lacks; record it by its email. */
+/**
+ * Make each customer the install target's website lacks, through the Import API (`customerImport.ts`:
+ * this store refuses `POST customers`), and record each by its email.
+ */
 export async function installCustomers(ctx: KindContext, rows: CustomerRows): Promise<void> {
     const websiteId = ctx.session.websiteId;
     if (websiteId === undefined) throw new Error("The install target names no website, so the pack's customers have nowhere to sign in.");
     const lk = productLookups(ctx);
+    const todo: CustomerToMake[] = [];
     for (const row of rows) {
         const key = customerKey(row.customer.email);
         if (ownedId(ctx.session, CUSTOMER_KIND, key) !== undefined || ctx.recorder.byKey(CUSTOMER_KIND, key)) continue;
@@ -140,19 +145,11 @@ export async function installCustomers(ctx: KindContext, rows: CustomerRows): Pr
             ctx.log(`left customer ${key} as it is: the website already has it`);
             continue;
         }
-        // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
-        const made = await tryRow(ctx, { kind: CUSTOMER_KIND, key }, async () => {
-            const customer = { ...(await customerFields(lk, row)), website_id: websiteId, store_id: ctx.session.storeId } as CommerceCustomer;
-            return createOne(ctx, { kind: CUSTOMER_KIND, key, find: { websiteId } }, async () => {
-                const answer = (await ctx.send('POST', 'customers', { customer, ...(row.password ? { password: row.password } : {}) })) as CommerceCustomer | null;
-                const id = Number(answer?.id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new customer ${key}'s id.`);
-                return { kind: CUSTOMER_KIND, id: String(id), key };
-            });
-        });
-        if (!made) continue;
-        ctx.log(`created customer ${key}`);
+        // Step 14 item 3: a row naming what the store lacks (its group) is skipped; the rest go on.
+        const fields = await tryRow(ctx, { kind: CUSTOMER_KIND, key }, () => customerFields(lk, row));
+        if (fields) todo.push(customerImportRows({ ...fields, email: row.customer.email }, ctx, row.password));
     }
+    await makeCustomersByImport(ctx, todo);
 }
 
 export async function removeCustomer(send: CommerceSend, id: string): Promise<void> {

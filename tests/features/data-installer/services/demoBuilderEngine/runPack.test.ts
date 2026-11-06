@@ -32,8 +32,8 @@ describe('installPack', () => {
     it('refuses a pack holding a kind it cannot install, before writing anything', async () => {
         const ctx = await fakeContext();
 
-        await expect(installPack(ctx, { categories: { categories: [] }, customers_export: {}, aco_products: [] })).rejects.toThrow(
-            new UnsupportedKindsError(['customers_export', 'aco_products']),
+        await expect(installPack(ctx, { categories: { categories: [] }, aco_metadata: {}, aco_products: [] })).rejects.toThrow(
+            new UnsupportedKindsError(['aco_metadata', 'aco_products']),
         );
         expect(ctx.sent).toStrictEqual([]);
     });
@@ -82,6 +82,8 @@ describe('installPack', () => {
             // Step 11: gift cards after the products, as the service makes them.
             'giftcards',
             'source_items',
+            // Customers in the service's import form, in the service's place (2026-11-06).
+            'customers_export',
             'customers',
             // Step 11: cart rules and their coupons, before a shared catalog renames a group they name.
             'cart_rules',

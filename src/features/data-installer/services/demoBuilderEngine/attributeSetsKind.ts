@@ -106,34 +106,38 @@ async function createOwnGroup(ctx: KindContext, name: string, setId: number): Pr
 /** Create the sets the store lacks, each with its own group, and record them. */
 export async function installAttributeSets(ctx: KindContext, rows: readonly AttributeSetRow[]): Promise<void> {
     await loadStoreSets(ctx);
-    for (const { attributeSet, skeletonId } of rows) {
-        const name = attributeSet.attribute_set_name;
-        // One this engine made is known by its id, renamed in the Admin or not; one the SC
-        // deleted since stays deleted (step 05).
-        const owned = ownedId(ctx.session, ATTRIBUTE_SET_KIND, name);
-        if (owned === null) continue;
-        if (owned !== undefined) ctx.session.setIds.set(name, Number(owned));
-        const existing = ctx.session.setIds.get(name);
-        if (existing !== undefined) {
-            const ours = ctx.recorder.has(ATTRIBUTE_SET_KIND, String(existing));
-            if ((await groupInSet(ctx, name, existing)) === undefined && ours) await createOwnGroup(ctx, name, existing);
-            continue;
-        }
-        // Step 14 item 3: a set Commerce refuses is skipped, and the rows that need it with it.
-        await tryRow(ctx, { kind: ATTRIBUTE_SET_KIND, key: name }, async () => {
-            const made = await createOne(ctx, { kind: ATTRIBUTE_SET_KIND, key: name }, async () => {
-                const created = (await ctx.send('POST', 'products/attribute-sets', {
-                    attributeSet: { entity_type_id: PRODUCT_ENTITY_TYPE, sort_order: 0, ...attributeSet },
-                    skeletonId: skeletonId ?? DEFAULT_SKELETON,
-                })) as { attribute_set_id?: number } | null;
-                if (created?.attribute_set_id === undefined) throw new Error(`Commerce made no attribute set ${name}.`);
-                return { kind: ATTRIBUTE_SET_KIND, id: String(created.attribute_set_id) };
-            });
-            ctx.session.setIds.set(name, Number(made.id));
-            ctx.log(`created attribute set ${name}`);
-            await createOwnGroup(ctx, name, Number(made.id));
-        });
+    // Sets stand alone, so a few go at once: one after another, Luma's eight took eight seconds (2026-11-06).
+    await eachFewAtOnce(firstOfEach(rows, (row) => row.attributeSet.attribute_set_name), (row) => installAttributeSet(ctx, row));
+}
+
+/** Use the set the store has by name, or make it with its own group, and record it. */
+async function installAttributeSet(ctx: KindContext, { attributeSet, skeletonId }: AttributeSetRow): Promise<void> {
+    const name = attributeSet.attribute_set_name;
+    // One this engine made is known by its id, renamed in the Admin or not; one the SC
+    // deleted since stays deleted (step 05).
+    const owned = ownedId(ctx.session, ATTRIBUTE_SET_KIND, name);
+    if (owned === null) return;
+    if (owned !== undefined) ctx.session.setIds.set(name, Number(owned));
+    const existing = ctx.session.setIds.get(name);
+    if (existing !== undefined) {
+        const ours = ctx.recorder.has(ATTRIBUTE_SET_KIND, String(existing));
+        if ((await groupInSet(ctx, name, existing)) === undefined && ours) await createOwnGroup(ctx, name, existing);
+        return;
     }
+    // Step 14 item 3: a set Commerce refuses is skipped, and the rows that need it with it.
+    await tryRow(ctx, { kind: ATTRIBUTE_SET_KIND, key: name }, async () => {
+        const made = await createOne(ctx, { kind: ATTRIBUTE_SET_KIND, key: name }, async () => {
+            const created = (await ctx.send('POST', 'products/attribute-sets', {
+                attributeSet: { entity_type_id: PRODUCT_ENTITY_TYPE, sort_order: 0, ...attributeSet },
+                skeletonId: skeletonId ?? DEFAULT_SKELETON,
+            })) as { attribute_set_id?: number } | null;
+            if (created?.attribute_set_id === undefined) throw new Error(`Commerce made no attribute set ${name}.`);
+            return { kind: ATTRIBUTE_SET_KIND, id: String(created.attribute_set_id) };
+        });
+        ctx.session.setIds.set(name, Number(made.id));
+        ctx.log(`created attribute set ${name}`);
+        await createOwnGroup(ctx, name, Number(made.id));
+    });
 }
 
 /** Put each attribute in its set unless it is there already, and record what was added. */
@@ -142,9 +146,9 @@ export async function installAssignments(ctx: KindContext, rows: readonly Assign
     const inSet = new Map<number, Set<string>>();
     const keyOf = (row: AssignmentRow) => `${row.attributeSetId}/${row.attributeCode}`;
     const wanted = firstOfEach(rows, keyOf).filter((row) => ownedId(ctx.session, ASSIGNMENT_KIND, keyOf(row)) !== null);
-    // Each set's members and group are read first, once, so the assignments sent at once share them.
-    // A read that fails here is tried again by each row, which then reports it as its own.
-    for (const name of new Set(wanted.map((row) => row.attributeSetId))) await readSet(ctx, name, inSet).catch(() => undefined);
+    // Each set's members and group are read first, once and all at once, so the assignments sent at once
+    // share them. A read that fails here is tried again by each row, which then reports it as its own.
+    await Promise.all([...new Set(wanted.map((row) => row.attributeSetId))].map((name) => readSet(ctx, name, inSet).catch(() => undefined)));
     await eachFewAtOnce(wanted, (row) =>
         tryRow(ctx, { kind: ASSIGNMENT_KIND, key: keyOf(row) }, () => assign(ctx, row, inSet)),
     );

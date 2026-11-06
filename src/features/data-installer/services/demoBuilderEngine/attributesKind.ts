@@ -18,7 +18,8 @@
 import { z } from 'zod';
 import { sameText } from './b2bReads';
 import { ATTRIBUTE_CODE, deleteIfPresent, eachFewAtOnce, firstOfEach, type KindContext, ownedId, readOrNull, segment } from './kindContext';
-import { createOne } from './pendingCreates';
+import { certainlyNotMade, createOne } from './pendingCreates';
+import type { PendingObject } from './pendingRecord';
 import { tryRow } from './refusedRows';
 import type { CommerceSend } from '@/types/commerceWire';
 
@@ -139,19 +140,35 @@ async function readOptions(ctx: KindContext, code: string): Promise<StoreOption[
  */
 export async function addMissingOptions(ctx: KindContext, code: string, options: readonly PackOption[], input?: string): Promise<void> {
     const have = await readOptions(ctx, code);
-    const missing = options.filter((o) => !have.some((h) => sameText(h.label, o.label)));
+    const missing = firstOfEach(
+        options.filter((o) => !have.some((h) => sameText(h.label, o.label))),
+        (o) => o.label.trim().toLowerCase(),
+    );
+    const pendingOf = (option: PackOption): PendingObject => ({ kind: ATTRIBUTE_OPTION_KIND, key: `${code}/${option.label}` });
+    // Each sent in turn (one attribute's options are not sent at once), each pending first; then one read
+    // for all their ids. A read after each send made Luma's twelve colours take eleven seconds (2026-11-06).
+    const sent: PackOption[] = [];
     for (const option of missing) {
         const { value: _sourceValue, ...body } = option;
-        const key = `${code}/${option.label}`;
-        const made = await tryRow(ctx, { kind: ATTRIBUTE_OPTION_KIND, key }, () =>
-            createOne(ctx, { kind: ATTRIBUTE_OPTION_KIND, key }, async () => {
+        const posted = await tryRow(ctx, pendingOf(option), async () => {
+            await ctx.recorder.markPending([pendingOf(option)]);
+            try {
                 await sendOption(ctx, code, isSwatch(input) ? swatchOption(option) : body);
-                const added = (await readOptions(ctx, code)).find((h) => sameText(h.label, option.label));
-                if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
-                return { kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}` };
-            }),
-        );
-        if (made) ctx.log(`added option "${option.label}" to ${code}`);
+            } catch (error) {
+                if (certainlyNotMade(error)) await ctx.recorder.forgetPending([pendingOf(option)]);
+                throw error;
+            }
+            return true;
+        });
+        if (posted) sent.push(option);
+    }
+    if (sent.length === 0) return;
+    const now = await readOptions(ctx, code);
+    for (const option of sent) {
+        const added = now.find((h) => sameText(h.label, option.label));
+        if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
+        await ctx.recorder.confirm([pendingOf(option)], [{ kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}`, key: pendingOf(option).key }]);
+        ctx.log(`added option "${option.label}" to ${code}`);
     }
 }
 

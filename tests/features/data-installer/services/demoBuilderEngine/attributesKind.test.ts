@@ -87,6 +87,34 @@ describe('installAttributes', () => {
         expect(ctx.sent.some((c) => c.method === 'DELETE')).toBe(false);
     });
 
+    // 2026-11-06: a read after each option made Luma's twelve colours take eleven seconds.
+    it('reads the options once before and once after sending all it lacks, not once per option', async () => {
+        let options: Array<{ label: string; value: string }> = [{ label: 'Canvas', value: '50' }];
+        let reads = 0;
+        const ctx = await fakeContext(
+            {
+                'products/attributes/bodea_fabric': { attribute_code: 'bodea_fabric' },
+                'products/attributes/bodea_fabric/options': () => (reads += 1, options),
+            },
+            (call) => {
+                const label = (call.body as { option: { label: string } }).option.label;
+                options = [...options, { label, value: String(50 + options.length) }];
+                return true;
+            },
+        );
+        const row = { attribute: { ...FABRIC.attribute, options: [{ label: 'Canvas' }, { label: 'Nylon' }, { label: 'Wool' }] } };
+
+        await installAttributes(ctx, parseAttributeRows([row]));
+
+        expect(ctx.sent.map((c) => (c.body as { option: { label: string } }).option.label)).toEqual(['Nylon', 'Wool']);
+        expect(reads).toBe(2);
+        expect(ctx.recorder.created.map((o) => [o.id, o.key])).toEqual([
+            ['bodea_fabric/51', 'bodea_fabric/Nylon'],
+            ['bodea_fabric/52', 'bodea_fabric/Wool'],
+        ]);
+        expect(ctx.recorder.pending).toStrictEqual([]);
+    });
+
     it('fails when Commerce does not keep an option it was sent', async () => {
         const ctx = await fakeContext({
             'products/attributes/bodea_fabric': { attribute_code: 'bodea_fabric' },

@@ -39,8 +39,9 @@
  */
 
 import { z } from 'zod';
-import { COMPANY_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
+import { COMPANY_KIND, customerKey } from './b2bKeys';
 import { PUBLIC_CATALOG_TYPE, companyByName, customerByEmail, readCatalogs, sameText } from './b2bReads';
+import { customerImportRows, makeCustomersByImport } from './customerImport';
 import { deleteIfPresent, type KindContext, ownedId, parseRows, readOrNull, segment } from './kindContext';
 import { createOne } from './pendingCreates';
 import { tryRow } from './refusedRows';
@@ -143,19 +144,20 @@ async function regionIdOf(get: CommerceGet, address: Address, regions: Regions =
     return Number(found.id);
 }
 
-/** The admin's customer id: the website's own customer by that email, else one made and recorded. */
+/**
+ * The admin's customer id: the website's own customer by that email, else one made through the Import
+ * API and recorded (`customerImport.ts`: this store refuses `POST customers`).
+ *
+ * @throws Error when Commerce did not make the admin, so the company is skipped with it
+ */
 async function adminId(ctx: KindContext, admin: CompanyRow['variables']['input']['company_admin'], websiteId: number): Promise<number> {
     const existing = (await customerByEmail(ctx.get, admin.email, websiteId)) ?? (await customerByEmail(ctx.get, admin.email));
     if (existing?.id !== undefined) return existing.id;
-    const customer: CommerceCustomer = { email: admin.email, firstname: admin.firstname, lastname: admin.lastname, website_id: websiteId, store_id: ctx.session.storeId };
     const key = customerKey(admin.email);
-    const made = await createOne(ctx, { kind: CUSTOMER_KIND, key, find: { websiteId } }, async () => {
-        const id = Number(((await ctx.send('POST', 'customers', { customer })) as CommerceCustomer | null)?.id);
-        if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new company admin ${admin.email}'s id.`);
-        return { kind: CUSTOMER_KIND, id: String(id), key };
-    });
+    const made = (await makeCustomersByImport(ctx, [customerImportRows({ email: admin.email, firstname: admin.firstname, lastname: admin.lastname }, ctx)])).get(key);
+    if (made === undefined) throw new Error(`Commerce did not make the company admin ${admin.email}.`);
     ctx.log(`created customer ${key}, a company admin`);
-    return Number(made.id);
+    return made;
 }
 
 /** Make each company the store lacks, with its admin; record it by its name. */
