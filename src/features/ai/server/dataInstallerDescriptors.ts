@@ -425,8 +425,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'With the demo-builder engine only the dataTypes named install, with what they need. ' +
             'A kind left out is left alone: not installed, not removed, not put back. ' +
             'Installing a pack again updates and removes what it made before, of the kinds named, and keeps what was ' +
-            'changed in the Admin; the outcome\'s note says what it kept, and preview_datapack_changes ' +
-            'says it beforehand. A pack\'s store_config rows are written last, and the note names each ' +
+            'changed in the Admin; the outcome\'s note says what it took out and what it kept, and preview_datapack_changes ' +
+            'says it beforehand. What Commerce will not take out stays, named in the note with its reason. A pack\'s store_config rows are written last, and the note names each ' +
             'setting set, by path, with its old and new value. With the demo-builder engine, a pack holding no ' +
             'store_config also gets its settings layer, the newest library pack named <pack>-settings, written after ' +
             'its data and removed with it, if dataTypes names all the pack holds or store_config; the note says when not. ' +
@@ -458,7 +458,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "that holds things it did not make is kept (a kept company with its admin and its catalog), and " +
             "the outcome's note says which; store settings it set, its settings layer's included, are put back " +
             "first, unless changed since, and the note names each by path. The project stops naming the pack only once a removal " +
-            'finishes having taken everything out. A pack the demo-builder engine has no install record of ' +
+            'finishes having taken everything out; what Commerce will not take back stays, named in the note with its reason, and removing again tries it again. A pack the demo-builder engine has no install record of ' +
             'is refused and nothing is removed by name; check_demo_data then clear_demo_data clears what an ' +
             'earlier install left. With the demo-builder engine, if the user changed anything the pack made ' +
             'since it was installed, this names the changes and removes nothing until changes answers: keep ' +

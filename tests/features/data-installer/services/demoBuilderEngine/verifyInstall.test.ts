@@ -240,6 +240,12 @@ describe('checkLine', () => {
         expect(checkLine({ ...base, verdict: 'matches' })).toBe('Checked 2,048 products against the datapack: all match.');
     });
 
+    it('says how many products it left out because a reinstall kept them', () => {
+        expect(checkLine({ ...base, verdict: 'matches', checked: 1948, leftOut: 100 })).toBe(
+            'Checked 1,948 products against the datapack: all match. It left out 100 products kept as changed in the Admin; verify_datapack_install checks every product.',
+        );
+    });
+
     it('names each kind of difference with its count', () => {
         const line = checkLine({
             ...base,
@@ -272,7 +278,7 @@ describe('checkAfterInstall', () => {
             [{ kind: 'products', key: 'EDITED' }],
         );
 
-        expect(check).toMatchObject({ verdict: 'matches', checked: 1 });
+        expect(check).toMatchObject({ verdict: 'matches', checked: 1, leftOut: 1 });
     });
 
     it('never fails the install when the store cannot be read; the line says so', async () => {

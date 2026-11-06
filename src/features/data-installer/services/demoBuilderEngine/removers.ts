@@ -75,7 +75,7 @@ const REMOVERS: Record<string, Remover> = {
 /**
  * Take one recorded object back out of the store.
  *
- * @throws Error naming the object when its kind cannot be taken back or Commerce refuses
+ * @throws TakeBackRefused when Commerce answers with an error; Error naming the object otherwise
  */
 export async function takeBack(commerce: RemovalAccess, object: CreatedObject): Promise<void> {
     const remover = REMOVERS[object.kind];
@@ -83,7 +83,24 @@ export async function takeBack(commerce: RemovalAccess, object: CreatedObject): 
     try {
         await remover(commerce, object);
     } catch (error) {
-        throw new Error(`Could not take back ${object.kind} ${object.id}: ${error instanceof Error ? error.message : String(error)}`);
+        const what = `Could not take back ${object.kind} ${object.id}`;
+        if (error instanceof CommerceReadError) throw new TakeBackRefused(what, error);
+        throw new Error(`${what}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/**
+ * Commerce answered a take-back with an error: its status stays readable, so a refusal of the one
+ * object (`isRowRefusal`) can leave it in the store and carry on (`takeBackAll`).
+ */
+export class TakeBackRefused extends CommerceReadError {
+    constructor(
+        what: string,
+        /** Commerce's own answer. */
+        readonly refusal: CommerceReadError,
+    ) {
+        super(`${what}: ${refusal.message}`, refusal.status);
+        this.name = 'TakeBackRefused';
     }
 }
 

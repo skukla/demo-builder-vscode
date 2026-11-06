@@ -240,9 +240,9 @@ export async function verifyInstall(
                   .map((o) => o.id.toLowerCase()),
           )
         : undefined;
-    const wanted = packProducts(items).filter(
-        (p) => (!made || made.has(p.sku.toLowerCase())) && !kept.has(p.sku.toLowerCase()),
-    );
+    const ours = packProducts(items).filter((p) => !made || made.has(p.sku.toLowerCase()));
+    const wanted = ours.filter((p) => !kept.has(p.sku.toLowerCase()));
+    const leftOut = ours.length - wanted.length;
     const began = Date.now();
     const stored = await readProducts(
         ctx,
@@ -282,6 +282,7 @@ export async function verifyInstall(
     return {
         verdict: clean ? 'matches' : 'differs',
         checked: wanted.length,
+        ...(leftOut > 0 ? { leftOut } : {}),
         compared,
         missing: finding(missing.sort()),
         configurablesWithoutOptions: finding(bare.sort()),
@@ -317,7 +318,23 @@ export const holdsProducts = (items: Record<string, unknown>): boolean =>
 /** The check in one sentence, for the end of an install's note. */
 export function checkLine(check: InstallCheck): string {
     const checked = `Checked ${check.checked.toLocaleString('en-US')} ${check.checked === 1 ? 'product' : 'products'} against the datapack`;
-    if (check.verdict === 'matches') return `${checked}: all match.`;
+    return `${checked}: ${findingsOf(check)}.${leftOutOf(check)}`;
+}
+
+/**
+ * The products a reinstall kept, said beside the verdict. "All match" over 1,948 products once hid
+ * 100 left out (2026-11-06): their values were blanked by the install itself, which reads the same
+ * as an SC's edit, so only a check of every product shows them.
+ */
+function leftOutOf(check: InstallCheck): string {
+    const n = check.leftOut ?? 0;
+    if (n === 0) return '';
+    const what = n === 1 ? '1 product' : `${n.toLocaleString('en-US')} products`;
+    return ` It left out ${what} kept as changed in the Admin; verify_datapack_install checks every product.`;
+}
+
+function findingsOf(check: InstallCheck): string {
+    if (check.verdict === 'matches') return 'all match';
     const counted = (count: number, one: string, many: string, rest: string) =>
         `${count.toLocaleString('en-US')} ${count === 1 ? one : many} ${rest}`;
     const rows: Array<[count: number, one: string, many: string, rest: string]> = [
@@ -327,8 +344,7 @@ export function checkLine(check: InstallCheck): string {
         [check.valuesDiffer.count, 'attribute value', 'attribute values', 'not as in the datapack'],
         [check.pricesDiffer.count, 'price', 'prices', 'not as in the datapack'],
     ];
-    const found = rows.filter(([count]) => count > 0).map((row) => counted(...row));
-    return `${checked}: ${andList(found)}.`;
+    return andList(rows.filter(([count]) => count > 0).map((row) => counted(...row)));
 }
 
 /**

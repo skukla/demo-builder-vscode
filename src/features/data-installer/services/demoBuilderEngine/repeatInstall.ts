@@ -25,6 +25,7 @@
  * @module features/data-installer/services/demoBuilderEngine/repeatInstall
  */
 
+import { dataTypeLabel } from '../../ui/dataTypeLabel';
 import { ASSIGNMENT_KIND } from './attributeSetsKind';
 import { addMissingOptions, parseAttributeRows } from './attributesKind';
 import { updateCartRule } from './cartRulesKind';
@@ -39,9 +40,10 @@ import { type ExportRow, PRODUCT_EXPORT_KIND, updateProductRows } from './produc
 import { productLookups } from './productLookups';
 import { parseProductRows, toCommerceProduct } from './productsKind';
 import { tryRow } from './refusedRows';
-import { takeBackAll } from './removalRuns';
+import { type RefusedRemoval, takeBackAll } from './removalRuns';
 import { type KeptContainer, decideRemovals } from './removers';
 import { READABLE_KINDS, packKindIn, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
+import { andList } from '@/core/utils/andList';
 import { type OwnedChange, decideOwnedChange } from '@/core/utils/ownedChange';
 
 /** What becomes of one recorded object. `create` from the rule means the SC deleted it. */
@@ -214,20 +216,46 @@ export function removalsOf(plans: readonly KindPlan[]): CreatedObject[] {
     return ordered.flatMap((plan) => [...plan.objects].reverse().filter((o) => o.outcome === 'remove').map((o) => o.object));
 }
 
+/** What taking out what the pack no longer has did. */
+export interface Removals {
+    /** Containers kept because they hold what this engine did not make. */
+    containers: KeptContainer[];
+    /** What was taken out. */
+    tookOut: CreatedObject[];
+    /** What Commerce would not take out: still in the store and on the record (`takeBackAll`). */
+    refused: RefusedRemoval[];
+}
+
 /**
  * Take out what the pack no longer has, keeping a category or set that holds what this engine
  * did not make (`decideRemovals`, the rule a whole-pack removal applies too), and drop from the
  * record what is gone from both.
- *
- * @returns the containers kept
  */
-export async function applyRemovals(ctx: KindContext, plans: readonly KindPlan[]): Promise<KeptContainer[]> {
+export async function applyRemovals(ctx: KindContext, plans: readonly KindPlan[]): Promise<Removals> {
     for (const { object } of plans.flatMap((p) => p.objects).filter((o) => o.outcome === 'gone')) await ctx.recorder.drop(object);
     const { take, kept } = await decideRemovals(ctx.get, removalsOf(plans));
-    const tookOut = (object: CreatedObject): void => ctx.log(`took out ${object.kind} ${object.key ?? object.id}: the pack no longer has it`);
+    const tookOut: CreatedObject[] = [];
+    const said = (objects: readonly CreatedObject[]): void => {
+        tookOut.push(...objects);
+        for (const o of objects) ctx.log(`took out ${o.kind} ${o.key ?? o.id}: the pack no longer has it`);
+    };
     // As a removal takes things back, with as few calls as Commerce allows (`removalRuns.ts`).
-    await takeBackAll(ctx, ctx.recorder, take, (objects) => objects.forEach(tookOut));
-    return kept;
+    const refused = await takeBackAll(ctx, ctx.recorder, take, said);
+    return { containers: kept, tookOut, refused };
+}
+
+/**
+ * The one line a repeat install says about what it took out, by kind, or nothing. Said because a
+ * removal is the one change an install makes that the SC may not expect (2026-11-06: 40 attributes
+ * left their sets with nothing in the outcome to say so).
+ */
+export function tookOutLine(tookOut: readonly CreatedObject[]): string | undefined {
+    if (tookOut.length === 0) return undefined;
+    const counts = new Map<string, number>();
+    for (const o of tookOut) counts.set(o.kind, (counts.get(o.kind) ?? 0) + 1);
+    const kinds = [...counts].map(([kind, n]) => `${dataTypeLabel(kind).toLowerCase()} (${n.toLocaleString('en-US')})`);
+    const count = tookOut.length === 1 ? '1 item' : `${tookOut.length.toLocaleString('en-US')} items`;
+    return `Took out ${count} the pack no longer has: ${andList(kinds)}.`;
 }
 
 /** What the plan keeps because the SC changed or deleted it. */

@@ -63,7 +63,7 @@ export function needsUnskipped(session: CatalogSession, kinds: string | readonly
 }
 
 /** Commerce's own message from a refusal: its JSON `message` with `%1` filled in, else its text. */
-function commerceMessage(error: CommerceReadError): string {
+export function commerceMessage(error: CommerceReadError): string {
     const text = error.message.replace(/^Commerce answered \d+ for [^:]*: /u, '');
     try {
         const body = JSON.parse(text) as { message?: string; parameters?: unknown };

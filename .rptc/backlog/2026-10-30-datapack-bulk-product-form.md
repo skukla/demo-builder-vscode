@@ -110,3 +110,5 @@ prove one with a live install and removal.
 - 2026-11-06  perf(datapacks): import-form packs install in under five minutes, with sizes right (`abbdb81a9`)
 - 2026-11-06  fix(datapacks): customers through the Import API, and faster attribute steps (`ad99a2362`)
 - 2026-11-06  feat(datapacks): product records install through the Import API, and agents can check an install (`9dd98255e`)
+- 2026-11-06  feat(datapacks): every install checks its products against the pack (`fff4264b2`)
+- 2026-11-06  fix(datapacks): a reinstall no longer takes attributes out of their sets (`e19ef34a2`)

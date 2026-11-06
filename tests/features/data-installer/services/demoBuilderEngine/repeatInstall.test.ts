@@ -12,9 +12,10 @@
 import type { CreatedObject } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
 import { attributePackForm } from '@/features/data-installer/services/demoBuilderEngine/packForm';
-import { keptLine } from '@/features/data-installer/services/demoBuilderEngine/repeatInstall';
+import { keptLine, tookOutLine } from '@/features/data-installer/services/demoBuilderEngine/repeatInstall';
 import { installPack } from '@/features/data-installer/services/demoBuilderEngine/runPack';
 import { packedFingerprint } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
+import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceProduct } from '@/types/commerceWire';
 import { type SentCall, fakeContext, page } from './demoBuilderEngine.testUtils';
 
@@ -341,12 +342,37 @@ describe('an attribute this engine put in a set, installed again', () => {
         expect(ctx.recorder.has('attribute_assign_to_set', '4/bodea_fabric')).toBe(true);
     });
 
-    it('is taken out once the pack no longer has it', async () => {
+    it('is taken out once the pack no longer has it, and the outcome says so', async () => {
         const ctx = await assigned('4/bodea_fabric');
 
-        await installPack(ctx, { attribute_assign_to_set: [] });
+        const outcome = await installPack(ctx, { attribute_assign_to_set: [] });
 
         expect(writes(ctx.sent)).toEqual(['DELETE products/attribute-sets/4/attributes/bodea_fabric']);
+        expect(tookOutLine(outcome.tookOut)).toBe('Took out 1 item the pack no longer has: attribute assign to set (1).');
+    });
+
+    it('is left in its set, and on the record, when Commerce will not take it out; the install carries on', async () => {
+        const ctx = await assigned('Default/bodea_fabric');
+        const refuse = ctx.send;
+        ctx.send = async (method, path, body) => {
+            if (method === 'DELETE') throw new CommerceReadError(`Commerce answered 400 for ${path}: {"message":"Attribute is locked."}`, 400);
+            return refuse(method, path, body);
+        };
+
+        const outcome = await installPack(ctx, { attribute_assign_to_set: [] });
+
+        expect(outcome.notTakenOut).toEqual([{ kind: 'attribute_assign_to_set', key: 'Default/bodea_fabric', reason: 'Attribute is locked.' }]);
+        expect(outcome.tookOut).toStrictEqual([]);
+        expect(ctx.recorder.has('attribute_assign_to_set', '4/bodea_fabric')).toBe(true);
+    });
+});
+
+describe('tookOutLine', () => {
+    it('counts what was taken out by kind, and says nothing when nothing was', () => {
+        expect(tookOutLine([])).toBeUndefined();
+        expect(tookOutLine([{ kind: 'products', id: 'a' }, { kind: 'products', id: 'b' }, { kind: 'categories', id: '9' }])).toBe(
+            'Took out 3 items the pack no longer has: products (2) and categories (1).',
+        );
     });
 });
 

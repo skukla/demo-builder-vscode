@@ -32,8 +32,9 @@ import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
 import { type RootStepAsker, rootStepLine } from './packRootStep';
 import { ambiguousKeysLine } from './productLookups';
 import { skippedLine } from './refusedRows';
+import { refusedRemovalsLine } from './removalRuns';
 import { containersLine } from './removers';
-import { keptLine } from './repeatInstall';
+import { keptLine, tookOutLine } from './repeatInstall';
 import { type PackItems, PackRowsError, installPack, packRowProblems, removePack, unsupportedKinds } from './runPack';
 import { STORE_CONFIG_KIND, settingsLine, settingsWebsite } from './storeConfigKind';
 import { checkAfterInstall } from './verifyInstall';
@@ -199,6 +200,8 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     const progress = (line: string): void => void (job.detail = line);
     const ctx = { ...commerce, recorder, session, log: deps.log, asker: deps.asker, progress };
     const outcome = await installPack(ctx, items, (kind) => {
+        // Its rows are in, so the last kind's clock stops; it stays in progress to the end.
+        if (kind === undefined) return stopClock(job, current);
         endKind(job, current);
         current = kind;
         job.kindStartedAt = Date.now();
@@ -206,8 +209,6 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         job.detail = undefined;
     });
     job.detail = undefined;
-    // Its rows are in, so the last kind's clock stops here: the layer and the check are not its time.
-    stopClock(job, current);
     // The last kind stays in progress through the layer: the watcher ends when every kind asked for
     // has, and the note says what the layer did (step 09).
     const layerStopped = await applySettingsLayer(ctx, lookup);
@@ -221,6 +222,8 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     job.note = [
         addedKindsLine(all, request.dataTypes),
         skippedLine(session.skipped),
+        tookOutLine(outcome.tookOut),
+        refusedRemovalsLine(outcome.notTakenOut, 'Installing'),
         keptLine([...outcome.kept, ...layerKept(lookup, ctx)]),
         containersLine(outcome.containers),
         settingsDoneLine(lookup, ctx),
@@ -310,8 +313,9 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress });
                 job.detail = undefined;
                 if (result.noRecord) throw new Error(NO_RECORD);
-                job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
-                if (result.kept.length > 0) job.leftInStore = true;
+                const lines = [containersLine(result.kept), refusedRemovalsLine(result.refused, 'Removing'), settingsLine(result.settings, 'Put back')];
+                job.note = lines.filter(Boolean).join(' ') || undefined;
+                if (result.kept.length > 0 || result.refused.length > 0) job.leftInStore = true;
                 if (result.keptRoot) job.keptRoot = result.keptRoot;
                 for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';
             }),

@@ -1029,13 +1029,25 @@ installs reported success with nothing skipped while about 500 Luma products had
 so not even the install record is touched.
 
 Demo Builder's engine also runs the check at the end of every install that wrote products, with the
-pack already in memory (about 19 s on Luma), and leaves out products a reinstall kept because the SC
-changed them. The last data type stays in progress while it runs, so anything waiting on the install
-waits for it. Its answer is the outcome's `check`, which `get_datapack_import_status` returns, and the
+pack already in memory (about 16 s on Luma), and leaves out products a reinstall kept because the SC
+changed them, counting them as `leftOut` and saying so in its sentence: on 2026-11-06 "all match" over
+1,948 products hid 100 whose values the install itself had blanked, which reads the same as an SC's
+edit, so only the standalone tool, which checks every product, showed them. The last data type stays
+in progress while it runs, so anything waiting on the install waits for it, though its seconds in
+`timings` stop when its rows are in. Its answer is the outcome's `check`, which `get_datapack_import_status` returns, and the
 note gains one sentence ("Checked 2,048 products against the datapack: all match."). A check that
 cannot run never fails the install; the note says so. Measured 2026-11-06 on Luma, the standalone
 tool takes about 29 s: 10 s reading the pack and opening the store, 15 s reading the products (50 SKUs
 a call, five calls at once), 4 s comparing.
+
+A reinstall's note also says what it took out because the pack no longer has it, counted by data type
+("Took out 3 items the pack no longer has: products (2) and categories (1)."). Something Commerce will
+not take out (400, 404, 409 or 422, the rule a refused row follows) stays in the store and on the
+record, and the note names it with Commerce's reason; installing or removing again tries it again
+(`removalRuns.ts`). A removal that leaves one sets `leftInStore`, as a kept container does. Both came
+from one reinstall on 2026-11-06: assignments recorded by the set's id never matched the pack's rows,
+so 40 attributes left their sets with nothing in the note to say so, and one Commerce refused stopped
+the install part-way.
 
 ### Sharing a library pack (owner, 2026-10-30)
 

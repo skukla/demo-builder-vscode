@@ -96,7 +96,7 @@ async function installed() {
     ctx.session.websiteId = 3;
     ctx.session.storeId = 4;
     const seen: string[] = [];
-    await installPack(ctx, PACK_ITEMS, (kind) => seen.push(kind));
+    await installPack(ctx, PACK_ITEMS, (kind) => kind && seen.push(kind));
     return { ctx, files, store, seen };
 }
 
@@ -144,7 +144,7 @@ describe('a customer and B2B pack', () => {
             'DELETE customers/52',
             'DELETE customerGroups/31',
         ]);
-        expect(result).toEqual({ removed: 5, noRecord: false, kept: [] });
+        expect(result).toEqual({ removed: 5, noRecord: false, kept: [], refused: [] });
         expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
         expect(store.state).toMatchObject({ groups: [], customers: [], companies: [], catalogs: [{ id: 1 }] });
     });
@@ -184,7 +184,7 @@ describe('a customer and B2B pack', () => {
         const outcome = await installPack(ctx, PACK_ITEMS);
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(outcome).toEqual({ kept: [], containers: [], skipped: [] });
+        expect(outcome).toEqual({ kept: [], containers: [], skipped: [], tookOut: [], notTakenOut: [] });
     });
 
     it("keeps a company the SC changed in the Admin, and brings in the pack's change to one left as it was", async () => {

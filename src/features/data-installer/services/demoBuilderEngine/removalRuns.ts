@@ -10,17 +10,25 @@
  *   the record with that one (`impliedRemovals.ts`).
  * - The rest: one call each.
  *
+ * Commerce refusing one object (400, 404, 409 or 422, as `refusedRows.ts` counts a refused row) does
+ * not stop the rest: the object stays in the store and on the record, so the next run tries it again,
+ * and the outcome names it with Commerce's reason (live, 2026-11-06: "Attribute size is locked. This
+ * attribute is used in configurable products." stopped a reinstall part-way).
+ *
  * @module features/data-installer/services/demoBuilderEngine/removalRuns
  */
 
+import { dataTypeLabel } from '../../ui/dataTypeLabel';
 import { ASSIGNMENT_KINDS, type AssignmentKind } from './b2bKeys';
 import { type BulkRemovalAccess, removeProductsInBulk } from './bulkRemoval';
 import { impliedRemovals } from './impliedRemovals';
 import type { CreatedObject, InstallRecorder } from './installRecord';
 import { PRODUCT_KINDS } from './productKinds';
-import { takeBack } from './removers';
+import { commerceMessage, isRowRefusal } from './refusedRows';
+import { TakeBackRefused, takeBack } from './removers';
 import { removeAssignmentPairs } from './sharedCatalogKinds';
 import { LINK_KIND, removeStockSourceLinks } from './stockKinds';
+import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceSend } from '@/types/commerceWire';
 
 /** Kinds taken back several to a call: the route takes a list. */
@@ -62,9 +70,35 @@ async function inOneCall(
             run.map((o) => o.id),
         );
     } catch (error) {
-        throw new Error(
-            `Could not take back ${run.length} ${run[0].kind}: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        const what = `Could not take back ${run.length} ${run[0].kind}`;
+        if (error instanceof CommerceReadError) throw new TakeBackRefused(what, error);
+        throw new Error(`${what}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/** Something Commerce would not take back: still in the store, and on the record. */
+export interface RefusedRemoval {
+    kind: string;
+    /** The pack's name for it, or its id. */
+    key: string;
+    /** What Commerce said. */
+    reason: string;
+}
+
+/**
+ * Do one take-back; when Commerce refuses these objects, write each down as refused and answer false.
+ *
+ * @throws anything that is not a refusal of these objects: not signed in, throttled, no answer
+ */
+async function tryTakeBack(objects: readonly CreatedObject[], refused: RefusedRemoval[], work: () => Promise<void>): Promise<boolean> {
+    try {
+        await work();
+        return true;
+    } catch (error) {
+        if (!(error instanceof TakeBackRefused) || !isRowRefusal(error)) throw error;
+        const reason = commerceMessage(error.refusal);
+        refused.push(...objects.map((o) => ({ kind: o.kind, key: o.key ?? o.id, reason })));
+        return false;
     }
 }
 
@@ -72,35 +106,50 @@ async function inOneCall(
  * Take back every object in `take`, in its order, dropping each from the record once it has gone.
  *
  * @param after - told of each object as it leaves the record (a repeat install logs each)
- * @throws the first refusal, after what went before it has left the record
+ * @returns what Commerce refused to take back: left in the store and on the record
+ * @throws the first failure that is not a refusal, after what went before it has left the record
  */
 export async function takeBackAll(
     commerce: BulkRemovalAccess,
     recorder: Pick<InstallRecorder, 'drop'>,
     take: readonly CreatedObject[],
     after: (objects: readonly CreatedObject[]) => void = () => undefined,
-): Promise<void> {
+): Promise<RefusedRemoval[]> {
     const implied = impliedRemovals(take);
-    const withAlong = (objects: readonly CreatedObject[]) => [
-        ...objects,
-        ...objects.flatMap((o) => implied.takesWith.get(o) ?? []),
-    ];
+    const refused: RefusedRemoval[] = [];
+    const gone = async (objects: readonly CreatedObject[]) => {
+        const along = [...objects, ...objects.flatMap((o) => implied.takesWith.get(o) ?? [])];
+        await recorder.drop(...along);
+        after(along);
+    };
     for (const run of removalRuns(take.filter((o) => !implied.covered.has(o)))) {
         if (runOf(run[0]) === 'products') {
-            await removeProductsInBulk(commerce, recorder, run, (object) =>
-                takeBack(commerce, object),
-            );
+            await removeProductsInBulk(commerce, recorder, run, (object) => takeBack(commerce, object));
             after(run);
         } else if (runOf(run[0]) !== 'one') {
-            await inOneCall(commerce, run);
-            await recorder.drop(...withAlong(run));
-            after(withAlong(run));
+            if (await tryTakeBack(run, refused, () => inOneCall(commerce, run))) await gone(run);
         } else {
             for (const object of run) {
-                await takeBack(commerce, object);
-                await recorder.drop(...withAlong([object]));
-                after(withAlong([object]));
+                if (await tryTakeBack([object], refused, () => takeBack(commerce, object))) await gone([object]);
             }
         }
     }
+    for (const row of refused) commerce.log?.(`could not take back ${row.kind} ${row.key}: ${row.reason}`);
+    return refused;
+}
+
+/** How many refused removals the line names; Debug Logs names each one. */
+const NAMED_REFUSALS = 10;
+
+/**
+ * The one line about what Commerce would not take back, or nothing.
+ *
+ * @param again - what tries it again: "Installing" the pack again, or "Removing" it again
+ */
+export function refusedRemovalsLine(refused: readonly RefusedRemoval[], again: 'Installing' | 'Removing'): string | undefined {
+    if (refused.length === 0) return undefined;
+    const rows = refused.slice(0, NAMED_REFUSALS).map((row) => `${dataTypeLabel(row.kind).toLowerCase()} ${row.key} (${row.reason.replace(/\.$/u, '')})`);
+    const count = refused.length === 1 ? '1 item' : `${refused.length.toLocaleString('en-US')} items`;
+    const more = refused.length > NAMED_REFUSALS ? `; and ${refused.length - NAMED_REFUSALS} more, each named in Debug Logs` : '';
+    return `Left ${count} in the store that Commerce would not take out: ${rows.join('; ')}${more}. ${again} the datapack again tries again.`;
 }

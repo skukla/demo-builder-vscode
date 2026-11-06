@@ -270,7 +270,7 @@ describe('removing a pack whose install left a create pending', () => {
         const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(result).toEqual({ removed: 0, noRecord: false, kept: [] });
+        expect(result).toEqual({ removed: 0, noRecord: false, kept: [], refused: [] });
         expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
     });
 });

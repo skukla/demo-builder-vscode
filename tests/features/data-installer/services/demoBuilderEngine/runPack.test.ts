@@ -24,7 +24,7 @@ describe('installPack', () => {
         });
         const seen: string[] = [];
 
-        await installPack(ctx, { source_items: { sourceItems: [] }, attribute_sets: [] }, (kind) => seen.push(kind));
+        await installPack(ctx, { source_items: { sourceItems: [] }, attribute_sets: [] }, (kind) => kind && seen.push(kind));
 
         expect(seen).toEqual(['attribute_sets', 'source_items']);
     });
@@ -132,8 +132,23 @@ describe('removePack', () => {
             { method: 'DELETE', path: 'products/vrrack', body: undefined },
             { method: 'DELETE', path: 'categories/41', body: undefined },
         ]);
-        expect(result).toEqual({ removed: 2, noRecord: false, kept: [] });
+        expect(result).toEqual({ removed: 2, noRecord: false, kept: [], refused: [] });
         expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
+    });
+
+    it('leaves what Commerce refuses in the store and the record on disk, so removing again tries it again', async () => {
+        const files = memoryFiles();
+        await recorded(files);
+        const ctx = await fakeContext({}, (call) => {
+            if (call.path === 'categories/41') throw new CommerceReadError('Commerce answered 400 for categories/41: {"message":"Cannot delete."}', 400);
+            return true;
+        });
+
+        const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(result.refused).toEqual([{ kind: 'categories', key: '41', reason: 'Cannot delete.' }]);
+        expect(result.removed).toBe(1);
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'categories', id: '41' }]);
     });
 
     it('keeps a set the pack made that holds products the SC added, taking out only what the pack put in', async () => {
@@ -198,7 +213,7 @@ describe('removePack', () => {
     it('answers that there is no record when this engine never installed the pack', async () => {
         const ctx = await fakeContext();
 
-        await expect(removePack(ctx, memoryFiles(), { projectPath: PROJECT, pack: PACK })).resolves.toEqual({ removed: 0, noRecord: true, kept: [] });
+        await expect(removePack(ctx, memoryFiles(), { projectPath: PROJECT, pack: PACK })).resolves.toEqual({ removed: 0, noRecord: true, kept: [], refused: [] });
         expect(ctx.sent).toStrictEqual([]);
     });
 

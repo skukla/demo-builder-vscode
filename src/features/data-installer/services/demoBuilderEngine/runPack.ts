@@ -44,7 +44,7 @@ import { PRODUCT_EXPORT_KIND, installProductExport, parseProductExport } from '.
 import { GIFT_CARD_KIND, PRODUCT_KINDS } from './productKinds';
 import { installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
-import { takeBackAll } from './removalRuns';
+import { type RefusedRemoval, takeBackAll } from './removalRuns';
 import { type KeptContainer, type RemovalAccess, decideRemovals } from './removers';
 import { type KeptThing, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat } from './repeatInstall';
 import { flatAssignments, installCatalogs, installAssignments as installCatalogAssignments, parseCatalogRows } from './sharedCatalogKinds';
@@ -185,6 +185,10 @@ export interface InstallOutcome {
     rootStep?: PackRootStep;
     /** The rows skipped because Commerce refused them or they needed one that was (step 14 item 3). */
     skipped: SkippedRow[];
+    /** What it took out because the pack no longer has it. */
+    tookOut: CreatedObject[];
+    /** What Commerce would not take out: still in the store and on the record. */
+    notTakenOut: RefusedRemoval[];
 }
 
 /**
@@ -194,12 +198,13 @@ export interface InstallOutcome {
  * rows the pack no longer has, and keeps the SC's own edits (`repeatInstall.ts`); then what was made
  * or changed is read back and hashed.
  *
- * @param onKind - called as each kind starts, for progress
+ * @param onKind - called as each kind starts, for progress, and with undefined once the last kind's
+ *   rows are in: what follows (taking out, reading back) is no one kind's time
  * @throws UnsupportedKindsError before any write, when the pack holds a kind not listed above
  * @throws PackRowsError before any write, naming every kind whose rows Commerce could not take
  * @throws UrlKeyClashError before any write, when a category would take a url key the store uses
  */
-export async function installPack(ctx: KindContext, packItems: PackItems, onKind: (kind: string) => void = () => undefined): Promise<InstallOutcome> {
+export async function installPack(ctx: KindContext, packItems: PackItems, onKind: (kind: string | undefined) => void = () => undefined): Promise<InstallOutcome> {
     const unsupported = unsupportedKinds(packItems);
     if (unsupported.length > 0) throw new UnsupportedKindsError(unsupported);
     const problems = packRowProblems(packItems, ctx.session.websiteCode);
@@ -228,7 +233,8 @@ export async function installPack(ctx: KindContext, packItems: PackItems, onKind
         // The pack kept its own root: the one Admin step, checked and asked for before the rest goes in.
         if (step.kind === 'categories' && placement === 'own' && ctx.session.storeRoot) rootStep = await settlePackRoot(ctx, ctx.session.storeRoot, ctx.asker);
     }
-    const containers = await applyRemovals(ctx, plans);
+    onKind(undefined);
+    const { containers, tookOut, refused } = await applyRemovals(ctx, plans);
     await recordFingerprints(ctx, items);
     const settings = ctx.session.settings;
     const keptSettings = (settings?.kept ?? []).map((key): KeptThing => ({ kind: STORE_CONFIG_KIND, key }));
@@ -236,6 +242,8 @@ export async function installPack(ctx: KindContext, packItems: PackItems, onKind
         kept: [...keptOf(plans), ...keptSettings],
         containers,
         skipped: ctx.session.skipped ?? [],
+        tookOut,
+        notTakenOut: refused,
         ...(settings ? { settings } : {}),
         ...(placement ? { rootPlacement: placement } : {}),
         ...(rootStep ? { rootStep } : {}),
@@ -257,6 +265,8 @@ export interface RemovalResult {
     settings?: SettingsDone;
     /** The kept root's Admin step, when a store shows the pack's root (step 12). */
     keptRoot?: KeptRootStep;
+    /** What Commerce would not take back: still in the store and on the record. */
+    refused: RefusedRemoval[];
 }
 
 /**
@@ -285,7 +295,7 @@ export async function removePack(
     target: { projectPath: string; pack: DatapackId; log?: (line: string) => void; progress?: (line: string) => void },
 ): Promise<RemovalResult> {
     const record = await readInstallRecord(files, target.projectPath, target.pack);
-    if (!record) return { removed: 0, noRecord: true, kept: [] };
+    if (!record) return { removed: 0, noRecord: true, kept: [], refused: [] };
     const recorder = await openInstallRecord(files, target.projectPath, target.pack, () => record.startedAt);
     // Step 14 item 1: a create that landed unanswered is taken back too; one that never did costs nothing.
     await settlePending(commerce.get, recorder, () => undefined);
@@ -301,8 +311,9 @@ export async function removePack(
         taken += objects.length;
         target.progress?.(`took back ${taken.toLocaleString('en-US')} of ${take.length.toLocaleString('en-US')} objects`);
     };
-    await takeBackAll({ ...commerce, log: target.log, progress: target.progress }, recorder, take, said);
-    if (kept.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
+    const refused = await takeBackAll({ ...commerce, log: target.log, progress: target.progress }, recorder, take, said);
+    if (kept.length === 0 && refused.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
     const keptRoot = await keptRootStep(commerce.get, kept, record.rootStep?.storeRootId);
-    return { removed: take.length + settingObjects.length, noRecord: false, kept, ...(settings ? { settings } : {}), ...(keptRoot ? { keptRoot } : {}) };
+    const removed = taken + settingObjects.length;
+    return { removed, noRecord: false, kept, refused, ...(settings ? { settings } : {}), ...(keptRoot ? { keptRoot } : {}) };
 }

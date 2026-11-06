@@ -255,6 +255,8 @@ export interface CheckFinding<T> {
 export interface InstallCheck {
     verdict: 'matches' | 'differs';
     checked: number;
+    /** Products the pack made that a reinstall kept as changed in the Admin, and the check left out. */
+    leftOut?: number;
     /**
      * How many of each the check actually compared, so a `matches` that compared nothing (a pack whose
      * values name no attribute the store has, say) reads as that rather than as a clean install.

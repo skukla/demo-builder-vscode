@@ -6,7 +6,7 @@
 
 import type { CreatedObject } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { openInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { removalRuns, takeBackAll } from '@/features/data-installer/services/demoBuilderEngine/removalRuns';
+import { refusedRemovalsLine, removalRuns, takeBackAll } from '@/features/data-installer/services/demoBuilderEngine/removalRuns';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import { NOW, PACK, PROJECT, fakeContext, memoryFiles } from './demoBuilderEngine.testUtils';
 
@@ -82,5 +82,51 @@ describe('takeBackAll', () => {
 
         await expect(takeBackAll(ctx, recorder, take)).rejects.toThrow('Could not take back 2 stock_source_links: Commerce answered 500');
         expect(recorder.created.map((o) => o.id)).toEqual(['7/east', '7/west']);
+    });
+
+    // 2026-11-06, live: one locked attribute stopped a reinstall part-way, with the rest not taken out.
+    it('leaves in the store and on the record one object Commerce refuses, names why, and takes the rest', async () => {
+        const take: CreatedObject[] = [
+            { kind: 'attribute_assign_to_set', id: '155/size', key: 'Top/size' },
+            { kind: 'attribute_assign_to_set', id: '155/new', key: 'Top/new' },
+        ];
+        const recorder = await recorderWith(take);
+        const locked = '{"message":"Attribute \'%1\' is locked. %2","parameters":["size","This attribute is used in configurable products."]}';
+        const ctx = await fakeContext({}, (call) => {
+            if (call.path.endsWith('/size')) throw new CommerceReadError(`Commerce answered 400 for ${call.path}: ${locked}`, 400);
+            return true;
+        });
+
+        const refused = await takeBackAll(ctx, recorder, take);
+
+        expect(refused).toEqual([
+            { kind: 'attribute_assign_to_set', key: 'Top/size', reason: "Attribute 'size' is locked. This attribute is used in configurable products." },
+        ]);
+        expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual([
+            'DELETE products/attribute-sets/155/attributes/size',
+            'DELETE products/attribute-sets/155/attributes/new',
+        ]);
+        expect(recorder.created.map((o) => o.id)).toEqual(['155/size']);
+    });
+
+    it('CONTROL: still stops when Commerce fails rather than refuses, as when it is down', async () => {
+        const take: CreatedObject[] = [{ kind: 'attribute_assign_to_set', id: '155/size', key: 'Top/size' }];
+        const recorder = await recorderWith(take);
+        const ctx = await fakeContext({}, () => {
+            throw new CommerceReadError('Commerce answered 503', 503);
+        });
+
+        await expect(takeBackAll(ctx, recorder, take)).rejects.toThrow('Could not take back attribute_assign_to_set 155/size: Commerce answered 503');
+    });
+});
+
+describe('refusedRemovalsLine', () => {
+    it('names what was left, why, and what tries again; nothing when nothing was', () => {
+        const row = { kind: 'attribute_assign_to_set', key: 'Top/size', reason: 'Attribute size is locked.' };
+
+        expect(refusedRemovalsLine([], 'Installing')).toBeUndefined();
+        expect(refusedRemovalsLine([row], 'Removing')).toBe(
+            'Left 1 item in the store that Commerce would not take out: attribute assign to set Top/size (Attribute size is locked). Removing the datapack again tries again.',
+        );
     });
 });
