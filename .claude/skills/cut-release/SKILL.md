@@ -20,6 +20,10 @@ Also expect, on direct pushes to `develop`/`master`:
 `Bypassed rule violations ... 2 of 2 required status checks expected` — that's the
 branch-protection notice, **not** a failure.
 
+## Periodic passes gate (develop cuts only)
+
+First thing on a develop cut, before the preconditions below: run the `/dev-pipeline:freshness` skill's release-cut check and do what it says. Hotfix cuts skip this.
+
 ## Preconditions (verify, don't assume)
 
 1. On `develop`, working tree clean (`git status --short` empty).

@@ -1,0 +1,10 @@
+# dev-pipeline manifest. Read by the dev-pipeline plugin's freshness hook.
+# Each periodic step updates its own `last` date when it runs; do not edit by hand.
+rptc_version: 4.3.0
+checks: [npm run gate]
+artifact_dir: .rptc
+records_dir: .rptc/dream
+on_demand_plugins: [tech-case-engine]
+periodic:
+  reflect:        { budget: 3 releases or 30 days, last: 2026-08-24 }
+  codebase-sweep: { budget: 3 releases, last: 2026-08-27 }
