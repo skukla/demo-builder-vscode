@@ -14,7 +14,7 @@
  * built as the engine builds it: `resolveEngineTarget`, then `sessionFor`.
  *
  * A data type the cycle does not install is in COVERED_ELSEWHERE, naming the test that proves the same
- * for it, or in NOT_YET_COVERED, which may only shrink. A new data type in neither fails the build.
+ * for it. A new data type in neither fails the build.
  */
 
 import * as fs from 'fs';
@@ -216,17 +216,14 @@ const COVERED_ELSEWHERE: Record<string, { file: string; test: string }> = {
         file: 'runPack-b2b.test.ts',
         test: 'installing again changes nothing the SC left as it was',
     },
-};
-
-/**
- * Kinds nothing proves yet, each with why. May only SHRINK: an entry that gains a test moves to the
- * cycle or to COVERED_ELSEWHERE, and a new kind may not be added here to make the build pass.
- */
-const NOT_YET_COVERED: Record<string, string> = {
-    b2b_shared_catalog_categories:
-        "runPack-b2b's pack holds company assignments only; memoryStore has no shared catalogs",
-    b2b_shared_catalog_products:
-        "runPack-b2b's pack holds company assignments only; memoryStore has no shared catalogs",
+    b2b_shared_catalog_categories: {
+        file: 'runPack-b2b.test.ts',
+        test: 'installing again changes nothing the SC left as it was',
+    },
+    b2b_shared_catalog_products: {
+        file: 'runPack-b2b.test.ts',
+        test: 'installing again changes nothing the SC left as it was',
+    },
 };
 
 /** Commerce with its settings beside it, as the engine's harness composes them. */
@@ -373,31 +370,21 @@ describe('a pack installed, installed again, and removed', () => {
 describe('every data type proves "install again, nothing sent" somewhere', () => {
     const inCycle = new Set([...Object.keys(PACK_ROWS), ...Object.keys(IMPORT_FORM_PACKS)]);
 
-    it('names, for each kind the engine installs, the cycle, another test, or why not yet', () => {
-        const unproven = INSTALLABLE_KINDS.filter(
-            (kind) =>
-                !inCycle.has(kind) && !(kind in COVERED_ELSEWHERE) && !(kind in NOT_YET_COVERED)
-        );
+    it('names, for each kind the engine installs, the cycle or another test', () => {
+        const unproven = INSTALLABLE_KINDS.filter((kind) => !inCycle.has(kind) && !(kind in COVERED_ELSEWHERE));
 
         expect(unproven).toStrictEqual([]);
     });
 
-    it('each test named elsewhere still exists, by its file and its name', () => {
-        const missing = Object.entries(COVERED_ELSEWHERE).filter(([, { file, test }]) => {
+    // A named test must install the kind, not merely exist: a test whose pack lacks the kind proves nothing for it.
+    it('each test named elsewhere still exists, by its file and its name, and its file installs the kind', () => {
+        const missing = Object.entries(COVERED_ELSEWHERE).filter(([kind, { file, test }]) => {
             const source = path.join(__dirname, file);
-            return !fs.existsSync(source) || !fs.readFileSync(source, 'utf8').includes(test);
+            if (!fs.existsSync(source)) return true;
+            const text = fs.readFileSync(source, 'utf8');
+            return !text.includes(test) || !text.includes(kind);
         });
 
         expect(missing).toStrictEqual([]);
-    });
-
-    it('the not-yet list only shrinks: nothing on it is covered, and nothing on it is unknown', () => {
-        const stale = Object.keys(NOT_YET_COVERED).filter(
-            (kind) =>
-                inCycle.has(kind) || kind in COVERED_ELSEWHERE || !INSTALLABLE_KINDS.includes(kind)
-        );
-
-        expect(stale).toStrictEqual([]);
-        expect(Object.keys(NOT_YET_COVERED)).toHaveLength(2);
     });
 });

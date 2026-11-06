@@ -114,3 +114,6 @@ prove one with a live install and removal.
 - 2026-11-06  fix(datapacks): a reinstall no longer takes attributes out of their sets (`e19ef34a2`)
 - 2026-11-06  fix(datapacks): a removal Commerce refuses no longer stops the rest (`c3275bfae`)
 - 2026-11-06  fix(datapacks): a reinstall no longer unlinks a stock's sources (`dac4ee66c`)
+- 2026-11-06  test(sop): a measured time may not be checked only against zero (`c4ef742f0`)
+- 2026-11-06  test(datapacks): every data type installs, installs again sending nothing, and comes out (`c9f28ede2`)
+- 2026-11-06  feat(ai): import-datapack previews before installing a pack again (`dca2f4970`)
