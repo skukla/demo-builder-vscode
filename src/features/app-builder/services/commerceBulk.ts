@@ -37,7 +37,7 @@ const OPEN = 4;
  */
 export async function startBulk(
     send: CommerceSend,
-    method: 'POST' | 'PUT' | 'DELETE',
+    method: 'POST' | 'PUT',
     path: string,
     bodies: readonly unknown[],
 ): Promise<string> {
@@ -90,6 +90,29 @@ function outcomeOf(
     return { uuid, total, complete, failed, open, timedOut: false };
 }
 
+/** How many times a bulk's status is read before a failed read stops the caller. */
+const STATUS_READ_ATTEMPTS = 3;
+
+/**
+ * A bulk's status, read again (up to `STATUS_READ_ATTEMPTS` in all) when a read fails. Reading changes
+ * nothing, and a single 401 on a status read stopped a 7-minute Luma install while the same read
+ * answered normally a minute later (live, 2026-11-06). A read that keeps failing still stops it.
+ */
+async function readStatus(
+    get: CommerceGet,
+    uuid: string,
+    pause: Pick<BulkFollowDeps, 'sleep' | 'intervalMs'>,
+): Promise<CommerceBulkStatus> {
+    for (let attempt = 1; ; attempt += 1) {
+        try {
+            return ((await get(`bulk/${uuid}/status`)) ?? {}) as CommerceBulkStatus;
+        } catch (error) {
+            if (attempt >= STATUS_READ_ATTEMPTS) throw error;
+            await pause.sleep(pause.intervalMs);
+        }
+    }
+}
+
 /** How one request in a bulk ended: made, refused for good, worth sending again, or not run yet. */
 export type BulkRowState = 'done' | 'refused' | 'retry' | 'open';
 
@@ -129,8 +152,9 @@ export async function readBulkRows(
     get: CommerceGet,
     uuid: string,
     count: number,
+    pause: Pick<BulkFollowDeps, 'sleep' | 'intervalMs'> = { sleep, intervalMs: TIMEOUTS.COMMERCE_BULK_POLL_INTERVAL },
 ): Promise<BulkRow[]> {
-    const status = ((await get(`bulk/${uuid}/status`)) ?? {}) as CommerceBulkStatus;
+    const status = await readStatus(get, uuid, pause);
     const rows: BulkRow[] = Array.from({ length: count }, (_, index) => ({
         index,
         state: 'open',
@@ -163,8 +187,8 @@ export async function followBulk(
 ): Promise<CommerceBulkOutcome> {
     const started = deps.now();
     for (;;) {
-        const status = (await get(`bulk/${uuid}/status`)) as CommerceBulkStatus;
-        const outcome = outcomeOf(uuid, status ?? {}, expected);
+        const status = await readStatus(get, uuid, deps);
+        const outcome = outcomeOf(uuid, status, expected);
         deps.onProgress?.(outcome.complete + outcome.failed.length, outcome.total);
         if (outcome.open <= 0) return outcome;
         if (deps.now() - started >= deps.deadlineMs) return { ...outcome, timedOut: true };

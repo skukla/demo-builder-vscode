@@ -54,12 +54,23 @@ export async function createRecorded(
     return objects;
 }
 
-/** Create one object, recorded as pending first (`createRecorded`, for the common case). */
+/**
+ * Create one object, recorded as pending first (`createRecorded`, for the common case), with the
+ * pack's name for it (`pending.key`) when `make` gives none.
+ *
+ * The key goes on the record at creation, not only in the hash pass at the end of an install. A
+ * record without keys reads as one written before keys were kept, and for categories that means the
+ * pack made its own root: an install interrupted before its hash pass (a 401 on a status read, live
+ * 2026-11-06) was resumed under a second "Luma Catalog" with every category made again.
+ */
 export async function createOne(
     ctx: Pick<KindContext, 'recorder'>,
     pending: PendingObject,
     make: () => Promise<CreatedObject>,
 ): Promise<CreatedObject> {
-    const [object] = await createRecorded(ctx, [pending], async () => [await make()]);
+    const [object] = await createRecorded(ctx, [pending], async () => {
+        const made = await make();
+        return [made.key === undefined ? { ...made, key: pending.key } : made];
+    });
     return object;
 }

@@ -69,7 +69,7 @@ describe('installSources', () => {
         await installSources(ctx, parseSources({ sources: [{ source: BROADWAY }] }));
 
         expect(ctx.sent).toEqual([{ method: 'POST', path: 'inventory/sources', body: { source: BROADWAY } }]);
-        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway', key: 'carvelo_broadway' }]);
     });
 
     it('leaves a source the store has and uses alone', async () => {
@@ -90,7 +90,7 @@ describe('installSources', () => {
         expect(ctx.sent).toEqual([
             { method: 'PUT', path: 'inventory/sources/carvelo_broadway', body: { source: { ...off, enabled: true } } },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway', previous: { enabled: false } }]);
+        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway', key: 'carvelo_broadway', previous: { enabled: false } }]);
     });
 });
 
@@ -111,7 +111,7 @@ describe('installStocks', () => {
             },
         ]);
         expect(ctx.recorder.created).toEqual([
-            { kind: STOCK_KIND, id: '7', previous: { websiteCode: 'base', stockId: 1 } },
+            { kind: STOCK_KIND, id: '7', key: 'Carvelo Inventory', previous: { websiteCode: 'base', stockId: 1 } },
         ]);
     });
 
@@ -158,7 +158,7 @@ describe('installStockSourceLinks', () => {
                 body: { links: [{ stock_id: 7, source_code: 'carvelo_broadway', priority: 3 }] },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: LINK_KIND, id: '7/carvelo_broadway' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: LINK_KIND, id: '7/carvelo_broadway', key: '7/carvelo_broadway' }]);
     });
 
     // Step 14 item 3: skipped and named, and the rest of the pack goes on.

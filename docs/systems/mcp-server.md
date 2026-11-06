@@ -940,7 +940,7 @@ are left open. The store list never offers Commerce's own Admin website (`admin`
 ### Waiting on a datapack job instead of polling it (owner, 2026-11-05)
 
 No new tool. `start_datapack_import`, `reset_datapack` and `get_datapack_import_status` take
-`waitSeconds`, at most 60 (`importJobWait.ts`). The call waits for the job to end. While it waits,
+`waitSeconds`, at most 45 (`importJobWait.ts`). The call waits for the job to end. While it waits,
 it sends each change of progress into the agent's chat as a phase line, for example "Installing the
 datapack: 450 of 2,046 products". It answers when the job ends, or when the wait is up with
 `outcome` still `watching`. The start and the removal then carry the job's record as `job`, so a
@@ -953,8 +953,9 @@ products. Its note names at most ten skipped rows and counts the rest (`skippedL
 names each): a 2,000-row skip would otherwise put about 180,000 characters into every status read. The watch now follows a job for up to an hour, up from ten minutes, because a 2,000-product
 install can run past ten.
 
-A minute, not the whole job: each agent client limits how long one call may run, and those limits
-are not measured here. The MCP "tasks" feature, where the client does the waiting, is the fuller
+45 seconds, not the whole job: each agent client limits how long one call may run. The MCP client
+library's default is 60 s (`DEFAULT_REQUEST_TIMEOUT_MSEC`), and a 60 s wait timed out against it on
+2026-11-06, so the ceiling leaves room for the call's own start-up. The MCP "tasks" feature, where the client does the waiting, is the fuller
 answer; it is a backlog question until Claude Code and Copilot support it.
 
 ### A datapack from a Commerce product export (owner, 2026-11-05)

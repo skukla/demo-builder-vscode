@@ -10,8 +10,10 @@
  * Not signed in (401, 403) and too many calls (429) refuse the whole call, as Commerce checks them
  * when the call arrives.
  *
- * A `bySku` route runs as the single route with the SKU in its path, as Commerce runs it:
- * `DELETE products/bySku` with `{ sku }` is `DELETE products/{sku}`.
+ * A delete-mode product import (`POST import/json`, `behavior: 'delete'`, the route a removal uses
+ * since 2026-11-06) runs as one `DELETE products/{sku}` per row through the fake's single route, so a
+ * removal suite's assertions on those deletes still hold, and a deleted SKU then reads as missing.
+ * A row the single route refuses is simply not deleted, as Commerce's import skips an invalid row.
  *
  * A search for a list of SKUs that the fake does not answer is answered from its single-product
  * reads, so a path-table fake that knows `products/<sku>` needs nothing new.
@@ -46,10 +48,7 @@ async function runOne(
     id: number
 ): Promise<Operation> {
     try {
-        // A `bySku` route is the synchronous `products/{sku}` with the SKU taken from the body.
-        const sku = path.endsWith('/bySku') ? (body as { sku: string }).sku : undefined;
-        if (sku !== undefined) await send(method, `${path.slice(0, -'/bySku'.length)}/${encodeURIComponent(sku)}`, undefined);
-        else await send(method, path, body);
+        await send(method, path, body);
         return { id, status: 1, result_message: SUCCESS, error_code: null };
     } catch (error) {
         // Who we are and how fast we call are checked when the call arrives, not per request.
@@ -85,14 +84,60 @@ async function skuListFromSingles(get: CommerceGet, list: string): Promise<unkno
     return { items, total_count: items.length };
 }
 
+type DeleteImport = { source?: { entity?: string; behavior?: string; items?: Array<{ sku: string }> } };
+
+/** A delete-mode product import, or undefined for any other call. */
+function deleteImportOf(method: string, path: string, body: unknown): Array<{ sku: string }> | undefined {
+    const source = (body as DeleteImport | undefined)?.source;
+    const isDelete = method === 'POST' && path === 'import/json' && source?.entity === 'catalog_product' && source.behavior === 'delete';
+    return isDelete ? (source?.items ?? []) : undefined;
+}
+
+/** Each row through the single delete; one refused is left, as the import skips an invalid row. */
+async function runDeleteImport(send: CommerceSend, items: Array<{ sku: string }>, gone: Set<string>): Promise<string[]> {
+    let deleted = 0;
+    for (const { sku } of items) {
+        try {
+            await send('DELETE', `products/${encodeURIComponent(sku)}`, undefined);
+            gone.add(sku.toLowerCase());
+            deleted += 1;
+        } catch (error) {
+            if (error instanceof CommerceReadError && CALL_REFUSALS.has(error.status ?? 0)) throw error;
+        }
+    }
+    return [`Entities Processed: ${deleted}`];
+}
+
 /** The fake's get and send with the bulk queue in front of them. */
 export function withBulkQueue(
     get: CommerceGet,
     send: CommerceSend
 ): { get: CommerceGet; send: CommerceSend } {
     const bulks = new Map<string, Operation[]>();
+    const gone = new Set<string>();
+    const single = /^products\/([^/?]+)$/u;
+    const outer: CommerceGet = async (path) => {
+        const status = /^bulk\/([^/]+)\/status$/u.exec(path);
+        if (status) {
+            const operations = bulks.get(status[1]) ?? [];
+            const answer: CommerceBulkStatus = { operations_list: operations, operation_count: operations.length, user_type: 2, bulk_id: status[1] };
+            return answer;
+        }
+        const one = single.exec(path);
+        if (one && gone.has(decodeURIComponent(one[1]).toLowerCase())) throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
+        try {
+            return await get(path);
+        } catch (error) {
+            const list = SKU_LIST.exec(path);
+            if (!list || !(error instanceof CommerceReadError) || error.status !== 404) throw error;
+            return skuListFromSingles(outer, list[1]);
+        }
+    };
     return {
+        get: outer,
         send: async (method, path, body, route) => {
+            const deletes = deleteImportOf(method, path, body);
+            if (deletes) return runDeleteImport(send, deletes, gone);
             if (!route?.bulk) return send(method, path, body);
             const bodies = body as unknown[];
             const operations: Operation[] = [];
@@ -106,27 +151,6 @@ export function withBulkQueue(
                 errors: false,
             };
             return accepted;
-        },
-        get: async (path) => {
-            const status = /^bulk\/([^/]+)\/status$/u.exec(path);
-            if (status) {
-                const operations = bulks.get(status[1]) ?? [];
-                const answer: CommerceBulkStatus = {
-                    operations_list: operations,
-                    operation_count: operations.length,
-                    user_type: 2,
-                    bulk_id: status[1],
-                };
-                return answer;
-            }
-            try {
-                return await get(path);
-            } catch (error) {
-                const list = SKU_LIST.exec(path);
-                if (!list || !(error instanceof CommerceReadError) || error.status !== 404)
-                    throw error;
-                return skuListFromSingles(get, list[1]);
-            }
         },
     };
 }

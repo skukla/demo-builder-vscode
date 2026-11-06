@@ -172,6 +172,21 @@ describe('createProductsInBulk', () => {
         expect(h.ctx.recorder.pending.map((p) => p.key)).toEqual(['s0', 's1']);
     });
 
+    // Live, 2026-11-06: a 401 on a status read after Commerce had accepted the batch forgot 50 products it made.
+    it('leaves an accepted batch pending when following it fails, for the next run to settle', async () => {
+        const h = await harness();
+        const read = h.ctx.get;
+        h.ctx.get = async (path) => {
+            if (path.startsWith('bulk/')) throw new CommerceReadError('Commerce answered 401 for bulk/u-1/status', 401);
+            return read(path);
+        };
+
+        await expect(createProductsInBulk(h.ctx, runFor(2), products(2), NO_WAIT)).rejects.toThrow('401');
+
+        expect(h.bulkSizes).toEqual([2]);
+        expect(h.ctx.recorder.pending.map((p) => p.key)).toEqual(['s0', 's1']);
+    });
+
     it("learns the new products' ids for the parents that link them", async () => {
         const h = await harness(undefined, { inStore: { S0: 41, s1: 42 } });
 

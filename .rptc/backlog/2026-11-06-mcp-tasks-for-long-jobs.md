@@ -15,7 +15,7 @@ having to poll? Is that something that can be improved?").
 ## What is built
 
 A datapack install or removal is a background job. Since 2026-11-05 `start_datapack_import`,
-`reset_datapack` and `get_datapack_import_status` take `waitSeconds` (at most 60). The call waits
+`reset_datapack` and `get_datapack_import_status` take `waitSeconds` (at most 45; 60 timed out in a client on the MCP library's 60 s default, 2026-11-06). The call waits
 for the job, sending progress lines into the chat, and answers when the job ends or the minute is
 up (`importJobWait.ts`; `docs/systems/mcp-server.md`, "Waiting on a datapack job"). A 2,000-product
 install is then about four calls instead of dozens. Each call is still an AI turn.

@@ -70,15 +70,15 @@ const rank = (type: string | undefined): number => {
     return at < 0 ? TYPE_ORDER.length : at;
 };
 
-/** The attribute codes a base pack defines. */
-function definedCodes(base: DatapackFile | undefined): Set<string> {
+type BaseAttribute = { attribute?: { attribute_code?: unknown; frontend_input?: unknown } };
+
+/** The attribute codes a base pack defines, all of them or only those of one input type. */
+function definedCodes(base: DatapackFile | undefined, input?: string): Set<string> {
     const rows = base?.items.find((item) => item.dataType === 'product_attributes')?.records;
-    const codes = Array.isArray(rows)
-        ? rows.map(
-              (row) =>
-                  (row as { attribute?: { attribute_code?: unknown } }).attribute?.attribute_code,
-          )
-        : [];
+    const attributes = Array.isArray(rows) ? (rows as BaseAttribute[]) : [];
+    const codes = attributes
+        .filter((row) => !input || row.attribute?.frontend_input === input)
+        .map((row) => row.attribute?.attribute_code);
     return new Set(codes.filter((code): code is string => typeof code === 'string'));
 }
 
@@ -108,12 +108,14 @@ export function buildPackFromExport(input: ExportPackInput): ExportPackResult {
     rows.sort((a, b) => rank(a.fields.product_type) - rank(b.fields.product_type));
     const leftOut = new Set<string>();
     const known = definedCodes(input.base);
+    const multiselect = definedCodes(input.base, 'multiselect');
     const prices = new Map(
         rows.map((row) => [row.fields.sku.trim(), numberOf(row.fields.price) ?? 0]),
     );
     const made = rows.map((row) =>
         productRow(row, {
             known,
+            multiselect,
             urlKeys,
             prices,
             leftOut: (code) => leftOut.add(code),

@@ -202,7 +202,8 @@ describe('createOne', () => {
         await createOne(ctx, { kind: 'products', key: 'vrrack', id: 'vrrack' }, async () => ({ kind: 'products', id: 'vrrack' }));
 
         expect(ctx.recorder.pending).toStrictEqual([]);
-        expect(ctx.recorder.created).toEqual([{ kind: 'products', id: 'vrrack' }]);
+        // The pending entry's key goes on the record at creation, so an interrupted install still says what each row is.
+        expect(ctx.recorder.created).toEqual([{ kind: 'products', id: 'vrrack', key: 'vrrack' }]);
     });
 
     it('forgets the pending entry when Commerce refused the create: it made nothing', async () => {

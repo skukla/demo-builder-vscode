@@ -78,7 +78,7 @@ describe('demoBuilderEngine install', () => {
         expect(activationId).toMatch(/^demo-builder-/);
         expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
         expect(await engine.getJobFailureReason(activationId)).toBeUndefined();
-        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'categories', id: '40' }]);
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'categories', id: '40', key: 'Sale' }]);
     });
 
     it('says in one line what installing again kept, because the SC had changed it in the Admin', async () => {

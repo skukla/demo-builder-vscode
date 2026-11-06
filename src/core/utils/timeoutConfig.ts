@@ -294,11 +294,12 @@ export const TIMEOUTS = {
 
     /**
      * How often a datapack job's record is read while an agent's call waits on it (owner,
-     * 2026-11-05: the wait replaces blind polling), and the longest such a wait may be: one
-     * minute, well inside any agent client's limit on one call.
+     * 2026-11-05: the wait replaces blind polling), and the longest such a wait may be: 45 s.
+     * The MCP client library's default limit on one call is 60 s (`DEFAULT_REQUEST_TIMEOUT_MSEC`),
+     * so a 60 s wait timed out in a client on the default, measured live 2026-11-06.
      */
     DATAPACK_JOB_WAIT_POLL: 2000,
-    DATAPACK_JOB_WAIT_MAX: 60 * 1000,
+    DATAPACK_JOB_WAIT_MAX: 45 * 1000,
 
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,

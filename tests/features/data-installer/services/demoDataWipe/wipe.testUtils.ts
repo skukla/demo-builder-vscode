@@ -5,6 +5,7 @@
  * write, with its body, are kept, so a suite asserts both.
  */
 
+import { withBulkQueue } from '../demoBuilderEngine/bulkQueue.testUtils';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { CommerceCoupon, CommerceSalesRule } from '@/types/commerceSalesRule';
@@ -181,6 +182,12 @@ function reader(data: SandboxState) {
         if (path === 'store/storeViews') return [ADMIN_VIEW, ...SANDBOX_VIEWS];
         if (path.startsWith('categories/list?')) return page(SANDBOX_CATEGORIES);
         if (path.startsWith('products?')) {
+            // A list of SKUs, as a delete's read-back asks (`skusInStore`): Commerce's `in` filter.
+            const listed = /\[field\]=sku&.*\[conditionType\]=in&.*?\[value\]=([^&]*)/u.exec(path)?.[1];
+            if (listed !== undefined) {
+                const wanted = new Set(listed.split(',').map((sku) => decodeURIComponent(sku).toLowerCase()));
+                return page(data.products.filter((p) => wanted.has(p.sku.toLowerCase())));
+            }
             const searched = productSearch(data, path);
             if (searched) return page(searched);
             const [website] = filterOf(path)[1];
@@ -234,7 +241,11 @@ export function sandbox(state: Partial<SandboxState> = {}, refuse: (path: string
         if (instanceAnswer !== undefined) return instanceAnswer;
         return path.includes('/refund') ? 9001 : true;
     };
-    return { data, reads, sent, get, send };
+    // A delete-mode product import runs as one DELETE per row through `send` (`bulkQueue.testUtils.ts`).
+    const queued = withBulkQueue(get, send);
+    const sendMaybeEmpty = (method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, route?: { bulk?: boolean }) =>
+        queued.send(method, path, body, route);
+    return { data, reads, sent, get: queued.get, send: sendMaybeEmpty };
 }
 
 /** The writes a run made, without their bodies, for suites that assert only the order. */

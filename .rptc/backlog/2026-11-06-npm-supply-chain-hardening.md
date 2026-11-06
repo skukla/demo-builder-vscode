@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Harden what we take from npm, and act on the advisories already in the tree
@@ -52,3 +52,7 @@ and the MCP SDK's server dependencies (`body-parser`, `@hono/node-server`).
    direct, both have a fixed version, and both sit on paths that read input from outside.
 5. Triage the rest: which advisories reach code this extension runs, and which sit in server code
    it never starts.
+
+## Shipped so far
+
+- 2026-11-05  chore(deps): drop crypto-js, axios, @types/uuid and uuid (`f196c2f25`)

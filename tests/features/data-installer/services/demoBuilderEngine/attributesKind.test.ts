@@ -53,7 +53,7 @@ describe('installAttributes', () => {
                 body: { attribute: { ...FABRIC.attribute, frontend_labels: [{ store_id: 1, label: 'Fabric' }] } },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'bodea_fabric' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'bodea_fabric', key: 'bodea_fabric' }]);
     });
 
     it('never sends the source store\'s attribute id', async () => {
@@ -83,7 +83,7 @@ describe('installAttributes', () => {
         expect(ctx.sent).toEqual([
             { method: 'POST', path: 'products/attributes/bodea_fabric/options', body: { option: { label: 'Nylon' } } },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_OPTION_KIND, id: 'bodea_fabric/51' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_OPTION_KIND, id: 'bodea_fabric/51', key: 'bodea_fabric/Nylon' }]);
         expect(ctx.sent.some((c) => c.method === 'DELETE')).toBe(false);
     });
 
@@ -140,7 +140,7 @@ describe('swatch attributes', () => {
             { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Blue', value: '#286785', sort_order: 1, is_default: false } } },
         ]);
         // Its options go with it on removal, so only the attribute is recorded.
-        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'cs_color' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'cs_color', key: 'cs_color' }]);
     });
 
     it('adds the options a store\'s own swatch lacks with their swatch, and records each', async () => {
@@ -161,7 +161,7 @@ describe('swatch attributes', () => {
         expect(ctx.sent).toEqual<SentCall[]>([
             { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Blue', value: '#286785', sort_order: 1, is_default: false } } },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_OPTION_KIND, id: 'cs_color/61' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_OPTION_KIND, id: 'cs_color/61', key: 'cs_color/Blue' }]);
     });
 
     // What Commerce answers as a swatch's `frontend_input` is not captured in this repo, so both
@@ -183,7 +183,7 @@ describe('swatch attributes', () => {
         expect(asSwatch.sent.map((c) => c.path)).toEqual(['products/attributes', 'products/attributes/cs_color/options']);
         expect(asSwatch.sent[1].body).toEqual({ option: { label: 'Black', value: 'Black', sort_order: 0, is_default: false } });
         expect(asDropdown.sent.map((c) => c.path)).toEqual(['products/attributes']);
-        expect(asDropdown.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'cs_color' }]);
+        expect(asDropdown.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'cs_color', key: 'cs_color' }]);
     });
 });
 

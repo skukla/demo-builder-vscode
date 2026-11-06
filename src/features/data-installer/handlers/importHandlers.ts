@@ -73,7 +73,7 @@ interface StartImportPayload {
     saveAs?: { displayName?: unknown };
     /** Reset only, and only ever the confirm's box: turn on "always save" once a save has worked. */
     alwaysSave?: boolean;
-    /** Agent: wait up to this many seconds (at most 60) for the job to end, saying its progress (`importJobWait.ts`). */
+    /** Agent: wait up to this many seconds (at most 45) for the job to end, saying its progress (`importJobWait.ts`). */
     waitSeconds?: number;
 }
 

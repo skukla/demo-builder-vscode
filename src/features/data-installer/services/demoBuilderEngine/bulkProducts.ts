@@ -82,30 +82,37 @@ function skuFilter(skus: readonly string[]): string {
     );
 }
 
-/**
- * Which of these SKUs the store has, with their ids, by lowercased SKU (Commerce matches a SKU
- * whatever its case). A hundred at a time; a SKU with a comma in it is read on its own.
- */
-export async function productIdsInStore(
-    get: CommerceGet,
-    skus: readonly string[],
-): Promise<Map<string, number>> {
-    const found = new Map<string, number>();
+/** The store's rows for these SKUs, `id` and `sku` only: a hundred to a read, a SKU holding a comma on its own. */
+async function listedInStore(get: CommerceGet, skus: readonly string[]): Promise<Array<{ id?: number; sku: string }>> {
+    const rows: Array<{ id?: number; sku: string }> = [];
     const listable = skus.filter((sku) => !sku.includes(','));
     for (let start = 0; start < listable.length; start += SKUS_PER_READ) {
-        const page = await readAllPages<{ id?: number; sku?: string }>(
-            get,
-            'products',
-            skuFilter(listable.slice(start, start + SKUS_PER_READ)),
-        );
-        for (const item of page)
-            if (item.sku && item.id !== undefined) found.set(item.sku.toLowerCase(), item.id);
+        const page = await readAllPages<{ id?: number; sku?: string }>(get, 'products', skuFilter(listable.slice(start, start + SKUS_PER_READ)));
+        for (const item of page) if (item.sku) rows.push({ sku: item.sku, ...(item.id !== undefined ? { id: item.id } : {}) });
     }
     for (const sku of skus.filter((s) => s.includes(','))) {
         const item = await readOrNull<{ id?: number }>(get, `products/${encodeURIComponent(sku)}`);
-        if (item?.id !== undefined) found.set(sku.toLowerCase(), item.id);
+        if (item) rows.push({ sku, ...(item.id !== undefined ? { id: item.id } : {}) });
     }
+    return rows;
+}
+
+/**
+ * Which of these SKUs the store has, with their ids, by lowercased SKU (Commerce matches a SKU
+ * whatever its case).
+ */
+export async function productIdsInStore(get: CommerceGet, skus: readonly string[]): Promise<Map<string, number>> {
+    const found = new Map<string, number>();
+    for (const row of await listedInStore(get, skus)) if (row.id !== undefined) found.set(row.sku.toLowerCase(), row.id);
     return found;
+}
+
+/**
+ * Which of these SKUs the store still has, by lowercased SKU: presence alone, so a row read without
+ * its id still counts as there (a delete's read-back must never call a product gone on a guess).
+ */
+export async function skusInStore(get: CommerceGet, skus: readonly string[]): Promise<Set<string>> {
+    return new Set((await listedInStore(get, skus)).map((row) => row.sku.toLowerCase()));
 }
 
 /** The rows of one batch, sorted by how each ended. */
@@ -136,37 +143,28 @@ export function bulkRefusalWords(error: unknown): string {
     return said || `HTTP ${error instanceof CommerceReadError ? error.status : '?'}`;
 }
 
-/** Send one batch and follow it; undefined when Commerce refused the whole call, so nothing was made. */
-async function sendBatch(
-    ctx: KindContext,
-    run: BulkRun,
-    batch: readonly ProductToMake[],
-    wait: BulkWait,
-): Promise<BulkRow[] | undefined> {
-    let uuid: string;
+/**
+ * Start one batch: its uuid, or undefined when Commerce refused the whole call for its shape, so
+ * nothing was made and the batch goes one at a time.
+ */
+async function startBatch(ctx: KindContext, run: BulkRun, batch: readonly ProductToMake[]): Promise<string | undefined> {
     try {
-        uuid = await startBulk(
-            ctx.send,
-            'POST',
-            'products',
-            batch.map((p) => p.body),
-        );
+        return await startBulk(ctx.send, 'POST', 'products', batch.map((p) => p.body));
     } catch (error) {
         if (!refusedForShape(error)) throw error;
-        ctx.log(
-            `Commerce refused ${batch.length} ${run.noun} sent together (${bulkRefusalWords(error)}); sending them one at a time`,
-        );
+        ctx.log(`Commerce refused ${batch.length} ${run.noun} sent together (${bulkRefusalWords(error)}); sending them one at a time`);
         return undefined;
     }
+}
+
+/** Follow an accepted batch to its end and read how each row ended. */
+async function followBatch(ctx: KindContext, run: BulkRun, uuid: string, count: number, wait: BulkWait): Promise<BulkRow[]> {
     const before = run.done;
-    await followBulk(ctx.get, uuid, batch.length, {
+    await followBulk(ctx.get, uuid, count, {
         ...wait,
-        onProgress: (done) =>
-            ctx.progress?.(
-                `${(before + done).toLocaleString('en-US')} of ${run.total.toLocaleString('en-US')} ${run.noun}`,
-            ),
+        onProgress: (done) => ctx.progress?.(`${(before + done).toLocaleString('en-US')} of ${run.total.toLocaleString('en-US')} ${run.noun}`),
     });
-    return readBulkRows(ctx.get, uuid, batch.length);
+    return readBulkRows(ctx.get, uuid, count, wait);
 }
 
 /** One batch: pending first, then each row recorded, skipped, or sent again on its own. */
@@ -179,24 +177,26 @@ async function makeBatch(
     const pendingOf = (products: readonly ProductToMake[]): PendingObject[] =>
         products.map((p) => ({ kind: run.kind, key: p.sku, id: p.sku }));
     await ctx.recorder.markPending(pendingOf(batch));
-    let rows: BulkRow[] | undefined;
+    let uuid: string | undefined;
     try {
-        rows = await sendBatch(ctx, run, batch, wait);
+        uuid = await startBatch(ctx, run, batch);
     } catch (error) {
+        // Only the call itself being refused means nothing was made.
         if (certainlyNotMade(error)) await ctx.recorder.forgetPending(pendingOf(batch));
         throw error;
     }
-    if (!rows) {
+    if (!uuid) {
         await ctx.recorder.forgetPending(pendingOf(batch));
         for (const product of batch) await run.single(product);
         run.done += batch.length;
         return;
     }
+    // Accepted: Commerce is making these. A follow that fails from here leaves them pending, for the
+    // next install or removal to settle (a 401 on a status read once forgot 50 products made, live 2026-11-06).
+    const rows = await followBatch(ctx, run, uuid, batch.length, wait);
     const { made, refused, again } = sortRows(batch, rows);
-    const objects: CreatedObject[] = made.map(({ product }) => ({
-        kind: run.kind,
-        id: product.sku,
-    }));
+    // Keyed at creation, as `createOne` keys what it makes: an interrupted install's record must still say what each row is.
+    const objects: CreatedObject[] = made.map(({ product }) => ({ kind: run.kind, id: product.sku, key: product.sku }));
     await ctx.recorder.confirm(pendingOf(made.map((m) => m.product)), objects);
     for (const { product } of made) ctx.log(`created product ${product.sku}`);
     await ctx.recorder.forgetPending(pendingOf(refused.map((r) => r.product)));

@@ -118,3 +118,28 @@ describe('readBulkRows', () => {
         expect(rows.map((r) => r.state)).toEqual(['refused', 'open']);
     });
 });
+
+// Live, 2026-11-06: one 401 on a status read stopped a 7-minute install; the same read answered a minute later.
+describe('a failed status read', () => {
+    const refused = () => Promise.reject(new Error('Commerce answered 401 for bulk/u-1/status'));
+
+    it('is read again, so one glitch does not stop the follow', async () => {
+        const get = jest.fn().mockImplementationOnce(refused).mockImplementationOnce(refused).mockResolvedValue(bulkStatus([1]));
+        const time = clock();
+
+        const outcome = await followBulk(get, 'u-1', 1, { ...time, intervalMs: 3000, deadlineMs: 60_000 });
+        const rows = await readBulkRows(jest.fn().mockImplementationOnce(refused).mockResolvedValue(bulkStatus([1])), 'u-1', 1, { sleep: time.sleep, intervalMs: 1 });
+
+        expect(outcome).toMatchObject({ complete: 1, open: 0 });
+        // Two pauses for the follow's two failed reads, then one for the rows' failed read.
+        expect(time.slept).toEqual([3000, 3000, 1]);
+        expect(rows[0].state).toBe('done');
+    });
+
+    it('still stops the follow when it keeps failing', async () => {
+        const get = jest.fn().mockImplementation(refused);
+
+        await expect(followBulk(get, 'u-1', 1, { ...clock(), intervalMs: 3000, deadlineMs: 60_000 })).rejects.toThrow('401');
+        expect(get).toHaveBeenCalledTimes(3);
+    });
+});

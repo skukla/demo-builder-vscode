@@ -26,7 +26,13 @@ const BASE: DatapackFile = {
     id: { name: 'luma', version: 'eds-compatible' },
     displayName: 'Luma',
     items: [
-        { dataType: 'product_attributes', records: ['color', 'size', 'eco_collection'].map((code) => ({ attribute: { attribute_code: code } })) },
+        {
+            dataType: 'product_attributes',
+            records: [
+                ...['color', 'size', 'eco_collection'].map((code) => ({ attribute: { attribute_code: code, frontend_input: 'select' } })),
+                { attribute: { attribute_code: 'climate', frontend_input: 'multiselect' } },
+            ],
+        },
         { dataType: 'cart_rules', records: [{ rule: { name: 'Spend $50' } }] },
         { dataType: 'products', records: [{ product: { sku: 'old' } }] },
     ],
@@ -71,6 +77,14 @@ describe('buildPackFromExport', () => {
         expect(leftOutAttributes).not.toContain('color');
         expect(itemOf(pack, 'cart_rules')).toEqual(BASE.items[1].records);
         expect((itemOf(pack, 'products') as Row[]).some((r) => r.product.sku === 'old')).toBe(false);
+    });
+
+    // Live, 2026-11-06: "Yoga|Gym" read whole named no option, and 49 Luma products were skipped.
+    it('holds a multi-select\'s values as a list of labels, not the export\'s |-joined string', () => {
+        const { pack } = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma', base: BASE });
+        const climate = product(pack, 'MH01').custom_attributes.find((a: any) => a.attribute_code === 'climate');
+
+        expect(climate.value).toEqual(['All-Weather', 'Cool', 'Indoor', 'Spring', 'Windy']);
     });
 
     it('refuses a file that holds no products', () => {

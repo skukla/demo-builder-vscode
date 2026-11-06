@@ -4,7 +4,7 @@ kind: feature
 area: data-installer
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # `product_export`: the bulk product form Luma and Venia carry
@@ -99,3 +99,7 @@ bundle and grouped types (it handles simple, configurable and gift cards).
 
 So the item no longer waits on anyone: convert these rows to `products`, rebuild the two packs, and
 prove one with a live install and removal.
+
+## Shipped so far
+
+- 2026-11-05  feat(datapacks): bulk installs, waiting on jobs, big packs in parts, and packs from a product export (`95af3d5de`)

@@ -84,7 +84,7 @@ describe('gift cards install', () => {
         await installProducts(ctx, parseProductRows([GIFT_CARD_ROW]), GIFT_CARD_KIND);
 
         expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['POST products']);
-        expect(ctx.recorder.created).toEqual([{ kind: GIFT_CARD_KIND, id: 'mastercard-giftcard' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: GIFT_CARD_KIND, id: 'mastercard-giftcard', key: 'mastercard-giftcard' }]);
     });
 });
 

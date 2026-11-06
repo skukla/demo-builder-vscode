@@ -145,9 +145,9 @@ const WAIT_FOR_JOB = {
     waitSeconds: z
         .number()
         .min(0)
-        .max(60)
+        .max(45)
         .optional()
-        .describe('Wait up to this many seconds (at most 60) for the job to end, its progress shown; the answer then carries job'),
+        .describe('Wait up to this many seconds (at most 45) for the job to end, its progress shown; the answer then carries job'),
 };
 
 /**
@@ -214,8 +214,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Progress of the running or most recent datapack import/reset: its outcome (watching while it runs), ' +
             "each data type's state, and while products go in a count as detail (\"450 of 2,046 products\"). " +
-            'With waitSeconds (up to 60) it answers when the job ends or the wait is up, showing progress as it goes: ' +
-            'call it with waitSeconds 60 while outcome is watching, rather than polling quickly. A pack of 2,000 ' +
+            'With waitSeconds (up to 45) it answers when the job ends or the wait is up, showing progress as it goes: ' +
+            'call it with waitSeconds 45 while outcome is watching, rather than polling quickly. A pack of 2,000 ' +
             'products takes several minutes.',
         map: importHandlers,
         type: 'get-datapack-import-status',
@@ -223,9 +223,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             waitSeconds: z
                 .number()
                 .min(0)
-                .max(60)
+                .max(45)
                 .optional()
-                .describe('Wait up to this many seconds (at most 60) for the job to end, its progress shown; omit to answer at once'),
+                .describe('Wait up to this many seconds (at most 45) for the job to end, its progress shown; omit to answer at once'),
         },
     },
     {
@@ -396,9 +396,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Import a datapack into a live Commerce instance. Returns an activationId once the job starts. ' +
-            'With waitSeconds (up to 60) it waits for the job to end, showing its progress, and the answer carries ' +
+            'With waitSeconds (up to 45) it waits for the job to end, showing its progress, and the answer carries ' +
             'the outcome as job. A small pack ends inside the wait; a large one (2,000 products) takes several ' +
-            'minutes: then call get_datapack_import_status with waitSeconds 60 until outcome is no longer watching. ' +
+            'minutes: then call get_datapack_import_status with waitSeconds 45 until outcome is no longer watching. ' +
             'Validate first. ' +
             'With the demo-builder engine only the dataTypes named install, with what they need. ' +
             'A kind left out is left alone: not installed, not removed, not put back. ' +
@@ -429,7 +429,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             "Remove a datapack's data from the Commerce instance so the project can be reused. " +
-            'Cannot be undone. Returns an activationId; with waitSeconds (up to 60) it waits for the removal to end, ' +
+            'Cannot be undone. Returns an activationId; with waitSeconds (up to 45) it waits for the removal to end, ' +
             'showing its progress, and carries the outcome as job; else follow with get_datapack_import_status. With the ' +
             'demo-builder engine it takes everything the install record lists, whatever dataTypes names (it may be ' +
             'omitted; the service needs it). A category, set, company, shared catalog or customer group the pack made ' +

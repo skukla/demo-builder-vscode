@@ -330,11 +330,11 @@ describe('what each row accepts', () => {
         }
     });
 
-    it('asks the status read only how long it may wait, at most a minute', () => {
+    it('asks the status read only how long it may wait, at most 45 seconds', () => {
         expect(keys('get_datapack_import_status')).toEqual(['waitSeconds']);
         const schema = row('get_datapack_import_status')!.inputSchema!;
-        expect(schema.waitSeconds.parse(60)).toBe(60);
-        expect(() => schema.waitSeconds.parse(61)).toThrow();
+        expect(schema.waitSeconds.parse(45)).toBe(45);
+        expect(() => schema.waitSeconds.parse(46)).toThrow();
     });
 
     // An empty dataTypes is a request that would do nothing, and an agent that

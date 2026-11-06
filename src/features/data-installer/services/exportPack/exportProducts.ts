@@ -81,6 +81,12 @@ function isoDate(value: string | undefined): string | undefined {
 export interface ProductContext {
     /** The attribute codes the pack defines. */
     known: ReadonlySet<string>;
+    /**
+     * The pack's multi-select attributes. An export joins their values with `|` ("Yoga|Gym"); a pack
+     * holds them as a list of labels, which the install turns into option ids one by one. Read whole,
+     * "Yoga|Gym" named no option and 49 Luma products were skipped (live, 2026-11-06).
+     */
+    multiselect: ReadonlySet<string>;
     /** A category's full path → its url key, the key a product links it by. */
     urlKeys: ReadonlyMap<string, string>;
     /** Each SKU's price, for a bundle's parts. */
@@ -125,6 +131,12 @@ function ownFields(f: Record<string, string>, categories: string[]): Attribute[]
         .map(([code, value]) => ({ attribute_code: code, value }));
 }
 
+/** An extra's value as the pack holds it: a multi-select's labels as a list, a yes/no setting as Commerce's code. */
+function extraValue(code: string, value: string, ctx: ProductContext): unknown {
+    if (ctx.multiselect.has(code)) return value.split('|').map((label) => label.trim()).filter(Boolean);
+    return USE_CONFIG.has(code) ? (YES_NO_CONFIG[value] ?? value) : value;
+}
+
 /** The extras the pack can carry, Commerce's own type-specific attributes, and the defaults. */
 function customAttributes(row: ExportRow, categories: string[], ctx: ProductContext): Attribute[] {
     const attrs = ownFields(row.fields, categories);
@@ -134,10 +146,7 @@ function customAttributes(row: ExportRow, categories: string[], ctx: ProductCont
             if (!GIFT_CARD_CODES.has(code)) ctx.leftOut(code);
             continue;
         }
-        attrs.push({
-            attribute_code: code,
-            value: USE_CONFIG.has(code) ? (YES_NO_CONFIG[value] ?? value) : value,
-        });
+        attrs.push({ attribute_code: code, value: extraValue(code, value, ctx) });
     }
     for (const code of ['gift_wrapping_available', 'is_returnable']) {
         if (!attrs.some((a) => a.attribute_code === code))

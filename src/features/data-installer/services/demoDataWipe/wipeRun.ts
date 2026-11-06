@@ -49,11 +49,11 @@
  */
 
 import { removeAttribute } from '../demoBuilderEngine/attributesKind';
+import { afterImportDelete } from '../demoBuilderEngine/bulkRemoval';
 import { removeCategory } from '../demoBuilderEngine/categoriesKind';
 import { removeCompany } from '../demoBuilderEngine/companiesKind';
 import { removeCustomer } from '../demoBuilderEngine/customerKinds';
 import { deleteIfPresent, segment } from '../demoBuilderEngine/kindContext';
-import { removeProduct } from '../demoBuilderEngine/productsKind';
 import type { RemovalAccess } from '../demoBuilderEngine/removers';
 import { removeEmptySet } from './wipeAttributes';
 import { deleteRule, takeRuleOff } from './wipeCartRules';
@@ -216,7 +216,7 @@ function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string): Record<S
         products: {
             failed: 'remove 1 of the products',
             stage: DATAPACK_STAGES.removingProducts.label,
-            writes: each(plan.deleteSkus, self, (sku) => removeProduct(send, sku), { key: (sku) => `product:${sku}` }),
+            writes: each(plan.deleteSkus, self, afterImportDelete(commerce, plan.deleteSkus), { key: (sku) => `product:${sku}` }),
         },
         takenOff: {
             failed: 'take 1 of the products off a website',

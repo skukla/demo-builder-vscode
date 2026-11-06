@@ -188,8 +188,24 @@ Luma's 2,046 would have taken hours. Now:
 - A call refused for its shape (400, 404, 413) sends that batch one at a time. Not signed in, too
   many calls, a 5xx or no answer stops the install, as for a single create.
 - The progress window counts them: "450 of 2,046 products".
-- Removal deletes products 50 to a call through `DELETE V1/async/bulk/products/bySku`, with the
-  same fallback to one at a time. That route has not been run against an ACCS store from here.
+- A batch's status read that fails is read again, up to three times in all, before the install
+  stops. Once Commerce has accepted a batch, a failure while following it leaves the batch's
+  products pending, so the next install or removal settles them. Only a refusal of the batch call
+  itself means nothing was made. Both were found live on 2026-11-06, when one 401 stopped an install
+  and 50 products made by the accepted batch dropped off the record.
+- Everything an install makes goes on the record with its key at creation (`createOne`), not
+  only in the hash pass at the end. A keyless record reads as one from before keys were kept. For
+  categories, that means "the pack made its own root", so a resumed install once rebuilt Luma's
+  whole tree under a second root.
+- Products are deleted through Commerce's Import API in delete mode (`POST V1/import/json`,
+  `behavior: 'delete'`), 200 SKUs to a call, then read back. Only a SKU the store no longer has
+  leaves the record. One still there, or every SKU of a call the store refused for its shape, is
+  deleted on its own, five at a time. It is the Data Installer service's own route for removing a
+  pack's bulk products (`ProductExportDeleteProcessor`). Removal, installing a pack again, and Clear
+  Demo Data all use it (`deleteByImport`, `removeProductsInBulk`, `afterImportDelete`).
+- The bulk queue's delete does not work on ACCS. Commerce accepted every batch and failed every
+  row, "The product couldn't be removed" (live, 2026-11-06), so a Luma removal ran one product at a
+  time and took 26 minutes.
 
 ## What agents are not given
 

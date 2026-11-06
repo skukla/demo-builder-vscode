@@ -142,7 +142,7 @@ describe('installProducts', () => {
                 },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: PRODUCT_KIND, id: 'vrrack' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: PRODUCT_KIND, id: 'vrrack', key: 'vrrack' }]);
     });
 
     it("turns a configurable product's option labels and child SKUs into this store's ids", async () => {

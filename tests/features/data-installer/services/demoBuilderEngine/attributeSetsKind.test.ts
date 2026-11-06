@@ -55,7 +55,7 @@ describe('installAttributeSets', () => {
                 },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_SET_KIND, id: '12' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_SET_KIND, id: '12', key: 'Coolers' }]);
         expect(ctx.session.setIds.get('Coolers')).toBe(12);
         expect(ctx.session.groupIds.get('Coolers')).toBe(80);
     });
@@ -121,7 +121,7 @@ describe('installAssignments', () => {
                 body: { attributeSetId: 4, attributeGroupId: 9, attributeCode: 'bodea_fabric', sortOrder: 10 },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: ASSIGNMENT_KIND, id: '4/bodea_fabric' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: ASSIGNMENT_KIND, id: '4/bodea_fabric', key: '4/bodea_fabric' }]);
     });
 
     it('puts an attribute in the group the set kind made', async () => {

@@ -110,9 +110,9 @@ describe('installCategories', () => {
             },
         ]);
         expect(ctx.recorder.created).toEqual([
-            { kind: CATEGORY_KIND, id: '40' },
-            { kind: CATEGORY_KIND, id: '41' },
-            { kind: CATEGORY_KIND, id: '42' },
+            { kind: CATEGORY_KIND, id: '40', key: '(root)' },
+            { kind: CATEGORY_KIND, id: '41', key: 'Products' },
+            { kind: CATEGORY_KIND, id: '42', key: 'Products/Critical Power' },
         ]);
         expect(ctx.session.rootCategory).toEqual({ id: 40, name: 'Bodea' });
     });
@@ -130,7 +130,7 @@ describe('installCategories', () => {
         await installCategories(ctx, parseCategoryPack(BODEA));
 
         expect(ctx.sent.map((c) => (c.body as { category: { parent_id: number } }).category.parent_id)).toEqual([13]);
-        expect(ctx.recorder.created).toEqual([{ kind: CATEGORY_KIND, id: '40' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: CATEGORY_KIND, id: '40', key: 'Products/Critical Power' }]);
     });
 
     it('does not take a same-named category under another parent for this one', async () => {
