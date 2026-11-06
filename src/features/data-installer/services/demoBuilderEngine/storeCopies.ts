@@ -28,8 +28,12 @@ import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import { type Inventory, readInventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
 
-/** SKUs per search: short enough for any address, long enough to be few calls. */
-const SKUS_PER_READ = 20;
+/**
+ * SKUs per search: short enough for any address (50 SKUs of 64 characters, the longest Commerce takes,
+ * make about 4 KB), long enough to be few calls. Measured 2026-11-06: a page of 50 products took about
+ * 1.7 s and a page of 20 about 1.1 s, so 50 reads Luma's 2,048 in about two thirds of the time.
+ */
+const SKUS_PER_READ = 50;
 
 /**
  * Pages of SKUs read at once. One after another, the read-back after Luma's 2,046 products took over

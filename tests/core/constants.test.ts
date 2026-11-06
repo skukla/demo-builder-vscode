@@ -153,8 +153,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // 54: import-datapack no longer offers a suggested Save As name.
     // 55: import-datapack and diagnose-demo name dataInstaller.enabled.
     // 56: import-datapack runs verify_datapack_install after a successful install.
-    it('is 56 (import-datapack checks an install against its pack)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(56);
+    // 57: an install checks itself; import-datapack reads its check.
+    it('is 57 (import-datapack reads the install\'s own check)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(57);
     });
 });
 

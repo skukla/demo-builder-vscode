@@ -157,6 +157,27 @@ describe('watchImportJob', () => {
         expect(result.note).toBe('Kept 2 items changed in the Admin.');
     });
 
+    // 2026-11-06: the engine checks the store against the pack at the end of an install.
+    it("carries the engine's install check and timings onto the result", async () => {
+        const none = { count: 0, examples: [] };
+        const check = {
+            verdict: 'matches' as const,
+            checked: 2,
+            compared: { values: 2, prices: 2, configurables: 0 },
+            missing: none,
+            configurablesWithoutOptions: none,
+            configurablesDiffer: none,
+            valuesDiffer: none,
+            pricesDiffer: none,
+        };
+        const { promise } = runWith([snap({ categories: 'success', products: 'success' }, { check, timings: { products: 4.2 } })]);
+
+        const result = await promise;
+
+        expect(result.check).toEqual(check);
+        expect(result.timings).toEqual({ products: 4.2 });
+    });
+
     describe('progress reporting', () => {
         it('reports each poll as it happens, not once at the end', async () => {
             const seen: Array<Record<string, string>> = [];

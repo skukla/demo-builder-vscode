@@ -17,8 +17,7 @@ get_datapack_import_target      → WHICH INSTANCE this project implies
 list_datapack_import_scopes     → optional: narrow to a website / store view
 validate_datapack_import        → dry run; free, ungated, do it every time
 start_datapack_import           → confirm:true; returns a HANDLE, not a result
-get_datapack_import_status      → poll until outcome is not "watching"
-verify_datapack_install         → after success: does the store hold what the pack says?
+get_datapack_import_status      → poll until outcome is not "watching"; read its check
 ```
 
 ## Trap 1 — the start call does not mean it worked
@@ -41,10 +40,12 @@ That is a receipt, not an outcome. A fourteen-type pack takes minutes. **Poll
 Reporting success from the start call is the single most likely mistake here, and it is
 invisible: the user sees a confident "imported" and an empty catalog.
 
-`success` itself says only that Commerce took the rows, not that they came out right. Run
-`verify_datapack_install` (a read) after it: `verdict: "differs"` names products that are
-missing, configurables with no options, and select values or prices that are not what the
-pack says. Report those to the user rather than calling the install clean.
+`success` itself says only that Commerce took the rows, not that they came out right. An
+install that wrote products ends with `check`: the store checked against the pack.
+`check.verdict: "differs"` names products that are missing, configurables with no options,
+and select values or prices that are not what the pack says. Report those to the user rather
+than calling the install clean. `verify_datapack_install` (a read) runs the same check later,
+for example after products were edited by hand.
 
 ## Trap 2 — never guess `commerceInstance`
 

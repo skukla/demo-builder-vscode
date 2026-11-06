@@ -7755,10 +7755,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 274,
+            "line": 275,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (247 -> 248): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (251 -> 272): unchanged code; the progress push above it carries the engine's count. Re-anchored 2026-11-06 (272 -> 274): unchanged code; the job record carries timings and skips above it.",
+            "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (247 -> 248): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (251 -> 272): unchanged code; the progress push above it carries the engine's count. Re-anchored 2026-11-06 (272 -> 274): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (274 -> 275): unchanged code; the job record carries the install check above it.",
             "decision": "none \u2014 log-only.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -7768,10 +7768,10 @@
             "anchors": [
                 "if (!project) {"
             ],
-            "line": 267,
+            "line": 268,
             "mutants": 2,
             "category": "branch",
-            "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (240 -> 241): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (244 -> 265): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (265 -> 267): unchanged code; the job record carries timings and skips above it.",
+            "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (240 -> 241): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (244 -> 265): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (265 -> 267): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (267 -> 268): unchanged code; the job record carries the install check above it.",
             "decision": "none \u2014 equivalent. The guard is the intentional path and the catch is the backstop; a test cannot tell which one ran.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -12145,10 +12145,10 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 266,
+            "line": 269,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is `return undefined`, and an async function that falls off its end resolves to undefined too \u2014 so emptying the block produces the identical value on the identical path. The rejecting-echo case IS now driven (importJobRunner-interrupted.test.ts, 'still reports never-registered when the echo request fails'); it constrains the outcome, which is all there is to constrain here. Re-anchored 2026-10-31 (253 -> 256): unchanged code; the kept root step was added to what the engine said, above it. Re-anchored 2026-11-05 (256 -> 260): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (260 -> 266): unchanged code; what the engine said carries timings and skips above it.",
+            "reason": "The catch body is `return undefined`, and an async function that falls off its end resolves to undefined too \u2014 so emptying the block produces the identical value on the identical path. The rejecting-echo case IS now driven (importJobRunner-interrupted.test.ts, 'still reports never-registered when the echo request fails'); it constrains the outcome, which is all there is to constrain here. Re-anchored 2026-10-31 (253 -> 256): unchanged code; the kept root step was added to what the engine said, above it. Re-anchored 2026-11-05 (256 -> 260): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (260 -> 266): unchanged code; what the engine said carries timings and skips above it. Re-anchored again 2026-11-06 (266 -> 269): unchanged code; the result carries the install check above it.",
             "decision": "none \u2014 the explicit return states the intent; both forms return undefined",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"

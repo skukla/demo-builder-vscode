@@ -19,7 +19,7 @@
  */
 
 import * as crypto from 'crypto';
-import type { DataTypeStatus, ImportStart, KeptRootStep, ValidationResult } from '../../types';
+import type { DataTypeStatus, ImportStart, InstallCheck, KeptRootStep, ValidationResult } from '../../types';
 import { dataTypeLabel } from '../../ui/dataTypeLabel';
 import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient';
 import type { DatapackEngine } from '../datapackEngine';
@@ -36,6 +36,7 @@ import { containersLine } from './removers';
 import { keptLine } from './repeatInstall';
 import { type PackItems, PackRowsError, installPack, packRowProblems, removePack, unsupportedKinds } from './runPack';
 import { STORE_CONFIG_KIND, settingsLine, settingsWebsite } from './storeConfigKind';
+import { checkAfterInstall } from './verifyInstall';
 import { andList } from '@/core/utils/andList';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -108,15 +109,24 @@ interface Job {
     kindStartedAt?: number;
     /** Every row the install skipped, Commerce's reason whole. */
     skipped?: SkippedRow[];
+    /** The store checked against the pack once the install's products are in (`checkAfterInstall`). */
+    check?: InstallCheck;
     startedAt: number;
     finishedAt?: number;
+}
+
+/** Record the seconds the kind in progress took, once. */
+function stopClock(job: Job, kind: string | undefined): void {
+    if (!kind || job.kindStartedAt === undefined) return;
+    job.timings[kind] = Math.round((Date.now() - job.kindStartedAt) / 100) / 10;
+    job.kindStartedAt = undefined;
 }
 
 /** Close the kind in progress: its state, and the seconds it took. */
 function endKind(job: Job, kind: string | undefined): void {
     if (!kind) return;
     job.perType[kind] = 'success';
-    if (job.kindStartedAt !== undefined) job.timings[kind] = Math.round((Date.now() - job.kindStartedAt) / 100) / 10;
+    stopClock(job, kind);
 }
 
 /** Mark every kind not yet finished as failed: the covering set must end terminal. */
@@ -196,11 +206,18 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         job.detail = undefined;
     });
     job.detail = undefined;
+    // Its rows are in, so the last kind's clock stops here: the layer and the check are not its time.
+    stopClock(job, current);
     // The last kind stays in progress through the layer: the watcher ends when every kind asked for
     // has, and the note says what the layer did (step 09).
     const layerStopped = await applySettingsLayer(ctx, lookup);
     if (STORE_CONFIG_KIND in job.perType && lookup.state === 'found') job.perType[STORE_CONFIG_KIND] = layerStopped ? 'error' : 'success';
     if (layerStopped) job.reason = layerStopped;
+    // The last kind stays in progress through the check too, so whatever waits on the install waits for it.
+    job.detail = 'Checking the products against the datapack';
+    const checked = await checkAfterInstall(ctx, items, outcome.kept);
+    job.detail = undefined;
+    job.check = checked.check;
     job.note = [
         addedKindsLine(all, request.dataTypes),
         skippedLine(session.skipped),
@@ -211,6 +228,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         underStoreRootLine(outcome.rootPlacement, items.categories, session.storeRoot),
         rootStepLine(outcome.rootStep),
         ambiguousKeysLine(session.ambiguousCategoryKeys),
+        checked.line,
         ...(Array.isArray(items.products) && items.products.length > 0 ? AFTER_PRODUCTS_LINES : []),
     ].filter(Boolean).join(' ') || undefined;
     job.skipped = session.skipped;
@@ -308,6 +326,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 ...(job?.leftInStore ? { leftInStore: true } : {}),
                 ...(job?.keptRoot ? { keptRoot: job.keptRoot } : {}),
                 ...(job && Object.keys(job.timings).length > 0 ? { timings: { ...job.timings } } : {}),
+                ...(job?.check ? { check: job.check } : {}),
                 ...(job?.skipped && job.skipped.length > 0 ? { skipped: job.skipped.map(({ kind, key, reason }) => ({ kind, key, reason })) } : {}),
                 ...(job?.finishedAt !== undefined ? { processingTimeMs: job.finishedAt - job.startedAt } : {}),
             };

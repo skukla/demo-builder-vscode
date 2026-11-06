@@ -345,7 +345,9 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // an address alone decides it.
 // v56 (2026-11-06, install check): import-datapack adds verify_datapack_install after a successful
 // install. Existing projects would keep treating `success` as proof the data came out right.
-export const AI_CONTEXT_VERSION = 56;
+// v57 (2026-11-06, the install checks itself): import-datapack reads the install's own `check` and keeps
+// verify_datapack_install for later. Existing projects would keep calling the check after every install.
+export const AI_CONTEXT_VERSION = 57;
 
 /**
  * Component IDs for standardized component instance access

@@ -136,6 +136,7 @@ async function watchAndRecord(
             ...(result.keptRoot ? { keptRoot: result.keptRoot } : {}),
             ...(result.timings ? { timings: result.timings } : {}),
             ...(result.skipped ? { skipped: result.skipped } : {}),
+            ...(result.check ? { check: result.check } : {}),
             ...(result.processingTimeMs !== undefined
                 ? { processingTimeMs: result.processingTimeMs }
                 : {}),

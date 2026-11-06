@@ -217,7 +217,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'With waitSeconds (up to 45) it answers when the job ends or the wait is up, showing progress as it goes: ' +
             'call it with waitSeconds 45 while outcome is watching, rather than polling quickly. A pack of 2,000 ' +
             'products takes several minutes. Once ended: timings gives the seconds each data type took, and skipped ' +
-            'every skipped row with its whole reason, fifty at a time (skippedTotal; ask for more with skippedFrom).',
+            'every skipped row with its whole reason, fifty at a time (skippedTotal; ask for more with skippedFrom). ' +
+            "With Demo Builder's engine an install that wrote products ends with check: the store checked against the " +
+            'pack, as verify_datapack_install answers it; check.verdict "differs" means the data is not what the pack says.',
         map: importHandlers,
         type: 'get-datapack-import-status',
         inputSchema: {

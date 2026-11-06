@@ -131,23 +131,27 @@ describe('packedFingerprint', () => {
 });
 
 describe('readBySku', () => {
-    // Live, 2026-11-06: read one page after another, Luma's 2,046 products took over three minutes.
-    it('reads twenty SKUs a page, five pages at once, and keeps every row', async () => {
+    // Live, 2026-11-06: read one page after another, Luma's 2,046 products took over three minutes; a
+    // page of 50 then read about 60% more products a second than a page of 20.
+    it('reads fifty SKUs a page, five pages at once, and keeps every row', async () => {
         const ctx = await fakeContext();
         let inFlight = 0;
         let most = 0;
+        const sizes: number[] = [];
         ctx.get = async (asked) => {
             inFlight += 1;
             most = Math.max(most, inFlight);
             await new Promise((resolve) => setImmediate(resolve));
             inFlight -= 1;
             const skus = decodeURIComponent(/\[value\]=([^&]*)/u.exec(asked)?.[1] ?? '').split(',');
+            sizes.push(skus.length);
             return { items: skus.map((sku) => ({ sku })), total_count: skus.length };
         };
-        const skus = Array.from({ length: 130 }, (_, i) => `s${i}`);
+        const skus = Array.from({ length: 300 }, (_, i) => `s${i}`);
 
         const rows = await readBySku<{ sku: string }>(ctx, 'products', skus);
 
+        expect(sizes).toEqual([50, 50, 50, 50, 50, 50]);
         expect(most).toBe(5);
         expect(rows.map((r) => r.sku).sort()).toEqual([...skus].sort());
     });

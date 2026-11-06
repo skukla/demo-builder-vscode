@@ -16,17 +16,19 @@
  * @module features/data-installer/services/demoBuilderEngine/verifyInstall
  */
 
+import type { CheckFinding, InstallCheck } from '../../types';
 import { pairs } from '../exportPack/exportRows';
 import { sameText } from './b2bReads';
-import { type InstallRecord, nodeRecordFiles, readInstallRecord } from './installRecord';
-import { type KindContext, REQUESTS_AT_ONCE } from './kindContext';
+import { type InstallRecord, type InstallRecorder, nodeRecordFiles, readInstallRecord } from './installRecord';
+import { eachFewAtOnce, type KindContext, REQUESTS_AT_ONCE } from './kindContext';
 import { PRODUCT_EXPORT_KIND } from './productExportKind';
 import { additionalAsCustom } from './productImportRows';
-import { PRODUCT_KINDS } from './productKinds';
+import { GIFT_CARD_KIND, PRODUCT_KIND, PRODUCT_KINDS } from './productKinds';
 import { isNumeric, type ProductLookups, productLookups } from './productLookups';
 import { parseProductRows } from './productsKind';
 import { openStore, type StoreChangesDeps } from './storeAccess';
 import { knowingSkus, readProducts } from './storeCopies';
+import { andList } from '@/core/utils/andList';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import type { CommerceProduct } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -44,29 +46,11 @@ interface PackProduct {
     children: string[];
 }
 
-/** One finding: how many, and the first few. */
-export interface Finding<T> {
-    count: number;
-    examples: T[];
-}
+/** What the check reads of an install record: the objects the pack made. */
+type MadeObjects = Pick<InstallRecord, 'created'> | Pick<InstallRecorder, 'created'>;
 
-/** The check's answer. */
-export interface InstallCheck {
-    verdict: 'matches' | 'differs';
-    checked: number;
-    /**
-     * How many of each the check actually compared, so a `matches` that compared nothing (a pack whose
-     * values name no attribute the store has, say) reads as that rather than as a clean install.
-     */
-    compared: { values: number; prices: number; configurables: number };
-    missing: Finding<string>;
-    configurablesWithoutOptions: Finding<string>;
-    configurablesDiffer: Finding<{ sku: string; differs: string }>;
-    valuesDiffer: Finding<{ sku: string; attribute: string; pack: string; store: string }>;
-    pricesDiffer: Finding<{ sku: string; pack: number; store: number }>;
-}
-
-const finding = <T>(all: T[]): Finding<T> => ({
+const seconds = (ms: number): string => `${(ms / 1000).toFixed(1)} s`;
+const finding = <T>(all: T[]): CheckFinding<T> => ({
     count: all.length,
     examples: all.slice(0, EXAMPLES),
 });
@@ -216,15 +200,38 @@ async function configurableDiff(lk: ProductLookups, pack: PackProduct, stored: C
 }
 
 /**
+ * Read every attribute the check will ask about, a few at a time, before comparing. Asked as each
+ * product reached them, Luma's attributes were read one after another and comparing took 18 s
+ * (2026-11-06). A failed read is kept by the lookups and answered again when compared.
+ */
+async function primeAttributes(lk: ProductLookups, wanted: readonly PackProduct[], stored: readonly CommerceProduct[]) {
+    const codes = new Set(wanted.flatMap((p) => [...p.values.keys()]));
+    const optionIds = new Set(
+        stored.flatMap((p) =>
+            ((p.extension_attributes?.configurable_product_options as Array<{ attribute_id?: unknown }> | undefined) ?? []).map((o) =>
+                String(o.attribute_id),
+            ),
+        ),
+    );
+    await Promise.all([
+        eachFewAtOnce([...codes], (code) => lk.attribute(code).catch(() => undefined)),
+        eachFewAtOnce([...optionIds], (id) => lk.attributeCode(id).catch(() => undefined)),
+    ]);
+}
+
+/**
  * Check the store against the pack, for the products the pack made.
  *
  * @param record - the install record, when this engine installed the pack; without one every product
  *   the pack holds is checked
+ * @param kept - SKUs (lowercased) a reinstall kept because the SC changed them in the Admin: left out,
+ *   since their difference from the pack is the SC's own
  */
 export async function verifyInstall(
     ctx: KindContext,
     items: Record<string, unknown>,
-    record: InstallRecord | undefined,
+    record: MadeObjects | undefined,
+    kept: ReadonlySet<string> = new Set(),
 ): Promise<InstallCheck> {
     const made = record
         ? new Set(
@@ -233,13 +240,18 @@ export async function verifyInstall(
                   .map((o) => o.id.toLowerCase()),
           )
         : undefined;
-    const wanted = packProducts(items).filter((p) => !made || made.has(p.sku.toLowerCase()));
+    const wanted = packProducts(items).filter(
+        (p) => (!made || made.has(p.sku.toLowerCase())) && !kept.has(p.sku.toLowerCase()),
+    );
+    const began = Date.now();
     const stored = await readProducts(
         ctx,
         wanted.map((p) => p.sku),
     );
+    const read = Date.now();
     const bySku = new Map(stored.map((p) => [p.sku.toLowerCase(), p]));
     const lk = knowingSkus(productLookups(ctx), stored);
+    await primeAttributes(lk, wanted, stored);
     const missing: string[] = [];
     const bare: string[] = [];
     const configDiffs: InstallCheck['configurablesDiffer']['examples'] = [];
@@ -260,10 +272,11 @@ export async function verifyInstall(
             if (Math.abs(Number(copy.price ?? 0) - pack.price) > 0.005)
                 prices.push({ sku: pack.sku, pack: pack.price, store: Number(copy.price ?? 0) });
         }
-        const read = await valueDiffs(lk, pack, copy);
-        compared.values += read.compared;
-        values.push(...read.diffs);
+        const found = await valueDiffs(lk, pack, copy);
+        compared.values += found.compared;
+        values.push(...found.diffs);
     });
+    ctx.log(`Install check: read ${stored.length} products in ${seconds(read - began)}, compared in ${seconds(Date.now() - read)}.`);
     const clean =
         missing.length + bare.length + configDiffs.length + values.length + prices.length === 0;
     return {
@@ -289,8 +302,55 @@ export async function verifyPackInstall(
     pack: DatapackId,
     source: DatapackStoreName,
 ): Promise<InstallCheck & { installed: boolean }> {
+    const began = Date.now();
     const items = await deps.readPack(pack, source);
     const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack);
     const ctx = await openStore(deps, undefined, record);
+    deps.log(`Install check: read the pack and opened the store in ${seconds(Date.now() - began)}.`);
     return { installed: record !== undefined, ...(await verifyInstall(ctx, items, record)) };
+}
+
+/** Whether a pack holds products, in either form: only then is there anything to check. */
+export const holdsProducts = (items: Record<string, unknown>): boolean =>
+    [PRODUCT_KIND, GIFT_CARD_KIND, PRODUCT_EXPORT_KIND].some((kind) => items[kind] !== undefined);
+
+/** The check in one sentence, for the end of an install's note. */
+export function checkLine(check: InstallCheck): string {
+    const checked = `Checked ${check.checked.toLocaleString('en-US')} ${check.checked === 1 ? 'product' : 'products'} against the datapack`;
+    if (check.verdict === 'matches') return `${checked}: all match.`;
+    const counted = (count: number, one: string, many: string, rest: string) =>
+        `${count.toLocaleString('en-US')} ${count === 1 ? one : many} ${rest}`;
+    const rows: Array<[count: number, one: string, many: string, rest: string]> = [
+        [check.missing.count, 'product', 'products', 'missing from the store'],
+        [check.configurablesWithoutOptions.count, 'configurable product', 'configurable products', 'with no options'],
+        [check.configurablesDiffer.count, 'configurable product', 'configurable products', 'with other options or children'],
+        [check.valuesDiffer.count, 'attribute value', 'attribute values', 'not as in the datapack'],
+        [check.pricesDiffer.count, 'price', 'prices', 'not as in the datapack'],
+    ];
+    const found = rows.filter(([count]) => count > 0).map((row) => counted(...row));
+    return `${checked}: ${andList(found)}.`;
+}
+
+/**
+ * The check at the end of an install: the store against the rows just installed, for what the record
+ * says the pack made, less what a reinstall kept because the SC changed it. A check that cannot run
+ * never fails the install; the note says so instead.
+ */
+export async function checkAfterInstall(
+    ctx: KindContext,
+    items: Record<string, unknown>,
+    kept: ReadonlyArray<{ kind: string; key: string }>,
+): Promise<{ check?: InstallCheck; line?: string }> {
+    if (!holdsProducts(items)) return {};
+    const keptSkus = new Set(
+        kept.filter((k) => [...PRODUCT_KINDS, PRODUCT_EXPORT_KIND].includes(k.kind)).map((k) => k.key.toLowerCase()),
+    );
+    try {
+        const check = await verifyInstall(ctx, items, ctx.recorder, keptSkus);
+        // Nothing the pack made to compare (an empty product list): nothing worth a line.
+        return { check, ...(check.checked > 0 ? { line: checkLine(check) } : {}) };
+    } catch (error) {
+        ctx.log(`Install check could not run: ${error instanceof Error ? error.message : String(error)}`);
+        return { line: 'The products could not be checked against the datapack; verify_datapack_install checks them again.' };
+    }
 }

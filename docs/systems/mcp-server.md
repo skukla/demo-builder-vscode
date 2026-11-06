@@ -1028,6 +1028,15 @@ installs reported success with nothing skipped while about 500 Luma products had
 80 configurables had no options; both were found by hand. The store is opened without a recorder,
 so not even the install record is touched.
 
+Demo Builder's engine also runs the check at the end of every install that wrote products, with the
+pack already in memory (about 19 s on Luma), and leaves out products a reinstall kept because the SC
+changed them. The last data type stays in progress while it runs, so anything waiting on the install
+waits for it. Its answer is the outcome's `check`, which `get_datapack_import_status` returns, and the
+note gains one sentence ("Checked 2,048 products against the datapack: all match."). A check that
+cannot run never fails the install; the note says so. Measured 2026-11-06 on Luma, the standalone
+tool takes about 29 s: 10 s reading the pack and opening the store, 15 s reading the products (50 SKUs
+a call, five calls at once), 4 s comparing.
+
 ### Sharing a library pack (owner, 2026-10-30)
 
 `share_datapack` (confirm-gated; the consent names the pack and whether it is shared) shares every

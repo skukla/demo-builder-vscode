@@ -242,6 +242,31 @@ export interface SkippedRowRecord {
 }
 
 /** A snapshot of one async job's progress. */
+/** One finding of an install check: how many, and the first few. */
+export interface CheckFinding<T> {
+    count: number;
+    examples: T[];
+}
+
+/**
+ * Whether the store holds what a pack says, for the products the pack made (`verifyInstall.ts`):
+ * Demo Builder's engine runs it at the end of every install, and `verify_datapack_install` on ask.
+ */
+export interface InstallCheck {
+    verdict: 'matches' | 'differs';
+    checked: number;
+    /**
+     * How many of each the check actually compared, so a `matches` that compared nothing (a pack whose
+     * values name no attribute the store has, say) reads as that rather than as a clean install.
+     */
+    compared: { values: number; prices: number; configurables: number };
+    missing: CheckFinding<string>;
+    configurablesWithoutOptions: CheckFinding<string>;
+    configurablesDiffer: CheckFinding<{ sku: string; differs: string }>;
+    valuesDiffer: CheckFinding<{ sku: string; attribute: string; pack: string; store: string }>;
+    pricesDiffer: CheckFinding<{ sku: string; pack: number; store: number }>;
+}
+
 export interface JobStatusSnapshot {
     activationId: string;
     perType: Record<string, DataTypeStatus>;
@@ -271,6 +296,8 @@ export interface JobStatusSnapshot {
     timings?: Record<string, number>;
     /** Every row the job skipped, with Commerce's whole reason (`note` names ten). */
     skipped?: SkippedRowRecord[];
+    /** The store checked against the pack once an install's products are in (Demo Builder's engine). */
+    check?: InstallCheck;
 }
 
 /**
@@ -337,6 +364,8 @@ export interface ImportJobRecord {
     timings?: Record<string, number>;
     /** Every row the job skipped (`JobStatusSnapshot.skipped`). */
     skipped?: SkippedRowRecord[];
+    /** The install check (`JobStatusSnapshot.check`). */
+    check?: InstallCheck;
     processingTimeMs?: number;
 }
 

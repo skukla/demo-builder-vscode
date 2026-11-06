@@ -9,7 +9,7 @@
  */
 
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { verifyInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
+import { checkAfterInstall, checkLine, verifyInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
 import type { CommerceProduct } from '@/types/commerceWire';
 import { by, fakeContext, page } from './demoBuilderEngine.testUtils';
 
@@ -221,5 +221,67 @@ describe('verifyInstall', () => {
         expect(check.valuesDiffer.examples).toEqual([
             { sku: 'MH01-32', attribute: 'size', pack: 'Size 32', store: 'Size 34' },
         ]);
+    });
+});
+
+describe('checkLine', () => {
+    const none = { count: 0, examples: [] };
+    const base = {
+        checked: 2048,
+        compared: { values: 4491, prices: 1901, configurables: 147 },
+        missing: none,
+        configurablesWithoutOptions: none,
+        configurablesDiffer: none,
+        valuesDiffer: none,
+        pricesDiffer: none,
+    };
+
+    it('says all match in one sentence', () => {
+        expect(checkLine({ ...base, verdict: 'matches' })).toBe('Checked 2,048 products against the datapack: all match.');
+    });
+
+    it('names each kind of difference with its count', () => {
+        const line = checkLine({
+            ...base,
+            verdict: 'differs',
+            configurablesWithoutOptions: { count: 80, examples: [] },
+            valuesDiffer: { count: 512, examples: [] },
+        });
+
+        expect(line).toBe(
+            'Checked 2,048 products against the datapack: 80 configurable products with no options and 512 attribute values not as in the datapack.',
+        );
+    });
+});
+
+describe('checkAfterInstall', () => {
+    it('checks nothing, and says nothing, when the install wrote no products', async () => {
+        const ctx = await fakeContext({});
+
+        expect(await checkAfterInstall(ctx, { categories: [] }, [])).toStrictEqual({});
+    });
+
+    it('leaves out a product the reinstall kept because the SC changed it', async () => {
+        const ctx = await fakeContext({ ...COMMON, [skuIn('OTHER')]: { items: [stored(21, 'OTHER', { custom_attributes: [{ attribute_code: 'size', value: '33' }] })], total_count: 1 } });
+        await ctx.recorder.record({ kind: 'products', id: 'EDITED' });
+        await ctx.recorder.record({ kind: 'products', id: 'OTHER' });
+
+        const { check } = await checkAfterInstall(
+            ctx,
+            { products: [packSimple('EDITED', 'Size 32'), packSimple('OTHER', 'Size 32')] },
+            [{ kind: 'products', key: 'EDITED' }],
+        );
+
+        expect(check).toMatchObject({ verdict: 'matches', checked: 1 });
+    });
+
+    it('never fails the install when the store cannot be read; the line says so', async () => {
+        const ctx = await fakeContext({});
+        await ctx.recorder.record({ kind: 'products', id: 'MINE' });
+
+        const result = await checkAfterInstall(ctx, { products: [packSimple('MINE', 'Size 32')] }, []);
+
+        expect(result.check).toBeUndefined();
+        expect(result.line).toContain('could not be checked against the datapack');
     });
 });

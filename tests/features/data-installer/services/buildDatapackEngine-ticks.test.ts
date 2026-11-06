@@ -17,6 +17,8 @@ const LAYER = [settingRow(GRID, '24')];
 /** What an SC will wonder next when a job installed products (the engine's closing lines). */
 const AFTER_PRODUCTS =
     "Products can take up to 20 minutes to appear in storefront search. This datapack doesn't include product images. Products show the images that are in AEM Assets.";
+/** The check at the end of an install (2026-11-06): the one product installed, read back as the pack says. */
+const CHECKED_ONE = 'Checked 1 product against the datapack: all match.';
 
 let h: TicksHarness;
 
@@ -54,13 +56,14 @@ describe('importing part of a pack', () => {
         expect(h.writes('categories')).toEqual(['POST categories', 'POST categories']);
         expect(h.writes('products')).toEqual(['POST products']);
         expect(h.writes('inventory/source-items')).toStrictEqual([]);
-        expect(status.note).toBe(`Also installed categories: the data types asked for need them. ${AFTER_PRODUCTS}`);
+        expect(status.note).toBe(`Also installed categories: the data types asked for need them. ${CHECKED_ONE} ${AFTER_PRODUCTS}`);
+        expect(status.check).toMatchObject({ verdict: 'matches', checked: 1 });
     });
 
     it('says nothing about needs when what is needed was asked for, as the form asks', async () => {
         const status = await h.importTypes(['categories', 'products']);
 
-        expect(status.note).toBe(AFTER_PRODUCTS);
+        expect(status.note).toBe(`${CHECKED_ONE} ${AFTER_PRODUCTS}`);
     });
 
     it('says nothing about search or images when the job installed no products', async () => {

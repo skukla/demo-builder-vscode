@@ -30,7 +30,7 @@
  * @module features/data-installer/services/importJobRunner
  */
 
-import type { DataTypeStatus, JobFailureReason, JobStatusSnapshot, KeptRootStep, SkippedRowRecord } from '../types';
+import type { DataTypeStatus, InstallCheck, JobFailureReason, JobStatusSnapshot, KeptRootStep, SkippedRowRecord } from '../types';
 import type { PollingService } from '@/core/shell/pollingService';
 
 /**
@@ -89,6 +89,8 @@ export interface ImportJobResult {
     timings?: Record<string, number>;
     /** Every row skipped (`JobStatusSnapshot.skipped`). */
     skipped?: SkippedRowRecord[];
+    /** The install check (`JobStatusSnapshot.check`). */
+    check?: InstallCheck;
     processingTimeMs?: number;
 }
 
@@ -213,9 +215,10 @@ export async function watchImportJob(args: {
 }
 
 /** The finished job's own words, each only when the engine gave it. */
-function whatTheEngineSaid(latest: JobStatusSnapshot): Pick<ImportJobResult, 'note' | 'leftInStore' | 'keptRoot' | 'timings' | 'skipped' | 'processingTimeMs'> {
+function whatTheEngineSaid(latest: JobStatusSnapshot): Pick<ImportJobResult, 'note' | 'leftInStore' | 'keptRoot' | 'timings' | 'skipped' | 'check' | 'processingTimeMs'> {
     return {
         ...(latest.note ? { note: latest.note } : {}),
+        ...(latest.check ? { check: latest.check } : {}),
         ...(latest.timings ? { timings: latest.timings } : {}),
         ...(latest.skipped && latest.skipped.length > 0 ? { skipped: latest.skipped } : {}),
         ...(latest.leftInStore ? { leftInStore: true } : {}),
