@@ -460,7 +460,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-86` | feature | [Bulk selection on the Integrations screen](2026-11-05-integrations-bulk-selection.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
-### data-installer  (13)
+### data-installer  (14)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -476,6 +476,7 @@ each item's own file; what has already landed against an item is in its
 | `DI-11` | feature | [One Export motion for a datapack's copies](2026-11-05-datapack-one-export-motion.md) | — | low | backlog |
 | `DI-12` | feature | [Datapack sources as adapters, and one setting for either or both](2026-11-05-datapack-sources-as-adapters.md) | — | med | backlog |
 | `DI-13` | question | [The same pack in both stores, with different data: which one does an SC get?](2026-11-06-same-pack-in-both-stores.md) | — | med | open |
+| `DI-14` | feature | [A reinstall misreads a pack that holds one thing in two forms](2026-11-06-datapack-reinstall-both-product-forms.md) | — | med | backlog |
 | `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | superseded |
 
 ### prerequisites  (4)
@@ -737,7 +738,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*337 item(s) sit outside the A–G chain.*
+*338 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

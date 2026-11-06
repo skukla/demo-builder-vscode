@@ -1,36 +1,40 @@
 /**
- * A Commerce store held in memory that keeps what it is sent (step 14, item 16), for a round trip:
- * install a pack, then save the store back. The path-table fake (`fakeContext`) answers fixed
- * replies; a round trip needs a store whose reads show its writes.
+ * A Commerce store held in memory that keeps what it is sent (step 14, item 16), for a round trip and
+ * a full cycle: install a pack, install it again, save the store back, remove it. The path-table fake
+ * (`fakeContext`) answers fixed replies; these need a store whose reads show its writes.
  *
- * It answers the routes the catalog kinds' install and capture use, in the shapes the engine reads
- * (`StoreCategory`, `CommerceProduct`, the search pages `readAllPages` walks): one website (`base`,
- * id 1) whose store shows root category 2, the Default attribute set (4), the `default` source,
- * and the attributes named in `ATTRIBUTES`. Like Commerce it gives a new category its id and
- * path, and a new product's custom options and their values their own ids, so a capture that
- * kept them would carry this store's ids. It takes a product or category back out when told to, so
- * a removal can be read from the store. Any other route answers 404.
+ * This file holds the catalog (one website, `base`, id 1, whose store shows root category 2) and the
+ * products, and is the one entry. The rest lives beside it, one part per job, each answering the routes
+ * the engine reads and writes in their `commerceWire` shapes: attributes and sets
+ * (`memoryStore.attributes`), inventory (`memoryStore.inventory`), customers and promotions
+ * (`memoryStore.people`). Like Commerce it gives a new category its id and path, a new product's custom
+ * options and their values their own ids, so a capture that kept them would carry this store's ids, and
+ * deleting a product deletes its stock quantities. Any other route answers 404.
  */
 
+import { attributePart } from './memoryStore.attributes.testUtils';
+import { inventoryPart } from './memoryStore.inventory.testUtils';
+import { peoplePart } from './memoryStore.people.testUtils';
+import {
+    type ReadRoute,
+    type WriteRoute,
+    filtersOf,
+    idSource,
+    matches,
+    notFound,
+    page,
+} from './memoryStore.routes.testUtils';
 import { withBulkQueue } from './bulkQueue.testUtils';
-import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
-import type { StoreAttribute, StoreCategory } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
+import type { StoreCategory } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
 import type { CommerceGet, CommerceProduct, CommerceSend } from '@/types/commerceWire';
 
-/** The store's own attributes the packs here name: Commerce's, none of them user-defined. */
-const ATTRIBUTES: Record<string, StoreAttribute> = {
-    url_key: { attribute_id: 121, attribute_code: 'url_key', frontend_input: 'text', is_user_defined: false },
-    description: { attribute_id: 75, attribute_code: 'description', frontend_input: 'textarea', is_user_defined: false },
+const ROOT: StoreCategory = {
+    id: 2,
+    name: 'Default Category',
+    path: '1/2',
+    parent_id: 1,
+    is_active: true,
 };
-
-const ROOT: StoreCategory = { id: 2, name: 'Default Category', path: '1/2', parent_id: 1, is_active: true };
-
-interface SourceItem {
-    sku: string;
-    source_code: string;
-    quantity: number;
-    status: number;
-}
 
 /** What the store holds, and every write it was sent. */
 export interface MemoryStore {
@@ -38,70 +42,166 @@ export interface MemoryStore {
     send: CommerceSend;
     categories: Map<number, StoreCategory>;
     products: Map<string, CommerceProduct>;
-    sourceItems: SourceItem[];
     sent: Array<{ method: string; path: string; body?: unknown }>;
+    /** The parts' own holdings, for a suite to read what the store holds now. */
+    attributes: ReturnType<typeof attributePart>['attributes'];
+    sets: ReturnType<typeof attributePart>['sets'];
+    sources: ReturnType<typeof inventoryPart>['sources'];
+    stocks: ReturnType<typeof inventoryPart>['stocks'];
+    links: ReturnType<typeof inventoryPart>['links'];
+    sourceItems: ReturnType<typeof inventoryPart>['sourceItems'];
+    groups: ReturnType<typeof peoplePart>['groups'];
+    customers: ReturnType<typeof peoplePart>['customers'];
+    rules: ReturnType<typeof peoplePart>['rules'];
+    coupons: ReturnType<typeof peoplePart>['coupons'];
 }
 
-/** Every `field=value` filter of a search, by field, and its condition. */
-function filtersOf(path: string): Map<string, { value: string; condition: string }> {
-    const query = new URLSearchParams(path.split('?')[1] ?? '');
-    const filters = new Map<string, { value: string; condition: string }>();
-    for (const [key, field] of query) {
-        const at = /^searchCriteria\[filterGroups\]\[(\d+)\]\[filters\]\[0\]\[field\]$/u.exec(key);
-        if (!at) continue;
-        const base = `searchCriteria[filterGroups][${at[1]}][filters][0]`;
-        filters.set(field, { value: query.get(`${base}[value]`) ?? '', condition: query.get(`${base}[conditionType]`) ?? 'eq' });
-    }
-    return filters;
-}
-
-const matches = (filter: { value: string; condition: string } | undefined, actual: unknown): boolean => {
-    if (!filter) return true;
-    if (filter.condition === 'in') return filter.value.split(',').map((v) => v.toLowerCase()).includes(String(actual).toLowerCase());
-    return String(actual).toLowerCase() === filter.value.toLowerCase();
-};
-
-const page = <T>(items: T[]) => ({ items, total_count: items.length });
-const urlKey = (c: StoreCategory) => c.custom_attributes?.find((a) => a.attribute_code === 'url_key')?.value;
-
-function notFound(path: string): never {
-    throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
-}
+const urlKey = (c: StoreCategory) =>
+    c.custom_attributes?.find((a) => a.attribute_code === 'url_key')?.value;
 
 /** A new, empty store. */
 export function memoryStore(): MemoryStore {
+    const ids = idSource();
+    const attributes = attributePart(ids);
+    const inventory = inventoryPart(ids);
+    const people = peoplePart(ids);
     const categories = new Map<number, StoreCategory>([[ROOT.id, ROOT]]);
     const products = new Map<string, CommerceProduct>();
-    const sourceItems: SourceItem[] = [];
     const sent: MemoryStore['sent'] = [];
-    let nextId = 100;
+    /** A set named where Commerce takes an id (the Import API's `attribute_set_code`), as its id. */
+    const setIdOf = (named: unknown): unknown =>
+        [...attributes.sets.values()].find((s) => s.set.attribute_set_name === named)?.set
+            .attribute_set_id ?? named;
 
     const categoryList = (path: string) => {
         const f = filtersOf(path);
-        return page([...categories.values()].filter((c) => matches(f.get('parent_id'), c.parent_id) && matches(f.get('name'), c.name) && matches(f.get('url_key'), urlKey(c))));
+        return page(
+            [...categories.values()].filter(
+                (c) =>
+                    matches(f.get('parent_id'), c.parent_id) &&
+                    matches(f.get('name'), c.name) &&
+                    matches(f.get('url_key'), urlKey(c))
+            )
+        );
     };
     const productList = (path: string) => {
         const f = filtersOf(path);
         const website = f.get('website_id');
         const category = f.get('category_id');
-        const inCategory = (p: CommerceProduct) => !category || (p.extension_attributes?.category_links ?? []).some((l) => String(l.category_id) === category.value);
-        return page([...products.values()].filter((p) => matches(f.get('sku'), p.sku) && matches(f.get('entity_id'), p.id) && inCategory(p) && (!website || (p.extension_attributes?.website_ids ?? []).map(String).includes(website.value))));
+        const inCategory = (p: CommerceProduct) =>
+            !category ||
+            (p.extension_attributes?.category_links ?? []).some(
+                (l) => String(l.category_id) === category.value
+            );
+        const onWebsite = (p: CommerceProduct) =>
+            !website ||
+            (p.extension_attributes?.website_ids ?? []).map(String).includes(website.value);
+        return page(
+            [...products.values()].filter(
+                (p) =>
+                    matches(f.get('sku'), p.sku) &&
+                    matches(f.get('entity_id'), p.id) &&
+                    matches(f.get('attribute_set_id'), p.attribute_set_id) &&
+                    inCategory(p) &&
+                    onWebsite(p)
+            )
+        );
     };
-    const reads: Array<[RegExp, (path: string, match: RegExpExecArray) => unknown]> = [
-        [/^store\/websites$/u, () => [{ id: 1, code: 'base', name: 'Main Website', default_group_id: 1 }]],
-        [/^store\/storeGroups$/u, () => [{ id: 1, code: 'main_website_store', name: 'Main Store', website_id: 1, root_category_id: ROOT.id }]],
-        [/^store\/storeViews$/u, () => [{ id: 1, code: 'default', name: 'Default Store View', website_id: 1, store_group_id: 1 }]],
+    const reads: ReadRoute[] = [
+        [
+            /^store\/websites$/u,
+            () => [{ id: 1, code: 'base', name: 'Main Website', default_group_id: 1 }],
+        ],
+        [
+            /^store\/storeGroups$/u,
+            () => [
+                {
+                    id: 1,
+                    code: 'main_website_store',
+                    name: 'Main Store',
+                    website_id: 1,
+                    root_category_id: ROOT.id,
+                },
+            ],
+        ],
+        [
+            /^store\/storeViews$/u,
+            () => [
+                {
+                    id: 1,
+                    code: 'default',
+                    name: 'Default Store View',
+                    website_id: 1,
+                    store_group_id: 1,
+                },
+            ],
+        ],
         [/^categories\/list\?/u, categoryList],
         [/^categories\/(\d+)$/u, (path, m) => categories.get(Number(m[1])) ?? notFound(path)],
-        [/^products\/attribute-sets\/sets\/list\?/u, () => page([{ attribute_set_id: 4, attribute_set_name: 'Default', entity_type_id: 4 }])],
-        [/^products\/attribute-sets\/\d+\/attributes$/u, () => []],
-        [/^products\/attributes\?/u, (path) => page(Object.values(ATTRIBUTES).filter((a) => matches(filtersOf(path).get('attribute_id'), a.attribute_id)))],
-        [/^products\/attributes\/([^/?]+)$/u, (path, m) => ATTRIBUTES[decodeURIComponent(m[1])] ?? notFound(path)],
-        [/^products\/([^/?]+)$/u, (path, m) => products.get(decodeURIComponent(m[1])) ?? notFound(path)],
+        ...attributes.reads,
+        [
+            /^products\/([^/?]+)$/u,
+            (path, m) => products.get(decodeURIComponent(m[1])) ?? notFound(path),
+        ],
         [/^products\?/u, productList],
-        [/^inventory\/source-items\?/u, (path) => page(sourceItems.filter((i) => matches(filtersOf(path).get('sku'), i.sku)))],
-        [/^inventory\/sources\?/u, () => page([{ source_code: 'default', name: 'Default Source', enabled: true }])],
-        [/^inventory\/(stocks|stock-source-links)\?/u, () => page([])],
+        ...inventory.reads,
+        ...people.reads,
+    ];
+    const writes: WriteRoute[] = [
+        [
+            'POST',
+            /^categories$/u,
+            (body) => {
+                const { category } = body as { category: StoreCategory & { parent_id: number } };
+                const id = ids.next();
+                const made: StoreCategory = {
+                    ...category,
+                    id,
+                    path: `${categories.get(category.parent_id)?.path ?? '1'}/${id}`,
+                };
+                categories.set(id, made);
+                return made;
+            },
+        ],
+        [
+            'POST',
+            /^products$/u,
+            (body) => {
+                const { product } = body as { product: CommerceProduct };
+                const options = (product.options ?? []).map((o) => ({
+                    ...o,
+                    option_id: ids.next(),
+                    values: o.values?.map((v) => ({ ...v, option_type_id: ids.next() })),
+                }));
+                const made: CommerceProduct = {
+                    ...product,
+                    id: ids.next(),
+                    attribute_set_id: setIdOf(
+                        product.attribute_set_id
+                    ) as CommerceProduct['attribute_set_id'],
+                    created_at: '2026-10-30 12:00:00',
+                    updated_at: '2026-10-30 12:00:00',
+                    ...(product.options ? { options } : {}),
+                };
+                products.set(product.sku, made);
+                return made;
+            },
+        ],
+        [
+            'DELETE',
+            /^products\/([^/?]+)$/u,
+            (_body, m) => {
+                const sku = decodeURIComponent(m[1]);
+                products.delete(sku);
+                const kept = inventory.sourceItems.filter((i) => i.sku !== sku);
+                inventory.sourceItems.splice(0, inventory.sourceItems.length, ...kept);
+                return true;
+            },
+        ],
+        ['DELETE', /^categories\/(\d+)$/u, (_body, m) => (categories.delete(Number(m[1])), true)],
+        ...attributes.writes,
+        ...inventory.writes,
+        ...people.writes,
     ];
 
     const get: CommerceGet = async (path) => {
@@ -114,35 +214,28 @@ export function memoryStore(): MemoryStore {
 
     const send: CommerceSend = async (method, path, body) => {
         sent.push({ method, path, body });
-        if (method === 'POST' && path === 'categories') {
-            const { category } = body as { category: StoreCategory & { parent_id: number } };
-            const id = nextId++;
-            const made: StoreCategory = { ...category, id, path: `${categories.get(category.parent_id)?.path ?? '1'}/${id}` };
-            categories.set(id, made);
-            return made;
-        }
-        if (method === 'POST' && path === 'products') {
-            const { product } = body as { product: CommerceProduct };
-            const options = (product.options ?? []).map((o) => ({ ...o, option_id: nextId++, values: o.values?.map((v) => ({ ...v, option_type_id: nextId++ })) }));
-            const made: CommerceProduct = { ...product, id: nextId++, created_at: '2026-10-30 12:00:00', updated_at: '2026-10-30 12:00:00', ...(product.options ? { options } : {}) };
-            products.set(product.sku, made);
-            return made;
-        }
-        if (method === 'POST' && path === 'inventory/source-items') {
-            sourceItems.push(...(body as { sourceItems: SourceItem[] }).sourceItems);
-            return [];
-        }
-        if (method === 'DELETE' && path.startsWith('products/')) {
-            products.delete(decodeURIComponent(path.slice('products/'.length)));
-            return true;
-        }
-        if (method === 'DELETE' && path.startsWith('categories/')) {
-            categories.delete(Number(path.slice('categories/'.length)));
-            return true;
+        for (const [verb, route, take] of writes) {
+            const m = verb === method ? route.exec(path) : null;
+            if (m) return take(body, m);
         }
         return {};
     };
 
     // Commerce's bulk queue runs each request through the single route above (`bulkQueue.testUtils.ts`).
-    return { ...withBulkQueue(get, send), categories, products, sourceItems, sent };
+    return {
+        ...withBulkQueue(get, send),
+        categories,
+        products,
+        sent,
+        attributes: attributes.attributes,
+        sets: attributes.sets,
+        sources: inventory.sources,
+        stocks: inventory.stocks,
+        links: inventory.links,
+        sourceItems: inventory.sourceItems,
+        groups: people.groups,
+        customers: people.customers,
+        rules: people.rules,
+        coupons: people.coupons,
+    };
 }
