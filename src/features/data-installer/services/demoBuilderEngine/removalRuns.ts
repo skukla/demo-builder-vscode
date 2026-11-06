@@ -17,7 +17,7 @@ import { ASSIGNMENT_KINDS, type AssignmentKind } from './b2bKeys';
 import { type BulkRemovalAccess, removeProductsInBulk } from './bulkRemoval';
 import { impliedRemovals } from './impliedRemovals';
 import type { CreatedObject, InstallRecorder } from './installRecord';
-import { PRODUCT_KINDS } from './productsKind';
+import { PRODUCT_KINDS } from './productKinds';
 import { takeBack } from './removers';
 import { removeAssignmentPairs } from './sharedCatalogKinds';
 import { LINK_KIND, removeStockSourceLinks } from './stockKinds';

@@ -56,7 +56,7 @@ import { CART_RULE_KIND } from './cartRulesKind';
 import type { CreatedObject } from './installRecord';
 import type { KindContext } from './kindContext';
 import { keyOf } from './packForm';
-import { GIFT_CARD_KIND } from './productsKind';
+import { GIFT_CARD_KIND } from './productKinds';
 import { named } from './saveOutcome';
 import { absentAsEmpty, CommerceReadError, readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceSalesRule } from '@/types/commerceSalesRule';

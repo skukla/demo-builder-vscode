@@ -26,6 +26,7 @@ import type { DatapackEngine } from '../datapackEngine';
 import { askedRows, kindsAddedFor } from './askedKinds';
 import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
 import { resolveEngineTarget, sessionFor } from './installTarget';
+import type { SkippedRow } from './kindContext';
 import { type FindLayer, type LayerLookup, applySettingsLayer, layerKept, layerProblems, layerTroubleLine, lookUpAskedLayer, settingsDoneLine, withLayerRows } from './layerStep';
 import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
 import { type RootStepAsker, rootStepLine } from './packRootStep';
@@ -102,8 +103,20 @@ interface Job {
     leftInStore?: boolean;
     /** The kept root's Admin step (step 12), for the result's rows. */
     keptRoot?: KeptRootStep;
+    /** Seconds each kind took, and when the kind in progress began (`JobStatusSnapshot.timings`). */
+    timings: Record<string, number>;
+    kindStartedAt?: number;
+    /** Every row the install skipped, Commerce's reason whole. */
+    skipped?: SkippedRow[];
     startedAt: number;
     finishedAt?: number;
+}
+
+/** Close the kind in progress: its state, and the seconds it took. */
+function endKind(job: Job, kind: string | undefined): void {
+    if (!kind) return;
+    job.perType[kind] = 'success';
+    if (job.kindStartedAt !== undefined) job.timings[kind] = Math.round((Date.now() - job.kindStartedAt) / 100) / 10;
 }
 
 /** Mark every kind not yet finished as failed: the covering set must end terminal. */
@@ -176,8 +189,9 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     const progress = (line: string): void => void (job.detail = line);
     const ctx = { ...commerce, recorder, session, log: deps.log, asker: deps.asker, progress };
     const outcome = await installPack(ctx, items, (kind) => {
-        if (current) job.perType[current] = 'success';
+        endKind(job, current);
         current = kind;
+        job.kindStartedAt = Date.now();
         job.perType[kind] = 'processing';
         job.detail = undefined;
     });
@@ -199,13 +213,14 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         ambiguousKeysLine(session.ambiguousCategoryKeys),
         ...(Array.isArray(items.products) && items.products.length > 0 ? AFTER_PRODUCTS_LINES : []),
     ].filter(Boolean).join(' ') || undefined;
-    if (current) job.perType[current] = 'success';
+    job.skipped = session.skipped;
+    endKind(job, current);
 }
 
 /** Run a job in the background, ending every requested kind terminal whatever happens. */
 function start(deps: DemoBuilderEngineDeps, jobs: Map<string, Job>, request: ImportRequest, operation: JobEnd['operation'], work: (job: Job) => Promise<void>): ImportStart {
     const activationId = `demo-builder-${crypto.randomUUID()}`;
-    const job: Job = { perType: Object.fromEntries(request.dataTypes.map((kind) => [kind, 'pending' as DataTypeStatus])), startedAt: Date.now() };
+    const job: Job = { perType: Object.fromEntries(request.dataTypes.map((kind) => [kind, 'pending' as DataTypeStatus])), timings: {}, startedAt: Date.now() };
     jobs.set(activationId, job);
     void work(job)
         .catch((error: unknown) => {
@@ -273,7 +288,9 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
         startImport: async (request) => start(deps, jobs, request, 'import', (job) => runInstall(deps, request, job)),
         startDelete: async (request) =>
             start(deps, jobs, request, 'delete', async (job) => {
-                const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log });
+                const progress = (line: string): void => void (job.detail = line);
+                const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress });
+                job.detail = undefined;
                 if (result.noRecord) throw new Error(NO_RECORD);
                 job.note = [containersLine(result.kept), settingsLine(result.settings, 'Put back')].filter(Boolean).join(' ') || undefined;
                 if (result.kept.length > 0) job.leftInStore = true;
@@ -290,6 +307,8 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 ...(job?.detail ? { detail: job.detail } : {}),
                 ...(job?.leftInStore ? { leftInStore: true } : {}),
                 ...(job?.keptRoot ? { keptRoot: job.keptRoot } : {}),
+                ...(job && Object.keys(job.timings).length > 0 ? { timings: { ...job.timings } } : {}),
+                ...(job?.skipped && job.skipped.length > 0 ? { skipped: job.skipped.map(({ kind, key, reason }) => ({ kind, key, reason })) } : {}),
                 ...(job?.finishedAt !== undefined ? { processingTimeMs: job.finishedAt - job.startedAt } : {}),
             };
         },

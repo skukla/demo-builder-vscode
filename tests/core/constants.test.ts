@@ -151,8 +151,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // 51: update-credentials no longer names the ACCS OAuth pair.
     // 52: datapacks come from Demo Builder's datapack store first. 53: datapack Save and Save As.
     // 54: import-datapack no longer offers a suggested Save As name.
-    it('is 54 (import-datapack no longer offers a suggested Save As name)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(55);
+    // 55: import-datapack and diagnose-demo name dataInstaller.enabled.
+    // 56: import-datapack runs verify_datapack_install after a successful install.
+    it('is 56 (import-datapack checks an install against its pack)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(56);
     });
 });
 

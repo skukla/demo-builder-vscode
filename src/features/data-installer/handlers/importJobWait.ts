@@ -63,3 +63,19 @@ export async function waitForJob(
         await clock.sleep(clock.intervalMs);
     }
 }
+
+/** Rows of the skipped list per answer: Luma once skipped 533, too many for one answer. */
+const SKIPPED_PAGE = 50;
+
+/** The record with one page of its skipped rows, the total, and where the next page starts. */
+export function skippedPage(record: ImportJobRecord, from = 0): ImportJobRecord & { skippedTotal?: number; skippedNext?: number } {
+    if (!record.skipped || record.skipped.length === 0) return record;
+    const start = Math.max(0, Math.floor(from));
+    const next = start + SKIPPED_PAGE;
+    return {
+        ...record,
+        skipped: record.skipped.slice(start, next),
+        skippedTotal: record.skipped.length,
+        ...(next < record.skipped.length ? { skippedNext: next } : {}),
+    };
+}

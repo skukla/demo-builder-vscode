@@ -44,6 +44,40 @@ const MAX_LINE_CHARS = 500;
  */
 const MAX_RESPONSE_BYTES = 45_000;
 
+const STAMPED = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/u;
+const BARE_TIME = /^\d{2}:\d{2}/u;
+
+/**
+ * A bound as the log writes it. A bare time ("09:30") is that time on the day of the log's newest line:
+ * compared as written, it sorts after every dated stamp and the window comes back empty, which reads as
+ * "nothing was logged" (2026-11-06, a live call).
+ */
+function onLogDay(lines: readonly string[], bound: unknown): unknown {
+    if (typeof bound !== 'string' || !BARE_TIME.test(bound)) return bound;
+    const newest = [...lines].reverse().find((line) => STAMPED.test(line));
+    return newest ? `${newest.slice(0, 10)} ${bound}` : bound;
+}
+
+/**
+ * The lines inside a time window, compared by the timestamp each line starts with (`2026-11-06
+ * 09:38:29.127`, local time). A line without one (a stack trace's) goes with the line before it.
+ * 2026-11-06: one install's timeline was read off the log file by hand, since runs interleave and 500
+ * lines from the end held only the last one's tail.
+ */
+function inWindow(lines: readonly string[], sinceArg: unknown, untilArg: unknown): string[] {
+    if (typeof sinceArg !== 'string' && typeof untilArg !== 'string') return [...lines];
+    const since = onLogDay(lines, sinceArg);
+    const until = onLogDay(lines, untilArg);
+    const out: string[] = [];
+    let keep = false;
+    for (const line of lines) {
+        const stamp = STAMPED.test(line) ? line.slice(0, 23) : undefined;
+        if (stamp !== undefined) keep = (typeof since !== 'string' || stamp >= since) && (typeof until !== 'string' || stamp < until);
+        if (keep) out.push(line);
+    }
+    return out;
+}
+
 /**
  * Register `read_debug_logs` on `server`.
  *
@@ -80,8 +114,18 @@ export function registerDiagnosticsTools(server: McpToolServer, logDirPath: stri
                     .optional()
                     .describe(
                         'Case-insensitive substring; only matching lines count toward the tail ' +
-                            '(e.g. "Entity Fetcher", "error", a tool name)',
+                            '(e.g. "Entity Fetcher", "error", a tool name, "Data Installer #7" for one install)',
                     ),
+                since: z
+                    .string()
+                    .max(23)
+                    .optional()
+                    .describe('Only lines at or after this local time, as the log writes it: "2026-11-06 09:30" (any leading part); a bare "09:30" is on the log\'s latest day'),
+                until: z.string().max(23).optional().describe('Only lines before this local time, the same form as since'),
+                fromStart: z
+                    .boolean()
+                    .optional()
+                    .describe('Return the first matching lines rather than the last: to read one run from its beginning'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,25 +148,24 @@ export function registerDiagnosticsTools(server: McpToolServer, logDirPath: stri
             const filter = typeof args?.filter === 'string' ? args.filter.toLowerCase() : '';
 
             const all = content.split('\n').filter((line) => line.trim().length > 0);
-            const matched = filter
-                ? all.filter((line) => line.toLowerCase().includes(filter))
-                : all;
-            let tail = matched
-                .slice(-requested)
+            const matched = inWindow(all, args?.since, args?.until).filter((line) => !filter || line.toLowerCase().includes(filter));
+            let tail = (args?.fromStart === true ? matched.slice(0, requested) : matched.slice(-requested))
                 .map((line) =>
                     line.length > MAX_LINE_CHARS ? `${line.slice(0, MAX_LINE_CHARS)}…` : line,
                 );
-            // Enforce the byte cap newest-first: keep trailing lines while they fit.
+            // Enforce the byte cap from the end being read: the newest lines, or the first from the start.
+            const fromStart = args?.fromStart === true;
+            const ordered = fromStart ? tail : [...tail].reverse();
             let budget = MAX_RESPONSE_BYTES;
-            let keepFrom = tail.length;
-            while (keepFrom > 0 && budget - tail[keepFrom - 1].length - 1 > 0) {
-                budget -= tail[keepFrom - 1].length + 1;
-                keepFrom--;
+            let kept = 0;
+            while (kept < ordered.length && budget - ordered[kept].length - 1 > 0) {
+                budget -= ordered[kept].length + 1;
+                kept++;
             }
-            tail = tail.slice(keepFrom);
+            tail = fromStart ? ordered.slice(0, kept) : ordered.slice(0, kept).reverse();
 
             const header =
-                `--- last ${tail.length} of ${matched.length} ` +
+                `--- ${fromStart ? 'first' : 'last'} ${tail.length} of ${matched.length} ` +
                 `${filter ? `lines matching "${args.filter}"` : 'lines'} (${fileName}) ---`;
             return asRawText([header, ...tail].join('\n'));
         },

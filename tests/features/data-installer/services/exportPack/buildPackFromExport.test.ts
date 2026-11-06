@@ -103,6 +103,8 @@ describe('buildPackFromExport', () => {
         expect(pack.items.map((i) => i.dataType)).toEqual(['product_attributes', 'cart_rules', 'product_export']);
         const source = (itemOf(pack, 'product_export') as { source: { entity: string; behavior: string; items: Array<Record<string, string>> } }).source;
         expect([source.entity, source.behavior]).toEqual(['catalog_product', 'append']);
+        // The service's product_export schema: allowed_error_count is a number (a string is refused).
+        expect(typeof (source as unknown as { allowed_error_count: unknown }).allowed_error_count).toBe('number');
         expect(source.items.map((r) => r.sku)).toContain('MH01');
         expect([products, giftCards]).toEqual([6, 1]);
         const mh01 = source.items.find((r) => r.sku === 'MH01') as Record<string, string>;
@@ -131,6 +133,20 @@ describe('buildPackFromExport', () => {
         expect(sizeOption.values).toEqual([{ value_index: 'Size XS' }]);
         const rows = (itemOf(imported.pack, 'product_export') as { source: { items: Array<Record<string, string>> } }).source.items;
         expect(rows.find((r) => r.sku === 'MH01')?.configurable_variations).toBe('sku=MH01-XS-Black,size=Size XS,color=Black|sku=MH01-XS-Gray,size=Size XS,color=Gray');
+    });
+
+    // 2026-11-06: Luma's "32" against "Size 32" set the wrong size on about 500 products, unseen.
+    it('names each value that matches no option of the base pack, in both forms, before anything is installed', () => {
+        const colored: DatapackFile = {
+            ...BASE,
+            items: [{ dataType: 'product_attributes', records: [{ attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: 'Black' }, { label: 'Red' }] } }] }],
+        };
+
+        const records = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma', base: colored });
+        const imported = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma', base: colored, importForm: true });
+
+        expect(records.unmatchedOptions).toEqual(['color: Gray']);
+        expect(imported.unmatchedOptions).toEqual(['color: Gray']);
     });
 
     it('refuses a file that holds no products', () => {

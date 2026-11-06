@@ -28,6 +28,7 @@ import {
 } from './commerceRestClient';
 import { asRawText, asRawTextMarkingErrors } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
+import { projectPath, readPackFile } from '@/features/data-installer/handlers/datapackFiles';
 import type { HandlerContext } from '@/types/handlers';
 
 const WRITE_METHODS = ['POST', 'PUT', 'DELETE'] as const;
@@ -43,6 +44,20 @@ function refuseBadBulk(method: RestMethod, body: unknown): string | undefined {
         return 'Error: bulk:true needs body to be a non-empty ARRAY of request bodies, e.g. [{"product":{…}}, …].';
     }
     return undefined;
+}
+
+/**
+ * The call's body: `body` as given, or the JSON in `bodyPath`, a file inside the project (2026-11-06: an
+ * Import API call of hundreds of rows was sent through a test probe, since pasting it was impractical).
+ */
+async function bodyOf(ctx: HandlerContext, args: { body?: unknown; bodyPath?: unknown }): Promise<{ body: unknown } | { error: string }> {
+    if (args.bodyPath === undefined) return { body: args.body };
+    if (args.body !== undefined) return { error: 'send body or bodyPath, not both' };
+    try {
+        return { body: JSON.parse((await readPackFile(ctx, await projectPath(ctx, String(args.bodyPath)))).toString('utf8')) as unknown };
+    } catch (error) {
+        return { error: `the body file could not be read as JSON: ${error instanceof Error ? error.message : String(error)}` };
+    }
 }
 
 /**
@@ -77,7 +92,8 @@ export function registerCommerceRestWriteTool(
                 'whole catalog instead of one per product. Settings (Stores > Configuration) are writable too: ' +
                 'PUT system/config with { items: [{ path, value, scope, scope_code }] }, and its answer carries an errors ' +
                 'list under HTTP 200 that MUST be read, since a refused path is reported there, not as a failure ' +
-                '(set_commerce_config does that and records the previous values).',
+                '(set_commerce_config does that and records the previous values). A large body (an Import API call ' +
+                'of hundreds of rows, POST import/json) can come from a JSON file in the project: bodyPath instead of body.',
             inputSchema: {
                 method: z
                     .enum(WRITE_METHODS)
@@ -93,6 +109,10 @@ export function registerCommerceRestWriteTool(
                             'but some do (DELETE returns/{id} needs the return as rmaDataObject); ' +
                             'with bulk:true, an array of such bodies',
                     ),
+                bodyPath: z
+                    .string()
+                    .optional()
+                    .describe('A JSON file inside the project holding the body, instead of body: for one too large to send inline'),
                 bulk: z
                     .boolean()
                     .optional()
@@ -123,16 +143,18 @@ export function registerCommerceRestWriteTool(
             }
             const checked = validateRestPath(args?.path);
             if ('error' in checked) return asRawTextMarkingErrors(`Error: ${checked.error}`);
+            const ctx = ctxFactory();
+            const given = await bodyOf(ctx, args);
+            if ('error' in given) return asRawTextMarkingErrors(`Error: ${given.error}`);
+            const body = given.body;
             const bulk = args?.bulk === true;
             if (bulk) {
-                const refusal = refuseBadBulk(method, args?.body);
+                const refusal = refuseBadBulk(method, body);
                 if (refusal) return asRawTextMarkingErrors(refusal);
             }
-            const target = await resolveRestTarget(ctxFactory(), args?.storeView, fetchImpl);
+            const target = await resolveRestTarget(ctx, args?.storeView, fetchImpl);
             if ('refusal' in target) return asRawTextMarkingErrors(target.refusal);
-            return asRawTextMarkingErrors(
-                await sendRest(method, target, checked.path, args?.body, fetchImpl, { bulk }),
-            );
+            return asRawTextMarkingErrors(await sendRest(method, target, checked.path, body, fetchImpl, { bulk }));
         },
     );
 }

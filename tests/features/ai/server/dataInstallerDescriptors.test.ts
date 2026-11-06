@@ -46,6 +46,7 @@ it('registers the twenty-one tools, and only those', () => {
         'start_datapack_export',
         'start_datapack_import',
         'validate_datapack_import',
+        'verify_datapack_install',
     ]);
 });
 
@@ -226,6 +227,7 @@ describe('what each row declares', () => {
             'open_datapack_zip',
             'preview_datapack_changes',
             'validate_datapack_import',
+            'verify_datapack_install',
         ]);
         expect(byFlag(false)).toEqual([
             'build_datapack_from_export',
@@ -330,8 +332,8 @@ describe('what each row accepts', () => {
         }
     });
 
-    it('asks the status read only how long it may wait, at most 45 seconds', () => {
-        expect(keys('get_datapack_import_status')).toEqual(['waitSeconds']);
+    it('asks the status read how long it may wait, at most 45 seconds, and where the skipped rows start', () => {
+        expect(keys('get_datapack_import_status')).toEqual(['skippedFrom', 'waitSeconds']);
         const schema = row('get_datapack_import_status')!.inputSchema!;
         expect(schema.waitSeconds.parse(45)).toBe(45);
         expect(() => schema.waitSeconds.parse(46)).toThrow();

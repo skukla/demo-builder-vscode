@@ -234,6 +234,13 @@ export interface KeptRootStep {
     restore?: string;
 }
 
+/** A row a job skipped: its kind, the pack's name for it, and Commerce's reason, whole. */
+export interface SkippedRowRecord {
+    kind: string;
+    key: string;
+    reason: string;
+}
+
 /** A snapshot of one async job's progress. */
 export interface JobStatusSnapshot {
     activationId: string;
@@ -257,6 +264,13 @@ export interface JobStatusSnapshot {
     leftInStore?: boolean;
     /** The kept root category's Admin step, when that is what the removal kept. */
     keptRoot?: KeptRootStep;
+    /**
+     * Seconds each data type took, in the order they ran, for an agent measuring where the time
+     * went (2026-11-06: read off Debug Logs by hand). Demo Builder's engine only.
+     */
+    timings?: Record<string, number>;
+    /** Every row the job skipped, with Commerce's whole reason (`note` names ten). */
+    skipped?: SkippedRowRecord[];
 }
 
 /**
@@ -319,6 +333,10 @@ export interface ImportJobRecord {
     detail?: string;
     /** The kept root category's Admin step (`JobStatusSnapshot.keptRoot`). */
     keptRoot?: KeptRootStep;
+    /** Seconds each data type took (`JobStatusSnapshot.timings`). */
+    timings?: Record<string, number>;
+    /** Every row the job skipped (`JobStatusSnapshot.skipped`). */
+    skipped?: SkippedRowRecord[];
     processingTimeMs?: number;
 }
 

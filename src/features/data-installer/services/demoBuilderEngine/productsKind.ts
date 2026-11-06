@@ -24,21 +24,12 @@ import { BULK_WAIT, type BulkRun, type BulkWait, createProductsInBulk, productId
 import { amountsForStore, withoutAmounts } from './giftCardAmounts';
 import { deleteIfPresent, type KindContext, MissingNameError } from './kindContext';
 import { createOne } from './pendingCreates';
+import { type ExportRow, importProductRows } from './productExportKind';
+import { additionalAsCustom, importRowLookups, importRowOf } from './productImportRows';
+import { GIFT_CARD_KIND, PRODUCT_KIND, PRODUCT_KINDS } from './productKinds';
 import { isNumeric, type ProductLookups, productLookups } from './productLookups';
 import { tryRow } from './refusedRows';
 import type { CommerceSend } from '@/types/commerceWire';
-
-export const PRODUCT_KIND = 'products';
-
-/**
- * Gift cards (step 11): products of `type_id` giftcard, made and removed as products are (the
- * service's `GiftCardImportProcessor` posts them to `products` too), recorded under their own kind
- * so a repeat install finds their rows under `giftcards`.
- */
-export const GIFT_CARD_KIND = 'giftcards';
-
-/** The kinds whose recorded objects are products, by SKU. */
-export const PRODUCT_KINDS: readonly string[] = [PRODUCT_KIND, GIFT_CARD_KIND];
 
 /** Inputs whose values a pack writes as option labels. */
 const OPTION_INPUTS = new Set(['select', 'multiselect']);
@@ -175,19 +166,6 @@ async function extensionAttributes(lk: ProductLookups, row: ProductRow, websiteI
     return out;
 }
 
-/**
- * The row's custom attributes, with its `additional_attributes` object turned into more of them,
- * each value as text and a missing one as empty, as the service does (`ProductImportProcessor.js`
- * L97-114). The service then drops the row's own custom attributes; here the row's own win, code
- * for code, and the rest are kept.
- */
-function additionalAsCustom(row: ProductRow): CustomAttribute[] {
-    const own = row.custom_attributes ?? [];
-    const added = Object.entries(row.additional_attributes ?? {})
-        .filter(([code]) => !own.some((a) => a.attribute_code === code))
-        .map(([code, value]) => ({ attribute_code: code, value: value === null || value === undefined ? '' : String(value) }));
-    return [...own, ...added];
-}
 
 /** The body Commerce is sent for one row. */
 export async function toCommerceProduct(
@@ -271,16 +249,46 @@ export async function installProducts(ctx: KindContext, rows: readonly ProductRo
         done: 0,
         single: (product) => createSingle(ctx, kind, product),
     };
+    // Through the Import API where the row converts without loss (`productImportRows.ts`), the rest by
+    // the bulk queue: the pack stays in its own form, only the route differs.
+    const look = importRowLookups(lk);
+    const bySku = new Map(rows.map((row) => [row.sku.toLowerCase(), row]));
     for (const wave of waves(fresh)) {
+        const viaImport: ExportRow[] = [];
         const prepared: ProductToMake[] = [];
         for (const row of wave) {
-            // A row naming something the store lacks, or a row that was skipped, is skipped too.
+            // A row naming something the store lacks, or a row that was skipped, is skipped too, whichever
+            // route it would take: every row is checked by building its record first.
             const body = await tryRow(ctx, { kind, key: row.sku }, () => toCommerceProduct(lk, row, websiteId, leftAtDefault));
-            if (body) prepared.push({ sku: row.sku, body });
-            else run.total -= 1;
+            if (!body) {
+                run.total -= 1;
+                continue;
+            }
+            const converted = kind === PRODUCT_KIND ? await importRowOf(look, row, bySku) : undefined;
+            if (converted) viaImport.push(converted);
+            else prepared.push({ sku: row.sku, body });
         }
+        await importWave(ctx, run, viaImport, LINKING_TYPES.has(wave[0].type_id));
         await createProductsInBulk(ctx, run, prepared, wait);
     }
+}
+
+/**
+ * One wave's converted rows through the Import API, counted in the run's progress, then their ids
+ * learned for a parent the bulk queue makes that links them by id.
+ */
+async function importWave(ctx: KindContext, run: BulkRun, rows: readonly ExportRow[], parents: boolean): Promise<void> {
+    if (rows.length === 0) return;
+    await importProductRows(ctx, rows, {
+        skipKind: run.kind,
+        parents,
+        onDone: (count) => {
+            run.done += count;
+            ctx.progress?.(`${run.done.toLocaleString('en-US')} of ${run.total.toLocaleString('en-US')} ${run.noun}`);
+        },
+    });
+    const known = (ctx.session.productIds ??= new Map());
+    for (const [sku, id] of await productIdsInStore(ctx.get, rows.map((r) => r.sku))) known.set(sku, id);
 }
 
 /** Take back one product this engine made. */

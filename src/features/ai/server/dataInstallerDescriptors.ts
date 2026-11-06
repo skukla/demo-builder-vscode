@@ -60,7 +60,7 @@ const WIPE_STORE = z
  * save reads the installed version's own rows from it, so products the store already had are kept
  * in the new version.
  */
-const PACK_SOURCE = z.enum(['installer', 'library']).optional().describe('Which store holds the pack: installer or library. Omitted: the preview reads the installer, the save tries the library then the installer');
+const PACK_SOURCE = z.enum(['installer', 'library']).optional().describe('Which store holds the pack: installer or library. Omitted: the preview and the check read the installer, the save tries the library then the installer');
 
 const DATAPACK_ID = {
     datapackName: z.string().describe('Datapack name from find_datapacks'),
@@ -213,10 +213,11 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: true,
         description:
             'Progress of the running or most recent datapack import/reset: its outcome (watching while it runs), ' +
-            "each data type's state, and while products go in a count as detail (\"450 of 2,046 products\"). " +
+            "each data type's state, and while products go in or come out a count as detail (\"450 of 2,046 products\"). " +
             'With waitSeconds (up to 45) it answers when the job ends or the wait is up, showing progress as it goes: ' +
             'call it with waitSeconds 45 while outcome is watching, rather than polling quickly. A pack of 2,000 ' +
-            'products takes several minutes.',
+            'products takes several minutes. Once ended: timings gives the seconds each data type took, and skipped ' +
+            'every skipped row with its whole reason, fifty at a time (skippedTotal; ask for more with skippedFrom).',
         map: importHandlers,
         type: 'get-datapack-import-status',
         inputSchema: {
@@ -226,6 +227,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 .max(45)
                 .optional()
                 .describe('Wait up to this many seconds (at most 45) for the job to end, its progress shown; omit to answer at once'),
+            skippedFrom: z.number().int().min(0).optional().describe('Where in the skipped rows to start (default 0): the next page of fifty'),
         },
     },
     {
@@ -306,6 +308,24 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             source: PACK_SOURCE,
             dataTypes: z.array(z.string()).optional().describe('The kinds an install would be asked for; the answer then covers these and what they need, as the install does. All the pack holds when omitted'),
         },
+    },
+    {
+        tool: 'verify_datapack_install',
+        needsAuth: ['adobe'],
+        // Reads the pack and the project's store; opens the store with no recorder, so writes nothing.
+        readOnly: true,
+        description:
+            'Check that the store holds what a datapack says, after installing it: for each product the pack ' +
+            'made (all it holds when Demo Builder has no record of installing it), that it is in the store, that a ' +
+            'configurable has its options and children, that each select value is the option the pack names, and ' +
+            'that its price matches. Answers verdict (matches or differs), checked, compared (how many values, prices ' +
+            'and configurables it actually compared: a match that compared nothing is no proof), and per finding a count and up ' +
+            'to 20 examples: missing, configurablesWithoutOptions, configurablesDiffer, valuesDiffer, pricesDiffer. ' +
+            'Writes nothing. Run it after start_datapack_import succeeds: an install can report success with ' +
+            'products whose sizes or options are wrong.',
+        map: importHandlers,
+        type: 'verify-datapack-install',
+        inputSchema: { ...DATAPACK_ID, source: PACK_SOURCE },
     },
     {
         tool: 'save_store_changes_to_pack',
@@ -562,7 +582,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'attributes, attribute sets and other kinds the new pack keeps; its products and stock are replaced ' +
             'by the export\'s, and its categories kept when it has them. Without one, categories hang from a root ' +
             'named <displayName> Catalog and products keep Commerce\'s own fields; leftOutAttributes names the rest. ' +
-            'SKUs are kept as exported. The pack is checked with ' +
+            'SKUs are kept as exported. unmatchedOptions names each select value that matches no option of the base ' +
+            "pack's attribute (an install would refuse that row or set another option): fix those before loading it. The pack is checked with " +
             "the install's own checks first and not written if it would be refused. Load it with load_datapack_zip.",
         map: importHandlers,
         type: 'build-datapack-from-export',

@@ -17,6 +17,9 @@
  *   none, and the version holds only the picks (a store Demo Builder did not fill).
  *   Confirm-gated; its progress goes to the screen's progress window when started from one.
  *   Undone by deleting the new version from the library (`delete-library-datapack`).
+ * - `verify-datapack-install`: whether the store holds what the pack says, for the products the pack
+ *   made: each is there, a configurable has its options and children, select values are the options
+ *   the pack names, and prices match. Counts and up to 20 examples per finding. Writes nothing.
  * - `listPickable` (for `list-datapack-export-items` with Demo Builder's engine): one kind of the
  *   store's items to pick from, less what the pack being saved holds already.
  *
@@ -45,6 +48,7 @@ import type { PackRootStep } from '../services/demoBuilderEngine/packRootStep';
 import { countPickable, listPickable } from '../services/demoBuilderEngine/saveStore';
 import type { StoreChangesDeps } from '../services/demoBuilderEngine/storeAccess';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
+import { verifyPackInstall } from '../services/demoBuilderEngine/verifyInstall';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { DatapackSetupStep } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
@@ -291,6 +295,18 @@ export const storeChangesHandlers = defineHandlers({
             return { success: true, data: { datapackName: opened.pack.name, version: opened.pack.version, ...preview } };
         } catch (error) {
             return failure(context, error, 'What installing again would change could not be read.');
+        }
+    },
+
+    // Whether the store holds what the pack says (owner, 2026-11-06). Reads only.
+    'verify-datapack-install': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
+        const opened = await openStoreChanges(context, payload);
+        if ('response' in opened) return opened.response;
+        try {
+            const check = await verifyPackInstall(opened.deps, opened.pack, opened.source ?? 'installer');
+            return { success: true, data: { datapackName: opened.pack.name, version: opened.pack.version, ...check } };
+        } catch (error) {
+            return failure(context, error, 'The store could not be checked against the pack.');
         }
     },
 

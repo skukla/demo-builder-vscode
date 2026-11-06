@@ -33,12 +33,13 @@ import { updateCustomer, updateCustomerGroup } from './customerKinds';
 import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, ownedKey, segment } from './kindContext';
+import { type ExportRow, PRODUCT_EXPORT_KIND, updateProductRows } from './productExportKind';
 import { productLookups } from './productLookups';
 import { parseProductRows, toCommerceProduct } from './productsKind';
 import { tryRow } from './refusedRows';
 import { takeBackAll } from './removalRuns';
 import { type KeptContainer, decideRemovals } from './removers';
-import { READABLE_KINDS, packKindOf, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
+import { READABLE_KINDS, packKindIn, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
 import { type OwnedChange, decideOwnedChange } from '@/core/utils/ownedChange';
 
 /** What becomes of one recorded object. `create` from the rule means the SC deleted it. */
@@ -52,6 +53,8 @@ export interface PlannedObject {
 /** One recorded kind's objects, and the pack's rows of that kind no object was made for yet. */
 export interface KindPlan {
     kind: string;
+    /** The pack kind its rows came from: a product's is `products`, or `product_export` (`packKindIn`). */
+    packKind: string;
     objects: PlannedObject[];
     added: string[];
 }
@@ -72,7 +75,7 @@ function wantedOf(kind: string, object: CreatedObject, row: unknown, current: st
     return packed === object.wrote && current !== undefined ? current : packed;
 }
 
-async function planKind(ctx: KindContext, kind: string, objects: CreatedObject[], records: unknown): Promise<KindPlan> {
+async function planKind(ctx: KindContext, kind: string, objects: CreatedObject[], records: unknown): Promise<Omit<KindPlan, 'packKind'>> {
     const copies = await readCopies(ctx, productLookups(ctx), kind, objects);
     const rows = rowsByKey(kind, records);
     const planned = objects.map((object): PlannedObject => {
@@ -94,9 +97,9 @@ async function planKind(ctx: KindContext, kind: string, objects: CreatedObject[]
 export async function planRepeat(ctx: KindContext, items: Items, created: readonly CreatedObject[]): Promise<KindPlan[]> {
     const plans: KindPlan[] = [];
     for (const kind of READABLE_KINDS) {
-        const packKind = packKindOf(kind);
+        const packKind = packKindIn(kind, items);
         if (!(packKind in items)) continue;
-        plans.push(await planKind(ctx, kind, created.filter((o) => o.kind === kind), items[packKind]));
+        plans.push({ ...(await planKind(ctx, kind, created.filter((o) => o.kind === kind), items[packKind])), packKind });
     }
     return plans;
 }
@@ -154,7 +157,8 @@ const UPDATERS: Record<string, Updater> = {
  * ends (`recordFingerprints`), and its pack hash moves to the row it now matches.
  */
 export async function applyUpdates(ctx: KindContext, plans: readonly KindPlan[], packKind: string): Promise<void> {
-    for (const plan of plans.filter((p) => packKindOf(p.kind) === packKind)) {
+    if (packKind === PRODUCT_EXPORT_KIND) return updateByImport(ctx, plans.filter((p) => p.packKind === packKind));
+    for (const plan of plans.filter((p) => p.packKind === packKind)) {
         const update = UPDATERS[plan.kind];
         for (const { object, outcome, row } of plan.objects) {
             if (outcome !== 'update' || !update) continue;
@@ -165,6 +169,20 @@ export async function applyUpdates(ctx: KindContext, plans: readonly KindPlan[],
             ctx.log(`brought ${object.kind} ${object.key ?? object.id} up to the pack`);
         }
     }
+}
+
+/**
+ * A `product_export` pack's updates: every product to bring up to the pack in one set of import calls
+ * (`updateProductRows`), not one `PUT` each, then each recorded as a product updated is.
+ */
+async function updateByImport(ctx: KindContext, plans: readonly KindPlan[]): Promise<void> {
+    const todo = plans.flatMap((plan) => plan.objects.filter((o) => o.outcome === 'update' && o.row !== undefined).map((o) => ({ plan, ...o })));
+    if (todo.length === 0) return;
+    const rows = todo.map((t) => (t.row as { product: ExportRow }).product);
+    const updated = new Set(await updateProductRows(ctx, rows));
+    const done = todo.filter((t) => updated.has((t.row as { product: ExportRow }).product.sku));
+    await ctx.recorder.update(...done.map((t) => ({ kind: t.object.kind, id: t.object.id, fingerprint: undefined, wrote: packedFingerprint(t.plan.kind, t.row) })));
+    for (const t of done) ctx.log(`brought ${t.object.kind} ${t.object.key ?? t.object.id} up to the pack`);
 }
 
 /** Install order, so removal can run it backwards. */

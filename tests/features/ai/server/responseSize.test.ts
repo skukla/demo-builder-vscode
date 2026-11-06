@@ -437,6 +437,9 @@ describe('rows with no output safety net are classified', () => {
         // counts, message}`: fixed fields, never rows.
         'preview_datapack_changes',
         'save_store_changes_to_pack',
+        // `{datapackName, version, installed, verdict, checked, compared}` and five findings, each a count and at
+        // most 20 examples (`verifyInstall.ts`).
+        'verify_datapack_install',
         // HANDLER RETURNS DATA (datapack-engine step 07, read in datapackLibraryHandlers.ts):
         // `{datapackName, displayName, versions}`, three fixed fields.
         'rename_datapack',

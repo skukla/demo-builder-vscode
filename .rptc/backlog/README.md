@@ -460,7 +460,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-86` | feature | [Bulk selection on the Integrations screen](2026-11-05-integrations-bulk-selection.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
-### data-installer  (12)
+### data-installer  (13)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -470,11 +470,12 @@ each item's own file; what has already landed against an item is in its
 | `DI-5` | feature | [Demo Builder installs datapacks itself, beside the service](2026-10-27-demo-builder-installs-datapacks.md) | — | high | active |
 | `DI-6` | chore | [The Commerce secrets gathered for the Data Installer service are no longer needed](2026-10-28-datapack-credential-gathering-removed.md) | — | med | active |
 | `DI-7` | feature | [Datapack images: how a pack carries its product images](2026-10-30-datapack-images.md) | — | low | backlog |
-| `DI-8` | feature | [`product_export`: the bulk product form Luma and Venia carry](2026-10-30-datapack-bulk-product-form.md) | — | med | backlog |
+| `DI-8` | feature | [`product_export`: the bulk product form Luma and Venia carry](2026-10-30-datapack-bulk-product-form.md) | — | med | active |
 | `DI-9` | fix | [A pack links products to categories by url key, which two categories can share](2026-10-30-datapack-category-links-by-url-key.md) | — | med | active |
 | `DI-10` | feature | [A colleague's shared pack should say who made it](2026-10-31-library-pack-owner-name.md) | — | low | backlog |
 | `DI-11` | feature | [One Export motion for a datapack's copies](2026-11-05-datapack-one-export-motion.md) | — | low | backlog |
 | `DI-12` | feature | [Datapack sources as adapters, and one setting for either or both](2026-11-05-datapack-sources-as-adapters.md) | — | med | backlog |
+| `DI-13` | question | [The same pack in both stores, with different data: which one does an SC get?](2026-11-06-same-pack-in-both-stores.md) | — | med | open |
 | `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | superseded |
 
 ### prerequisites  (4)
@@ -587,7 +588,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-91` | question | [Should the other libraries live outside the extension, the way datapacks now do?](2026-11-04-libraries-outside-the-extension.md) | — | med | spiked |
 | `PL-92` | question | [What plug-in contract lets an SC's own integration bring its extension behaviour?](2026-11-04-integration-plugin-mechanism.md) | — | med | open |
 | `PL-93` | chore | [Colleague first names in tracked files](2026-11-04-colleague-names-in-tracked-files.md) | — | low | backlog |
-| `PL-94` | chore | [Harden what we take from npm, and act on the advisories already in the tree](2026-11-06-npm-supply-chain-hardening.md) | — | high | backlog |
+| `PL-94` | chore | [Harden what we take from npm, and act on the advisories already in the tree](2026-11-06-npm-supply-chain-hardening.md) | — | high | active |
 
 <!-- END GENERATED registry -->
 
@@ -736,7 +737,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*336 item(s) sit outside the A–G chain.*
+*337 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

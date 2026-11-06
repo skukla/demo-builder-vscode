@@ -21,6 +21,7 @@ import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
 import { eachCopy, type KindContext, segment } from './kindContext';
 import { attributePackForm, categoryPackForm, keyOf, productPackForm } from './packForm';
+import { PRODUCT_EXPORT_KIND } from './productExportKind';
 import type { ProductLookups } from './productLookups';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
@@ -40,6 +41,27 @@ const READS_AT_ONCE = 5;
 /** The pack data kind a recorded kind's rows live under. Options live in their attributes. */
 export function packKindOf(kind: string): string {
     return kind === 'attribute_options' ? 'product_attributes' : kind;
+}
+
+/**
+ * The pack kind a recorded kind's rows live under in these items: a product or gift card comes from
+ * `product_export` (the service's import form, `productExportKind.ts`) when the pack carries its
+ * products that way.
+ */
+export function packKindIn(kind: string, items: Record<string, unknown>): string {
+    if ((kind === 'products' || kind === 'giftcards') && !(kind in items) && PRODUCT_EXPORT_KIND in items) return PRODUCT_EXPORT_KIND;
+    return packKindOf(kind);
+}
+
+/**
+ * An import body's store-wide rows as product rows (`{ product: row }`, so they are keyed and hashed as
+ * products are), gift cards apart from the rest; undefined for anything else.
+ */
+function importRowsOf(kind: string, records: unknown): unknown[] | undefined {
+    if (kind !== 'products' && kind !== 'giftcards') return undefined;
+    const items = (records as { source?: { items?: unknown } } | null)?.source?.items;
+    if (!Array.isArray(items)) return undefined;
+    return (items as Row[]).filter((r) => !r.store_view_code && (r.product_type === 'giftcard') === (kind === 'giftcards')).map((r) => ({ product: r }));
 }
 
 /**
@@ -205,7 +227,7 @@ const list = (value: unknown, field?: string): unknown[] => {
 
 /** A pack kind's rows, as a list of single rows. */
 function rowsOf(kind: string, records: unknown): unknown[] {
-    const assignments = b2bRowsOf(kind, records);
+    const assignments = b2bRowsOf(kind, records) ?? importRowsOf(kind, records);
     if (assignments) return assignments;
     switch (kind) {
         case 'categories': {

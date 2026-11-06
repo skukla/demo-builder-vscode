@@ -184,6 +184,8 @@ describe('the ceiling table tracks the tool surface', () => {
             'share_datapack',
             // mark_team_datapack (beta.153): three fixed fields; not yet run live.
             'mark_team_datapack',
+            // verify_datapack_install (2026-11-06): counts and at most 20 examples per finding.
+            'verify_datapack_install',
         ]);
 
         const missing = descriptorTools.filter(

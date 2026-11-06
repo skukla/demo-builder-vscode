@@ -1,6 +1,6 @@
 ---
 name: import-datapack
-description: Loads sample data (products, categories, customers, B2B companies) into a project's Commerce instance from a datapack, removes it again, or captures data back out into a pack. Use when a demo needs catalog data, when the storefront renders but has nothing in it, or when the user asks to seed, populate, install, reset or export sample data. Six ordered calls with three traps — read this before calling any of them.
+description: Loads sample data (products, categories, customers, B2B companies) into a project's Commerce instance from a datapack, removes it again, or captures data back out into a pack. Use when a demo needs catalog data, when the storefront renders but has nothing in it, or when the user asks to seed, populate, install, reset or export sample data. Seven ordered calls with three traps — read this before calling any of them.
 ---
 
 # Import a Datapack
@@ -18,6 +18,7 @@ list_datapack_import_scopes     → optional: narrow to a website / store view
 validate_datapack_import        → dry run; free, ungated, do it every time
 start_datapack_import           → confirm:true; returns a HANDLE, not a result
 get_datapack_import_status      → poll until outcome is not "watching"
+verify_datapack_install         → after success: does the store hold what the pack says?
 ```
 
 ## Trap 1 — the start call does not mean it worked
@@ -39,6 +40,11 @@ That is a receipt, not an outcome. A fourteen-type pack takes minutes. **Poll
 
 Reporting success from the start call is the single most likely mistake here, and it is
 invisible: the user sees a confident "imported" and an empty catalog.
+
+`success` itself says only that Commerce took the rows, not that they came out right. Run
+`verify_datapack_install` (a read) after it: `verdict: "differs"` names products that are
+missing, configurables with no options, and select values or prices that are not what the
+pack says. Report those to the user rather than calling the install clean.
 
 ## Trap 2 — never guess `commerceInstance`
 

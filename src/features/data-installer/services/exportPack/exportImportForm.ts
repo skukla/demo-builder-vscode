@@ -87,7 +87,8 @@ export function productExportItem(
                 entity: 'catalog_product',
                 behavior: 'append',
                 validation_strategy: 'validation-skip-errors',
-                allowed_error_count: String(items.length),
+                // A number, as the service's `product_export` schema requires: a string fails its check on upload.
+                allowed_error_count: items.length,
                 items,
             },
         },

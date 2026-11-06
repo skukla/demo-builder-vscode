@@ -83,6 +83,7 @@ function answerOf(target: string, bytes: number, result: ExportPackResult): Reco
         categories: result.categories,
         ...listed('leftOutAttributes', result.leftOutAttributes),
         ...listed('unmatchedCategories', result.unmatchedCategories),
+        ...listed('unmatchedOptions', result.unmatchedOptions),
     };
 }
 

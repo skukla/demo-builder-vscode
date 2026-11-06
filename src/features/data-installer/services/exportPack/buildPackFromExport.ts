@@ -25,6 +25,7 @@ import { productExportItem } from './exportImportForm';
 import { optionLabels } from './exportOptions';
 import { numberOf, productRow, TYPE_ORDER } from './exportProducts';
 import { type ExportRow, firstRows, openRow, readExportTable } from './exportRows';
+import { unmatchedOptions } from './unmatchedOptions';
 import type { DatapackId } from '@/types/datapack';
 
 /** What to build. */
@@ -55,6 +56,11 @@ export interface ExportPackResult {
     leftOutAttributes: string[];
     /** Category paths the products name that the base pack's tree lacks, so not linked. */
     unmatchedCategories: string[];
+    /**
+     * Select and multi-select values naming no option of the base pack's attribute, `code: value`
+     * (`unmatchedOptions.ts`): an install refuses those rows, or sets a different option.
+     */
+    unmatchedOptions: string[];
 }
 
 /** The kinds the export supplies; a base pack's own rows of these are replaced. */
@@ -94,7 +100,7 @@ function definedCodes(base: DatapackFile | undefined, input?: string): Set<strin
  * The pack with its products in import form: the base pack's other kinds, its categories too when it
  * has them (the install makes any path the rows name that the store lacks), and the export's rows.
  */
-function importFormPack(input: ExportPackInput, table: ReadonlyArray<Record<string, string>>, rows: readonly ExportRow[]): ExportPackResult {
+function importFormPack(input: ExportPackInput, table: ReadonlyArray<Record<string, string>>, rows: readonly ExportRow[]): Omit<ExportPackResult, 'unmatchedOptions'> {
     const item = productExportItem(table, optionLabels(input.base));
     const kept = (input.base?.items ?? []).filter((i) => !FROM_EXPORT.has(i.dataType));
     const giftCards = rows.filter((r) => r.fields.product_type === 'giftcard').length;
@@ -115,6 +121,12 @@ function importFormPack(input: ExportPackInput, table: ReadonlyArray<Record<stri
  * @throws CsvError when the file is not a product export or holds no products
  */
 export function buildPackFromExport(input: ExportPackInput): ExportPackResult {
+    const built = buildPack(input);
+    return { ...built, unmatchedOptions: unmatchedOptions(built.pack, optionLabels(input.base)) };
+}
+
+/** The pack and what it says, before its option values are checked. */
+function buildPack(input: ExportPackInput): Omit<ExportPackResult, 'unmatchedOptions'> {
     const table = readExportTable(input.exportText, input.exportName);
     const rows = firstRows(table.map(openRow));
     if (rows.length === 0) throw new CsvError(`${input.exportName} holds no products.`);

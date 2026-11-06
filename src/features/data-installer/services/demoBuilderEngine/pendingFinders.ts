@@ -25,7 +25,7 @@ import { COUPON_KIND, couponByCode } from './couponsKind';
 import type { CreatedObject, InstallRecorder } from './installRecord';
 import { readOrNull, segment } from './kindContext';
 import type { PendingObject } from './pendingRecord';
-import { GIFT_CARD_KIND, PRODUCT_KIND } from './productsKind';
+import { GIFT_CARD_KIND, PRODUCT_KIND } from './productKinds';
 import { splitPair } from './sharedCatalogKinds';
 import { LINK_KIND, SOURCE_KIND, STOCK_KIND } from './stockKinds';
 import { STORE_CONFIG_KIND } from './storeConfigKind';

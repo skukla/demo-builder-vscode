@@ -1,5 +1,5 @@
 /**
- * The handlers behind "What would installing again change?" and Save / Save As (step 05,
+ * The handlers behind "What would installing again change?", the install check (2026-11-06), and Save / Save As (step 05,
  * `.rptc/plans/datapack-save-as/`): what they hand the service, what they refuse before it is
  * asked, and what they record on the project once a save lands.
  *
@@ -12,6 +12,10 @@ jest.mock('@/features/authentication/services/projectOrgGuard', () => ({ orgGuar
 jest.mock('@/features/data-installer/services/demoBuilderEngine/storeChanges', () => ({
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/storeChanges'),
     previewChanges: jest.fn(),
+}));
+jest.mock('@/features/data-installer/services/demoBuilderEngine/verifyInstall', () => ({
+    ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/verifyInstall'),
+    verifyPackInstall: jest.fn(),
 }));
 jest.mock('@/features/data-installer/services/demoBuilderEngine/saveStore', () => ({
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/saveStore'),
@@ -45,12 +49,14 @@ import type { DatapackFile } from '@/features/data-installer/services/datapackZi
 import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
 import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
+import { verifyPackInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 
 const mockedGuard = orgGuard as jest.MockedFunction<typeof orgGuard>;
 const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<typeof resolveDataInstallerAccess>;
 const mockedPreview = previewChanges as jest.MockedFunction<typeof previewChanges>;
+const mockedVerify = verifyPackInstall as jest.MockedFunction<typeof verifyPackInstall>;
 const mockedSave = saveStoreChanges as jest.MockedFunction<typeof saveStoreChanges>;
 const mockedWrite = writePackToStore as jest.MockedFunction<typeof writePackToStore>;
 const MockedWriter = DatapackStoreWriter as jest.MockedClass<typeof DatapackStoreWriter>;
@@ -128,6 +134,59 @@ describe('preview-datapack-changes', () => {
 
         expect(result.success).toBe(false);
         expect(mockedPreview).not.toHaveBeenCalled();
+    });
+});
+
+describe('verify-datapack-install', () => {
+    const none = { count: 0, examples: [] };
+    const CLEAN = {
+        installed: true,
+        verdict: 'matches' as const,
+        checked: 3,
+        compared: { values: 6, prices: 3, configurables: 1 },
+        missing: none,
+        configurablesWithoutOptions: none,
+        configurablesDiffer: none,
+        valuesDiffer: none,
+        pricesDiffer: none,
+    };
+
+    it("checks this project's store, at the target it chose, against the pack from the store named", async () => {
+        mockedVerify.mockResolvedValue(CLEAN);
+
+        const result = await storeChangesHandlers['verify-datapack-install'](harness(), { ...ID, source: 'library' });
+
+        expect(mockedVerify).toHaveBeenCalledWith(
+            expect.objectContaining({ projectPath: '/nonexistent/projects/acme', target: { websiteCode: 'acme', storeCode: 'acme_en' } }),
+            { name: 'bodea', version: 'main' },
+            'library',
+        );
+        expect(result).toEqual({ success: true, data: { datapackName: 'bodea', version: 'main', ...CLEAN } });
+    });
+
+    it('reads the pack from the Data Installer when no store is named', async () => {
+        mockedVerify.mockResolvedValue(CLEAN);
+
+        await storeChangesHandlers['verify-datapack-install'](harness(), ID);
+
+        expect(mockedVerify).toHaveBeenCalledWith(expect.anything(), { name: 'bodea', version: 'main' }, 'installer');
+    });
+
+    it('refuses before reading anything when the sign-in is in another org than the store', async () => {
+        mockedGuard.mockResolvedValue({ error: 'Use "Switch IMS Org" to continue.' });
+
+        const result = await storeChangesHandlers['verify-datapack-install'](harness(), ID);
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.ORG_MISMATCH });
+        expect(mockedVerify).not.toHaveBeenCalled();
+    });
+
+    it('answers what stopped it in words, not a thrown error', async () => {
+        mockedVerify.mockRejectedValue(new StoreChangesError('Choose the website and store view to install into first.'));
+
+        const result = await storeChangesHandlers['verify-datapack-install'](harness(), ID);
+
+        expect(result).toMatchObject({ success: false, error: expect.stringContaining('Choose the website and store view') });
     });
 });
 

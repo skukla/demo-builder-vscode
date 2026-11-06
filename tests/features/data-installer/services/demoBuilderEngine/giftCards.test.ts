@@ -17,12 +17,8 @@
 import { packedFingerprint } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
 import { productPackForm } from '@/features/data-installer/services/demoBuilderEngine/packForm';
 import { productLookups } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
-import {
-    GIFT_CARD_KIND,
-    installProducts,
-    parseProductRows,
-    toCommerceProduct,
-} from '@/features/data-installer/services/demoBuilderEngine/productsKind';
+import { installProducts, parseProductRows, toCommerceProduct } from '@/features/data-installer/services/demoBuilderEngine/productsKind';
+import { GIFT_CARD_KIND } from '@/features/data-installer/services/demoBuilderEngine/productKinds';
 import { GIFT_CARD_6, GIFTCARD_AMOUNTS_ATTRIBUTE } from '../../../../helpers/commerceSalesRuleFixtures';
 import { by, fakeContext, page } from './demoBuilderEngine.testUtils';
 

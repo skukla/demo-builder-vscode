@@ -343,7 +343,9 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v55 (2026-11-05, Data Installer on and off): import-datapack and diagnose-demo name
 // `dataInstaller.enabled` and the `turned-off` reason. Existing projects would keep telling the agent
 // an address alone decides it.
-export const AI_CONTEXT_VERSION = 55;
+// v56 (2026-11-06, install check): import-datapack adds verify_datapack_install after a successful
+// install. Existing projects would keep treating `success` as proof the data came out right.
+export const AI_CONTEXT_VERSION = 56;
 
 /**
  * Component IDs for standardized component instance access

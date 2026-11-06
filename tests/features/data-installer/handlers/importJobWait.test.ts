@@ -6,6 +6,7 @@
 
 import {
     type JobWaitClock,
+    skippedPage,
     waitForJob,
     waitMsOf,
 } from '@/features/data-installer/handlers/importJobWait';
@@ -97,5 +98,26 @@ describe('waitForJob', () => {
     it('answers at once with no wait, and with nothing when no job was ever started', async () => {
         expect((await run([record()], 0)).time.slept).toBe(0);
         expect((await run([null], 60_000)).result).toBeNull();
+    });
+});
+
+describe('skippedPage', () => {
+    const record = (count: number) =>
+        ({
+            activationId: 'a',
+            datapackName: 'luma',
+            outcome: 'success',
+            perType: {},
+            skipped: Array.from({ length: count }, (_, i) => ({ kind: 'products', key: `s${i}`, reason: 'refused' })),
+        }) as unknown as ImportJobRecord;
+
+    // 2026-11-06: 533 skipped rows were readable only in Debug Logs.
+    it('answers fifty skipped rows at a time, with the total and where the next page starts', () => {
+        const first = skippedPage(record(120));
+        const last = skippedPage(record(120), 100);
+
+        expect([first.skipped?.length, first.skippedTotal, first.skippedNext]).toEqual([50, 120, 50]);
+        expect([last.skipped?.[0].key, last.skipped?.length, last.skippedNext]).toEqual(['s100', 20, undefined]);
+        expect(skippedPage(record(0))).not.toHaveProperty('skippedTotal');
     });
 });

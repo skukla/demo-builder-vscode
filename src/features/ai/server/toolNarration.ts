@@ -131,6 +131,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     validate_datapack_import: 'Checking the sample-data import',
     // "What installing a datapack again would change ... Writes nothing."
     preview_datapack_changes: 'Previewing the datapack changes',
+    verify_datapack_install: 'Checking the datapack install',
     // "What a website of this project's store holds that Demo Builder did not install ... Writes nothing."
     check_demo_data: "Checking this demo's store data",
     verify_ai_setup: 'Checking the AI setup',

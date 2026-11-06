@@ -47,7 +47,7 @@ const pack = (rows: Row[]) => ({
 });
 
 /** A store with these SKUs, taking imports as the live Import API does; `imports` holds each call's rows. */
-async function store(existing: string[] = []) {
+async function store(existing: string[] = [], bareConfigurables: string[] = []) {
     const skus = new Set(existing.map((s) => s.toLowerCase()));
     const imports: Array<{ strategy: string; items: Row[] }> = [];
     let nextCategory = 300;
@@ -74,6 +74,9 @@ async function store(existing: string[] = []) {
             return { items, total_count: items.length };
         }
         if (path.startsWith('categories/list?')) return { items: [] };
+        // A configurable's options: one the store made bare answers none, as Commerce did (2026-11-06).
+        const options = /^configurable-products\/([^/]+)\/options\/all$/u.exec(path);
+        if (options) return bareConfigurables.includes(decodeURIComponent(options[1])) ? [] : [{ label: 'Size' }];
         throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
     };
     const send = ctx.send;
@@ -208,6 +211,21 @@ describe('installProductExport', () => {
             ['K100', ''],
             ['K100', 'justrite_test_store_us'],
         ]);
+    });
+
+    // Live, 2026-11-06: 80 of 147 configurables made with children linked and no options.
+    it('imports a configurable made without its options again alone, and names it when it stays bare', async () => {
+        const { ctx, imports } = await store([], ['MH02']);
+        const rows = [child('MH01-XS', { categories: undefined }), { ...parent('MH01', ['MH01-XS']), categories: undefined }, { ...parent('MH02', ['MH01-XS']), categories: undefined }];
+
+        await installProductExport(ctx, parseProductExport(pack(rows)));
+
+        expect(imports.map((call) => [call.strategy, call.items.map((r) => r.sku)])).toEqual([
+            ['validation-skip-errors', ['MH01-XS']],
+            ['validation-skip-errors', ['MH01', 'MH02']],
+            ['validation-stop-on-errors', ['MH02']],
+        ]);
+        expect(ctx.session.skipped).toEqual([{ kind: 'product_export', key: 'MH02', reason: 'Commerce made it with its children but without its options, twice' }]);
     });
 
     it('leaves the products pending when the import call gets no answer, for the next run to settle', async () => {

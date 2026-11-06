@@ -8,12 +8,8 @@
  * by SKU. Bodea's rows sell on website 3 of the store they came from.
  */
 
-import {
-    PRODUCT_KIND,
-    installProducts,
-    parseProductRows,
-    removeProduct,
-} from '@/features/data-installer/services/demoBuilderEngine/productsKind';
+import { installProducts, parseProductRows, removeProduct } from '@/features/data-installer/services/demoBuilderEngine/productsKind';
+import { PRODUCT_KIND } from '@/features/data-installer/services/demoBuilderEngine/productKinds';
 import { type SentCall, by, fakeContext, page } from './demoBuilderEngine.testUtils';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 

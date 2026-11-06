@@ -36,7 +36,7 @@ import { datapackZipHandlers } from './datapackZipHandlers';
 import { demoDataHandlers } from './demoDataHandlers';
 import { exportHandlers } from './exportHandlers';
 import { exportPackHandlers } from './exportPackHandlers';
-import { waitForJob, waitMsOf } from './importJobWait';
+import { skippedPage, waitForJob, waitMsOf } from './importJobWait';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
 import { SERVICE_INSTALLS_ONLY_ITS_OWN, SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from './libraryReads';
@@ -234,12 +234,12 @@ export const importHandlers = defineHandlers({
     /** The running or last job, live while it runs; with `waitSeconds`, once it ends or the wait is up. */
     'get-datapack-import-status': async (
         context: HandlerContext,
-        payload?: { waitSeconds?: number },
+        payload?: { waitSeconds?: number; skippedFrom?: number },
     ): Promise<HandlerResponse> => {
         const transient = new TransientStateManager(context.context);
         const read = () => transient.get<ImportJobRecord | null>(JOB_KEY, null);
         const record = await waitForJob(read, waitMsOf(payload?.waitSeconds));
-        return { success: true, data: record };
+        return { success: true, data: record ? skippedPage(record, payload?.skippedFrom) : record };
     },
 });
 

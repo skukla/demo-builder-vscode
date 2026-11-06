@@ -5,6 +5,9 @@
  * and its Content-Type, and DELETE sending a body only when given one.
  */
 
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { resetCommerceRestTokens } from '@/features/ai/server/commerceRestClient';
 import { registerCommerceRestWriteTool } from '@/features/ai/server/commerceRestWriteTool';
 import { AGENT_ALERT_COPY } from '@/features/ai/server/agentAlertCopy';
@@ -165,6 +168,21 @@ describe('the signed write (args pinned)', () => {
         });
         expect(JSON.parse(init.body)).toEqual({ credit: { id: 12, credit_limit: 50000 } });
         expect(JSON.parse(out)).toEqual({ id: 12, credit_limit: 50000 });
+    });
+
+    // 2026-11-06: an Import API call of hundreds of rows was too large to paste.
+    it('sends the body from a JSON file inside the project (bodyPath), and refuses body and bodyPath together', async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'db-write-'));
+        fs.writeFileSync(path.join(dir, 'import.json'), JSON.stringify({ source: { entity: 'catalog_product', items: [{ sku: 'a' }] } }));
+        getCurrentProject.mockResolvedValue({ ...ACCS_PROJECT, path: dir });
+        fetchMock = answering(200, '["Entities Processed: 1"]');
+
+        const out = await serve().raw({ method: 'POST', path: 'import/json', bodyPath: 'import.json', confirm: true });
+        const both = await serve().raw({ method: 'POST', path: 'import/json', body: {}, bodyPath: 'import.json', confirm: true });
+
+        expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ source: { entity: 'catalog_product', items: [{ sku: 'a' }] } });
+        expect(JSON.parse(out)).toEqual(['Entities Processed: 1']);
+        expect(both).toContain('send body or bodyPath, not both');
     });
 
     it('DELETE without a body sends none and no Content-Type, and a bare `true` answer is passed through', async () => {

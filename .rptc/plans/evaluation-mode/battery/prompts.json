@@ -1446,6 +1446,15 @@
         "why": "Datapack store step 05 (owner, 2026-10-01): install runs through the Data Installer, so a library pack is copied there first. Tier 3: it writes into the catalog other teams share and the extension cannot remove it again, so it never runs unattended; represented by datapackLibraryHandlers.test and the consent gate. Listed so the tool is judged, not grandfathered."
     },
     {
+        "id": "verify-datapack-install",
+        "prompt": "The Luma datapack install says it succeeded. Did everything actually come out right in the store?",
+        "expect": [
+            "verify_datapack_install"
+        ],
+        "cwd": "project",
+        "why": "Owner, 2026-11-06: two Luma installs reported success with nothing skipped while about 500 products had the wrong size and 80 configurables had no options, both found by hand. An agent asked whether an install came out right must check the store against the pack, not repeat the import's outcome. A read."
+    },
+    {
         "id": "preview-datapack-changes",
         "prompt": "What would reinstalling Frescopa change?",
         "expect": [

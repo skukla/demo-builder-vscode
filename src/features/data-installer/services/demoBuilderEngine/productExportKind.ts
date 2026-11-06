@@ -25,12 +25,13 @@
 import { z } from 'zod';
 import { skusInStore } from './bulkProducts';
 import { installCategories, parseCategoryPack } from './categoriesKind';
-import { importBody, importOneRow } from './importApi';
+import { importBody, importOneRow, importRefusal } from './importApi';
 import type { CreatedObject } from './installRecord';
-import { eachFewAtOnce, type KindContext, readOrNull, segment } from './kindContext';
+import { eachFewAtOnce, type KindContext, readOrNull, REQUESTS_AT_ONCE, segment } from './kindContext';
 import type { PendingObject } from './pendingRecord';
-import { GIFT_CARD_KIND, PRODUCT_KIND } from './productsKind';
+import { GIFT_CARD_KIND, PRODUCT_KIND } from './productKinds';
 import { skipRow } from './refusedRows';
+import { runInBatches } from '@/core/utils/promiseUtils';
 
 export const PRODUCT_EXPORT_KIND = 'product_export';
 
@@ -43,7 +44,12 @@ export const PRODUCTS_PER_IMPORT = 100;
  */
 export const PARENTS_PER_IMPORT = 20;
 
-/** Import calls in flight at once: three ran together and every row landed (2026-11-06). */
+/**
+ * Import calls in flight at once, for products that link no others: three ran together and every row
+ * landed whole (2026-11-06). Parents go one call at a time: with three calls at once, 80 of Luma's 147
+ * configurables were made with their children linked but no options, and the same rows imported one
+ * call at a time came out whole (ACCS sandbox, 2026-11-06).
+ */
 export const IMPORT_CALLS_AT_ONCE = 3;
 
 /** The rows in calls of at most `size` products, a product's store-view rows in the same call as it. */
@@ -154,6 +160,7 @@ async function importCall(
     ctx: KindContext,
     rows: readonly ExportRow[],
     root: string,
+    skipKind: string,
 ): Promise<void> {
     await ctx.recorder.markPending(pendingOf(rows));
     await ctx.send(
@@ -190,7 +197,7 @@ async function importCall(
     await ctx.recorder.forgetPending(pendingOf(missing));
     for (const sku of new Set(missing.map((r) => r.sku)))
         skipRow(ctx, {
-            kind: PRODUCT_EXPORT_KIND,
+            kind: skipKind,
             key: sku,
             reason: reasons.get(sku) || 'Commerce took the row but did not make the product',
         });
@@ -216,18 +223,92 @@ export async function installProductExport(
     const todo = rows.filter((r) => !there.has(r.sku.toLowerCase()) && !ours(r));
     const total = new Set(todo.map((r) => r.sku)).size;
     let done = 0;
-    const leaves = todo.filter((r) => !PARENT_TYPES.has(r.product_type));
-    const parents = todo.filter((r) => PARENT_TYPES.has(r.product_type));
-    // Children first, all of them, then the parents that link them, a few calls at once in each wave.
-    for (const calls of [callsOf(leaves, PRODUCTS_PER_IMPORT), callsOf(parents, PARENTS_PER_IMPORT)]) {
-        await eachFewAtOnce(
-            calls,
-            async (call) => {
-                await importCall(ctx, call, root);
-                done += new Set(call.map((r) => r.sku)).size;
-                ctx.progress?.(`${done.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} products`);
-            },
-            IMPORT_CALLS_AT_ONCE,
-        );
+    const onDone = (count: number) => {
+        done += count;
+        ctx.progress?.(`${done.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} products`);
+    };
+    // Children first, all of them, then the parents that link them.
+    await importProductRows(ctx, todo.filter((r) => !PARENT_TYPES.has(r.product_type)), { skipKind: PRODUCT_EXPORT_KIND, parents: false, onDone });
+    await importProductRows(ctx, todo.filter((r) => PARENT_TYPES.has(r.product_type)), { skipKind: PRODUCT_EXPORT_KIND, parents: true, onDone });
+}
+
+/**
+ * Import these rows, a few calls at once, a product's store-view rows in its own call; each product
+ * pending first, read back, recorded, a refused one named under `skipKind`. One wave: none of them may
+ * link another in the same rows.
+ *
+ * @param onDone - told how many products each call settled, for the progress line
+ */
+export async function importProductRows(
+    ctx: KindContext,
+    rows: readonly ExportRow[],
+    options: { skipKind: string; parents: boolean; onDone?: (count: number) => void },
+): Promise<void> {
+    if (rows.length === 0) return;
+    const root = await rootName(ctx);
+    await eachFewAtOnce(
+        callsOf(rows, options.parents ? PARENTS_PER_IMPORT : PRODUCTS_PER_IMPORT),
+        async (call) => {
+            await importCall(ctx, call, root, options.skipKind);
+            options.onDone?.(new Set(call.map((r) => r.sku)).size);
+        },
+        options.parents ? 1 : IMPORT_CALLS_AT_ONCE,
+    );
+    if (options.parents) await checkConfigurables(ctx, rows, root, options.skipKind);
+}
+
+/** A configurable's options as the store holds them; none means it cannot be bought by size or colour. */
+async function optionsOf(ctx: KindContext, sku: string): Promise<unknown[]> {
+    return ((await readOrNull<unknown[]>(ctx.get, `configurable-products/${segment(sku)}/options/all`)) ?? []) as unknown[];
+}
+
+/**
+ * Every configurable the import made, checked for its options: one made with its children linked but
+ * no options (seen live, 2026-11-06) is imported again alone, and if it still has none it is named as
+ * skipped rather than left half-made. Its children and the product itself stay on the record.
+ */
+async function checkConfigurables(ctx: KindContext, rows: readonly ExportRow[], root: string, skipKind: string): Promise<void> {
+    const made = rows.filter((r) => r.product_type === 'configurable' && !r.store_view_code && ctx.recorder.has(kindOf(r), r.sku));
+    const bare = (await runInBatches([...made], REQUESTS_AT_ONCE, async (r) => ((await optionsOf(ctx, r.sku)).length === 0 ? r : undefined))).filter(
+        (r): r is ExportRow => r !== undefined,
+    );
+    for (const row of bare) {
+        await ctx.send('POST', 'import/json', importBody('catalog_product', 'append', [forStore(row, ctx, root)], 'validation-stop-on-errors'));
+        if ((await optionsOf(ctx, row.sku)).length > 0) continue;
+        skipRow(ctx, { kind: skipKind, key: row.sku, reason: 'Commerce made it with its children but without its options, twice' });
     }
+}
+
+/**
+ * Bring products the pack made before up to the pack's rows, a hundred to an import call: an update a
+ * reinstall decided on (`repeatInstall.applyUpdates`). Each call stops on its first refused row, so the
+ * row is named; the call is sent again without it. Only a product's store-wide row is sent.
+ *
+ * @returns the SKUs brought up to the pack; a refused one is skipped and named
+ */
+export async function updateProductRows(ctx: KindContext, rows: readonly ExportRow[]): Promise<string[]> {
+    const root = await rootName(ctx);
+    const updated: string[] = [];
+    for (let start = 0; start < rows.length; start += PRODUCTS_PER_IMPORT) {
+        let call = rows.slice(start, start + PRODUCTS_PER_IMPORT);
+        while (call.length > 0) {
+            const answer = await ctx.send('POST', 'import/json', importBody('catalog_product', 'append', call.map((r) => forStore(r, ctx, root)), 'validation-stop-on-errors'));
+            const refusal = importRefusal(answer);
+            if (refusal === undefined) {
+                updated.push(...call.map((r) => r.sku));
+                break;
+            }
+            // "Row N": the call's Nth row, which stopped it; nothing in the call was imported.
+            const at = Number(/^Row (\d+)/u.exec(refusedLine(answer))?.[1] ?? 1) - 1;
+            const bad = call[Math.min(Math.max(at, 0), call.length - 1)];
+            skipRow(ctx, { kind: PRODUCT_EXPORT_KIND, key: bad.sku, reason: refusal });
+            call = call.filter((r) => r !== bad);
+        }
+    }
+    return updated;
+}
+
+/** The raw line of a stop-on-errors refusal, row number included. */
+function refusedLine(answer: unknown): string {
+    return (Array.isArray(answer) ? answer : []).find((line): line is string => typeof line === 'string' && !/^Entities Processed:/iu.test(line)) ?? '';
 }

@@ -190,6 +190,9 @@ A descriptor per source, abilities on each row, and the engine interface that al
    store stays on, with no checkbox; the Data Installer keeps its box. The "Datapack Sources" group
    shows the store's address and the Data Installer's address and checkbox, and the both-off screen
    is not needed.
+3. **The same pack in both stores, with different data** (owner, 2026-11-06): filed as
+   [DI-13](../../backlog/2026-11-06-same-pack-in-both-stores.md). `luma@eds-compatible` and
+   `venia@eds-compatible` are in both today with different contents, and the list shows only ours.
 
 ## Effort
 

@@ -20,7 +20,7 @@ import type { KindContext } from './kindContext';
 import { keyOf } from './packForm';
 import { productLookups } from './productLookups';
 import { STORE_CONFIG_KIND, rebasedSetting } from './storeConfigKind';
-import { READABLE_KINDS, onceInventory, packKindOf, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
+import { READABLE_KINDS, onceInventory, packKindIn, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
 
 /** One object, hashed from its copy now and against the row it matches, if any. */
 function hashed(kind: string, object: CreatedObject, copy: unknown, rows: Map<string, unknown>, key: string | undefined): CreatedObject {
@@ -41,7 +41,7 @@ function hashed(kind: string, object: CreatedObject, copy: unknown, rows: Map<st
 function rowsOnce(items: Record<string, unknown>): (kind: string) => Map<string, unknown> {
     const indexed = new Map<string, Map<string, unknown>>();
     return (kind) => {
-        if (!indexed.has(kind)) indexed.set(kind, rowsByKey(kind, items[packKindOf(kind)]));
+        if (!indexed.has(kind)) indexed.set(kind, rowsByKey(kind, items[packKindIn(kind, items)]));
         return indexed.get(kind) as Map<string, unknown>;
     };
 }
@@ -72,7 +72,7 @@ async function copiesByKind(ctx: KindContext, objects: readonly CreatedObject[])
  * @param items - the pack's rows, by kind, for the hash of the row each object was made from
  */
 export async function recordFingerprints(ctx: KindContext, items: Record<string, unknown>): Promise<void> {
-    const pending = ctx.recorder.created.filter((o) => o.fingerprint === undefined && packKindOf(o.kind) in items);
+    const pending = ctx.recorder.created.filter((o) => o.fingerprint === undefined && packKindIn(o.kind, items) in items);
     const copies = await copiesByKind(ctx, pending);
     const rowsOf = rowsOnce(items);
     const updates: ObjectUpdate[] = [];

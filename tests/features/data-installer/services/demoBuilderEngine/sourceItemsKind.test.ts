@@ -3,7 +3,7 @@
  * (DI-5). Rows are Bodea `main`'s own shape, read from the service on 2026-10-27.
  */
 
-import { PRODUCT_KIND } from '@/features/data-installer/services/demoBuilderEngine/productsKind';
+import { PRODUCT_KIND } from '@/features/data-installer/services/demoBuilderEngine/productKinds';
 import { installSourceItems, parseSourceItems } from '@/features/data-installer/services/demoBuilderEngine/sourceItemsKind';
 import { fakeContext } from './demoBuilderEngine.testUtils';
 

@@ -829,10 +829,20 @@ view, and root category first in every category path). Unlike the service, its c
 made first by the categories kind so they are on the record, a SKU the store already has is left
 alone, each product is read back by SKU (the import's count includes refused rows), and a row that
 did not land is sent alone, stopping on its error, for Commerce's reason. All children go before
-any parent, a hundred products to a call and parents twenty, three calls at once, a product's
-store-view rows in its own call (a configurable costs far more in a big call: 100 took 97 s, 19 in
-small calls 2 s). Luma installs in about 4.5 minutes this way (2026-11-06), against about 7.5 as
-product records. Removal takes the products back as any pack's.
+any parent, a hundred products to a call and parents twenty, a product's store-view rows in its own
+call. Simple products go three calls at once; parents one call at a time, because with three at once
+80 of Luma's 147 configurables were made with their children linked but no options (2026-11-06).
+After the parents, each configurable is checked for its options; one without is imported again alone,
+and named as skipped if it stays bare. Its products are fingerprinted as product records are, so a
+reinstall brings an unchanged product up to the pack in one import call and keeps one edited in the
+Admin. Removal takes the products back as any pack's.
+
+The `products` kind goes the same way where it can (`productImportRows.ts`): each record is checked as
+before, then converted to an import row if the import form carries it without loss (simple, virtual,
+and a configurable whose children's values can be named); the rest (gift cards, bundles, grouped and
+downloadable products, custom options, tier prices, values holding the import's separators) go by the
+bulk queue. The pack itself is unchanged, so it stays in the Data Installer's form. Luma as product
+records installs in about 6.5 minutes this way, against about 7.5 by the bulk queue alone.
 
 Customers are made through the Import API too (`customerImport.ts`, `customer_composite`): a pack's
 `customers`, the service's `customers_export` kind (its substitutions: website, store view, group by
@@ -1000,6 +1010,23 @@ go in Commerce's import form instead, the Data Installer's own `product_export` 
 (`exportImportForm.ts`): the export's rows as written, image columns and timestamps left out, option
 labels fixed the same way. Such a pack installs through the Import API about twice as fast, and the
 service installs it too; a reinstall leaves the products already there as they are.
+
+### Checking an install against its pack (owner, 2026-11-06)
+
+`verify_datapack_install` (a read) checks the project's store against a pack, for the products the
+pack made: the install record's, or every product the pack holds when Demo Builder's engine has no
+record of installing it (`installed: false`). Each product must be in the store; a configurable must
+have options, on the attributes the pack names, and the children it names; each select or
+multi-select value must be the option the pack names (by label, or the stored option's own id); and
+the price must match when the pack gives one. Either pack form is read (`products` records or
+`product_export` rows). It answers `verdict` (`matches` or `differs`), `checked`, `compared` (how many
+values, prices and configurables it actually compared, so a match that compared nothing says so), and
+five findings,
+each a count and at most 20 examples: `missing`, `configurablesWithoutOptions`,
+`configurablesDiffer`, `valuesDiffer`, `pricesDiffer` (`verifyInstall.ts`). It exists because two
+installs reported success with nothing skipped while about 500 Luma products had the wrong size and
+80 configurables had no options; both were found by hand. The store is opened without a recorder,
+so not even the install record is touched.
 
 ### Sharing a library pack (owner, 2026-10-30)
 

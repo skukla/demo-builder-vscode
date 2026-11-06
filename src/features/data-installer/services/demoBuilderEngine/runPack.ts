@@ -28,6 +28,7 @@ import { COUPON_KIND, installCoupons, parseCouponRows } from './couponsKind';
 import { installCustomerGroups, installCustomers, parseCustomerGroupRows, parseCustomerRows } from './customerKinds';
 import { CUSTOMERS_EXPORT_KIND, installCustomersExport, parseCustomersExport } from './customersExportKind';
 import {
+    type CreatedObject,
     type InstallRecord,
     type RecordFiles,
     forgetInstallRecord,
@@ -40,7 +41,8 @@ import { type RootPlacement, placeCategories, rootPlacement } from './packRoot';
 import { type PackRootStep, keptRootStep, settlePackRoot } from './packRootStep';
 import { settlePending } from './pendingFinders';
 import { PRODUCT_EXPORT_KIND, installProductExport, parseProductExport } from './productExportKind';
-import { GIFT_CARD_KIND, PRODUCT_KINDS, installProducts, parseProductRows } from './productsKind';
+import { GIFT_CARD_KIND, PRODUCT_KINDS } from './productKinds';
+import { installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
 import { takeBackAll } from './removalRuns';
 import { type KeptContainer, type RemovalAccess, decideRemovals } from './removers';
@@ -280,7 +282,7 @@ export function kindsOnRecord(record: Pick<InstallRecord, 'created' | 'pending'>
 export async function removePack(
     commerce: RemovalAccess,
     files: RecordFiles,
-    target: { projectPath: string; pack: DatapackId; log?: (line: string) => void },
+    target: { projectPath: string; pack: DatapackId; log?: (line: string) => void; progress?: (line: string) => void },
 ): Promise<RemovalResult> {
     const record = await readInstallRecord(files, target.projectPath, target.pack);
     if (!record) return { removed: 0, noRecord: true, kept: [] };
@@ -293,7 +295,13 @@ export async function removePack(
     const settings = settingObjects.length > 0 ? await putBackSettings(commerce, settingObjects, (o) => recorder.drop(o)) : undefined;
     const { take, kept } = await decideRemovals(commerce.get, removalOrder({ ...record, created: [...created] }).filter((o) => o.kind !== STORE_CONFIG_KIND));
     // In the record's order, with as few calls as Commerce allows (`removalRuns.ts`).
-    await takeBackAll({ ...commerce, log: target.log }, recorder, take);
+    let taken = 0;
+    // How far it has got, for the status (2026-11-06: a removal showed every kind "pending" to its end).
+    const said = (objects: readonly CreatedObject[]) => {
+        taken += objects.length;
+        target.progress?.(`took back ${taken.toLocaleString('en-US')} of ${take.length.toLocaleString('en-US')} objects`);
+    };
+    await takeBackAll({ ...commerce, log: target.log, progress: target.progress }, recorder, take, said);
     if (kept.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
     const keptRoot = await keptRootStep(commerce.get, kept, record.rootStep?.storeRootId);
     return { removed: take.length + settingObjects.length, noRecord: false, kept, ...(settings ? { settings } : {}), ...(keptRoot ? { keptRoot } : {}) };

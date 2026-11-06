@@ -17,7 +17,7 @@
 
 import { z } from 'zod';
 import type { KindContext } from './kindContext';
-import { PRODUCT_KINDS } from './productsKind';
+import { PRODUCT_KINDS } from './productKinds';
 
 /** Rows per call. */
 const BATCH = 100;

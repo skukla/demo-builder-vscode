@@ -19,6 +19,9 @@
  * made by since 2026-11-06) runs each customer through the fake's own `POST customers`, its answer's id
  * kept, and a later `customers/search` by that email also finds it, so a suite's fake store needs nothing
  * new. A stop-on-errors call whose customer the fake refuses answers "Row 1: <its words>", as Commerce does.
+ * A product import in append mode (the route every product a pack holds as a record goes by where it
+ * converts, since 2026-11-06) runs each row through the fake's own `POST products` the same way, its
+ * SKU, name, type, set and price carried, so a suite's fake store sees the product made.
  * Every import body is kept in `imports`, for a suite to assert what was sent.
  *
  * A search for a list of SKUs that the fake does not answer is answered from its single-product
@@ -94,6 +97,19 @@ type DeleteImport = { source?: { entity?: string; behavior?: string; items?: Arr
 
 type CustomerImport = { source: { entity: string; validation_strategy?: string; items: Array<Record<string, string>> } };
 
+type ProductImport = { source: { entity: string; behavior?: string; validation_strategy?: string; items: Array<Record<string, string>> } };
+
+/** A product import in append mode, or undefined for any other call. */
+function productImportOf(method: string, path: string, body: unknown): ProductImport['source'] | undefined {
+    const source = (body as ProductImport | undefined)?.source;
+    return method === 'POST' && path === 'import/json' && source?.entity === 'catalog_product' && source.behavior === 'append' ? source : undefined;
+}
+
+/** A product import row as the `POST products` body it stands for. */
+function productBodyOf(row: Record<string, string>): unknown {
+    return { product: { sku: row.sku, name: row.name, type_id: row.product_type, attribute_set_id: row.attribute_set_code, ...(row.price ? { price: Number(row.price) } : {}) } };
+}
+
 /** A customer import, or undefined for any other call. */
 function customerImportOf(method: string, path: string, body: unknown): CustomerImport['source'] | undefined {
     const source = (body as CustomerImport | undefined)?.source;
@@ -157,7 +173,23 @@ export function withBulkQueue(
     const bulks = new Map<string, Operation[]>();
     const gone = new Set<string>();
     const customersMade: Array<Record<string, unknown>> = [];
+    /** Products a product import made, by lowercased SKU, with the id the fake's create answered. */
+    const productsMade = new Map<string, { id: number; sku: string }>();
     const imports: unknown[] = [];
+    /** Each product row of the import through the fake's own create; a stop-on-errors refusal in Commerce's words. */
+    const runProductImport = async (source: ProductImport['source']): Promise<string[]> => {
+        for (const row of source.items.filter((r) => !r.store_view_code)) {
+            try {
+                const answer = (await send('POST', 'products', productBodyOf(row))) as { id?: number } | null;
+                productsMade.set(row.sku.toLowerCase(), { id: Number(answer?.id ?? productsMade.size + 1000), sku: row.sku });
+            } catch (error) {
+                const refused = error instanceof CommerceReadError && error.status !== undefined && error.status >= 400 && error.status < 500 && !CALL_REFUSALS.has(error.status);
+                if (!refused) throw error;
+                if (source.validation_strategy === 'validation-stop-on-errors') return [`Row 1: ${reasonOf(newCatalogSession(), error)}`];
+            }
+        }
+        return [`Entities Processed: ${source.items.length}`];
+    };
     /** Each customer of the import through the fake's own create; a stop-on-errors refusal in Commerce's words. */
     const runCustomerImport = async (source: CustomerImport['source']): Promise<string[]> => {
         const main = source.items.filter((row) => row.firstname !== undefined);
@@ -192,6 +224,17 @@ export function withBulkQueue(
             const items = [...(known?.items ?? []), ...made];
             return { items, total_count: items.length };
         }
+        const listed = SKU_LIST.exec(path);
+        if (listed && productsMade.size > 0) {
+            // The suite's own answer first; products an import made fill in the SKUs it lacks.
+            const known = (await get(path).catch(() => skuListFromSingles(outer, listed[1]))) as { items?: Array<{ sku?: string }> } | null;
+            const items: Array<{ sku?: string }> = [...(known?.items ?? [])];
+            for (const sku of decodeURIComponent(listed[1]).split(',')) {
+                const made = productsMade.get(sku.toLowerCase());
+                if (made && !gone.has(sku.toLowerCase()) && !items.some((i) => i.sku?.toLowerCase() === sku.toLowerCase())) items.push(made);
+            }
+            return { items, total_count: items.length };
+        }
         try {
             return await get(path);
         } catch (error) {
@@ -209,6 +252,8 @@ export function withBulkQueue(
             if (deletes) return runDeleteImport(send, deletes, gone);
             const customers = customerImportOf(method, path, body);
             if (customers) return runCustomerImport(customers);
+            const products = productImportOf(method, path, body);
+            if (products) return runProductImport(products);
             if (!route?.bulk) return send(method, path, body);
             const bodies = body as unknown[];
             const operations: Operation[] = [];
