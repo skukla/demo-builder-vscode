@@ -261,3 +261,31 @@ export function parseRows<T>(schema: z.ZodType<T>, records: unknown, what: strin
         );
     return parsed.data;
 }
+
+/**
+ * Creates sent at once where each stands alone (an attribute, an assignment, a category beside its
+ * siblings). One at a time, Luma's 600-odd took about two minutes of an eleven-minute install
+ * (2026-11-06); five is the number removal already sends at once.
+ */
+export const CREATES_AT_ONCE = 5;
+
+/** The items with the first of each key kept: sent at once, two rows for one object would both create it. */
+export function firstOfEach<T>(items: readonly T[], keyOf: (item: T) => string): T[] {
+    const seen = new Set<string>();
+    return items.filter((item) => !seen.has(keyOf(item)) && Boolean(seen.add(keyOf(item))));
+}
+
+/**
+ * Do `work` for each item, {@link CREATES_AT_ONCE} at a time. A group is let finish before a failure
+ * stops the rest, so no create is still on its way when the caller reports the install stopped.
+ *
+ * @throws the first failure, once its group has finished
+ */
+export async function eachFewAtOnce<T>(items: readonly T[], work: (item: T) => Promise<unknown>): Promise<void> {
+    for (let start = 0; start < items.length; start += CREATES_AT_ONCE) {
+        const group = items.slice(start, start + CREATES_AT_ONCE);
+        const results = await Promise.allSettled(group.map((item) => work(item)));
+        const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+        if (failed) throw failed.reason;
+    }
+}

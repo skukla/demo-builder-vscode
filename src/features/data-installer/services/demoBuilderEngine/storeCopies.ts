@@ -22,12 +22,20 @@ import type { CreatedObject } from './installRecord';
 import { eachCopy, type KindContext, segment } from './kindContext';
 import { attributePackForm, categoryPackForm, keyOf, productPackForm } from './packForm';
 import type { ProductLookups } from './productLookups';
+import { runInBatches } from '@/core/utils/promiseUtils';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import { type Inventory, readInventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
 
 /** SKUs per search: short enough for any address, long enough to be few calls. */
 const SKUS_PER_READ = 20;
+
+/**
+ * Pages of SKUs read at once. One after another, the read-back after Luma's 2,046 products took over
+ * three minutes of a twelve-minute install, and as long again checking for edits before removal
+ * (2026-11-06).
+ */
+const READS_AT_ONCE = 5;
 
 /** The pack data kind a recorded kind's rows live under. Options live in their attributes. */
 export function packKindOf(kind: string): string {
@@ -39,12 +47,11 @@ export function packKindOf(kind: string): string {
  * `products`, quantities from `inventory/source-items`.
  */
 export async function readBySku<T>(ctx: KindContext, route: string, skus: readonly string[]): Promise<T[]> {
-    const found: T[] = [];
     // A comma would split one SKU into two in an "in" search; such a SKU is read on its own.
     const plain = skus.filter((sku) => !sku.includes(','));
-    for (let start = 0; start < plain.length; start += SKUS_PER_READ) {
-        found.push(...(await readAllPages<T>(ctx.get, route, filterIn('sku', plain.slice(start, start + SKUS_PER_READ)))));
-    }
+    const groups = Array.from({ length: Math.ceil(plain.length / SKUS_PER_READ) }, (_, i) => plain.slice(i * SKUS_PER_READ, (i + 1) * SKUS_PER_READ));
+    const pages = await runInBatches(groups, READS_AT_ONCE, (group) => readAllPages<T>(ctx.get, route, filterIn('sku', group)));
+    const found: T[] = pages.flat();
     for (const sku of skus.filter((s) => s.includes(','))) {
         found.push(...(await readAllPages<T>(ctx.get, route, filterBy('sku', sku))));
     }

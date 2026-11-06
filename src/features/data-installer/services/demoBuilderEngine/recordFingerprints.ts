@@ -15,7 +15,7 @@
  */
 
 import { fingerprintRow } from './fingerprint';
-import type { CreatedObject } from './installRecord';
+import type { CreatedObject, ObjectUpdate } from './installRecord';
 import type { KindContext } from './kindContext';
 import { keyOf } from './packForm';
 import { productLookups } from './productLookups';
@@ -31,6 +31,18 @@ function hashed(kind: string, object: CreatedObject, copy: unknown, rows: Map<st
         ...(key !== undefined ? { key } : {}),
         fingerprint: fingerprintRow(copy),
         ...(row !== undefined ? { wrote: packedFingerprint(kind, row) } : { ...(object.wrote ? { wrote: object.wrote } : {}) }),
+    };
+}
+
+/**
+ * Each kind's rows by key, indexed the first time a kind is asked for. Indexed per object, this and
+ * a write per object were most of a two-minute pass after Luma's 2,046 products (2026-11-06).
+ */
+function rowsOnce(items: Record<string, unknown>): (kind: string) => Map<string, unknown> {
+    const indexed = new Map<string, Map<string, unknown>>();
+    return (kind) => {
+        if (!indexed.has(kind)) indexed.set(kind, rowsByKey(kind, items[packKindOf(kind)]));
+        return indexed.get(kind) as Map<string, unknown>;
     };
 }
 
@@ -62,13 +74,15 @@ async function copiesByKind(ctx: KindContext, objects: readonly CreatedObject[])
 export async function recordFingerprints(ctx: KindContext, items: Record<string, unknown>): Promise<void> {
     const pending = ctx.recorder.created.filter((o) => o.fingerprint === undefined && packKindOf(o.kind) in items);
     const copies = await copiesByKind(ctx, pending);
+    const rowsOf = rowsOnce(items);
+    const updates: ObjectUpdate[] = [];
     for (const object of pending) {
         const copy = copies.get(object.kind)?.get(object.id);
         if (copy === undefined) continue;
-        const rows = rowsByKey(object.kind, items[packKindOf(object.kind)]);
-        const next = hashed(object.kind, object, copy, rows, object.key ?? keyOf(object.kind, copy));
-        await ctx.recorder.update({ kind: next.kind, id: next.id, key: next.key, fingerprint: next.fingerprint, wrote: next.wrote });
+        const next = hashed(object.kind, object, copy, rowsOf(object.kind), object.key ?? keyOf(object.kind, copy));
+        updates.push({ kind: next.kind, id: next.id, key: next.key, fingerprint: next.fingerprint, wrote: next.wrote });
     }
+    if (updates.length > 0) await ctx.recorder.update(...updates);
 }
 
 /**
@@ -82,6 +96,7 @@ export async function recordFingerprints(ctx: KindContext, items: Record<string,
 export async function rebaseRecord(ctx: KindContext, created: readonly CreatedObject[], saved: Record<string, unknown>): Promise<CreatedObject[]> {
     const copies = await copiesByKind(ctx, created);
     const rebased: CreatedObject[] = [];
+    const rowsOf = rowsOnce(saved);
     for (const object of created) {
         if (object.kind === STORE_CONFIG_KIND) {
             rebased.push(rebasedSetting(object, saved[STORE_CONFIG_KIND]));
@@ -89,8 +104,7 @@ export async function rebaseRecord(ctx: KindContext, created: readonly CreatedOb
         }
         const copy = copies.get(object.kind)?.get(object.id);
         if (copy === undefined) continue;
-        const rows = rowsByKey(object.kind, saved[packKindOf(object.kind)]);
-        rebased.push(hashed(object.kind, object, copy, rows, keyOf(object.kind, copy)));
+        rebased.push(hashed(object.kind, object, copy, rowsOf(object.kind), keyOf(object.kind, copy)));
     }
     return rebased;
 }

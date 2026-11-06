@@ -6,8 +6,11 @@
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import {
     ATTRIBUTE_CODE,
+    CREATES_AT_ONCE,
     SOURCE_CODE,
     deleteIfPresent,
+    eachFewAtOnce,
+    firstOfEach,
     isAlreadyGone,
     readOrNull,
     segment,
@@ -97,5 +100,73 @@ describe('untrusted pack codes', () => {
     it('escapes a value into one path segment, so a slash cannot climb', () => {
         expect(segment('../../customers/5')).toBe('..%2F..%2Fcustomers%2F5');
         expect(segment(41)).toBe('41');
+    });
+});
+
+describe('eachFewAtOnce', () => {
+    /** Work that waits until released, counting how many are in flight at once. */
+    function heldWork() {
+        const started: number[] = [];
+        const release: Array<() => void> = [];
+        let inFlight = 0;
+        let most = 0;
+        const work = (n: number) => {
+            started.push(n);
+            inFlight += 1;
+            most = Math.max(most, inFlight);
+            return new Promise<void>((resolve, reject) => {
+                release[n] = () => {
+                    inFlight -= 1;
+                    if (n === 1) reject(new Error('refused 1'));
+                    else resolve();
+                };
+            });
+        };
+        return { started, release, work, most: () => most };
+    }
+
+    const ticks = async () => {
+        for (let i = 0; i < 5; i += 1) await Promise.resolve();
+    };
+
+    it(`sends ${CREATES_AT_ONCE} at a time, starting the next group once the last has finished`, async () => {
+        const h = heldWork();
+        const items = Array.from({ length: 7 }, (_, i) => i + 2);
+        const done = eachFewAtOnce(items, h.work);
+
+        await ticks();
+        expect(h.started).toEqual([2, 3, 4, 5, 6]);
+        for (const n of [2, 3, 4, 5, 6]) h.release[n]();
+        await ticks();
+        expect(h.started).toEqual([2, 3, 4, 5, 6, 7, 8]);
+        h.release[7]();
+        h.release[8]();
+        await done;
+        expect(h.most()).toBe(CREATES_AT_ONCE);
+    });
+
+    it('lets a failing group finish, then throws its failure and starts no more', async () => {
+        const h = heldWork();
+        const done = eachFewAtOnce([0, 1, 2, 3, 4, 5], h.work);
+        const settled = jest.fn();
+        void done.catch(settled);
+
+        await ticks();
+        h.release[1]();
+        await ticks();
+        // Still waiting on the rest of the group: none of it is on its way when the failure is told.
+        expect(settled).not.toHaveBeenCalled();
+        for (const n of [0, 2, 3, 4]) h.release[n]();
+
+        await expect(done).rejects.toThrow('refused 1');
+        expect(h.started).not.toContain(5);
+    });
+});
+
+describe('firstOfEach', () => {
+    it('keeps the first item of each key, in order', () => {
+        const rows = [{ k: 'a', n: 1 }, { k: 'b', n: 2 }, { k: 'a', n: 3 }];
+
+        expect(firstOfEach(rows, (r) => r.k)).toEqual([{ k: 'a', n: 1 }, { k: 'b', n: 2 }]);
     });
 });

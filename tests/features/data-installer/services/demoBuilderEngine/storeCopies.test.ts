@@ -11,7 +11,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { productLookups } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
-import { packedFingerprint, readCopies, rowsByKey } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
+import { packedFingerprint, readBySku, readCopies, rowsByKey } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
 import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
 import type { CommerceInventoryStock, CommerceProduct, CommerceStockSourceLink } from '@/types/commerceWire';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
@@ -109,5 +109,28 @@ describe('packedFingerprint', () => {
         expect(packedFingerprint('attribute_sets', { attributeSet: { attribute_set_name: 'Racks', sort_order: 1 } })).toBe(
             packedFingerprint('attribute_sets', { attributeSet: { attribute_set_name: 'Racks', sort_order: 9 } }),
         );
+    });
+});
+
+describe('readBySku', () => {
+    // Live, 2026-11-06: read one page after another, Luma's 2,046 products took over three minutes.
+    it('reads twenty SKUs a page, five pages at once, and keeps every row', async () => {
+        const ctx = await fakeContext();
+        let inFlight = 0;
+        let most = 0;
+        ctx.get = async (asked) => {
+            inFlight += 1;
+            most = Math.max(most, inFlight);
+            await new Promise((resolve) => setImmediate(resolve));
+            inFlight -= 1;
+            const skus = decodeURIComponent(/\[value\]=([^&]*)/u.exec(asked)?.[1] ?? '').split(',');
+            return { items: skus.map((sku) => ({ sku })), total_count: skus.length };
+        };
+        const skus = Array.from({ length: 130 }, (_, i) => `s${i}`);
+
+        const rows = await readBySku<{ sku: string }>(ctx, 'products', skus);
+
+        expect(most).toBe(5);
+        expect(rows.map((r) => r.sku).sort()).toEqual([...skus].sort());
     });
 });

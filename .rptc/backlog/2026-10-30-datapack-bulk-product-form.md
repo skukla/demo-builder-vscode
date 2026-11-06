@@ -103,3 +103,4 @@ prove one with a live install and removal.
 ## Shipped so far
 
 - 2026-11-05  feat(datapacks): bulk installs, waiting on jobs, big packs in parts, and packs from a product export (`95af3d5de`)
+- 2026-11-06  fix(datapacks): fast product removal, resumable installs, and the live-test fixes (`c59faba63`)

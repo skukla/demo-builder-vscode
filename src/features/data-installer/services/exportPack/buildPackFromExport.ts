@@ -21,6 +21,7 @@ import {
     onRoot,
     type PackCategories,
 } from './exportCategories';
+import { optionLabels } from './exportOptions';
 import { numberOf, productRow, TYPE_ORDER } from './exportProducts';
 import { firstRows, openRow, readExportTable } from './exportRows';
 import type { DatapackId } from '@/types/datapack';
@@ -109,6 +110,8 @@ export function buildPackFromExport(input: ExportPackInput): ExportPackResult {
     const leftOut = new Set<string>();
     const known = definedCodes(input.base);
     const multiselect = definedCodes(input.base, 'multiselect');
+    const yesNo = definedCodes(input.base, 'boolean');
+    const options = optionLabels(input.base);
     const prices = new Map(
         rows.map((row) => [row.fields.sku.trim(), numberOf(row.fields.price) ?? 0]),
     );
@@ -116,6 +119,8 @@ export function buildPackFromExport(input: ExportPackInput): ExportPackResult {
         productRow(row, {
             known,
             multiselect,
+            yesNo,
+            options,
             urlKeys,
             prices,
             leftOut: (code) => leftOut.add(code),

@@ -180,6 +180,23 @@ describe('what the record keeps about each object (step 05)', () => {
         expect(files.data.size).toBe(0);
     });
 
+    it('changes several objects in one write', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'categories', id: '41' });
+        await recorder.record({ kind: 'categories', id: '42' });
+        const write = jest.spyOn(files, 'write');
+
+        await recorder.update(
+            { kind: 'categories', id: '41', fingerprint: 'a' },
+            { kind: 'categories', id: '42', fingerprint: 'b' },
+            { kind: 'categories', id: '99', fingerprint: 'not ours' },
+        );
+
+        expect(write).toHaveBeenCalledTimes(1);
+        expect(recorder.created.map((o) => o.fingerprint)).toEqual(['a', 'b']);
+    });
+
     it('finds an object by the pack\'s name for it, so a category renamed in the Admin is still ours', async () => {
         const recorder = await openInstallRecord(memoryFiles(), PROJECT, PACK, NOW);
         await recorder.record({ kind: 'categories', id: '41' });
@@ -329,6 +346,30 @@ describe('nodeRecordFiles', () => {
 // Step 14 item 1: a create whose answer is lost is still the pack's. Its pending entry is written
 // before the create, so a re-run or a removal can look for it.
 describe('pending entries', () => {
+    // Creates are sent a few at once: a write that finished late must not leave an older record.
+    it('writes in order, so a slow earlier write never leaves the older record on disk', async () => {
+        const files = memoryFiles();
+        const write = files.write.bind(files);
+        let releaseFirst: () => void = () => undefined;
+        let calls = 0;
+        files.write = (p, content) => {
+            calls += 1;
+            if (calls > 1) return write(p, content);
+            return new Promise<void>((resolve) => {
+                releaseFirst = () => void write(p, content).then(resolve);
+            });
+        };
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+
+        const first = recorder.record({ kind: 'categories', id: '41' });
+        const second = recorder.record({ kind: 'categories', id: '42' });
+        while (calls === 0) await Promise.resolve();
+        releaseFirst();
+        await Promise.all([first, second]);
+
+        expect(stored(files)).toMatchObject({ created: [{ id: '41' }, { id: '42' }] });
+    });
+
     it('writes a pending entry to disk, then swaps it for the object once made', async () => {
         const files = memoryFiles();
         const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);

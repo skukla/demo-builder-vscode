@@ -970,7 +970,11 @@ sets, categories and other kinds, and replaces its products and stock. This is h
 were rebuilt on 2026-11-05. Without a base pack, categories hang from a root named `<displayName>
 Catalog`, and products keep Commerce's own fields. The answer says what was left out:
 `leftOutAttributes` and `unmatchedCategories` (each cut at 50 entries, with a count past that). SKUs
-are kept exactly as exported: the storefront takes any SKU (`pdpPath.ts`, ADR-024). The pack is
+are kept exactly as exported: the storefront takes any SKU (`pdpPath.ts`, ADR-024). Values are
+written the way the base pack's attributes take them: a multi-select's `|`-joined labels as a list,
+a yes/no attribute's Yes or No as 1 or 0, and a label written with an HTML mark ("LumaTech&trade;")
+as the option it names ("LumaTech", `exportOptions.ts`). Commerce refused all three as exported,
+skipping 49, 76 and 86 Luma products in live installs on 2026-11-06. The pack is
 checked with the install's own row checks and is not written if the install would refuse it.
 The CSV reader is our own (`csvTable.ts`), not an npm package (PL-94).
 

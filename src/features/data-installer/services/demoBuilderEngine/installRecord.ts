@@ -126,8 +126,8 @@ export interface InstallRecorder {
     setRootStep(step: PackRootStep): Promise<void>;
     has(kind: string, id: string): boolean;
     record(object: CreatedObject): Promise<void>;
-    /** Change what is kept about an object already recorded; nothing for one that is not. */
-    update(update: ObjectUpdate): Promise<void>;
+    /** Change what is kept about objects already recorded, in one write; nothing for one that is not. */
+    update(...updates: ObjectUpdate[]): Promise<void>;
     /** The object of a kind the pack names `key`; an object recorded with no key answers by its id. */
     byKey(kind: string, key: string): CreatedObject | undefined;
     /** Take objects off the record in one write, in place (a caller may hold `created`): one, or a bulk removal's batch. */
@@ -280,11 +280,13 @@ export async function openInstallRecord(
         created: [],
     };
     const pending: PendingObject[] = [...(record.pending ?? [])];
-    // Written only while something is pending, so a record with none reads as one written before.
-    const save = () => {
+    // Written only while something is pending, so a record with none reads as one written before. Writes
+    // go in order, each with the state as it stands then: creates sent together never leave an older record.
+    let writing: Promise<unknown> = Promise.resolve();
+    const save = () => (writing = writing.catch(() => undefined).then(() => {
         const { pending: _was, ...rest } = record;
         return files.write(filePath, `${JSON.stringify(pending.length > 0 ? { ...rest, pending } : rest, null, 2)}\n`);
-    };
+    }));
     const indexOf = (kind: string, id: string) =>
         record.created.findIndex((o) => o.kind === kind && o.id === id);
     const samePending = (a: PendingObject) => (b: PendingObject) => a.kind === b.kind && a.key === b.key;
@@ -311,11 +313,10 @@ export async function openInstallRecord(
             record.created.push(object);
             await save();
         },
-        async update(update) {
-            const index = indexOf(update.kind, update.id);
-            if (index < 0) return;
-            record.created[index] = { ...record.created[index], ...update };
-            await save();
+        async update(...updates) {
+            const found = updates.map((u) => [u, indexOf(u.kind, u.id)] as const).filter(([, i]) => i >= 0);
+            for (const [u, i] of found) record.created[i] = { ...record.created[i], ...u };
+            if (found.length > 0) await save();
         },
         byKey: (kind, key) => record.created.find((o) => o.kind === kind && (o.key ?? o.id) === key),
         async drop(...gone) {

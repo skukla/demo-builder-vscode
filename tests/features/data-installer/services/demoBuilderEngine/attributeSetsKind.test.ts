@@ -124,6 +124,23 @@ describe('installAssignments', () => {
         expect(ctx.recorder.created).toEqual([{ kind: ASSIGNMENT_KIND, id: '4/bodea_fabric', key: '4/bodea_fabric' }]);
     });
 
+    it('reads each set once for many assignments sent together, and adds a repeated row once', async () => {
+        const reads: string[] = [];
+        const counted = (answer: unknown) => (path: string) => () => (reads.push(path), answer);
+        const setPath = 'products/attribute-sets/4/attributes';
+        const ctx = await fakeContext({
+            [SETS_PAGE]: STORE_SETS,
+            [setPath]: counted([{ attribute_code: 'sku' }])(setPath),
+            [groupsOf(4)]: counted({ items: [{ attribute_group_id: 7, attribute_group_name: 'General' }] })(groupsOf(4)),
+        });
+        const codes = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a1'];
+
+        await installAssignments(ctx, parseAssignmentRows(codes.map((attributeCode) => ({ ...ROW, attributeCode }))));
+
+        expect(reads).toEqual([setPath, groupsOf(4)]);
+        expect(ctx.sent.map((c) => (c.body as { attributeCode: string }).attributeCode).sort()).toEqual(['a1', 'a2', 'a3', 'a4', 'a5', 'a6']);
+    });
+
     it('puts an attribute in the group the set kind made', async () => {
         const ctx = await fakeContext({
             [SETS_PAGE]: STORE_SETS,

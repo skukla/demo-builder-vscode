@@ -117,6 +117,37 @@ describe('installCategories', () => {
         expect(ctx.session.rootCategory).toEqual({ id: 40, name: 'Bodea' });
     });
 
+    it("sends a level's categories together, and a child only once its whole level is made", async () => {
+        const row = (name: string, path: string) => ({ category: { name, path } });
+        const pack = { root_category: { name: 'Bodea' }, categories: [row('Tools', 'Bodea/Gear'), row('Gear', 'Bodea'), row('Parts', 'Bodea'), row('Gear', 'Bodea')] };
+        const ctx = await fakeContext(
+            {
+                [childSearch(1, 'Bodea')]: NONE,
+                [childSearch(40, 'Gear')]: NONE,
+                [childSearch(40, 'Parts')]: NONE,
+                [childSearch(41, 'Tools')]: NONE,
+            },
+            numbered(),
+        );
+        const send = ctx.send;
+        const events: string[] = [];
+        ctx.send = async (method, path, body, route) => {
+            const name = (body as { category: { name: string } }).category.name;
+            events.push(`send ${name}`);
+            // Answered only once everything else waiting has run, as a real round trip is.
+            await new Promise((resolve) => setImmediate(resolve));
+            const answer = await send(method, path, body, route);
+            events.push(`made ${name}`);
+            return answer;
+        };
+
+        await installCategories(ctx, parseCategoryPack(pack));
+
+        // The second "Gear" row is the first one again: made once, as when one row found the other.
+        expect(events).toEqual(['send Bodea', 'made Bodea', 'send Gear', 'send Parts', 'made Gear', 'made Parts', 'send Tools', 'made Tools']);
+        expect(ctx.recorder.created.map((o) => o.key)).toEqual(['(root)', 'Gear', 'Parts', 'Gear/Tools']);
+    });
+
     it('uses categories the store already has under the same parent, and records nothing for them', async () => {
         const ctx = await fakeContext(
             {

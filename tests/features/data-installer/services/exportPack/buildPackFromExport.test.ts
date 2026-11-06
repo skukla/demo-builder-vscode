@@ -29,8 +29,9 @@ const BASE: DatapackFile = {
         {
             dataType: 'product_attributes',
             records: [
-                ...['color', 'size', 'eco_collection'].map((code) => ({ attribute: { attribute_code: code, frontend_input: 'select' } })),
+                ...['color', 'size'].map((code) => ({ attribute: { attribute_code: code, frontend_input: 'select' } })),
                 { attribute: { attribute_code: 'climate', frontend_input: 'multiselect' } },
+                ...['eco_collection', 'new'].map((code) => ({ attribute: { attribute_code: code, frontend_input: 'boolean' } })),
             ],
         },
         { dataType: 'cart_rules', records: [{ rule: { name: 'Spend $50' } }] },
@@ -85,6 +86,14 @@ describe('buildPackFromExport', () => {
         const climate = product(pack, 'MH01').custom_attributes.find((a: any) => a.attribute_code === 'climate');
 
         expect(climate.value).toEqual(['All-Weather', 'Cool', 'Indoor', 'Spring', 'Windy']);
+    });
+
+    // Live, 2026-11-06: Commerce refused "Yes" where it takes 1, and 163 Luma products were skipped.
+    it('holds a yes/no attribute as 1 or 0, not the export\'s Yes or No', () => {
+        const { pack } = buildPackFromExport({ exportText: CSV, exportName: 'products.csv', id: ID, displayName: 'Luma', base: BASE });
+        const value = (code: string) => product(pack, 'MH01').custom_attributes.find((a: any) => a.attribute_code === code)?.value;
+
+        expect([value('eco_collection'), value('new')]).toEqual(['1', '0']);
     });
 
     it('refuses a file that holds no products', () => {

@@ -18,7 +18,7 @@
  */
 
 import { z } from 'zod';
-import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, MissingNameError, ownedId, segment } from './kindContext';
+import { ATTRIBUTE_CODE, deleteIfPresent, eachFewAtOnce, firstOfEach, type KindContext, MissingNameError, ownedId, segment } from './kindContext';
 import { createOne } from './pendingCreates';
 import { needsUnskipped, tryRow } from './refusedRows';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
@@ -140,11 +140,23 @@ export async function installAttributeSets(ctx: KindContext, rows: readonly Attr
 export async function installAssignments(ctx: KindContext, rows: readonly AssignmentRow[]): Promise<void> {
     await loadStoreSets(ctx);
     const inSet = new Map<number, Set<string>>();
-    for (const row of rows) {
-        const key = `${row.attributeSetId}/${row.attributeCode}`;
-        if (ownedId(ctx.session, ASSIGNMENT_KIND, key) === null) continue;
-        await tryRow(ctx, { kind: ASSIGNMENT_KIND, key }, () => assign(ctx, row, inSet));
-    }
+    const keyOf = (row: AssignmentRow) => `${row.attributeSetId}/${row.attributeCode}`;
+    const wanted = firstOfEach(rows, keyOf).filter((row) => ownedId(ctx.session, ASSIGNMENT_KIND, keyOf(row)) !== null);
+    // Each set's members and group are read first, once, so the assignments sent at once share them.
+    // A read that fails here is tried again by each row, which then reports it as its own.
+    for (const name of new Set(wanted.map((row) => row.attributeSetId))) await readSet(ctx, name, inSet).catch(() => undefined);
+    await eachFewAtOnce(wanted, (row) =>
+        tryRow(ctx, { kind: ASSIGNMENT_KIND, key: keyOf(row) }, () => assign(ctx, row, inSet)),
+    );
+}
+
+/** What a set already holds, and its group, read once; nothing for a set the store lacks. */
+async function readSet(ctx: KindContext, name: string, inSet: Map<number, Set<string>>): Promise<void> {
+    const setId = ctx.session.setIds.get(name);
+    if (setId === undefined || inSet.has(setId)) return;
+    const attributes = ((await ctx.get(`products/attribute-sets/${segment(setId)}/attributes`)) ?? []) as CommerceSetAttribute[];
+    inSet.set(setId, new Set(attributes.map((a) => a.attribute_code ?? '')));
+    await groupInSet(ctx, name, setId);
 }
 
 /** Put one attribute in its set unless it is there already, and record it. */
@@ -152,10 +164,7 @@ async function assign(ctx: KindContext, row: AssignmentRow, inSet: Map<number, S
     needsUnskipped(ctx.session, ATTRIBUTE_KIND_NAME, row.attributeCode);
     const setId = ctx.session.setIds.get(row.attributeSetId);
     if (setId === undefined) throw new MissingNameError(ATTRIBUTE_SET_KIND, row.attributeSetId, `The store has no attribute set named ${row.attributeSetId}.`);
-    if (!inSet.has(setId)) {
-        const attributes = ((await ctx.get(`products/attribute-sets/${segment(setId)}/attributes`)) ?? []) as CommerceSetAttribute[];
-        inSet.set(setId, new Set(attributes.map((a) => a.attribute_code ?? '')));
-    }
+    await readSet(ctx, row.attributeSetId, inSet);
     if (inSet.get(setId)?.has(row.attributeCode)) return;
     const groupId = await groupInSet(ctx, row.attributeSetId, setId);
     if (groupId === undefined) throw new Error(`The attribute set ${row.attributeSetId} has no group to put ${row.attributeCode} in.`);

@@ -66,4 +66,17 @@ describe('recordFingerprints', () => {
 
         expect(ctx.recorder.created[0].fingerprint).toEqual(expect.any(String));
     });
+
+    // Live, 2026-11-06: a write per object was much of a two-minute pass after Luma's 2,046 products.
+    it('writes the record once for every object it hashes', async () => {
+        const ctx = await fakeContext({ ...stored, 'categories/42': { ...RACK, id: 42, name: 'Shelves' } });
+        await ctx.recorder.record({ kind: 'categories', id: '41' });
+        await ctx.recorder.record({ kind: 'categories', id: '42' });
+        const update = jest.spyOn(ctx.recorder, 'update');
+
+        await recordFingerprints(ctx, items);
+
+        expect(update).toHaveBeenCalledTimes(1);
+        expect(ctx.recorder.created.every((o) => o.fingerprint !== undefined)).toBe(true);
+    });
 });

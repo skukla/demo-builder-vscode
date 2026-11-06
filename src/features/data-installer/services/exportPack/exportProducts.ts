@@ -15,6 +15,7 @@
  */
 
 import type { ProductRow } from '../demoBuilderEngine/productsKind';
+import { asOption, type OptionLabels } from './exportOptions';
 import { type ExportRow, pairs, splitList } from './exportRows';
 
 const VISIBILITY: Record<string, number> = {
@@ -87,6 +88,13 @@ export interface ProductContext {
      * "Yoga|Gym" named no option and 49 Luma products were skipped (live, 2026-11-06).
      */
     multiselect: ReadonlySet<string>;
+    /**
+     * The pack's yes/no attributes. An export writes "Yes" or "No"; Commerce takes 1 or 0 and refuses
+     * the product otherwise, which skipped 163 Luma products (live, 2026-11-06).
+     */
+    yesNo: ReadonlySet<string>;
+    /** The option labels of the pack's select and multi-select attributes (`exportOptions.ts`). */
+    options: OptionLabels;
     /** A category's full path → its url key, the key a product links it by. */
     urlKeys: ReadonlyMap<string, string>;
     /** Each SKU's price, for a bundle's parts. */
@@ -131,9 +139,18 @@ function ownFields(f: Record<string, string>, categories: string[]): Attribute[]
         .map(([code, value]) => ({ attribute_code: code, value }));
 }
 
-/** An extra's value as the pack holds it: a multi-select's labels as a list, a yes/no setting as Commerce's code. */
+/** An export's yes/no as Commerce stores it. */
+const YES_NO: Record<string, string> = { Yes: '1', No: '0' };
+
+/**
+ * An extra's value as the pack holds it: a multi-select's labels as a list, a yes/no attribute as 1
+ * or 0, a yes/no setting as Commerce's code.
+ */
 function extraValue(code: string, value: string, ctx: ProductContext): unknown {
-    if (ctx.multiselect.has(code)) return value.split('|').map((label) => label.trim()).filter(Boolean);
+    if (ctx.multiselect.has(code))
+        return value.split('|').map((label) => label.trim()).filter(Boolean).map((label) => asOption(ctx.options, code, label));
+    if (ctx.yesNo.has(code)) return YES_NO[value] ?? value;
+    if (ctx.options.has(code)) return asOption(ctx.options, code, value);
     return USE_CONFIG.has(code) ? (YES_NO_CONFIG[value] ?? value) : value;
 }
 

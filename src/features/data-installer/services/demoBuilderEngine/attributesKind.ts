@@ -17,7 +17,7 @@
 
 import { z } from 'zod';
 import { sameText } from './b2bReads';
-import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, ownedId, readOrNull, segment } from './kindContext';
+import { ATTRIBUTE_CODE, deleteIfPresent, eachFewAtOnce, firstOfEach, type KindContext, ownedId, readOrNull, segment } from './kindContext';
 import { createOne } from './pendingCreates';
 import { tryRow } from './refusedRows';
 import type { CommerceSend } from '@/types/commerceWire';
@@ -69,18 +69,21 @@ export function parseAttributeRows(records: unknown): AttributeRow[] {
 
 /** Create what the store lacks, record it, and leave what it has alone. */
 export async function installAttributes(ctx: KindContext, rows: readonly AttributeRow[]): Promise<void> {
-    for (const row of rows) {
-        const code = row.attribute.attribute_code;
-        // One this engine made and the SC deleted since stays deleted (step 05).
-        if (ownedId(ctx.session, ATTRIBUTE_KIND, code) === null) continue;
-        const existing = await readOrNull<object>(ctx.get, `products/attributes/${segment(code)}`);
-        if (existing && !ctx.recorder.has(ATTRIBUTE_KIND, code)) {
-            await addMissingOptions(ctx, code, row.attribute.options ?? [], row.attribute.frontend_input);
-            continue;
-        }
-        // Step 14 item 3: an attribute Commerce refuses is skipped, and the rows that need it with it.
-        if (!existing) await tryRow(ctx, { kind: ATTRIBUTE_KIND, key: code }, () => createAttribute(ctx, row));
+    // Attributes stand alone, so a few go at once; one attribute's options still go one by one.
+    await eachFewAtOnce(firstOfEach(rows, (row) => row.attribute.attribute_code), (row) => installAttribute(ctx, row));
+}
+
+async function installAttribute(ctx: KindContext, row: AttributeRow): Promise<void> {
+    const code = row.attribute.attribute_code;
+    // One this engine made and the SC deleted since stays deleted (step 05).
+    if (ownedId(ctx.session, ATTRIBUTE_KIND, code) === null) return;
+    const existing = await readOrNull<object>(ctx.get, `products/attributes/${segment(code)}`);
+    if (existing && !ctx.recorder.has(ATTRIBUTE_KIND, code)) {
+        await addMissingOptions(ctx, code, row.attribute.options ?? [], row.attribute.frontend_input);
+        return;
     }
+    // Step 14 item 3: an attribute Commerce refuses is skipped, and the rows that need it with it.
+    if (!existing) await tryRow(ctx, { kind: ATTRIBUTE_KIND, key: code }, () => createAttribute(ctx, row));
 }
 
 /** Whether a row is a swatch, made in two steps. */
