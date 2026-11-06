@@ -106,7 +106,7 @@ const CASES: Record<string, Case> = {
     'a stock source link': {
         reads: INVENTORY,
         run: (ctx) => installStockSourceLinks(ctx, parseStockSourceLinks({ stockSourceLinks: [{ stockSourceLink: { stock_id: 'Racks Stock', source_code: 'default' } }] })),
-        pending: { kind: 'stock_source_links', key: '3/default', id: '3/default' },
+        pending: { kind: 'stock_source_links', key: 'Racks Stock/default', id: '3/default' },
     },
     'a product': {
         reads: {},

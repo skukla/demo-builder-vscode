@@ -367,6 +367,38 @@ describe('an attribute this engine put in a set, installed again', () => {
     });
 });
 
+// The same mismatch, found by the audit after it (2026-11-06): a link was recorded by the stock's
+// id ("7/east") and the pack names it by the stock's name ("Bodea Stock/east").
+describe('a source this engine linked to a stock, installed again', () => {
+    const ROW = { stockSourceLink: { stock_id: 'Bodea Stock', source_code: 'east', priority: 1 } };
+    const INVENTORY = {
+        'inventory/stocks?searchCriteria[pageSize]=200': { items: [{ stock_id: 7, name: 'Bodea Stock' }] },
+        'inventory/sources?searchCriteria[pageSize]=200': { items: [{ source_code: 'east', enabled: true }] },
+        'inventory/stock-source-links?searchCriteria[pageSize]=200': { items: [{ stock_id: 7, source_code: 'east', priority: 1 }] },
+    };
+
+    async function linked(key: string) {
+        const ctx = await fakeContext(INVENTORY);
+        await ctx.recorder.record({
+            kind: 'stock_source_links',
+            id: '7/east',
+            key,
+            fingerprint: fingerprintRow(ROW),
+            wrote: packedFingerprint('stock_source_links', ROW),
+        });
+        return ctx;
+    }
+
+    it.each(['Bodea Stock/east', '7/east'])('stays linked while the pack still has it (recorded as %s)', async (key) => {
+        const ctx = await linked(key);
+
+        await installPack(ctx, { stock_source_links: { stockSourceLinks: [ROW] } });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.has('stock_source_links', '7/east')).toBe(true);
+    });
+});
+
 describe('tookOutLine', () => {
     it('counts what was taken out by kind, and says nothing when nothing was', () => {
         expect(tookOutLine([])).toBeUndefined();

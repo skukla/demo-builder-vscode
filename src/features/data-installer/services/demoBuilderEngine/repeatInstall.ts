@@ -26,7 +26,6 @@
  */
 
 import { dataTypeLabel } from '../../ui/dataTypeLabel';
-import { ASSIGNMENT_KIND } from './attributeSetsKind';
 import { addMissingOptions, parseAttributeRows } from './attributesKind';
 import { updateCartRule } from './cartRulesKind';
 import { updateCompany } from './companiesKind';
@@ -80,19 +79,22 @@ function wantedOf(kind: string, object: CreatedObject, row: unknown, current: st
 }
 
 /**
- * An attribute put in a set was recorded by the set's id ("155/size") until 2026-11-06, and the
- * pack names it by the set's name ("Top/size"); the store's copy carries the name. Every other
- * record is keyed as the pack names it.
+ * The record's object under the pack's name for it. Two kinds were recorded by a store id until
+ * 2026-11-06, an attribute in a set ("155/size", where the pack says "Top/size") and a stock's
+ * source link ("7/east", where it says "Bodea Stock/east"), so a reinstall found no row and took
+ * every one out. Any record whose name the pack does not use is matched by the name the store's
+ * copy gives it, since taking out is the one decision that cannot be undone.
  */
-function packKeyOf(kind: string, object: CreatedObject, copy: unknown): CreatedObject {
-    if (kind !== ASSIGNMENT_KIND || copy === undefined) return object;
-    return { ...object, key: keyOf(kind, copy) ?? object.key };
+function packKeyOf(kind: string, object: CreatedObject, copy: unknown, rows: ReadonlyMap<string, unknown>): CreatedObject {
+    if (object.key === undefined || rows.has(object.key) || copy === undefined) return object;
+    const named = keyOf(kind, copy);
+    return named !== undefined && rows.has(named) ? { ...object, key: named } : object;
 }
 
 async function planKind(ctx: KindContext, kind: string, recorded: CreatedObject[], records: unknown): Promise<Omit<KindPlan, 'packKind'>> {
     const copies = await readCopies(ctx, productLookups(ctx), kind, recorded);
     const rows = rowsByKey(kind, records);
-    const objects = recorded.map((object) => (object.key === undefined ? object : packKeyOf(kind, object, copies.get(object.id))));
+    const objects = recorded.map((object) => packKeyOf(kind, object, copies.get(object.id), rows));
     const planned = objects.map((object): PlannedObject => {
         const row = object.key === undefined ? undefined : rows.get(object.key);
         if (object.key === undefined || object.fingerprint === undefined) return { object, outcome: 'leave-not-ours', row };

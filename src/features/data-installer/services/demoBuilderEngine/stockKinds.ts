@@ -126,7 +126,8 @@ export async function installStockSourceLinks(ctx: KindContext, pack: LinksPack)
             if (stockId === undefined) throw new MissingNameError(STOCK_KIND, link.stock_id, `The store has no stock named ${link.stock_id}.`);
             if (links.some((l) => l.stock_id === stockId && l.source_code === link.source_code)) return;
             const id = `${stockId}/${link.source_code}`;
-            await createOne(ctx, { kind: LINK_KIND, key: id, id }, async () => {
+            // Keyed by the pack's name for it, which a reinstall looks it up by; the id is what removal sends.
+            await createOne(ctx, { kind: LINK_KIND, key, id }, async () => {
                 await ctx.send('POST', 'inventory/stock-source-links', {
                     links: [{ stock_id: stockId, source_code: link.source_code, priority: link.priority ?? 1 }],
                 });

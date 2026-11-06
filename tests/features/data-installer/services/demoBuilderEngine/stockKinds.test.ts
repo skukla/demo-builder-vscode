@@ -158,7 +158,8 @@ describe('installStockSourceLinks', () => {
                 body: { links: [{ stock_id: 7, source_code: 'carvelo_broadway', priority: 3 }] },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: LINK_KIND, id: '7/carvelo_broadway', key: '7/carvelo_broadway' }]);
+        // Keyed by the pack's name for it (the stock's name), as a reinstall looks it up; the id is what removal sends.
+        expect(ctx.recorder.created).toEqual([{ kind: LINK_KIND, id: '7/carvelo_broadway', key: 'Carvelo Inventory/carvelo_broadway' }]);
     });
 
     // Step 14 item 3: skipped and named, and the rest of the pack goes on.
