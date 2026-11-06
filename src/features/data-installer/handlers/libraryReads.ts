@@ -12,14 +12,12 @@ import type { DatapackEngineAccess } from '../services/buildDatapackEngine';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { HandlerContext } from '@/types/handlers';
 
-/** The sentence an engine build answers when a library pack meets the service engine. */
-export const SERVICE_INSTALLS_ONLY_ITS_OWN =
-    'The Data Installer service installs only packs in its own catalog. Copy this one to the Data Installer first, ' +
-    'or set demoBuilder.dataInstaller.engine to demo-builder.';
-
-/** The sentence a removal answers when the service installed the pack and cannot be asked to remove it. */
+/**
+ * The sentence a removal answers when the Data Installer service installed the pack: Demo Builder
+ * has no record of what it added, and never removes by name (step s4, DI-12).
+ */
 export const SERVICE_REMOVAL_UNAVAILABLE =
-    "The Data Installer installed this datapack, and it isn't available. Use Clear Demo Data to remove what it added.";
+    'The Data Installer installed this datapack, so Demo Builder has no record of what it added. Use Clear Demo Data to remove it.';
 
 /**
  * Open the library's reads for this context.

@@ -1,489 +1,77 @@
 /**
- * The export handlers — Stage 3's extension-side spine.
+ * The export handlers: capture a datapack from the project's Commerce store.
  *
- * Two message types, matching the service's documented two-step flow:
- * `list-datapack-export-items` (what is here to capture) and
- * `start-datapack-export` (capture it).
- *
- * The guards are the point. An export WRITES a datapack into a catalog that
- * other teams share — 23 curated entries live in it — so it refuses before it
- * reaches the service when the target is not fully named. And it resolves the
- * REST base URL the list call needs from the project's own ACCS endpoint, which
- * is the one place that URL exists.
- *
- * Strict TDD: written BEFORE the handlers exist.
+ * All three are Demo Builder's own (datapack-engine step 14): the list and the count read the
+ * project's store (`listPickableItems`, `countPickableItems`), and the export saves what is picked
+ * into the datapack library (`saveFromStore`). The Data Installer service's own export, into its
+ * shared catalog, was deleted on 2026-11-06 with its engine (DI-12); what those three do with a
+ * payload is `storeChangesHandlers-picks.test.ts`'s. This suite pins only the routing, and that an
+ * ACO pack is refused before anything is read, while ACO packs are held back.
  */
 
-import * as vscode from 'vscode';
-import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
-import { DataInstallerExportClient } from '@/features/data-installer/services/dataInstallerExportClient';
-import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
-import type { Project } from '@/types/base';
-import { ErrorCode } from '@/types/errorCodes';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { ACO_HELD_BACK, exportHandlers } from '@/features/data-installer/handlers/exportHandlers';
 import {
-    createStatefulGlobalState,
-    createMockExtensionContext,
-} from '../../../helpers/extensionContextFake';
-import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+    countPickableItems,
+    listPickableItems,
+    saveFromStore,
+} from '@/features/data-installer/handlers/storeChangesHandlers';
+import { ErrorCode } from '@/types/errorCodes';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
-jest.mock('@/features/data-installer/services/dataInstallerExportClient');
-// Export is the Data Installer service's; this suite is about that path, so the service
-// engine is chosen. The one test for Demo Builder's engine says so itself.
-jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
-    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
-    selectedDatapackEngine: jest.fn(() => 'service'),
-}));
-jest.mock('@/features/data-installer/services/importJobRunner', () => ({
-    watchImportJob: jest.fn(),
-    IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
+jest.mock('@/features/data-installer/handlers/storeChangesHandlers', () => ({
+    listPickableItems: jest.fn(async () => ({ success: true, data: 'listed' })),
+    countPickableItems: jest.fn(async () => ({ success: true, data: 'counted' })),
+    saveFromStore: jest.fn(async () => ({ success: true, data: 'saved' })),
 }));
 
-const MockedClient = DataInstallerExportClient as jest.MockedClass<typeof DataInstallerExportClient>;
+const context = createMockHandlerContext();
 
-const ACCS_ENDPOINT = 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql';
+beforeEach(() => jest.clearAllMocks());
 
-function accsProject(): Partial<Project> {
-    return {
-        name: 'demo-accs',
-        componentSelections: { backend: 'adobe-commerce-accs' },
-        componentConfigs: { 'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: ACCS_ENDPOINT } },
-    };
-}
+describe('the export handlers, routed to the store', () => {
+    it("lists one kind of the project's store, with the payload as sent", async () => {
+        const payload = { dataType: 'products' };
 
-/** A PaaS project: no ACCS endpoint, so the REST root is the Commerce URL. */
-function paasProject(url?: string): Partial<Project> {
-    return {
-        name: 'demo-paas',
-        componentSelections: { backend: 'adobe-commerce-paas' },
-        componentConfigs: {
-            'adobe-commerce-paas': url === undefined ? {} : { ADOBE_COMMERCE_URL: url },
-        },
-    };
-}
-
-function makeImportHarness(project: unknown = accsProject()) {
-    return createMockHandlerContext({
-        logger: createMockLogger(),
-        debugLogger: createMockLogger(),
-        authManager: createMockAuthenticationService({
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getTokenManager: jest.fn().mockReturnValue({
-                inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }),
-            }),
-        }),
-        panel: createMockWebviewPanel(),
-        context: createMockExtensionContext({
-            globalState: createStatefulGlobalState().globalState,
-            secrets: createMockSecretStorage().secrets,
-        }),
-        stateManager: createMockStateManager({
-            getCurrentProject: jest.fn().mockResolvedValue(project),
-        }),
-        sendMessage: jest.fn(),
-    });
-}
-
-const PAYLOAD = {
-    datapackName: 'captured-pack',
-    version: 'v1',
-    commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi',
-    dataTypes: ['attribute_sets'],
-};
-
-let listExportItems: jest.Mock;
-let startExport: jest.Mock;
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    // The access guard runs first and reads settings; without a base URL every
-    // handler refuses before it reaches the client.
-    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-        get: jest.fn((key: string) =>
-            key === 'apiBaseUrl'
-                ? 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api'
-                : true
-        ),
-    });
-    listExportItems = jest.fn().mockResolvedValue({ items: [], totalCount: 0, excludedCount: 0 });
-    startExport = jest.fn().mockResolvedValue({ success: true, perType: [] });
-    MockedClient.mockImplementation(
-        () => ({ listExportItems, startExport }) as unknown as DataInstallerExportClient
-    );
-});
-
-describe('list-datapack-export-items', () => {
-    it('derives the REST base URL from the project ACCS endpoint', async () => {
-        await importHandlers['list-datapack-export-items'](makeImportHarness(), {
-            ...PAYLOAD,
-            dataType: 'attribute_sets',
-        });
-
-        // The graphql suffix is stripped: get-export-items wants the REST root.
-        expect(listExportItems).toHaveBeenCalledWith(
-            expect.objectContaining({
-                restBaseUrl: 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi',
-            }),
-            'attribute_sets'
-        );
+        await expect(
+            exportHandlers['list-datapack-export-items'](context, payload)
+        ).resolves.toEqual({ success: true, data: 'listed' });
+        expect(listPickableItems).toHaveBeenCalledWith(context, payload);
     });
 
-    it('returns the page for the UI to choose from', async () => {
-        listExportItems.mockResolvedValue({
-            items: [{ id: 10, displayName: 'Accessories' }],
-            totalCount: 8,
-            excludedCount: 1,
-        });
-
-        const result = await importHandlers['list-datapack-export-items'](makeImportHarness(), {
-            ...PAYLOAD,
-            dataType: 'attribute_sets',
-        });
-
-        expect(result.success).toBe(true);
-        expect(result.data).toMatchObject({ totalCount: 8, excludedCount: 1 });
-    });
-
-    it('refuses without a data type rather than asking for everything', async () => {
-        const result = await importHandlers['list-datapack-export-items'](
-            makeImportHarness(),
-            PAYLOAD
-        );
-
-        expect(result.success).toBe(false);
-        expect(listExportItems).not.toHaveBeenCalled();
-    });
-});
-
-describe('start-datapack-export', () => {
-    // The service's export has not saved what it reads since August. With Demo Builder's
-    // engine (the default) the export is Demo Builder's own save into the demo's own pack
-    // (step 14, `storeChangesHandlers-picks.test.ts`), which refuses the service's fields
-    // (a pack name in the shared catalog) before anything is read or written.
-    it("refuses the service's export with Demo Builder's engine chosen, writing nothing", async () => {
-        (selectedDatapackEngine as jest.Mock).mockReturnValueOnce('demo-builder');
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
-        expect(result.error).toMatch(/Demo Builder's engine/);
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    /**
-     * The catalog is shared infrastructure. A pack written under a name someone
-     * else owns is not something the service will stop, so this does.
-     */
-    it('refuses a nameless target instead of writing into the shared catalog', async () => {
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), {
-            ...PAYLOAD,
-            datapackName: '',
-        });
-
-        expect(result.success).toBe(false);
-        expect(result.error).toMatch(/name/i);
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    it('refuses without a version — name and version are the identity', async () => {
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), {
-            ...PAYLOAD,
-            version: '',
-        });
-
-        expect(result.success).toBe(false);
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    it('refuses with no data types selected', async () => {
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), {
-            ...PAYLOAD,
-            dataTypes: [],
-        });
-
-        expect(result.success).toBe(false);
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    it('passes the identity, instance and types through', async () => {
-        await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(startExport).toHaveBeenCalledWith(
-            expect.objectContaining({
-                id: { name: 'captured-pack', version: 'v1' },
-                commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi',
-                dataTypes: ['attribute_sets'],
-            })
-        );
-    });
-
-    /** The reason only `verbose` reveals must reach the user, not be swallowed. */
-    it('returns the per-type reason when the service refuses to store', async () => {
-        startExport.mockResolvedValue({
-            success: false,
-            perType: [
-                {
-                    dataType: 'attribute_sets',
-                    success: false,
-                    exported: 0,
-                    excluded: 0,
-                    reason: 'Failed to store exported data: MongoDB connection URI required.',
-                },
-            ],
-        });
-
-        const harness = makeImportHarness();
-        const result = await importHandlers['start-datapack-export'](harness, PAYLOAD);
-
-        expect(result.success).toBe(true); // the call worked; the export did not
-        expect(JSON.stringify(result.data)).toContain('MongoDB connection URI required');
-        // The logs say so too: the service answers 200 with the failure inside, and
-        // the door used to log "200" and "ok" — a failed export read as a success.
-        // The LEVEL is the assertion (a failure is a warning, not an info line); the
-        // wording is not pinned (tests/sop/no-logger-wording-assertions.test.ts).
-        expect(harness.logger.warn).toHaveBeenCalledTimes(1);
-        expect(harness.logger.info).not.toHaveBeenCalledWith(expect.stringContaining('Exported'));
-    });
-
-    it('logs each data type that exported, with its counts', async () => {
-        startExport.mockResolvedValue({
+    it("counts each kind of the project's store", async () => {
+        await expect(exportHandlers['count-datapack-export-items'](context, {})).resolves.toEqual({
             success: true,
-            perType: [{ dataType: 'attribute_sets', success: true, exported: 4, excluded: 1 }],
+            data: 'counted',
         });
-        const harness = makeImportHarness();
-
-        await importHandlers['start-datapack-export'](harness, PAYLOAD);
-
-        expect(harness.logger.info).toHaveBeenCalledTimes(1);
-        expect(harness.logger.warn).not.toHaveBeenCalled();
+        expect(countPickableItems).toHaveBeenCalledWith(context, {});
     });
 
-    /** A failure with no per-type entry would otherwise leave no trace at all. */
-    it('warns when a failed export names no data type, and not when a success names none', async () => {
-        startExport.mockResolvedValue({ success: false, perType: [] });
-        const failed = makeImportHarness();
-        await importHandlers['start-datapack-export'](failed, PAYLOAD);
+    it('saves what is picked into the library', async () => {
+        const payload = {
+            selections: { products: { sku: ['A'] } },
+            saveAs: { displayName: 'My Pack' },
+            confirm: true,
+        };
 
-        startExport.mockResolvedValue({ success: true, perType: [] });
-        const succeeded = makeImportHarness();
-        await importHandlers['start-datapack-export'](succeeded, PAYLOAD);
-
-        expect(failed.logger.warn).toHaveBeenCalledTimes(1);
-        expect(succeeded.logger.warn).not.toHaveBeenCalled();
+        await expect(exportHandlers['start-datapack-export'](context, payload)).resolves.toEqual({
+            success: true,
+            data: 'saved',
+        });
+        expect(saveFromStore).toHaveBeenCalledWith(context, payload);
     });
 
-    it('refuses when the project has no Commerce backend', async () => {
-        const result = await importHandlers['start-datapack-export'](
-            makeImportHarness({ ...accsProject(), componentSelections: { backend: '' } }),
-            PAYLOAD,
-        );
-
-        expect(result.success).toBe(false);
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    // The service signs in with its own credential (DEMOSYS-1698), so the export names
-    // only the backend: an ACCS project that saved no Commerce pair is not refused (DI-6).
-    it('exports for an ACCS project that saved no Commerce credentials, naming its backend', async () => {
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result.success).toBe(true);
-        expect(startExport).toHaveBeenCalledWith(expect.objectContaining({ backend: 'accs' }));
-    });
-});
-
-describe('prepareExport guards', () => {
-    it('refuses a payload that is missing entirely', async () => {
-        const list = await importHandlers['list-datapack-export-items'](
-            makeImportHarness(),
-            undefined
-        );
-        const start = await importHandlers['start-datapack-export'](makeImportHarness(), undefined);
-
-        expect(list.success).toBe(false);
-        expect(start.success).toBe(false);
-        expect(listExportItems).not.toHaveBeenCalled();
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    // Both export handlers share prepareExport, so the LIST call must refuse a
-    // half-named target too — not fall through to a request it cannot build.
-    it('refuses a half-named target on the list call, with the naming reason', async () => {
-        const result = await importHandlers['list-datapack-export-items'](makeImportHarness(), {
-            ...PAYLOAD,
-            datapackName: '',
-            dataType: 'attribute_sets',
+    it('refuses an ACO pack before anything is read, while ACO packs are held back', async () => {
+        const result = await exportHandlers['start-datapack-export'](context, {
+            aco: true,
+            datapackName: 'p',
+            version: 'v1',
         });
 
-        expect(result.success).toBe(false);
-        expect(result.error).toMatch(/datapack name and a version/);
-        expect(listExportItems).not.toHaveBeenCalled();
-    });
-
-    it('refuses without a Commerce instance to export from', async () => {
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), {
-            ...PAYLOAD,
-            commerceInstance: '',
+        expect(result).toEqual({
+            success: false,
+            error: ACO_HELD_BACK,
+            code: ErrorCode.INVALID_OPERATION,
         });
-
-        expect(result.success).toBe(false);
-        expect(result.error).toMatch(/Commerce instance is required/);
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    // An ABSENT dataTypes is the same refusal as an empty one: the default is
-    // nothing, never everything, because the request writes to a shared catalog.
-    it('refuses when dataTypes is absent, not just when it is empty', async () => {
-        const { dataTypes: _dropped, ...withoutTypes } = PAYLOAD;
-        const result = await importHandlers['start-datapack-export'](
-            makeImportHarness(),
-            withoutTypes
-        );
-
-        expect(result.success).toBe(false);
-        expect(result.error).toMatch(/at least one data type/);
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    it('returns the access refusal when the Data Installer is not configured', async () => {
-        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-            get: jest.fn(() => undefined),
-        });
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result.success).toBe(false);
-        // The access refusal is returned AS IT CAME, code included: the UI
-        // branches on INVALID_OPERATION to offer the settings fix, so it must
-        // not be flattened into a generic failure on the way out.
-        expect(result.code).toBe(ErrorCode.INVALID_OPERATION);
-        expect(MockedClient).not.toHaveBeenCalled();
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    it('refuses when no project is open', async () => {
-        const result = await importHandlers['start-datapack-export'](
-            makeImportHarness(null),
-            PAYLOAD
-        );
-
-        expect(result.success).toBe(false);
-        expect(result.error).toMatch(/Open a project before exporting/);
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    it('builds the export client against the configured API base URL', async () => {
-        await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(MockedClient).toHaveBeenCalledWith(
-            expect.objectContaining({
-                baseUrl: 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api',
-            })
-        );
-    });
-
-    // Omitted means "everything allowed" — a selections key must only appear
-    // when the caller chose one, and must carry what they chose.
-    it('passes selections through only when the caller sent them', async () => {
-        const selections = { attribute_sets: { attribute_set_id: [10, 11] } };
-
-        await importHandlers['start-datapack-export'](makeImportHarness(), {
-            ...PAYLOAD,
-            selections,
-        });
-        expect(startExport).toHaveBeenCalledWith(expect.objectContaining({ selections }));
-
-        startExport.mockClear();
-        await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-        expect(startExport.mock.calls[0][0]).not.toHaveProperty('selections');
-    });
-});
-
-describe('the REST base URL', () => {
-    it('uses the Commerce URL as-is for a PaaS project', async () => {
-        await importHandlers['start-datapack-export'](
-            makeImportHarness(paasProject('https://paas.example.com')),
-            PAYLOAD
-        );
-
-        expect(startExport).toHaveBeenCalledWith(
-            expect.objectContaining({ restBaseUrl: 'https://paas.example.com' })
-        );
-    });
-
-    it('sends an empty base URL when the project configures neither', async () => {
-        await importHandlers['start-datapack-export'](makeImportHarness(paasProject()), PAYLOAD);
-
-        expect(startExport).toHaveBeenCalledWith(expect.objectContaining({ restBaseUrl: '' }));
-    });
-
-    // Only a TRAILING /graphql is the suffix — one earlier in the path is part
-    // of the tenant's own route and must survive.
-    it('strips only the trailing /graphql, not an earlier one', async () => {
-        await importHandlers['start-datapack-export'](
-            makeImportHarness({
-                ...accsProject(),
-                componentConfigs: {
-                    'adobe-commerce-accs': {
-                        ACCS_GRAPHQL_ENDPOINT: 'https://na1.commerce.adobe.com/graphql-eu/t1/graphql',
-                    },
-                },
-            }),
-            PAYLOAD
-        );
-
-        expect(startExport).toHaveBeenCalledWith(
-            expect.objectContaining({
-                restBaseUrl: 'https://na1.commerce.adobe.com/graphql-eu/t1',
-            })
-        );
-    });
-});
-
-describe('when the service call itself fails', () => {
-    it('reports why the list could not be fetched', async () => {
-        listExportItems.mockRejectedValue(new Error('502 from get-export-items'));
-
-        const result = await importHandlers['list-datapack-export-items'](makeImportHarness(), {
-            ...PAYLOAD,
-            dataType: 'attribute_sets',
-        });
-
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('502 from get-export-items');
-    });
-
-    it('falls back to a readable reason when the list throws a non-Error', async () => {
-        listExportItems.mockRejectedValue('socket hang up');
-
-        const result = await importHandlers['list-datapack-export-items'](makeImportHarness(), {
-            ...PAYLOAD,
-            dataType: 'attribute_sets',
-        });
-
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('Could not list what is available.');
-    });
-
-    it('reports why the export could not be started', async () => {
-        startExport.mockRejectedValue(new Error('process-datapack refused the tenant id'));
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('process-datapack refused the tenant id');
-    });
-
-    it('falls back to a readable reason when the export throws a non-Error', async () => {
-        startExport.mockRejectedValue({ statusCode: 500 });
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('The export could not be started.');
+        expect(saveFromStore).not.toHaveBeenCalled();
     });
 });

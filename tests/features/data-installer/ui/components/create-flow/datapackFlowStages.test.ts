@@ -13,18 +13,15 @@ import {
     stageOrder,
 } from '@/features/data-installer/ui/components/create-flow/datapackFlowStages';
 
-const NOTHING: FlowGates = { packTypeChosen: false, canSave: false, viewsChosen: false, kindsChosen: false, typesChosen: false, named: false, saveAsNamed: false };
+const NOTHING: FlowGates = { packTypeChosen: false, canSave: false, viewsChosen: false, kindsChosen: false, named: false, saveAsNamed: false };
 
+// One route per pack type: the Data Installer service's own export route was deleted on 2026-11-06 (DI-12).
 describe('routeOf', () => {
     it.each([
-        ['commerce', 'demo-builder', 'store'],
-        ['commerce', 'service', 'service'],
-        ['commerce', undefined, 'service'],
-        ['aco', 'demo-builder', 'aco'],
-        ['aco', 'service', 'aco'],
-        ['aco', undefined, 'aco'],
-    ] as const)('%s with the %s engine takes %s', (packType, engine, route) => {
-        expect(routeOf(packType, engine)).toBe(route);
+        ['commerce', 'store'],
+        ['aco', 'aco'],
+    ] as const)('%s takes %s', (packType, route) => {
+        expect(routeOf(packType)).toBe(route);
     });
 });
 
@@ -38,7 +35,6 @@ describe('stageOrder', () => {
     it.each([
         ['store', ['store-picks']],
         ['aco', ['aco-views', 'aco-kinds', 'pack-name']],
-        ['service', ['service-types', 'pack-name']],
     ] as const)('walks the %s route with no pack-type screen in front', (route, order) => {
         expect(stageOrder(route, false)).toEqual(order);
     });
@@ -72,7 +68,6 @@ describe('the main button', () => {
         ['store-picks', 'save'],
         ['aco-views', 'continue'],
         ['aco-kinds', 'continue'],
-        ['service-types', 'continue'],
         ['pack-name', 'export'],
     ] as const)('on %s does %s', (stage, action) => {
         expect(mainActionOf(stage)).toBe(action);
@@ -83,7 +78,6 @@ describe('the main button', () => {
         ['store-picks', 'canSave'],
         ['aco-views', 'viewsChosen'],
         ['aco-kinds', 'kindsChosen'],
-        ['service-types', 'typesChosen'],
         ['pack-name', 'named'],
     ] as const)('on %s waits for %s, and for nothing else', (stage, gate) => {
         expect(canProceed(stage, NOTHING)).toBe(false);

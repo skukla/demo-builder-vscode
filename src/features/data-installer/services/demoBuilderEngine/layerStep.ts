@@ -34,7 +34,7 @@ export type FindLayer = (pack: DatapackId) => Promise<SettingsLayer | undefined>
 
 /** What a pack's layer turned out to be, for this install. */
 export type LayerLookup =
-    /** Nothing looks here: the service's engine, or part of a pack that holds settings itself or has no layer. */
+    /** Nothing looks here: no library to ask, or part of a pack that holds settings itself or has no layer. */
     | { state: 'off' }
     /** The pack has a layer, and this install is of part of the pack: left alone, set or not. */
     | { state: 'left-out'; layer: SettingsLayer }

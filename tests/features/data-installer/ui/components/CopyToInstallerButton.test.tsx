@@ -1,6 +1,7 @@
 /**
  * "Copy to the Data Installer": one request carrying the pack name back as the
- * confirmation, then Import once the whole pack has landed — or which types did not.
+ * confirmation, then that the whole pack landed, or which types did not. Import sits
+ * beside it in the flyout (`PackActions`): Demo Builder installs a library pack where it is.
  */
 
 import '../../../../helpers/webviewClientMock';
@@ -20,37 +21,35 @@ function answer(response: unknown): void {
     mockRequest.mockResolvedValue(response);
 }
 
-async function copyIt(onImport = jest.fn()) {
-    render(<CopyToInstallerButton id={ID} onImport={onImport} />);
+async function copyIt() {
+    render(<CopyToInstallerButton id={ID} />);
     await press(screen.getByRole('button', { name: 'Copy to the Data Installer' }));
     await settle();
-    return onImport;
 }
 
 it('says the copy is shared and permanent before anything is sent', () => {
     answer({ success: true, data: { stored: [], failed: [] } });
-    render(<CopyToInstallerButton id={ID} onImport={jest.fn()} />);
+    render(<CopyToInstallerButton id={ID} />);
 
     expect(screen.getByText(/Other teams will see justrite/)).toBeInTheDocument();
     expect(screen.getByText(/cannot be removed from here/)).toBeInTheDocument();
     expect(mockRequest).not.toHaveBeenCalled();
 });
 
-it('sends the pack with its name back, then offers Import for the same pack', async () => {
+it('sends the pack with its name back, then says it landed', async () => {
     answer({ success: true, data: { stored: ['categories', 'customer_groups'], failed: [] } });
 
-    const onImport = await copyIt();
+    await copyIt();
 
     expect(mockRequest.mock.calls[0].slice(0, 2)).toEqual([
         'copy-library-datapack-to-installer',
         { datapackName: 'justrite', version: 'v1', confirmName: 'justrite' },
     ]);
     expect(screen.getByText('Copied into the Data Installer.')).toBeInTheDocument();
-    await press(screen.getByRole('button', { name: 'Import' }));
-    expect(onImport).toHaveBeenCalledWith(ID);
+    expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
 });
 
-it('offers no Import when part of the pack did not land, and names what and why', async () => {
+it('names what did not land, and why, when part of the pack did not', async () => {
     answer({
         success: true,
         data: {

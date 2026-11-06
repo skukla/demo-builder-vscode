@@ -1,15 +1,14 @@
 /**
- * buildSampleDataDeps — the four closures that talk to the service.
+ * buildSampleDataDeps — the four closures behind creation's install and reset's removal.
  *
  * The sibling suite pins the two shape mismatches that shipped (the credential
  * dispatch and the client handed to the poller) and the progress wording. What
- * it never enters is `inventory`, `startImport`, `startDelete` and the private
- * `writeClient` — 25 of this module's mutants sat in code no test reached
- * (measured 2026-09-06), including both halves of the "the Data Installer is not
- * reachable" refusal.
+ * it never enters is `inventory`, `startImport`, `startDelete` and the engine they
+ * build — 25 of this module's mutants sat in code no test reached (measured
+ * 2026-09-06), including both halves of the "not reachable" refusal.
  *
- * `resolveDataInstallerAccess` is the seam: it decides reachable-or-not, and
- * every closure here is a different answer to that question.
+ * `resolveDataInstallerAccess` is one seam: it decides reachable-or-not. The engine
+ * (`buildDatapackEngine`) is the other, built once per job.
  */
 
 jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
@@ -20,24 +19,19 @@ jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
         resolveDatapackAccess: (context: unknown) => resolveDataInstallerAccess(context),
     };
 });
-jest.mock('@/features/data-installer/services/dataInstallerWriteClient', () => ({
-    DataInstallerWriteClient: jest.fn(),
+jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
+    ...jest.requireActual('@/features/data-installer/services/buildDatapackEngine'),
+    buildDatapackEngine: jest.fn(),
+    installedByDemoBuilder: jest.fn(),
 }));
+jest.mock('@/features/authentication/services/projectOrgGuard', () => ({ orgGuard: jest.fn(async () => undefined) }));
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
 }));
 
-// These suites drive the SERVICE engine. Demo Builder's own is the default since 2026-10-28,
-// so they say which one they mean rather than lean on the default. A jest.fn, so a suite that
-// needs the other engine can still choose it.
-jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
-    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
-    selectedDatapackEngine: jest.fn(() => 'service'),
-}));
-
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
-import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
+import { buildDatapackEngine, installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
 import type { DataTypeStatus } from '@/features/data-installer/types';
 import {
@@ -51,7 +45,8 @@ import {
 const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<
     typeof resolveDataInstallerAccess
 >;
-const MockedWriteClient = DataInstallerWriteClient as unknown as jest.Mock;
+const mockedBuild = buildDatapackEngine as unknown as jest.Mock;
+const mockedInstalled = installedByDemoBuilder as jest.MockedFunction<typeof installedByDemoBuilder>;
 const mockedWatch = watchImportJob as unknown as jest.Mock;
 
 const PROJECT = ACCS_PROJECT;
@@ -90,10 +85,11 @@ function deps(mode: 'install' | 'remove' = 'install') {
 beforeEach(() => {
     jest.clearAllMocks();
     dataInstallerAddress(INSTALLER_ADDRESS);
-    MockedWriteClient.mockImplementation(() => ({
+    mockedBuild.mockImplementation(() => ({
         startImport: jest.fn().mockResolvedValue({ activationId: 'imp-1' }),
         startDelete: jest.fn().mockResolvedValue({ activationId: 'del-1' }),
     }));
+    mockedInstalled.mockResolvedValue(true);
     mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
 });
 
@@ -131,26 +127,22 @@ describe('startImport / startDelete', () => {
         target: { backend: 'accs' },
     } as unknown as Parameters<ReturnType<typeof deps>['startImport']>[0];
 
-    it('sends the request to the write client and returns its activation id', async () => {
+    it('sends the request to the engine and returns its activation id', async () => {
         reachable(readClient());
         const d = deps();
 
         await expect(d.startImport(REQUEST)).resolves.toEqual({ activationId: 'imp-1' });
 
-        expect(MockedWriteClient.mock.results[0].value.startImport).toHaveBeenCalledWith(REQUEST);
+        expect(mockedBuild.mock.results[0].value.startImport).toHaveBeenCalledWith(REQUEST);
     });
 
-    it('builds that client against the resolved base URL and token source', async () => {
-        reachable(readClient());
+    it('builds that engine for the project, reading packs through the access client', async () => {
+        const client = readClient();
+        reachable(client);
 
         await deps().startImport(REQUEST);
 
-        expect(MockedWriteClient).toHaveBeenCalledWith(
-            expect.objectContaining({
-                baseUrl: 'https://installer.test/api',
-                getToken: expect.any(Function),
-            }),
-        );
+        expect(mockedBuild).toHaveBeenCalledWith(expect.objectContaining({ project: PROJECT, catalog: client }), expect.any(Function));
     });
 
     it('Reset takes the same request to the delete verb', async () => {
@@ -159,25 +151,27 @@ describe('startImport / startDelete', () => {
 
         await expect(d.startDelete!(REQUEST)).resolves.toEqual({ activationId: 'del-1' });
 
-        expect(MockedWriteClient.mock.results[0].value.startDelete).toHaveBeenCalledWith(REQUEST);
+        expect(mockedBuild.mock.results[0].value.startDelete).toHaveBeenCalledWith(REQUEST);
     });
 
-    it('refuses rather than building a client against nothing when unreachable', async () => {
+    it('refuses rather than building an engine against nothing when unreachable', async () => {
         unreachable();
 
         await expect(deps().startImport(REQUEST)).rejects.toThrow(NOT_REACHABLE);
-        expect(MockedWriteClient).not.toHaveBeenCalled();
+        expect(mockedBuild).not.toHaveBeenCalled();
     });
 
-    // With no address the access in hand is the datapack store's, which does not run the service's jobs.
-    it('says what to do instead of sending a removal the service owes to the datapack store', async () => {
-        dataInstallerAddress('');
+    // The Data Installer service installed it, before its engine was deleted (DI-12): no record, no removal by name.
+    it('points to Clear Demo Data for a pack Demo Builder has no record of, building nothing', async () => {
         reachable(readClient());
+        mockedInstalled.mockResolvedValue(false);
+        const project = { ...PROJECT, datapack: PACK };
 
-        await expect(deps('remove').startDelete!(REQUEST)).rejects.toThrow(
-            "The Data Installer installed this datapack, and it isn't available. Use Clear Demo Data to remove what it added.",
+        await expect(buildSampleDataDeps(importHarness(), project, jest.fn(), 'remove').startDelete!(REQUEST)).rejects.toThrow(
+            'The Data Installer installed this datapack, so Demo Builder has no record of what it added. Use Clear Demo Data to remove it.',
         );
-        expect(MockedWriteClient).not.toHaveBeenCalled();
+        expect(mockedInstalled).toHaveBeenCalledWith(PROJECT.path, PACK);
+        expect(mockedBuild).not.toHaveBeenCalled();
     });
 });
 
@@ -218,7 +212,7 @@ describe('watch', () => {
         await d.watch({ activationId: 'imp-1', requestedTypes: ['categories'] });
 
         expect(mockedAccess).toHaveBeenCalledTimes(1);
-        expect(MockedWriteClient).toHaveBeenCalledTimes(1);
+        expect(mockedBuild).toHaveBeenCalledTimes(1);
         expect(mockedWatch.mock.calls[0][0].client).toBe(mockedWatch.mock.calls[1][0].client);
     });
 

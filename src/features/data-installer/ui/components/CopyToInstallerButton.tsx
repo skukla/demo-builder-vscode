@@ -1,12 +1,12 @@
 /**
  * "Copy to the Data Installer" — put a library pack in the Data Installer's catalog.
  *
- * Shown only with the service engine chosen, which installs from its own catalog alone:
- * Demo Builder's engine installs a library pack directly (`DatapackDetailPanel`). Once
- * every data type has landed, the same flyout offers Import. The copy writes into the
- * catalog other teams share and the extension cannot
- * remove it again, so the button says so before it is pressed, and the press is the
- * confirmation (the handler also wants the pack name back, which this sends).
+ * Shown on a library pack while the Data Installer is on (`PackActions`), beside Import: it puts
+ * the pack where other teams can install it, and is not needed to install it here, since Demo
+ * Builder installs a library pack where it is (owner, 2026-11-06). The copy writes into the
+ * catalog other teams share and the extension cannot remove it again, so the button says so
+ * before it is pressed, and the press is the confirmation (the handler also wants the pack name
+ * back, which this sends).
  *
  * @module features/data-installer/ui/components/CopyToInstallerButton
  */
@@ -25,14 +25,9 @@ interface CopyOutcome {
 
 export interface CopyToInstallerButtonProps {
     id: DatapackId;
-    /** Open the Import for this pack — offered once the whole pack is in the Data Installer. */
-    onImport: (id: DatapackId) => void;
 }
 
-export function CopyToInstallerButton({
-    id,
-    onImport,
-}: CopyToInstallerButtonProps): React.JSX.Element {
+export function CopyToInstallerButton({ id }: CopyToInstallerButtonProps): React.JSX.Element {
     const copy = useDataInstallerRequest<CopyOutcome>('copy-library-datapack-to-installer');
     const run = copy.load;
     const start = useCallback((): void => {
@@ -40,7 +35,7 @@ export function CopyToInstallerButton({
     }, [run, id.name, id.version]);
 
     if (copy.value) {
-        return <CopyResult outcome={copy.value} onImport={() => onImport(id)} />;
+        return <CopyResult outcome={copy.value} />;
     }
     return (
         <div className="datapack-save-file">
@@ -49,7 +44,7 @@ export function CopyToInstallerButton({
                 be removed from here.
             </p>
             {/* Spectrum's busy button, not a "-ing" label (owner, 2026-10-31). */}
-            <Button variant="accent" onPress={start} isPending={copy.loading}>
+            <Button variant="secondary" onPress={start} isPending={copy.loading}>
                 Copy to the Data Installer
             </Button>
             {copy.failure ? (
@@ -59,14 +54,8 @@ export function CopyToInstallerButton({
     );
 }
 
-/** Import once everything landed; otherwise which types did not, and why. */
-function CopyResult({
-    outcome,
-    onImport,
-}: {
-    outcome: CopyOutcome;
-    onImport: () => void;
-}): React.JSX.Element {
+/** That everything landed; otherwise which types did not, and why. */
+function CopyResult({ outcome }: { outcome: CopyOutcome }): React.JSX.Element {
     if (outcome.failed.length > 0) {
         return (
             <div className="datapack-save-file">
@@ -83,9 +72,6 @@ function CopyResult({
     return (
         <div className="datapack-save-file">
             <p className="datapack-export-note">Copied into the Data Installer.</p>
-            <Button variant="accent" onPress={onImport}>
-                Import
-            </Button>
         </div>
     );
 }

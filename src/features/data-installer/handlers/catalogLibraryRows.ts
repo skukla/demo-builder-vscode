@@ -12,7 +12,7 @@
  */
 
 import type { DataInstallerClient } from '../services/dataInstallerClient';
-import { resolveDataInstallerBaseUrl, selectedDatapackEngine } from '../services/dataInstallerConfig';
+import { resolveDataInstallerBaseUrl } from '../services/dataInstallerConfig';
 import type { CatalogPage, DatapackSummary, Page } from '../types';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse } from '@/types/handlers';
@@ -85,7 +85,8 @@ export function mergedCatalog(
         items,
         // No `total`: the two stores' totals do not add up to anything a caller can use.
         count: items.length,
-        engine: selectedDatapackEngine(),
+        // Copy to the Data Installer is offered while its address is set and switched on.
+        ...(resolveDataInstallerBaseUrl().ok ? { installerOn: true } : {}),
         ...(library.success ? {} : { storeMissing: true }),
         ...(installer.success ? {} : { installerMissing: whyMissing(installer) }),
         ...(off ? { installerOff: true } : {}),

@@ -70,12 +70,8 @@ export interface DatapackDetailPanelProps {
     onSaveChanges?: () => void;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
-    /**
-     * Whether a library pack can be installed where it is: true when Demo Builder's engine is
-     * chosen, which reads the library itself. The service installs only from its own catalog,
-     * so with it chosen a library pack offers Copy to the Data Installer instead (DI-5).
-     */
-    installsFromLibrary: boolean;
+    /** The Data Installer's address is set and switched on: a library pack offers Copy to it. */
+    installerOn: boolean;
     /** That pack's Admin step (step 12) as one line; its dialog is mounted beside the flyout (`usePackSetupStep`). */
     setupStep?: React.ReactNode;
     /**
@@ -103,7 +99,7 @@ export function DatapackDetailPanel({
     onImport,
     onSaveChanges,
     onRemoved,
-    installsFromLibrary,
+    installerOn,
     setupStep,
     onRename,
     sharedInFile,
@@ -143,7 +139,7 @@ export function DatapackDetailPanel({
                                 onImport={onImport}
                                 onSaveChanges={onSaveChanges}
                                 onRemoved={onRemoved}
-                                installsFromLibrary={installsFromLibrary}
+                                installerOn={installerOn}
                                 sharedInFile={sharedInFile}
                                 onSharingChanged={onSharingChanged}
                                 settingsLayer={settingsLayer}

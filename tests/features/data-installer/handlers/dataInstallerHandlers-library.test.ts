@@ -3,14 +3,6 @@
  * library's own catalog, and the one list every surface shows.
  */
 
-// These suites drive the SERVICE engine. Demo Builder's own is the default since 2026-10-28,
-// so they say which one they mean rather than lean on the default. A jest.fn, so a suite that
-// needs the other engine can still choose it.
-jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
-    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
-    selectedDatapackEngine: jest.fn(() => 'service'),
-}));
-
 import * as vscode from 'vscode';
 import {
     BASE,
@@ -23,12 +15,9 @@ import {
     resolveDatapackAccess,
 } from './dataInstallerHandlers.testUtils';
 import { NO_ACCESS_DISMISSED_KEY } from '@/features/data-installer/handlers/dataInstallerHandlers';
-import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
 import { DataInstallerApiError } from '@/features/data-installer/services/dataInstallerErrors';
 import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
 import { ErrorCode } from '@/types/errorCodes';
-
-const mockedEngine = selectedDatapackEngine as jest.Mock;
 
 beforeEach(() => {
     resetDataInstallerHandlerMocks();
@@ -156,29 +145,16 @@ describe('the library store', () => {
             MockedClient.prototype.batchGetDataItems = jest.fn().mockResolvedValue({ present: dataTypes, missing: [], presentCount: 1, missingCount: 0, requestedCount: 1 });
             MockedClient.prototype.findDatapacks = jest.fn().mockResolvedValue({ items: [LAYER_ROW], count: 1 });
             MockedClient.prototype.getDataItem = jest.fn().mockResolvedValue({ dataType: 'store_config', records: [{ path: 'catalog/frontend/grid_per_page', value: '24', scope: 'default' }] });
-            mockedEngine.mockReturnValue('demo-builder');
         }
         const ask = () => dataInstallerHandlers['get-datapack-detail'](makeHeadlessContext(), { datapackName: 'bodea', version: 'main' });
 
-        afterEach(() => mockedEngine.mockReturnValue('service'));
-
-        it('names it, with each path and value, with Demo Builder\'s engine', async () => {
+        it('names it, with each path and value', async () => {
             withPack(['products']);
 
             expect(await ask()).toMatchObject({
                 success: true,
                 data: { settingsLayer: { id: { name: 'bodea-settings', version: '2' }, mine: true, settings: [{ path: 'catalog/frontend/grid_per_page', value: '24' }] } },
             });
-        });
-
-        it('says nothing with the service engine, which never applies one', async () => {
-            withPack(['products']);
-            mockedEngine.mockReturnValue('service');
-
-            const res = await ask();
-
-            expect(res.data).not.toHaveProperty('settingsLayer');
-            expect(MockedClient.prototype.findDatapacks).not.toHaveBeenCalled();
         });
 
         it('does not look for a pack that holds settings of its own', async () => {
@@ -293,8 +269,8 @@ describe('the library store', () => {
 
             expect(res).toEqual({
                 success: true,
-                // `engine`: the screen offers Import on a library pack only with Demo Builder's (DI-5).
-                data: { items: [{ ...LIBRARY_ROW, store: 'library' }, INSTALLER_ROW], count: 2, engine: 'service' },
+                // `installerOn`: the Data Installer's address is set, so a library pack offers Copy to it.
+                data: { items: [{ ...LIBRARY_ROW, store: 'library' }, INSTALLER_ROW], count: 2, installerOn: true },
             });
         });
 
@@ -306,7 +282,7 @@ describe('the library store', () => {
 
             expect(res).toEqual({
                 success: true,
-                data: { items: [INSTALLER_ROW], count: 1, engine: 'service', storeMissing: true },
+                data: { items: [INSTALLER_ROW], count: 1, installerOn: true, storeMissing: true },
             });
         });
 
@@ -334,6 +310,8 @@ describe('the library store', () => {
                 success: true,
                 data: { items: [{ ...LIBRARY_ROW, store: 'library' }], installerMissing: 'no-address' },
             });
+            // Nothing to copy a pack into: the screen offers no Copy to the Data Installer.
+            expect(res.data).not.toHaveProperty('installerOn');
         });
 
         // The SC's switch beside Community (2026-11-03): off means the Data Installer is not asked.
@@ -436,26 +414,11 @@ describe('the library store', () => {
             expect(MockedClient).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: BASE }));
         });
 
-        it("is the datapack store's when no address is set, with Demo Builder's engine", async () => {
+        it("is the datapack store's when no address is set", async () => {
             setupLibrary(LIBRARY, '');
-            mockedEngine.mockReturnValue('demo-builder');
 
             expect(await resolveDatapackAccess(makeHeadlessContext())).toMatchObject({ ok: true, baseUrl: LIBRARY });
             expect(MockedClient.mock.calls.map(([deps]) => deps.baseUrl)).toEqual([LIBRARY]);
-        });
-
-        // The store does not run the service's jobs, so an SC who chose the service must not reach it.
-        it('keeps the refusal when the service engine is chosen and no address is set', async () => {
-            setupLibrary(LIBRARY, '');
-            mockedEngine.mockReturnValue('service');
-
-            const access = await resolveDatapackAccess(makeHeadlessContext());
-
-            expect(access).toMatchObject({
-                ok: false,
-                response: { code: ErrorCode.INVALID_OPERATION, error: expect.stringContaining('No Data Installer API URL') },
-            });
-            expect(MockedClient).not.toHaveBeenCalled();
         });
     });
 });

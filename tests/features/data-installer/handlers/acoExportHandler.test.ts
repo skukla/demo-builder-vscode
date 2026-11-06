@@ -33,7 +33,7 @@ jest.mock('@/features/data-installer/services/datapackTransfer', () => ({
     writePackToStore: jest.fn(),
 }));
 
-// The shared wall first (it chooses the SERVICE engine), then the subject.
+// The shared wall first, then the subject.
 import { importHandlers, makeImportHarness } from './importHandlers.testUtils';
 import { startAcoExport } from '@/features/data-installer/handlers/acoExportHandler';
 import { ACO_HELD_BACK } from '@/features/data-installer/handlers/exportHandlers';
@@ -45,7 +45,6 @@ import {
 } from '@/features/data-installer/services/acoExport/acoPackExport';
 import { AcoExportError } from '@/features/data-installer/services/acoExport/acoStoreReads';
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
-import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
 import { DatapackStoreWriter } from '@/features/data-installer/services/datapackStoreWriter';
 import { writePackToStore } from '@/features/data-installer/services/datapackTransfer';
 import type { DatapackFile } from '@/features/data-installer/services/datapackZip';
@@ -63,7 +62,6 @@ const mockedClient = commerceClientForProject as jest.MockedFunction<
 >;
 const mockedWrite = writePackToStore as jest.MockedFunction<typeof writePackToStore>;
 const MockedWriter = DatapackStoreWriter as jest.MockedClass<typeof DatapackStoreWriter>;
-const mockedEngine = selectedDatapackEngine as jest.MockedFunction<typeof selectedDatapackEngine>;
 
 const INSTALLER = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
 const LIBRARY = 'https://example-namespace.adobeioruntime.net/api/v1/web/datapack-store';
@@ -124,15 +122,6 @@ describe('start-datapack-export with aco', () => {
         expect(result).toEqual({ success: true, note: OUTCOME.sentence, data: OUTCOME });
     });
 
-    it("runs with Demo Builder's engine chosen, where the Commerce export is refused", async () => {
-        mockedEngine.mockReturnValueOnce('demo-builder');
-
-        const result = await send({});
-
-        expect(result.success).toBe(true);
-        expect(mockedExport).toHaveBeenCalled();
-    });
-
     it("hands it the project's own Commerce reads: store-wide as `all`, else through the store view named", async () => {
         const get = jest.fn();
         mockedClient.mockResolvedValue({ get, send: jest.fn() });
@@ -183,13 +172,10 @@ describe('start-datapack-export with aco', () => {
 
     // Merging G3 (the pick screen's `selections`) with G5: the other two exports' fields would
     // be silently ignored by an ACO pack, which reads the project's own store and picks nothing.
-    it.each(['service', 'demo-builder'] as const)(
-        'refuses commerceInstance and selections with the %s engine, before anything is read',
-        async (engine) => {
-            // Not `Once`: the ACO branch never asks for the engine, so a queued value would leak.
-            mockedEngine.mockImplementation(() => engine);
-            const result = await send({ commerceInstance: 'tenant-1', selections: { products: { sku: ['VR-Rack'] } } })
-                .finally(() => mockedEngine.mockImplementation(() => 'service'));
+    it(
+        'refuses commerceInstance and selections, before anything is read',
+        async () => {
+            const result = await send({ commerceInstance: 'tenant-1', selections: { products: { sku: ['VR-Rack'] } } });
 
             expect(result).toEqual({
                 success: false,

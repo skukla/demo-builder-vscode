@@ -441,16 +441,16 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_export: {
         action: 'Export sample data',
         consequence:
-            "With Demo Builder's engine, saves what was picked from this project's store into the datapack library: a new version of the project's pack when it is yours, else a new pack of yours by the name given; nothing in Commerce changes. With the Data Installer service's, captures this instance's data into the shared catalogue, where other people will see it. An ACO pack, with either engine, goes into your own datapack library.",
-        // The pack and the store it is captured FROM. `confirmName` is the
+            "Saves what was picked from this project's store into the datapack library: a new version of the project's pack when it is yours, else a new pack of yours by the name given. Nothing in Commerce changes, and nothing goes into the Data Installer's shared catalogue.",
+        // The pack it writes (named only for an ACO pack). `confirmName` is the
         // proof-of-intent echo, not the target.
-        target: ['datapackName', 'version', 'commerceInstance'],
+        target: ['datapackName', 'version'],
         sessionGrant: false,
     },
     copy_library_datapack_to_installer: {
         action: 'Copy a library datapack into the Data Installer',
         consequence:
-            "Adds this pack to the Data Installer's shared catalogue so it can be installed. Other teams will see it, and the extension cannot remove it again.",
+            "Adds this pack to the Data Installer's shared catalogue, so other teams can find and install it. They will see it, and the extension cannot remove it again.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },

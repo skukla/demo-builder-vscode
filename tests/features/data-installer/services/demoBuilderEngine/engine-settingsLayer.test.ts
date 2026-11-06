@@ -7,7 +7,7 @@
 
 import { readInstallRecord, openInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { demoBuilderEngine, type DemoBuilderEngineDeps } from '@/features/data-installer/services/demoBuilderEngine/engine';
-import type { ImportRequest } from '@/features/data-installer/services/dataInstallerWriteClient';
+import type { ImportRequest } from '@/features/data-installer/services/importRequest';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import type { CommerceSystemConfigWrite } from '@/types/commerceWire';
 import { GRID, LIST, foundLayer, settingRow } from '../../../../helpers/settingsLayerFixtures';

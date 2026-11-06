@@ -8,7 +8,7 @@ import { CommerceReadError } from '@/features/app-builder/services/erpFillReader
 import { openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { demoBuilderEngine, type DemoBuilderEngineDeps } from '@/features/data-installer/services/demoBuilderEngine/engine';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
-import type { ImportRequest } from '@/features/data-installer/services/dataInstallerWriteClient';
+import type { ImportRequest } from '@/features/data-installer/services/importRequest';
 import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
 import { PACK, PROJECT, type SentCall, fakeContext, memoryFiles, noneUnder } from './demoBuilderEngine.testUtils';
 

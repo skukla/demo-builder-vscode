@@ -25,7 +25,7 @@ Datapacks step and the dashboard tile always show, and the panel is titled
 **Show** list filters what they hold (`ui/catalogShow.ts`, owner, 2026-11-05): **Recommended** (the default: your packs, the team's and the Data Installer's curated ones),
 **My Datapacks**, **Demo Builder Datapacks** (the team packs), **Data Installer Datapacks**,
 **Community Datapacks** and **All Datapacks**. Both surfaces read the list again when
-`dataInstaller.apiBaseUrl`, `dataInstaller.enabled`, `dataInstaller.engine` or `datapackStore.apiBaseUrl` changes
+`dataInstaller.apiBaseUrl`, `dataInstaller.enabled` or `datapackStore.apiBaseUrl` changes
 (`affectsDatapackList`), with no Refresh. The Data Installer choice
 appears only once the Data Installer has answered this SC (an address is set and it accepts
 their sign-in). Agents can still leave it unasked (`includeInstaller: false`, answered with
@@ -34,7 +34,7 @@ above the cards says only Demo Builder's datapacks are shown, and why (`installe
 `no-access` when it turned the SC's sign-in away, `no-answer` when it is down). No address
 (`no-address`) shows nothing: that is most SCs (owner, 2026-11-03). Neither does `turned-off`:
 `demoBuilder.dataInstaller.enabled` turns the Data Installer off without deleting its address
-(owner, 2026-11-05), and the service engine then falls back to Demo Builder's. When the store does not
+(owner, 2026-11-05). When the store does not
 answer, an amber banner says so (`storeMissing`). Only when neither
 answers does the list fail, with the store's reason, and its title is "Datapacks
 Aren't Available".
@@ -249,7 +249,7 @@ shipped for one day and was removed (owner, 2026-11-04): it looked like no other
 was the header's Create Datapack a second time, and the card already had a selected look that a
 library pack had never been given.
 
-With the service's engine the header's Create Datapack exports into the shared catalog instead.
+A pack reaches the Data Installer's shared catalog only by Copy to the Data Installer, afterwards.
 
 Both doors walk the same screens (`create-flow/DatapackFlowDialog`): a card per kind (products, gift
 cards, categories, cart rules, customers, companies, customer groups, shared catalogs, attributes,
@@ -280,27 +280,18 @@ is saved with its region's name. Nothing reaches the Data Installer or its share
 trip (install a pack into an empty store, save it back, compare) is pinned by
 `tests/features/data-installer/services/demoBuilderEngine/roundTrip.test.ts`.
 
-## Stage 3 (export, the service's engine)
+## The Data Installer service's engine and export (deleted 2026-11-06, DI-12)
 
-Implemented (`handlers/exportHandlers.ts`, `services/dataInstallerExportClient.ts`). "Create
-datapack" in the catalog's header asks the pack type first (`CreateDatapackModal`). With the
-service engine chosen, its Commerce card goes on to cards for the data types, then the name and
-version; its ACO card, with either engine, to cards for the store views and the ACO data types (below),
-then the name and version. A
-probe on 2026-08-14 found it authenticating and connecting but storing nothing
-("MongoDB connection URI required"). That investigation is in
-[`.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md`](../../.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md),
-and it read the cause as the deployment's configuration.
-
-**Corrected 2026-10-01, with the service's source in hand**
-(`Adobe-CoreTech/dsc-data-installer-api`, internal): the deployed export action DOES carry
-its database address. The service's `buildContext()` builds the processor context from a
-fixed field list that omits every `MONGO_*` input, and every export processor asks that
-context for the address. One line fixes it; the proof and the prepared patch are recorded in
-`.rptc/plans/datapack-store/overview.md`. The service also has active maintainers (merges in
-July and September 2026), so "blocked indefinitely" in older notes is out of date.
-
-A dated finding about a service we do not own — re-verify before relying on it.
+Until 2026-11-06 the SC could choose the Data Installer service to install and remove packs
+(the Engine setting under Sample Data), and Create Datapack could ask the service to export a store
+into its shared catalog. Since 2026-10-27 the service has ignored the Commerce credentials a caller
+sends, so both did nothing for us, and both were deleted with the setting, under "no soft
+deprecation". Nothing that worked was lost: Demo Builder installs the service's packs itself
+(`readPackItems`), including its import-form products and customers; Save As captures any store,
+hand-built ones included; and Copy to the Data Installer puts a pack in its shared catalog. A pack
+the service installed before then has no install record, so its removal points to Clear Demo Data.
+The owner's note: the split between the two sources is to be reconsidered when they become adapters
+(DI-12, part 1).
 
 ### An ACO pack from a Commerce store
 
@@ -313,12 +304,7 @@ The export screen's "Pack type" choice, and `start_datapack_export` with `aco: t
 Adobe Commerce Optimizer pack from the project's own store (datapack-engine step 14 item 19,
 PL-60): `aco_metadata`, `aco_categories`, `aco_products`, `aco_price_books` and `aco_prices`,
 for the store views the SC ticks (none named means every one). It is Demo Builder's port of the
-service's `process-aco-datapack` export (`services/acoExport/`), so it runs with either engine,
-**Held back in beta.153** (owner, 2026-11-03): Create Datapack opens straight on the Commerce
-pack, with no pack-type screen, and `start_datapack_export` refuses `aco: true`
-(`ACO_HELD_BACK`). An ACO pack saved now would sit in the library with nothing to install it. The
-code below ships unreached. The ACO line reverts the hold commit when ACO support is released.
-
+service's `process-aco-datapack` export (`services/acoExport/`), so it runs in the extension,
 reads Commerce only, and saves into the SC's datapack **library**, never the shared catalog.
 Each kind is checked against the service's own schemas (`config/aco-schemas/`, copied
 verbatim). An existing name and version is refused, and so are `commerceInstance` and
@@ -380,14 +366,15 @@ A library card is tagged "Library", or "Mine" when the SC owns it — the librar
 so itself (`mine`), because only it knows the caller's verified email.
 
 A library pack's flyout offers Import, with Save as file and, when it is yours, Share or Stop
-sharing and Remove from library in its menu (`PackActions`).
-Demo Builder's engine (the default) installs it straight from the library; agents pass
-`source: "library"` to `validate_datapack_import`, `start_datapack_import` and
-`reset_datapack`. With the service engine chosen, which installs only from its own
-catalog, the flyout offers Copy to the Data Installer in place of Import
-(`copy-library-datapack-to-installer` / `copy_library_datapack_to_installer`). The copy
-writes into the shared catalog, so it carries the load's guards — the pack name sent
-back, an existing pack never overwritten — and it cannot be undone from the extension.
+sharing and Remove from library in its menu (`PackActions`). Demo Builder installs it straight
+from the library; agents pass `source: "library"` to `validate_datapack_import`,
+`start_datapack_import` and `reset_datapack`. While the Data Installer is on (its address set and
+`dataInstaller.enabled`, the catalog's `installerOn`), the flyout also offers Copy to the Data
+Installer beside Import (`copy-library-datapack-to-installer` / `copy_library_datapack_to_installer`):
+it puts the pack where other teams can find and install it, and is not needed to install it here
+(owner, 2026-11-06). The copy writes into the shared catalog, so it carries the load's guards —
+the pack name sent back, an existing pack never overwritten — and it cannot be undone from the
+extension.
 If the library cannot be reached, the Data Installer's packs still show, with a line
 saying why the library's are missing. Agents get the same through `find_datapacks`
 (`store`, `includeLibrary`) and `get_datapack` (`store`).
@@ -443,7 +430,7 @@ A zip whose files sit under one root folder reads the same.
 | Save a pack from either store | "Save as file" in a pack's flyout menu, and after an export | `save_datapack_zip`; `dataTypes` saves only the types named (to leave out one the store cannot send) |
 | Remove your own library pack | "Remove from library" in its flyout menu | `delete_library_datapack` |
 | Install a library pack | "Import" in its flyout | `start_datapack_import` with `source: "library"` |
-| Put a library pack in the Data Installer's catalog (service engine only) | "Copy to the Data Installer" in its flyout | `copy_library_datapack_to_installer` |
+| Put a library pack in the Data Installer's catalog | "Copy to the Data Installer" in its flyout, while the Data Installer is on | `copy_library_datapack_to_installer` |
 | See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
 | Build a pack file from a Commerce product export | none (agent only) | `build_datapack_from_export` |
 | Write it into a store | "Load from file", library by default | `load_datapack_zip` |

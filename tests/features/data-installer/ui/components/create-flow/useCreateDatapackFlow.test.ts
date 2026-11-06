@@ -1,6 +1,6 @@
 /**
  * The flow's state, apart from the view: stages, Back and forward, picks kept, the gates, and which
- * route each engine and pack type takes. The reads are driven through the real request hook and a
+ * route each pack type takes. The reads are driven through the real request hook and a
  * mocked client; a kind's read belongs to its screen (`StoreItemsStage`), so here its answer is
  * reported as that screen reports it.
  */
@@ -23,7 +23,6 @@ const NONE: StoreItemPage = { items: [], totalCount: 0, excludedCount: 0, inPack
 const PACK: PackBeingSaved = { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', source: 'library' };
 const WEBSITES: TargetWebsite[] = [{ code: 'base', name: 'Main Website', storeViews: [{ code: 'default', name: 'Default' }, { code: 'fr', name: 'French' }] }];
 
-const callsOf = (type: string) => mockRequest.mock.calls.filter((c) => c[0] === type);
 
 async function flowFor(args: Partial<CreateDatapackFlowArgs> = {}) {
     const onSave = jest.fn();
@@ -40,8 +39,6 @@ async function flowFor(args: Partial<CreateDatapackFlowArgs> = {}) {
 beforeEach(() => {
     mockRequest.mockReset();
     mockRequest.mockImplementation(async (type: string) => {
-        if (type === 'list-datapack-data-types') return { success: true, data: { dataTypes: ['categories', 'products'] } };
-        if (type === 'get-datapack-import-target') return { success: true, data: { instance: 'inst-1' } };
         if (type === 'list-datapack-import-scopes') return { success: true, data: { websites: WEBSITES } };
         if (type === 'start-datapack-export') return new Promise(() => undefined);
         return { success: true, data: null };
@@ -51,22 +48,18 @@ beforeEach(() => {
 // ACO packs are held back until ACO support ships (owner, 2026-11-03): the flow is a Commerce pack
 // from the start, with no pack-type screen. The ACO line reverts this, and its route's tests.
 describe('the first screen', () => {
-    it.each([
-        ['demo-builder', 'store-picks'],
-        ['service', 'service-types'],
-        [undefined, 'service-types'],
-    ] as const)("with the %s engine, starts on the Commerce pack's %s with nothing behind it", async (engine, stage) => {
-        const { result } = await flowFor({ engine });
+    it("starts on the Commerce pack's picks with nothing behind it", async () => {
+        const { result } = await flowFor({});
 
         expect(result.current.packType).toBe('commerce');
-        expect(result.current.stage).toBe(stage);
+        expect(result.current.stage).toBe('store-picks');
         expect(result.current.canGoBack).toBe(false);
     });
 });
 
 describe('the store route', () => {
     async function onThePicks(args: Partial<CreateDatapackFlowArgs> = {}) {
-        return flowFor({ engine: 'demo-builder', ...args });
+        return flowFor(args);
     }
 
     it('opens a kind where it stands', async () => {
@@ -153,7 +146,7 @@ describe('the store route', () => {
 
 describe('starting at the picks', () => {
     it('has nothing behind the picks and no pack type to ask', async () => {
-        const { result } = await flowFor({ engine: 'demo-builder', startsAtPicks: true });
+        const { result } = await flowFor({ startsAtPicks: true });
 
         expect(result.current.stage).toBe('store-picks');
         expect(result.current.route).toBe('store');
@@ -161,50 +154,11 @@ describe('starting at the picks', () => {
     });
 
     it('can save a pack with nothing picked, and a store only with something picked', async () => {
-        const held = await flowFor({ engine: 'demo-builder', startsAtPicks: true, pack: PACK });
+        const held = await flowFor({ startsAtPicks: true, pack: PACK });
         expect(held.result.current.main.isDisabled).toBe(false);
 
-        const alone = await flowFor({ engine: 'demo-builder', startsAtPicks: true });
+        const alone = await flowFor({ startsAtPicks: true });
         expect(alone.result.current.main.isDisabled).toBe(true);
     });
 });
 
-describe("the service's route", () => {
-    async function onTheTypes() {
-        return flowFor({ engine: 'service' });
-    }
-
-    it('gates the types on one chosen, then the name on both fields', async () => {
-        const { result, step } = await onTheTypes();
-        expect(result.current.main).toMatchObject({ label: 'Continue', isDisabled: true });
-
-        await step(() => result.current.answers.types.onToggle('products', true));
-        expect(result.current.main.isDisabled).toBe(false);
-
-        await step(() => result.current.main.onPress());
-        expect(result.current.stage).toBe('pack-name');
-        expect(result.current.main).toMatchObject({ label: 'Export', isDisabled: true });
-
-        await step(() => result.current.answers.setName('pack'));
-        expect(result.current.main.isDisabled).toBe(true);
-
-        await step(() => result.current.answers.setVersion('v1'));
-        expect(result.current.main.isDisabled).toBe(false);
-    });
-
-    it('reads the types and the target once, whichever way the SC walks', async () => {
-        const { result, step } = await onTheTypes();
-        await step(() => result.current.answers.types.onToggle('products', true));
-        await step(() => result.current.main.onPress());
-        await step(() => result.current.back());
-
-        expect(callsOf('list-datapack-data-types')).toHaveLength(1);
-        expect(callsOf('get-datapack-import-target')).toHaveLength(1);
-    });
-
-    it('reads no store views', async () => {
-        await onTheTypes();
-
-        expect(callsOf('list-datapack-import-scopes')).toHaveLength(0);
-    });
-});

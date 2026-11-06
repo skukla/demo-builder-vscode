@@ -91,7 +91,7 @@ describe('diagnose-demo routes the empty-product-page symptom correctly', () => 
         // NOT a bare /root categor/ — that matched even after the sentence
         // carrying the claim was gutted, because the words survive elsewhere.
         // Pin the two claims that make this actionable instead.
-        expect(c).toMatch(/does not attach it to a store/i);
+        expect(c).toMatch(/without attaching\s+it to a store/i);
         // The distinguishing check: the flat search is what shows reality when
         // the tree endpoint hides it.
         expect(c).toMatch(/categories\/list|flat search/i);
@@ -172,14 +172,13 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
         expect(c).toMatch(/instance wipe/i);
     });
 
-    it('says EXPORT is the one operation the caller must order', () => {
+    // The service's own export, which the caller had to order type by type, was deleted on
+    // 2026-11-06 with its engine (DI-12). What reaches the Data Installer now is a copy.
+    it('says how a pack reaches the Data Installer, and that it is not needed to install here', () => {
         const c = content();
-        // `startDelete`'s own comment: the service supplies dependency ordering
-        // for import and delete. Export has no such guarantee, so exporting
-        // types individually in the wrong order is on the caller.
-        expect(c).toMatch(/attributes before products/i);
-        expect(c).toContain('list_datapack_data_types');
-        expect(c).toMatch(/operationMode.*export|export.*operationMode/i);
+        expect(c).toContain('copy_library_datapack_to_installer');
+        expect(c).toMatch(/not needed to install the\s+pack here/i);
+        expect(c).toMatch(/confirmName/);
     });
 
     /**
@@ -201,12 +200,6 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
         expect(c).toMatch(/Admin/i);
         // Customer segments: the rule installs and is silently broken.
         expect(c).toMatch(/segment/i);
-    });
-
-    it('says a re-export rewrites rather than duplicates', () => {
-        // This is what makes a wrong-order export recoverable, and without it an
-        // agent would treat the mistake as needing a fresh pack.
-        expect(content()).toMatch(/rewrites the previous/i);
     });
 });
 

@@ -57,7 +57,7 @@ function renderPanel(over: Partial<React.ComponentProps<typeof DatapackDetailPan
             onRetry={jest.fn()}
             onImport={jest.fn()}
             onRemoved={jest.fn()}
-            installsFromLibrary={false}
+            installerOn={false}
             {...over}
         />
     );

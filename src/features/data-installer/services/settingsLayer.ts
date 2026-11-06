@@ -78,17 +78,16 @@ const isSettingRow = (row: unknown): row is { path: string; value: string } => {
 /**
  * What a pack's flyout says about its layer (`get-datapack-detail`), so an SC sees what Import will
  * set before pressing it, and can remove a layer of their own, whose card is not offered
- * (`withoutLayerCards`). Only with Demo Builder's engine, since it alone applies a layer, and only
- * for a pack holding no settings of its own. A library that cannot be asked costs only the row.
+ * (`withoutLayerCards`). Only for a pack holding no settings of its own. A library that cannot be
+ * asked costs only the row.
  *
  * @param open - the library's reads, opened only when there is something to ask
  */
 export async function layerForDetail(
     pack: Pick<DatapackSummary, 'id' | 'dataTypes'>,
-    engine: 'service' | 'demo-builder',
     open: () => Promise<LayerReads>,
 ): Promise<PackDetailLayer | undefined> {
-    if (engine !== 'demo-builder' || pack.dataTypes.includes(STORE_CONFIG_KIND)) return undefined;
+    if (pack.dataTypes.includes(STORE_CONFIG_KIND)) return undefined;
     try {
         const layer = await findSettingsLayer(await open(), pack.id.name);
         if (!layer) return undefined;

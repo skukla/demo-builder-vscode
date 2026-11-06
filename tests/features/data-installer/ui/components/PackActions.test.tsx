@@ -43,7 +43,7 @@ function renderActions(over: Partial<React.ComponentProps<typeof PackActions>> =
         detail: makeDetail(),
         onImport: jest.fn(),
         onRemoved: jest.fn(),
-        installsFromLibrary: false,
+        installerOn: false,
         ...over,
     };
     render(<PackActions {...props} />);
@@ -83,7 +83,7 @@ describe('a Data Installer pack', () => {
 
 // Saving the store into a pack is Save Changes, given only for the demo's own pack (2026-11-04).
 it('never offers Save Store Changes in the menu', () => {
-    renderActions({ detail: OWN, installsFromLibrary: true });
+    renderActions({ detail: OWN });
 
     expect(menuLabels()).not.toContain('Save Store Changes to This Datapack');
     expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
@@ -91,7 +91,7 @@ it('never offers Save Store Changes in the menu', () => {
 
 it('leads with Save Changes when given it, Import beside it', async () => {
     const onSaveChanges = jest.fn();
-    renderActions({ detail: OWN, installsFromLibrary: true, onSaveChanges });
+    renderActions({ detail: OWN, onSaveChanges });
 
     const [first, second] = screen.getAllByRole('button');
     expect(first).toHaveTextContent('Save Changes');
@@ -101,21 +101,29 @@ it('leads with Save Changes when given it, Import beside it', async () => {
 });
 
 describe('a library pack', () => {
-    it('offers Copy to the Data Installer instead of Import with the service engine, and saves from the library', async () => {
-        renderActions({ detail: LIBRARY });
+    // Owner, 2026-11-06: a pack an SC makes can go to the Data Installer, and Demo Builder installs
+    // a library pack where it is, so Import is always there and Copy is beside it while it is on.
+    it('offers Import, and Copy to the Data Installer beside it while the Data Installer is on', async () => {
+        const props = renderActions({ detail: LIBRARY, installerOn: true });
 
-        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Copy to the Data Installer' })).toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Import' }));
+        expect(props.onImport).toHaveBeenCalledWith(LIBRARY.id);
         await press(row('Save as File'));
         expect(mockRequest).toHaveBeenCalledWith('save-datapack-zip', { source: 'library', datapackName: 'bodea', version: 'main' }, undefined);
     });
 
-    it("offers Import in place of Copy when Demo Builder's engine is chosen", async () => {
-        const props = renderActions({ detail: LIBRARY, installsFromLibrary: true });
+    it('offers no Copy while the Data Installer is off or has no address, and still Import', () => {
+        renderActions({ detail: LIBRARY, installerOn: false });
 
         expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
-        await press(screen.getByRole('button', { name: 'Import' }));
-        expect(props.onImport).toHaveBeenCalledWith(LIBRARY.id);
+        expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+    });
+
+    it("never offers Copy on a Data Installer pack: it is there already", () => {
+        renderActions({ detail: makeDetail(), installerOn: true });
+
+        expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
     });
 
     it("offers neither Share nor Remove on a colleague's library pack", () => {
@@ -275,7 +283,7 @@ describe('while a menu row works, the flyout waits', () => {
                 onRetry={jest.fn()}
                 onImport={jest.fn()}
                 onRemoved={jest.fn()}
-                installsFromLibrary={false}
+                installerOn={false}
             />,
         );
         expect(screen.getByText('CoreTech')).toBeInTheDocument();
@@ -294,7 +302,7 @@ describe('while a menu row works, the flyout waits', () => {
     it('lets the flyout go when it is closed during the wait', async () => {
         const onWorking = jest.fn();
         const { unmount } = render(
-            <PackActions detail={makeDetail()} onImport={jest.fn()} onRemoved={jest.fn()} installsFromLibrary={false} onWorking={onWorking} />,
+            <PackActions detail={makeDetail()} onImport={jest.fn()} onRemoved={jest.fn()} installerOn={false} onWorking={onWorking} />,
         );
         pendingRequest();
         await press(row('Save as File'));

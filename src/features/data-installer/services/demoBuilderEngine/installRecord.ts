@@ -3,7 +3,7 @@
  * is created (DI-5, owner 2026-10-27).
  *
  * Removal reads this and takes away exactly what is in it, in reverse, and nothing the store
- * already had. The service's engine keeps no such list: it removes whatever a pack names,
+ * already had. The Data Installer service kept no such list: it removed whatever a pack named,
  * matched by SKU, code or name, including things that were there before it installed
  * (`.rptc/research/datapack-engine/catalog-spec.md`, "Installation record").
  *

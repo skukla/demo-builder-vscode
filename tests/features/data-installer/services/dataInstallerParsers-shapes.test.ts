@@ -28,12 +28,10 @@ import {
     parseDatapackDetail,
     parseDatapackList,
     parseHealth,
-    parseImportStart,
     parseInstalledDatapacks,
     parseJobFailureReason,
     parseJobStatus,
     parseProcessorOrder,
-    parseValidation,
 } from '@/features/data-installer/services/dataInstallerParsers';
 import { IDENTITY_ROW as ROW } from './dataInstallerParsers.testUtils';
 
@@ -499,62 +497,6 @@ describe('parseJobFailureReason', () => {
 
     it('reports nothing when a failure names no reason', () => {
         expect(parseJobFailureReason({ success: false })).toBeUndefined();
-    });
-});
-
-// =============================================================================
-// parseImportStart — the id there is nothing to poll without
-// =============================================================================
-
-describe('parseImportStart', () => {
-    it('reads the activation id off an accepted start', () => {
-        expect(
-            parseImportStart({
-                success: true,
-                status: 'pending',
-                activation_id: 'act-9',
-                pipeline: 'import',
-            })
-        ).toEqual({ activationId: 'act-9' });
-    });
-
-    // An accepted job with nothing to poll cannot be told apart from one that
-    // never reports, so the caller must see undefined rather than an empty id.
-    it('answers undefined when the response carries no activation id', () => {
-        expect(parseImportStart({ success: true, status: 'pending' })).toBeUndefined();
-    });
-
-    it('answers undefined for a body that is not an object at all', () => {
-        expect(parseImportStart('accepted')).toBeUndefined();
-    });
-});
-
-// =============================================================================
-// parseValidation — a refusal is an ANSWER
-// =============================================================================
-
-describe('parseValidation', () => {
-    it('reads success as valid, with no reason to give', () => {
-        expect(parseValidation({ success: true })).toEqual({ valid: true });
-    });
-
-    // The service's own wording names the cause, and getting that wording is the
-    // entire reason the validate call exists.
-    it('carries the refusal reason through verbatim', () => {
-        expect(parseValidation({ success: false, error: 'data_type products is unknown' })).toEqual(
-            {
-                valid: false,
-                reason: 'data_type products is unknown',
-            }
-        );
-    });
-
-    it('treats anything that is not success as a refusal', () => {
-        expect(parseValidation({ status: 'pending' })).toEqual({ valid: false });
-    });
-
-    it('omits the reason rather than carrying an empty one', () => {
-        expect('reason' in parseValidation({ success: false, error: '' })).toBe(false);
     });
 });
 

@@ -3,7 +3,7 @@
  * the root category that store view's store shows (DI-5).
  *
  * The codes come from the project's Business Structure step (`resolveInstallTarget`, the pair
- * the service engine sends too). The ids are read from the store as it is now, through the same
+ * the service's own engine sent too, before it was deleted). The ids are read from the store as it is now, through the same
  * `storeScopeOf` the ERP's "Assign products" scopes itself with, so the two can never disagree
  * about which catalog is the project's. The service took the codes and looked the ids up
  * itself (catalog spec §0, "Store scoping").

@@ -8,8 +8,8 @@
  * the install record onto that version, so the removal that follows has to be of the saved
  * version; the caller is told which it is.
  *
- * A pack with no install record (the service's engine installed it) has no record of changes, so
- * nothing here applies to it and it is removed as it always was. Objects recorded before hashes
+ * A pack with no install record (the Data Installer service installed it) has no record of changes,
+ * so nothing here applies to it, and its removal then points to Clear Demo Data. Objects recorded before hashes
  * were kept are not counted as changed: nothing can tell.
  *
  * @module features/data-installer/handlers/removalChanges

@@ -12,10 +12,10 @@
 import {
     importHandlers,
     PAYLOAD,
-    happyClient,
+    happyEngine,
     makeImportHarness,
     resetImportHandlerMocks,
-    stubWriteClient,
+    stubEngine,
 } from './importHandlers.testUtils';
 import type { Project } from '@/types/base';
 
@@ -44,7 +44,7 @@ function sentRequest(startImport: jest.Mock) {
 describe('no project open', () => {
     it('refuses a start rather than writing into an unnamed instance', async () => {
         const { context } = makeImportHarness(null);
-        const client = happyClient();
+        const client = happyEngine();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -57,7 +57,7 @@ describe('no project open', () => {
 
     it('refuses a dry run for the same reason', async () => {
         const { context } = makeImportHarness(null);
-        const client = happyClient();
+        const client = happyEngine();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
@@ -70,7 +70,7 @@ describe('no project open', () => {
 describe('reset-datapack without confirmation', () => {
     it('refuses before resolving anything at all', async () => {
         const { context } = makeImportHarness();
-        const client = happyClient();
+        const client = happyEngine();
 
         const result = await importHandlers['reset-datapack'](context, PAYLOAD);
 
@@ -83,7 +83,7 @@ describe('reset-datapack without confirmation', () => {
         // The gate exists so a caller cannot opt in by accident; 'yes' from a
         // loosely-typed agent payload is exactly that accident.
         const { context } = makeImportHarness();
-        const client = happyClient();
+        const client = happyEngine();
 
         const result = await importHandlers['reset-datapack'](context, {
             ...PAYLOAD,
@@ -100,7 +100,7 @@ describe("the project's scope as a fallback target", () => {
         // The MCP rows leave both codes optional. Without this an agent that
         // skipped the scope list would import — and RESET — against `base`.
         const { context } = makeImportHarness(PAAS_WITH_SCOPE);
-        const client = happyClient();
+        const client = happyEngine();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -112,7 +112,7 @@ describe("the project's scope as a fallback target", () => {
 
     it("lets a caller's explicit scope win over the project's", async () => {
         const { context } = makeImportHarness(PAAS_WITH_SCOPE);
-        const client = happyClient();
+        const client = happyEngine();
 
         await importHandlers['start-datapack-import'](context, {
             ...PAYLOAD,
@@ -130,7 +130,7 @@ describe("the project's scope as a fallback target", () => {
 describe('a dry run that throws', () => {
     it('reports the thrown message', async () => {
         const { context } = makeImportHarness();
-        stubWriteClient({
+        stubEngine({
             checkCredentials: jest.fn().mockRejectedValue(new Error('token expired')),
             validateImport: jest.fn(),
         });
@@ -142,7 +142,7 @@ describe('a dry run that throws', () => {
 
     it('falls back to its own wording for a non-Error throw', async () => {
         const { context } = makeImportHarness();
-        stubWriteClient({
+        stubEngine({
             checkCredentials: jest.fn().mockRejectedValue('a string'),
             validateImport: jest.fn(),
         });
@@ -154,7 +154,7 @@ describe('a dry run that throws', () => {
 
     it('uses its own wording when the access check gives no reason', async () => {
         const { context } = makeImportHarness();
-        stubWriteClient({
+        stubEngine({
             checkCredentials: jest.fn().mockResolvedValue({ usable: false }),
             validateImport: jest.fn(),
         });

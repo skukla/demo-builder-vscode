@@ -3,9 +3,8 @@
  * (`aco: true`), datapack-engine step 14 item 19 (PL-60). Reached through `start-datapack-export`
  * so the human and the agent export from the one place they already do.
  *
- * Unlike the Commerce export (the Data Installer service's, into the shared catalog), this runs
- * on Demo Builder's own reads of the project's store and writes into the SC's datapack LIBRARY,
- * private to them, whichever engine is chosen. Undone by deleting the pack from the library
+ * It runs on Demo Builder's own reads of the project's store and writes into the SC's datapack
+ * LIBRARY, private to them. Undone by deleting the pack from the library
  * (`delete-library-datapack`). Nothing is written to Commerce.
  *
  * It opens as every datapack write does (`resolveDatapackWriteAccess`), then checks the sign-in
@@ -45,10 +44,10 @@ export interface AcoExportPayload {
 }
 
 /**
- * Fields that belong to the other two exports: the service's Commerce export names the instance
- * it reads (`commerceInstance`), Demo Builder's save from the store sends its picks
- * (`selections`). An ACO pack reads this project's own store and picks nothing, so either one
- * sent with `aco` would be silently ignored; it is refused instead, with either engine.
+ * Fields that belong to other exports: the Data Installer service's own export named the instance
+ * it read (`commerceInstance`, deleted with it on 2026-11-06), and Demo Builder's save from the
+ * store sends its picks (`selections`). An ACO pack reads this project's own store and picks
+ * nothing, so either one sent with `aco` would be silently ignored; it is refused instead.
  */
 const OTHER_EXPORT_FIELDS = ['commerceInstance', 'selections'] as const;
 

@@ -1,6 +1,6 @@
 /**
  * The wizard's creation install and project reset ask the same org question the screen's import
- * asks (`importHandlers-orgGuard.test.ts`): with Demo Builder's engine, a sign-in outside the org
+ * asks (`importHandlers-orgGuard.test.ts`): a sign-in outside the org
  * that owns the store stops the job before it starts, in the guard's own words (DI-5).
  */
 
@@ -13,20 +13,14 @@ jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
     };
 });
 jest.mock('@/features/authentication/services/projectOrgGuard', () => ({ orgGuard: jest.fn() }));
-jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
-    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
-    selectedDatapackEngine: jest.fn(),
-}));
 
 // The shared wall first (webview-test-authoring §3).
 import { ACCS_PROJECT, INSTALLER_ADDRESS, dataInstallerAddress, importHarness } from './sampleDataInstallDeps.testUtils';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
-import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 
 const mockedGuard = orgGuard as jest.MockedFunction<typeof orgGuard>;
-const mockedEngine = selectedDatapackEngine as jest.MockedFunction<typeof selectedDatapackEngine>;
 const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<typeof resolveDataInstallerAccess>;
 const MISMATCH = 'Project uses a different Adobe organization. Use "Switch IMS Org" to continue.';
 
@@ -47,19 +41,18 @@ describe('the creation install and reset ask the org question', () => {
     >[0];
 
     it('stop before starting when the sign-in is outside the store\'s org', async () => {
-        mockedEngine.mockReturnValue('demo-builder');
         mockedGuard.mockResolvedValue({ error: MISMATCH });
         const deps = buildSampleDataDeps(importHarness(), ACCS_PROJECT, jest.fn());
 
         await expect(deps.startImport(REQUEST)).rejects.toThrow(MISMATCH);
     });
 
-    it('do not ask when the service is the engine', async () => {
-        mockedEngine.mockReturnValue('service');
+    it('CONTROL: go on to build the engine once the sign-in is in that org', async () => {
+        mockedGuard.mockResolvedValue(undefined);
         const deps = buildSampleDataDeps(importHarness(), ACCS_PROJECT, jest.fn());
 
-        await deps.startImport(REQUEST).catch(() => undefined);
-
-        expect(mockedGuard).not.toHaveBeenCalled();
+        // Past the guard, the job stops on the request's missing target, not on the org.
+        await expect(deps.startImport(REQUEST)).resolves.toMatchObject({ activationId: expect.any(String) });
+        expect(mockedGuard).toHaveBeenCalled();
     });
 });

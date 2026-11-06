@@ -11,10 +11,9 @@
  */
 
 import { resolveDataInstallerAccess, resolveDatapackAccess } from '../handlers/dataInstallerHandlers';
-import { SERVICE_INSTALLS_ONLY_ITS_OWN, SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from '../handlers/libraryReads';
+import { SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from '../handlers/libraryReads';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
-import { buildDatapackEngine, engineThatInstalled } from './buildDatapackEngine';
-import { resolveDataInstallerBaseUrl, selectedDatapackEngine } from './dataInstallerConfig';
+import { buildDatapackEngine, installedByDemoBuilder } from './buildDatapackEngine';
 import type { DatapackEngine } from './datapackEngine';
 import { watchImportJob } from './importJobRunner';
 import type { SampleDataDeps } from './sampleDataInstall';
@@ -84,21 +83,13 @@ export function buildSampleDataDeps(
             return fromStore.length > 0 ? fromStore : held('installer');
         },
 
-        startImport: async (request) => {
-            // The service installs only from its own catalog: say so, rather than send it a
-            // pack it reads as missing.
-            if (request.source === 'library' && mode === 'install' && selectedDatapackEngine() === 'service') {
-                throw new Error(SERVICE_INSTALLS_ONLY_ITS_OWN);
-            }
-            return (await engineOnce()).startImport(request);
-        },
+        startImport: async (request) => (await engineOnce()).startImport(request),
 
         // The Reset workflow's half. Same request, same engine, different verb.
         startDelete: async (request) => (await engineOnce()).startDelete(request),
 
         /**
-         * Polls through the engine. For the service engine that is the READ client,
-         * the only one that can answer.
+         * Polls through the engine, the one that started the job and keeps it in memory.
          *
          * `watchImportJob` needs a `JobStatusSource` — `getJobStatus` and
          * `getJobFailureReason` — and those live on `DataInstallerClient`. This
@@ -137,28 +128,24 @@ export function buildSampleDataDeps(
     };
 }
 
-/** The engine the setting chooses, built the way the import handlers build it (`buildDatapackEngine`). */
+/** The engine, built the way the import handlers build it (`buildDatapackEngine`). */
 async function engine(context: HandlerContext, project: Project, mode: SampleDataMode): Promise<DatapackEngine> {
     const access = await resolveDatapackAccess(context);
     if (!access.ok) {
         throw new Error('Datapacks are not available for this project.');
     }
-    // A removal goes through the engine that installed the project's pack (DI-5).
-    const engineId =
-        mode === 'remove' && project.datapack ? await engineThatInstalled(project.path, project.datapack) : selectedDatapackEngine();
+    // A pack the Data Installer service installed has no record here: only Clear Demo Data clears it.
+    if (mode === 'remove' && project.datapack && !(await installedByDemoBuilder(project.path, project.datapack))) {
+        throw new Error(SERVICE_REMOVAL_UNAVAILABLE);
+    }
     // The org that owns the store is the org the sign-in must be in, as the screen's import
     // checks (`importHandlers`, `orgGuard`).
-    if (engineId === 'demo-builder' && context.authManager) {
+    if (context.authManager) {
         const orgFailure = await orgGuard(context, project, context.authManager);
         if (orgFailure) throw new Error(orgFailure.error);
     }
-    // With no address, `access` is the datapack store's, and the store does not run the service's jobs.
-    if (engineId === 'service' && !resolveDataInstallerBaseUrl().ok) throw new Error(SERVICE_REMOVAL_UNAVAILABLE);
     return buildDatapackEngine(
-        engineId,
         {
-            ...access,
-            jobs: access.client,
             catalog: access.client,
             libraryCatalog: libraryReads(context),
             project,

@@ -14,9 +14,9 @@
  * @module features/data-installer/handlers/importJobWatch
  */
 
-import type { ImportRequest } from '../services/dataInstallerWriteClient';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { watchImportJob } from '../services/importJobRunner';
+import type { ImportRequest } from '../services/importRequest';
 import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord, type ValidationResult } from '../types';
 import { progressLabel, progressStep, summarizeProgress } from '../ui/importProgress';
 import { PollingService } from '@/core/shell/pollingService';

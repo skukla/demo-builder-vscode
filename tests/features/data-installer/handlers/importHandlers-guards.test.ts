@@ -11,9 +11,10 @@
 import {
     importHandlers,
     PAYLOAD,
-    happyClient,
+    happyEngine,
     makeImportHarness,
-    MockedWriteClient,
+    mockedBuildEngine,
+    PAAS_PROJECT,
     resetImportHandlerMocks,
     setupSettings,
 } from './importHandlers.testUtils';
@@ -29,7 +30,7 @@ describe('a call with no payload at all', () => {
         ['validate-datapack-import'],
     ] as const)('%s refuses instead of throwing', async (handler) => {
         const { context } = makeImportHarness();
-        const client = happyClient();
+        const client = happyEngine();
 
         const result = await importHandlers[handler](context);
 
@@ -42,7 +43,7 @@ describe('a call with no payload at all', () => {
 
     it('reset-datapack refuses at the confirm gate, before reading anything', async () => {
         const { context } = makeImportHarness();
-        const client = happyClient();
+        const client = happyEngine();
 
         const result = await importHandlers['reset-datapack'](context);
 
@@ -52,7 +53,7 @@ describe('a call with no payload at all', () => {
 
     it('refuses a payload holding a name but no version', async () => {
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
 
         const result = await importHandlers['start-datapack-import'](context, {
             datapackName: 'bodea',
@@ -63,7 +64,7 @@ describe('a call with no payload at all', () => {
 
     it('refuses a payload with an empty dataTypes array', async () => {
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
 
         const result = await importHandlers['start-datapack-import'](context, {
             ...PAYLOAD,
@@ -75,7 +76,7 @@ describe('a call with no payload at all', () => {
 
     it('refuses a website code with no store code', async () => {
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
 
         const result = await importHandlers['start-datapack-import'](context, {
             ...PAYLOAD,
@@ -87,7 +88,7 @@ describe('a call with no payload at all', () => {
 
     it('refuses a store code with no website code', async () => {
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
 
         const result = await importHandlers['start-datapack-import'](context, {
             ...PAYLOAD,
@@ -102,7 +103,7 @@ describe('a confirmed reset that cannot be prepared', () => {
     it('returns the preparation refusal rather than deleting anything', async () => {
         // Past the confirm gate, into prepareImport, which refuses on no project.
         const { context } = makeImportHarness(null);
-        const client = happyClient();
+        const client = happyEngine();
 
         const result = await importHandlers['reset-datapack'](context, {
             ...PAYLOAD,
@@ -117,7 +118,7 @@ describe('a confirmed reset that cannot be prepared', () => {
     });
 });
 
-describe('the Data Installer URL is not configured', () => {
+describe('no datapack store address is configured', () => {
     beforeEach(() => {
         (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
             get: jest.fn((key: string) => (key === 'apiBaseUrl' ? '' : true)),
@@ -130,19 +131,20 @@ describe('the Data Installer URL is not configured', () => {
 
     it('refuses a start before resolving the project or its credentials', async () => {
         const { context } = makeImportHarness();
-        const client = happyClient();
+        const client = happyEngine();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
 
         expect(client.validateImport).not.toHaveBeenCalled();
         expect(result.success).toBe(false);
-        // This harness has the service engine chosen, and that needs the Data Installer's own address.
-        expect(result.error).toContain('Data Installer API URL');
+        // No Data Installer address sends the write to Demo Builder's datapack store, and this
+        // harness answers '' for that address too: the refusal names the setting to fix.
+        expect(result.error).toContain('demoBuilder.datapackStore.apiBaseUrl');
     });
 
     it('refuses a dry run the same way', async () => {
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
@@ -150,22 +152,21 @@ describe('the Data Installer URL is not configured', () => {
     });
 });
 
-describe('how the write client is built', () => {
-    it('is constructed with the resolved base URL, a token source and a log line', async () => {
+describe('how the engine is built', () => {
+    it("is built for the open project, reading packs from the catalog, with a log line", async () => {
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
-        const options = MockedWriteClient.mock.calls[0][0];
-        expect(options.baseUrl).toBe(
-            'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api',
-        );
-        expect(typeof options.getToken).toBe('function');
-        // Every service call gets a line in Debug Logs. The first live dry run
+        const [access, log] = mockedBuildEngine.mock.calls[0];
+        expect(access.project).toEqual(PAAS_PROJECT);
+        expect(typeof access.catalog.getDataItem).toBe('function');
+        expect(typeof access.libraryCatalog).toBe('function');
+        // Every engine call gets a line in Debug Logs. The first live dry run
         // refused with an EMPTY channel, which is undebuggable for the user.
         // The WIRING is the claim here, not the wording.
-        options.log?.('a service line');
+        log('an engine line');
         expect(context.debugLogger.debug).toHaveBeenCalled();
     });
 });

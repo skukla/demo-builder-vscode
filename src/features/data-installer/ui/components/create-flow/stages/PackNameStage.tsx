@@ -29,18 +29,9 @@ export function SaveAsNameStage({ name, onChange }: { name: string; onChange: (n
     );
 }
 
-export function PackNameStage({ answers, sharedCatalog }: {
-    answers: ExportAnswers;
-    /** The pack goes in the shared catalog. */
-    sharedCatalog: boolean;
-}): React.ReactElement {
+export function PackNameStage({ answers }: { answers: ExportAnswers }): React.ReactElement {
     return (
         <>
-            {sharedCatalog ? (
-                <p className="datapack-export-intro">
-                    Other teams see this name and version in the shared catalog.
-                </p>
-            ) : null}
             <FormField
                 fieldKey="datapackName"
                 label="Datapack Name"

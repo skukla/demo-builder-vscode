@@ -48,6 +48,24 @@ Not checked live: whether the service's export, behind the service engine's Crea
 works today. Check it before deleting that route. Reading the service's job history for the
 Activity tab is not part of the engine and stays.
 
+**2026-11-06: the engine part done, in reduced scope.** Deleted: the service engine (the service
+installing into and removing from Commerce for us), the `demoBuilder.dataInstaller.engine` setting,
+and the service's own Create route (it exported a store into its shared catalog with the service's
+Commerce access). Both conditions above had been met first: `product_export` and `customers_export`
+install natively (DI-8), and a pack the service installed points to Clear Demo Data. The export check
+was answered by reading the code rather than live: Save As captures what is picked from any store,
+one Demo Builder never installed into included, and Select All Data takes a whole store, so the
+service's export did nothing Save As then Copy does not.
+
+Kept, at the owner's word (2026-11-06): **Copy to the Data Installer**, because packs an SC makes
+are meant to reach the Data Installer one day, now shown beside Import on a library pack whenever the
+Data Installer is on rather than only under the service engine; and **installing a pack only the
+Data Installer holds**, which Demo Builder already does by reading it (`readPackItems`). Checking a
+pack against the service's rules belongs at the copy, before anything is sent (plan s33).
+
+The owner's note: this split between the two sources is to be reconsidered when part 1, the
+sources as adapters, is built.
+
 ## Size
 
 About 4.5 to 5.5 working days, plus review between parts; the engine answer moves it by a day. The

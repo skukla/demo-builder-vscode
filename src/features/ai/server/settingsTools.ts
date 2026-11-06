@@ -75,7 +75,6 @@ export const SETTING_KEYS = [
     'demoBuilder.byom.overlayUrl',
     'demoBuilder.ai.engine',
     'demoBuilder.ai.permissions',
-    'demoBuilder.dataInstaller.engine',
     'demoBuilder.dataInstaller.changesOnRemoval',
     'demoBuilder.dataInstaller.apiBaseUrl',
     'demoBuilder.dataInstaller.enabled',

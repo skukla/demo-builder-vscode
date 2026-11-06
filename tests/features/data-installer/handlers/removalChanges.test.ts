@@ -43,7 +43,7 @@ jest.mock('@/features/data-installer/handlers/importJobWatch', () => ({
 
 import * as vscode from 'vscode';
 import { createMockProject } from '../../../helpers/projectFake';
-import { makeImportHarness, setupSettings } from './importHandlers.testUtils';
+import { makeImportHarness, mockedInstalledByDemoBuilder, setupSettings } from './importHandlers.testUtils';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
@@ -54,7 +54,7 @@ import type { StoreChangesPayload } from '@/features/data-installer/handlers/sto
 import { buildDatapackEngine } from '@/features/data-installer/services/buildDatapackEngine';
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
-import type { ImportRequest } from '@/features/data-installer/services/dataInstallerWriteClient';
+import type { ImportRequest } from '@/features/data-installer/services/importRequest';
 import { type InstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { type SaveResult, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
@@ -137,7 +137,6 @@ beforeEach(() => {
     events = [];
     setting('ask');
     mockedGuard.mockResolvedValue(undefined);
-    jest.spyOn(DataInstallerClient.prototype, 'checkHealth').mockResolvedValue({ reachable: true });
     mockedAccess.mockImplementation(async (_context, store = 'installer') => ({
         ok: true,
         baseUrl: `https://example.invalid/${store}`,
@@ -157,6 +156,10 @@ beforeEach(() => {
         return SAVED;
     });
     mockedEngine.mockImplementation(fakeEngine);
+    // The real check, over the record this suite fakes (`recordsFor`): the shared wall stubs it.
+    mockedInstalledByDemoBuilder.mockImplementation(
+        jest.requireActual<typeof import('@/features/data-installer/services/buildDatapackEngine')>('@/features/data-installer/services/buildDatapackEngine').installedByDemoBuilder,
+    );
     mockedRun.mockImplementation(async (_context, _engine, _request, spec) => ({ success: true, data: await spec.begin() }));
 });
 
@@ -353,54 +356,24 @@ describe('a read that fails', () => {
     });
 });
 
+// The Data Installer service installed it, before its engine was deleted (DI-12): Demo Builder has
+// no record of what it added, so it never removes by name, and points to Clear Demo Data.
 describe('a pack the service installed', () => {
     beforeEach(() => recordsFor());
 
-    it('has no record of changes, so it is removed as it always was, without opening the store', async () => {
-        const result = await reset();
+    const NO_RECORD = 'The Data Installer installed this datapack, so Demo Builder has no record of what it added. Use Clear Demo Data to remove it.';
 
-        expect(result.success).toBe(true);
+    it.each([
+        ['nothing answered', {}],
+        ['keep', KEEP],
+    ])('is refused with Clear Demo Data (%s), saving and sending nothing', async (_name, over) => {
+        const result = await reset(over);
+
+        expect(result).toEqual({ success: false, error: NO_RECORD, code: ErrorCode.INVALID_OPERATION });
         expect(mockedPreview).not.toHaveBeenCalled();
-        expect(mockedGuard).not.toHaveBeenCalled();
-        expect(events).toEqual(['remove bodea@main']);
-    });
-
-    it('ignores keep: there is nothing to save', async () => {
-        await reset(KEEP);
-
         expect(mockedSave).not.toHaveBeenCalled();
-        expect(events).toEqual(['remove bodea@main']);
-    });
-
-    const UNAVAILABLE = "The Data Installer installed this datapack, and it isn't available. Use Clear Demo Data to remove what it added.";
-
-    it('says what to do instead when the Data Installer does not answer, and sends nothing', async () => {
-        jest.spyOn(DataInstallerClient.prototype, 'checkHealth').mockRejectedValue(new Error('down'));
-
-        const result = await reset();
-
-        expect(result).toEqual({ success: false, error: UNAVAILABLE, code: ErrorCode.INVALID_OPERATION });
         expect(events).toHaveLength(0);
         expect(mockedRun).not.toHaveBeenCalled();
-    });
-
-    it('says the same when its address is gone, and asks the Data Installer rather than the store', async () => {
-        // The gate opens first, as it does on the datapack store's access with no address set. The
-        // next to ask is the health check, which wants the Data Installer's own.
-        const opened = mockedAccess.getMockImplementation();
-        let asked = 0;
-        mockedAccess.mockImplementation(async (context, store) => {
-            asked += 1;
-            if (asked === 1) return opened!(context, store);
-            return { ok: false, response: { success: false, error: 'No address', code: ErrorCode.INVALID_OPERATION } };
-        });
-
-        const result = await reset();
-
-        expect(result).toEqual({ success: false, error: UNAVAILABLE, code: ErrorCode.INVALID_OPERATION });
-        expect(mockedAccess.mock.calls[1]).toHaveLength(1);
-        expect(DataInstallerClient.prototype.checkHealth).not.toHaveBeenCalled();
-        expect(events).toHaveLength(0);
     });
 });
 
@@ -421,9 +394,10 @@ describe('a pack whose record has moved onto a pack saved from it', () => {
     });
 
     it('CONTROL: the pack that is unrelated to it goes through', async () => {
-        recordsFor(SAVED_ID);
+        recordsFor(SAVED_ID, { name: 'frescopa', version: 'main' });
 
-        const result = await reset({ datapackName: 'frescopa' }, own);
+        // Frescopa has a record of its own, so it is asked about its changes like any pack: dropped here.
+        const result = await reset({ datapackName: 'frescopa', changes: 'drop' }, own);
 
         expect(result.success).toBe(true);
     });

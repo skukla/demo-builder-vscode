@@ -19,19 +19,17 @@ import React from 'react';
 import type { StorePicks } from '../../../pickableKinds';
 import { ExportDatapackResult } from '../ExportDatapackResult';
 import { type ResultContent, resultStatus } from '../importResult';
-import type { DatapackEngine, PackBeingSaved } from './datapackFlowStages';
+import type { PackBeingSaved } from './datapackFlowStages';
 import { AcoKindsStage } from './stages/AcoKindsStage';
 import { AcoViewsStage } from './stages/AcoViewsStage';
 import { PackNameStage, SaveAsNameStage } from './stages/PackNameStage';
 import { PackTypeStage } from './stages/PackTypeStage';
-import { ServiceTypesStage } from './stages/ServiceTypesStage';
 import { StorePicksStage } from './stages/StorePicksStage';
 import { type CreateDatapackFlow, useCreateDatapackFlow } from './useCreateDatapackFlow';
 import { type ActionButton, Modal, type ModalProps, type ModalWait } from '@/core/ui/components/ui/Modal';
 
 export interface DatapackFlowDialogProps {
     title: string;
-    engine?: DatapackEngine;
     /** Start at what goes in it, with no pack type to ask. */
     startsAtPicks?: boolean;
     pack?: PackBeingSaved;
@@ -60,19 +58,18 @@ function footerOf(flow: CreateDatapackFlow): ActionButton[] {
 }
 
 /** The body the stage asks for. */
-function StageBody({ flow, engine, pack }: Pick<DatapackFlowDialogProps, 'engine' | 'pack'> & { flow: CreateDatapackFlow }): React.ReactElement {
+function StageBody({ flow, pack }: Pick<DatapackFlowDialogProps, 'pack'> & { flow: CreateDatapackFlow }): React.ReactElement {
     const { stage, store, answers } = flow;
     if (stage === 'save-as-name') return <SaveAsNameStage name={flow.saveAsName} onChange={flow.setSaveAsName} />;
-    if (stage === 'pack-type') return <PackTypeStage engine={engine} packType={flow.packType} onPick={flow.pickPackType} />;
+    if (stage === 'pack-type') return <PackTypeStage packType={flow.packType} onPick={flow.pickPackType} />;
     if (stage === 'store-picks') return <StorePicksStage pack={pack} store={store} />;
     if (stage === 'aco-views') return <AcoViewsStage aco={answers.aco} />;
     if (stage === 'aco-kinds') return <AcoKindsStage aco={answers.aco} />;
-    if (stage === 'service-types') return <ServiceTypesStage types={answers.types} />;
-    return <PackNameStage answers={answers} sharedCatalog={flow.route === 'service'} />;
+    return <PackNameStage answers={answers} />;
 }
 
-export function DatapackFlowDialog({ title, engine, startsAtPicks, pack, saveAsName, onClose, onSave }: DatapackFlowDialogProps): React.ReactElement {
-    const flow = useCreateDatapackFlow({ engine, startsAtPicks, pack, saveAsName, onSave });
+export function DatapackFlowDialog({ title, startsAtPicks, pack, saveAsName, onClose, onSave }: DatapackFlowDialogProps): React.ReactElement {
+    const flow = useCreateDatapackFlow({ startsAtPicks, pack, saveAsName, onSave });
     const { result, savable } = flow.answers;
     return (
         <>
@@ -87,9 +84,9 @@ export function DatapackFlowDialog({ title, engine, startsAtPicks, pack, saveAsN
             >
                 <div className="datapack-export-body">
                     {result ? (
-                        <ExportDatapackResult result={result} savable={savable} source={flow.route === 'aco' ? 'library' : 'installer'} />
+                        <ExportDatapackResult result={result} savable={savable} source="library" />
                     ) : (
-                        <StageBody flow={flow} engine={engine} pack={pack} />
+                        <StageBody flow={flow} pack={pack} />
                     )}
                 </div>
             </Modal>

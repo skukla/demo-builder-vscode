@@ -15,7 +15,7 @@
  */
 
 import * as vscode from 'vscode';
-import type { ChangesOnRemoval, DatapackEngineId } from '../types';
+import type { ChangesOnRemoval } from '../types';
 import { validateURL } from '@/core/validation/URLValidator';
 
 /** Longest base URL we will accept from settings. */
@@ -23,20 +23,6 @@ export const DATA_INSTALLER_MAX_URL_LENGTH = 2048;
 
 const SETTINGS_SECTION = 'demoBuilder.dataInstaller';
 const STORE_SETTINGS_SECTION = 'demoBuilder.datapackStore';
-
-/**
- * Which engine installs and removes datapacks (`demoBuilder.dataInstaller.engine`, DI-5).
- * Demo Builder's own unless the SC chooses the service (owner, 2026-10-28): the service still
- * answers the catalog, but since 2026-10-27 it ignores the Commerce credentials a caller sends,
- * so it installs nothing for us. Anything unrecognised reads as the default. A pack already
- * installed is removed by whichever engine installed it, whatever this says.
- */
-export function selectedDatapackEngine(): DatapackEngineId {
-    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('engine', 'demo-builder');
-    // The service's engine needs the Data Installer: turned off, Demo Builder's installs instead, so
-    // the switch never blocks an install (owner, 2026-11-05).
-    return raw === 'service' && dataInstallerEnabled() ? 'service' : 'demo-builder';
-}
 
 /**
  * Whether the SC uses the Data Installer (`demoBuilder.dataInstaller.enabled`, owner, 2026-11-05):
@@ -65,7 +51,7 @@ export async function alwaysSaveChangesOnRemoval(): Promise<void> {
 
 /**
  * Whether a settings change alters the datapack list: which sources it reads, or what its cards
- * offer (`engine` decides Import or Copy). A screen showing the list follows these, since an SC who
+ * offer (whether the Data Installer is on decides Copy to the Data Installer). A screen showing the list follows these, since an SC who
  * has just changed one has no reason to know the list needs a Refresh (owner, 2026-11-05).
  *
  * @param event - the change
@@ -75,7 +61,6 @@ export function affectsDatapackList(event: vscode.ConfigurationChangeEvent): boo
     return (
         event.affectsConfiguration(`${SETTINGS_SECTION}.apiBaseUrl`) ||
         event.affectsConfiguration(`${SETTINGS_SECTION}.enabled`) ||
-        event.affectsConfiguration(`${SETTINGS_SECTION}.engine`) ||
         event.affectsConfiguration(`${STORE_SETTINGS_SECTION}.apiBaseUrl`)
     );
 }

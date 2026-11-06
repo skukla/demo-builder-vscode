@@ -7,7 +7,7 @@
 import { openInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { demoBuilderEngine, type JobEnd } from '@/features/data-installer/services/demoBuilderEngine/engine';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
-import type { ImportRequest } from '@/features/data-installer/services/dataInstallerWriteClient';
+import type { ImportRequest } from '@/features/data-installer/services/importRequest';
 import { PACK, PROJECT, fakeContext, memoryFiles } from './demoBuilderEngine.testUtils';
 
 const STORE = {

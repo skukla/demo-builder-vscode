@@ -8138,30 +8138,6 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/data-installer/services/dataInstallerExportClient.ts",
-            "anchors": [
-                "const items = (row.items ?? [])"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Stryker replaces the empty fallback array with [\"Stryker was here\"], but the very next step filters on item?.id !== undefined and a string has no id, so the row is dropped again. items is [] either way and totalCount falls back to items.length in both, so no observable difference exists. Moved with parseExportItemPage to dataInstallerExportClient.ts (2026-10-08).",
-            "decision": "equivalent",
-            "recorded": "2026-09-05",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/data-installer/services/dataInstallerWriteClient.ts",
-            "anchors": [
-                "} catch {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "The mutant empties the catch block. safeParse's catch does nothing but return undefined, and a function that falls off the end of an emptied catch also returns undefined, so the caller cannot tell the two apart.",
-            "decision": "equivalent",
-            "recorded": "2026-09-05",
-            "source": "mutationLedger add"
-        },
-        {
             "module": "src/core/ui/components/forms/FieldHelpButton.tsx",
             "anchors": [
                 "}, [onClose]);"
@@ -9881,20 +9857,6 @@
             "category": "block",
             "reason": "Emptying this catch makes authedManager return undefined where it returned null. Every caller tests only falsiness - create/workspace do 'if (!mgr)' and delete does 'if (!(await authedManager(ctx)))' - so undefined and null take the identical branch and produce the identical NEEDS_ADOBE handoff. The declared return type already admits null, so nothing downstream distinguishes them either.",
             "decision": "none - null and undefined are indistinguishable to every caller's falsiness test",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
-            "module": "src/features/data-installer/handlers/exportHandlers.ts",
-            "anchors": [
-                "const commerceInstance = payload?.commerceInstance;",
-                "const dataTypes = payload?.dataTypes ?? [];",
-                "...(payload?.selections ? { selections: payload.selections } : {}),"
-            ],
-            "mutants": 3,
-            "category": "optionalChain",
-            "reason": "All three sit AFTER prepareExport's first guard, which reads payload?.datapackName and payload?.version and returns the naming refusal unless both are non-empty strings. Reaching any of these lines therefore proves payload is an object, so dropping the optional chain cannot throw or change a value. The same chains on the guard's OWN two reads are killed, by the test that calls both handlers with no payload at all.",
-            "decision": "Recorded as equivalent. Defensive repetition behind a guard that has already established the payload object exists.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
         },
@@ -13178,7 +13140,7 @@
             "anchors": [
                 "return `scheme=\"${parsed.protocol.replace(/:$/, '')}\", host=\"${parsed.hostname}\"`;"
             ],
-            "line": 193,
+            "line": 178,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker drops the end anchor, so /:$/ becomes /:/. Both are non-global and replace the FIRST colon, and a URL protocol has exactly one: the WHATWG scheme grammar allows no colon inside a scheme. Checked seven shapes (https, data, javascript, a+b-c.d, file, mailto, urn:isbn:...) \u2014 in every case the only colon in .protocol is its last character. Planted the mutation and re-ran the suite (2026-09-06): all 30 tests pass, and no reachable value could separate the two regexes.",

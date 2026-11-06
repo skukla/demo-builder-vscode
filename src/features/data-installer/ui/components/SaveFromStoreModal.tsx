@@ -28,7 +28,6 @@ export function SaveFromStoreModal({ onClose, onSave, pack, saveAsName }: SaveFr
     return (
         <DatapackFlowDialog
             title={title}
-            engine="demo-builder"
             startsAtPicks
             pack={pack}
             saveAsName={saveAsName}

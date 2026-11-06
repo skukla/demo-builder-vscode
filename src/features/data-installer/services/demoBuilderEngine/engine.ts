@@ -21,8 +21,8 @@
 import * as crypto from 'crypto';
 import type { DataTypeStatus, ImportStart, InstallCheck, KeptRootStep, ValidationResult } from '../../types';
 import { dataTypeLabel } from '../../ui/dataTypeLabel';
-import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient';
 import type { DatapackEngine } from '../datapackEngine';
+import type { CredentialCheck, ImportRequest } from '../importRequest';
 import { askedRows, kindsAddedFor } from './askedKinds';
 import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
 import { resolveEngineTarget, sessionFor } from './installTarget';
@@ -265,7 +265,6 @@ function start(deps: DemoBuilderEngineDeps, jobs: Map<string, Job>, request: Imp
 export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
     const jobs = new Map<string, Job>();
     return {
-        id: 'demo-builder',
         async checkCredentials(): Promise<CredentialCheck> {
             try {
                 await (await access(deps)).get('store/websites');

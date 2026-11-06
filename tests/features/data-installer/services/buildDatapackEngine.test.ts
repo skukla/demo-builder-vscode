@@ -1,12 +1,13 @@
 /**
- * The one place a datapack engine is chosen and built (DI-5): the setting's choice picks the
- * service's engine or Demo Builder's, and Demo Builder's reads a pack's rows from the service's
- * catalog and signs with the project's own Commerce access.
+ * The one place the datapack engine is built (DI-5): it reads a pack's rows from Demo Builder's
+ * datapack store first, else the Data Installer's catalog, and signs with the project's own
+ * Commerce access. The service's engine, and the setting that chose it, were deleted on
+ * 2026-11-06 (DI-12).
  */
 
 import {
     buildDatapackEngine,
-    engineThatInstalled,
+    installedByDemoBuilder,
     layerFinder,
     projectCommerce,
     readPackItems,
@@ -30,9 +31,6 @@ jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
 
 function access(overrides: Partial<DatapackEngineAccess> = {}): DatapackEngineAccess {
     return {
-        baseUrl: 'https://installer.test/api',
-        getToken: async () => 'tok',
-        jobs: { getJobStatus: jest.fn(), getJobFailureReason: jest.fn() },
         catalog: { getDatapackDetail: jest.fn(), getDataItem: jest.fn() },
         project: createMockProject({ path: '/projects/frescopa' }),
         authManager: undefined,
@@ -42,16 +40,8 @@ function access(overrides: Partial<DatapackEngineAccess> = {}): DatapackEngineAc
 }
 
 describe('buildDatapackEngine', () => {
-    it('builds the service\'s engine when the service is chosen', () => {
-        expect(buildDatapackEngine('service', access(), jest.fn()).id).toBe('service');
-    });
-
-    it('builds Demo Builder\'s engine when it is chosen', () => {
-        expect(buildDatapackEngine('demo-builder', access(), jest.fn()).id).toBe('demo-builder');
-    });
-
     it('says the store cannot be written without an Adobe sign-in, rather than trying', async () => {
-        const engine = buildDatapackEngine('demo-builder', access(), jest.fn());
+        const engine = buildDatapackEngine(access(), jest.fn());
 
         await expect(
             engine.checkCredentials({
@@ -83,15 +73,6 @@ describe('buildDatapackEngine and a settings layer (step 09)', () => {
     it('looks nowhere without a library', () => {
         expect(layerFinder({})).toStrictEqual({});
     });
-
-    it("leaves the service's engine alone: only Demo Builder's applies a layer", async () => {
-        const libraryCatalog = jest.fn();
-
-        const engine = buildDatapackEngine('service', access({ libraryCatalog }), jest.fn());
-
-        expect(engine.id).toBe('service');
-        expect(libraryCatalog).not.toHaveBeenCalled();
-    });
 });
 
 describe('buildDatapackEngine activity log', () => {
@@ -100,7 +81,7 @@ describe('buildDatapackEngine activity log', () => {
     it("appends each job Demo Builder's engine finishes to the project's activity log", async () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'build-engine-activity-'));
         try {
-            const engine = buildDatapackEngine('demo-builder', access({ project: createMockProject({ path: dir }) }), jest.fn());
+            const engine = buildDatapackEngine(access({ project: createMockProject({ path: dir }) }), jest.fn());
 
             // No target: the job stops at once, which is a job that ended all the same.
             await engine.startImport({ id: PACK, commerceInstance: 'unused', dataTypes: ['categories'] });
@@ -206,21 +187,21 @@ describe('readPackItems, the datapack store first whatever the pack names', () =
     });
 });
 
-describe('engineThatInstalled', () => {
-    it('is Demo Builder\'s when its install record is beside the project', async () => {
+describe('installedByDemoBuilder', () => {
+    it('is true when its install record is beside the project', async () => {
         const files = memoryFiles();
         await (await openInstallRecord(files, PROJECT, PACK, NOW)).record({ kind: 'categories', id: '40' });
 
-        await expect(engineThatInstalled(PROJECT, PACK, files)).resolves.toBe('demo-builder');
+        await expect(installedByDemoBuilder(PROJECT, PACK, files)).resolves.toBe(true);
     });
 
-    it('is the service\'s when there is no record', async () => {
-        await expect(engineThatInstalled(PROJECT, PACK, memoryFiles())).resolves.toBe('service');
+    it('is false when there is no record: the Data Installer service installed it', async () => {
+        await expect(installedByDemoBuilder(PROJECT, PACK, memoryFiles())).resolves.toBe(false);
     });
 
     it('refuses to guess when a record is there but cannot be read', async () => {
         const files = memoryFiles({ [installRecordPath(PROJECT, PACK)]: 'not json' });
 
-        await expect(engineThatInstalled(PROJECT, PACK, files)).rejects.toThrow(InstallRecordError);
+        await expect(installedByDemoBuilder(PROJECT, PACK, files)).rejects.toThrow(InstallRecordError);
     });
 });

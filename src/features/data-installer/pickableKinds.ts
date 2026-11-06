@@ -4,8 +4,7 @@
  * pick names each item by.
  *
  * The picks travel as the service's export `selections` (`{<kind>: {<field>: [ids]}}`,
- * `selectionFilter.js`), so the export screen and `start_datapack_export` send one shape with
- * either engine. The fields are the service's own `id_field`s (`config/data_processors_export.json`),
+ * `selectionFilter.js`), so the export screen and `start_datapack_export` send one shape. The fields are the service's own `id_field`s (`config/data_processors_export.json`),
  * but for an attribute, which Demo Builder's capture names by code.
  *
  * Each kind is one the capture already starts from (`capture.ts`): a picked product brings its

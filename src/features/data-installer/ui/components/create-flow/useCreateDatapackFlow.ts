@@ -14,7 +14,6 @@ import { useState } from 'react';
 import type { StorePicks } from '../../../pickableKinds';
 import {
     canProceed,
-    type DatapackEngine,
     type DatapackFlowStage,
     type DatapackRoute,
     mainActionOf,
@@ -30,7 +29,6 @@ import { type ExportAnswers, useExportAnswers } from './useExportAnswers';
 import { type StorePicksState, useStorePicks } from './useStorePicks';
 
 export interface CreateDatapackFlowArgs {
-    engine?: DatapackEngine;
     /** Start at what goes in it, with no pack type to ask ("Save store changes to this pack"). */
     startsAtPicks?: boolean;
     /** The pack being saved, which can be saved with nothing picked. */
@@ -69,21 +67,20 @@ export interface CreateDatapackFlow {
 /** What the dialog waits for on a stage. */
 function isWaiting(stage: DatapackFlowStage, answers: ExportAnswers, store: StorePicksState): boolean {
     if (stage === 'store-picks') return !store.ready;
-    if (stage === 'service-types') return answers.types.loading;
     return stage === 'aco-views' && answers.aco.loadingViews;
 }
 
-export function useCreateDatapackFlow({ engine, startsAtPicks = false, pack, saveAsName: initialName, onSave }: CreateDatapackFlowArgs): CreateDatapackFlow {
+export function useCreateDatapackFlow({ startsAtPicks = false, pack, saveAsName: initialName, onSave }: CreateDatapackFlowArgs): CreateDatapackFlow {
     const savesAs = initialName !== undefined;
     const [saveAsName, setSaveAsName] = useState(initialName ?? '');
     // A Commerce pack, chosen for the SC: ACO packs are held back until ACO support ships (owner,
     // 2026-11-03), so there is no second type to ask about. The ACO line reverts this.
     const [packType, setPackType] = useState<PackType | undefined>('commerce');
     const [stage, setStage] = useState<DatapackFlowStage>(
-        () => stageOrder(routeOf('commerce', engine), startsAtPicks, savesAs)[0] ?? 'pack-type',
+        () => stageOrder(routeOf('commerce'), startsAtPicks, savesAs)[0] ?? 'pack-type',
     );
 
-    const route = packType && routeOf(packType, engine);
+    const route = packType && routeOf(packType);
     const order = stageOrder(route, startsAtPicks, savesAs);
     const store = useStorePicks(stage === 'store-picks', pack);
     const answers = useExportAnswers(route, stage !== 'pack-type');
@@ -113,7 +110,6 @@ export function useCreateDatapackFlow({ engine, startsAtPicks = false, pack, sav
                 canSave: pack !== undefined || store.count > 0,
                 viewsChosen: answers.aco.viewsChosen,
                 kindsChosen: answers.aco.pickedKinds.length > 0,
-                typesChosen: answers.types.selected.length > 0,
                 named: answers.named,
                 saveAsNamed: saveAsName.trim() !== '',
             }),

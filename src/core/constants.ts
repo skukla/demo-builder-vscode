@@ -350,7 +350,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v58 (2026-11-06, a reinstall removed what the pack still had): import-datapack previews before
 // installing a pack again and stops when an unchanged pack would change anything. Existing projects
 // would keep reinstalling blind.
-export const AI_CONTEXT_VERSION = 58;
+// v59 (2026-11-06, the service's install engine deleted, DI-12): import-datapack and diagnose-demo
+// describe one engine, and import-datapack says how a pack is copied into the Data Installer.
+// Existing projects would keep telling agents to set an Engine setting that no longer exists.
+export const AI_CONTEXT_VERSION = 59;
 
 /**
  * Component IDs for standardized component instance access

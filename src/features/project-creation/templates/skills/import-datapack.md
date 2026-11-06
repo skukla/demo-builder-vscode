@@ -99,8 +99,7 @@ A refusal comes back as a verdict, not an error:
 `success: true` with `valid: false` means the call worked and the answer is no. Read the
 reason to the user rather than retrying.
 
-With Demo Builder's own engine (the default) the dry run also reads the pack's rows, every
-kind's, and names each kind whose rows Commerce could not take; the real import checks the
+The dry run also reads the pack's rows, every kind's, and names each kind whose rows Commerce could not take; the real import checks the
 same before its first write. Once writing, a row Commerce refuses is skipped and the rest go
 in: the status's `note` starts "Skipped N rows" and names each row with Commerce's reason,
 and any row that needed a skipped one (a product in a skipped category) is skipped with it,
@@ -116,32 +115,30 @@ All four, on every write call:
 - `version` — e.g. `main`. There is **no "latest"**; omitting it fails
 - `commerceInstance` — see trap 2
 - `dataTypes` — at least one, from `list_datapack_data_types`. Omitting it does not mean
-  "all"; it fails. With Demo Builder's own engine (the default) an import writes only these and
-  what they need, and leaves the rest of the pack alone: not installed, not removed. `reset_datapack`
-  is the one exception: with that engine it ignores them, as the next section says
+  "all"; it fails. An import writes only these and what they need, and leaves the rest of the
+  pack alone: not installed, not removed. `reset_datapack` is the one exception: it ignores
+  them, as the next section says
 
 ## Removing data — scoped, not a wipe
 
-`reset_datapack` is **import in reverse**: it walks the datapack's own data files and
-deletes those entities. It removes what the pack knows about and nothing else — it is not
-an instance wipe, and data that arrived some other way is untouched.
+`reset_datapack` is **import in reverse**: it takes back what the install made. It removes
+what the pack put there and nothing else — it is not an instance wipe, and data that arrived
+some other way is untouched.
 
-It is confirm-gated and **cannot be undone** — the service has no undo — but "cannot be
-undone" and "unbounded" are different claims, and only the first is true here. Say the
-scope when you ask the user, rather than implying the instance is at risk.
+It is confirm-gated and **cannot be undone**, but "cannot be undone" and "unbounded" are
+different claims, and only the first is true here. Say the scope when you ask the user,
+rather than implying the instance is at risk.
 
-With Demo Builder's own engine (the default), removal takes back everything the project's
-install record lists and nothing else, whichever `dataTypes` you send, so say that to the user
-rather than naming the kinds you sent. A pack this project's engine never installed (the service did, or
-another project did) is refused and nothing is removed by name; to clear what an earlier
-install left, use `check_demo_data` and then `clear_demo_data` (the screen's "Clear demo
-data").
+Removal takes back everything the project's install record lists and nothing else, whichever
+`dataTypes` you send, so say that to the user rather than naming the kinds you sent. A pack
+Demo Builder never installed in this project (the Data Installer service installed it, or
+another project did) is refused and nothing is removed by name; to clear what that install
+left, use `check_demo_data` and then `clear_demo_data` (the screen's "Clear demo data").
 
-Like an import it returns a handle and is polled, and **the service supplies its own
-dependency ordering for the delete** — a different order from import, over the same data
-types. You do not have to reason about what to remove first.
+Like an import it returns a handle and is polled. Demo Builder removes in the reverse of the
+install's order, so you do not have to reason about what to remove first.
 
-## Saving the store into a pack (Demo Builder's engine, the default)
+## Saving the store into a pack
 
 `save_store_changes_to_pack` saves the project's store into the datapack library, as Save or
 Save As: the pack Demo Builder installed here, plus anything you pick in `selections`.
@@ -154,8 +151,8 @@ Save As: the pack Demo Builder installed here, plus anything you pick in `select
 
 Either way the project then uses the new version: it installs from it and resets to it. With no
 pack named it saves only what is picked, which is how a store built by hand in the Admin becomes
-a pack (send `saveAs`). `start_datapack_export` is the same save with this engine: send
-`selections`, `saveAs` and `confirm`.
+a pack (send `saveAs`). `start_datapack_export` is the same save: send `selections`, `saveAs`
+and `confirm`.
 
 - **Pick with `list_datapack_export_items`** (`dataType`: products, giftcards, categories,
   cart_rules, customers, b2b_companies, customer_groups, b2b_shared_catalogs,
@@ -171,32 +168,18 @@ a pack (send `saveAs`). `start_datapack_export` is the same save with this engin
 - Undo is `delete_library_datapack` on the new version. Nothing in Commerce changes, and a
   picked thing is never removed when the pack is.
 
-## Exporting (the service's engine)
-
-With `demoBuilder.dataInstaller.engine` set to `service`, `start_datapack_export` captures data
-from an instance INTO a datapack. It writes to a catalog **other teams depend on**, so it needs
-`confirm: true` and `confirmName` equal to the datapack name — the same bar as deleting a repo,
-for the same reason: the risk is not to your own work.
-
-Use `list_datapack_export_items` first to see what would be captured. It is paged;
-`totalCount` tells you how many exist beyond the page.
+## ACO packs
 
 **ACO packs** (Adobe Commerce Optimizer) come with ACO support, in a later release:
 `start_datapack_export` refuses `aco: true` until then. Say so if the user asks for one.
 
-### Export is the one operation you must order yourself
+## Putting a pack in the Data Installer
 
-Import and reset are ordered BY THE SERVICE. Export is not. You can export data types
-individually, and if you do, **you own the dependencies** — attributes before products,
-and so on down the chain.
-
-`list_datapack_data_types` returns the types for an operation mode **already in dependency
-order**. Ask it with `operationMode: "export"` and keep the order it gives you. The import
-and export sets genuinely differ, so do not reuse an order you got for another mode.
-
-Re-exporting a data type **rewrites the previous one** in the pack rather than appending or
-duplicating. So a wrong-order export is fixable by re-exporting in the right order — it is
-the one mistake in this skill that does not require starting over.
+`copy_library_datapack_to_installer` copies one of the user's library packs into the Data
+Installer's catalog, so other teams can find and install it. It is not needed to install the
+pack here: `start_datapack_import` installs a library pack where it is. It writes to a catalog
+**other teams depend on** and cannot be undone from here, so it needs `confirm: true` and
+`confirmName` equal to the pack name. Ask the user first.
 
 ## What the INSTANCE needs, which the import cannot check
 
@@ -218,7 +201,7 @@ waiting for the symptom.
 
 And one that only bites AFTER a successful import: **a pack's own root category.**
 A store shows only the categories under its root, and no API can change a store's
-root (the store routes are read-only). With Demo Builder's engine:
+root (the store routes are read-only):
 
 - **The store's root is its own** (no other store shows it): the pack's
   categories go straight under it, and the install's note says so. Nothing to do.
@@ -230,9 +213,7 @@ root (the store routes are read-only). With Demo Builder's engine:
   user word for word: you cannot do it. Running `start_datapack_import` again
   re-checks it (nothing else is rewritten) and marks it done once it is set.
 
-With the service engine, the root is never attached: the storefront reads empty
-until someone sets it by hand. `diagnose-demo` carries the full symptom, including
-why `GET /V1/categories` hides it. On an Edge Delivery storefront, `republish`
+`diagnose-demo` carries the full symptom, including why `GET /V1/categories` hides it. On an Edge Delivery storefront, `republish`
 rebuilds the catalog menu once the categories show.
 
 ## If a pack from the Data Installer is not listed

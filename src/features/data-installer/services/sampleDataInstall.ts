@@ -27,8 +27,8 @@
  */
 
 import type { DataTypeStatus } from '../types';
-import type { ImportRequest } from './dataInstallerWriteClient';
 import { deriveImportInstance } from './importInstance';
+import type { ImportRequest } from './importRequest';
 import type { ComponentConfigs } from '@/types/components';
 import type { DatapackLocation, ProjectDatapack } from '@/types/datapack';
 

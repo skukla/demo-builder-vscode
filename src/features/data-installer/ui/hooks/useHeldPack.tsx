@@ -23,8 +23,6 @@ export interface HeldPackInput {
     selected?: DatapackId;
     /** The pack the open project holds, as recorded on it. */
     held?: ProjectDatapack;
-    /** The engine chosen. */
-    engine?: 'service' | 'demo-builder';
     /** The open flyout's detail, once loaded. */
     detail?: { displayName: string; store?: DatapackStoreName; mine?: boolean };
     /** True while the flyout's detail is loading. */
@@ -44,13 +42,12 @@ export interface HeldPack {
     windows: React.JSX.Element;
 }
 
-export function useHeldPack({ selected, held, engine, detail, detailLoading, onSaved }: HeldPackInput): HeldPack {
+export function useHeldPack({ selected, held, detail, detailLoading, onSaved }: HeldPackInput): HeldPack {
     const storeChanges = useSaveStoreChanges(onSaved);
     const holdsSelected = held !== undefined && held.name === selected?.name && held.version === selected.version;
-    const ownsStore = holdsSelected && engine === 'demo-builder';
-    const setupStep = usePackSetupStep(ownsStore && detail && !detailLoading ? selected : undefined);
+    const setupStep = usePackSetupStep(holdsSelected && detail && !detailLoading ? selected : undefined);
     // Any version of the demo's pack: a save writes a new one either way.
-    const savable = held && held.name === selected?.name && engine === 'demo-builder' && !detailLoading && detail?.store === 'library' && detail.mine === true;
+    const savable = held && held.name === selected?.name && !detailLoading && detail?.store === 'library' && detail.mine === true;
     const offer = storeChanges.offer;
     const saveChanges = useCallback((): void => {
         if (held && detail) offer({ id: { name: held.name, version: held.version }, displayName: detail.displayName, source: held.store ?? 'library' });

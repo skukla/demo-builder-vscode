@@ -14,10 +14,10 @@
  */
 
 import {
-    happyClient,
+    happyEngine,
     importHandlers,
     makeImportHarness,
-    stubWriteClient,
+    stubEngine,
     mockedWatch,
     PAAS_PROJECT,
     PAYLOAD,
@@ -50,7 +50,7 @@ describe('progress push', () => {
     const settleWatch = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
     it('forwards each poll to the webview as it arrives', async () => {
-        happyClient();
+        happyEngine();
         const { context } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -73,7 +73,7 @@ describe('progress push', () => {
      * started while an import watches would otherwise drive the wrong ring.
      */
     it('stamps the push with the activation it belongs to', async () => {
-        happyClient();
+        happyEngine();
         const { context } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -88,7 +88,7 @@ describe('progress push', () => {
 
     // Owner, 2026-11-05: an agent reading the status saw only "watching" while the window counted products.
     it('writes each poll to the record, so the status an agent reads shows it while the job runs', async () => {
-        happyClient();
+        happyEngine();
         let finish: (value: Awaited<ReturnType<typeof mockedWatch>>) => void = () => undefined;
         mockedWatch.mockImplementation(async ({ onProgress }) => {
             onProgress?.({ categories: 'success', products: 'processing' }, '50 of 330 products');
@@ -114,7 +114,7 @@ describe('progress push', () => {
 
     /** A reset watches the same way and must say so, for the wording. */
     it('names the operation, so a reset is not worded as an import', async () => {
-        happyClient();
+        happyEngine();
         const { context } = makeImportHarness();
 
         // `confirm` is the destructive-action guard; without it the reset
@@ -132,7 +132,7 @@ describe('progress push', () => {
 
 describe('the detached watch', () => {
     it('does NOT await the watch — the request returns while the job runs', async () => {
-        happyClient();
+        happyEngine();
         const { context } = makeImportHarness();
         let settled = false;
         mockedWatch.mockImplementation(
@@ -155,7 +155,7 @@ describe('the detached watch', () => {
     });
 
     it('records the job so a closed panel does not lose it', async () => {
-        happyClient();
+        happyEngine();
         const { context, stores } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -190,7 +190,7 @@ describe('the shared progress channel', () => {
     }
 
     async function progressOf(handler: 'start-datapack-import' | 'reset-datapack') {
-        happyClient();
+        happyEngine();
         const { context } = makeImportHarness();
         await importHandlers[handler](context, { ...PAYLOAD, confirm: true });
         await settleWatch();
@@ -270,7 +270,7 @@ describe('the shared progress channel', () => {
     });
 
     it('closes the notice as succeeded when the job succeeds', async () => {
-        happyClient();
+        happyEngine();
         mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
         const { context } = makeImportHarness();
 
@@ -281,7 +281,7 @@ describe('the shared progress channel', () => {
     });
 
     it('closes the notice with the line about what it kept, so a backgrounded install still says it', async () => {
-        happyClient();
+        happyEngine();
         mockedWatch.mockResolvedValue({
             outcome: 'success',
             perType: {},
@@ -300,7 +300,7 @@ describe('the shared progress channel', () => {
     });
 
     it('closes the notice as failed with the runner reason', async () => {
-        happyClient();
+        happyEngine();
         mockedWatch.mockResolvedValue({
             outcome: 'error',
             perType: {},
@@ -319,7 +319,7 @@ describe('the shared progress channel', () => {
     });
 
     it('still names a failure when the runner gave no reason', async () => {
-        happyClient();
+        happyEngine();
         mockedWatch.mockResolvedValue({ outcome: 'error', perType: {} });
         const { context } = makeImportHarness();
 
@@ -362,7 +362,7 @@ describe('a watch that cannot run', () => {
     }
 
     it('records that it stopped watching when the runner throws', async () => {
-        happyClient();
+        happyEngine();
         mockedWatch.mockRejectedValue(new Error('the service went away'));
         const { context, stores } = makeImportHarness();
 
@@ -375,7 +375,7 @@ describe('a watch that cannot run', () => {
     // The reason IS the payload: "we stopped looking" is not actionable without
     // saying why, and this is the only place the cause exists.
     it('keeps the reason so the panel can say what went wrong', async () => {
-        happyClient();
+        happyEngine();
         mockedWatch.mockRejectedValue(new Error('the service went away'));
         const { context, stores } = makeImportHarness();
 
@@ -391,7 +391,7 @@ describe('a watch that cannot run', () => {
     // NOT 'stopped'. That means the user chose to stop looking; this means we
     // could not look, and they never asked for that.
     it('does not disguise a broken watch as the user stopping one', async () => {
-        happyClient();
+        happyEngine();
         mockedWatch.mockRejectedValue(new Error('boom'));
         const { context, stores } = makeImportHarness();
 
@@ -404,7 +404,7 @@ describe('a watch that cannot run', () => {
     // The import is unaffected — it is already running server-side. Only the
     // watching failed, and the handler had already returned success.
     it('still reports the import as started', async () => {
-        happyClient();
+        happyEngine();
         mockedWatch.mockRejectedValue(new Error('boom'));
         const { context } = makeImportHarness();
 
@@ -418,7 +418,7 @@ describe('a watch that cannot run', () => {
 describe('what the finished watch records', () => {
     it('keeps the reason the runner gave for a non-success outcome', async () => {
         const { context, stores } = makeImportHarness();
-        happyClient();
+        happyEngine();
         mockedWatch.mockResolvedValue({
             outcome: 'error',
             perType: {},
@@ -436,7 +436,7 @@ describe('what the finished watch records', () => {
 
     it('keeps the processing time when the runner measured one', async () => {
         const { context, stores } = makeImportHarness();
-        happyClient();
+        happyEngine();
         mockedWatch.mockResolvedValue({
             outcome: 'success',
             perType: {},
@@ -453,7 +453,7 @@ describe('what the finished watch records', () => {
 
     it("keeps the engine's line about what it kept, so the window and get_datapack_import_status say it", async () => {
         const { context, stores } = makeImportHarness();
-        happyClient();
+        happyEngine();
         mockedWatch.mockResolvedValue({
             outcome: 'success',
             perType: {},
@@ -470,7 +470,7 @@ describe('what the finished watch records', () => {
 
     it('omits both fields when the runner reported neither', async () => {
         const { context, stores } = makeImportHarness();
-        happyClient();
+        happyEngine();
         mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -485,7 +485,7 @@ describe('what the finished watch records', () => {
 
     it('carries the operation into the watch so a reset is watched as a reset', async () => {
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
 
         await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
         await new Promise((resolve) => setImmediate(resolve));
@@ -517,7 +517,7 @@ describe('the feature turned off mid-import', () => {
             }),
         });
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
         on = false;
@@ -533,7 +533,7 @@ describe('the feature turned off mid-import', () => {
 describe('a start the service refuses', () => {
     it('reports the service reason and records no job', async () => {
         const { context, stores } = makeImportHarness();
-        stubWriteClient({
+        stubEngine({
             validateImport: jest.fn().mockResolvedValue({ valid: false, reason: 'unknown pack' }),
             startImport: jest.fn(),
             checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
@@ -547,7 +547,7 @@ describe('a start the service refuses', () => {
 
     it('falls back to its own wording when the service gives no reason', async () => {
         const { context } = makeImportHarness();
-        stubWriteClient({
+        stubEngine({
             validateImport: jest.fn().mockResolvedValue({ valid: false }),
             startImport: jest.fn(),
             checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
@@ -560,7 +560,7 @@ describe('a start the service refuses', () => {
 
     it('reports a thrown start as a failure rather than losing it', async () => {
         const { context } = makeImportHarness();
-        stubWriteClient({
+        stubEngine({
             validateImport: jest.fn().mockResolvedValue({ valid: true }),
             startImport: jest.fn().mockRejectedValue(new Error('runtime 503')),
             checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
@@ -573,7 +573,7 @@ describe('a start the service refuses', () => {
 
     it('uses the operation-specific wording when the thrown value is not an Error', async () => {
         const { context } = makeImportHarness();
-        stubWriteClient({
+        stubEngine({
             validateImport: jest.fn().mockResolvedValue({ valid: true }),
             startDelete: jest.fn().mockRejectedValue('not an error object'),
             checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
@@ -591,7 +591,7 @@ describe('a start the service refuses', () => {
 describe('recording the datapack on the project', () => {
     it('writes the pack the import was accepted for', async () => {
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -607,7 +607,7 @@ describe('recording the datapack on the project', () => {
             ...PAAS_PROJECT,
             datapack: { name: 'bodea', version: 'main' },
         });
-        happyClient();
+        happyEngine();
 
         await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
         await new Promise((resolve) => setImmediate(resolve));
@@ -626,7 +626,7 @@ describe('recording the datapack on the project', () => {
             ...PAAS_PROJECT,
             datapack: { name: 'bodea', version: 'main' },
         });
-        happyClient();
+        happyEngine();
         mockedWatch.mockReturnValue(new Promise(() => undefined));
 
         await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
@@ -642,7 +642,7 @@ describe('recording the datapack on the project', () => {
                 ...PAAS_PROJECT,
                 datapack: { name: 'bodea', version: 'main' },
             });
-            happyClient();
+            happyEngine();
             mockedWatch.mockResolvedValue({ outcome, perType: {} });
 
             await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
@@ -657,7 +657,7 @@ describe('recording the datapack on the project', () => {
             ...PAAS_PROJECT,
             datapack: { name: 'bodea', version: 'main' },
         });
-        happyClient();
+        happyEngine();
         mockedWatch.mockResolvedValue({ outcome: 'success', perType: {}, leftInStore: true });
 
         await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
@@ -671,7 +671,7 @@ describe('recording the datapack on the project', () => {
             ...PAAS_PROJECT,
             datapack: { name: 'bodea', version: 'main' },
         });
-        happyClient();
+        happyEngine();
         const other = {
             ...PAAS_PROJECT,
             name: 'demo-b',
@@ -695,7 +695,7 @@ describe('recording the datapack on the project', () => {
         // The service has already accepted the job. Failing the handler over
         // bookkeeping would report a started import as a failed one.
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
         (context.stateManager.saveProject as jest.Mock).mockRejectedValue(
             new Error('manifest locked')
         );
@@ -707,7 +707,7 @@ describe('recording the datapack on the project', () => {
 
     it('records nothing, and still succeeds, when the project vanishes mid-flight', async () => {
         const { context } = makeImportHarness();
-        happyClient();
+        happyEngine();
         // Present for prepareImport, gone by the time the record is written.
         (context.stateManager.getCurrentProject as jest.Mock)
             .mockResolvedValueOnce({

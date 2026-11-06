@@ -1,51 +1,25 @@
 /**
- * Export handlers — Stage 3: capture a datapack FROM a Commerce instance.
+ * Export handlers: capture a datapack FROM the project's Commerce store.
  *
- * The service's documented two-step flow, in two message types:
- * `list-datapack-export-items` (what is here to capture) and
- * `start-datapack-export` (capture it), with `count-datapack-export-items` beside
- * them for Demo Builder's engine (how many of each, before any is listed). Merged into `importHandlers` so the
- * panel and its tests keep one map to reach for; separate here because the
- * import spine was already at its size limit.
+ * Three message types, all Demo Builder's own (datapack-engine step 14): `list-datapack-export-items`
+ * reads one kind of the project's store with the project's own credential (`listPickableItems`),
+ * `count-datapack-export-items` says how many of each there are before any is listed, and
+ * `start-datapack-export` saves what is picked into a new version of this demo's own pack in Demo
+ * Builder's datapack store (`saveFromStore`), with the project's own pack when Demo Builder
+ * installed it. Nothing reaches the Data Installer: a pack goes there by Copy to the Data Installer.
  *
- * Three contracts, all measured live 2026-08-14 and several contrary to the
- * vendor docs — see `docs/systems/data-installer.md` §6b:
+ * The Data Installer service's own export, which captured a store into its shared catalog with the
+ * service's Commerce access, was deleted on 2026-11-06 (DI-12): that access has ignored the
+ * credentials a caller sends since 2026-10-27, and Save As then Copy does the same job.
  *
- * - **Two instance forms.** `process-datapack` takes the ACCS tenant id;
- *   `get-export-items` refuses it and needs the REST base URL, because the
- *   deployment config that enables the id shorthand is not set for that action.
- *   {@link deriveRestBaseUrl} produces the second from the project.
- * - **`verbose` is mandatory**, enforced in the export client: without it a
- *   failed export returns an all-zero summary and no reason at all.
- * - **A failed export is a VERDICT**, not a failed call — `success: true` with
- *   the per-type reasons in `data`, matching the dry run's shape.
- *
- * The guards refuse a half-named target before the request goes out. The catalog
- * is shared infrastructure — 23 curated entries other teams depend on — and the
- * service will not stop a pack written under the wrong name.
- *
- * **With Demo Builder's engine** (the default) both message types are Demo Builder's own
- * (datapack-engine step 14): the list reads one kind of the project's store with the
- * project's own credential (`listPickableItems`), and the export saves what is picked into
- * a new version of this demo's own library pack (`saveFromStore`), with the project's own
- * pack when Demo Builder installed it. Nothing reaches the service or its shared catalog.
- * With `aco: true`, with either engine, the export makes an ACO pack from the project's store
- * into the SC's library instead (`startAcoExport`, step 14 item 19).
+ * Merged into `importHandlers` so the panel and its tests keep one map to reach for; separate here
+ * because the import spine was already at its size limit.
  *
  * @module features/data-installer/handlers/exportHandlers
  */
 
 import type { Selections } from '../pickableKinds';
-import { selectedDatapackEngine } from '../services/dataInstallerConfig';
-import {
-    DataInstallerExportClient,
-    type ExportRequest,
-    type ExportOutcome,
-} from '../services/dataInstallerExportClient';
-import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { countPickableItems, listPickableItems, saveFromStore } from './storeChangesHandlers';
-import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
-import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -53,123 +27,22 @@ import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/typ
 export const ACO_HELD_BACK = 'ACO datapacks arrive with ACO support, in a later release. Make a Commerce datapack instead.';
 
 export const exportHandlers = defineHandlers({
-    /**
-     * What this instance holds for one data type — step 1 of an export.
-     *
-     * The list endpoint cannot resolve an ACCS tenant id, so it gets the REST
-     * base URL derived from the project's own ACCS GraphQL endpoint. That is the
-     * only place that URL exists.
-     */
-    'list-datapack-export-items': async (
-        context: HandlerContext,
-        payload?: ExportPayload,
-    ): Promise<HandlerResponse> => {
-        if (selectedDatapackEngine() !== 'service') return listPickableItems(context, payload);
-        if (!payload?.dataType) {
-            return { success: false, error: 'Choose a data type to list.' };
-        }
-        const prepared = await prepareExport(context, payload);
-        if ('response' in prepared) {
-            return prepared.response;
-        }
-        try {
-            const page = await prepared.writeClient.listExportItems(
-                prepared.request,
-                payload.dataType,
-            );
-            return { success: true, data: page };
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Could not list what is available.',
-                code: ErrorCode.UNKNOWN,
-            };
-        }
-    },
+    /** What the project's store holds of one data type, to pick from. */
+    'list-datapack-export-items': (context: HandlerContext, payload?: ExportPayload): Promise<HandlerResponse> =>
+        listPickableItems(context, payload),
 
-    /**
-     * How many of each pickable kind the store has, with Demo Builder's engine. The service's
-     * engine lists from the service, so a count read here could disagree with its list: it
-     * answers a refusal, and every card stays clickable.
-     */
-    'count-datapack-export-items': async (
-        context: HandlerContext,
-        payload?: ExportPayload,
-    ): Promise<HandlerResponse> => {
-        if (selectedDatapackEngine() === 'service') {
-            return { success: false, error: "The service's engine lists one kind at a time." };
-        }
-        return countPickableItems(context, payload);
-    },
+    /** How many of each pickable kind the project's store has. */
+    'count-datapack-export-items': (context: HandlerContext, payload?: ExportPayload): Promise<HandlerResponse> =>
+        countPickableItems(context, payload),
 
-    /**
-     * Capture the chosen data into a datapack — step 2.
-     *
-     * Synchronous on purpose: unlike an import, the service's export path gives
-     * no activation id to watch, and its own docs show the result returning
-     * inline.
-     *
-     * A failed export is a VERDICT, not a failed call: `success: true` with the
-     * per-type reasons in `data`, the same shape the dry run uses. The reason
-     * only exists because the client asks for `verbose` — see the export client.
-     */
-    'start-datapack-export': async (
-        context: HandlerContext,
-        payload?: ExportPayload,
-    ): Promise<HandlerResponse> => {
+    /** Save what is picked into a new version of the demo's own pack (Save, or Save As with `saveAs`). */
+    'start-datapack-export': async (context: HandlerContext, payload?: ExportPayload): Promise<HandlerResponse> => {
         // ACO packs are held back until ACO support ships (owner, 2026-11-03): one saved now would
         // sit in the library with nothing to install it. The ACO line reverts this.
         if (payload?.aco === true) return { success: false, error: ACO_HELD_BACK, code: ErrorCode.INVALID_OPERATION };
-        // The service's export has not saved what it reads since August, into a catalog other
-        // teams share. With Demo Builder's engine the export is Demo Builder's own save (step 14).
-        if (selectedDatapackEngine() !== 'service') return saveFromStore(context, payload);
-        const prepared = await prepareExport(context, payload);
-        if ('response' in prepared) {
-            return prepared.response;
-        }
-        try {
-            const outcome = await prepared.writeClient.startExport(prepared.request);
-            logExportVerdicts(context, prepared.request.id, outcome);
-            return { success: true, data: outcome };
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'The export could not be started.',
-                code: ErrorCode.UNKNOWN,
-            };
-        }
+        return saveFromStore(context, payload);
     },
 });
-
-/**
- * The verdict, in the logs, per data type. The service answers a failed export
- * with HTTP 200 and `success: false` inside, so the door used to log "200" and
- * "ok" and nothing else: an SC reading the logs after a failed export saw a
- * success (found 2026-09-13, reading the logs of an export that stored
- * nothing). A failure is a warning in the User Logs, in the service's words.
- */
-function logExportVerdicts(
-    context: HandlerContext,
-    id: { name: string; version: string },
-    outcome: ExportOutcome,
-): void {
-    const pack = `${id.name}@${id.version}`;
-    for (const type of outcome.perType) {
-        if (type.success) {
-            context.logger.info(
-                `[Data Installer] Exported ${type.exported} ${type.dataType} to ${pack}` +
-                    (type.excluded ? ` (${type.excluded} excluded)` : ''),
-            );
-        } else {
-            context.logger.warn(
-                `[Data Installer] ${type.dataType} export to ${pack} failed: ${type.reason ?? 'the service gave no reason'}`,
-            );
-        }
-    }
-    if (!outcome.success && outcome.perType.length === 0) {
-        context.logger.warn(`[Data Installer] Export to ${pack} failed; the service named no data type`);
-    }
-}
 
 /** Payload for the two export message types. */
 export interface ExportPayload {
@@ -179,84 +52,14 @@ export interface ExportPayload {
     dataTypes?: string[];
     /** List call only: which type to enumerate. */
     dataType?: string;
-    /** `{<type>: {<idField>: [ids]}}` — omitted means "everything allowed" (the service's engine). */
+    /** `{<type>: {<idField>: [ids]}}`: what is picked of each kind. */
     selections?: Selections;
-    /** Demo Builder's engine: the save must be confirmed, as `save-store-changes-to-pack`'s is. */
+    /** The save must be confirmed, as `save-store-changes-to-pack`'s is. */
     confirm?: boolean;
-    /** Demo Builder's engine, Save As: a new datapack of the user's under this name. */
+    /** Save As: a new datapack of the user's under this name. */
     saveAs?: { displayName?: string };
     /** Make an ACO pack from this store, into the library (`acoExportHandler.ts`). */
     aco?: boolean;
     /** ACO only: the store views to make it for; omitted means every one. */
     storeViews?: string[];
-}
-
-/**
- * Guards and wiring shared by both export handlers.
- *
- * An export WRITES into a catalog other teams share, so a half-named target is
- * refused here rather than at the service — which would accept it.
- */
-async function prepareExport(
-    context: HandlerContext,
-    payload: ExportPayload | undefined,
-): Promise<
-    { writeClient: DataInstallerExportClient; request: ExportRequest } | { response: HandlerResponse }
-> {
-    const name = payload?.datapackName;
-    const version = payload?.version;
-    if (!name || !version) {
-        return {
-            response: {
-                success: false,
-                error: 'An export needs a datapack name and a version — together they name what it writes.',
-            },
-        };
-    }
-    const commerceInstance = payload?.commerceInstance;
-    if (!commerceInstance) {
-        return { response: { success: false, error: 'A Commerce instance is required.' } };
-    }
-    const dataTypes = payload?.dataTypes ?? [];
-    if (dataTypes.length === 0) {
-        return { response: { success: false, error: 'Select at least one data type to export.' } };
-    }
-
-    const gate = await resolveDatapackWriteAccess(context, 'export');
-    if ('response' in gate) {
-        return gate;
-    }
-
-    return {
-        writeClient: new DataInstallerExportClient({
-            baseUrl: gate.baseUrl,
-            getToken: gate.getToken,
-            orgCode: gate.orgCode,
-            log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
-        }),
-        request: {
-            id: { name, version },
-            commerceInstance,
-            restBaseUrl: deriveRestBaseUrl(gate.project.componentConfigs ?? {}),
-            dataTypes,
-            backend: gate.backend,
-            ...(payload?.selections ? { selections: payload.selections } : {}),
-        },
-    };
-}
-
-/**
- * The Commerce REST root, for the one action that cannot take a tenant id.
- *
- * ACCS: the project's GraphQL endpoint minus its `/graphql` suffix. PaaS: the
- * Commerce URL as configured.
- */
-function deriveRestBaseUrl(
-    configs: Record<string, Record<string, string | number | boolean | undefined>>,
-): string {
-    const accs = lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT);
-    if (accs) {
-        return accs.replace(/\/graphql\/?$/, '');
-    }
-    return lookupComponentConfigValue(configs, PAAS_URL) ?? '';
 }

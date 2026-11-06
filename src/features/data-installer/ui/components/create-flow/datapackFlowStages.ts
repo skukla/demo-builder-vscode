@@ -3,11 +3,13 @@
  * pack walks, in what order, what the main button does on each, and what turns it on. No React,
  * as `flowStages.ts` is for Add Integration.
  *
- * | Route | Pack, engine | Screens after the pack type |
+ * | Route | Pack | Screens after the pack type |
  * |---|---|---|
- * | `store` | Commerce, Demo Builder's | the kinds and their items, on one screen |
- * | `aco` | ACO, either | store views, ACO data types, name |
- * | `service` | Commerce, the service's (or none chosen) | data types, name |
+ * | `store` | Commerce | the kinds and their items, on one screen |
+ * | `aco` | ACO | store views, ACO data types, name |
+ *
+ * The Data Installer service's own export route (data types, name, into its shared catalog) was
+ * deleted on 2026-11-06 with its engine (DI-12): Save As, then Copy to the Data Installer.
  *
  * Save is that one screen, with no pack type to ask. Save As (`savesAs`) asks the new pack's name
  * first, then that screen (`.rptc/plans/datapack-save-as/`).
@@ -20,17 +22,13 @@ import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 /** The two pack types. */
 export type PackType = 'commerce' | 'aco';
 
-/** The engine chosen; the service's when absent, as the export was before Demo Builder's had one. */
-export type DatapackEngine = 'service' | 'demo-builder';
-
-export type DatapackRoute = 'store' | 'aco' | 'service';
+export type DatapackRoute = 'store' | 'aco';
 
 export type DatapackFlowStage =
     | 'pack-type'
     | 'store-picks'
     | 'aco-views'
     | 'aco-kinds'
-    | 'service-types'
     | 'pack-name'
     | 'save-as-name';
 
@@ -51,7 +49,6 @@ export interface FlowGates {
     canSave: boolean;
     viewsChosen: boolean;
     kindsChosen: boolean;
-    typesChosen: boolean;
     named: boolean;
     /** Save As's name is typed. */
     saveAsNamed: boolean;
@@ -60,7 +57,6 @@ export interface FlowGates {
 const ROUTE_STAGES: Record<DatapackRoute, DatapackFlowStage[]> = {
     store: ['store-picks'],
     aco: ['aco-views', 'aco-kinds', 'pack-name'],
-    service: ['service-types', 'pack-name'],
 };
 
 const MAIN_ACTIONS: Record<DatapackFlowStage, MainAction> = {
@@ -68,7 +64,6 @@ const MAIN_ACTIONS: Record<DatapackFlowStage, MainAction> = {
     'store-picks': 'save',
     'aco-views': 'continue',
     'aco-kinds': 'continue',
-    'service-types': 'continue',
     'pack-name': 'export',
     'save-as-name': 'continue',
 };
@@ -78,15 +73,13 @@ const GATES: Record<DatapackFlowStage, (gates: FlowGates) => boolean> = {
     'store-picks': (gates) => gates.canSave,
     'aco-views': (gates) => gates.viewsChosen,
     'aco-kinds': (gates) => gates.kindsChosen,
-    'service-types': (gates) => gates.typesChosen,
     'pack-name': (gates) => gates.named,
     'save-as-name': (gates) => gates.saveAsNamed,
 };
 
-/** Which route a pack type takes with the engine chosen. */
-export function routeOf(packType: PackType, engine: DatapackEngine | undefined): DatapackRoute {
-    if (packType === 'aco') return 'aco';
-    return engine === 'demo-builder' ? 'store' : 'service';
+/** Which route a pack type takes. */
+export function routeOf(packType: PackType): DatapackRoute {
+    return packType === 'aco' ? 'aco' : 'store';
 }
 
 /**

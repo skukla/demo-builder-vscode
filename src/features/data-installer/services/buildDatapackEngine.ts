@@ -1,22 +1,22 @@
 /**
- * The one place a datapack engine is chosen and built (DI-5).
+ * The one place the datapack engine is built (DI-5).
  *
  * Every write builds its engine here: the Data Installer screen's import, dry run and removal,
- * the wizard's creation install, and project reset's removal. The choice is the
- * `demoBuilder.dataInstaller.engine` setting, read by the caller and passed in, so this stays a
- * plain function the tests drive with either id.
+ * the wizard's creation install, and project reset's removal. Demo Builder does the work, over
+ * the project's own signed Commerce access (the client the ERP work opens,
+ * `commerceClientForProject`), reading the pack's rows from the store that holds it (Demo
+ * Builder's datapack store first, else the Data Installer's catalog, `readPackItems`) through the
+ * reader the datapack file and library tools use (`readPackFromStore`).
  *
- * - `service`: the Data Installer service does the work (`buildServiceEngine`, unchanged).
- * - `demo-builder`: Demo Builder does it, over the project's own signed Commerce access (the
- *   client the ERP work opens, `commerceClientForProject`), reading the pack's rows from the
- *   store that holds it (the service's catalog or the datapack library, `readPackItems`)
- *   through the reader the datapack file and library tools use (`readPackFromStore`).
+ * The Data Installer service's own engine, and the setting that chose between the two, were
+ * deleted on 2026-11-06 (DI-12): the service had ignored the Commerce credentials a caller sends
+ * since 2026-10-27, so it installed nothing for us.
  *
  * @module features/data-installer/services/buildDatapackEngine
  */
 
 import type { DataInstallerClient } from './dataInstallerClient';
-import { type DatapackEngine, type DatapackEngineId, type ServiceEngineAccess, buildServiceEngine } from './datapackEngine';
+import type { DatapackEngine } from './datapackEngine';
 import { readPackFromStore } from './datapackTransfer';
 import { type DemoBuilderEngineDeps, demoBuilderEngine } from './demoBuilderEngine/engine';
 import { type RecordFiles, nodeRecordFiles, readInstallRecord } from './demoBuilderEngine/installRecord';
@@ -32,8 +32,8 @@ import { commerceClientForProject } from '@/features/project-creation/services/e
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
-/** What either engine needs: the service's access, and the project Demo Builder's writes into. */
-export interface DatapackEngineAccess extends ServiceEngineAccess {
+/** What the engine needs: the project it writes into, and where a pack's rows are read from. */
+export interface DatapackEngineAccess {
     project: Project;
     /** The service catalog's reads, where Demo Builder's engine reads a pack's rows from. */
     catalog: Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'>;
@@ -79,14 +79,12 @@ export function layerFinder(access: Pick<DatapackEngineAccess, 'libraryCatalog'>
 }
 
 /**
- * The chosen engine, built for one project.
+ * The engine, built for one project.
  *
- * @param id - which engine, from `selectedDatapackEngine()`
- * @param access - the service's access and the project
+ * @param access - the project and the stores a pack is read from
  * @param log - one line per call, for Debug Logs
  */
-export function buildDatapackEngine(id: DatapackEngineId, access: DatapackEngineAccess, log: (line: string) => void): DatapackEngine {
-    if (id === 'service') return buildServiceEngine(access, log);
+export function buildDatapackEngine(access: DatapackEngineAccess, log: (line: string) => void): DatapackEngine {
     // Each finished job goes in the project's activity log (step 14): the service logs its own runs.
     const writeActivity = recordJobEnd({
         files: nodeActivityFiles,
@@ -139,18 +137,14 @@ export function projectCommerce(
 }
 
 /**
- * Which engine removes a pack from a project: the one that installed it. Demo Builder's engine
- * leaves its install record beside the project, so a record there means it installed the pack;
- * otherwise the service did. Removal never goes through the other one, so nothing either
- * created is stranded or taken by the wrong hand (plan, "The shape").
+ * Whether Demo Builder installed a pack in a project: its engine leaves an install record beside
+ * the project. Without one, the Data Installer service installed it, before its engine was
+ * deleted, and only Clear Demo Data can take out what it added (`SERVICE_REMOVAL_UNAVAILABLE`):
+ * Demo Builder never removes by name what it has no record of making.
  *
  * @throws InstallRecordError when a record is there but cannot be read: guessing would remove
  *   nothing and call it done
  */
-export async function engineThatInstalled(
-    projectPath: string,
-    pack: DatapackId,
-    files: RecordFiles = nodeRecordFiles,
-): Promise<DatapackEngineId> {
-    return (await readInstallRecord(files, projectPath, pack)) ? 'demo-builder' : 'service';
+export async function installedByDemoBuilder(projectPath: string, pack: DatapackId, files: RecordFiles = nodeRecordFiles): Promise<boolean> {
+    return (await readInstallRecord(files, projectPath, pack)) !== undefined;
 }

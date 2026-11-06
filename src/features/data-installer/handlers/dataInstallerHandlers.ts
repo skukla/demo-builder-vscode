@@ -20,7 +20,6 @@ import { DataInstallerClient } from '../services/dataInstallerClient';
 import {
     resolveDataInstallerBaseUrl,
     resolveDatapackStoreBaseUrl,
-    selectedDatapackEngine,
 } from '../services/dataInstallerConfig';
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
 import { orgNumberOf } from '../services/dataInstallerSignIn';
@@ -132,14 +131,12 @@ export async function resolveDataInstallerAccess(
 }
 
 /**
- * Access for a datapack write. Demo Builder's engine does not need the Data Installer, so an SC who
- * has not set its address still installs: they get the datapack store's client, whose routes are
- * the same, and a pack named in the Data Installer is read from the store instead. An SC who chose
- * the service engine does need it: the store does not run its jobs, so that keeps its refusal.
+ * Access for a datapack write. The engine does not need the Data Installer, so an SC who has not
+ * set its address, or has turned it off, still installs: they get the datapack store's client,
+ * whose routes are the same, and a pack named in the Data Installer is read from the store instead.
  */
 export async function resolveDatapackAccess(context: HandlerContext): Promise<DataInstallerAccess> {
-    const useStore = !resolveDataInstallerBaseUrl().ok && selectedDatapackEngine() !== 'service';
-    return useStore ? resolveDataInstallerAccess(context, 'library') : resolveDataInstallerAccess(context);
+    return resolveDataInstallerBaseUrl().ok ? resolveDataInstallerAccess(context) : resolveDataInstallerAccess(context, 'library');
 }
 
 /** The sign-in half of the guard, shared by both stores: both take the SC's own Adobe token. */
@@ -417,7 +414,7 @@ export const dataInstallerHandlers = defineHandlers({
                 store === 'library'
                     ? await sharedInFileWarningFor(context.context.globalState, id, packReadsVia((s) => resolveDataInstallerAccess(context, s)))
                     : undefined;
-            const settingsLayer = await layerForDetail(detail, selectedDatapackEngine(), async () => {
+            const settingsLayer = await layerForDetail(detail, async () => {
                 const library = await resolveDataInstallerAccess(context, 'library');
                 if (!library.ok) throw new Error('The datapack library is not reachable.');
                 return library.client;

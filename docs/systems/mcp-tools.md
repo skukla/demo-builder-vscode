@@ -204,7 +204,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `build_datapack_from_export` |  | Build a datapack file from a Commerce product export (the CSV System > Data Transfer > Export writes, |
 | `check_demo_data` | read | What some STORES of this project's Commerce instance hold that Demo Builder did not install, and what clearing them would do. |
 | `clear_demo_data` | **confirm** | Clear the chosen stores of everything check_demo_data listed: deletes those products, categories, customers, cart rules |
-| `copy_library_datapack_to_installer` | **confirm** | Copy a datapack library pack into the Data Installer's catalog, for the Data Installer |
+| `copy_library_datapack_to_installer` | **confirm** | Copy a datapack library pack into the Data Installer's catalog, so other teams can find and install |
 | `delete_library_datapack` | **confirm** | Delete one of your own packs from the datapack library — the undo of |
 | `get_datapack_import_status` | read | Progress of the running or most recent datapack import/reset: its outcome (watching while it runs), |
 | `get_datapack_import_target` | read | Which Commerce instance an import would land on, derived from the current project, |
@@ -219,7 +219,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `save_datapack_zip` |  | Save a datapack from the Data Installer or the datapack library as a zip file in the |
 | `save_store_changes_to_pack` | **confirm** | Save the store\ |
 | `share_datapack` | **confirm** | Share one of your own datapack library packs with your team, or stop sharing it: every version. |
-| `start_datapack_export` | **confirm** | Capture data from a Commerce instance into a datapack. With the demo-builder engine (the |
+| `start_datapack_export` | **confirm** | Capture data from this project's Commerce store into a datapack: saves what is picked in selections |
 | `start_datapack_import` | **confirm** | Import a datapack into a live Commerce instance. Returns an activationId once the job starts. |
 | `validate_datapack_import` | read | Dry-run an import: same guard, same credentials, same request body as the real thing, |
 | `verify_datapack_install` | read | Check that the store holds what a datapack says, after installing it: for each product the pack |

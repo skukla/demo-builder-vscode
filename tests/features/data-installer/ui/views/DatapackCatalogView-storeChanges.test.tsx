@@ -3,9 +3,8 @@
  * (owner, 2026-11-04, `.rptc/plans/datapack-save-as/`).
  *
  * The pack the project installs from and resets to is one of the library's cards, wearing the
- * check, wherever it lives. Its flyout leads with Save Changes when the pack is the SC's own and
- * Demo Builder's engine, which reads the store back, is chosen. A new pack is the header's Create
- * Datapack. A finished save reads the catalog again at once, so Close only closes.
+ * check, wherever it lives. Its flyout leads with Save Changes when the pack is the SC's own. A new
+ * pack is the header's Create Datapack. A finished save reads the catalog again at once, so Close only closes.
  */
 
 import { act, render, screen, waitFor, within } from '@testing-library/react';
@@ -23,9 +22,9 @@ const MINE = [OLDER, NEWER, ...CATALOG];
 type Held = { name: string; version: string; store?: 'library' | 'installer' } | undefined;
 
 /** The catalog, the open project's recorded pack, and the flyout's detail for whichever card opens. */
-function store(engine: 'demo-builder' | 'service', datapack: Held, items: DatapackSummary[] = MINE) {
+function store(datapack: Held, items: DatapackSummary[] = MINE, installerOn = false) {
     mockRequest.mockImplementation((type: string, payload?: { datapackName?: string; version?: string }) => {
-        if (type === 'find-datapacks') return Promise.resolve({ success: true, data: { items, count: items.length, total: items.length, engine } });
+        if (type === 'find-datapacks') return Promise.resolve({ success: true, data: { items, count: items.length, total: items.length, ...(installerOn ? { installerOn } : {}) } });
         if (type === 'get-datapack-import-target') return Promise.resolve({ success: true, data: { instance: 'inst', projectName: 'acme', datapack } });
         if (type === 'get-datapack-detail') {
             const detail = items.find((item) => item.id.name === payload?.datapackName && item.id.version === payload.version) ?? items[0];
@@ -59,7 +58,7 @@ beforeEach(() => {
 
 describe("the demo's datapack in the library", () => {
     it('wears the check on its own card, opening on the version the demo uses, with no section above the grid', async () => {
-        store('demo-builder', { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
+        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
         await renderView();
 
         expect(within(card('acme-1a2b3c')).getByTestId('datapack-card-project-check')).toBeInTheDocument();
@@ -71,7 +70,7 @@ describe("the demo's datapack in the library", () => {
 
     it('marks a newer version on the card, and says from when', async () => {
         const items = [{ ...OLDER, createdAt: '2026-11-01T09:00:00Z' }, { ...NEWER, createdAt: '2026-11-03T12:00:00Z' }];
-        store('demo-builder', { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, items);
+        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, items);
         await renderView();
 
         expect(within(card('acme-1a2b3c')).getByRole('img', { name: 'Newer version: Nov 3' })).toBeInTheDocument();
@@ -80,7 +79,7 @@ describe("the demo's datapack in the library", () => {
 
 describe('Save Changes, in the flyout', () => {
     it("leads the flyout of the demo's own pack, and saves into it with no name", async () => {
-        store('demo-builder', { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
+        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
         await renderView();
         await press(card('acme-1a2b3c'));
 
@@ -99,7 +98,7 @@ describe('Save Changes, in the flyout', () => {
     });
 
     it("is not offered on a pack that is not the SC's", async () => {
-        store('demo-builder', { name: 'bodea', version: 'main' });
+        store({ name: 'bodea', version: 'main' });
         await renderView();
         await press(card('bodea'));
 
@@ -108,17 +107,19 @@ describe('Save Changes, in the flyout', () => {
         expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
     });
 
-    it('is not offered with the service engine, which keeps no record to read back', async () => {
-        store('service', { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
+    // Owner, 2026-11-06: a pack an SC makes can go to the Data Installer, beside its own actions.
+    it('sits beside Copy to the Data Installer and Import while the Data Installer is on', async () => {
+        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, MINE, true);
         await renderView();
         await press(card('acme-1a2b3c'));
 
-        expect(await screen.findByRole('button', { name: 'Copy to the Data Installer' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Copy to the Data Installer' })).toBeInTheDocument();
     });
 
     it('reads the catalog again when the save finishes, once, without waiting for Close', async () => {
-        store('demo-builder', { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
+        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
         await renderView();
         await press(card('acme-1a2b3c'));
         await press(await screen.findByRole('button', { name: 'Save Changes' }));

@@ -85,11 +85,8 @@ const SELECTIONS = z
         `Things to pick from the store, as {kind: {field: [ids]}} with ids from list_datapack_export_items: ${PICKABLE_KINDS.map((kind) => `${kind} by ${PICK_FIELDS[kind]}`).join(', ')}`,
     );
 
-/** The service engine's export fields: with Demo Builder's engine, sending any of them is refused. */
-const SERVICE_ONLY = ' (service engine only; refused with the demo-builder engine)';
-
-/** The same, except that an ACO pack (aco:true) takes them with either engine. */
-const SERVICE_OR_ACO = ' (service engine, or with aco either engine; otherwise refused with the demo-builder engine)';
+/** The export fields only an ACO pack (aco:true) takes: a save from the store refuses them. */
+const ACO_ONLY = ' (with aco only; a save from the store refuses it)';
 
 /**
  * Where the data lands, and which parts of it.
@@ -111,8 +108,8 @@ const IMPORT_TARGET = {
         .array(z.string())
         .min(1)
         .describe(
-            'Data types to include, from list_datapack_data_types. At least one. With the demo-builder engine an ' +
-                'install writes only these and what they need, and leaves the rest of the pack alone',
+            'Data types to include, from list_datapack_data_types. At least one. An install writes only these ' +
+                'and what they need, and leaves the rest of the pack alone',
         ),
     // Optional, and safe to omit: the handler falls back to the scope the
     // PROJECT recorded. Omitting them used to mean the SERVICE's base/default —
@@ -135,9 +132,9 @@ const IMPORT_TARGET = {
             'Store VIEW code, from list_datapack_import_scopes. Omit to use the project’s; ' +
                 'send with websiteCode to override',
         ),
-    // Which store holds the pack (DI-5). The service installs only from its own catalog; Demo
-    // Builder's engine reads either, so a library pack is installed without copying it first.
-    source: z.enum(['installer', 'library']).optional().describe('Which store holds the pack: installer (default) or library. A library pack needs the demo-builder engine'),
+    // Which store holds the pack (DI-5). Demo Builder installs from either, its own copy first, so a
+    // library pack is installed without copying it to the Data Installer.
+    source: z.enum(['installer', 'library']).optional().describe("Which store holds the pack: installer (default) or library. Demo Builder installs either, reading its own store's copy first"),
 };
 
 /** An agent's call that waits on the job it started rather than polling it (`importJobWait.ts`). */
@@ -218,7 +215,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'call it with waitSeconds 45 while outcome is watching, rather than polling quickly. A pack of 2,000 ' +
             'products takes several minutes. Once ended: timings gives the seconds each data type took, and skipped ' +
             'every skipped row with its whole reason, fifty at a time (skippedTotal; ask for more with skippedFrom). ' +
-            "With Demo Builder's engine an install that wrote products ends with check: the store checked against the " +
+            'An install that wrote products ends with check: the store checked against the ' +
             'pack, as verify_datapack_install answers it; check.verdict "differs" means the data is not what the pack says.',
         map: importHandlers,
         type: 'get-datapack-import-status',
@@ -238,15 +235,13 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: true,
         description:
             'What this Commerce instance holds for one data type, to choose from before exporting. ' +
-            'Paged — totalCount reports how many exist. With the demo-builder engine (the default), it ' +
-            "reads the project's own store, scoped to its website (products, customers, cart rules), its " +
+            "Paged — totalCount reports how many exist. It reads the project's own store, scoped to its website (products, customers, cart rules), its " +
             `root category (categories) or its customers (companies), for one of: ${PICKABLE_KINDS.join(', ')}; ` +
             "each item's id is what selections names it by. Commerce's own (the Default set, its five groups, " +
             'the public catalog) is counted in excludedCount. Items the pack being saved already holds (the ' +
             "pack named, else the project's own when Demo Builder installed it) are left off, counted in " +
             'inPackCount: what is left is what was added by hand. Send only dataType (and datapackName with ' +
-            'version for a pack named). With the service engine, it asks the service, and needs ' +
-            'datapackName, version, commerceInstance and dataTypes.',
+            'version for a pack named).',
         map: importHandlers,
         type: 'list-datapack-export-items',
         inputSchema: {
@@ -254,13 +249,6 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             version: z.string().optional().describe('That pack\'s version'),
             source: PACK_SOURCE,
             dataType: z.string().describe('The single data type to enumerate'),
-            // The service engine's `prepareExport` refuses without it ("A Commerce instance is required.").
-            commerceInstance: z.string().optional().describe('Source Commerce instance id (service engine only)'),
-            dataTypes: z
-                .array(z.string())
-                .min(1)
-                .optional()
-                .describe('Data types the export would cover; at least one, same as start (service engine only)'),
             limit: z
                 .number()
                 .optional()
@@ -279,8 +267,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Dry-run an import: same guard, same credentials, same request body as the real thing, ' +
             'without writing. Run this before start_datapack_import. A refusal comes back as ' +
-            'valid:false with a reason, not as an error. With the demo-builder engine it also reads ' +
-            "the pack's rows and names each kind whose rows Commerce could not take.",
+            "valid:false with a reason, not as an error. It also reads the pack's rows and names each kind " +
+            'whose rows Commerce could not take.',
         map: importHandlers,
         type: 'validate-datapack-import',
         inputSchema: { ...DATAPACK_ID, ...IMPORT_TARGET },
@@ -422,12 +410,12 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'the outcome as job. A small pack ends inside the wait; a large one (2,000 products) takes several ' +
             'minutes: then call get_datapack_import_status with waitSeconds 45 until outcome is no longer watching. ' +
             'Validate first. ' +
-            'With the demo-builder engine only the dataTypes named install, with what they need. ' +
+            'Only the dataTypes named install, with what they need. ' +
             'A kind left out is left alone: not installed, not removed, not put back. ' +
             'Installing a pack again updates and removes what it made before, of the kinds named, and keeps what was ' +
             'changed in the Admin; the outcome\'s note says what it took out and what it kept, and preview_datapack_changes ' +
             'says it beforehand. What Commerce will not take out stays, named in the note with its reason. A pack\'s store_config rows are written last, and the note names each ' +
-            'setting set, by path, with its old and new value. With the demo-builder engine, a pack holding no ' +
+            'setting set, by path, with its old and new value. A pack holding no ' +
             'store_config also gets its settings layer, the newest library pack named <pack>-settings, written after ' +
             'its data and removed with it, if dataTypes names all the pack holds or store_config; the note says when not. ' +
             'A path a pack may not set stops the install before any write, by path, ' +
@@ -452,21 +440,19 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Remove a datapack's data from the Commerce instance so the project can be reused. " +
             'Cannot be undone. Returns an activationId; with waitSeconds (up to 45) it waits for the removal to end, ' +
-            'showing its progress, and carries the outcome as job; else follow with get_datapack_import_status. With the ' +
-            'demo-builder engine it takes everything the install record lists, whatever dataTypes names (it may be ' +
-            'omitted; the service needs it). A category, set, company, shared catalog or customer group the pack made ' +
+            'showing its progress, and carries the outcome as job; else follow with get_datapack_import_status. ' +
+            'It takes everything the install record lists, whatever dataTypes names (it may be omitted). A category, set, company, shared catalog or customer group the pack made ' +
             "that holds things it did not make is kept (a kept company with its admin and its catalog), and " +
             "the outcome's note says which; store settings it set, its settings layer's included, are put back " +
             "first, unless changed since, and the note names each by path. The project stops naming the pack only once a removal " +
-            'finishes having taken everything out; what Commerce will not take back stays, named in the note with its reason, and removing again tries it again. A pack the demo-builder engine has no install record of ' +
-            'is refused and nothing is removed by name; check_demo_data then clear_demo_data clears what an ' +
-            'earlier install left. With the demo-builder engine, if the user changed anything the pack made ' +
+            'finishes having taken everything out; what Commerce will not take back stays, named in the note with its reason, and removing again tries it again. A pack Demo Builder has no install record of ' +
+            '(one the Data Installer service installed) is refused and nothing is removed by name; check_demo_data then ' +
+            'clear_demo_data clears what that install left. If the user changed anything the pack made ' +
             'since it was installed, this names the changes and removes nothing until changes answers: keep ' +
             "saves them first, into the user's own pack or as a new one named by saveAs (the answer says which; " +
             'if the save fails nothing is removed), drop loses them. When changes is omitted and the setting ' +
             'demoBuilder.dataInstaller.changesOnRemoval is save, it saves without asking. Ask the user; ' +
-            'preview_datapack_changes shows them beforehand (keep). Packs the service installed have no ' +
-            'record of changes, so none of this applies to them.',
+            'preview_datapack_changes shows them beforehand (keep).',
         map: importHandlers,
         type: 'reset-datapack',
         // Gated TWICE, and that is not redundant. The handler has always required
@@ -478,7 +464,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             ...DATAPACK_ID,
             ...IMPORT_TARGET,
             ...WAIT_FOR_JOB,
-            dataTypes: z.array(z.string()).min(1).optional().describe('Only for a pack the service installed: the data types to remove, from list_datapack_data_types'),
+            dataTypes: z.array(z.string()).min(1).optional().describe('May be omitted: a removal takes everything the install record lists'),
             changes: z.enum(['keep', 'drop']).optional().describe("The user's changes since install: keep saves them first (into their own pack, or as saveAs), drop loses them"),
             saveAs: SAVE_AS,
         },
@@ -488,28 +474,23 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Capture data from a Commerce instance into a datapack. With the demo-builder engine (the ' +
-            "default): saves what is picked in selections from this project's store into the datapack library, " +
-            "with the project's pack when Demo Builder installed it; the same save as save_store_changes_to_pack " +
-            '(Save, or Save As with saveAs), answering the same way. Send selections, saveAs and confirm. With the ' +
-            'service engine: **writes into the SHARED catalog other teams depend on** — requires confirm:true ' +
-            'and confirmName equal to the datapack name. List what it would contain first. aco:true (an Adobe ' +
-            'Commerce Optimizer pack) is refused in this release: ACO datapacks arrive with ACO support.',
+            "Capture data from this project's Commerce store into a datapack: saves what is picked in selections " +
+            "into the datapack library, with the project's pack when Demo Builder installed it; the same save as " +
+            'save_store_changes_to_pack (Save, or Save As with saveAs), answering the same way. Send selections, ' +
+            "saveAs and confirm. Nothing goes into the Data Installer's shared catalog: copy_library_datapack_to_installer " +
+            'does that, afterwards. aco:true (an Adobe Commerce Optimizer pack) is refused in this release: ACO ' +
+            'datapacks arrive with ACO support.',
         map: importHandlers,
         type: 'start-datapack-export',
         confirm: true,
         inputSchema: {
-            datapackName: z.string().optional().describe(`Datapack name to write${SERVICE_OR_ACO}`),
-            version: z.string().optional().describe(`Datapack version to write${SERVICE_OR_ACO}`),
-            commerceInstance: z
-                .string()
-                .optional()
-                .describe(`Source Commerce instance id${SERVICE_ONLY}; refused with aco too`),
+            datapackName: z.string().optional().describe(`Datapack name to write${ACO_ONLY}`),
+            version: z.string().optional().describe(`Datapack version to write${ACO_ONLY}`),
             dataTypes: z
                 .array(z.string())
                 .min(1)
                 .optional()
-                .describe(`Data types to capture; at least one${SERVICE_OR_ACO}. With aco, ACO kinds (omit for all five)`),
+                .describe(`ACO kinds to capture; omit for all five${ACO_ONLY}`),
             selections: SELECTIONS,
             saveAs: SAVE_AS,
             aco: z.boolean().optional().describe('Refused in this release: ACO datapacks arrive with ACO support'),
@@ -520,21 +501,17 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             confirmName: z
                 .string()
                 .optional()
-                .describe('Must equal datapackName exactly — guards a write to the shared catalog'),
+                .describe(`Must equal datapackName exactly${ACO_ONLY}`),
         },
-        // The echo is checked BEFORE dispatch, like delete_github_repo's. A
-        // confirm alone is the bar for "your own project"; this writes somewhere
-        // other people read. A call naming no pack writes no shared pack, so it
-        // needs none (Demo Builder's engine; the service's refuses it anyway).
+        // The echo is checked BEFORE dispatch, like delete_github_repo's: an ACO pack is written
+        // under the name sent. A call naming no pack is a save from the store, which needs none.
         preflight: (args) =>
             args.datapackName === undefined || args.confirmName === args.datapackName
                 ? undefined
                 : {
                       error:
-                          `start_datapack_export writes "${String(args.datapackName)}" into ` +
-                          (args.aco === true ? 'your datapack library' : 'the shared datapack catalog') +
-                          `. To proceed, call again with confirmName:"${String(args.datapackName)}".`,
-                      sharedCatalog: args.aco !== true,
+                          `start_datapack_export writes "${String(args.datapackName)}" into your datapack library. ` +
+                          `To proceed, call again with confirmName:"${String(args.datapackName)}".`,
                   },
     },
 
@@ -725,9 +702,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Copy a datapack library pack into the Data Installer's catalog, for the Data Installer " +
-            'service to install. Not needed to install it here: start_datapack_import takes ' +
-            'source:"library". **Writes into the SHARED catalog** — needs confirm:true and ' +
+            "Copy a datapack library pack into the Data Installer's catalog, so other teams can find and install " +
+            'it. Not needed to install it here: start_datapack_import takes source:"library". **Writes into the ' +
+            'SHARED catalog** — needs confirm:true and ' +
             'confirmName equal to the pack name, never overwrites an existing pack, and cannot be ' +
             'undone from the extension.',
         map: importHandlers,

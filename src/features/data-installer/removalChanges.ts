@@ -34,8 +34,8 @@ export interface DatapackRemovalChanges {
 
 /**
  * What a removal of a pack takes, as the import form is told it (`get-datapack-removal-scope`): the
- * kinds on its install record, in install order, whatever is ticked. Null when there is no record,
- * so the service's engine removes it, by the types it is sent.
+ * kinds on its install record, in install order, whatever is ticked. Null when there is no record:
+ * the Data Installer service installed it, and its removal points to Clear Demo Data.
  */
 export interface DatapackRemovalScope {
     recordedKinds: string[] | null;

@@ -17,9 +17,10 @@
  * button to spin. What each one says afterwards (where the file went, why it could not) shows under
  * the actions.
  *
- * By store: a Data Installer pack offers Import. A library pack offers Import when Demo Builder's
- * engine is chosen (it reads the library itself), else Copy to the Data Installer, above, which
- * offers Import once the copy lands (the service installs only from its own catalog).
+ * Every pack offers Import: Demo Builder installs a library pack and a Data Installer pack alike.
+ * A library pack also offers Copy to the Data Installer, above, while the Data Installer is on:
+ * it puts the pack in the catalog other teams share (owner, 2026-11-06), and is not needed to
+ * install it here.
  *
  * @module features/data-installer/ui/components/PackActions
  */
@@ -45,8 +46,8 @@ export interface PackActionsProps {
     onSaveChanges?: () => void;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
-    /** Demo Builder's engine is chosen, which installs a library pack where it is. */
-    installsFromLibrary: boolean;
+    /** The Data Installer's address is set and switched on: a library pack offers Copy to it. */
+    installerOn: boolean;
     /** The warning a delete carries when this SC shared the pack in a project file. */
     sharedInFile?: string;
     /** The SC's own pack was shared or stopped being shared, or its settings layer was removed. Stable. */
@@ -121,7 +122,7 @@ export function PackActions({
     onImport,
     onSaveChanges,
     onRemoved,
-    installsFromLibrary,
+    installerOn,
     sharedInFile,
     onSharingChanged,
     settingsLayer,
@@ -163,7 +164,6 @@ export function PackActions({
             <Text>{row.label}</Text>
         </Item>
     );
-    const showImport = !library || installsFromLibrary;
     const removing = removeRows(library && detail.mine === true, settingsLayer?.mine === true);
     return (
         <>
@@ -173,9 +173,9 @@ export function PackActions({
                 </div>
             ) : null}
             {/* Kept mounted through a wait: a copy's own result would be lost with it. */}
-            {library && !installsFromLibrary ? (
+            {library && installerOn ? (
                 <div hidden={working}>
-                    <CopyToInstallerButton id={detail.id} onImport={onImport} />
+                    <CopyToInstallerButton id={detail.id} />
                 </div>
             ) : null}
             {working ? null : (
@@ -186,11 +186,9 @@ export function PackActions({
                                 Save Changes
                             </Button>
                         ) : null}
-                        {showImport ? (
-                            <Button variant={onSaveChanges ? 'secondary' : 'accent'} onPress={() => onImport(detail.id)}>
-                                Import
-                            </Button>
-                        ) : null}
+                        <Button variant={onSaveChanges ? 'secondary' : 'accent'} onPress={() => onImport(detail.id)}>
+                            Import
+                        </Button>
                         <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
                             <Section key="pack">{packRows(detail).map(renderRow)}</Section>
                             {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}

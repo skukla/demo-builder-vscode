@@ -19,14 +19,15 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
 }));
 
-// These suites drive the SERVICE engine. Demo Builder's own is the default since 2026-10-28,
-// so they say which one they mean rather than lean on the default. A jest.fn, so a suite that
-// needs the other engine can still choose it.
-jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
-    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
-    selectedDatapackEngine: jest.fn(() => 'service'),
+jest.mock('@/features/authentication/services/projectOrgGuard', () => ({ orgGuard: jest.fn(async () => undefined) }));
+// The engine the job is started on, so a test can see the poller is handed that same one.
+jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
+    ...jest.requireActual('@/features/data-installer/services/buildDatapackEngine'),
+    buildDatapackEngine: jest.fn(),
 }));
 
+import { buildDatapackEngine } from '@/features/data-installer/services/buildDatapackEngine';
+import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import type { HandlerContext } from '@/types/handlers';
 import type { DataTypeStatus } from '@/features/data-installer/types';
@@ -58,7 +59,8 @@ beforeEach(() => {
  * Observed live 2026-08-17: a reset's delete was accepted (202) and then polled
  * to nothing, once per backoff step, leaving the job unwatched. The third cast
  * of the night to hide a shape mismatch, which is why this asserts on the object
- * handed over rather than on any outcome.
+ * handed over rather than on any outcome. Since DI-5 the poller is handed the ENGINE,
+ * which keeps its jobs in memory, so it must be the very engine the job started on.
  */
 describe('buildSampleDataDeps — watch', () => {
     const { watchImportJob } = jest.requireMock(
@@ -68,13 +70,18 @@ describe('buildSampleDataDeps — watch', () => {
         '@/features/data-installer/handlers/dataInstallerHandlers'
     );
 
-    /** A read client: the two methods the poller calls, and nothing else. */
+    /** A read client, as the access hands over: the engine reads a pack's rows through it. */
     const readClient = {
-        getJobStatus: jest.fn(),
-        getJobFailureReason: jest.fn(),
         getDatapackDetail: jest.fn(),
         batchGetDataItems: jest.fn(),
+        getDataItem: jest.fn(),
     };
+    /** The engine the job runs on: the two methods the poller calls answer from its jobs. */
+    const engine = {
+        getJobStatus: jest.fn(),
+        getJobFailureReason: jest.fn(),
+        startImport: jest.fn(async () => ({ activationId: 'act-1' })),
+    } as unknown as DatapackEngine;
 
     beforeEach(() => {
         dataInstallerAddress(INSTALLER_ADDRESS);
@@ -85,6 +92,7 @@ describe('buildSampleDataDeps — watch', () => {
             getToken: async () => 'tok',
         });
         watchImportJob.mockResolvedValue({ outcome: 'success', perType: {} });
+        (buildDatapackEngine as jest.Mock).mockReturnValue(engine);
     });
 
     // `clearAllMocks` clears CALLS, not implementations, so the ok:true override
@@ -104,20 +112,18 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     /**
-     * CONTROL. The assertion above must be sensitive to WHICH client answers — a
-     * write client has neither method, which is exactly the bug. Since DI-5 the
-     * poller is handed the ENGINE, and the service engine must answer from the
-     * read client `resolveDataInstallerAccess` supplies: the poll reaches it.
+     * CONTROL. The assertion above must be sensitive to WHICH object answers: a client
+     * without the job has nothing to say about it. The job is started and watched on one
+     * engine, built once for the whole job.
      */
-    it('CONTROL — the polls reach the access client, not some other one', async () => {
+    it('CONTROL — the polls reach the engine the job was started on, built once', async () => {
         const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
+        await deps.startImport({ id: { name: 'frescopa', version: 'main' }, commerceInstance: 'x', dataTypes: ['categories'] });
         await deps.watch({ activationId: 'act-1', requestedTypes: ['categories'] });
-        await watchImportJob.mock.calls[0][0].client.getJobStatus('act-1');
-        await watchImportJob.mock.calls[0][0].client.getJobFailureReason('act-1');
 
-        expect(readClient.getJobStatus).toHaveBeenCalledWith('act-1');
-        expect(readClient.getJobFailureReason).toHaveBeenCalledWith('act-1');
+        expect(watchImportJob.mock.calls[0][0].client).toBe(engine);
+        expect(buildDatapackEngine).toHaveBeenCalledTimes(1);
     });
 
     // The poller names the job from this; a removal labelled `import` is what the

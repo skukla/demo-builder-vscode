@@ -41,7 +41,6 @@
 
 import { KIND_NOUNS, PICKABLE_KINDS, type Selections, type StorePicks, isPickableKind, picksOf } from '../pickableKinds';
 import { layerFinder, projectCommerce, readPackItems } from '../services/buildDatapackEngine';
-import { selectedDatapackEngine } from '../services/dataInstallerConfig';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { checkRecordedRootStep, recordedRootStep, rootStepItem } from '../services/demoBuilderEngine/packRootCheck';
 import type { PackRootStep } from '../services/demoBuilderEngine/packRootStep';
@@ -143,8 +142,8 @@ export async function openProjectStore(context: HandlerContext): Promise<Project
         projectPath: gate.project.path,
         target: resolveInstallTarget(gate.project) ?? undefined,
         log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
-        // Only Demo Builder's engine applies a settings layer (step 09), so only it previews or saves one.
-        ...(selectedDatapackEngine() === 'demo-builder' ? layerFinder({ libraryCatalog }) : {}),
+        // The settings layer (step 09) is previewed and saved as the engine applies it.
+        ...layerFinder({ libraryCatalog }),
     };
     return { project: gate.project, deps };
 }
@@ -240,20 +239,23 @@ interface StoreSavePayload {
     dataTypes?: string[];
 }
 
-/** The service's export fields, which name a pack in the shared catalog that this save never writes. */
-const SERVICE_EXPORT_FIELDS = ['datapackName', 'version', 'commerceInstance', 'dataTypes'] as const;
+/**
+ * The export fields that name the pack written, which only an ACO pack takes, and the service's
+ * export did before it was deleted (DI-12): a save names its pack by the project's, or by `saveAs`.
+ */
+const NAMING_FIELDS = ['datapackName', 'version', 'commerceInstance', 'dataTypes'] as const;
 
 /**
- * The export door with Demo Builder's engine (step 14, item 10): what is picked from the project's
- * store, with the project's pack when Demo Builder installed it, saved as Save or Save As
- * (`saveAs`). The same save as `save-store-changes-to-pack`; never a pack in the shared catalog.
+ * The export door (step 14, item 10): what is picked from the project's store, with the project's
+ * pack when Demo Builder installed it, saved as Save or Save As (`saveAs`). The same save as
+ * `save-store-changes-to-pack`; never a pack in the shared catalog.
  */
 export async function saveFromStore(context: HandlerContext, payload: StoreSavePayload | undefined): Promise<HandlerResponse> {
-    const named = SERVICE_EXPORT_FIELDS.filter((field) => payload?.[field] !== undefined);
+    const named = NAMING_FIELDS.filter((field) => payload?.[field] !== undefined);
     if (named.length > 0) {
         return {
             success: false,
-            error: `With Demo Builder's engine a save goes into the datapack library, never the shared catalog, so ${named.join(', ')} cannot be sent. Send selections, and saveAs with a name for a new datapack.`,
+            error: `A save goes into the datapack library under the project's pack or saveAs, so ${named.join(', ')} cannot be sent. Send selections, and saveAs with a name for a new datapack.`,
             code: ErrorCode.INVALID_OPERATION,
         };
     }

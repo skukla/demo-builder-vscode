@@ -247,13 +247,12 @@ export function DatapackCatalogView(): React.JSX.Element {
     const heldPack = useHeldPack({
         selected,
         held,
-        engine: value?.engine,
         detail: detail.value?.detail,
         detailLoading: detail.loading,
         onSaved: afterSave,
     });
 
-    // The header's Create Datapack with Demo Builder's engine: Save As, the name first and empty.
+    // The header's Create Datapack: Save As, the name first and empty.
     const offerSaveAs = heldPack.offerSaveAs;
     const createDatapack = useCallback((): void => offerSaveAs(''), [offerSaveAs]);
 
@@ -335,7 +334,6 @@ export function DatapackCatalogView(): React.JSX.Element {
                                 onShow={setShow}
                                 installerAnswered={installerAnswered}
                                 onCatalogChanged={refresh}
-                                engine={value?.engine}
                                 onCreate={createDatapack}
                             />
                         }
@@ -369,7 +367,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onImport={openImport}
                 onSaveChanges={heldPack.saveChanges}
                 onRemoved={removedFromLibrary}
-                installsFromLibrary={value?.engine === 'demo-builder'}
+                installerOn={value?.installerOn === true}
                 setupStep={heldPack.setupStepLine}
                 onRename={renamePack}
                 sharedInFile={detail.value?.sharedInFile}

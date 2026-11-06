@@ -15,14 +15,14 @@ jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
     buildSampleDataDeps: jest.fn(() => ({})),
 }));
 jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
-    engineThatInstalled: jest.fn(),
+    installedByDemoBuilder: jest.fn(),
 }));
 
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
 import { contextForProject, settleChangesBeforeRemoval } from '@/features/data-installer/handlers/removalChanges';
-import { engineThatInstalled } from '@/features/data-installer/services/buildDatapackEngine';
+import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import { confirmSampleDataRemoval, removeProjectSampleData } from '@/features/eds/services/reset/edsResetSampleData';
 import type { Project } from '@/types/base';
@@ -30,7 +30,7 @@ import { ErrorCode } from '@/types/errorCodes';
 
 const mockedSettle = settleChangesBeforeRemoval as jest.MockedFunction<typeof settleChangesBeforeRemoval>;
 const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
-const mockedEngine = engineThatInstalled as jest.MockedFunction<typeof engineThatInstalled>;
+const mockedOurs = installedByDemoBuilder as jest.MockedFunction<typeof installedByDemoBuilder>;
 
 const project = (): Project =>
     createMockProject({ name: 'acme', path: '/nonexistent/acme', datapack: { name: 'bodea', version: 'main', store: 'library' } });
@@ -124,7 +124,7 @@ describe('the question these doors ask', () => {
     const vscodeStub = (answer: unknown) => ({ window: { showWarningMessage: jest.fn().mockResolvedValue(answer) } }) as unknown as typeof import('vscode');
 
     it('says where changes go, for a pack Demo Builder installed', async () => {
-        mockedEngine.mockResolvedValue('demo-builder');
+        mockedOurs.mockResolvedValue(true);
         const vscode = vscodeStub(undefined);
 
         await confirmSampleDataRemoval(project(), vscode, Promise.resolve(true));
@@ -133,7 +133,7 @@ describe('the question these doors ask', () => {
     });
 
     it('says nothing of it for a pack the service installed, which has no record of changes', async () => {
-        mockedEngine.mockResolvedValue('service');
+        mockedOurs.mockResolvedValue(false);
         const vscode = vscodeStub(undefined);
 
         await confirmSampleDataRemoval(project(), vscode, Promise.resolve(true));

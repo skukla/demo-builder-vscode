@@ -754,19 +754,23 @@ picks alone (send `saveAs`): a pack from a store Demo Builder did not fill, whic
 It answers `unnamed` (ids kept because the store could not name them) and `leftOut` (what the store
 has, of products, gift cards, categories, cart rules, customers and companies, that the version
 does not hold), both also in its message, and a version the install's own parsers would refuse is
-not saved. With Demo Builder's engine (the default), `list_datapack_export_items` lists one kind of
-the project's store to pick from (website-scoped where Commerce scopes it, less what the pack being
-saved holds, counted in `inPackCount`), and `start_datapack_export` is the same save, sent
-`selections`, `saveAs` and `confirm`: the service's fields (`datapackName`, `version`, `commerceInstance`,
-`dataTypes`) are refused there, and the name echo applies only to a call naming a pack.
+not saved. `list_datapack_export_items` lists one kind of the project's store to pick from
+(website-scoped where Commerce scopes it, less what the pack being saved holds, counted in
+`inPackCount`), and `start_datapack_export` is the same save, sent `selections`, `saveAs` and
+`confirm`: the fields that name a pack (`datapackName`, `version`, `dataTypes`) are an ACO pack's
+alone and refused on a save, and the name echo applies only to a call naming a pack. The Data
+Installer service's own engine and export, and the Engine setting that chose them, were
+deleted on 2026-11-06 with the setting (DI-12): the service had ignored the Commerce credentials a
+caller sends since 2026-10-27. A pack reaches its shared catalog by `copy_library_datapack_to_installer`,
+and a pack only it holds is installed by Demo Builder.
 A project's datapack records the store that holds it (`installer` or `library`): creation, a copy
 and a project file install from that store, `configure_project` takes it as `datapack.store`, and
 `create_project_from_file` answers `datapackNote` when the pack named can't be read (the pack it
 was made from, or none, is installed instead) or a colleague's private pack is copied into your library first, as a pack of yours. `start_datapack_import` installs only the `dataTypes` named and
 what they need, and leaves the rest of the pack alone; `validate_datapack_import` and
 `preview_datapack_changes` decide it the same way. `reset_datapack` takes all the install record
-lists, whichever `dataTypes` it is sent (optional with this engine, needed for a pack the service
-installed), and its job reports the kinds on the record. Every removal path, `reset_datapack`
+lists, whichever `dataTypes` it is sent (it may be omitted), and its job reports the kinds on the
+record; a pack the service installed has no record, and is answered with Clear Demo Data. Every removal path, `reset_datapack`
 included, keeps a category or set the pack made that holds something it did not, and the
 outcome's `note` says so ("Kept the set Racks: it holds 2 products you added."). A `reset_datapack`
 clears the project's datapack only when the removal finishes having taken everything out: one that

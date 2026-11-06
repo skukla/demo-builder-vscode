@@ -155,8 +155,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // 56: import-datapack runs verify_datapack_install after a successful install.
     // 57: an install checks itself; import-datapack reads its check.
     // 58: import-datapack previews before installing a pack again.
-    it('is 58 (import-datapack previews before a reinstall)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(58);
+    // 59: one datapack engine; import-datapack says how a pack reaches the Data Installer.
+    it('is 59 (one datapack engine in the generated skills)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(59);
     });
 });
 

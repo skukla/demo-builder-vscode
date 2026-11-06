@@ -138,16 +138,18 @@ export interface ActivityEntry {
  * The catalog the panel shows: the Data Installer's packs, plus the library's when
  * asked. `libraryError` says why the library's are missing, when they are.
  */
-/** Which engine installs and removes datapacks (`demoBuilder.dataInstaller.engine`, DI-5). */
+/**
+ * Who installed a pack, or ran a job: Demo Builder (its install record and activity log) or the
+ * Data Installer service (its own tracking, from before its engine was deleted on 2026-11-06).
+ */
 export type DatapackEngineId = 'service' | 'demo-builder';
 
 /** `demoBuilder.dataInstaller.changesOnRemoval`: ask each time, or always save them first. */
 export type ChangesOnRemoval = 'ask' | 'save';
 
 /**
- * The catalog with the library's rows. `engine` says which engine will install, so the screen
- * offers Install on a library pack only when Demo Builder's engine is chosen: the service
- * installs only from its own catalog.
+ * The catalog with the library's rows. `installerOn` says the Data Installer's address is set and
+ * switched on, so a library pack's flyout offers Copy to the Data Installer beside Import.
  */
 export type CatalogPage = Page<DatapackSummary> & {
     /** Demo Builder's datapack store did not answer, so only the Data Installer's rows are here. */
@@ -167,7 +169,8 @@ export type CatalogPage = Page<DatapackSummary> & {
      * Cleared once the Data Installer answers them, so it comes back if access is lost again.
      */
     noAccessDismissed?: boolean;
-    engine?: DatapackEngineId;
+    /** The Data Installer's address is set and switched on: Copy to the Data Installer is offered. */
+    installerOn?: boolean;
 };
 
 /**

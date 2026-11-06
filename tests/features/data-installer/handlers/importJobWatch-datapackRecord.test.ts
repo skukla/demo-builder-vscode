@@ -17,9 +17,8 @@
 // The family helper owns the module wall AND re-exports the handler. It must be
 // imported BEFORE anything it mocks, and the handler must come from it — a direct
 // import of the SUT loads the real module before these mocks register.
-import { answeringDataInstaller, importHandlers, mockedWatch } from './importHandlers.testUtils';
+import { happyEngine, importHandlers, mockedInstalledByDemoBuilder, mockedWatch, stubEngine } from './importHandlers.testUtils';
 import * as vscode from 'vscode';
-import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -31,10 +30,6 @@ import {
 } from '../../../helpers/extensionContextFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
-
-const MockedWriteClient = DataInstallerWriteClient as jest.MockedClass<
-    typeof DataInstallerWriteClient
->;
 
 const BASE = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
 
@@ -83,23 +78,9 @@ const PAYLOAD = {
     dataTypes: ['categories'],
 };
 
-/** The class carries private state no literal can supply; the methods stand in. */
-function stubWriteClient(methods: Partial<DataInstallerWriteClient>): void {
-    MockedWriteClient.mockImplementation(() => methods as DataInstallerWriteClient);
-}
-
-function happyClient() {
-    stubWriteClient({
-        validateImport: jest.fn().mockResolvedValue({ valid: true }),
-        startImport: jest.fn().mockResolvedValue({ activationId: 'act-1' }),
-        startDelete: jest.fn().mockResolvedValue({ activationId: 'act-9' }),
-        checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-    });
-}
-
-/** A client whose validate REFUSES, so the job is never accepted. */
-function refusingClient() {
-    stubWriteClient({
+/** An engine whose validate REFUSES, so the job is never accepted. */
+function refusingEngine() {
+    stubEngine({
         validateImport: jest.fn().mockResolvedValue({ valid: false, reason: 'nope' }),
         startImport: jest.fn(),
         startDelete: jest.fn(),
@@ -109,6 +90,7 @@ function refusingClient() {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockedInstalledByDemoBuilder.mockResolvedValue(true);
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
         get: jest.fn((key: string) => (key === 'apiBaseUrl' ? BASE : true)),
     });
@@ -116,7 +98,7 @@ beforeEach(() => {
 
 describe('an accepted import records the datapack on the project', () => {
     it('writes name, version and the store it came from, and saves', async () => {
-        happyClient();
+        happyEngine();
         const project = PAAS_PROJECT();
         const { context, saveProject } = makeImportHarness(project);
 
@@ -134,7 +116,7 @@ describe('an accepted import records the datapack on the project', () => {
      * nothing.
      */
     it('CONTROL — records nothing when validate refuses the request', async () => {
-        refusingClient();
+        refusingEngine();
         const project = PAAS_PROJECT();
         const { context, saveProject } = makeImportHarness(project);
 
@@ -149,7 +131,7 @@ describe('an accepted import records the datapack on the project', () => {
      * over a bookkeeping write would report a started import as a failed one.
      */
     it('still reports success when the project write fails', async () => {
-        happyClient();
+        happyEngine();
         const saveProject = jest.fn().mockRejectedValue(new Error('disk full'));
         const { context } = makeImportHarness(PAAS_PROJECT(), saveProject);
 
@@ -161,8 +143,7 @@ describe('an accepted import records the datapack on the project', () => {
 
 describe('a reset that finishes clears it', () => {
     it('removes the datapack so reset stops offering a removal already done', async () => {
-        happyClient();
-        answeringDataInstaller();
+        happyEngine();
         mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
         const project = { ...PAAS_PROJECT(), datapack: { name: 'bodea', version: 'main' } };
         const { context, saveProject } = makeImportHarness(project);
@@ -181,7 +162,7 @@ describe('a reset that finishes clears it', () => {
         ['another pack', { name: 'frescopa', version: 'main' }],
         ['another version of it', { name: 'bodea', version: '2.0' }],
     ])('leaves the project naming %s', async (_name, named) => {
-        happyClient();
+        happyEngine();
         mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
         const project = { ...PAAS_PROJECT(), datapack: named };
         const { context, saveProject } = makeImportHarness(project);
@@ -196,7 +177,7 @@ describe('a reset that finishes clears it', () => {
     // Confirm-gated: an unconfirmed reset does nothing at all, including to the
     // project record.
     it('CONTROL — an unconfirmed reset changes nothing', async () => {
-        happyClient();
+        happyEngine();
         const project = { ...PAAS_PROJECT(), datapack: { name: 'bodea', version: 'main' } };
         const { context, saveProject } = makeImportHarness(project);
 

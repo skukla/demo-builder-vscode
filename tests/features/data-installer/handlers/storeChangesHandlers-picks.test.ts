@@ -35,7 +35,6 @@ import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/d
 import { exportHandlers } from '@/features/data-installer/handlers/exportHandlers';
 import { storeChangesHandlers } from '@/features/data-installer/handlers/storeChangesHandlers';
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
-import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
 import { type InstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { type SaveResult, countPickable, listPickable, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
@@ -73,7 +72,6 @@ const PICKS = { products: { sku: ['VR-Rack'] }, cart_rules: { rule_id: [7] } };
 beforeEach(() => {
     jest.clearAllMocks();
     (orgGuard as jest.Mock).mockResolvedValue(undefined);
-    (selectedDatapackEngine as jest.Mock).mockReturnValue('demo-builder');
     mockedRecord.mockResolvedValue(undefined);
     mockedSave.mockImplementation(async (_deps, target) => saved(target));
     (resolveDataInstallerAccess as jest.Mock).mockResolvedValue({
@@ -222,14 +220,5 @@ describe('count-datapack-export-items', () => {
         const result = await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, {});
 
         expect(result).toEqual({ success: false, error: 'Choose the website and store view to install into first.' });
-    });
-
-    it("refuses with the service's engine, whose list answers from the service, asking nothing of the store", async () => {
-        (selectedDatapackEngine as jest.Mock).mockReturnValue('service');
-
-        const result = await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, {});
-
-        expect(result).toMatchObject({ success: false });
-        expect(mockedCount).not.toHaveBeenCalled();
     });
 });

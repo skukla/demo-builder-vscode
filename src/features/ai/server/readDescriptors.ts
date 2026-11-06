@@ -682,7 +682,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "One datapack's metadata plus which of its declared data types the service actually " +
             'stores. Use before installing: a pack can declare a type it holds no item for. settingsLayer ' +
-            'names the store settings an install would also apply, with the demo-builder engine.',
+            'names the store settings an install would also apply.',
         map: dataInstallerHandlers,
         type: 'get-datapack-detail',
         inputSchema: {

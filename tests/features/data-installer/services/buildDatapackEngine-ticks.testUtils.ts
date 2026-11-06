@@ -17,7 +17,7 @@ import { type MemoryStore, memoryStore } from './demoBuilderEngine/memoryStore.t
 import { configStore } from './demoBuilderEngine/storeConfig.testUtils';
 import { buildDatapackEngine, type DatapackEngineAccess, layerFinder, projectCommerce, readPackItems } from '@/features/data-installer/services/buildDatapackEngine';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
-import type { ImportRequest } from '@/features/data-installer/services/dataInstallerWriteClient';
+import type { ImportRequest } from '@/features/data-installer/services/importRequest';
 import { type CreatedObject, nodeRecordFiles, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { StoreChangesDeps } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
 import type { DatapackDetail } from '@/features/data-installer/types';
@@ -132,16 +132,13 @@ export function ticksHarness(): TicksHarness {
         },
     });
     const access = ({ rows = ROWS, layer }: PackStores = {}): DatapackEngineAccess => ({
-        baseUrl: 'https://installer.test/api',
-        getToken: async () => 'tok',
-        jobs: { getJobStatus: jest.fn(), getJobFailureReason: jest.fn() },
         catalog: catalogOf(rows),
         libraryCatalog: libraryOf(layer),
         project: createMockProject({ path: dir }),
         authManager: {} as DatapackEngineAccess['authManager'],
         secrets: undefined,
     });
-    const engine: TicksHarness['engine'] = (stores) => buildDatapackEngine('demo-builder', access(stores), () => undefined);
+    const engine: TicksHarness['engine'] = (stores) => buildDatapackEngine(access(stores), () => undefined);
     return {
         dir,
         store,

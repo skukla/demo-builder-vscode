@@ -17,7 +17,6 @@ import {
     DATA_INSTALLER_MAX_URL_LENGTH,
     actionUrl,
     fingerprintUrl,
-    selectedDatapackEngine,
     resolveDataInstallerBaseUrl,
     resolveDatapackStoreBaseUrl,
 } from '@/features/data-installer/services/dataInstallerConfig';
@@ -25,14 +24,11 @@ import {
 const STAGE_URL = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
 
 /** Stub `getConfiguration` so both reads in the module see the given values. */
-function setupConfig(values: { apiBaseUrl?: unknown; engine?: unknown }): void {
+function setupConfig(values: { apiBaseUrl?: unknown }): void {
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
         get: jest.fn((key: string, fallback?: unknown) => {
             if (key === 'apiBaseUrl') {
                 return 'apiBaseUrl' in values ? values.apiBaseUrl : fallback;
-            }
-            if (key === 'engine') {
-                return 'engine' in values ? values.engine : fallback;
             }
             return fallback;
         }),
@@ -44,34 +40,15 @@ describe('dataInstallerConfig', () => {
         jest.clearAllMocks();
     });
 
-    describe('selectedDatapackEngine', () => {
-        /**
-         * Demo Builder's own by default (owner, 2026-10-28): the service still answers the
-         * catalog, but since 2026-10-27 it ignores the Commerce credentials a caller sends, so
-         * it installs nothing for us. Choosing the service again is one setting.
-         */
-        it("is Demo Builder's own until the SC chooses otherwise", () => {
-            setupConfig({});
-            expect(selectedDatapackEngine()).toBe('demo-builder');
-        });
-
-        it('is the service when chosen', () => {
-            setupConfig({ engine: 'service' });
-            expect(selectedDatapackEngine()).toBe('service');
-        });
-
-        it('reads anything else as the default rather than guessing', () => {
-            setupConfig({ engine: 'mystery' });
-            expect(selectedDatapackEngine()).toBe('demo-builder');
-        });
-
-        it('is declared in package.json with the same two values and the same default', () => {
-            const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../../package.json'), 'utf8')) as {
-                contributes: { configuration: Array<{ properties?: Record<string, { enum?: string[]; default?: unknown }> }> };
-            };
-            const setting = pkg.contributes.configuration.map((c) => c.properties?.['demoBuilder.dataInstaller.engine']).find(Boolean);
-            expect(setting).toMatchObject({ enum: ['service', 'demo-builder'], default: 'demo-builder' });
-        });
+    // The Engine setting was deleted on 2026-11-06 with the service's engine (DI-12): no migration,
+    // an old value in settings.json is simply not read.
+    it('declares no Engine setting in package.json', () => {
+        const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../../package.json'), 'utf8')) as {
+            contributes: { configuration: Array<{ properties?: Record<string, unknown> }> };
+        };
+        const declared = pkg.contributes.configuration.flatMap((c) => Object.keys(c.properties ?? {}));
+        expect(declared).toContain('demoBuilder.dataInstaller.enabled');
+        expect(declared).not.toContain('demoBuilder.dataInstaller.engine');
     });
 
     describe('resolveDataInstallerBaseUrl', () => {
@@ -300,7 +277,6 @@ describe('affectsDatapackList', () => {
 
     it.each([
         'demoBuilder.dataInstaller.apiBaseUrl',
-        'demoBuilder.dataInstaller.engine',
         'demoBuilder.datapackStore.apiBaseUrl',
     ])('follows %s', (setting) => {
         expect(affectsDatapackList(changing(setting))).toBe(true);
@@ -331,14 +307,6 @@ describe('the Data Installer turned off', () => {
 
         expect(dataInstallerEnabled()).toBe(true);
         expect(resolveDataInstallerBaseUrl()).toEqual({ ok: true, baseUrl: ADDRESS });
-    });
-
-    it("hands the service's installs to Demo Builder's engine, so turning it off never blocks one", () => {
-        settings({ engine: 'service', enabled: false });
-        expect(selectedDatapackEngine()).toBe('demo-builder');
-
-        settings({ engine: 'service' });
-        expect(selectedDatapackEngine()).toBe('service');
     });
 
     it('is a setting the list follows', () => {

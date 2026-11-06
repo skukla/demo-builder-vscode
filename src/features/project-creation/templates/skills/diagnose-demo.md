@@ -90,13 +90,13 @@ land under their own root and are invisible through that endpoint. The per-type
 `GET /V1/categories/list`, the flat search, to see what is actually there.
 
 **A store shows only the categories under its root, and no API can change a
-store's root.** Demo Builder's engine puts a pack's categories under the store's
+store's root.** Demo Builder puts a pack's categories under the store's
 root when no other store shares it. When another store shares it, the pack keeps
 a root of its own and the install asks the SC to set it in the Admin; "Skip for
 now" leaves that step open, and the import's note names it (Stores > All Stores >
-the store > Root Category). The service engine creates the category tree; it
-does not attach it to a store at all.
-Either way, until someone sets it, the storefront has a catalog it cannot see.
+the store > Root Category). A pack the Data Installer service installed, before
+Demo Builder installed packs itself, created the category tree without attaching
+it to a store at all. Either way, until someone sets it, the storefront has a catalog it cannot see.
 This is the step most often missing when "the import worked and the site is empty".
 
 So, in order:
@@ -105,8 +105,8 @@ So, in order:
 2. If scope is fine, check the flat category list rather than the tree.
 3. If the categories exist but the store shows none, the root category has not
    been assigned. That is an Admin step: give the user the store and the value,
-   rather than re-importing. With Demo Builder's engine, running
-   `start_datapack_import` again afterwards only re-checks it and marks it done.
+   rather than re-importing. Running `start_datapack_import` again afterwards only
+   re-checks it and marks it done.
 4. Set but the storefront still shows nothing: Catalog Service can lag behind the
    store; on an Edge Delivery storefront, `republish` rebuilds the catalog menu.
 

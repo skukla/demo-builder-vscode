@@ -8,10 +8,9 @@
  * header answered 200 with 42 datapacks.
  */
 
-import { DataInstallerExportClient } from '@/features/data-installer/services/dataInstallerExportClient';
 import { signInHeaders } from '@/features/data-installer/services/dataInstallerSignIn';
 import { DataInstallerTransport } from '@/features/data-installer/services/dataInstallerTransport';
-import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
+import { DatapackStoreWriter } from '@/features/data-installer/services/datapackStoreWriter';
 
 const ORG = '8EBB33FE5E43BA110A495EF8@AdobeOrg';
 const BASE = 'https://example.adobeioruntime.net/api/v1/web/data-installer-api';
@@ -54,29 +53,11 @@ describe('every client sends the org', () => {
         expect(headersOf(f).Authorization).toBe('Bearer ims-token');
     });
 
-    it('the write client', async () => {
+    // Copy to the Data Installer writes through this, into the shared catalog.
+    it('the store writer', async () => {
         const f = okFetch({ success: true });
-        await new DataInstallerWriteClient({ baseUrl: BASE, getToken, orgCode: ORG, fetchImpl: f as unknown as typeof fetch }).checkCredentials({
-            id: { name: 'bodea', version: 'main' },
-            commerceInstance: 'x',
-            dataTypes: ['categories'],
-        });
-        expect(headersOf(f)['x-gw-ims-org-id']).toBe(ORG);
-    });
-
-    it('the export client', async () => {
-        const f = okFetch({ success: true, items: [], pagination: { page: 1, page_size: 1000, total_count: 0, total_pages: 0 } });
-        await new DataInstallerExportClient({ baseUrl: BASE, getToken, orgCode: ORG, fetchImpl: f as unknown as typeof fetch })
-            .listExportItems(
-                {
-                    id: { name: 'p', version: 'v1' },
-                    commerceInstance: 't',
-                    restBaseUrl: 'https://na1-sandbox.api.commerce.adobe.com/t',
-                    dataTypes: ['attribute_sets'],
-                    backend: 'accs',
-                },
-                'attribute_sets',
-            )
+        await new DatapackStoreWriter({ baseUrl: BASE, getToken, orgCode: ORG, fetchImpl: f as unknown as typeof fetch })
+            .deleteDatapack({ name: 'p', version: 'v1' })
             .catch(() => undefined);
         expect(headersOf(f)['x-gw-ims-org-id']).toBe(ORG);
     });

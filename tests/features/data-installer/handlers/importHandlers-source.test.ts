@@ -1,11 +1,11 @@
 /**
  * Which store a pack is installed from (DI-5): the Data Installer's catalog, unless the caller
- * names the library. The service installs only from its own catalog, so with it chosen (the
- * default) a library pack is refused with what to do instead, and nothing is started.
+ * names the library. Demo Builder installs from either; the service's engine, which installed
+ * only from its own catalog and refused a library pack, was deleted on 2026-11-06 (DI-12).
  */
 
 import {
-    happyClient,
+    happyEngine,
     importHandlers,
     makeImportHarness,
     PAYLOAD,
@@ -18,7 +18,7 @@ beforeEach(() => {
 
 describe('the store a pack is installed from', () => {
     it('is the Data Installer when the caller names none', async () => {
-        const { startImport } = happyClient();
+        const { startImport } = happyEngine();
         const { context } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -26,23 +26,18 @@ describe('the store a pack is installed from', () => {
         expect(startImport).toHaveBeenCalledWith(expect.objectContaining({ source: 'installer' }));
     });
 
-    it('refuses a library pack while the service is the engine, starting nothing', async () => {
-        const { startImport } = happyClient();
+    it('is the library when the caller names it, installed where it is', async () => {
+        const { startImport } = happyEngine();
         const { context } = makeImportHarness();
 
         const response = await importHandlers['start-datapack-import'](context, { ...PAYLOAD, source: 'library' });
 
-        expect(response).toEqual({
-            success: false,
-            error:
-                'The Data Installer service installs only packs in its own catalog. Copy this one to the Data Installer first, ' +
-                'or set demoBuilder.dataInstaller.engine to demo-builder.',
-        });
-        expect(startImport).not.toHaveBeenCalled();
+        expect(response.success).toBe(true);
+        expect(startImport).toHaveBeenCalledWith(expect.objectContaining({ source: 'library' }));
     });
 
     it('refuses a store that does not exist', async () => {
-        const { startImport } = happyClient();
+        const { startImport } = happyEngine();
         const { context } = makeImportHarness();
 
         const response = await importHandlers['start-datapack-import'](context, { ...PAYLOAD, source: 'attic' });

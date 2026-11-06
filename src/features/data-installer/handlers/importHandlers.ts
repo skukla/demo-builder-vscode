@@ -22,12 +22,11 @@
  * @module features/data-installer/handlers/importHandlers
  */
 
-import { buildDatapackEngine, engineThatInstalled } from '../services/buildDatapackEngine';
-import { selectedDatapackEngine } from '../services/dataInstallerConfig';
-import type { ImportRequest, ImportTarget } from '../services/dataInstallerWriteClient';
+import { buildDatapackEngine, installedByDemoBuilder } from '../services/buildDatapackEngine';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
+import type { ImportRequest, ImportTarget } from '../services/importRequest';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { ImportJobRecord } from '../types';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
@@ -39,7 +38,7 @@ import { exportPackHandlers } from './exportPackHandlers';
 import { skippedPage, waitForJob, waitMsOf } from './importJobWait';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
-import { SERVICE_INSTALLS_ONLY_ITS_OWN, SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from './libraryReads';
+import { SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from './libraryReads';
 import { STARTING_REMOVAL_STAGE, type SavedFirst, removalChangesHandlers, removalStageReporter, settleChangesBeforeRemoval } from './removalChanges';
 import { storeChangesHandlers } from './storeChangesHandlers';
 import { TransientStateManager } from '@/core/state/transientStateManager';
@@ -188,9 +187,9 @@ export const importHandlers = defineHandlers({
      * watching the same kind of activation id. That the runner needs no changes
      * is the seam working as designed.
      *
-     * **What it takes depends on who installed it.** The service removes the types
-     * it is sent. Demo Builder's engine removes what its install record lists, so
-     * the types sent are not asked for and the job reports the record's kinds.
+     * **What it takes is what its install record lists**, so the types sent are not asked for
+     * and the job reports the record's kinds. A pack the Data Installer service installed has
+     * no record, and is answered with Clear Demo Data (`SERVICE_REMOVAL_UNAVAILABLE`).
      *
      * **Confirm-gated.** A reset is destructive and the service has no undo, so it
      * takes the same explicit opt-in the destructive MCP tools use rather than
@@ -310,8 +309,6 @@ function withSavedNote(response: HandlerResponse, saved: SavedFirst | undefined)
 async function prepareImport(
     context: HandlerContext,
     payload: StartImportPayload | undefined,
-    // A removal goes through the engine that installed the pack; anything else through the
-    // one the setting chooses (DI-5).
     write: 'install' | 'remove' = 'install',
 ): Promise<
     { engine: DatapackEngine; request: ImportRequest } | { response: HandlerResponse }
@@ -327,11 +324,11 @@ async function prepareImport(
     }
 
     const pack = { name: input.datapackName, version: input.version };
-    const engine = await engineFor(context, gate, { pack, write, source: input.source });
+    const engine = await engineFor(context, gate, { pack, write });
     if ('response' in engine) {
         return engine;
     }
-    const dataTypes = write === 'remove' ? await typesToRemove(engine.engine, gate.project.path, pack, input.dataTypes) : input.dataTypes;
+    const dataTypes = write === 'remove' ? await typesToRemove(gate.project.path, pack, input.dataTypes) : input.dataTypes;
     if (dataTypes.length === 0) {
         return { response: { success: false, error: 'Select at least one data type to remove.' } };
     }
@@ -360,54 +357,39 @@ async function prepareImport(
 
 
 /**
- * What a removal reports on. Demo Builder's engine takes what its record lists, whatever was ticked;
- * a record with nothing left on it still has a job to run, over the types sent.
+ * What a removal reports on: what the install record lists, whatever was ticked; a record with
+ * nothing left on it still has a job to run, over the types sent.
  */
-async function typesToRemove(engine: DatapackEngine, projectPath: string, pack: DatapackId, sent: string[]): Promise<string[]> {
-    if (engine.id !== 'demo-builder') {
-        return sent;
-    }
+async function typesToRemove(projectPath: string, pack: DatapackId, sent: string[]): Promise<string[]> {
     const record = await readInstallRecord(nodeRecordFiles, projectPath, pack);
     const kinds = record ? kindsOnRecord(record) : [];
     return kinds.length > 0 ? kinds : sent;
 }
 
 /**
- * The engine for one write: for a removal the one that installed the pack, otherwise the one
- * the setting chooses (DI-5). The service installs only from its own catalog, so a library pack
- * with the service chosen is refused with what to do instead.
+ * The engine for one write. A removal of a pack the Data Installer service installed has no
+ * install record to remove by, so it is answered with Clear Demo Data instead (DI-12).
  */
 async function engineFor(
     context: HandlerContext,
     gate: DatapackWriteAccess,
-    write: { pack: DatapackId; write: 'install' | 'remove'; source: DatapackStoreName },
+    write: { pack: DatapackId; write: 'install' | 'remove' },
 ): Promise<{ engine: DatapackEngine } | { response: HandlerResponse }> {
-    const engineId =
-        write.write === 'remove' ? await engineThatInstalled(gate.project.path, write.pack) : selectedDatapackEngine();
-    // Demo Builder's engine writes into the project's own store with the project's credential, so
-    // the sign-in must be in the org that owns that store. Checked before anything is written, with
+    if (write.write === 'remove' && !(await installedByDemoBuilder(gate.project.path, write.pack))) {
+        return { response: { success: false, error: SERVICE_REMOVAL_UNAVAILABLE, code: ErrorCode.INVALID_OPERATION } };
+    }
+    // The engine writes into the project's own store with the project's credential, so the
+    // sign-in must be in the org that owns that store. Checked before anything is written, with
     // the extension's one org guard (adobe-org-context): a mismatch says "Switch IMS Org" rather
     // than failing half way through with Commerce's refusal (owner, 2026-10-28).
-    if (engineId === 'demo-builder' && context.authManager) {
+    if (context.authManager) {
         const orgFailure = await orgGuard(context, gate.project, context.authManager);
         if (orgFailure) {
             return { response: { success: false, error: orgFailure.error, code: ErrorCode.ORG_MISMATCH } };
         }
     }
-    if (engineId === 'service' && write.write === 'remove' && !(await gate.dataInstallerAnswers())) {
-        return { response: { success: false, error: SERVICE_REMOVAL_UNAVAILABLE, code: ErrorCode.INVALID_OPERATION } };
-    }
-    if (engineId === 'service' && write.source === 'library') {
-        return {
-            response: {
-                success: false,
-                error: SERVICE_INSTALLS_ONLY_ITS_OWN,
-            },
-        };
-    }
     return {
         engine: buildDatapackEngine(
-            engineId,
             {
                 ...gate,
                 authManager: context.authManager,

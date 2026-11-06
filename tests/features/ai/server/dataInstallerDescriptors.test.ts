@@ -100,24 +100,20 @@ describe('start_datapack_export name echo', () => {
     const preflight = () => row('start_datapack_export')!.preflight!;
 
     it('refuses when the echo does not match', () => {
-        const out = preflight()({ datapackName: 'shared-pack', confirmName: 'wrong' }) as {
-            error: string;
-            sharedCatalog: boolean;
-        };
+        const out = preflight()({ datapackName: 'aco-pack', confirmName: 'wrong' }) as { error: string };
 
-        expect(out.error).toMatch(/confirmName:"shared-pack"/);
-        expect(out.sharedCatalog).toBe(true);
+        expect(out.error).toMatch(/confirmName:"aco-pack"/);
     });
 
     it('refuses when no echo is given at all', () => {
         expect(preflight()({ datapackName: 'shared-pack' })).toBeDefined();
     });
 
-    it('asks the echo for an ACO pack too, naming the library it writes into, not the shared catalog', () => {
-        const out = preflight()({ datapackName: 'aco_acme', aco: true }) as { error: string; sharedCatalog: boolean };
+    // The service's export into the shared catalog was deleted on 2026-11-06 (DI-12): a named pack is the library's.
+    it('names the library it writes into, never the shared catalog', () => {
+        const out = preflight()({ datapackName: 'aco_acme', aco: true }) as { error: string };
 
-        expect(out.error).toBe('start_datapack_export writes "aco_acme" into your datapack library. To proceed, call again with confirmName:"aco_acme".');
-        expect(out.sharedCatalog).toBe(false);
+        expect(out).toEqual({ error: 'start_datapack_export writes "aco_acme" into your datapack library. To proceed, call again with confirmName:"aco_acme".' });
     });
 
     it('allows dispatch when the echo matches', () => {
@@ -126,7 +122,7 @@ describe('start_datapack_export name echo', () => {
         ).toBeUndefined();
     });
 
-    // Step 14: with Demo Builder's engine the call names no pack and writes none to the shared catalog.
+    // Step 14: a save from the store names no pack and writes none to the shared catalog.
     it('needs no echo from a call naming no pack, which writes into the demo\'s own pack', () => {
         expect(preflight()({ selections: { products: { sku: ['VR-Rack'] } } })).toBeUndefined();
     });
@@ -290,7 +286,7 @@ describe('what each row accepts', () => {
     });
 
     it('says what the ticks mean, for an import and for a removal', () => {
-        expect(row('start_datapack_import')!.description).toContain('only the dataTypes named install, with what they need');
+        expect(row('start_datapack_import')!.description).toContain('Only the dataTypes named install, with what they need');
         expect(row('start_datapack_import')!.description).toContain('A kind left out is left alone');
         expect(row('reset_datapack')!.description).toContain('takes everything the install record lists, whatever dataTypes names');
     });
@@ -304,13 +300,13 @@ describe('what each row accepts', () => {
 
     it('gives the export item list a single data type to enumerate, and a limit', () => {
         expect(keys('list_datapack_export_items')).toEqual(
-            ['commerceInstance', 'dataType', 'dataTypes', 'datapackName', 'limit', 'source', 'version'].sort(),
+            ['dataType', 'datapackName', 'limit', 'source', 'version'].sort(),
         );
     });
 
-    it('gives the export the name echo that guards the shared catalog, the picks and the ACO choice', () => {
+    it('gives the export the picks, the Save As name, and the ACO choice with its name echo', () => {
         expect(keys('start_datapack_export')).toEqual(
-            ['aco', 'commerceInstance', 'confirmName', 'dataTypes', 'datapackName', 'saveAs', 'selections', 'storeViews', 'version'].sort(),
+            ['aco', 'confirmName', 'dataTypes', 'datapackName', 'saveAs', 'selections', 'storeViews', 'version'].sort(),
         );
     });
 
@@ -346,7 +342,6 @@ describe('what each row accepts', () => {
             'validate_datapack_import',
             'start_datapack_import',
             'reset_datapack',
-            'list_datapack_export_items',
             'start_datapack_export',
         ]) {
             const dataTypes = row(tool)!.inputSchema!.dataTypes;

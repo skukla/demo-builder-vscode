@@ -228,13 +228,13 @@ describe('the two doors out of the catalog', () => {
     });
 
     // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save
-    // from this store", quiet buttons rather than links, with every engine; Clear demo data last.
-    it.each([['demo-builder'], [undefined], ['service']] as const)(
-        'with the %s engine, offers Create Datapack, Load from File and, last, Clear Demo Data',
-        async (engine) => {
+    // from this store", quiet buttons rather than links; Clear demo data last.
+    it(
+        'offers Create Datapack, Load from File and, last, Clear Demo Data',
+        async () => {
             mockRequest.mockResolvedValue({
                 success: true,
-                data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, ...(engine ? { engine } : {}) },
+                data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
             });
             render(<DatapackCatalogView />);
             await settle();
@@ -249,9 +249,10 @@ describe('the two doors out of the catalog', () => {
         },
     );
 
-    // With Demo Builder's engine it is Save As with no name yet: the name first, then the picks (2026-11-03).
-    it("opens Create Datapack's name screen first with Demo Builder's engine, empty", async () => {
-        mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine: 'demo-builder' } });
+    // Save As with no name yet: the name first, then the picks (2026-11-03). The service's own
+    // export window it opened with the service's engine was deleted on 2026-11-06 (DI-12).
+    it("opens Create Datapack's name screen first, empty", async () => {
+        mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length } });
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');
@@ -261,25 +262,6 @@ describe('the two doors out of the catalog', () => {
         expect(await screen.findByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
         expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('');
         expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute('aria-disabled', 'true');
-    });
-
-    it("opens the service's export from Create Datapack with the service engine, and closes it again", async () => {
-        mockRequest.mockResolvedValue({
-            success: true,
-            data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine: 'service' },
-        });
-        render(<DatapackCatalogView />);
-        await settle();
-        await screen.findAllByTestId('datapack-card');
-
-        await press(screen.getByRole('button', { name: 'Create Datapack' }));
-        // The export's screens are Create datapack's own window.
-        expect(screen.getByText('Data Types')).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
-
-        await press(screen.getByRole('button', { name: 'Cancel' }));
-
-        expect(screen.queryByRole('heading', { name: 'Create Datapack' })).not.toBeInTheDocument();
     });
 });
 

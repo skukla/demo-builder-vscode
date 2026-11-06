@@ -118,3 +118,4 @@ prove one with a live install and removal.
 - 2026-11-06  test(datapacks): every data type installs, installs again sending nothing, and comes out (`c9f28ede2`)
 - 2026-11-06  feat(ai): import-datapack previews before installing a pack again (`dca2f4970`)
 - 2026-11-06  test(datapacks): shared-catalog categories and products install again sending nothing (`43420bec6`)
+- 2026-11-06  fix(datapacks): stock quantities five calls at once, yes/no words install, and the preview counts what the store has (`fb95e1b65`)

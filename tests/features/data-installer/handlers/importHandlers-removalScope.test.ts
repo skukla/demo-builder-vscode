@@ -7,7 +7,7 @@
 
 // First, on purpose: it owns the Commerce mock, and the handlers below load the engine that uses it.
 import { type TicksHarness, PACK, ROWS, ticksHarness } from '../services/buildDatapackEngine-ticks.testUtils';
-import { makeImportHarness, importHandlers, mockedWatch } from './importHandlers.testUtils';
+import { makeImportHarness, importHandlers, mockedBuildEngine, mockedInstalledByDemoBuilder, mockedWatch } from './importHandlers.testUtils';
 import { createMockProject } from '../../../helpers/projectFake';
 import { resolveDatapackWriteAccess } from '@/features/data-installer/handlers/datapackWriteGate';
 import type { DatapackEngineAccess } from '@/features/data-installer/services/buildDatapackEngine';
@@ -19,6 +19,8 @@ jest.mock('@/features/authentication/services/projectOrgGuard', () => ({ orgGuar
 jest.mock('@/features/data-installer/handlers/datapackWriteGate', () => ({ resolveDatapackWriteAccess: jest.fn() }));
 
 const mockedGate = resolveDatapackWriteAccess as jest.MockedFunction<typeof resolveDatapackWriteAccess>;
+/** The real engine and record check: the shared wall stubs both for the suites that drive the handlers' order. */
+const actual = jest.requireActual<typeof import('@/features/data-installer/services/buildDatapackEngine')>('@/features/data-installer/services/buildDatapackEngine');
 
 const unreadable: DatapackEngineAccess['catalog'] = {
     getDatapackDetail: async () => {
@@ -37,12 +39,12 @@ const RESET = { datapackName: PACK.name, version: PACK.version, commerceInstance
 beforeEach(() => {
     jest.clearAllMocks();
     h = ticksHarness();
+    mockedBuildEngine.mockImplementation(actual.buildDatapackEngine);
+    mockedInstalledByDemoBuilder.mockImplementation(actual.installedByDemoBuilder);
     mockedGate.mockImplementation(async () => ({
         baseUrl: 'https://installer.test/api',
         getToken: async () => 'tok',
-        jobs: { getJobStatus: jest.fn(), getJobFailureReason: jest.fn() },
         catalog: unreadable,
-        dataInstallerAnswers: async () => true,
         project: projectOf(),
         backend: 'paas',
     }));
@@ -110,10 +112,15 @@ describe('reset-datapack on a pack Demo Builder installed', () => {
 });
 
 describe('reset-datapack on a pack with no record', () => {
-    it('is the service\'s, and needs the types: it removes what it is sent', async () => {
-        const result = await importHandlers['reset-datapack'](makeImportHarness(projectOf()).context, RESET);
+    // The Data Installer service installed it, before its engine was deleted (DI-12): nothing is removed by name.
+    it('is refused with Clear Demo Data, and nothing is sent', async () => {
+        const result = await importHandlers['reset-datapack'](makeImportHarness(projectOf()).context, { ...RESET, dataTypes: ['categories'] });
 
-        expect(result).toEqual({ success: false, error: 'Select at least one data type to remove.' });
+        expect(result).toEqual({
+            success: false,
+            error: 'The Data Installer installed this datapack, so Demo Builder has no record of what it added. Use Clear Demo Data to remove it.',
+            code: 'INVALID_OPERATION',
+        });
         expect(h.store.sent).toStrictEqual([]);
     });
 });

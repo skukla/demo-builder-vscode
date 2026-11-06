@@ -19,8 +19,7 @@
 
 import { commerceBackendOf, type CommerceBackend } from '../services/commerceBackend';
 import type { DataInstallerClient } from '../services/dataInstallerClient';
-import type { JobStatusSource } from '../services/importJobRunner';
-import { resolveDataInstallerAccess, resolveDatapackAccess } from './dataInstallerHandlers';
+import { resolveDatapackAccess } from './dataInstallerHandlers';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -34,12 +33,8 @@ export interface DatapackWriteAccess {
     getToken: () => Promise<string>;
     /** The SC's IMS org code, for the gateway (`dataInstallerSignIn`). */
     orgCode?: string;
-    /** The service's job reads, for the service engine (`datapackEngine`). */
-    jobs: JobStatusSource;
-    /** The service catalog's reads, where Demo Builder's engine reads a pack's rows from. */
+    /** The catalog's reads, where the engine reads a pack's rows from. */
     catalog: Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'>;
-    /** Whether the Data Installer answers this SC now, asked only for what only it can do. */
-    dataInstallerAnswers: () => Promise<boolean>;
     project: Project;
     /** The project's Commerce backend: what an export's scope header is chosen by. */
     backend: CommerceBackend;
@@ -56,13 +51,6 @@ const NO_BACKEND: Record<DatapackWrite, string> = {
     import: 'This project has no Adobe Commerce backend, so there is nothing to import into.',
     export: 'This project has no Adobe Commerce backend, so there is nothing to export from.',
 };
-
-/** Whether the Data Installer has an address and takes this SC's sign-in. */
-async function dataInstallerAnswers(context: HandlerContext): Promise<boolean> {
-    const access = await resolveDataInstallerAccess(context);
-    if (!access.ok) return false;
-    return access.client.checkHealth().then(() => true, () => false);
-}
 
 /**
  * Open a datapack write: access, project, backend, in that order.
@@ -96,9 +84,7 @@ export async function resolveDatapackWriteAccess(
         baseUrl: access.baseUrl,
         getToken: access.getToken,
         orgCode: access.orgCode,
-        jobs: access.client,
         catalog: access.client,
-        dataInstallerAnswers: () => dataInstallerAnswers(context),
         project,
         backend,
     };
