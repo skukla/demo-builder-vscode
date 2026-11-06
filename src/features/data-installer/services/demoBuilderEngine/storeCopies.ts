@@ -75,12 +75,19 @@ async function attributeOrNone(lk: ProductLookups, code: string) {
     }
 }
 
-/** Products by SKU, a page of SKUs at a time; a gift card is one too (step 11). */
+/**
+ * Products by SKU, a page of SKUs at a time; a gift card is one too (step 11). A configurable names
+ * its children by id, and the pages just read hold most of them: asked for one at a time, Luma's
+ * 1,900 children took two minutes of the read-back (2026-11-06). Only an id not read costs a request.
+ */
 const productReader: Reader = async (ctx, lk, objects) => {
-    const bySku = new Map((await readProducts(ctx, objects.map((o) => o.id))).map((p) => [p.sku, p]));
+    const products = await readProducts(ctx, objects.map((o) => o.id));
+    const bySku = new Map(products.map((p) => [p.sku, p]));
+    const skuOfId = new Map(products.map((p) => [String(p.id), p.sku]));
+    const known: ProductLookups = { ...lk, productSku: async (id) => skuOfId.get(String(id)) ?? lk.productSku(id) };
     return eachCopy(objects, async (o) => {
         const raw = bySku.get(o.id);
-        return raw ? productPackForm(lk, raw) : undefined;
+        return raw ? productPackForm(known, raw) : undefined;
     });
 };
 
@@ -171,7 +178,12 @@ export async function readCopies(
 ): Promise<Copies> {
     const reader = READERS[kind];
     if (!reader || objects.length === 0) return new Map();
-    return reader(ctx, lk, objects, inventory);
+    // How long each kind takes to read back, in Debug Logs: the read-back and removal's check for
+    // edits each took two to three minutes for Luma, and which kind spent it was not known.
+    const started = Date.now();
+    const copies = await reader(ctx, lk, objects, inventory);
+    ctx.log(`read back ${objects.length} ${kind} in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+    return copies;
 }
 
 /** The inventory's three lists, read once however many kinds ask. */

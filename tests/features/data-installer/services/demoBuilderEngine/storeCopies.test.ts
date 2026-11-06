@@ -48,6 +48,24 @@ describe('readCopies', () => {
         expect((copies.get('DigiWristQuantum') as { product: CommerceProduct }).product.sku).toBe('DigiWristQuantum');
     });
 
+    // Live, 2026-11-06: one request per child, Luma's 1,900 took two minutes of the read-back.
+    it("names a configurable's children from the page it read, asking nothing more for them", async () => {
+        const parent = { id: 10, sku: 'MH01', type_id: 'configurable', extension_attributes: { configurable_product_links: [11, 12] } };
+        const children = [{ id: 11, sku: 'MH01-XS-Black' }, { id: 12, sku: 'MH01-XS-Gray' }];
+        const ctx = await fakeContext({ [skuIn('MH01,MH01-XS-Black,MH01-XS-Gray')]: { items: [parent, ...children], total_count: 3 } });
+        const read = jest.spyOn(ctx, 'get');
+
+        const copies = await readCopies(ctx, productLookups(ctx), 'products', [
+            { kind: 'products', id: 'MH01' },
+            { kind: 'products', id: 'MH01-XS-Black' },
+            { kind: 'products', id: 'MH01-XS-Gray' },
+        ]);
+
+        const links = (copies.get('MH01') as { product: CommerceProduct }).product.extension_attributes?.configurable_product_links;
+        expect(links).toEqual(['MH01-XS-Black', 'MH01-XS-Gray']);
+        expect(read).toHaveBeenCalledTimes(1);
+    });
+
     it('reads stocks, sources and links from one read of the inventory, naming a link\'s stock', async () => {
         const ctx = await fakeContext(INVENTORY);
 
