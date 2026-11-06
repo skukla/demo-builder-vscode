@@ -154,8 +154,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // 55: import-datapack and diagnose-demo name dataInstaller.enabled.
     // 56: import-datapack runs verify_datapack_install after a successful install.
     // 57: an install checks itself; import-datapack reads its check.
-    it('is 57 (import-datapack reads the install\'s own check)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(57);
+    // 58: import-datapack previews before installing a pack again.
+    it('is 58 (import-datapack previews before a reinstall)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(58);
     });
 });
 

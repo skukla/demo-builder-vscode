@@ -113,3 +113,4 @@ prove one with a live install and removal.
 - 2026-11-06  feat(datapacks): every install checks its products against the pack (`fff4264b2`)
 - 2026-11-06  fix(datapacks): a reinstall no longer takes attributes out of their sets (`e19ef34a2`)
 - 2026-11-06  fix(datapacks): a removal Commerce refuses no longer stops the rest (`c3275bfae`)
+- 2026-11-06  fix(datapacks): a reinstall no longer unlinks a stock's sources (`dac4ee66c`)

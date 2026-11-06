@@ -347,7 +347,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // install. Existing projects would keep treating `success` as proof the data came out right.
 // v57 (2026-11-06, the install checks itself): import-datapack reads the install's own `check` and keeps
 // verify_datapack_install for later. Existing projects would keep calling the check after every install.
-export const AI_CONTEXT_VERSION = 57;
+// v58 (2026-11-06, a reinstall removed what the pack still had): import-datapack previews before
+// installing a pack again and stops when an unchanged pack would change anything. Existing projects
+// would keep reinstalling blind.
+export const AI_CONTEXT_VERSION = 58;
 
 /**
  * Component IDs for standardized component instance access

@@ -16,6 +16,7 @@ find_datapacks                  → which packs exist
 get_datapack_import_target      → WHICH INSTANCE this project implies
 list_datapack_import_scopes     → optional: narrow to a website / store view
 validate_datapack_import        → dry run; free, ungated, do it every time
+preview_datapack_changes        → when the pack is installed already: what installing again changes
 start_datapack_import           → confirm:true; returns a HANDLE, not a result
 get_datapack_import_status      → poll until outcome is not "watching"; read its check
 ```
@@ -46,6 +47,20 @@ install that wrote products ends with `check`: the store checked against the pac
 and select values or prices that are not what the pack says. Report those to the user rather
 than calling the install clean. `verify_datapack_install` (a read) runs the same check later,
 for example after products were edited by hand.
+
+## Installing a pack again
+
+When `get_datapack_import_target` or `list_installed_datapacks` shows the pack is already
+installed, **call `preview_datapack_changes` before `start_datapack_import`**. It reads only, and
+says by data type what installing again would update, add, remove, or keep because it was changed
+in the Admin. Show the user what it would remove: removing things can blank product values with
+them, and it cannot be undone.
+
+If the pack has not changed since it was installed, the preview should show nothing to update,
+add or remove. If it shows any, stop and tell the user rather than installing: it means Demo
+Builder has lost track of what it made, not that the pack changed. Afterwards the note says what
+was taken out ("Took out 3 items the pack no longer has: …"), and `check.leftOut` counts products
+the check skipped because they were kept; `verify_datapack_install` checks every product.
 
 ## Trap 2 — never guess `commerceInstance`
 
