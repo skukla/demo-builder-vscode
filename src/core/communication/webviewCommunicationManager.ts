@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging/debugLogger';
 import { sleep } from '@/core/utils/sleep';
@@ -212,7 +212,7 @@ export class WebviewCommunicationManager {
             this.once('__webview_ready__', () => {
                 // Send handshake confirmation
                 this.sendRawMessage({
-                    id: uuidv4(),
+                    id: randomUUID(),
                     type: '__handshake_complete__',
                     timestamp: Date.now(),
                 });
@@ -239,7 +239,7 @@ export class WebviewCommunicationManager {
      */
     async sendMessage(type: string, payload?: unknown): Promise<void> {
         const message: Message = {
-            id: uuidv4(),
+            id: randomUUID(),
             type,
             payload,
             timestamp: Date.now(),
@@ -261,7 +261,7 @@ export class WebviewCommunicationManager {
      */
     async request<T = unknown>(type: string, payload?: unknown): Promise<T> {
         const message: Message = {
-            id: uuidv4(),
+            id: randomUUID(),
             type,
             payload,
             timestamp: Date.now(),
@@ -390,7 +390,7 @@ export class WebviewCommunicationManager {
                     if (requestTimeout) {
                         // Fire-and-forget: Don't await to avoid blocking handler
                         this.sendRawMessage({
-                            id: uuidv4(),
+                            id: randomUUID(),
                             type: '__timeout_hint__',
                             payload: {
                                 requestId: message.id,
@@ -414,7 +414,7 @@ export class WebviewCommunicationManager {
                 // If the message has an ID, send a response
                 if (message.id && message.expectsResponse) {
                     this.sendRawMessage({
-                        id: uuidv4(),
+                        id: randomUUID(),
                         type: '__response__',
                         payload: result,
                         timestamp: Date.now(),
@@ -425,7 +425,7 @@ export class WebviewCommunicationManager {
             } catch (error) {
                 if (message.id && message.expectsResponse) {
                     this.sendRawMessage({
-                        id: uuidv4(),
+                        id: randomUUID(),
                         type: '__response__',
                         payload: undefined,
                         timestamp: Date.now(),
@@ -452,7 +452,7 @@ export class WebviewCommunicationManager {
             );
             if (message.id && message.expectsResponse) {
                 this.sendRawMessage({
-                    id: uuidv4(),
+                    id: randomUUID(),
                     type: '__response__',
                     payload: undefined,
                     timestamp: Date.now(),
@@ -466,7 +466,7 @@ export class WebviewCommunicationManager {
         // Send acknowledgment for non-response messages
         if (!message.isResponse) {
             this.sendRawMessage({
-                id: uuidv4(),
+                id: randomUUID(),
                 type: '__acknowledge__',
                 timestamp: Date.now(),
                 responseToId: message.id,

@@ -111,7 +111,6 @@ module.exports = {
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
-        '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
         '^@octokit/core$': '<rootDir>/tests/__mocks__/@octokit/core.ts',
         '^@octokit/plugin-retry$': '<rootDir>/tests/__mocks__/@octokit/plugin-retry.ts',
       },
@@ -185,7 +184,6 @@ module.exports = {
         '^@spectrum-icons/(.*)$': '<rootDir>/tests/__mocks__/@spectrum-icons/workflow.tsx',
         // Other mocks
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
-        '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
         '^@octokit/core$': '<rootDir>/tests/__mocks__/@octokit/core.ts',
         '^@octokit/plugin-retry$': '<rootDir>/tests/__mocks__/@octokit/plugin-retry.ts',
       },

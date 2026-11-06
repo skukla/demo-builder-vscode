@@ -127,7 +127,8 @@ describe('a mock that does nothing is not written', () => {
         // Either number silently reaching zero would make the ban above vacuous:
         // no files to scan, or no module names to match against.
         expect(files.length).toBeGreaterThan(1000);
-        expect(mapped.size).toBeGreaterThanOrEqual(6);
+        // 5 since uuid's mapping went with the package (2026-11-05: Node's crypto.randomUUID instead).
+        expect(mapped.size).toBeGreaterThanOrEqual(5);
         expect(mapped.has('vscode')).toBe(true);
     });
 });
