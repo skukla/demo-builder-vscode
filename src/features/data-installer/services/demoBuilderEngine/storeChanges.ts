@@ -16,7 +16,7 @@ import { sameText } from './b2bReads';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import { COUPON_KIND, couponByCode } from './couponsKind';
 import { type CreatedObject, nodeRecordFiles, readInstallRecord } from './installRecord';
-import type { KindContext } from './kindContext';
+import { type KindContext, segment } from './kindContext';
 import { type LayerLookup, layerLeftOutLine, layerProblems, layerRowsToApply, lookUpAskedLayer } from './layerStep';
 import { placeCategories, rootPlacement } from './packRoot';
 import { rootPreview } from './packRootStep';
@@ -33,6 +33,7 @@ import { clashLine, placedClashes } from './urlKeyClashes';
 import { andList } from '@/core/utils/andList';
 import { configFix } from '@/features/app-builder/services/storePreparation/configFix';
 import type { Inventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
+import type { CommerceSetAttribute } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** What installing again would do to one kind. */
@@ -43,7 +44,7 @@ export interface KindChanges {
     add: Named;
     /**
      * Rows the store already has that this engine did not make: installing leaves them as they
-     * are. Told apart for products, gift cards, attributes, their options and sets (which a save then takes into
+     * are. Told apart for products, gift cards, attributes, their options, sets and set assignments (which a save then takes into
      * the new version, as it reads them by the pack's own names), for cart rules and coupons (by
      * name and code, step 11) and for sources, stocks and their links
      * (which install uses as they are, `stockKinds.ts`; a switched-off source is switched on, so it
@@ -116,6 +117,32 @@ async function optionsInStore(ctx: KindContext, keys: string[]): Promise<Set<str
     return new Set(keys.filter((_key, i) => present[i]));
 }
 
+/**
+ * Which of these assignments (`<set name>/<attribute code>`) the store already has, matched the way
+ * install matches them (`installAssignments`): one read of each set's attributes. Install records
+ * none of these, so nothing else says so (live, 2026-11-06: an unchanged Luma "would add" 9).
+ */
+async function assignmentsInStore(ctx: KindContext, keys: string[]): Promise<Set<string>> {
+    await loadStoreSets(ctx);
+    const members = new Map<string, Promise<Set<string>>>();
+    const membersOf = (name: string): Promise<Set<string>> => {
+        const id = ctx.session.setIds.get(name);
+        if (id === undefined) return Promise.resolve(new Set());
+        if (!members.has(name)) {
+            const read = ctx.get(`products/attribute-sets/${segment(id)}/attributes`).then((a) => (a ?? []) as CommerceSetAttribute[], () => []);
+            members.set(name, read.then((attributes) => new Set(attributes.map((a) => a.attribute_code ?? ''))));
+        }
+        return members.get(name) as Promise<Set<string>>;
+    };
+    const present = await Promise.all(
+        keys.map(async (key) => {
+            const slash = key.lastIndexOf('/');
+            return (await membersOf(key.slice(0, slash))).has(key.slice(slash + 1));
+        }),
+    );
+    return new Set(keys.filter((_key, i) => present[i]));
+}
+
 /** Which of these pack rows the store already has, for the kinds told apart (see `inStore`). */
 async function alreadyInStore(ctx: KindContext, kind: string, keys: string[], inventory: () => Promise<Inventory>): Promise<Set<string>> {
     if (keys.length === 0) return new Set();
@@ -140,6 +167,7 @@ async function alreadyInStore(ctx: KindContext, kind: string, keys: string[], in
         await loadStoreSets(ctx);
         return new Set(keys.filter((name) => ctx.session.setIds.has(name)));
     }
+    if (kind === 'attribute_assign_to_set') return assignmentsInStore(ctx, keys);
     return new Set();
 }
 

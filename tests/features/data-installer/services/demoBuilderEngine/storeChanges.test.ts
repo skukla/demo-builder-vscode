@@ -262,6 +262,25 @@ describe('previewChanges, counted the way a save counts', () => {
         });
     });
 
+    // Live 2026-11-06: an unchanged Luma's preview said it would add 9 assignments (Default/cost and
+    // the like), attributes the store already had in those sets, which install leaves off the record.
+    it('counts an attribute already in its set as already in the store', async () => {
+        const reads = {
+            'products/attribute-sets/sets/list?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100': { items: [{ attribute_set_id: 4, attribute_set_name: 'Default' }], total_count: 1 },
+            'products/attribute-sets/4/attributes': [{ attribute_code: 'cost' }],
+        };
+        const rows = [{ attributeSetId: 'Default', attributeCode: 'cost' }, { attributeSetId: 'Default', attributeCode: 'fabric' }];
+        const { d, ctx } = await deps(true, reads, { attribute_assign_to_set: rows });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(preview.kinds.find((k) => k.kind === 'attribute_assign_to_set')).toMatchObject({
+            add: { count: 1, names: ['Default/fabric'] },
+            inStore: { count: 1, names: ['Default/cost'] },
+        });
+    });
+
     it('CONTROL: counts every option as new when the store lacks the attribute', async () => {
         const row = { attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: 'Blue' }] } };
         const { d } = await deps(true, {}, { product_attributes: [row] });

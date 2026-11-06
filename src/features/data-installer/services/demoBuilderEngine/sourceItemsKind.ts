@@ -8,7 +8,9 @@
  * with it.
  *
  * The service sends the whole list in one call; this sends it in batches, since a pack's list
- * runs to hundreds of rows and one signed call carries them all.
+ * runs to hundreds of rows and one signed call carries them all, five batches at once (2026-11-06:
+ * Luma's 1,901 took 54 s one call after another, about 2.7 s a call). Each batch names other SKUs,
+ * so the order they land in does not matter.
  *
  * Endpoint (spec §9): `POST inventory/source-items` with `{ sourceItems }`.
  *
@@ -16,7 +18,7 @@
  */
 
 import { z } from 'zod';
-import type { KindContext } from './kindContext';
+import { type KindContext, eachFewAtOnce } from './kindContext';
 import { PRODUCT_KINDS } from './productKinds';
 
 /** Rows per call. */
@@ -46,8 +48,12 @@ export function parseSourceItems(records: unknown): SourceItemsPack {
 export async function installSourceItems(ctx: KindContext, pack: SourceItemsPack): Promise<void> {
     const before = ctx.session.productsBefore ?? new Set<string>();
     const ours = pack.sourceItems.filter((item) => PRODUCT_KINDS.some((kind) => ctx.recorder.has(kind, item.sku)) && !before.has(item.sku));
-    for (let start = 0; start < ours.length; start += BATCH) {
-        await ctx.send('POST', 'inventory/source-items', { sourceItems: ours.slice(start, start + BATCH) });
-    }
+    const batches = Array.from({ length: Math.ceil(ours.length / BATCH) }, (_, i) => ours.slice(i * BATCH, (i + 1) * BATCH));
+    let done = 0;
+    await eachFewAtOnce(batches, async (batch) => {
+        await ctx.send('POST', 'inventory/source-items', { sourceItems: batch });
+        done += batch.length;
+        ctx.progress?.(`${done.toLocaleString('en-US')} of ${ours.length.toLocaleString('en-US')} stock quantities`);
+    });
     ctx.log(`set ${ours.length} stock quantities; left ${pack.sourceItems.length - ours.length} for products the store already had`);
 }

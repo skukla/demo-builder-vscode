@@ -37,7 +37,7 @@ import { containersLine } from './removers';
 import { keptLine, tookOutLine } from './repeatInstall';
 import { type PackItems, PackRowsError, installPack, packRowProblems, removePack, unsupportedKinds } from './runPack';
 import { STORE_CONFIG_KIND, settingsLine, settingsWebsite } from './storeConfigKind';
-import { checkAfterInstall } from './verifyInstall';
+import { checkAfterInstall, holdsProductRows } from './verifyInstall';
 import { andList } from '@/core/utils/andList';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -232,7 +232,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         rootStepLine(outcome.rootStep),
         ambiguousKeysLine(session.ambiguousCategoryKeys),
         checked.line,
-        ...(Array.isArray(items.products) && items.products.length > 0 ? AFTER_PRODUCTS_LINES : []),
+        ...(holdsProductRows(items) ? AFTER_PRODUCTS_LINES : []),
     ].filter(Boolean).join(' ') || undefined;
     job.skipped = session.skipped;
     endKind(job, current);

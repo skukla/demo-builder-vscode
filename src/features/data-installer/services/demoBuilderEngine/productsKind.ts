@@ -93,6 +93,9 @@ async function optionOf(lk: ProductLookups, code: string, label: string): Promis
     }
 }
 
+/** A yes/no attribute's words, as Commerce's import file writes them, and the number REST takes. */
+const YES_NO: Record<string, string> = { yes: '1', no: '0' };
+
 /**
  * A custom attribute's value with labels and url keys turned into this store's ids, or null
  * for a layout field whose value the store does not offer.
@@ -115,6 +118,9 @@ async function customAttribute(
         if (isNumeric(value)) return attr;
         throw error;
     }
+    // A yes/no written as a word, as the Import API takes it; REST takes only 1 or 0 (live, 2026-11-06, Venia).
+    const word = typeof value === 'string' ? YES_NO[value.trim().toLowerCase()] : undefined;
+    if (input === 'boolean' && word !== undefined) return { attribute_code: code, value: word };
     if (!OPTION_INPUTS.has(input)) return attr;
     try {
         const ids = await Promise.all(labels(value).map((label) => optionOf(lk, code, label)));

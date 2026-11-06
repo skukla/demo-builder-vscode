@@ -311,6 +311,12 @@ export async function verifyPackInstall(
     return { installed: record !== undefined, ...(await verifyInstall(ctx, items, record)) };
 }
 
+/**
+ * Whether the rows an install was handed hold any product, in either form: then the note says how long
+ * search takes to show them. Import-form packs went without it until 2026-11-06.
+ */
+export const holdsProductRows = (items: Record<string, unknown>): boolean => packProducts(items).length > 0;
+
 /** Whether a pack holds products, in either form: only then is there anything to check. */
 export const holdsProducts = (items: Record<string, unknown>): boolean =>
     [PRODUCT_KIND, GIFT_CARD_KIND, PRODUCT_EXPORT_KIND].some((kind) => items[kind] !== undefined);

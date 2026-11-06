@@ -33,3 +33,30 @@ describe('a number as a select value', () => {
         await expect(sizeOf('7')).resolves.toBe('7');
     });
 });
+
+/**
+ * A yes/no attribute written as words. Venia's pack says has_video "No" or "Yes" (all 1,162 products);
+ * the Import API takes the words, but a product made over REST was refused: "The "No" value's type is
+ * invalid. The "int" type was expected" (live, 2026-11-06, 63 products). As ACCS answers
+ * `GET products/attributes/has_video`: frontend_input boolean, backend_type int.
+ */
+describe('a yes/no attribute written as a word', () => {
+    const HAS_VIDEO = { attribute_id: 210, attribute_code: 'has_video', frontend_input: 'boolean', backend_type: 'int', is_user_defined: true };
+
+    async function hasVideo(value: string) {
+        const ctx = await fakeContext({ 'products/attributes/has_video': HAS_VIDEO });
+        ctx.session.setIds.set('Bottom', 9);
+        const row = parseProductRows([{ product: { sku: 'VP08', name: 'Pants', attribute_set_id: 'Bottom', type_id: 'simple', custom_attributes: [{ attribute_code: 'has_video', value }] } }])[0];
+        const { product } = (await toCommerceProduct(productLookups(ctx), row, 1)) as { product: { custom_attributes: Array<{ attribute_code: string; value: unknown }> } };
+        return product.custom_attributes.find((a) => a.attribute_code === 'has_video')?.value;
+    }
+
+    it('goes as 1 or 0, whatever its case', async () => {
+        await expect(hasVideo('No')).resolves.toBe('0');
+        await expect(hasVideo('yes')).resolves.toBe('1');
+    });
+
+    it('CONTROL: a number goes as it is', async () => {
+        await expect(hasVideo('1')).resolves.toBe('1');
+    });
+});

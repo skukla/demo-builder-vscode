@@ -9,7 +9,10 @@ import { demoBuilderEngine } from '@/features/data-installer/services/demoBuilde
 import { checkAfterInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
 import { PACK, PROJECT, fakeContext, memoryFiles, noneUnder } from './demoBuilderEngine.testUtils';
 
-jest.mock('@/features/data-installer/services/demoBuilderEngine/verifyInstall', () => ({ checkAfterInstall: jest.fn() }));
+jest.mock('@/features/data-installer/services/demoBuilderEngine/verifyInstall', () => ({
+    ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/verifyInstall'),
+    checkAfterInstall: jest.fn(),
+}));
 
 const STORE = {
     'store/websites': [{ id: 1, code: 'base', name: 'Main Website', default_group_id: 1 }],

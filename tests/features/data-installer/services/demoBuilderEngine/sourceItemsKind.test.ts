@@ -29,6 +29,32 @@ describe('installSourceItems', () => {
         expect(ctx.sent.map((c) => (c.body as { sourceItems: unknown[] }).sourceItems.length)).toEqual([100, 100, 50]);
     });
 
+    // 2026-11-06, live: Luma's 1,901 quantities took 54 s as 20 calls one after another, at about 2.7 s a call.
+    it('keeps five calls in flight, and says how far it has got', async () => {
+        const ctx = await fakeContext();
+        const skus = Array.from({ length: 1_100 }, (_, i) => `sku-${i}`);
+        for (const sku of skus) await ctx.recorder.record({ kind: PRODUCT_KIND, id: sku });
+        let inFlight = 0;
+        let most = 0;
+        const sent: number[] = [];
+        ctx.send = async (_method, _path, body) => {
+            inFlight += 1;
+            most = Math.max(most, inFlight);
+            await new Promise((resolve) => setImmediate(resolve));
+            inFlight -= 1;
+            sent.push((body as { sourceItems: unknown[] }).sourceItems.length);
+            return [];
+        };
+        const said: string[] = [];
+        ctx.progress = (line) => void said.push(line);
+
+        await installSourceItems(ctx, parseSourceItems({ sourceItems: skus.map(item) }));
+
+        expect(most).toBe(5);
+        expect(sent.reduce((a, b) => a + b, 0)).toBe(1_100);
+        expect(said.at(-1)).toBe('1,100 of 1,100 stock quantities');
+    });
+
     it('sends nothing when the install made none of the products', async () => {
         const ctx = await fakeContext();
 

@@ -9,7 +9,7 @@
  */
 
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { checkAfterInstall, checkLine, verifyInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
+import { checkAfterInstall, checkLine, holdsProductRows, verifyInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
 import type { CommerceProduct } from '@/types/commerceWire';
 import { by, fakeContext, page } from './demoBuilderEngine.testUtils';
 
@@ -289,5 +289,14 @@ describe('checkAfterInstall', () => {
 
         expect(result.check).toBeUndefined();
         expect(result.line).toContain('could not be checked against the datapack');
+    });
+});
+
+// 2026-11-06, live: an import-form Luma's note left out how long search takes to show its products.
+describe('holdsProductRows', () => {
+    it('counts products in either form, and an empty list as none', () => {
+        expect(holdsProductRows({ product_export: { source: { items: [{ sku: 'MH01', product_type: 'simple' }] } } })).toBe(true);
+        expect(holdsProductRows({ products: [packSimple('MH01-32', 'Size 32')] })).toBe(true);
+        expect(holdsProductRows({ products: [], categories: [] })).toBe(false);
     });
 });
