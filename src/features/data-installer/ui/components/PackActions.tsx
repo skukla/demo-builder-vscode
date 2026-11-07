@@ -18,9 +18,10 @@
  * the actions.
  *
  * Every pack offers Import: Demo Builder installs a library pack and a Data Installer pack alike.
- * A library pack also offers Copy to the Data Installer, above, while the Data Installer is on:
- * it puts the pack in the catalog other teams share (owner, 2026-11-06), and is not needed to
- * install it here.
+ * Copy to the Data Installer, which puts a library pack in the catalog other teams share, is not
+ * shown (`COPY_TO_INSTALLER_SHOWN`): the Data Installer does not let our accounts write to it yet
+ * (owner, 2026-11-06), so it would fail every time. The copy itself is built and tested, and its
+ * agent tool says why it is refused.
  *
  * @module features/data-installer/ui/components/PackActions
  */
@@ -38,6 +39,12 @@ import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { ConfirmActionDialog, type ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import type { DatapackId } from '@/types/datapack';
+
+/**
+ * Whether a library pack offers Copy to the Data Installer. Off until the Data Installer lets our
+ * accounts write to it (owner, 2026-11-06); turning it on is this one line.
+ */
+const COPY_TO_INSTALLER_SHOWN = false;
 
 export interface PackActionsProps {
     detail: DatapackDetail;
@@ -173,7 +180,7 @@ export function PackActions({
                 </div>
             ) : null}
             {/* Kept mounted through a wait: a copy's own result would be lost with it. */}
-            {library && installerOn ? (
+            {library && installerOn && COPY_TO_INSTALLER_SHOWN ? (
                 <div hidden={working}>
                     <CopyToInstallerButton id={detail.id} />
                 </div>

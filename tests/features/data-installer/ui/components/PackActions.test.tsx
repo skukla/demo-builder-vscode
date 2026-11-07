@@ -101,12 +101,13 @@ it('leads with Save Changes when given it, Import beside it', async () => {
 });
 
 describe('a library pack', () => {
-    // Owner, 2026-11-06: a pack an SC makes can go to the Data Installer, and Demo Builder installs
-    // a library pack where it is, so Import is always there and Copy is beside it while it is on.
-    it('offers Import, and Copy to the Data Installer beside it while the Data Installer is on', async () => {
+    // Owner, 2026-11-06: Demo Builder installs a library pack where it is, so Import is always there.
+    // Copy to the Data Installer is not shown even while it is on: our accounts cannot write to it yet,
+    // so it would fail every time (`COPY_TO_INSTALLER_SHOWN`).
+    it('offers Import, and no Copy to the Data Installer even while it is on', async () => {
         const props = renderActions({ detail: LIBRARY, installerOn: true });
 
-        expect(screen.getByRole('button', { name: 'Copy to the Data Installer' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Import' }));
         expect(props.onImport).toHaveBeenCalledWith(LIBRARY.id);
         await press(row('Save as File'));

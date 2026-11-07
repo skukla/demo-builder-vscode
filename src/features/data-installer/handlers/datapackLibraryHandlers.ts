@@ -38,7 +38,7 @@ import { myLayerVersions } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import { SHARE_CONSENT } from '../shareWording';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
-import { failure, installerEchoRefusal } from './datapackZipHandlers';
+import { failure, installerEchoRefusal, installerWriteRefusal } from './datapackZipHandlers';
 import { packReadsFor } from './recordedPackHandlers';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
@@ -322,7 +322,7 @@ export const datapackLibraryHandlers = defineHandlers({
                 },
             };
         } catch (error) {
-            return failure(context, error, 'The library datapack could not be copied.');
+            return installerWriteRefusal(error) ?? failure(context, error, 'The library datapack could not be copied.');
         }
     },
 });

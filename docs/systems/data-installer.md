@@ -309,6 +309,12 @@ three things differed:
 
 A data type the service has no schema for, store settings, is refused before any write too.
 
+**Not offered on screen yet** (owner, 2026-11-06): the Data Installer does not let our accounts write
+to it, so Copy to the Data Installer would fail every time. The button is off
+(`COPY_TO_INSTALLER_SHOWN` in `PackActions.tsx`, one line to turn on once access exists). The agent
+tools stay, and a refusal for who we are (401 or 403) answers in plain words
+(`INSTALLER_WRITE_REFUSED`) rather than the service's.
+
 ### An ACO pack from a Commerce store
 
 **Held back in beta.153** (owner, 2026-11-03): Create Datapack opens straight on the Commerce
@@ -446,7 +452,7 @@ A zip whose files sit under one root folder reads the same.
 | Save a pack from either store | "Save as file" in a pack's flyout menu, and after an export | `save_datapack_zip`; `dataTypes` saves only the types named (to leave out one the store cannot send) |
 | Remove your own library pack | "Remove from library" in its flyout menu | `delete_library_datapack` |
 | Install a library pack | "Import" in its flyout | `start_datapack_import` with `source: "library"` |
-| Put a library pack in the Data Installer's catalog | "Copy to the Data Installer" in its flyout, while the Data Installer is on | `copy_library_datapack_to_installer` |
+| Put a library pack in the Data Installer's catalog (needs write access, which our accounts lack today) | Not on screen until then | `copy_library_datapack_to_installer` |
 | See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
 | Build a pack file from a Commerce product export | none (agent only) | `build_datapack_from_export` |
 | Write it into a store | "Load from file", library by default | `load_datapack_zip` |

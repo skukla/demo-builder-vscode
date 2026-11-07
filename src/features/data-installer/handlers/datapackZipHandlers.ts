@@ -96,6 +96,17 @@ function storeLabel(store: DatapackStoreName): string {
  * A refusal this feature explains carries its own sentence (or the store's); anything
  * else is logged in full and the person reads the fallback, never a library's words.
  */
+/** What the Data Installer's refusal of a write for who we are says (owner, 2026-11-06: our accounts cannot write to it yet). */
+export const INSTALLER_WRITE_REFUSED =
+    "Your Adobe account can't add packs to the Data Installer: its owners grant that access. " +
+    "Packs stay in Demo Builder's datapack store, where Demo Builder installs them.";
+
+/** The Data Installer turned a write down for who we are (401 or 403): said plainly, not in its words. */
+export function installerWriteRefusal(error: unknown): HandlerResponse | undefined {
+    if (!(error instanceof DataInstallerApiError) || (error.status !== 401 && error.status !== 403)) return undefined;
+    return { success: false, error: INSTALLER_WRITE_REFUSED, code: ErrorCode.INVALID_OPERATION, data: { sharedCatalog: true } };
+}
+
 export function failure(
     context: HandlerContext,
     error: unknown,
@@ -284,7 +295,7 @@ export const datapackZipHandlers = defineHandlers({
                 },
             };
         } catch (error) {
-            return failure(context, error, 'The datapack file could not be loaded.');
+            return (target === 'installer' ? installerWriteRefusal(error) : undefined) ?? failure(context, error, 'The datapack file could not be loaded.');
         }
     },
 });

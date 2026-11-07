@@ -6,7 +6,7 @@
 
 // The shared wall first: it owns the access-guard mock and the subject's import.
 import { STORE, datapackLibraryHandlers, mockAccess } from './datapackLibraryHandlers.testUtils';
-import { installerEchoRefusal } from '@/features/data-installer/handlers/datapackZipHandlers';
+import { INSTALLER_WRITE_REFUSED, installerEchoRefusal } from '@/features/data-installer/handlers/datapackZipHandlers';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
 import type { DatapackDetail } from '@/features/data-installer/types';
@@ -296,6 +296,16 @@ describe('copy-library-datapack-to-installer', () => {
 
         expect(result).toMatchObject({ success: false, error: expect.stringContaining('takes no store_config data, so nothing was sent') });
         expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    // Owner, 2026-11-06: our accounts cannot write to the Data Installer yet; say so in plain words.
+    it.each([401, 403])('says plainly that the account cannot write to the Data Installer when it answers %i', async (status) => {
+        fetchMock.mockResolvedValueOnce({ ok: false, status, text: async () => '{"success":false,"error":"ERR1201"}' });
+
+        const result = await copy(contextFor(null, false), { datapackName: 'justrite', version: 'v1', confirmName: 'justrite' });
+
+        expect(result).toMatchObject({ success: false, error: INSTALLER_WRITE_REFUSED });
+        expect(sentRoutes()).toEqual([`${INSTALLER}/create-datapack`]);
     });
 
     it('refuses without a name and version', async () => {

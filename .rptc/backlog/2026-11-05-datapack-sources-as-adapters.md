@@ -66,6 +66,19 @@ pack against the service's rules belongs at the copy, before anything is sent (p
 The owner's note: this split between the two sources is to be reconsidered when part 1, the
 sources as adapters, is built.
 
+**2026-11-06: Copy to the Data Installer, for part 1.** Our accounts cannot write to the Data
+Installer, so the button is off for now (`COPY_TO_INSTALLER_SHOWN` in `PackActions.tsx`, a stopgap
+for beta.153), and its agent tool says plainly when the service refuses. The owner asked that part 1
+decide the lasting shape:
+- Copy shows from the target source's own ability to take a pack (its descriptor's "accepts
+  writes", false for the Data Installer today), replacing the code switch.
+- Copy has no undo: Demo Builder cannot delete a pack from the Data Installer, and a copy never
+  replaces one. Part 1 includes that removal, or says why it cannot be done (rule 1, whatever can be
+  done can be undone).
+- The format check a pack passes on its way in (`installerForm.ts`: gift cards to the Default set,
+  counts as numbers, data types it has no schema for refused before any write) is the Data
+  Installer source's own rule, and belongs with that source.
+
 ## Size
 
 About 4.5 to 5.5 working days, plus review between parts; the engine answer moves it by a day. The
@@ -76,3 +89,4 @@ Not for beta.153: the release behaves sensibly with both sources on.
 ## Shipped so far
 
 - 2026-11-06  feat(datapacks): Demo Builder installs every datapack itself (`7b6091474`)
+- 2026-11-06  feat(datapacks): a pack copied to the Data Installer goes in its format, or not at all (`5b9742dc4`)

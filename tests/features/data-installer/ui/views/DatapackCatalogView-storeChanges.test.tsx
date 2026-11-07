@@ -107,15 +107,15 @@ describe('Save Changes, in the flyout', () => {
         expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
     });
 
-    // Owner, 2026-11-06: a pack an SC makes can go to the Data Installer, beside its own actions.
-    it('sits beside Copy to the Data Installer and Import while the Data Installer is on', async () => {
+    // Owner, 2026-11-06: Copy to the Data Installer is off until our accounts can write to it.
+    it('sits beside Import while the Data Installer is on, with no Copy to it', async () => {
         store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, MINE, true);
         await renderView();
         await press(card('acme-1a2b3c'));
 
         expect(await screen.findByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Copy to the Data Installer' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
     });
 
     it('reads the catalog again when the save finishes, once, without waiting for Close', async () => {
