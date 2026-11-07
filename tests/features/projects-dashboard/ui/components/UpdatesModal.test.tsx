@@ -72,7 +72,7 @@ const ROWS: PendingUpdateRow[] = [
     {
         id: 'blockLibrary:0',
         kind: 'blockLibrary',
-        group: { key: '/p/justrite', title: 'JustRite' },
+        group: { key: '/p/justrite', title: 'JustRite', detail: 'kmanns/justrite' },
         label: 'Demo Builder Blocks',
         detail: 'Newer version',
         ticked: true,
@@ -80,7 +80,7 @@ const ROWS: PendingUpdateRow[] = [
     {
         id: 'integration:0',
         kind: 'integration',
-        group: { key: '/p/justrite', title: 'JustRite' },
+        group: { key: '/p/justrite', title: 'JustRite', detail: 'kmanns/justrite' },
         label: 'ERP Integration and Justrite ERP',
         detail: 'update available',
         ticked: false,
@@ -88,7 +88,7 @@ const ROWS: PendingUpdateRow[] = [
     },
 ];
 
-/** One more than the list opens every group for, so each starts closed. Its own group, last. */
+/** Four updates in three groups, Bodea's last. */
 const MANY: PendingUpdateRow[] = [
     ...ROWS,
     {
@@ -142,10 +142,10 @@ describe('UpdatesModal', () => {
 
         expect(screen.getByText('Demo Builder')).toBeInTheDocument();
         expect(screen.getByText('JustRite')).toBeInTheDocument();
-        // Heading, its row; heading, its two rows.
+        // The Apply header (every open row ticked), then each row: Demo Builder's, JustRite's two.
         const boxes = screen.getAllByRole('checkbox', { hidden: true });
-        expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([true, true, true, true, false]);
-        expect(boxes.map((b) => (b as HTMLInputElement).disabled)).toEqual([false, false, false, false, true]);
+        expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([true, true, true, false]);
+        expect(boxes.map((b) => (b as HTMLInputElement).disabled)).toEqual([false, false, false, true]);
         expect(screen.getByText('This project uses a different Adobe organization')).toBeInTheDocument();
         expect(screen.getByText('Newer version')).toBeInTheDocument();
     });
@@ -154,8 +154,7 @@ describe('UpdatesModal', () => {
         const c = controls({ phase: 'list', rows: MANY }, ['extension', 'blockLibrary:0']);
         render(<UpdatesModal controls={c} />);
 
-        await user().click(screen.getByRole('button', { name: /JustRite/ }));
-        // Demo Builder's checkbox, JustRite's, then JustRite's rows: Demo Builder is closed.
+        // The Apply header, then the rows: Demo Builder's, then JustRite's first.
         await user().click(screen.getAllByRole('checkbox')[2]);
         await user().click(screen.getByRole('button', { name: 'Apply 2 Updates' }));
 
@@ -385,71 +384,53 @@ describe('UpdatesModal', () => {
 
         const dialog = screen.getByRole('dialog', { name: 'Updates Available' });
         expect(dialog).toHaveAttribute('data-size', 'L');
-        expect(container.querySelector('.updates-group-list')).not.toBeNull();
+        expect(container.querySelector('.updates-table')).not.toBeNull();
         expect(container.querySelector('.lead-text')).toBeNull();
     });
 
-    // A project's name is the SC's own, so it is drawn as written, not in the section
-    // label's capitals; and it is a checkbox, so one click skips a whole demo (owner,
-    // 2026-10-20).
-    it("heads each project with a checkbox in the name's own casing that ticks its open rows", async () => {
+    // F50 (owner, 2026-11-07): Reset Selected's table. A project per row, its name as the SC wrote it
+    // with its repository under it, its updates in the Apply column.
+    it("draws each project as Reset Selected does: its name as written, its repository under it", () => {
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
+
+        const name = screen.getByText('JustRite');
+        expect(name).toHaveClass('checkbox-row-label');
+        expect(name.closest('th')).toHaveTextContent('kmanns/justrite');
+        expect(screen.getByText('Project')).toHaveClass('batch-project-head');
+        expect(screen.getByText('Demo Builder Blocks').closest('td')).toHaveTextContent('ERP Integration and Justrite ERP');
+    });
+
+    // The column header ticks every update that can be applied, locked ones never.
+    it('heads the Apply column with a box that ticks every update that can be applied', async () => {
         const c = controls({ phase: 'list', rows: MANY }, ['extension', 'blockLibrary:0']);
         render(<UpdatesModal controls={c} />);
 
-        // The projects list's own row name, as its list view draws it: the shared toggle's
-        // name carries the same rules (`.disclosure-toggle-name`, moved from `.project-row-name`).
-        expect(screen.getByText('JustRite')).toHaveClass('disclosure-toggle-name');
-        expect(screen.getByText('JustRite')).not.toHaveClass('section-label');
-        // Every group closed: Demo Builder's checkbox, then JustRite's.
-        await user().click(screen.getAllByRole('checkbox')[1]);
+        await user().click(screen.getAllByRole('checkbox')[0]);
 
-        expect(c.toggleGroup).toHaveBeenCalledWith(['blockLibrary:0']);
-        // Ticking a project is not opening it.
-        expect(screen.getByRole('button', { name: /JustRite/ })).toHaveAttribute('aria-expanded', 'false');
+        expect(c.toggleGroup).toHaveBeenCalledWith(['extension', 'blockLibrary:0', 'blockLibrary:1']);
     });
 
-    // Closed, a project says what it holds: the count, and what still waits for the SC
-    // (owner, 2026-10-20). Its name opens it.
-    it('starts each project closed when there are more than three updates, and opens it on its name', async () => {
+    // At one class the batch table's "the name takes what is left" won, loading later, and every update
+    // wrapped (owner, 2026-11-07): the share is held by both classes.
+    it("gives a project's name two fifths of the row, outranking the batch table's rule", () => {
+        expect(ruleFor('.batch-delete-table.updates-table tbody th')).toMatch(/width:\s*40%/);
+    });
+
+    // Nothing folds away (owner, 2026-11-07): a long list scrolls instead, so every row shows.
+    it('shows every update, however many', () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: MANY }, ['extension', 'blockLibrary:0'])} />);
 
-        expect(screen.getByText('Demo Builder Blocks')).not.toBeVisible();
-        await user().click(screen.getByRole('button', { name: /JustRite/ }));
-
-        expect(screen.getByText('Demo Builder Blocks')).toBeVisible();
-        expect(screen.getByText('Demo Builder extension')).not.toBeVisible();
+        for (const row of MANY) expect(screen.getByText(row.label)).toBeVisible();
+        expect(screen.queryByRole('button', { name: /JustRite/ })).toBeNull();
     });
 
-    // Three fit, so nothing is hidden behind a click (owner, 2026-10-24); the name still closes it.
-    it('starts every project open when there are three updates or fewer', async () => {
-        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
-
-        expect(screen.getByText('Demo Builder extension')).toBeVisible();
-        expect(screen.getByText('Demo Builder Blocks')).toBeVisible();
-        await user().click(screen.getByRole('button', { name: /JustRite/ }));
-
-        expect(screen.getByText('Demo Builder Blocks')).not.toBeVisible();
-    });
-
-    // A row that starts unticked is the one a closed project must not hide: the redeploy,
-    // or one locked in another org. Once ticked, it no longer waits.
-    it('says how many rows in a closed project wait for the SC, until they are ticked', () => {
+    // A row waiting for the SC shows itself, unticked, so no group says how many wait.
+    it('never counts the rows that need attention: an unticked row shows itself', () => {
         const redeploy: PendingUpdateRow = { ...ROWS[2], id: 'integration:1', lockedReason: undefined };
-        const rows = [...ROWS, redeploy];
-        const { rerender } = render(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension'])} />);
-
-        expect(screen.getByText('2 need attention')).toBeInTheDocument();
-
-        rerender(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension', 'integration:1'])} />);
-        expect(screen.getByText('1 needs attention')).toBeInTheDocument();
-    });
-
-    // An open project shows the unticked row itself, so the note would say it twice.
-    it('says nothing about waiting rows in an open project', () => {
-        const rows = [ROWS[0], ROWS[1], ROWS[2]];
-        render(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension'])} />);
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: [...ROWS, redeploy] }, ['extension'])} />);
 
         expect(screen.queryByText(/needs? attention/)).not.toBeInTheDocument();
+        expect(screen.getAllByText('ERP Integration and Justrite ERP')).toHaveLength(2);
     });
 
     // It was on every such row (owner, 2026-11-05): the window says it once, and only then.
@@ -467,7 +448,7 @@ describe('UpdatesModal', () => {
         expect(container.querySelector('.checkbox-row-detail')).toBeNull();
     });
 
-    it('shows a project partly ticked as mixed', () => {
+    it('shows the Apply header as mixed while some updates are ticked', () => {
         const rows: PendingUpdateRow[] = [ROWS[1], { ...ROWS[1], id: 'template:0', label: 'EDS template' }];
         render(<UpdatesModal controls={controls({ phase: 'list', rows }, ['template:0'])} />);
 
@@ -476,12 +457,11 @@ describe('UpdatesModal', () => {
         expect(heading).not.toBeChecked();
     });
 
-    // The checkbox shows all, some or none ticked, so a count beside the name said it twice.
+    // The checkboxes show what is ticked, so a count beside a name would say it twice.
     it("shows no ticked count beside a project's name", () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: MANY }, ['extension', 'blockLibrary:0'])} />);
 
         expect(screen.queryByText(/\d+ of \d+/)).not.toBeInTheDocument();
-        expect(screen.getByText('1 needs attention')).toBeInTheDocument();
     });
 
     // Owner, 2026-10-22: after applying only some, the SC can go back to the rest.
@@ -564,7 +544,7 @@ describe('the Updates list', () => {
     // the projects batch window and (the fade) the API picker (owner, 2026-11-05).
     it('is as tall as its rows, and scrolls past a cap', () => {
         const { container } = render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
-        expect(container.querySelector('.updates-group-list')).toHaveClass('scroll-fade', 'scroll-fade--capped');
+        expect(container.querySelector('.updates-table')?.parentElement).toHaveClass('scroll-fade', 'scroll-fade--capped');
         const rule = ruleFor('.scroll-fade--capped');
 
         expect(rule).toMatch(/max-height:\s*[^;]+;/);
@@ -572,11 +552,11 @@ describe('the Updates list', () => {
         expect(rule).toMatch(/overflow-y:\s*auto/);
     });
 
-    // Lines: one rule, under the title. Groups are told apart by the 24 between them.
-    it('draws no box around its groups or its questions', () => {
-        expect(ruleFor('.updates-group')).not.toMatch(/border|background/);
+    // Projects apart by a hairline, as in the batch windows; no box around a project or a question.
+    it('draws a hairline between projects, and no box around a project or its questions', () => {
+        expect(ruleFor('.batch-delete-table tbody tr + tr > th, .batch-delete-table tbody tr + tr > td')).toMatch(/border-top:\s*1px solid/);
+        expect(ruleFor('.updates-table tbody th, .updates-table tbody td')).not.toMatch(/border|background/);
         expect(ruleFor('.updates-run-question')).not.toMatch(/border/);
-        expect(ruleFor('.updates-group-list')).toMatch(/gap:\s*24px/);
     });
 
     // A cut-off panel at the bottom edge did not read as "more below" (owner, 2026-10-20).
@@ -592,8 +572,8 @@ describe('the Updates list', () => {
     // Spectrum's 32px checkbox made the rows tall (owner, 2026-10-20); here alone they
     // take 24px, the box and one line of text.
     it('draws its rows thinner than the checkbox default, and only inside the list', () => {
-        expect(ruleFor('.updates-group-rows .checkbox-row')).toMatch(/padding:\s*0;/);
-        expect(ruleFor(".updates-group-rows .checkbox-row label[class*='spectrum-Checkbox']")).toMatch(
+        expect(ruleFor('.updates-table .checkbox-row')).toMatch(/padding:\s*0;/);
+        expect(ruleFor(".updates-table .checkbox-row label[class*='spectrum-Checkbox']")).toMatch(
             /min-height:\s*24px/,
         );
     });

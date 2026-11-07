@@ -28,6 +28,8 @@ import { PROJECT_SELECTION_KINDS, type ProjectSelectionKind } from './updateSele
 import { getTemplateSource } from './updateSources';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
+import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type {
     PendingUpdateGroup,
@@ -180,11 +182,17 @@ export function toPendingUpdateRows(
     return rows;
 }
 
+/** A project's heading: its name, and the line Reset Selected draws under it (F50). */
+function projectGroup(project: Project): PendingUpdateGroup {
+    const detail = extractEdsMetadata(project)?.githubRepo ?? getBrandStackSummary(project);
+    return { key: project.path, title: getProjectDisplayName(project), ...(detail ? { detail } : {}) };
+}
+
 function projectRows(selections: UpdateSelections): Array<PendingUpdateRow & { project: Project }> {
     return PROJECT_SELECTION_KINDS.flatMap((kind) =>
         (selections[kind] as Array<{ project: Project }>).map((entry, i) => {
             const words = (PROJECT_KINDS[kind] as (e: unknown) => RowText)(entry);
-            const group = { key: entry.project.path, title: getProjectDisplayName(entry.project) };
+            const group = projectGroup(entry.project);
             return { ...row(`${kind}:${i}`, kind, group, words), project: entry.project };
         }),
     );

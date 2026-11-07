@@ -10,33 +10,30 @@
  * that leaves rows the SC unticked still waiting says how many and offers "Back to
  * updates", the list again on a fresh check (owner, 2026-10-22).
  *
- * Built from the house pieces: `ui/Modal`, `CheckboxRow` (extracted from the API picker
- * for this) and `DisclosureToggle` (extracted from here, 2026-10-23). Each
- * group is a heading with a trailing chevron over its rows: Spectrum's Disclosure was tried first and
- * brought a look nothing else here has (owner, 2026-10-20). With {@link OPEN_UP_TO} updates or
- * fewer in all, every group starts open, since they fit and a closed one hid what the SC
- * was approving (owner, 2026-10-24); with more, a group starts closed and says what it holds: its name in its own casing, and how many rows wait for the SC (one that
- * started unticked: the redeploy, or one locked in another org), so a closed group cannot
- * hide the row that needs a decision; an open one shows that row, so it says nothing more. Its checkbox already shows all, some or none ticked. The rest of its line opens it.
- * Its checkbox ticks or unticks the whole group (mixed while some rows are ticked; never a
- * locked row), and sits beside the opening button rather than in it, so ticking a group
- * does not open it. The list is as tall as its rows and scrolls past a cap
- * (`.updates-group-list`). One sentence under the title, only when a listed update reaches the
- * live site: it was on every such row, and read as noise (owner, 2026-11-05). Each row's detail
- * has a line of its own under its name, as a run's rows and the delete window's boxes do.
+ * Drawn as Reset Selected and Delete Selected draw their projects (F50, owner 2026-11-07): a table,
+ * a project per row with its storefront's repository under its name, hairlines between them, its
+ * updates as boxes in the Apply column, whose header ticks or unticks every update. Demo Builder
+ * itself and the template repositories are rows of their own. Nothing folds away, so a row waiting
+ * for the SC (a redeploy, or one locked in another org) is simply unticked with its reason under
+ * it. A long list scrolls under the fixed header, its bottom edge fading while there is more
+ * (`scroll-fade`), and Apply counts every ticked update, seen or not: the owner chose scrolling over
+ * pages, which would hide rows being approved (2026-11-07). The groups with chevrons it replaces
+ * (2026-10-20) had a group's own tick-all; a project's updates are now ticked one by one or all at
+ * once. One sentence under the title, only when a listed update reaches the live site (owner,
+ * 2026-11-05). Built from the house pieces: `ui/Modal`, `CheckboxRow`, and the batch window's table
+ * classes (`projects-batch.css`).
  * How a run ended is the title with its status icon.
  *
  * @module features/projects-dashboard/ui/components/UpdatesModal
  */
 
-import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import { DialogContainer } from '@adobe/react-spectrum';
+import React from 'react';
 import { APPLYING_TITLE, type RowStatuses, type UpdatesModalControls } from '../hooks/useUpdatesModal';
 import { groupsOf, updatesLiveSite, type RowGroup } from './updateGroups';
 import { UpdatesRunView } from './UpdatesRunView';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
-import { DisclosureToggle } from '@/core/ui/components/ui/DisclosureToggle';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -46,51 +43,17 @@ import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewP
 const LIST_TITLE = 'Updates Available';
 const LIVE_SITE_SENTENCE = 'Storefront updates go to the live site.';
 const NO_ACTIONS: ActionButton[] = [];
-/** The most updates the list opens every group for: two lines each, they fit unscrolled. */
-export const OPEN_UP_TO = 3;
 
-/**
- * The rows a group's checkbox ticks, and what a closed group says about itself. It
- * says only how many rows wait for the SC, since a closed group could hide those. It
- * said "1 of 2" as well until 2026-10-21; the checkbox already shows all, some or none.
- */
-function summaryOf(group: RowGroup, ticked: ReadonlySet<string>): { open: string[]; tickedCount: number; text: string } {
-    const open = group.rows.filter((r) => !r.lockedReason).map((r) => r.id);
-    const tickedCount = open.filter((id) => ticked.has(id)).length;
-    const waiting = group.rows.filter((r) => !r.ticked && !ticked.has(r.id)).length;
-    return { open, tickedCount, text: waitingText(waiting) };
-}
-
-function waitingText(waiting: number): string {
-    if (waiting === 0) return '';
-    return waiting === 1 ? '1 needs attention' : `${waiting} need attention`;
-}
-
-interface RowGroupViewProps {
-    group: RowGroup;
-    controls: UpdatesModalControls;
-    startsOpen: boolean;
-}
-
-function RowGroupView({ group, controls, startsOpen }: RowGroupViewProps) {
-    const [isOpen, setOpen] = useState(startsOpen);
-    const { open, tickedCount, text } = summaryOf(group, controls.ticked);
-    const all = open.length > 0 && tickedCount === open.length;
+/** One project (or Demo Builder, or the template repositories): its name over its line, then its updates. */
+function GroupRow({ group, controls }: { group: RowGroup; controls: UpdatesModalControls }) {
     return (
-        <div className="updates-group">
-            <div className="updates-group-header">
-                <Checkbox
-                    aria-label={`All of ${group.title}`}
-                    isSelected={all}
-                    isIndeterminate={tickedCount > 0 && !all}
-                    isDisabled={open.length === 0}
-                    onChange={() => controls.toggleGroup(open)}
-                />
-                <DisclosureToggle isOpen={isOpen} onToggle={() => setOpen(!isOpen)} note={(!isOpen && text) || undefined}>
-                    {group.title}
-                </DisclosureToggle>
-            </div>
-            <div className="updates-group-rows" hidden={!isOpen}>
+        <tr>
+            <th scope="row">
+                <span className="checkbox-row-label">{group.title}</span>
+                {group.detail && <div className="work-row-detail">{group.detail}</div>}
+            </th>
+            <td>
+                <div className="updates-table-boxes">
                 {group.rows.map((row) => (
                     <CheckboxRow
                         key={row.id}
@@ -102,26 +65,44 @@ function RowGroupView({ group, controls, startsOpen }: RowGroupViewProps) {
                         onChange={() => controls.toggle(row.id)}
                     />
                 ))}
-            </div>
-        </div>
+                </div>
+            </td>
+        </tr>
     );
 }
 
+/** The list as Reset Selected's table: a project per row, its updates in the Apply column, whose header ticks them all. */
 function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: UpdatesModalControls }) {
+    const open = rows.filter((r) => !r.lockedReason).map((r) => r.id);
+    const tickedCount = open.filter((id) => controls.ticked.has(id)).length;
+    const all = open.length > 0 && tickedCount === open.length;
     return (
-        <>
+        <div className="batch-confirm">
             {updatesLiveSite(rows) && <LeadText>{LIVE_SITE_SENTENCE}</LeadText>}
-            <div className="updates-group-list scroll-fade scroll-fade--capped">
-                {groupsOf(rows).map((group) => (
-                    <RowGroupView
-                        key={group.key}
-                        group={group}
-                        controls={controls}
-                        startsOpen={rows.length <= OPEN_UP_TO}
-                    />
-                ))}
+            <div className="batch-delete scroll-fade scroll-fade--capped">
+                <table className="batch-delete-table updates-table">
+                    <thead>
+                        <tr>
+                            <td className="batch-changes-head batch-project-head">Project</td>
+                            <th scope="col">
+                                <CheckboxRow
+                                    label="Apply"
+                                    isSelected={all}
+                                    isIndeterminate={tickedCount > 0 && !all}
+                                    isDisabled={open.length === 0}
+                                    onChange={() => controls.toggleGroup(open)}
+                                />
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {groupsOf(rows).map((group) => (
+                            <GroupRow key={group.key} group={group} controls={controls} />
+                        ))}
+                    </tbody>
+                </table>
             </div>
-        </>
+        </div>
     );
 }
 

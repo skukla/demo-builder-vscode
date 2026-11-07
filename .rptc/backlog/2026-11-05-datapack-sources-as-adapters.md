@@ -90,3 +90,4 @@ Not for beta.153: the release behaves sensibly with both sources on.
 
 - 2026-11-06  feat(datapacks): Demo Builder installs every datapack itself (`7b6091474`)
 - 2026-11-06  feat(datapacks): a pack copied to the Data Installer goes in its format, or not at all (`5b9742dc4`)
+- 2026-11-07  fix(datapacks): hide Copy to the Data Installer until we can write to it (`8b7b425f8`)

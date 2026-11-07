@@ -11,6 +11,8 @@ import type { PendingUpdateKind, PendingUpdateRow } from '@/types/pendingUpdates
 export interface RowGroup {
     key: string;
     title: string;
+    /** A project's line under its name: its storefront's repository, else its card's line. */
+    detail?: string;
     rows: PendingUpdateRow[];
 }
 

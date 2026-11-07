@@ -82,6 +82,16 @@ describe('toPendingUpdateRows', () => {
         expect(row).toMatchObject({ label: expected, detail: LIVE });
     });
 
+    // F50 (owner, 2026-11-07): the Updates window draws a project as Reset Selected does, its storefront's
+    // repository under its name.
+    it("heads a project's rows with its storefront's repository", () => {
+        const project = storefront({ githubRepo: 'skukla/justrite', templateOwner: 'kmanns', templateRepo: 'justrite' });
+
+        const [row] = toPendingUpdateRows({ ...empty(), template: [{ project }] }, undefined, undefined);
+
+        expect(row.group).toEqual({ key: '/p/justrite', title: 'JustRite', detail: 'skukla/justrite' });
+    });
+
     // A colleague's demo reset since it was last taken replaces the storefront: the row waits for the
     // SC's tick and says why (owner, 2026-11-03).
     it("leaves a colleague's reset demo unticked, saying it was reset", () => {

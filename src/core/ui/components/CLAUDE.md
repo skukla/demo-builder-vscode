@@ -45,7 +45,6 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Full-screen surface: sticky search band over a 960px body | `layout/FullScreenSurface` | re-inlining `.projects-sticky-header` + `.page-container-padded` |
 | Two-column / grid / sidebar layout | `layout/TwoColumnLayout`, `GridLayout`, `ContentWithSidebar` | raw flex (see the 450px trap) |
 | Search box over a list | `navigation/SearchHeader` / `SearchableList` | a TextField + filter |
-| Opening and closing a part of a modal: its name, a note beside it, the chevron at the end | `ui/DisclosureToggle` (the Updates modal's groups; a host bundle imports `disclosure-toggle.css`) | Spectrum's `Disclosure` (rejected, a look nothing else has) or `<details>` |
 | Labelled lines that scan as one small table (label column, value column) | `ui/FactList` + `Fact` (the setup guide; a host bundle imports `fact-list.css`) | a per-feature `<dl>` grid with its own spacing |
 | One manual Admin step's Where (menu path as breadcrumbs) / Set (copyable pills) / Then / Why | `ui/SetupStepFacts` over a `SetupChecklistItem` (the setup guide and the Data Installer's pack step dialog; styles in `fact-list.css`) | re-drawing the path, pills and reason per surface |
 | One manual Admin step's title and where it stands (the house banner: Done, Not set up with what the check found, Couldn't check, Skipped) | `ui/SetupStepHeader` + `savedStepStatus(item)` (the setup guide's `StepHeader` adds its run and Apply's plan; the Data Installer's pack step dialog; styles in `fact-list.css`) | a per-surface status box or badge |

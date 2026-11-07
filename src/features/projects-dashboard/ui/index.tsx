@@ -72,7 +72,6 @@ import '@/core/ui/styles/checkbox-row.css';
 import '@/core/ui/styles/work-row.css';
 // SectionLabel and LeadText (ADR-017 §6).
 import '@/core/ui/styles/modal-text.css';
-import '@/core/ui/styles/disclosure-toggle.css';
 // A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
 import '@/core/ui/styles/scroll-fade.css';
 

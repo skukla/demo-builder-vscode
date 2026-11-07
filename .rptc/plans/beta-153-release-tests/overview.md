@@ -76,6 +76,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F47 | Create Datapack, Save Changes | The result was a wall of text naming every item the SC had not picked | One line per data type it holds, count first ("4 Customer Groups"), in the pick list's order (the flyout's labels follow it too). A save into the demo's own pack adds what it left out, by count. The agent keeps the whole sentence (owner, 2026-11-05). Built |
 | F48 | Datapacks screen | The Data Installer's uncurated packs (test packs, ACO exports, a sample) were tagged Community, and only 2 of its packs showed under Data Installer | Tagged by where a pack lives: every Data Installer pack says Data Installer; Community is colleagues' packs. Empty packs and ACO-only packs are not listed, the SC's own excepted. The 9 hidden curated packs are the SC's own copies, shown once as the store's (owner, 2026-11-05). Built |
 | F49 | Datapack cards | "Shared" and "Community" read as the same thing; a tag beside a wrapped name moved with it; the tile was crowded | One word per fact: Mine, Data Installer, Community (an SC's own shared pack is Mine and Community). The tags sit at the right of the version line, pinned to the card's foot. No data type count on the card; the flyout names the types (owner, 2026-11-05). Built |
+| F50 | 1.9 | The Updates window still draws collapsible groups with chevrons and nested boxes, where Reset Selected and Delete Selected draw a table (owner, 2026-11-07) | Proposed: the batch windows' table, a Project column with each project's repository under its name, its updates as boxes in an Apply column whose header ticks them all, no chevrons, hairlines between projects, the fixed header and fade; a long list scrolls, no pages, no count (owner, 2026-11-07). The run after Apply is unchanged. `DisclosureToggle`, its only user gone, deleted. In a short window the dialog body scrolled too; now the table is the one scroller, shrinking to the room the dialog has (no measured number, so any zoom). Passed 2026-11-07 (owner) |
 
 ## Questions raised
 
@@ -95,6 +96,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | 1.6 | A datapack travels with a project (live test 5) | open |
 | 1.7 | Save Changes, Newer Version, reset and delete with a pack | open |
 | 1.8 | Colour swatches | open |
+| 1.9 | Demo Builder installs every pack, and checks it (2026-11-06) | open |
 | 2.1 to 2.4 | Projects list: select, reset several, failures, the open project | passed 2026-11-04 |
 | 2.5 | A datapack in a reset batch | passed in part 2026-11-04 |
 | 2.6 | Delete Selected | open |
@@ -226,6 +228,25 @@ button and "Reset to <pack>" removed by its own pivot. Uses the Bodea demo.
 The Data Installer refused the owner's sign-in (`ERR1201`, missing product profile) from 2026-11-03.
 It answers again as of 2026-11-05: its packs list on the Datapacks screen. The store's own packs do
 not depend on it.
+
+### 1.9 Demo Builder installs every pack, and checks it (added 2026-11-06)
+
+The changes of 2026-11-06 on `fix/release-walk-fixes` (DI-8, DI-12): the Data Installer's own install
+engine and the Engine setting are gone, an install checks its products against the pack, a
+reinstall says what it took out, and Copy to the Data Installer is off the screen until our accounts
+can write to it. The live install, reinstall and removal of Luma, import-form Luma, Venia and a
+Data-Installer-only pack were run through the agent tools that day; this is the owner's look at the
+screens.
+
+1. In Settings, search `dataInstaller`. Expect no **Engine** setting under Sample Data.
+2. In Datapacks, open a library pack's flyout (Luma). Expect **Import**, and no **Copy to the Data
+   Installer**.
+3. Import Luma (it is installed on `justrite_test_store_us`, so this is a reinstall). Expect the
+   progress notification with a count, then the finish note ending "Checked 2,048 products against
+   the datapack: all match." and no "Took out" line.
+4. Expect the result to say nothing was changed in the Admin ("Kept …" absent).
+
+**Result:** open
 
 ---
 
@@ -387,8 +408,9 @@ change to every SC with the ERP integration.
 3. **4.3** Point JustRite's four ERP component folders back at `main`. Expect `erp/status` to still
    answer `closesOrdersByStore` and `refundsOnReset`.
 4. **4.4** Mark the 9 packs as team packs and share them. Expect each to show with no tag.
-5. **4.5** Push develop, then cut beta.153 with the `cut-release` skill. Expect the pre-release
-   published.
+5. **4.5** Merge `fix/release-walk-fixes` into develop (the walk's fixes and the 2026-11-06 datapack
+   work, CI green), push develop, then cut beta.153 with the `cut-release` skill. Expect the
+   pre-release published.
 
 Details for 4.1 to 4.3: `.rptc/plans/datapack-engine/overview.md`, "Before beta.153 ships".
 

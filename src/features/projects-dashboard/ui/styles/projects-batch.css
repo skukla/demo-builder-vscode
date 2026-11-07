@@ -163,12 +163,44 @@
         }
     }
 
-    /* Each confirm, Delete Selected's and Reset Selected's two steps (owner, 2026-11-04): the
-       sentence, then the table, 24 apart, the dialog rules' gap between groups. */
+    /* Each confirm, Delete Selected's and Reset Selected's two steps (owner, 2026-11-04), and the
+       Updates list (F50): the sentence, then the table, 24 apart, the dialog rules' gap between
+       groups. */
     .batch-confirm {
         display: flex;
         flex-direction: column;
         gap: 24px;
+        min-height: 0;
+    }
+
+    /* ONE scroller: the table. In a short window the whole dialog body scrolled, its sentence cut
+       off, while the table had room to scroll itself (owner, 2026-11-07). So the body holding a
+       confirm does not scroll, and the table shrinks to the height the dialog has left (still at
+       most its `scroll-fade--capped` limit) and scrolls there, its header fixed. The dialog bounds
+       its own height against the window, so this holds at any window size and zoom, with no number
+       to measure. The API picker's single scroller is the same idea (`modal.css`). */
+    .modal-body:has(.batch-confirm) {
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* The two boxes `SteadyHeight` puts between the body and the confirm, then the confirm and its
+       table: each passes the height it is given down, rather than its content's height up. */
+    .modal-body:has(.batch-confirm) > *,
+    .modal-body:has(.batch-confirm) > * > *,
+    .modal-body .batch-confirm {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    /* The table's scroller shrinks with the rest and scrolls; it stays a block, so its table keeps
+       its own layout. */
+    .batch-confirm > .scroll-fade--capped {
+        flex: 1 1 auto;
+        min-height: 0;
     }
 
     .batch-confirm > .lead-text {

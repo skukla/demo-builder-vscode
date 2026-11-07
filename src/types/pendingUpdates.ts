@@ -49,6 +49,11 @@ export interface PendingUpdateGroup {
     key: string;
     /** "Demo Builder", the project's display name, "Template repositories". */
     title: string;
+    /**
+     * A project's line under its name: its storefront's repository ("skukla/bodea"), else its card's
+     * line, as Reset Selected draws a project (F50, 2026-11-07). Absent for the other groups.
+     */
+    detail?: string;
 }
 
 /** `showUpdates` — pushed to a projects list already open: the rows to show. */
