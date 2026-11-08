@@ -199,6 +199,11 @@ One file: `.rptc/research/codebase-sweep-<date>/sweep.md`.
 Rejected candidates are not filler: without them the next sweep re-litigates the
 same nine groups from scratch.
 
+## After the sweep
+
+Answer each proposal through `/dev-pipeline:resolve-findings` (fix, contest, escalate or
+decline), so every decision is recorded once and the next sweep does not re-argue it.
+
 ## Verify
 1. Every finding names real file:line pairs — open one and confirm before proposing.
 2. Every scan's count is compared to the baseline, not reported raw.

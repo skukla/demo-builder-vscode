@@ -5,6 +5,7 @@ checks: [npm run gate]
 artifact_dir: .rptc
 records_dir: .rptc/dream
 on_demand_plugins: [tech-case-engine]
+standards: [CLAUDE.md#what-this-extension-never-compromises-on, CLAUDE.md#words-on-screen]
 periodic:
   reflect:        { budget: 3 releases or 30 days, last: 2026-08-24 }
   codebase-sweep: { budget: 3 releases, last: 2026-08-27 }
