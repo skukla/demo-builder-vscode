@@ -22,6 +22,7 @@ import '@testing-library/jest-dom';
 // Below the mock on purpose (see useDataInstallerRequest's suite).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DataInstallerScreen } from '@/features/data-installer/ui/DataInstallerScreen';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 const mockRequest = webviewClient.request as jest.Mock;
 
@@ -162,6 +163,39 @@ describe('DataInstallerScreen', () => {
             // Settling removed that race and showed the proxy was wrong — the
             // claim it was standing in for is still true, and the line above is
             // what actually tests it.
+        });
+    });
+    // Owner, 2026-11-07 (F65): one screen silently acted on the project opened last.
+    describe('as the Datapack Library', () => {
+        it('names itself the library, offers no Activity, and reads no project', async () => {
+            render(<DataInstallerScreen mode="library" />);
+            await settle();
+            await waitFor(() => expect(mockRequest).toHaveBeenCalled());
+
+            expect(screen.getByText('Datapack Library')).toBeInTheDocument();
+            expect(screen.getByText('Browse and manage datapacks')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Activity' })).not.toBeInTheDocument();
+            expect(requestedTypes()).not.toContain('get-datapack-import-target');
+            expect(requestedTypes()).not.toContain('list-installed-datapacks');
+        });
+
+        it('offers Load from File, and nothing that acts on a store', async () => {
+            render(<DataInstallerScreen mode="library" />);
+            await settle();
+
+            expect(await screen.findByRole('button', { name: /Load from File/ })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Create Datapack/ })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Clear Demo Data/ })).not.toBeInTheDocument();
+        });
+
+        it('CONTROL: a project\'s Datapacks names the project and keeps the store\'s actions', async () => {
+            render(<DataInstallerScreen mode="project" projectName={asDisplayName('scratch-1028')} />);
+            await settle();
+
+            expect(screen.getByText('scratch-1028')).toBeInTheDocument();
+            expect(await screen.findByRole('button', { name: /Create Datapack/ })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Activity' })).toBeInTheDocument();
+            await waitFor(() => expect(requestedTypes()).toContain('get-datapack-import-target'));
         });
     });
 });

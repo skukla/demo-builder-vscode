@@ -58,8 +58,8 @@
                 "category": "Demo Builder"
             },
             {
-                "command": "demoBuilder.showDataInstaller",
-                "title": "Open Datapacks",
+                "command": "demoBuilder.showDatapackLibrary",
+                "title": "Open Datapack Library",
                 "category": "Demo Builder"
             },
             {

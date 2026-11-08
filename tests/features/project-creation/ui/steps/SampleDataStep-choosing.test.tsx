@@ -86,7 +86,7 @@ describe('SampleDataStep — the Show list', () => {
         renderStep();
         await waitFor(() => expect(mockExecute).toHaveBeenCalledTimes(1));
 
-        act(() => mockMessageHandlers.get('datapack-settings-changed')?.(undefined));
+        act(() => mockMessageHandlers.get('datapack-list-changed')?.(undefined));
 
         expect(mockExecute).toHaveBeenCalledTimes(2);
         expect(mockExecute).toHaveBeenLastCalledWith({ includeCommunity: true });

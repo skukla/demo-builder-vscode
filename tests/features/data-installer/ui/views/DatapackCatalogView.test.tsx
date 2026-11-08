@@ -130,10 +130,31 @@ describe('DatapackCatalogView', () => {
             const asked = () => mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks').length;
             const before = asked();
 
-            act(() => webviewClientHandlers.get('datapack-settings-changed')?.(undefined));
+            act(() => webviewClientHandlers.get('datapack-list-changed')?.(undefined));
             await settle();
 
             expect(asked()).toBe(before + 1);
+        });
+
+        // F66: a pack changed elsewhere may be the one this project holds.
+        it('reads which pack the project holds again when the packs change, and the library never does', async () => {
+            resolveWith(CATALOG);
+            const { unmount } = render(<DatapackCatalogView />);
+            await settle();
+            const targets = () => mockRequest.mock.calls.filter((call) => call[0] === 'get-datapack-import-target').length;
+            const before = targets();
+
+            act(() => webviewClientHandlers.get('datapack-list-changed')?.(undefined));
+            await settle();
+            expect(targets()).toBe(before + 1);
+            unmount();
+
+            mockRequest.mockClear();
+            render(<DatapackCatalogView library />);
+            await settle();
+            act(() => webviewClientHandlers.get('datapack-list-changed')?.(undefined));
+            await settle();
+            expect(targets()).toBe(0);
         });
 
         it('keeps the filter box on an empty view, so choosing one moves nothing', async () => {

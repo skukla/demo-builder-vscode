@@ -12,12 +12,13 @@ jest.mock('@/features/eds/services/storefront/sharedRepoProjects', () => ({ shar
 // The library, for a pack's display name: unreachable unless a test says otherwise.
 jest.mock('@/features/data-installer/handlers/libraryWriter', () => ({
     openLibraryWriter: jest.fn(async () => ({ ok: false, reason: 'not in this test' })),
+    libraryDisplayName: jest.fn(async () => undefined),
 }));
 
 import * as vscode from 'vscode';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
-import { openLibraryWriter } from '@/features/data-installer/handlers/libraryWriter';
+import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { deletablePackOf } from '@/features/projects-dashboard/services/demoPackDeletion';
@@ -152,14 +153,12 @@ describe('prepareResetBatch', () => {
     it("names a library pack by its display name", async () => {
         const team = withPack('team');
         mockedChanges.mockResolvedValue({ count: 1, kinds: [], alwaysSave: false });
-        (openLibraryWriter as jest.Mock).mockResolvedValueOnce({
-            ok: true,
-            client: { findDatapacks: jest.fn(async () => ({ items: [{ id: { name: 'bodea' }, displayName: 'Team Bodea Pack' }] })) },
-        });
+        (libraryDisplayName as jest.Mock).mockResolvedValueOnce('Team Bodea Pack');
 
         const [row] = await prepareResetBatch(contextWith(team), [team.path]);
 
         expect(row.datapack).toStrictEqual({ name: 'Team Bodea Pack', changes: 'asks' });
+        expect(libraryDisplayName).toHaveBeenCalledWith(expect.anything(), team.datapack);
     });
 
     // The card's own line under each name, so the confirm reads like the list (owner, 2026-11-04:

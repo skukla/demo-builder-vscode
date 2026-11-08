@@ -15,6 +15,9 @@
  *
  * Each action owns the dialog it opens, so the catalog view carries no dialog's state.
  *
+ * The Datapack Library (no `onCreate`) offers Load from File alone: Create Datapack reads a project's
+ * store and Clear Demo Data clears stores, and the library touches none (owner, 2026-11-07).
+ *
  * @module features/data-installer/ui/components/CatalogHeaderActions
  */
 
@@ -29,8 +32,8 @@ import type { WipeStoreChoice } from '@/types/demoDataWipe';
 export interface CatalogHeaderActionsProps {
     /** A file was loaded (or the load modal closed): the catalog may have changed. Stable. */
     onCatalogChanged: () => void;
-    /** Create Datapack: Save As with no name yet. Stable. */
-    onCreate: () => void;
+    /** Create Datapack: Save As with no name yet; absent in the Datapack Library. Stable. */
+    onCreate?: () => void;
 }
 
 /** Which dialog the header has open. */
@@ -59,19 +62,25 @@ export function CatalogHeaderActions({
 
     return (
         <>
-            <ActionButton isQuiet onPress={onCreate}>
-                {renderMenuIcon('add')}
-                <Text>Create Datapack</Text>
-            </ActionButton>
+            {onCreate ? (
+                <ActionButton isQuiet onPress={onCreate}>
+                    {renderMenuIcon('add')}
+                    <Text>Create Datapack</Text>
+                </ActionButton>
+            ) : null}
             <ActionButton isQuiet onPress={() => setOpen('load')}>
                 {renderMenuIcon('openFile')}
                 <Text>Load from File</Text>
             </ActionButton>
-            <Divider orientation="vertical" size="S" />
-            <ActionButton isQuiet onPress={() => setOpen('clear')}>
-                {renderMenuIcon('delete')}
-                <Text>Clear Demo Data</Text>
-            </ActionButton>
+            {onCreate ? (
+                <>
+                    <Divider orientation="vertical" size="S" />
+                    <ActionButton isQuiet onPress={() => setOpen('clear')}>
+                        {renderMenuIcon('delete')}
+                        <Text>Clear Demo Data</Text>
+                    </ActionButton>
+                </>
+            ) : null}
             {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} /> : null}
             {open === 'clear' ? <ClearDemoDataModal onClose={close} onClear={startClear} /> : null}
             {progressWindow}

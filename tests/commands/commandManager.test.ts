@@ -171,7 +171,9 @@ describe('CommandManager', () => {
             // 38 since AI-4b added demoBuilder.pickAiChat.
             // 37 since EDS-64 removed demoBuilder.storefrontReport: Diagnostics and the
             // get_storefront_report tool carry what it said (owner, 2026-10-23).
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(37);
+            // 38 since demoBuilder.showDatapackLibrary: the Datapack Library, from the sidebar
+            // and the palette, beside a project's Datapacks (owner, 2026-11-07).
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(38);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -183,6 +185,7 @@ describe('CommandManager', () => {
                 // the grid section of).
                 'demoBuilder.showIntegrations',
                 'demoBuilder.showDataInstaller',
+                'demoBuilder.showDatapackLibrary',
                 'demoBuilder.loadProject',
                 'demoBuilder.startDemo',
                 'demoBuilder.stopDemo',

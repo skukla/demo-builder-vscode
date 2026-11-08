@@ -32,13 +32,16 @@ import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
 /**
  * `ShowDataInstallerCommand.getInitialData` → the dataInstaller bundle.
  *
- * Deliberately thin and project-independent: the datapack catalog is global to
- * the service, so the panel opens with no project selected.
+ * One screen opened two ways (owner, 2026-11-07): the Datapack Library, from the sidebar and the
+ * palette, browses and manages packs and touches no store; a project's Datapacks, from its
+ * dashboard, names the project and holds Import, Save Changes and the store's other actions.
  */
 export interface DataInstallerInitialData {
     theme: ThemeMode;
     /** Project display name — `''` when no project is selected. */
     projectName: ProjectDisplayName;
+    /** `library`: no project, no store actions. `project`: the open project's Datapacks. */
+    mode: 'library' | 'project';
 }
 
 /**

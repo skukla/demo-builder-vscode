@@ -210,8 +210,11 @@ export type DataTypeStatus = 'pending' | 'processing' | 'success' | 'error';
  */
 export const IMPORT_PROGRESS_MESSAGE = 'datapack-import-progress';
 
-/** A setting the datapack list depends on changed: a screen showing the list reads it again. */
-export const DATAPACK_SETTINGS_CHANGED_MESSAGE = 'datapack-settings-changed';
+/**
+ * The datapack list may have changed: a setting it depends on, or the packs themselves (a rename, a
+ * save, an import, an agent's change; `datapackChanges.ts`). A screen showing the list reads it again.
+ */
+export const DATAPACK_LIST_CHANGED_MESSAGE = 'datapack-list-changed';
 
 /** One poll, as it reaches the webview. */
 export interface ImportProgressMessage {

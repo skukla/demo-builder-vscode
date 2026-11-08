@@ -29,6 +29,7 @@ import {
     createMockExtensionContext,
 } from '../../../helpers/extensionContextFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { onDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
 
 
 const BASE = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
@@ -185,5 +186,36 @@ describe('a reset that finishes clears it', () => {
 
         expect(project.datapack).toEqual({ name: 'bodea', version: 'main' });
         expect(saveProject).not.toHaveBeenCalled();
+    });
+});
+
+// F66 (owner, 2026-11-07): every open Datapacks screen reads its list again.
+describe('every open Datapacks screen hears of it', () => {
+    it('when an import is accepted, and again when its job ends', async () => {
+        happyEngine();
+        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
+        const heard = jest.fn();
+        const following = onDatapacksChanged(heard);
+        const { context } = makeImportHarness(PAAS_PROJECT());
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        expect(heard).toHaveBeenCalledTimes(1);
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(heard).toHaveBeenCalledTimes(2);
+        following.dispose();
+    });
+
+    it('CONTROL: not for a refused import', async () => {
+        refusingEngine();
+        const heard = jest.fn();
+        const following = onDatapacksChanged(heard);
+        const { context } = makeImportHarness(PAAS_PROJECT());
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(heard).not.toHaveBeenCalled();
+        following.dispose();
     });
 });

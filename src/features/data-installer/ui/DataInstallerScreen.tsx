@@ -18,6 +18,12 @@
  * `hooks/useDataInstallerRequest`), so the extra round trip bought nothing but a
  * slower first paint. The handler stays — step 12 exposes it as an MCP tool.
  *
+ * **Two modes** (owner, 2026-11-07, `DataInstallerInitialData.mode`). The Datapack Library, from the
+ * sidebar and the palette, browses and manages packs: no project, no store actions, no Activity
+ * (that log is a store's). A project's Datapacks, from its dashboard, names the project in its
+ * header and holds the store's actions. One screen that silently acted on the project opened last
+ * was the finding (F65).
+ *
  * @module features/data-installer/ui/DataInstallerScreen
  */
 
@@ -57,15 +63,22 @@ const VIEWS: SwitchableView[] = [
     { id: 'activity', label: 'Activity' },
 ];
 
-export function DataInstallerScreen(_props: DataInstallerScreenProps): React.JSX.Element {
+/** The header's line: the library's own, or the project the Datapacks are for. */
+function subtitleOf(library: boolean, projectName: string | undefined): string {
+    if (library) return 'Browse and manage datapacks';
+    return projectName || 'Browse and install Adobe Commerce sample-data datapacks';
+}
+
+export function DataInstallerScreen({ mode, projectName }: DataInstallerScreenProps): React.JSX.Element {
     const [activeView, setActiveView] = useState(VIEWS[0].id);
+    const library = mode === 'library';
 
     return (
         <PageLayout
             header={
                 <PageHeader
-                    title="Datapacks"
-                    subtitle="Browse and install Adobe Commerce sample-data datapacks"
+                    title={library ? 'Datapack Library' : 'Datapacks'}
+                    subtitle={subtitleOf(library, projectName)}
                     // Aligns the title with the content band below it. Both
                     // page-level peers set it; without it the header ran the full
                     // panel width while the body sat in a 960px column.
@@ -78,15 +91,17 @@ export function DataInstallerScreen(_props: DataInstallerScreenProps): React.JSX
                 spinner can take what is left under the tabs and centre in it; a
                 window-high spinner below the tabs sat ~165px low (2026-10-29). */}
             <div className="flex flex-column h-full">
-                {/* Constrained like every other band on the page. */}
-                <div className="page-container-padded">
-                    <ViewSwitcher views={VIEWS} activeId={activeView} onSelect={setActiveView} />
-                </div>
+                {/* Constrained like every other band on the page. The library has one view, so no strip. */}
+                {library ? null : (
+                    <div className="page-container-padded">
+                        <ViewSwitcher views={VIEWS} activeId={activeView} onSelect={setActiveView} />
+                    </div>
+                )}
                 {/* Mounted one at a time on purpose: each view owns its own request,
                     so keeping the others mounted would spend round trips on screens
                     nobody is looking at. The cost is a re-fetch when you switch back,
                     which is the cheaper of the two. */}
-                {renderView(activeView)}
+                {library ? <DatapackCatalogView library /> : renderView(activeView)}
             </div>
         </PageLayout>
     );

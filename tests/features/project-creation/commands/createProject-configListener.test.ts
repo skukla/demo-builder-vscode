@@ -16,6 +16,7 @@ import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { announceDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
@@ -237,7 +238,17 @@ describe('CreateProjectWebviewCommand - Config Change Listener', () => {
             affectsConfiguration: (section: string) => section === 'demoBuilder.dataInstaller.apiBaseUrl',
         });
 
-        expect(mockSendMessage).toHaveBeenCalledWith('datapack-settings-changed', undefined);
+        expect(mockSendMessage).toHaveBeenCalledWith('datapack-list-changed', undefined);
+    });
+
+    // F66: a pack changed in a Datapacks screen, or by an agent, while the wizard is open.
+    it("tells the wizard's Datapacks step when the packs change", async () => {
+        await command.execute();
+        mockSendMessage.mockClear();
+
+        announceDatapacksChanged();
+
+        expect(mockSendMessage).toHaveBeenCalledWith('datapack-list-changed', undefined);
     });
 
     it('should send updated custom block library defaults when settings change', async () => {

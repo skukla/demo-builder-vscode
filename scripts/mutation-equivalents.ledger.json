@@ -2627,10 +2627,10 @@
             "anchors": [
                 "const updated = parseCustomBlockLibrarySettings(config.get<string[]>('blockLibraries.custom', []));"
             ],
-            "line": 30,
+            "line": 33,
             "mutants": 1,
             "category": "other",
-            "reason": "Same as the getInitialData read: the fallback fires only for an unset setting, and the value is parsed by parseCustomBlockLibrarySettings before it is pushed to the webview. A placeholder string resolves to no owner and repo, so it is filtered out and the pushed payload holds the same empty array \u2014 which the settings-listener suite asserts directly.",
+            "reason": "Same as the getInitialData read: the fallback fires only for an unset setting, and the value is parsed by parseCustomBlockLibrarySettings before it is pushed to the webview. A placeholder string resolves to no owner and repo, so it is filtered out and the pushed payload holds the same empty array \u2014 which the settings-listener suite asserts directly. Re-anchored 2026-11-08 (30 -> 33): unchanged code; the wizard follows pack changes too, set up above it.",
             "decision": "Kept: an unset setting is an empty list.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-02, 2026-09-04"
@@ -7755,10 +7755,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 281,
+            "line": 284,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (247 -> 248): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (251 -> 272): unchanged code; the progress push above it carries the engine's count. Re-anchored 2026-11-06 (272 -> 274): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (274 -> 275): unchanged code; the job record carries the install check above it.",
+            "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (247 -> 248): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (251 -> 272): unchanged code; the progress push above it carries the engine's count. Re-anchored 2026-11-06 (272 -> 274): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (274 -> 275): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (281 -> 284): unchanged code; the pack-change announcement was added above it.",
             "decision": "none \u2014 log-only.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -7768,10 +7768,10 @@
             "anchors": [
                 "if (!project) {"
             ],
-            "line": 274,
+            "line": 277,
             "mutants": 2,
             "category": "branch",
-            "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (240 -> 241): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (244 -> 265): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (265 -> 267): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (267 -> 268): unchanged code; the job record carries the install check above it.",
+            "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (240 -> 241): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (244 -> 265): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (265 -> 267): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (267 -> 268): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (274 -> 277): unchanged code; the pack-change announcement was added above it.",
             "decision": "none \u2014 equivalent. The guard is the intentional path and the catch is the backstop; a test cannot tell which one ran.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -8129,10 +8129,10 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 626,
+            "line": 631,
             "mutants": 1,
             "category": "block",
-            "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints. Re-anchored 2026-10-19 (608 -> 609): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-20 (609 -> 614): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (614 -> 613): unchanged code; the global MCP registration toast above it became one line. Re-anchored 2026-10-30 (608 -> 618): unchanged code; the projects list command above it now closes the dashboard inside a webview transition (PL-80). Re-anchored 2026-10-31 (618 -> 626): unchanged code; the Sign In commands above it ask in modals now.",
+            "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints. Re-anchored 2026-10-19 (608 -> 609): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-20 (609 -> 614): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (614 -> 613): unchanged code; the global MCP registration toast above it became one line. Re-anchored 2026-10-30 (608 -> 618): unchanged code; the projects list command above it now closes the dashboard inside a webview transition (PL-80). Re-anchored 2026-10-31 (618 -> 626): unchanged code; the Sign In commands above it ask in modals now. Re-anchored 2026-11-07 (626 -> 631): unchanged code; the Datapack Library's command was registered above it.",
             "decision": "none - log-only catch body; the reveal-anyway behaviour it guards is asserted.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
@@ -10701,7 +10701,7 @@
         {
             "module": "src/features/data-installer/ui/views/DatapackCatalogView.tsx",
             "anchors": [
-                "}, [loadProjectContext]);",
+                "}, [loadProjectContext, library]);",
                 "[],",
                 "[loadDetail],",
                 "const closeDetail = useCallback((): void => setSelected(undefined), []);",
@@ -10709,7 +10709,7 @@
             ],
             "mutants": 5,
             "category": "other",
-            "reason": "Five dependency lists whose entries never change between renders. Two of them name a hook's `load`, which is a useCallback over `execute` from useVSCodeRequest and is stable for the component's lifetime \u2014 dropping it leaves the effect and the callback firing exactly as before (and if it were NOT stable the effect at line 104 would re-fire on every render, which it does not). The other three are empty and constant, and Stryker replaces them with a different constant array: React compares dependency lists element by element between renders, and two renders both produce the same one, so the memoisation is identical. Each planted individually: all 38 tests pass. The three dependency lists in this file that DO carry a changing value \u2014 refresh's includeCommunity, closeImport's commerceInstance, retryDetail's selected \u2014 are each killed by a test.",
+            "reason": "Five dependency lists whose entries never change between renders. Two of them name a hook's `load`, which is a useCallback over `execute` from useVSCodeRequest and is stable for the component's lifetime \u2014 dropping it leaves the effect and the callback firing exactly as before (and if it were NOT stable the effect at line 104 would re-fire on every render, which it does not). The other three are empty and constant, and Stryker replaces them with a different constant array: React compares dependency lists element by element between renders, and two renders both produce the same one, so the memoisation is identical. Each planted individually: all 38 tests pass. The three dependency lists in this file that DO carry a changing value \u2014 refresh's includeCommunity, closeImport's commerceInstance, retryDetail's selected \u2014 are each killed by a test. Re-anchored 2026-11-07: the first list gained `library`, a prop fixed for the panel's life (the Datapack Library or a project's Datapacks), so it too never changes between renders.",
             "decision": "none \u2014 every one of these lists is required and correct as written",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
@@ -15180,10 +15180,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 366,
+            "line": 368,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body in sendAiChatMenu is a single logger.debug call. That the catch EXISTS is tested: sidebarProvider-messages 'still answers with the context, sends no Chat menu, and reports no error' makes the engine lookup throw and asserts the context is still sent, no aiChatMenu follows and the request is answered without an error. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Stryker planted the empty body against that test: green. Re-anchored 2026-10-20 (370 -> 366): unchanged code; four unused sidebar commands above it were removed.",
+            "reason": "The catch body in sendAiChatMenu is a single logger.debug call. That the catch EXISTS is tested: sidebarProvider-messages 'still answers with the context, sends no Chat menu, and reports no error' makes the engine lookup throw and asserts the context is still sent, no aiChatMenu follows and the request is answered without an error. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Stryker planted the empty body against that test: green. Re-anchored 2026-10-20 (370 -> 366): unchanged code; four unused sidebar commands above it were removed. Re-anchored 2026-11-07 (366 -> 368): unchanged code; the Datapacks tile's command button was added above it.",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 MUT-02, 2026-10-10"

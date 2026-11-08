@@ -64,8 +64,10 @@ export interface DatapackDetailPanelProps {
      * a child of the Drawer — a dialog inside a drawer, which no other surface in
      * this extension does. `IntegrationsScreen` mounts its flow modal beside the
      * list and keeps its detail flyout view-only; this now matches.
+     *
+     * Absent in the Datapack Library, which touches no store (owner, 2026-11-07).
      */
-    onImport: (id: DatapackId) => void;
+    onImport?: (id: DatapackId) => void;
     /** Save Changes: given only for the demo's own pack when it is the SC's (`useHeldPack`). */
     onSaveChanges?: () => void;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */

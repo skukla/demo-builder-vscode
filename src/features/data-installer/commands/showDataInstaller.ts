@@ -1,10 +1,14 @@
 /**
- * Data Installer panel command.
+ * The Datapacks panel commands: one screen, opened two ways (owner, 2026-11-07).
  *
- * A standalone surface, unlike the project-scoped tabs: the datapack catalog is
- * global to the service, so this panel deliberately does NOT dispose the dashboard
- * or projects list when it opens. Browsing datapacks should not close what the user
- * was looking at.
+ * - `project` (`demoBuilder.showDataInstaller`, from a project's dashboard): the open project's
+ *   Datapacks, named in its header, with Import, Save Changes and the store's other actions.
+ * - `library` (`demoBuilder.showDatapackLibrary`, from the sidebar and the palette): the Datapack
+ *   Library, which browses and manages packs and touches no store. One screen that silently
+ *   acted on the project opened last was the finding (F65).
+ *
+ * Both are standalone surfaces: opening one does NOT dispose the dashboard or projects list.
+ * Each has its own panel, so a project's Datapacks and the library can be open side by side.
  *
  * @module features/data-installer/commands/showDataInstaller
  */
@@ -18,11 +22,15 @@ import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataIn
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
 import { affectsDatapackList } from '@/features/data-installer/services/dataInstallerConfig';
-import { DATAPACK_SETTINGS_CHANGED_MESSAGE } from '@/features/data-installer/types';
+import { onDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
+import { DATAPACK_LIST_CHANGED_MESSAGE } from '@/features/data-installer/types';
 import type { HandlerMap } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 
 const WEBVIEW_ID = 'demoBuilder.dataInstaller';
+const LIBRARY_WEBVIEW_ID = 'demoBuilder.datapackLibrary';
 
 /**
  * Registered as its own map because it belongs in NEITHER of the others: it is
@@ -52,16 +60,26 @@ const progressWindowHandlers: HandlerMap = {
 export class ShowDataInstallerCommand extends StandalonePanelCommand<DataInstallerInitialData> {
     protected readonly bundleName = 'dataInstaller';
 
+    /** @param mode - `library` opens the Datapack Library; `project`, the open project's Datapacks */
+    constructor(
+        context: vscode.ExtensionContext,
+        stateManager: StateManager,
+        logger: Logger,
+        private readonly mode: DataInstallerInitialData['mode'] = 'project',
+    ) {
+        super(context, stateManager, logger);
+    }
+
     protected getWebviewId(): string {
-        return WEBVIEW_ID;
+        return this.mode === 'library' ? LIBRARY_WEBVIEW_ID : WEBVIEW_ID;
     }
 
     protected getWebviewTitle(): string {
-        return 'Datapacks';
+        return this.mode === 'library' ? 'Datapack Library' : 'Datapacks';
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading Datapacks';
+        return this.mode === 'library' ? 'Loading Datapack Library' : 'Loading Datapacks';
     }
 
     /**
@@ -73,14 +91,18 @@ export class ShowDataInstallerCommand extends StandalonePanelCommand<DataInstall
         return [dataInstallerHandlers, importHandlers, settingsHandlers, progressWindowHandlers];
     }
 
-    /** The list follows the settings it depends on, as the wizard and Configure follow theirs. */
+    /**
+     * The list follows the settings it depends on, as the wizard and Configure follow theirs, and
+     * the packs themselves: a change made in the other Datapacks screen, or by an agent (F66).
+     */
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
         super.initializeMessageHandlers(comm);
         this.disposables.add(
             vscode.workspace.onDidChangeConfiguration((event) => {
-                if (affectsDatapackList(event)) void this.sendMessage(DATAPACK_SETTINGS_CHANGED_MESSAGE);
+                if (affectsDatapackList(event)) void this.sendMessage(DATAPACK_LIST_CHANGED_MESSAGE);
             }),
         );
+        this.disposables.add(onDatapacksChanged(() => void this.sendMessage(DATAPACK_LIST_CHANGED_MESSAGE)));
     }
 
     /**
@@ -89,8 +111,9 @@ export class ShowDataInstallerCommand extends StandalonePanelCommand<DataInstall
      * only so the import flow can name a default target without a second round trip.
      */
     protected async getInitialData(): Promise<DataInstallerInitialData> {
-        const project = await this.stateManager.getCurrentProject();
-        return { theme: this.themeMode(), projectName: this.projectNameOf(project) };
+        // The library reads no project: nothing in it acts on one.
+        const project = this.mode === 'library' ? undefined : await this.stateManager.getCurrentProject();
+        return { theme: this.themeMode(), projectName: this.projectNameOf(project), mode: this.mode };
     }
 
     /** Dispose any active Data Installer panel (used by sibling surfaces on swap). */
@@ -98,3 +121,4 @@ export class ShowDataInstallerCommand extends StandalonePanelCommand<DataInstall
         BaseWebviewCommand.disposePanel(WEBVIEW_ID);
     }
 }
+

@@ -28,6 +28,8 @@ export interface SidebarProps {
     onCreateProject: () => void;
     /** Callback for opening tools */
     onOpenTools?: () => void;
+    /** Callback for opening the Datapack Library */
+    onOpenDatapacks?: () => void;
     /** Callback for opening help */
     onOpenHelp?: () => void;
     /** Callback for opening settings */
@@ -51,6 +53,7 @@ export function Sidebar({
     onNavigate: _onNavigate,
     onCreateProject: _onCreateProject,
     onOpenTools,
+    onOpenDatapacks,
     onOpenHelp,
     onOpenSettings,
     onOpenLogs,
@@ -93,6 +96,7 @@ export function Sidebar({
             )}
             <UtilityBar
                 onOpenTools={onOpenTools}
+                onOpenDatapacks={onOpenDatapacks}
                 onOpenHelp={onOpenHelp}
                 onOpenSettings={onOpenSettings}
                 onOpenLogs={onOpenLogs}

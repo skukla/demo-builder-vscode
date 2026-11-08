@@ -14,6 +14,7 @@
  * @module features/data-installer/handlers/importJobWatch
  */
 
+import { announceDatapacksChanged } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { watchImportJob } from '../services/importJobRunner';
 import type { ImportRequest } from '../services/importRequest';
@@ -150,6 +151,8 @@ async function watchAndRecord(
         if (resetOf !== undefined && result.outcome === 'success' && !result.leftInStore) {
             await clearDatapackOnProject(context, resetOf, { name: record.datapackName, version: record.version });
         }
+        // What the store holds, and which pack the project names, may have moved: every open screen reads again.
+        announceDatapacksChanged();
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(

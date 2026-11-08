@@ -99,7 +99,8 @@ describe('ActionGrid', () => {
                 'Edit storefront pages',
                 'The Commerce Admin',
                 'Connected systems',
-                'Sample data',
+                // Datapacks names the demo's pack once the extension answers (DataInstallerTile.test).
+                undefined,
             ]);
         });
 

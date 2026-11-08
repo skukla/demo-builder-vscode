@@ -21,6 +21,7 @@
  */
 
 import * as vscode from 'vscode';
+import { handleGetDatapackLine } from './datapackLineHandler';
 import {
     handleGetDemoPackagePreview,
     handleSaveDemoPackage,
@@ -359,6 +360,7 @@ export const dashboardHandlers = defineHandlers({
     openIntegrations: handleOpenIntegrations,
     setViewModeOverride: handleSetViewModeOverride,
     openDataInstaller: handleOpenDataInstaller,
+    'get-datapack-line': handleGetDatapackLine,
     openSiteAccess: handleOpenSiteAccess,
     showProjectDashboard: handleShowProjectDashboard,
 

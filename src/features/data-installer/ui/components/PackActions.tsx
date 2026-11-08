@@ -17,7 +17,9 @@
  * button to spin. What each one says afterwards (where the file went, why it could not) shows under
  * the actions.
  *
- * Every pack offers Import: Demo Builder installs a library pack and a Data Installer pack alike.
+ * Every pack offers Import in a project's Datapacks: Demo Builder installs a library pack and a
+ * Data Installer pack alike. The Datapack Library touches no store (owner, 2026-11-07), so there
+ * the menu's rows are the buttons, Save as File and Share, and More holds only what removes.
  * Copy to the Data Installer, which puts a library pack in the catalog other teams share, is not
  * shown (`COPY_TO_INSTALLER_SHOWN`): the Data Installer does not let our accounts write to it yet
  * (owner, 2026-11-06), so it would fail every time. The copy itself is built and tested, and its
@@ -48,7 +50,8 @@ const COPY_TO_INSTALLER_SHOWN = false;
 
 export interface PackActionsProps {
     detail: DatapackDetail;
-    onImport: (id: DatapackId) => void;
+    /** Import: absent in the Datapack Library. */
+    onImport?: (id: DatapackId) => void;
     /** Save Changes: given only for the demo's own pack when it is the SC's. */
     onSaveChanges?: () => void;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
@@ -187,20 +190,24 @@ export function PackActions({
             ) : null}
             {working ? null : (
                 <>
-                    <div className="db-drawer-actions">
-                        {onSaveChanges ? (
-                            <Button variant="accent" onPress={onSaveChanges}>
-                                Save Changes
+                    {onImport ? (
+                        <div className="db-drawer-actions">
+                            {onSaveChanges ? (
+                                <Button variant="accent" onPress={onSaveChanges}>
+                                    Save Changes
+                                </Button>
+                            ) : null}
+                            <Button variant={onSaveChanges ? 'secondary' : 'accent'} onPress={() => onImport(detail.id)}>
+                                Import
                             </Button>
-                        ) : null}
-                        <Button variant={onSaveChanges ? 'secondary' : 'accent'} onPress={() => onImport(detail.id)}>
-                            Import
-                        </Button>
-                        <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
-                            <Section key="pack">{packRows(detail).map(renderRow)}</Section>
-                            {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
-                        </CardActionsMenu>
-                    </div>
+                            <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
+                                <Section key="pack">{packRows(detail).map(renderRow)}</Section>
+                                {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
+                            </CardActionsMenu>
+                        </div>
+                    ) : (
+                        <LibraryActions detail={detail} removing={removing} onAction={onAction} renderRow={renderRow} />
+                    )}
                     <PackActionNotes>
                         {saveFile.note}
                         {sharing.note}
@@ -216,6 +223,38 @@ export function PackActions({
                 onClose={doneAsking}
             />
         </>
+    );
+}
+
+/** The Datapack Library's actions: the menu's upper rows as buttons, and More only for what removes. */
+function LibraryActions({
+    detail,
+    removing,
+    onAction,
+    renderRow,
+}: {
+    detail: DatapackDetail;
+    removing: Row[];
+    onAction: (key: React.Key) => void;
+    renderRow: (row: Row) => React.JSX.Element;
+}): React.JSX.Element {
+    const sharable = detail.store === 'library' && detail.mine === true;
+    return (
+        <div className="db-drawer-actions">
+            <Button variant="secondary" onPress={() => onAction('save-file')}>
+                Save as File
+            </Button>
+            {sharable ? (
+                <Button variant="secondary" onPress={() => onAction('share')}>
+                    {detail.shared ? 'Stop Sharing' : 'Share'}
+                </Button>
+            ) : null}
+            {removing.length > 0 ? (
+                <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
+                    <Section key="remove">{removing.map(renderRow)}</Section>
+                </CardActionsMenu>
+            ) : null}
+        </div>
     );
 }
 

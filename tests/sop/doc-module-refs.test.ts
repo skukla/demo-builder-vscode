@@ -402,7 +402,7 @@ describe('the counts a directory guide states match its own source', () => {
             `${['zero', 'one', 'two', 'three', 'four'][aiZoneTiles()]} in \`AiZone\``
         );
         expect(doc).toContain(
-            `${['zero', 'one', 'two', 'three', 'four'][utilityTiles()]} in \`UtilityBar\``
+            `${['zero', 'one', 'two', 'three', 'four', 'five', 'six'][utilityTiles()]} in \`UtilityBar\``
         );
     });
 

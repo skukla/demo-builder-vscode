@@ -8,7 +8,8 @@
 
 import * as vscode from 'vscode';
 import { affectsDatapackList } from '@/features/data-installer/services/dataInstallerConfig';
-import { DATAPACK_SETTINGS_CHANGED_MESSAGE } from '@/features/data-installer/types';
+import { onDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
+import { DATAPACK_LIST_CHANGED_MESSAGE } from '@/features/data-installer/types';
 import { ADDED_DEMOS_SETTING, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import type {
@@ -24,7 +25,9 @@ import type {
  * @returns the subscription
  */
 export function watchWizardSettings(send: (type: string, payload?: unknown) => Promise<void>): vscode.Disposable {
-    return vscode.workspace.onDidChangeConfiguration((e) => {
+    // The Datapacks step's list also follows the packs themselves: a change in a Datapacks screen or by an agent.
+    const packs = onDatapacksChanged(() => void send(DATAPACK_LIST_CHANGED_MESSAGE));
+    const settings = vscode.workspace.onDidChangeConfiguration((e) => {
         const config = vscode.workspace.getConfiguration('demoBuilder');
         if (e.affectsConfiguration('demoBuilder.blockLibraries.custom')) {
             const updated = parseCustomBlockLibrarySettings(config.get<string[]>('blockLibraries.custom', []));
@@ -39,6 +42,12 @@ export function watchWizardSettings(send: (type: string, payload?: unknown) => P
             const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
             void send('blockLibraryDefaultsUpdated', { blockLibraryDefaults } satisfies BlockLibraryDefaultsUpdatedPayload);
         }
-        if (affectsDatapackList(e)) void send(DATAPACK_SETTINGS_CHANGED_MESSAGE);
+        if (affectsDatapackList(e)) void send(DATAPACK_LIST_CHANGED_MESSAGE);
     });
+    return {
+        dispose: () => {
+            settings.dispose();
+            packs.dispose();
+        },
+    };
 }

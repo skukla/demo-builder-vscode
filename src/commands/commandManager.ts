@@ -523,6 +523,11 @@ export class CommandManager {
         this.registerCommand('demoBuilder.showDataInstaller', async () => {
             await dataInstaller.execute();
         });
+        // The Datapack Library (sidebar, palette): the same screen, no project, no store actions.
+        const datapackLibrary = new ShowDataInstallerCommand(this.context, this.stateManager, this.logger, 'library');
+        this.registerCommand('demoBuilder.showDatapackLibrary', async () => {
+            await datapackLibrary.execute();
+        });
 
         // One-shot storefront name migration (heals pre-`164fd251` storefronts
         // without requiring a destructive reset).

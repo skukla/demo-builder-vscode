@@ -1,22 +1,19 @@
 /**
- * The dashboard's Data Installer tile.
+ * The dashboard's Datapacks card.
  *
- * Sits in the Build zone beside Integrations — both route to a dedicated
- * surface, which is what that zone holds.
+ * Its line names the demo's pack, read from the extension (`get-datapack-line`), and read again when
+ * the dashboard comes back into view (owner, 2026-11-07): the sidebar's Datapacks tile opens the
+ * Datapack Library, and this line is what tells the card apart from it.
  *
- * The one thing worth pinning is what it does NOT do. Integrations replaces the
- * tab: it disposes the dashboard panel and opens its surface in place, because
- * that surface is scoped to the project you came from. The datapack catalog is
- * global to the SERVICE, not to a project — the same 25 packs whatever is open —
- * so browsing it must not close what you were looking at. The command's own
- * registration says so, and this tile has to agree with it.
- *
- * Strict TDD: written BEFORE the tile exists.
+ * The other thing worth pinning is what it does NOT do. Integrations replaces the tab: it disposes
+ * the dashboard panel and opens its surface in place. Datapacks opens beside the dashboard, so it
+ * must not close what you were looking at. The command's own registration says so, and this tile
+ * has to agree with it.
  */
 
 import '../../../../helpers/webviewClientMock';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 jest.mock('@adobe/react-spectrum', () => {
@@ -46,19 +43,28 @@ jest.mock('@adobe/react-spectrum', () => {
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DataInstallerTile } from '@/features/dashboard/ui/components/DataInstallerTile';
 
-const posted = webviewClient as unknown as { postMessage: jest.Mock };
+const posted = webviewClient as unknown as { postMessage: jest.Mock; request: jest.Mock };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+    jest.clearAllMocks();
+    posted.request.mockResolvedValue({ success: true, data: { line: 'Luma, eds-compatible' } });
+});
+
+/** Render, and let the first read of the line land. */
+async function renderTile(): Promise<void> {
+    render(<DataInstallerTile />);
+    await act(async () => undefined);
+}
 
 describe('DataInstallerTile', () => {
-    it('names the surface it opens', () => {
-        render(<DataInstallerTile />);
+    it('names the surface it opens', async () => {
+        await renderTile();
 
         expect(screen.getByText('Datapacks')).toBeInTheDocument();
     });
 
-    it('opens the Data Installer when pressed', () => {
-        render(<DataInstallerTile />);
+    it('opens the Data Installer when pressed', async () => {
+        await renderTile();
 
         fireEvent.click(screen.getByText('Datapacks').closest('button')!);
 
@@ -70,8 +76,8 @@ describe('DataInstallerTile', () => {
      * disposes the dashboard on the way; this one must not, so it cannot borrow
      * that message.
      */
-    it('does not send the integrations message', () => {
-        render(<DataInstallerTile />);
+    it('does not send the integrations message', async () => {
+        await renderTile();
 
         fireEvent.click(screen.getByText('Datapacks').closest('button')!);
 
@@ -79,10 +85,29 @@ describe('DataInstallerTile', () => {
         expect(posted.postMessage).toHaveBeenCalledTimes(1);
     });
 
-    it('says where it leads, and not which pack: that is on the Datapacks screen (2026-11-03)', () => {
-        render(<DataInstallerTile />);
+    it('names the demo\'s pack, as the extension reads it', async () => {
+        await renderTile();
 
-        expect(screen.getByText('Sample data')).toBeInTheDocument();
-        expect(screen.queryByText(/This demo\u2019s pack/)).not.toBeInTheDocument();
+        expect(posted.request).toHaveBeenCalledWith('get-datapack-line', {});
+        expect(screen.getByText('Luma, eds-compatible')).toBeInTheDocument();
+    });
+
+    it('reads the line again when the dashboard comes back into view: an import changes it', async () => {
+        await renderTile();
+        posted.request.mockResolvedValue({ success: true, data: { line: 'Venia, eds-compatible' } });
+
+        await act(async () => {
+            document.dispatchEvent(new Event('visibilitychange'));
+        });
+
+        expect(screen.getByText('Venia, eds-compatible')).toBeInTheDocument();
+    });
+
+    it('shows no line when the extension cannot answer', async () => {
+        posted.request.mockResolvedValue({ success: false, error: 'no' });
+        await renderTile();
+
+        expect(screen.queryByText('Luma, eds-compatible')).not.toBeInTheDocument();
+        expect(screen.getByText('Datapacks')).toBeInTheDocument();
     });
 });

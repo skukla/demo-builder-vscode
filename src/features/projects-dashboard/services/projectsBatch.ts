@@ -27,7 +27,7 @@ import { runProjectDelete } from './projectDeletionService';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { stageLine } from '@/core/utils/stageLine';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
-import { openLibraryWriter } from '@/features/data-installer/handlers/libraryWriter';
+import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
@@ -92,24 +92,6 @@ function summaryOf(project: Project): { repository?: string; summary?: string } 
     return { ...(repository ? { repository } : {}), ...(summary ? { summary } : {}) };
 }
 
-/**
- * A library pack's display name, as the Datapacks screen shows it (F17: the confirm showed its id,
- * "kukla-justrite-a80dca"). Undefined for a pack outside the library, or a library that does not
- * answer: the caller falls back to the id.
- */
-async function displayNameOf(context: HandlerContext, held: NonNullable<Project['datapack']>): Promise<string | undefined> {
-    if (held.store !== 'library') return undefined;
-    try {
-        const library = await openLibraryWriter(context);
-        if (!library.ok) return undefined;
-        const page = await library.client.findDatapacks({ datapackName: held.name });
-        return page.items.find((item) => item.id.name === held.name)?.displayName;
-    } catch (error) {
-        context.debugLogger.debug(`[ProjectsBatch] Could not read ${held.name}'s display name: ${error instanceof Error ? error.message : String(error)}`);
-        return undefined;
-    }
-}
-
 /** A project's IMS organization as the SC knows it: its name, its id when it has none. */
 function orgOf(project: Project): { org?: string } {
     const org = project.adobe?.organizationName ?? project.adobe?.organization;
@@ -123,7 +105,7 @@ export async function prepareResetBatch(context: HandlerContext, paths: readonly
             const row: BatchResetRow = { path: project.path, name: getProjectDisplayName(project), ...summaryOf(project), ...orgOf(project) };
             if (!project.datapack || commerceBackendOf(project) === undefined) return row;
             const changes = await readRemovalChangesOf(context, project);
-            const name = changes?.packName ?? (await displayNameOf(context, project.datapack)) ?? project.datapack.name;
+            const name = changes?.packName ?? (await libraryDisplayName(context, project.datapack)) ?? project.datapack.name;
             row.datapack = { name };
             // Unread is not "no changes": the pack stays rather than lose what nobody could see.
             if (!changes) row.datapack.changes = 'unchecked';

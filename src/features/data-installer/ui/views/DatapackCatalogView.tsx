@@ -38,7 +38,7 @@
  * @module features/data-installer/ui/views/DatapackCatalogView
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack, PackDetailLayer, Page } from '../../types';
 import { CatalogCountRow } from '../components/CatalogCountRow';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
@@ -96,7 +96,12 @@ function nameOnCard(page: CatalogPage | null, id: DatapackId | undefined): strin
     return (rows.find((row) => same(row) && row.id.version === id.version) ?? rows.find(same))?.displayName;
 }
 
-export function DatapackCatalogView(): React.JSX.Element {
+/**
+ * @param library - the Datapack Library (owner, 2026-11-07): no project is read, no card wears the
+ *   project's check, and nothing that acts on a store is offered (Import, Save Changes, Create
+ *   Datapack, Clear Demo Data).
+ */
+export function DatapackCatalogView({ library = false }: { library?: boolean } = {}): React.JSX.Element {
     const [query, setQuery] = useState('');
     const [versions, setVersions] = useState<Record<string, string>>({});
     const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
@@ -105,7 +110,9 @@ export function DatapackCatalogView(): React.JSX.Element {
     const [importing, setImporting] = useState<DatapackId | undefined>(undefined);
 
     // The one list: Demo Builder's datapack store, then the Data Installer's if it answers.
-    const { refresh, loading, value, failure, settled } = useDatapackCatalog();
+    // Set below, once the callbacks it needs exist: what a pack change also reads again (F66).
+    const onPacksChanged = useRef<(() => void) | undefined>(undefined);
+    const { refresh, loading, value, failure, settled } = useDatapackCatalog(onPacksChanged);
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
     // What the open project was CREATED to hold, recorded by the wizard's Sample
     // Data area. Optional in every direction: no project, or a project that
@@ -114,8 +121,8 @@ export function DatapackCatalogView(): React.JSX.Element {
 
     const loadProjectContext = projectContext.load;
     useEffect(() => {
-        loadProjectContext({});
-    }, [loadProjectContext]);
+        if (!library) loadProjectContext({});
+    }, [loadProjectContext, library]);
 
     /**
      * What is recorded as installed on this project's instance: Demo Builder's
@@ -262,6 +269,17 @@ export function DatapackCatalogView(): React.JSX.Element {
         }
     }, [loadDetail, selected, selectedStore]);
 
+    // Another Datapacks screen, or an agent, changed the packs (F66): the list reads itself again
+    // (`useDatapackCatalog`), then this reads which pack the project holds, and the open pack's details.
+    const packsChanged = useCallback((): void => {
+        if (!library) {
+            loadProjectContext({});
+            if (commerceInstance) loadInstalled({ commerceInstance });
+        }
+        retryDetail();
+    }, [library, loadProjectContext, loadInstalled, commerceInstance, retryDetail]);
+    onPacksChanged.current = packsChanged;
+
     // A rename shows on the card and in the flyout: both are read again once it lands.
     const renamePack = useCallback(
         async (id: DatapackId, name: string): Promise<string | null> => {
@@ -334,7 +352,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                                 onShow={setShow}
                                 installerAnswered={installerAnswered}
                                 onCatalogChanged={refresh}
-                                onCreate={createDatapack}
+                                onCreate={library ? undefined : createDatapack}
                             />
                         }
                     />
@@ -364,8 +382,8 @@ export function DatapackCatalogView(): React.JSX.Element {
                 failure={detail.failure}
                 onClose={closeDetail}
                 onRetry={retryDetail}
-                onImport={openImport}
-                onSaveChanges={heldPack.saveChanges}
+                onImport={library ? undefined : openImport}
+                onSaveChanges={library ? undefined : heldPack.saveChanges}
                 onRemoved={removedFromLibrary}
                 installerOn={value?.installerOn === true}
                 setupStep={heldPack.setupStepLine}

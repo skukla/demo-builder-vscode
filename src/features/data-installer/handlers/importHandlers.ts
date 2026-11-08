@@ -23,6 +23,7 @@
  */
 
 import { buildDatapackEngine, installedByDemoBuilder } from '../services/buildDatapackEngine';
+import { announcingChanges } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
@@ -89,7 +90,27 @@ async function afterWait(context: HandlerContext, response: HandlerResponse, wai
     return { ...response, data: { ...(response.data as object), job } };
 }
 
-export const importHandlers = defineHandlers({
+/**
+ * The actions that change the packs or which pack a project holds: each announces it once it
+ * succeeds, so every open Datapacks screen reads its list again (F66, `datapackChanges.ts`). Wrapped
+ * here, where the map is built, so the screens and the agent tools are one path. An import or removal
+ * job announces again when it ends (`importJobWatch`).
+ */
+const CHANGES_PACKS = [
+    'delete-library-datapack',
+    'rename-library-datapack',
+    'share-library-datapack',
+    'mark-team-datapack',
+    'copy-library-datapack-to-installer',
+    'load-datapack-zip',
+    'build-datapack-from-export',
+    'save-store-changes-to-pack',
+    'start-datapack-export',
+    'start-datapack-import',
+    'reset-datapack',
+] as const;
+
+export const importHandlers = announcingChanges(defineHandlers({
     // Closing a running import hands it to a notification that keeps narrating
     // (PL-59 R8); this is the channel that says so.
     backgroundOperation: handleBackgroundOperation,
@@ -243,7 +264,7 @@ export const importHandlers = defineHandlers({
         const record = await waitForJob(read, waitMsOf(payload?.waitSeconds));
         return { success: true, data: record ? skippedPage(record, payload?.skippedFrom) : record };
     },
-});
+}), CHANGES_PACKS);
 
 /**
  * The SC's changes, before anything is removed (step 05), once the request itself is known to be

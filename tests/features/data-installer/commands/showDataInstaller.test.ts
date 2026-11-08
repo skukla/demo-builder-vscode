@@ -34,6 +34,7 @@ import { WebviewCommunicationManager } from '@/core/communication/webviewCommuni
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { announceDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 import * as vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -77,11 +78,12 @@ type Internals = {
     communicationManager: WebviewCommunicationManager | undefined;
 };
 
-function makeCommand(): ShowDataInstallerCommand & Internals {
+function makeCommand(mode?: 'library' | 'project'): ShowDataInstallerCommand & Internals {
     return new ShowDataInstallerCommand(
         makeExtensionContext(),
         makeStateManager() as unknown as StateManager,
-        logger
+        logger,
+        mode
     ) as ShowDataInstallerCommand & Internals;
 }
 
@@ -121,7 +123,7 @@ describe('ShowDataInstallerCommand', () => {
 
             fire('demoBuilder.dataInstaller.apiBaseUrl');
 
-            expect(command.sendMessage).toHaveBeenCalledWith('datapack-settings-changed');
+            expect(command.sendMessage).toHaveBeenCalledWith('datapack-list-changed');
         });
 
         it('says nothing about a setting the list does not read', () => {
@@ -330,6 +332,47 @@ describe('ShowDataInstallerCommand', () => {
 
             expect(initComm).not.toHaveBeenCalled();
         });
+    });
+
+    // Owner, 2026-11-07 (F65): the same screen, opened as the Datapack Library from the sidebar and palette.
+    describe('as the Datapack Library', () => {
+        it('has a panel of its own, titled the library, so a project\'s Datapacks can stay open beside it', () => {
+            const library = makeCommand('library');
+
+            expect(library.getWebviewId()).toBe('demoBuilder.datapackLibrary');
+            expect(library.getWebviewTitle()).toBe('Datapack Library');
+            expect(library.getLoadingMessage()).toBe('Loading Datapack Library');
+        });
+
+        it('says it is the library, and names no project even while one is open', async () => {
+            const stateManager = makeStateManager();
+            (stateManager.getCurrentProject as jest.Mock).mockResolvedValue({ name: 'scratch-1028', path: '/p' });
+            const library = new ShowDataInstallerCommand(makeExtensionContext(), stateManager as unknown as StateManager, logger, 'library') as ShowDataInstallerCommand & Internals;
+
+            const data = await library.getInitialData();
+
+            expect(data).toMatchObject({ mode: 'library', projectName: '' });
+            expect(stateManager.getCurrentProject).not.toHaveBeenCalled();
+        });
+
+        it('CONTROL: a project\'s Datapacks says so', async () => {
+            expect((await makeCommand().getInitialData()).mode).toBe('project');
+        });
+    });
+
+    // F66: a change in the other Datapacks screen, or by an agent.
+    it('tells the screen when the packs change, until the panel closes', () => {
+        const command = makeCommand();
+        command.sendMessage = jest.fn().mockResolvedValue(undefined);
+        command.initializeMessageHandlers({ onStreaming: jest.fn() });
+
+        announceDatapacksChanged();
+        expect(command.sendMessage).toHaveBeenCalledWith('datapack-list-changed');
+
+        (command as unknown as { disposables: { dispose(): void } }).disposables.dispose();
+        (command.sendMessage as jest.Mock).mockClear();
+        announceDatapacksChanged();
+        expect(command.sendMessage).not.toHaveBeenCalled();
     });
 
     describe('initial data', () => {

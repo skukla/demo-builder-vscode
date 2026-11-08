@@ -94,6 +94,11 @@ function SidebarApp(): React.ReactElement {
         sendMessage('openTools');
     }, []);
 
+    // The Datapack Library: every pack, no project
+    const handleOpenDatapacks = useCallback(() => {
+        sendMessage('openDatapackLibrary');
+    }, []);
+
     // Handle open help
     const handleOpenHelp = useCallback(() => {
         sendMessage('openHelp');
@@ -156,6 +161,7 @@ function SidebarApp(): React.ReactElement {
                 onNavigate={handleNavigate}
                 onCreateProject={handleCreateProject}
                 onOpenTools={handleOpenTools}
+                onOpenDatapacks={handleOpenDatapacks}
                 onOpenHelp={handleOpenHelp}
                 onOpenSettings={handleOpenSettings}
                 onOpenLogs={handleOpenLogs}

@@ -143,6 +143,36 @@ describe('a library pack', () => {
     });
 });
 
+// Owner, 2026-11-07: the Datapack Library touches no store, so it is given no Import.
+describe('in the Datapack Library', () => {
+    it('offers no Import or Save Changes; Save as File and Share are the buttons, More only removes', async () => {
+        renderActions({ detail: OWN, onImport: undefined });
+
+        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
+        expect(menuLabels()).toEqual(['Remove Datapack']);
+        await press(screen.getByRole('button', { name: 'Save as File' }));
+        expect(mockRequest).toHaveBeenCalledWith('save-datapack-zip', { source: 'library', datapackName: 'bodea', version: 'main' }, undefined);
+    });
+
+    it("offers a colleague's pack only Save as File, with no More", () => {
+        renderActions({ detail: LIBRARY, onImport: undefined });
+
+        expect(screen.getByRole('button', { name: 'Save as File' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+    });
+
+    it('asks before Share, as the menu row does', async () => {
+        renderActions({ detail: OWN, onImport: undefined });
+
+        await press(screen.getByRole('button', { name: 'Share' }));
+
+        expect(screen.getByText(SHARE_CONSENT)).toBeInTheDocument();
+    });
+});
+
 describe('Share and Stop sharing ask in a dialog', () => {
     it("Share asks with the owner's sentence, and shares every version only when the dialog says so", async () => {
         const onSharingChanged = jest.fn();

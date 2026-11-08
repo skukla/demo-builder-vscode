@@ -311,7 +311,9 @@ describe('dashboardHandlers', () => {
             // getStorefrontReport + takeStorefrontReportRequest + checkForUpdates removed
             // (97 → 94, EDS-64, 2026-10-23): the report window is gone; Diagnostics and the
             // get_storefront_report tool carry what it said.
-            expect(types).toHaveLength(94);
+            // get-datapack-line (94 → 95, 2026-11-07): the Datapacks card names the demo's pack,
+            // telling it apart from the sidebar's Datapack Library.
+            expect(types).toHaveLength(95);
         });
 
         it('should have handlers as functions', () => {

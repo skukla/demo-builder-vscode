@@ -27,6 +27,18 @@ describe('UtilityBar', () => {
         expect(screen.getByRole('button', { name: /view logs/i })).toBeInTheDocument();
     });
 
+    // Owner, 2026-11-07: the Datapack Library, every pack and no project, after Tools.
+    it('offers Datapacks after Tools, opening the Datapack Library', () => {
+        const onOpenDatapacks = jest.fn();
+        renderWithProvider(<UtilityBar onOpenTools={jest.fn()} onOpenDatapacks={onOpenDatapacks} onOpenHelp={jest.fn()} />);
+
+        const names = screen.getAllByRole('button').map((button) => button.getAttribute('aria-label'));
+        expect(names).toEqual(['Tools', 'Datapack Library', 'Get Help']);
+        expect(screen.getByText('Datapacks')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Datapack Library' }));
+        expect(onOpenDatapacks).toHaveBeenCalledTimes(1);
+    });
+
     it('omits the Logs button when onOpenLogs is absent', () => {
         renderWithProvider(<UtilityBar onOpenTools={jest.fn()} />);
 

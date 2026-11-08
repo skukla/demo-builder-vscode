@@ -11,6 +11,7 @@
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 /** The library's reads and writes, or why it cannot be opened. */
@@ -34,4 +35,25 @@ export async function openLibraryWriter(context: HandlerContext): Promise<Opened
         inParts: true,
     });
     return { ok: true, client: access.client, writer };
+}
+
+/**
+ * A library pack's display name, as the Datapacks screen shows it (F17: the reset confirm showed its
+ * id, "kukla-justrite-a80dca"). Undefined for a pack outside the library, or a library that does not
+ * answer: the caller falls back. Read by the Reset Selected confirm and the dashboard's Datapacks
+ * card (owner, 2026-11-07).
+ *
+ * @param context - a context with no `panel` reads without asking the SC to sign in
+ */
+export async function libraryDisplayName(context: HandlerContext, held: NonNullable<Project['datapack']>): Promise<string | undefined> {
+    if (held.store !== 'library') return undefined;
+    try {
+        const library = await openLibraryWriter(context);
+        if (!library.ok) return undefined;
+        const page = await library.client.findDatapacks({ datapackName: held.name });
+        return page.items.find((item) => item.id.name === held.name)?.displayName;
+    } catch (error) {
+        context.debugLogger.debug(`[Data Installer] Could not read ${held.name}'s display name: ${error instanceof Error ? error.message : String(error)}`);
+        return undefined;
+    }
 }
