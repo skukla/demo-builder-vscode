@@ -12,9 +12,13 @@
  *
  * Where it says it follows the progress (owner, 2026-10-23): with a modal on screen
  * the sign-in is a step in that modal, not a notification on top of it; with none,
- * it is a notification. Both offer the sign-in link, because on 2026-10-23 no browser
- * opened and there was nothing to click, and both have a Cancel that stops the
- * sign-in (`signInSession`).
+ * it is a notification. Both have a Cancel that stops the sign-in (`signInSession`).
+ *
+ * Only the modal's step offers the sign-in link (on 2026-10-23 no browser opened and
+ * there was nothing to click), because the modal takes its step down when the sign-in
+ * ends. The notification offered it as a second notice, which VS Code gives no way to
+ * close from code, so it outlived every sign-in that worked; a sign-in should end as it
+ * does everywhere else, on the status bar's check (owner, 2026-11-07).
  *
  * @module core/auth/browserSignInNotice
  */
@@ -38,7 +42,6 @@ const IN_MODAL = {
 /** The same step before the sign-in page is known: there is no link to offer yet. */
 const IN_MODAL_NO_LINK = { title: 'Finish Signing In', message: 'Sign in to Adobe in your browser.' };
 const OPEN_PAGE = 'Open Sign-In Page';
-const NO_WINDOW = 'No browser window opened for the Adobe sign-in? Open the sign-in page here.';
 
 /**
  * Run a browser-opening auth call where the SC can see it, with its link and a Cancel.
@@ -59,28 +62,10 @@ export function withBrowserSignInNotice<T>(
             { location: vscode.ProgressLocation.Notification, title, cancellable: true },
             (_progress, token) => {
                 token.onCancellationRequested(cancelSignIn);
-                const work = run();
-                void offerLinkBeside(work);
-                return work;
+                return run();
             },
         ),
     );
-}
-
-/**
- * The link, as a button beside the notification: its message line is a stage name,
- * cut off past 25 characters, so a link there could not be read. Offered only while
- * the sign-in is still waiting.
- */
-async function offerLinkBeside(work: Promise<unknown>): Promise<void> {
-    const ended = work.then(
-        () => undefined,
-        () => undefined,
-    );
-    const link = await Promise.race([signInLink(), ended]);
-    if (!link) return;
-    const choice = await vscode.window.showInformationMessage(NO_WINDOW, OPEN_PAGE);
-    if (choice === OPEN_PAGE) await vscode.env.openExternal(vscode.Uri.parse(link));
 }
 
 /**

@@ -189,7 +189,8 @@ describe('with a modal on screen, before the sign-in page is known', () => {
 describe('with no modal', () => {
     beforeEach(() => mockModal.mockReturnValue(false));
 
-    it('is a cancellable notification, with the sign-in link offered beside it', async () => {
+    // Owner, 2026-11-07: a second notice with the link outlived every sign-in that worked.
+    it('is a cancellable notification, and nothing more', async () => {
         let cancel: () => void = () => {};
         (vscode.window.withProgress as jest.Mock).mockImplementationOnce(async (_options, task) =>
             task(
@@ -197,7 +198,6 @@ describe('with no modal', () => {
                 { isCancellationRequested: false, onCancellationRequested: (fn: () => void) => (cancel = fn) },
             ),
         );
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('Open Sign-In Page');
         const signIn = signInThatWaits();
 
         const result = withBrowserSignInNotice(signIn.run);
@@ -207,11 +207,8 @@ describe('with no modal', () => {
             expect.objectContaining({ location: vscode.ProgressLocation.Notification, cancellable: true }),
             expect.any(Function),
         );
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-            expect.stringMatching(/browser/),
-            'Open Sign-In Page',
-        );
-        expect(vscode.env.openExternal).toHaveBeenCalledWith(expect.objectContaining({ path: LINK }));
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        expect(vscode.env.openExternal).not.toHaveBeenCalled();
         cancel();
         await expect(result).resolves.toBe(false);
         expect(signIn.session().signal.aborted).toBe(true);
