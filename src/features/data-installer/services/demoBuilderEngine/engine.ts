@@ -19,7 +19,7 @@
  */
 
 import * as crypto from 'crypto';
-import type { DataTypeStatus, ImportStart, InstallCheck, JobStatusSnapshot, KeptRootStep, ValidationResult } from '../../types';
+import { type DataTypeStatus, FINISHING_STOP, type ImportStart, type InstallCheck, type JobStatusSnapshot, type KeptRootStep, type ValidationResult } from '../../types';
 import { dataTypeLabel } from '../../ui/dataTypeLabel';
 import type { DatapackEngine } from '../datapackEngine';
 import type { CredentialCheck, ImportRequest } from '../importRequest';
@@ -116,6 +116,8 @@ interface Job {
     retryable?: boolean;
     /** What the job is doing while no one kind is: reading the store first, the check at the end. */
     phase?: string;
+    /** Every kind's rows are in: a stop from here is the finishing work's, not the last kind's. */
+    finishing?: boolean;
     /** The note's lines the SC needs to read; the rest are for the record and agents. */
     scLines?: string[];
     /** When the install wrote products: how long until storefront search shows them. */
@@ -140,15 +142,19 @@ function endKind(job: Job, kind: string | undefined): void {
     stopClock(job, kind);
 }
 
-/** Mark every kind not yet finished as failed: the covering set must end terminal. */
+/**
+ * Mark every kind not yet finished as failed: the covering set must end terminal. Once every kind's
+ * rows are in, the one kept in progress is done, and the stop is the finishing work's.
+ */
 function failRest(job: Job, error: unknown): void {
     job.reason = errorText(error);
     job.phase = undefined;
-    const stoppedAt = Object.keys(job.perType).find((kind) => job.perType[kind] === 'processing');
+    const stoppedAt = job.finishing ? FINISHING_STOP : Object.keys(job.perType).find((kind) => job.perType[kind] === 'processing');
     if (stoppedAt) job.stoppedAt = stoppedAt;
     job.retryable = isWorthRetrying(error);
     for (const [kind, status] of Object.entries(job.perType)) {
-        if (status === 'pending' || status === 'processing') job.perType[kind] = 'error';
+        if (job.finishing && status === 'processing') job.perType[kind] = 'success';
+        else if (status === 'pending' || status === 'processing') job.perType[kind] = 'error';
     }
 }
 
@@ -220,7 +226,10 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         // Its rows are in, so the last kind's clock stops; it stays in progress to the end, while
         // the engine takes out what the pack dropped and reads back what it wrote.
         job.phase = kind === undefined ? 'Recording what was installed' : undefined;
-        if (kind === undefined) return stopClock(job, current);
+        if (kind === undefined) {
+            job.finishing = true;
+            return stopClock(job, current);
+        }
         endKind(job, current);
         current = kind;
         job.kindStartedAt = Date.now();

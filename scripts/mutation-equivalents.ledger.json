@@ -12094,10 +12094,10 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 287,
+            "line": 288,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is `return undefined`, and an async function that falls off its end resolves to undefined too \u2014 so emptying the block produces the identical value on the identical path. The rejecting-echo case IS now driven (importJobRunner-interrupted.test.ts, 'still reports never-registered when the echo request fails'); it constrains the outcome, which is all there is to constrain here. Re-anchored 2026-10-31 (253 -> 256): unchanged code; the kept root step was added to what the engine said, above it. Re-anchored 2026-11-05 (256 -> 260): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (260 -> 266): unchanged code; what the engine said carries timings and skips above it. Re-anchored again 2026-11-06 (266 -> 269): unchanged code; the result carries the install check above it.",
+            "reason": "The catch body is `return undefined`, and an async function that falls off its end resolves to undefined too \u2014 so emptying the block produces the identical value on the identical path. The rejecting-echo case IS now driven (importJobRunner-interrupted.test.ts, 'still reports never-registered when the echo request fails'); it constrains the outcome, which is all there is to constrain here. Re-anchored 2026-10-31 (253 -> 256): unchanged code; the kept root step was added to what the engine said, above it. Re-anchored 2026-11-05 (256 -> 260): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (260 -> 266): unchanged code; what the engine said carries timings and skips above it. Re-anchored again 2026-11-06 (266 -> 269): unchanged code; the result carries the install check above it. Re-anchored 2026-11-07 (287 -> 288): unchanged code; a job that stopped after every type was in is never a success, above it.",
             "decision": "none \u2014 the explicit return states the intent; both forms return undefined",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"

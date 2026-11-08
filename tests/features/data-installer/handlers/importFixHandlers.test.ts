@@ -64,6 +64,16 @@ describe('fixImportPrompt', () => {
         expect(prompt).toContain('- It stopped at Products: Commerce answered 403');
     });
 
+    it('says the import stopped after every data type was in, never naming a data type', () => {
+        const prompt = fixImportPrompt(
+            { ...RECORD, outcome: 'partial', stoppedAt: 'finishing', reason: 'Commerce answered 503' },
+            'Justrite Demo'
+        );
+
+        expect(prompt).toContain('- It stopped after every data type was in, while finishing the import: Commerce answered 503');
+        expect(prompt).not.toContain('It stopped at');
+    });
+
     it('CONTROL: has nothing to say about an import with no problem', () => {
         expect(fixImportPrompt(RECORD, 'Justrite Demo')).toBeUndefined();
     });

@@ -35,9 +35,13 @@ const SALE = {
     custom_attributes: [],
 };
 
-/** Install ITEMS with Commerce answering a category write with `send`, and wait for the job to end. */
+/**
+ * Install ITEMS with Commerce answering a category write with `send`, and wait for the job to end.
+ * `checkFails` makes the final check throw, after every kind's rows are in.
+ */
 async function installWith(
-    send: () => unknown
+    send: () => unknown,
+    checkFails?: Error
 ): Promise<{ status: JobStatusSnapshot; during: JobStatusSnapshot[] }> {
     const ctx = await fakeContext(
         {
@@ -60,6 +64,7 @@ async function installWith(
     let activationId = '';
     jest.mocked(checkAfterInstall).mockImplementation(async () => {
         during.push(await engine.getJobStatus(activationId));
+        if (checkFails) throw checkFails;
         return {};
     });
     ({ activationId } = await engine.startImport({
@@ -93,6 +98,28 @@ describe('a job that stopped', () => {
 
         expect(status.stoppedAt).toBe('categories');
         expect(status.retryable).toBeUndefined();
+    });
+});
+
+describe('a job that stopped after every kind was in', () => {
+    it('marks every kind done and names the finishing work as where it stopped', async () => {
+        const { status } = await installWith(
+            () => ({ id: 40 }),
+            new CommerceReadError('Commerce answered 503 for products: down', 503)
+        );
+
+        expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
+        expect(status).toMatchObject({ stoppedAt: 'finishing', retryable: true });
+        expect(status.phase).toBeUndefined();
+    });
+
+    it('CONTROL: the last kind is still in progress while the check runs, so the watch waits for it', async () => {
+        const { during } = await installWith(
+            () => ({ id: 40 }),
+            new CommerceReadError('Commerce answered 503 for products: down', 503)
+        );
+
+        expect(during.map((s) => s.perType.categories)).toEqual(['processing']);
     });
 });
 

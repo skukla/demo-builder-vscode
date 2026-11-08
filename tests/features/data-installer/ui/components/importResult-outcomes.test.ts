@@ -127,6 +127,18 @@ describe('an import that stopped', () => {
         expect(outcomeOf({ ...stopped, retryable: false })?.action).toBe('fix');
     });
 
+    it('is "Import Stopped" when every data type went in and the work after them stopped', () => {
+        const result = outcomeOf({
+            outcome: 'partial',
+            perType: done('categories', 'products'),
+            stoppedAt: 'finishing',
+            reason: 'Commerce answered 503.',
+            retryable: true,
+        });
+
+        expect(result).toMatchObject({ variant: 'error', title: 'Import Stopped', action: 'retry' });
+    });
+
     it('says nothing under its rows but how long it took: the rows say where it stopped', () => {
         expect(outcomeOf({ ...stopped, retryable: true })?.lead).toBeUndefined();
     });

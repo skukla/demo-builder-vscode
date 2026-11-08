@@ -363,6 +363,15 @@ describe('watchImportJob', () => {
             expect(await promise).toMatchObject({ outcome, reason: 'The store has no customer group Platinum Buyer.' });
         });
 
+        // Every type went in and the work after them stopped: the engine says so with stoppedAt.
+        it('every type done but the job stopped while finishing → partial, with its reason', async () => {
+            const { promise } = runWith([snap({ categories: 'success', products: 'success' }, { stoppedAt: 'finishing' })], {
+                failureReason: { error: 'Commerce answered 503.' },
+            });
+
+            expect(await promise).toMatchObject({ outcome: 'partial', stoppedAt: 'finishing', reason: 'Commerce answered 503.' });
+        });
+
         it('asks for no reason when every kind succeeded', async () => {
             const { promise, getJobFailureReason } = runWith([snap({ categories: 'success', products: 'success' })]);
 

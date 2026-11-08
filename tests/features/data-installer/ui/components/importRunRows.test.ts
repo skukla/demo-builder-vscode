@@ -178,6 +178,22 @@ describe('runRows', () => {
             expect(finishing).toMatchObject({ status: 'pending', line: 'Not run' });
         });
 
+        it('puts a stop after every type on Finishing Import, red, with each type done', () => {
+            const from = source({
+                perType: states({ categories: 'success', products: 'success' }),
+                stoppedAt: FINISHING,
+                reason: 'Commerce answered 503.',
+            });
+            const [preparing, finishing] = ends(from);
+
+            expect(finishing).toMatchObject({
+                status: 'error',
+                problem: { text: 'Commerce answered 503.', failed: true },
+            });
+            expect(preparing).toMatchObject({ status: 'success', line: 'Done' });
+            expect(typeRows(from).map((row) => row.line)).toEqual(['Done', 'Done']);
+        });
+
         it('finishes when only the store settings failed: they fail without stopping the job', () => {
             const [, finishing] = ends(
                 source({

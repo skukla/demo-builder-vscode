@@ -30,7 +30,7 @@
  * @module features/data-installer/services/importJobRunner
  */
 
-import type { DataTypeStatus, InstallCheck, JobFailureReason, JobStatusSnapshot, KeptRootStep, SkippedRowRecord } from '../types';
+import { type DataTypeStatus, FINISHING_STOP, type InstallCheck, type JobFailureReason, type JobStatusSnapshot, type KeptRootStep, type SkippedRowRecord } from '../types';
 import type { PollingService } from '@/core/shell/pollingService';
 
 /**
@@ -215,7 +215,8 @@ export async function watchImportJob(args: {
     }
 
     const perType = latest?.perType ?? {};
-    const outcome = classify(perType, requestedTypes);
+    // Every data type went in and the work after them stopped: never a success, though each type was.
+    const outcome = latest?.stoppedAt === FINISHING_STOP ? 'partial' : classify(perType, requestedTypes);
     // Demo Builder's engine knows why a kind failed; the service's echo, for a job that ran,
     // has nothing to say and answers no reason. Either way the screen shows what it gets.
     const reason = outcome === 'success' ? undefined : await readFailureReason(client, activationId);

@@ -14,7 +14,7 @@
 
 import { STORE_CONFIG_KIND } from '../../services/datapackCatalog';
 import { inInstallOrder } from '../../services/demoBuilderEngine/installOrder';
-import type { DataTypeStatus, JobStanding } from '../../types';
+import { type DataTypeStatus, FINISHING_STOP, type JobStanding } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { StepStatus } from '@/core/ui/components/feedback/StepStatusIcon';
 
@@ -44,7 +44,7 @@ export interface RunSource extends Pick<JobStanding, 'phase' | 'stoppedAt' | 'ro
 
 /** The end rows' kinds: no data type is named this. */
 export const PREPARING = 'preparing';
-export const FINISHING = 'finishing';
+export const FINISHING = FINISHING_STOP;
 
 /**
  * Every row: Preparing Import, the types in install order (those asked for and any the engine added
@@ -78,8 +78,9 @@ function preparingRow(source: RunSource, begun: boolean): RunRow {
 }
 
 /**
- * After the last type: spins while the engine works with no type left to start. Not run when the
- * job stopped on a type; the store settings fail without stopping it, so the check still ran.
+ * After the last type: spins while the engine works with no type left to start. Failed when the job
+ * stopped there, after every type was in. Not run when it stopped on a type; the store settings fail
+ * without stopping it, so the check still ran.
  */
 function finishingRow(source: RunSource, begun: boolean, kinds: string[]): RunRow {
     const row = { kind: FINISHING, label: 'Finishing Import' };
@@ -87,6 +88,9 @@ function finishingRow(source: RunSource, begun: boolean, kinds: string[]): RunRo
         return begun && source.phase
             ? { ...row, status: 'checking', line: source.phase }
             : { ...row, status: 'pending', line: 'Waiting' };
+    }
+    if (source.stoppedAt === FINISHING_STOP) {
+        return { ...row, status: 'error', problem: { text: source.reason ?? 'It stopped here.', failed: true } };
     }
     const stopped = kinds.some((kind) => source.perType[kind] === 'error' && kind !== STORE_CONFIG_KIND);
     return stopped ? { ...row, status: 'pending', line: 'Not run' } : { ...row, ...DONE };

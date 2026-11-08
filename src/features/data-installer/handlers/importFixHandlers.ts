@@ -13,7 +13,7 @@
  */
 
 import * as vscode from 'vscode';
-import type { ImportJobRecord } from '../types';
+import { FINISHING_STOP, type ImportJobRecord } from '../types';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
 import { JOB_KEY } from './importJobWatch';
 import { TransientStateManager } from '@/core/state/transientStateManager';
@@ -21,6 +21,7 @@ import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/typ
 
 /** Where the import stopped and why, when it did. */
 function stoppedLine(record: ImportJobRecord): string | undefined {
+    if (record.stoppedAt === FINISHING_STOP) return `It stopped after every data type was in, while finishing the import: ${record.reason ?? 'no reason given'}`;
     if (record.stoppedAt) return `It stopped at ${dataTypeLabel(record.stoppedAt)}: ${record.reason ?? 'no reason given'}`;
     if (record.reason) return `It stopped before any data type: ${record.reason}`;
     return undefined;

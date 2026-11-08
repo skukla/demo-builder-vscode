@@ -226,13 +226,23 @@ export interface ImportProgressMessage {
 }
 
 /**
+ * `JobStanding.stoppedAt` when the job stopped after every data type's rows were in: recording what
+ * was installed, applying the store settings, or the check. Each data type says Done, and the window's
+ * Finishing Import row says why it stopped. No data type is named this.
+ */
+export const FINISHING_STOP = 'finishing';
+
+/**
  * Where Demo Builder's engine says a job stands beyond each data type's state: what the import
  * window draws, a row per data type (owner, 2026-11-07).
  */
 export interface JobStanding {
     /** What the job is doing while no one data type is: "Comparing the store with the datapack". */
     phase?: string;
-    /** The data type that failed: the one in progress when the job stopped, or the store settings, which fail without stopping it. */
+    /**
+     * The data type that failed: the one in progress when the job stopped, or the store settings, which
+     * fail without stopping it. {@link FINISHING_STOP} when it stopped after every data type was in.
+     */
     stoppedAt?: string;
     /** Running it again could get past what stopped it: Commerce failing, slowing down or not answering. */
     retryable?: boolean;

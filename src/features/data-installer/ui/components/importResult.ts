@@ -15,7 +15,7 @@
  * @module features/data-installer/ui/components/importResult
  */
 
-import type { ImportJobRecord, KeptRootStep } from '../../types';
+import { FINISHING_STOP, type ImportJobRecord, type KeptRootStep } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
@@ -174,14 +174,14 @@ function ranOnRows(record: ImportJobRecord): boolean {
 
 /**
  * An import's ending on its rows (owner, 2026-11-07). It ran to the end when nothing failed but the
- * store settings, which fail without stopping it: "Datapack Imported", amber when a row has a
+ * store settings, which fail without stopping it, and the work after the data types did not stop: "Datapack Imported", amber when a row has a
  * problem, with Fix with AI. Otherwise "Import Stopped", with Retry while a retry can get past the
  * stop, else Fix with AI. The title names the kind of thing (dialog design rules, 2026-11-04).
  */
 function runResult(record: ImportJobRecord, name: string, where: { store?: string; retries: number }): ResultContent {
     const took = record.processingTimeMs !== undefined ? { tookMs: record.processingTimeMs } : {};
     const failed = Object.entries(record.perType).filter(([, state]) => state === 'error').map(([kind]) => kind);
-    const ranToEnd = failed.every((kind) => kind === SETTINGS_KIND && record.stoppedAt === SETTINGS_KIND);
+    const ranToEnd = record.stoppedAt !== FINISHING_STOP && failed.every((kind) => kind === SETTINGS_KIND && record.stoppedAt === SETTINGS_KIND);
     if (!ranToEnd) {
         const retry = record.retryable === true && where.retries < RETRIES_BEFORE_FIX;
         return { variant: 'error', title: 'Import Stopped', run: record, action: retry ? 'retry' : 'fix', ...took };
