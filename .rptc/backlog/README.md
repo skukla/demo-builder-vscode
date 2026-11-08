@@ -244,7 +244,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 | `EDS-63` | fix | [The agent's `republish` does what the dashboard's Republish does](2026-10-23-agent-republish-matches-the-button.md) | — | med | active |
 
-### eds  (76)
+### eds  (77)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -323,6 +323,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-68` | fix | [The DA.live status still says signed in when IMS has cancelled the sign-in](2026-10-28-dalive-status-says-yes-for-a-cancelled-sign-in.md) | — | high | built |
 | `EDS-69` | fix | [A storefront delete carries on when AEM refuses the sign-in](2026-10-28-delete-carries-on-when-aem-refuses-the-sign-in.md) | — | high | active |
 | `EDS-70` | question | [Could one Adobe credential replace our separate DA.live and publishing sign-ins?](2026-11-03-eds-service-credential-question.md) | — | med | backlog |
+| `EDS-71` | feature | [The DA.live block library without Universal Editor's `component-definition.json`](2026-11-08-block-library-without-universal-editor.md) | — | high | planned |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (130)
@@ -739,7 +740,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*339 item(s) sit outside the A–G chain.*
+*340 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
