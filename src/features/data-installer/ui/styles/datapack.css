@@ -148,8 +148,13 @@
     gap: 8px;
 }
 
+/* The dot is a quiet button so Spectrum's tooltip can hang on it (owner, 2026-11-07); it keeps the
+   dot's own size, so the version line does not grow (the sidebar tiles size their buttons the same way). */
 .datapack-card-newer {
     display: inline-flex;
+    min-width: 16px;
+    height: 16px;
+    padding: 0;
 }
 }
 

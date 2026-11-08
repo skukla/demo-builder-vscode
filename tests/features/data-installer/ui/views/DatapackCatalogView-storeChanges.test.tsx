@@ -68,12 +68,13 @@ describe("the demo's datapack in the library", () => {
         expect(screen.queryByRole('region', { name: "This Demo's Datapack" })).not.toBeInTheDocument();
     });
 
-    it('marks a newer version on the card, and says from when', async () => {
+    // Owner, 2026-11-07: the dot's words, on hover, in the version list's own word for a change.
+    it('marks a later save on the card: a newer version is in the list', async () => {
         const items = [{ ...OLDER, createdAt: '2026-11-01T09:00:00Z' }, { ...NEWER, createdAt: '2026-11-03T12:00:00Z' }];
         store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, items);
         await renderView();
 
-        expect(within(card('acme-1a2b3c')).getByRole('img', { name: 'Newer version: Nov 3' })).toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).getByRole('button', { name: 'Newer version available' })).toBeInTheDocument();
     });
 });
 

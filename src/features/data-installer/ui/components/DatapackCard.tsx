@@ -25,12 +25,12 @@
  * @module features/data-installer/ui/components/DatapackCard
  */
 
-import { Badge, Item, Picker } from '@adobe/react-spectrum';
+import { ActionButton, Badge, Item, Picker, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
 import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackSummary } from '../../types';
 import { packSource, type PackSource } from '../catalogShow';
-import { shortDate } from './projectPackNewer';
+import { versionChanged } from './projectPackNewer';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
@@ -73,11 +73,13 @@ export interface DatapackCardProps {
      */
     isInstalled?: boolean;
     /**
-     * When a newer version of the demo's own pack arrived, if one has (`newerVersionOf`). The card
-     * marks it with the house amber dot beside the version, the dashboard's "due" mark, and says
-     * when on hover; taking it is the SC's choice, from the version picker (owner, 2026-11-04).
+     * What is newer in the demo's own pack, if anything (`newerLabel`): "Updated Nov 6" or "Newer
+     * version available". The card marks it with the house amber dot beside the version, the
+     * dashboard's "due" mark, and says this on hover in Spectrum's tooltip, as the dashboard's dots
+     * do (owner, 2026-11-07: a browser `title` never showed here); taking it is the SC's choice,
+     * from the version picker (owner, 2026-11-04).
      */
-    newerAt?: string;
+    newer?: string;
 }
 
 /**
@@ -95,7 +97,7 @@ export function DatapackCard({
     onOpen,
     selected,
     isInstalled,
-    newerAt,
+    newer,
 }: DatapackCardProps): React.JSX.Element {
     // Checked for PRESENCE: `false` means selectable-and-unselected, which is
     // still a radio. Truthiness here would silently make every unselected card
@@ -162,7 +164,7 @@ export function DatapackCard({
                     and its options are the parts that escape. */}
                 {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child Picker (InlineRenameField precedent) */}
                 <span
-                    className={newerAt ? 'datapack-card-version datapack-card-version--newer' : 'datapack-card-version'}
+                    className={newer ? 'datapack-card-version datapack-card-version--newer' : 'datapack-card-version'}
                     onClick={stopPropagation}
                     onKeyDown={stopPropagation}
                 >
@@ -172,10 +174,13 @@ export function DatapackCard({
                         onSelectionChange={(key) => onVersionChange(String(key))}
                     >
                         {group.versions.map((candidate) => (
-                            <Item key={candidate.id.version}>{candidate.id.version}</Item>
+                            <Item key={candidate.id.version} textValue={candidate.id.version}>
+                                <Text>{candidate.id.version}</Text>
+                                {versionChanged(candidate) ? <Text slot="description">{versionChanged(candidate)}</Text> : null}
+                            </Item>
                         ))}
                     </Picker>
-                    {newerAt ? <NewerMark at={newerAt} /> : null}
+                    {newer ? <NewerMark said={newer} /> : null}
                 </span>
                 {/* No count of data types (owner, 2026-11-05: the tile was crowded); the flyout
                     names them. */}
@@ -186,13 +191,18 @@ export function DatapackCard({
     );
 }
 
-/** The amber dot beside the version: a newer one is in the library, from this day. */
-function NewerMark({ at }: { at: string }): React.JSX.Element {
-    const said = `Newer version: ${shortDate(at)}`;
+/**
+ * The amber dot beside the version, saying what is newer on hover and on focus. A quiet button,
+ * because Spectrum's tooltip needs a focusable trigger; pressing it does nothing more.
+ */
+function NewerMark({ said }: { said: string }): React.JSX.Element {
     return (
-        <span className="datapack-card-newer" role="img" aria-label={said} title={said}>
-            <StatusDot variant="warning" />
-        </span>
+        <TooltipTrigger delay={300}>
+            <ActionButton isQuiet aria-label={said} UNSAFE_className="datapack-card-newer">
+                <StatusDot variant="warning" />
+            </ActionButton>
+            <Tooltip>{said}</Tooltip>
+        </TooltipTrigger>
     );
 }
 

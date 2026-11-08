@@ -17,7 +17,7 @@ import React from 'react';
 import { type DatapackGroup, isHeld, pickDefaultVersion } from '../../services/datapackCatalog';
 import { EMPTY_SHOW_TITLE, type CatalogShow } from '../catalogShow';
 import { DatapackCard } from './DatapackCard';
-import { newerVersionOf } from './projectPackNewer';
+import { newerLabel, newerVersionOf } from './projectPackNewer';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
@@ -96,10 +96,16 @@ export function DatapackCatalogGrid({
                         onVersionChange={(version) => pickVersion(group.key, version)}
                         onOpen={openDetail}
                         isInstalled={installedHere(group, installedPacks, held)}
-                        newerAt={own ? newerVersionOf(group, held, installedAt)?.at : undefined}
+                        newer={own ? newerOf(group, held, installedAt) : undefined}
                     />
                 );
             })}
         </div>
     );
+}
+
+/** The dot's words for the demo's own pack, when something newer is there (`newerLabel`). */
+function newerOf(group: DatapackGroup, held: DatapackId | undefined, installedAt: string | undefined): string | undefined {
+    const newer = newerVersionOf(group, held, installedAt);
+    return newer && held ? newerLabel(newer, held) : undefined;
 }
