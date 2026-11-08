@@ -1,8 +1,8 @@
 /**
  * The import window while an import runs and once it ends, on the same rows (owner, 2026-11-07):
  * a row per data type in the order the engine installs, drawn as the Updates and batch windows
- * draw theirs (`WorkRow`), down each column in turn. While it runs, what the engine is doing
- * between data types and the clock go under the list; once it ends, the rows keep their final
+ * draw theirs (`WorkRow`), down each column in turn, between a Preparing Import row and a Finishing
+ * Import row. While it runs, the clock goes under the list; once it ends, the rows keep their final
  * state, a problem sits on its row, and the one sentence and "Took …" go under the list ("A run
  * ends where it ran", `docs/development/sop/dialog-design.md`). It was a medium spinner and one
  * line in the form's large box, silent for minutes, then a paragraph in a second view.
@@ -22,8 +22,6 @@ export interface RunEnd {
     lead?: string;
     /** What changed in the store and what is left to do (`JobStanding.scLines`). */
     lines: string[];
-    /** Why it stopped, when it stopped before any data type: no row to put it on. */
-    problem?: string;
     took?: string;
 }
 
@@ -31,8 +29,8 @@ export interface ImportRunViewProps {
     rows: RunRow[];
     /** How many columns the rows take: the form's, for the box the form had. */
     columns: number;
-    /** While it runs: when it started, and what the engine is doing between data types. */
-    running?: { startedAt: number; phase?: string };
+    /** While it runs: when it started. */
+    running?: { startedAt: number };
     end?: RunEnd;
 }
 
@@ -58,27 +56,15 @@ function Row({ row }: { row: RunRow }): React.ReactElement {
     );
 }
 
-/** The clock and what the engine is doing, under the list while it runs. */
-function RunningFoot({
-    startedAt,
-    phase,
-}: {
-    startedAt: number;
-    phase?: string;
-}): React.ReactElement {
+/** The clock, under the list while it runs. */
+function RunningFoot({ startedAt }: { startedAt: number }): React.ReactElement {
     const clock = useRunClock(startedAt);
-    return (
-        <div className="import-run-foot">
-            {phase ? <p className="dialog-note">{phase}</p> : null}
-            {clock ? <p className="dialog-note">{clock}</p> : null}
-        </div>
-    );
+    return <div className="import-run-foot">{clock ? <p className="dialog-note">{clock}</p> : null}</div>;
 }
 
 function EndFoot({ end }: { end: RunEnd }): React.ReactElement {
     return (
         <div className="import-run-foot dialog-stack">
-            {end.problem ? <p className="dialog-problem text-negative">{end.problem}</p> : null}
             {end.lead ? <LeadText>{end.lead}</LeadText> : null}
             {end.lines.map((line) => (
                 <p key={line} className="dialog-line">
@@ -107,7 +93,7 @@ export function ImportRunView({
                     </div>
                 ))}
             </div>
-            {running ? <RunningFoot startedAt={running.startedAt} phase={running.phase} /> : null}
+            {running ? <RunningFoot startedAt={running.startedAt} /> : null}
             {end ? <EndFoot end={end} /> : null}
         </div>
     );

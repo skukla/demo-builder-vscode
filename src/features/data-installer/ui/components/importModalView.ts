@@ -64,6 +64,8 @@ export function isPickingUp(
 /** One view at a time; this precedence IS the state machine. */
 export function resolveView(state: {
     busy: boolean;
+    /** The busy wait is an import starting: it shows the run's rows, not a spinner. */
+    starting?: boolean;
     /** The SC pressed Remove and the read of what they changed is out. */
     readingChanges?: boolean;
     resetArmed: boolean;
@@ -73,7 +75,7 @@ export function resolveView(state: {
     noInstance: boolean;
 }): ModalView {
     if (state.busy) {
-        return 'busy';
+        return state.starting ? 'starting' : 'busy';
     }
     if (state.readingChanges) {
         return 'reading-changes';
@@ -106,16 +108,14 @@ export function isRemoving(a: { armed: boolean; lastAction: LastAction | null; v
 }
 
 /**
- * Which in-flight operation the one busy spinner is narrating.
+ * Which in-flight operation the one busy spinner is narrating. An import starting has no spinner of
+ * its own: its rows show at once, Preparing Import spinning (the `starting` view).
  *
  * @param savingStage - the stage of saving the SC's changes first, while a removal waits on it
  */
-export function busyMessage(starting: boolean, resetting: boolean, savingStage?: string): string {
+export function busyMessage(resetting: boolean, savingStage?: string): string {
     if (savingStage) {
         return savingStage;
-    }
-    if (starting) {
-        return 'Starting import';
     }
     if (resetting) {
         // "removal", matching the button and the progress verb.
@@ -159,7 +159,7 @@ export function buildActions(a: {
     onPress: () => void;
     isDisabled?: boolean;
 }[] {
-    if (a.view === 'watching') {
+    if (a.view === 'watching' || a.view === 'starting') {
         // The way out is Run in Background, the dialog's own close (`closeLabel`): a Close beside it
         // did the same thing, and the dialog rules allow one button per job (owner, 2026-11-07).
         // Nothing cancels: no endpoint exists to cancel with.
@@ -246,7 +246,7 @@ export interface ViewFrame {
  */
 export function closeLabel(view: ModalView, handsOver = false): string {
     if (view === 'reading-changes') return 'Cancel';
-    return view === 'watching' || (view === 'busy' && handsOver) ? 'Run in Background' : 'Close';
+    return view === 'watching' || view === 'starting' || (view === 'busy' && handsOver) ? 'Run in Background' : 'Close';
 }
 
 /**
@@ -303,6 +303,8 @@ export function viewFrame(a: {
                       status: resultStatus(a.result),
                   }
                 : { ...small, title: `Import ${a.displayName}` };
+        case 'starting':
+            return { ...formWidth(a.typeCount), hideClose: false, title: `Import ${a.displayName}` };
         case 'watching':
             // An import's rows take the form's box; a removal still waits on its spinner.
             return a.removing

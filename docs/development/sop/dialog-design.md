@@ -72,7 +72,11 @@ batch run, a datapack import) does not switch to a result view when the run ends
 to the outcome with its icon, the rows stay with each one's final state, and a problem sits on the
 row it is about, one short line in orange or red. What is left to say about the whole run (one
 sentence, then "Took …") goes under the list, and the size does not change. Nothing waits for a
-second view (owner, 2026-11-07, generalising the Updates run's rule of 2026-10-21).
+second view (owner, 2026-11-07, generalising the Updates run's rule of 2026-10-21). Work that
+belongs to no one item (an import's preparing before the first data type, its finishing after the
+last) is a row of its own at each end, spinning with its current step as its line, never a grey
+line under the list; and the rows show from the first press, with no spinner screen in front of
+them (owner, 2026-11-07).
 
 **Capitals.** What names a thing is Title Case: the title, buttons, tabs, menu items and labels
 ("Run in Background", "Data Types"). What tells the SC something keeps normal capitals: a sentence,

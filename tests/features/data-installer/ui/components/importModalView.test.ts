@@ -36,6 +36,7 @@ import {
     targetName,
     isPickingUp,
     viewFrame,
+    waitOf,
     watchedActivation,
 } from '@/features/data-installer/ui/components/importModalView';
 import type { ImportScopes } from '@/features/data-installer/ui/hooks/useImportScopes';
@@ -132,21 +133,28 @@ describe('resolveView', () => {
 });
 
 describe('busyMessage', () => {
-    it('names the import when an import is starting', () => {
-        expect(busyMessage(true, false)).toBe('Starting import');
-    });
-
     it('says removal when a removal is starting', () => {
-        expect(busyMessage(false, true)).toBe('Starting removal');
+        expect(busyMessage(true)).toBe('Starting removal');
     });
 
-    /** A dry run is the only busy state with neither flag set. */
-    it('says it is checking when nothing else is running', () => {
-        expect(busyMessage(false, false)).toBe('Checking with the service');
+    /** A dry run is the only busy state left: an import starting shows its rows instead. */
+    it('says it is checking when no removal is running', () => {
+        expect(busyMessage(false)).toBe('Checking with the service');
+    });
+});
+
+describe('an import starting', () => {
+    it('is its own view, ahead of the plain wait', () => {
+        expect(resolveView({ ...IDLE, busy: true, starting: true })).toBe('starting');
+        expect(resolveView({ ...IDLE, busy: true })).toBe('busy');
     });
 
-    it('prefers the import when both flags are set', () => {
-        expect(busyMessage(true, true)).toBe('Starting import');
+    it('takes the running import’s frame, footer and way out', () => {
+        const frame = viewFrame({ view: 'starting', displayName: 'Frescopa', removing: false, store: '', typeCount: 8, result: null });
+        expect(frame).toMatchObject({ size: 'L', wide: false, title: 'Import Frescopa' });
+        expect(rows(actionArgs({ view: 'starting' }))).toStrictEqual([]);
+        expect(closeLabel('starting')).toBe('Run in Background');
+        expect(waitOf('starting', false, '')).toBe(false);
     });
 });
 
@@ -408,8 +416,8 @@ describe('the removal confirm (step 05)', () => {
     });
 
     it('says the save\'s stage over the removal\'s, and the removal\'s once there is none', () => {
-        expect(busyMessage(false, true, 'Saving to the library')).toBe('Saving to the library');
-        expect(busyMessage(false, true, undefined)).toBe('Starting removal');
+        expect(busyMessage(true, 'Saving to the library')).toBe('Saving to the library');
+        expect(busyMessage(true, undefined)).toBe('Starting removal');
     });
 
     it.each([

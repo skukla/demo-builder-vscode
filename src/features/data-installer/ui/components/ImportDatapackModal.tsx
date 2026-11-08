@@ -48,7 +48,7 @@ import { useJobPickup } from '../hooks/useJobPickup';
 import { useRemovalConfirm, useRemovalScope } from '../hooks/useRemovalConfirm';
 import { useTypeSelection } from '../hooks/useTypeSelection';
 import { ImportDatapackModalBody, type BodyContext } from './ImportDatapackModalBody';
-import { backgroundTitle, jobBusyMessage, libraryField } from './importModalJob';
+import { backgroundTitle, isStartingImport, jobBusyMessage, libraryField } from './importModalJob';
 import { buildActions, closeLabel, isRemoving, resolveView, runColumns, targetName, viewFrame, waitOf, watchedActivation } from './importModalView';
 import { resolveResult, type LastAction } from './importResult';
 import { removeLabel } from './removalConfirm';
@@ -233,6 +233,7 @@ export function ImportDatapackModal({
     const canStart = ready && selected.length > 0;
     const view = resolveView({
         busy,
+        starting: isStartingImport({ start: start.loading, reset: reset.loading, pickingUp, lastAction }),
         readingChanges: removal.reading,
         resetArmed: removal.armed,
         running,
@@ -251,7 +252,7 @@ export function ImportDatapackModal({
         record,
         result,
         // Saving first has stages of its own (step 05), in the same wait, before the removal's.
-        busyMessage: jobBusyMessage({ start: start.loading, reset: reset.loading, pickingUp, lastAction, stage: removal.stage }),
+        busyMessage: jobBusyMessage({ reset: reset.loading, pickingUp, lastAction, stage: removal.stage }),
         scope,
         removal,
         toggle,
@@ -262,10 +263,11 @@ export function ImportDatapackModal({
     // Closing a job that is still RUNNING hands it to a progress notification,
     // so the SC keeps seeing where it is — the same handover every progress
     // modal offers (PL-59 R8). Nothing is cancelled: the watcher carries on. A
-    // removal saving the SC's changes first is already going the same way.
+    // removal saving the SC's changes first is already going the same way, and so
+    // does an import still starting: the notice opens only once its job runs.
     const savingFirst = reset.loading && removal.stage !== undefined;
     const close = (): void => {
-        if (running || savingFirst) {
+        if (running || savingFirst || view === 'starting') {
             webviewClient.postMessage('backgroundOperation', {
                 id: DATAPACK_OPERATION_ID,
                 title: backgroundTitle(record?.operation === 'reset' || savingFirst, displayName),

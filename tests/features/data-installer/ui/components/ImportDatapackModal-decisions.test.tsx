@@ -180,7 +180,7 @@ describe('ImportDatapackModal — decisions', () => {
             await settle();
 
             expect(await screen.findByText('Installing')).toBeInTheDocument();
-            expect(screen.getByText('Waiting')).toBeInTheDocument();
+            expect(screen.getByText('Products').closest('.work-row')).toHaveTextContent('Waiting');
             expect(screen.queryByText(OPERATION_STAGES.installingDatapack.label)).not.toBeInTheDocument();
         });
 

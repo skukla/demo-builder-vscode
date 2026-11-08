@@ -16,17 +16,20 @@ export function libraryField(source: DatapackStoreName | undefined): { source?: 
     return source === 'library' ? { source } : {};
 }
 
-/** The wait's words: an import's, or a removal's with its saving-first stage (step 05). */
+/** The wait's words: a removal's with its saving-first stage (step 05), or a dry run's. */
 export function jobBusyMessage(a: {
-    start: boolean;
     reset: boolean;
     pickingUp: boolean;
     lastAction: LastAction | null;
     stage: string | undefined;
 }): ReturnType<typeof busyMessage> {
-    const importing = a.start || (a.pickingUp && a.lastAction === 'start');
     const removing = a.reset || (a.pickingUp && a.lastAction === 'reset');
-    return busyMessage(importing, removing, a.reset ? a.stage : undefined);
+    return busyMessage(removing, a.reset ? a.stage : undefined);
+}
+
+/** An import is starting, up to its first record: the window shows its rows rather than a spinner. */
+export function isStartingImport(a: { start: boolean; reset: boolean; pickingUp: boolean; lastAction: LastAction | null }): boolean {
+    return !a.reset && (a.start || (a.pickingUp && a.lastAction === 'start'));
 }
 
 /** The notification a running job is handed to on close: what it is doing, and to which pack. */

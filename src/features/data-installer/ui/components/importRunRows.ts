@@ -4,12 +4,15 @@
  * same rows ("A run ends where it ran", `docs/development/sop/dialog-design.md`).
  *
  * Pure: no React. Rows sit in the order the engine installs, from the start, so nothing moves as
- * each type begins. A type the engine is between (reading the store first, the check at the end)
- * is not running: its rows are in, and the window says the phase under the list.
+ * each type begins. The engine's work outside any one type has a row of its own at each end:
+ * Preparing Import (reading the datapack, comparing the store with it) and Finishing Import
+ * (recording what went in, the store settings, the check), each spinning with its step as its line.
+ * That work was a grey line under the list, while every row said Waiting (owner, 2026-11-07).
  *
  * @module features/data-installer/ui/components/importRunRows
  */
 
+import { STORE_CONFIG_KIND } from '../../services/datapackCatalog';
 import { inInstallOrder } from '../../services/demoBuilderEngine/installOrder';
 import type { DataTypeStatus, JobStanding } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
@@ -35,14 +38,58 @@ export interface RunSource extends Pick<JobStanding, 'phase' | 'stoppedAt' | 'ro
     detail?: string;
     /** Why the job stopped, for the row it stopped on. */
     reason?: string;
+    /** Still running: the end rows spin or wait. Otherwise each says how it ended. */
+    running?: boolean;
 }
 
-/** Every row, in install order: the types asked for and any the engine added because they need them. */
+/** The end rows' kinds: no data type is named this. */
+export const PREPARING = 'preparing';
+export const FINISHING = 'finishing';
+
+/**
+ * Every row: Preparing Import, the types in install order (those asked for and any the engine added
+ * because they need them), then Finishing Import.
+ */
 export function runRows(source: RunSource): RunRow[] {
     const kinds = inInstallOrder([
         ...new Set([...source.dataTypes, ...Object.keys(source.perType)]),
     ]);
-    return kinds.map((kind) => rowOf(kind, source));
+    const states = kinds.map((kind) => source.perType[kind] ?? 'pending');
+    const begun = states.some((state) => state !== 'pending' && state !== 'error');
+    return [
+        preparingRow(source, begun),
+        ...kinds.map((kind) => rowOf(kind, source)),
+        finishingRow(source, begun, kinds),
+    ];
+}
+
+const DONE = { status: 'success', line: 'Done' } as const;
+
+/** Before the first type: spins with the engine's step; it failed when the job stopped before any. */
+function preparingRow(source: RunSource, begun: boolean): RunRow {
+    const row = { kind: PREPARING, label: 'Preparing Import' };
+    if (source.running) {
+        return begun ? { ...row, ...DONE } : { ...row, status: 'checking', line: source.phase ?? 'Starting' };
+    }
+    if (!begun && !source.stoppedAt && source.reason) {
+        return { ...row, status: 'error', problem: { text: source.reason, failed: true } };
+    }
+    return { ...row, ...DONE };
+}
+
+/**
+ * After the last type: spins while the engine works with no type left to start. Not run when the
+ * job stopped on a type; the store settings fail without stopping it, so the check still ran.
+ */
+function finishingRow(source: RunSource, begun: boolean, kinds: string[]): RunRow {
+    const row = { kind: FINISHING, label: 'Finishing Import' };
+    if (source.running) {
+        return begun && source.phase
+            ? { ...row, status: 'checking', line: source.phase }
+            : { ...row, status: 'pending', line: 'Waiting' };
+    }
+    const stopped = kinds.some((kind) => source.perType[kind] === 'error' && kind !== STORE_CONFIG_KIND);
+    return stopped ? { ...row, status: 'pending', line: 'Not run' } : { ...row, ...DONE };
 }
 
 function rowOf(kind: string, source: RunSource): RunRow {

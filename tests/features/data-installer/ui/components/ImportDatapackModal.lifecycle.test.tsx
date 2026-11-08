@@ -165,7 +165,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
             expect(screen.queryByRole('button', { name: /^checking$/i })).not.toBeInTheDocument();
         });
 
-        it('shows a spinner and no actions while an import is starting', async () => {
+        // The rows show at once, Preparing Import spinning: a spinner screen first, then the rows,
+        // changed the window's layout under the SC (owner, 2026-11-07).
+        it('shows the run’s rows and no actions while an import is starting', async () => {
             neverResolve('start-datapack-import');
             renderModal();
             await awaitForm();
@@ -173,9 +175,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
             await press(startButton());
 
-            expect(await screen.findByText(/starting import/i)).toBeInTheDocument();
+            expect((await screen.findByText('Preparing Import')).closest('.work-row')).toHaveTextContent('Starting');
+            expect(screen.getByText('Categories').closest('.work-row')).toHaveTextContent('Waiting');
             expect(screen.queryByRole('button', { name: /^import$/i })).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /^starting$/i })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
         });
 
         // All three in-flight states share one visual: the form swaps for a
@@ -439,7 +442,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
 
             expect(await screen.findByText('Installing')).toBeInTheDocument();
-            expect(screen.getByText('Done')).toBeInTheDocument();
+            expect(screen.getByText('Categories').closest('.work-row')).toHaveTextContent('Done');
         });
 
         /** Before any type reports there is no honest count, so the line stays away. */
@@ -454,7 +457,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
             await settle();
             expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
-            expect(screen.getAllByText('Waiting')).toHaveLength(2);
+            // The two types and Finishing Import; Preparing Import is under way.
+            expect(screen.getAllByText('Waiting')).toHaveLength(3);
         });
 
         // There is NO cancel endpoint. Closing says "Run in Background", never "Cancel": the
@@ -547,7 +551,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
             expect(await screen.findByRole('heading', { name: 'Import Stopped' })).toBeInTheDocument();
             expect(screen.getByText('Commerce did not respond.')).toBeInTheDocument();
-            expect(screen.getByText('Done')).toBeInTheDocument();
+            expect(screen.getByText('Categories').closest('.work-row')).toHaveTextContent('Done');
         });
 
         // Superseded contract, recorded: an earlier version restored the form

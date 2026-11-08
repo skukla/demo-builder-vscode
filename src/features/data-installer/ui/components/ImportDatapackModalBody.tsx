@@ -9,7 +9,7 @@
  * @module features/data-installer/ui/components/ImportDatapackModalBody
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { ImportJobRecord } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useImportProgress } from '../hooks/useImportProgress';
@@ -70,7 +70,7 @@ function ResetConfirm({ ctx }: { ctx: BodyContext }): React.JSX.Element {
 }
 
 /** Which view the modal is showing. */
-export type ModalView = 'form' | 'busy' | 'reading-changes' | 'confirm-reset' | 'watching' | 'result' | 'no-instance';
+export type ModalView = 'form' | 'busy' | 'starting' | 'reading-changes' | 'confirm-reset' | 'watching' | 'result' | 'no-instance';
 
 /** Everything the one visible view needs, gathered once. */
 export interface BodyContext {
@@ -107,6 +107,7 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
             <div className="datapack-import-body">
                     {view === 'confirm-reset' ? <ResetConfirm ctx={ctx} /> : null}
 
+                    {view === 'starting' ? <StartingRun dataTypes={ctx.selected} columns={ctx.columns} /> : null}
                     {view === 'watching' && ctx.record ? <Watch record={ctx.record} columns={ctx.columns} /> : null}
 
 
@@ -134,6 +135,15 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
     );
 }
 
+/**
+ * An import before its job is recorded: its rows at once, Preparing Import spinning, so the window
+ * does not show a spinner screen first and then change layout (owner, 2026-11-07).
+ */
+function StartingRun({ dataTypes, columns }: { dataTypes: string[]; columns: number }): React.JSX.Element {
+    const [startedAt] = useState(() => Date.now());
+    return <ImportRunView rows={runRows({ perType: {}, dataTypes, running: true })} columns={columns} running={{ startedAt }} />;
+}
+
 /** An import runs on its rows; a removal still waits on its spinner. */
 function Watch({ record, columns }: { record: ImportJobRecord; columns: number }): React.JSX.Element {
     return record.operation === 'reset' ? <WatchProgress record={record} /> : <ImportWatch record={record} columns={columns} />;
@@ -141,28 +151,27 @@ function Watch({ record, columns }: { record: ImportJobRecord; columns: number }
 
 /**
  * An import while it runs: a row per data type, from the LIVE poll (`record.perType` is written only
- * as polls land), and under them what the engine is doing between data types and the clock.
+ * as polls land), between Preparing Import and Finishing Import, and the clock under them.
  */
 function ImportWatch({ record, columns }: { record: ImportJobRecord; columns: number }): React.JSX.Element {
     const live = useImportProgress(record.activationId);
-    const phase = live ? live.phase : record.phase;
     const rows = runRows({
         perType: live?.perType ?? record.perType,
         dataTypes: record.dataTypes,
         detail: live ? live.detail : record.detail,
-        phase,
+        phase: live ? live.phase : record.phase,
+        running: true,
     });
-    return <ImportRunView rows={rows} columns={columns} running={{ startedAt: Date.parse(record.startedAt), phase }} />;
+    return <ImportRunView rows={rows} columns={columns} running={{ startedAt: Date.parse(record.startedAt) }} />;
 }
 
 /**
  * An import's ending, on the rows it ran on: each row's final state and problem, then the sentence,
- * what changed in the store, and how long it took. A stop before any data type has no row, so its
- * reason goes under the list.
+ * what changed in the store, and how long it took. A stop before any data type sits on Preparing
+ * Import.
  */
 function ImportEnd({ result, run, columns }: { result: ResultContent; run: ImportJobRecord; columns: number }): React.JSX.Element {
     const rows = runRows({ perType: run.perType, dataTypes: run.dataTypes, stoppedAt: run.stoppedAt, rowNotes: run.rowNotes, reason: run.reason });
-    const stoppedBeforeAny = result.variant === 'error' && !run.stoppedAt ? run.reason : undefined;
     const took = result.tookMs === undefined ? undefined : tookValue(result.tookMs);
     return (
         <ImportRunView
@@ -171,7 +180,6 @@ function ImportEnd({ result, run, columns }: { result: ResultContent; run: Impor
             end={{
                 ...(result.lead ? { lead: result.lead } : {}),
                 lines: run.scLines ?? [],
-                ...(stoppedBeforeAny ? { problem: stoppedBeforeAny } : {}),
                 ...(took ? { took } : {}),
             }}
         />

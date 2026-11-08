@@ -121,15 +121,27 @@ describe('the running view', () => {
     it('draws an import as a row per data type, in install order, each waiting before the first poll', () => {
         render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: RECORD })} />);
 
-        const names = screen.getAllByText(/^(Categories|Products)$/).map((el) => el.textContent);
-        expect(names).toEqual(['Categories', 'Products']);
-        expect(screen.getAllByText('Waiting')).toHaveLength(2);
+        const names = screen.getAllByText(/^(Preparing Import|Categories|Products|Finishing Import)$/).map((el) => el.textContent);
+        expect(names).toEqual(['Preparing Import', 'Categories', 'Products', 'Finishing Import']);
+        // The two types and Finishing Import; Preparing Import is under way.
+        expect(screen.getAllByText('Waiting')).toHaveLength(3);
     });
 
-    it('says under the rows what the engine is doing between data types', () => {
+    // The engine's work outside any one type was a grey line under the list (owner, 2026-11-07).
+    it('puts what the engine is doing before the first type on Preparing Import', () => {
         render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: { ...RECORD, phase: 'Comparing the store with the datapack' } })} />);
 
-        expect(screen.getByText('Comparing the store with the datapack')).toBeInTheDocument();
+        const line = screen.getByText('Comparing the store with the datapack');
+        expect(line.closest('.work-row')).toHaveTextContent('Preparing Import');
+    });
+
+    it('shows the rows while the import starts, before its job is recorded', () => {
+        render(<ImportDatapackModalBody view="starting" ctx={ctx({ selected: ['products', 'categories'] })} />);
+
+        expect(screen.getByText('Preparing Import').closest('.work-row')).toHaveTextContent('Starting');
+        expect(screen.getAllByText('Waiting')).toHaveLength(3);
+        // One spinner, on its row: no spinner screen in front of the rows.
+        expect(screen.getByRole('progressbar').closest('.work-row')).toHaveTextContent('Preparing Import');
     });
 
     it('CONTROL: a removal still waits on its spinner', () => {
@@ -158,9 +170,10 @@ describe('an import’s ending, on its rows', () => {
         const result = { variant: 'error' as const, title: 'Import Stopped', run: RUN, tookMs: 182_000 };
         render(<ImportDatapackModalBody view="result" ctx={ctx({ result })} />);
 
-        expect(screen.getByText('Done')).toBeInTheDocument();
+        // Preparing Import and Categories; Source Items and Finishing Import did not run.
+        expect(screen.getAllByText('Done')).toHaveLength(2);
         expect(screen.getByText('Commerce did not respond.')).toHaveClass('dialog-problem', 'text-negative');
-        expect(screen.getByText('Not run')).toBeInTheDocument();
+        expect(screen.getAllByText('Not run')).toHaveLength(2);
         expect(screen.getByText('Took 3 minutes, 2 seconds')).toBeInTheDocument();
     });
 
@@ -174,11 +187,13 @@ describe('an import’s ending, on its rows', () => {
         expect(screen.getByText('Kept 2 things you had changed in the Admin.')).toBeInTheDocument();
     });
 
-    it('puts the reason under the list when it stopped before any data type', () => {
+    it('puts the reason on Preparing Import when it stopped before any data type', () => {
         const run = { ...RUN, perType: { categories: 'error', products: 'error', source_items: 'error' } as ImportJobRecord['perType'], stoppedAt: undefined, reason: 'Choose the website and store view to install into first.' };
         render(<ImportDatapackModalBody view="result" ctx={ctx({ result: { variant: 'error', title: 'Import Stopped', run } })} />);
 
-        expect(screen.getByText('Choose the website and store view to install into first.')).toHaveClass('text-negative');
-        expect(screen.getAllByText('Not run')).toHaveLength(3);
+        const reason = screen.getByText('Choose the website and store view to install into first.');
+        expect(reason).toHaveClass('dialog-problem', 'text-negative');
+        expect(reason.closest('.work-row')).toHaveTextContent('Preparing Import');
+        expect(screen.getAllByText('Not run')).toHaveLength(4);
     });
 });
