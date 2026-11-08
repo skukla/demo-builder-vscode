@@ -96,6 +96,8 @@ describe('patchesReleased', () => {
             ['a workflow', ['.github/workflows/lkg-gate.yml']],
             ['the gate and its tests', ['scripts/lkg-gate.sh', 'tests/lkg-gate.test.sh']],
             ['the canary record', ['canary/b2b.last-synced']],
+            // 2026-11-08: a pointer's hold changes nothing a storefront reads (eds-demo-patches README).
+            ['the hold beside a pointer', ['b2b/last-known-good.hold']],
         ])('pass when they only touch %s: the gate publishes nothing for those', (_name, files) => {
             expect(check([stale(files)]).code).toBe(0);
         });
