@@ -30,6 +30,7 @@ import {
     buildActions,
     busyMessage,
     closeLabel,
+    runColumns,
     isRemoving,
     resolveView,
     targetName,
@@ -92,7 +93,7 @@ describe('watchedActivation', () => {
 const RESULT: ResultContent = { variant: 'success', title: 'Dry Run Passed' };
 
 /** Nothing set: the state a fresh modal with an instance is in. */
-const IDLE = { busy: false, resetArmed: false, running: false, watching: true, result: null, noInstance: false };
+const IDLE = { busy: false, resetArmed: false, running: false, result: null, noInstance: false };
 
 describe('resolveView', () => {
     it('shows the form when nothing is happening', () => {
@@ -103,14 +104,13 @@ describe('resolveView', () => {
         expect(resolveView({ ...IDLE, busy: true })).toBe('busy');
         expect(resolveView({ ...IDLE, resetArmed: true })).toBe('confirm-reset');
         expect(resolveView({ ...IDLE, running: true })).toBe('watching');
-        expect(resolveView({ ...IDLE, running: true, watching: false })).toBe('stopped-watching');
         expect(resolveView({ ...IDLE, result: RESULT })).toBe('result');
         expect(resolveView({ ...IDLE, noInstance: true })).toBe('no-instance');
     });
 
     /** The precedence IS the state machine: each condition outranks the next. */
     it('lets a request in flight outrank everything', () => {
-        const all = { busy: true, resetArmed: true, running: true, watching: false, result: RESULT, noInstance: true };
+        const all = { busy: true, resetArmed: true, running: true, result: RESULT, noInstance: true };
         expect(resolveView(all)).toBe('busy');
     });
 
@@ -160,7 +160,6 @@ function actionArgs(over: Partial<ActionArgs> = {}): ActionArgs {
         checking: false,
         starting: false,
         resetting: false,
-        stopWatching: jest.fn(),
         validate: jest.fn(),
         armReset: jest.fn(),
         disarmReset: jest.fn(),
@@ -179,12 +178,11 @@ function rows(args: ActionArgs): { label: string; variant: string; isDisabled?: 
 }
 
 describe('buildActions', () => {
-    /** NOT "Cancel": there is no endpoint to cancel with. */
-    it('offers only Close while a job runs, wired to stopWatching', () => {
-        const args = actionArgs({ view: 'watching' });
-        const actions = buildActions(args);
-        expect(rows(args)).toStrictEqual([{ label: 'Close', variant: 'secondary' }]);
-        expect(actions[0].onPress).toBe(args.stopWatching);
+    // The way out is the dialog's own Run in Background: a Close beside it did the same thing
+    // (owner, 2026-11-07). NOT "Cancel": there is no endpoint to cancel with.
+    it('offers nothing beside Run in Background while a job runs', () => {
+        expect(rows(actionArgs({ view: 'watching' }))).toStrictEqual([]);
+        expect(closeLabel('watching')).toBe('Run in Background');
     });
 
     // Cancel stands in for Close, which the confirm's frame hides: one way back, not two.
@@ -200,14 +198,28 @@ describe('buildActions', () => {
     });
 
     // Nothing left but the way out, which the frame's Close already is: three dead buttons before.
-    it.each(['stopped-watching', 'no-instance'] as const)('offers nothing beside Close on %s', (view) => {
-        expect(rows(actionArgs({ view }))).toStrictEqual([]);
+    it('offers nothing beside Close when the project has no Commerce instance', () => {
+        expect(rows(actionArgs({ view: 'no-instance' }))).toStrictEqual([]);
     });
 
-    it('offers only Back on a result', () => {
+    it('offers only Back on a result with nothing left to do', () => {
         const args = actionArgs({ view: 'result' });
         expect(rows(args)).toStrictEqual([{ label: 'Back', variant: 'secondary' }]);
         expect(buildActions(args)[0].onPress).toBe(args.goBack);
+    });
+
+    // The main action last (dialog design rules), owner 2026-11-07.
+    it.each([
+        ['retry', 'Retry'],
+        ['fix', 'Fix with AI'],
+    ] as const)('puts a result’s %s action last, accent, wired', (resultAction, label) => {
+        const args = actionArgs({ view: 'result', resultAction, retry: jest.fn(), fixWithAi: jest.fn() });
+        const actions = buildActions(args);
+        expect(rows(args)).toStrictEqual([
+            { label: 'Back', variant: 'secondary' },
+            { label, variant: 'accent' },
+        ]);
+        expect(actions[1].onPress).toBe(resultAction === 'retry' ? args.retry : args.fixWithAi);
     });
 
     // The main action last; the two beside it quiet (dialog design rules, 2026-10-31).
@@ -323,15 +335,20 @@ describe('viewFrame', () => {
         });
     });
 
-    it('titles a watch the SC stopped, with no status: it is neither good nor bad', () => {
-        const frame = viewFrame({ ...base, view: 'stopped-watching' });
+    // An import runs and ends on its rows, in the box the form had (owner, 2026-11-07).
+    it('keeps the form’s width while an import runs, and for its ending on the rows', () => {
+        const run = { variant: 'success' as const, title: 'Datapack Imported', run: {} as ResultContent['run'] };
 
-        expect(frame).toMatchObject({ title: 'Running in Background', size: 'S', hideClose: false });
-        expect(frame.status).toBeUndefined();
+        expect(viewFrame({ ...base, view: 'watching', typeCount: 8 })).toMatchObject({ size: 'L', wide: false, title: 'Import Frescopa' });
+        expect(viewFrame({ ...base, view: 'result', typeCount: 8, result: run })).toMatchObject({ size: 'L', status: 'success', title: 'Datapack Imported' });
+    });
+
+    it('CONTROL: a removal still waits small, on its spinner', () => {
+        expect(viewFrame({ ...base, view: 'watching', removing: true, typeCount: 8 })).toMatchObject({ size: 'S', title: 'Remove Frescopa' });
     });
 
     it('CONTROL: any other result stays small', () => {
-        const result = { variant: 'success' as const, title: 'Imported Frescopa' };
+        const result = { variant: 'success' as const, title: 'Removed Frescopa' };
 
         expect(viewFrame({ ...base, view: 'result', result })).toMatchObject({ size: 'S' });
     });
@@ -404,5 +421,17 @@ describe('the removal confirm (step 05)', () => {
         [{ armed: false, lastAction: 'start' as const, view: 'busy' as const }, false],
     ])('isRemoving %j is %s', (state, expected) => {
         expect(isRemoving(state)).toBe(expected);
+    });
+});
+
+describe('runColumns', () => {
+    it.each([
+        [3, 1],
+        [6, 1],
+        [7, 2],
+        [12, 2],
+        [13, 3],
+    ])('lays %i types out in %i columns, as the form does', (typeCount, columns) => {
+        expect(runColumns(typeCount)).toBe(columns);
     });
 });

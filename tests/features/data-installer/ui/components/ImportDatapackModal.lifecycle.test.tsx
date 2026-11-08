@@ -310,7 +310,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
                     operation: 'reset',
                 },
             });
-            expect((await settle(), screen.getByRole('button', { name: /^close$/i }))).toBeInTheDocument();
+            expect((await settle(), screen.getByRole('button', { name: 'Run in Background' }))).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
         });
 
@@ -372,7 +372,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             );
             renderModal();
 
-            expect((await settle(), screen.getByRole('button', { name: /^close$/i }))).toBeInTheDocument();
+            expect((await settle(), screen.getByRole('button', { name: 'Run in Background' }))).toBeInTheDocument();
         });
 
         it('does NOT show a finished record from a previous session', async () => {
@@ -429,7 +429,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
          * happening now". It is a count and the type in hand instead, in the words
          * every datapack surface uses (progress vocabulary slice 5, 2026-10-16).
          */
-        it('shows a count and the type being worked on while running', async () => {
+        it('shows each type where it stands, on its row, while running', async () => {
             withStatus({
                 activationId: 'act-1',
                 dataTypes: ['categories', 'products'],
@@ -438,7 +438,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
             renderModal();
 
-            expect(await screen.findByText('1 of 2 data types: Products')).toBeInTheDocument();
+            expect(await screen.findByText('Installing')).toBeInTheDocument();
+            expect(screen.getByText('Done')).toBeInTheDocument();
         });
 
         /** Before any type reports there is no honest count, so the line stays away. */
@@ -452,15 +453,14 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
 
             await settle();
-            expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
-            expect(screen.queryByText(/of 2 data types/i)).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
+            expect(screen.getAllByText('Waiting')).toHaveLength(2);
         });
 
-        // There is NO cancel endpoint. Both strings are pinned, because softening
-        // either turns "we stopped looking" into "we cancelled your import".
-        // Closing says "Run in background", never "Cancel": the footer is what says the job
-        // carries on while it is watched (dialog design rules: no hint repeating a button).
-        it('offers Close, and Run in Background in place of Close', async () => {
+        // There is NO cancel endpoint. Closing says "Run in Background", never "Cancel": the
+        // footer is what says the job carries on while it is watched (dialog design rules: no hint
+        // repeating a button). A Close beside it did the same thing (owner, 2026-11-07).
+        it('offers Run in Background, and no Close beside it', async () => {
             withStatus({
                 activationId: 'act-1',
                 dataTypes: ['categories'],
@@ -470,7 +470,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
             await settle();
 
-            expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^close$/i })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
         });
 
@@ -484,7 +484,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
 
             await settle();
-            expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
 
             expect(
                 screen.queryByRole('button', { name: /cancel import/i })
@@ -533,7 +533,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             finished('success', { categories: 'success', products: 'success' });
             await startAJob();
 
-            expect(await screen.findByRole('heading', { name: 'Imported Bodea' })).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Datapack Imported' })).toBeInTheDocument();
             expect(screen.queryByText(/categories: success/i)).not.toBeInTheDocument();
         });
 
@@ -541,12 +541,13 @@ describe('ImportDatapackModal — job lifecycle', () => {
          * A partial run is the opposite case: the successes are the noise and the
          * failures are the answer, so only the troubled types are named.
          */
-        it('names only the types that need attention when the run is partial', async () => {
-            finished('partial', { categories: 'success', products: 'error' });
+        it('keeps the rows when the run stopped, the reason on the one it stopped on', async () => {
+            finished('partial', { categories: 'success', products: 'error' }, { stoppedAt: 'products', reason: 'Commerce did not respond.' });
             await startAJob();
 
-            expect(await screen.findByText(/products: error/i)).toBeInTheDocument();
-            expect(screen.queryByText(/categories: success/i)).not.toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Import Stopped' })).toBeInTheDocument();
+            expect(screen.getByText('Commerce did not respond.')).toBeInTheDocument();
+            expect(screen.getByText('Done')).toBeInTheDocument();
         });
 
         // Superseded contract, recorded: an earlier version restored the form
@@ -557,7 +558,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             finished('success', { categories: 'success' });
             await startAJob();
 
-            expect(await screen.findByRole('heading', { name: 'Imported Bodea' })).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Datapack Imported' })).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
 
             await press(screen.getByRole('button', { name: /back/i }));
@@ -597,15 +598,28 @@ describe('ImportDatapackModal — job lifecycle', () => {
             finished('success', { categories: 'success' });
             await startAJob();
 
-            expect(await screen.findByRole('heading', { name: 'Imported Bodea' })).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Datapack Imported' })).toBeInTheDocument();
         });
 
-        // Not a failure: a re-run legitimately skips items that already exist.
-        it('reports partial as its own outcome, not as an error', async () => {
-            finished('partial', { categories: 'success', products: 'error' });
+        // Retry runs the same import again: what is in sends nothing (owner, 2026-11-07).
+        it('offers Retry when the run stopped on a failure a retry can get past, and pressing it starts the import again', async () => {
+            finished('partial', { categories: 'success', products: 'error' }, { stoppedAt: 'products', reason: 'Commerce did not respond.', retryable: true });
+            await startAJob();
+            const starts = () => mockRequest.mock.calls.filter((c) => c[0] === 'start-datapack-import').length;
+            const before = starts();
+
+            await press(await screen.findByRole('button', { name: 'Retry' }));
+
+            expect(starts()).toBe(before + 1);
+        });
+
+        it('offers Fix with AI when a row has a problem, and pressing it asks the extension to open the AI', async () => {
+            finished('success', { categories: 'success', products: 'success' }, { rowNotes: { products: 'The store refused 3.' } });
             await startAJob();
 
-            expect(await screen.findByText(/some data types/i)).toBeInTheDocument();
+            await press(await screen.findByRole('button', { name: 'Fix with AI' }));
+
+            expect(mockRequest).toHaveBeenCalledWith('fix-datapack-import-with-ai', {});
         });
 
         it('explains a never-registered job with the service reason', async () => {

@@ -81,8 +81,8 @@ async function watchAndRecord(
     // Each poll is also written to the record, so an agent reading the status sees it while it
     // runs (owner, 2026-11-05). Writes go in order, and the outcome waits for the last of them.
     let progressWritten: Promise<unknown> = Promise.resolve();
-    const writeProgress = (perType: ImportJobRecord['perType'], detail: string | undefined): void => {
-        const live = { ...record, perType, ...(detail ? { detail } : {}) };
+    const writeProgress = (perType: ImportJobRecord['perType'], detail: string | undefined, phase: string | undefined): void => {
+        const live = { ...record, perType, ...(detail ? { detail } : {}), ...(phase ? { phase } : {}) };
         progressWritten = progressWritten.then(() => transient.set(JOB_KEY, live)).catch(() => undefined);
     };
     try {
@@ -96,12 +96,13 @@ async function watchAndRecord(
             // Each poll goes straight to the modal. Without this the webview
             // learns nothing until the job ends, which on a fourteen-type pack
             // is minutes of an unexplained spinner.
-            onProgress: (perType, detail) => {
+            onProgress: (perType, detail, phase) => {
                 void context.sendMessage(IMPORT_PROGRESS_MESSAGE, {
                     activationId: record.activationId,
                     operation: record.operation,
                     perType,
                     ...(detail ? { detail } : {}),
+                    ...(phase ? { phase } : {}),
                 });
                 // The SAME progress on the shared channel, so closing the modal
                 // can hand the job to a notification that keeps narrating
@@ -112,7 +113,7 @@ async function watchAndRecord(
                     state: 'running',
                     ...datapackStage(record, perType, detail),
                 });
-                writeProgress(perType, detail);
+                writeProgress(perType, detail, phase);
             },
         });
         await progressWritten;
@@ -137,6 +138,11 @@ async function watchAndRecord(
             ...(result.timings ? { timings: result.timings } : {}),
             ...(result.skipped ? { skipped: result.skipped } : {}),
             ...(result.check ? { check: result.check } : {}),
+            ...(result.stoppedAt ? { stoppedAt: result.stoppedAt } : {}),
+            ...(result.retryable ? { retryable: true } : {}),
+            ...(result.scLines ? { scLines: result.scLines } : {}),
+            ...(result.searchDelay ? { searchDelay: result.searchDelay } : {}),
+            ...(result.rowNotes ? { rowNotes: result.rowNotes } : {}),
             ...(result.processingTimeMs !== undefined
                 ? { processingTimeMs: result.processingTimeMs }
                 : {}),

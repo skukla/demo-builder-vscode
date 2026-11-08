@@ -34,7 +34,7 @@ form, confirm, progress, result) shows one at a time.
 |---|---|---|
 | **Form** | Fields, then the actions | medium; large or extra-wide when a list needs columns |
 | **Confirm** | A question as the title, as few short sentences as it takes, Cancel and the action | small |
-| **Progress** | A spinner, what is happening, how far | small |
+| **Progress** | A spinner, what is happening, how far; a run through a list (updates, projects, a datapack's data types) shows a row per item instead (`WorkRow`) | small; a list keeps the box it found |
 | **Result** | The outcome as the title, then only what is left to know or do | small |
 | **Guide** | Steps with their state, one step open (the demo setup guide; a pack's setup step is a guide of one) | large |
 
@@ -66,6 +66,13 @@ its answer and its spinner (owner, 2026-11-02). A
 done result with nothing else to say is just its title. Where nothing follows from
 it, it closes itself (the progress window); a dialog whose result offers Back to its
 form (Import) stays until closed.
+
+**A run ends where it ran.** A window that shows a run as rows (the Updates run, the projects
+batch run, a datapack import) does not switch to a result view when the run ends. The title turns
+to the outcome with its icon, the rows stay with each one's final state, and a problem sits on the
+row it is about, one short line in orange or red. What is left to say about the whole run (one
+sentence, then "Took …") goes under the list, and the size does not change. Nothing waits for a
+second view (owner, 2026-11-07, generalising the Updates run's rule of 2026-10-21).
 
 **Capitals.** What names a thing is Title Case: the title, buttons, tabs, menu items and labels
 ("Run in Background", "Data Types"). What tells the SC something keeps normal capitals: a sentence,

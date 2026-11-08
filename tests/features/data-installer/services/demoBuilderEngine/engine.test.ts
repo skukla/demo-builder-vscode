@@ -314,6 +314,12 @@ describe('demoBuilderEngine reads', () => {
             { valid: false, reason: 'The store has no store view default on a website acme. Choose them again in the Commerce step.' },
         ],
         ['a kind it cannot install', request({ dataTypes: ['categories', 'aco_products'] }), { valid: false, reason: 'Demo Builder does not install aco_products yet.' }],
+        // Live 2026-11-07: the preview counts attribute options apart, and an agent asked for them by name.
+        [
+            'a kind that installs with another',
+            request({ dataTypes: ['product_attributes', 'attribute_options'] }),
+            { valid: false, reason: 'attribute_options is no data type of its own: it installs with product_attributes, so ask for that.' },
+        ],
     ])('dry run with %s', async (_label, req, expected) => {
         const { engine, ctx } = await engineWith({}, () => ({}));
 

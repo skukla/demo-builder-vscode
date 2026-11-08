@@ -339,7 +339,7 @@ function leftOutOf(check: InstallCheck): string {
     return ` It left out ${what} kept as changed in the Admin; verify_datapack_install checks every product.`;
 }
 
-function findingsOf(check: InstallCheck): string {
+export function findingsOf(check: InstallCheck): string {
     if (check.verdict === 'matches') return 'all match';
     const counted = (count: number, one: string, many: string, rest: string) =>
         `${count.toLocaleString('en-US')} ${count === 1 ? one : many} ${rest}`;
@@ -351,6 +351,17 @@ function findingsOf(check: InstallCheck): string {
         [check.pricesDiffer.count, 'price', 'prices', 'not as in the datapack'],
     ];
     return andList(rows.filter(([count]) => count > 0).map((row) => counted(...row)));
+}
+
+/**
+ * What the window says on the products' row when the check found a difference (dialog design rules:
+ * one short line). What to do is the window's Fix with AI: importing again over these products sends
+ * only what the datapack changed, so a value that never landed reads as unchanged (owner, 2026-11-07).
+ */
+export function checkRowNote(check: InstallCheck | undefined): string | undefined {
+    if (!check || check.verdict === 'matches') return undefined;
+    // Every finding starts with its count, so the line needs no capital.
+    return `${findingsOf(check)}.`;
 }
 
 /**

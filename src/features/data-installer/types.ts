@@ -221,6 +221,27 @@ export interface ImportProgressMessage {
     perType: Record<string, DataTypeStatus>;
     /** How far the type in progress has got (`JobStatusSnapshot.detail`). */
     detail?: string;
+    /** What the job is doing while no one data type is (`JobStanding.phase`). */
+    phase?: string;
+}
+
+/**
+ * Where Demo Builder's engine says a job stands beyond each data type's state: what the import
+ * window draws, a row per data type (owner, 2026-11-07).
+ */
+export interface JobStanding {
+    /** What the job is doing while no one data type is: "Comparing the store with the datapack". */
+    phase?: string;
+    /** The data type that failed: the one in progress when the job stopped, or the store settings, which fail without stopping it. */
+    stoppedAt?: string;
+    /** Running it again could get past what stopped it: Commerce failing, slowing down or not answering. */
+    retryable?: boolean;
+    /** The note's lines the SC needs to read in the window; `note` holds every line. */
+    scLines?: string[];
+    /** When the job wrote products: how long until storefront search shows them. */
+    searchDelay?: string;
+    /** A line for each data type with a problem that did not stop the job: what is wrong, what to do. */
+    rowNotes?: Record<string, string>;
 }
 
 /**
@@ -272,7 +293,7 @@ export interface InstallCheck {
     pricesDiffer: CheckFinding<{ sku: string; pack: number; store: number }>;
 }
 
-export interface JobStatusSnapshot {
+export interface JobStatusSnapshot extends JobStanding {
     activationId: string;
     perType: Record<string, DataTypeStatus>;
     processingTimeMs?: number;
@@ -329,7 +350,7 @@ export interface ImportStart {
  * result lands. `outcome: 'watching'` is the in-flight state; the rest come from
  * the runner.
  */
-export interface ImportJobRecord {
+export interface ImportJobRecord extends JobStanding {
     activationId: string;
     datapackName: string;
     version: string;

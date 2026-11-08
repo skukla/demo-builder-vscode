@@ -2,7 +2,7 @@
  * Configure, start and watch one import — as an explicit state machine.
  *
  * The modal shows ONE view at a time: `form`, `busy`, `reading-changes`, `confirm-reset`, `watching`,
- * `stopped-watching`, `result` or `no-instance`, with the footer narrating each. An earlier shape let
+ * `result` or `no-instance`, with the footer narrating each. An earlier shape let
  * the form, dry-run verdicts, three failure displays and a credentials notice
  * coexist as conditional fragments — and that produced a live bug nobody could
  * localize (a bare error icon whose words were lost somewhere in the pile).
@@ -42,16 +42,17 @@ import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { useImportRetry } from '../hooks/useImportRetry';
 import { useImportScopes } from '../hooks/useImportScopes';
 import { useJobPickup } from '../hooks/useJobPickup';
 import { useRemovalConfirm, useRemovalScope } from '../hooks/useRemovalConfirm';
 import { useTypeSelection } from '../hooks/useTypeSelection';
-import { ImportDatapackModalBody, type BodyContext, type ModalView } from './ImportDatapackModalBody';
+import { ImportDatapackModalBody, type BodyContext } from './ImportDatapackModalBody';
 import { backgroundTitle, jobBusyMessage, libraryField } from './importModalJob';
-import { buildActions, closeLabel, isRemoving, resolveView, targetName, viewFrame, watchedActivation } from './importModalView';
+import { buildActions, closeLabel, isRemoving, resolveView, runColumns, targetName, viewFrame, waitOf, watchedActivation } from './importModalView';
 import { resolveResult, type LastAction } from './importResult';
 import { removeLabel } from './removalConfirm';
-import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
+import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -72,17 +73,6 @@ interface ImportTarget {
     scope?: { websiteCode: string; storeCode: string };
 }
 
-/**
- * The dialog's wait: starting or removing, or what it needs before the form can show. `reading` has
- * to cover the first frame, before any request has been sent: a form drawn there set the box the
- * wait then kept (407px).
- */
-function waitOf(view: ModalView, reading: boolean, message: string): ModalWait | false {
-    if (view === 'busy') return { message };
-    if (view === 'reading-changes') return {};
-    return view === 'form' && reading ? {} : false;
-}
-
 export interface ImportDatapackModalProps {
     id: DatapackId;
     displayName: string;
@@ -101,7 +91,6 @@ export function ImportDatapackModal({
     onClose,
 }: ImportDatapackModalProps): React.JSX.Element {
     const { selected, allSelected, toggle, toggleAll } = useTypeSelection(availableTypes);
-    const [watching, setWatching] = useState(true);
     // The removal's confirm, and what the SC changed that it asks about (step 05).
     const removal = useRemovalConfirm();
     /** Which operation's outcome the result view shows. */
@@ -140,15 +129,14 @@ export function ImportDatapackModal({
     const record = status.value ?? null;
     const running = record?.outcome === 'watching';
 
-    // Re-read while a job is in flight; stops on its own once terminal, and
-    // when the user stops watching.
+    // Re-read while a job is in flight; stops on its own once terminal.
     useEffect(() => {
-        if (!running || !watching) {
+        if (!running) {
             return undefined;
         }
         const timer = setInterval(() => loadStatus({}), STATUS_POLL_MS);
         return () => clearInterval(timer);
-    }, [running, watching, loadStatus]);
+    }, [running, loadStatus]);
 
     // Pick the job up as soon as one is accepted. A reset is the same kind of
     // job — same activation id, same runner, same record.
@@ -194,16 +182,15 @@ export function ImportDatapackModal({
         dryRun.load(requestBody());
     }, [act, dryRun, requestBody]);
 
-    const startImport = useCallback((): void => {
+    const runImport = useCallback((): void => {
         act('start');
-        setWatching(true);
         start.load(requestBody());
     }, [act, start, requestBody]);
+    const { retries, startImport, retry, fixWithAi } = useImportRetry(runImport);
 
     const confirmRemoval = (save: boolean): void => {
         const answer = removal.press(save);
         act('reset');
-        setWatching(true);
         // `confirm` is added HERE and nowhere else. The handler refuses
         // without it, so the armed press is the only path that can remove data.
         reset.load({ ...requestBody(), confirm: true, ...answer });
@@ -217,7 +204,16 @@ export function ImportDatapackModal({
     const busy = dryRun.loading || start.loading || reset.loading || pickingUp;
     const result =
         !dismissed && !busy
-            ? resolveResult(lastAction, { name: displayName, dryRun, start, reset, record, startedActivation })
+            ? resolveResult(lastAction, {
+                  name: displayName,
+                  store: targetName(scope, commerceInstance),
+                  retries,
+                  dryRun,
+                  start,
+                  reset,
+                  record,
+                  startedActivation,
+              })
             : null;
     const goBack = (): void => {
         if (result?.backToConfirm) removal.reopen();
@@ -240,7 +236,6 @@ export function ImportDatapackModal({
         readingChanges: removal.reading,
         resetArmed: removal.armed,
         running,
-        watching,
         result,
         noInstance: !commerceInstance && target.settled,
     });
@@ -261,6 +256,7 @@ export function ImportDatapackModal({
         removal,
         toggle,
         toggleAll,
+        columns: runColumns(availableTypes.length),
     };
 
     // Closing a job that is still RUNNING hands it to a progress notification,
@@ -297,7 +293,7 @@ export function ImportDatapackModal({
                 hideClose={frame.hideClose}
                 fitContent
                 waiting={waitOf(view, scope.loading || !target.settled || !scopeSettled, bodyContext.busyMessage)}
-                holdSize={view === 'watching'}
+                holdSize={frame.holdSize === true}
                 onClose={view === 'reading-changes' ? removal.disarm : close}
                 closeLabel={closeLabel(view, savingFirst)}
                 actionButtons={buildActions({
@@ -308,13 +304,15 @@ export function ImportDatapackModal({
                     checking: dryRun.loading,
                     starting: start.loading,
                     resetting: reset.loading,
-                    stopWatching: () => setWatching(false),
                     validate,
                     armReset,
                     disarmReset: removal.disarm,
                     ...removalButtons(removal, confirmRemoval),
                     startImport,
                     goBack,
+                    resultAction: result?.action,
+                    retry,
+                    fixWithAi,
                 })}
             >
                 <ImportDatapackModalBody view={view} ctx={bodyContext} />

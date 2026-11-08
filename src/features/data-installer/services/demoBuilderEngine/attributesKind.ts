@@ -28,6 +28,13 @@ export const ATTRIBUTE_KIND = 'product_attributes';
 export const ATTRIBUTE_OPTION_KIND = 'attribute_options';
 
 /**
+ * Kinds counted on their own that are no data type of their own: an option goes in with its
+ * attribute, so a preview counts it apart and an install asks for the attribute (live, 2026-11-07:
+ * an agent copied the preview's kinds into an import, which refused `attribute_options`).
+ */
+export const INSTALLS_WITH: Readonly<Record<string, string>> = { [ATTRIBUTE_OPTION_KIND]: ATTRIBUTE_KIND };
+
+/**
  * Swatch attributes are made in the service's two steps (spec §1 step 6;
  * `ProductAttributeImportProcessor.js` L338-352, L475-525): the attribute without its options or
  * default, then each option through the options route, its `value` the swatch (a colour or a

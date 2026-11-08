@@ -290,6 +290,17 @@ describe('previewChanges, counted the way a save counts', () => {
         expect(preview.kinds.find((k) => k.kind === 'attribute_options')).toMatchObject({ add: { count: 1, names: ['color/Blue'] }, inStore: { count: 0 } });
     });
 
+    // Live 2026-11-07: an agent copied the preview's kinds into an import, which refused attribute_options.
+    it('says an attribute option installs with its attribute, and a data type of its own says nothing', async () => {
+        const row = { attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: 'Blue' }] } };
+        const { d } = await deps(true, {}, { product_attributes: [row] });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'attribute_options')?.installsWith).toBe('product_attributes');
+        expect(preview.kinds.find((k) => k.kind === 'product_attributes')).not.toHaveProperty('installsWith');
+    });
+
     it('counts a cart rule or code the store already has by that name as already in the store (step 11)', async () => {
         const { d } = await deps(true, {
             [page('salesRules/search', filterBy('name', '10% Coupon'))]: { items: [{ rule_id: 3, name: '10% Coupon' }], total_count: 1 },

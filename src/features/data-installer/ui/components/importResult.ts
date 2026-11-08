@@ -58,7 +58,25 @@ export interface ResultContent {
     keptRoot?: KeptRootStep;
     /** Back goes to the confirm it came from, not the form: saving failed and nothing was removed. */
     backToConfirm?: true;
+    /**
+     * An import Demo Builder's engine ran: the window keeps its rows and draws the ending under them
+     * ("A run ends where it ran", owner 2026-11-07), from this record.
+     */
+    run?: ImportJobRecord;
+    /** The ending under the rows: where the pack went and how long search takes. */
+    lead?: string;
+    /** The footer's main action: run the same import again, or hand the problem to the SC's AI. */
+    action?: 'retry' | 'fix';
 }
+
+/**
+ * How many times Retry may be pressed on one import before the window offers Fix with AI instead:
+ * a stop that comes back twice is not one a retry gets past.
+ */
+export const RETRIES_BEFORE_FIX = 2;
+
+/** The store settings, the one data type that fails without stopping the import. */
+const SETTINGS_KIND = 'store_config';
 
 const RESULT_STATUS: Record<ResultContent['variant'], ModalStatus | undefined> = {
     success: 'success',
@@ -102,6 +120,10 @@ export function resolveResult(
     sources: {
         /** The pack, by the name the SC knows it by, for the result's title. */
         name: string;
+        /** Where the import went, by name, for the sentence under its rows. */
+        store?: string;
+        /** How many times Retry was pressed on this import. */
+        retries?: number;
         dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>;
         start: DataInstallerRequest<{ activationId: string }>;
         reset: DataInstallerRequest<{ activationId: string; savedNote?: string }>;
@@ -110,6 +132,7 @@ export function resolveResult(
     },
 ): ResultContent | null {
     const { name, dryRun, start, reset, record, startedActivation } = sources;
+    const where = { store: sources.store, retries: sources.retries ?? 0 };
 
     switch (lastAction) {
         case 'dryRun':
@@ -131,6 +154,7 @@ export function resolveResult(
                 record.outcome !== 'watching' &&
                 record.activationId === startedActivation
             ) {
+                if (record.operation !== 'reset' && ranOnRows(record)) return runResult(record, name, where);
                 return withSavedNote(terminalResult(record, name), lastAction === 'reset' ? reset.value?.savedNote : undefined);
             }
             return null;
@@ -138,6 +162,40 @@ export function resolveResult(
         default:
             return null;
     }
+}
+
+/**
+ * Whether the import's ending goes on its rows: an import that finished or stopped part-way. One
+ * that never started, was stopped watching, or could not be watched has no rows to keep.
+ */
+function ranOnRows(record: ImportJobRecord): boolean {
+    return record.outcome === 'success' || record.outcome === 'partial' || record.outcome === 'error';
+}
+
+/**
+ * An import's ending on its rows (owner, 2026-11-07). It ran to the end when nothing failed but the
+ * store settings, which fail without stopping it: "Datapack Imported", amber when a row has a
+ * problem, with Fix with AI. Otherwise "Import Stopped", with Retry while a retry can get past the
+ * stop, else Fix with AI. The title names the kind of thing (dialog design rules, 2026-11-04).
+ */
+function runResult(record: ImportJobRecord, name: string, where: { store?: string; retries: number }): ResultContent {
+    const took = record.processingTimeMs !== undefined ? { tookMs: record.processingTimeMs } : {};
+    const failed = Object.entries(record.perType).filter(([, state]) => state === 'error').map(([kind]) => kind);
+    const ranToEnd = failed.every((kind) => kind === SETTINGS_KIND && record.stoppedAt === SETTINGS_KIND);
+    if (!ranToEnd) {
+        const retry = record.retryable === true && where.retries < RETRIES_BEFORE_FIX;
+        return { variant: 'error', title: 'Import Stopped', run: record, action: retry ? 'retry' : 'fix', ...took };
+    }
+    const problems = failed.length > 0 || Object.keys(record.rowNotes ?? {}).length > 0;
+    const lead = [where.store ? `${name} is in ${where.store}.` : undefined, record.searchDelay].filter(Boolean).join(' ');
+    return {
+        variant: problems ? 'warning' : 'success',
+        title: 'Datapack Imported',
+        run: record,
+        ...(lead ? { lead } : {}),
+        ...(problems ? { action: 'fix' as const } : {}),
+        ...took,
+    };
 }
 
 /** Where the changes went: what a removal that saved them first has left to say, however it ended. */

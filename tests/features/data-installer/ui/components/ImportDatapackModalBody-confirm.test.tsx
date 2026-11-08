@@ -38,6 +38,7 @@ function ctx(over: Partial<BodyContext> = {}): BodyContext {
         removal: { content: { kind: 'plain' }, choice: { always: false }, onToggleAlways: jest.fn(), onSaveAsName: jest.fn() },
         toggle: jest.fn(),
         toggleAll: jest.fn(),
+        columns: 1,
         ...over,
     };
 }
@@ -109,32 +110,75 @@ describe('the running view', () => {
         datapackName: 'zz-test-root-db12',
         version: '1',
         commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi',
-        dataTypes: ['categories'],
+        dataTypes: ['products', 'categories'],
         startedAt: '2026-11-02T00:00:00.000Z',
         outcome: 'watching',
         perType: {},
     };
 
-    it('uses the dialog wait spacing, and holds no blank row under its two lines', () => {
-        const { container } = render(
-            <ImportDatapackModalBody view="watching" ctx={ctx({ record: RECORD })} />,
-        );
-
-        expect(container.querySelector('.modal-wait [role="status"]')).not.toBeNull();
-        expect(container.querySelector('.text-xs')).toBeNull();
-    });
-
-    it('says the import carries on once watching has stopped, with nothing still spinning', () => {
-        render(<ImportDatapackModalBody view="stopped-watching" ctx={ctx({ record: RECORD })} />);
-
-        expect(screen.getByText('The import continues in the background.')).toBeInTheDocument();
-        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-        expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    });
-
-    it('CONTROL: a running watch does spin', () => {
+    // A row per data type from the first frame, in the order the engine installs (owner,
+    // 2026-11-07): it was a medium spinner and one line, silent for minutes.
+    it('draws an import as a row per data type, in install order, each waiting before the first poll', () => {
         render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: RECORD })} />);
 
+        const names = screen.getAllByText(/^(Categories|Products)$/).map((el) => el.textContent);
+        expect(names).toEqual(['Categories', 'Products']);
+        expect(screen.getAllByText('Waiting')).toHaveLength(2);
+    });
+
+    it('says under the rows what the engine is doing between data types', () => {
+        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: { ...RECORD, phase: 'Comparing the store with the datapack' } })} />);
+
+        expect(screen.getByText('Comparing the store with the datapack')).toBeInTheDocument();
+    });
+
+    it('CONTROL: a removal still waits on its spinner', () => {
+        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: { ...RECORD, operation: 'reset' } })} />);
+
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByText('Waiting')).not.toBeInTheDocument();
+    });
+});
+
+describe('an import’s ending, on its rows', () => {
+    const RUN: ImportJobRecord = {
+        activationId: 'a-1',
+        datapackName: 'luma',
+        version: '1',
+        commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi',
+        dataTypes: ['categories', 'products', 'source_items'],
+        startedAt: '2026-11-02T00:00:00.000Z',
+        outcome: 'partial',
+        perType: { categories: 'success', products: 'error', source_items: 'error' },
+        stoppedAt: 'products',
+        reason: 'Commerce did not respond.',
+    };
+
+    it('keeps each row’s end: done, the reason in red on the one it stopped on, the rest not run', () => {
+        const result = { variant: 'error' as const, title: 'Import Stopped', run: RUN, tookMs: 182_000 };
+        render(<ImportDatapackModalBody view="result" ctx={ctx({ result })} />);
+
+        expect(screen.getByText('Done')).toBeInTheDocument();
+        expect(screen.getByText('Commerce did not respond.')).toHaveClass('dialog-problem', 'text-negative');
+        expect(screen.getByText('Not run')).toBeInTheDocument();
+        expect(screen.getByText('Took 3 minutes, 2 seconds')).toBeInTheDocument();
+    });
+
+    it('puts a problem that did not stop it on its row, orange, and the sentence under the list', () => {
+        const run = { ...RUN, outcome: 'success' as const, perType: { categories: 'success', products: 'success', source_items: 'success' } as ImportJobRecord['perType'], stoppedAt: undefined, reason: undefined, rowNotes: { products: 'The store refused 3.' }, scLines: ['Kept 2 things you had changed in the Admin.'] };
+        const result = { variant: 'warning' as const, title: 'Datapack Imported', run, lead: 'Luma is in Justrite Test Store.' };
+        render(<ImportDatapackModalBody view="result" ctx={ctx({ result })} />);
+
+        expect(screen.getByText('The store refused 3.')).toHaveClass('dialog-problem', 'text-notice');
+        expect(screen.getByText('Luma is in Justrite Test Store.')).toBeInTheDocument();
+        expect(screen.getByText('Kept 2 things you had changed in the Admin.')).toBeInTheDocument();
+    });
+
+    it('puts the reason under the list when it stopped before any data type', () => {
+        const run = { ...RUN, perType: { categories: 'error', products: 'error', source_items: 'error' } as ImportJobRecord['perType'], stoppedAt: undefined, reason: 'Choose the website and store view to install into first.' };
+        render(<ImportDatapackModalBody view="result" ctx={ctx({ result: { variant: 'error', title: 'Import Stopped', run } })} />);
+
+        expect(screen.getByText('Choose the website and store view to install into first.')).toHaveClass('text-negative');
+        expect(screen.getAllByText('Not run')).toHaveLength(3);
     });
 });

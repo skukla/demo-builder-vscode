@@ -92,7 +92,19 @@ export interface ImportJobResult {
     /** The install check (`JobStatusSnapshot.check`). */
     check?: InstallCheck;
     processingTimeMs?: number;
+    /** Where it stopped, whether a retry could help, and what the SC reads (`JobStanding`). */
+    stoppedAt?: string;
+    retryable?: boolean;
+    scLines?: string[];
+    searchDelay?: string;
+    rowNotes?: Record<string, string>;
 }
+
+/**
+ * Told each poll: every data type's state, the engine's count for the one in progress ("450 of
+ * 2,046 products"), and what it is doing while no one type is (`JobStanding.phase`).
+ */
+export type ProgressListener = (perType: Record<string, DataTypeStatus>, detail?: string, phase?: string) => void;
 
 /** The read-client methods this needs. Narrowed so tests need no client. */
 export interface JobStatusSource {
@@ -108,12 +120,13 @@ export interface JobStatusSource {
  * and the only thing a propagated error would achieve is a wrong verdict.
  */
 function report(
-    onProgress: ((perType: Record<string, DataTypeStatus>, detail?: string) => void) | undefined,
+    onProgress: ProgressListener | undefined,
     perType: Record<string, DataTypeStatus>,
     detail: string | undefined,
+    phase: string | undefined,
 ): void {
     try {
-        onProgress?.(perType, detail);
+        onProgress?.(perType, detail, phase);
     } catch {
         // Deliberately swallowed — see above.
     }
@@ -145,7 +158,7 @@ export async function watchImportJob(args: {
      * Never called with an empty map: that shape means "no record yet", not
      * progress.
      */
-    onProgress?: (perType: Record<string, DataTypeStatus>, detail?: string) => void;
+    onProgress?: ProgressListener;
 }): Promise<ImportJobResult> {
     const { client, activationId, requestedTypes, polling, abortSignal } = args;
     const graceMs = args.graceMs ?? DEFAULT_GRACE_MS;
@@ -168,7 +181,7 @@ export async function watchImportJob(args: {
             return true;
         }
 
-        report(args.onProgress, latest.perType, latest.detail);
+        report(args.onProgress, latest.perType, latest.detail, latest.phase);
         return isTerminal(latest, requestedTypes);
     };
 
@@ -215,8 +228,13 @@ export async function watchImportJob(args: {
 }
 
 /** The finished job's own words, each only when the engine gave it. */
-function whatTheEngineSaid(latest: JobStatusSnapshot): Pick<ImportJobResult, 'note' | 'leftInStore' | 'keptRoot' | 'timings' | 'skipped' | 'check' | 'processingTimeMs'> {
+function whatTheEngineSaid(latest: JobStatusSnapshot): Omit<ImportJobResult, 'outcome' | 'perType' | 'reason'> {
     return {
+        ...(latest.stoppedAt ? { stoppedAt: latest.stoppedAt } : {}),
+        ...(latest.retryable ? { retryable: true } : {}),
+        ...(latest.scLines ? { scLines: latest.scLines } : {}),
+        ...(latest.searchDelay ? { searchDelay: latest.searchDelay } : {}),
+        ...(latest.rowNotes ? { rowNotes: latest.rowNotes } : {}),
         ...(latest.note ? { note: latest.note } : {}),
         ...(latest.check ? { check: latest.check } : {}),
         ...(latest.timings ? { timings: latest.timings } : {}),

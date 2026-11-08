@@ -34,6 +34,7 @@ import {
 } from '@/features/data-installer/services/demoBuilderEngine/productsKind';
 import {
     isRowRefusal,
+    isWorthRetrying,
     reasonOf,
     skippedLine,
 } from '@/features/data-installer/services/demoBuilderEngine/refusedRows';
@@ -90,6 +91,19 @@ describe("what is the row's fault", () => {
         ],
     ])('%s: %s', (_label, error, rows) => {
         expect(isRowRefusal(error)).toBe(rows);
+    });
+
+    // What stops the install, sorted into what a Retry can get past (owner, 2026-11-07).
+    it.each([
+        ['a 503', new CommerceReadError('x', 503), true],
+        ['a 429', new CommerceReadError('x', 429), true],
+        ['no answer at all', new CommerceReadError('Commerce did not answer products: timed out'), true],
+        ['a 403: who we are', new CommerceReadError('x', 403), false],
+        ['a 401', new CommerceReadError('x', 401), false],
+        ['a row refusal (422)', new CommerceReadError('x', 422), false],
+        ['anything the engine did not expect', new Error('Commerce did not return the new cart rule id.'), false],
+    ])('a retry can get past %s: %s', (_label, error, worth) => {
+        expect(isWorthRetrying(error)).toBe(worth);
     });
 
     it("gives Commerce's own message, with its parameters filled in", () => {

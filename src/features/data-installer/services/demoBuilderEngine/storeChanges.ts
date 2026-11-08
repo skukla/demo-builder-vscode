@@ -12,6 +12,7 @@
 import { layerNotAskedLine } from '../settingsLayer';
 import { askedRows } from './askedKinds';
 import { loadStoreSets } from './attributeSetsKind';
+import { INSTALLS_WITH } from './attributesKind';
 import { sameText } from './b2bReads';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import { COUPON_KIND, couponByCode } from './couponsKind';
@@ -53,6 +54,11 @@ export interface KindChanges {
     inStore: Named;
     remove: Named;
     keep: Named;
+    /**
+     * The data type this kind installs with, when it is none of its own (`INSTALLS_WITH`): an
+     * attribute's options, counted apart here, go in when an install asks for `product_attributes`.
+     */
+    installsWith?: string;
 }
 
 /** What installing a pack again would change. */
@@ -188,6 +194,7 @@ async function summarize(ctx: KindContext, plans: readonly KindPlan[], taken: re
                 inStore: named(added.filter((key) => there.has(key))),
                 remove: named(keyed((o) => o.outcome === 'remove' && !keptHere(o))),
                 keep: named(keyed((o) => o.outcome === 'leave-edited' || o.outcome === 'create' || keptHere(o))),
+                ...(kind in INSTALLS_WITH ? { installsWith: INSTALLS_WITH[kind] } : {}),
             };
         }),
     );

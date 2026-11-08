@@ -21,7 +21,6 @@ import {
     jobRecord,
     sources,
     succeeded,
-    PACK_NAME,
 } from './importResult.testUtils';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -117,7 +116,7 @@ describe('resolveResult — start and reset', () => {
             sources({ record: jobRecord(), startedActivation: ACTIVATION })
         );
 
-        expect(result).toMatchObject({ variant: 'success', title: `Imported ${PACK_NAME}` });
+        expect(result).toMatchObject({ variant: 'success', title: 'Datapack Imported' });
     });
 
     it('shows nothing while the record is still being watched', () => {

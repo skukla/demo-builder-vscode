@@ -35,6 +35,7 @@ import { datapackZipHandlers } from './datapackZipHandlers';
 import { demoDataHandlers } from './demoDataHandlers';
 import { exportHandlers } from './exportHandlers';
 import { exportPackHandlers } from './exportPackHandlers';
+import { importFixWithAiHandlers } from './importFixHandlers';
 import { skippedPage, waitForJob, waitMsOf } from './importJobWait';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
@@ -111,6 +112,8 @@ export const importHandlers = defineHandlers({
     ...removalChangesHandlers,
     // What a website holds that Demo Builder did not install, and clearing it (step 10).
     ...demoDataHandlers,
+    // An import that ended with a problem, handed to the SC's AI (owner, 2026-11-07).
+    ...importFixWithAiHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,

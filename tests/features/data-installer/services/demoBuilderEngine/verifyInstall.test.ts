@@ -9,7 +9,7 @@
  */
 
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { checkAfterInstall, checkLine, holdsProductRows, verifyInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
+import { checkAfterInstall, checkLine, checkRowNote, holdsProductRows, verifyInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
 import type { CommerceProduct } from '@/types/commerceWire';
 import { by, fakeContext, page } from './demoBuilderEngine.testUtils';
 
@@ -257,6 +257,21 @@ describe('checkLine', () => {
         expect(line).toBe(
             'Checked 2,048 products against the datapack: 80 configurable products with no options and 512 attribute values not as in the datapack.',
         );
+    });
+});
+
+// The products' row in the import window: what differs, one short line; Fix with AI is the what-to-do.
+describe('checkRowNote', () => {
+    const none = { count: 0, examples: [] };
+    const base = { checked: 2048, compared: { values: 1, prices: 1, configurables: 1 }, missing: none, configurablesWithoutOptions: none, configurablesDiffer: none, valuesDiffer: none, pricesDiffer: none };
+
+    it('says what differs, as a sentence', () => {
+        expect(checkRowNote({ ...base, verdict: 'differs', missing: { count: 3, examples: ['MH01'] } })).toBe('3 products missing from the store.');
+    });
+
+    it('CONTROL: says nothing when everything matches, or when there was no check', () => {
+        expect(checkRowNote({ ...base, verdict: 'matches' })).toBeUndefined();
+        expect(checkRowNote(undefined)).toBeUndefined();
     });
 });
 

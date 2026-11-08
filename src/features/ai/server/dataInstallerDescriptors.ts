@@ -286,7 +286,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'What installing a datapack again would change in this project\'s store: by data kind, how many ' +
             'things Demo Builder made would be updated to the pack, added, removed, or kept because they were ' +
-            'changed in the Admin, with a few names each. Writes nothing. installed:false means Demo Builder ' +
+            'changed in the Admin, with a few names each. A kind with installsWith is no data type of its own ' +
+            '(attribute_options go in with product_attributes): an install asks for that one instead. ' +
+            'Writes nothing. installed:false means Demo Builder ' +
             'never installed the pack here, so every row would be new. root (a pack with a root category of its ' +
             "own) says where it would go: under the store's own root, or a root of its own with one Admin step. " +
             'settings names what an install would change in store settings, by path with old and new value, and ' +

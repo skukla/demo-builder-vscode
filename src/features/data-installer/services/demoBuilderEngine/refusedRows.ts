@@ -46,6 +46,17 @@ export function isRowRefusal(error: unknown): boolean {
     return error instanceof CommerceReadError && error.status !== undefined && ROW_STATUSES.has(error.status);
 }
 
+/**
+ * Whether running the install again could get past the error that stopped it: Commerce asking us
+ * to slow down (429), failing (5xx) or not answering at all. Not a refusal of who we are (401, 403),
+ * which needs a sign-in, and not anything the engine did not expect, which would stop it again.
+ * An install run again carries on from its record and settles a write that got no answer.
+ */
+export function isWorthRetrying(error: unknown): boolean {
+    if (!(error instanceof CommerceReadError)) return false;
+    return error.status === undefined || error.status === 429 || error.status >= 500;
+}
+
 /** The row this install skipped that `kind` knows by `name`, if any. */
 export function skippedAs(session: CatalogSession, kinds: string | readonly string[], name: string): SkippedRow | undefined {
     const wanted = typeof kinds === 'string' ? [kinds] : kinds;

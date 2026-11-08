@@ -19,7 +19,7 @@
 
 import type { KeptRootStep } from '../../types';
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
-import { installAttributes, parseAttributeRows } from './attributesKind';
+import { INSTALLS_WITH, installAttributes, parseAttributeRows } from './attributesKind';
 import { ASSIGNMENT_KINDS, CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
 import { CART_RULE_KIND, installCartRules, parseCartRuleRows } from './cartRulesKind';
 import { installCategories, parseCategoryPack } from './categoriesKind';
@@ -128,6 +128,19 @@ export class UnsupportedKindsError extends Error {
 /** The pack's kinds this engine cannot install. */
 export function unsupportedKinds(items: PackItems): string[] {
     return Object.keys(items).filter((kind) => !INSTALLABLE_KINDS.includes(kind));
+}
+
+/**
+ * Why an install asked for these kinds is refused: a kind that goes in with another names the one
+ * to ask for (`INSTALLS_WITH`); the rest are kinds this engine does not install yet.
+ */
+export function refusedKindsReason(kinds: readonly string[]): string {
+    const partOf = kinds.filter((kind) => kind in INSTALLS_WITH);
+    const notYet = kinds.filter((kind) => !(kind in INSTALLS_WITH));
+    return [
+        ...partOf.map((kind) => `${kind} is no data type of its own: it installs with ${INSTALLS_WITH[kind]}, so ask for that.`),
+        ...(notYet.length > 0 ? [`Demo Builder does not install ${notYet.join(', ')} yet.`] : []),
+    ].join(' ');
 }
 
 /** One kind of a pack the install would refuse, from its rows alone, and the install's reason. */

@@ -79,7 +79,7 @@ describe('ImportDatapackModal — decisions', () => {
             withStatus(runningRecord());
             renderModal();
             await settle();
-            await screen.findByRole('button', { name: /^close$/i });
+            await screen.findByRole('button', { name: 'Run in Background' });
 
             const before = statusCalls();
             await tick(2000);
@@ -87,28 +87,19 @@ describe('ImportDatapackModal — decisions', () => {
             expect(statusCalls()).toBeGreaterThan(before);
         });
 
-        it('stops re-reading once the user stops watching', async () => {
+        // One way out while a job runs (owner, 2026-11-07): a Close beside Run in Background did
+        // the same thing. It hands the job to a notification and closes the window.
+        it('offers only Run in Background while a job runs, which hands the job over and closes', async () => {
+            const onClose = jest.fn();
             withStatus(runningRecord());
-            renderModal();
+            renderModal({ onClose });
             await settle();
-            await press(await screen.findByRole('button', { name: /^close$/i }));
 
-            const before = statusCalls();
-            await tick(6000);
+            expect(screen.queryByRole('button', { name: /^close$/i })).not.toBeInTheDocument();
+            await press(await screen.findByRole('button', { name: 'Run in Background' }));
 
-            expect(statusCalls()).toBe(before);
-            expect(screen.getByRole('heading', { name: 'Running in Background' })).toBeInTheDocument();
-        });
-
-        it('shows no spinner and no Close once stopped, and Close is the way out', async () => {
-            withStatus(runningRecord());
-            renderModal();
-            await settle();
-            await press(await screen.findByRole('button', { name: /^close$/i }));
-
-            expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: 'Run in Background' })).not.toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+            expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', expect.objectContaining({ id: DATAPACK_OPERATION_ID }));
+            expect(onClose).toHaveBeenCalled();
         });
 
         it('never starts a poll for a job that is not running', async () => {
@@ -126,7 +117,7 @@ describe('ImportDatapackModal — decisions', () => {
             withStatus(runningRecord());
             renderModal();
             await settle();
-            await screen.findByRole('button', { name: /^close$/i });
+            await screen.findByRole('button', { name: 'Run in Background' });
             await tick(2000);
 
             withStatus(runningRecord({ outcome: 'success', perType: { categories: 'success' } }));
@@ -182,40 +173,22 @@ describe('ImportDatapackModal — decisions', () => {
             expect(screen.getByText('0 of 2 data types: Categories')).toBeInTheDocument();
         });
 
-        it('CONTROL — narrates a running import as an import', async () => {
+        // An import runs on its rows (owner, 2026-11-07): each type where it stands.
+        it('draws a running import as its rows, the type in progress installing', async () => {
             withStatus(runningRecord({ perType: { categories: 'processing' } }));
             renderModal();
             await settle();
 
-            expect(await screen.findByText(OPERATION_STAGES.installingDatapack.label)).toBeInTheDocument();
-            expect(screen.getByText('0 of 2 data types: Categories')).toBeInTheDocument();
+            expect(await screen.findByText('Installing')).toBeInTheDocument();
+            expect(screen.getByText('Waiting')).toBeInTheDocument();
+            expect(screen.queryByText(OPERATION_STAGES.installingDatapack.label)).not.toBeInTheDocument();
         });
 
-        it('says the REMOVAL carries on once watching stops', async () => {
-            withStatus(runningRecord({ operation: 'reset' }));
+        it('gives a removal’s ring the measured percentage once a type has reported', async () => {
+            withStatus(runningRecord({ operation: 'reset', perType: { categories: 'success' } }));
             renderModal();
             await settle();
-
-            await press(await screen.findByRole('button', { name: /^close$/i }));
-
-            expect(screen.getByText('The removal continues in the background.')).toBeInTheDocument();
-        });
-
-        it('CONTROL — says the IMPORT carries on once watching stops', async () => {
-            withStatus(runningRecord());
-            renderModal();
-            await settle();
-
-            await press(await screen.findByRole('button', { name: /^close$/i }));
-
-            expect(screen.getByText('The import continues in the background.')).toBeInTheDocument();
-        });
-
-        it('gives the ring the measured percentage once a type has reported', async () => {
-            withStatus(runningRecord({ perType: { categories: 'success' } }));
-            renderModal();
-            await settle();
-            await screen.findByText(OPERATION_STAGES.installingDatapack.label);
+            await screen.findByText(OPERATION_STAGES.removingDatapack.label);
 
             expect(screen.getByRole('progressbar')).toHaveAttribute('value', '50');
         });

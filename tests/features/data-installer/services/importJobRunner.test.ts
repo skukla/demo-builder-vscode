@@ -46,7 +46,7 @@ jest.mock('@/core/shell/rateLimiter', () => ({
 // shape `fileWatcher`'s suite uses.
 
 import { pollingStub, snap } from './importJobRunner.testUtils';
-import { watchImportJob, IMPORT_POLL } from '@/features/data-installer/services/importJobRunner';
+import { watchImportJob, IMPORT_POLL, type ProgressListener } from '@/features/data-installer/services/importJobRunner';
 import type { JobStatusSnapshot } from '@/features/data-installer/types';
 import { PollingService } from '@/core/shell/pollingService';
 
@@ -58,7 +58,7 @@ function runWith(
         failureReason?: { error: string };
         graceMs?: number;
         abortSignal?: AbortSignal;
-        onProgress?: (perType: JobStatusSnapshot['perType'], detail?: string) => void;
+        onProgress?: ProgressListener;
     } = {}
 ) {
     let call = 0;
@@ -228,6 +228,31 @@ describe('watchImportJob', () => {
 
             expect(details[0]).toBe('450 of 2,046 products');
             expect(details.at(-1)).toBeUndefined();
+        });
+
+        // The import window says what the engine is doing between data types (owner, 2026-11-07).
+        it('hands on what the engine is doing while no one type is', async () => {
+            const phases: Array<string | undefined> = [];
+            const { promise } = runWith(
+                [
+                    snap({ categories: 'success', products: 'processing' }, { phase: 'Checking the products against the datapack' }),
+                    snap({ categories: 'success', products: 'success' }),
+                ],
+                { onProgress: (_perType, _detail, phase) => phases.push(phase) }
+            );
+
+            await promise;
+
+            expect(phases[0]).toBe('Checking the products against the datapack');
+            expect(phases.at(-1)).toBeUndefined();
+        });
+
+        // The window's rows and its main action read these off the finished job.
+        it('hands on where the job stopped, whether a retry can help, and what the SC reads', async () => {
+            const said = { stoppedAt: 'products', retryable: true, scLines: ['Kept 2 things.'], searchDelay: 'Soon.', rowNotes: { categories: 'The store refused 1.' } };
+            const { promise } = runWith([snap({ categories: 'success', products: 'error' }, said)]);
+
+            expect(await promise).toMatchObject(said);
         });
 
         /** An empty map is "not started", not progress. Reporting it would blank the line. */

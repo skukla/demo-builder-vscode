@@ -13,7 +13,7 @@
 import type { ImportScopes } from '../hooks/useImportScopes';
 import type { ModalView } from './ImportDatapackModalBody';
 import { type LastAction, type ResultContent, resultStatus } from './importResult';
-import type { ModalStatus } from '@/core/ui/components/ui/Modal';
+import type { ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
 
 /**
  * Which job to watch: the one the LAST action started.
@@ -68,8 +68,6 @@ export function resolveView(state: {
     readingChanges?: boolean;
     resetArmed: boolean;
     running: boolean;
-    /** The SC is still following the running job; false once they press Close. */
-    watching: boolean;
     result: ResultContent | null;
     /** The project named no Commerce instance, and the target request settled. */
     noInstance: boolean;
@@ -84,7 +82,7 @@ export function resolveView(state: {
         return 'confirm-reset';
     }
     if (state.running) {
-        return state.watching ? 'watching' : 'stopped-watching';
+        return 'watching';
     }
     if (state.result) {
         return 'result';
@@ -133,7 +131,6 @@ export function buildActions(a: {
     checking: boolean;
     starting: boolean;
     resetting: boolean;
-    stopWatching: () => void;
     validate: () => void;
     armReset: () => void;
     disarmReset: () => void;
@@ -152,6 +149,10 @@ export function buildActions(a: {
     removesAll?: boolean;
     /** Whether the form's removal may be pressed; as `canStart` when it does not say. */
     canRemove?: boolean;
+    /** A result's main action (`ResultContent.action`), and what each one does. */
+    resultAction?: 'retry' | 'fix';
+    retry?: () => void;
+    fixWithAi?: () => void;
 }): {
     label: string;
     variant: 'secondary' | 'accent' | 'negative' | 'quiet';
@@ -159,8 +160,10 @@ export function buildActions(a: {
     isDisabled?: boolean;
 }[] {
     if (a.view === 'watching') {
-        // NOT "Cancel" — no endpoint exists to cancel with.
-        return [{ label: 'Close', variant: 'secondary', onPress: a.stopWatching }];
+        // The way out is Run in Background, the dialog's own close (`closeLabel`): a Close beside it
+        // did the same thing, and the dialog rules allow one button per job (owner, 2026-11-07).
+        // Nothing cancels: no endpoint exists to cancel with.
+        return [];
     }
     if (a.view === 'confirm-reset') {
         // Cancel stands in for Close here (the frame hides Close): two buttons that both
@@ -180,11 +183,10 @@ export function buildActions(a: {
         ];
     }
     if (a.view === 'result') {
-        return [{ label: 'Back', variant: 'secondary', onPress: a.goBack }];
+        return [{ label: 'Back', variant: 'secondary', onPress: a.goBack }, ...resultMain(a)];
     }
-    // Nothing left to press but the way out: the job goes on by itself, or there is no instance
-    // to import to.
-    if (a.view === 'stopped-watching' || a.view === 'no-instance') {
+    // Nothing left to press but the way out: there is no instance to import to.
+    if (a.view === 'no-instance') {
         return [];
     }
     // form and busy share the row. While busy the body shows the spinner, so every button keeps
@@ -211,6 +213,13 @@ export function buildActions(a: {
     ];
 }
 
+/** A result's main button, last in the footer: Retry, or Fix with AI. */
+function resultMain(a: { resultAction?: 'retry' | 'fix'; retry?: () => void; fixWithAi?: () => void }): ReturnType<typeof buildActions> {
+    if (a.resultAction === 'retry' && a.retry) return [{ label: 'Retry', variant: 'accent', onPress: a.retry }];
+    if (a.resultAction === 'fix' && a.fixWithAi) return [{ label: 'Fix with AI', variant: 'accent', onPress: a.fixWithAi }];
+    return [];
+}
+
 /** The chosen target by name, "Justrite Test Store US (Justrite Test)", or the instance when unnamed. */
 export function targetName(scope: ImportScopes, commerceInstance: string): string {
     const website = scope.websites.find((w) => w.code === scope.websiteCode);
@@ -226,6 +235,8 @@ export interface ViewFrame {
     size: 'S' | 'M' | 'L';
     wide: boolean;
     hideClose: boolean;
+    /** A wait with its own buttons keeps its box (`Modal.holdSize`): a removal's spinner. */
+    holdSize?: true;
 }
 
 /**
@@ -250,6 +261,12 @@ function formWidth(typeCount: number): Pick<ViewFrame, 'size' | 'wide'> {
     return { size: 'L', wide: true };
 }
 
+/** How many columns an import's rows take: the form's, in the box the form had (`formWidth`). */
+export function runColumns(typeCount: number): number {
+    if (typeCount <= 6) return 1;
+    return typeCount <= 12 ? 2 : 3;
+}
+
 /**
  * Each view's frame, by the dialog design rules (`docs/development/sop/dialog-design.md`): the
  * form takes the width its types need; the confirm, the wait and the result are small, and the
@@ -268,7 +285,6 @@ export function viewFrame(a: {
     const small = { size: 'S' as const, wide: false, hideClose: false };
     // Amber: nothing failed, and the next move is the SC's.
     if (a.view === 'no-instance') return { ...small, title: 'This project has no Commerce instance', status: 'warning' };
-    if (a.view === 'stopped-watching') return { ...small, title: 'Running in Background' };
     switch (a.view) {
         // One title for the read and the confirm it leads to, so the wait does not retitle the dialog.
         case 'reading-changes':
@@ -276,6 +292,8 @@ export function viewFrame(a: {
         case 'confirm-reset':
             return { ...small, title: `Remove from ${a.store}?`, status: 'warning', hideClose: true };
         case 'result':
+            // An import's ending stays on its rows, in the form's box.
+            if (a.result?.run) return { ...formWidth(a.typeCount), hideClose: false, title: a.result.title, status: resultStatus(a.result) };
             return a.result
                 ? {
                       ...small,
@@ -285,10 +303,25 @@ export function viewFrame(a: {
                       status: resultStatus(a.result),
                   }
                 : { ...small, title: `Import ${a.displayName}` };
-        case 'busy':
         case 'watching':
+            // An import's rows take the form's box; a removal still waits on its spinner.
+            return a.removing
+                ? { ...small, title: `Remove ${a.displayName}`, holdSize: true }
+                : { ...formWidth(a.typeCount), hideClose: false, title: `Import ${a.displayName}` };
+        case 'busy':
             return { ...small, title: `${a.removing ? 'Remove' : 'Import'} ${a.displayName}` };
         default:
             return { ...formWidth(a.typeCount), hideClose: false, title: `Import ${a.displayName}` };
     }
+}
+
+/**
+ * The dialog's wait: starting or removing, or what it needs before the form can show. `reading` has
+ * to cover the first frame, before any request has been sent: a form drawn there set the box the
+ * wait then kept (407px).
+ */
+export function waitOf(view: ModalView, reading: boolean, message: string): ModalWait | false {
+    if (view === 'busy') return { message };
+    if (view === 'reading-changes') return {};
+    return view === 'form' && reading ? {} : false;
 }

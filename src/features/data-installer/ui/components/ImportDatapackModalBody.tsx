@@ -19,11 +19,14 @@ import { hasMeasurableProgress, progressLabel, progressStep, summarizeProgress }
 import { DatapackResultBody } from './DatapackResultBody';
 import { ImportForm } from './ImportForm';
 import type { ResultContent } from './importResult';
+import { runRows } from './importRunRows';
+import { ImportRunView } from './ImportRunView';
 import { recordedRemovalLines } from './removalConfirm';
 import { RemovalConfirmBody } from './RemovalConfirmBody';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
+import { tookValue } from '@/core/ui/hooks/useRunClock';
 
 /**
  * The project names no Commerce instance; the outcome is the dialog's title (`viewFrame`).
@@ -34,14 +37,6 @@ import { LeadText } from '@/core/ui/components/ui/LeadText';
  */
 function NoInstanceNotice(): React.JSX.Element {
     return <LeadText>Connect a Commerce backend on the project dashboard, then import from here.</LeadText>;
-}
-
-/**
- * After Close: said so "stopped looking" never reads as "cancelled". No spinner, because
- * nothing here is waiting any more; the title says it stopped (`viewFrame`).
- */
-function StoppedWatching({ record }: { record: ImportJobRecord }): React.JSX.Element {
-    return <LeadText>The {record.operation === 'reset' ? 'removal' : 'import'} continues in the background.</LeadText>;
 }
 
 /** A data type's label inside a sentence: "attribute sets", but "B2B companies" keeps its acronym. */
@@ -75,7 +70,7 @@ function ResetConfirm({ ctx }: { ctx: BodyContext }): React.JSX.Element {
 }
 
 /** Which view the modal is showing. */
-export type ModalView = 'form' | 'busy' | 'reading-changes' | 'confirm-reset' | 'watching' | 'stopped-watching' | 'result' | 'no-instance';
+export type ModalView = 'form' | 'busy' | 'reading-changes' | 'confirm-reset' | 'watching' | 'result' | 'no-instance';
 
 /** Everything the one visible view needs, gathered once. */
 export interface BodyContext {
@@ -93,6 +88,8 @@ export interface BodyContext {
     removal: RemovalConfirmView;
     toggle: (type: string, isSelected: boolean) => void;
     toggleAll: () => void;
+    /** How many columns an import's rows take (`runColumns`). */
+    columns: number;
 }
 
 /**
@@ -110,11 +107,11 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
             <div className="datapack-import-body">
                     {view === 'confirm-reset' ? <ResetConfirm ctx={ctx} /> : null}
 
-                    {view === 'watching' && ctx.record ? <WatchProgress record={ctx.record} /> : null}
+                    {view === 'watching' && ctx.record ? <Watch record={ctx.record} columns={ctx.columns} /> : null}
 
-                    {view === 'stopped-watching' && ctx.record ? <StoppedWatching record={ctx.record} /> : null}
 
-                    {view === 'result' && ctx.result ? <DatapackResultBody result={ctx.result} /> : null}
+                    {view === 'result' && ctx.result?.run ? <ImportEnd result={ctx.result} run={ctx.result.run} columns={ctx.columns} /> : null}
+                    {view === 'result' && ctx.result && !ctx.result.run ? <DatapackResultBody result={ctx.result} /> : null}
 
                     {view === 'no-instance' ? <NoInstanceNotice /> : null}
 
@@ -137,8 +134,52 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
     );
 }
 
+/** An import runs on its rows; a removal still waits on its spinner. */
+function Watch({ record, columns }: { record: ImportJobRecord; columns: number }): React.JSX.Element {
+    return record.operation === 'reset' ? <WatchProgress record={record} /> : <ImportWatch record={record} columns={columns} />;
+}
+
 /**
- * The in-flight watch: spinner, and the per-type states in the subMessage slot. The footer's "Run in
+ * An import while it runs: a row per data type, from the LIVE poll (`record.perType` is written only
+ * as polls land), and under them what the engine is doing between data types and the clock.
+ */
+function ImportWatch({ record, columns }: { record: ImportJobRecord; columns: number }): React.JSX.Element {
+    const live = useImportProgress(record.activationId);
+    const phase = live ? live.phase : record.phase;
+    const rows = runRows({
+        perType: live?.perType ?? record.perType,
+        dataTypes: record.dataTypes,
+        detail: live ? live.detail : record.detail,
+        phase,
+    });
+    return <ImportRunView rows={rows} columns={columns} running={{ startedAt: Date.parse(record.startedAt), phase }} />;
+}
+
+/**
+ * An import's ending, on the rows it ran on: each row's final state and problem, then the sentence,
+ * what changed in the store, and how long it took. A stop before any data type has no row, so its
+ * reason goes under the list.
+ */
+function ImportEnd({ result, run, columns }: { result: ResultContent; run: ImportJobRecord; columns: number }): React.JSX.Element {
+    const rows = runRows({ perType: run.perType, dataTypes: run.dataTypes, stoppedAt: run.stoppedAt, rowNotes: run.rowNotes, reason: run.reason });
+    const stoppedBeforeAny = result.variant === 'error' && !run.stoppedAt ? run.reason : undefined;
+    const took = result.tookMs === undefined ? undefined : tookValue(result.tookMs);
+    return (
+        <ImportRunView
+            rows={rows}
+            columns={columns}
+            end={{
+                ...(result.lead ? { lead: result.lead } : {}),
+                lines: run.scLines ?? [],
+                ...(stoppedBeforeAny ? { problem: stoppedBeforeAny } : {}),
+                ...(took ? { took } : {}),
+            }}
+        />
+    );
+}
+
+/**
+ * A removal in flight: spinner, and the per-type states in the subMessage slot. The footer's "Run in
  * background" and "Close" say the job carries on while it is watched.
  */
 function WatchProgress({ record }: { record: ImportJobRecord }): React.JSX.Element {

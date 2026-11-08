@@ -294,6 +294,21 @@
 }
 }
 
+/* The import's run (`ImportRunView`): its rows down each column in turn, as many columns as the
+   form had, and under them what the engine is doing, or how it ended. */
+@layer theme {
+.import-run-columns {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    column-gap: 24px;
+}
+
+.import-run-foot {
+    margin-top: 16px;
+}
+}
+
 /* Where the pack lands. Two pickers side by side — they are one decision, and
    stacking them reads as two unrelated fields. */
 /* Side by side: website and store view are one decision, and the hint that used
