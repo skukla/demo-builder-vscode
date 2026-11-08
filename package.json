@@ -375,7 +375,7 @@
                         "order": 2,
                         "type": "boolean",
                         "default": true,
-                        "description": "Use the Data Installer at the address above: list its datapacks, which Demo Builder installs, and copy your own into its catalog. Untick to keep the address and list only Demo Builder's datapacks."
+                        "description": "Use the Data Installer at the address above: list its datapacks beside Demo Builder's, which Demo Builder installs. Untick to keep the address and list only Demo Builder's datapacks."
                     },
                     "demoBuilder.datapackStore.apiBaseUrl": {
                         "order": 4,

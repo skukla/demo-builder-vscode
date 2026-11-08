@@ -12,7 +12,7 @@
 import { layerNotAskedLine } from '../settingsLayer';
 import { askedRows } from './askedKinds';
 import { loadStoreSets } from './attributeSetsKind';
-import { INSTALLS_WITH } from './attributesKind';
+import { ATTRIBUTE_OPTION_KIND, INSTALLS_WITH } from './attributesKind';
 import { sameText } from './b2bReads';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import { COUPON_KIND, couponByCode } from './couponsKind';
@@ -179,12 +179,21 @@ async function alreadyInStore(ctx: KindContext, kind: string, keys: string[], in
 
 const keyOfObject = (object: CreatedObject) => object.key ?? object.id;
 
+/**
+ * An option with no label (`manufacturer/`): Commerce's own empty choice, which every select
+ * attribute has and a pack copied from a store carries. Install matches it to the store's and sends
+ * nothing (`addMissingOptions`), so the preview neither counts nor names it (F61, 2026-11-07).
+ */
+const isBlankOption = (kind: string, key: string): boolean =>
+    kind === ATTRIBUTE_OPTION_KIND && key.slice(key.indexOf('/') + 1).trim() === '';
+
 /** Counted by kind; `taken` is what the removal would take out, so all else it was asked about stays. */
 async function summarize(ctx: KindContext, plans: readonly KindPlan[], taken: readonly CreatedObject[]): Promise<KindChanges[]> {
     const keptHere = (o: PlannedObject) => o.outcome === 'remove' && !taken.includes(o.object);
     const inventory = onceInventory(ctx);
     return Promise.all(
-        plans.map(async ({ kind, objects, added }) => {
+        plans.map(async ({ kind, objects, added: asked }) => {
+            const added = asked.filter((key) => !isBlankOption(kind, key));
             const keyed = (test: (o: PlannedObject) => boolean) => objects.filter(test).map((o) => keyOfObject(o.object));
             const there = await alreadyInStore(ctx, kind, added, inventory);
             return {

@@ -281,6 +281,21 @@ describe('previewChanges, counted the way a save counts', () => {
         });
     });
 
+    // F61, live 2026-11-07: Luma's preview named "manufacturer/" and "activity/", Commerce's own
+    // empty choice, which a pack copied from a store carries and install sends nothing for.
+    it('neither counts nor names an option with no label', async () => {
+        const inStore = { attribute_code: 'color', frontend_input: 'select', options: [{ label: ' ', value: '' }, { label: 'Blue', value: '273' }] };
+        const row = { attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: ' ' }, { label: '' }, { label: 'Blue' }] } };
+        const { d } = await deps(true, { 'products/attributes/color': inStore }, { product_attributes: [row] });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'attribute_options')).toMatchObject({
+            add: { count: 0, names: [] },
+            inStore: { count: 1, names: ['color/Blue'] },
+        });
+    });
+
     it('CONTROL: counts every option as new when the store lacks the attribute', async () => {
         const row = { attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: 'Blue' }] } };
         const { d } = await deps(true, {}, { product_attributes: [row] });
