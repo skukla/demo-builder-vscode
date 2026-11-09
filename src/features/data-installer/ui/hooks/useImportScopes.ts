@@ -34,6 +34,13 @@ export interface ImportScopes {
     chooseStore: (code: string) => void;
     /** The request fields, or nothing at all when no target was chosen. */
     targetFields: () => Partial<{ websiteCode: string; storeCode: string }>;
+    /**
+     * The pair is fixed: the pack is installed there, and importing it again can go nowhere else
+     * (owner, 2026-11-08). The pickers show it and do not change.
+     */
+    locked: boolean;
+    /** Fix the pair to where the pack is installed. Stable. */
+    lockTo: (scope: RecordedScope) => void;
 }
 
 /** Stable empty list, so an undiscovered instance does not remake deps. */
@@ -65,6 +72,7 @@ export interface RecordedScope {
 export function useImportScopes(recorded?: RecordedScope): ImportScopes {
     const [websiteCode, setWebsiteCode] = useState('');
     const [storeCode, setStoreCode] = useState('');
+    const [locked, setLocked] = useState(false);
     const scopes = useDataInstallerRequest<{ websites: TargetWebsite[] }>(
         'list-datapack-import-scopes',
     );
@@ -134,6 +142,12 @@ export function useImportScopes(recorded?: RecordedScope): ImportScopes {
      * absent and would try to validate an empty string, so a half-chosen target
      * contributes nothing.
      */
+    const lockTo = useCallback((scope: RecordedScope): void => {
+        setWebsiteCode(scope.websiteCode);
+        setStoreCode(scope.storeCode);
+        setLocked(true);
+    }, []);
+
     const targetFields = useCallback(
         () => (websiteCode && storeCode ? { websiteCode, storeCode } : {}),
         [websiteCode, storeCode],
@@ -147,5 +161,21 @@ export function useImportScopes(recorded?: RecordedScope): ImportScopes {
         chooseWebsite,
         chooseStore: setStoreCode,
         targetFields,
+        locked,
+        lockTo,
     };
+}
+
+/**
+ * Lock the pickers to where the pack is installed, once the install record says (owner,
+ * 2026-11-08): a form that offered another website let the SC press Import into a refusal.
+ *
+ * @param at - the record's website and store view, when it records them
+ */
+export function useLockedScope(lockTo: ImportScopes['lockTo'], at?: RecordedScope): void {
+    const websiteCode = at?.websiteCode;
+    const storeCode = at?.storeCode;
+    useEffect(() => {
+        if (websiteCode && storeCode) lockTo({ websiteCode, storeCode });
+    }, [lockTo, websiteCode, storeCode]);
 }

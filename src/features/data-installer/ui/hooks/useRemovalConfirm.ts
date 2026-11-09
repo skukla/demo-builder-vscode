@@ -99,6 +99,8 @@ export interface RemovalScope {
     removesAll: boolean;
     /** The read has answered at least once. */
     settled: boolean;
+    /** Where the record says the pack was installed, when it says. */
+    installedAt?: DatapackRemovalScope['installedAt'];
 }
 
 /**
@@ -113,5 +115,5 @@ export function useRemovalScope(pack: DatapackId, showingForm: boolean): Removal
         if (showingForm) load({ datapackName: name, version });
     }, [showingForm, load, name, version]);
     const recordedKinds = value?.recordedKinds ?? null;
-    return { recordedKinds, removesAll: (recordedKinds?.length ?? 0) > 0, settled };
+    return { recordedKinds, removesAll: (recordedKinds?.length ?? 0) > 0, settled, installedAt: value?.installedAt };
 }

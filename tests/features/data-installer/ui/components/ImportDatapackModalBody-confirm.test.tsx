@@ -22,6 +22,8 @@ const SCOPE: ImportScopes = {
     chooseWebsite: jest.fn(),
     chooseStore: jest.fn(),
     targetFields: () => ({ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store_us' }),
+    locked: false,
+    lockTo: jest.fn(),
 };
 
 function ctx(over: Partial<BodyContext> = {}): BodyContext {
@@ -30,6 +32,7 @@ function ctx(over: Partial<BodyContext> = {}): BodyContext {
         commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi',
         availableTypes: ['categories'],
         selected: ['categories'],
+        changes: { lines: null, failed: false },
         allSelected: true,
         record: null,
         result: null,

@@ -74,12 +74,15 @@ function TargetScopeFields({
     storeCode,
     onWebsiteChange,
     onStoreChange,
+    locked,
 }: {
     websites: TargetWebsite[];
     websiteCode: string;
     storeCode: string;
     onWebsiteChange: (code: string) => void;
     onStoreChange: (code: string) => void;
+    /** The pack is installed there, and importing again can go nowhere else. */
+    locked: boolean;
 }): React.JSX.Element | null {
     // Nothing discovered: this instance offers no choice. The dialog waits for the answer.
     if (websites.length === 0) {
@@ -95,6 +98,7 @@ function TargetScopeFields({
                 <Picker
                     aria-label="Website"
                     placeholder={websitePlaceholder(defaultSite?.name)}
+                    isDisabled={locked}
                     selectedKey={websiteCode || null}
                     onSelectionChange={(key) => onWebsiteChange(String(key ?? ''))}
                 >
@@ -109,7 +113,7 @@ function TargetScopeFields({
                 <Picker
                     aria-label="Store view"
                     placeholder={storePlaceholder(chosen ? storeViews[0]?.name : undefined)}
-                    isDisabled={!websiteCode}
+                    isDisabled={!websiteCode || locked}
                     selectedKey={storeCode || null}
                     onSelectionChange={(key) => onStoreChange(String(key ?? ''))}
                 >
@@ -166,6 +170,8 @@ export function ImportForm({
     storeCode,
     onWebsiteChange,
     onStoreChange,
+    changes,
+    scopeLocked = false,
 }: {
     availableTypes: string[];
     selected: string[];
@@ -177,6 +183,10 @@ export function ImportForm({
     storeCode: string;
     onWebsiteChange: (code: string) => void;
     onStoreChange: (code: string) => void;
+    /** What importing again would change, by data type, for a pack the project has. */
+    changes?: { lines: Record<string, string> | null; failed: boolean };
+    /** Where the pack is installed fixes the website and store view. */
+    scopeLocked?: boolean;
 }): React.JSX.Element {
     return (
         <>
@@ -197,6 +207,7 @@ export function ImportForm({
                 storeCode={storeCode}
                 onWebsiteChange={onWebsiteChange}
                 onStoreChange={onStoreChange}
+                locked={scopeLocked}
             />
             <div className="datapack-import-types">
                 <span className="datapack-import-label">Data</span>
@@ -218,10 +229,15 @@ export function ImportForm({
                             onChange={(isSelected) => onToggle(type, isSelected)}
                         >
                             {dataTypeLabel(type)}
+                            {changes?.lines ? <span className="datapack-type-changes">{changes.lines[type]}</span> : null}
                         </Checkbox>
                     ))}
                 </div>
                 <MissingDependencies availableTypes={availableTypes} selected={selected} />
+                {changes?.failed ? (
+                    // The counts are what an SC checks before importing again; their absence is said.
+                    <p className="dialog-problem text-notice">What importing again would change could not be read.</p>
+                ) : null}
             </div>
         </>
     );

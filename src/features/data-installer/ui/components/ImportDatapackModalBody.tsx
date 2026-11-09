@@ -90,6 +90,8 @@ export interface BodyContext {
     toggleAll: () => void;
     /** How many columns an import's rows take (`runColumns`). */
     columns: number;
+    /** What importing again would change, by data type (`useImportChanges`), when the project has it. */
+    changes: { lines: Record<string, string> | null; failed: boolean };
 }
 
 /**
@@ -128,6 +130,8 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
                             storeCode={ctx.scope.storeCode}
                             onWebsiteChange={ctx.scope.chooseWebsite}
                             onStoreChange={ctx.scope.chooseStore}
+                            scopeLocked={ctx.scope.locked}
+                            changes={ctx.changes}
                         />
                     ) : null}
         </div>

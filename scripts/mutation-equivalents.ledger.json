@@ -9510,14 +9510,14 @@
             "decision": "none \u2014 starting undismissed is what 'the user has seen nothing yet' means",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05",
-            "line": 99
+            "line": 100
         },
         {
             "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
             "anchors": [
                 "}, [loadStatus]);"
             ],
-            "line": 116,
+            "line": 117,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9530,7 +9530,7 @@
             "anchors": [
                 "}, [loadTarget]);"
             ],
-            "line": 121,
+            "line": 122,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9543,7 +9543,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 178,
+            "line": 179,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves.",

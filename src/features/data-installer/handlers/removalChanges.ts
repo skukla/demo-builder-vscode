@@ -233,7 +233,9 @@ export function contextForProject(context: HandlerContext, project: Project): Ha
 /** What a removal of this pack takes, when Demo Builder's engine installed it: read from the record alone. */
 async function removalScope(project: Project | undefined, pack: DatapackId): Promise<DatapackRemovalScope> {
     const record = project ? await readInstallRecord(nodeRecordFiles, project.path, pack) : undefined;
-    return { recordedKinds: record ? kindsOnRecord(record) : null };
+    if (!record) return { recordedKinds: null };
+    const at = record.target;
+    return { recordedKinds: kindsOnRecord(record), ...(at ? { installedAt: { websiteCode: at.websiteCode, storeCode: at.storeCode } } : {}) };
 }
 
 /** The form's and the confirm's reads: what a removal of this pack would take, and would lose. Write nothing. */

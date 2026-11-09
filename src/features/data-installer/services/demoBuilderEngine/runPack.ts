@@ -46,7 +46,7 @@ import { installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
 import { type RefusedRemoval, takeBackAll } from './removalRuns';
 import { type KeptContainer, type RemovalAccess, decideRemovals } from './removers';
-import { type KeptThing, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat } from './repeatInstall';
+import { type KeptThing, type KindPlan, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat } from './repeatInstall';
 import { flatAssignments, installCatalogs, installAssignments as installCatalogAssignments, parseCatalogRows } from './sharedCatalogKinds';
 import { installSourceItems, parseSourceItems } from './sourceItemsKind';
 import {
@@ -202,6 +202,20 @@ export interface InstallOutcome {
     tookOut: CreatedObject[];
     /** What Commerce would not take out: still in the store and on the record. */
     notTakenOut: RefusedRemoval[];
+    /**
+     * Whether any product or gift card was added or brought up to the pack. Search and images
+     * lines follow it, not the pack holding products (walk F76: a reinstall with nothing to change
+     * still said products would take 20 minutes to appear).
+     */
+    productsWritten: boolean;
+}
+
+/** The comparison a re-import's form just made, when it still holds (`recentComparison.ts`). */
+export type EarlierPlans = (created: readonly CreatedObject[], items: PackItems) => KindPlan[] | undefined;
+
+/** Whether the plans add or update a product or gift card. */
+function writesProducts(plans: readonly KindPlan[]): boolean {
+    return plans.some((plan) => PRODUCT_KINDS.includes(plan.kind) && (plan.added.length > 0 || plan.objects.some((o) => o.outcome === 'update')));
 }
 
 /**
@@ -213,11 +227,17 @@ export interface InstallOutcome {
  *
  * @param onKind - called as each kind starts, for progress, and with undefined once the last kind's
  *   rows are in: what follows (taking out, reading back) is no one kind's time
+ * @param earlier - the form's comparison, used instead of reading the store again when it holds
  * @throws UnsupportedKindsError before any write, when the pack holds a kind not listed above
  * @throws PackRowsError before any write, naming every kind whose rows Commerce could not take
  * @throws UrlKeyClashError before any write, when a category would take a url key the store uses
  */
-export async function installPack(ctx: KindContext, packItems: PackItems, onKind: (kind: string | undefined) => void = () => undefined): Promise<InstallOutcome> {
+export async function installPack(
+    ctx: KindContext,
+    packItems: PackItems,
+    onKind: (kind: string | undefined) => void = () => undefined,
+    earlier: EarlierPlans = () => undefined,
+): Promise<InstallOutcome> {
     const unsupported = unsupportedKinds(packItems);
     if (unsupported.length > 0) throw new UnsupportedKindsError(unsupported);
     const problems = packRowProblems(packItems, ctx.session.websiteCode);
@@ -227,7 +247,7 @@ export async function installPack(ctx: KindContext, packItems: PackItems, onKind
     // Step 12: under the store's own root, the pack's root is left out; the record says which once made.
     const placement = rootPlacement(packItems.categories, ctx.recorder.created, ctx.session.storeRoot);
     const items = placeCategories(packItems, placement);
-    const plans = await planRepeat(ctx, items, ctx.recorder.created);
+    const plans = earlier(ctx.recorder.created, items) ?? (await planRepeat(ctx, items, ctx.recorder.created));
     ctx.session.owned = ownedFrom(plans);
     const scope = { storeRootId: ctx.session.rootCategory.id, created: ctx.recorder.created, owned: ctx.session.owned };
     const clashes = await placedClashes(ctx.get, items, placement, scope);
@@ -257,6 +277,7 @@ export async function installPack(ctx: KindContext, packItems: PackItems, onKind
         skipped: ctx.session.skipped ?? [],
         tookOut,
         notTakenOut: refused,
+        productsWritten: writesProducts(plans),
         ...(settings ? { settings } : {}),
         ...(placement ? { rootPlacement: placement } : {}),
         ...(rootStep ? { rootStep } : {}),

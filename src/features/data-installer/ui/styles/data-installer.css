@@ -392,6 +392,16 @@
 }
 }
 
+/* What importing again would change, under a data type's name in the Import form (owner,
+   2026-11-08): the quieter second line a checkbox row carries, as `CheckboxRow`'s detail does. */
+@layer theme {
+.datapack-type-changes {
+    display: block;
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    color: var(--spectrum-global-color-gray-700);
+}
+}
+
 /* EVERY field label in this modal, from one rule.
 
    "Data types" was the only one styled, so Spectrum's default sized "Target

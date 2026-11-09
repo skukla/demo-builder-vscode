@@ -32,13 +32,14 @@ import { type FindLayer, type LayerLookup, applySettingsLayer, layerKept, layerP
 import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
 import { type RootStepAsker, rootStepLine } from './packRootStep';
 import { ambiguousKeysLine } from './productLookups';
+import { reuseComparison } from './recentComparison';
 import { isWorthRetrying, skippedLine } from './refusedRows';
 import { refusedRemovalsLine } from './removalRuns';
 import { containersLine } from './removers';
 import { keptLine, tookOutLine } from './repeatInstall';
 import { type PackItems, PackRowsError, installPack, packRowProblems, refusedKindsReason, removePack, unsupportedKinds } from './runPack';
 import { STORE_CONFIG_KIND, settingsLine, settingsWebsite } from './storeConfigKind';
-import { checkAfterInstall, checkRowNote, holdsProductRows } from './verifyInstall';
+import { checkAfterInstall, checkRowNote } from './verifyInstall';
 import { andList } from '@/core/utils/andList';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -222,6 +223,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     const ctx = { ...commerce, recorder, session, log: deps.log, asker: deps.asker, progress };
     // Reading what an earlier install made, before the first kind: the long wait of an install run again.
     job.phase = 'Comparing the store with the datapack';
+    const earlier = reuseComparison(deps, request.id, request.target);
     const outcome = await installPack(ctx, items, (kind) => {
         // Its rows are in, so the last kind's clock stops; it stays in progress to the end, while
         // the engine takes out what the pack dropped and reads back what it wrote.
@@ -235,7 +237,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         job.kindStartedAt = Date.now();
         job.perType[kind] = 'processing';
         job.detail = undefined;
-    });
+    }, earlier);
     job.detail = undefined;
     // The last kind stays in progress through the layer: the watcher ends when every kind asked for
     // has, and the note says what the layer did (step 09).
@@ -265,9 +267,9 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         [rootStepLine(outcome.rootStep), outcome.rootStep?.state !== 'done'],
         [ambiguousKeysLine(session.ambiguousCategoryKeys), false],
         [checked.line, false],
-        ...(holdsProductRows(items) ? AFTER_PRODUCTS_LINES.map((line): NoteLine => [line, false]) : []),
+        ...(outcome.productsWritten ? AFTER_PRODUCTS_LINES.map((line): NoteLine => [line, false]) : []),
     ]));
-    if (holdsProductRows(items)) job.searchDelay = AFTER_PRODUCTS_LINES[0];
+    if (outcome.productsWritten) job.searchDelay = AFTER_PRODUCTS_LINES[0];
     const rowNotes = rowNotesOf(session.skipped, checkRowNote(checked.check), Object.keys(items));
     if (Object.keys(rowNotes).length > 0) job.rowNotes = rowNotes;
     job.skipped = session.skipped;

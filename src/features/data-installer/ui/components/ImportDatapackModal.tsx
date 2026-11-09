@@ -42,8 +42,9 @@ import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { useImportChanges } from '../hooks/useImportChanges';
 import { useImportRetry } from '../hooks/useImportRetry';
-import { useImportScopes } from '../hooks/useImportScopes';
+import { useImportScopes, useLockedScope } from '../hooks/useImportScopes';
 import { useJobPickup } from '../hooks/useJobPickup';
 import { useRemovalConfirm, useRemovalScope } from '../hooks/useRemovalConfirm';
 import { useTypeSelection } from '../hooks/useTypeSelection';
@@ -240,7 +241,9 @@ export function ImportDatapackModal({
         result,
         noInstance: !commerceInstance && target.settled,
     });
-    const { recordedKinds, removesAll, settled: scopeSettled } = useRemovalScope(id, view === 'form');
+    const { recordedKinds, removesAll, settled: scopeSettled, installedAt } = useRemovalScope(id, view === 'form');
+    useLockedScope(scope.lockTo, installedAt);
+    const changes = useImportChanges({ id, displayName, source, types: availableTypes, installed: removesAll, active: view === 'form', used: lastAction !== null });
 
     const bodyContext: BodyContext = {
         displayName,
@@ -258,6 +261,7 @@ export function ImportDatapackModal({
         toggle,
         toggleAll,
         columns: runColumns(availableTypes.length),
+        changes,
     };
 
     // Closing a job that is still RUNNING hands it to a progress notification,
@@ -294,7 +298,7 @@ export function ImportDatapackModal({
                 wide={frame.wide}
                 hideClose={frame.hideClose}
                 fitContent
-                waiting={waitOf(view, scope.loading || !target.settled || !scopeSettled, bodyContext.busyMessage)}
+                waiting={waitOf(view, scope.loading || !target.settled || !scopeSettled, bodyContext.busyMessage, changes.wait)}
                 holdSize={frame.holdSize === true}
                 onClose={view === 'reading-changes' ? removal.disarm : close}
                 closeLabel={closeLabel(view, savingFirst)}

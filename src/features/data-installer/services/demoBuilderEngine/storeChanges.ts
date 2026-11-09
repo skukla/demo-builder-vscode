@@ -23,6 +23,7 @@ import { placeCategories, rootPlacement } from './packRoot';
 import { rootPreview } from './packRootStep';
 import { GIFT_CARD_KIND } from './productKinds';
 import { productLookups } from './productLookups';
+import { rememberComparison } from './recentComparison';
 import { containersLine, decideRemovals } from './removers';
 import { type KindPlan, type PlannedObject, keptLine, keptOf, ownedFrom, planRepeat, removalsOf } from './repeatInstall';
 import { type Named, named } from './saveOutcome';
@@ -262,5 +263,8 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     const keptThings = [...keptOf(plans), ...(settings?.keep.names ?? []).map((key) => ({ kind: STORE_CONFIG_KIND, key }))];
     const kept = [keptLine(keptThings), containersLine(containers)].filter(Boolean).join(' ');
     const kinds = [...(await summarize(ctx, plans, take)), ...(settings ? [settings] : [])];
+    // The run that may follow uses these plans instead of reading again (walk F74).
+    const target = record?.target ?? deps.target;
+    if (target) rememberComparison({ projectPath: deps.projectPath, pack, target }, record?.created ?? [], items, plans);
     return { installed: record !== undefined, kinds, ...(kept ? { kept } : {}), ...(root ? { root } : {}), ...(settingsPreview ? { settings: settingsPreview } : {}) };
 }

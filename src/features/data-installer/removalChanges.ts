@@ -39,6 +39,11 @@ export interface DatapackRemovalChanges {
  */
 export interface DatapackRemovalScope {
     recordedKinds: string[] | null;
+    /**
+     * The website and store view the record says the pack went into, when it says: importing it
+     * again can go nowhere else (`engine.ts` `elsewhere`), so the form locks its pickers to them.
+     */
+    installedAt?: { websiteCode: string; storeCode: string };
 }
 
 /** The nouns for the kinds an SC cannot pick but a pack can make. */

@@ -283,6 +283,8 @@ const CHOSEN: ImportScopes = {
     chooseWebsite: jest.fn(),
     chooseStore: jest.fn(),
     targetFields: () => ({}),
+    locked: false,
+    lockTo: jest.fn(),
 };
 
 describe('targetName', () => {

@@ -301,6 +301,20 @@ export const TIMEOUTS = {
     DATAPACK_JOB_WAIT_POLL: 2000,
     DATAPACK_JOB_WAIT_MAX: 45 * 1000,
 
+    /**
+     * How long the Import window waits for its comparison of the store with a pack the project has
+     * (owner, 2026-11-08): 5 minutes. Measured 58 s for Luma's 12 data types on a live store; the
+     * webview's default of 30 s gave up on every one.
+     */
+    DATAPACK_IMPORT_COMPARE: 5 * 60 * 1000,
+
+    /**
+     * How long a re-import's run may use the comparison its form just made instead of reading the
+     * store again (owner, 2026-11-08, walk F74): 5 minutes. Long enough for an SC to read the form
+     * and press Import; short enough that the store has had little time to change since.
+     */
+    DATAPACK_COMPARISON_REUSE: 5 * 60 * 1000,
+
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
 

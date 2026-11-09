@@ -16,3 +16,7 @@ from that file. Until this ships, the B2B patch pointer is held on a template th
 
 Plan, owner sign-off pending: `.rptc/plans/block-library-without-universal-editor/overview.md`.
 Research: `.rptc/research/ue-retirement-component-definition/research.md`.
+
+## Shipped so far
+
+- 2026-11-08  docs(rptc): walk findings F62 to F68, release tests 1.10 and 1.11, and the block library plan (`85f44f49c`)
