@@ -7,16 +7,22 @@
  * @module features/data-installer/ui/hooks/useDatapackCatalog
  */
 
-import { type RefObject, useCallback, useEffect } from 'react';
+import { type RefObject, useCallback, useEffect, useMemo, useState } from 'react';
 import { DATAPACK_LIST_CHANGED_MESSAGE, type CatalogPage } from '../../types';
 import { CATALOG_REQUEST } from '../catalogShow';
 import { useDataInstallerRequest, type DataInstallerRequest } from './useDataInstallerRequest';
 import { useVSCodeMessage } from '@/core/ui/hooks/useVSCodeMessage';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 export interface DatapackCatalog extends Omit<DataInstallerRequest<CatalogPage>, 'load'> {
     /** Read the list again. Stable: an effect can depend on it. */
     refresh: () => void;
+    /** The list as the "no access" notice reads it: dismissed at once when the SC closes it. */
+    noticePage: CatalogPage | null;
+    /** Close the "no access" notice; the extension remembers it on this machine (2026-11-03). */
+    dismissNoAccess: () => void;
 }
+
 
 /**
  * Load the list, and keep it following its settings and the packs themselves (F66).
@@ -36,5 +42,12 @@ export function useDatapackCatalog(alsoOnChange?: RefObject<(() => void) | undef
         alsoOnChange?.current?.();
     }, [refresh, alsoOnChange]);
     useVSCodeMessage(DATAPACK_LIST_CHANGED_MESSAGE, listChanged, [listChanged]);
-    return { ...request, refresh };
+    const [noAccessClosed, setNoAccessClosed] = useState(false);
+    const dismissNoAccess = useCallback((): void => {
+        setNoAccessClosed(true);
+        webviewClient.postMessage('dismiss-datapack-no-access');
+    }, []);
+    const { value } = request;
+    const noticePage = useMemo(() => (value && noAccessClosed ? { ...value, noAccessDismissed: true } : value), [value, noAccessClosed]);
+    return { ...request, refresh, noticePage, dismissNoAccess };
 }

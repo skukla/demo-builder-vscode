@@ -49,12 +49,12 @@ import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useCatalogShow } from '../hooks/useCatalogShow';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useDatapackCatalog } from '../hooks/useDatapackCatalog';
+import { requestDatapackRename, useDetailFlyout } from '../hooks/useDetailFlyout';
 import { useHeldPack } from '../hooks/useHeldPack';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
+import type { DatapackId, ProjectDatapack } from '@/types/datapack';
 
 /** What `get-datapack-detail` hands back — metadata plus what is actually stored. */
 interface DatapackDetailResponse {
@@ -67,23 +67,6 @@ interface DatapackDetailResponse {
 }
 
 const DATAPACKS_UNAVAILABLE = "Datapacks Aren't Available";
-
-/**
- * Rename the SC's own library pack (step 07), the inline field's contract: null on success,
- * the reason otherwise. The field is the confirmation, so it is sent confirmed.
- */
-async function requestDatapackRename(id: DatapackId, displayName: string): Promise<string | null> {
-    try {
-        const response = await webviewClient.request<{ success: boolean; error?: string }>('rename-library-datapack', {
-            datapackName: id.name,
-            displayName,
-            confirm: true,
-        });
-        return response?.success ? null : (response?.error ?? 'Rename failed');
-    } catch (error) {
-        return error instanceof Error ? error.message : 'Rename failed';
-    }
-}
 
 /**
  * The name the open pack's card shows, for the flyout's title while its detail loads. By version:
@@ -104,15 +87,12 @@ function nameOnCard(page: CatalogPage | null, id: DatapackId | undefined): strin
 export function DatapackCatalogView({ library = false }: { library?: boolean } = {}): React.JSX.Element {
     const [query, setQuery] = useState('');
     const [versions, setVersions] = useState<Record<string, string>>({});
-    const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
-    /** Which store the open flyout's pack lives in. */
-    const [selectedStore, setSelectedStore] = useState<DatapackStoreName>('installer');
     const [importing, setImporting] = useState<DatapackId | undefined>(undefined);
 
     // The one list: Demo Builder's datapack store, then the Data Installer's if it answers.
     // Set below, once the callbacks it needs exist: what a pack change also reads again (F66).
     const onPacksChanged = useRef<(() => void) | undefined>(undefined);
-    const { refresh, loading, value, failure, settled } = useDatapackCatalog(onPacksChanged);
+    const { refresh, loading, value, failure, settled, noticePage, dismissNoAccess } = useDatapackCatalog(onPacksChanged);
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
     // What the open project was CREATED to hold, recorded by the wizard's Sample
     // Data area. Optional in every direction: no project, or a project that
@@ -181,16 +161,6 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
         heldFirst: true,
     });
 
-    // The "no access" banner closes at once, and the extension remembers it (2026-11-03).
-    const [noAccessClosed, setNoAccessClosed] = useState(false);
-    const dismissNoAccess = useCallback((): void => {
-        setNoAccessClosed(true);
-        webviewClient.postMessage('dismiss-datapack-no-access');
-    }, []);
-    const noticePage = useMemo(
-        () => (value && noAccessClosed ? { ...value, noAccessDismissed: true } : value),
-        [value, noAccessClosed],
-    );
 
     const pickVersion = useCallback(
         (name: string, version: string): void =>
@@ -199,22 +169,16 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
     );
 
     const loadDetail = detail.load;
-    const openDetail = useCallback(
-        (id: DatapackId, store: DatapackStoreName): void => {
-            setSelected(id);
-            setSelectedStore(store);
-            loadDetail({ datapackName: id.name, version: id.version, store });
-        },
-        [loadDetail],
-    );
-    const closeDetail = useCallback((): void => setSelected(undefined), []);
+    // The flyout's pack: the version its card showed, or the demo's own once known (F77).
+    const flyout = useDetailFlyout({ load: loadDetail, held, versions, groups: shown });
+    const { selected, selectedStore, open: openDetail, close: closeDetail } = flyout;
     // Removing your own library pack closes its flyout, takes its card off at once, and re-reads the
     // catalog, which confirms it.
     const removedFromLibrary = useCallback((): void => {
         if (selected) hideRemoved(selected);
-        setSelected(undefined);
+        closeDetail();
         refresh();
-    }, [selected, hideRemoved, refresh]);
+    }, [selected, hideRemoved, closeDetail, refresh]);
 
     // The import modal is mounted HERE, not inside the flyout. As a child of the
     // Drawer it was a dialog nested in a drawer; `IntegrationsScreen` mounts its

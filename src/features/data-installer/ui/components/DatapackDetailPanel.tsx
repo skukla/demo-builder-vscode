@@ -95,7 +95,7 @@ export function DatapackDetailPanel({
     selectedName,
     detail,
     inventory,
-    loading,
+    loading: reading,
     failure,
     onClose,
     onRetry,
@@ -110,6 +110,11 @@ export function DatapackDetailPanel({
     settingsLayer,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selectedName ?? selected?.name ?? 'Datapack';
+    // A read of the pack already on show (after Share, Stop Sharing or a rename) updates it in
+    // place: the rows stay and change when the answer lands. Swapping them for a wait moved the
+    // whole flyout for a second (owner, 2026-11-08). Another pack's read still waits, since the
+    // rows on show are the last pack's until it lands.
+    const loading = reading && !isOnShow(detail, selected);
     // A menu row's work is running: the flyout waits as its load does (`PackActions`).
     const [working, setWorking] = useState(false);
 
@@ -154,6 +159,11 @@ export function DatapackDetailPanel({
             ) : null}
         </Drawer>
     );
+}
+
+/** Whether the detail on show is the selected pack's, at its version. */
+function isOnShow(detail: DatapackDetail | null, selected: DatapackId | undefined): boolean {
+    return detail !== null && selected !== undefined && detail.id.name === selected.name && detail.id.version === selected.version;
 }
 
 /**

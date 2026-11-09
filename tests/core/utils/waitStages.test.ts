@@ -4,21 +4,23 @@
  * the clock after it, and all three written.
  */
 
-import { OPERATION_STAGES, type OperationStage } from '@/core/utils/operationStages';
-import { WAIT_STAGES } from '@/core/utils/waitStages';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { WAIT_STAGES, type WaitStage } from '@/core/utils/waitStages';
 
-const WAITS: readonly OperationStage[] = Object.values(WAIT_STAGES);
+const WAITS: readonly WaitStage[] = Object.values(WAIT_STAGES);
 
-const tooLong = (field: keyof OperationStage, max: number, stages: readonly OperationStage[] = WAITS) =>
-    stages.map((stage) => stage[field]).filter((text) => text.length > max);
+const tooLong = (field: keyof WaitStage, max: number, stages: readonly WaitStage[] = WAITS) =>
+    stages.map((stage) => stage[field] ?? '').filter((text) => text.length > max);
 
 describe('WAIT_STAGES', () => {
-    it('gives every wait a label, a detail and an expectation', () => {
-        for (const wait of WAITS) {
-            expect(wait.label.trim()).not.toBe('');
-            expect(wait.detail.trim()).not.toBe('');
-            expect(wait.expectation.trim()).not.toBe('');
-        }
+    it('gives every wait a label and an expectation, and a detail that says something when it has one', () => {
+        expect(WAITS.filter((wait) => wait.label.trim() === '' || wait.expectation.trim() === '')).toStrictEqual([]);
+        expect(WAITS.filter((wait) => wait.detail !== undefined && wait.detail.trim() === '')).toStrictEqual([]);
+    });
+
+    it('words Share and Stop Sharing by the label alone (owner, 2026-11-08)', () => {
+        expect(WAIT_STAGES.sharingPack).toStrictEqual({ label: 'Sharing the datapack', expectation: 'Usually a few seconds' });
+        expect(WAIT_STAGES.makingPackPrivate).toStrictEqual({ label: 'Making it private', expectation: 'Usually a few seconds' });
     });
 
     it('keeps labels to 25, details to 40 and expectations to 25 characters', () => {
@@ -28,7 +30,7 @@ describe('WAIT_STAGES', () => {
     });
 
     it('CONTROL: the length check flags a planted long line, and reads the real table', () => {
-        const planted: OperationStage[] = [{ label: 'x'.repeat(26), detail: 'd', expectation: 'e' }];
+        const planted: WaitStage[] = [{ label: 'x'.repeat(26), detail: 'd', expectation: 'e' }];
         expect(tooLong('label', 25, planted)).toStrictEqual(['x'.repeat(26)]);
         expect(WAITS.length).toBeGreaterThan(20);
     });

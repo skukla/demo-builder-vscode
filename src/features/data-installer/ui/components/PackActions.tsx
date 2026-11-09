@@ -136,7 +136,7 @@ function workLines(work: {
     shared?: boolean;
 }): WaitLines {
     if (work.saveFile.saving) return WAIT_STAGES.savingPackFile;
-    if (work.sharing.working) return work.shared ? WAIT_STAGES.unsharingPack : WAIT_STAGES.sharingPack;
+    if (work.sharing.working) return work.shared ? WAIT_STAGES.makingPackPrivate : WAIT_STAGES.sharingPack;
     if (work.layerRemoval.removing) return WAIT_STAGES.removingPackSettings;
     return WAIT_STAGES.removingPack;
 }

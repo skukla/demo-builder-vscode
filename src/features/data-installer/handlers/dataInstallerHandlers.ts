@@ -318,6 +318,8 @@ interface DatapackRefPayload {
     version?: string;
     /** Which catalog holds it. Defaults to the Data Installer. */
     store?: DatapackStoreName;
+    /** Why the flyout asked for this version (`OPEN_WHY`), for Debug Logs (walk F77). */
+    why?: string;
 }
 
 /** globalState: the SC dismissed the Datapacks screen's "no access" banner on this machine. */
@@ -394,6 +396,8 @@ export const dataInstallerHandlers = defineHandlers({
             return { success: false, error: 'A datapack name and version are required.' };
         }
         const store = payload?.store ?? 'installer';
+        const why = typeof payload?.why === 'string' ? `: ${payload.why}` : '';
+        context.debugLogger.debug(`[Data Installer] Opening ${id.name}@${id.version} (${store})${why}`);
         return withClient(context, 'Could not load the datapack.', async (client) => {
             const fetched = await client.getDatapackDetail(id);
             const detail = store === 'library' ? { ...fetched, store } : fetched;

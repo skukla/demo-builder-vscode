@@ -19,6 +19,12 @@
 import { DATAPACK_STAGES } from './datapackStages';
 import type { OperationStage } from './operationStages';
 
+/**
+ * A wait's words: a stage's, with the detail optional. Some waits need no line 2: the label
+ * already says all there is (owner, 2026-11-08, of Share and Stop Sharing).
+ */
+export type WaitStage = Omit<OperationStage, 'detail'> & { readonly detail?: string };
+
 const FEW_SECONDS = 'Usually a few seconds';
 const FROM_COMMERCE = "From this demo's Commerce instance";
 
@@ -106,16 +112,9 @@ export const WAIT_STAGES = {
         expectation: FEW_SECONDS,
         detail: 'Every data type in the pack',
     },
-    sharingPack: {
-        label: 'Sharing the datapack',
-        expectation: FEW_SECONDS,
-        detail: 'With your team',
-    },
-    unsharingPack: {
-        label: 'Unsharing the datapack',
-        expectation: FEW_SECONDS,
-        detail: 'Only you will see it',
-    },
+    // Share and Stop Sharing: the label alone (owner, 2026-11-08). Each changes every version.
+    sharingPack: { label: 'Sharing the datapack', expectation: FEW_SECONDS },
+    makingPackPrivate: { label: 'Making it private', expectation: FEW_SECONDS },
     removingPack: {
         label: 'Removing the datapack',
         expectation: FEW_SECONDS,
@@ -126,4 +125,4 @@ export const WAIT_STAGES = {
         expectation: FEW_SECONDS,
         detail: 'Saved with this datapack',
     },
-} as const satisfies Record<string, OperationStage>;
+} as const satisfies Record<string, WaitStage>;

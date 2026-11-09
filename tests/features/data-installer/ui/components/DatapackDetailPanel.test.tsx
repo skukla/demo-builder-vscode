@@ -44,6 +44,9 @@ const INVENTORY: DataItemInventory = {
     requestedCount: 3,
 };
 
+/** A pack the SC moved to while the last one's detail is still on the props (stale). */
+const ANOTHER_PACK = { name: 'acme', version: 'main' };
+
 function renderPanel(over: Partial<React.ComponentProps<typeof DatapackDetailPanel>> = {}) {
     const onClose = jest.fn();
     const view = render(
@@ -332,14 +335,14 @@ describe('DatapackDetailPanel', () => {
         });
 
         it('withholds Import while a detail is loading, stale detail and all', () => {
-            renderPanel({ loading: true });
+            renderPanel({ selected: ANOTHER_PACK, loading: true });
 
             expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
         });
 
         it('imports the pack on screen, never the one still loading', () => {
             const onImport = jest.fn();
-            renderPanel({ loading: true, onImport });
+            renderPanel({ selected: ANOTHER_PACK, loading: true, onImport });
 
             expect(screen.queryByRole('button', { name: /import/i })).toBeNull();
             expect(onImport).not.toHaveBeenCalled();
@@ -383,10 +386,20 @@ describe('DatapackDetailPanel', () => {
          * contents to another.
          */
         it('shows the spinner over a stale detail, not the stale rows', () => {
-            renderPanel({ loading: true });
+            renderPanel({ selected: ANOTHER_PACK, loading: true });
 
             expect(screen.getByRole('status')).toBeInTheDocument();
             expect(screen.queryByText('Visible To')).not.toBeInTheDocument();
+        });
+
+        // Owner, 2026-11-08: after Share the rows gave way to "Reading the datapack" for a second, and
+        // the flyout jumped. A read of the pack on show updates it in place.
+        it('keeps the rows and Import on show while the same pack is read again', () => {
+            renderPanel({ loading: true });
+
+            expect(screen.queryByRole('status')).not.toBeInTheDocument();
+            expect(screen.getByText('Visible To')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
         });
 
         it('shows the failure treatment with a retry', () => {
@@ -426,7 +439,7 @@ describe('DatapackDetailPanel — actions', () => {
     });
 
     it('offers no menu while the detail is loading', () => {
-        renderPanel({ loading: true });
+        renderPanel({ selected: ANOTHER_PACK, loading: true });
 
         expect(screen.queryByRole('button', { name: 'More actions for Bodea' })).not.toBeInTheDocument();
     });

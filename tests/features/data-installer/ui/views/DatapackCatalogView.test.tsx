@@ -264,7 +264,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'get-datapack-detail',
-                    payload: { datapackName: 'bodea', version: 'main', store: 'installer' },
+                    payload: { datapackName: 'bodea', version: 'main', store: 'installer', why: 'the version its card showed' },
                 })
             );
         });
@@ -301,7 +301,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'get-datapack-detail',
-                    payload: { datapackName: 'bodea', version: 'tierpricingfix', store: 'installer' },
+                    payload: { datapackName: 'bodea', version: 'tierpricingfix', store: 'installer', why: 'the version its card showed' },
                 })
             );
         });
