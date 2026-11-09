@@ -929,12 +929,13 @@ check says so and names the file.
 > **Not enforced** yet: the batch window follows it; an audit of every other window header is
 > under way and will decide whether a check can tell a name from a kind.
 
-> **Convention.** A dialog that is waiting shows nothing else: the title, a medium spinner centred
-> both ways in the space between the rule and the buttons, and the way out. `Modal`'s `waiting` prop
-> does it. A flyout waits the same way: its title and a medium centred spinner, with no words
-> (owner, 2026-11-02).
+> **Convention.** A dialog that is waiting shows nothing else: the title, the wait centred both ways
+> in the space between the rule and the buttons, and the way out. The wait says what it is doing in
+> the progress window's three rows (`StageWait`, words from `WAIT_STAGES`), and `Modal`'s `waiting`
+> prop does it. A flyout waits the same way (owner, 2026-11-08).
 > *Why:* half a form under a spinner invites a press that goes nowhere, and it kept coming back on
-> different surfaces (owner, 2026-11-01).
+> different surfaces (owner, 2026-11-01); a wordless spinner over a minute's work told the SC
+> nothing (owner, 2026-11-08).
 > Enforced by `tests/sop/modal-waits.test.ts`.
 
 > **Convention.** A CSS class used in a bundle is styled by that bundle.

@@ -41,7 +41,7 @@ describe("a dialog's size never animates", () => {
         const { rerender } = render(wrap(<Modal {...defaultProps} size="M" />));
 
         rerender(wrap(<Modal {...defaultProps} size="S" title="Remove from the store?" />));
-        rerender(wrap(<Modal {...defaultProps} size="S" title="Remove" waiting={{}} />));
+        rerender(wrap(<Modal {...defaultProps} size="S" title="Remove" waiting={{ label: 'Reading' }} />));
         rerender(wrap(<Modal {...defaultProps} size="S" title="Removed" />));
 
         expect(animate.mock.calls.filter(([frames]) => 'height' in frames[0])).toStrictEqual([]);
@@ -87,7 +87,7 @@ describe('a wait keeps the box it found', () => {
     it('holds the width, and the height as a floor', () => {
         const { rerender } = render(wrap(<Modal {...defaultProps} size="M" />));
 
-        rerender(wrap(<Modal {...defaultProps} size="S" waiting={{}} />));
+        rerender(wrap(<Modal {...defaultProps} size="S" waiting={{ label: 'Reading' }} />));
 
         const held = { width: '480px', minHeight: '290px' };
         expect(holds()).toHaveLength(1);
@@ -106,7 +106,7 @@ describe('a wait keeps the box it found', () => {
 
     it('changes nothing when one wait follows another', () => {
         const { rerender } = render(wrap(<Modal {...defaultProps} />));
-        rerender(wrap(<Modal {...defaultProps} waiting={{}} />));
+        rerender(wrap(<Modal {...defaultProps} waiting={{ label: 'Reading' }} />));
         animate.mockClear();
 
         rerender(wrap(<Modal {...defaultProps} holdSize />));
@@ -119,7 +119,7 @@ describe('a wait keeps the box it found', () => {
         const cancel = jest.fn();
         animate.mockReturnValue({ cancel });
         const { rerender } = render(wrap(<Modal {...defaultProps} size="M" />));
-        rerender(wrap(<Modal {...defaultProps} waiting={{}} size="M" />));
+        rerender(wrap(<Modal {...defaultProps} waiting={{ label: 'Reading' }} size="M" />));
         animate.mockClear();
 
         rerender(wrap(<Modal {...defaultProps} size="S" title="Removed" />));
@@ -130,16 +130,16 @@ describe('a wait keeps the box it found', () => {
     });
 
     it('has no box to keep on a first open', () => {
-        render(wrap(<Modal {...defaultProps} waiting={{}} />));
+        render(wrap(<Modal {...defaultProps} waiting={{ label: 'Reading' }} />));
 
         expect(animate).not.toHaveBeenCalled();
         expect(dialog()).not.toHaveClass('is-holding');
     });
 
     it('does not treat a new message in the same wait as a change of view', () => {
-        const { rerender } = render(wrap(<Modal {...defaultProps} waiting={{ message: 'One' }} />));
+        const { rerender } = render(wrap(<Modal {...defaultProps} waiting={{ label: 'One' }} />));
 
-        rerender(wrap(<Modal {...defaultProps} waiting={{ message: 'Two' }} />));
+        rerender(wrap(<Modal {...defaultProps} waiting={{ label: 'Two' }} />));
 
         expect(animate).not.toHaveBeenCalled();
     });
@@ -148,7 +148,7 @@ describe('a wait keeps the box it found', () => {
         const cancel = jest.fn();
         animate.mockReturnValue({ cancel });
         const { rerender, unmount } = render(wrap(<Modal {...defaultProps} />));
-        rerender(wrap(<Modal {...defaultProps} waiting={{}} />));
+        rerender(wrap(<Modal {...defaultProps} waiting={{ label: 'Reading' }} />));
 
         unmount();
 

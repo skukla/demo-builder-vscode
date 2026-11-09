@@ -31,9 +31,10 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * Strings in a naming position the compiler cannot read: props and runtime values. Shrink only.
  * 70 -> 71 on 2026-11-04 (raised for the owner to confirm): the projects batch window's title is
  * a run's question's own heading while it asks ("Sign In to DA.live"), which arrives from the
- * extension at run time.
+ * extension at run time. 71 -> 69 on 2026-11-08, with the waits' rework (`WAIT_STAGES`) and the
+ * import pause taken out: two fewer strings the scan cannot read.
  */
-const DYNAMIC_PIN = 71;
+const DYNAMIC_PIN = 69;
 
 /** A positive control: well below this, the scan has stopped finding the sites. */
 const MINIMUM_SITES = 300;

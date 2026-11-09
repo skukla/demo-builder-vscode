@@ -23,12 +23,13 @@ import { ShareFileForm } from './ShareFileForm';
 import { ShareLinkForm } from './ShareLinkForm';
 import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DemoPackagePreview } from '@/types/webviewRequests';
 
 type ShareForm = 'link' | 'file';
 
 /** A dialog reading what it will show says nothing while it does. */
-const READING: ModalWait = {};
+const READING: ModalWait = WAIT_STAGES.readingDemo;
 
 /** A handler's answer: branch on `success` before reading anything else (webview-command-handler). */
 interface Answer<D> {

@@ -36,8 +36,9 @@ import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
 import { PackActions } from './PackActions';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StageWait } from '@/core/ui/components/feedback/StageWait';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId } from '@/types/datapack';
 
 export interface DatapackDetailPanelProps {
@@ -201,10 +202,10 @@ function renderPanelBody(args: {
         // its height is a fixed DimensionValue (no percentages — the same limit
         // IntegrationsScreen records), and this needs flex-fill of whatever space
         // the drawer body has. db-drawer-body is a flex column, so flex:1 centers.
-        // Medium and wordless, as a waiting dialog is: the title already names the pack.
+        // The house wait, as a waiting dialog's (`StageWait`).
         return (
             <div className="datapack-panel-loading">
-                <LoadingDisplay size="M" centered message="" />
+                <StageWait lines={WAIT_STAGES.readingPack} />
             </div>
         );
     }

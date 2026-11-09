@@ -42,12 +42,12 @@ import {
     type UseIntegrationFlowReturn,
 } from './useIntegrationFlow';
 import { useOrgApis } from './useOrgApis';
-import { ADOBE_APIS_WAIT } from '@/core/ui/components/feedback/adobeApisWait';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import type { DialogOutcome } from '@/core/ui/components/ui/DialogOutcome';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeAuthSessionState, WizardState } from '@/types/webview';
 
@@ -237,7 +237,7 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
             // short, the api-access list is long and still scrolls at max-height.
             fitContent
             // Reading what it will show: only the way out, and the one line a read this long needs.
-            waiting={onApiStage && orgApis.loading ? ADOBE_APIS_WAIT : false}
+            waiting={onApiStage && orgApis.loading ? WAIT_STAGES.readingAdobeServices : false}
             onClose={props.onClose}
             closeLabel="Cancel"
             // A stage's wait keeps the box it found, and stays mounted: it holds the read.

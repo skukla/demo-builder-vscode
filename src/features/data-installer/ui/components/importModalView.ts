@@ -14,6 +14,7 @@ import type { ImportScopes } from '../hooks/useImportScopes';
 import type { ModalView } from './ImportDatapackModalBody';
 import { type LastAction, type ResultContent, resultStatus } from './importResult';
 import type { ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 
 /**
  * Which job to watch: the one the LAST action started.
@@ -322,8 +323,10 @@ export function viewFrame(a: {
  * to cover the first frame, before any request has been sent: a form drawn there set the box the
  * wait then kept (407px).
  */
-export function waitOf(view: ModalView, reading: boolean, message: string): ModalWait | false {
-    if (view === 'busy') return { message };
-    if (view === 'reading-changes') return {};
-    return view === 'form' && reading ? {} : false;
+export function waitOf(view: ModalView, reading: boolean, message: string, comparing: ModalWait | false = false): ModalWait | false {
+    // A pack the project has: the store compared with it before the form (`useImportChanges`).
+    if (comparing) return comparing;
+    if (view === 'busy') return { label: message };
+    if (view === 'reading-changes') return WAIT_STAGES.readingChangesSinceImport;
+    return view === 'form' && reading ? WAIT_STAGES.readingWebsites : false;
 }

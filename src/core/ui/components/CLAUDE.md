@@ -12,6 +12,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | The job | Use | Not |
 |---|---|---|
 | Full-block loading (empty view, waiting on a fetch) | `feedback/LoadingDisplay` (`size="L"`) | a bare `ProgressCircle` + label |
+| A dialog's or flyout's wait: what it is doing, on what, how long (the progress window's three rows) | `Modal`'s `waiting`, or `feedback/StageWait` in a flyout, with words from `WAIT_STAGES` (`core/utils/waitStages.ts`) | a wordless spinner, or a `LoadingDisplay` with words written on the spot |
 | Loading ON TOP of existing content | `feedback/LoadingOverlay` | a conditional spinner |
 | Small inline busy indicator | `ui/Spinner` | `ProgressCircle` directly |
 | Long wait needing "still moving" copy | `LoadingDisplay` + `useElapsedStage` | a static message |

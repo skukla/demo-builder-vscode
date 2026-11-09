@@ -27,6 +27,7 @@ import { PackTypeStage } from './stages/PackTypeStage';
 import { StorePicksStage } from './stages/StorePicksStage';
 import { type CreateDatapackFlow, useCreateDatapackFlow } from './useCreateDatapackFlow';
 import { type ActionButton, Modal, type ModalProps, type ModalWait } from '@/core/ui/components/ui/Modal';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 
 export interface DatapackFlowDialogProps {
     title: string;
@@ -40,8 +41,10 @@ export interface DatapackFlowDialogProps {
     onSave: (picks: StorePicks, saveAsName?: string) => void;
 }
 
-/** A read of what the screen will show says nothing. */
-const SILENT_WAIT: ModalWait = {};
+/** The read of what the screen will show: the store's data to pick from, or ACO's catalog views. */
+function waitLines(stage: string): ModalWait {
+    return stage === 'aco-views' ? WAIT_STAGES.readingCatalogViews : WAIT_STAGES.readingWhatToSelect;
+}
 
 function frameOf(result: ResultContent | null, title: string, stage: string): Pick<ModalProps, 'size' | 'title' | 'status' | 'wide'> {
     if (result) return { size: 'S', title: result.title, status: resultStatus(result) };
@@ -79,7 +82,7 @@ export function DatapackFlowDialog({ title, startsAtPicks, pack, saveAsName, onC
                 fitContent
                 onClose={onClose}
                 closeLabel={result ? 'Close' : 'Cancel'}
-                waiting={flow.waiting ? SILENT_WAIT : false}
+                waiting={flow.waiting ? waitLines(flow.stage) : false}
                 actionButtons={footerOf(flow)}
             >
                 <div className="datapack-export-body">

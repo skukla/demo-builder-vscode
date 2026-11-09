@@ -43,14 +43,14 @@ describe('ProjectsBatchModal: Delete Selected', () => {
         expect(dialog).toHaveAttribute('data-status', 'warning');
         // Extra-wide, so three columns of names fit on one line (owner, 2026-11-05).
         expect(dialog).toHaveAttribute('data-wide', 'true');
-        expect(screen.queryByText('Reading Projects')).toBeNull();
+        expect(screen.queryByText('Reading projects')).toBeNull();
     });
 
     it('shows the wait while the read is out', async () => {
         await openOn('delete', null);
 
         expect(screen.getByRole('dialog', { name: /^Delete \d+ Projects?\?$/ })).toBeInTheDocument();
-        expect(screen.getByText('Reading Projects')).toBeInTheDocument();
+        expect(screen.getByText('Reading projects')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Delete 3 Projects' })).toBeNull();
     });
 

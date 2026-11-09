@@ -26,6 +26,7 @@ import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DemoDataCheck, WipePreview, WipeStoreChoice } from '@/types/demoDataWipe';
 
 /** Every string the modal shows that is not the extension's own. */
@@ -100,7 +101,7 @@ function ClearForm({ onClose, onClear }: ClearDemoDataModalProps) {
             status={failed ? 'error' : undefined}
             size={failed ? 'S' : 'L'}
             fitContent
-            waiting={!failed && !check.ready ? {} : false}
+            waiting={!failed && !check.ready ? WAIT_STAGES.readingDemoData : false}
             onClose={onClose}
             actionButtons={failed ? [] : [{ label: total > 0 ? clearLabel(total) : 'Clear', variant: 'negative', onPress: clear, isDisabled: total === 0 }]}
         >

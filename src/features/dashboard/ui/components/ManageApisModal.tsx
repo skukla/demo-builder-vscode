@@ -27,13 +27,14 @@
 
 import { DialogContainer, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ADOBE_APIS_WAIT } from '@/core/ui/components/feedback/adobeApisWait';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
-import { Modal, type ActionButton, type ModalProps } from '@/core/ui/components/ui/Modal';
+import { Modal, type ActionButton, type ModalProps, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { CONSOLE_APIS_OPERATION_ID } from '@/core/utils/operationIds';
+import { expectationFor } from '@/core/utils/operationStages';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { CloudGrouping } from '@/types/adobeApis';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -202,6 +203,12 @@ function useListFloor(listShown: boolean): { ref: React.RefObject<HTMLDivElement
 }
 
 /** The title, the wait and the way on, for where the read and the apply stand. */
+/** The subscribe's own lines while it applies, with its stage's expectation from the stage table. */
+function applyingWait(stage: string | undefined, step: string | undefined): ModalWait {
+    const label = stage ?? 'Applying';
+    return { label, detail: step, expectation: expectationFor(label) };
+}
+
 function viewOf(
     name: string,
     list: ApiList,
@@ -212,9 +219,9 @@ function viewOf(
     if (applying.isApplying) {
         // The subscribe's own lines: it reads the workspace's credentials and can wait on Adobe
         // for a minute (PL-59 slice 6). Work the SC started says what is happening.
-        return { title, waiting: { message: applying.stage ?? 'Applying', detail: applying.step }, closeLabel: 'Cancel' };
+        return { title, waiting: applyingWait(applying.stage, applying.step), closeLabel: 'Cancel' };
     }
-    if (list.isLoading) return { title, waiting: ADOBE_APIS_WAIT, closeLabel: 'Cancel' };
+    if (list.isLoading) return { title, waiting: WAIT_STAGES.readingAdobeServices, closeLabel: 'Cancel' };
     if (list.needsSignIn) {
         const signIn: ActionButton = { label: MANAGE_APIS_COPY.signIn, variant: 'accent', onPress: list.signIn };
         return { title: MANAGE_APIS_COPY.signInTitle, status: 'warning', actionButtons: [signIn] };

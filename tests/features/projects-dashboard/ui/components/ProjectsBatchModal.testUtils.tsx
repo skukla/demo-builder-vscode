@@ -38,7 +38,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         children: React.ReactNode;
     }) => (
         <div role="dialog" aria-label={title} data-status={status} data-wide={wide ? 'true' : undefined}>
-            {waiting ? <p>{waiting.message}</p> : children}
+            {waiting ? <p>{waiting.label}</p> : children}
             {!hideClose && <button onClick={onClose}>{closeLabel ?? 'Close'}</button>}
             {(waiting ? [] : actionButtons).map((b) => (
                 <button key={b.label} onClick={b.onPress} disabled={b.isDisabled} data-variant={b.variant}>

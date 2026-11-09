@@ -36,10 +36,11 @@ import { useLibrarySharing } from '../hooks/useLibrarySharing';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
 import { useSaveDatapackFile } from './SaveDatapackFileButton';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { ConfirmActionDialog, type ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId } from '@/types/datapack';
 
 /**
@@ -127,6 +128,19 @@ function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: stri
     };
 }
 
+/** What the flyout says while a menu row's work runs; a removal when it is none of the others. */
+function workLines(work: {
+    saveFile: { saving: boolean };
+    sharing: { working: boolean };
+    layerRemoval: { removing: boolean };
+    shared?: boolean;
+}): WaitLines {
+    if (work.saveFile.saving) return WAIT_STAGES.savingPackFile;
+    if (work.sharing.working) return work.shared ? WAIT_STAGES.unsharingPack : WAIT_STAGES.sharingPack;
+    if (work.layerRemoval.removing) return WAIT_STAGES.removingPackSettings;
+    return WAIT_STAGES.removingPack;
+}
+
 export function PackActions({
     detail,
     onImport,
@@ -179,7 +193,7 @@ export function PackActions({
         <>
             {working ? (
                 <div className="datapack-panel-loading">
-                    <LoadingDisplay size="M" centered message="" />
+                    <StageWait lines={workLines({ saveFile, sharing, layerRemoval, shared: detail.shared })} />
                 </div>
             ) : null}
             {/* Kept mounted through a wait: a copy's own result would be lost with it. */}

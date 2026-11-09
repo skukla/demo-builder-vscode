@@ -58,7 +58,7 @@ describe('Modal startButtons', () => {
     it('hides them while the dialog is waiting, as it hides the action buttons', () => {
         renderModal({
             startButtons: [{ label: 'Check All Steps', variant: 'secondary', onPress: jest.fn() }],
-            waiting: {},
+            waiting: { label: 'Reading demo data' },
         });
 
         expect(screen.queryByRole('button', { name: 'Check All Steps' })).not.toBeInTheDocument();

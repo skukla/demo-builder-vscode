@@ -2,7 +2,7 @@ import { Dialog, Heading, Content, Divider } from '@adobe/react-spectrum';
 import React, { ReactNode, useCallback } from 'react';
 import { Spinner } from './Spinner';
 import { useDialogViewChange } from './useDialogViewChange';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { cn } from '@/core/ui/utils/classNames';
@@ -83,10 +83,12 @@ export interface ModalProps {
      */
     wide?: boolean;
     /**
-     * The dialog is waiting for what it will show. Only the title, a medium centred spinner and
-     * the way out appear: no fields, no text, no action buttons (dialog design rules, owner
-     * 2026-11-01). A button doing its own work uses `isPending` instead. `false` or absent shows
-     * the content. The end of a wait is a change of view: see `useDialogViewChange`.
+     * The dialog is waiting for what it will show. Only the title, the wait and the way out
+     * appear: no fields and no action buttons (dialog design rules, owner 2026-11-01). The wait
+     * says what it is doing in the progress window's three rows (`StageWait`, owner 2026-11-08),
+     * its words from `WAIT_STAGES`. A button doing its own work uses `isPending` instead. `false`
+     * or absent shows the content. The end of a wait is a change of view: see
+     * `useDialogViewChange`.
      */
     waiting?: ModalWait | false;
     /**
@@ -97,12 +99,8 @@ export interface ModalProps {
     children: ReactNode;
 }
 
-/** What a wait may say beside its spinner. Most say nothing. */
-export interface ModalWait {
-    message?: string;
-    detail?: string;
-    helperText?: string;
-}
+/** What a wait says: always what it is doing, then on what and how long (`WAIT_STAGES`). */
+export type ModalWait = WaitLines;
 
 /**
  * Focusable button wrapper to ensure buttons are in the same tab order
@@ -269,13 +267,7 @@ export function Modal({
                     <SteadyHeight>
                         {waiting ? (
                             <div className="modal-wait">
-                                <LoadingDisplay
-                                    size="M"
-                                    centered
-                                    message={waiting.message ?? ''}
-                                    subMessage={waiting.detail}
-                                    helperText={waiting.helperText}
-                                />
+                                <StageWait lines={waiting} />
                             </div>
                         ) : (
                             children

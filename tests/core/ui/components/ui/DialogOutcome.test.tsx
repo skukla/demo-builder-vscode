@@ -71,13 +71,16 @@ describe('DialogOutcomeBody', () => {
 });
 
 describe('DialogWaitBody', () => {
-    it('tells the dialog the wait is on and when it ends, and draws a spinner with no words', () => {
+    it('tells the dialog the wait is on and when it ends, and says what it is waiting for', () => {
         const onWaiting = jest.fn();
-        const { unmount } = render(<DialogWaitBody onWaiting={onWaiting} />);
+        const { unmount } = render(
+            <DialogWaitBody lines={{ label: 'Loading workspaces', detail: 'Demo Project' }} onWaiting={onWaiting} />,
+        );
 
         expect(onWaiting).toHaveBeenLastCalledWith(true);
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
-        expect(document.querySelector('.modal-wait')?.textContent).toBe('');
+        expect(document.querySelector('.modal-wait')).toHaveTextContent('Loading workspaces');
+        expect(document.querySelector('.modal-wait')).toHaveTextContent('Demo Project');
 
         unmount();
         expect(onWaiting).toHaveBeenLastCalledWith(false);

@@ -28,6 +28,7 @@ import { AiSkillsList } from './AiSkillsList';
 import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AI_FILES_OPERATION_ID } from '@/core/utils/operationIds';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 
 /**
@@ -91,7 +92,7 @@ export interface AiCapabilitiesModalProps {
 const EMPTY_SKILLS: SkillInventoryEntry[] = [];
 
 /** A dialog reading what it will show says nothing while it does. */
-const READING: ModalWait = {};
+const READING: ModalWait = WAIT_STAGES.checkingAiSetup;
 
 /**
  * The dialog's wait. Busy with no `progress` is either the verify (on every dashboard mount and
@@ -101,7 +102,7 @@ const READING: ModalWait = {};
 function waitOf(isBusy: boolean, isLoading: boolean, progress?: AiRegenerateProgress): ModalWait | false {
     if (isBusy && progress) {
         const percent = progress.progress === undefined ? '' : `${progress.progress}%`;
-        return { message: progress.currentOperation, detail: [progress.message, percent].filter(Boolean).join(', ') };
+        return { label: progress.currentOperation, detail: [progress.message, percent].filter(Boolean).join(', ') };
     }
     return isBusy || isLoading ? READING : false;
 }

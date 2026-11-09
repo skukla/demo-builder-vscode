@@ -75,13 +75,13 @@ describe('ErpDowntimeDialog', () => {
         expect(screen.queryByRole('button', { name: /^start downtime$/i })).toBeNull();
     });
 
-    it('while the ERP is read, the dialog is the wait, with no words', async () => {
+    it('while the ERP is read, the dialog is the wait, saying so', async () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));
 
         await open();
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
-        expect(screen.queryByText(/Reading/)).toBeNull();
+        expect(screen.getByText('Reading the ERP status')).toBeInTheDocument();
         expect(screen.queryByLabelText('Minutes')).toBeNull();
         expect(screen.queryByRole('button', { name: /^start downtime$/i })).toBeNull();
     });

@@ -161,7 +161,14 @@ export function SelectionStepContent<T extends SelectableItem>({
 
     // State 1: Loading
     if (showLoading || (isLoading && !hasLoadedOnce)) {
-        if (dialogHost) return <DialogWaitBody onWaiting={dialogHost.onWaiting} />;
+        if (dialogHost) {
+            return (
+                <DialogWaitBody
+                    lines={{ label: labels.loadingMessage, detail: labels.loadingSubMessage }}
+                    onWaiting={dialogHost.onWaiting}
+                />
+            );
+        }
         return (
             <>
                 {header}

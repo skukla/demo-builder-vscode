@@ -85,13 +85,13 @@ describe('the confirm in front of adding the ERP integration', () => {
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 
-    it('while the store is read, the dialog is the wait: no words, no sentences, no action', async () => {
+    it('while the store is read, the dialog is the wait: its rows, no sentences, no action', async () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));
         renderDialog();
         await act(async () => controls.confirmAdd(TARGET));
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
-        expect(screen.queryByText(/Checking|Reading/)).toBeNull();
+        expect(screen.getByText('Checking the demo setup')).toBeInTheDocument();
         expect(screen.queryByText(PREPARE_ON_ADD_COPY.intro('ERP Integration'))).toBeNull();
         expect(screen.queryByRole('button', { name: PREPARE_ON_ADD_COPY.action })).toBeNull();
     });

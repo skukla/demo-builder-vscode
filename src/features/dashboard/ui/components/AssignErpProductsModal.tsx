@@ -27,6 +27,7 @@ import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { AssignProductList } from './AssignProductList';
 import { Modal, type ModalStatus, type ModalWait } from '@/core/ui/components/ui/Modal';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import { previewAssignment } from '@/features/app-builder/services/erpAssignSelection';
 import { setsInWords } from '@/features/app-builder/services/erpOwnerAttributeSets';
 import { useErpAssignOptions } from '@/features/dashboard/ui/hooks/useErpAssignOptions';
@@ -94,7 +95,7 @@ export function AssignErpProductsModal({ target, onClose, onAssign, onAddSets }:
 }
 
 /** A dialog reading what it will show says nothing while it does. */
-const READING: ModalWait = {};
+const READING: ModalWait = WAIT_STAGES.readingProducts;
 
 /** The dialog's outcome when there is no list to show: a read that failed, or why nothing can be assigned. */
 interface NoList {

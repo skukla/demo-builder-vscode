@@ -16,6 +16,7 @@
 import { DialogContainer, NumberField } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
 import { Modal, type ActionButton, type ModalWait } from '@/core/ui/components/ui/Modal';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import {
     useErpDemoControls,
     type ErpDemoControlTarget,
@@ -28,7 +29,7 @@ export type { ErpDemoControlTarget };
 const { min: MIN, max: MAX } = ERP_DOWNTIME_MINUTES;
 
 /** A dialog reading what it will show says nothing while it does. */
-const READING: ModalWait = {};
+const READING: ModalWait = WAIT_STAGES.readingErpStatus;
 
 function isWindowLength(minutes: number): boolean {
     return Number.isInteger(minutes) && minutes >= MIN && minutes <= MAX;

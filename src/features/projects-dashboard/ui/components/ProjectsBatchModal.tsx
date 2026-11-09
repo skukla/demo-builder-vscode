@@ -3,7 +3,8 @@
  * list (owner, 2026-11-04), built as the Updates window is: the house `ui/Modal` in a
  * `DialogContainer`, the controls handed in (`useProjectsBatch`).
  *
- * Reading: the house wait, "Reading demo data" for a reset and "Reading Projects" for a delete.
+ * Reading: the house wait, "Reading demo data" for a reset and "Reading projects" for a delete
+ * (`WAIT_STAGES`).
  * The questions: `BatchDeleteQuestions` or `BatchResetQuestions`, Cancel and the button that
  * runs them. The run: `ProjectsBatchRunView`, closed into the background while it goes, its end
  * the title with its status icon, as the Updates run ends.
@@ -21,8 +22,10 @@ import { BatchResetQuestions } from './BatchResetQuestions';
 import { ProjectsBatchRunView } from './ProjectsBatchRunView';
 import { promptButtons } from './UpdatesModal';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
+import type { WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { ProjectsBatchAction } from '@/types/projectsBatch';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
@@ -166,9 +169,9 @@ function BodyOf({ controls }: { controls: ProjectsBatchControls }): React.ReactE
 }
 
 /** The wait while the questions are read. */
-function waitOf(view: BatchView): { message: string } | false {
+function waitOf(view: BatchView): WaitLines | false {
     if (view.phase !== 'reading') return false;
-    return { message: view.action === 'reset' ? 'Reading demo data' : 'Reading Projects' };
+    return view.action === 'reset' ? WAIT_STAGES.readingProjectsDemoData : WAIT_STAGES.readingProjects;
 }
 
 /** The batch window; nothing while closed. */

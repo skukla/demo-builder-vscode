@@ -18,7 +18,7 @@
 
 import React, { useLayoutEffect, useRef } from 'react';
 import type { ModalStatus } from './Modal';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
 
 /** A button the outcome offers. The last of them is the main one, drawn last in the footer. */
 export interface DialogOutcomeAction {
@@ -82,21 +82,28 @@ export function DialogOutcomeBody({ outcome, onOutcome }: DialogOutcomeBodyProps
 }
 
 /**
- * The silent wait of a part reading what the dialog will show: a medium centred spinner and no
- * words (dialog design rules). It tells the dialog while it is on screen, so the dialog can leave
- * only the way out.
+ * The wait of a part reading what the dialog will show, in the progress window's rows (`StageWait`,
+ * owner 2026-11-08). It tells the dialog while it is on screen, so the dialog can leave only the
+ * way out.
  *
- * @param props - where to report that the wait started and ended; must be a stable function
- * @returns the spinner
+ * @param props - what the wait says, and where to report that it started and ended (a stable
+ *   function)
+ * @returns the wait
  */
-export function DialogWaitBody({ onWaiting }: { onWaiting: (waiting: boolean) => void }): React.ReactElement {
+export function DialogWaitBody({
+    lines,
+    onWaiting,
+}: {
+    lines: WaitLines;
+    onWaiting: (waiting: boolean) => void;
+}): React.ReactElement {
     useLayoutEffect(() => {
         onWaiting(true);
         return () => onWaiting(false);
     }, [onWaiting]);
     return (
         <div className="modal-wait">
-            <LoadingDisplay size="M" centered message="" />
+            <StageWait lines={lines} />
         </div>
     );
 }

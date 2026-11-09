@@ -12,14 +12,14 @@
  */
 
 import React from 'react';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { OperationQuestion } from '@/core/ui/components/feedback/OperationQuestion';
+import { StageRows } from '@/core/ui/components/feedback/StageWait';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { tookValue, useRunClock } from '@/core/ui/hooks/useRunClock';
 import { cn } from '@/core/ui/utils/classNames';
-import { expectationLine, stageLine } from '@/core/utils/stageLine';
+import { stageLine } from '@/core/utils/stageLine';
 import type { OperationChange, OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
 
 export interface OperationProgressBodyProps {
@@ -71,17 +71,18 @@ export function OperationProgressBody({
     // The room for all three lines is kept and what is there sits level in it, so the spinner does
     // not ride high over a blank line, and the box does not move when a line arrives. Row 3 only
     // when it has words: `expectationLine` answers a blank for a screen that holds the row.
-    const hasExpectation = Boolean(progress?.expectation || total);
+    // The same three rows a dialog's wait shows (`StageRows`), large here.
     return (
         <div className={cn('modal-wait', 'modal-wait-progress', subject && 'modal-wait-progress-subject')}>
             {subject && <div className="modal-progress-subject">{subject}</div>}
-            <LoadingDisplay
+            <StageRows
                 size="L"
-                steady
-                noBlankRows
-                message={progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting'}
-                subMessage={progress?.step}
-                helperText={hasExpectation ? expectationLine(progress?.expectation, total) : undefined}
+                clock={total}
+                lines={{
+                    label: progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting',
+                    detail: progress?.step,
+                    expectation: progress?.expectation,
+                }}
             />
         </div>
     );

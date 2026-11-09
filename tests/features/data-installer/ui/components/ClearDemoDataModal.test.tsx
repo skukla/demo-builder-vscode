@@ -248,14 +248,14 @@ it('shows a re-check as a spinner where the answer lands, with no words, and kee
     await settle();
 });
 
-it('waits with no words while it reads the stores', async () => {
+it('waits saying what it reads while it reads the stores', async () => {
     mockRequest.mockReset();
     mockRequest.mockImplementation(() => new Promise(() => undefined));
 
     await openModal();
 
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
-    expect(screen.queryByText('Reading demo data')).not.toBeInTheDocument();
+    expect(screen.getByText('Reading demo data')).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
 });

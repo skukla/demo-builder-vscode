@@ -304,7 +304,7 @@ describe('AssignErpProductsModal', () => {
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
         expect(screen.queryByRole('grid', { name: 'Products' })).toBeNull();
         expect(screen.queryByTestId('spectrum-searchfield')).toBeNull();
-        expect(screen.queryByText(/Reading/)).toBeNull();
+        expect(screen.getByText('Reading products')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: ASSIGN_COPY.actionIdle })).toBeNull();
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });

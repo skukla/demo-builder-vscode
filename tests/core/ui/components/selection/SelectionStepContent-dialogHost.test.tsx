@@ -82,12 +82,13 @@ describe('SelectionStepContent in a dialog', () => {
         expect(onCreate).toHaveBeenCalledTimes(1);
     });
 
-    it('waits silently: a medium spinner, no words, and it tells the dialog', () => {
+    it("waits saying what it loads, in the dialog's rows, and tells the dialog", () => {
         const { onWaiting, view } = hosted({ showLoading: true, isLoading: true, hasLoadedOnce: false });
 
         expect(onWaiting).toHaveBeenLastCalledWith(true);
         expect(document.querySelector('.modal-wait [role="progressbar"]')).not.toBeNull();
-        expect(screen.queryByText(baseLabels.loadingMessage)).toBeNull();
+        expect(document.querySelector('.modal-wait')).toHaveTextContent(baseLabels.loadingMessage);
+        // The whole screen's long helper line stays on the whole screen.
         expect(screen.queryByText(/slow to respond/)).toBeNull();
 
         view.unmount();

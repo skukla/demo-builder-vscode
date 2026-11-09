@@ -365,9 +365,10 @@ describe('AiCapabilitiesModal', () => {
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
         // isBusy is set during BOTH verify-ai-setup (every dashboard mount and every open) and
-        // regenerate-ai-files, and neither has anything to say until a step arrives. The old
-        // "Reinstalling storefront dependencies" was specific to regen and misled during a verify.
-        expect(screen.queryByText(/checking|reinstalling|up to a minute/i)).not.toBeInTheDocument();
+        // regenerate-ai-files before its first step: the wait says the check, never a regenerate's
+        // step. The old "Reinstalling storefront dependencies" was specific to regen and misled.
+        expect(screen.getByText('Checking the AI setup')).toBeInTheDocument();
+        expect(screen.queryByText(/reinstalling/i)).not.toBeInTheDocument();
         expect(screen.queryByTestId('ai-mcps-list')).not.toBeInTheDocument();
         expect(screen.queryByTestId('ai-skills-summary')).not.toBeInTheDocument();
     });
@@ -375,7 +376,7 @@ describe('AiCapabilitiesModal', () => {
     it('is the same wait while the inventory is first read: nothing counted, nothing offered', () => {
         renderModal({ isLoading: true });
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
-        expect(screen.queryByText(/checking/i)).not.toBeInTheDocument();
+        expect(screen.getByText('Checking the AI setup')).toBeInTheDocument();
         expect(screen.queryByTestId('ai-mcps-heading')).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /^regenerate ai files$/i })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();

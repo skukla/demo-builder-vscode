@@ -21,6 +21,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PreparationStepRow } from './PreparationStepRow';
 import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import { postAdd } from '@/features/dashboard/ui/integrationsSurface/liveAddBuilder';
 import type { AddPreparationAnswer, AddPreparationPreview } from '@/types/storePreparation';
 import type { AddAppBuilderComponentRequestPayload } from '@/types/webviewRequests';
@@ -80,7 +81,7 @@ export function usePrepareOnAdd(
 }
 
 /** A dialog reading what it will show says nothing while it does. */
-const READING: ModalWait = {};
+const READING: ModalWait = WAIT_STAGES.checkingDemoSetup;
 
 interface PreviewState {
     preparation?: AddPreparationPreview;

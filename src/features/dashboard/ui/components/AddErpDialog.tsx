@@ -31,6 +31,7 @@ import { ErpOwnershipPicker, ruleOf, type OwnershipChoice, type StoreReadState }
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import { previewAsItStands, previewErpAdd, previewLines } from '@/features/app-builder/services/erpAddPreview';
 import { erpListIdFor } from '@/features/app-builder/services/erpListId';
 import { countOwnedAfterAdd, ownsProblem, rulesAfterAdd } from '@/features/app-builder/services/erpOwnership';
@@ -73,7 +74,7 @@ export interface AddErpDialogProps {
 const ATTRIBUTE_FIRST: OwnershipChoice = { mode: 'attribute', websites: [] };
 
 /** A dialog reading what it will show says nothing while it does. */
-const READING: ModalWait = {};
+const READING: ModalWait = WAIT_STAGES.readingErpCatalog;
 
 /** One empty list for every render, so the picker's effects do not see a new reference each time. */
 const NONE: never[] = [];

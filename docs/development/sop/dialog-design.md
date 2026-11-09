@@ -40,19 +40,22 @@ form, confirm, progress, result) shows one at a time.
 
 ## Rules
 
-**A wait shows nothing else.** While a dialog waits for what it will show, only the title, a
-medium centred spinner and the way out (Close or Cancel) appear: no fields, no text, no action
-buttons. Work the SC started is the Progress layout, so it may say what is happening beside the
-spinner ("Starting removal"); a dialog reading what it will show says nothing. The one exception
-is the wait for Adobe's API catalog, which says "The first load can take a few minutes": a silent
-spinner that long looks stuck (owner, 2026-11-02). The spinner is centred both ways between the title's rule and the buttons. `Modal`'s
-`waiting` prop does all of this, and eases to the content when the wait ends. A button doing its own
-work shows its spinner on itself (`isPending`). A re-check inside a dialog already showing
-its content, such as ticking a store in Clear demo data or pressing Check on a pack's setup step, is
-not a wait for the dialog: its spinner goes where the answer lands and the rest stays (owner,
-2026-11-01).
-A flyout waits the same way: its title and a medium centred spinner, with no words (owner,
-2026-11-02).
+**A wait shows nothing else, and says what it is waiting for.** While a dialog waits for what it
+will show, only the title, the wait and the way out (Close or Cancel) appear: no fields and no action
+buttons. The wait is the progress window's three rows, medium and centred (`StageWait`): what it is
+doing ("Reading demo data"), on what ("Each data type, in Commerce"), and how long it usually takes
+with the time so far ("Usually a few seconds · 4 seconds"). Its words come from `WAIT_STAGES`
+(`core/utils/waitStages.ts`), held to the stage table's rules: a label of 25 characters at most, a
+detail of 40, an expectation of 25, and the stage table's words for the same work ("Reading from
+Commerce", never "Reading the store"). Work the SC started reports its own stages in the same rows.
+A wordless spinner sat for a minute over a re-import's comparison, telling the SC nothing (owner,
+2026-11-08; it said nothing at all from 2026-11-01). The wait is centred both ways between the
+title's rule and the buttons. `Modal`'s `waiting` prop does all of this, takes a label by type, and
+eases to the content when the wait ends. A button doing its own work shows its spinner on itself
+(`isPending`). A re-check inside a dialog already showing its content, such as ticking a store in
+Clear demo data or pressing Check on a pack's setup step, is not a wait for the dialog: its spinner
+goes where the answer lands and the rest stays (owner, 2026-11-01).
+A flyout waits the same way: its title and the same rows (owner, 2026-11-08).
 
 **A dialog and a whole wizard screen draw an outcome differently, on purpose** (owner, 2026-11-02).
 A dialog has a title bar, so the outcome sits in it, with a small icon. A whole wizard screen has
@@ -76,7 +79,10 @@ second view (owner, 2026-11-07, generalising the Updates run's rule of 2026-10-2
 belongs to no one item (an import's preparing before the first data type, its finishing after the
 last) is a row of its own at each end, spinning with its current step as its line, never a grey
 line under the list; and the rows show from the first press, with no spinner screen in front of
-them (owner, 2026-11-07).
+them (owner, 2026-11-07). A run that changes what is there already (importing a pack the project
+has) says what it would change before it is started, not mid-run: the window opens on its wait
+("Comparing with Commerce"), then the form shows each data type's change in counts under its name
+("12 updated, 2 removed", "No changes"), and Import runs straight away (owner, 2026-11-08).
 
 **Capitals.** What names a thing is Title Case: the title, buttons, tabs, menu items and labels
 ("Run in Background", "Data Types"). What tells the SC something keeps normal capitals: a sentence,

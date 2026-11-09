@@ -245,8 +245,9 @@ describe('AddErpDialog — before and without the store', () => {
         await open();
 
         expect(screen.getAllByRole('progressbar')).toHaveLength(1);
-        // A dialog reading what it will show says nothing (dialog design rules).
-        expect(screen.queryByText(/Reading/)).toBeNull();
+        // The wait says what it reads (dialog design rules, owner 2026-11-08).
+        expect(screen.getByText('Reading from Commerce')).toBeInTheDocument();
+        expect(screen.getByText('The catalog the ERP will hold')).toBeInTheDocument();
         expect(screen.queryByLabelText(/^ERP Name/)).toBeNull();
         expect(screen.queryByRole('button', { name: ADD_ERP_COPY.add })).toBeNull();
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();

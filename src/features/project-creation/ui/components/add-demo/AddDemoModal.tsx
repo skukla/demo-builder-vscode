@@ -17,6 +17,7 @@ import { FoundStage } from './FoundStage';
 import { LinkStage } from './LinkStage';
 import { useAddDemoFlow, type UseAddDemoFlowArgs } from './useAddDemoFlow';
 import { Modal, type ActionButton, type ModalWait } from '@/core/ui/components/ui/Modal';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { AddedDemo } from '@/types/projectFile';
 
 export interface AddDemoModalProps extends UseAddDemoFlowArgs {
@@ -82,9 +83,9 @@ function Body({ flow, mode, outcome, ...props }: BodyProps): React.ReactElement 
  * is reading what the dialog will show.
  */
 function waitOf(flow: BodyProps['flow'], mode: BodyProps['mode']): ModalWait | false {
-    if (flow.importing) return { message: flow.importStep?.message ?? COPY.importing, detail: flow.importStep?.detail };
-    if (flow.adding) return { message: mode === 'change' ? COPY.change.changing : COPY.adding };
-    if (flow.stage === 'found' && (flow.probe.status === 'idle' || flow.probe.status === 'loading')) return {};
+    if (flow.importing) return { label: flow.importStep?.message ?? COPY.importing, detail: flow.importStep?.detail };
+    if (flow.adding) return { label: mode === 'change' ? COPY.change.changing : COPY.adding };
+    if (flow.stage === 'found' && (flow.probe.status === 'idle' || flow.probe.status === 'loading')) return WAIT_STAGES.checkingSharedDemo;
     return false;
 }
 

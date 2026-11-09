@@ -1,10 +1,15 @@
 /**
- * SOP: a dialog that is waiting shows nothing else.
+ * SOP: a dialog that is waiting shows nothing else, and says what it is waiting for.
  *
  * Owner, 2026-11-01: "nothing on the modal should show when a spinner is running. We've had to
- * deal with this multiple times." The title, a medium centred spinner and the way out appear, and
- * `Modal`'s `waiting` prop does it, so a file that renders a Modal has no reason to draw its own
- * spinner in the body. A button's own work is `isPending`, which this does not touch.
+ * deal with this multiple times." The title, the wait and the way out appear, and `Modal`'s
+ * `waiting` prop does it, so a file that renders a Modal has no reason to draw its own spinner in
+ * the body. A button's own work is `isPending`, which this does not touch.
+ *
+ * Owner, 2026-11-08 (walk F72): the wait says what it is doing, in the progress window's three rows
+ * (`StageWait`, words from `WAIT_STAGES`). A wordless spinner sat for a minute over a re-import's
+ * comparison. `Modal`'s `waiting` takes a label by type; a wait drawn outside it (a flyout's) is
+ * checked here.
  *
  * Read from the source because every webview suite mocks `Modal`, and a mock cannot see this.
  */
@@ -41,28 +46,25 @@ function offenders(): string[] {
         .sort();
 }
 
-/** A wait with its own words, or the large spinner that belongs to a whole screen. */
-const FLYOUT_WAIT_TOO_MUCH = /<LoadingDisplay\b[^>]*(size="L"|message="[^"]+")/;
+/** A wait with no words: the shape every dialog and flyout wait had until 2026-11-08. */
+const WORDLESS_WAIT = /<LoadingDisplay\b[^>]*message=(""|\{''\})/;
 
-function flyoutOffenders(): string[] {
+function wordlessWaits(): string[] {
     return sources(SRC)
-        .filter((file) => {
-            const text = fs.readFileSync(file, 'utf8');
-            return /<Drawer\b/.test(text) && FLYOUT_WAIT_TOO_MUCH.test(text);
-        })
+        .filter((file) => WORDLESS_WAIT.test(fs.readFileSync(file, 'utf8')))
         .map(relative)
         .sort();
 }
 
 describe('a dialog that is waiting shows nothing else', () => {
-    it('a flyout waits the same way: its title and a medium spinner, with no words', () => {
-        expect(flyoutOffenders()).toStrictEqual([]);
+    it('no wait anywhere is wordless: a dialog or flyout wait says what it is doing', () => {
+        expect(wordlessWaits()).toStrictEqual([]);
     });
 
-    it('CONTROL: the flyout check finds both ways of getting it wrong, and passes the right one', () => {
-        expect(FLYOUT_WAIT_TOO_MUCH.test('<LoadingDisplay size="L" message="" />')).toBe(true);
-        expect(FLYOUT_WAIT_TOO_MUCH.test('<LoadingDisplay size="M" message="Loading datapack" />')).toBe(true);
-        expect(FLYOUT_WAIT_TOO_MUCH.test('<LoadingDisplay size="M" centered message="" />')).toBe(false);
+    it('CONTROL: the wordless check finds both spellings, and passes a wait with words', () => {
+        expect(WORDLESS_WAIT.test('<LoadingDisplay size="M" centered message="" />')).toBe(true);
+        expect(WORDLESS_WAIT.test("<LoadingDisplay message={''} />")).toBe(true);
+        expect(WORDLESS_WAIT.test('<LoadingDisplay size="M" message="Loading activity" />')).toBe(false);
     });
 
     it('draws no wait of its own in a Modal: Modal takes `waiting`', () => {
@@ -78,7 +80,8 @@ describe('a dialog that is waiting shows nothing else', () => {
         expect(rule).toMatch(/padding-top: 8px/);
     });
 
-    it('CONTROL: still finds the thing it looks for', () => {
-        expect(fs.readFileSync(path.join(SRC, 'core/ui/components/ui/Modal.tsx'), 'utf8')).toMatch(/<LoadingDisplay\b/);
+    it('CONTROL: still finds the thing it looks for, and Modal waits with the house rows', () => {
+        expect(fs.readFileSync(path.join(SRC, 'core/ui/components/ui/Modal.tsx'), 'utf8')).toMatch(/<StageWait\b/);
+        expect(offenders().length).toBeGreaterThan(0);
     });
 });
