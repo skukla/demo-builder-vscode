@@ -23,6 +23,7 @@ import { type RecordFiles, nodeRecordFiles, readInstallRecord } from './demoBuil
 import type { PackItems } from './demoBuilderEngine/runPack';
 import { nodeActivityFiles, recordJobEnd } from './engineActivityLog';
 import { deriveImportInstance } from './importInstance';
+import { cachedPackRead } from './packReadCache';
 import { type LayerReads, findSettingsLayer } from './settingsLayer';
 import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
@@ -50,7 +51,17 @@ export interface DatapackEngineAccess {
  * store does not hold is read from the Data Installer. Shared by the engine and by the preview and
  * save of store changes (step 05), which read a pack the same way.
  */
-export async function readPackItems(
+export function readPackItems(
+    access: Pick<DatapackEngineAccess, 'catalog' | 'libraryCatalog'>,
+    id: DatapackId,
+    source: DatapackStoreName,
+): Promise<PackItems> {
+    // Kept a few minutes and shared by every caller (`packReadCache`, walk F82): about 9 s for Luma.
+    return cachedPackRead(id, source, () => readPackItemsNow(access, id, source));
+}
+
+/** The read itself, from the store first, then the Data Installer. */
+async function readPackItemsNow(
     access: Pick<DatapackEngineAccess, 'catalog' | 'libraryCatalog'>,
     id: DatapackId,
     source: DatapackStoreName,

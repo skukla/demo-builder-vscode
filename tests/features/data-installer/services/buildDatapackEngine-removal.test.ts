@@ -5,6 +5,10 @@
 
 import { type TicksHarness, ROWS, request, ticksHarness } from './buildDatapackEngine-ticks.testUtils';
 import { kindsOnRecord } from '@/features/data-installer/services/demoBuilderEngine/runPack';
+import { forgetPackReads } from '@/features/data-installer/services/packReadCache';
+
+// Pack reads are kept between callers (`packReadCache`, walk F82): each test reads its own.
+beforeEach(() => forgetPackReads());
 
 const ALL = Object.keys(ROWS);
 

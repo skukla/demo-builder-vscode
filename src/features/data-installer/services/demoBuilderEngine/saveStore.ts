@@ -249,13 +249,26 @@ function refuseUninstallable(items: Record<string, unknown>): void {
  * @param pack - the pack being saved, when there is one
  */
 export async function listPickable(deps: StoreChangesDeps, kind: PickableKind, pack?: DatapackId, source?: DatapackStoreName): Promise<StoreItemPage> {
+    const started = Date.now();
     const record = pack ? await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack) : undefined;
-    const ctx = await openStore(deps, pack, record);
-    const { items, excluded } = await listStoreItems(ctx, kind);
-    const rows = pack ? await readInstalled(deps, { pack, ...(source ? { source } : {}) }).then((r) => r.rows, () => ({})) : {};
+    // Commerce and the pack are read at once; the pack once a visit (`packReadCache`, walk F81).
+    const [store, held] = await Promise.all([
+        openStore(deps, pack, record).then((ctx) => listStoreItems(ctx, kind)).then((listed) => ({ ...listed, ms: Date.now() - started })),
+        pack ? packRowsOf(deps, pack, source) : Promise.resolve(undefined),
+    ]);
+    const { items, excluded } = store;
+    const rows = held?.rows ?? {};
+    deps.log(`Listed ${kind}: Commerce in ${store.ms} ms${held ? `, ${labelPack(held.pack)} in ${held.ms} ms` : ''}`);
     const holds = holdsOf(kind, record?.created ?? [], rows);
     const offered = items.filter((item) => !holds(item));
     return { items: offered, totalCount: items.length, excludedCount: excluded, inPackCount: items.length - offered.length };
+}
+
+/** The pack's rows for a list (read once a visit, `packReadCache`); none when it cannot be read, as before. */
+async function packRowsOf(deps: StoreChangesDeps, pack: DatapackId, source: DatapackStoreName | undefined): Promise<{ pack: DatapackId; rows: Record<string, unknown>; ms: number }> {
+    const started = Date.now();
+    const rows = await readInstalled(deps, { pack, ...(source ? { source } : {}) }).then((r) => r.rows, () => ({}));
+    return { pack, rows, ms: Date.now() - started };
 }
 
 /**
@@ -264,7 +277,10 @@ export async function listPickable(deps: StoreChangesDeps, kind: PickableKind, p
  *
  * @param pack - the pack being saved, when there is one
  */
-export async function countPickable(deps: StoreChangesDeps, pack?: DatapackId): Promise<StoreKindCounts> {
+export async function countPickable(deps: StoreChangesDeps, pack?: DatapackId, source?: DatapackStoreName): Promise<StoreKindCounts> {
+    // Asked as Create Datapack opens: the pack's read starts now, so the first list finds it read
+    // (`packReadCache`, walk F82). Not waited for; a failure here is the list's to report.
+    if (pack) void readInstalled(deps, { pack, ...(source ? { source } : {}) }).catch(() => undefined);
     const record = pack ? await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack) : undefined;
     return countStoreItems(await openStore(deps, pack, record));
 }

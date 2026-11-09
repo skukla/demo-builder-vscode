@@ -11,6 +11,10 @@ import { nodeRecordFiles, readInstallRecord, writeInstallRecord } from '@/featur
 import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
 import type { DatapackFile } from '@/features/data-installer/services/datapackZip';
+import { forgetPackReads } from '@/features/data-installer/services/packReadCache';
+
+// Pack reads are kept between callers (`packReadCache`, walk F82): each test reads its own.
+beforeEach(() => forgetPackReads());
 
 const ALL = Object.keys(ROWS);
 const LAYER = [settingRow(GRID, '24')];

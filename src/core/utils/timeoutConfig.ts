@@ -308,13 +308,6 @@ export const TIMEOUTS = {
      */
     DATAPACK_IMPORT_COMPARE: 5 * 60 * 1000,
 
-    /**
-     * How long a re-import's run may use the comparison its form just made instead of reading the
-     * store again (owner, 2026-11-08, walk F74): 5 minutes. Long enough for an SC to read the form
-     * and press Import; short enough that the store has had little time to change since.
-     */
-    DATAPACK_COMPARISON_REUSE: 5 * 60 * 1000,
-
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
 

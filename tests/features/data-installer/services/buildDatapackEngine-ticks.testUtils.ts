@@ -16,6 +16,7 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { type MemoryStore, memoryStore } from './demoBuilderEngine/memoryStore.testUtils';
 import { configStore } from './demoBuilderEngine/storeConfig.testUtils';
 import { buildDatapackEngine, type DatapackEngineAccess, layerFinder, projectCommerce, readPackItems } from '@/features/data-installer/services/buildDatapackEngine';
+import { forgetPackReads } from '@/features/data-installer/services/packReadCache';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import type { ImportRequest } from '@/features/data-installer/services/importRequest';
 import { type CreatedObject, nodeRecordFiles, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
@@ -131,7 +132,12 @@ export function ticksHarness(): TicksHarness {
             return settings.put(body as { items: CommerceSystemConfigWrite[] });
         },
     });
-    const access = ({ rows = ROWS, layer }: PackStores = {}): DatapackEngineAccess => ({
+    // Each access is the stores as they are now: a read kept from the last one is not (`packReadCache`).
+    const access = ({ rows = ROWS, layer }: PackStores = {}): DatapackEngineAccess => {
+        forgetPackReads();
+        return accessOf(rows, layer);
+    };
+    const accessOf = (rows: Record<string, unknown>, layer: PackStores["layer"]): DatapackEngineAccess => ({
         catalog: catalogOf(rows),
         libraryCatalog: libraryOf(layer),
         project: createMockProject({ path: dir }),

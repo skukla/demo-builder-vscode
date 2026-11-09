@@ -221,7 +221,7 @@ export async function countPickableItems(context: HandlerContext, payload: Store
     const target = await packToSave(store.project, payload);
     if ('error' in target) return { success: false, error: target.error };
     try {
-        return { success: true, data: await countPickable(store.deps, target.pack) };
+        return { success: true, data: await countPickable(store.deps, target.pack, target.source) };
     } catch (error) {
         return failure(context, error, "The store's items could not be counted.");
     }

@@ -82,7 +82,8 @@ export function useCreateDatapackFlow({ startsAtPicks = false, pack, saveAsName:
 
     const route = packType && routeOf(packType);
     const order = stageOrder(route, startsAtPicks, savesAs);
-    const store = useStorePicks(stage === 'store-picks', pack);
+    // With a pack, the counts are asked as the flow opens: their read starts the pack's (walk F82).
+    const store = useStorePicks(stage === 'store-picks' || pack !== undefined, pack);
     const answers = useExportAnswers(route, stage !== 'pack-type');
 
     const action = mainActionOf(stage);

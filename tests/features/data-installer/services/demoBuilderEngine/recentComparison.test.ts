@@ -26,7 +26,7 @@ import {
     installPack,
 } from '@/features/data-installer/services/demoBuilderEngine/runPack';
 import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 const TARGET = { websiteCode: 'base', storeCode: 'default' };
@@ -44,22 +44,31 @@ const PLANS: KindPlan[] = [
     { kind: 'customer_groups', packKind: 'customer_groups', objects: [], added: ['VIP'] },
 ];
 
+/** The clock the kept comparison reads (`core/cache` reads Date.now). */
+function clockAt(ms: number): void {
+    jest.spyOn(Date, 'now').mockReturnValue(ms);
+}
+
 beforeEach(() => forgetComparisons());
 
 describe('takeComparison', () => {
-    it('gives back the plans the form made, for the same place, record and rows', () => {
-        rememberComparison(PLACE, CREATED, ROWS, PLANS, AT);
+    beforeEach(() => clockAt(AT));
+    afterEach(() => jest.restoreAllMocks());
 
-        expect(takeComparison(PLACE, CREATED, ROWS, AT + 1000)).toEqual({
+    it('gives back the plans the form made, for the same place, record and rows', () => {
+        rememberComparison(PLACE, CREATED, ROWS, PLANS);
+        clockAt(AT + 1000);
+
+        expect(takeComparison(PLACE, CREATED, ROWS)).toEqual({
             plans: PLANS,
             ageMs: 1000,
         });
     });
 
     it('gives a run of fewer data types only their plans, in the order a read would', () => {
-        rememberComparison(PLACE, CREATED, ROWS, PLANS, AT);
+        rememberComparison(PLACE, CREATED, ROWS, PLANS);
 
-        const taken = takeComparison(PLACE, CREATED, { products: ROWS.products }, AT);
+        const taken = takeComparison(PLACE, CREATED, { products: ROWS.products });
 
         expect(taken?.plans.map((p) => p.kind)).toEqual(['products']);
     });
@@ -70,7 +79,7 @@ describe('takeComparison', () => {
             PLACE,
             CREATED,
             ROWS,
-            AT + TIMEOUTS.DATAPACK_COMPARISON_REUSE + 1,
+            AT + CACHE_TTL.MEDIUM + 1,
         ],
         [
             'the install record changed since',
@@ -108,20 +117,21 @@ describe('takeComparison', () => {
             AT,
         ],
     ])('reads again when %s', (_why, place, created, rows, now) => {
-        rememberComparison(PLACE, CREATED, ROWS, PLANS, AT);
+        rememberComparison(PLACE, CREATED, ROWS, PLANS);
+        clockAt(now);
 
-        expect(takeComparison(place, created, rows, now)).toBeUndefined();
+        expect(takeComparison(place, created, rows)).toBeUndefined();
     });
 
     it('is taken once: a second run reads again', () => {
-        rememberComparison(PLACE, CREATED, ROWS, PLANS, AT);
-        takeComparison(PLACE, CREATED, ROWS, AT);
+        rememberComparison(PLACE, CREATED, ROWS, PLANS);
+        takeComparison(PLACE, CREATED, ROWS);
 
-        expect(takeComparison(PLACE, CREATED, ROWS, AT)).toBeUndefined();
+        expect(takeComparison(PLACE, CREATED, ROWS)).toBeUndefined();
     });
 
     it('reads again when nothing was compared', () => {
-        expect(takeComparison(PLACE, CREATED, ROWS, AT)).toBeUndefined();
+        expect(takeComparison(PLACE, CREATED, ROWS)).toBeUndefined();
     });
 });
 

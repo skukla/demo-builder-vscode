@@ -8,9 +8,13 @@
  */
 
 import { installRecordPath, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import { forgetPackReads } from '@/features/data-installer/services/packReadCache';
 import { listPickable, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { PACK, PROJECT } from './demoBuilderEngine.testUtils';
 import { RACKS, SAVE_AS, deps } from './storeChanges.testUtils';
+
+// Pack reads are kept between callers (walk F82): each test starts with none kept.
+beforeEach(() => forgetPackReads());
 
 const BY_HAND = { 'categories/42': { id: 42, name: 'Cables', path: '1/2/42', is_active: true } };
 const TREE = {

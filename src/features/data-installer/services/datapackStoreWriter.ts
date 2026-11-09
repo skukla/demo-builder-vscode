@@ -18,6 +18,7 @@ import { actionUrl } from './dataInstallerConfig';
 import { DataInstallerApiError } from './dataInstallerErrors';
 import { type DataInstallerSignIn, signInHeaders } from './dataInstallerSignIn';
 import { itemsTooLarge, partsOf, splittable } from './itemParts';
+import { forgetPackRead } from './packReadCache';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { DatapackId } from '@/types/datapack';
 
@@ -83,6 +84,7 @@ export class DatapackStoreWriter {
         });
         if (response.status === 409) return 'exists';
         await this.check(response, 'create-datapack');
+        forgetPackRead(pack.id);
         return 'created';
     }
 
@@ -106,6 +108,8 @@ export class DatapackStoreWriter {
             });
             await this.check(response, 'add-data-item', dataType);
         }
+        // A read kept from before this write is not the pack any more (`packReadCache`).
+        forgetPackRead(id);
     }
 
     /** The data types this store could not take, said before anything is written (`itemParts.ts`). */
@@ -134,6 +138,7 @@ export class DatapackStoreWriter {
             signal: AbortSignal.timeout(this.timeoutMs),
         });
         this.deps.log?.(`delete-datapack → ${response.status}`);
+        forgetPackRead(id);
         if (response.status === 404) return 'not-found';
         await this.check(response, 'delete-datapack');
         return 'deleted';

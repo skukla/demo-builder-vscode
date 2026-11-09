@@ -8,7 +8,7 @@
  * - the same project, pack version, website and store view;
  * - the install record exactly as it was (any run, save or settled send in between changes it);
  * - each data type's rows exactly as compared, placed the same way (`placeCategories`);
- * - read at most `TIMEOUTS.DATAPACK_COMPARISON_REUSE` ago.
+ * - made at most `CACHE_TTL.MEDIUM` ago, kept in the house cache entry (`core/cache`, walk F82).
  *
  * Anything else, and the run reads again. A comparison is taken once: a second run reads again.
  * The run then does exactly what the form showed; an edit made in the Admin in those few minutes is
@@ -24,7 +24,8 @@ import type { CreatedObject, TargetCodes } from './installRecord';
 import type { KindPlan } from './repeatInstall';
 import type { EarlierPlans } from './runPack';
 import { READABLE_KINDS, packKindIn } from './storeCopies';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { type CacheEntry, createCacheEntry, isExpired } from '@/core/cache/cacheUtils';
+import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type { DatapackId } from '@/types/datapack';
 
 /** Where a comparison was made: the project, the pack version and the store view. */
@@ -40,7 +41,7 @@ interface Kept {
     plans: { plan: KindPlan; rows: string }[];
 }
 
-const kept = new Map<string, Kept>();
+const kept = new Map<string, CacheEntry<Kept>>();
 
 const hashOf = (value: unknown): string =>
     createHash('sha256')
@@ -56,13 +57,13 @@ export function rememberComparison(
     created: readonly CreatedObject[],
     items: Record<string, unknown>,
     plans: readonly KindPlan[],
-    now = Date.now(),
 ): void {
-    kept.set(slotOf(place), {
-        at: now,
+    const comparison: Kept = {
+        at: Date.now(),
         record: hashOf(created),
         plans: plans.map((plan) => ({ plan, rows: hashOf(items[plan.packKind]) })),
-    });
+    };
+    kept.set(slotOf(place), createCacheEntry(comparison, CACHE_TTL.MEDIUM));
 }
 
 /**
@@ -73,17 +74,12 @@ export function takeComparison(
     place: ComparisonPlace,
     created: readonly CreatedObject[],
     items: Record<string, unknown>,
-    now = Date.now(),
 ): { plans: KindPlan[]; ageMs: number } | undefined {
     const slot = slotOf(place);
-    const entry = kept.get(slot);
+    const cached = kept.get(slot);
     kept.delete(slot);
-    if (
-        !entry ||
-        now - entry.at > TIMEOUTS.DATAPACK_COMPARISON_REUSE ||
-        entry.record !== hashOf(created)
-    )
-        return undefined;
+    if (!cached || isExpired(cached) || cached.value.record !== hashOf(created)) return undefined;
+    const entry = cached.value;
     const rowHashes = new Map<string, string>();
     const plans: KindPlan[] = [];
     // The kinds and order `planRepeat` would give for these items.
@@ -100,7 +96,7 @@ export function takeComparison(
         if (!match) return undefined;
         plans.push(match.plan);
     }
-    return { plans, ageMs: now - entry.at };
+    return { plans, ageMs: Date.now() - entry.at };
 }
 
 /**

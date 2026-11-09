@@ -7,6 +7,7 @@
 
 import { DatapackStoreWriter } from '@/features/data-installer/services/datapackStoreWriter';
 import { DataInstallerApiError } from '@/features/data-installer/services/dataInstallerErrors';
+import { cachedPackRead, forgetPackReads } from '@/features/data-installer/services/packReadCache';
 
 const BASE = 'https://store.example.test/api/v1/web/datapack-store';
 
@@ -311,5 +312,35 @@ describe('a list too large for one request', () => {
         expect(fetchImpl).toHaveBeenCalledTimes(1);
         expect(writer(fetchImpl).oversized(items)).toEqual(['products']);
         expect(writer(fetchImpl, undefined, true).oversized(items)).toStrictEqual([]);
+    });
+});
+
+// Walk F82, 2026-11-09: reads of a pack's rows are kept a few minutes; a write here changes them.
+describe('a write forgets the kept read of that pack', () => {
+    const PACK_ID = { name: 'acme', version: '1.0.0' };
+    beforeEach(() => forgetPackReads());
+
+    async function readTwiceAround(write: () => Promise<unknown>): Promise<number> {
+        const read = jest.fn(async () => ({ products: [] }));
+        await cachedPackRead(PACK_ID, 'library', read);
+        await write();
+        await cachedPackRead(PACK_ID, 'library', read);
+        return read.mock.calls.length;
+    }
+
+    it.each([
+        ['adding rows', (w: DatapackStoreWriter) => w.addDataItem(PACK_ID, 'products', [])],
+        ['creating the pack', (w: DatapackStoreWriter) => w.createDatapack({ id: PACK_ID, displayName: 'Acme' })],
+        ['deleting it', (w: DatapackStoreWriter) => w.deleteDatapack(PACK_ID)],
+    ])('reads again after %s', async (_what, write) => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        await expect(readTwiceAround(() => write(writer(fetchImpl)))).resolves.toBe(2);
+    });
+
+    it('CONTROL: a change of display name leaves the rows, and the kept read, alone', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        await expect(readTwiceAround(() => writer(fetchImpl).updateDisplayName(PACK_ID, 'Acme 2'))).resolves.toBe(1);
     });
 });

@@ -23,6 +23,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { createMockProject } from '../../../helpers/projectFake';
+import { forgetPackReads } from '@/features/data-installer/services/packReadCache';
+
+// Pack reads are kept between callers (`packReadCache`, walk F82): each test reads its own.
+beforeEach(() => forgetPackReads());
 
 const mockCommerceClientForProject = jest.fn();
 jest.mock('@/features/project-creation/services/erpFillForProject', () => ({

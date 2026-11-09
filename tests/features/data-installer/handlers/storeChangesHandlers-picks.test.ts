@@ -184,7 +184,8 @@ describe('count-datapack-export-items', () => {
 
         const result = await exportHandlers['count-datapack-export-items'](context, {});
 
-        expect(mockedCount).toHaveBeenCalledWith(expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }), BODEA);
+        // The store it is held in too, so the count can start the pack's read there (walk F82).
+        expect(mockedCount).toHaveBeenCalledWith(expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }), BODEA, 'library');
         expect(result).toEqual({ success: true, data: { products: 139, giftcards: 0 } });
     });
 
@@ -193,7 +194,7 @@ describe('count-datapack-export-items', () => {
 
         await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, { datapackName: 'other', version: 'v2' });
 
-        expect(mockedCount).toHaveBeenCalledWith(expect.anything(), { name: 'other', version: 'v2' });
+        expect(mockedCount).toHaveBeenCalledWith(expect.anything(), { name: 'other', version: 'v2' }, undefined);
     });
 
     it('with no pack Demo Builder installed, counts for none', async () => {
@@ -201,7 +202,7 @@ describe('count-datapack-export-items', () => {
 
         await exportHandlers['count-datapack-export-items'](makeImportHarness(project()).context, {});
 
-        expect(mockedCount).toHaveBeenCalledWith(expect.anything(), undefined);
+        expect(mockedCount).toHaveBeenCalledWith(expect.anything(), undefined, undefined);
     });
 
     it('writes nothing to the project', async () => {
