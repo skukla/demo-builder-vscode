@@ -35,11 +35,11 @@ export function failure(context: HandlerContext, error: unknown, fallback: strin
     return { success: false, error: `${fallback} Details are in Debug Logs.`, code: ErrorCode.UNKNOWN };
 }
 
-/** A save the SC must name: the demo's pack is not theirs, or there is none. Writes nothing. */
+/** A save the SC must name: the demo's pack is a team pack, not theirs, or none. Writes nothing. */
 function needsName(): HandlerResponse {
     return {
         success: false,
-        error: 'This datapack is not yours, so the changes cannot be saved into it. Save them as a new datapack of your own: send saveAs with its name.',
+        error: 'This datapack is a team pack or not yours, so the changes cannot be saved into it. Save them as a new datapack of your own: send saveAs with its name.',
         code: ErrorCode.INVALID_OPERATION,
         data: { needsName: true },
     };
@@ -62,7 +62,8 @@ export async function saveIntoFor(
         if (library.ok) {
             try {
                 const page = await library.client.findDatapacks({ datapackName: held.name });
-                const mine = page.items.find((item) => item.id.name === held.name && item.mine === true);
+                // A team pack is never saved into, even by its owner: every demo is made from it (F80).
+                const mine = page.items.find((item) => item.id.name === held.name && item.mine === true && item.team !== true);
                 if (mine) return { name: held.name, displayName: mine.displayName };
             } catch (error) {
                 // Not known to be the SC's, so never written: Save As is the safe answer.

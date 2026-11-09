@@ -64,7 +64,7 @@ describe('before both columns are ready', () => {
         await open();
 
         expect(noRows()).toHaveLength(PICKABLE_KINDS.length);
-        expect(screen.getByRole('progressbar', { name: /Loading the store's products/ })).toBeInTheDocument();
+        expect(screen.getByText('Reading products')).toBeInTheDocument();
         expect(callsOf(LIST).map((c) => c[1])).toEqual([{ dataType: 'products' }]);
     });
 
@@ -88,7 +88,7 @@ describe('before both columns are ready', () => {
         await press(row('Customers'));
 
         expect(rows()).toHaveLength(PICKABLE_KINDS.length);
-        expect(screen.getByRole('progressbar', { name: /Loading the store's customers/ })).toBeInTheDocument();
+        expect(screen.getByText('Reading customers')).toBeInTheDocument();
     });
 });
 
@@ -188,7 +188,15 @@ describe('a count and a list', () => {
         answer(counted({ products: 3 }), { products: ALL_IN_PACK });
         await open();
 
-        expect(row('Products')).toHaveTextContent('All in datapack');
+        expect(row('Products')).toHaveTextContent('Included from the datapack');
+    });
+
+    // Owner, 2026-11-08 (F79): the row names the pack being saved.
+    it('names the pack being saved when it holds them all', async () => {
+        answer(counted({ products: 3 }), { products: ALL_IN_PACK });
+        await open({ pack: { id: { name: 'luma', version: 'eds-compatible' }, displayName: 'Luma', source: 'library' } });
+
+        expect(row('Products')).toHaveTextContent('Included from Luma');
     });
 
     it('says how many are selected on the row', async () => {

@@ -126,3 +126,13 @@ export const WAIT_STAGES = {
         detail: 'Saved with this datapack',
     },
 } as const satisfies Record<string, WaitStage>;
+
+/**
+ * One kind's list in Create Datapack's picker ("Reading categories"), in the words of
+ * `readingProducts` and `readingWebsites` (owner, 2026-11-08, F79: the pane's spinner said nothing).
+ *
+ * @param many - the kind's plural noun, as `KIND_NOUNS` gives it
+ */
+export function readingKind(many: string): WaitStage {
+    return { label: `Reading ${many}`, expectation: FEW_SECONDS, detail: FROM_COMMERCE };
+}

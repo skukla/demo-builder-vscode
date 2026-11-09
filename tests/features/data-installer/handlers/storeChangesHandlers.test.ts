@@ -314,6 +314,21 @@ describe('save-store-changes-to-pack', () => {
         expect(context.stateManager.saveProject).not.toHaveBeenCalled();
     });
 
+    // Owner, 2026-11-08 (F80): every demo is made from a team pack, so not even its owner saves into it.
+    it('writes nothing into a team pack, even its owner\'s, and asks for a name', async () => {
+        const team = { name: 'luma', version: 'eds-compatible', store: 'library' as const };
+        const { context } = makeImportHarness({ ...PROJECT, datapack: team });
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({
+            items: [{ id: { name: team.name, version: team.version }, displayName: 'Luma', shared: false, dataTypes: [], art: {}, mine: true, team: true }],
+            count: 1,
+        });
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: team.name, version: team.version, confirm: true });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION, data: { needsName: true } });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
     it("writes nothing into a pack that is not the SC's, and asks for a name", async () => {
         const context = harness();
 

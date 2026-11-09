@@ -41,6 +41,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack, PackDetailLayer, Page } from '../../types';
 import { CatalogCountRow } from '../components/CatalogCountRow';
+import type { PackBeingSaved } from '../components/create-flow/datapackFlowStages';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
 import { DatapackSourceNotice } from '../components/DatapackSourceNotice';
@@ -67,6 +68,13 @@ interface DatapackDetailResponse {
 }
 
 const DATAPACKS_UNAVAILABLE = "Datapacks Aren't Available";
+
+/** What a new datapack starts from: the demo's own pack, when Demo Builder installed it (F79). */
+function startingPack(held: ProjectDatapack | undefined, installedAt: string | undefined, page: CatalogPage | null): PackBeingSaved | undefined {
+    if (!held || !installedAt) return undefined;
+    const id = { name: held.name, version: held.version };
+    return { id, displayName: nameOnCard(page, id) ?? held.name, source: held.store ?? 'library' };
+}
 
 /**
  * The name the open pack's card shows, for the flyout's title while its detail loads. By version:
@@ -225,7 +233,10 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
 
     // The header's Create Datapack: Save As, the name first and empty.
     const offerSaveAs = heldPack.offerSaveAs;
-    const createDatapack = useCallback((): void => offerSaveAs(''), [offerSaveAs]);
+    // On a demo holding a pack Demo Builder installed, a new datapack starts from it, as the save
+    // underneath does (`packToSave`): the screen says so and Create needs no pick (F79).
+    const installedAt = projectContext.value?.installedAt;
+    const createDatapack = useCallback((): void => offerSaveAs('', startingPack(held, installedAt, value)), [offerSaveAs, held, installedAt, value]);
 
     const retryDetail = useCallback((): void => {
         if (selected) {

@@ -24,18 +24,20 @@ import { cn } from '@/core/ui/utils/classNames';
 const NO_PICKS: string[] = [];
 
 /** Why a row is greyed out, or how many are selected, or that its list did not answer, or nothing. */
-function noteOf(page: StoreItemPage | null | undefined, count: number | undefined, picked: number): string | undefined {
+function noteOf(page: StoreItemPage | null | undefined, count: number | undefined, picked: number, packName = 'the datapack'): string | undefined {
     // A read that did not answer says so on its row, wherever the SC is (Select All Data reads kinds unopened).
     if (page === null) return "Couldn't be read";
-    if (page && hasNothingToPick(page)) return page.inPackCount > 0 ? 'All in datapack' : 'None available';
+    // Named for the pack being saved, and saying they come along: "Included from Luma" (owner,
+    // 2026-11-08, F79; "All in Luma" read as "in Luma, not in mine").
+    if (page && hasNothingToPick(page)) return page.inPackCount > 0 ? `Included from ${packName}` : 'None available';
     if (isKnownEmpty(page, count)) return 'None available';
     return picked > 0 ? `${picked.toLocaleString('en-US')} selected` : undefined;
 }
 
-function KindRow({ kind, store }: { kind: PickableKind; store: StorePicksState }): React.ReactElement {
+function KindRow({ kind, store, packName }: { kind: PickableKind; store: StorePicksState; packName?: string }): React.ReactElement {
     const picked = store.picks[kind]?.length ?? 0;
     const shown = kind === store.kind;
-    const note = noteOf(store.reads[kind], store.counts[kind], picked);
+    const note = noteOf(store.reads[kind], store.counts[kind], picked, packName);
     return (
         <li>
             <button
@@ -77,7 +79,7 @@ export function StorePicksStage({ pack, store }: StorePicksStageProps): React.Re
                             onToggle={() => void store.selectEverything(!store.everything.all)}
                         />
                     </li>
-                    {PICKABLE_KINDS.map((each) => <KindRow key={each} kind={each} store={store} />)}
+                    {PICKABLE_KINDS.map((each) => <KindRow key={each} kind={each} store={store} packName={pack?.displayName} />)}
                 </ul>
                 <div className="datapack-picks-pane">
                     {kind ? (

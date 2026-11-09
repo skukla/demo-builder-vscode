@@ -24,7 +24,7 @@ export interface HeldPackInput {
     /** The pack the open project holds, as recorded on it. */
     held?: ProjectDatapack;
     /** The open flyout's detail, once loaded. */
-    detail?: { displayName: string; store?: DatapackStoreName; mine?: boolean };
+    detail?: { displayName: string; store?: DatapackStoreName; mine?: boolean; team?: boolean };
     /** True while the flyout's detail is loading. */
     detailLoading: boolean;
     /** The save's progress window closed. Must be stable. */
@@ -46,8 +46,9 @@ export function useHeldPack({ selected, held, detail, detailLoading, onSaved }: 
     const storeChanges = useSaveStoreChanges(onSaved);
     const holdsSelected = held !== undefined && held.name === selected?.name && held.version === selected.version;
     const setupStep = usePackSetupStep(holdsSelected && detail && !detailLoading ? selected : undefined);
-    // Any version of the demo's pack: a save writes a new one either way.
-    const savable = held && held.name === selected?.name && !detailLoading && detail?.store === 'library' && detail.mine === true;
+    // Any version of the demo's pack: a save writes a new one either way. Never a team pack, even
+    // to its owner: every demo is made from it (owner, 2026-11-08, F80).
+    const savable = held && held.name === selected?.name && !detailLoading && detail?.store === 'library' && detail.mine === true && detail.team !== true;
     const offer = storeChanges.offer;
     const saveChanges = useCallback((): void => {
         if (held && detail) offer({ id: { name: held.name, version: held.version }, displayName: detail.displayName, source: held.store ?? 'library' });

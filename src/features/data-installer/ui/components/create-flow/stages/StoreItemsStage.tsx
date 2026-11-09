@@ -51,6 +51,7 @@ export function StoreItemsStage({ kind, pack, answered, picked, onChange, onAnsw
             loading={loading}
             picked={picked}
             onChange={onChange}
+            packName={pack?.displayName}
         />
     );
 }

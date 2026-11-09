@@ -135,7 +135,7 @@ describe('selecting the items', () => {
         await open({ pack: PACK });
 
         expect(listCalls()).toEqual([{ dataType: 'products', datapackName: 'bodea', version: 'main', source: 'library' }]);
-        expect(screen.getByText('2 more already in the datapack.')).toBeInTheDocument();
+        expect(screen.getByText('2 more included from Bodea.')).toBeInTheDocument();
     });
 
     it('counts on the row as items are selected, and does not read a kind twice', async () => {
@@ -187,7 +187,8 @@ describe('selecting the items', () => {
         expect(row('Products')).toHaveTextContent('1,284 selected');
     });
 
-    it('reads with a silent spinner, keeping the rows and Save, so a slow read costs nothing', async () => {
+    // Owner, 2026-11-08 (F79): the pane's bare spinner said nothing; it waits in the house rows.
+    it('reads in its pane, saying what it reads, keeping the rows and Save, so a slow read costs nothing', async () => {
         mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
             if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: {} });
             return payload?.dataType === 'products' ? Promise.resolve({ success: true, data: PRODUCTS }) : new Promise(() => undefined);
@@ -197,8 +198,8 @@ describe('selecting the items', () => {
 
         await press(row('Cart Rules'));
 
-        expect(screen.getByRole('progressbar', { name: /Loading the store's cart rules/ })).toBeInTheDocument();
-        expect(screen.queryByText(/Loading the store's/)).not.toBeInTheDocument();
+        expect(screen.getByText('Reading cart rules')).toBeInTheDocument();
+        expect(screen.getByText("From this demo's Commerce instance")).toBeInTheDocument();
         expect(button('Save')).toHaveAttribute('aria-disabled', 'false');
 
         await press(row('Products'));

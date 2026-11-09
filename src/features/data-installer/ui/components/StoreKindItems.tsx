@@ -2,7 +2,8 @@
  * One kind's items to select, or why they could not be listed (`StoreItemsStage`).
  *
  * The screen keeps its kinds and buttons while the store is read (a slow read must not cost what is
- * already selected), so the spinner sits in the pane, without words. A kind with nothing to select
+ * already selected), so the wait sits in the pane, in the house rows: "Reading categories", from
+ * this demo's Commerce instance (owner, 2026-11-08, F79: a bare spinner said nothing). A kind with nothing to select
  * never rests here: the flow moves on to the next kind, and its row is greyed out.
  *
  * Its notes sit under the list, so the filter, count and Select All are in the same place on every
@@ -14,7 +15,8 @@
 import React from 'react';
 import { KIND_NOUNS, type PickableKind, type StoreItemPage } from '../../pickableKinds';
 import { StoreItemChecklist } from './StoreItemChecklist';
-import { Spinner } from '@/core/ui/components/ui/Spinner';
+import { StageWait } from '@/core/ui/components/feedback/StageWait';
+import { readingKind } from '@/core/utils/waitStages';
 
 /** What selecting one of these also saves, on the kinds where the SC needs to know. */
 const INCLUDES: Partial<Record<PickableKind, string>> = {
@@ -30,14 +32,16 @@ export interface StoreKindItemsProps {
     loading: boolean;
     picked: string[];
     onChange: (ids: string[]) => void;
+    /** The pack being saved, when there is one: the note names it. */
+    packName?: string;
 }
 
-export function StoreKindItems({ kind, page, failure, loading, picked, onChange }: StoreKindItemsProps): React.ReactElement {
+export function StoreKindItems({ kind, page, failure, loading, picked, onChange, packName }: StoreKindItemsProps): React.ReactElement {
     const [one, many] = KIND_NOUNS[kind];
     if (loading || (!page && !failure) || page?.items.length === 0) {
         return (
             <div className="modal-wait">
-                <Spinner size="M" aria-label={`Loading the store's ${many}`} />
+                <StageWait key={kind} lines={readingKind(many)} />
             </div>
         );
     }
@@ -46,7 +50,7 @@ export function StoreKindItems({ kind, page, failure, loading, picked, onChange 
         <>
             <StoreItemChecklist items={page.items} nouns={[one, many]} picked={picked} onChange={onChange} />
             {INCLUDES[kind] ? <p className="datapack-export-note">{INCLUDES[kind]}</p> : null}
-            {page.inPackCount > 0 ? <p className="datapack-export-note">{page.inPackCount.toLocaleString('en-US')} more already in the datapack.</p> : null}
+            {page.inPackCount > 0 ? <p className="datapack-export-note">{page.inPackCount.toLocaleString('en-US')} more included from {packName ?? 'the datapack'}.</p> : null}
         </>
     );
 }
