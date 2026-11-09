@@ -42,7 +42,11 @@
 .sidebar-action-tile {
     background: var(--spectrum-global-color-gray-50);
     border-radius: 6px;
-    padding: 8px;
+    /* 2px at the sides, not 8px: the label is the widest thing in the tile, and at 8px it had
+       46px, which "Datapacks" (about 52px at 11px) overran, so `overflow-wrap: anywhere` broke
+       it to "Datapac / ks" (walk F69, 2026-11-08). 58px holds every label on one line; the
+       icon is centred, so nothing else moves. */
+    padding: 8px 2px;
     border: 1px solid var(--spectrum-global-color-gray-300);
     transition: all var(--spectrum-global-animation-duration-300) ease;
 
