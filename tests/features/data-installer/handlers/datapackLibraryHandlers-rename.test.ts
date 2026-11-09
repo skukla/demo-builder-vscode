@@ -11,6 +11,7 @@ import type { DatapackSummary } from '@/features/data-installer/types';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
 import { createMockProject } from '../../../helpers/projectFake';
 
 const rename = datapackLibraryHandlers['rename-library-datapack'];
@@ -66,6 +67,14 @@ it("renames every version of the SC's own pack, asked of the library by name", a
         { datapack_name: 'acme-1a2b3c', version: '20261029-183005', display_name: 'Acme Q4' },
     ]);
     expect(result).toEqual({ success: true, data: { datapackName: 'acme-1a2b3c', displayName: 'Acme Q4', versions: 2 } });
+});
+
+it('remembers the new name, so the dashboard card shows it at once (F69)', async () => {
+    const context = contextFor(null);
+
+    await rename(context, { datapackName: 'acme-1a2b3c', displayName: 'Acme Q4', confirm: true });
+
+    expect(context.context.globalState.update).toHaveBeenCalledWith(PACK_NAMES_KEY, { 'acme-1a2b3c': 'Acme Q4' });
 });
 
 it('never writes to the project: no pack follows a project any more', async () => {

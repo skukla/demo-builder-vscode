@@ -34,6 +34,7 @@ import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { readPackFromStore, writePackToStore } from '../services/datapackTransfer';
 import { myVersions } from '../services/demoPack';
 import { toInstallerForm } from '../services/installerForm';
+import { rememberPackName } from '../services/packNames';
 import { myLayerVersions } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import { SHARE_CONSENT } from '../shareWording';
@@ -223,6 +224,7 @@ export const datapackLibraryHandlers = defineHandlers({
             }
             const writer = writerFor(context, access, 'library');
             for (const version of versions) await writer.updateDisplayName(version, input.displayName);
+            await rememberPackName(context.context.globalState, input.name, input.displayName);
             context.logger.info(`${LOG_PREFIX} Renamed ${input.name} (${versions.length} versions) in the datapack library`);
             return { success: true, data: { datapackName: input.name, displayName: input.displayName, versions: versions.length } };
         } catch (error) {

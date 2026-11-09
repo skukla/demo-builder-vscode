@@ -10,6 +10,7 @@
 
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
+import { rememberPackName } from '../services/packNames';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -41,7 +42,8 @@ export async function openLibraryWriter(context: HandlerContext): Promise<Opened
  * A library pack's display name, as the Datapacks screen shows it (F17: the reset confirm showed its
  * id, "kukla-justrite-a80dca"). Undefined for a pack outside the library, or a library that does not
  * answer: the caller falls back. Read by the Reset Selected confirm and the dashboard's Datapacks
- * card (owner, 2026-11-07).
+ * card (owner, 2026-11-07). Every name read is remembered (`packNames`), so the card can show it at
+ * once next time.
  *
  * @param context - a context with no `panel` reads without asking the SC to sign in
  */
@@ -51,7 +53,9 @@ export async function libraryDisplayName(context: HandlerContext, held: NonNulla
         const library = await openLibraryWriter(context);
         if (!library.ok) return undefined;
         const page = await library.client.findDatapacks({ datapackName: held.name });
-        return page.items.find((item) => item.id.name === held.name)?.displayName;
+        const name = page.items.find((item) => item.id.name === held.name)?.displayName;
+        if (name) await rememberPackName(context.context.globalState, held.name, name);
+        return name;
     } catch (error) {
         context.debugLogger.debug(`[Data Installer] Could not read ${held.name}'s display name: ${error instanceof Error ? error.message : String(error)}`);
         return undefined;

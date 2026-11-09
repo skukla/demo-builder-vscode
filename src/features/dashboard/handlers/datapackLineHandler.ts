@@ -8,11 +8,16 @@
  * cannot be read (signed out, a Data Installer pack, a library that does not answer), the line says
  * whose data it is instead of showing an id.
  *
+ * **A name read before is shown at once** (walk F69): the library read took long enough that the
+ * card drew without a line and gained one a moment later. The remembered name answers now, and the
+ * read still runs behind it, so a name changed elsewhere shows the next time the card draws.
+ *
  * @module features/dashboard/handlers/datapackLineHandler
  */
 
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { packLine } from '@/features/data-installer/packVersions';
+import { rememberedPackName } from '@/features/data-installer/services/packNames';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 export const NO_DATAPACK = 'No Datapack';
@@ -24,7 +29,11 @@ export async function handleGetDatapackLine(context: HandlerContext): Promise<Ha
     const held = project?.datapack;
     if (!held) return { success: true, data: { line: NO_DATAPACK } };
     // No panel: the library guard then reports a missing sign-in instead of asking for one.
-    const name = await libraryDisplayName({ ...context, panel: undefined }, held);
+    const reading = libraryDisplayName({ ...context, panel: undefined }, held);
+    const known = held.store === 'library'
+        ? rememberedPackName(context.context.globalState, held.name)
+        : undefined;
+    const name = known ?? (await reading);
     return {
         success: true,
         data: { line: name ? packLine(name, held.version) : UNNAMED_DATAPACK },

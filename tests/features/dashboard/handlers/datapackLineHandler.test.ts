@@ -9,12 +9,15 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { createMockProject } from '../../../helpers/projectFake';
 import { NO_DATAPACK, UNNAMED_DATAPACK, handleGetDatapackLine } from '@/features/dashboard/handlers/datapackLineHandler';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
+import { PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
 
 const mockName = libraryDisplayName as jest.Mock;
 
-function contextHolding(datapack: Project['datapack']) {
+function contextHolding(datapack: Project['datapack'], remembered: Record<string, string> = {}) {
     const context = createMockHandlerContext();
+    (context.context.globalState.get as jest.Mock).mockImplementation((key: string) =>
+        key === PACK_NAMES_KEY ? remembered : undefined);
     (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ datapack }));
     return context;
 }
@@ -49,6 +52,26 @@ describe('get-datapack-line', () => {
         mockName.mockResolvedValue(undefined);
 
         const answer = await handleGetDatapackLine(contextHolding({ name: 'luma', version: 'main', store: 'installer' }));
+
+        expect(answer.data).toStrictEqual({ line: UNNAMED_DATAPACK });
+    });
+
+    it('shows a name read before at once, and still reads the library behind it (F69)', async () => {
+        mockName.mockReturnValue(new Promise(() => undefined));
+        const held = { name: 'luma', version: 'eds-compatible', store: 'library' as const };
+
+        const answer = await handleGetDatapackLine(contextHolding(held, { luma: 'Luma' }));
+
+        expect(answer.data).toStrictEqual({ line: 'Luma, eds-compatible' });
+        expect(mockName).toHaveBeenCalledWith(expect.objectContaining({ panel: undefined }), held);
+    });
+
+    it('never answers a Data Installer pack with a library name kept under the same id', async () => {
+        mockName.mockResolvedValue(undefined);
+
+        const answer = await handleGetDatapackLine(
+            contextHolding({ name: 'luma', version: 'main', store: 'installer' }, { luma: 'Luma' }),
+        );
 
         expect(answer.data).toStrictEqual({ line: UNNAMED_DATAPACK });
     });

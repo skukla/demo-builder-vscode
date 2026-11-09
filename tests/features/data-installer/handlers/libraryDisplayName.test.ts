@@ -11,6 +11,7 @@ jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
+import { PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
 
 const mockAccess = resolveDataInstallerAccess as jest.Mock;
 const LUMA = { name: 'luma', version: 'eds-compatible', store: 'library' as const };
@@ -40,6 +41,7 @@ describe('libraryDisplayName', () => {
         await expect(libraryDisplayName(context, LUMA)).resolves.toBe('Luma');
         expect(find).toHaveBeenCalledWith({ datapackName: 'luma' });
         expect(mockAccess).toHaveBeenCalledWith(context, 'library');
+        expect(context.context.globalState.update).toHaveBeenCalledWith(PACK_NAMES_KEY, { luma: 'Luma' });
     });
 
     it('answers nothing for a Data Installer pack, without asking the library', async () => {
