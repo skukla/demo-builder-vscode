@@ -241,6 +241,15 @@ What is decided more than once, and gets one home:
 Also in this phase:
 
 - Uninstall's question keeps its three buttons on one line (Clarity 2.1; owner agreed 2026-11-10).
+- Dry Run endings use the install's ending buttons (owner, 2026-11-10):
+  - Dry Run Found a Problem (amber): Close · Back · **Fix with AI** (accent, last, the same hint
+    as the install's). The extension records the dry run's answer (datapack, version, reason) and
+    builds the prompt from that record, never from the window, as `importFixHandlers.ts` does. The
+    prompt asks the AI to fix the datapack (save_datapack_zip, correct the rows, load_datapack_zip),
+    run validate_datapack_import again and report; it never installs without asking.
+  - Dry Run Failed (red, the check could not run): Close · Back · **Retry**, as Install Stopped.
+  - The agent surface: validate_datapack_import's refusal names the same reason, so an agent
+    reaches the same fix without the button.
 - "Took …" (owner agreed 2026-11-10): `RunFoot` makes the one `tookValue` call, so the
   one-minute rule and the wording have one home. It looks as it does today in all four run windows:
   the last line of the body, the house's quiet `dialog-note` (12px, grey), "Took 3 minutes, 12
