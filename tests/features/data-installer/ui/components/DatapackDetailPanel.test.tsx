@@ -448,12 +448,12 @@ describe('DatapackDetailPanel — actions', () => {
 describe('DatapackDetailPanel and a settings layer (datapack-engine step 09)', () => {
     const LAYER = { id: { name: 'bodea-settings', version: '2' }, mine: true, settings: [{ path: 'catalog/frontend/grid_per_page', value: '24' }] };
 
-    // Clarity 1.8: one name, Store Settings, and a count; the paths wait behind Show. No layer id.
-    it('says how many Store Settings Install also sets, with the paths behind Show', () => {
+    // Clarity 1.8: one name, Store Configuration, and a count; the paths wait behind Show. No layer id.
+    it('says how many settings of Store Configuration Install also sets, with the paths behind Show', () => {
         renderPanel({ settingsLayer: LAYER });
 
-        expect(screen.getByText('Store Settings')).toBeInTheDocument();
-        expect(screen.getByText('1 setting')).toBeInTheDocument();
+        expect(screen.getByText('Store Configuration')).toBeInTheDocument();
+        expect(screen.getByText('1 Setting')).toBeInTheDocument();
         expect(screen.queryByText('catalog/frontend/grid_per_page: 24')).not.toBeInTheDocument();
         expect(screen.queryByText(/bodea-settings/)).not.toBeInTheDocument();
 
@@ -467,6 +467,6 @@ describe('DatapackDetailPanel and a settings layer (datapack-engine step 09)', (
     it('has no such row for a pack with no layer', () => {
         renderPanel();
 
-        expect(screen.queryByText('Store Settings')).not.toBeInTheDocument();
+        expect(screen.queryByText('Store Configuration')).not.toBeInTheDocument();
     });
 });

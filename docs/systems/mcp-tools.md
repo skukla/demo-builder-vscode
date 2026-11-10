@@ -221,7 +221,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `share_datapack` | **confirm** | Share one of your own datapack library packs with your team, or stop sharing it: every version. |
 | `start_datapack_export` | **confirm** | Capture data from this project's Commerce store into a datapack: saves what is picked in selections |
 | `start_datapack_import` | **confirm** | Install a datapack into a live Commerce instance. Returns an activationId once the job starts. |
-| `validate_datapack_import` | read | Check first: try an install with the same guard, same credentials, same request body as the real thing, |
+| `validate_datapack_import` | read | Dry run: try an install with the same guard, same credentials, same request body as the real thing, |
 | `verify_datapack_install` | read | Check that the store holds what a datapack says, after installing it: for each product the pack |
 
 ## `src/features/ai/server/deleteProjectTool.ts`

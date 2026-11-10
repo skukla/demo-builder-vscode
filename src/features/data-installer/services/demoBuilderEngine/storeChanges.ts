@@ -74,11 +74,11 @@ export interface ChangePreview {
      * root of its own with the one Admin step it leaves.
      */
     root?: string;
-    /** What installing would do to store settings (step 09), when the pack or its layer has any. */
+    /** What installing would do to store configuration (step 09), when the pack or its layer has any. */
     settings?: SettingsPreview;
 }
 
-/** The store settings an install would change, by path with old and new value. */
+/** The store configuration an install would change, by path with old and new value. */
 export interface SettingsPreview {
     /** The settings layer they come from; absent when the pack holds them itself. */
     layer?: DatapackId;
@@ -210,7 +210,7 @@ async function summarize(ctx: KindContext, plans: readonly KindPlan[], taken: re
     );
 }
 
-/** What installing would do to the pack's store settings (step 09), planned as the install plans them. */
+/** What installing would do to the pack's store configuration (step 09), planned as the install plans them. */
 async function settingsChanges(ctx: KindContext, records: unknown, created: readonly CreatedObject[]): Promise<{ counts: KindChanges; preview: Omit<SettingsPreview, 'layer'> }> {
     const plan = await planSettings(ctx.get, packSettings(records, ctx.session.websiteCode), created, ctx.session.websiteCode);
     const keys = (...outcomes: SettingOutcome[]) => named(plan.filter((p) => outcomes.includes(p.outcome)).map((p) => p.key));
@@ -222,7 +222,7 @@ async function settingsChanges(ctx: KindContext, records: unknown, created: read
     return { counts, preview: { changes, ...(unknown.length > 0 ? { note: `Demo Builder cannot read what ${andList(unknown)} holds now, so it would not set it.` } : {}) } };
 }
 
-/** The preview's rows of store settings, its own or its layer's; none when neither has any. */
+/** The preview's rows of store configuration, its own or its layer's; none when neither has any. */
 function settingRows(items: Record<string, unknown>, lookup: LayerLookup, created: readonly CreatedObject[]): unknown {
     return STORE_CONFIG_KIND in items ? items[STORE_CONFIG_KIND] : layerRowsToApply(lookup, created);
 }
@@ -230,7 +230,7 @@ function settingRows(items: Record<string, unknown>, lookup: LayerLookup, create
 /** What the preview says of the layer: nothing when there is none to speak of. */
 async function layerSettings(ctx: KindContext, items: Record<string, unknown>, lookup: LayerLookup, created: readonly CreatedObject[]): Promise<{ counts?: KindChanges; preview?: SettingsPreview }> {
     if (lookup.state === 'left-out') return { preview: { layer: lookup.layer.id, changes: [], note: layerLeftOutLine() } };
-    if (lookup.state === 'unasked') return { preview: { changes: [], note: layerNotAskedLine('are not counted here') } };
+    if (lookup.state === 'unasked') return { preview: { changes: [], note: layerNotAskedLine('is not counted here') } };
     const rows = settingRows(items, lookup, created);
     if (rows === undefined) return {};
     const { counts, preview } = await settingsChanges(ctx, rows, created);

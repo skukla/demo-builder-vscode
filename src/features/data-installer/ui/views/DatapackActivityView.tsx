@@ -16,7 +16,7 @@
  *
  * A row speaks the screen's words, never ids or wire words (owner, 2026-11-10): the pack by the
  * name on its card, a save by when it was saved (`versionLabel`), and the operation as the
- * button that runs it ("Import", "Uninstall", "Save", "Dry Run"). The service's `scenario` and the
+ * button that runs it ("Install", "Uninstall", "Save", "Dry Run"). The service's `scenario` and the
  * Commerce instance id are not shown: the first is a wire value, and the whole tab is already for
  * the one instance.
  *
@@ -28,7 +28,7 @@
 
 import { Button, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { CHECK_FIRST, INSTALL } from '../../datapackWords';
+import { DRY_RUN, INSTALL } from '../../datapackWords';
 import { versionLabel } from '../../packVersions';
 import type { ActivityEntry, DatapackEngineId, HistoryPage, OperationMode } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
@@ -52,7 +52,7 @@ const MODE_WORDS: Record<OperationMode, string> = {
     import: INSTALL,
     export: 'Save',
     delete: 'Uninstall',
-    validate: CHECK_FIRST,
+    validate: DRY_RUN,
 };
 
 /** A logged mode in the screen's words; nothing for one it has no word for. */

@@ -92,7 +92,7 @@ describe('watchedActivation', () => {
 });
 
 /** A result to show, typed to the real interface. */
-const RESULT: ResultContent = { variant: 'success', title: 'Check Passed' };
+const RESULT: ResultContent = { variant: 'success', title: 'Dry Run Passed' };
 
 /** Nothing set: the state a fresh modal with an instance is in. */
 const IDLE = { busy: false, resetArmed: false, running: false, result: null, noInstance: false };
@@ -144,9 +144,9 @@ describe('busyMessage', () => {
     });
 
     /** A dry run is the only busy state left: an import starting shows its steps instead. */
-    it('waits on a check first, with no second line', () => {
+    it('waits on a dry run, with no second line', () => {
         expect(busyMessage(false)).toStrictEqual({
-            label: 'Checking first',
+            label: 'Running the dry run',
             expectation: 'Usually a few seconds',
         });
     });
@@ -238,13 +238,13 @@ describe('buildActions', () => {
         expect(actions[1].onPress).toBe(resultAction === 'retry' ? args.retry : args.fixWithAi);
     });
 
-    // The main action last; Check First outlined, as Close is (walk F102). Remove Data is not here: it
+    // The main action last; Dry Run outlined, as Close is (walk F102). Remove Data is not here: it
     // opens this window straight on its confirm (`opensOn: 'remove'`, walk F118).
-    it('shows Check First outlined, then Install, each wired', () => {
+    it('shows Dry Run outlined, then Install, each wired', () => {
         const args = actionArgs();
         const actions = buildActions(args);
         expect(rows(args)).toStrictEqual([
-            { label: 'Check First', variant: 'secondary', isDisabled: false },
+            { label: 'Dry Run', variant: 'secondary', isDisabled: false },
             { label: 'Install', variant: 'accent', isDisabled: false },
         ]);
         expect(actions[0].onPress).toBe(args.validate);
@@ -296,7 +296,7 @@ describe('buildActions', () => {
     it('keeps every label while a check or a start runs', () => {
         for (const busy of [{ checking: true }, { starting: true }]) {
             const actions = buildActions(actionArgs({ view: 'busy', canStart: false, ...busy }));
-            expect(actions.map((a) => a.label)).toStrictEqual(['Check First', 'Install']);
+            expect(actions.map((a) => a.label)).toStrictEqual(['Dry Run', 'Install']);
             expect(actions.every((a) => a.isDisabled === true)).toBe(true);
         }
     });

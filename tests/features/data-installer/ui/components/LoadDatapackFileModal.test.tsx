@@ -279,18 +279,18 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
     });
     const opened = { success: true, data: LAYERED };
 
-    it('says, before anything is written, that its Store Settings go to My Datapacks, by count', async () => {
+    it('says, before anything is written, that its store configuration goes to My Datapacks, by count', async () => {
         withService({ 'open-datapack-zip': opened });
 
         await openModal();
 
-        expect(screen.getByText('It includes 1 Store Setting, which goes into My Datapacks.')).toBeInTheDocument();
+        expect(screen.getByText('Its store configuration (1 setting) goes into My Datapacks.')).toBeInTheDocument();
     });
 
     it('says nothing of the kind for a file with none', async () => {
         await openModal();
 
-        expect(screen.queryByText(/store setting/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/store configuration/i)).not.toBeInTheDocument();
     });
 
     it('offers one undo when removing the pack takes the layer: the same version', async () => {
@@ -299,9 +299,9 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
 
         await press(screen.getByRole('button', { name: 'Load' }));
 
-        expect(screen.getByText('Added to My Datapacks, with its Store Settings.')).toBeInTheDocument();
+        expect(screen.getByText('Added to My Datapacks, with its store configuration.')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Delete Datapack' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Delete Store Settings' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Delete Store Configuration' })).not.toBeInTheDocument();
     });
 
     it('offers the layer its own undo at another version, or when the data went to the Data Installer', async () => {
@@ -309,7 +309,7 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
         await openModal();
 
         await press(screen.getByRole('button', { name: 'Load' }));
-        await press(screen.getByRole('button', { name: 'Delete Store Settings' }));
+        await press(screen.getByRole('button', { name: 'Delete Store Configuration' }));
 
         expect(screen.queryByRole('button', { name: 'Delete Datapack' })).not.toBeInTheDocument();
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'justrite-settings', version: '3', confirm: true }, undefined);
@@ -321,8 +321,8 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
 
         await press(screen.getByRole('button', { name: 'Load' }));
 
-        expect(screen.getByText(/Store settings: The library already holds justrite-settings@3/)).toBeInTheDocument();
+        expect(screen.getByText(/Store Configuration: The library already holds justrite-settings@3/)).toBeInTheDocument();
         expect(screen.getByRole('heading', { name: 'Justrite B2B Loaded' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Delete Store Settings' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Delete Store Configuration' })).not.toBeInTheDocument();
     });
 });

@@ -181,7 +181,7 @@ describe('a kind left out, that an earlier install stopped before hashing', () =
     });
 });
 
-describe("a pack's own store settings, left out of an install", () => {
+describe("a pack's own store configuration, left out of an install", () => {
     const stores = { rows: ROWS_WITH_SETTINGS };
 
     it('are not set on a first install of part of the pack', async () => {
@@ -219,7 +219,7 @@ describe('a settings layer, and an install of part of its pack', () => {
         const status = await h.importTypes(ALL, { layer: LAYER });
 
         expect(h.settings.state.default[GRID]).toBe('24');
-        expect(status.note).toContain('Store Settings');
+        expect(status.note).toContain('Store Configuration');
     });
 
     it('does not apply to part of the pack, and the note says so', async () => {
@@ -227,7 +227,7 @@ describe('a settings layer, and an install of part of its pack', () => {
 
         expect(h.writes('system/config')).toStrictEqual([]);
         expect(h.settings.state.default[GRID]).toBe('12');
-        expect(status.note).toBe('The Store Settings were left as they are: they go in when every data type is installed.');
+        expect(status.note).toBe('The store configuration was left as it is: it goes in when every data type is installed.');
     });
 
     it('applies with part of the pack when store_config is asked for by name', async () => {
@@ -312,7 +312,7 @@ describe('the preview says what the install does', () => {
         expect(preview.settings).toEqual({
             layer: { name: 'racks-settings', version: '2' },
             changes: [],
-            note: 'The Store Settings were left as they are: they go in when every data type is installed.',
+            note: 'The store configuration was left as it is: it goes in when every data type is installed.',
         });
     });
 

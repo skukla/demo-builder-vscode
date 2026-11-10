@@ -4,10 +4,10 @@
  * and its preview, so the three never disagree. Unticked means left alone: a kind not asked for is
  * not installed, not compared, and stays on the record if it was there.
  *
- * Store settings are the one kind a form may hold no box for, since a pack's settings layer is a
- * pack of its own (`layerStep.ts`). They are in when `store_config` is asked for by name, or when
- * every kind the pack holds is: an install of the whole pack is what its flyout's "Also sets" says.
- * Part of a pack leaves them alone, set or not.
+ * Store configuration is the one kind a form may hold no box for, since a pack's settings layer is a
+ * pack of its own (`layerStep.ts`). It is in when `store_config` is asked for by name, or when
+ * every kind the pack holds is: an install of the whole pack is what its flyout's Store Configuration row says.
+ * Part of a pack leaves it alone, set or not.
  *
  * @module features/data-installer/services/demoBuilderEngine/askedKinds
  */
@@ -32,7 +32,7 @@ export function kindsAddedFor(all: Rows, dataTypes: readonly string[]): string[]
     return withDependencies(dataTypes, Object.keys(all)).filter((kind) => !dataTypes.includes(kind));
 }
 
-/** Whether a request touches store settings (see the module comment). */
+/** Whether a request touches store configuration (see the module comment). */
 export function settingsAsked(all: Rows, dataTypes: readonly string[] | undefined): boolean {
     if (!dataTypes || dataTypes.includes(STORE_CONFIG_KIND)) return true;
     return Object.keys(all).every((kind) => dataTypes.includes(kind));

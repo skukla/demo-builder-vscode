@@ -877,7 +877,7 @@ invalid"), whatever the body, while the same customer imports with its group and
 (2026-11-06); the cause is on the store's side and was not found. Each customer is pending first,
 read back by email, recorded with the store's id, and a refused one is named in Commerce's words.
 
-### Store settings in a pack (datapack-engine step 09, 2026-10-30)
+### Store configuration in a pack (datapack-engine step 09, 2026-10-30)
 
 No new tool. `start_datapack_import` installs a pack's `store_config` rows (`{path, value, scope,
 scope_code}`) last, through the setup guide's settings fix: store-wide (`default`) or for the

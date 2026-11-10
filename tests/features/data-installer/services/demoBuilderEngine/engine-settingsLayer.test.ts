@@ -84,7 +84,7 @@ describe('installing a pack that has a settings layer', () => {
         expect(sent).toEqual([CATEGORY_POST, { method: 'PUT', path: 'system/config', body: { items: [{ path: GRID, value: '24', scope: 'default' }] } }]);
         expect((await readInstallRecord(files, PROJECT, PACK))?.created.map((o) => o.kind)).toEqual(['categories', 'store_config']);
         expect(status.perType).toEqual({ categories: 'success' });
-        expect(status.note).toBe(`Store Settings: Set ${GRID}: 12 → 24.`);
+        expect(status.note).toBe(`Store Configuration: Set ${GRID}: 12 → 24.`);
     });
 
     it('keeps the job open while the layer is written, so the note reaches the watcher', async () => {
@@ -151,7 +151,7 @@ describe('a settings layer the install cannot use', () => {
 
         expect(sent).toStrictEqual([]);
         expect(refusal?.error).toContain(path);
-        expect(refusal?.error).toContain('Store Settings');
+        expect(refusal?.error).toMatch(/store configuration/i);
         expect(await readInstallRecord(files, PROJECT, PACK)).toBeUndefined();
     });
 
@@ -216,7 +216,7 @@ describe('a settings layer the install cannot use', () => {
 
         expect(sent).toEqual([CATEGORY_POST]);
         expect(status.perType).toEqual({ categories: 'success' });
-        expect(status.note).toBe("My Datapacks couldn't be read, so this datapack's Store Settings, if any, were not applied.");
+        expect(status.note).toBe("My Datapacks couldn't be read, so this datapack's store configuration, if any, was not applied.");
     });
 });
 

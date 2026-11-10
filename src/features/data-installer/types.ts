@@ -234,7 +234,7 @@ export interface ImportProgressMessage {
 
 /**
  * `JobStanding.stoppedAt` when the job stopped after every data type's rows were in: recording what
- * was installed, applying the store settings, or the check. Each data type says Done, and the window's
+ * was installed, applying the store configuration, or the check. Each data type says Done, and the window's
  * Finishing Import row says why it stopped. No data type is named this.
  */
 export const FINISHING_STOP = 'finishing';
@@ -260,7 +260,7 @@ export const ENGINE_PHASES = {
     reading: 'Reading the datapack',
     comparing: 'Comparing Commerce with the datapack',
     recording: 'Recording what was installed',
-    settings: 'Applying the store settings',
+    settings: 'Applying the store configuration',
     checking: 'Checking products',
 } as const;
 
@@ -280,7 +280,7 @@ export interface JobStanding {
     /** What the job is doing while no one data type is: "Comparing Commerce with the datapack". */
     phase?: string;
     /**
-     * The data type that failed: the one in progress when the job stopped, or the store settings, which
+     * The data type that failed: the one in progress when the job stopped, or the store configuration, which
      * fail without stopping it. {@link FINISHING_STOP} when it stopped after every data type was in.
      */
     stoppedAt?: string;

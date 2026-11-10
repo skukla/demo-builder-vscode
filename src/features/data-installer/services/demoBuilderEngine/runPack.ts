@@ -7,8 +7,8 @@
  * A pack holding a kind this engine cannot install is refused before anything is written, so a
  * half-installed pack is never the answer to "we don't do that kind yet" (the ACO kinds, today). Customers and B2B
  * (step 08) come after the catalog, in the service's order: groups before the products whose tier
- * prices name them, customers before the companies that make them admins. Store settings (step 09)
- * come last, once the pack's data is in, and are put back first on removal. Gift cards, cart rules
+ * prices name them, customers before the companies that make them admins. Store configuration (step 09)
+ * comes last, once the pack's data is in, and is put back first on removal. Gift cards, cart rules
  * and coupons (step 11) sit where the service puts them.
  *
  * Removal walks the record in reverse, dropping each object from it as it goes, so a removal
@@ -113,7 +113,7 @@ const STEPS: readonly KindStep[] = [
     ...ASSIGNMENT_KINDS.map(
         (kind): KindStep => ({ kind, check: (records) => void flatAssignments(kind, records), install: (ctx, r) => installCatalogAssignments(ctx, kind, r) }),
     ),
-    // Step 09: the pack's store settings, once its data is in.
+    // Step 09: the pack's store configuration, once its data is in.
     { kind: STORE_CONFIG_KIND, check: (records, websiteCode) => void packSettings(records, websiteCode), install: installStoreConfig },
 ];
 
@@ -193,7 +193,7 @@ export interface InstallOutcome {
     kept: KeptThing[];
     /** Containers it did not take out because they hold what the engine did not make. */
     containers: KeptContainer[];
-    /** What the store settings kind set and put back (step 09), when the pack holds settings. */
+    /** What the store configuration kind set and put back (step 09), when the pack holds settings. */
     settings?: SettingsDone;
     /** Where the pack's own root went (step 12), when it has one. */
     rootPlacement?: RootPlacement;
@@ -306,7 +306,7 @@ export interface RemovalResult {
      * (step 05). They stay on the record, so a later removal takes them once they are empty.
      */
     kept: KeptContainer[];
-    /** What putting the pack's store settings back did (step 09), when it had any. */
+    /** What putting the pack's store configuration back did (step 09), when it had any. */
     settings?: SettingsDone;
     /** The kept root's Admin step, when a store shows the pack's root (step 12). */
     keptRoot?: KeptRootStep;

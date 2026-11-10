@@ -41,7 +41,7 @@ export function describePerType(
 /** The operation whose outcome the result view should show. */
 export type LastAction = 'dryRun' | 'start' | 'reset';
 
-/** Whether the result on screen is a Check First that passed: it offers Install, not Close. */
+/** Whether the result on screen is a Dry Run that passed: it offers Install, not Close. */
 export function checkPassed(lastAction: LastAction | null, check: { valid: boolean } | null | undefined): boolean {
     return lastAction === 'dryRun' && check?.valid === true;
 }
@@ -83,7 +83,7 @@ export interface ResultContent {
  */
 export const RETRIES_BEFORE_FIX = 2;
 
-/** The store settings, the one data type that fails without stopping the import. */
+/** The store configuration, the one data type that fails without stopping the import. */
 const SETTINGS_KIND = 'store_config';
 
 const RESULT_STATUS: Record<ResultContent['variant'], ModalStatus | undefined> = {
@@ -233,7 +233,7 @@ function hasProblem(record: ImportJobRecord, failed: string[]): boolean {
  * An import's ending (owner, 2026-11-10, walk F134). A clean finish hands off to the small result:
  * "My Luma Installed", then only what is left to know (`leftToKnow`). Only a problem keeps the steps:
  * the same title in amber, how long search takes and "Took …" under them, with Fix with AI. A run that stopped is "Install Stopped" on its steps, with Retry while a retry can get past
- * the stop, else Fix with AI. It ran to the end when nothing failed but the store settings, which
+ * the stop, else Fix with AI. It ran to the end when nothing failed but the store configuration, which
  * fail without stopping it, and the work after the data types did not stop.
  */
 function runResult(record: ImportJobRecord, name: string, retries: number): ResultContent {
@@ -257,15 +257,15 @@ function withSavedNote(result: ResultContent, savedNote: string | undefined): Re
 }
 
 /**
- * Check First's answer (D6). A refusal is an ANSWER the button exists to fetch: amber, not red. A
+ * The Dry Run's answer (D6). A refusal is an ANSWER the button exists to fetch: amber, not red. A
  * pass says what it means for this datapack, and its footer offers the install itself (Flow 2.14).
  */
 function dryRunResult(dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>, name: string): ResultContent | null {
-    if (dryRun.failure) return { variant: 'error', title: "Couldn't Run the Check", message: dryRun.failure.message };
+    if (dryRun.failure) return { variant: 'error', title: 'Dry Run Failed', message: dryRun.failure.message };
     if (!dryRun.value) return null;
     return dryRun.value.valid
-        ? { variant: 'success', title: 'Check Passed', message: `${name} can be installed here. Nothing was written.` }
-        : { variant: 'warning', title: 'Check Found a Problem', message: dryRun.value.reason };
+        ? { variant: 'success', title: 'Dry Run Passed', message: `${name} can be installed here. Nothing was written.` }
+        : { variant: 'warning', title: 'Dry Run Found a Problem', message: dryRun.value.reason };
 }
 
 /** A finished job, worded for ITS operation: a removal must not say "Installed". */

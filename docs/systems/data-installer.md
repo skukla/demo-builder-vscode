@@ -120,7 +120,7 @@ which lists every object the install made. It never removes by name.
   on the removal's confirm (`opensOn: 'remove'`, `useRemovalWindow`), with no form and no comparison
   only an import needs, and Cancel or Back closes the window. The import form no longer has it. The
   confirm names the kinds on the record: "Permanently deletes what Bodea installed: categories and
-  products. Puts back the store settings it changed." A removal's check asks nothing of the pack, so a pack deleted from its store
+  products. Puts back the store configuration it changed." A removal's check asks nothing of the pack, so a pack deleted from its store
   can still be removed (`validateRemoval`); it refuses only a store other than the one on the record.
   With no record the service removes the types it is sent, and the form and confirm stay as they were.
 - **Installing another pack or version over the project's replaces it** (walk F97, 2026-11-09,
@@ -163,7 +163,7 @@ which lists every object the install made. It never removes by name.
   F134): "My Luma Installed", then "Your changes are saved in Version History." when a save ran and
   "New products can take 20 minutes to show in search." when products went in, and nothing else.
   A finish with a problem (a data type refused rows, the check found products that differ, the
-  store settings failed) stays on its steps under the same title in amber, with Fix with AI, the
+  store configuration failed) stays on its steps under the same title in amber, with Fix with AI, the
   sentence ("This demo now uses My Luma from Nov 9, 9:15 AM. Your changes are saved as Nov 9, 1:56
   PM.") and "Took …" under them; a stop is "Install Stopped" on its steps. A save or removal that fails installs nothing, says why in red on its step, and leaves the
   project naming the old pack; the project names the new pack once the old one is gone, so a reset
@@ -446,7 +446,7 @@ three things differed:
 | An import-form item's `allowed_error_count` as text | Sends it as a number |
 | An item over the service's 1 MB request limit (Luma's and Venia's products) | Refused before any write (`itemParts.ts`): those packs cannot go to the Data Installer |
 
-A data type the service has no schema for, store settings, is refused before any write too.
+A data type the service has no schema for, store configuration, is refused before any write too.
 
 **Not offered on screen yet** (owner, 2026-11-06): the Data Installer does not let our accounts write
 to it, so Copy to the Data Installer would fail every time. The button is off
@@ -483,7 +483,7 @@ rows. It is ordinary pack rows, moved like any pack. Only Demo Builder's engine 
 | When | What happens |
 |---|---|
 | Install | the pack's data, then the newest version of its layer, on the pack's own install record. A pack holding `store_config` itself wins, so nothing applies twice |
-| Install of part of the pack | the layer goes in only when every kind the pack holds is asked for, or `store_config` by name. Otherwise settings are left as they are, set or not, on the record or not, and the note says "The store settings in bodea-settings@2 were left as they are: they go in when every data type is imported." The preview says the same |
+| Install of part of the pack | the layer goes in only when every kind the pack holds is asked for, or `store_config` by name. Otherwise settings are left as they are, set or not, on the record or not, and the note says "The store configuration was left as it is: it goes in when every data type is installed." The preview says the same |
 | Remove | one removal takes both: the record's settings go back first, by the settings fix's "changed since" rule, then the data. No library is needed |
 | Install again | a setting still as Demo Builder left it follows the layer; one the SC changed is kept and counted; one the layer dropped, or every one when the library says the layer is gone, is put back |
 | Refused | a path outside `catalog/`, `sales/`, `checkout/`, `customer/`, `btob/`, `cataloginventory/`, under `web/` or `admin/`, or ending in password, secret, token or key, and a store-view row, stop the whole install before any write, by path, in the dry run too. So does the same path in a file's layer at Open and Load |
@@ -497,7 +497,7 @@ is pressed. The install's note says "From bodea-settings@2: Set catalog/frontend
 **The catalog offers no card for a layer while its pack is listed** (`withoutLayerCards`, the Data
 Installer screen and the wizard's Datapacks step). That would strand one an SC could otherwise not
 remove, so it keeps its card when no pack of its name is listed or when it was installed on its own;
-and the pack's flyout offers "Remove its store settings" on a layer that is yours. `find_datapacks`
+and the pack's flyout offers Delete Store Configuration on a layer that is yours. `find_datapacks`
 still lists every row: an agent can tell a layer by its name and `get_datapack`'s `settingsLayer`.
 
 **Saving.** "Save store changes" never writes a layer's settings into the new version, which would
@@ -510,8 +510,8 @@ step. Sharing a pack shares its layer.
 **Files.** A pack's file carries its layer as a second section, and the format version stays 1, so
 an older extension loads the data and ignores the rest. Loading puts the data where the SC chose and
 the layer in the library; a version already there is left unless the SC asked to replace. An older
-file, with no section, loads as it always did. The layer's reversal is on the load result ("Remove
-its store settings from the library", unless removing the pack takes it).
+file, with no section, loads as it always did. The layer's reversal is on the load result (Delete
+Store Configuration, unless removing the pack takes it).
 
 **Putting a value back leaves a website row explicit.** The API has no delete route, so a removal
 writes the value the website had inherited, and the website then holds it as its own. This work does

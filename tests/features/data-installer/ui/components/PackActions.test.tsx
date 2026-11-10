@@ -354,9 +354,9 @@ describe('a pack with a settings layer (datapack-engine step 09)', () => {
         mockRequest.mockResolvedValue({ success: true, data: { deleted: true } });
         renderActions({ settingsLayer: LAYER, onSharingChanged });
 
-        expect(menuLabels()).toEqual(['Save as File', 'Delete Store Settings']);
-        await press(row('Delete Store Settings'));
-        expect(screen.getByRole('heading', { name: "Delete Bodea's Store Settings?" })).toBeInTheDocument();
+        expect(menuLabels()).toEqual(['Save as File', 'Delete Store Configuration']);
+        await press(row('Delete Store Configuration'));
+        expect(screen.getByRole('heading', { name: "Delete Bodea's Store Configuration?" })).toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalled();
         await press(screen.getByRole('button', { name: 'Delete' }));
 
@@ -368,7 +368,7 @@ describe('a pack with a settings layer (datapack-engine step 09)', () => {
     it("offers it beside the SC's own pack's Remove, after it", () => {
         renderActions({ detail: OWN, settingsLayer: LAYER });
 
-        expect(menuLabels().slice(-2)).toEqual(['Delete Datapack', 'Delete Store Settings']);
+        expect(menuLabels().slice(-2)).toEqual(['Delete Datapack', 'Delete Store Configuration']);
     });
 
     it("does not offer a colleague's layer, which only its owner can remove", () => {

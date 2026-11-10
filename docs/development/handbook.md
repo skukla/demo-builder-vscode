@@ -917,15 +917,16 @@ check says so and names the file.
 
 > **Convention.** A datapack has one set of words, and every screen takes them from
 > `features/data-installer/datapackWords.ts`: it is **installed** and **uninstalled**, never
-> imported or removed; the trial run is **Check First**; the settings it carries are **Store
-> Settings**; and the thing is a "datapack", never a "pack" on its own. A sentence on screen carries
-> no long dash and no raw setting key (`demoBuilder.…`).
+> imported or removed; the trial run is **Dry Run**; the settings it carries are its **Store
+> Configuration**; and the thing is a "datapack", never a "pack" on its own. A sentence on screen
+> carries no long dash and no raw setting key (`demoBuilder.…`).
 > *Why:* the owner, 2026-11-10: one thing went by Import, Install and Load, its trial by Dry Run,
 > Validate and "Checking the import", and its settings by "Also Sets" and "settings layer". The SC
-> could not tell whether two buttons did the same thing.
+> could not tell whether two buttons did the same thing. Dry Run is kept because SCs know it, and
+> Store Configuration matches Commerce Admin's Stores > Configuration.
 > Enforced by `tests/sop/datapack-words.test.ts`, which reads every string in the data installer
 > and the wait and stage tables with the compiler, exempts code, comments, logs and lines marked
-> as never reaching a screen, and proves itself on a planted "Dry Run".
+> as never reaching a screen, and proves itself on a planted "Check First".
 
 > **Convention.** A window's header names the thing and what happened to it: "My Luma Installed",
 > "My Luma Uninstalled", "Couldn't Save My Luma". Only a window with no one name to give (several

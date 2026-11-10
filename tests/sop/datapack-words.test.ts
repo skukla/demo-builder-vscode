@@ -1,8 +1,10 @@
 /**
  * SOP: one set of words for datapacks (datapack simplification, Phase 1, owner 2026-11-10).
  *
- * A datapack is INSTALLED into Commerce and UNINSTALLED from it (D1); the dry run is CHECK FIRST
- * (D6); the thing is a "datapack", never a "pack" on its own; a setting is named in words, never by
+ * A datapack is INSTALLED into Commerce and UNINSTALLED from it (D1); the dry run stays DRY RUN,
+ * never "Check First" (D6, kept by the owner 2026-11-10: SCs know the term); a datapack's settings are
+ * its STORE CONFIGURATION, as Commerce Admin's Stores > Configuration names them, never "Store
+ * Settings" (owner 2026-11-10); the thing is a "datapack", never a "pack" on its own; a setting is named in words, never by
  * its raw `demoBuilder.` key; and a sentence breaks with a colon or a full stop, not a long dash.
  * The repeated phrases live in `src/features/data-installer/datapackWords.ts`.
  *
@@ -39,7 +41,8 @@ interface Finding {
 
 const RULES: ReadonlyArray<{ rule: string; test: (text: string) => boolean }> = [
     { rule: 'Install, not Import', test: (text) => /\bimport(s|ing|ed)?\b/i.test(text) },
-    { rule: 'Check First, not Dry Run', test: (text) => /\bdry[ -]?run\b/i.test(text) },
+    { rule: 'Dry Run, not Check First', test: (text) => /\bcheck first\b/i.test(text) },
+    { rule: 'Store Configuration, not Store Settings', test: (text) => /\bstore settings?\b/i.test(text) },
     { rule: 'datapack, not pack', test: (text) => /\bpacks?\b/i.test(text) },
     { rule: 'no raw setting key', test: (text) => /\bdemoBuilder\.\w/.test(text) },
     { rule: 'no long dash in a sentence', test: (text) => text.includes('—') && text.trim() !== '—' },
@@ -165,7 +168,8 @@ describe('SOP: one set of words for datapacks', () => {
             'planted.tsx',
             [
                 "const a = 'Import My Luma';",
-                "const b = <Button>Dry Run</Button>;",
+                "const b = <Button>Check First</Button>;",
+                "const b2 = 'Deletes its store settings.';",
                 "const c = `Every data type in the pack`;",
                 "const d = 'Set demoBuilder.dataInstaller.apiBaseUrl first.';",
                 "const e = 'Saved — it is ready.';",
@@ -177,14 +181,16 @@ describe('SOP: one set of words for datapacks', () => {
                 "logger.info('Import finished for the pack');",
                 `// ${NOT_ON_SCREEN}`,
                 "const h = 'Imports a datapack into Commerce.';",
-                "type T = 'import' | 'Dry Run';",
+                "type T = 'import' | 'Check First';",
                 "const i = 'Install My Luma';",
+                "const j = <Button>Dry Run</Button>;",
+                "const k = 'Delete Store Configuration';",
             ].join('\n'),
         );
         const caught = scanSource(planted, 'planted.tsx');
 
         expect(caught.map((finding) => finding.rule)).toStrictEqual(RULES.map((rule) => rule.rule));
-        expect(caught.map((finding) => finding.line)).toStrictEqual([1, 2, 3, 4, 5]);
+        expect(caught.map((finding) => finding.line)).toStrictEqual([1, 2, 3, 4, 5, 6]);
     });
 
     it('CONTROL: reads the real files, not an empty list', () => {

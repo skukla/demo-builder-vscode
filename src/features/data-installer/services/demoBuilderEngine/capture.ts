@@ -322,7 +322,7 @@ export async function capturePack(
     // Cart rules and their coupons (step 11).
     const promotions = await capturePromotions(ctx, lk, created, installed);
     onPhase(7);
-    // Store settings at their values now, each at its own scope (step 09).
+    // Store configuration at its values now, each setting at its own scope (step 09).
     const settings = await captureSettings(ctx.get, created, installed, ctx.session.websiteCode);
     const items: Record<string, unknown> = {
         ...(sets.length > 0 ? { attribute_sets: sets } : {}),

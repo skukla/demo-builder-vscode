@@ -268,7 +268,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         // thing, without writing".
         readOnly: true,
         description:
-            'Check first: try an install with the same guard, same credentials, same request body as the real thing, ' +
+            'Dry run: try an install with the same guard, same credentials, same request body as the real thing, ' +
             'without writing. Run this before start_datapack_import. A refusal comes back as ' +
             "valid:false with a reason, not as an error. It also reads the pack's rows and names each kind " +
             'whose rows Commerce could not take.',
@@ -294,7 +294,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'Writes nothing. installed:false means Demo Builder ' +
             'never installed the pack here, so every row would be new. root (a pack with a root category of its ' +
             "own) says where it would go: under the store's own root, or a root of its own with one Admin step. " +
-            'settings names what an install would change in store settings, by path with old and new value, and ' +
+            'settings names what an install would change in the store configuration, by path with old and new value, and ' +
             'settings.layer the settings layer they come from (a library pack named <pack>-settings).',
         map: importHandlers,
         type: 'preview-datapack-changes',
@@ -337,7 +337,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             '(list_datapack_export_items with unused: true lists them). No pack named: the project\'s when ' +
             'Demo Builder installed it, else none, and the version holds only what is picked (a store Demo Builder ' +
             'did not fill; send saveAs). The pack installed is never changed, and nothing picked is ever removed with it; ' +
-            'undo by deleting the new version with delete_library_datapack. Store settings a pack does not hold ' +
+            'undo by deleting the new version with delete_library_datapack. Store configuration a pack does not hold ' +
             'itself go to a settings layer beside the new version, not into it (settingsLayer). Answers the pack saved into and its new ' +
             'version, unnamed (ids kept because the store could not name them) and, for a save of picks alone, leftOut (what the store has, of ' +
             'products, gift cards, categories, cart rules, customers and companies, that the version does not ' +
@@ -465,7 +465,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'showing its progress, and carries the outcome as job; else follow with get_datapack_import_status. ' +
             'It takes everything the install record lists, whatever dataTypes names (it may be omitted). A category, set, company, shared catalog or customer group the pack made ' +
             "that holds things it did not make is kept (a kept company with its admin and its catalog), and " +
-            "the outcome's note says which; store settings it set, its settings layer's included, are put back " +
+            "the outcome's note says which; store configuration it set, its settings layer's included, is put back " +
             "first, unless changed since, and the note names each by path. The project stops naming the pack only once an uninstall " +
             'finishes having taken everything out; what Commerce will not take back stays, named in the note with its reason, and uninstalling again tries it again. A pack Demo Builder has no install record of ' +
             '(one the Data Installer service installed) is refused and nothing is uninstalled by name; check_demo_data then ' +
@@ -732,7 +732,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'confirmName equal to the pack name, never overwrites an existing pack, and cannot be ' +
             'undone from the extension. The pack goes in the form the Data Installer takes, or not at all: a gift card ' +
             'goes in the Default attribute set (changed lists each such change), and a data type it takes no data of ' +
-            '(store settings) or one too large for it is refused before anything is sent.',
+            '(store configuration) or one too large for it is refused before anything is sent.',
         map: importHandlers,
         type: 'copy-library-datapack-to-installer',
         confirm: true,

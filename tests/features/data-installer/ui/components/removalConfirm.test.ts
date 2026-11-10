@@ -144,11 +144,11 @@ describe('recordedRemovalLines', () => {
     });
 
     it('says settings go back, since nothing deletes them', () => {
-        expect(recordedRemovalLines('Bodea', ['categories', 'store_config'], [], inWords)).toEqual(['Permanently deletes what Bodea installed: categories.', 'Puts back the Store Settings it changed.']);
+        expect(recordedRemovalLines('Bodea', ['categories', 'store_config'], [], inWords)).toEqual(['Permanently deletes what Bodea installed: categories.', 'Puts back the store configuration it changed.']);
     });
 
     it('does not claim a deletion when settings are all it holds', () => {
-        expect(recordedRemovalLines('Bodea', ['store_config'], [], inWords)).toEqual(['Puts back the Store Settings Bodea changed.']);
+        expect(recordedRemovalLines('Bodea', ['store_config'], [], inWords)).toEqual(['Puts back the store configuration Bodea changed.']);
     });
 
     it('says so when the record lists nothing', () => {

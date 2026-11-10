@@ -208,7 +208,7 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await awaitForm();
 
-            expect(screen.queryByText('Checking the import')).not.toBeInTheDocument();
+            expect(screen.queryByText('Running the dry run')).not.toBeInTheDocument();
         });
 
         it('does not show the watch for a record whose job has already finished', async () => {
@@ -283,8 +283,8 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
-            await press(screen.getByRole('button', { name: /^check first$/i }));
-            await screen.findByText(/check passed/i);
+            await press(screen.getByRole('button', { name: /^dry run$/i }));
+            await screen.findByText(/dry run passed/i);
         }
 
         it('offers Back, then Install', async () => {

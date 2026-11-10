@@ -69,16 +69,16 @@ it('shows the handler refusal in its own words', async () => {
     ).toBeInTheDocument();
 });
 
-it('says the store settings went in the file too (datapack-engine step 09)', async () => {
+it('says the store configuration went in the file too (datapack-engine step 09)', async () => {
     answer({ success: true, data: { path: '/Users/sc/justrite-v1.datapack.zip', settingsLayer: { settings: 2 } } });
 
     await saveFrom();
 
-    expect(screen.getByText('Saved to /Users/sc/justrite-v1.datapack.zip, with its Store Settings')).toBeInTheDocument();
+    expect(screen.getByText('Saved to /Users/sc/justrite-v1.datapack.zip, with its store configuration')).toBeInTheDocument();
 });
 
 it('says the file may lack them when the library could not be asked', async () => {
-    const note = "My Datapacks couldn't be read, so this datapack's Store Settings, if any, are not in this file.";
+    const note = "My Datapacks couldn't be read, so this datapack's store configuration, if any, is not in this file.";
     answer({ success: true, data: { path: '/Users/sc/justrite-v1.datapack.zip', settingsLayerNote: note } });
 
     await saveFrom();

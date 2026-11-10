@@ -236,7 +236,7 @@ describe('ImportDatapackModal', () => {
     // already validates server-side before it starts. "Dry run" names it as a
     // rehearsal of the same request.
     describe('the dry run', () => {
-        const validateButton = () => screen.getByRole('button', { name: /^check first$/i });
+        const validateButton = () => screen.getByRole('button', { name: /^dry run$/i });
 
         it('is offered beside Start import, with the same requirements', async () => {
             renderModal();
@@ -294,7 +294,7 @@ describe('ImportDatapackModal', () => {
 
             await press(validateButton());
 
-            expect(await screen.findByText(/check passed/i)).toBeInTheDocument();
+            expect(await screen.findByText(/dry run passed/i)).toBeInTheDocument();
         });
 
         // The reason IS the payload — it is the service's own wording about why

@@ -54,7 +54,7 @@ const STEP_LINES: Record<string, string> = {
     // own words for a read (owner, 2026-11-09, walk F121; "Commerce", never "the store", 2026-11-03).
     [COMPARING]: 'Reading from Commerce',
     [RECORDING]: 'Recording installed items',
-    [SETTINGS]: 'Applying store settings',
+    [SETTINGS]: 'Applying store configuration',
 };
 
 const waiting = (running: boolean | undefined): Pick<OperationRow, 'status' | 'line'> =>

@@ -1,6 +1,6 @@
 /**
  * Finding a pack's settings layer (datapack-engine step 09, decision 1, owner 2026-11-02): a
- * library pack named `<pack name>-settings` that holds only store settings, its newest version.
+ * library pack named `<pack name>-settings` that holds only store configuration, its newest version.
  * The service's catalog stays the source of the packs; a layer lives beside them, in our library.
  *
  * Reads only. What a layer does at install is `demoBuilderEngine/layerStep.ts`; both the engine and
@@ -66,7 +66,7 @@ export async function myLayerVersions(reads: Pick<LayerReads, 'findDatapacks'>, 
 
 /** Why a layer was not looked at, in the words the three surfaces share. */
 export function layerNotAskedLine(consequence: string): string {
-    return `My Datapacks couldn't be read, so this datapack's Store Settings, if any, ${consequence}.`;
+    return `My Datapacks couldn't be read, so this datapack's store configuration, if any, ${consequence}.`;
 }
 
 /** A row of a layer as the flyout shows it; anything else in the rows is not shown. */

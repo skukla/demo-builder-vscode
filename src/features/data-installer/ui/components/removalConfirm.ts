@@ -27,7 +27,7 @@ export type ConfirmContent =
 /**
  * What the confirm says goes, when Demo Builder's engine installed the pack: what its install record
  * lists, not what is ticked (the service removes what is ticked, and its sentence is the modal's).
- * Store settings are not deleted, they are put back, so they get a sentence of their own. The ticks
+ * Store configuration is not deleted, it is put back, so it gets a sentence of its own. The ticks
  * are mentioned only when they name less than what goes, where they could be read as a limit.
  *
  * @param recordedKinds - the kinds on the record, in install order
@@ -38,7 +38,7 @@ export function recordedRemovalLines(displayName: string, recordedKinds: readonl
     const kinds = recordedKinds.filter((kind) => kind !== STORE_CONFIG_KIND);
     const sentences = [
         kinds.length > 0 ? `Permanently deletes what ${displayName} installed: ${typesInWords(kinds)}.` : undefined,
-        kinds.length < recordedKinds.length ? `Puts back the Store Settings ${kinds.length > 0 ? 'it' : displayName} changed.` : undefined,
+        kinds.length < recordedKinds.length ? `Puts back the store configuration ${kinds.length > 0 ? 'it' : displayName} changed.` : undefined,
         recordedKinds.length === 0 ? `${displayName} has nothing left in Commerce to delete.` : undefined,
         selected.length > 0 && recordedKinds.some((kind) => !selected.includes(kind)) ? 'The data types you tick apply to Install only.' : undefined,
     ];

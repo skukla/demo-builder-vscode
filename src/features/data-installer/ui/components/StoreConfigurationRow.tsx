@@ -1,22 +1,22 @@
 /**
- * The datapack flyout's Store Settings row.
+ * The datapack flyout's Store Configuration row.
  *
- * @module features/data-installer/ui/components/StoreSettingsRow
+ * @module features/data-installer/ui/components/StoreConfigurationRow
  */
 
 import { ActionButton } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
-import { STORE_SETTINGS } from '../../datapackWords';
+import { configurationSettingsCount, STORE_CONFIGURATION } from '../../datapackWords';
 import type { PackDetailLayer } from '../../types';
 import { PanelRow } from '@/core/ui/components/ui/PanelRow';
 
-/** The datapack's Store Settings: how many, with their paths behind Show (Clarity 1.8: no layer id on screen). */
-export function StoreSettingsRow({ layer }: { layer: PackDetailLayer }): React.JSX.Element {
+/** The datapack's Store Configuration: how many settings, with their paths behind Show (Clarity 1.8: no layer id on screen). */
+export function StoreConfigurationRow({ layer }: { layer: PackDetailLayer }): React.JSX.Element {
     const [shown, setShown] = useState(false);
     const count = layer.settings.length;
     return (
-        <PanelRow label={STORE_SETTINGS}>
-            <span>{count === 1 ? '1 setting' : `${count} settings`}</span>
+        <PanelRow label={STORE_CONFIGURATION}>
+            <span>{configurationSettingsCount(count)}</span>
             <ActionButton isQuiet onPress={() => setShown(!shown)}>
                 {shown ? 'Hide' : 'Show'}
             </ActionButton>

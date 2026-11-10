@@ -96,7 +96,7 @@ describe('DatapackActivityView', () => {
         ['import', 'Install'],
         ['delete', 'Uninstall'],
         ['export', 'Save'],
-        ['validate', 'Check First'],
+        ['validate', 'Dry Run'],
     ])('calls a %s run by the screen\'s word, %s', async (mode, word) => {
         resolveWith([makeEntry({ mode })]);
 
@@ -114,7 +114,7 @@ describe('DatapackActivityView', () => {
         await screen.findAllByTestId('activity-row');
 
         const options = Array.from(screen.getByTestId('spectrum-picker-select').querySelectorAll('option')).map((o) => o.textContent);
-        expect(options).toEqual(['All Operations', 'Install', 'Save', 'Uninstall', 'Check First']);
+        expect(options).toEqual(['All Operations', 'Install', 'Save', 'Uninstall', 'Dry Run']);
     });
 
     describe('mode filter', () => {

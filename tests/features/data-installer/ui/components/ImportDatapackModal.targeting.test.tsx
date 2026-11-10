@@ -335,7 +335,7 @@ describe('the redesigned target section', () => {
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
         expect(screen.queryAllByTestId('spectrum-picker-select')).toHaveLength(0);
         expect(screen.queryByRole('button', { name: /^install$/i })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /^check first$/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^dry run$/i })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /^remove data$/i })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
     });

@@ -9,7 +9,7 @@
  * The demo's own pack, when it is the SC's, leads with Save Changes, which writes what its store now
  * holds as a new version, with Import beside it (owner, 2026-11-04); a new pack is the header's
  * Create Datapack.
- * A pack whose settings layer is the SC's own also offers "Remove its store settings" there, since a
+ * A pack whose settings layer is the SC's own also offers "Delete Store Configuration" there, since a
  * layer has no card of its own to remove it from (datapack-engine step 09).
  *
  * **Share, Stop sharing and both removes ask in a dialog** (`ConfirmActionDialog`, owner,
@@ -104,7 +104,7 @@ function removeRows(ownPack: boolean, ownLayer: boolean, removesData: boolean): 
         // Delete, not Remove (owner, 2026-11-09, walk F118): it leaves the library for good, where
         // Uninstall takes a demo's data out of its store and an import puts it back.
         ...(ownPack ? [{ key: 'remove', label: 'Delete Datapack', icon: 'delete' }] : []),
-        ...(ownLayer ? [{ key: 'remove-settings', label: 'Delete Store Settings', icon: 'delete' }] : []),
+        ...(ownLayer ? [{ key: 'remove-settings', label: 'Delete Store Configuration', icon: 'delete' }] : []),
     ];
 }
 
@@ -129,11 +129,11 @@ function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: stri
     }
     if (asking === 'remove-settings') {
         return {
-            title: `Delete ${name}'s Store Settings?`,
+            title: `Delete ${name}'s Store Configuration?`,
             actionLabel: 'Delete',
             actionVariant: 'negative',
             // The house form for a warning: a word in the main sentence (dialog design rules).
-            children: 'Permanently deletes the Store Settings saved with it.',
+            children: 'Permanently deletes the store configuration saved with it.',
         };
     }
     // A pack of saves goes whole, its Version History with it (owner, 2026-11-09).

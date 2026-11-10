@@ -251,7 +251,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     reset_datapack: {
         action: 'Uninstall a datapack',
         consequence:
-            "Deletes what this datapack put in Commerce and puts back any Store Settings it changed. This can't be undone.",
+            "Deletes what this datapack put in Commerce and puts back any store configuration it changed. This can't be undone.",
         target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
@@ -434,7 +434,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_import: {
         action: 'Install a datapack',
         consequence:
-            'Writes the chosen data types and what they need into the live Commerce instance, then the datapack\'s Store Settings when all of it is chosen. Installing again updates or removes what the datapack made earlier of those types, keeping anything changed in the Admin. Installing another datapack over the one this demo uses uninstalls that one first. Takes several minutes and cannot be paused.',
+            'Writes the chosen data types and what they need into the live Commerce instance, then the datapack\'s store configuration when all of it is chosen. Installing again updates or removes what the datapack made earlier of those types, keeping anything changed in the Admin. Installing another datapack over the one this demo uses uninstalls that one first. Takes several minutes and cannot be paused.',
         target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
@@ -490,7 +490,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     load_datapack_zip: {
         action: 'Load a datapack file',
         consequence:
-            'Adds the datapack in this file to My Datapacks, or to the Data Installer catalog other teams share. Store Settings the file carries go into My Datapacks.',
+            'Adds the datapack in this file to My Datapacks, or to the Data Installer catalog other teams share. Any store configuration the file carries goes into My Datapacks.',
         target: ['path', 'target'],
         sessionGrant: false,
     },

@@ -1,5 +1,5 @@
 /**
- * Store settings in a pack (datapack-engine step 09): the `store_config` kind, one row per
+ * Store configuration in a pack (datapack-engine step 09): the `store_config` kind, one row per
  * setting, `{ path, value, scope, scope_code }`, stored and moved like every other kind.
  *
  * Nothing here writes a setting itself. Every read and write goes through the setup guide's
@@ -85,7 +85,7 @@ export function isOffLimitsSetting(path: string): boolean {
 }
 
 function refusal(path: string, scope: string): string | undefined {
-    if (scope === 'store' || scope === 'stores') return `${path} is set for one store view, and Demo Builder sets Store Settings store-wide or for the install's website only`;
+    if (scope === 'store' || scope === 'stores') return `${path} is set for one store view, and Demo Builder sets store configuration store-wide or for the install's website only`;
     if (isOffLimitsSetting(path)) return `${path} is a setting a datapack may not change`;
     if (!ALLOWED_SECTIONS.includes(path.split('/')[0])) return `${path} is outside what a datapack may set (${andList(ALLOWED_SECTIONS)})`;
     return undefined;
@@ -98,9 +98,9 @@ function refusal(path: string, scope: string): string | undefined {
  * @throws Error naming each row refused, so nothing of this kind is written
  */
 export function packSettings(records: unknown, websiteCode: string | undefined): PackSetting[] {
-    const rows = parseRows(rowsSchema, records, 'store settings');
+    const rows = parseRows(rowsSchema, records, 'store configuration');
     const refused = rows.flatMap((row) => refusal(row.path, row.scope) ?? []);
-    if (refused.length > 0) throw new Error(`The datapack's Store Settings cannot be installed: ${andList(refused)}. Nothing of this kind was written.`);
+    if (refused.length > 0) throw new Error(`The datapack's store configuration cannot be installed: ${andList(refused)}. Nothing of this kind was written.`);
     return settingsOf(rows, websiteCode);
 }
 
@@ -352,7 +352,7 @@ export async function captureSettings(
     }
     if (installed[STORE_CONFIG_KIND] !== undefined) {
         // The rows' shape only: a path the install would refuse is the save's to refuse, by name (`saveStore.ts`).
-        const rows = parseRows(rowsSchema, installed[STORE_CONFIG_KIND], 'store settings').filter((row) => row.scope !== 'store' && row.scope !== 'stores');
+        const rows = parseRows(rowsSchema, installed[STORE_CONFIG_KIND], 'store configuration').filter((row) => row.scope !== 'store' && row.scope !== 'stores');
         for (const { key, item } of settingsOf(rows, websiteCode)) if (!named.has(key)) named.set(key, { path: item.path, scope: item.scope });
     }
     const wanted = [...named.values()];

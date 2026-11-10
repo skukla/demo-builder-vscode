@@ -17,7 +17,7 @@ Sources (each finding below cites its report and number):
 ## What "done" looks like for the SC
 
 - One word for each action, the same on every button, window, result and agent prompt.
-- Nothing to maintain: no list of versions, no second thing called store settings.
+- Nothing to maintain: no list of versions, no second thing called store configuration.
 - Every long job (install, uninstall, save) runs in the same window and ends the same way.
 - The screen says what state the demo is in and how to put its data back.
 - No action loses the SC's Commerce changes without asking first.
@@ -41,7 +41,7 @@ Sources (each finding below cites its report and number):
 | D3 | **No versions the SC picks, and no date used as a name** (owner, changed 2026-11-10 after the Phase 0 walk: picking by date confused, and a restore left the demo on the older date while the newer one sat unused). The SC's datapack is always its latest save. **Save Changes** replaces it; **Undo Last Save** goes back one save and installs it, losing any unsaved Commerce changes after asking; **Restore My Luma** puts Commerce back to the latest save (owner, 2026-11-10: a restore, not an install). Version History, Restore Version and choosing a date go. A date may show as information only ("Saved today, 8:38 AM"). Storage keeps two saves (Versions A.4, Model 1; owner confirmed 2-saves 2026-11-10). Trade-off accepted: no going back further than one save; Save As New Datapack keeps a state for good |
 | D4 | A save made without asking may push out the last save made by hand, for now |
 | D5 | **Clear Demo Data empties the demo's stores, datapack included.** The name stays. Today it removes only what Demo Builder did not install, which no name makes clear without knowing the mechanism. Clearing only the hand-added data while keeping the datapack is no longer one step: clear, then install again. A "Keep My Luma" box can bring it back if it is missed |
-| D6 | Dry Run becomes **Check First**; its result "Check Passed" |
+| D6 | **Dry Run** keeps its name; its results are "Dry Run Passed", "Dry Run Found a Problem" and "Dry Run Failed". The result names the datapack and says nothing was written, and a pass offers Install. (Owner, 2026-11-10: Phase 1 first renamed it "Check First", then reversed that because SCs know "Dry Run". The same day "Store Settings" became **Store Configuration**, matching Commerce Admin's Stores > Configuration.) |
 | D7 | The agent tools lose the Data Installer destination, which fails for our accounts |
 
 ## Phases
@@ -66,7 +66,7 @@ Every later phase touches strings, so the words go first.
 - Apply D1 and D2 everywhere: buttons, titles, steps, results, errors, agent consent and tool text.
 - Apply the wording finds (Versions Part B): most waits lose their second line; fragments,
   inside-view lines and unasked reassurance go.
-- One name, "Store Settings", treated as part of the datapack in every sentence. No hidden id on
+- One name, "Store Configuration", treated as part of the datapack in every sentence. No hidden id on
   screen (Clarity 1.8).
 - D6: Dry Run's name and its three result titles (Flow 2.14, Clarity 1.20).
 - The leftovers: Flow 2.13 (wizard step), 2.16 (flyout words), 2.20 (small words), Clarity 1.21.
@@ -174,7 +174,7 @@ a step label still fails.
 - **Restore <name>** on the datapack the demo uses (Phase 5's label) puts Commerce back to the latest
   save; it asks "Save Your Changes First?" when there are changes (Phase 3).
 - Storage: after each successful save, keep the newest save and the one before it; delete older saves
-  with their store settings. Never touch a named version (`main`) or a save another project on this
+  with their store configuration. Never touch a named version (`main`) or a save another project on this
   machine uses.
 - Fix in the same change, or trimming takes a shared datapack from colleagues:
   - a save of a shared datapack stays shared;
@@ -349,7 +349,7 @@ Settled with the owner, 2026-11-10:
   Datapack Library (no store to install into). Today both say "Load from File".
 - The flyout's buttons stay pinned (Clarity 2.2); its rows (2.11); the header band (2.12).
 - The More menu: Save as File, Version History, **Share Datapack / Stop Sharing Datapack**; then,
-  in its own section, Uninstall and Delete Datapack (Clarity 1.7). **Delete Store Settings is
+  in its own section, Uninstall and Delete Datapack (Clarity 1.7). **Delete Store Configuration is
   removed**, with its confirm and its code (no soft deprecation): an SC changes a setting because
   the demo needs it, and Delete Datapack already takes the settings layer with it, so the undo
   remains.

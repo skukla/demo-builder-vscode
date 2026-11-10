@@ -88,7 +88,7 @@ describe('the removal confirmation for a pack Demo Builder installed', () => {
 
         // One consequence per line (dialog design rules), so each is its own element.
         expect(screen.getByText('Permanently deletes what ZZ Test Root DB12 installed: attribute sets, categories and products.')).toBeInTheDocument();
-        expect(screen.getByText('Puts back the Store Settings it changed.')).toBeInTheDocument();
+        expect(screen.getByText('Puts back the store configuration it changed.')).toBeInTheDocument();
         expect(screen.getByText('The data types you tick apply to Install only.')).toBeInTheDocument();
     });
 

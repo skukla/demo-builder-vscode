@@ -137,10 +137,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            await press(screen.getByRole('button', { name: /^check first$/i }));
+            await press(screen.getByRole('button', { name: /^dry run$/i }));
 
-            await screen.findByText(/checking first/i);
-            expect(screen.queryByRole('button', { name: /^check first$/i })).not.toBeInTheDocument();
+            await screen.findByText(/running the dry run/i);
+            expect(screen.queryByRole('button', { name: /^dry run$/i })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^checking$/i })).not.toBeInTheDocument();
         });
 
@@ -173,9 +173,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            await press(screen.getByRole('button', { name: /^check first$/i }));
+            await press(screen.getByRole('button', { name: /^dry run$/i }));
 
-            expect(await screen.findByText(/checking first/i)).toBeInTheDocument();
+            expect(await screen.findByText(/running the dry run/i)).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
         });
@@ -186,8 +186,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            await press(screen.getByRole('button', { name: /^check first$/i }));
-            await screen.findByText(/checking first/i);
+            await press(screen.getByRole('button', { name: /^dry run$/i }));
+            await screen.findByText(/running the dry run/i);
 
             expect(screen.queryByRole('button', { name: /^install$/i })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^remove data$/i })).not.toBeInTheDocument();
@@ -227,26 +227,26 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
-            await press(screen.getByRole('button', { name: /^check first$/i }));
+            await press(screen.getByRole('button', { name: /^dry run$/i }));
         }
 
         it('replaces the form — one view at a time, never a pile', async () => {
             refuseDryRun();
             await dryRun();
 
-            expect(await screen.findByText(/couldn't run the check/i)).toBeInTheDocument();
+            expect(await screen.findByText(/dry run failed/i)).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
         });
 
         it('offers Back, which returns to the form with selections intact', async () => {
             refuseDryRun();
             await dryRun();
-            await screen.findByText(/couldn't run the check/i);
+            await screen.findByText(/dry run failed/i);
 
             await press(screen.getByRole('button', { name: /back/i }));
 
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
-            expect(screen.queryByText(/couldn't run the check/i)).not.toBeInTheDocument();
+            expect(screen.queryByText(/dry run failed/i)).not.toBeInTheDocument();
         });
 
         it('a passed dry run is a result view with Back too', async () => {
@@ -257,7 +257,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             );
             await dryRun();
 
-            expect(await screen.findByText(/check passed/i)).toBeInTheDocument();
+            expect(await screen.findByText(/dry run passed/i)).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
         });

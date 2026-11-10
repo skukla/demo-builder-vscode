@@ -15,7 +15,7 @@ the order below is not a suggestion.
 find_datapacks                  → which packs exist
 get_datapack_import_target      → WHICH INSTANCE this project implies
 list_datapack_import_scopes     → optional: narrow to a website / store view
-validate_datapack_import        → check first; free, ungated, do it every time
+validate_datapack_import        → dry run; free, ungated, do it every time
 preview_datapack_changes        → when the pack is installed already: what installing again changes
 start_datapack_import           → confirm:true; returns a HANDLE, not a result
 get_datapack_import_status      → poll until outcome is not "watching"; read its check

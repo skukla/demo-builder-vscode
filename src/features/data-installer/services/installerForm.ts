@@ -15,7 +15,7 @@
  * - An import-form item's `allowed_error_count` written as text; the Data Installer takes a number.
  * - An item over its 1 MB request limit: refused before any write by the writer (`itemParts.ts`).
  *
- * A data type the Data Installer has no schema for is refused before any write too: store settings
+ * A data type the Data Installer has no schema for is refused before any write too: store configuration
  * travel in a settings layer, a pack of their own in Demo Builder's store.
  *
  * @module features/data-installer/services/installerForm
@@ -114,7 +114,7 @@ export function toInstallerForm(pack: DatapackFile): InstallerForm {
     if (unknown.length > 0) {
         throw new InstallerFormError(
             `The Data Installer takes no ${unknown.join(', ')} data, so nothing was sent. ` +
-                "Store settings travel in a settings layer, kept in Demo Builder's datapack store.",
+                "Store configuration travels in a settings layer, kept in Demo Builder's datapack store.",
         );
     }
     const changes: string[] = [];

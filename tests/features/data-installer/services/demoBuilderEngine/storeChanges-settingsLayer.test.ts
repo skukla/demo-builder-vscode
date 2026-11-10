@@ -32,7 +32,7 @@ describe('previewing a pack with a settings layer', () => {
 
         const preview = await previewChanges({ ...d, findLayer: async () => foundLayer() }, PACK, 'installer', ['categories']);
 
-        expect(preview.settings).toEqual({ layer: foundLayer().id, changes: [], note: expect.stringContaining('left as they are') });
+        expect(preview.settings).toEqual({ layer: foundLayer().id, changes: [], note: expect.stringContaining('left as it is') });
         expect(preview.kinds.map((k) => k.kind)).not.toContain('store_config');
     });
 
@@ -70,7 +70,7 @@ describe('previewing a pack with a settings layer', () => {
 
         const preview = await previewChanges({ ...d, findLayer: down }, PACK, 'installer');
 
-        expect(preview.settings).toEqual({ changes: [], note: "My Datapacks couldn't be read, so this datapack's Store Settings, if any, are not counted here." });
+        expect(preview.settings).toEqual({ changes: [], note: "My Datapacks couldn't be read, so this datapack's store configuration, if any, is not counted here." });
     });
 });
 

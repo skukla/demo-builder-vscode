@@ -9,7 +9,7 @@
  * install record moves onto the new version, hashed afresh, so the store and it start out as one
  * another; a pick never joins it, since the engine did not make it and removal must leave it.
  *
- * Store settings go where they belong (step 09). A pack holding `store_config` keeps them. Any other
+ * Store configuration goes where it belongs (step 09). A pack holding `store_config` keeps it. Any other
  * pack's are its settings layer's, so they go to a layer beside the new version, named for the
  * demo's own pack at the same version (`<own pack>-settings`), where the next install, the zip and a
  * colleague find it: never into the version, which would make it hold settings of its own and win
@@ -170,7 +170,7 @@ function layerFile(saveAs: SaveAs, records: unknown[], exportedAt: string): Data
     return {
         id: { name: settingsLayerName(saveAs.id.name), version: saveAs.id.version },
         displayName: `${saveAs.displayName} settings`,
-        description: `Store settings for ${saveAs.displayName}, applied after its data when Demo Builder installs it.`,
+        description: `Store configuration for ${saveAs.displayName}, applied after its data when Demo Builder installs it.`,
         items: [{ dataType: STORE_CONFIG_KIND, records }],
         source: 'library',
         exportedAt,

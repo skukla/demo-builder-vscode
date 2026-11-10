@@ -37,7 +37,7 @@ import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
 import { PackActions } from './PackActions';
-import { StoreSettingsRow } from './StoreSettingsRow';
+import { StoreConfigurationRow } from './StoreConfigurationRow';
 import { StageWait } from '@/core/ui/components/feedback/StageWait';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
 import { PanelRow } from '@/core/ui/components/ui/PanelRow';
@@ -286,7 +286,7 @@ function DetailRows({
                     </span>
                 </PanelRow>
             ) : null}
-            {settingsLayer && settingsLayer.settings.length > 0 ? <StoreSettingsRow layer={settingsLayer} /> : null}
+            {settingsLayer && settingsLayer.settings.length > 0 ? <StoreConfigurationRow layer={settingsLayer} /> : null}
         </>
     );
 }

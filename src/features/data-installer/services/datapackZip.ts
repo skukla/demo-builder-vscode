@@ -36,7 +36,7 @@ const DATA_TYPE_PATTERN = /^[a-z0-9_]+$/;
 /** Unpacked size a file may claim before it is refused, checked before anything is unpacked. */
 const DEFAULT_MAX_UNPACKED_BYTES = 256 * 1024 * 1024;
 
-/** A pack's settings layer, as its file carries it: a library pack of store settings. */
+/** A pack's settings layer, as its file carries it: a library pack of store configuration. */
 export interface PackSettingsLayer {
     id: DatapackId;
     displayName: string;
@@ -229,7 +229,7 @@ function readLayer(zip: AdmZip, root: string, manifest: Manifest): PackSettingsL
     try {
         records = JSON.parse(zip.readAsText(`${root}${LAYER_FILE}`)) as unknown;
     } catch {
-        throw new DatapackZipError("This datapack file's Store Settings are missing or not valid JSON.");
+        throw new DatapackZipError("This datapack file's store configuration is missing or not valid JSON.");
     }
     return {
         id: { name: expected, version: section.version },

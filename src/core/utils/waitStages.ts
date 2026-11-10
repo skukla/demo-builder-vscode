@@ -35,9 +35,9 @@ export const WAIT_STAGES = {
     // (Phase 1, owner 2026-11-10).
     checkingForChanges: { label: 'Checking for your changes', expectation: 'Usually about a minute' },
     readingWebsites: { label: 'Reading websites', expectation: FEW_SECONDS, detail: FROM_COMMERCE },
-    // Check First on an install: the request is checked and nothing is written (D6, owner
-    // 2026-11-10). The label alone; the result says nothing was written.
-    checkingImport: { label: 'Checking first', expectation: FEW_SECONDS },
+    // A Dry Run of an install: the request is checked and nothing is written (D6; the name Dry Run
+    // is kept, owner 2026-11-10). The label alone; the result says nothing was written.
+    checkingImport: { label: 'Running the dry run', expectation: FEW_SECONDS },
     readingWhatToSelect: { label: 'Reading from Commerce', expectation: FEW_SECONDS },
     readingCatalogViews: {
         label: 'Reading catalog views',
@@ -79,7 +79,7 @@ export const WAIT_STAGES = {
     sharingPack: { label: 'Sharing the datapack', expectation: FEW_SECONDS },
     makingPackPrivate: { label: 'Making it private', expectation: FEW_SECONDS },
     deletingPack: { label: 'Deleting the datapack', expectation: FEW_SECONDS },
-    deletingPackSettings: { label: 'Deleting Store Settings', expectation: FEW_SECONDS },
+    deletingPackSettings: { label: 'Deleting configuration', expectation: FEW_SECONDS },
 } as const satisfies Record<string, WaitStage>;
 
 /**

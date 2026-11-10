@@ -41,7 +41,7 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toEqual({
             variant: 'success',
-            title: 'Check Passed',
+            title: 'Dry Run Passed',
             message: `${PACK_NAME} can be installed here. Nothing was written.`,
         });
     });
@@ -54,7 +54,7 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toMatchObject({
             variant: 'warning',
-            title: 'Check Found a Problem',
+            title: 'Dry Run Found a Problem',
             message: 'Catalog is locked',
         });
     });
@@ -64,7 +64,7 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toEqual({
             variant: 'error',
-            title: "Couldn't Run the Check",
+            title: 'Dry Run Failed',
             message: 'Request timed out',
         });
     });
@@ -72,7 +72,7 @@ describe('resolveResult — dry run', () => {
     it('prefers the failure over a value the request is still holding', () => {
         const stale = { ...failed<{ valid: boolean }>('Request timed out'), value: { valid: true } };
 
-        expect(resolveResult('dryRun', sources({ dryRun: stale }))?.title).toBe("Couldn't Run the Check");
+        expect(resolveResult('dryRun', sources({ dryRun: stale }))?.title).toBe('Dry Run Failed');
     });
 
     it('shows nothing while the dry run has neither answered nor failed', () => {

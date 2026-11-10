@@ -35,7 +35,7 @@ describe('saving a pack that has a settings layer', () => {
         expect(written[1].displayName).toBe('Acme Demo settings');
         expect(result.counts).not.toHaveProperty('store_config');
         expect(result.settingsLayer).toEqual({ datapackName: 'acme-demo-1a2b3c-settings', version: '20261029-183000', settings: 1 });
-        expect(result.sentence).toContain('Its 1 store setting is saved beside it, in acme-demo-1a2b3c-settings.');
+        expect(result.sentence).toContain('Its store configuration (1 setting) is saved beside it, in acme-demo-1a2b3c-settings.');
     });
 
     it('takes a setting the layer names that the record does not list: it was already at its value', async () => {
@@ -79,7 +79,7 @@ describe('saving a pack with no layer', () => {
 
         expect(written).toHaveLength(1);
         expect(result).not.toHaveProperty('settingsLayer');
-        expect(result.sentence).not.toContain('store setting');
+        expect(result.sentence).not.toContain('store configuration');
     });
 
     it('does not look for a layer of a pack that holds settings of its own, and keeps them in the pack', async () => {

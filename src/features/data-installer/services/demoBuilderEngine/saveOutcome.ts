@@ -102,7 +102,7 @@ export function unnamedLine(unnamed: readonly string[]): string | undefined {
 export function layerLine(layer: { datapackName: string; settings: number } | undefined): string | undefined {
     if (!layer) return undefined;
     const many = layer.settings !== 1;
-    return `Its ${layer.settings} store setting${many ? 's are' : ' is'} saved beside it, in ${layer.datapackName}.`;
+    return `Its store configuration (${layer.settings} setting${many ? 's' : ''}) is saved beside it, in ${layer.datapackName}.`;
 }
 
 /** The save's whole sentence: its parts that have something to say, in order. */

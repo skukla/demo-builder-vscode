@@ -83,7 +83,7 @@ export interface CatalogSession {
      */
     productsBefore?: ReadonlySet<string>;
     /**
-     * What the store settings kind did (step 09), for the install's one line: each change in the
+     * What the store configuration kind did (step 09), for the install's one line: each change in the
      * settings fix's words, its lines for settings kept, and the keys of the ones kept.
      */
     settings?: SettingsDone;
@@ -130,7 +130,7 @@ export class MissingNameError extends Error {
     }
 }
 
-/** What the store settings kind did (step 09, `storeConfigKind.ts`), for an install's or removal's one line. */
+/** What the store configuration kind did (step 09, `storeConfigKind.ts`), for an install's or removal's one line. */
 export interface SettingsDone {
     /** Each change in the settings fix's words: "catalog/frontend/grid_per_page: 12 → 24". */
     changes: string[];

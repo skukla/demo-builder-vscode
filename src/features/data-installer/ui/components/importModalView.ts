@@ -17,7 +17,7 @@ import { type ConfirmContent, removeLabel } from './removalConfirm';
 import type { ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
-import { CHECK_FIRST, INSTALL, UNINSTALL, installTitle, saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
+import { DRY_RUN, INSTALL, UNINSTALL, installTitle, saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
 
 /**
  * Which job to watch: the one the LAST action started.
@@ -152,7 +152,7 @@ export function buildActions(a: {
     ranToEnd?: boolean;
     /** Back would only close the window (one opened by Uninstall, with no question to return to). */
     backCloses?: boolean;
-    /** Check First passed: the next move is the install itself, so Install sits beside Back (Flow 2.14). */
+    /** The Dry Run passed: the next move is the install itself, so Install sits beside Back (Flow 2.14). */
     checkPassed?: boolean;
     /** A result's main action (`ResultContent.action`), and what each one does. */
     resultAction?: 'retry' | 'fix';
@@ -218,7 +218,7 @@ export function buildActions(a: {
         // Remove Data is not here: it is the flyout's own action, opening this window straight on
         // its confirm (owner, 2026-11-09, walk F118: pressing Import to remove data was strange).
         // Outlined, as Close is: the house's secondary button, not plain text (walk F102).
-        { label: CHECK_FIRST, variant: 'secondary', onPress: a.validate, isDisabled: !a.canStart },
+        { label: DRY_RUN, variant: 'secondary', onPress: a.validate, isDisabled: !a.canStart },
         {
             label: INSTALL,
             variant: 'accent',

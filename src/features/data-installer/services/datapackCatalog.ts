@@ -58,7 +58,7 @@ export function isHeld(group: DatapackGroup, held?: ProjectDatapack): boolean {
 
 const MAIN = 'main';
 
-/** The data kind of one store setting per row (datapack-engine step 09). */
+/** The data kind of one store configuration setting per row (datapack-engine step 09). */
 export const STORE_CONFIG_KIND = 'store_config';
 
 const LAYER_SUFFIX = '-settings';
@@ -69,7 +69,7 @@ export function settingsLayerName(packName: string): string {
 }
 
 /**
- * Whether a row is a settings layer: named as one, AND holding nothing but store settings. A demo
+ * Whether a row is a settings layer: named as one, AND holding nothing but store configuration. A demo
  * whose name happens to end in `-settings` holds data, and stays a demo.
  */
 export function isSettingsLayer(row: Pick<DatapackSummary, 'id' | 'dataTypes'>): boolean {
@@ -79,7 +79,7 @@ export function isSettingsLayer(row: Pick<DatapackSummary, 'id' | 'dataTypes'>):
 
 /**
  * The rows a catalog offers as cards: all but the settings layers whose pack is listed too, which
- * are reached from that pack's flyout (its "Store settings" row, and "Remove its store settings"
+ * are reached from that pack's flyout (its Store Configuration row, and "Delete Store Configuration"
  * on the SC's own). A layer keeps its card when hiding it would strand it: no pack of its name is
  * listed, so no flyout reaches it, or it was installed on its own, and a card is where a pack is
  * removed from the store.

@@ -368,7 +368,7 @@ export function findingsOf(check: InstallCheck): string {
  *
  * @param productsRead - the products the install's read-back read once its writes were done
  *   (`InstallOutcome.productsRead`): only the rest are read. Between the two only the settings layer
- *   runs (`runInstall`, `engine.ts`), which writes store settings, never a product. Read again,
+ *   runs (`runInstall`, `engine.ts`), which writes store configuration, never a product. Read again,
  *   Luma's 2,048 took 14.8 s of the check (2026-11-09).
  */
 export async function checkAfterInstall(

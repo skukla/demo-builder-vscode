@@ -7,7 +7,7 @@
  * (`packedFingerprint`), and when every data type holds the same rows it stops there.
  *
  * Only a save into the demo's own pack is compared: a Save As makes a new pack, which is the SC's
- * ask whatever it holds. Store settings the version holds itself are compared with the rest; a save
+ * ask whatever it holds. Store configuration the version holds itself is compared with the rest; a save
  * that would write them into a layer beside the version counts as a change, since the layer already
  * written is not read here.
  *

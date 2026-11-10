@@ -58,10 +58,10 @@ describe('installPack', () => {
         expect(packRowProblems({ attribute_sets: [], categories: { categories: [] }, b2b_shared_catalog_products: { catalogs: [] } })).toStrictEqual([]);
     });
 
-    it('names a shared catalog assignment kind and a store settings kind whose rows are wrong', () => {
+    it('names a shared catalog assignment kind and a store configuration kind whose rows are wrong', () => {
         const problems = packRowProblems({ b2b_shared_catalog_products: { catalogs: [{ name: 'Retail' }] }, store_config: [{ path: 'web/unsecure/base_url', value: 'x', scope: 'default' }] });
 
-        expect(problems).toEqual([expect.stringMatching(/shared catalog products/u), expect.stringMatching(/Store Settings cannot be installed/u)]);
+        expect(problems).toEqual([expect.stringMatching(/shared catalog products/u), expect.stringMatching(/store configuration cannot be installed/iu)]);
     });
 
     // Step 08: groups before the products whose tier prices name them; customers before the

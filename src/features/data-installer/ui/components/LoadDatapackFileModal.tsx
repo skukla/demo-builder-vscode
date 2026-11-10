@@ -27,7 +27,7 @@
 
 import { Checkbox, DialogContainer, Radio, RadioGroup } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
-import { storeSettingsCount } from '../../datapackWords';
+import { configurationSettingsCount } from '../../datapackWords';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion, packLine, versionLabel } from '../../packVersions';
 import { dataTypeLabel } from '../dataTypeLabel';
@@ -148,7 +148,7 @@ export function LoadDatapackFileModal({
                         <RemoveFromLibraryButton id={{ name: outcome.datapackName, version: outcome.version }} />
                     ) : null}
                     {result && undoLayer ? (
-                        <RemoveFromLibraryButton id={{ name: undoLayer.datapackName, version: undoLayer.version }} label="Delete Store Settings" />
+                        <RemoveFromLibraryButton id={{ name: undoLayer.datapackName, version: undoLayer.version }} label="Delete Store Configuration" />
                     ) : null}
                 </div>
             </Modal>
@@ -182,7 +182,7 @@ function loadResult(args: {
     const layer = outcome?.settingsLayer;
     const details = [
         ...(outcome?.failed ?? []).map((f) => `${dataTypeLabel(f.dataType)}: ${f.reason}`),
-        ...(layer?.reason ? [`Store settings: ${layer.reason}`] : []),
+        ...(layer?.reason ? [`Store Configuration: ${layer.reason}`] : []),
     ];
     if (loadError) {
         return { variant: 'error', title: `Couldn't Load ${name}`, message: loadError, details };
@@ -199,8 +199,8 @@ function loadResult(args: {
 
 /** Where the file's parts went: the settings stay in My Datapacks wherever the data goes. */
 function loadedWhere(intoInstaller: boolean, settingsLanded: boolean): string {
-    if (intoInstaller) return `Added to the Data Installer.${settingsLanded ? ' Its Store Settings are in My Datapacks.' : ''}`;
-    return `Added to My Datapacks${settingsLanded ? ', with its Store Settings' : ''}.`;
+    if (intoInstaller) return `Added to the Data Installer.${settingsLanded ? ' Its store configuration is in My Datapacks.' : ''}`;
+    return `Added to My Datapacks${settingsLanded ? ', with its store configuration' : ''}.`;
 }
 
 /** "My Luma, saved Nov 9, 9:15 AM" or "Luma, main": a save by its date, never its id. */
@@ -221,7 +221,7 @@ function LoadForm({ file, choice, offersInstaller }: { file: OpenedFile; choice:
             </p>
             {file.settingsLayer ? (
                 <p className="datapack-export-note">
-                    It includes {storeSettingsCount(file.settingsLayer.paths.length)}, which {file.settingsLayer.paths.length === 1 ? 'goes' : 'go'} into My Datapacks.
+                    Its store configuration ({configurationSettingsCount(file.settingsLayer.paths.length).toLowerCase()}) goes into My Datapacks.
                 </p>
             ) : null}
             {offersInstaller ? <DestinationChoice name={file.datapackName} choice={choice} /> : (
