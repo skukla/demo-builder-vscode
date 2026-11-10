@@ -86,7 +86,7 @@ the second, now written into `docs/development/sop/dialog-design.md`:
 |---|---|---|
 | Size | A Confirm and a Result are small everywhere; the progress window is small from start to finish unless it shows rows; no window changes size between its wait and its result | The shared progress window (all 31 operations) and about five other states. One screenshot to confirm the three wait lines fit at 400px |
 | Closing itself | A clean result that is its title alone closes itself after a glance, in every window; anything to read stays | Four results: Updates Applied, Projects Reset, Projects Deleted, a clean install with nothing to say |
-| Titles | Form: "Install My Luma". Running: "Installing My Luma" (the title changes when the run starts). Done: the thing, then what happened. Failed: "Couldn't …" | Five running titles and eleven failure titles ("Import Stopped", "Dry Run Failed", "Export Failed", "Project Setup Failed" and the rest), plus three done titles with odd word order |
+| Titles | Form: "Install My Luma". Running: "Installing My Luma" (the title changes when the run starts). Done: the thing, then what happened. Failed: "Couldn't …", except "Dry Run Failed" (owner, 2026-11-10: SCs know the word, and it matches the Dry Run button; the enforcer allows it by name) | Five running titles and ten failure titles ("Import Stopped", "Export Failed", "Project Setup Failed" and the rest), plus three done titles with odd word order |
 
 **Scope for beta.153** (owner, 2026-11-10, changed the same day): **all of the modal work is in
 the release.** Build the five layout components and the enforcer, then move every window in the
