@@ -166,14 +166,14 @@ describe('started from a button on a screen (R1)', () => {
         await withOperationProgress({ id: ID, title: 'Resetting Bodea', inModal: true }, async (report) => {
             report(STAGE.label);
             await withProgressRegister({ title: 'Deploying API Mesh' }, async (nested) => {
-                nested('Building the mesh config');
+                nested('Building the mesh configuration');
             });
             return { success: true };
         });
 
         expect(vscode.window.withProgress).not.toHaveBeenCalled();
         expect(modalPayloads()).toContainEqual(
-            expect.objectContaining({ stage: STAGE.label, step: 'Building the mesh config' }),
+            expect.objectContaining({ stage: STAGE.label, step: 'Building the mesh configuration' }),
         );
     });
 

@@ -109,7 +109,7 @@ describe('takeOutProductPages', () => {
         await run();
 
         expect(report.mock.calls).toStrictEqual([
-            [RESET_STEP.clearingOldContent, 'Removing the old product pages'],
+            [RESET_STEP.clearingOldContent, 'Unpublishing the old product pages'],
             [
                 RESET_STEP.clearingOldContent,
                 'Removed 1 product page from skukla/kukla-justrite, live and preview.',

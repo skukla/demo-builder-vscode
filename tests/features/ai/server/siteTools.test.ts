@@ -253,7 +253,7 @@ describe('repair_site_configuration', () => {
             harness().call('repair_site_configuration', { confirm: true }),
         );
 
-        expect(phases).toEqual(['Updating the site config']);
+        expect(phases).toEqual(['Updating the site configuration']);
     });
 
     it('does not republish', async () => {

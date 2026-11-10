@@ -3,7 +3,7 @@
  * vocabulary slice 3, owner 2026-10-16).
  *
  * A notification shows one line, so each half names its STEP, as the same job is named
- * everywhere else: "Updating the site config", then "Publishing the settings". Until
+ * everywhere else: "Updating the site configuration", then "Publishing the settings". Until
  * then the republish half was titled "Republishing storefront" and showed the config
  * step's own lines ("Extracting configuration", "Syncing to GitHub and CDN") as if each
  * were the step.

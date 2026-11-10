@@ -16,6 +16,6 @@ describe('stepLine', () => {
     });
 
     it('counts a step taking things off sites in what it takes off', () => {
-        expect(stepLine('rulesTakenOff', 1, 2)).toBe('1 of 2 cart rules');
+        expect(stepLine('rulesTakenOff', 1, 2)).toBe('1 of 2 cart price rules');
     });
 });

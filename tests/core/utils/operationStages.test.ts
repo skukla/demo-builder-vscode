@@ -6,7 +6,12 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+import { ADOBE_PROJECT_STAGES } from '@/core/utils/adobeProjectStages';
+import { CREATION_STAGES } from '@/core/utils/creationStages';
 import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
+import { RESET_STAGES } from '@/core/utils/resetStages';
+import { STOREFRONT_STAGES } from '@/core/utils/storefrontStages';
+import { UPDATE_STAGES } from '@/core/utils/updateStages';
 import {
     OPERATION_STAGES,
     detailFor,
@@ -84,23 +89,42 @@ describe('OPERATION_STAGES', () => {
         expect(needDetail.filter((stage) => (stage.detail ?? '').trim() === '')).toStrictEqual([]);
     });
 
-    // The label is the SHORT set: it is all a background notification shows, after a
-    // title that already takes ~29 of the ~64 characters VS Code draws before cutting
-    // the line off (owner screenshot, 2026-09-19). The detail is the long set.
-    // Clear Demo Data's labels in Commerce's own verbs (Flow 2.20). The cap and the verb
-    // convention for the whole extension land in Phase 1b (owner, 2026-11-10).
-    const LONG_LABELS_UNTIL_PHASE_1B: readonly string[] = [
-        DATAPACK_STAGES.takingProductsOff.label,
-        DATAPACK_STAGES.takingRulesOff.label,
-        DATAPACK_STAGES.resettingSettings.label,
+    // The label is the SHORT set: a background notification shows "title: label" on one
+    // line, and VS Code cuts it off at about 62 characters (owner screenshot,
+    // 2026-09-19). So the label's room is what its operation's running title leaves,
+    // checked per operation, not a fixed cap (Phase 1b, owner 2026-11-10). A title that
+    // carries a name is checked with a realistic one.
+    const NOTIFICATION_WIDTH = 62;
+    const labelsOf = (table: Record<string, OperationStage>) => Object.values(table).map((stage) => stage.label);
+    const tabled = new Set(
+        [STOREFRONT_STAGES, RESET_STAGES, ADOBE_PROJECT_STAGES, CREATION_STAGES, DATAPACK_STAGES, UPDATE_STAGES]
+            .flatMap(labelsOf),
+    );
+    const OPERATIONS: ReadonlyArray<{ title: string; labels: readonly string[] }> = [
+        { title: 'Clearing Demo Data', labels: labelsOf(DATAPACK_STAGES) },
+        { title: 'Deleting citisignal-demo', labels: labelsOf(STOREFRONT_STAGES) },
+        { title: 'Resetting citisignal-demo', labels: labelsOf(RESET_STAGES) },
+        { title: 'Creating citisignal-demo', labels: [...labelsOf(CREATION_STAGES), ...labelsOf(ADOBE_PROJECT_STAGES)] },
+        { title: 'Updating Demo Builder to v1.2.3', labels: labelsOf(UPDATE_STAGES) },
+        // Everything else: App Builder, mesh, ERP and republish runs.
+        { title: 'Redeploying ERP Integration', labels: labelsOf(OPERATION_STAGES).filter((label) => !tabled.has(label)) },
     ];
+    const overWidth = (operations: typeof OPERATIONS) =>
+        operations.flatMap(({ title, labels }) =>
+            labels.map((label) => `${title}: ${label}`).filter((line) => line.length > NOTIFICATION_WIDTH),
+        );
 
-    it('keeps every label to 25 characters, so a notification shows it whole', () => {
-        const long = Object.values(OPERATION_STAGES)
-            .map((stage) => stage.label)
-            .filter((label) => label.length > 25);
+    it('CONTROL: the width check flags a planted pair over 62 characters and passes one at it', () => {
+        const title = 'T'.repeat(20);
+        expect(overWidth([{ title, labels: ['x'.repeat(40), 'y'.repeat(41)] }])).toStrictEqual([
+            `${title}: ${'y'.repeat(41)}`,
+        ]);
+        // Every stage is in some operation, so none escapes the check.
+        expect(new Set(OPERATIONS.flatMap(({ labels }) => labels)).size).toBe(labelsOf(OPERATION_STAGES).length);
+    });
 
-        expect(long).toStrictEqual([...LONG_LABELS_UNTIL_PHASE_1B]);
+    it("fits every label beside its operation's title in a notification", () => {
+        expect(overWidth(OPERATIONS)).toStrictEqual([]);
     });
 
     // Lines are SHORT BY DESIGN (owner, 2026-10-16: "Why should we need lines that are

@@ -168,7 +168,7 @@ async function unlistFirst(
     options: RemoveOptions,
 ): Promise<string | undefined> {
     if (!deps.unlistSystem) return undefined;
-    deps.onProgress?.(OPERATION_STAGES.removing.label, "Taking it off the integration's list");
+    deps.onProgress?.(OPERATION_STAGES.removing.label, "Removing it from the integration's list");
     const reason = await deps.unlistSystem(project, integrationId, id);
     if (!reason) return undefined;
     const name = shownNameOf(project, id, state);

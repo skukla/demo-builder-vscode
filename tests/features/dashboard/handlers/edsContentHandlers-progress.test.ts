@@ -313,7 +313,7 @@ describe('republish, in a notification', () => {
             'Publishing the settings (3 of 10)',
             'Publishing the code (4 of 10)',
             'Setting site permissions (5 of 10)',
-            'Clearing the cache (6 of 10)',
+            'Refreshing the cache (6 of 10)',
             'Publishing the pages (7 of 10)',
             'Updating the catalog menu (8 of 10)',
             'Warming product pages (9 of 10)',

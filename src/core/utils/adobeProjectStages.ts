@@ -22,7 +22,7 @@ export const ADOBE_PROJECT_STAGES = {
         detail: "Each workspace's I/O Events credentials",
     },
     removingEventSetup: {
-        label: 'Removing event setup',
+        label: 'Deleting event setup',
         expectation: 'Usually under a minute',
         detail: 'Its event registrations and providers',
     },

@@ -294,8 +294,8 @@ describe('with a repo to unpublish against', () => {
 
         await tearDownStorefront(SITE, { ...deps, onStepDetail: (step, detail) => details.push([step, detail]) });
 
-        expect(details).toContainEqual([OPERATION_STAGES.clearingDaLiveContent.label, '1 file removed']);
-        expect(details).toContainEqual([OPERATION_STAGES.clearingDaLiveContent.label, '2 files removed']);
+        expect(details).toContainEqual([OPERATION_STAGES.clearingDaLiveContent.label, '1 file deleted']);
+        expect(details).toContainEqual([OPERATION_STAGES.clearingDaLiveContent.label, '2 files deleted']);
     });
 
     // The delete's own words under it: the table's line for this step is the

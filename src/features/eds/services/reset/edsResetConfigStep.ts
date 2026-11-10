@@ -27,6 +27,7 @@ import { HelixService } from '../helix/helixService';
 import { DaLiveAuthError } from '../types';
 import type { EdsResetParams } from './edsResetParams';
 import { RESET_STEP } from '@/core/utils/resetStages';
+import { STOREFRONT_JOBS } from '@/core/utils/storefrontJobs';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -118,7 +119,7 @@ export async function publishConfigAndRegisterSite(
     // Step 7: Update Configuration Service with current content source.
     // Folder mapping is intentionally NOT configured — deprecated by Adobe
     // (see aem.live/developer/byom). CitiSignal handles /products/{sku} via client-side routing.
-    report(RESET_STEP.publishingCodeAndSettings, 'Updating the site config');
+    report(RESET_STEP.publishingCodeAndSettings, STOREFRONT_JOBS.updatingSiteConfig);
     // Same telegraph as the create path: state access before the write that
     // depends on it, so a reset log explains itself.
     await logConfigAccessState(tokenProvider, { owner: repoOwner, repo: repoName }, logger);

@@ -61,7 +61,7 @@ export async function takeOutProductPages(
 ): Promise<PageSentence | undefined> {
     const { logger, stateManager } = context;
     const { repoOwner, repoName, daLiveOrg, daLiveSite, project } = params;
-    report(RESET_STEP.clearingOldContent, 'Removing the old product pages');
+    report(RESET_STEP.clearingOldContent, 'Unpublishing the old product pages');
     const result = await removeProductPages(
         { repoOwner, repoName },
         productPageRemovalDepsFor({

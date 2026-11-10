@@ -25,10 +25,10 @@ export const RESET_STAGES = {
     publishingCodeAndSettings: {
         label: 'Publishing code, settings',
         expectation: 'Usually under a minute',
-        detail: 'Code, permissions and site config',
+        detail: 'Code, permissions and site configuration',
     },
     clearingOldContent: {
-        label: 'Clearing old content',
+        label: 'Deleting old content',
         expectation: 'Usually under a minute',
         detail: 'The pages the reset replaces',
     },
@@ -48,7 +48,7 @@ export const RESET_STAGES = {
         detail: 'Pages, sheets and the block library',
     },
     removingOldPages: {
-        label: 'Removing old pages',
+        label: 'Unpublishing old pages',
         expectation: 'Usually a few seconds',
         detail: 'Live pages from before the reset',
     },

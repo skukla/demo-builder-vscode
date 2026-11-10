@@ -149,14 +149,14 @@ describe('in a notification', () => {
         const lines = mockProgressReport.mock.calls.map(([update]) => (update as { message?: string }).message);
         expect(lines).toStrictEqual([
             'Checking requirements (1 of 8)',
-            'Taking pages off the site (2 of 8)',
-            'Removing product pages (3 of 8)',
-            'Removing product pages (3 of 8)',
-            'Clearing DA.live content (4 of 8)',
-            'Clearing site settings (5 of 8)',
+            'Unpublishing pages (2 of 8)',
+            'Unpublishing product pages (3 of 8)',
+            'Unpublishing product pages (3 of 8)',
+            'Deleting DA.live content (4 of 8)',
+            'Deleting DA.live settings (5 of 8)',
             'Deleting the repository (6 of 8)',
-            "Removing the site's code (7 of 8)",
-            'Removing project files (8 of 8)',
+            "Deleting the site's code (7 of 8)",
+            'Deleting project files (8 of 8)',
         ]);
     });
 });

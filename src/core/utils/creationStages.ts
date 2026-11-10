@@ -1,8 +1,8 @@
 /**
  * Project creation's own steps, in the one stage table (`operationStages.ts`, which
  * spreads them into `OPERATION_STAGES`), with an Edit's and a headless project reset's. Kept in their own file so the
- * table stays under the util size limit. The same rules hold: a label of at most 25
- * characters, an expectation and a detail.
+ * table stays under the util size limit. The same rules hold: a label that fits beside
+ * its operation's title, a verb from the one list, an expectation and a detail.
  *
  * Creation shows the SAME step where the work is the same as elsewhere: the mesh deploy
  * is 'Deploying the mesh', config.json is 'Publishing the settings', the product pages
@@ -22,7 +22,7 @@ export const CREATION_STAGES = {
     preparingProject: {
         label: 'Preparing the project',
         expectation: 'Usually a few seconds',
-        detail: 'Clearing anything left from before',
+        detail: 'Deleting anything left from before',
     },
     settingUpProject: {
         label: 'Setting up the project',
@@ -38,7 +38,7 @@ export const CREATION_STAGES = {
     // its other steps are creation's. FIRST ESTIMATE, NOT MEASURED: no reset of a
     // headless project is in the logs. It deletes one folder per component.
     removingComponents: {
-        label: 'Removing components',
+        label: 'Deleting components',
         expectation: 'Usually a few seconds',
         detail: 'Integrations stay where they are',
     },
@@ -63,12 +63,12 @@ export const CREATION_STAGES = {
     // An Edit that unticks integrations, the same way. FIRST ESTIMATE from one removal
     // (3 minutes, 39 seconds on 2026-09-21, `operationStages.ts`).
     removingIntegrations: {
-        label: 'Removing integrations',
+        label: 'Undeploying integrations',
         expectation: 'A few minutes each',
         detail: 'Off Adobe I/O Runtime and Commerce',
     },
     writingConfigFiles: {
-        label: 'Writing config files',
+        label: 'Writing configuration files',
         expectation: 'Usually a few seconds',
         detail: "Each component's .env and config.json",
     },

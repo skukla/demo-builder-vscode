@@ -1,7 +1,8 @@
 /**
  * Applying updates, in the one stage table
  * (`operationStages.ts`, which spreads them into `OPERATION_STAGES`). The same rules
- * hold: a label of at most 25 characters, an expectation and a detail.
+ * hold: a label that fits beside its operation's title, a verb from the one list, an
+ * expectation and a detail.
  *
  * WHY (progress vocabulary slice 7, owner 2026-10-16): the update notifications called
  * VS Code's progress themselves, so an agent heard none of them, and their messages

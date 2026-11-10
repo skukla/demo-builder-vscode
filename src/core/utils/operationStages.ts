@@ -106,12 +106,12 @@ export const OPERATION_STAGES = {
         detail: 'Checking what it needs before it deploys',
     },
     removing: {
-        label: 'Taking the app down',
+        label: 'Undeploying the app',
         expectation: 'Usually under a minute',
-        detail: 'Removing it from Adobe I/O Runtime',
+        detail: 'Off Adobe I/O Runtime',
     },
     generatingMeshConfig: {
-        label: 'Building the mesh config',
+        label: 'Building the mesh configuration',
         expectation: 'Usually a few seconds',
         detail: "From the project's Commerce settings",
     },
@@ -182,7 +182,7 @@ export const OPERATION_STAGES = {
         detail: "Through Commerce's App Management",
     },
     readingMeshConfig: {
-        label: 'Reading the mesh config',
+        label: 'Reading the mesh configuration',
         expectation: 'Usually a few seconds',
         detail: "The mesh's mesh.json",
     },
@@ -197,7 +197,7 @@ export const OPERATION_STAGES = {
         expectation: 'Up to a couple of minutes',
         detail: 'Waiting for Adobe to report it deployed',
     },
-    // A removal ran as ONE line, "Taking the app down", for 3m 39s on 2026-09-21
+    // A removal ran as ONE line for 3m 39s on 2026-09-21
     // while it undid Commerce writes, uninstalled, undeployed two apps, deleted
     // eight leftovers and waited on Adobe for the workspace. Each phase now says so.
     undoingCommerceChanges: {
@@ -206,7 +206,7 @@ export const OPERATION_STAGES = {
         detail: 'What the integration wrote into Commerce',
     },
     clearingRecords: {
-        label: 'Clearing the records',
+        label: 'Deleting the records',
         expectation: 'Usually under a minute',
         detail: 'Its own data, before its code goes',
     },
@@ -222,20 +222,19 @@ export const OPERATION_STAGES = {
     ...RESET_STAGES,
     ...ADOBE_PROJECT_STAGES,
     removingWorkspace: {
-        label: 'Removing the workspace',
+        label: 'Deleting the workspace',
         expectation: 'Up to a couple of minutes',
         detail: 'Adobe can take a while to confirm it',
     },
     removingFromCommerce: {
-        label: 'Removing from Commerce',
+        label: 'Uninstalling from Commerce',
         // Kept off line 3, which stays short (owner, 2026-10-16): longer if Commerce asks for a
         // retry.
         expectation: 'Usually under a minute',
         detail: "Through Commerce's App Management",
     },
     // Changing a project's Adobe destination (AB-23). Both were literals until the
-    // progress vocabulary's enforcer found them (slice 8, 2026-10-16), and the first
-    // read "Saving the new destination", one character over the 25.
+    // progress vocabulary's enforcer found them (slice 8, 2026-10-16).
     // FIRST ESTIMATES, NOT MEASURED.
     savingDestination: {
         label: 'Saving the destination',

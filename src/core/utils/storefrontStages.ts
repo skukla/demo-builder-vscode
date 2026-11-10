@@ -1,8 +1,8 @@
 /**
  * The storefront's stages, in the one stage table (`operationStages.ts`), which spreads
  * them into `OPERATION_STAGES`: callers reach them as `OPERATION_STAGES.<key>` like any
- * other, and the same rules hold (a label of at most 25 characters, an expectation and
- * a detail). Kept in their own file so the table stays under the util size limit.
+ * other, and the same rules hold (a label that fits beside its operation's title, a
+ * verb from the one list, an expectation and a detail). Kept in their own file so the table stays under the util size limit.
  *
  * Where a step IS one of the storefront's jobs (`storefrontJobs.ts`), its label is the
  * job's name, by reference, so the step and the job cannot be worded apart.
@@ -49,7 +49,7 @@ export const STOREFRONT_STAGES = {
     removingProductPages: {
         label: STOREFRONT_JOBS.removingProductPages,
         expectation: 'Usually under a minute',
-        detail: "Removing the old store's product pages",
+        detail: "The old store's product pages",
     },
     // Republish refreshes the catalog menu, or swaps it after a store change. Measured
     // from one reset (2026-10-16): 47 seconds for 11 category pages.
@@ -61,7 +61,7 @@ export const STOREFRONT_STAGES = {
     // Configure's Republish with block library work pending (EDS-39): the libraries
     // unticked go first, then the ones ticked, then the DA.live block list follows.
     removingBlockLibraries: {
-        label: 'Removing block libraries',
+        label: 'Removing libraries from the site',
         expectation: 'Usually under a minute',
         detail: 'Their blocks, out of the storefront',
     },
@@ -152,7 +152,7 @@ export const STOREFRONT_STAGES = {
     // product pages, 15 for 68 DA.live files, under a second each for the settings and
     // the repository, 3 for the files; 2026-10-14 agrees).
     takingPagesOffSite: {
-        label: 'Taking pages off the site',
+        label: 'Unpublishing pages',
         expectation: 'Usually about a minute',
         detail: 'So the live site stops serving them',
     },
@@ -162,9 +162,9 @@ export const STOREFRONT_STAGES = {
         detail: "The site's documents in DA.live",
     },
     clearingSiteSettings: {
-        label: 'Clearing site settings',
+        label: 'Deleting DA.live settings',
         expectation: 'Usually a few seconds',
-        detail: 'DA.live permissions and config',
+        detail: 'DA.live permissions and configuration',
     },
     deletingRepository: {
         label: 'Deleting the repository',
@@ -176,12 +176,12 @@ export const STOREFRONT_STAGES = {
     // this step. Four requests at once over a template's couple of hundred files is
     // the estimate behind the expectation; replace it from the Debug Logs.
     removingSiteCode: {
-        label: "Removing the site's code",
+        label: "Deleting the site's code",
         expectation: 'Usually under a minute',
         detail: 'Its copy of the code on aem.live',
     },
     removingProjectFiles: {
-        label: 'Removing project files',
+        label: 'Deleting project files',
         expectation: 'Usually a few seconds',
         detail: 'Its folder on this computer',
     },

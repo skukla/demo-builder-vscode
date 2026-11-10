@@ -1,7 +1,7 @@
 /**
  * A datapack save (Save and Save As), in the one stage table (`operationStages.ts`, which
- * spreads them into `OPERATION_STAGES`). The same rules hold: a label of at most 25
- * characters and an expectation; a detail only where it adds something the label does not say
+ * spreads them into `OPERATION_STAGES`). The same rules hold: a label that fits beside its
+ * operation's title, a verb from the one list, and an expectation; a detail only where it adds something the label does not say
  * (Phase 1, owner 2026-11-10). Plain words for what the software does (owner, 2026-11-03:
  * "Reading the store" read as an AI talking).
  *
@@ -34,8 +34,8 @@ export const DATAPACK_STAGES = {
     // What the clearing does, in Commerce's own verbs, one per action (Flow 2.20, owner
     // 2026-11-10): Delete is gone from Commerce; Remove ... from websites still exists, no longer on
     // that website; Restore default configuration sets the website scope back to Default Config.
-    // Each label stands alone, with no second line. Three run past 25 characters: the cap and the
-    // verb convention for the whole extension land in Phase 1b.
+    // Each label stands alone, with no second line, and fits beside "Clearing Demo Data" in the
+    // background notification (Phase 1b).
     removingCustomers: { label: 'Deleting customers', expectation: 'Usually a second each' },
     removingProducts: { label: 'Deleting products', expectation: 'Usually a second each' },
     takingProductsOff: { label: 'Removing products from websites', expectation: 'Usually a second each' },

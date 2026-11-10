@@ -219,7 +219,7 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(h.progress).toContainEqual({
                 operation: 'cache-purge',
-                message: 'Clearing the cache',
+                message: 'Refreshing the cache',
             });
         });
 

@@ -13,7 +13,8 @@
  *   once for one operation. Their plain lines are the line under the current step;
  *   a step they report AS a step (`reportStep`, `operationStepChannel`) is line 1.
  * - **R2, anywhere else:** one notification with the fixed title and the STAGE name as
- *   its message — the short set of words, capped at 25 characters in `operationStages`.
+ *   its message — the short set of words, short enough in `operationStages` that the
+ *   title and the label fit the notification together (about 62 characters).
  *   The step is the modal's long set and never reaches a notification. A pair's
  *   position rides after the stage in both: "Deploying the app (1 of 2)".
  * - **R3, under an agent:** `withProgressRegister` opens nothing of its own and the

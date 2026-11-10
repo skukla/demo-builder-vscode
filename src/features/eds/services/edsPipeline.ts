@@ -284,7 +284,7 @@ async function pipelineClearContent(
         (info) => {
             onProgress?.({
                 operation: 'content-clear',
-                message: jobLine(STOREFRONT_JOBS.clearingContent, `${info.deleted} files removed`),
+                message: jobLine(STOREFRONT_JOBS.clearingContent, `${info.deleted} files deleted`),
                 subMessage: info.current,
             });
         },
@@ -297,7 +297,7 @@ async function pipelineClearContent(
     logger.info(`[EdsPipeline] Cleared ${clearResult.deletedCount} files`);
     onProgress?.({
         operation: 'content-clear',
-        message: jobLine(STOREFRONT_JOBS.clearingContent, `${clearResult.deletedCount} files removed`),
+        message: jobLine(STOREFRONT_JOBS.clearingContent, `${clearResult.deletedCount} files deleted`),
     });
 }
 

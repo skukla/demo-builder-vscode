@@ -111,7 +111,7 @@ describe('replaceDeployedElsewhere', () => {
         );
         // Not forced: a removal that stops, stops the add.
         expect(mockRemove).toHaveBeenCalledWith(other, 'erp-integration', { _deps: true });
-        expect(report).toHaveBeenCalledWith('Taking the app down', "Replacing justrite's Justrite ERP in KuklaJustrite");
+        expect(report).toHaveBeenCalledWith('Undeploying the app', "Replacing justrite's Justrite ERP in KuklaJustrite");
     });
 
     it("saves the other project's record in place, never as the current project", async () => {

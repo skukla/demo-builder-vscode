@@ -9,7 +9,7 @@
  * step reported yet the first one froze as the step for the whole run: "Saving your
  * changes" over a push and a publish. Turning a plain line into a step when it happens
  * to match a step name would have changed every other modal too (a nested mesh deploy
- * says "Building the mesh config" under a reset's own step). A step said AS a step is
+ * says "Building the mesh configuration" under a reset's own step). A step said AS a step is
  * the explicit way.
  *
  * vscode-free, the same AsyncLocalStorage pattern as `agentPhaseChannel`.

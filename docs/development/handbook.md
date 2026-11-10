@@ -481,7 +481,8 @@ meant.
 
 > **Convention.** A progress notification's title is an "-ing" verb and its object, and
 > says nothing else: "Deploying API Mesh", never "Demo Builder", never "Loading…", never
-> "Step 2/5:". The message under it is the stage name alone, 25 characters at most.
+> "Step 2/5:". The message under it is the stage name alone, short enough that the title,
+> ": " and the stage together fit the background notification: 62 characters.
 > *Why:* VS Code draws the title and message on one line of fixed width, puts ": "
 > between them itself, and spins a wheel beside them — so a trailing "…" or ":" is said
 > twice, a long stage is cut off mid-word, and a title that names the product instead of
@@ -517,8 +518,10 @@ meant.
 > purpose ("Usually about a minute · 1 minute, 5 seconds"; kept again 2026-11-04, owner,
 > over the house writing rule that otherwise bans one). A surface with one line (a notification, an agent's chat) shows the step
 > alone, and a count it has no line 2 for is left out rather than moved up. The lines
-> are short by design: line 1 at most 25 characters, line 2 at most 40 of text we
-> write, line 3's expectation at most 25 with the clock after it.
+> are short by design: line 1 short enough that the operation's title, ": " and the step
+> fit the background notification (62 characters, checked per operation, owner 2026-11-10;
+> it replaced a fixed 25), line 2 at most 40 of text we write, line 3's expectation at
+> most 25 with the clock after it.
 > *Why:* the same job was called three things depending on which flow ran it, and counts
 > sat where the step goes: "Publishing block library (11 of 11)" read as eleven
 > libraries, and Site Access's "Checking access (2 of 4)" read as step two of four
@@ -547,6 +550,24 @@ meant.
 > progress-steps suite named above, through `progressLineScan.ts`, which measures only
 > the text in the code: a template's placeholders are counts or names, and count as
 > nothing. It cannot see text assigned to a variable first. No sites predate it.
+
+> **Convention.** A progress step that takes something away says what happens to it in the
+> host system's own word, one verb per action: **Deleting** (the record is gone: Commerce,
+> Adobe Console, GitHub, DA.live, local files), **Removing … from …** (it still exists and
+> only its link goes, so it always says from what), **Uninstalling** (out of Commerce),
+> **Undeploying** (off App Builder Runtime), **Unpublishing** (off the live site),
+> **Restoring default configuration** (Commerce configuration back to its Default value),
+> **Closing** (orders and returns), **Restoring** (Commerce back to how a datapack's latest
+> save left it) and **Replacing** (one datapack uninstalled, another installed). "Clear" is
+> only an action's name (Clear Demo Data); as a step, "Clearing …" says nothing, nor do
+> "Taking …" and "Unlisting …". Commerce's nouns are its own: "cart price rules",
+> "configuration", "websites", never "cart rules", "config" or "site settings". A step stands
+> alone on one line, with no second line to explain the verb.
+> *Why:* the owner, 2026-11-10: "Removing", "Clearing" and "Taking … off" each meant three
+> different things, so the SC could not tell whether a step destroyed a record or only
+> unlinked it.
+> Enforced by `tests/sop/progress-verbs.test.ts`, which reads every stage table, storefront
+> job and wait label, and proves itself on planted defects.
 
 > **Convention.** A field with a fallback rule is read through that rule, everywhere.
 > *Why:* two fields carry one — the DA.live org IS the GitHub namespace, the site
@@ -1931,11 +1952,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 67 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 68 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 138 conventions. 135 of them are enforced; 3 are not.**
+**This handbook states 139 conventions. 136 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

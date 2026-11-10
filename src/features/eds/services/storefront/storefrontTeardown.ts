@@ -136,7 +136,7 @@ export interface StorefrontTeardownDeps {
      * {@link teardownSteps} lists them, for a caller that is narrating progress.
      */
     onStep?: (step: string) => void;
-    /** What a step is doing now ("12 files removed"), for the line under it. */
+    /** What a step is doing now ("12 files deleted"), for the line under it. */
     onStepDetail?: (step: string, detail: string) => void;
 }
 
@@ -301,7 +301,7 @@ export async function tearDownStorefront(
     // surface maps it to a typed non-retryable answer, and swallowing it here
     // turned that into a plain "deletion failed" string.
     const deleted = await contentOps.deleteAllSiteContent(daLiveOrg, daLiveSite, ({ deleted: count }) =>
-        onStepDetail?.(OPERATION_STAGES.clearingDaLiveContent.label, `${itemCount(count, 'file')} removed`),
+        onStepDetail?.(OPERATION_STAGES.clearingDaLiveContent.label, `${itemCount(count, 'file')} deleted`),
     );
     logger.debug(
         `[Teardown] DA.live content deleted: ${deleted.deletedCount} file(s) from ${daLiveOrg}/${daLiveSite}`,
