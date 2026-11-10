@@ -1,0 +1,158 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Datapack simplification: screen mockups</title>
+<style>
+  :root { --amber: var(--warning, #e8a33d); --blue: var(--info, #3b82f6); --green: var(--success, #22a06b); --red: var(--destructive, #e5484d); }
+  body { font-family: var(--font-sans); font-size: 13px; line-height: 1.45; }
+  h2 { font-size: 15px; margin: 28px 0 4px; }
+  h2:first-child { margin-top: 0; }
+  .why { color: var(--muted-foreground); margin: 0 0 12px; font-size: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .cap { font-size: 11px; color: var(--muted-foreground); margin: 0 0 6px; }
+  .win { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+  .s { width: 300px; } .m { width: 360px; } .l { width: 470px; }
+  .win h3 { margin: 0; padding: 16px 16px 8px; font-size: 15px; }
+  .win h3.warn { color: var(--amber); }
+  .body { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .lead { margin: 0; }
+  .note { margin: 0; color: var(--muted-foreground); font-size: 12px; }
+  .foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
+  .foot .apart { margin-right: auto; }
+  .btn { border-radius: 14px; padding: 3px 12px; font-size: 12px; border: 1.5px solid var(--border); background: transparent; color: var(--foreground); white-space: nowrap; display: inline-block; }
+  .btn.cta { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+  .btn.out { border-color: var(--foreground); }
+  .step { display: grid; grid-template-columns: 18px 1fr; gap: 2px 8px; }
+  .step b { font-weight: 600; } .step .d { grid-column: 2; color: var(--muted-foreground); font-size: 12px; }
+  .ic { width: 14px; height: 14px; border-radius: 50%; margin-top: 2px; display: inline-block; box-sizing: border-box; }
+  .ic.ok { background: var(--green); } .ic.run { border: 2px solid var(--blue); border-right-color: transparent; }
+  .runfoot { color: var(--muted-foreground); font-size: 12px; border-top: 1px dashed var(--border); padding-top: 8px; }
+  .card { width: 210px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 6px; box-sizing: border-box; }
+  .card .t { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+  .card .meta { color: var(--muted-foreground); font-size: 12px; }
+  .tag { font-size: 11px; padding: 0 6px; border-radius: 4px; background: var(--secondary); color: var(--secondary-foreground); }
+  .tags { display: flex; gap: 4px; }
+  .check { color: var(--blue); font-weight: 700; } .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); display: inline-block; }
+  .state { font-size: 12px; display: flex; gap: 6px; align-items: center; }
+  .state.amber { color: var(--amber); }
+  .hover { font-size: 11px; background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; align-self: flex-start; }
+  .drawer { width: 330px; height: 330px; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+  .drawer .hd { padding: 14px 16px 8px; font-weight: 600; font-size: 15px; display: flex; justify-content: space-between; }
+  .drawer .bd { flex: 1; overflow: hidden; padding: 0 16px; position: relative; }
+  .drawer .bd::after { content: "scrolls"; position: absolute; right: 16px; bottom: 4px; font-size: 10px; color: var(--muted-foreground); }
+  .kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 10px; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); align-items: start; }
+  .kv > span:first-child { color: var(--muted-foreground); }
+  .link { color: var(--primary); }
+  .drawer .bar { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
+  .drawer .bar .end { margin-left: auto; }
+  .menu { width: 210px; background: var(--popover); border: 1px solid var(--border); border-radius: 6px; padding: 4px 0; font-size: 12px; }
+  .menu div { padding: 4px 12px; } .menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
+  .menu .sec { font-size: 11px; color: var(--muted-foreground); padding-top: 2px; }
+  .menu .danger { color: var(--destructive); }
+  .tree label, .radio label { display: block; font-size: 12px; padding: 2px 0; }
+  .grp { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
+  .list { font-size: 12px; display: grid; grid-template-columns: 110px 1fr; gap: 3px 10px; }
+  .list span:nth-child(odd) { color: var(--muted-foreground); }
+  .hdrband { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; width: 100%; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .hdrband .count { font-weight: 600; margin-right: auto; }
+  .pick { border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 12px; }
+  .hint { font-size: 12px; color: var(--muted-foreground); padding: 6px 0 12px; }
+  .num { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 9px; background: var(--accent); color: var(--accent-foreground); font-size: 11px; font-weight: 700; margin-right: 6px; }
+</style></head><body>
+
+<h2><span class="num">2</span>Phase 2: versions the SC never manages</h2>
+<p class="why">The card names the save and shows its date as information only, with no picker. Undo Last Save replaces Version History.</p>
+<div class="row">
+  <div><p class="cap">Card (the demo's own datapack)</p>
+    <div class="card"><div class="t">My Luma <span class="check">✓</span></div>
+      <div class="meta">Saved Nov 10, 9:15 AM</div>
+      <div class="tags"><span class="tag">Mine</span></div>
+      <div class="state">Installed in this demo</div></div></div>
+  <div><p class="cap">More menu</p>
+    <div class="menu"><div>Undo Last Save</div><div>Save as File</div><hr><div class="sec">Commerce</div><div>Uninstall from Commerce</div><hr><div>Delete Saved Settings</div><div class="danger">Delete Datapack</div></div></div>
+  <div><p class="cap">Undo Last Save (small Confirm)</p>
+    <div class="win s"><h3 class="warn">Undo Last Save?</h3>
+      <div class="body"><p class="lead">Commerce goes back to My Luma as it was before your last save. Anything you changed since is lost.</p></div>
+      <div class="foot"><span class="btn">Cancel</span><span class="btn out">Undo Last Save</span></div></div>
+    <p class="cap" style="margin-top:8px">Then the steps window: Uninstall, Install, Verify.</p></div>
+</div>
+
+<h2><span class="num">4</span>Phase 4: Uninstall drawn as steps, with one RunFoot</h2>
+<p class="why">It uses the same rows as Install, not a three-minute spinner. The window keeps one size from question to result, and the question's three buttons stay on one line.</p>
+<div class="row">
+  <div><p class="cap">Question with changes (large)</p>
+    <div class="win l"><h3 class="warn">Uninstall My Luma?</h3>
+      <div class="body"><p class="lead">Permanently deletes what My Luma installed and puts back its store settings.</p>
+        <p class="note">You changed these since your last save. Uninstalling takes them out too.</p>
+        <div class="list"><span>Products</span><span>24-mb01, 24-mb02 and 2 more</span><span>Categories</span><span>Gear Sale</span></div></div>
+      <div class="foot"><span class="btn out apart">Uninstall Without Saving</span><span class="btn">Cancel</span><span class="btn cta">Save and Uninstall</span></div></div></div>
+  <div><p class="cap">Running (same window)</p>
+    <div class="win l"><h3>Uninstalling My Luma</h3>
+      <div class="body">
+        <div class="step"><span class="ic ok"></span><b>Save Your Changes</b><span class="d">Saved to My Luma</span></div>
+        <div class="step"><span class="ic run"></span><b>Uninstall My Luma</b><span class="d">Removing 450 of 2,046 products</span></div>
+        <div class="runfoot">1:12</div></div>
+      <div class="foot"><span class="btn">Run in Background</span></div></div></div>
+  <div><p class="cap">Clean end: its title alone, closes itself</p>
+    <div class="win s"><h3>My Luma Uninstalled</h3><div class="foot"><span class="btn">Close</span></div></div></div>
+</div>
+
+<h2><span class="num">5</span>Phase 5: the screen says what state the demo is in</h2>
+<p class="why">The blue check means installed. Chosen but not installed gets the amber dot with words. A newer save says what to do, and an open Admin step shows on the card.</p>
+<div class="row">
+  <div class="card"><div class="t">My Luma <span class="check">✓</span></div><div class="meta">Saved Nov 10, 9:15 AM</div><div class="state">Installed in this demo</div></div>
+  <div class="card"><div class="t">Bodea</div><div class="meta">Data Installer</div><div class="state amber"><span class="dot"></span>Not installed yet</div></div>
+  <div class="card"><div class="t">My Luma <span class="dot"></span></div><div class="meta">Saved Nov 10, 9:15 AM</div><span class="hover">Updated Nov 10. Install again to get it.</span></div>
+  <div class="card"><div class="t">Luma B2B <span class="check">✓</span></div><div class="meta">Saved Nov 8, 4:02 PM</div><div class="state amber"><span class="dot"></span>1 Admin step left</div><span class="link" style="font-size:12px">Set the store's root category</span></div>
+</div>
+<div class="row" style="margin-top:12px">
+  <div><p class="cap">Save Changes names what it saves (medium)</p>
+    <div class="win m"><h3>Save Changes to My Luma?</h3>
+      <div class="body"><p class="lead">Saves these changes into My Luma:</p>
+        <div class="list"><span>Products</span><span>24-mb01, 24-mb02 and 2 more</span><span>Store Settings</span><span>2 settings</span></div>
+        <span class="link" style="font-size:12px">Add unused items…</span></div>
+      <div class="foot"><span class="btn">Cancel</span><span class="btn">Save As New</span><span class="btn cta">Save</span></div></div></div>
+  <div><p class="cap">Install Again with changes</p>
+    <div class="win m"><h3 class="warn">Save Your Changes First?</h3>
+      <div class="body"><p class="lead">Installing My Luma again puts Commerce back to your last save.</p>
+        <div class="list"><span>Products</span><span>24-mb01 and 1 more</span></div></div>
+      <div class="foot"><span class="btn out apart">Install Without Saving</span><span class="btn">Cancel</span><span class="btn cta">Save and Install</span></div></div></div>
+</div>
+
+<h2><span class="num">6</span>Phase 6: Clear Demo Data, and one reset window</h2>
+<p class="why">Clear Demo Data opens with the project's own store ticked, so the preview shows at once. Reset asks every question in one window instead of three VS Code dialogs.</p>
+<div class="row">
+  <div><p class="cap">Clear Demo Data (large Form)</p>
+    <div class="win l"><h3>Clear Demo Data</h3>
+      <div class="body"><p class="lead">Permanently removes everything in this demo's stores and closes their orders.</p>
+        <div class="tree"><label>☑ Main Website › Main Store (this demo)</label><label>☐ B2B Website › B2B Store</label></div>
+        <div class="list"><span>My Luma</span><span>Uninstalled first: 2,046 products, 38 categories</span><span>Products</span><span>12 added by hand</span><span>Orders</span><span>7 closed</span><span>Not Removed</span><span>3 products B2B Store also sells</span></div>
+        <p class="note">You changed My Luma since your last save. It's saved first.</p></div>
+      <div class="foot"><span class="btn">Cancel</span><span class="btn out">Clear Demo Data</span></div></div></div>
+  <div><p class="cap">Reset one project (medium)</p>
+    <div class="win m"><h3 class="warn">Reset Acme Demo?</h3>
+      <div class="body"><p class="lead">Puts the storefront code and pages back to the template.</p>
+        <div class="radio"><div class="grp">Commerce</div>
+          <label>◉ Install My Luma Again</label><label>○ Uninstall My Luma</label><label>○ Clear Demo Data</label><label>○ Leave Commerce As It Is</label></div>
+        <p class="note">Your changes to My Luma are saved first.</p></div>
+      <div class="foot"><span class="btn">Cancel</span><span class="btn out">Reset Project</span></div></div>
+    <p class="cap" style="margin-top:8px">Several projects: the same words, one row per project.</p></div>
+</div>
+
+<h2><span class="num">7</span>Phase 7: the Datapacks screen</h2>
+<p class="why">The header wraps instead of squeezing. The flyout's action bar is pinned outside the scrolling body. Uninstall sits in its own section of More (above). The filter says where hidden matches are.</p>
+<div class="hdrband"><span class="count">12 datapacks</span><span>Show</span><span class="pick">Mine and Team ▾</span><span class="btn">Add from File</span><span class="btn">Create Datapack</span><span class="btn cta">Save Changes to My Luma</span></div>
+<div class="hint">No matches for "bodea" here. 2 in Community. <span class="link">Show Community</span></div>
+<div class="row">
+  <div><p class="cap">Flyout</p>
+    <div class="drawer"><div class="hd">My Luma <span>✕</span></div>
+      <div class="bd">
+        <div class="kv"><span>Saved</span><span>Nov 10, 9:15 AM</span></div>
+        <div class="kv"><span>Data</span><span>Products, Categories, Attributes, Customers, Cart Rules, Stock…</span></div>
+        <div class="kv"><span>Store Settings</span><span>4 settings · <span class="link">Show</span></span></div>
+        <div class="kv"><span>Empty Types</span><span>Gift Cards</span></div>
+        <div class="kv"><span>Description</span><span>Luma catalog for EDS storefronts.</span></div></div>
+      <div class="bar"><span class="btn">Save Changes</span><span class="btn cta">Install Again</span><span class="btn end">More ▾</span></div></div></div>
+  <div><p class="cap">Sidebar button</p><span class="btn">Datapack Library</span>
+    <p class="cap" style="margin-top:16px">Wizard Datapacks card</p>
+    <div class="card"><div class="t">My Luma</div><div class="meta">2,046 products · 38 categories · 4 store settings</div></div></div>
+</div>
+</body></html>

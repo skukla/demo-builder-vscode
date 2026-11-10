@@ -38,7 +38,7 @@ Sources (each finding below cites its report and number):
 |---|---|
 | D1 | Putting a datapack into Commerce is **Install**; taking it out is **Uninstall**. "Import" goes |
 | D2 | A zip into and out of My Datapacks: **Add from File / Save as File** |
-| D3 | **No versions the SC picks, and no date used as a name** (owner, changed 2026-11-10 after the Phase 0 walk: picking by date confused, and a restore left the demo on the older date while the newer one sat unused). The SC's datapack is always its latest save. **Save Changes** replaces it; **Undo Last Save** goes back one save and installs it, losing any unsaved Commerce changes after asking; **Install Again** puts Commerce back to the latest save. Version History, Restore Version and choosing a date go. A date may show as information only ("Saved today, 8:38 AM"). Storage keeps two saves (Versions A.4, Model 1). Trade-off accepted: no going back further than one save; Save As New Datapack keeps a state for good |
+| D3 | **No versions the SC picks, and no date used as a name** (owner, changed 2026-11-10 after the Phase 0 walk: picking by date confused, and a restore left the demo on the older date while the newer one sat unused). The SC's datapack is always its latest save. **Save Changes** replaces it; **Undo Last Save** goes back one save and installs it, losing any unsaved Commerce changes after asking; **Restore My Luma** puts Commerce back to the latest save (owner, 2026-11-10: a restore, not an install). Version History, Restore Version and choosing a date go. A date may show as information only ("Saved today, 8:38 AM"). Storage keeps two saves (Versions A.4, Model 1; owner confirmed 2-saves 2026-11-10). Trade-off accepted: no going back further than one save; Save As New Datapack keeps a state for good |
 | D4 | A save made without asking may push out the last save made by hand, for now |
 | D5 | **Clear Demo Data empties the demo's stores, datapack included.** The name stays. Today it removes only what Demo Builder did not install, which no name makes clear without knowing the mechanism. Clearing only the hand-added data while keeping the datapack is no longer one step: clear, then install again. A "Keep My Luma" box can bring it back if it is missed |
 | D6 | Dry Run becomes **Check First**; its result "Check Passed" |
@@ -92,11 +92,14 @@ the second, now written into `docs/development/sop/dialog-design.md`:
 the release.** Build the five layout components and the enforcer, then move every window in the
 extension onto them: the 24 built on `Modal`, the shared progress window with its 31 operations, and
 the two field-help dialogs that use Spectrum directly (the 11 confirms already use
-`ConfirmActionDialog`). The enforcer's ledger ends the phase empty, or holds only windows with a
-written reason no layout fits. Order: the shared progress window first (most operations), then the
+`ConfirmActionDialog`). The enforcer's ledger ends the phase empty (owner, 2026-11-10): a window no layout fits gets a
+new layout, and the new layout is itself a convention with the enforcer, so nothing drifts. Order: the shared progress window first (most operations), then the
 datapack windows, then the rest by feature (Updates and the batch runs, Manage APIs, Add ERP and
 Assign Products, Add a Demo Package, Add Integration, site access, prompts). Each feature's windows
-move in their own commit, with the owner's screenshots of that feature before it.
+move in their own commit. Owner, 2026-11-10: the order stands; no "before" screenshots from the owner.
+The `webview-visual-baseline` fingerprint is taken before each feature and compared after it, and
+only its diff is read; the owner screenshots the "after" only for a window whose diff is not the
+intended change.
 
 **First, the five layout components and their enforcer** (see "The convention system"): the
 spacing, hierarchy, size and button rules stop being things a window can get wrong.
@@ -122,6 +125,38 @@ Also decided (owner, 2026-11-10):
 
 Each rule above lands as a registered convention with its enforcer: see "The convention system" below.
 
+**Progress-label verbs (owner, 2026-11-10: a convention, the whole extension, in this phase).**
+One verb per action, the host system's own word for it:
+
+| Verb | Means | Example |
+|---|---|---|
+| Delete | The record is gone (Commerce, Adobe Console, GitHub, DA.live, local files) | Deleting the workspace |
+| Remove … from … | It still exists; only its link to that place goes. Always says "from" what | Removing products from websites |
+| Uninstall | Out of Commerce | Uninstalling from Commerce |
+| Undeploy | Off App Builder Runtime | Undeploying the app |
+| Unpublish | Off the live site (AEM's word) | Unpublishing pages |
+| Restore default configuration | Commerce configuration set back to its Default value | Restoring default configuration |
+| Close | Orders and returns | Closing orders |
+| Restore | Commerce put back to how the datapack's latest save left it | Restoring My Luma |
+| Replace | One datapack uninstalled, another installed (all or nothing) | Replace My Luma with Bodea? |
+
+**Clear** is an action name, not a step verb (owner, 2026-11-10): it names buttons and titles
+only (Clear Demo Data, Clear Commerce Instance); their steps use the verbs above. "Clearing …" as
+a step label still fails.
+
+- Commerce nouns: "cart price rules", "configuration", "websites"; never "cart rules", "config",
+  "site settings".
+- Every stage table moves to it: `operationStages`, `waitStages`, `adobeProjectStages`,
+  `creationStages`, `storefrontStages`, `resetStages`, `datapackStages` (Removing the workspace /
+  project files / components / event setup → Deleting …; Taking the app down → Undeploying the app;
+  Taking pages off the site → Unpublishing pages; Removing from Commerce → Uninstalling from
+  Commerce; each "Clearing …" gets its real verb).
+- Labels stand alone, no second line. The fixed 25-character cap becomes: title + label fit the
+  background notification (about 62 characters), checked per operation; the longest label is
+  screenshot-checked in the 400px window.
+- Handbook convention + SOP enforcer: a destructive label's first word comes from the list; "Taking",
+  "Clearing", "Unlisting" fail; "Removing" without "from" fails. Registered in `toolingRegistry.ts`.
+
 ### Phase 2: versions the SC never manages (medium, mockup first)
 
 - The SC's datapack is its latest save. The card and flyout name it ("My Luma"); a date shows only
@@ -130,10 +165,11 @@ Each rule above lands as a registered convention with its enforcer: see "The con
   9, 9:15 AM" becomes "Install My Luma").
 - More menu: **Undo Last Save**, shown only when there is a save to go back to. It asks
   ("Undo Last Save?", "Commerce goes back to My Luma as it was before your last save. Anything you
-  changed since is lost."), deletes the newest save, then installs the one before it through the
+  changed since is lost."), deletes the newest save, then installs the one before it straight away
+  (owner, 2026-11-10: Commerce follows the undo, no separate Restore) through the
   same steps window (Uninstall, Install, Verify). No "Save Your Changes First?" on this path: saving
   would make a new save that the undo then removes.
-- **Install Again** on the datapack the demo uses (Phase 5's label) puts Commerce back to the latest
+- **Restore <name>** on the datapack the demo uses (Phase 5's label) puts Commerce back to the latest
   save; it asks "Save Your Changes First?" when there are changes (Phase 3).
 - Storage: after each successful save, keep the newest save and the one before it; delete older saves
   with their store settings. Never touch a named version (`main`) or a save another project on this
@@ -145,7 +181,8 @@ Each rule above lands as a registered convention with its enforcer: see "The con
 - Results stop naming Version History or dates: "Your changes were saved to My Luma."
 - Agents: `save_store_changes_to_pack` says saves replace and one undo is kept; a new or existing tool
   does Undo Last Save; `start_datapack_import` with a version is no longer the restore. The generated
-  `import-datapack` skill says the same, so `AI_CONTEXT_VERSION` goes up (`ai-context-authoring`).
+  `import-datapack` skill says the same. `AI_CONTEXT_VERSION` goes up once, after the last phase is
+  built, not here (owner, 2026-11-10; `ai-context-authoring`).
 - Ends with the live cycle, including an Undo Last Save.
 
 ### Phase 3: never lose changes without asking (small to medium)
@@ -166,6 +203,17 @@ Each rule above lands as a registered convention with its enforcer: see "The con
 - A first install opens with every data type ticked; a locked row says why (`CheckboxRow`'s reason
   line) (Clarity 1.3).
 - "Always Save Without Asking" gets a way back on screen (Flow 2.18).
+  Owner, 2026-11-10: items 1, 2, 4 agreed. Fact found: it is ALREADY the VS Code setting
+  `demoBuilder.dataInstaller.changesOnRemoval` (package.json:350), and once on, the
+  "Save Your Changes First?" window never shows, so a way back inside that window cannot work.
+  Open: the on-screen way back, the checkbox wording, and the setting's stale description
+  ("pack", "version", "Always do this, and stop asking").
+  Settled 2026-11-10: item 3 locked, all or nothing (owner: "data should not be mixed").
+  Item 5: reuse the house pattern `showOneTimeTip` (projectDeletionService.ts:193,
+  createProject.ts:387): the first time the box is ticked, a one-time VS Code notification
+  "Tip: You can change this in Settings → Demo Builder" with Open Settings, filtered to
+  `demoBuilder.dataInstaller.changesOnRemoval`. No modal line, no menu item. Checkbox wording
+  "Always Save Changes" (owner confirmed 2026-11-10: names the behaviour like an app preference; "First" is already the window title's word, "Without Asking" is the effect; "Don't Ask Again" rejected because the setting only remembers Save, never Don't Save); setting description rewritten to the glossary.
 - Confirm by a test, then fix or drop: "Selected data types apply to Import only." in an Uninstall
   window (Flow 2.21).
 
@@ -176,6 +224,8 @@ read). Verdict: the five windows are **not** one component. They already share t
 (`WorkRow`, `WorkRowColumns`, `useRunClock`, `Modal`), and three of them do different jobs: Updates
 groups rows by project and asks questions inside a row; the batch times each project; the save is
 the shared progress window every operation uses. Merging the windows would invent an abstraction.
+
+Owner, 2026-11-10: items 1 (one rule for ending small) and 3 (uninstall drawn as steps) agreed.
 
 What is decided more than once, and gets one home:
 
@@ -188,21 +238,60 @@ What is decided more than once, and gets one home:
 
 Also in this phase:
 
-- Uninstall's question keeps its three buttons on one line (Clarity 2.1).
-- A run sent to the background ends on a notification that stays, in the result's own words, with
-  Open Datapacks (Clarity 1.12). A flag per run: the code is shared with every progress window.
+- Uninstall's question keeps its three buttons on one line (Clarity 2.1; owner agreed 2026-11-10).
+- "Took …" (owner agreed 2026-11-10): `RunFoot` makes the one `tookValue` call, so the
+  one-minute rule and the wording have one home. It looks as it does today in all four run windows:
+  the last line of the body, the house's quiet `dialog-note` (12px, grey), "Took 3 minutes, 12
+  seconds", only for runs of a minute or more. Fix the stale "labelled Took row" comment in
+  `useRunClock.ts`.
+  Mockup approved 2026-11-10: shown only when the window stays open (a row has a warning or
+  problem, or the run failed, above Retry / Fix with AI); a clean run ends small with no Took.
+  Kept because every run window in the extension already shows it.
+- A run sent to the background (Clarity 1.12; owner 2026-11-10), for every job that offers Run in
+  Background, since the code is shared:
+  - Succeeded: closes on its own, as today, in the result's own words ("Installed My Luma", not
+    "— done"). No button: there is nothing to do.
+  - Failed, or ended with something to know (a warning, a skipped row): a notification that stays
+    until dismissed, in the result's own words, with ONE button that leads to what happened. Which
+    one depends on the job; the default is Open Debug Logs (today's). Owner, 2026-11-10: no Show
+    Details; a failure keeps one button. Becomes a convention: success goes quietly, a problem
+    stays and offers a way in.
 
 ### Phase 5: the screen says what state the demo is in (medium, mockup first)
 
-- The blue check means installed, not chosen. Chosen but not installed gets the amber dot and
-  "Not installed yet" (Clarity 1.4, to reproduce first).
-- On the datapack the demo uses, the button reads Install Again, and reset's question says where to
-  put the data back (Clarity 1.1).
-- The card's version picker says which version the demo uses; the amber dot's hover says what to do
-  (Clarity 1.9).
+Owner settled all items 2026-11-10 (mockups walked one per item).
+
+- Installed = the blue check and blue border, nothing else; no status line, no dot for "chosen".
+  The screen has no chosen state: clicking a card opens its flyout. Installing another pack asks
+  "Replace My Luma with Bodea?" / "Uninstalls My Luma from Commerce, then installs Bodea." (button
+  Replace; stages Uninstalling from Commerce, Installing Bodea); the check moves after (Clarity 1.4).
+- On the datapack the demo uses, the button reads **Restore My Luma**: "Restore My Luma?" /
+  "Commerce goes back to My Luma as you last saved it. Anything you changed since is lost.",
+  Cancel / Save Changes First / Restore; label Restoring My Luma. Restore joins the verb table
+  (Clarity 1.1).
+- The amber dot's hover: "My Luma has changes saved after this demo installed it. Restore My Luma
+  to install them." (Clarity 1.9).
 - Save Changes says what it saved, by data type, in the question's own form (Clarity 1.11).
-- The header's save button names the datapack; Create Datapack stays reachable (Clarity 1.16).
-- An open Admin step shows on the card and says what it is for (Clarity 1.18).
+  Collapsed lists stay informational: name a few, "and N more", full list in Debug Logs; registered
+  as a convention.
+- The header's save button names the datapack; Create Datapack stays reachable (Clarity 1.16;
+  revisited in Phase 7b).
+- An open Admin step: keep today's flyout Demo Setup line + step dialog (the integrations setup
+  guide pattern); the card stays clean; check the line's wording only (Clarity 1.18).
+- No "Not installed yet" state. Dashboard line shows the installed pack's name, else None.
+- A failed install is an error state on the pack, shown exactly as integration cards show one: the
+  shared `StatusDot` (error) + label from `statusVocabulary.ts` (new entry "Install failed"), no
+  border change (owner, 2026-11-10). As on integration cards (status error + Retry;
+  flyout shows the reason, as `deriveInstallation` does): the creation-time install records its
+  failure on the project, the card shows it, the flyout says why and offers **Retry** (the extension's label for redoing a failed
+  operation: integration menu, progress window, data installer failure). Finish Install is not used:
+  integrations keep it for a deployed app whose Commerce step alone failed. The dashboard Datapacks
+  line shows the failure as the dashboard's linked integrations do: the error dot + "My Luma (install
+  failed)" (`LinkedSection.tsx:45-55`) (owner, 2026-11-10).
+  The failed state also offers **Fix with AI**, reusing the import window's rule
+  (`useImportRetry.ts`, `importResult.ts` `RETRIES_BEFORE_FIX`, `importFixHandlers.ts`): Retry while a
+  retry can get past the stop, Fix with AI once it cannot or retries have not helped. The SC is not
+  expected to fix a failed install alone (owner, 2026-11-10).
 
 ### Phase 6: reset, delete and Clear Demo Data (medium to large, mockup first)
 
@@ -216,19 +305,126 @@ Also in this phase:
 - One project and several projects ask reset and delete in the same words (Flow 2.19).
 - A single reset asks its questions in one window, not three VS Code dialogs in a row (Flow 2.19).
 
+Owner walk, 2026-11-10:
+- Items 1 and 2 agreed: one window, and the same words for one project and for several
+  ("Reset Kukla Luma?" / "Reset 3 Projects?", bare-verb buttons, a shared lead). Destructive
+  choices start unpicked, so the SC has to choose. The window starts from the existing mockup
+  (`mockups/screens.html` Phase 6): one Commerce radio, Restore My Luma / Uninstall My Luma /
+  Clear Demo Data / Leave Commerce As It Is, defaulting to Leave. A radio rather than checkboxes,
+  because Clear already includes Uninstall.
+- Item 3 settled: two clears, split by whose data it is.
+  - Scope: a datapack lands on WEBSITES (products, customers, cart rules, stock, website
+    prices), plus root categories through stores, store-view text and orders, and global records.
+    Data is never "installed to a store", so the SC never picks a store. This reverses the
+    2026-10-30 store unit (`datapack-engine/step-10-wipe.md`).
+  - Clear Demo Data, for the project: no picker. It clears every website the project uses,
+    one or several (ready for multi-site datapacks): what its install records list, whatever
+    was added by hand on those websites that no other demo claims, and global records only it
+    used. The lead names the websites. Window title "Clear Luma Demo Data?", button
+    "Clear N Items". Orders are closed, never deleted. Anything another demo uses is kept.
+  - Clear Commerce Instance, a new action: the one place to choose websites. It uses
+    `CheckboxRow` rows plus Select All, starting unticked, and each row names the local
+    projects using that website as plain text, two names then "and N more" (the collapsed-list
+    convention; nothing tappable). A warning gives the count: "N projects lose their demo
+    data. This can't be undone." No mention of other computers (Demo Builder is per computer).
+    The lead says "whichever project put it there". An unticked "I understand every project on
+    these websites loses its data" box enables "Clear N Websites". Each demo's datapack is uninstalled first, and ERP
+    orders are closed through the integration. It ignores install-record ownership and lifts
+    the `claimedBy` guard (this reverses step-10 lines 53–54 and 88).
+  - Where: the Datapacks header's Clear Demo Data button becomes a "Clear" menu with both
+    items, like New Project's menu. Also in the Command Palette and as an MCP tool. Not on
+    the Projects list, which has no notion of an instance.
+  - Verb table: "Clear" means removing everything in a scope. Uninstall removes one pack.
+
 ### Phase 7: the Datapacks screen (small to medium, mockup first)
 
+Settled with the owner, 2026-11-10:
+
+- The header, in order of how often an SC does each: **Create Datapack**, then the file action,
+  then Clear. The file action is named for what the SC wants on that screen: **Install from File**
+  in a project's Datapacks (adds the zip to the library, then opens the same install confirm as a
+  card's Install, preview included; Cancel leaves it in the library), **Add from File** in the
+  Datapack Library (no store to install into). Today both say "Load from File".
 - The flyout's buttons stay pinned (Clarity 2.2); its rows (2.11); the header band (2.12).
-- The More menu: Uninstall in its own section with its own icon; "Delete Saved Settings"
-  (Clarity 1.7).
-- One date format (Clarity 2.6). The card's tag on one line (2.5).
+- The More menu: Save as File, Version History, **Share Datapack / Stop Sharing Datapack**; then,
+  in its own section, Uninstall and Delete Datapack (Clarity 1.7). **Delete Store Settings is
+  removed**, with its confirm and its code (no soft deprecation): an SC changes a setting because
+  the demo needs it, and Delete Datapack already takes the settings layer with it, so the undo
+  remains.
+- One date format, absolute (Clarity 2.6). The card's tag on one line (2.5); an SC's own datapack
+  is tagged **Mine**.
+- The SC never sees a version: not in the replace title ("Replace My Luma?"), not in the Delete
+  confirm (`PackActions.tsx:139` today says "version …").
 - The filter says when matches sit under another Show choice (Clarity 1.13); the Show names an SC
   can read (1.17).
-- Add from File asks about replacing only when the version exists (Clarity 1.15); it uses the house
-  text classes (2.9). After it, the new datapack's flyout opens (Flow 2.20).
-- The sidebar's button says Datapack Library (Flow 2.17).
+- The file action asks about replacing only when the datapack exists (Clarity 1.15); it uses the
+  house text classes (2.9).
+- The sidebar tile stays **Datapacks** (it fits); the window it opens stays titled Datapack Library
+  (Flow 2.17).
 - The wizard's Datapacks card says what is in the datapack (Clarity 1.19).
 - Delete the unused styles (Clarity 2.16).
+- Datapacks the extension owns are **Demo Builder Datapacks** (owner, 2026-11-10, reversing walk
+  F86): the Show filter reads "Demo Builder Datapacks" (`catalogShow.ts:46`, and its empty state),
+  and the card tag reads **Demo Builder**, not "Team" (`DatapackCard.tsx:297`). No one can delete a
+  Demo Builder datapack from the flyout, its owner included: Delete Datapack is hidden on it (today
+  `PackActions.tsx:105` shows it to any owner).
+
+### Phase 7b: Create Datapack (medium, walk today's flow first, then mockup)
+
+Added by the owner, 2026-11-10, after walking today's Create Datapack: it shows only what is not
+already in the pack, and says so badly, so the SC cannot tell what the pack will hold.
+
+- Rule (convention): an SC can see what a datapack will hold before saving it.
+- Audit the save buttons, in the header and in a datapack's flyout: Create Datapack, Save Changes,
+  Save As New Datapack, and the dialog's Save As New, which retitles the dialog mid-flow
+  (`DatapackFlowDialog.tsx` `frameOf`). Does each still have a job in the flow this plan builds?
+- Widened (owner, 2026-11-10): every datapack flyout and dialog, in a project's Datapacks, the
+  Library and the wizard, uses one pinned button bar, with the same buttons in the same order.
+- The owner sees buttons change in the flyout unexpectedly. Lead to check first: the label and the
+  button's presence depend on data that loads after the flyout opens (`useHeldPack.tsx`:
+  `saveChanges` waits for `detail`, `saveChangesAsNew` for the pack's owner; the header's for
+  `heldInCatalog`), so a button can appear, or change its words, while the SC looks at it.
+  Convention to propose: a button's words never change while it is on screen; it waits, disabled,
+  until what decides them is known.
+
+Decided (owner, 2026-11-10, walking the save flow step by step):
+
+- **Add Unused Items is removed**, the screen, its link and its picker mode. A save already takes
+  everything the demo uses, hand-made records included; something nothing uses does not change
+  the demo, and goes in once it is used. No soft deprecation: `list_datapack_export_items`'s
+  `unused` and `save_store_changes_to_pack`'s `selections` on a save into an existing pack go too.
+- **Save Changes** is: press it, see what the datapack will hold (read-only counts), Save, Saved.
+  Nothing to tick, no second screen, a title that never changes.
+- **Create Datapack** (no datapack yet) keeps its picker: name, then everything in the project's
+  store by kind with Select All Data, Save. After it, the header reads Save Changes.
+- The mockups' words were illustrative. The real words for each step go in the wording table, held
+  to the conventions, before the build.
+- The flyout's Save goes: saving lives in the header only.
+- The header's save button: on your own datapack it is a menu button, **Save ▾**, with Save and
+  Save As New (reusing the AI tile's menu-button pattern, `AiZone.tsx`; no split button). On
+  someone else's datapack it is a plain **Save As New**. The choice is made before any dialog
+  opens: Save opens the review dialog (Cancel · Save); Save As New opens its own window with a
+  Name field (Cancel · Save). Neither dialog offers the other. This is how an SC branches a
+  variant — no Library Duplicate.
+- Convention: a button inside a dialog drops the object its title already names (Save, not Save
+  Datapack). Buttons on a screen keep verb + object.
+- Convention: a button's words never change while it is on screen. Until they are known it shows
+  the extension's standard loading state for a button, disabled.
+- Convention: one button bar order everywhere: secondary actions, Cancel, main button.
+- Create Datapack's picker starts with everything ticked.
+- Recovery for a regretted Save is Phase 2's Undo Last Save (already in scope).
+
+Wording rows (owner approved all, 2026-11-10). Done titles are past tense + object, title only:
+
+| Window | Title | Text | Buttons | Step | Done |
+|---|---|---|---|---|---|
+| Save (own pack) | Save Changes to My Luma | "My Luma will hold:" + read-only counts. Note: "This replaces your last save. Undo Last Save brings it back." | Cancel · Save | Saving My Luma | Saved to My Luma |
+| Save As New (own pack) | Save As New Datapack | Name field. "A new datapack of yours with everything this demo has now. This demo then uses it." | Cancel · Save | Saving Luma Holiday | Saved as Luma Holiday |
+| Save As New (someone else's) | Save As New Datapack | As above; lead: "Bodea isn't yours, so your changes go into a new datapack of yours." | Cancel · Save | as above | as above |
+| Create | Create Datapack | Name field, then "What it holds" by kind, all ticked, Select All Data | Cancel · Create | Creating My Luma | Created My Luma |
+| Undo | Undo Last Save? | "Commerce goes back to My Luma as it was before your last save. Anything you changed since is lost." | Cancel · Undo (outline) | Restoring My Luma | Last Save Undone |
+
+Name errors: "You already have a datapack named Luma Holiday." / "Give it a name."
 
 ### Phase 8: the agent surface matches the screen (small)
 
@@ -236,6 +432,12 @@ Also in this phase:
   `copy_library_datapack_to_installer`, or hide both tools behind the same switch as the screen.
 - Run `ai-coverage-scan` over the datapack handlers after Phases 1 to 7: every new or renamed
   action has its tool, in the screen's words.
+- Remove what Phase 7b removed: `unused` on `list_datapack_export_items`, `selections` on a save
+  into an existing pack.
+- Add what the screen gained: an Undo Last Save tool (Phase 2); separate settings deletion goes
+  wherever Phase 7 removed it from the screen; tool names and descriptions use the screen's words
+  (Install from File, Add from File, Save, Save As New, Clear Commerce Instance, Share Datapack).
+  Settled 2026-11-10.
 - Regenerate the tool docs; sync `docs/systems/mcp-server.md` and `data-installer.md`.
 
 ## The convention system
