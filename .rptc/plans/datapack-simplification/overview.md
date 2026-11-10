@@ -122,6 +122,8 @@ Also decided (owner, 2026-11-10):
 | Close or Cancel | Cancel beside a button that commits; Close otherwise |
 | The button that loses the SC's changes | Outline, in every window |
 | Bold step titles | A fifth kind of text in the standard, drawn by `WorkRow`, for every window that shows steps |
+| Text against the box (audit option C) | `.lead-text` and `.dialog-line` stop at about 60 characters a line, in every window. A window whose body is only sentences draws its lead at 16px; lists, forms and rows stay 14px. A sixth text size, stated in the standard |
+| Button weight | Spectrum's default (bold), not a house choice. `.modal-button` follows Spectrum rather than setting its own weight; the larger lead, not a lighter button, puts the sentence ahead of the buttons |
 
 Each rule above lands as a registered convention with its enforcer: see "The convention system" below.
 
@@ -525,6 +527,11 @@ regenerated index and counts.
 | Each repeated phrase has one home | 1 | None new: `validate:source-duplication` already pins copy-paste | Already checked |
 | A wait has no second line unless it adds a fact; words that read poorly | 1 | None. `modal-waits.test.ts` stays as it is | No: judgement. The owner's rejected examples go in the SOP |
 | Spacing and text come from the house classes | 1b | Extends `tests/sop/inline-styles.test.ts` or the stylesheet enforcers: a feature rule that sets margin, padding or gap on a house dialog class | Yes, with a ledger |
+| Lines stop at about 60 characters; a sentence-only body leads at 16px; buttons keep Spectrum's weight | 1b | The Form, Confirm and Result components own it (the lead size is theirs to pick from what they hold); a stylesheet check that no feature rule sets `max-width`, `font-size` or `font-weight` on `.lead-text`, `.dialog-line` or `.modal-button` | Yes, by construction plus the stylesheet check |
+
+Screenshots owed in Phase 1b's after check (the audit read these from CSS only): which title size
+Spectrum draws (18px or 16px), whether the three wait lines fit at 400px, Give Access's long checkbox
+label, and three long buttons at medium.
 
 Housekeeping the system needs, once, in Phase 1b: move the three rules written into
 `dialog-design.md` on 2026-11-10 up into handbook callouts and leave the SOP the examples; correct
