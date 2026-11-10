@@ -260,7 +260,7 @@ export function parseRows<T>(schema: z.ZodType<T>, records: unknown, what: strin
     const parsed = schema.safeParse(records);
     if (!parsed.success)
         throw new Error(
-            `The pack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`,
+            `The datapack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`,
         );
     return parsed.data;
 }

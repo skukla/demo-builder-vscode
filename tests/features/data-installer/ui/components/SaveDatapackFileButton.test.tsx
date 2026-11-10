@@ -74,11 +74,11 @@ it('says the store settings went in the file too (datapack-engine step 09)', asy
 
     await saveFrom();
 
-    expect(screen.getByText('Saved to /Users/sc/justrite-v1.datapack.zip, with its store settings')).toBeInTheDocument();
+    expect(screen.getByText('Saved to /Users/sc/justrite-v1.datapack.zip, with its Store Settings')).toBeInTheDocument();
 });
 
 it('says the file may lack them when the library could not be asked', async () => {
-    const note = 'The datapack library could not be asked for justrite-settings, so any store settings it holds are not in this file.';
+    const note = "My Datapacks couldn't be read, so this datapack's Store Settings, if any, are not in this file.";
     answer({ success: true, data: { path: '/Users/sc/justrite-v1.datapack.zip', settingsLayerNote: note } });
 
     await saveFrom();

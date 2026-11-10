@@ -118,7 +118,7 @@ describe('Save Changes, in the flyout', () => {
         await press(card('acme-1a2b3c'));
 
         // CONTROL: the flyout is open, with Import.
-        expect(await screen.findByRole('button', { name: 'Import' })).toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: 'Install' })).toBeInTheDocument();
         expect(inFlyout().queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
     });
 
@@ -132,7 +132,7 @@ describe('Save Changes, in the flyout', () => {
         await press(await inFlyout().findByRole('button', { name: 'Save As New Datapack' }));
 
         expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
-        expect(screen.getByText('Saves everything this demo uses as a new datapack of yours.')).toBeInTheDocument();
+        expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
         expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('');
     });
 
@@ -143,7 +143,7 @@ describe('Save Changes, in the flyout', () => {
 
         await press(await inFlyout().findByRole('button', { name: 'Save As New Datapack' }));
 
-        expect(await screen.findByText('Saves everything this demo uses as a new datapack of yours.')).toBeInTheDocument();
+        expect(await screen.findByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
     });
 
     // Owner, 2026-11-06: Copy to the Data Installer is off until our accounts can write to it.
@@ -153,7 +153,7 @@ describe('Save Changes, in the flyout', () => {
         await press(card('acme-1a2b3c'));
 
         expect(await inFlyout().findByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Install' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
     });
 
@@ -207,6 +207,6 @@ describe('the header button', () => {
         await press(screen.getByRole('button', { name: 'Save As New Datapack' }));
 
         expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
-        expect(screen.getByText('Saves everything this demo uses as a new datapack of yours.')).toBeInTheDocument();
+        expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
     });
 });

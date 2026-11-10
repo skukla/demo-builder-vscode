@@ -22,7 +22,7 @@ import type { BatchChoices } from '../hooks/useBatchChoices';
 import { UNCHECKED_NOTE } from './BatchResetQuestions';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
-import { UNINSTALL_DATAPACK } from '@/features/data-installer/uninstallWords';
+import { UNINSTALL_DATAPACK } from '@/features/data-installer/datapackWords';
 import { deleteSentence } from '@/features/projects-dashboard/deleteWords';
 import type { BatchDeleteRow } from '@/types/projectsBatch';
 

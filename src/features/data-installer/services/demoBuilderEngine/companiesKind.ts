@@ -164,7 +164,7 @@ async function adminId(ctx: KindContext, admin: CompanyRow['variables']['input']
 /** Make each company the store lacks, with its admin; record it by its name. */
 export async function installCompanies(ctx: KindContext, rows: CompanyRows): Promise<void> {
     const websiteId = ctx.session.websiteId;
-    if (websiteId === undefined) throw new Error("The install target names no website, so the pack's companies have no admin to sign in.");
+    if (websiteId === undefined) throw new Error("The install target names no website, so the datapack's companies have no admin to sign in.");
     const publicGroup = (await readCatalogs(ctx.get)).find((c) => c.type === PUBLIC_CATALOG_TYPE)?.customer_group_id;
     const regions: Regions = new Map();
     const scope = { websiteId, publicGroup, regions };

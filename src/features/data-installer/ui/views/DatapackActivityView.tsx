@@ -28,6 +28,7 @@
 
 import { Button, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { CHECK_FIRST, INSTALL } from '../../datapackWords';
 import { versionLabel } from '../../packVersions';
 import type { ActivityEntry, DatapackEngineId, HistoryPage, OperationMode } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
@@ -48,10 +49,10 @@ const MODES: OperationMode[] = ['import', 'export', 'delete', 'validate'];
 
 /** Each mode as the screen names it: both engines log an uninstall as `delete`, a save as `export`. */
 const MODE_WORDS: Record<OperationMode, string> = {
-    import: 'Import',
+    import: INSTALL,
     export: 'Save',
     delete: 'Uninstall',
-    validate: 'Dry Run',
+    validate: CHECK_FIRST,
 };
 
 /** A logged mode in the screen's words; nothing for one it has no word for. */
@@ -181,7 +182,7 @@ export function DatapackActivityView(): React.JSX.Element {
         return (
             <EmptyState
                 title="No Project Open"
-                description="Open a project to see the datapack activity on its Commerce instance."
+                description="Open a project to see its datapack activity."
             />
         );
     }
@@ -266,7 +267,7 @@ function renderActivityBody({
         return (
             <EmptyState
                 title="No Activity Yet"
-                description="Neither Demo Builder nor the Data Installer has a run on this Commerce instance matching this filter."
+                description="No activity matches this filter."
             />
         );
     }
@@ -291,7 +292,7 @@ function renderActivityBody({
 /** Why one source's rows are missing, when they are: the feed must not quietly show less. */
 function SourceNotes({ page }: { page: HistoryPage<ActivityEntry> | null }): React.JSX.Element | null {
     const notes = [
-        page?.serviceError ? `The Data Installer's own log could not be read: ${page.serviceError}` : undefined,
+        page?.serviceError ? `Couldn't read the Data Installer's activity: ${page.serviceError}` : undefined,
         page?.engineError,
     ].filter((note): note is string => Boolean(note));
     if (notes.length === 0) return null;

@@ -107,7 +107,7 @@ describe('import targeting', () => {
 
         // canStart also needs a data type; without one the button is disabled.
         await press(screen.getByRole('checkbox', { name: 'Categories' }));
-        await press(screen.getByRole('button', { name: /^import$/i }));
+        await press(screen.getByRole('button', { name: /^install$/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -130,7 +130,7 @@ describe('import targeting', () => {
         await awaitScopes();
 
         await press(screen.getByRole('checkbox', { name: 'Categories' }));
-        await press(screen.getByRole('button', { name: /^import$/i }));
+        await press(screen.getByRole('button', { name: /^install$/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -167,7 +167,7 @@ describe('import targeting', () => {
         renderModal();
 
         await waitFor(() =>
-            expect(screen.getByRole('button', { name: /^import$/i })).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /^install$/i })).toBeInTheDocument()
         );
         // Wait for the failure to SETTLE — the spinner standing in for the
         // pickers is what marks the in-flight state, so its absence is the
@@ -267,7 +267,7 @@ describe('seeding the target scope', () => {
         await waitFor(() => expect(pickerFor(/^website$/i)).toHaveValue('bodea'));
 
         await press(screen.getByRole('checkbox', { name: 'Categories' }));
-        await press(screen.getByRole('button', { name: /^import$/i }));
+        await press(screen.getByRole('button', { name: /^install$/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -334,8 +334,8 @@ describe('the redesigned target section', () => {
         expect(await screen.findAllByRole('progressbar')).toHaveLength(1);
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
         expect(screen.queryAllByTestId('spectrum-picker-select')).toHaveLength(0);
-        expect(screen.queryByRole('button', { name: /^import$/i })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /^dry run$/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^install$/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^check first$/i })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /^remove data$/i })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
     });
@@ -384,7 +384,7 @@ describe('the redesigned target section', () => {
         await screen.findByRole('checkbox', { name: 'Categories' });
 
         await waitFor(() =>
-            expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
+            expect(screen.getByRole('button', { name: /^install$/i })).toHaveAttribute(
                 'aria-disabled',
                 'false'
             )
@@ -435,8 +435,8 @@ describe('the redesigned target section', () => {
         );
         renderModal();
 
-        expect(await screen.findByRole('heading', { name: 'This project has no Commerce instance' })).toBeInTheDocument();
-        expect(screen.getByText(/Connect a Commerce backend/)).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'No Commerce Instance' })).toBeInTheDocument();
+        expect(screen.getByText(/Connect Commerce on the project dashboard/)).toBeInTheDocument();
         // Nothing here can be started, so nothing offers to: Close is the only button.
         expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Close']);
     });
@@ -469,7 +469,7 @@ describe('default scope selection', () => {
         renderModal();
         await awaitScopes();
         await press(screen.getByRole('checkbox', { name: 'Categories' }));
-        await press(screen.getByRole('button', { name: /^import$/i }));
+        await press(screen.getByRole('button', { name: /^install$/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');

@@ -121,8 +121,8 @@ export async function originDisplayName(entry: SharedInFileEntry, reads: PackRea
  */
 export function sharedInFileWarning(entry: SharedInFileEntry, originName?: string): string {
     const day = new Date(entry.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' });
-    const instead = entry.origin ? (originName ?? 'the pack it was made from') : 'no sample data';
-    return `You shared this pack in a project file on ${day}. Anyone who hasn't created that project yet will get ${instead} instead.`;
+    const instead = entry.origin ? (originName ?? 'the datapack it was made from') : 'no datapack';
+    return `You shared this datapack in a project file on ${day}. Anyone who hasn't created that project yet will get ${instead} instead.`;
 }
 
 /**

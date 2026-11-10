@@ -35,13 +35,13 @@ import React from 'react';
 import { FlyoutActions } from './FlyoutActions';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { LinkedSection } from './LinkedSection';
-import { PanelRow } from './PanelRow';
 import { SetupChecklistSection } from './SetupChecklistSection';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { CommerceScopeList } from '@/core/ui/components/integrations/CommerceScopeList';
 import { IntegrationStatusLabel } from '@/core/ui/components/integrations/IntegrationStatusLabel';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
+import { PanelRow } from '@/core/ui/components/ui/PanelRow';
 
 export interface IntegrationDetailPanelProps {
     /** The selected card's model, or undefined while no card is selected. */

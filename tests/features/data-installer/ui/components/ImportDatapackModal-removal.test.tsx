@@ -25,7 +25,7 @@ const CHANGED: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENT
 const CHANGED_TEAM: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENTENCE, alwaysSave: false };
 const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], alwaysSave: false };
 const ALWAYS_BOX = 'Always Save Without Asking';
-const CHANGES_LEAD = "You changed these since this demo's last save. Uninstalling takes them out too.";
+const CHANGES_LEAD = 'Uninstalling removes these changes.';
 const DELETES = 'Permanently deletes Bodea’s categories.';
 
 const footerRemove = () => screen.getByRole('button', { name: /^(Uninstall( Anyway)?|Save and Uninstall|Save As New and Uninstall)$/ });
@@ -64,7 +64,7 @@ describe('opening on Remove Data', () => {
         // While it checks, the title names the work, with no warning icon (walk F108).
         expect(screen.getByRole('heading', { name: 'Uninstall Bodea' })).toBeInTheDocument();
         expect(screen.getByText('Checking for your changes')).toBeInTheDocument();
-        expect(screen.getByText("Since this demo's last save")).toBeInTheDocument();
+        expect(screen.queryByText("Since this demo's last save")).toBeNull();
         expect(screen.queryByText(DELETES)).not.toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Uninstall' })).not.toBeInTheDocument();
@@ -96,7 +96,7 @@ describe('opening on Remove Data', () => {
         answers({ success: true, data: NOTHING });
         await openConfirm();
 
-        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Dry Run' })).not.toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
     });
@@ -334,7 +334,7 @@ describe('a read that fails', () => {
 
         // Review, 2026-11-10: the title says it could not check; the body is the one consequence.
         expect(screen.getByRole('heading', { name: "Couldn't Check for Changes" })).toBeInTheDocument();
-        expect(screen.getByText("Uninstalling removes anything you changed since this demo's last save.")).toBeInTheDocument();
+        expect(screen.getByText('Uninstalling removes any changes you made.')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Uninstall Anyway' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
@@ -389,7 +389,7 @@ describe('a save that fails', () => {
         expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Close' }));
         expect(onClose).toHaveBeenCalledTimes(1);
-        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
     });
 });
 

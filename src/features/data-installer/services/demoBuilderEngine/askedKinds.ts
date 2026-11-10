@@ -41,7 +41,7 @@ export function settingsAsked(all: Rows, dataTypes: readonly string[] | undefine
 /** Why the pack cannot answer the request, when it lacks a kind the request asks for. */
 export function missingKinds(request: Pick<ImportRequest, 'dataTypes'>, items: Rows): string | undefined {
     const missing = request.dataTypes.filter((kind) => !(kind in items));
-    return missing.length > 0 ? `The pack holds no ${missing.join(', ')}.` : undefined;
+    return missing.length > 0 ? `The datapack holds no ${missing.join(', ')}.` : undefined;
 }
 
 /** The note's line for what an install added because the kinds asked for need it; the form ticks these itself. */

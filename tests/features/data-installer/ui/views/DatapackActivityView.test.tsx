@@ -75,7 +75,7 @@ describe('DatapackActivityView', () => {
 
         expect(rows[0]).toHaveTextContent('bodea');
         expect(rows[0]).toHaveTextContent('main');
-        expect(rows[0]).toHaveTextContent('Import');
+        expect(rows[0]).toHaveTextContent('Install');
         expect(rows[0]).not.toHaveTextContent('aBcDeFgHiJkLmNoPqRsTu');
         expect(rows[0]).not.toHaveTextContent('DATAPACK_SPECIFIC_ITEMS');
     });
@@ -93,10 +93,10 @@ describe('DatapackActivityView', () => {
     });
 
     it.each([
-        ['import', 'Import'],
+        ['import', 'Install'],
         ['delete', 'Uninstall'],
         ['export', 'Save'],
-        ['validate', 'Dry Run'],
+        ['validate', 'Check First'],
     ])('calls a %s run by the screen\'s word, %s', async (mode, word) => {
         resolveWith([makeEntry({ mode })]);
 
@@ -114,7 +114,7 @@ describe('DatapackActivityView', () => {
         await screen.findAllByTestId('activity-row');
 
         const options = Array.from(screen.getByTestId('spectrum-picker-select').querySelectorAll('option')).map((o) => o.textContent);
-        expect(options).toEqual(['All Operations', 'Import', 'Save', 'Uninstall', 'Dry Run']);
+        expect(options).toEqual(['All Operations', 'Install', 'Save', 'Uninstall', 'Check First']);
     });
 
     describe('mode filter', () => {

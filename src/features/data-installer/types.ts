@@ -261,7 +261,7 @@ export const ENGINE_PHASES = {
     comparing: 'Comparing Commerce with the datapack',
     recording: 'Recording what was installed',
     settings: 'Applying the store settings',
-    checking: 'Checking the products against the datapack',
+    checking: 'Checking products',
 } as const;
 
 /**

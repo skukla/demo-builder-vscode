@@ -99,7 +99,7 @@ export function describeApiFailure(
     statusText: string,
     body: string,
 ): string {
-    return `${action}: ${status} ${statusText} — ${summarizeBody(body)}`;
+    return `${action}: ${status} ${statusText}: ${summarizeBody(body)}`;
 }
 
 /** Collapse a response body to one short, single-line fragment. */

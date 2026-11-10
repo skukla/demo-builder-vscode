@@ -55,8 +55,8 @@ describe('installing a pack’s store settings', () => {
 
     it.each([
         ['a store-view row', row(GRID, '24', 'stores', 'default'), 'is set for one store view'],
-        ['a base URL', row('web/secure/base_url', 'https://example.com/'), 'a setting a pack may not change'],
-        ['a credential', row('payment/some_gateway/api_key', 'x'), 'a setting a pack may not change'],
+        ['a base URL', row('web/secure/base_url', 'https://example.com/'), 'a setting a datapack may not change'],
+        ['a credential', row('payment/some_gateway/api_key', 'x'), 'a setting a datapack may not change'],
     ])('refuses %s before writing anything', async (_what, refused, words) => {
         const ctx = await storeContext(configStore({ default: { [GRID]: '12', [LIST]: '10' } }));
 
@@ -76,14 +76,14 @@ describe('installing a pack’s store settings', () => {
     it.each(['design/head/default_title', 'payment/checkmo/active', 'carriers/flatrate/active', 'general/locale/code', 'sales_email/order/enabled', 'catalogue/frontend/x'])(
         'refuses %s by path: its section is not on the allowed list',
         (path) => {
-            expect(() => packSettings([row(path, '1')], WEBSITE)).toThrow(`${path} is outside what a pack may set`);
+            expect(() => packSettings([row(path, '1')], WEBSITE)).toThrow(`${path} is outside what a datapack may set`);
         },
     );
 
     it.each(['web/unsecure/base_url', 'web/seo/use_rewrites', 'admin/security/session_lifetime', 'catalog/search/api_key', 'sales/gateway/apikey', 'customer/captcha/secret', 'checkout/hook/token', 'btob/service/password', 'catalog/search/API_KEY'.toLowerCase()])(
         'refuses %s whatever the list says',
         (path) => {
-            expect(() => packSettings([row(path, '1')], WEBSITE)).toThrow(`${path} is a setting a pack may not change`);
+            expect(() => packSettings([row(path, '1')], WEBSITE)).toThrow(`${path} is a setting a datapack may not change`);
         },
     );
 

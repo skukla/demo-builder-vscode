@@ -77,7 +77,7 @@ describe('coupons install', () => {
     });
 
     it('refuses a coupon row with no code before anything is sent', () => {
-        expect(() => parseCouponRows([{ coupon: { rule_id: 'x' } }])).toThrow("The pack's coupons are not in the shape Commerce takes");
+        expect(() => parseCouponRows([{ coupon: { rule_id: 'x' } }])).toThrow("The datapack's coupons are not in the shape Commerce takes");
     });
 });
 

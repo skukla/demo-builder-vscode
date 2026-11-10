@@ -31,6 +31,8 @@ export interface ActionButton {
      * changes (owner, 2026-11-04: ticking a row in Updates moved Close).
      */
     sizeLabels?: string[];
+    /** What the button does, shown on hover, for a label that does not say it (Fix with AI). */
+    hint?: string;
 }
 
 export interface ModalProps {
@@ -114,6 +116,7 @@ interface FocusableButtonProps {
     isPending?: boolean;
     /** The button's name while pending, when the label it shows is hidden behind the spinner. */
     pendingName?: string;
+    hint?: string;
     children: React.ReactNode;
 }
 
@@ -130,7 +133,7 @@ function ButtonFace({ children, isPending, onColour }: { children: React.ReactNo
     );
 }
 
-function FocusableButton({ variant, onPress, isDisabled: disabled, isPending, pendingName, children }: FocusableButtonProps) {
+function FocusableButton({ variant, onPress, isDisabled: disabled, isPending, pendingName, hint, children }: FocusableButtonProps) {
     // Pending ignores presses like disabled does, without dimming: the button is busy, not unavailable.
     const isDisabled = disabled === true || isPending === true;
     const handleKeyDown = useCallback(
@@ -168,6 +171,7 @@ function FocusableButton({ variant, onPress, isDisabled: disabled, isPending, pe
             aria-disabled={isDisabled}
             aria-busy={isPending || undefined}
             aria-label={isPending ? pendingName : undefined}
+            title={hint}
         >
             <ButtonFace isPending={isPending} onColour={variant === 'primary' || variant === 'accent' || variant === 'negative'}>
                 {children}
@@ -201,6 +205,7 @@ function renderButton(button: ActionButton, index: number): React.JSX.Element {
             isDisabled={button.isDisabled}
             isPending={button.isPending}
             pendingName={button.label}
+            hint={button.hint}
         >
             <SizedLabel label={button.label} sizeLabels={button.sizeLabels} />
         </FocusableButton>

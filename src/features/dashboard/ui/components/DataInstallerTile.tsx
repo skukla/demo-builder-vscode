@@ -61,7 +61,7 @@ export function DataInstallerTile(): React.ReactElement {
             icon={<Box size="L" />}
             onPress={() => webviewClient.postMessage('openDataInstaller')}
             action="dataInstaller"
-            tooltip="This demo's datapack: import it, save its changes, or choose another"
+            tooltip="Install, save or change this demo's datapack"
         />
     );
 }

@@ -183,7 +183,7 @@ function readManifest(zip: AdmZip, root: string): Manifest {
     }
     if (!parsed.datapack_name || !parsed.version) {
         throw new DatapackZipError(
-            "This datapack file does not say the pack's name and a version.",
+            "This datapack file does not say the datapack's name and a version.",
         );
     }
     if (!Array.isArray(parsed.data_types)) {
@@ -229,7 +229,7 @@ function readLayer(zip: AdmZip, root: string, manifest: Manifest): PackSettingsL
     try {
         records = JSON.parse(zip.readAsText(`${root}${LAYER_FILE}`)) as unknown;
     } catch {
-        throw new DatapackZipError("This datapack file's store settings are missing or not valid JSON.");
+        throw new DatapackZipError("This datapack file's Store Settings are missing or not valid JSON.");
     }
     return {
         id: { name: expected, version: section.version },

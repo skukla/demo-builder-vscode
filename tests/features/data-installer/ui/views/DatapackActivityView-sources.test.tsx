@@ -63,7 +63,7 @@ describe('DatapackActivityView sources', () => {
         render(<DatapackActivityView />);
 
         await waitFor(() => expect(screen.getAllByTestId('activity-row')).toHaveLength(1));
-        expect(screen.getByText(/The Data Installer's own log could not be read: The Data Installer is turned off\./)).toBeInTheDocument();
+        expect(screen.getByText(/Couldn't read the Data Installer's activity: The Data Installer is turned off\./)).toBeInTheDocument();
     });
 
     it("says when Demo Builder's own records could not be read", async () => {

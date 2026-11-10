@@ -55,7 +55,7 @@ export function BatchDatapackChanges({ rows, removing, choices }: Props): React.
     const column = discardColumnState(asking, choices.fields);
     return (
         <div className="batch-confirm">
-            <LeadText>Changed since installed. Save each as a new datapack, or discard its changes.</LeadText>
+            <LeadText>These datapacks have changes. Save each as a new datapack, or discard its changes.</LeadText>
             <div className="batch-delete scroll-fade scroll-fade--capped">
                 <table className="batch-delete-table batch-changes-table">
                     <thead>

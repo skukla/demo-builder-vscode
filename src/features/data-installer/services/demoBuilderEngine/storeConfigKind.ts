@@ -85,9 +85,9 @@ export function isOffLimitsSetting(path: string): boolean {
 }
 
 function refusal(path: string, scope: string): string | undefined {
-    if (scope === 'store' || scope === 'stores') return `${path} is set for one store view, and Demo Builder sets store settings store-wide or for the install's website only`;
-    if (isOffLimitsSetting(path)) return `${path} is a setting a pack may not change`;
-    if (!ALLOWED_SECTIONS.includes(path.split('/')[0])) return `${path} is outside what a pack may set (${andList(ALLOWED_SECTIONS)})`;
+    if (scope === 'store' || scope === 'stores') return `${path} is set for one store view, and Demo Builder sets Store Settings store-wide or for the install's website only`;
+    if (isOffLimitsSetting(path)) return `${path} is a setting a datapack may not change`;
+    if (!ALLOWED_SECTIONS.includes(path.split('/')[0])) return `${path} is outside what a datapack may set (${andList(ALLOWED_SECTIONS)})`;
     return undefined;
 }
 
@@ -100,7 +100,7 @@ function refusal(path: string, scope: string): string | undefined {
 export function packSettings(records: unknown, websiteCode: string | undefined): PackSetting[] {
     const rows = parseRows(rowsSchema, records, 'store settings');
     const refused = rows.flatMap((row) => refusal(row.path, row.scope) ?? []);
-    if (refused.length > 0) throw new Error(`The pack's store settings cannot be installed: ${andList(refused)}. Nothing of this kind was written.`);
+    if (refused.length > 0) throw new Error(`The datapack's Store Settings cannot be installed: ${andList(refused)}. Nothing of this kind was written.`);
     return settingsOf(rows, websiteCode);
 }
 
@@ -109,7 +109,7 @@ function settingsOf(rows: ReadonlyArray<z.infer<typeof rowsSchema>[number]>, web
     const settings = new Map<string, PackSetting>();
     for (const row of rows) {
         const scope = row.scope === 'default' ? 'default' : 'website';
-        if (scope === 'website' && !websiteCode) throw new Error('The install target names no website, and the pack sets a website setting.');
+        if (scope === 'website' && !websiteCode) throw new Error('The install target names no website, and the datapack sets a website setting.');
         const item: SetupConfigFixItem = { path: row.path, value: row.value, scope };
         settings.set(keyOf(item), { key: keyOf(item), item });
     }

@@ -74,13 +74,13 @@ export const CREATION_STAGES = {
     },
     installingDatapack: {
         label: 'Installing the datapack',
-        expectation: 'Minutes; varies by pack',
-        detail: 'Into your Commerce instance',
+        expectation: 'Usually a few minutes',
+        detail: 'Into Commerce',
     },
     removingDatapack: {
         label: 'Uninstalling the datapack',
-        expectation: 'Minutes; varies by pack',
-        detail: 'From your Commerce instance',
+        expectation: 'Usually a few minutes',
+        detail: 'From Commerce',
     },
     applyingChanges: {
         label: 'Applying the changes',

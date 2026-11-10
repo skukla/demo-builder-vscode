@@ -72,8 +72,10 @@ export function DatapackCatalogGrid({
                 // Only your own or the whole catalog can be filled from here.
                 description={
                     show === 'team' || show === 'installer' || show === 'community'
-                        ? 'Choose another view'
-                        : "Load a datapack .zip file, or save one from your demo's Commerce instance."
+                        ? 'Try All Datapacks'
+                        : show === 'yours'
+                          ? 'Add one from a file.'
+                          : "Add one from a file, or save this demo's."
                 }
             />
         );

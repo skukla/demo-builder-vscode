@@ -206,10 +206,10 @@ server IS — transport, lifecycle, scoping, security — is in
 | `clear_demo_data` | **confirm** | Clear the chosen stores of everything check_demo_data listed: deletes those products, categories, customers, cart rules |
 | `copy_library_datapack_to_installer` | **confirm** | Copy a datapack library pack into the Data Installer's catalog, so other teams can find and install |
 | `delete_library_datapack` | **confirm** | Delete one of your own packs from the datapack library — the undo of |
-| `get_datapack_import_status` | read | Progress of the running or most recent datapack import or uninstall: its outcome (watching while it runs), |
-| `get_datapack_import_target` | read | Which Commerce instance an import would land on, derived from the current project, |
+| `get_datapack_import_status` | read | Progress of the running or most recent datapack install or uninstall: its outcome (watching while it runs), |
+| `get_datapack_import_target` | read | Which Commerce instance an install would land on, derived from the current project, |
 | `list_datapack_export_items` | read | What this Commerce instance holds for one data type, to choose from before exporting. |
-| `list_datapack_import_scopes` | read | The websites and store views an import can be scoped to on this project's instance. |
+| `list_datapack_import_scopes` | read | The websites and store views an install can be scoped to on this project's instance. |
 | `load_datapack_zip` | **confirm** | Write the pack in a datapack zip file into the datapack library (default) or the Data Installer. |
 | `mark_team_datapack` | **confirm** | Mark one of your own datapacks in Demo Builder's datapack store as an official team pack, or take |
 | `open_datapack_zip` | read | Say what a datapack zip file holds — name, version, data types, and any settings layer by path — |
@@ -220,8 +220,8 @@ server IS — transport, lifecycle, scoping, security — is in
 | `save_store_changes_to_pack` | **confirm** | Save the store\ |
 | `share_datapack` | **confirm** | Share one of your own datapack library packs with your team, or stop sharing it: every version. |
 | `start_datapack_export` | **confirm** | Capture data from this project's Commerce store into a datapack: saves what is picked in selections |
-| `start_datapack_import` | **confirm** | Import a datapack into a live Commerce instance. Returns an activationId once the job starts. |
-| `validate_datapack_import` | read | Dry-run an import: same guard, same credentials, same request body as the real thing, |
+| `start_datapack_import` | **confirm** | Install a datapack into a live Commerce instance. Returns an activationId once the job starts. |
+| `validate_datapack_import` | read | Check first: try an install with the same guard, same credentials, same request body as the real thing, |
 | `verify_datapack_install` | read | Check that the store holds what a datapack says, after installing it: for each product the pack |
 
 ## `src/features/ai/server/deleteProjectTool.ts`

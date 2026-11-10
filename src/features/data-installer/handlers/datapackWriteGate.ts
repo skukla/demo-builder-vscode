@@ -42,13 +42,13 @@ export interface DatapackWriteAccess {
 
 /** The refusal when no project is open, verbatim per write. */
 const NO_PROJECT: Record<DatapackWrite, string> = {
-    import: 'Open a project before importing a datapack.',
+    import: 'Open a project before installing a datapack.',
     export: 'Open a project before exporting.',
 };
 
 /** The refusal when the project has no Commerce backend, verbatim per write. */
 const NO_BACKEND: Record<DatapackWrite, string> = {
-    import: 'This project has no Adobe Commerce backend, so there is nothing to import into.',
+    import: 'This project has no Adobe Commerce backend, so there is nothing to install into.',
     export: 'This project has no Adobe Commerce backend, so there is nothing to export from.',
 };
 

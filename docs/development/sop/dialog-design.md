@@ -25,9 +25,22 @@ what reads as AI-written:
 | "Data (12)" | It counts a list the SC can see |
 | "Every data type went in." | It says nothing the green title did not |
 
+Six patterns the owner rejected (2026-11-10, `.rptc/research/datapack-versions-and-wording/`).
+Each has one rejected example; the words module (`features/data-installer/datapackWords.ts`) holds
+the ones that replace them, and `tests/sop/datapack-words.test.ts` catches the mechanical ones.
+
+| Pattern | Rejected example | Write instead |
+|---|---|---|
+| **Fragment**: half a sentence, or a clause standing in for a noun | "Since this demo's last save" | Nothing, or a whole sentence |
+| **Inside view**: how the software works, not what the SC is waiting for | "Each data type in My Luma" | What the SC waits for, or nothing |
+| **Unasked reassurance**: explains something nobody asked | "No version is deleted." | Nothing |
+| **"The store"**: where the word is Commerce | "Checking the store" | "Reading from Commerce" |
+| **Vague or wrong name** | "Remove Data" | The thing's name and its verb: "Uninstall My Luma" |
+| **Code on screen**: an id, a raw version, a setting key, or "pack" for "datapack" | "20261109-141504" | "Nov 9, 2:15 PM"; "datapack"; the setting's title |
+
 ## Layouts
 
-Every dialog is built from five. A dialog that walks through several (Import goes
+Every dialog is built from five. A dialog that walks through several (Install goes
 form, confirm, progress, result) shows one at a time.
 
 | Layout | Holds | Usual width |
@@ -42,9 +55,10 @@ form, confirm, progress, result) shows one at a time.
 
 **A wait shows nothing else, and says what it is waiting for.** While a dialog waits for what it
 will show, only the title, the wait and the way out (Close or Cancel) appear: no fields and no action
-buttons. The wait is the progress window's three rows, medium and centred (`StageWait`): what it is
-doing ("Reading demo data"), on what ("Each data type, in Commerce"), and how long it usually takes
-with the time so far ("Usually a few seconds · 4 seconds"). Its words come from `WAIT_STAGES`
+buttons. The wait is the progress window's rows, medium and centred (`StageWait`): what it is
+doing ("Reading demo data"), a second line only when it tells the SC something the first does not
+("From Commerce"), and how long it usually takes with the time so far ("Usually a few seconds · 4
+seconds"). Most waits need no second line: "Checking for your changes" says it all. Its words come from `WAIT_STAGES`
 (`core/utils/waitStages.ts`), held to the stage table's rules: a label of 25 characters at most, a
 detail of 40, an expectation of 25, and the stage table's words for the same work ("Reading from
 Commerce", never "Reading the store"). Work the SC started reports its own stages in the same rows.
@@ -84,7 +98,7 @@ deploy vanished while "Projects Reset" stayed on its title (owner, 2026-11-10).
 **A clean run ends small; a run with a problem ends where it ran.** A window that shows a run as
 rows (the Updates run, the projects batch run, a datapack import, a datapack save) and finishes cleanly hands off
 to the small Result layout: the outcome as the title with its green icon, then only what is left
-to know ("My Luma Imported", then "Your changes are saved in Version History." when a save ran),
+to know ("My Luma Installed", then "Your changes are saved in Version History." when a save ran),
 or the title alone when nothing is. No rows, no "Took …". A run that finishes with any problem (a
 row or step with a warning or error, a stop) does not switch: the title turns to the outcome with
 its icon, the rows stay with each one's final state, and a problem sits on the row it is about,
@@ -97,7 +111,7 @@ ends on its title alone, "No Changes to Save". A run shown as rows has no rows o
 outside its items: a save says it on the row it leads to, the first while it finds what to read and
 the last while it writes (review, 2026-11-10). A run made of
 steps shows the steps, each named for what it does, in the order it runs, and only those that
-apply (an import: Save Your Changes, Uninstall the Previous Version, Install, Verify the Import; owner,
+apply (an install: Save Your Changes, Uninstall the Previous Version, Install, Verify Installation; owner,
 2026-11-09): work that belongs to no one item is a line of the step it serves, never a grey line
 under the list or a row of its own, and a step's items (an import's data types) sit under it, one
 line each, the one in progress with a second line saying what it is doing, the word first and
@@ -110,13 +124,13 @@ for a stop. The one exception is a clean Updates run that left updates unticked,
 to Updates beside Close, since those updates are still waiting. A run that changes what is there already (importing a pack the project has) says what
 it would change before it is started, not mid-run: the window opens on its wait ("Checking for
 your changes", the one name for that check wherever it runs), then the form shows each data type's
-change in counts under its name ("12 updated, 2 removed", "No changes"), and Import runs straight
+change in counts under its name ("12 updated, 2 removed", "No changes"), and Install runs straight
 away (owner, 2026-11-08).
 
 **A confirm that can lose the SC's changes** puts the button that loses them at the footer's start,
 apart from Cancel and the save button, as Don't Save stands in a Save dialog, and lists the changes
 one row per data type in the two-column `FactList` (owner, 2026-11-09). While the confirm's check
-runs, the title names the work ("Import My Luma"), not a question nothing has asked yet, at the
+runs, the title names the work ("Install My Luma"), not a question nothing has asked yet, at the
 confirm's own width so nothing jumps when it comes.
 
 **Capitals.** What names a thing is Title Case: the title, buttons, tabs, menu items and labels
@@ -147,7 +161,7 @@ dangerous main action is solid red. Never two buttons that do the same thing.
   run changes its title when the run starts. Done: the thing, then what happened. Failed:
   "Couldn't" and the verb ("Couldn't Install My Luma"), never "… Failed", "… Stopped" or "… Did
   Not …".
-- A result's title NAMES the thing, then what happened to it ("My Luma Imported", "My Luma
+- A result's title NAMES the thing, then what happened to it ("My Luma Installed", "My Luma
   Uninstalled", "Couldn't Save My Luma"), never a generic kind ("Datapack Removed"). Only when
   there is no name to give does it name the kind ("Couldn't Open the File"). A title is a
   statement, never the reason, and has no comma. Owner, 2026-11-10, settling the contradiction

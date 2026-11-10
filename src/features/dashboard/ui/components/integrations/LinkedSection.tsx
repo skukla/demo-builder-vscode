@@ -13,7 +13,7 @@
 import { Link } from '@adobe/react-spectrum';
 import React from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
-import { PanelRow } from './PanelRow';
+import { PanelRow } from '@/core/ui/components/ui/PanelRow';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 
 export interface LinkedSectionProps {

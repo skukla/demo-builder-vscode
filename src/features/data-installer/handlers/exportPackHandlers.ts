@@ -107,7 +107,7 @@ async function build(context: HandlerContext, given: Checked): Promise<HandlerRe
     const problems = packRowProblems(rows, undefined);
     if (problems.length > 0) {
         throw new DatapackTransferError(
-            `The pack would be refused at install, so it was not written: ${problems.join(' ')}`,
+            `The datapack would be refused at install, so it was not written: ${problems.join(' ')}`,
         );
     }
     const target = await projectPath(context, given.path ?? '.', datapackZipName(id));

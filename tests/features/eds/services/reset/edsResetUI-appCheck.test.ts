@@ -167,8 +167,8 @@ describe('resetEdsProjectWithUI — before the progress window', () => {
         await run(createProject());
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            expect.stringContaining('reset "test-project"'),
-            { modal: true },
+            'Reset test-project?',
+            { modal: true, detail: 'It returns to how it was set up. Code changes are lost.' },
             RESET,
         );
     });

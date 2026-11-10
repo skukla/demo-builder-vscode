@@ -137,8 +137,8 @@ export interface EdsResetWithUIOptions {
 async function confirmReset(vscode: typeof import('vscode'), projectName: string): Promise<boolean> {
     const confirmButton = 'Reset Project';
     const confirmation = await vscode.window.showWarningMessage(
-        `Are you sure you want to reset "${projectName}"? This will reset all code to the template state and re-copy demo content.`,
-        { modal: true },
+        `Reset ${projectName}?`,
+        { modal: true, detail: 'It returns to how it was set up. Code changes are lost.' },
         confirmButton,
     );
     return confirmation === confirmButton;

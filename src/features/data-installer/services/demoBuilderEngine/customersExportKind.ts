@@ -39,7 +39,7 @@ export function parseCustomersExport(records: unknown): CustomerExportRow[] {
     const parsed = packSchema.safeParse(records);
     if (!parsed.success)
         throw new Error(
-            `The pack's customers_export rows are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`,
+            `The datapack's customers_export rows are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`,
         );
     return parsed.data.source.items;
 }
@@ -84,7 +84,7 @@ export async function installCustomersExport(
     const websiteId = ctx.session.websiteId;
     if (websiteId === undefined)
         throw new Error(
-            "The install target names no website, so the pack's customers have nowhere to sign in.",
+            "The install target names no website, so the datapack's customers have nowhere to sign in.",
         );
     const lk = productLookups(ctx);
     const todo: CustomerToMake[] = [];

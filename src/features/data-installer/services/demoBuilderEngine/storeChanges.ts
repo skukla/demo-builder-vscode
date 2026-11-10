@@ -229,8 +229,8 @@ function settingRows(items: Record<string, unknown>, lookup: LayerLookup, create
 
 /** What the preview says of the layer: nothing when there is none to speak of. */
 async function layerSettings(ctx: KindContext, items: Record<string, unknown>, lookup: LayerLookup, created: readonly CreatedObject[]): Promise<{ counts?: KindChanges; preview?: SettingsPreview }> {
-    if (lookup.state === 'left-out') return { preview: { layer: lookup.layer.id, changes: [], note: layerLeftOutLine(lookup.layer) } };
-    if (lookup.state === 'unasked') return { preview: { changes: [], note: layerNotAskedLine(lookup.pack.name, 'are not counted here') } };
+    if (lookup.state === 'left-out') return { preview: { layer: lookup.layer.id, changes: [], note: layerLeftOutLine() } };
+    if (lookup.state === 'unasked') return { preview: { changes: [], note: layerNotAskedLine('are not counted here') } };
     const rows = settingRows(items, lookup, created);
     if (rows === undefined) return {};
     const { counts, preview } = await settingsChanges(ctx, rows, created);

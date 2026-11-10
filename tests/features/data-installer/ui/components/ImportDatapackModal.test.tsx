@@ -36,7 +36,7 @@ import {
 
 // The shared Modal renders its actions as div[role="button"][aria-disabled],
 // not <button disabled> — so jest-dom's toBeDisabled() does not apply.
-const startButton = () => screen.getByRole('button', { name: /^import$/i });
+const startButton = () => screen.getByRole('button', { name: /^install$/i });
 const expectStartDisabled = () => expect(startButton()).toHaveAttribute('aria-disabled', 'true');
 
 /** The payload of the start request, once one has been sent. */
@@ -81,7 +81,7 @@ describe('ImportDatapackModal', () => {
             renderModal();
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
-            await press(screen.getByRole('button', { name: /^import$/i }));
+            await press(screen.getByRole('button', { name: /^install$/i }));
 
             await waitFor(() => {
                 const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -236,7 +236,7 @@ describe('ImportDatapackModal', () => {
     // already validates server-side before it starts. "Dry run" names it as a
     // rehearsal of the same request.
     describe('the dry run', () => {
-        const validateButton = () => screen.getByRole('button', { name: /^dry run$/i });
+        const validateButton = () => screen.getByRole('button', { name: /^check first$/i });
 
         it('is offered beside Start import, with the same requirements', async () => {
             renderModal();
@@ -294,7 +294,7 @@ describe('ImportDatapackModal', () => {
 
             await press(validateButton());
 
-            expect(await screen.findByText(/dry run passed/i)).toBeInTheDocument();
+            expect(await screen.findByText(/check passed/i)).toBeInTheDocument();
         });
 
         // The reason IS the payload — it is the service's own wording about why

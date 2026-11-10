@@ -10,11 +10,11 @@ describe('the save screens, one line each', () => {
     });
 
     it('Save As New Datapack: everything the demo uses, as a new pack of yours, whoever owned the one it started from', () => {
-        expect(SAVE_AS_INTRO).toBe('Saves everything this demo uses as a new datapack of yours.');
+        expect(SAVE_AS_INTRO).toBe("Saves this demo's data as a new datapack.");
     });
 
     it('Add Unused Items: what the list is, and that choosing is yours', () => {
-        expect(UNUSED_INTRO).toBe('Nothing in this demo uses these yet. Select any to include.');
+        expect(UNUSED_INTRO).toBe("This demo doesn't use these yet. Select any to include.");
     });
 
     it('Create Datapack, from nothing: what to include', () => {

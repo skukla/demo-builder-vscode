@@ -1,6 +1,6 @@
 /**
  * Exporting a project whose pack is the SC's own PRIVATE library pack (owner, 2026-10-30): a
- * person is asked once, "Your teammates can't use this pack's data. Share it?", with Share; declining
+ * person is asked once, "Your teammates can't use this datapack's data. Share it?", with Share; declining
  * exports anyway. An agent's export answer carries the same sentence as a note instead.
  */
 
@@ -71,7 +71,7 @@ describe('offerToShareBeforeExport', () => {
         expect(await offerToShareBeforeExport(context, PROJECT, deps)).toBe('shared');
         expect(deps.ask).toHaveBeenCalledTimes(1);
         expect(deps.ask).toHaveBeenCalledWith(PRIVATE_PACK_QUESTION, 'Everyone can find and install it under Community Datapacks.');
-        expect(PRIVATE_PACK_QUESTION).toBe("Your teammates can't use this pack's data. Share it?");
+        expect(PRIVATE_PACK_QUESTION).toBe("Your teammates can't use this datapack's data. Share it?");
         expect(deps.share).toHaveBeenCalledWith(context, 'acme-1a2b3c');
     });
 

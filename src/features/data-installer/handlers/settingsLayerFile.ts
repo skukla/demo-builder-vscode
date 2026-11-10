@@ -70,7 +70,7 @@ export async function withFileLayer(context: HandlerContext, pack: DatapackFile)
         return { pack: { ...pack, settingsLayer: { id, displayName, ...(description ? { description } : {}), records } } };
     } catch (error) {
         context.debugLogger.debug(`${LOG_PREFIX} Could not look for ${pack.id.name}'s settings layer: ${String(error)}`);
-        return { pack, note: layerNotAskedLine(pack.id.name, 'are not in this file') };
+        return { pack, note: layerNotAskedLine('are not in this file') };
     }
 }
 

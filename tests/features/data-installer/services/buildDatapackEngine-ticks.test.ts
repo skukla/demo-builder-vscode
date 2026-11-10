@@ -103,7 +103,7 @@ describe('importing part of a pack', () => {
     it('still refuses a kind the pack does not hold', async () => {
         const verdict = await h.engine({ rows: { categories: ROWS.categories } }).validateImport(request(['products']));
 
-        expect(verdict).toEqual({ valid: false, reason: 'The pack holds no products.' });
+        expect(verdict).toEqual({ valid: false, reason: 'The datapack holds no products.' });
     });
 });
 
@@ -219,7 +219,7 @@ describe('a settings layer, and an install of part of its pack', () => {
         const status = await h.importTypes(ALL, { layer: LAYER });
 
         expect(h.settings.state.default[GRID]).toBe('24');
-        expect(status.note).toContain('From racks-settings@2');
+        expect(status.note).toContain('Store Settings');
     });
 
     it('does not apply to part of the pack, and the note says so', async () => {
@@ -227,7 +227,7 @@ describe('a settings layer, and an install of part of its pack', () => {
 
         expect(h.writes('system/config')).toStrictEqual([]);
         expect(h.settings.state.default[GRID]).toBe('12');
-        expect(status.note).toBe('The store settings in racks-settings@2 were left as they are: they go in when every data type is imported.');
+        expect(status.note).toBe('The Store Settings were left as they are: they go in when every data type is installed.');
     });
 
     it('applies with part of the pack when store_config is asked for by name', async () => {
@@ -312,7 +312,7 @@ describe('the preview says what the install does', () => {
         expect(preview.settings).toEqual({
             layer: { name: 'racks-settings', version: '2' },
             changes: [],
-            note: 'The store settings in racks-settings@2 were left as they are: they go in when every data type is imported.',
+            note: 'The Store Settings were left as they are: they go in when every data type is installed.',
         });
     });
 

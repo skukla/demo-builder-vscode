@@ -112,7 +112,7 @@ async function movedOn(project: Project, pack: DatapackId): Promise<HandlerRespo
     if (!(await hasRecord(project, held))) return undefined;
     return {
         success: false,
-        error: `What this pack put in Commerce was saved to ${held.name}@${held.version}, the datapack this demo now uses, so uninstall that one instead. Nothing was uninstalled.`,
+        error: `What this datapack put in Commerce was saved to ${held.name}@${held.version}, the datapack this demo now uses, so uninstall that one instead. Nothing was uninstalled.`,
         code: ErrorCode.INVALID_OPERATION,
     };
 }
@@ -167,7 +167,7 @@ function couldNotCheck(response: HandlerResponse): HandlerResponse {
     return {
         ...response,
         error:
-            `Could not check what changed since this pack was installed: ${response.error ?? 'no reason given.'} Nothing was uninstalled. ` +
+            `Could not check what changed since this datapack was installed: ${response.error ?? 'no reason given.'} Nothing was uninstalled. ` +
             'Call again with changes:"drop" to uninstall it anyway, losing any changes.',
     };
 }

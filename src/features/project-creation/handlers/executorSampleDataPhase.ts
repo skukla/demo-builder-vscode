@@ -127,5 +127,5 @@ function describeSampleDataResult(
     if (result.outcome === 'success') {
         return `Installed ${name}`;
     }
-    return `Installed ${name} partially \u2014 some data types did not land. Retry from the dashboard.`;
+    return `${name} was partly installed. Install it again from the dashboard.`;
 }

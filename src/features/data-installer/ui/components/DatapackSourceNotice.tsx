@@ -29,7 +29,7 @@ export const SOURCE_NOTICE_COPY = {
     ownOnly: "Showing Demo Builder's datapacks",
     noAccess:
         "Your Adobe account can't use the Data Installer, so its datapacks aren't listed. An admin of your Adobe org can add you to it.",
-    noAnswer: "The Data Installer didn't answer, so its datapacks aren't listed. Refresh to try again.",
+    noAnswer: "The Data Installer isn't responding, so its datapacks aren't listed.",
     storeMissing: "Demo Builder's datapacks aren't available",
     storeMissingLine: "Only the Data Installer's are listed. Refresh to try again.",
     dismiss: 'Dismiss',

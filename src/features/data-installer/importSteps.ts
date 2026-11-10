@@ -53,7 +53,7 @@ const STEP_LINES: Record<string, string> = {
     // What Commerce holds already, read so the install updates rather than duplicates: the house's
     // own words for a read (owner, 2026-11-09, walk F121; "Commerce", never "the store", 2026-11-03).
     [COMPARING]: 'Reading from Commerce',
-    [RECORDING]: 'Recording what went in',
+    [RECORDING]: 'Recording installed items',
     [SETTINGS]: 'Applying store settings',
 };
 
@@ -178,18 +178,18 @@ function checkedLine(
     if (check.verdict === 'matches')
         return {
             status: 'success',
-            line: `Checked ${count} products against the datapack: all match`,
+            line: `${count} products match the datapack`,
         };
     const differ = check.productsDiffer?.toLocaleString('en-US') ?? 'some';
     return {
         status: 'warning',
-        problem: { text: `Checked ${count} products against the datapack: ${differ} differ`, failed: false },
+        problem: { text: `${differ} of ${count} products differ from the datapack`, failed: false },
     };
 }
 
 /** Verify the Import: recording what went in, then the check. */
 function verifyStep(source: StepSource, install: ImportStep): ImportStep {
-    const row = { kind: FINISHING, label: 'Verify the Import' };
+    const row = { kind: FINISHING, label: 'Verify Installation' };
     if (source.stoppedAt === FINISHING_STOP) return { ...row, ...failed(source.reason) };
     if (source.running) {
         return install.status === 'success' && source.phase && VERIFY_PHASES.has(source.phase)

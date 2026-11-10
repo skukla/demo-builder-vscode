@@ -41,7 +41,7 @@ export function failure(context: HandlerContext, error: unknown, fallback: strin
 function needsName(): HandlerResponse {
     return {
         success: false,
-        error: 'This datapack is a team pack or not yours, so the changes cannot be saved into it. Save them as a new datapack of your own: send saveAs with its name.',
+        error: 'This datapack is a team datapack or not yours, so the changes cannot be saved into it. Save them as a new datapack of your own: send saveAs with its name.',
         code: ErrorCode.INVALID_OPERATION,
         data: { needsName: true },
     };

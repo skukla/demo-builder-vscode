@@ -9,7 +9,7 @@
 /**
  * The question's sentence: what goes whatever is ticked, and, when the box is offered, that the
  * datapack stays installed in Commerce unless the SC uninstalls it. The box itself is
- * `UNINSTALL_DATAPACK` (`data-installer/uninstallWords.ts`).
+ * `UNINSTALL_DATAPACK` (`data-installer/datapackWords.ts`).
  */
 export function deleteSentence(offersData: boolean): string {
     const files = 'Project files are removed from this machine.';

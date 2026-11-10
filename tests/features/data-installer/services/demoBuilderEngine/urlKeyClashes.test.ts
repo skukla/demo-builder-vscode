@@ -137,7 +137,7 @@ describe('clashLine', () => {
     it('says which category, which key, whose, and where to change it', () => {
         expect(clashLine([])).toBeUndefined();
         expect(clashLine([{ name: 'Coffee', urlKey: 'coffee', storeCategory: 'Coffee Beans' }])).toBe(
-            'Commerce would refuse one of the pack\'s categories: Coffee (url key "coffee", already used by the category Coffee Beans in Commerce). ' +
+            'Commerce would refuse one of the datapack\'s categories: Coffee (url key "coffee", already used by the category Coffee Beans in Commerce). ' +
                 "In the Admin, Catalog > Categories, change that category's URL Key (Search Engine Optimization), then install.",
         );
         expect(new UrlKeyClashError([{ name: 'Coffee', urlKey: 'coffee', storeCategory: 'Coffee Beans' }]).message).toMatch(/^Nothing was installed\. Commerce would refuse/u);

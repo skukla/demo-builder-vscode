@@ -21,14 +21,14 @@ import { LeadText } from '@/core/ui/components/ui/LeadText';
 
 /** The confirm's sentence over the list of changes (walk F110), for an import and for a removal. */
 export const CHANGES_LEAD = {
-    import: "You changed these since this demo's last save. Importing replaces them.",
-    remove: "You changed these since this demo's last save. Uninstalling takes them out too.",
+    import: 'Installing replaces these changes.',
+    remove: 'Uninstalling removes these changes.',
 } as const;
 
 /** The confirm's sentence when the check could not run; its title says so (review, 2026-11-10). */
 export const UNCHECKED_LEAD = {
-    import: "Importing replaces anything you changed since this demo's last save.",
-    remove: "Uninstalling removes anything you changed since this demo's last save.",
+    import: 'Installing replaces any changes you made.',
+    remove: 'Uninstalling removes any changes you made.',
 } as const;
 
 /** Names a data type shows in full; past that, how many more (the dialog design rules' count). */

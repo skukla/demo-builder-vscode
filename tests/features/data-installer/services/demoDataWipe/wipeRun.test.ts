@@ -33,7 +33,7 @@ describe('runWipe', () => {
             { method: 'DELETE', path: 'products/ZZ-JACKET-RED' },
             { method: 'DELETE', path: 'products/ZZ-SHARED-WITH-JUSTRITE/websites/5' },
         ]);
-        expect(stages).toEqual(['Closing returns', 'Closing orders', 'Removing customers', 'Removing products', 'Taking products off sites']);
+        expect(stages).toEqual(['Closing returns', 'Closing orders', 'Deleting customers', 'Deleting products', 'Removing products from websites']);
         expect(outcome.sentence).toBe(
             'Removed 3 products and 1 customer from the store justrite_test_store. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
                 'Took 1 product other websites also sell off the chosen websites. ' +

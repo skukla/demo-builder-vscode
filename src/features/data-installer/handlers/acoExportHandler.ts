@@ -93,7 +93,7 @@ export async function startAcoExport(
     if (stray.length > 0)
         return {
             success: false,
-            error: `An ACO pack is made from this project's own store, so ${stray.join(' and ')} cannot be sent with aco.`,
+            error: `An ACO datapack is made from this project's own store, so ${stray.join(' and ')} cannot be sent with aco.`,
             code: ErrorCode.INVALID_OPERATION,
         };
     const name = payload?.datapackName;
@@ -101,7 +101,7 @@ export async function startAcoExport(
     if (!name || !version)
         return {
             success: false,
-            error: 'An export needs a datapack name and a version — together they name what it writes.',
+            error: 'An export needs a datapack name and a version: together they name what it writes.',
         };
     const gate = await resolveDatapackWriteAccess(context, 'export');
     if ('response' in gate) return gate.response;
@@ -136,7 +136,7 @@ export async function startAcoExport(
         );
         return {
             success: false,
-            error: 'The ACO pack could not be made. Details are in Debug Logs.',
+            error: 'The ACO datapack could not be made. Details are in Debug Logs.',
             code: ErrorCode.UNKNOWN,
         };
     }

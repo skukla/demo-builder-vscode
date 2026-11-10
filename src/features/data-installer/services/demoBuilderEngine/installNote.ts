@@ -28,7 +28,7 @@ export function rowNotesOf(skipped: readonly SkippedRow[] | undefined): Record<s
     const refused = new Map<string, number>();
     for (const row of skipped ?? []) refused.set(row.kind, (refused.get(row.kind) ?? 0) + 1);
     const notes: Record<string, string> = {};
-    for (const [kind, n] of refused) notes[kind] = `Commerce refused ${n.toLocaleString('en-US')}.`;
+    for (const [kind, n] of refused) notes[kind] = `Commerce refused ${n.toLocaleString('en-US')} ${n === 1 ? 'row' : 'rows'}.`;
     return notes;
 }
 

@@ -24,7 +24,6 @@ import { settingsAsked } from './askedKinds';
 import type { CreatedObject } from './installRecord';
 import type { KindContext } from './kindContext';
 import type { KeptThing } from './repeatInstall';
-import { labelPack } from './storeAccess';
 import { installStoreConfig, packSettings, settingsLine } from './storeConfigKind';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { DatapackId } from '@/types/datapack';
@@ -89,7 +88,7 @@ export function layerProblems(lookup: LayerLookup, websiteCode: string | undefin
         packSettings(lookup.layer.records, websiteCode);
         return [];
     } catch (error) {
-        return [`${labelPack(lookup.layer.id)}: ${errorText(error)}`];
+        return [`Store Settings: ${errorText(error)}`];
     }
 }
 
@@ -128,19 +127,18 @@ export function layerKept(lookup: LayerLookup, ctx: Pick<KindContext, 'session'>
 /** What the settings did, in the note's words: whose they were, when they were a layer's. */
 export function settingsDoneLine(lookup: LayerLookup, ctx: Pick<KindContext, 'session'>): string | undefined {
     const line = settingsLine(ctx.session.settings, 'Set');
-    return line && lookup.state === 'found' ? `From ${labelPack(lookup.layer.id)}: ${line}` : line;
+    return line && lookup.state === 'found' ? `Store Settings: ${line}` : line;
 }
 
 /** Why a layer was not applied to an install of part of its pack. */
-export function layerLeftOutLine(layer: Pick<SettingsLayer, 'id'>): string {
-    return `The store settings in ${labelPack(layer.id)} were left as they are: they go in when every data type is imported.`;
+export function layerLeftOutLine(): string {
+    return 'The Store Settings were left as they are: they go in when every data type is installed.';
 }
 
 /** The note's line when the layer was left out, could not be looked at, or stopped. */
 export function layerTroubleLine(lookup: LayerLookup, stopped: string | undefined): string | undefined {
-    if (lookup.state === 'left-out') return layerLeftOutLine(lookup.layer);
-    if (lookup.state === 'unasked') return layerNotAskedLine(lookup.pack.name, 'were not applied');
+    if (lookup.state === 'left-out') return layerLeftOutLine();
+    if (lookup.state === 'unasked') return layerNotAskedLine('were not applied');
     if (stopped === undefined) return undefined;
-    const whose = lookup.state === 'found' ? labelPack(lookup.layer.id) : 'the settings layer';
-    return `The store settings in ${whose} were not all applied. ${stopped} The datapack's data is installed. Uninstalling the datapack takes it out, and puts back any setting that was applied.`;
+    return `The Store Settings were not all applied. ${stopped} The datapack's data is installed. Uninstalling the datapack takes it out, and puts back any setting that was applied.`;
 }

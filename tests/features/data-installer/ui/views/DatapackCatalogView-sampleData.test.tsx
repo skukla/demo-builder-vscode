@@ -200,8 +200,8 @@ describe('the project’s recorded sample data', () => {
 
         const cards = await screen.findAllByTestId('datapack-card');
         await press(cards[0]);
-        await press(await screen.findByRole('button', { name: /^import/i }));
-        await screen.findByText('Import', { selector: '.modal-button' });
+        await press(await screen.findByRole('button', { name: /^install/i }));
+        await screen.findByText('Install', { selector: '.modal-button' });
 
         const before = mockRequest.mock.calls.filter(
             (c) => c[0] === 'get-datapack-import-target'

@@ -19,10 +19,10 @@
 export const PICKS_INTRO = "Select what to include from this demo's Commerce instance.";
 
 /** Save As New Datapack's name screen, from any pack, the SC's own or not. */
-export const SAVE_AS_INTRO = 'Saves everything this demo uses as a new datapack of yours.';
+export const SAVE_AS_INTRO = "Saves this demo's data as a new datapack.";
 
 /** Add Unused Items: what the list is, and that choosing is the SC's. */
-export const UNUSED_INTRO = 'Nothing in this demo uses these yet. Select any to include.';
+export const UNUSED_INTRO = "This demo doesn't use these yet. Select any to include.";
 
 /**
  * Save Changes's sentence: a new version of the SC's own pack, of everything the demo uses.

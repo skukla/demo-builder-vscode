@@ -188,7 +188,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'Which Commerce instance an import would land on, derived from the current project, ' +
+            'Which Commerce instance an install would land on, derived from the current project, ' +
             'plus the datapack the project was created to hold and the website/store-view scope ' +
             'it recorded. Answers; does not decide.',
         map: importHandlers,
@@ -199,8 +199,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            "The websites and store views an import can be scoped to on this project's instance. " +
-            'An empty list is normal — it means the import lands on the default.',
+            "The websites and store views an install can be scoped to on this project's instance. " +
+            'An empty list is normal — it means the install lands on the default.',
         map: importHandlers,
         type: 'list-datapack-import-scopes',
     },
@@ -209,7 +209,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'Progress of the running or most recent datapack import or uninstall: its outcome (watching while it runs), ' +
+            'Progress of the running or most recent datapack install or uninstall: its outcome (watching while it runs), ' +
             "each data type's state, and while products go in or come out a count as detail (\"450 of 2,046 products\"). " +
             'With waitSeconds (up to 45) it answers when the job ends or the wait is up, showing progress as it goes: ' +
             'call it with waitSeconds 45 while outcome is watching, rather than polling quickly. A pack of 2,000 ' +
@@ -268,7 +268,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         // thing, without writing".
         readOnly: true,
         description:
-            'Dry-run an import: same guard, same credentials, same request body as the real thing, ' +
+            'Check first: try an install with the same guard, same credentials, same request body as the real thing, ' +
             'without writing. Run this before start_datapack_import. A refusal comes back as ' +
             "valid:false with a reason, not as an error. It also reads the pack's rows and names each kind " +
             'whose rows Commerce could not take.',
@@ -411,7 +411,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Import a datapack into a live Commerce instance. Returns an activationId once the job starts. ' +
+            'Install a datapack into a live Commerce instance. Returns an activationId once the job starts. ' +
             'With waitSeconds (up to 45) it waits for the job to end, showing its progress, and the answer carries ' +
             'the outcome as job. A small pack ends inside the wait; a large one (2,000 products) takes several ' +
             'minutes: then call get_datapack_import_status with waitSeconds 45 until outcome is no longer watching. ' +
@@ -434,12 +434,12 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'go in; the note names each skipped row and why, and every row that needed it. Every kind still ' +
             'reads success, so read the note. Sign-in, throttling, a Commerce error or no answer stop it; ' +
             'running it again carries on and counts anything made without an answer as the pack\'s. ' +
-            'Importing another pack or another version over the one the project uses (Demo Builder installed it) ' +
+            'Installing another pack or another version over the one the project uses (Demo Builder installed it) ' +
             "replaces it: that pack is uninstalled first, in the same job, as reset_datapack uninstalls it, then this " +
             'one installs; an uninstall that fails installs nothing (stoppedAt replacing) and the project keeps naming the ' +
             "old pack, else it names the new one. Changes the user made since it was installed are saved into the user's " +
             'own pack first; when the old pack is not theirs, this names the changes and installs nothing until changes ' +
-            'answers: keep saves them as a new pack named by saveAs, drop loses them. Ask the user. Importing the same ' +
+            'answers: keep saves them as a new pack named by saveAs, drop loses them. Ask the user. Installing the same ' +
             'version again replaces nothing.',
         map: importHandlers,
         type: 'start-datapack-import',

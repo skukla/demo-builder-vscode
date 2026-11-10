@@ -249,7 +249,7 @@ describe('keep', () => {
         const result = await reset(KEEP);
 
         expect(result.success).toBe(false);
-        expect(result.error).toBe(`The library is not answering. Your changes are safe: ${SAVED.sentence}`);
+        expect(result.error).toBe(`The library is not answering. Your changes were saved: ${SAVED.sentence}`);
     });
 });
 

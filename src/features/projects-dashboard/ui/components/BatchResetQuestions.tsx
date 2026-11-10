@@ -19,7 +19,7 @@ import { removable, removeColumnState } from '../batchChoices';
 import type { BatchChoices } from '../hooks/useBatchChoices';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
-import { UNINSTALL_DATAPACK } from '@/features/data-installer/uninstallWords';
+import { UNINSTALL_DATAPACK } from '@/features/data-installer/datapackWords';
 import type { BatchResetRow } from '@/types/projectsBatch';
 
 

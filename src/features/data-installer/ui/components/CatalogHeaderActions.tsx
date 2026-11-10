@@ -15,7 +15,7 @@
  *
  * Each action owns the dialog it opens, so the catalog view carries no dialog's state.
  *
- * The Datapack Library (no `onCreate`) offers Load from File alone: Create Datapack reads a project's
+ * The Datapack Library (no `onCreate`) offers Add from File alone: Create Datapack reads a project's
  * store and Clear Demo Data clears stores, and the library touches none (owner, 2026-11-07).
  *
  * @module features/data-installer/ui/components/CatalogHeaderActions
@@ -82,7 +82,7 @@ export function CatalogHeaderActions({
             ) : null}
             <ActionButton isQuiet onPress={() => setOpen('load')}>
                 {renderMenuIcon('openFile')}
-                <Text>Load from File</Text>
+                <Text>Add from File</Text>
             </ActionButton>
             {onCreate ? (
                 <>

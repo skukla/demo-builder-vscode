@@ -40,10 +40,9 @@ describe('WAIT_STAGES', () => {
 
     // Walk F114: the re-import's comparison, the replace's check and Remove Data's check are one read.
     // F126: its line says since when, in the question's own words, not which pack.
-    it('names the changes check one way, since the last save', () => {
+    it('names the changes check one way', () => {
         expect(WAIT_STAGES.checkingForChanges).toEqual({
             label: 'Checking for your changes',
-            detail: "Since this demo's last save",
             expectation: 'Usually about a minute',
         });
     });

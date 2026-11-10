@@ -150,7 +150,7 @@ describe('dependencies the pack does not contain', () => {
         await press(box('Products'));
 
         expect(notice()).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /^import$/i })).not.toBeDisabled();
+        expect(screen.getByRole('button', { name: /^install$/i })).not.toBeDisabled();
     });
 
     it('says nothing while nothing is selected', async () => {

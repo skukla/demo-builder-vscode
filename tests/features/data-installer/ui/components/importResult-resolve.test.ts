@@ -41,8 +41,8 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toEqual({
             variant: 'success',
-            title: 'Dry Run Passed',
-            message: 'Nothing was written.',
+            title: 'Check Passed',
+            message: `${PACK_NAME} can be installed here. Nothing was written.`,
         });
     });
 
@@ -54,7 +54,7 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toMatchObject({
             variant: 'warning',
-            title: 'Validation Failed',
+            title: 'Check Found a Problem',
             message: 'Catalog is locked',
         });
     });
@@ -64,7 +64,7 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toEqual({
             variant: 'error',
-            title: 'Dry Run Failed',
+            title: "Couldn't Run the Check",
             message: 'Request timed out',
         });
     });
@@ -72,7 +72,7 @@ describe('resolveResult — dry run', () => {
     it('prefers the failure over a value the request is still holding', () => {
         const stale = { ...failed<{ valid: boolean }>('Request timed out'), value: { valid: true } };
 
-        expect(resolveResult('dryRun', sources({ dryRun: stale }))?.title).toBe('Dry Run Failed');
+        expect(resolveResult('dryRun', sources({ dryRun: stale }))?.title).toBe("Couldn't Run the Check");
     });
 
     it('shows nothing while the dry run has neither answered nor failed', () => {
@@ -82,7 +82,7 @@ describe('resolveResult — dry run', () => {
 
 describe('resolveResult — start and reset', () => {
     it.each([
-        ['start', `Couldn't Import ${PACK_NAME}`],
+        ['start', `Couldn't Install ${PACK_NAME}`],
         ['reset', `Couldn't Uninstall ${PACK_NAME}`],
     ])('%s reports its own wording for a request that never started', (action, title) => {
         const failure = failed<{ activationId: string }>('The service is unreachable');
@@ -118,7 +118,7 @@ describe('resolveResult — start and reset', () => {
             sources({ record: jobRecord(), startedActivation: ACTIVATION })
         );
 
-        expect(result).toMatchObject({ variant: 'success', title: `${PACK_NAME} Imported` });
+        expect(result).toMatchObject({ variant: 'success', title: `${PACK_NAME} Installed` });
     });
 
     it('shows nothing while the record is still being watched', () => {
@@ -169,7 +169,7 @@ describe('resolveResult — a removal that was to save the changes first (step 0
 
         const result = resolveResult('start', sources({ start, replacing: { name: 'Version 1.1.0', dataTypes: ['products'] } }));
 
-        expect(result).toMatchObject({ variant: 'error', title: 'Import Stopped', lead: 'Nothing was uninstalled or installed.', backToConfirm: true });
+        expect(result).toMatchObject({ variant: 'error', title: 'Install Stopped', lead: 'Nothing was uninstalled or installed.', backToConfirm: true });
         expect(result?.run).toMatchObject({
             replaces: 'Version 1.1.0',
             stoppedAt: 'saving-changes',
@@ -183,7 +183,7 @@ describe('resolveResult — a removal that was to save the changes first (step 0
             ['Save Your Changes', 'error', 'The library is not answering.'],
             ['Uninstall the Previous Datapack', 'pending', 'Not run'],
             ['Install My Luma, 1', 'pending', 'Not run'],
-            ['Verify the Import', 'pending', 'Not run'],
+            ['Verify Installation', 'pending', 'Not run'],
         ]);
     });
 

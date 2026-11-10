@@ -33,13 +33,13 @@ const RECORD: ImportJobRecord = {
 describe('fixImportPrompt', () => {
     it('names the pack, the project, each row’s problem, and the tools that fix it', () => {
         const prompt = fixImportPrompt(
-            { ...RECORD, rowNotes: { products: 'Commerce refused 3.' } },
+            { ...RECORD, rowNotes: { products: 'Commerce refused 3 rows.' } },
             'Justrite Demo'
         );
 
         expect(prompt).toContain('luma@eds-compatible');
         expect(prompt).toContain('Justrite Demo');
-        expect(prompt).toContain('- Products: Commerce refused 3.');
+        expect(prompt).toContain('- Products: Commerce refused 3 rows.');
         for (const tool of [
             'get_datapack_import_status',
             'verify_datapack_install',
@@ -70,7 +70,7 @@ describe('fixImportPrompt', () => {
             'Justrite Demo'
         );
 
-        expect(prompt).toContain('- It stopped after every data type was in, while finishing the import: Commerce answered 503');
+        expect(prompt).toContain('- It stopped after every data type was in, while finishing the install: Commerce answered 503');
         expect(prompt).not.toContain('It stopped at');
     });
 
@@ -96,7 +96,7 @@ describe('fix-datapack-import-with-ai', () => {
 
     it('opens the SC’s AI in a new chat on the recorded problem', async () => {
         const result = await importFixWithAiHandlers['fix-datapack-import-with-ai'](
-            contextWith({ ...RECORD, rowNotes: { products: 'Commerce refused 3.' } })
+            contextWith({ ...RECORD, rowNotes: { products: 'Commerce refused 3 rows.' } })
         );
 
         expect(result).toEqual({ success: true });
@@ -104,7 +104,7 @@ describe('fix-datapack-import-with-ai', () => {
             'demoBuilder.openInClaude',
             expect.objectContaining({
                 fresh: true,
-                prompt: expect.stringContaining('Commerce refused 3.'),
+                prompt: expect.stringContaining('Commerce refused 3 rows.'),
             })
         );
     });
@@ -114,7 +114,7 @@ describe('fix-datapack-import-with-ai', () => {
             contextWith(RECORD)
         );
 
-        expect(result).toEqual({ success: false, error: 'The last import has no problem to fix.' });
+        expect(result).toEqual({ success: false, error: 'The last install has no problem to fix.' });
         expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
 });

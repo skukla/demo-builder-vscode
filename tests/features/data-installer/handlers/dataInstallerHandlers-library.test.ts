@@ -64,7 +64,7 @@ describe('the library store', () => {
             response: expect.objectContaining({
                 success: false,
                 code: ErrorCode.INVALID_OPERATION,
-                error: expect.stringContaining('demoBuilder.datapackStore.apiBaseUrl'),
+                error: 'The datapack library has no usable address. Set it in Settings to an https:// URL.',
             }),
         });
     });
@@ -85,7 +85,7 @@ describe('the library store', () => {
             response: expect.objectContaining({
                 success: false,
                 code: ErrorCode.INVALID_OPERATION,
-                error: 'The Data Installer is turned off. Turn on demoBuilder.dataInstaller.enabled to use it.',
+                error: 'The Data Installer is turned off. Turn it on in Settings.',
             }),
         });
     });
@@ -180,7 +180,7 @@ describe('the library store', () => {
         MockedClient.prototype.getDatapackDetail = jest
             .fn()
             .mockResolvedValue({ id: { name: 'mine', version: 'v1' }, dataTypes: [] });
-        // The pack it was made from, as the library lists it: the warning names it as the SC sees it.
+        // The datapack it was made from, as the library lists it: the warning names it as the SC sees it.
         const findDatapacks = jest.fn().mockResolvedValue({
             items: [{ id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', shared: true }],
             count: 1,
@@ -198,7 +198,7 @@ describe('the library store', () => {
 
         expect(shared).toMatchObject({
             success: true,
-            data: { sharedInFile: "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get Bodea instead." },
+            data: { sharedInFile: "You shared this datapack in a project file on 27 October. Anyone who hasn't created that project yet will get Bodea instead." },
         });
         expect(findDatapacks).toHaveBeenCalledWith({ datapackName: 'bodea' });
         expect((installer.data as Record<string, unknown>).sharedInFile).toBeUndefined();

@@ -38,9 +38,9 @@ export function recordedRemovalLines(displayName: string, recordedKinds: readonl
     const kinds = recordedKinds.filter((kind) => kind !== STORE_CONFIG_KIND);
     const sentences = [
         kinds.length > 0 ? `Permanently deletes what ${displayName} installed: ${typesInWords(kinds)}.` : undefined,
-        kinds.length < recordedKinds.length ? `Puts back the store settings ${kinds.length > 0 ? 'it' : displayName} changed.` : undefined,
+        kinds.length < recordedKinds.length ? `Puts back the Store Settings ${kinds.length > 0 ? 'it' : displayName} changed.` : undefined,
         recordedKinds.length === 0 ? `${displayName} has nothing left in Commerce to delete.` : undefined,
-        selected.length > 0 && recordedKinds.some((kind) => !selected.includes(kind)) ? 'Selected data types apply to Import only.' : undefined,
+        selected.length > 0 && recordedKinds.some((kind) => !selected.includes(kind)) ? 'The data types you tick apply to Install only.' : undefined,
     ];
     return sentences.filter((line): line is string => line !== undefined);
 }
@@ -67,7 +67,7 @@ export interface RemovalAnswer {
 /** What the confirm shows, from the read's answer or its failure. */
 export function confirmContent(answer: DatapackRemovalChanges | null, failure: DataInstallerFailure | null): ConfirmContent {
     // No answer at all has only transport text to show, which is not words for the SC.
-    if (failure) return { kind: 'read-failed', reason: failure.unanswered ? 'The check took too long to answer.' : failure.message };
+    if (failure) return { kind: 'read-failed', reason: failure.unanswered ? 'The check timed out.' : failure.message };
     if (!answer || answer.count === 0 || answer.sentence === undefined) return { kind: 'plain' };
     // "Always save" needs somewhere to save without asking: only the SC's own pack is that.
     if (answer.alwaysSave && answer.packName) return { kind: 'will-save', packName: answer.packName };
@@ -104,7 +104,7 @@ export function removalAnswer(content: ConfirmContent, choice: RemovalChoice, sa
 
 /**
  * The confirm's main button when there are no changes to keep: it names what pressing it does. With
- * changes the buttons are the save-first pair (`buildActions`, `uninstallWords.ts`).
+ * changes the buttons are the save-first pair (`buildActions`, `datapackWords.ts`).
  */
 export function removeLabel(content: ConfirmContent): string {
     return content.kind === 'read-failed' ? 'Uninstall Anyway' : 'Uninstall';

@@ -107,7 +107,7 @@ it('asks about the ticked store, and lists what clearing it would do, orders inc
 it("says it is permanent in the opening sentence, not in a footnote under the list", async () => {
     await openModal();
 
-    expect(screen.getByText(/Clearing permanently removes what only they use/)).toBeInTheDocument();
+    expect(screen.getByText(/Clearing permanently removes their data/)).toBeInTheDocument();
 
     await tick(/Bodea Store/);
 
@@ -202,7 +202,7 @@ it('says what stays when nothing goes, rather than that the stores hold nothing,
     await tick(/Bodea Store/);
 
     expect(screen.getByText('1 company (Altura): a customer in them is on a website not chosen')).toBeInTheDocument();
-    expect(screen.queryByText('These stores hold nothing Demo Builder did not install.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nothing to clear in these stores.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clear' })).toHaveAttribute('aria-disabled', 'true');
 });
 
@@ -213,7 +213,7 @@ it('says the stores hold nothing only when nothing goes and nothing stays', asyn
 
     await tick(/Bodea Store/);
 
-    expect(screen.getByText('These stores hold nothing Demo Builder did not install.')).toBeInTheDocument();
+    expect(screen.getByText('Nothing to clear in these stores.')).toBeInTheDocument();
 });
 
 it('writes large counts with separators, in the list and on the button', async () => {

@@ -25,107 +25,61 @@ import type { OperationStage } from './operationStages';
 export type WaitStage = Omit<OperationStage, 'detail'> & { readonly detail?: string };
 
 const FEW_SECONDS = 'Usually a few seconds';
-const FROM_COMMERCE = "From this demo's Commerce instance";
+const FROM_COMMERCE = 'From Commerce';
 
 export const WAIT_STAGES = {
-    // Comparing the store with the version the demo uses: before re-importing it (EDS walk F56),
-    // before importing another version over it, and before Remove Data. One read, so one name
-    // (owner, 2026-11-09, walk F114: it had three). Measured 2026-11-08: 58 seconds for Luma's 12
-    // data types on a live store. The detail says since when, in the words the question after it
-    // uses ("You changed these since this demo's last save"), as the mockup had it; "Each data type in
-    // My Luma" read unlike any other wait (owner, 2026-11-09, walk F126).
-    checkingForChanges: {
-        label: 'Checking for your changes',
-        expectation: 'Usually about a minute',
-        detail: "Since this demo's last save",
-    },
+    // Comparing Commerce with the datapack the demo uses: before installing it again (EDS walk F56),
+    // before installing another over it, and before Uninstall. One read, so one name (owner,
+    // 2026-11-09, walk F114: it had three). Measured 2026-11-08: 58 seconds for Luma's 12 data types
+    // on a live instance. The label says it all; "Since this demo's last save" was a fragment
+    // (Phase 1, owner 2026-11-10).
+    checkingForChanges: { label: 'Checking for your changes', expectation: 'Usually about a minute' },
     readingWebsites: { label: 'Reading websites', expectation: FEW_SECONDS, detail: FROM_COMMERCE },
-    // A datapack import's Dry Run: the service checks the request and writes nothing (review,
-    // 2026-11-10: it waited on a bare "Checking with the service").
-    checkingImport: { label: 'Checking the import', expectation: FEW_SECONDS, detail: 'Nothing is written' },
-    readingWhatToSelect: {
-        label: 'Reading from Commerce',
-        expectation: FEW_SECONDS,
-        detail: 'What there is to select',
-    },
+    // Check First on an install: the request is checked and nothing is written (D6, owner
+    // 2026-11-10). The label alone; the result says nothing was written.
+    checkingImport: { label: 'Checking first', expectation: FEW_SECONDS },
+    readingWhatToSelect: { label: 'Reading from Commerce', expectation: FEW_SECONDS },
     readingCatalogViews: {
         label: 'Reading catalog views',
         expectation: FEW_SECONDS,
         detail: 'From Adobe Commerce Optimizer',
     },
-    readingErpCatalog: {
-        label: 'Reading from Commerce',
-        expectation: FEW_SECONDS,
-        detail: 'The catalog the ERP will hold',
-    },
+    readingErpCatalog: { label: 'Reading the catalog', expectation: FEW_SECONDS, detail: FROM_COMMERCE },
     readingProducts: { label: 'Reading products', expectation: FEW_SECONDS, detail: FROM_COMMERCE },
     readingDemoData: {
         label: 'Reading demo data',
         expectation: FEW_SECONDS,
-        detail: 'Each data type, in Commerce',
+        detail: FROM_COMMERCE,
     },
     readingProjectsDemoData: {
         label: 'Reading demo data',
         expectation: FEW_SECONDS,
-        detail: "Each selected project's Commerce",
+        detail: 'From each selected project',
     },
-    readingProjects: {
-        label: 'Reading projects',
-        expectation: FEW_SECONDS,
-        detail: 'What each selected project holds',
-    },
-    readingErpStatus: {
-        label: 'Reading the ERP status',
-        expectation: FEW_SECONDS,
-        detail: 'From the ERP',
-    },
-    checkingDemoSetup: {
-        label: 'Checking the demo setup',
-        expectation: FEW_SECONDS,
-        detail: 'What this integration needs',
-    },
+    readingProjects: { label: 'Reading projects', expectation: FEW_SECONDS },
+    readingErpStatus: { label: 'Reading the ERP status', expectation: FEW_SECONDS },
+    checkingDemoSetup: { label: 'Checking the demo setup', expectation: FEW_SECONDS },
     // The first read of an org's APIs is slow on Adobe's side (the old helper text said so).
     readingAdobeServices: {
         label: 'Reading Adobe services',
-        expectation: 'First load: a few minutes',
+        expectation: 'Usually a few minutes',
         detail: "Your organization's APIs",
     },
-    readingDemo: {
-        label: 'Reading the demo',
-        expectation: FEW_SECONDS,
-        detail: 'Its package and storefront',
-    },
-    checkingSharedDemo: {
-        label: 'Checking the shared demo',
-        expectation: FEW_SECONDS,
-        detail: 'Its package and datapack',
-    },
+    readingDemo: { label: 'Reading the demo', expectation: FEW_SECONDS },
+    checkingSharedDemo: { label: 'Checking the shared demo', expectation: FEW_SECONDS },
     checkingAiSetup: {
         label: 'Checking the AI setup',
         expectation: FEW_SECONDS,
         detail: 'Files and MCP servers',
     },
     // The datapack flyout: its own load, then each menu row's work.
-    // Its versions, data types and settings, wherever the pack is kept.
-    readingPack: { label: 'Reading the datapack', expectation: FEW_SECONDS, detail: 'Its versions and data types' },
-    savingPackFile: {
-        label: 'Saving to a file',
-        expectation: FEW_SECONDS,
-        detail: 'Every data type in the pack',
-    },
+    readingPack: { label: 'Reading the datapack', expectation: FEW_SECONDS },
+    savingPackFile: { label: 'Saving to a file', expectation: FEW_SECONDS },
     // Share and Stop Sharing: the label alone (owner, 2026-11-08). Each changes every version.
     sharingPack: { label: 'Sharing the datapack', expectation: FEW_SECONDS },
     makingPackPrivate: { label: 'Making it private', expectation: FEW_SECONDS },
-    deletingPack: {
-        label: 'Deleting the datapack',
-        expectation: FEW_SECONDS,
-        detail: 'From My Datapacks',
-    },
-    deletingPackSettings: {
-        label: 'Deleting store settings',
-        expectation: FEW_SECONDS,
-        detail: 'Saved with this datapack',
-    },
+    deletingPack: { label: 'Deleting the datapack', expectation: FEW_SECONDS },
+    deletingPackSettings: { label: 'Deleting Store Settings', expectation: FEW_SECONDS },
 } as const satisfies Record<string, WaitStage>;
 
 /**

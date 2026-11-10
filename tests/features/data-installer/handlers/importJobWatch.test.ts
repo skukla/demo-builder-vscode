@@ -555,7 +555,7 @@ describe('a start the service refuses', () => {
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
 
-        expect(result.error).toBe('The Data Installer rejected this import request.');
+        expect(result.error).toBe('The Data Installer rejected this install request.');
     });
 
     it('reports a thrown start as a failure rather than losing it', async () => {

@@ -3,7 +3,7 @@
  *
  * The screen keeps its kinds and buttons while the store is read (a slow read must not cost what is
  * already selected), so the wait sits in the pane, in the house rows: "Reading categories", from
- * this demo's Commerce instance (owner, 2026-11-08, F79: a bare spinner said nothing). A kind with nothing to select
+ * Commerce (owner, 2026-11-08, F79: a bare spinner said nothing). A kind with nothing to select
  * never rests here: the flow moves on to the next kind, and its row is greyed out.
  *
  * Its notes sit under the list, so the filter, count and Select All are in the same place on every

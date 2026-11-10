@@ -20,7 +20,7 @@ import type { DatapackId } from '@/types/datapack';
  * which clears what Demo Builder did not install. Agents reach it as `check_demo_data` and `clear_demo_data`.
  */
 export const NO_RECORD =
-    'Demo Builder did not install this pack in this project, so it has no record of what the pack made and uninstalls ' +
+    'Demo Builder did not install this datapack in this project, so it has no record of what the datapack made and uninstalls ' +
     'nothing by name. To clear what an earlier install left in Commerce, use Clear Demo Data on the Data Installer screen.';
 
 /** What a removal did, as the job reports it. */

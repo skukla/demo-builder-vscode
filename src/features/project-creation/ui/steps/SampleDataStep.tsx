@@ -192,7 +192,6 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                     <LoadingDisplay
                         size="L"
                         message="Loading datapacks"
-                        helperText="This should only take a moment"
                     />
                 </CenteredFeedbackContainer>
             ) : (
@@ -213,8 +212,8 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                     {asked ? (
                         <p className="sample-data-note" data-testid="demo-datapack-note">
                             {askedGroup
-                                ? `This demo asks for ${askedGroup.displayName}${askedVersion && !askedGroup.versions.some((v) => v.id.version === askedVersion) ? ` (version ${askedVersion} is no longer published; the default version is selected)` : ''}.`
-                                : `This demo asks for ${asked.name}, which isn't published yet. Ask the demo's owner to export it.`}
+                                ? `This demo asks for ${askedGroup.displayName}.${askedVersion && !askedGroup.versions.some((v) => v.id.version === askedVersion) ? ' That version is gone, so the default is selected.' : ''}`
+                                : `This demo asks for ${asked.name}, which isn't shared yet. Ask the demo's owner to share it.`}
                         </p>
                     ) : null}
                     <div className="sample-data-grid" role="radiogroup" aria-label="Datapacks">
@@ -241,10 +240,10 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                         </p>
                     ) : null}
                     {groups.length > 0 && shown.length === 0 && EMPTY_SHOW_TITLE[show] ? (
-                        <p className="sample-data-note">{EMPTY_SHOW_TITLE[show]}. Choose another view.</p>
+                        <p className="sample-data-note">{EMPTY_SHOW_TITLE[show]}. Try All Datapacks.</p>
                     ) : null}
                     {settled && groups.length === 0 ? (
-                        <p className="sample-data-note">No Datapacks Yet. You can add one after the project is created.</p>
+                        <p className="sample-data-note">No datapacks yet. You can add one after the project is created.</p>
                     ) : null}
                 </>
             )}
@@ -280,7 +279,7 @@ function NoSampleData({
         >
             <span className="sample-data-none-label">None</span>
             <span className="sample-data-none-description">
-                Create this project without sample data.
+                Create this project without a datapack.
             </span>
         </div>
     );

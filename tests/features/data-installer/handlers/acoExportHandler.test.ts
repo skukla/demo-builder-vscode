@@ -80,7 +80,7 @@ const OUTCOME: AcoExportOutcome = {
     perType: [{ dataType: 'aco_products', success: true, exported: 3, excluded: 1 }],
     saved: { name: 'aco_acme', version: 'main' },
     storeViews: ['default'],
-    sentence: 'Saved the ACO pack aco_acme@main to your datapack library: 1 kinds for default.',
+    sentence: 'Saved the ACO datapack aco_acme@main to your datapack library: 1 kinds for default.',
 };
 
 const send = (payload: Record<string, unknown>) =>
@@ -165,7 +165,7 @@ describe('start-datapack-export with aco', () => {
 
         expect(result).toEqual({
             success: false,
-            error: 'An export needs a datapack name and a version — together they name what it writes.',
+            error: 'An export needs a datapack name and a version: together they name what it writes.',
         });
         expect(mockedExport).not.toHaveBeenCalled();
     });
@@ -179,7 +179,7 @@ describe('start-datapack-export with aco', () => {
 
             expect(result).toEqual({
                 success: false,
-                error: "An ACO pack is made from this project's own store, so commerceInstance and selections cannot be sent with aco.",
+                error: "An ACO datapack is made from this project's own store, so commerceInstance and selections cannot be sent with aco.",
                 code: ErrorCode.INVALID_OPERATION,
             });
             expect(mockedExport).not.toHaveBeenCalled();
@@ -232,7 +232,7 @@ describe('start-datapack-export with aco', () => {
         mockedExport.mockRejectedValue(new Error('socket hang up'));
         await expect(send({})).resolves.toEqual({
             success: false,
-            error: 'The ACO pack could not be made. Details are in Debug Logs.',
+            error: 'The ACO datapack could not be made. Details are in Debug Logs.',
             code: ErrorCode.UNKNOWN,
         });
     });

@@ -107,7 +107,7 @@ function readRename(payload?: RenameLibraryDatapackPayload): { name: string; dis
     if (payload?.confirm !== true) {
         return {
             success: false,
-            error: 'Renaming changes the name everyone sees for this pack. Send confirm:true to proceed.',
+            error: 'Renaming changes the name everyone sees for this datapack. Send confirm:true to proceed.',
             code: ErrorCode.INVALID_OPERATION,
         };
     }
@@ -119,7 +119,7 @@ function readShare(payload?: ShareLibraryDatapackPayload): { name: string; share
     const name = payload?.datapackName;
     if (!name || typeof payload?.shared !== 'boolean') return { success: false, error: 'Name the datapack, and whether to share it.' };
     if (payload.confirm !== true) {
-        const why = payload.shared ? SHARE_CONSENT : 'Stopping sharing takes this pack out of everyone else\'s list.';
+        const why = payload.shared ? SHARE_CONSENT : 'Stopping sharing takes this datapack out of everyone else\'s list.';
         return { success: false, error: `${why} Send confirm:true to proceed.`, code: ErrorCode.INVALID_OPERATION };
     }
     return { name, shared: payload.shared };
@@ -311,7 +311,7 @@ export const datapackLibraryHandlers = defineHandlers({
         try {
             const versions = await myVersions(access.client, name);
             if (versions.length === 0) {
-                return { success: false, error: `Demo Builder's datapack store has no pack of yours named ${name}.`, code: ErrorCode.INVALID_OPERATION };
+                return { success: false, error: `Demo Builder's datapack store has no datapack of yours named ${name}.`, code: ErrorCode.INVALID_OPERATION };
             }
             const writer = writerFor(context, access, 'library');
             for (const version of versions) await writer.updateTeam(version, payload.team);

@@ -70,7 +70,7 @@ type CustomAttribute = NonNullable<ProductRow['custom_attributes']>[number];
 export function parseProductRows(records: unknown): ProductRow[] {
     const parsed = rowsSchema.safeParse(records);
     if (!parsed.success) {
-        throw new Error(`The pack's products are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+        throw new Error(`The datapack's products are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
     }
     return parsed.data.map((row) => row.product);
 }
@@ -233,7 +233,7 @@ async function createSingle(ctx: KindContext, kind: string, product: ProductToMa
  */
 export async function installProducts(ctx: KindContext, rows: readonly ProductRow[], kind = PRODUCT_KIND, wait: BulkWait = BULK_WAIT): Promise<void> {
     const websiteId = ctx.session.websiteId;
-    if (websiteId === undefined) throw new Error('The install target names no website, so the pack\'s products have nowhere to be sold.');
+    if (websiteId === undefined) throw new Error('The install target names no website, so the datapack\'s products have nowhere to be sold.');
     const lk = productLookups(ctx);
     const told = new Set<string>();
     const leftAtDefault: LeftAtDefault = (code, value) => {

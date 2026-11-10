@@ -3,10 +3,10 @@ name: import-datapack
 description: Loads sample data (products, categories, customers, B2B companies) into a project's Commerce instance from a datapack, removes it again, or captures data back out into a pack. Use when a demo needs catalog data, when the storefront renders but has nothing in it, or when the user asks to seed, populate, install, reset or export sample data. Seven ordered calls with three traps — read this before calling any of them.
 ---
 
-# Import a Datapack
+# Install a Datapack
 
 A datapack is a named bundle of Commerce data — products, categories, customers, B2B
-companies, shared catalogs. Importing one writes into a **live Commerce instance**, so
+companies, shared catalogs. Installing one writes into a **live Commerce instance**, so
 the order below is not a suggestion.
 
 ## The sequence
@@ -15,7 +15,7 @@ the order below is not a suggestion.
 find_datapacks                  → which packs exist
 get_datapack_import_target      → WHICH INSTANCE this project implies
 list_datapack_import_scopes     → optional: narrow to a website / store view
-validate_datapack_import        → dry run; free, ungated, do it every time
+validate_datapack_import        → check first; free, ungated, do it every time
 preview_datapack_changes        → when the pack is installed already: what installing again changes
 start_datapack_import           → confirm:true; returns a HANDLE, not a result
 get_datapack_import_status      → poll until outcome is not "watching"; read its check
@@ -36,10 +36,10 @@ That is a receipt, not an outcome. A fourteen-type pack takes minutes. **Poll
 |---|---|
 | `watching` | still running — poll again |
 | `success` | done; `perType` says what landed |
-| `unwatchable` | the watch was lost, NOT the import failed. `reason` says why. The job may well have finished — say so rather than reporting a failure |
+| `unwatchable` | the watch was lost, NOT the install failed. `reason` says why. The job may well have finished — say so rather than reporting a failure |
 
 Reporting success from the start call is the single most likely mistake here, and it is
-invisible: the user sees a confident "imported" and an empty catalog.
+invisible: the user sees a confident "installed" and an empty catalog.
 
 `success` itself says only that Commerce took the rows, not that they came out right. An
 install that wrote products ends with `check`: the store checked against the pack.
@@ -64,9 +64,9 @@ expected to change things: show the user the preview and go on. Afterwards the n
 taken out ("Took out 3 items the pack no longer has: …"), and `check.leftOut` counts products the
 check skipped because they were kept; `verify_datapack_install` checks every product.
 
-## Importing another pack or version
+## Installing another pack or version
 
-When the project uses a pack Demo Builder installed and you import **another pack, or another
+When the project uses a pack Demo Builder installed and you install **another pack, or another
 version of it**, `start_datapack_import` replaces it: the old pack's data is removed first, in the
 same job, the way `reset_datapack` removes it, then the new one installs. Tell the user that before
 you start.
@@ -80,13 +80,13 @@ you start.
   why, and the project still names the old pack.
 - Once the old pack is gone the project names the new one, and `reset_datapack` removes the new one.
 
-Importing the same version again replaces nothing: it updates in place, as above.
+Installing the same version again replaces nothing: it updates in place, as above.
 
 ## Trap 2 — never guess `commerceInstance`
 
 It is required and deliberately not defaulted. From the handler that refuses it:
 
-> Required, and deliberately NOT defaulted from the project: an import writes into
+> Required, and deliberately NOT defaulted from the project: an install writes into
 > whatever instance this names, and a wrong default writes sample data into someone
 > else's live demo.
 
@@ -96,11 +96,11 @@ from anything else you can see.
 
 ### The website and store view default to the project's, not the service's
 
-`websiteCode` and `storeCode` are optional, and omitting them is safe: the import lands
+`websiteCode` and `storeCode` are optional, and omitting them is safe: the install lands
 on the scope the project recorded, which `get_datapack_import_target` also reports.
 
 That was not always true. Omitting them used to mean the SERVICE's own `base`/`default`
-— so an import, or worse a **reset**, could run against a website nobody chose. Send both
+— so an install, or worse a **reset**, could run against a website nobody chose. Send both
 to override deliberately, or neither to inherit. Never send one: half a pair is refused
 rather than completed.
 
@@ -119,12 +119,12 @@ A refusal comes back as a verdict, not an error:
 `success: true` with `valid: false` means the call worked and the answer is no. Read the
 reason to the user rather than retrying.
 
-The dry run also reads the pack's rows, every kind's, and names each kind whose rows Commerce could not take; the real import checks the
+The check also reads the pack's rows, every kind's, and names each kind whose rows Commerce could not take; the real install checks the
 same before its first write. Once writing, a row Commerce refuses is skipped and the rest go
 in: the status's `note` starts "Skipped N rows" and names each row with Commerce's reason,
 and any row that needed a skipped one (a product in a skipped category) is skipped with it,
 by name. Every kind still reads `success`, so read the note. Sign-in, throttling, a Commerce
-error or no answer at all still stop the import; running it again carries on, and anything
+error or no answer at all still stop the install; running it again carries on, and anything
 the store did make without answering is found then and counted as the pack's.
 
 ## Arguments that are required and look optional
@@ -135,13 +135,13 @@ All four, on every write call:
 - `version` — e.g. `main`. There is **no "latest"**; omitting it fails
 - `commerceInstance` — see trap 2
 - `dataTypes` — at least one, from `list_datapack_data_types`. Omitting it does not mean
-  "all"; it fails. An import writes only these and what they need, and leaves the rest of the
+  "all"; it fails. An install writes only these and what they need, and leaves the rest of the
   pack alone: not installed, not removed. `reset_datapack` is the one exception: it ignores
   them, as the next section says
 
 ## Removing data — scoped, not a wipe
 
-`reset_datapack` is **import in reverse**: it takes back what the install made. It removes
+`reset_datapack` is **install in reverse**: it takes back what the install made. It removes
 what the pack put there and nothing else — it is not an instance wipe, and data that arrived
 some other way is untouched.
 
@@ -155,7 +155,7 @@ Demo Builder never installed in this project (the Data Installer service install
 another project did) is refused and nothing is removed by name; to clear what that install
 left, use `check_demo_data` and then `clear_demo_data` (the screen's "Clear demo data").
 
-Like an import it returns a handle and is polled. Demo Builder removes in the reverse of the
+Like an install it returns a handle and is polled. Demo Builder removes in the reverse of the
 install's order, so you do not have to reason about what to remove first.
 
 ## Saving the store into a pack
@@ -207,7 +207,7 @@ pack here: `start_datapack_import` installs a library pack where it is. It write
 **other teams depend on** and cannot be undone from here, so it needs `confirm: true` and
 `confirmName` equal to the pack name. Ask the user first.
 
-## What the INSTANCE needs, which the import cannot check
+## What the INSTANCE needs, which the install cannot check
 
 Three limitations live on the Commerce instance rather than in the datapack. None
 is detectable from here, so raise them with the user when they apply rather than
@@ -217,15 +217,15 @@ waiting for the symptom.
   B2B types fail. There is no API that reports whether they are on, so if the
   pack contains `b2b_*` types, ask.
 - **A non-default website or store view must already exist** on the instance
-  before data can be imported into it. Nothing can create one from here.
+  before data can be installed into it. Nothing can create one from here.
   `list_datapack_import_scopes` reports what exists, so a scope missing from that
   list is a Commerce Admin task, not a bad argument.
 - **Customer segments are not supported.** A cart rule that references one still
-  imports, and is silently non-functional until someone fixes it in the Admin.
+  installs, and is silently non-functional until someone fixes it in the Admin.
   If the pack has `cart_rules` or `coupons`, say so — nothing will report it
   later.
 
-And one that only bites AFTER a successful import: **a pack's own root category.**
+And one that only bites AFTER a successful install: **a pack's own root category.**
 A store shows only the categories under its root, and no API can change a store's
 root (the store routes are read-only):
 

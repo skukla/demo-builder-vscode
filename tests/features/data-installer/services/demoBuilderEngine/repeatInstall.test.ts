@@ -28,7 +28,7 @@ const SETS = { [page('products/attribute-sets/sets/list')]: { items: [{ attribut
 const AS_INSTALLED: CommerceProduct = { id: 11, sku: 'vrrack', name: 'VR Rack', price: 7500, attribute_set_id: 4, type_id: 'simple' };
 /** The same product in pack form, which is what its fingerprint is made from. */
 const AS_INSTALLED_ROW = { product: { sku: 'vrrack', name: 'VR Rack', price: 7500, attribute_set_id: 'Default', type_id: 'simple' } };
-/** The pack's row as it was installed. */
+/** The datapack's row as it was installed. */
 const PACK_ROW = { product: { sku: 'vrrack', name: 'VR Rack', price: 7500, attribute_set_id: 'Default', type_id: 'simple' } };
 
 const recorded = (extra: Partial<CreatedObject> = {}): CreatedObject => ({
@@ -348,7 +348,7 @@ describe('an attribute this engine put in a set, installed again', () => {
         const outcome = await installPack(ctx, { attribute_assign_to_set: [] });
 
         expect(writes(ctx.sent)).toEqual(['DELETE products/attribute-sets/4/attributes/bodea_fabric']);
-        expect(tookOutLine(outcome.tookOut)).toBe('Took out 1 item the pack no longer has: attribute assign to set (1).');
+        expect(tookOutLine(outcome.tookOut)).toBe('Took out 1 item the datapack no longer has: attribute assign to set (1).');
     });
 
     it('is left in its set, and on the record, when Commerce will not take it out; the install carries on', async () => {
@@ -403,7 +403,7 @@ describe('tookOutLine', () => {
     it('counts what was taken out by kind, and says nothing when nothing was', () => {
         expect(tookOutLine([])).toBeUndefined();
         expect(tookOutLine([{ kind: 'products', id: 'a' }, { kind: 'products', id: 'b' }, { kind: 'categories', id: '9' }])).toBe(
-            'Took out 3 items the pack no longer has: products (2) and categories (1).',
+            'Took out 3 items the datapack no longer has: products (2) and categories (1).',
         );
     });
 });

@@ -51,7 +51,7 @@ describe('no project open', () => {
         expect(client.startImport).not.toHaveBeenCalled();
         expect(result).toEqual({
             success: false,
-            error: 'Open a project before importing a datapack.',
+            error: 'Open a project before installing a datapack.',
         });
     });
 

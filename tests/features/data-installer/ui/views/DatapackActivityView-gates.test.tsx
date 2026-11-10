@@ -137,7 +137,7 @@ describe('DatapackActivityView — a page that fails', () => {
         failNthPage(1, [{ items: [makeEntry()], total: 1 }]);
 
         render(<DatapackActivityView />);
-        expect(await screen.findByText('Could Not Reach the Data Installer')).toBeInTheDocument();
+        expect(await screen.findByText("Couldn't Reach the Data Installer")).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', { name: /retry/i }));
 
@@ -155,7 +155,7 @@ describe('DatapackActivityView — a page that fails', () => {
 
         render(<DatapackActivityView />);
         fireEvent.click(await screen.findByRole('button', { name: /Load 50 More/ }));
-        await screen.findByText('Could Not Reach the Data Installer');
+        await screen.findByText("Couldn't Reach the Data Installer");
 
         fireEvent.click(screen.getByRole('button', { name: /retry/i }));
 
@@ -171,7 +171,7 @@ describe('DatapackActivityView — a page that fails', () => {
         });
 
         render(<DatapackActivityView />);
-        await screen.findByText('Could Not Reach the Data Installer');
+        await screen.findByText("Couldn't Reach the Data Installer");
 
         fireEvent.click(screen.getByRole('button', { name: /retry/i }));
 

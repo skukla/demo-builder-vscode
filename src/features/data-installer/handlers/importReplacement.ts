@@ -55,7 +55,7 @@ export interface Replacement {
     validate?: () => Promise<ValidationResult>;
 }
 
-const REJECTED = 'The Data Installer rejected this import request.';
+const REJECTED = 'The Data Installer rejected this install request.';
 
 /**
  * The project's pack by the name the SC knows it by: remembered, else read from the library without
@@ -164,7 +164,7 @@ export function withSavedNote(
     if (!response.success) {
         return {
             ...response,
-            error: `${response.error ?? failed} Your changes are safe: ${saved.note}`,
+            error: `${response.error ?? failed} Your changes were saved: ${saved.note}`,
         };
     }
     return {

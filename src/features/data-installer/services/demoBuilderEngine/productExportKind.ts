@@ -80,7 +80,7 @@ export function parseProductExport(records: unknown): ExportRow[] {
     const parsed = packSchema.safeParse(records);
     if (!parsed.success)
         throw new Error(
-            `The pack's product_export rows are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`,
+            `The datapack's product_export rows are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`,
         );
     return parsed.data.source.items;
 }

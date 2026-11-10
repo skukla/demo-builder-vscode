@@ -19,7 +19,7 @@ import {
     defaultResponse,
 } from './ImportDatapackModal.testUtils';
 
-const startButton = () => screen.getByRole('button', { name: /^import$/i });
+const startButton = () => screen.getByRole('button', { name: /^install$/i });
 
 /**
  * An activation id for the write calls, but the real target for the target call.
@@ -137,10 +137,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            await press(screen.getByRole('button', { name: /^dry run$/i }));
+            await press(screen.getByRole('button', { name: /^check first$/i }));
 
-            await screen.findByText(/checking the import/i);
-            expect(screen.queryByRole('button', { name: /^dry run$/i })).not.toBeInTheDocument();
+            await screen.findByText(/checking first/i);
+            expect(screen.queryByRole('button', { name: /^check first$/i })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^checking$/i })).not.toBeInTheDocument();
         });
 
@@ -158,9 +158,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
             const install = (await screen.findByText('Install Bodea, main')).closest('.work-row');
             expect(install).toHaveTextContent('Starting');
             expect(install).toHaveTextContent('Categories');
-            expect(screen.getByText('Verify the Import')).toBeInTheDocument();
+            expect(screen.getByText('Verify Installation')).toBeInTheDocument();
             expect(screen.queryByText('Preparing Import')).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /^import$/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^install$/i })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
         });
 
@@ -173,9 +173,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            await press(screen.getByRole('button', { name: /^dry run$/i }));
+            await press(screen.getByRole('button', { name: /^check first$/i }));
 
-            expect(await screen.findByText(/checking the import/i)).toBeInTheDocument();
+            expect(await screen.findByText(/checking first/i)).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
         });
@@ -186,10 +186,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            await press(screen.getByRole('button', { name: /^dry run$/i }));
-            await screen.findByText(/checking the import/i);
+            await press(screen.getByRole('button', { name: /^check first$/i }));
+            await screen.findByText(/checking first/i);
 
-            expect(screen.queryByRole('button', { name: /^import$/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^install$/i })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^remove data$/i })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
         });
@@ -216,7 +216,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
                 type === 'validate-datapack-import'
                     ? {
                           success: false,
-                          error: 'This project has no Adobe Commerce backend, so there is nothing to import into.',
+                          error: 'This project has no Adobe Commerce backend, so there is nothing to install into.',
                           code: 'INVALID_OPERATION',
                       }
                     : defaultResponse(type)
@@ -227,26 +227,26 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
-            await press(screen.getByRole('button', { name: /^dry run$/i }));
+            await press(screen.getByRole('button', { name: /^check first$/i }));
         }
 
         it('replaces the form — one view at a time, never a pile', async () => {
             refuseDryRun();
             await dryRun();
 
-            expect(await screen.findByText(/dry run failed/i)).toBeInTheDocument();
+            expect(await screen.findByText(/couldn't run the check/i)).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
         });
 
         it('offers Back, which returns to the form with selections intact', async () => {
             refuseDryRun();
             await dryRun();
-            await screen.findByText(/dry run failed/i);
+            await screen.findByText(/couldn't run the check/i);
 
             await press(screen.getByRole('button', { name: /back/i }));
 
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
-            expect(screen.queryByText(/dry run failed/i)).not.toBeInTheDocument();
+            expect(screen.queryByText(/couldn't run the check/i)).not.toBeInTheDocument();
         });
 
         it('a passed dry run is a result view with Back too', async () => {
@@ -257,7 +257,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             );
             await dryRun();
 
-            expect(await screen.findByText(/dry run passed/i)).toBeInTheDocument();
+            expect(await screen.findByText(/check passed/i)).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
         });
@@ -526,7 +526,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             finished('success', { categories: 'success', products: 'success' });
             await startAJob();
 
-            expect(await screen.findByRole('heading', { name: 'Bodea Imported' })).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Bodea Installed' })).toBeInTheDocument();
             expect(screen.queryByText(/categories: success/i)).not.toBeInTheDocument();
         });
 
@@ -541,7 +541,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
             await startAJob();
 
-            expect(await screen.findByRole('heading', { name: 'Bodea Imported' })).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Bodea Installed' })).toBeInTheDocument();
             expect(screen.queryByTestId('import-run')).not.toBeInTheDocument();
             expect(
                 screen.getByText('Your changes are saved in Version History. New products can take 20 minutes to show in search.'),
@@ -550,12 +550,12 @@ describe('ImportDatapackModal — job lifecycle', () => {
         });
 
         it('keeps the steps when the run finished with a problem, under the same title', async () => {
-            finished('success', { categories: 'success', products: 'success' }, { rowNotes: { products: 'Commerce refused 3.' } });
+            finished('success', { categories: 'success', products: 'success' }, { rowNotes: { products: 'Commerce refused 3 rows.' } });
             await startAJob();
 
-            expect(await screen.findByRole('heading', { name: 'Bodea Imported' })).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Bodea Installed' })).toBeInTheDocument();
             expect(screen.getByTestId('import-run')).toBeInTheDocument();
-            expect(screen.getByText('Commerce refused 3.').closest('.work-row')).toHaveTextContent('Products');
+            expect(screen.getByText('Commerce refused 3 rows.').closest('.work-row')).toHaveTextContent('Products');
         });
 
         /**
@@ -566,7 +566,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             finished('partial', { categories: 'success', products: 'error' }, { stoppedAt: 'products', reason: 'Commerce did not respond.' });
             await startAJob();
 
-            expect(await screen.findByRole('heading', { name: 'Import Stopped' })).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Install Stopped' })).toBeInTheDocument();
             expect(screen.getByText('Stopped').closest('.work-row')).toHaveTextContent('Install Bodea, main');
             expect(screen.getByText('Commerce did not respond.').closest('.work-row')).toHaveTextContent('Products');
             expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
@@ -583,7 +583,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
             await press(startButton());
 
-            expect(await screen.findByRole('heading', { name: 'Bodea Imported' })).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Bodea Installed' })).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
 
@@ -621,7 +621,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             finished('success', { categories: 'success' });
             await startAJob();
 
-            expect(await screen.findByRole('heading', { name: 'Bodea Imported' })).toBeInTheDocument();
+            expect(await screen.findByRole('heading', { name: 'Bodea Installed' })).toBeInTheDocument();
         });
 
         // Retry runs the same import again: what is in sends nothing (owner, 2026-11-07).
@@ -637,7 +637,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         });
 
         it('offers Fix with AI when a row has a problem, and pressing it asks the extension to open the AI', async () => {
-            finished('success', { categories: 'success', products: 'success' }, { rowNotes: { products: 'Commerce refused 3.' } });
+            finished('success', { categories: 'success', products: 'success' }, { rowNotes: { products: 'Commerce refused 3 rows.' } });
             await startAJob();
 
             await press(await screen.findByRole('button', { name: 'Fix with AI' }));

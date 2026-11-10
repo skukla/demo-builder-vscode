@@ -66,7 +66,7 @@ async function pressImport(): Promise<void> {
     renderModal({ availableTypes: ['categories'] });
     await awaitForm();
     // A one-type pack starts ticked.
-    await press(screen.getByRole('button', { name: 'Import' }));
+    await press(screen.getByRole('button', { name: 'Install' }));
     await settle();
 }
 
@@ -91,7 +91,7 @@ describe('importing another version over the one the demo uses', () => {
 
         expect(screen.getByRole('checkbox', { name: /^Categories/ })).toBeChecked();
         expect(screen.getByRole('checkbox', { name: /^Products/ })).toBeChecked();
-        expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Install' })).toBeEnabled();
     });
 
     it('CONTROL: an import replacing nothing still starts with nothing ticked', async () => {
@@ -115,22 +115,22 @@ describe('importing another version over the one the demo uses', () => {
         });
         expect(screen.getByRole('heading', { name: 'Save Your Changes First?' })).toBeInTheDocument();
         // A lead sentence, then a row per data type (walk F110).
-        expect(screen.getByText("You changed these since this demo's last save. Importing replaces them.")).toBeInTheDocument();
+        expect(screen.getByText('Installing replaces these changes.')).toBeInTheDocument();
         const rows = Array.from(document.querySelectorAll('.fact-list dt')).map((dt) => [dt.textContent, dt.nextElementSibling?.textContent]);
         expect(rows).toStrictEqual([['Products', 'A, B']]);
         expect(screen.queryByText(SENTENCE)).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Save As New and Import' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save As New and Install' })).toBeInTheDocument();
         expect(startCalls()).toHaveLength(0);
     });
 
     // The button that loses the changes stands apart, at the footer's start (walk F111).
-    it('puts Import Without Saving at the footer\'s start, Cancel and the save at its end', async () => {
+    it('puts Install Without Saving at the footer\'s start, Cancel and the save at its end', async () => {
         holding(OLD, CHANGED_TEAM);
 
         await pressImport();
 
-        expect(screen.getByRole('button', { name: 'Import Without Saving' }).closest('.modal-footer-start')).not.toBeNull();
-        expect(screen.getByRole('button', { name: 'Save As New and Import' }).closest('.modal-footer-start')).toBeNull();
+        expect(screen.getByRole('button', { name: 'Install Without Saving' }).closest('.modal-footer-start')).not.toBeNull();
+        expect(screen.getByRole('button', { name: 'Save As New and Install' }).closest('.modal-footer-start')).toBeNull();
         expect(screen.getByRole('button', { name: 'Cancel' }).closest('.modal-footer-start')).toBeNull();
     });
 
@@ -144,18 +144,18 @@ describe('importing another version over the one the demo uses', () => {
 
         await pressImport();
 
-        expect(screen.getByRole('heading', { name: 'Import Bodea' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Install Bodea' })).toBeInTheDocument();
         expect(screen.getByText('Checking for your changes')).toBeInTheDocument();
-        expect(screen.getByText("Since this demo's last save")).toBeInTheDocument();
+        expect(screen.queryByText("Since this demo's last save")).toBeNull();
         expect(screen.queryByRole('heading', { name: 'Save Your Changes First?' })).not.toBeInTheDocument();
         expect(startCalls()).toHaveLength(0);
     });
 
-    it('Import Without Saving starts the import, losing the changes, and removes nothing on its own', async () => {
+    it('Install Without Saving starts the import, losing the changes, and removes nothing on its own', async () => {
         holding(OLD, CHANGED_TEAM);
         await pressImport();
 
-        await press(screen.getByRole('button', { name: 'Import Without Saving' }));
+        await press(screen.getByRole('button', { name: 'Install Without Saving' }));
 
         expect(startCalls()[0][1]).toMatchObject({
             datapackName: 'bodea',
@@ -177,7 +177,7 @@ describe('importing another version over the one the demo uses', () => {
         );
         await pressImport();
 
-        await press(screen.getByRole('button', { name: 'Save and Import' }));
+        await press(screen.getByRole('button', { name: 'Save and Install' }));
 
         expect(screen.getByText('Save Your Changes')).toBeInTheDocument();
         expect(screen.getByText('Starting')).toBeInTheDocument();
@@ -189,7 +189,7 @@ describe('importing another version over the one the demo uses', () => {
 
         await press(screen.getByRole('button', { name: 'Cancel' }));
 
-        expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Install' })).toBeInTheDocument();
         expect(startCalls()).toHaveLength(0);
         expect(resetCalls()).toHaveLength(0);
     });

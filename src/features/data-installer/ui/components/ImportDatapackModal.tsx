@@ -55,7 +55,7 @@ import { useVersionTypes } from '../hooks/useVersionTypes';
 import { ImportDatapackModalBody, type BodyContext } from './ImportDatapackModalBody';
 import { backgroundTitle, isStartingImport, jobBusyMessage, libraryField } from './importModalJob';
 import { buildActions, closeLabel, isRemoving, removalButtons, resolveView, targetName, viewFrame, waitOf, watchedActivation } from './importModalView';
-import { resolveResult, type LastAction } from './importResult';
+import { checkPassed, resolveResult, type LastAction } from './importResult';
 import type { RemovalAnswer } from './removalConfirm';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -234,9 +234,8 @@ export function ImportDatapackModal({
         if (result?.backToConfirm) replacement.reopen(lastAction === 'start');
         setDismissed(true);
     };
-    // Not ready while the scopes load, or a Start pressed then lands on the service default
-    // (`base`) silently; a discovery that FAILS clears `loading` too, so an untargeted import stays
-    // possible.
+    // Not ready while the scopes load, or a Start pressed then lands on the service default (`base`)
+    // silently; a discovery that FAILS clears `loading` too, so an untargeted import stays possible.
     const ready = commerceInstance.length > 0 && !busy && !scope.loading;
     const canStart = ready && selected.length > 0;
     const view = resolveView({
@@ -321,6 +320,7 @@ export function ImportDatapackModal({
         goBack,
         ranToEnd: result?.finished === true,
         backCloses: backOnlyCloses(leave.closesOnBack, result),
+        checkPassed: checkPassed(lastAction, dryRun.value),
         resultAction: result?.action,
         retry,
         fixWithAi,

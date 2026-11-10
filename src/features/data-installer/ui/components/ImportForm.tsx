@@ -152,7 +152,7 @@ function ScopeField({ label, children }: { label: string; children: React.ReactN
  * whether the request was in flight or wedged.
  */
 function websitePlaceholder(defaultName?: string): string {
-    return defaultName ? `${defaultName} (default)` : 'Instance default';
+    return defaultName ? `${defaultName} (default)` : 'Instance Default';
 }
 
 function storePlaceholder(firstViewName?: string): string {
@@ -241,7 +241,7 @@ export function ImportForm({
                 <MissingDependencies availableTypes={availableTypes} selected={selected} />
                 {changes?.failed ? (
                     // The counts are what an SC checks before importing again; their absence is said.
-                    <p className="dialog-problem text-notice">What importing again would change could not be read.</p>
+                    <p className="dialog-problem text-notice">What installing again would change couldn't be read.</p>
                 ) : null}
             </div>
         </>

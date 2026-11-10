@@ -63,10 +63,10 @@ describe('importing a pack the project has', () => {
 
         // The same check, in the same words, as before a removal or a replace (walk F114).
         expect(screen.getByText('Checking for your changes')).toBeInTheDocument();
-        expect(screen.getByText("Since this demo's last save")).toBeInTheDocument();
+        expect(screen.queryByText("Since this demo's last save")).toBeNull();
         expect(screen.getByText('Usually about a minute')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: /Categories/ })).toBeNull();
-        expect(screen.queryByRole('button', { name: 'Import' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Install' })).toBeNull();
         expect(previewCalls()[0][1]).toEqual({ datapackName: 'bodea', version: 'main' });
     });
 
@@ -93,7 +93,7 @@ describe('importing a pack the project has', () => {
         renderModal();
         await awaitForm();
 
-        expect(screen.getByText('What importing again would change could not be read.')).toBeInTheDocument();
+        expect(screen.getByText("What installing again would change couldn't be read.")).toBeInTheDocument();
         expect(screen.queryByText('No changes')).toBeNull();
     });
 
@@ -103,7 +103,7 @@ describe('importing a pack the project has', () => {
         await awaitForm();
 
         await press(screen.getByRole('checkbox', { name: /^Products/ }));
-        await press(screen.getByRole('button', { name: 'Import' }));
+        await press(screen.getByRole('button', { name: 'Install' }));
         await settle();
 
         expect(mockRequest.mock.calls.some(([type]) => type === 'start-datapack-import')).toBe(true);
@@ -130,7 +130,7 @@ describe('where an installed pack goes', () => {
         expect(pickerFor(/^website$/i)).toHaveValue('bodea');
 
         await press(screen.getByRole('checkbox', { name: /^Products/ }));
-        await press(screen.getByRole('button', { name: 'Import' }));
+        await press(screen.getByRole('button', { name: 'Install' }));
         const start = mockRequest.mock.calls.find(([type]) => type === 'start-datapack-import');
         expect(start?.[1]).toEqual(expect.objectContaining(INSTALLED_AT));
     });

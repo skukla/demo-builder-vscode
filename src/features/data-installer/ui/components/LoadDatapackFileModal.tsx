@@ -27,6 +27,7 @@
 
 import { Checkbox, DialogContainer, Radio, RadioGroup } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
+import { storeSettingsCount } from '../../datapackWords';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion, packLine, versionLabel } from '../../packVersions';
 import { dataTypeLabel } from '../dataTypeLabel';
@@ -122,7 +123,7 @@ export function LoadDatapackFileModal({
     return (
         <DialogContainer onDismiss={onClose}>
             <Modal
-                title={result?.title ?? 'Load from File'}
+                title={result?.title ?? 'Add from File'}
                 status={result ? resultStatus(result) : undefined}
                 size={result ? 'S' : 'M'}
                 fitContent
@@ -198,8 +199,8 @@ function loadResult(args: {
 
 /** Where the file's parts went: the settings stay in My Datapacks wherever the data goes. */
 function loadedWhere(intoInstaller: boolean, settingsLanded: boolean): string {
-    if (intoInstaller) return `Added to the Data Installer.${settingsLanded ? ' Its store settings are in My Datapacks.' : ''}`;
-    return `Added to My Datapacks${settingsLanded ? ', with its store settings' : ''}.`;
+    if (intoInstaller) return `Added to the Data Installer.${settingsLanded ? ' Its Store Settings are in My Datapacks.' : ''}`;
+    return `Added to My Datapacks${settingsLanded ? ', with its Store Settings' : ''}.`;
 }
 
 /** "My Luma, saved Nov 9, 9:15 AM" or "Luma, main": a save by its date, never its id. */
@@ -220,7 +221,7 @@ function LoadForm({ file, choice, offersInstaller }: { file: OpenedFile; choice:
             </p>
             {file.settingsLayer ? (
                 <p className="datapack-export-note">
-                    It also carries store settings, which go into My Datapacks: {file.settingsLayer.paths.join(', ')}.
+                    It includes {storeSettingsCount(file.settingsLayer.paths.length)}, which {file.settingsLayer.paths.length === 1 ? 'goes' : 'go'} into My Datapacks.
                 </p>
             ) : null}
             {offersInstaller ? <DestinationChoice name={file.datapackName} choice={choice} /> : (

@@ -161,13 +161,13 @@ export const importHandlers = announcingChanges(defineHandlers({
             operation: 'import',
             validate: replacement.validate ?? (() => engine.validateImport(request)),
             begin: () => engine.startImport(request),
-            rejected: 'The Data Installer rejected this import request.',
-            failed: 'The import could not be started.',
+            rejected: 'The Data Installer rejected this install request.',
+            failed: 'The install could not be started.',
             ...(replaces ? { replaces } : {}),
             ...(savedAs ? { savedAs } : {}),
             ...(replacesVersion ? { replacesVersion } : {}),
         });
-        return withSavedNote(await afterWait(context, started, payload?.waitSeconds), saved, 'The import could not be started.');
+        return withSavedNote(await afterWait(context, started, payload?.waitSeconds), saved, 'The install could not be started.');
     },
 
     /**
@@ -452,11 +452,11 @@ function readInput(
     // into someone else's live demo.
     const commerceInstance = payload?.commerceInstance;
     if (!commerceInstance) {
-        return { error: 'A Commerce instance is required — it is where the data will be written.' };
+        return { error: 'A Commerce instance is required: it is where the data will be written.' };
     }
     const dataTypes = payload?.dataTypes ?? [];
     if (write === 'install' && dataTypes.length === 0) {
-        return { error: 'Select at least one data type to import.' };
+        return { error: 'Select at least one data type to install.' };
     }
     const target = readTarget(payload);
     if ('error' in target) {
@@ -486,7 +486,7 @@ function readTarget(
     }
     if (!websiteCode || !storeCode) {
         return {
-            error: 'Choose both a target website and a store view, or neither — the Data Installer needs the pair.',
+            error: 'Choose both a target website and a store view, or neither: the Data Installer needs the pair.',
         };
     }
     return { target: { websiteCode, storeCode } };

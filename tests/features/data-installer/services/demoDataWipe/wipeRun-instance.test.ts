@@ -30,7 +30,7 @@ describe('runWipe, the B2B kinds', () => {
             { method: 'DELETE', path: 'customerGroups/25' },
         ]);
         expect(store.data.instance?.movedToGeneral).toStrictEqual([]);
-        expect(stages).toEqual(['Removing companies', 'Removing customers', 'Removing shared catalogs']);
+        expect(stages).toEqual(['Deleting companies', 'Deleting customers', 'Deleting shared catalogs']);
         expect(outcome.removed).toMatchObject({ companies: 1, customers: 2, catalogs: 1, customerGroups: 0 });
         expect(outcome.failed).toStrictEqual([]);
         expect(outcome.unfinished).toBeUndefined();
@@ -176,7 +176,7 @@ describe('runWipe, website settings', () => {
 
         const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }), (stage) => stages.at(-1) !== stage && stages.push(stage));
 
-        expect(stages).toEqual(['Resetting site settings']);
+        expect(stages).toEqual(['Restoring default configuration']);
         expect(outcome.removed.settings).toBe(1);
         expect(outcome.sentence).toContain("Set 1 website setting to the default's value. Commerce can't clear a website's own value, so a later change to the default won't reach it.");
         expect(outcome.failed).toEqual([{ what: 'set 1 of the website settings back', count: 1, first: expect.stringContaining(REFUSED_SETTING) }]);

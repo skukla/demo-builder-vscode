@@ -123,18 +123,18 @@ describe('checkRecordedPack', () => {
         });
     });
 
-    it('falls back to the pack it was made from, saying the changes are not included', async () => {
+    it('falls back to the datapack it was made from, saying the changes are not included', async () => {
         const r = reads([{ id: { name: 'bodea', version: '1.0.0' }, store: 'installer' }]);
 
         await expect(checkRecordedPack(r, ACME)).resolves.toEqual({
             verdict: 'fallback',
             pack: { name: 'bodea', version: '1.0.0', store: 'installer' },
             displayName: 'Bodea',
-            note: "The acme-demo-1a2b3c pack this project uses can't be read: its owner has deleted it or not shared it. You can continue with Bodea, the pack it was made from; their changes won't be included.",
+            note: "The acme-demo-1a2b3c datapack this project uses can't be read: its owner has deleted it or not shared it. You can continue with Bodea, the datapack it was made from; their changes won't be included.",
         });
     });
 
-    it("uses the newest version of the pack it was made from when that version has gone too, and says so", async () => {
+    it("uses the newest version of the datapack it was made from when that version has gone too, and says so", async () => {
         const r = reads([
             { id: { name: 'bodea', version: '2.0.0' }, store: 'installer', over: { updatedAt: '2026-10-20T00:00:00Z' } },
             { id: { name: 'bodea', version: '1.5.0' }, store: 'installer', over: { updatedAt: '2026-09-01T00:00:00Z' } },
@@ -146,19 +146,19 @@ describe('checkRecordedPack', () => {
         expect(check.verdict === 'fallback' && check.note).toContain("Bodea version 1.0.0 has gone too, so its newest version, 2.0.0, is used");
     });
 
-    it('continues without sample data when the pack it was made from has gone entirely, and says why', async () => {
+    it('continues without a datapack when the datapack it was made from has gone entirely, and says why', async () => {
         await expect(checkRecordedPack(reads([]), ACME)).resolves.toEqual({
             verdict: 'none',
-            note: "The acme-demo-1a2b3c pack this project uses can't be read: its owner has deleted it or not shared it. The pack it was made from, bodea, has gone too, so this project will be created without sample data.",
+            note: "The acme-demo-1a2b3c datapack this project uses can't be read: its owner has deleted it or not shared it. The datapack it was made from, bodea, has gone too, so this project will be created without a datapack.",
         });
     });
 
-    it('continues without sample data when there is no pack it was made from', async () => {
+    it('continues without a datapack when there is no pack it was made from', async () => {
         const check = await checkRecordedPack(reads([]), { name: 'gone', version: '1', store: 'library' });
 
         expect(check).toEqual({
             verdict: 'none',
-            note: "The gone pack this project uses can't be read: its owner has deleted it or not shared it. This project will be created without sample data.",
+            note: "The gone datapack this project uses can't be read: its owner has deleted it or not shared it. This project will be created without a datapack.",
         });
     });
 

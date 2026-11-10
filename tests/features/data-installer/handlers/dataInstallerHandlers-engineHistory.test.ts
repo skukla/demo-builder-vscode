@@ -159,7 +159,7 @@ describe('list-installed-datapacks from both engines', () => {
         const data = res.data as HistoryPage<InstalledDatapack>;
         expect(data.items.map((row) => row.source)).toStrictEqual(['demo-builder']);
         expect(data.total).toBe(1);
-        expect(data.serviceError).toMatch(/No Data Installer API URL/);
+        expect(data.serviceError).toMatch(/No Data Installer address is set/);
     });
 
     // The Data Installer is an extra: a project with no history answers that it has none, not a failure.
@@ -170,7 +170,7 @@ describe('list-installed-datapacks from both engines', () => {
 
         expect(res).toStrictEqual({
             success: true,
-            data: { items: [], count: 0, total: 0, serviceError: expect.stringMatching(/No Data Installer API URL/) },
+            data: { items: [], count: 0, total: 0, serviceError: expect.stringMatching(/No Data Installer address is set/) },
         });
     });
 

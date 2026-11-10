@@ -253,12 +253,12 @@ describe('clear-demo-data', () => {
         await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true, progress: 'modal' });
 
         const pushed = (context.sendMessage as jest.Mock).mock.calls.filter(([type]) => type === 'operationProgress').map(([, payload]) => payload);
-        expect(pushed).toContainEqual(expect.objectContaining({ id: 'demo-data-clear', state: 'running', stage: 'Removing customers' }));
+        expect(pushed).toContainEqual(expect.objectContaining({ id: 'demo-data-clear', state: 'running', stage: 'Deleting customers' }));
         // The check counts through the data types it re-reads, as an install does (owner, 2026-11-04).
         expect(pushed).toContainEqual(expect.objectContaining({ stage: 'Verifying demo data', step: '0 of 11 data types: Categories' }));
         expect(pushed).toContainEqual(expect.objectContaining({ stage: 'Verifying demo data', step: '10 of 11 data types: Orders' }));
         // Each removal step counts its items the same way.
-        expect(pushed).toContainEqual(expect.objectContaining({ stage: 'Removing products', step: '3 of 3 products' }));
+        expect(pushed).toContainEqual(expect.objectContaining({ stage: 'Deleting products', step: '3 of 3 products' }));
         expect(pushed).toContainEqual(expect.objectContaining({ id: 'demo-data-clear', state: 'succeeded', note: expect.stringMatching(/^Removed 3 products/) }));
     });
 

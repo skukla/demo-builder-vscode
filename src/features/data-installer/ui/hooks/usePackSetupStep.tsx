@@ -26,7 +26,7 @@ import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { DatapackId } from '@/types/datapack';
 
 /** A Check whose request gave up: the extension may still have finished and recorded it. */
-export const CHECK_NO_ANSWER = "Demo Builder didn't get an answer in time. The check may still have finished; press Check to try again.";
+export const CHECK_NO_ANSWER = 'The check timed out. Press Check again.';
 
 /** What the catalog mounts: the flyout's line, and the dialog beside the flyout. */
 export interface PackSetupStepView {

@@ -12,8 +12,8 @@ const skipped = (kind: string, n: number): SkippedRow[] =>
 describe('rowNotesOf', () => {
     it('says how many rows Commerce refused, on that data type', () => {
         expect(rowNotesOf([...skipped('products', 3), ...skipped('categories', 1)])).toEqual({
-            products: 'Commerce refused 3.',
-            categories: 'Commerce refused 1.',
+            products: 'Commerce refused 3 rows.',
+            categories: 'Commerce refused 1 row.',
         });
     });
 

@@ -71,14 +71,17 @@ function refuse(
 /** Why the Data Installer cannot be asked: the log line and the refusal, by reason. */
 const INSTALLER_REFUSALS: Record<'not-configured' | 'turned-off' | 'invalid-url', { log: string; message: string }> = {
     'not-configured': {
+        // datapack-words: not on screen
         log: 'demoBuilder.dataInstaller.apiBaseUrl is not set. It has no default, so every SC sets their own.',
-        message: 'No Data Installer API URL is configured. Set demoBuilder.dataInstaller.apiBaseUrl.',
+        message: 'No Data Installer address is set. Set it in Settings.',
     },
     'turned-off': {
+        // datapack-words: not on screen
         log: 'the Data Installer is turned off (demoBuilder.dataInstaller.enabled).',
-        message: 'The Data Installer is turned off. Turn on demoBuilder.dataInstaller.enabled to use it.',
+        message: 'The Data Installer is turned off. Turn it on in Settings.',
     },
     'invalid-url': {
+        // datapack-words: not on screen
         log: 'invalid demoBuilder.dataInstaller.apiBaseUrl',
         message: 'The configured Data Installer API URL is not usable. It must be an https:// URL.',
     },
@@ -113,7 +116,7 @@ export async function resolveDataInstallerAccess(
                 `${LOG_PREFIX} Refused: demoBuilder.datapackStore.apiBaseUrl is ${library.reason === 'not-configured' ? 'not set' : `not usable (${library.fingerprint ?? 'unreadable'})`}.`,
             );
             return refuse(
-                'The datapack library has no usable address. Set demoBuilder.datapackStore.apiBaseUrl to an https:// URL.',
+                'The datapack library has no usable address. Set it in Settings to an https:// URL.',
                 ErrorCode.INVALID_OPERATION,
             );
         }
@@ -437,6 +440,7 @@ export const dataInstallerHandlers = defineHandlers({
                 success: false,
                 // No default: the import and export sets genuinely differ, so
                 // guessing one would offer the wrong types.
+                // datapack-words: not on screen
                 error: 'An operation mode is required (import, export, delete or validate).',
             };
         }

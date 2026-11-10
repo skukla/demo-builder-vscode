@@ -18,7 +18,7 @@
 import * as vscode from 'vscode';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { askForDetailsDuringOperation, withModalAsking } from '@/core/vscode/operationPrompt';
-import { UNINSTALL_DATAPACK } from '@/features/data-installer/uninstallWords';
+import { UNINSTALL_DATAPACK } from '@/features/data-installer/datapackWords';
 import type { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import type { SharedOnline } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { deleteSentence } from '@/features/projects-dashboard/deleteWords';
@@ -43,10 +43,10 @@ export interface CleanupOptions {
  */
 export async function confirmPlainDelete(project: Project): Promise<boolean> {
     const confirm = await vscode.window.showWarningMessage(
-        `Are you sure you want to delete "${getProjectDisplayName(project)}"?`,
+        `Delete ${getProjectDisplayName(project)}?`,
         {
             modal: true,
-            detail: 'This will remove all project files and configuration. This action cannot be undone.',
+            detail: 'Permanently removes its files from this machine.',
         },
         'Delete',
     );
@@ -215,7 +215,7 @@ export async function showCleanupConfirmation(
     // Show QuickPick with cleanup options
     const quickPick = vscode.window.createQuickPick<CleanupQuickPickItem>();
     quickPick.title = `Delete "${getProjectDisplayName(project)}"`;
-    quickPick.placeholder = 'Also delete these external resources? (Enter to delete)';
+    quickPick.placeholder = 'Also delete these?';
     quickPick.canSelectMany = true;
     quickPick.ignoreFocusOut = true; // Prevent dismissal when webview takes focus
     quickPick.items = items;

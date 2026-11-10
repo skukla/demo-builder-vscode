@@ -129,7 +129,7 @@ describe('cart_rules install', () => {
     });
 
     it('refuses a pack row with no name before anything is sent', () => {
-        expect(() => parseCartRuleRows([{ rule: { description: 'x' } }])).toThrow("The pack's cart rules are not in the shape Commerce takes");
+        expect(() => parseCartRuleRows([{ rule: { description: 'x' } }])).toThrow("The datapack's cart rules are not in the shape Commerce takes");
     });
 });
 

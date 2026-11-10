@@ -92,7 +92,7 @@ async function installSource(ctx: KindContext, source: SourcesPack['sources'][nu
 /** Make the stocks the store lacks, each selling to the install target's website. */
 export async function installStocks(ctx: KindContext, pack: StocksPack): Promise<void> {
     const websiteCode = ctx.session.websiteCode;
-    if (!websiteCode) throw new Error('The install target names no website, so the pack\'s stocks have nothing to sell to.');
+    if (!websiteCode) throw new Error('The install target names no website, so the datapack\'s stocks have nothing to sell to.');
     const { stocks } = await readInventory(ctx.get);
     for (const { stock } of pack.stocks) await counted(ctx, STOCK_KIND, stock.name, () => installStock(ctx, stock, stocks, websiteCode));
 }

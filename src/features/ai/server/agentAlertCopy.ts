@@ -251,7 +251,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     reset_datapack: {
         action: 'Uninstall a datapack',
         consequence:
-            "Deletes what this datapack put in Commerce and puts back any store settings it changed. This can't be undone.",
+            "Deletes what this datapack put in Commerce and puts back any Store Settings it changed. This can't be undone.",
         target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
@@ -432,9 +432,9 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         sessionGrant: true,
     },
     start_datapack_import: {
-        action: 'Import sample data',
+        action: 'Install a datapack',
         consequence:
-            'Writes the chosen data types and what they need into the live Commerce instance, then any store settings the pack or its settings layer holds when all of it is chosen, and installing again updates or removes what the pack made earlier of those types, keeping anything changed in the Admin. Importing another datapack or version over the one this demo uses uninstalls that one first. Takes several minutes and cannot be paused.',
+            'Writes the chosen data types and what they need into the live Commerce instance, then the datapack\'s Store Settings when all of it is chosen. Installing again updates or removes what the datapack made earlier of those types, keeping anything changed in the Admin. Installing another datapack over the one this demo uses uninstalls that one first. Takes several minutes and cannot be paused.',
         target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
@@ -450,7 +450,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     copy_library_datapack_to_installer: {
         action: 'Copy a datapack into the Data Installer',
         consequence:
-            "Adds this pack to the Data Installer's shared catalogue, so other teams can find and install it. They will see it, and the extension cannot remove it again.",
+            "Adds this datapack to the Data Installer's shared catalog, so other teams can find and install it. They will see it, and the extension cannot remove it again.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
@@ -477,20 +477,20 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     },
     mark_team_datapack: {
         action: 'Mark or unmark a team datapack',
-        consequence: 'Marked, this pack is in the default list for everyone it is shared with; unmarked, it is behind Include Community.',
+        consequence: 'Marked, this datapack is in the default list for everyone it is shared with; unmarked, it is behind Include Community.',
         target: ['datapackName', 'team'],
         sessionGrant: false,
     },
     share_datapack: {
         action: 'Share or stop sharing a datapack',
-        consequence: 'Shared, everyone using Demo Builder can see and install every version of this pack, under Community Datapacks; stopped, only you can.',
+        consequence: 'Shared, everyone using Demo Builder can see and install every version of this datapack, under Community Datapacks; stopped, only you can.',
         target: ['datapackName', 'shared'],
         sessionGrant: false,
     },
     load_datapack_zip: {
         action: 'Load a datapack file',
         consequence:
-            'Adds the datapack in this file to My Datapacks, or to the Data Installer catalog other teams share. Store settings the file carries go into My Datapacks.',
+            'Adds the datapack in this file to My Datapacks, or to the Data Installer catalog other teams share. Store Settings the file carries go into My Datapacks.',
         target: ['path', 'target'],
         sessionGrant: false,
     },

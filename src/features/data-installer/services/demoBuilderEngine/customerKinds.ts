@@ -137,7 +137,7 @@ async function customerFields(lk: ProductLookups, row: CustomerRow): Promise<Par
  */
 export async function installCustomers(ctx: KindContext, rows: CustomerRows): Promise<void> {
     const websiteId = ctx.session.websiteId;
-    if (websiteId === undefined) throw new Error("The install target names no website, so the pack's customers have nowhere to sign in.");
+    if (websiteId === undefined) throw new Error("The install target names no website, so the datapack's customers have nowhere to sign in.");
     const lk = productLookups(ctx);
     const todo: CustomerToMake[] = [];
     for (const row of rows) {

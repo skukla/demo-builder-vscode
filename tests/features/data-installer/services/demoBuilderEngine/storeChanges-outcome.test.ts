@@ -46,7 +46,7 @@ describe('a save is checked by the install before it is stored', () => {
         const { d, written, write } = await deps(true, { 'categories/41': { id: 41, name: '', path: '1/2/41', is_active: true } });
 
         await expect(saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write)).rejects.toThrow(
-            /^The saved version could not be installed, so nothing was saved\. categories: The pack's categories are not in the shape Commerce takes: /u,
+            /^Nothing was saved, because the datapack could not be installed again: categories: The datapack's categories are not in the shape Commerce takes: /u,
         );
         expect(written).toStrictEqual([]);
     });
@@ -65,8 +65,8 @@ describe('packRowRefusals, as a save checks a version', () => {
 
     it('names each kind the install would refuse, in its own words', () => {
         expect(packRowRefusals({ products: [{ product: {} }], coupons: 'not a list' })).toEqual([
-            { kind: 'products', reason: expect.stringMatching(/^The pack's products are not in the shape Commerce takes/u) },
-            { kind: 'coupons', reason: expect.stringMatching(/^The pack's coupons are not in the shape Commerce takes/u) },
+            { kind: 'products', reason: expect.stringMatching(/^The datapack's products are not in the shape Commerce takes/u) },
+            { kind: 'coupons', reason: expect.stringMatching(/^The datapack's coupons are not in the shape Commerce takes/u) },
         ]);
     });
 });

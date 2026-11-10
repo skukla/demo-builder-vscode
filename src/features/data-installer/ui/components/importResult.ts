@@ -41,6 +41,11 @@ export function describePerType(
 /** The operation whose outcome the result view should show. */
 export type LastAction = 'dryRun' | 'start' | 'reset';
 
+/** Whether the result on screen is a Check First that passed: it offers Install, not Close. */
+export function checkPassed(lastAction: LastAction | null, check: { valid: boolean } | null | undefined): boolean {
+    return lastAction === 'dryRun' && check?.valid === true;
+}
+
 /**
  * One rendered outcome, whatever produced it, in the dialog design rules' result shape
  * (`docs/development/sop/dialog-design.md`): the outcome as the dialog's title, with its status as
@@ -95,20 +100,20 @@ export function resultStatus(result: ResultContent): ModalStatus | undefined {
 
 /** Which operation, in the words each place needs. */
 interface OperationWords {
-    /** "Imported" / "Removed" */
+    /** "Installed" / "Uninstalled" */
     done: string;
-    /** "Import" / "Remove", for a title */
+    /** "Install" / "Uninstall", for a title */
     verbTitle: string;
-    /** "import" / "removal", for a sentence */
+    /** "install" / "uninstall", for a sentence */
     noun: string;
-    /** "Import" / "Removal", for a title */
+    /** "Install" / "Uninstall", for a title */
     nounTitle: string;
 }
 
 function wordsFor(operation: 'start' | 'reset' | undefined): OperationWords {
     return operation === 'reset'
         ? { done: 'Uninstalled', verbTitle: 'Uninstall', noun: 'uninstall', nounTitle: 'Uninstall' }
-        : { done: 'Imported', verbTitle: 'Import', noun: 'import', nounTitle: 'Import' };
+        : { done: 'Installed', verbTitle: 'Install', noun: 'install', nounTitle: 'Install' };
 }
 
 /**
@@ -138,7 +143,7 @@ export function resolveResult(
 
     switch (lastAction) {
         case 'dryRun':
-            return dryRunResult(dryRun);
+            return dryRunResult(dryRun, name);
         case 'start':
         case 'reset': {
             const request = lastAction === 'start' ? start : reset;
@@ -190,7 +195,7 @@ function notSavedRun(reason: string, replacing: { name: string; dataTypes: strin
         stoppedAt: SAVE_STOP,
         reason,
     };
-    return { variant: 'error', title: 'Import Stopped', run, lead: 'Nothing was uninstalled or installed.', backToConfirm: true };
+    return { variant: 'error', title: 'Install Stopped', run, lead: 'Nothing was uninstalled or installed.', backToConfirm: true };
 }
 
 /**
@@ -226,8 +231,8 @@ function hasProblem(record: ImportJobRecord, failed: string[]): boolean {
 
 /**
  * An import's ending (owner, 2026-11-10, walk F134). A clean finish hands off to the small result:
- * "My Luma Imported", then only what is left to know (`leftToKnow`). Only a problem keeps the steps:
- * the same title in amber, how long search takes and "Took …" under them, with Fix with AI. A run that stopped is "Import Stopped" on its steps, with Retry while a retry can get past
+ * "My Luma Installed", then only what is left to know (`leftToKnow`). Only a problem keeps the steps:
+ * the same title in amber, how long search takes and "Took …" under them, with Fix with AI. A run that stopped is "Install Stopped" on its steps, with Retry while a retry can get past
  * the stop, else Fix with AI. It ran to the end when nothing failed but the store settings, which
  * fail without stopping it, and the work after the data types did not stop.
  */
@@ -237,9 +242,9 @@ function runResult(record: ImportJobRecord, name: string, retries: number): Resu
     const ranToEnd = record.stoppedAt !== FINISHING_STOP && failed.every((kind) => kind === SETTINGS_KIND && record.stoppedAt === SETTINGS_KIND);
     if (!ranToEnd) {
         const retry = record.retryable === true && retries < RETRIES_BEFORE_FIX;
-        return { variant: 'error', title: 'Import Stopped', run: record, action: retry ? 'retry' : 'fix', ...took };
+        return { variant: 'error', title: 'Install Stopped', run: record, action: retry ? 'retry' : 'fix', ...took };
     }
-    const title = `${name} Imported`;
+    const title = `${name} ${wordsFor('start').done}`;
     if (!hasProblem(record, failed)) return { variant: 'success', title, finished: true, ...leftToKnow(record) };
     const lead = record.searchDelay ? { lead: record.searchDelay } : {};
     return { variant: 'warning', title, run: record, finished: true, action: 'fix', ...lead, ...took };
@@ -251,16 +256,19 @@ function withSavedNote(result: ResultContent, savedNote: string | undefined): Re
     return { ...result, message: [result.message, savedNote].filter(Boolean).join(' ') };
 }
 
-/** A dry run's answer. A refusal is an ANSWER the button exists to fetch: amber, not red. */
-function dryRunResult(dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>): ResultContent | null {
-    if (dryRun.failure) return { variant: 'error', title: 'Dry Run Failed', message: dryRun.failure.message };
+/**
+ * Check First's answer (D6). A refusal is an ANSWER the button exists to fetch: amber, not red. A
+ * pass says what it means for this datapack, and its footer offers the install itself (Flow 2.14).
+ */
+function dryRunResult(dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>, name: string): ResultContent | null {
+    if (dryRun.failure) return { variant: 'error', title: "Couldn't Run the Check", message: dryRun.failure.message };
     if (!dryRun.value) return null;
     return dryRun.value.valid
-        ? { variant: 'success', title: 'Dry Run Passed', message: 'Nothing was written.' }
-        : { variant: 'warning', title: 'Validation Failed', message: dryRun.value.reason };
+        ? { variant: 'success', title: 'Check Passed', message: `${name} can be installed here. Nothing was written.` }
+        : { variant: 'warning', title: 'Check Found a Problem', message: dryRun.value.reason };
 }
 
-/** A finished job, worded for ITS operation: a removal must not say "Imported". */
+/** A finished job, worded for ITS operation: a removal must not say "Installed". */
 function terminalResult(record: ImportJobRecord, name: string): ResultContent {
     const words = wordsFor(record.operation === 'reset' ? 'reset' : 'start');
     const took = record.processingTimeMs !== undefined ? { tookMs: record.processingTimeMs } : {};
@@ -277,12 +285,12 @@ function successResult(record: ImportJobRecord, name: string, words: OperationWo
     if (record.keptRoot) {
         return {
             variant: 'warning',
-            title: `Action Required to Uninstall ${name}`,
+            title: `One Step Left to Uninstall ${name}`,
             message: `${record.keptRoot.store} still uses the datapack's root category, ${record.keptRoot.category}, so it stayed.`,
             keptRoot: record.keptRoot,
         };
     }
-    // The pack, then what happened to it, as "My Luma Imported" (review, 2026-11-10).
+    // The datapack, then what happened to it, as "My Luma Installed" (review, 2026-11-10).
     return { variant: 'success', title: `${name} ${words.done}`, ...(record.note ? { message: record.note } : {}) };
 }
 
@@ -293,13 +301,13 @@ function successResult(record: ImportJobRecord, name: string, words: OperationWo
 function unfinishedResult(record: ImportJobRecord, name: string, words: OperationWords): ResultContent {
     const troubled = describePerType(record.perType, { troubledOnly: true });
     const kept = record.note ? [record.note] : [];
-    const later = `The ${words.noun} continues in the background. See the Activity tab for the result.`;
+    const later = 'Still running. The result will be on the Activity tab.';
     switch (record.outcome) {
         case 'partial':
             return {
                 variant: 'warning',
                 title: `Some Data Types Not ${words.done}`,
-                details: [...kept, ...troubled, 'Running it again skips existing items.'],
+                details: [...kept, ...troubled],
             };
         case 'error':
             return { variant: 'error', title: `Couldn't ${words.verbTitle} ${name}`, message: record.reason, details: [...kept, ...troubled] };
@@ -310,7 +318,7 @@ function unfinishedResult(record: ImportJobRecord, name: string, words: Operatio
         case 'still-running':
             return { variant: 'info', title: 'Still Running', message: later };
         case 'unwatchable':
-            return { variant: 'warning', title: `${words.nounTitle} Status Unknown`, message: 'It is still running. See the Activity tab for the result.' };
+            return { variant: 'warning', title: `${words.nounTitle} Status Unknown`, message: later };
         default:
             return { variant: 'info', title: String(record.outcome) };
     }

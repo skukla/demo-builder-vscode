@@ -141,13 +141,13 @@ describe('delete-library-datapack', () => {
     });
 
     // Step 07: a pack shared in a project file is read by reference, so deleting it leaves
-    // anyone who has not yet created that project with the pack it was made from.
+    // anyone who has not yet created that project with the datapack it was made from.
     describe('a pack shared in a project file', () => {
         const WARNING =
-            "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get Bodea instead.";
+            "You shared this datapack in a project file on 27 October. Anyone who hasn't created that project yet will get Bodea instead.";
 
         beforeEach(() => {
-            // The pack it was made from, as the library lists it: named as the SC sees it, never by id.
+            // The datapack it was made from, as the library lists it: named as the SC sees it, never by id.
             library.findDatapacks.mockResolvedValue({
                 items: [{ id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', shared: true }],
                 count: 1,

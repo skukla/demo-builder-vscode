@@ -39,7 +39,7 @@ export function useLibrarySharing(id: DatapackId, shared: boolean, onChanged?: (
     }, [changed, onChanged]);
 
     const note = request.failure ? (
-        <p className="dialog-problem text-negative">It could not be changed: {request.failure.message}</p>
+        <p className="dialog-problem text-negative">{shared ? "Sharing couldn't be stopped" : "It couldn't be shared"}: {request.failure.message}</p>
     ) : null;
     return { start, working: request.loading, note };
 }

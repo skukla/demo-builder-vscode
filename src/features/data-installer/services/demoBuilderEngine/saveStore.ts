@@ -140,7 +140,7 @@ async function startSave(deps: StoreChangesDeps, target: SaveTarget, files: Reco
         return { installed: { rows: {} } };
     }
     const record = await readInstallRecord(files, deps.projectPath, pack);
-    if (!record) throw new StoreChangesError(`Demo Builder did not install ${labelPack(pack)} in this project, so there are no store changes of it to save.`);
+    if (!record) throw new StoreChangesError(`Demo Builder didn't install ${labelPack(pack)} in this project, so there is nothing to save.`);
     return { record, installed: await readInstalled(deps, { pack, ...(target.source ? { source: target.source } : {}) }) };
 }
 
@@ -214,7 +214,7 @@ export async function saveStoreChanges(
     const took = jobClock(deps.log, `Save of ${saveAs.displayName}`);
     const ctx = await openStore(deps, pack ?? saveAs.id, record);
     const { picks, products } = await picksOf(ctx, record, installed.rows, target.picks);
-    took(`found what the demo uses, ${pickCount(picks)} not in the pack`);
+    took(`found what the demo uses, ${pickCount(picks)} not in the datapack`);
     const seeds = [...(record?.created ?? []), ...seedsOf(picks)];
     const seeded = [...seeds.map((seed) => seed.kind), ...Object.keys(installed.rows)];
     const lineFor = captureLines(seeded);
@@ -272,12 +272,12 @@ export async function saveStoreChanges(
 
 /** The last row's line while the save writes: the write, then the record moved onto the new version (`rebaseRecord`). */
 const SAVING_STEP = 'Saving to My Datapacks';
-const RECORD_STEP = "Updating this demo's record";
+const RECORD_STEP = 'Finishing the save';
 
 /** The rows before what the demo uses is known: the kinds the record, the pack and the picks name. */
 function preparingRows(record: InstallRecord | undefined, rows: Record<string, unknown>, target: SaveTarget): OperationRow[] {
     const kinds = [...(record?.created ?? []).map((o) => o.kind), ...Object.keys(rows), ...seedsOf(target.picks ?? {}).map((o) => o.kind)];
-    return captureRows(kinds).preparing(firstStep(target) ?? 'Reading what was selected');
+    return captureRows(kinds).preparing(firstStep(target) ?? 'Reading your selection');
 }
 
 /**
@@ -323,7 +323,7 @@ function withPicks(demo: StorePicks, chosen: StorePicks | undefined): StorePicks
 
 /** What the window's second row says before the data types are known: from a pack, the demo's data is found first. */
 function firstStep(target: SaveTarget): string | undefined {
-    return target.pack ? 'Finding what this demo uses' : undefined;
+    return target.pack ? "Reading this demo's data" : undefined;
 }
 
 /** The installed pack as the SC knows it, when the save started from one. */
@@ -343,7 +343,7 @@ function refuseUninstallable(items: Record<string, unknown>): void {
     const refused = packRowRefusals(items, ANY_WEBSITE);
     if (refused.length === 0) return;
     const reasons = refused.map((r) => `${r.kind}: ${r.reason}`).join(' ');
-    throw new StoreChangesError(`The saved version could not be installed, so nothing was saved. ${reasons}`);
+    throw new StoreChangesError(`Nothing was saved, because the datapack could not be installed again: ${reasons}`);
 }
 
 /**

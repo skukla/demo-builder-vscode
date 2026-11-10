@@ -104,21 +104,21 @@ async function locate(reads: PackReads, recorded: ProjectDatapack): Promise<{ pa
 /** The pack it was made from, its newest version, or nothing: what a fallback can install. */
 async function fallbackFor(reads: PackReads, recorded: ProjectDatapack, unreadable: string): Promise<RecordedPackCheck> {
     const origin = recorded.origin;
-    if (!origin) return { verdict: 'none', note: `${unreadable} This project will be created without sample data.` };
+    if (!origin) return { verdict: 'none', note: `${unreadable} This project will be created without a datapack.` };
     const same = await find(reads, origin);
     if (same) {
         return {
             verdict: 'fallback',
             pack: located(same, storeOf(origin)),
             displayName: same.displayName,
-            note: `${unreadable} You can continue with ${same.displayName}, the pack it was made from; their changes won't be included.`,
+            note: `${unreadable} You can continue with ${same.displayName}, the datapack it was made from; their changes won't be included.`,
         };
     }
     const latest = await newest(reads, origin);
     if (!latest) {
         return {
             verdict: 'none',
-            note: `${unreadable} The pack it was made from, ${origin.name}, has gone too, so this project will be created without sample data.`,
+            note: `${unreadable} The datapack it was made from, ${origin.name}, has gone too, so this project will be created without a datapack.`,
         };
     }
     return {
@@ -149,7 +149,7 @@ export async function checkRecordedPack(reads: PackReads, recorded: ProjectDatap
                 shared: located.found.shared,
             };
         }
-        const unreadable = `The ${recorded.name} pack this project uses can't be read: its owner has deleted it or not shared it.`;
+        const unreadable = `The ${recorded.name} datapack this project uses can't be read: its owner has deleted it or not shared it.`;
         return await fallbackFor(reads, recorded, unreadable);
     } catch {
         return { verdict: 'unknown' };

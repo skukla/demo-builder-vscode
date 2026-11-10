@@ -133,14 +133,14 @@ describe('a job that ran to the end', () => {
         });
 
         expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
-        expect(status.rowNotes).toEqual({ categories: 'Commerce refused 1.' });
+        expect(status.rowNotes).toEqual({ categories: 'Commerce refused 1 row.' });
         expect(status.stoppedAt).toBeUndefined();
     });
 
     it('says it is checking the products while the check runs, and nothing once it ends', async () => {
         const { status, during } = await installWith(() => ({ id: 40 }));
 
-        expect(during.map((s) => s.phase)).toEqual(['Checking the products against the datapack']);
+        expect(during.map((s) => s.phase)).toEqual(['Checking products']);
         expect(status.phase).toBeUndefined();
         expect(status.rowNotes).toBeUndefined();
     });

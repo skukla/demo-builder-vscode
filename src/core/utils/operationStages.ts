@@ -33,9 +33,11 @@ export interface OperationStage {
     readonly expectation: string;
     /**
      * Row 2 when a report names no step of its own: what the stage is working on.
-     * Without it the row sat blank and the modal read as two lines with a gap.
+     * Without it the row sat blank and the modal read as two lines with a gap; a stage whose
+     * label says it all leaves it out, and the row is dropped (`noBlankRows`), not left blank
+     * (Phase 1, owner 2026-11-10: Clear Demo Data's labels stand alone).
      */
-    readonly detail: string;
+    readonly detail?: string;
 }
 
 export const OPERATION_STAGES = {

@@ -915,7 +915,19 @@ check says so and names the file.
 > Enforced by `tests/sop/ui-label-case.test.ts`, which reads every webview bundle with the compiler,
 > holds strings it cannot read to a pin, and proves itself on planted defects.
 
-> **Convention.** A window's header names the thing and what happened to it: "My Luma Imported",
+> **Convention.** A datapack has one set of words, and every screen takes them from
+> `features/data-installer/datapackWords.ts`: it is **installed** and **uninstalled**, never
+> imported or removed; the trial run is **Check First**; the settings it carries are **Store
+> Settings**; and the thing is a "datapack", never a "pack" on its own. A sentence on screen carries
+> no long dash and no raw setting key (`demoBuilder.…`).
+> *Why:* the owner, 2026-11-10: one thing went by Import, Install and Load, its trial by Dry Run,
+> Validate and "Checking the import", and its settings by "Also Sets" and "settings layer". The SC
+> could not tell whether two buttons did the same thing.
+> Enforced by `tests/sop/datapack-words.test.ts`, which reads every string in the data installer
+> and the wait and stage tables with the compiler, exempts code, comments, logs and lines marked
+> as never reaching a screen, and proves itself on a planted "Dry Run".
+
+> **Convention.** A window's header names the thing and what happened to it: "My Luma Installed",
 > "My Luma Uninstalled", "Couldn't Save My Luma". Only a window with no one name to give (several
 > projects, a file not yet read) names the kind: "Projects Deleted", "Couldn't Read Projects",
 > "Couldn't Open the File"; then each project is a row beneath it. A header is a statement of
@@ -925,7 +937,7 @@ check says so and names the file.
 > notification is the SC's only way to see what the agent is touching (owner, 2026-11-04).
 > *Why:* the owner, 2026-11-04: headers like "Some Projects Weren't Deleted" read as the reason for
 > the header rather than the header. On 2026-11-10 the owner settled the rest: a result names what
-> it is about ("My Luma Imported"), withdrawing the 2026-11-04 line that put the name in the body.
+> it is about ("My Luma Installed"), withdrawing the 2026-11-04 line that put the name in the body.
 > **Not enforced** yet: the batch window follows it; an audit of every other window header is
 > under way and will decide whether a check can tell a name from a kind.
 
@@ -1918,11 +1930,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 66 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 67 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 137 conventions. 134 of them are enforced; 3 are not.**
+**This handbook states 138 conventions. 135 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

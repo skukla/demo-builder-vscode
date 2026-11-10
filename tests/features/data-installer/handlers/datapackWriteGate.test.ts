@@ -72,7 +72,7 @@ describe('resolveDatapackWriteAccess — the refusals, in order', () => {
     });
 
     it.each([
-        ['import', 'Open a project before importing a datapack.'],
+        ['import', 'Open a project before installing a datapack.'],
         ['export', 'Open a project before exporting.'],
     ] as const)('with no project open, the %s copy', async (write, copy) => {
         const gate = await resolveDatapackWriteAccess(contextWith(undefined), write);
@@ -81,7 +81,7 @@ describe('resolveDatapackWriteAccess — the refusals, in order', () => {
     });
 
     it.each([
-        ['import', 'This project has no Adobe Commerce backend, so there is nothing to import into.'],
+        ['import', 'This project has no Adobe Commerce backend, so there is nothing to install into.'],
         ['export', 'This project has no Adobe Commerce backend, so there is nothing to export from.'],
     ] as const)('an %s on a project with no Commerce backend names that gap', async (write, copy) => {
         const gate = await resolveDatapackWriteAccess(contextWith(projectOn('')), write);

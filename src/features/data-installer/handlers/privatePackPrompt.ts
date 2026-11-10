@@ -3,7 +3,7 @@
  *
  * A project file carries its pack by reference, and a private pack is the owner's alone, so a
  * colleague who creates a project from the file cannot read it. Every export door asks: a person,
- * once, "Your teammates can't use this pack's data. Share it?", with Share (the share's own consent
+ * once, "Your teammates can't use this datapack's data. Share it?", with Share (the share's own consent
  * sentence as the detail); declining exports anyway. An agent's export answers the same sentence as
  * a note, naming `share_datapack`. Whether the pack is private is read from the library
  * (`find-datapacks`: `mine`, `shared`); a library that cannot be asked asks nothing, so an export
@@ -25,7 +25,7 @@ import type { ProjectDatapack } from '@/types/datapack';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /** The owner's words (2026-10-30). */
-export const PRIVATE_PACK_QUESTION = "Your teammates can't use this pack's data. Share it?";
+export const PRIVATE_PACK_QUESTION = "Your teammates can't use this datapack's data. Share it?";
 
 /** The project's pack, when it is the SC's own and only they can read it. */
 export interface PrivatePack {

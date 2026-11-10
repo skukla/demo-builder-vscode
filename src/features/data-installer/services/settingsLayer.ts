@@ -65,8 +65,8 @@ export async function myLayerVersions(reads: Pick<LayerReads, 'findDatapacks'>, 
 }
 
 /** Why a layer was not looked at, in the words the three surfaces share. */
-export function layerNotAskedLine(packName: string, consequence: string): string {
-    return `The datapack library could not be asked for ${settingsLayerName(packName)}, so any store settings it holds ${consequence}.`;
+export function layerNotAskedLine(consequence: string): string {
+    return `My Datapacks couldn't be read, so this datapack's Store Settings, if any, ${consequence}.`;
 }
 
 /** A row of a layer as the flyout shows it; anything else in the rows is not shown. */

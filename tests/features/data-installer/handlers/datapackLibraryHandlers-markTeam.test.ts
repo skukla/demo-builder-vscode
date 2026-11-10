@@ -86,7 +86,7 @@ it('refuses a pack the SC does not own, writing nothing', async () => {
 
     expect(result).toEqual({
         success: false,
-        error: "Demo Builder's datapack store has no pack of yours named frescopa.",
+        error: "Demo Builder's datapack store has no datapack of yours named frescopa.",
         code: ErrorCode.INVALID_OPERATION,
     });
     expect(puts()).toHaveLength(0);

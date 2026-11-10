@@ -260,7 +260,7 @@ export async function saveFromStore(context: HandlerContext, payload: StoreSaveP
     if (named.length > 0) {
         return {
             success: false,
-            error: `A save goes into My Datapacks under the project's pack or saveAs, so ${named.join(', ')} cannot be sent. Send selections, and saveAs with a name for a new datapack.`,
+            error: `A save goes into My Datapacks under the project's datapack or saveAs, so ${named.join(', ')} cannot be sent. Send selections, and saveAs with a name for a new datapack.`,
             code: ErrorCode.INVALID_OPERATION,
         };
     }

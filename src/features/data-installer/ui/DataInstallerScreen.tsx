@@ -66,7 +66,7 @@ const VIEWS: SwitchableView[] = [
 /** The header's line: the library's own, or the project the Datapacks are for. */
 function subtitleOf(library: boolean, projectName: string | undefined): string {
     if (library) return 'Browse and manage datapacks';
-    return projectName || 'Browse and install Adobe Commerce sample-data datapacks';
+    return projectName || 'Browse and install datapacks';
 }
 
 export function DataInstallerScreen({ mode, projectName }: DataInstallerScreenProps): React.JSX.Element {

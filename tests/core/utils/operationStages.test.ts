@@ -6,6 +6,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
 import {
     OPERATION_STAGES,
     detailFor,
@@ -66,24 +67,40 @@ const LITERAL_STAGE = /\b(?:onProgress\??\.?|report)\(\s*[`'"]/;
 describe('OPERATION_STAGES', () => {
     // The detail is row 2, shown when a report names no step of its own. A stage
     // without one left that row blank, and the modal read as two lines with a gap
-    // (owner, 2026-09-19).
-    it('gives every stage a label, an expectation and a detail', () => {
-        for (const stage of Object.values(OPERATION_STAGES)) {
+    // (owner, 2026-09-19). The datapack stages whose label says it all have none
+    // (Phase 1, owner 2026-11-10): their waits drop the row (`noBlankRows`). Every
+    // other stage still needs one.
+    const STANDS_ALONE: ReadonlySet<string> = new Set(
+        Object.values(DATAPACK_STAGES).map((stage) => stage.label),
+    );
+
+    it('gives every stage a label, an expectation and, outside the datapack stages, a detail', () => {
+        const stages = Object.values(OPERATION_STAGES) as readonly OperationStage[];
+        for (const stage of stages) {
             expect(stage.label.trim()).not.toBe('');
             expect(stage.expectation.trim()).not.toBe('');
-            expect(stage.detail.trim()).not.toBe('');
         }
+        const needDetail = stages.filter((stage) => stage.detail !== undefined || !STANDS_ALONE.has(stage.label));
+        expect(needDetail.filter((stage) => (stage.detail ?? '').trim() === '')).toStrictEqual([]);
     });
 
     // The label is the SHORT set: it is all a background notification shows, after a
     // title that already takes ~29 of the ~64 characters VS Code draws before cutting
     // the line off (owner screenshot, 2026-09-19). The detail is the long set.
+    // Clear Demo Data's labels in Commerce's own verbs (Flow 2.20). The cap and the verb
+    // convention for the whole extension land in Phase 1b (owner, 2026-11-10).
+    const LONG_LABELS_UNTIL_PHASE_1B: readonly string[] = [
+        DATAPACK_STAGES.takingProductsOff.label,
+        DATAPACK_STAGES.takingRulesOff.label,
+        DATAPACK_STAGES.resettingSettings.label,
+    ];
+
     it('keeps every label to 25 characters, so a notification shows it whole', () => {
         const long = Object.values(OPERATION_STAGES)
             .map((stage) => stage.label)
             .filter((label) => label.length > 25);
 
-        expect(long).toStrictEqual([]);
+        expect(long).toStrictEqual([...LONG_LABELS_UNTIL_PHASE_1B]);
     });
 
     // Lines are SHORT BY DESIGN (owner, 2026-10-16: "Why should we need lines that are
@@ -97,7 +114,7 @@ describe('OPERATION_STAGES', () => {
         max: number,
         stages: readonly OperationStage[] = Object.values(OPERATION_STAGES),
     ) =>
-        stages.map((stage) => stage[field]).filter((text) => text.length > max);
+        stages.map((stage) => stage[field] ?? '').filter((text) => text.length > max);
 
     it('CONTROL: the length checks flag a planted long line and pass one at the limit', () => {
         const planted: OperationStage[] = [

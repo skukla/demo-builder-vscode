@@ -1,5 +1,5 @@
 /**
- * The flyout's actions (owner, 2026-10-30): Import is the one button on view; everything else is
+ * The flyout's actions (owner, 2026-10-30): Install is the one button on view; everything else is
  * in the house kebab (`CardActionsMenu`): Save as file, Share or Stop sharing, and Delete Datapack
  * in its own section at the bottom. Share and Delete show only on the SC's own library pack,
  * each asks in a dialog, the flyout waits while a row works, and a library pack offers Copy to the
@@ -37,7 +37,7 @@ function makeDetail(overrides: Partial<DatapackDetail> = {}): DatapackDetail {
 
 const LIBRARY = makeDetail({ store: 'library', shared: false });
 const OWN = makeDetail({ store: 'library', mine: true, shared: false });
-const WARNING = "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get bodea instead.";
+const WARNING = "You shared this datapack in a project file on 27 October. Anyone who hasn't created that project yet will get bodea instead.";
 
 function renderActions(over: Partial<React.ComponentProps<typeof PackActions>> = {}) {
     const props = {
@@ -60,14 +60,14 @@ beforeEach(() => {
 });
 
 describe('a Data Installer pack', () => {
-    it('shows Import as the one button, and Save as File in the menu; never Share or Remove', async () => {
+    it('shows Install as the one button, and Save as File in the menu; never Share or Remove', async () => {
         const props = renderActions({ detail: makeDetail({ mine: true }) });
 
         expect(screen.getByRole('button', { name: 'More actions for Bodea' })).toBeInTheDocument();
         expect(menuLabels()).toEqual(['Save as File']);
         expect(screen.queryByRole('button', { name: 'Save as File' })).not.toBeInTheDocument();
 
-        await press(screen.getByRole('button', { name: 'Import' }));
+        await press(screen.getByRole('button', { name: 'Install' }));
         expect(props.onImport).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
     });
 
@@ -90,36 +90,36 @@ it('never offers Save Store Changes in the menu', () => {
     expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
 });
 
-it('leads with Save Changes when given it, Import beside it', async () => {
+it('leads with Save Changes when given it, Install beside it', async () => {
     const onSaveChanges = jest.fn();
     renderActions({ detail: OWN, onSaveChanges });
 
     const [first, second] = screen.getAllByRole('button');
     expect(first).toHaveTextContent('Save Changes');
-    expect(second).toHaveTextContent('Import');
+    expect(second).toHaveTextContent('Install');
     await press(first);
     expect(onSaveChanges).toHaveBeenCalledTimes(1);
 });
 
 describe('a library pack', () => {
-    // Owner, 2026-11-06: Demo Builder installs a library pack where it is, so Import is always there.
+    // Owner, 2026-11-06: Demo Builder installs a library pack where it is, so Install is always there.
     // Copy to the Data Installer is not shown even while it is on: our accounts cannot write to it yet,
     // so it would fail every time (`INSTALLER_WRITES_SHOWN`).
-    it('offers Import, and no Copy to the Data Installer even while it is on', async () => {
+    it('offers Install, and no Copy to the Data Installer even while it is on', async () => {
         const props = renderActions({ detail: LIBRARY, installerOn: true });
 
         expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
-        await press(screen.getByRole('button', { name: 'Import' }));
+        await press(screen.getByRole('button', { name: 'Install' }));
         expect(props.onImport).toHaveBeenCalledWith(LIBRARY.id);
         await press(row('Save as File'));
         expect(mockRequest).toHaveBeenCalledWith('save-datapack-zip', { source: 'library', datapackName: 'bodea', version: 'main' }, undefined);
     });
 
-    it('offers no Copy while the Data Installer is off or has no address, and still Import', () => {
+    it('offers no Copy while the Data Installer is off or has no address, and still Install', () => {
         renderActions({ detail: LIBRARY, installerOn: false });
 
         expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Install' })).toBeInTheDocument();
     });
 
     it("never offers Copy on a Data Installer pack: it is there already", () => {
@@ -144,12 +144,12 @@ describe('a library pack', () => {
     });
 });
 
-// Owner, 2026-11-07: the Datapack Library touches no store, so it is given no Import.
+// Owner, 2026-11-07: the Datapack Library touches no store, so it is given no Install.
 describe('in the Datapack Library', () => {
-    it('offers no Import or Save Changes; Save as File and Share are the buttons, More only removes', async () => {
+    it('offers no Install or Save Changes; Save as File and Share are the buttons, More only removes', async () => {
         renderActions({ detail: OWN, onImport: undefined });
 
-        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
         expect(menuLabels()).toEqual(['Delete Datapack']);
@@ -210,7 +210,7 @@ describe('Share and Stop sharing ask in a dialog', () => {
         await press(row('Share'));
         await press(screen.getByRole('button', { name: 'Share' }));
 
-        expect(await screen.findByText('It could not be changed: No.')).toBeInTheDocument();
+        expect(await screen.findByText("It couldn't be shared: No.")).toBeInTheDocument();
         expect(row('Share')).toBeInTheDocument();
     });
 });
@@ -279,7 +279,7 @@ describe('while a menu row works, the flyout waits', () => {
         await press(row('Save as File'));
 
         expect(waiting()).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
         expect(onWorking).toHaveBeenLastCalledWith(true);
 
         finish({ success: true, data: { path: '/tmp/bodea.zip' } });

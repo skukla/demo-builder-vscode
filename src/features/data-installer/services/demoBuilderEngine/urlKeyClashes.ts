@@ -99,7 +99,7 @@ export async function placedClashes(get: CommerceGet, items: Record<string, unkn
 /** The sentence the preview shows (and the install stops with), or undefined when nothing collides. */
 export function clashLine(clashes: readonly UrlKeyClash[]): string | undefined {
     if (clashes.length === 0) return undefined;
-    const which = clashes.length === 1 ? "one of the pack's categories" : `${clashes.length} of the pack's categories`;
+    const which = clashes.length === 1 ? "one of the datapack's categories" : `${clashes.length} of the datapack's categories`;
     const each = clashes.map((c) => `${c.name} (url key "${c.urlKey}", already used by the category ${c.storeCategory} in Commerce)`).join(', ');
     return (
         `Commerce would refuse ${which}: ${each}. ` +

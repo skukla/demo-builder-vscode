@@ -132,7 +132,7 @@ export function toInstallerForm(pack: DatapackFile): InstallerForm {
             const { records, changed } = errorCountAsNumber(item.records);
             if (changed)
                 changes.push(
-                    "The product import's allowed error count goes as a number, as the Data Installer takes it.",
+                    "The product rows' allowed error count goes as a number, as the Data Installer takes it.",
                 );
             return { ...item, records };
         }

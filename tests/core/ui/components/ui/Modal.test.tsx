@@ -513,19 +513,19 @@ describe('Modal', () => {
 });
 
 describe('Modal: a wait shows nothing else, and says what it waits for', () => {
-    const action: ActionButton = { label: 'Import', variant: 'accent', onPress: jest.fn() };
+    const action: ActionButton = { label: 'Install', variant: 'accent', onPress: jest.fn() };
 
     it('shows the title, the wait and the way out, and neither the content nor the actions', () => {
         renderWithProvider(
-            <Modal title="Import" actionButtons={[action]} onClose={jest.fn()} waiting={WAIT_STAGES.readingDemoData}>
+            <Modal title="Install" actionButtons={[action]} onClose={jest.fn()} waiting={WAIT_STAGES.readingDemoData}>
                 <p>The form</p>
             </Modal>,
         );
 
-        expect(screen.getByRole('heading', { name: 'Import' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Install' })).toBeInTheDocument();
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
         expect(screen.queryByText('The form')).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
 
@@ -538,13 +538,13 @@ describe('Modal: a wait shows nothing else, and says what it waits for', () => {
 
         const wait = container.ownerDocument.querySelector('.modal-wait') as HTMLElement;
         expect(wait).toHaveTextContent('Reading demo data');
-        expect(wait).toHaveTextContent('Each data type, in Commerce');
+        expect(wait).toHaveTextContent('From Commerce');
         expect(wait).toHaveTextContent('Usually a few seconds');
     });
 
     it('holds no blank rows for a wait that gives only its label, so it stays centred', () => {
         const { container } = renderWithProvider(
-            <Modal title="Import" onClose={jest.fn()} waiting={{ label: 'Starting removal' }}>
+            <Modal title="Install" onClose={jest.fn()} waiting={{ label: 'Starting removal' }}>
                 <p>The form</p>
             </Modal>,
         );
@@ -555,13 +555,13 @@ describe('Modal: a wait shows nothing else, and says what it waits for', () => {
 
     it('shows the content and the actions when it is not waiting', () => {
         renderWithProvider(
-            <Modal title="Import" actionButtons={[action]} onClose={jest.fn()} waiting={false}>
+            <Modal title="Install" actionButtons={[action]} onClose={jest.fn()} waiting={false}>
                 <p>The form</p>
             </Modal>,
         );
 
         expect(screen.getByText('The form')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Install' })).toBeInTheDocument();
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
 });

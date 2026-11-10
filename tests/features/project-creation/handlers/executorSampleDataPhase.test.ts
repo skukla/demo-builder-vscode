@@ -19,7 +19,7 @@
  * `sampleDataInstall` owns that and has its own suite. Two rules matter here:
  *
  * 1. **It cannot fail the build.** Whatever the install reports, the phase
- *    returns normally. A project is complete without sample data, and by the
+ *    returns normally. A project is complete without a datapack, and by the
  *    time an import goes wrong the instance is already partly written — failing
  *    creation would mark a good project bad and leave the mess anyway.
  * 2. **It reports what happened.** Silence would be worse than failure: the
@@ -107,13 +107,13 @@ describe('executeSampleDataPhase — the recorded pack, settled first', () => {
     it('installs nothing when the settle step found nothing to install', async () => {
         mockedSettle.mockImplementation(async (project) => {
             project.datapack = undefined;
-            return { changed: true, note: 'Created without sample data.' };
+            return { changed: true, note: 'Created without a datapack.' };
         });
         const progress = jest.fn();
 
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
-        expect(progress).toHaveBeenCalledWith(OPERATION_STAGES.installingDatapack.label, 92, 'Created without sample data.');
+        expect(progress).toHaveBeenCalledWith(OPERATION_STAGES.installingDatapack.label, 92, 'Created without a datapack.');
         expect(mockedInstall).not.toHaveBeenCalled();
     });
 
@@ -299,7 +299,7 @@ describe('executeSampleDataPhase', () => {
         expect(progress).toHaveBeenLastCalledWith(
             OPERATION_STAGES.installingDatapack.label,
             96,
-            'Installed bodea partially \u2014 some data types did not land. Retry from the dashboard.'
+            'bodea was partly installed. Install it again from the dashboard.'
         );
     });
 

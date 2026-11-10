@@ -67,7 +67,7 @@ describe('closing the import modal re-reads what this project holds', () => {
         const cards = await screen.findAllByTestId('datapack-card');
         await press(cards[0]);
         await settle();
-        await press(await screen.findByRole('button', { name: /^import/i }));
+        await press(await screen.findByRole('button', { name: /^install/i }));
         await settle();
         await settle();
     }
@@ -230,7 +230,7 @@ describe('the two doors out of the catalog', () => {
     // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save
     // from this store", quiet buttons rather than links; Clear demo data last.
     it(
-        'offers Create Datapack, Load from File and, last, Clear Demo Data',
+        'offers Create Datapack, Add from File and, last, Clear Demo Data',
         async () => {
             mockRequest.mockResolvedValue({
                 success: true,
@@ -240,7 +240,7 @@ describe('the two doors out of the catalog', () => {
             await settle();
             await screen.findAllByTestId('datapack-card');
 
-            const labels = ['Create Datapack', 'Load from File', 'Clear Demo Data'];
+            const labels = ['Create Datapack', 'Add from File', 'Clear Demo Data'];
             const buttons = labels.map((name) => screen.getByRole('button', { name }));
             expect(buttons.every((button, i) => i === 0 || buttons[i - 1].compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
             expect(screen.queryByText('Export from this instance')).not.toBeInTheDocument();

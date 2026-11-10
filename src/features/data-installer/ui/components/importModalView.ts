@@ -17,7 +17,7 @@ import { type ConfirmContent, removeLabel } from './removalConfirm';
 import type { ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
-import { saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/uninstallWords';
+import { CHECK_FIRST, INSTALL, UNINSTALL, installTitle, saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
 
 /**
  * Which job to watch: the one the LAST action started.
@@ -152,6 +152,8 @@ export function buildActions(a: {
     ranToEnd?: boolean;
     /** Back would only close the window (one opened by Uninstall, with no question to return to). */
     backCloses?: boolean;
+    /** Check First passed: the next move is the install itself, so Install sits beside Back (Flow 2.14). */
+    checkPassed?: boolean;
     /** A result's main action (`ResultContent.action`), and what each one does. */
     resultAction?: 'retry' | 'fix';
     retry?: () => void;
@@ -163,6 +165,8 @@ export function buildActions(a: {
     isDisabled?: boolean;
     /** At the footer's start, apart from the rest (walk F111): the button that loses the SC's changes. */
     start?: true;
+    /** What the button does, on hover, when its label does not say it. */
+    hint?: string;
 }[] {
     if (a.view === 'watching' || a.view === 'starting') {
         // The way out is Run in Background, the dialog's own close (`closeLabel`): a Close beside it
@@ -173,8 +177,8 @@ export function buildActions(a: {
     if (a.view === 'confirm-reset') {
         // Cancel stands in for Close here (the frame hides Close): two buttons that both
         // backed out was one too many (dialog design rules).
-        // An import's confirm asks only about the SC's changes, so its buttons say Import (walk F106).
-        const verb = a.confirmsImport ? 'Import' : 'Uninstall';
+        // An install's confirm asks only about the SC's changes, so its buttons say Install (walk F106).
+        const verb = a.confirmsImport ? INSTALL : UNINSTALL;
         if (a.removeWithoutSaving) {
             // Changes to keep: saving is the likely intent, so it is the main button; losing them
             // is its own button rather than a box to untick (owner, 2026-11-03).
@@ -188,8 +192,8 @@ export function buildActions(a: {
         return [
             { label: 'Cancel', variant: 'secondary', onPress: a.disarmReset },
             a.confirmsImport
-                ? { label: 'Import Anyway', variant: 'accent', onPress: a.confirmReset }
-                : { label: a.removeLabel ?? 'Uninstall', variant: 'negative', onPress: a.confirmReset },
+                ? { label: `${INSTALL} Anyway`, variant: 'accent', onPress: a.confirmReset }
+                : { label: a.removeLabel ?? UNINSTALL, variant: 'negative', onPress: a.confirmReset },
         ];
     }
     if (a.view === 'result') {
@@ -198,7 +202,10 @@ export function buildActions(a: {
         // A window opened by Uninstall has no form behind it: its Back only closed, beside the Close
         // that does the same (review, 2026-11-10), so it ends on Close alone.
         if (a.ranToEnd || a.backCloses) return resultMain(a);
-        return [{ label: 'Back', variant: 'secondary', onPress: a.goBack }, ...resultMain(a)];
+        const back = { label: 'Back', variant: 'secondary' as const, onPress: a.goBack };
+        // A check that passed asks for the install next: the same install the form's button starts.
+        if (a.checkPassed) return [back, { label: INSTALL, variant: 'accent', onPress: a.startImport, isDisabled: !a.canStart }];
+        return [back, ...resultMain(a)];
     }
     // Nothing left to press but the way out: there is no instance to import to.
     if (a.view === 'no-instance') {
@@ -211,9 +218,9 @@ export function buildActions(a: {
         // Remove Data is not here: it is the flyout's own action, opening this window straight on
         // its confirm (owner, 2026-11-09, walk F118: pressing Import to remove data was strange).
         // Outlined, as Close is: the house's secondary button, not plain text (walk F102).
-        { label: 'Dry Run', variant: 'secondary', onPress: a.validate, isDisabled: !a.canStart },
+        { label: CHECK_FIRST, variant: 'secondary', onPress: a.validate, isDisabled: !a.canStart },
         {
-            label: 'Import',
+            label: INSTALL,
             variant: 'accent',
             onPress: a.startImport,
             isDisabled: !a.canStart,
@@ -224,7 +231,9 @@ export function buildActions(a: {
 /** A result's main button, last in the footer: Retry, or Fix with AI. */
 function resultMain(a: { resultAction?: 'retry' | 'fix'; retry?: () => void; fixWithAi?: () => void }): ReturnType<typeof buildActions> {
     if (a.resultAction === 'retry' && a.retry) return [{ label: 'Retry', variant: 'accent', onPress: a.retry }];
-    if (a.resultAction === 'fix' && a.fixWithAi) return [{ label: 'Fix with AI', variant: 'accent', onPress: a.fixWithAi }];
+    if (a.resultAction === 'fix' && a.fixWithAi) {
+        return [{ label: 'Fix with AI', variant: 'accent', onPress: a.fixWithAi, hint: 'Opens your AI assistant on this problem' }];
+    }
     return [];
 }
 
@@ -324,9 +333,9 @@ export function viewFrame(a: {
     const run = runWidth(a.typeCount, a.columns);
     const confirmFrame = a.replacing ? run : { size: 'M' as const, wide: false };
     // While it checks, the title names the work, not a question nothing has asked yet (walk F108).
-    const checking = a.replacing ? `Import ${a.displayName}` : `Uninstall ${a.displayName}`;
+    const checking = a.replacing ? installTitle(a.displayName, false) : `${UNINSTALL} ${a.displayName}`;
     // Amber: nothing failed, and the next move is the SC's.
-    if (a.view === 'no-instance') return { ...small, title: 'This project has no Commerce instance', status: 'warning' };
+    if (a.view === 'no-instance') return { ...small, title: 'No Commerce Instance', status: 'warning' };
     switch (a.view) {
         case 'reading-changes':
             return { ...small, ...confirmFrame, title: checking };
@@ -344,18 +353,18 @@ export function viewFrame(a: {
                       title: a.result.title,
                       status: resultStatus(a.result),
                   }
-                : { ...small, title: `Import ${a.displayName}` };
+                : { ...small, title: installTitle(a.displayName, false) };
         case 'starting':
-            return { ...run, hideClose: false, title: `Import ${a.displayName}` };
+            return { ...run, hideClose: false, title: installTitle(a.displayName, true) };
         case 'watching':
             // An import's rows take the form's box; a removal still waits on its spinner.
             return a.removing
-                ? { ...small, title: `Uninstall ${a.displayName}`, holdSize: true }
-                : { ...run, hideClose: false, title: `Import ${a.displayName}` };
+                ? { ...small, title: `${UNINSTALL} ${a.displayName}`, holdSize: true }
+                : { ...run, hideClose: false, title: installTitle(a.displayName, true) };
         case 'busy':
-            return { ...small, title: `${a.removing ? 'Uninstall' : 'Import'} ${a.displayName}` };
+            return { ...small, title: a.removing ? `${UNINSTALL} ${a.displayName}` : installTitle(a.displayName, true) };
         default:
-            return { ...formWidth(a.typeCount), hideClose: false, title: `Import ${a.displayName}` };
+            return { ...formWidth(a.typeCount), hideClose: false, title: installTitle(a.displayName, false) };
     }
 }
 

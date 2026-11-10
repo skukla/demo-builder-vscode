@@ -101,7 +101,7 @@ async function toCommerceRule(lk: ProductLookups, rule: PackRule, websiteId: num
 
 function websiteOf(ctx: KindContext): number {
     const websiteId = ctx.session.websiteId;
-    if (websiteId === undefined) throw new Error("The install target names no website, so the pack's cart rules have nowhere to apply.");
+    if (websiteId === undefined) throw new Error("The install target names no website, so the datapack's cart rules have nowhere to apply.");
     return websiteId;
 }
 

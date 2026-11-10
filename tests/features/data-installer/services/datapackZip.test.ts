@@ -261,7 +261,7 @@ describe('a pack file with its settings layer (datapack-engine step 09)', () => 
         const named = { datapack_name: 'justrite-settings', version: '1' };
 
         expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith({ datapack_name: 'justrite-settings' }), 'settings/store_config.json': '[]' }))).toThrow(DatapackZipError);
-        expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith(named) }))).toThrow('store settings');
-        expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith(named), 'settings/store_config.json': '{' }))).toThrow('store settings');
+        expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith(named) }))).toThrow('Store Settings');
+        expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith(named), 'settings/store_config.json': '{' }))).toThrow('Store Settings');
     });
 });

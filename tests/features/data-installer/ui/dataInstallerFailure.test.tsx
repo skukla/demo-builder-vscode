@@ -17,16 +17,16 @@ describe('renderDataInstallerFailure, a surface about the Data Installer', () =>
     it('points a refused sign-in at the address', () => {
         render(renderDataInstallerFailure(refused('find-datapacks: 401 Unauthorized'), jest.fn(), { onOpenSettings: jest.fn() }));
 
-        expect(screen.getByText("The Data Installer didn't accept your sign-in")).toBeInTheDocument();
+        expect(screen.getByText('Data Installer Sign-In Failed')).toBeInTheDocument();
         expect(screen.getByText(/address in settings/)).toBeInTheDocument();
         expect(screen.getByText('Open Settings')).toBeInTheDocument();
     });
 
-    it('names the one setting a missing address needs, and no other', () => {
+    it('says a missing address is set in Settings, with no raw setting key', () => {
         render(renderDataInstallerFailure(unconfigured('No address.'), jest.fn(), { onOpenSettings: jest.fn() }));
 
-        expect(screen.getByText('The Data Installer is not configured')).toBeInTheDocument();
-        expect(screen.getByText('Set demoBuilder.dataInstaller.apiBaseUrl.')).toBeInTheDocument();
+        expect(screen.getByText('Data Installer Not Set Up')).toBeInTheDocument();
+        expect(screen.getByText("Set the Data Installer's address in Settings.")).toBeInTheDocument();
     });
 });
 

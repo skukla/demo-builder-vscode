@@ -138,7 +138,7 @@ type Updater = (ctx: KindContext, object: CreatedObject, row: unknown) => Promis
 
 /** A product brought up to its row with `PUT products/{sku}`; a gift card too (step 11). */
 const updateProduct: Updater = async (ctx, object, row) => {
-    if (ctx.session.websiteId === undefined) throw new Error('The install target names no website, so the pack\'s products have nowhere to be sold.');
+    if (ctx.session.websiteId === undefined) throw new Error('The install target names no website, so the datapack\'s products have nowhere to be sold.');
     const [product] = parseProductRows([row]);
     const { stock_item: _stock, ...ext } = (product.extension_attributes ?? {}) as Row;
     // Quantities are the source items' business; a stock block would reset them.
@@ -291,7 +291,7 @@ export function tookOutLine(tookOut: readonly CreatedObject[]): string | undefin
     for (const o of tookOut) counts.set(o.kind, (counts.get(o.kind) ?? 0) + 1);
     const kinds = [...counts].map(([kind, n]) => `${dataTypeLabel(kind).toLowerCase()} (${n.toLocaleString('en-US')})`);
     const count = tookOut.length === 1 ? '1 item' : `${tookOut.length.toLocaleString('en-US')} items`;
-    return `Took out ${count} the pack no longer has: ${andList(kinds)}.`;
+    return `Took out ${count} the datapack no longer has: ${andList(kinds)}.`;
 }
 
 /** What the plan keeps because the SC changed or deleted it. */

@@ -83,7 +83,7 @@ it('names a saved version by when it was saved, never its id', async () => {
 it('titles the dialog as its button is labelled', async () => {
     await openModal();
 
-    expect(screen.getByRole('heading', { name: 'Load from File' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Add from File' })).toBeInTheDocument();
 });
 
 it('offers no Data Installer destination while the Data Installer takes no writes from us', async () => {
@@ -123,7 +123,7 @@ it('makes the outcome the title, and offers one way out rather than Close and Do
     await press(screen.getByRole('button', { name: 'Load' }));
     await settle();
 
-    expect(screen.queryByRole('heading', { name: 'Load from File' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Add from File' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load' })).not.toBeInTheDocument();
     await press(screen.getByRole('button', { name: 'Close' }));
@@ -279,18 +279,18 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
     });
     const opened = { success: true, data: LAYERED };
 
-    it('says, before anything is written, that its settings go to the library, by path', async () => {
+    it('says, before anything is written, that its Store Settings go to My Datapacks, by count', async () => {
         withService({ 'open-datapack-zip': opened });
 
         await openModal();
 
-        expect(screen.getByText('It also carries store settings, which go into My Datapacks: catalog/frontend/grid_per_page.')).toBeInTheDocument();
+        expect(screen.getByText('It includes 1 Store Setting, which goes into My Datapacks.')).toBeInTheDocument();
     });
 
     it('says nothing of the kind for a file with none', async () => {
         await openModal();
 
-        expect(screen.queryByText(/store settings/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/store setting/i)).not.toBeInTheDocument();
     });
 
     it('offers one undo when removing the pack takes the layer: the same version', async () => {
@@ -299,7 +299,7 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
 
         await press(screen.getByRole('button', { name: 'Load' }));
 
-        expect(screen.getByText('Added to My Datapacks, with its store settings.')).toBeInTheDocument();
+        expect(screen.getByText('Added to My Datapacks, with its Store Settings.')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Delete Datapack' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Delete Store Settings' })).not.toBeInTheDocument();
     });

@@ -46,14 +46,14 @@ describe('SampleDataStep — a demo that asks for a pack', () => {
         const { updateState } = renderStep({ demo: demo({ name: 'bodea', version: 'vanished' }) });
 
         await waitFor(() => expect(updateState).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'main', store: 'installer' } }));
-        expect(screen.getByTestId('demo-datapack-note')).toHaveTextContent(/version vanished is no longer published/);
+        expect(screen.getByTestId('demo-datapack-note')).toHaveTextContent(/That version is gone, so the default is selected/);
     });
 
     it("says the pack is not published when the catalog does not have it, and selects nothing", async () => {
         const { updateState } = renderStep({ demo: demo({ name: 'isle5' }) });
 
         await screen.findByTestId('demo-datapack-note');
-        expect(screen.getByTestId('demo-datapack-note')).toHaveTextContent(/isle5, which isn't published yet/);
+        expect(screen.getByTestId('demo-datapack-note')).toHaveTextContent(/isle5, which isn't shared yet/);
         expect(updateState).not.toHaveBeenCalled();
     });
 

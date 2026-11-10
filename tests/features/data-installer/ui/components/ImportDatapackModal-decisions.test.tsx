@@ -149,7 +149,7 @@ describe('ImportDatapackModal — decisions', () => {
             await press(screen.getByRole('checkbox', { name: 'Select All' }));
 
             const before = statusCalls();
-            await press(screen.getByRole('button', { name: /^import$/i }));
+            await press(screen.getByRole('button', { name: /^install$/i }));
 
             expect(statusCalls()).toBeGreaterThan(before);
         });
@@ -283,18 +283,18 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await awaitForm();
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
-            await press(screen.getByRole('button', { name: /^dry run$/i }));
-            await screen.findByText(/dry run passed/i);
+            await press(screen.getByRole('button', { name: /^check first$/i }));
+            await screen.findByText(/check passed/i);
         }
 
-        it('offers Back and nothing else', async () => {
+        it('offers Back, then Install', async () => {
             await passedDryRun();
 
             // Every button, unfiltered: an extra footer entry with no label is
             // exactly what a broken actions array produces, and dropping the
             // nameless ones would hide it.
             const labels = screen.getAllByRole('button').map((button) => button.textContent);
-            expect(labels).toEqual(['Close', 'Back']);
+            expect(labels).toEqual(['Close', 'Back', 'Install']);
         });
     });
 
@@ -317,7 +317,7 @@ describe('ImportDatapackModal — decisions', () => {
             await press(await screen.findByRole('button', { name: 'Run in Background' }));
 
             expect(mockPostMessage.mock.calls).toStrictEqual([
-                ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Importing Bodea' }],
+                ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Installing Bodea' }],
             ]);
             expect(onClose).toHaveBeenCalledTimes(1);
         });
@@ -345,11 +345,11 @@ describe('ImportDatapackModal — decisions', () => {
             expect(onClose).toHaveBeenCalledTimes(1);
         });
 
-        it('titles the dialog with the pack it imports', async () => {
+        it('titles the dialog with the datapack it installs', async () => {
             renderModal();
             await awaitForm();
 
-            expect(screen.getByText('Import Bodea')).toBeInTheDocument();
+            expect(screen.getByText('Install Bodea')).toBeInTheDocument();
         });
     });
 
@@ -368,7 +368,7 @@ describe('ImportDatapackModal — decisions', () => {
 
             expect(screen.getByRole('progressbar')).toBeInTheDocument();
             expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /^import$/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^install$/i })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
     });
@@ -389,7 +389,7 @@ describe('ImportDatapackModal — decisions', () => {
 
             await press(screen.getByRole('checkbox', { name: 'Select All' }));
 
-            expect(screen.getByRole('button', { name: /^import$/i })).toHaveAttribute(
+            expect(screen.getByRole('button', { name: /^install$/i })).toHaveAttribute(
                 'aria-disabled',
                 'true',
             );

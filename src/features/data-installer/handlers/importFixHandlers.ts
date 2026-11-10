@@ -21,7 +21,7 @@ import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/typ
 
 /** Where the import stopped and why, when it did. */
 function stoppedLine(record: ImportJobRecord): string | undefined {
-    if (record.stoppedAt === FINISHING_STOP) return `It stopped after every data type was in, while finishing the import: ${record.reason ?? 'no reason given'}`;
+    if (record.stoppedAt === FINISHING_STOP) return `It stopped after every data type was in, while finishing the install: ${record.reason ?? 'no reason given'}`;
     if (record.stoppedAt) return `It stopped at ${dataTypeLabel(record.stoppedAt)}: ${record.reason ?? 'no reason given'}`;
     if (record.reason) return `It stopped before any data type: ${record.reason}`;
     return undefined;
@@ -47,12 +47,12 @@ export function fixImportPrompt(
     if (problems.length === 0) return undefined;
     const pack = `${record.datapackName}@${record.version}`;
     return [
-        `Importing the datapack ${pack} into the Commerce instance of the Demo Builder project ${projectName ?? 'that is open'} ended with a problem.`,
+        `Installing the datapack ${pack} into the Commerce instance of the Demo Builder project ${projectName ?? 'that is open'} ended with a problem.`,
         ...problems.map((line) => `- ${line}`),
         '',
         "Find the cause with get_datapack_import_status (its skipped rows carry Commerce's reasons) and " +
             'verify_datapack_install. Fix it where it lives: in Commerce with write_commerce_rest, or in ' +
-            'the datapack (save_datapack_zip, correct the rows, load_datapack_zip). Then import the pack ' +
+            'the datapack (save_datapack_zip, correct the rows, load_datapack_zip). Then install the datapack ' +
             'again with start_datapack_import: data types already in send nothing. Tell me what you ' +
             'found and what you changed.',
     ].join('\n');
@@ -66,7 +66,7 @@ export const importFixWithAiHandlers = defineHandlers({
         );
         const project = await context.stateManager.getCurrentProject();
         const prompt = record ? fixImportPrompt(record, project?.name) : undefined;
-        if (!prompt) return { success: false, error: 'The last import has no problem to fix.' };
+        if (!prompt) return { success: false, error: 'The last install has no problem to fix.' };
         await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt, fresh: true });
         context.logger.info(
             `[Data Installer] Opened Fix with AI on ${record?.datapackName}@${record?.version}`,

@@ -61,7 +61,7 @@ describe('installPack', () => {
     it('names a shared catalog assignment kind and a store settings kind whose rows are wrong', () => {
         const problems = packRowProblems({ b2b_shared_catalog_products: { catalogs: [{ name: 'Retail' }] }, store_config: [{ path: 'web/unsecure/base_url', value: 'x', scope: 'default' }] });
 
-        expect(problems).toEqual([expect.stringMatching(/shared catalog products/u), expect.stringMatching(/store settings cannot be installed/u)]);
+        expect(problems).toEqual([expect.stringMatching(/shared catalog products/u), expect.stringMatching(/Store Settings cannot be installed/u)]);
     });
 
     // Step 08: groups before the products whose tier prices name them; customers before the

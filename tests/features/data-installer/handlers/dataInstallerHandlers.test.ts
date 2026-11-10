@@ -151,7 +151,7 @@ describe('dataInstallerHandlers', () => {
             setupSettings({ apiBaseUrl: 'not a url' });
             const unusable = await resolveDataInstallerAccess(makeAccessContext());
 
-            expect(unset.ok === false && unset.response.error).toContain('No Data Installer API URL');
+            expect(unset.ok === false && unset.response.error).toContain('No Data Installer address is set');
             expect(unusable.ok === false && unusable.response.error).toContain('not usable');
         });
 

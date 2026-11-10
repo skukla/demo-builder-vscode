@@ -63,7 +63,7 @@ export async function readPackFromStore(
         const item = await client.getDataItem(id, dataType);
         if (item.records === undefined) {
             throw new DatapackTransferError(
-                `The stored ${dataType} rows of ${id.name}@${id.version} are not valid JSON, so the pack cannot be saved.`,
+                `The stored ${dataType} rows of ${id.name}@${id.version} are not valid JSON, so the datapack cannot be saved.`,
             );
         }
         items.push({ dataType, records: item.records });

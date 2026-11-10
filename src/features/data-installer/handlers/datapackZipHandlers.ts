@@ -54,7 +54,7 @@ const LOG_PREFIX = '[Data Installer]';
 const ZIP_FILTER = { 'Datapack file': ['zip'] };
 
 export const INSTALLER_UPDATE_REFUSED =
-    "Updating an existing pack in the Data Installer is not offered: it cannot tell whose pack it is, so an update could overwrite a colleague's data. Load it under a new version, or into the datapack library.";
+    "Updating an existing datapack in the Data Installer is not offered: it cannot tell whose datapack it is, so an update could overwrite a colleague's data. Load it under a new version, or into the datapack library.";
 
 /** Files the panel's open dialog returned this session — the only outside paths `load` accepts. */
 const openedByDialog = new Set<string>();
@@ -98,8 +98,8 @@ function storeLabel(store: DatapackStoreName): string {
  */
 /** What the Data Installer's refusal of a write for who we are says (owner, 2026-11-06: our accounts cannot write to it yet). */
 export const INSTALLER_WRITE_REFUSED =
-    "Your Adobe account can't add packs to the Data Installer: its owners grant that access. " +
-    "Packs stay in Demo Builder's datapack store, where Demo Builder installs them.";
+    "Your Adobe account can't add datapacks to the Data Installer: its owners grant that access. " +
+    "Datapacks stay in Demo Builder's datapack store, where Demo Builder installs them.";
 
 /** The Data Installer turned a write down for who we are (401 or 403): said plainly, not in its words. */
 export function installerWriteRefusal(error: unknown): HandlerResponse | undefined {

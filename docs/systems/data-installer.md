@@ -123,23 +123,23 @@ which lists every object the install made. It never removes by name.
   products. Puts back the store settings it changed." A removal's check asks nothing of the pack, so a pack deleted from its store
   can still be removed (`validateRemoval`); it refuses only a store other than the one on the record.
   With no record the service removes the types it is sent, and the form and confirm stay as they were.
-- **Importing another pack or version over the project's replaces it** (walk F97, 2026-11-09,
+- **Installing another pack or version over the project's replaces it** (walk F97, 2026-11-09,
   `handlers/importReplacement.ts`). It used to run as a first install: products already in the store
   were left alone, the project named the new pack, and the old data had nothing pointing at it. Now,
-  when Demo Builder installed the pack the project uses, the import form says what it replaces in
+  when Demo Builder installed the pack the project uses, the install form says what it replaces in
   the SC's terms (walk F101, `replaceWords.ts`): "Replaces this demo's data with the version from
-  Nov 9, 9:15 AM." for another save of the same pack, "This demo uses Luma. Importing replaces its
-  data with My Luma's." for another pack. Every data type starts ticked (walk F103), and Import
-  first reads the SC's changes to that pack the way a removal does, under the import's own title,
+  Nov 9, 9:15 AM." for another save of the same pack, "Replaces this demo's datapack, Luma." for
+  another pack. Every data type starts ticked (walk F103), and Install
+  first reads the SC's changes to that pack the way a removal does, under the install's own title,
   waiting on "Checking for your changes" (walk F108, F114: the one name for that check, wherever it
   runs). With changes the removal's confirm asks "Save Your Changes First?" at medium width (walk
-  F104, F106): "You changed these since this demo's last save. Importing replaces them.", then the
+  F104, F106): "Installing replaces these changes.", then the
   changes one row per data type ("Products: 24-mb01, 24-mb02, 24-ug01 and 2 more", walk F110), with
-  **Import Without Saving** at the footer's start and **Cancel** and **Save and Import** (or **Save
-  As New and Import**) at its end (walk F111); with none it starts at once. The start and the removal wait up to
+  **Install Without Saving** at the footer's start and **Cancel** and **Save and Install** (or **Save
+  As New and Install**) at its end (walk F111); with none it starts at once. The start and the removal wait up to
   `TIMEOUTS.DATAPACK_SAVE_THEN_WRITE` (10 minutes), since a save runs before they answer: the
-  webview's 30 s default gave up on a 1 min 28 s save and said "Couldn't Start the Import" over an
-  import that then ran (walk F105). **The run is steps** (owner, 2026-11-09, `importSteps.ts`,
+  webview's 30 s default gave up on a 1 min 28 s save and said it couldn't start over an
+  install that then ran (walk F105). **The run is steps** (owner, 2026-11-09, `importSteps.ts`,
   `.rptc/research/replace-flow-steps/`), each named for what it does, in the order it runs, only those
   that apply: **Save Your Changes** (its stage, then "Saved as Nov 9, 1:56 PM", the record's
   `savedAs`), **Uninstall the Previous Version** (or Previous Datapack: "Reading the new version",
@@ -147,7 +147,7 @@ which lists every object the install made. It never removes by name.
   **Install the Version from Nov 9, 1:56 PM** (or "Install My Luma"; its line a plain count, "5 of
   11 data types"), its data types under it, small, with small icons, the one in progress with a
   second line, the word first and then the count: "Installing 1,200 of 2,046", or "Linking product
-  options 2,044 of 2,046" while configurable products go in (walk F133, `doingLine`), and **Verify the Import** ("Recording what went in", "Checking the products against the
+  options 2,044 of 2,046" while configurable products go in (walk F133, `doingLine`), and **Verify Installation** ("Recording what went in", "Checking the products against the
   datapack", then "Checked 2,048 products against the datapack: all match"). The job removes the old
   pack by its record, through the same removal a reset runs (`demoBuilderEngine/engineRemoval.ts`),
   after the new pack is read and checked and before anything is installed. The window is fixed to
@@ -160,15 +160,15 @@ which lists every object the install made. It never removes by name.
   opens, two columns of data types at large for more than six, one at medium for six or fewer or
   in an editor too narrow for two (`runColumns`, F135), and the check and question before a replace
   take that width (F127). **A clean finish hands off to the small result** (owner, 2026-11-10, walk
-  F134): "My Luma Imported", then "Your changes are saved in Version History." when a save ran and
+  F134): "My Luma Installed", then "Your changes are saved in Version History." when a save ran and
   "New products can take 20 minutes to show in search." when products went in, and nothing else.
   A finish with a problem (a data type refused rows, the check found products that differ, the
   store settings failed) stays on its steps under the same title in amber, with Fix with AI, the
   sentence ("This demo now uses My Luma from Nov 9, 9:15 AM. Your changes are saved as Nov 9, 1:56
-  PM.") and "Took …" under them; a stop is "Import Stopped" on its steps. A save or removal that fails installs nothing, says why in red on its step, and leaves the
+  PM.") and "Took …" under them; a stop is "Install Stopped" on its steps. A save or removal that fails installs nothing, says why in red on its step, and leaves the
   project naming the old pack; the project names the new pack once the old one is gone, so a reset
   then removes the new one. Agents get the same through `start_datapack_import` (`changes`,
-  `saveAs`, `CHANGES_NEED_ANSWER`). Importing the same version again replaces nothing.
+  `saveAs`, `CHANGES_NEED_ANSWER`). Installing the same version again replaces nothing.
 - **What a removal keeps is decided several reads at a time** (2026-11-09, `removers.ts`,
   `fewReadsAtOnce.ts`). Before anything is taken out, `decideRemovals` asks of each container the
   record lists whether something not being removed sits in it (a category's products and child
@@ -590,7 +590,7 @@ A zip whose files sit under one root folder reads the same.
 |---|---|---|
 | Save a pack from either store | "Save as file" in a pack's flyout menu, and after an export | `save_datapack_zip`; `dataTypes` saves only the types named (to leave out one the store cannot send) |
 | Remove your own library pack | "Remove from library" in its flyout menu | `delete_library_datapack` |
-| Install a library pack | "Import" in its flyout | `start_datapack_import` with `source: "library"` |
+| Install a library pack | "Install" in its flyout | `start_datapack_import` with `source: "library"` |
 | Put a library pack in the Data Installer's catalog (needs write access, which our accounts lack today) | Not on screen until then | `copy_library_datapack_to_installer` |
 | See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
 | Build a pack file from a Commerce product export | none (agent only) | `build_datapack_from_export` |

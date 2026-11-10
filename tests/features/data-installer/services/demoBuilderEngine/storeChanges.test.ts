@@ -122,7 +122,7 @@ describe('saveStoreChanges', () => {
     it('refuses, writing nothing, when Demo Builder did not install the pack here', async () => {
         const { d, written, write } = await deps(false);
 
-        await expect(saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write)).rejects.toThrow(/did not install bodea-main@1\.2\.0 in this project/);
+        await expect(saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write)).rejects.toThrow(/didn't install bodea-main@1\.2\.0 in this project/);
         expect(written).toStrictEqual([]);
     });
 
@@ -143,8 +143,8 @@ describe('saveStoreChanges', () => {
         expect(stages).toEqual([
             // First what else the demo uses (walk F85), said at once (walk F90), before the data types are known;
             // then again with the rows, once the pack's own data types are (walk F91).
-            ['Reading from Commerce', 'Finding what this demo uses'],
-            ['Reading from Commerce', 'Finding what this demo uses'],
+            ['Reading from Commerce', "Reading this demo's data"],
+            ['Reading from Commerce', "Reading this demo's data"],
             // This pack holds categories alone, so the line counts that (`capturePhases.test.ts`).
             ['Reading from Commerce', '0 of 1 data type: Categories'],
             ['Reading from Commerce', '0 of 1 data type: Categories'],
@@ -156,7 +156,7 @@ describe('saveStoreChanges', () => {
             ['Reading from Commerce', '1 of 1 data type'],
             ['Reading from Commerce', '1 of 1 data type'],
             ['Saving to My Datapacks', 'Categories'],
-            ['Saving to My Datapacks', "Updating this demo's record"],
+            ['Saving to My Datapacks', "Finishing the save"],
         ]);
     });
 
@@ -170,11 +170,11 @@ describe('saveStoreChanges', () => {
 
         const labels = (rows: OperationRow[]) => rows.map((row) => `${row.label}: ${row.status}`);
         expect(sent[0]).toStrictEqual([
-            expect.objectContaining({ label: 'Categories', status: 'checking', line: 'Finding what this demo uses' }),
+            expect.objectContaining({ label: 'Categories', status: 'checking', line: "Reading this demo's data" }),
         ]);
         expect(sent.every((rows) => rows.every((row) => !/Preparing|Finishing/u.test(row.label)))).toBe(true);
         expect(labels(sent.find((rows) => rows[0]?.status === 'checking' && !rows[0].line?.startsWith('Finding')) ?? [])).toStrictEqual(['Categories: checking']);
-        expect(sent.at(-1)?.at(-1)).toMatchObject({ label: 'Categories', status: 'checking', line: "Updating this demo's record" });
+        expect(sent.at(-1)?.at(-1)).toMatchObject({ label: 'Categories', status: 'checking', line: "Finishing the save" });
     });
 
     it("names what goes in when a save is into the demo's own pack, too", async () => {

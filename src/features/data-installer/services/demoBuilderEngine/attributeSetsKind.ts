@@ -59,7 +59,7 @@ export type AssignmentRow = z.infer<typeof assignmentRowSchema>;
 function parseRows<T>(schema: z.ZodType<T>, records: unknown, what: string): T[] {
     const parsed = z.array(schema).safeParse(records);
     if (!parsed.success) {
-        throw new Error(`The pack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+        throw new Error(`The datapack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
     }
     return parsed.data;
 }

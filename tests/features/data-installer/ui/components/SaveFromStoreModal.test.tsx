@@ -203,7 +203,7 @@ describe('selecting the items', () => {
         await press(row('Cart Rules'));
 
         expect(screen.getByText('Reading cart rules')).toBeInTheDocument();
-        expect(screen.getByText("From this demo's Commerce instance")).toBeInTheDocument();
+        expect(screen.getByText('From Commerce')).toBeInTheDocument();
         expect(button('Create')).toHaveAttribute('aria-disabled', 'false');
 
         await press(row('Products'));
@@ -326,7 +326,7 @@ describe('Save As', () => {
         const onSave = await open({ pack: PACK, saveAsName: 'Bodea Copy' });
 
         expect(screen.getByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
-        expect(screen.getByText('Saves everything this demo uses as a new datapack of yours.')).toBeInTheDocument();
+        expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
         const name = screen.getByRole('textbox', { name: /Datapack Name/ });
         expect(name).toHaveValue('Bodea Copy');
         fireEvent.change(name, { target: { value: 'My Bodea' } });
@@ -344,7 +344,7 @@ describe('Save As', () => {
 
         await press(button('Save As New'));
         expect(screen.getByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
-        expect(screen.getByText('Saves everything this demo uses as a new datapack of yours.')).toBeInTheDocument();
+        expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
         fireEvent.change(screen.getByRole('textbox', { name: /Datapack Name/ }), { target: { value: 'Bodea Retail' } });
         expect(screen.queryByRole('button', { name: 'Save As New' })).not.toBeInTheDocument();
         await press(button('Save'));
@@ -367,7 +367,7 @@ describe('Add Unused Items (walk F85)', () => {
 
         await press(button('Add Unused Items'));
         expect(screen.getByRole('heading', { name: 'Add Unused Items' })).toBeInTheDocument();
-        expect(screen.getByText('Nothing in this demo uses these yet. Select any to include.')).toBeInTheDocument();
+        expect(screen.getByText("This demo doesn't use these yet. Select any to include.")).toBeInTheDocument();
         await press(screen.getByRole('checkbox', { name: /Live Demo/ }));
         await press(button('Add'));
 

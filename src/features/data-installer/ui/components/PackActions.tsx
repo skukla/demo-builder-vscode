@@ -32,6 +32,7 @@
 
 import { Button, Item, Section, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useLayoutEffect, useState } from 'react';
+import { INSTALL } from '../../datapackWords';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion } from '../../packVersions';
 import { SHARE_CONSENT } from '../../shareWording';
@@ -132,7 +133,7 @@ function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: stri
             actionLabel: 'Delete',
             actionVariant: 'negative',
             // The house form for a warning: a word in the main sentence (dialog design rules).
-            children: 'Permanently deletes the store settings saved with it.',
+            children: 'Permanently deletes the Store Settings saved with it.',
         };
     }
     // A pack of saves goes whole, its Version History with it (owner, 2026-11-09).
@@ -232,7 +233,7 @@ export function PackActions({
                     {onImport ? (
                         <div className="db-drawer-actions">
                             {onSaveChanges ? (
-                                // Outlined, as Import is beside it (owner, 2026-11-09, walk F124): whether
+                                // Outlined, as Install is beside it (owner, 2026-11-09, walk F124): whether
                                 // anything changed is not known until a save reads the store, so it must
                                 // not look like something waits to be saved.
                                 <Button variant="secondary" onPress={onSaveChanges}>
@@ -240,7 +241,7 @@ export function PackActions({
                                 </Button>
                             ) : null}
                             <Button variant={onSaveChanges ? 'secondary' : 'accent'} onPress={() => onImport(detail.id)}>
-                                Import
+                                {INSTALL}
                             </Button>
                             <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
                                 <Section key="pack">{packRows(detail, history.length > 1).map(renderRow)}</Section>

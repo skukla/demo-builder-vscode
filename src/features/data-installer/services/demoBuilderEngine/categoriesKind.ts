@@ -61,7 +61,7 @@ export interface FoundCategory {
 export function parseCategoryPack(records: unknown): CategoryPack {
     const parsed = packSchema.safeParse(records);
     if (!parsed.success) {
-        throw new Error(`The pack's categories are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+        throw new Error(`The datapack's categories are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
     }
     return parsed.data;
 }
@@ -196,7 +196,7 @@ async function placeInTree(ctx: KindContext, category: CategoryRow['category'], 
     }
     const parentId = tree.byPath.get(category.path);
     if (parentId === undefined) {
-        throw new Error(`The category ${category.name} sits under "${category.path}", which the pack does not make.`);
+        throw new Error(`The category ${category.name} sits under "${category.path}", which the datapack does not make.`);
     }
     const id = await placed(ctx, category, parentId, category.path);
     if (id === 'skipped') tree.skipped.add(own);

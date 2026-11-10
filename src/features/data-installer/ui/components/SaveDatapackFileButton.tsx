@@ -82,7 +82,7 @@ function renderSaveNote(
         return (
             <p className="datapack-export-note">
                 Saved to {value.path}
-                {value.settingsLayer ? ', with its store settings' : ''}
+                {value.settingsLayer ? ', with its Store Settings' : ''}
                 {value.settingsLayerNote ? `. ${value.settingsLayerNote}` : ''}
             </p>
         );

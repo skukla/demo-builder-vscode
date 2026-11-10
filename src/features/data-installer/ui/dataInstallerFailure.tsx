@@ -80,7 +80,7 @@ export function renderDataInstallerFailure(
         return (
             <StatusDisplay
                 variant="warning"
-                title="The Data Installer didn't accept your sign-in"
+                title="Data Installer Sign-In Failed"
                 message={failure.message}
                 details={details}
                 actions={[
@@ -95,7 +95,7 @@ export function renderDataInstallerFailure(
 
     if (failure.code === ErrorCode.INVALID_OPERATION && !options.unreachableTitle) {
         const details = [
-            'Set demoBuilder.dataInstaller.apiBaseUrl.',
+            "Set the Data Installer's address in Settings.",
         ];
         if (options.extraDetail) {
             details.push(options.extraDetail);
@@ -103,7 +103,7 @@ export function renderDataInstallerFailure(
         return (
             <StatusDisplay
                 variant="warning"
-                title="The Data Installer is not configured"
+                title="Data Installer Not Set Up"
                 message={failure.message}
                 details={details}
                 actions={
@@ -124,7 +124,7 @@ export function renderDataInstallerFailure(
     return (
         <StatusDisplay
             variant="error"
-            title={options.unreachableTitle ?? 'Could Not Reach the Data Installer'}
+            title={options.unreachableTitle ?? "Couldn't Reach the Data Installer"}
             message={failure.message}
             details={extra}
             actions={[{ label: 'Retry', onPress: onRetry, variant: 'primary' }]}

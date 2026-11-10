@@ -180,7 +180,7 @@ describe('demoBuilderEngine install', () => {
         const { activationId } = await engine.startImport(request());
         await settle(engine, activationId);
 
-        expect((await engine.getJobFailureReason(activationId))?.error).toBe('The pack holds no categories.');
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe('The datapack holds no categories.');
     });
 
     it('says why when the project has no Commerce access', async () => {
@@ -278,7 +278,7 @@ describe('demoBuilderEngine removal', () => {
         const status = await settle(engine, activationId);
 
         expect((await engine.getJobFailureReason(activationId))?.error).toBe(
-            'Demo Builder did not install this pack in this project, so it has no record of what the pack made and uninstalls ' +
+            'Demo Builder did not install this datapack in this project, so it has no record of what the datapack made and uninstalls ' +
                 'nothing by name. To clear what an earlier install left in Commerce, use Clear Demo Data on the Data Installer screen.',
         );
         expect(status.perType).toEqual({ attribute_sets: 'error', categories: 'error' });
@@ -336,14 +336,14 @@ describe('demoBuilderEngine reads', () => {
         const verdict = await engine.validateImport(request());
 
         expect(verdict.valid).toBe(false);
-        expect(verdict.reason).toMatch(/^Nothing would be installed: The pack's categories are not in the shape Commerce takes/u);
+        expect(verdict.reason).toMatch(/^Nothing would be installed: The datapack's categories are not in the shape Commerce takes/u);
         expect(ctx.sent).toStrictEqual([]);
     });
 
     it('dry run says when the pack does not hold a kind it was asked for', async () => {
         const { engine } = await engineWith({}, () => ({}), { readPack: async () => ({ attribute_sets: [] }) });
 
-        await expect(engine.validateImport(request())).resolves.toEqual({ valid: false, reason: 'The pack holds no categories.' });
+        await expect(engine.validateImport(request())).resolves.toEqual({ valid: false, reason: 'The datapack holds no categories.' });
     });
 
     it('checks the project\'s own Commerce access, not the credentials in the request', async () => {

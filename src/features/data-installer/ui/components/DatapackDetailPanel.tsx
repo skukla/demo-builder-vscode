@@ -29,7 +29,7 @@
 import { ActionButton } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React, { useState } from 'react';
-import { versionLabel } from '../../packVersions';
+import { isSavedVersion, versionLabel } from '../../packVersions';
 import { inPickOrder } from '../../pickableKinds';
 import type { DataItemInventory, DatapackDetail, PackDetailLayer } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
@@ -37,8 +37,10 @@ import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
 import { PackActions } from './PackActions';
+import { StoreSettingsRow } from './StoreSettingsRow';
 import { StageWait } from '@/core/ui/components/feedback/StageWait';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
+import { PanelRow } from '@/core/ui/components/ui/PanelRow';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId } from '@/types/datapack';
 
@@ -145,7 +147,7 @@ export function DatapackDetailPanel({
                     <div className="db-drawer-head">
                         <div className="datapack-panel-title">
                             <DatapackPanelTitle title={title} detail={loading || failure || working ? null : detail} onRename={onRename} />
-                            <span className="datapack-panel-version">{versionLabel(selected.version)}</span>
+                            <span className="datapack-panel-version">{isSavedVersion(selected.version) ? `Saved ${versionLabel(selected.version)}` : selected.version}</span>
                         </div>
                         <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
                             <Close size="S" />
@@ -264,7 +266,7 @@ function DetailRows({
             {detail.updatedAt ? (
                 <PanelRow label="Updated">{formatDate(detail.updatedAt)}</PanelRow>
             ) : null}
-            <PanelRow label="Data">
+            <PanelRow label="Data Types">
                 <span className="datapack-panel-types">
                     {inPickOrder(present).map((dataType) => (
                         <span key={dataType} className="datapack-panel-type">
@@ -274,7 +276,7 @@ function DetailRows({
                 </span>
             </PanelRow>
             {missing.length > 0 ? (
-                <PanelRow label="Declared, Not Stored">
+                <PanelRow label="Empty Data Types">
                     <span className="datapack-panel-types" data-testid="datapack-detail-missing">
                         {inPickOrder(missing).map((dataType) => (
                             <span key={dataType} className="datapack-panel-type is-missing">
@@ -284,17 +286,7 @@ function DetailRows({
                     </span>
                 </PanelRow>
             ) : null}
-            {settingsLayer && settingsLayer.settings.length > 0 ? (
-                <PanelRow label="Also Sets">
-                    <span className="datapack-panel-types" data-testid="datapack-detail-settings">
-                        {settingsLayer.settings.map((setting) => (
-                            <span key={setting.path} className="datapack-panel-type">
-                                {setting.path}: {setting.value}
-                            </span>
-                        ))}
-                    </span>
-                </PanelRow>
-            ) : null}
+            {settingsLayer && settingsLayer.settings.length > 0 ? <StoreSettingsRow layer={settingsLayer} /> : null}
         </>
     );
 }
@@ -312,23 +304,7 @@ function ownerLabel(detail: DatapackDetail): string | undefined {
 /** Who can see it. In the library, "shared" means every SC sees it; otherwise only its owner. */
 function visibleTo(detail: DatapackDetail): string {
     if (detail.store === 'library' && !detail.shared) return 'Only you';
-    return detail.shared ? 'Everyone' : 'Everyone (community)';
-}
-
-/** One key/value detail row. */
-function PanelRow({
-    label,
-    children,
-}: {
-    label: string;
-    children: React.ReactNode;
-}): React.JSX.Element {
-    return (
-        <div className="integration-panel-row">
-            <span className="integration-panel-row-key">{label}</span>
-            <span className="integration-panel-row-value">{children}</span>
-        </div>
-    );
+    return 'Everyone';
 }
 
 /**

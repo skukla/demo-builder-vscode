@@ -179,11 +179,11 @@ describe('DataInstallerScreen', () => {
             expect(requestedTypes()).not.toContain('list-installed-datapacks');
         });
 
-        it('offers Load from File, and nothing that acts on a store', async () => {
+        it('offers Add from File, and nothing that acts on a store', async () => {
             render(<DataInstallerScreen mode="library" />);
             await settle();
 
-            expect(await screen.findByRole('button', { name: /Load from File/ })).toBeInTheDocument();
+            expect(await screen.findByRole('button', { name: /Add from File/ })).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /Create Datapack/ })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /Clear Demo Data/ })).not.toBeInTheDocument();
         });

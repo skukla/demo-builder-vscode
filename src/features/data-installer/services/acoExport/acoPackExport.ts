@@ -71,7 +71,7 @@ function kindsAsked(dataTypes: readonly string[] | undefined): AcoExportKind[] {
     );
     if (unknown.length > 0) {
         throw new AcoExportError(
-            `An ACO pack is made of ${ACO_EXPORT_KINDS.join(', ')}; ${unknown.join(', ')} cannot be made from a Commerce store here (the Data Installer's own export makes no product layers either).`,
+            `An ACO datapack is made of ${ACO_EXPORT_KINDS.join(', ')}; ${unknown.join(', ')} cannot be made from a Commerce store here (the Data Installer's own export makes no product layers either).`,
         );
     }
     return ACO_EXPORT_KINDS.filter((kind) => dataTypes.includes(kind));
@@ -166,11 +166,11 @@ async function save(
 }
 
 function sentenceFor(outcome: Omit<AcoExportOutcome, 'sentence'>, id: DatapackId): string {
-    if (!outcome.saved) return 'Commerce had nothing to put in an ACO pack, so nothing was saved.';
+    if (!outcome.saved) return 'Commerce had nothing to put in an ACO datapack, so nothing was saved.';
     const made = outcome.perType.filter((t) => t.success && t.exported > 0).length;
     const failed = outcome.perType.filter((t) => !t.success).length;
     const tail = failed > 0 ? ` ${failed} of the kinds could not be made; each says why.` : '';
-    return `Saved the ACO pack ${id.name}@${id.version} to My Datapacks: ${made} kinds for ${outcome.storeViews.join(', ')}.${tail}`;
+    return `Saved the ACO datapack ${id.name}@${id.version} to My Datapacks: ${made} kinds for ${outcome.storeViews.join(', ')}.${tail}`;
 }
 
 /**

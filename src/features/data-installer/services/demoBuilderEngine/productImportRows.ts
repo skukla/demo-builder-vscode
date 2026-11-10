@@ -162,7 +162,7 @@ async function variationsOf(
     const variations = await Promise.all(
         links.map(async (link) => {
             const child = children.get(String(link).toLowerCase());
-            if (!child) throw new NotImportable(`child ${String(link)} is not in the pack`);
+            if (!child) throw new NotImportable(`child ${String(link)} is not in the datapack`);
             const values = additionalAsCustom(child);
             const pairs = await Promise.all(
                 codes.map(async (code) => {

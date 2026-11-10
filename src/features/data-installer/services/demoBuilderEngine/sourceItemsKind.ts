@@ -36,7 +36,7 @@ export type SourceItemsPack = z.infer<typeof packSchema>;
 export function parseSourceItems(records: unknown): SourceItemsPack {
     const parsed = packSchema.safeParse(records);
     if (!parsed.success) {
-        throw new Error(`The pack's stock quantities are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+        throw new Error(`The datapack's stock quantities are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
     }
     return parsed.data;
 }

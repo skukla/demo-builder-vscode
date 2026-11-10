@@ -1,6 +1,6 @@
 /**
  * An import's run as steps (owner, 2026-11-09, `.rptc/research/replace-flow-steps/`): Save Your
- * Changes, Uninstall the Previous Version, Install, Verify the Import, only those that apply, in the
+ * Changes, Uninstall the Previous Version, Install, Verify Installation, only those that apply, in the
  * order they run. The data types are Install's own rows; the engine's work outside any one type is
  * a line on the step it serves, where Preparing Import and Finishing Import used to be rows.
  */
@@ -60,7 +60,7 @@ describe('which steps show', () => {
     it('draws a first install as Install, spinning from the start, and Verify waiting', () => {
         const steps = importSteps(source());
 
-        expect(labels(steps)).toStrictEqual(['Install Luma, main', 'Verify the Import']);
+        expect(labels(steps)).toStrictEqual(['Install Luma, main', 'Verify Installation']);
         expect(steps.map((step) => [step.status, step.line])).toStrictEqual([
             ['checking', 'Starting'],
             ['pending', 'Waiting'],
@@ -83,7 +83,7 @@ describe('which steps show', () => {
             'Save Your Changes',
             'Uninstall the Previous Version',
             `Install the Version from ${versionLabel(SAVED)}`,
-            'Verify the Import',
+            'Verify Installation',
         ]);
         expect(steps[0]).toStrictEqual({
             kind: 'saving-changes',
@@ -249,7 +249,7 @@ describe('Install’s lines', () => {
             source({
                 running: false,
                 perType: { categories: 'success', products: 'success' },
-                rowNotes: { products: 'Commerce refused 3.' },
+                rowNotes: { products: 'Commerce refused 3 rows.' },
             })
         );
 
@@ -299,15 +299,15 @@ describe('Verify’s lines', () => {
             verify(importSteps(source({ perType: allIn, phase: 'Recording what was installed' })))
         ).toMatchObject({
             status: 'checking',
-            line: 'Recording what went in',
+            line: 'Recording installed items',
         });
         expect(
             verify(
                 importSteps(
-                    source({ perType: allIn, phase: 'Checking the products against the datapack' })
+                    source({ perType: allIn, phase: 'Checking products' })
                 )
             )
-        ).toMatchObject({ status: 'checking', line: 'Checking the products against the datapack' });
+        ).toMatchObject({ status: 'checking', line: 'Checking products' });
     });
 
     it('ends on what the check found when it matched', () => {
@@ -317,9 +317,9 @@ describe('Verify’s lines', () => {
 
         expect(verify(steps)).toStrictEqual({
             kind: 'finishing',
-            label: 'Verify the Import',
+            label: 'Verify Installation',
             status: 'success',
-            line: 'Checked 2,046 products against the datapack: all match',
+            line: '2,046 products match the datapack',
         });
     });
 
@@ -333,7 +333,7 @@ describe('Verify’s lines', () => {
 
         expect(verify(steps)).toMatchObject({
             status: 'warning',
-            problem: { text: 'Checked 2,048 products against the datapack: 3 differ', failed: false },
+            problem: { text: '3 of 2,048 products differ from the datapack', failed: false },
         });
         // Not on the products' row as well (review, 2026-11-10).
         const products = steps.flatMap((s) => s.types ?? []).find((t) => t.kind === 'products');
@@ -345,7 +345,7 @@ describe('Verify’s lines', () => {
             source({ running: false, perType: allIn, check: { ...CHECK, verdict: 'differs', checked: 12 } })
         );
 
-        expect(verify(steps).problem?.text).toBe('Checked 12 products against the datapack: some differ');
+        expect(verify(steps).problem?.text).toBe('some of 12 products differ from the datapack');
     });
 
     it('fails with the reason when the job stopped after every type was in', () => {

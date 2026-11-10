@@ -3,7 +3,7 @@
  * the outcome is the dialog's TITLE and the body carries only what is left to know or do.
  *
  * An import that finished cleanly hands off to the small result (owner, 2026-11-10, walk F134):
- * "Frescopa Imported", then only where the SC's changes went and how long search takes. One that
+ * "Frescopa Installed", then only where the SC's changes went and how long search takes. One that
  * finished with a problem, or stopped, stays on the steps it ran on: the record goes with the result
  * for the steps, and the footer's main action is Retry while a retry can get past the stop, else
  * Fix with AI. Before, a success was "Imported Luma" over the engine's whole note as one paragraph,
@@ -46,7 +46,7 @@ describe('an import that finished cleanly (walk F134)', () => {
         // No `run` (so no steps), no lead, no "Took …".
         expect(outcomeOf(record)).toEqual({
             variant: 'success',
-            title: `${PACK_NAME} Imported`,
+            title: `${PACK_NAME} Installed`,
             finished: true,
             message: SEARCH,
         });
@@ -66,7 +66,7 @@ describe('an import that finished cleanly (walk F134)', () => {
 
         expect(result).toEqual({
             variant: 'success',
-            title: `${PACK_NAME} Imported`,
+            title: `${PACK_NAME} Installed`,
             finished: true,
             details: [SAVED_LINE, 'Kept 2 things you had changed in the Admin.', SEARCH],
         });
@@ -90,14 +90,14 @@ describe('an import that finished cleanly (walk F134)', () => {
     it('is the title alone when there is nothing left to know', () => {
         expect(outcomeOf({ outcome: 'success', perType: done('categories') })).toEqual({
             variant: 'success',
-            title: `${PACK_NAME} Imported`,
+            title: `${PACK_NAME} Installed`,
             finished: true,
         });
     });
 
     it('treats a record written before the operation field as an import', () => {
         expect(outcomeOf({ outcome: 'success', perType: done('products') })?.title).toBe(
-            `${PACK_NAME} Imported`
+            `${PACK_NAME} Installed`
         );
     });
 
@@ -113,14 +113,14 @@ describe('an import that finished with a problem (walk F134)', () => {
         const record = {
             outcome: 'success' as const,
             perType: done('categories', 'products'),
-            rowNotes: { products: 'Commerce refused 3.' },
+            rowNotes: { products: 'Commerce refused 3 rows.' },
             searchDelay: SEARCH,
             processingTimeMs: 72_000,
         };
 
         expect(outcomeOf(record)).toEqual({
             variant: 'warning',
-            title: `${PACK_NAME} Imported`,
+            title: `${PACK_NAME} Installed`,
             run: jobRecord(record),
             finished: true,
             action: 'fix',
@@ -143,7 +143,7 @@ describe('an import that finished with a problem (walk F134)', () => {
         };
         const result = outcomeOf({ outcome: 'success', perType: done('products'), check });
 
-        expect(result).toMatchObject({ variant: 'warning', title: `${PACK_NAME} Imported`, action: 'fix' });
+        expect(result).toMatchObject({ variant: 'warning', title: `${PACK_NAME} Installed`, action: 'fix' });
         expect(result?.run).toBeDefined();
     });
 
@@ -172,7 +172,7 @@ describe('an import that finished with a problem (walk F134)', () => {
 
         expect(result).toMatchObject({
             variant: 'warning',
-            title: `${PACK_NAME} Imported`,
+            title: `${PACK_NAME} Installed`,
             action: 'fix',
             finished: true,
         });
@@ -190,10 +190,10 @@ describe('an import that stopped', () => {
         reason: 'Commerce did not respond to V1/products: timed out',
     };
 
-    it('is "Import Stopped", red, with Retry when a retry can get past it', () => {
+    it('is "Install Stopped", red, with Retry when a retry can get past it', () => {
         expect(outcomeOf({ ...stopped, retryable: true })).toMatchObject({
             variant: 'error',
-            title: 'Import Stopped',
+            title: 'Install Stopped',
             action: 'retry',
         });
     });
@@ -211,7 +211,7 @@ describe('an import that stopped', () => {
         expect(outcomeOf({ ...stopped, retryable: false })?.action).toBe('fix');
     });
 
-    it('is "Import Stopped" when every data type went in and the work after them stopped', () => {
+    it('is "Install Stopped" when every data type went in and the work after them stopped', () => {
         const result = outcomeOf({
             outcome: 'partial',
             perType: done('categories', 'products'),
@@ -220,7 +220,7 @@ describe('an import that stopped', () => {
             retryable: true,
         });
 
-        expect(result).toMatchObject({ variant: 'error', title: 'Import Stopped', action: 'retry' });
+        expect(result).toMatchObject({ variant: 'error', title: 'Install Stopped', action: 'retry' });
     });
 
     it('says nothing under its rows but how long it took: the rows say where it stopped', () => {
@@ -266,7 +266,7 @@ describe('a removal', () => {
             })
         ).toEqual({
             variant: 'warning',
-            title: `Action Required to Uninstall ${PACK_NAME}`,
+            title: `One Step Left to Uninstall ${PACK_NAME}`,
             message:
                 "Justrite Test Store still uses the datapack's root category, ZZ Root DB12, so it stayed.",
             keptRoot,
@@ -283,7 +283,7 @@ describe('a removal', () => {
         expect(result).toEqual({
             variant: 'warning',
             title: `Some Data Types Not Uninstalled`,
-            details: ['Products: error', 'Running it again skips existing items.'],
+            details: ['Products: error'],
         });
     });
 
@@ -304,19 +304,19 @@ describe('a removal', () => {
 
 describe('a job with no rows to end on', () => {
     it.each([
-        ['never-registered', 'error', 'Import Did Not Start', undefined],
-        ['stopped', 'info', 'Running in Background', 'The import continues in the background.'],
+        ['never-registered', 'error', 'Install Did Not Start', undefined],
+        ['stopped', 'info', 'Running in Background', 'The install continues in the background.'],
         [
             'still-running',
             'info',
             'Still Running',
-            'The import continues in the background. See the Activity tab for the result.',
+            'Still running. The result will be on the Activity tab.',
         ],
         [
             'unwatchable',
             'warning',
-            'Import Status Unknown',
-            'It is still running. See the Activity tab for the result.',
+            'Install Status Unknown',
+            'Still running. The result will be on the Activity tab.',
         ],
     ])('%s reads as a %s with its own wording', (outcome, variant, title, message) => {
         const result = outcomeOf({ outcome: outcome as ImportJobRecord['outcome'] });

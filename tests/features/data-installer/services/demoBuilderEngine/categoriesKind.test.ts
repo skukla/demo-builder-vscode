@@ -203,7 +203,7 @@ describe('installCategories', () => {
         const pack = { categories: [{ category: { name: 'Orphan', path: 'Default Category/Gone' } }] };
 
         await expect(installCategories(ctx, parseCategoryPack(pack))).rejects.toThrow(
-            'The category Orphan sits under "Default Category/Gone", which the pack does not make.',
+            'The category Orphan sits under "Default Category/Gone", which the datapack does not make.',
         );
         expect(ctx.sent).toStrictEqual([]);
     });

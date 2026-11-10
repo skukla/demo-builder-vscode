@@ -37,7 +37,7 @@ import { tookValue } from '@/core/ui/hooks/useRunClock';
  * submitted and never says why is the worst of both.
  */
 function NoInstanceNotice(): React.JSX.Element {
-    return <LeadText>Connect a Commerce backend on the project dashboard, then import from here.</LeadText>;
+    return <LeadText>Connect Commerce on the project dashboard first.</LeadText>;
 }
 
 /** A data type's label inside a sentence: "attribute sets", but "B2B companies" keeps its acronym. */

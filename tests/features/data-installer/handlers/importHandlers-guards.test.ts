@@ -71,7 +71,7 @@ describe('a call with no payload at all', () => {
             dataTypes: [],
         });
 
-        expect(result.error).toBe('Select at least one data type to import.');
+        expect(result.error).toBe('Select at least one data type to install.');
     });
 
     it('refuses a website code with no store code', async () => {
@@ -113,7 +113,7 @@ describe('a confirmed reset that cannot be prepared', () => {
         expect(client.startDelete).not.toHaveBeenCalled();
         expect(result).toEqual({
             success: false,
-            error: 'Open a project before importing a datapack.',
+            error: 'Open a project before installing a datapack.',
         });
     });
 });
@@ -138,8 +138,8 @@ describe('no datapack store address is configured', () => {
         expect(client.validateImport).not.toHaveBeenCalled();
         expect(result.success).toBe(false);
         // No Data Installer address sends the write to Demo Builder's datapack store, and this
-        // harness answers '' for that address too: the refusal names the setting to fix.
-        expect(result.error).toContain('demoBuilder.datapackStore.apiBaseUrl');
+        // harness answers '' for that address too: the refusal says where to fix it.
+        expect(result.error).toBe('The datapack library has no usable address. Set it in Settings to an https:// URL.');
     });
 
     it('refuses a dry run the same way', async () => {

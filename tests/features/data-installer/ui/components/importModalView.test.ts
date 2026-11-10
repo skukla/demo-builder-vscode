@@ -92,7 +92,7 @@ describe('watchedActivation', () => {
 });
 
 /** A result to show, typed to the real interface. */
-const RESULT: ResultContent = { variant: 'success', title: 'Dry Run Passed' };
+const RESULT: ResultContent = { variant: 'success', title: 'Check Passed' };
 
 /** Nothing set: the state a fresh modal with an instance is in. */
 const IDLE = { busy: false, resetArmed: false, running: false, result: null, noInstance: false };
@@ -138,17 +138,16 @@ describe('busyMessage', () => {
     it('waits on an uninstall in the stage the uninstall itself reports', () => {
         expect(busyMessage(true)).toStrictEqual({
             label: 'Uninstalling the datapack',
-            expectation: 'Minutes; varies by pack',
-            detail: 'From your Commerce instance',
+            expectation: 'Usually a few minutes',
+            detail: 'From Commerce',
         });
     });
 
     /** A dry run is the only busy state left: an import starting shows its steps instead. */
-    it('waits on a dry run as checking the import, which writes nothing', () => {
+    it('waits on a check first, with no second line', () => {
         expect(busyMessage(false)).toStrictEqual({
-            label: 'Checking the import',
+            label: 'Checking first',
             expectation: 'Usually a few seconds',
-            detail: 'Nothing is written',
         });
     });
 });
@@ -161,7 +160,7 @@ describe('an import starting', () => {
 
     it('takes the running import’s frame, footer and way out', () => {
         const frame = viewFrame({ view: 'starting', displayName: 'Frescopa', removing: false, store: '', typeCount: 8, columns: 2, result: null });
-        expect(frame).toMatchObject({ size: 'L', wide: false, title: 'Import Frescopa' });
+        expect(frame).toMatchObject({ size: 'L', wide: false, title: 'Installing Frescopa' });
         expect(rows(actionArgs({ view: 'starting' }))).toStrictEqual([]);
         expect(closeLabel('starting')).toBe('Run in Background');
         expect(waitOf('starting', false, { label: '' })).toBe(false);
@@ -239,14 +238,14 @@ describe('buildActions', () => {
         expect(actions[1].onPress).toBe(resultAction === 'retry' ? args.retry : args.fixWithAi);
     });
 
-    // The main action last; Dry Run outlined, as Close is (walk F102). Remove Data is not here: it
+    // The main action last; Check First outlined, as Close is (walk F102). Remove Data is not here: it
     // opens this window straight on its confirm (`opensOn: 'remove'`, walk F118).
-    it('shows Dry Run outlined, then Import, each wired', () => {
+    it('shows Check First outlined, then Install, each wired', () => {
         const args = actionArgs();
         const actions = buildActions(args);
         expect(rows(args)).toStrictEqual([
-            { label: 'Dry Run', variant: 'secondary', isDisabled: false },
-            { label: 'Import', variant: 'accent', isDisabled: false },
+            { label: 'Check First', variant: 'secondary', isDisabled: false },
+            { label: 'Install', variant: 'accent', isDisabled: false },
         ]);
         expect(actions[0].onPress).toBe(args.validate);
         expect(actions[1].onPress).toBe(args.startImport);
@@ -297,7 +296,7 @@ describe('buildActions', () => {
     it('keeps every label while a check or a start runs', () => {
         for (const busy of [{ checking: true }, { starting: true }]) {
             const actions = buildActions(actionArgs({ view: 'busy', canStart: false, ...busy }));
-            expect(actions.map((a) => a.label)).toStrictEqual(['Dry Run', 'Import']);
+            expect(actions.map((a) => a.label)).toStrictEqual(['Check First', 'Install']);
             expect(actions.every((a) => a.isDisabled === true)).toBe(true);
         }
     });
@@ -359,7 +358,7 @@ describe('viewFrame', () => {
     // Walk F108: while it checks, the title names the work, not a question nothing has asked yet.
     it('titles the check by the work, with no warning icon, at the confirm\'s width', () => {
         expect(viewFrame({ ...base, view: 'reading-changes', replacing: 'Luma, eds-compatible' })).toStrictEqual({
-            title: 'Import Frescopa',
+            title: 'Install Frescopa',
             size: 'M',
             wide: false,
             hideClose: false,
@@ -389,11 +388,11 @@ describe('viewFrame', () => {
         const actions = buildActions(actionArgs({ view: 'confirm-reset', confirmsImport: true, removeWithoutSaving: jest.fn(), removeLabel: 'Save and Uninstall' }));
         expect(actions.map((a) => [a.label, a.variant])).toEqual([
             ['Cancel', 'secondary'],
-            ['Import Without Saving', 'secondary'],
-            ['Save and Import', 'accent'],
+            ['Install Without Saving', 'secondary'],
+            ['Save and Install', 'accent'],
         ]);
         const unread = buildActions(actionArgs({ view: 'confirm-reset', confirmsImport: true, removeLabel: 'Uninstall Anyway' }));
-        expect(unread.map((a) => a.label)).toEqual(['Cancel', 'Import Anyway']);
+        expect(unread.map((a) => a.label)).toEqual(['Cancel', 'Install Anyway']);
     });
 
     it.each([
@@ -403,7 +402,7 @@ describe('viewFrame', () => {
         [12, 'L', false],
         [13, 'L', true],
     ])('gives a form of %i types the %s width (extra-wide: %s)', (typeCount, size, wide) => {
-        expect(viewFrame({ ...base, view: 'form', typeCount })).toMatchObject({ size, wide, title: 'Import Frescopa', hideClose: false });
+        expect(viewFrame({ ...base, view: 'form', typeCount })).toMatchObject({ size, wide, title: 'Install Frescopa', hideClose: false });
     });
 
     it('gives the removal that kept a root the medium width, so its Admin path reads as one line', () => {
@@ -415,7 +414,7 @@ describe('viewFrame', () => {
 
     it('titles a project with no instance by its outcome, amber, at the small width', () => {
         expect(viewFrame({ ...base, view: 'no-instance' })).toMatchObject({
-            title: 'This project has no Commerce instance',
+            title: 'No Commerce Instance',
             status: 'warning',
             size: 'S',
             wide: false,
@@ -426,18 +425,18 @@ describe('viewFrame', () => {
     // An import runs on its steps in the box the form had; one that ended with a problem stays
     // there (owner, 2026-11-07, 2026-11-10).
     it('keeps the form’s width while an import runs, and for an ending with a problem on its steps', () => {
-        const run = { variant: 'warning' as const, title: 'Frescopa Imported', run: {} as ResultContent['run'] };
+        const run = { variant: 'warning' as const, title: 'Frescopa Installed', run: {} as ResultContent['run'] };
 
-        expect(viewFrame({ ...base, view: 'watching', typeCount: 8, columns: 2 })).toMatchObject({ size: 'L', wide: false, title: 'Import Frescopa' });
-        expect(viewFrame({ ...base, view: 'result', typeCount: 8, columns: 2, result: run })).toMatchObject({ size: 'L', status: 'warning', title: 'Frescopa Imported' });
+        expect(viewFrame({ ...base, view: 'watching', typeCount: 8, columns: 2 })).toMatchObject({ size: 'L', wide: false, title: 'Installing Frescopa' });
+        expect(viewFrame({ ...base, view: 'result', typeCount: 8, columns: 2, result: run })).toMatchObject({ size: 'L', status: 'warning', title: 'Frescopa Installed' });
     });
 
     // Walk F134: a clean finish carries no `run`, so it hands off to the small result.
     it('hands a clean import finish to the small result, with its green icon', () => {
-        const clean: ResultContent = { variant: 'success', title: 'Frescopa Imported', finished: true, message: 'Your changes are saved in Version History.' };
+        const clean: ResultContent = { variant: 'success', title: 'Frescopa Installed', finished: true, message: 'Your changes are saved in Version History.' };
 
         expect(viewFrame({ ...base, view: 'result', typeCount: 8, columns: 2, result: clean })).toEqual({
-            title: 'Frescopa Imported',
+            title: 'Frescopa Installed',
             status: 'success',
             size: 'S',
             wide: false,
@@ -525,11 +524,10 @@ describe('the removal confirm (step 05)', () => {
     });
 
     // One check, one name (walk F114); its line says since when, as the question after it does (F126).
-    it('waits on the changes check in its words, since the last save', () => {
+    it('waits on the changes check in its words', () => {
         expect(waitOf('reading-changes', false, { label: '' })).toStrictEqual({
             label: 'Checking for your changes',
             expectation: 'Usually about a minute',
-            detail: "Since this demo's last save",
         });
     });
 
@@ -544,7 +542,7 @@ describe('the removal confirm (step 05)', () => {
     });
 
     it('says the save\'s stage over the removal\'s, and the removal\'s once there is none', () => {
-        expect(busyMessage(true, 'Saving to My Datapacks')).toMatchObject({ label: 'Saving to My Datapacks', detail: 'Your data' });
+        expect(busyMessage(true, 'Saving to My Datapacks')).toMatchObject({ label: 'Saving to My Datapacks' });
         expect(busyMessage(true, 'A stage no table names')).toStrictEqual({ label: 'A stage no table names' });
         expect(busyMessage(true, undefined)).toMatchObject({ label: 'Uninstalling the datapack' });
     });

@@ -70,7 +70,7 @@ describe('previewing a pack with a settings layer', () => {
 
         const preview = await previewChanges({ ...d, findLayer: down }, PACK, 'installer');
 
-        expect(preview.settings).toEqual({ changes: [], note: 'The datapack library could not be asked for bodea-main-settings, so any store settings it holds are not counted here.' });
+        expect(preview.settings).toEqual({ changes: [], note: "My Datapacks couldn't be read, so this datapack's Store Settings, if any, are not counted here." });
     });
 });
 

@@ -93,7 +93,7 @@ export function StorePicksStage({ pack, store }: StorePicksStageProps): React.Re
                             unused={store.unused}
                         />
                     ) : (
-                        <p className="datapack-export-note">{store.unused ? 'Nothing to add.' : 'This Commerce instance has no data to select.'}</p>
+                        <p className="datapack-export-note">{store.unused ? 'Nothing to add.' : 'Commerce has nothing to select.'}</p>
                     )}
                 </div>
             </div>

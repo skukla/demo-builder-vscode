@@ -54,7 +54,7 @@ describe('confirmContent', () => {
     });
 
     it('does not show transport text when no answer came back', () => {
-        expect(confirmContent(null, { message: 'Request timeout: get-datapack-removal-changes', unanswered: true })).toEqual({ kind: 'read-failed', reason: 'The check took too long to answer.' });
+        expect(confirmContent(null, { message: 'Request timeout: get-datapack-removal-changes', unanswered: true })).toEqual({ kind: 'read-failed', reason: 'The check timed out.' });
     });
 
     it('believes the failure over an answer left by an earlier read', () => {
@@ -131,7 +131,7 @@ describe('recordedRemovalLines', () => {
 
     it('says the ticks only choose what an import installs when they name less than what goes', () => {
         expect(recordedRemovalLines('Bodea', ['categories', 'products'], ['categories'], inWords)).toEqual(
-            ['Permanently deletes what Bodea installed: categories and products.', 'Selected data types apply to Import only.'],
+            ['Permanently deletes what Bodea installed: categories and products.', 'The data types you tick apply to Install only.'],
         );
     });
 
@@ -144,11 +144,11 @@ describe('recordedRemovalLines', () => {
     });
 
     it('says settings go back, since nothing deletes them', () => {
-        expect(recordedRemovalLines('Bodea', ['categories', 'store_config'], [], inWords)).toEqual(['Permanently deletes what Bodea installed: categories.', 'Puts back the store settings it changed.']);
+        expect(recordedRemovalLines('Bodea', ['categories', 'store_config'], [], inWords)).toEqual(['Permanently deletes what Bodea installed: categories.', 'Puts back the Store Settings it changed.']);
     });
 
     it('does not claim a deletion when settings are all it holds', () => {
-        expect(recordedRemovalLines('Bodea', ['store_config'], [], inWords)).toEqual(['Puts back the store settings Bodea changed.']);
+        expect(recordedRemovalLines('Bodea', ['store_config'], [], inWords)).toEqual(['Puts back the Store Settings Bodea changed.']);
     });
 
     it('says so when the record lists nothing', () => {

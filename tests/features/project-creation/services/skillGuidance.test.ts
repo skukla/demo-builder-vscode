@@ -165,7 +165,7 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
         const c = content();
         // "cannot be undone" and "unbounded" are different claims and only the
         // first is true. An agent told the second refuses a safe operation.
-        expect(c).toMatch(/import in reverse/i);
+        expect(c).toMatch(/install in reverse/i);
         // Matched on the distinctive phrase alone, not the full sentence: prose
         // in these files wraps, so a multi-word regex spanning a line break
         // fails for a reason that has nothing to do with the claim.

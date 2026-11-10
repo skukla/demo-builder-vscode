@@ -128,7 +128,7 @@ describe('save-datapack-zip', () => {
 
         const result = await save(context(), body);
 
-        expect(result).toMatchObject({ success: true, data: { settingsLayerNote: 'The datapack library could not be asked for justrite-settings, so any store settings it holds are not in this file.' } });
+        expect(result).toMatchObject({ success: true, data: { settingsLayerNote: "My Datapacks couldn't be read, so this datapack's Store Settings, if any, are not in this file." } });
         expect(fs.existsSync(path.join(dir, 'out.zip'))).toBe(true);
     });
 });

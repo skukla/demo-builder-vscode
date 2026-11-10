@@ -71,7 +71,7 @@ interface StoreOption {
 export function parseAttributeRows(records: unknown): AttributeRow[] {
     const parsed = z.array(rowSchema).safeParse(records);
     if (!parsed.success) {
-        throw new Error(`The pack's product attributes are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+        throw new Error(`The datapack's product attributes are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
     }
     return parsed.data;
 }

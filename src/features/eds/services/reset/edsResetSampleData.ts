@@ -12,11 +12,11 @@
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
+import { saveFirstLabel, UNINSTALL_DATAPACK, withoutSavingLabel } from '@/features/data-installer/datapackWords';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import { rememberedPackName, type NameMemory } from '@/features/data-installer/services/packNames';
-import { saveFirstLabel, UNINSTALL_DATAPACK, withoutSavingLabel } from '@/features/data-installer/uninstallWords';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';

@@ -143,7 +143,7 @@ describe('exportAcoPack: what it saves', () => {
     it('says what it saved, where, and for which store views', async () => {
         const { sentence } = await harness().run({ storeViews: ['default', 'fr'] });
         expect(sentence).toBe(
-            'Saved the ACO pack aco_acme@main to My Datapacks: 5 kinds for default, fr.'
+            'Saved the ACO datapack aco_acme@main to My Datapacks: 5 kinds for default, fr.'
         );
     });
 
@@ -332,7 +332,7 @@ describe('exportAcoPack: what goes wrong', () => {
         expect(h.write).not.toHaveBeenCalled();
         expect(result).toMatchObject({
             success: true,
-            sentence: 'Commerce had nothing to put in an ACO pack, so nothing was saved.',
+            sentence: 'Commerce had nothing to put in an ACO datapack, so nothing was saved.',
         });
         expect(result).not.toHaveProperty('saved');
     });

@@ -1,8 +1,8 @@
 /**
- * One labelled row of the integration flyout: a key column and a value column.
- * Shared by the panel and the bound system's section, so both rows read alike.
+ * One labelled row of a detail flyout: a key column and a value column.
+ * Shared by the integration and datapack flyouts, so their rows read alike.
  *
- * @module features/dashboard/ui/components/integrations/PanelRow
+ * @module core/ui/components/ui/PanelRow
  */
 
 import React from 'react';
