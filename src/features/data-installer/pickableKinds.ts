@@ -78,6 +78,13 @@ export const isPickableKind = (kind: string): kind is PickableKind => (PICKABLE_
  */
 export const LEFT_OUT_KINDS: readonly PickableKind[] = ['products', 'giftcards', 'categories', 'cart_rules', 'customers', 'b2b_companies'];
 
+/**
+ * The kinds Commerce keeps for the whole instance, so only some of each is a demo's: the ones
+ * Add Items offers what a demo does not use of (`demoUses.ts`, walk F85). The rest are a demo's
+ * website's, its root's or its customers', so a save from a pack takes all of them.
+ */
+export const UNUSED_KINDS: readonly PickableKind[] = ['customer_groups', 'b2b_shared_catalogs', 'product_attributes', 'attribute_sets'];
+
 /** The ids picked, by kind. */
 export type StorePicks = Partial<Record<PickableKind, string[]>>;
 

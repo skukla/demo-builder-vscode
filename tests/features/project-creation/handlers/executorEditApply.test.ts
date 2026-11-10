@@ -297,7 +297,11 @@ describe('finishEditWithoutRebuild — the datapack changed', () => {
 
         expect(await finishEditWithoutRebuild(context, NEW_PACK, progress, ask)).toBe(true);
 
-        expect(planDatapackChange).toHaveBeenCalledWith(project, ['datapack'], ask.removeOldDatapack);
+        expect(planDatapackChange).toHaveBeenCalledWith(project, ['datapack'], expect.any(Function));
+        // The question it hands on asks with the remembered pack names, so it names the pack.
+        const asked = (planDatapackChange as jest.Mock).mock.calls[0][2] as (p: unknown, c: unknown) => unknown;
+        void asked(project, undefined);
+        expect(ask.removeOldDatapack).toHaveBeenCalledWith(project, undefined, context.context.globalState);
         expect(applyDatapackChange).toHaveBeenCalledWith(context, project, NEW_PACK, plan, progress, false);
         // Nothing of Adobe's is touched for a datapack: no sign-in check, no add.
         expect(runGuards).not.toHaveBeenCalled();

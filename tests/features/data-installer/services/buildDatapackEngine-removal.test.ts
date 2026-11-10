@@ -57,7 +57,7 @@ describe('checking a removal', () => {
 
         const verdict = await h.engine().validateRemoval(request(ALL, { websiteCode: 'other', storeCode: 'default' }));
 
-        expect(verdict).toEqual({ valid: false, reason: 'racks@1.0.0 is installed on the website base. Choose that one to remove it.' });
+        expect(verdict).toEqual({ valid: false, reason: 'racks@1.0.0 is installed on the website base. Choose that one to uninstall it.' });
         expect(h.store.sent).toStrictEqual([]);
     });
 });

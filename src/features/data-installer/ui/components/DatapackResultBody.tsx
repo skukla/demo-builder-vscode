@@ -27,7 +27,7 @@ function keptRootItem(step: KeptRootStep): SetupChecklistItem {
         where: `Stores > All Stores > ${step.store}`,
         path: ['Stores', 'All Stores', step.store],
         enter: [`Root Category: ${step.restore ?? 'the one it had before the datapack'}`],
-        then: 'Save Store, then remove the datapack again.',
+        then: 'Save Store, then uninstall the datapack again.',
         // The result's sentence already says why.
         why: '',
         state: 'open',

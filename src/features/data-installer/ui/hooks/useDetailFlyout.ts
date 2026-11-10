@@ -14,8 +14,9 @@
  * @module features/data-installer/ui/hooks/useDetailFlyout
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DatapackGroup } from '../../services/datapackCatalog';
+import { versionHistoryOf } from '../versionHistory';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
@@ -51,6 +52,8 @@ export function useDetailFlyout(a: {
     selectedStore: DatapackStoreName;
     open: (id: DatapackId, store: DatapackStoreName) => void;
     close: () => void;
+    /** The open pack's saves and the one in use, for its Version History (walk F99). */
+    history: ReturnType<typeof versionHistoryOf>;
 } {
     const { load, held, versions, groups } = a;
     const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
@@ -85,7 +88,8 @@ export function useDetailFlyout(a: {
         show({ name: held.name, version: held.version }, heldStore, OPEN_WHY.demo);
     }, [selected, selectedStore, held, versions, groups, show]);
 
-    return { selected, selectedStore, open, close };
+    const history = useMemo(() => versionHistoryOf(groups, selected, selectedStore, held), [groups, selected, selectedStore, held]);
+    return { selected, selectedStore, open, close, history };
 }
 
 /**

@@ -141,14 +141,14 @@ function ordersLine(plan: WipePlan): string {
 
 /**
  * Ask whether to clear the rest, when there is any. The message names the store and says it
- * cannot be undone; Esc and "Keep Them" both keep everything.
+ * cannot be undone; Esc and "Keep It" both keep everything.
  */
 export async function confirmClearOtherData(vscode: typeof import('vscode'), plan: WipePlan | undefined): Promise<boolean> {
     if (!plan || plan.preview.total === 0) return false;
     const { stores, takenOff, rulesTakenOff, left } = plan.preview;
     const store = stores.map((s) => `${s.storeName} (${s.storeCode}, website ${s.websiteCode})`).join(', ');
-    const clearButton: import('vscode').MessageItem = { title: 'Remove Those Too' };
-    const keepButton: import('vscode').MessageItem = { title: 'Keep Them', isCloseAffordance: true };
+    const clearButton: import('vscode').MessageItem = { title: 'Clear Demo Data Too' };
+    const keepButton: import('vscode').MessageItem = { title: 'Keep It', isCloseAffordance: true };
     const holds = kindsLine(plan) ? `also holds ${kindsLine(plan)} Demo Builder didn't install.` : "holds orders or settings Demo Builder didn't place.";
     const shared =
         (takenOff.count > 0 ? ` ${counted(takenOff.count, 'product', 'products')} another website also sells will only be taken off this one.` : '') +
@@ -156,8 +156,8 @@ export async function confirmClearOtherData(vscode: typeof import('vscode'), pla
     const leftLine = left.length > 0 ? ` Some things are left: ${left.map((l) => `${l.count} ${l.kind} (${l.why})`).join('; ')}.` : '';
     const erpLine = plan.preview.erp ? ` ${plan.preview.erp.line}` : '';
     const answer = await vscode.window.showWarningMessage(
-        `This demo's store, ${store}, ${holds}${settingsLine(plan)}${ordersLine(plan)}${erpLine}${shared}${leftLine} ` +
-            "Also remove those, to leave this demo's store empty? This can't be undone.",
+        `In Commerce, ${store} ${holds}${settingsLine(plan)}${ordersLine(plan)}${erpLine}${shared}${leftLine} ` +
+            'Clear demo data too, to leave it empty? This can\'t be undone.',
         { modal: true },
         clearButton,
         keepButton,
@@ -166,7 +166,7 @@ export async function confirmClearOtherData(vscode: typeof import('vscode'), pla
 }
 
 function notCleared(context: HandlerContext, why: string): { cleared: false; sentence: string } {
-    const sentence = `The store was not cleared: ${why}`;
+    const sentence = `Demo data was not cleared: ${why}`;
     context.logger.warn(`${LOG_PREFIX} ${sentence}`);
     return { cleared: false, sentence };
 }
@@ -195,7 +195,7 @@ export async function clearProjectOtherData(
         log.call(context.logger, `${LOG_PREFIX} ${outcome.sentence}`);
         return { cleared: true, sentence: outcome.sentence };
     } catch (error) {
-        const sentence = `The store was not cleared, reset stands: ${error instanceof Error ? error.message : String(error)}`;
+        const sentence = `Demo data was not cleared, but the reset is done: ${error instanceof Error ? error.message : String(error)}`;
         context.logger.warn(`${LOG_PREFIX} ${sentence}`);
         return { cleared: false, sentence };
     }

@@ -52,7 +52,7 @@ describe('resolveWipeScope', () => {
     });
 
     it.each([
-        [[{ websiteCode: 'nope' }], 'The store has no website nope.'],
+        [[{ websiteCode: 'nope' }], 'Commerce has no website nope.'],
         [[{ websiteCode: 'bodea', storeCode: 'justrite_store' }], 'The website bodea has no store justrite_store.'],
         [[], 'Name at least one store to clear.'],
     ])('refuses %j', (choices, message) => {

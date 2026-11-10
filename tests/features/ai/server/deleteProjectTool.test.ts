@@ -48,7 +48,7 @@ describe('delete_project', () => {
 
         // The gate the handler enforces has to be REACHABLE: an agent can only
         // send confirm/confirmName if the declared input shape accepts them.
-        it('declares the name, both confirmation fields, the two cloud choices and the pack', () => {
+        it("declares the name, both confirmation fields, the two cloud choices and the datapack data's", () => {
             const s = fakeServer();
             registerDeleteProjectTool(s, ctxFactory);
             const shape = s.schema().inputSchema as Record<string, z.ZodTypeAny>;
@@ -61,7 +61,9 @@ describe('delete_project', () => {
                 'confirmName',
                 'deleteGithubRepo',
                 'deleteDaLiveSite',
-                'deletePack',
+                'removeData',
+                'changes',
+                'saveAs',
             ]);
             expect(z.object(shape).safeParse({ name: 'alpha' }).success).toBe(true);
             expect(z.object(shape).safeParse({}).success).toBe(false);
@@ -431,8 +433,10 @@ describe('what each input is described as', () => {
                 "Also delete the project's GitHub repository (default: false, or true when the cleanupBehavior setting is deleteAll)",
             deleteDaLiveSite:
                 "Also delete the project's DA.live site and take its pages off the CDN (default: false, or true when the cleanupBehavior setting is deleteAll)",
-            deletePack:
-                "Also delete every version of the project's own pack in the datapack library, after its files (default: false under every cleanupBehavior; refused under localOnly)",
+            removeData:
+                "Also remove the project's datapack data from its Commerce instance, before anything else (default: false under every cleanupBehavior; refused under localOnly)",
+            changes: "With removeData, when the pack is not the user's: keep saves their changes as a new datapack named by saveAs, drop loses them",
+            saveAs: 'With changes:"keep": the new datapack of the user\'s that their changes are saved as',
         });
     });
 });

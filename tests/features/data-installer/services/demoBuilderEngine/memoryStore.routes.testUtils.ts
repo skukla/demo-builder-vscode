@@ -60,6 +60,8 @@ export const matches = (
     actual: unknown
 ): boolean => {
     if (!filter) return true;
+    if (filter.condition === 'notnull') return actual !== undefined && actual !== null && actual !== '';
+    if (filter.condition === 'neq') return String(actual).toLowerCase() !== filter.value.toLowerCase();
     if (filter.condition === 'in')
         return filter.value
             .split(',')

@@ -105,7 +105,7 @@ export async function storeShowingRoot(get: CommerceGet, rootId: string): Promis
     const store = String(found.name ?? found.id);
     return {
         store,
-        reason: `the store ${store} shows it as its root category. In the Admin, Stores > All Stores > ${store}, set Root Category back to the one it had and Save Store, then remove the pack again`,
+        reason: `the store ${store} shows it as its root category. In the Admin, Stores > All Stores > ${store}, set Root Category back to the one it had and Save Store, then uninstall the pack again`,
     };
 }
 

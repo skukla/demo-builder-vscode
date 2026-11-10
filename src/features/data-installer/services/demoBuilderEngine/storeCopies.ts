@@ -89,8 +89,22 @@ export function readProducts(ctx: KindContext, skus: readonly string[]): Promise
     return readBySku<CommerceProduct>(ctx, 'products', skus);
 }
 
+/**
+ * The products of these SKUs: those already read, and a read of the rest (Commerce matches a SKU in
+ * any case). A save's capture passes the website's products it read whole (walk F90); the install
+ * check, the products the install's read-back read moments before (`recordFingerprints`).
+ */
+export async function productsOf(ctx: KindContext, skus: readonly string[], known: readonly CommerceProduct[]): Promise<CommerceProduct[]> {
+    const have = new Map(known.map((p) => [p.sku.toLowerCase(), p]));
+    const found = skus.map((sku) => have.get(sku.toLowerCase())).filter((p): p is CommerceProduct => p !== undefined);
+    const missing = skus.filter((sku) => !have.has(sku.toLowerCase()));
+    return missing.length > 0 ? [...found, ...(await readProducts(ctx, missing))] : found;
+}
+
 type Copies = Map<string, unknown>;
-type Reader = (ctx: KindContext, lk: ProductLookups, objects: readonly CreatedObject[], inventory: () => Promise<Inventory>) => Promise<Copies>;
+/** Told of the products a read-back read, as the store holds them, so a later check need not read them again. */
+export type ProductsSeen = (products: readonly CommerceProduct[]) => void;
+type Reader = (ctx: KindContext, lk: ProductLookups, objects: readonly CreatedObject[], inventory: () => Promise<Inventory>, seen: ProductsSeen) => Promise<Copies>;
 
 /** The attribute by code, or undefined when the store no longer has it. */
 async function attributeOrNone(lk: ProductLookups, code: string) {
@@ -112,8 +126,9 @@ export function knowingSkus(lk: ProductLookups, products: readonly CommerceProdu
 }
 
 /** Products by SKU, a page of SKUs at a time; a gift card is one too (step 11). */
-const productReader: Reader = async (ctx, lk, objects) => {
+const productReader: Reader = async (ctx, lk, objects, _inventory, seen) => {
     const products = await readProducts(ctx, objects.map((o) => o.id));
+    seen(products);
     const bySku = new Map(products.map((p) => [p.sku, p]));
     const known = knowingSkus(lk, products);
     return eachCopy(objects, async (o) => {
@@ -206,13 +221,14 @@ export async function readCopies(
     kind: string,
     objects: readonly CreatedObject[],
     inventory: () => Promise<Inventory> = onceInventory(ctx),
+    seen: ProductsSeen = () => undefined,
 ): Promise<Copies> {
     const reader = READERS[kind];
     if (!reader || objects.length === 0) return new Map();
     // How long each kind takes to read back, in Debug Logs: the read-back and removal's check for
     // edits each took two to three minutes for Luma, and which kind spent it was not known.
     const started = Date.now();
-    const copies = await reader(ctx, lk, objects, inventory);
+    const copies = await reader(ctx, lk, objects, inventory, seen);
     ctx.log(`read back ${objects.length} ${kind} in ${((Date.now() - started) / 1000).toFixed(1)}s`);
     return copies;
 }

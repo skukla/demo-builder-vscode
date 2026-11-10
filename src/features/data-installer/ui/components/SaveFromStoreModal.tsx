@@ -31,14 +31,19 @@ export function SaveFromStoreModal({ onClose, onSave, pack, saveAsName }: SaveFr
             startsAtPicks
             pack={pack}
             saveAsName={saveAsName}
+            // Save into the SC's own pack may branch off instead.
+            canSaveAsNew={pack !== undefined && saveAsName === undefined}
             onClose={onClose}
             onSave={onSave}
         />
     );
 }
 
-/** Save names the pack; Save As from a pack says so; with no pack it is Create, the header's own words. */
+/**
+ * The button's own words (owner, 2026-11-09, F83): Save Changes into the SC's own pack, Save As New
+ * Datapack from another's, Create Datapack from nothing.
+ */
 function titleOf(pack: PackBeingSaved | undefined, saveAsName: string | undefined): string {
-    if (saveAsName === undefined) return `Save ${pack?.displayName ?? 'Datapack'}`;
-    return pack ? 'Save As New Datapack' : 'Create Datapack';
+    if (!pack) return 'Create Datapack';
+    return saveAsName === undefined ? 'Save Changes' : 'Save As New Datapack';
 }

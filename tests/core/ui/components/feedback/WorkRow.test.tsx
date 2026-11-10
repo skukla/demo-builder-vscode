@@ -53,3 +53,32 @@ describe('a list of work rows', () => {
         expect(ruleFor(".work-row[data-state='done'] .checkbox-row-label")).toMatch(/color:\s*var\(--spectrum-global-color-gray-600\)/);
     });
 });
+
+// A dense row is the import's data types under Install (owner, 2026-11-10, walks F132, F133, F135):
+// the name alone, and the working row's words on a second line under it.
+describe('a dense row', () => {
+    it('puts its detail on a second line under the name, never beside it', () => {
+        const { container } = render(<WorkRow status="checking" label="Products" detail="Installing 1,200 of 2,046" dense />);
+
+        const text = container.querySelector('.work-row-text') as HTMLElement;
+        expect(Array.from(text.children).map((child) => [child.className, child.textContent])).toEqual([
+            ['checkbox-row-label', 'Products'],
+            ['work-row-doing', 'Installing 1,200 of 2,046'],
+        ]);
+    });
+
+    it('is the name alone without a detail', () => {
+        const { container } = render(<WorkRow status="success" label="Categories" dense />);
+
+        expect(container.querySelector('.work-row-text')?.children).toHaveLength(1);
+    });
+
+    it('never wraps or cuts a line short, and holds room for the second line in every column', () => {
+        expect(ruleFor('.work-row--dense .work-row-text')).toMatch(/white-space:\s*nowrap/);
+        expect(ruleFor('.work-row--dense .work-row-text')).not.toMatch(/overflow|ellipsis/);
+        expect(ruleFor('.work-row-doing')).toMatch(/line-height:\s*16px/);
+        expect(ruleFor('.work-row-columns--dense > .work-row-column')).toMatch(/padding-bottom:\s*16px/);
+        expect(ruleFor('.work-row-columns--dense > .work-row-column--working')).toMatch(/padding-bottom:\s*0/);
+        expect(ruleFor('.work-row-columns--dense')).toMatch(/grid-auto-columns:\s*minmax\(max-content, 1fr\)/);
+    });
+});

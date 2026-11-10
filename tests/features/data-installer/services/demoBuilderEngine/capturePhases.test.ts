@@ -19,7 +19,7 @@ describe('captureLines', () => {
 
         expect(line(0)).toBe('0 of 5 data types: Products');
         expect(line(1)).toBe('1 of 5 data types: Categories');
-        expect(line(4)).toBe('4 of 5 data types: Source Items');
+        expect(line(4)).toBe('4 of 5 data types: Stock Quantities');
     });
 
     it('counts a kind read under another by the phase that reads it', () => {

@@ -28,27 +28,27 @@ describe('in the progress window', () => {
     beforeEach(() => mockedInWindow.mockReturnValue(true));
 
     it('asks the name, starting empty as Create Datapack\'s does, with both answers in the removal words', async () => {
-        mockedAsk.mockResolvedValueOnce({ action: 'Save As New and Remove', values: { name: '  My Bodea ' } });
+        mockedAsk.mockResolvedValueOnce({ action: 'Save As New and Uninstall', values: { name: '  My Bodea ' } });
 
         await expect(askSaveAsNameWith(vscode)(asked)).resolves.toStrictEqual({ saveAs: 'My Bodea' });
         expect(mockedAsk).toHaveBeenCalledWith({
             message: asked.sentence,
             fields: [{ id: 'name', label: 'Save Changes As', value: '' }],
-            actions: ['Save As New and Remove', 'Remove Without Saving'],
+            actions: ['Save As New and Uninstall', 'Uninstall Without Saving'],
         });
     });
 
     it('asks again when the name is empty, saying it is required', async () => {
         mockedAsk
-            .mockResolvedValueOnce({ action: 'Save As New and Remove', values: { name: ' ' } })
-            .mockResolvedValueOnce({ action: 'Save As New and Remove', values: { name: 'My Bodea' } });
+            .mockResolvedValueOnce({ action: 'Save As New and Uninstall', values: { name: ' ' } })
+            .mockResolvedValueOnce({ action: 'Save As New and Uninstall', values: { name: 'My Bodea' } });
 
         await expect(askSaveAsNameWith(vscode)(asked)).resolves.toStrictEqual({ saveAs: 'My Bodea' });
         expect(mockedAsk.mock.calls[1][0].fields).toStrictEqual([{ id: 'name', label: 'Save Changes As', value: ' ', description: 'Datapack name is required' }]);
     });
 
-    it('answers drop for Remove Without Saving, and nothing when closed', async () => {
-        mockedAsk.mockResolvedValueOnce({ action: 'Remove Without Saving', values: {} }).mockResolvedValueOnce({ action: undefined, values: {} });
+    it('answers drop for Uninstall Without Saving, and nothing when closed', async () => {
+        mockedAsk.mockResolvedValueOnce({ action: 'Uninstall Without Saving', values: {} }).mockResolvedValueOnce({ action: undefined, values: {} });
 
         await expect(askSaveAsNameWith(vscode)(asked)).resolves.toBe('drop');
         await expect(askSaveAsNameWith(vscode)(asked)).resolves.toBeUndefined();
@@ -59,19 +59,19 @@ describe("in VS Code's dialogs, with no window", () => {
     beforeEach(() => mockedInWindow.mockReturnValue(false));
 
     it('asks which answer, then the name, which the box will not take empty', async () => {
-        showWarningMessage.mockResolvedValueOnce('Save As New and Remove');
+        showWarningMessage.mockResolvedValueOnce('Save As New and Uninstall');
         showInputBox.mockResolvedValueOnce('My Bodea');
 
         await expect(askSaveAsNameWith(vscode)(asked)).resolves.toStrictEqual({ saveAs: 'My Bodea' });
-        expect(showWarningMessage).toHaveBeenCalledWith(asked.sentence, { modal: true }, 'Save As New and Remove', 'Remove Without Saving');
+        expect(showWarningMessage).toHaveBeenCalledWith(asked.sentence, { modal: true }, 'Save As New and Uninstall', 'Uninstall Without Saving');
         const { validateInput } = showInputBox.mock.calls[0][0];
         expect(validateInput('  ')).toBe('Datapack name is required');
         expect(validateInput('My Bodea')).toBeUndefined();
         expect(mockedAsk).not.toHaveBeenCalled();
     });
 
-    it('answers drop for Remove Without Saving without asking a name, and nothing when either is closed', async () => {
-        showWarningMessage.mockResolvedValueOnce('Remove Without Saving').mockResolvedValueOnce(undefined).mockResolvedValueOnce('Save As New and Remove');
+    it('answers drop for Uninstall Without Saving without asking a name, and nothing when either is closed', async () => {
+        showWarningMessage.mockResolvedValueOnce('Uninstall Without Saving').mockResolvedValueOnce(undefined).mockResolvedValueOnce('Save As New and Uninstall');
         showInputBox.mockResolvedValueOnce(undefined);
 
         await expect(askSaveAsNameWith(vscode)(asked)).resolves.toBe('drop');

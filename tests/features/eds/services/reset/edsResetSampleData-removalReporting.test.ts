@@ -62,8 +62,8 @@ const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSample
 const mockedDeps = buildSampleDataDeps as jest.MockedFunction<typeof buildSampleDataDeps>;
 const meshDeps = createMeshDepsFake();
 const RESET = 'Reset Project';
-const REMOVE = { title: 'Remove Datapack' };
-const KEEP = { title: 'Keep Data', isCloseAffordance: true };
+const REMOVE = { title: 'Uninstall Datapack' };
+const KEEP = { title: 'Keep Datapack', isCloseAffordance: true };
 
 function createProject(): Project {
     return createMockProject({
@@ -129,8 +129,8 @@ describe('the datapack prompt', () => {
 
         expect(vscode.window.showWarningMessage).toHaveBeenNthCalledWith(
             2,
-            expect.stringContaining('(bodea@main)'),
-            { modal: true },
+            expect.stringMatching(/^Uninstall .+ Too\?$/u),
+            { modal: true, detail: expect.stringContaining('Deletes what it installed in Commerce.') },
             REMOVE,
             KEEP,
         );
@@ -143,7 +143,7 @@ describe('the removal narration', () => {
 
         await run(context);
 
-        expect(report).toHaveBeenCalledWith({ message: 'Removing the sample data' });
+        expect(report).toHaveBeenCalledWith({ message: 'Uninstalling the datapack' });
         expect(mockedDeps).toHaveBeenCalledWith(
             context,
             expect.objectContaining({ name: 'test-project' }),
@@ -155,10 +155,10 @@ describe('the removal narration', () => {
         // A notification shows the step alone: the count of types is the line under
         // it, never the step's position (progress vocabulary slice 5, 2026-10-16).
         relay({ done: 1, total: 3, processing: ['Products', 'Categories'] });
-        expect(report).toHaveBeenLastCalledWith({ message: 'Removing the sample data' });
+        expect(report).toHaveBeenLastCalledWith({ message: 'Uninstalling the datapack' });
 
         relay({ done: 3, total: 3, processing: [] });
-        expect(report).toHaveBeenLastCalledWith({ message: 'Removing the sample data' });
+        expect(report).toHaveBeenLastCalledWith({ message: 'Uninstalling the datapack' });
     });
 });
 
@@ -187,7 +187,7 @@ describe('the removal narration in a screen\'s modal', () => {
             expect.objectContaining({
                 id: 'reset-modal',
                 state: 'running',
-                stage: 'Removing the sample data',
+                stage: 'Uninstalling the datapack',
                 step: '1 of 3 data types: Products, Categories',
             }),
         );

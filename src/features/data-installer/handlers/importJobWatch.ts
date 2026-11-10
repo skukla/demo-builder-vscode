@@ -18,7 +18,7 @@ import { announceDatapacksChanged } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { watchImportJob } from '../services/importJobRunner';
 import type { ImportRequest } from '../services/importRequest';
-import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord, type ValidationResult } from '../types';
+import { type DataTypeStatus, IMPORT_PROGRESS_MESSAGE, type ImportJobRecord, type ValidationResult } from '../types';
 import { progressLabel, progressStep, summarizeProgress } from '../ui/importProgress';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
@@ -78,14 +78,17 @@ async function watchAndRecord(
     record: ImportJobRecord,
     engine: DatapackEngine,
     resetOf: string | undefined,
+    replacement?: ImportRequest,
 ): Promise<void> {
     // Each poll is also written to the record, so an agent reading the status sees it while it
     // runs (owner, 2026-11-05). Writes go in order, and the outcome waits for the last of them.
     let progressWritten: Promise<unknown> = Promise.resolve();
-    const writeProgress = (perType: ImportJobRecord['perType'], detail: string | undefined, phase: string | undefined): void => {
-        const live = { ...record, perType, ...(detail ? { detail } : {}), ...(phase ? { phase } : {}) };
+    const writeProgress = (perType: ImportJobRecord['perType'], detail: string | undefined, phase: string | undefined, replacing: DataTypeStatus | undefined): void => {
+        const live = { ...record, perType, ...(detail ? { detail } : {}), ...(phase ? { phase } : {}), ...(replacing ? { replacing } : {}) };
         progressWritten = progressWritten.then(() => transient.set(JOB_KEY, live)).catch(() => undefined);
     };
+    // Walk F97: the project names the new pack once the one it replaces is gone, never before.
+    const named = namedOnceReplaced(context, replacement);
     try {
         // The engine that started the job is the one asked how it is going: only it knows.
         const result = await watchImportJob({
@@ -97,14 +100,16 @@ async function watchAndRecord(
             // Each poll goes straight to the modal. Without this the webview
             // learns nothing until the job ends, which on a fourteen-type pack
             // is minutes of an unexplained spinner.
-            onProgress: (perType, detail, phase) => {
+            onProgress: (perType, detail, phase, replacing) => {
                 void context.sendMessage(IMPORT_PROGRESS_MESSAGE, {
                     activationId: record.activationId,
                     operation: record.operation,
                     perType,
                     ...(detail ? { detail } : {}),
                     ...(phase ? { phase } : {}),
+                    ...(replacing ? { replacing } : {}),
                 });
+                void named(replacing);
                 // The SAME progress on the shared channel, so closing the modal
                 // can hand the job to a notification that keeps narrating
                 // (PL-59 R8). The modal's own view is richer — per type, with
@@ -114,10 +119,11 @@ async function watchAndRecord(
                     state: 'running',
                     ...datapackStage(record, perType, detail),
                 });
-                writeProgress(perType, detail, phase);
+                writeProgress(perType, detail, phase, replacing);
             },
         });
         await progressWritten;
+        await named(result.replacing);
         // What a repeat install kept goes with the success, for a notification to say too.
         const kept = result.note ? { note: result.note } : {};
         await pushOperationProgress(
@@ -144,6 +150,7 @@ async function watchAndRecord(
             ...(result.scLines ? { scLines: result.scLines } : {}),
             ...(result.searchDelay ? { searchDelay: result.searchDelay } : {}),
             ...(result.rowNotes ? { rowNotes: result.rowNotes } : {}),
+            ...(result.replacing ? { replacing: result.replacing } : {}),
             ...(result.processingTimeMs !== undefined
                 ? { processingTimeMs: result.processingTimeMs }
                 : {}),
@@ -204,6 +211,12 @@ export async function runAndWatch(
         rejected: string;
         /** Wording when the call itself fails. */
         failed: string;
+        /** An import replacing the demo's pack: that pack, as the SC knows it (walk F97). */
+        replaces?: string;
+        /** Where the SC's changes were saved before it began (walk F105). */
+        savedAs?: string;
+        /** The pack replaced is another version of the same pack: that version, as the SC reads it. */
+        replacesVersion?: string;
     },
 ): Promise<HandlerResponse> {
     try {
@@ -223,15 +236,19 @@ export async function runAndWatch(
             startedAt: new Date().toISOString(),
             outcome: 'watching',
             perType: {},
+            ...(spec.replaces ? { replaces: spec.replaces, replacing: 'pending' as const } : {}),
+            ...(spec.savedAs ? { savedAs: spec.savedAs } : {}),
+            ...(spec.replacesVersion ? { replacesVersion: spec.replacesVersion } : {}),
         };
         const transient = new TransientStateManager(context.context);
         await transient.set(JOB_KEY, record);
 
         // An import is recorded at once; a reset is cleared only when it finishes (see below).
         const resetOf = spec.operation === 'reset' ? await projectPathNow(context) : undefined;
-        if (spec.operation !== 'reset') await recordDatapackOnProject(context, request);
+        // An import replacing the demo's pack is recorded once that pack is gone (`namedOnceReplaced`).
+        if (spec.operation !== 'reset' && !request.replaces) await recordDatapackOnProject(context, request);
 
-        void watchAndRecord(context, transient, record, engine, resetOf);
+        void watchAndRecord(context, transient, record, engine, resetOf, request.replaces ? request : undefined);
 
         return { success: true, data: { activationId: started.activationId } };
     } catch (error) {
@@ -284,6 +301,21 @@ async function recordDatapackOnProject(context: HandlerContext, request: ImportR
     } catch (error) {
         context.debugLogger.debug(`[Data Installer] could not record the datapack on the project: ${errorText(error)}`);
     }
+}
+
+/**
+ * For an import replacing the demo's pack (walk F97): record the new pack on the project the first
+ * time the removal of the old one is seen done. A removal that fails leaves the project naming the
+ * pack still in the store; one that is done leaves the new pack's data on the way in, which is what
+ * a project reset must then offer to remove.
+ */
+function namedOnceReplaced(context: HandlerContext, replacement: ImportRequest | undefined): (replacing: DataTypeStatus | undefined) => Promise<void> {
+    let recorded: Promise<void> | undefined;
+    return (replacing) => {
+        if (!replacement || replacing !== 'success') return recorded ?? Promise.resolve();
+        recorded ??= recordDatapackOnProject(context, replacement);
+        return recorded;
+    };
 }
 
 /**

@@ -15,6 +15,7 @@
 import * as vscode from 'vscode';
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import type { ProgressTracker } from './shared';
+import type { NameMemory } from '@/features/data-installer/services/packNames';
 import {
     beginSampleDataRemovalCheck,
     askSaveAsNameWith,
@@ -34,6 +35,8 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
 export type AskRemoveOldDatapack = (
     project: Project,
     canRemove: Promise<boolean> | undefined,
+    /** Where the library's pack names are remembered, so the question names the pack. */
+    memory?: NameMemory,
 ) => Promise<boolean>;
 
 /** What the SC decided about the datapack, asked before anything runs. */

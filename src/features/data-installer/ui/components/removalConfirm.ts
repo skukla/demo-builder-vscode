@@ -6,7 +6,7 @@
  * @module features/data-installer/ui/components/removalConfirm
  */
 
-import type { ChangesAnswer, DatapackRemovalChanges } from '../../removalChanges';
+import type { ChangedKind, ChangesAnswer, DatapackRemovalChanges } from '../../removalChanges';
 import { STORE_CONFIG_KIND } from '../../services/datapackCatalog';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 
@@ -18,7 +18,7 @@ export type ConfirmContent =
      * The SC's changes: saved into the demo's pack when it is theirs (`packName`), else as a new
      * pack under a name they give (`suggestedName` is where the name starts).
      */
-    | { kind: 'changes'; sentence: string; packName?: string }
+    | { kind: 'changes'; sentence: string; packName?: string; kinds?: ChangedKind[] }
     /** The setting answers: the one line, and no boxes. */
     | { kind: 'will-save'; packName: string }
     /** The read failed, so nothing is known; never the same as nothing changed. */
@@ -39,7 +39,7 @@ export function recordedRemovalLines(displayName: string, recordedKinds: readonl
     const sentences = [
         kinds.length > 0 ? `Permanently deletes what ${displayName} installed: ${typesInWords(kinds)}.` : undefined,
         kinds.length < recordedKinds.length ? `Puts back the store settings ${kinds.length > 0 ? 'it' : displayName} changed.` : undefined,
-        recordedKinds.length === 0 ? `${displayName} has nothing left in the store to delete.` : undefined,
+        recordedKinds.length === 0 ? `${displayName} has nothing left in Commerce to delete.` : undefined,
         selected.length > 0 && recordedKinds.some((kind) => !selected.includes(kind)) ? 'Selected data types apply to Import only.' : undefined,
     ];
     return sentences.filter((line): line is string => line !== undefined);
@@ -74,6 +74,8 @@ export function confirmContent(answer: DatapackRemovalChanges | null, failure: D
     return {
         kind: 'changes',
         sentence: answer.sentence,
+        // Each data type and what changed in it, for the confirm's list (walk F110).
+        ...(answer.kinds.length > 0 ? { kinds: answer.kinds } : {}),
         ...(answer.packName ? { packName: answer.packName } : {}),
     };
 }
@@ -100,9 +102,10 @@ export function removalAnswer(content: ConfirmContent, choice: RemovalChoice, sa
     return { changes: 'keep', saveAs: { displayName: saveAsNameOf(content, choice) } };
 }
 
-/** The confirm's main button: it names what pressing it does. */
+/**
+ * The confirm's main button when there are no changes to keep: it names what pressing it does. With
+ * changes the buttons are the save-first pair (`buildActions`, `uninstallWords.ts`).
+ */
 export function removeLabel(content: ConfirmContent): string {
-    if (content.kind === 'read-failed') return 'Remove Anyway';
-    if (content.kind === 'changes') return content.packName ? 'Save and Remove' : 'Save As New and Remove';
-    return 'Remove';
+    return content.kind === 'read-failed' ? 'Uninstall Anyway' : 'Uninstall';
 }

@@ -4,6 +4,10 @@
  * `list-datapack-export-items` (less what the pack being saved holds); selections kept across kinds
  * and counted on each row; Save hands them on.
  *
+ * A save from a pack has no picks screen (walk F85): Save Changes is one sentence and Save As New
+ * Datapack the name, each with Add Unused Items for what the demo does not use yet. The picks screen is
+ * Create Datapack's, from nothing.
+ *
  * The list answers are `StoreItemPage`s, typed to the handler's own interface.
  */
 
@@ -32,6 +36,7 @@ const PRODUCTS: StoreItemPage = {
 };
 const RULES: StoreItemPage = { items: [{ id: '7', displayName: 'Spring Sale', key: 'Spring Sale' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
 const NONE: StoreItemPage = { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 };
+const UNUSED_GROUPS: StoreItemPage = { items: [{ id: '31', displayName: 'Live Demo', key: 'Live Demo' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
 const PACK = { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', source: 'library' as const };
 
 function answer(pages: Record<string, StoreItemPage>) {
@@ -56,10 +61,9 @@ beforeEach(() => mockRequest.mockReset());
 describe('the screen', () => {
     it('has its own title, and one row per kind in order', async () => {
         answer({ products: PRODUCTS });
-        await open({ pack: PACK });
+        await open();
 
-        // Save names the pack it writes into (2026-11-03).
-        expect(screen.getByRole('heading', { name: 'Save Bodea' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
         const names = screen.getAllByRole('button').filter((b) => b.classList.contains('datapack-picks-kind')).map((b) => b.firstChild?.textContent);
         expect(names).toEqual(PICKABLE_KINDS.map(dataTypeLabel));
         expect(screen.queryByRole('button', { name: /Commerce Datapack/ })).not.toBeInTheDocument();
@@ -94,11 +98,11 @@ describe('the screen', () => {
         });
     });
 
-    it('has nothing to go back to', async () => {
+    it('has nothing to go back to, so no Back', async () => {
         answer({ products: PRODUCTS });
         await open();
 
-        expect(button('Back')).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
     });
 
     it('offers Cancel, not Close, while nothing has happened', async () => {
@@ -108,16 +112,24 @@ describe('the screen', () => {
         expect(button('Cancel')).toBeInTheDocument();
     });
 
-    it('says what saving a held pack does, and not otherwise', async () => {
+    // Owner, 2026-11-09 (walk F85): from a pack there is nothing to tick.
+    it('says a save into the pack makes a new version of it, with Add Unused Items, Save As New and Save, and nothing to tick', async () => {
         answer({ products: PRODUCTS });
         await open({ pack: PACK });
-        expect(screen.getByText(/Includes what Bodea put in Commerce/)).toBeInTheDocument();
+
+        expect(screen.getByRole('heading', { name: 'Save Changes' })).toBeInTheDocument();
+        expect(screen.getByText('Saves everything this demo uses as a new version of Bodea.')).toBeInTheDocument();
+        expect(button('Add Unused Items')).toBeInTheDocument();
+        expect(button('Save As New')).toBeInTheDocument();
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+        expect(listCalls()).toStrictEqual([]);
     });
 
-    it('has no opening paragraph for a store with no pack', async () => {
+    it('says what to include from a store with no pack, and offers no Save As New', async () => {
         answer({ products: PRODUCTS });
         await open();
-        expect(screen.queryByText(/a new version/)).not.toBeInTheDocument();
+        expect(screen.getByText("Select what to include from this demo's Commerce instance.")).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save As New' })).not.toBeInTheDocument();
     });
 });
 
@@ -128,14 +140,6 @@ describe('selecting the items', () => {
 
         expect(listCalls()).toEqual([{ dataType: 'products' }]);
         expect(screen.getByRole('checkbox', { name: /VR Rack/ })).toBeInTheDocument();
-    });
-
-    it('asks for the kind less what the pack being saved holds, and says how many it holds', async () => {
-        answer({ products: PRODUCTS });
-        await open({ pack: PACK });
-
-        expect(listCalls()).toEqual([{ dataType: 'products', datapackName: 'bodea', version: 'main', source: 'library' }]);
-        expect(screen.getByText('2 more included from Bodea.')).toBeInTheDocument();
     });
 
     it('counts on the row as items are selected, and does not read a kind twice', async () => {
@@ -160,7 +164,7 @@ describe('selecting the items', () => {
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
         await press(row('Cart Rules'));
         await press(screen.getByRole('checkbox', { name: /Spring Sale/ }));
-        await press(button('Save'));
+        await press(button('Create'));
 
         expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'], cart_rules: ['7'] });
     });
@@ -172,7 +176,7 @@ describe('selecting the items', () => {
         expect(screen.getByRole('checkbox', { name: 'Select All' })).toBePartiallyChecked();
 
         await press(screen.getByRole('checkbox', { name: 'Select All' }));
-        await press(button('Save'));
+        await press(button('Create'));
 
         expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'] });
     });
@@ -200,7 +204,7 @@ describe('selecting the items', () => {
 
         expect(screen.getByText('Reading cart rules')).toBeInTheDocument();
         expect(screen.getByText("From this demo's Commerce instance")).toBeInTheDocument();
-        expect(button('Save')).toHaveAttribute('aria-disabled', 'false');
+        expect(button('Create')).toHaveAttribute('aria-disabled', 'false');
 
         await press(row('Products'));
 
@@ -292,18 +296,18 @@ describe('Save', () => {
         answer({ products: PRODUCTS });
         await open();
 
-        expect(button('Save')).toHaveAttribute('aria-disabled', 'true');
+        expect(button('Create')).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('is off again when the last selection is taken away', async () => {
         answer({ products: PRODUCTS });
         await open();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
-        expect(button('Save')).toHaveAttribute('aria-disabled', 'false');
+        expect(button('Create')).toHaveAttribute('aria-disabled', 'false');
 
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
 
-        expect(button('Save')).toHaveAttribute('aria-disabled', 'true');
+        expect(button('Create')).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('can save a pack Demo Builder installed with nothing selected', async () => {
@@ -317,27 +321,76 @@ describe('Save', () => {
 });
 
 describe('Save As', () => {
-    it('asks the new pack\'s name first, starting from the one given, then the picks, and hands both on', async () => {
-        answer({ products: PRODUCTS });
+    it("asks the new pack's name, starting from the one given, and saves from there", async () => {
+        answer({});
         const onSave = await open({ pack: PACK, saveAsName: 'Bodea Copy' });
 
         expect(screen.getByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
+        expect(screen.getByText('Saves everything this demo uses as a new datapack of yours.')).toBeInTheDocument();
         const name = screen.getByRole('textbox', { name: /Datapack Name/ });
         expect(name).toHaveValue('Bodea Copy');
         fireEvent.change(name, { target: { value: 'My Bodea' } });
-        await press(button('Continue'));
-        await settle();
-        await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
-        await press(button('Create'));
+        await press(button('Save'));
 
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'] }, 'My Bodea');
+        expect(onSave).toHaveBeenCalledWith({}, 'My Bodea');
     });
 
-    it('will not go on without a name', async () => {
+    it('branches off with Save As New: the name, keeping what Add Unused Items added', async () => {
+        answer({ customer_groups: UNUSED_GROUPS });
+        const onSave = await open({ pack: PACK });
+        await press(button('Add Unused Items'));
+        await press(screen.getByRole('checkbox', { name: /Live Demo/ }));
+        await press(button('Add'));
+
+        await press(button('Save As New'));
+        expect(screen.getByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
+        expect(screen.getByText('Saves everything this demo uses as a new datapack of yours.')).toBeInTheDocument();
+        fireEvent.change(screen.getByRole('textbox', { name: /Datapack Name/ }), { target: { value: 'Bodea Retail' } });
+        expect(screen.queryByRole('button', { name: 'Save As New' })).not.toBeInTheDocument();
+        await press(button('Save'));
+
+        expect(onSave).toHaveBeenCalledWith({ customer_groups: ['31'] }, 'Bodea Retail');
+    });
+
+    it('will not go on without a name, from nothing', async () => {
         answer({ products: PRODUCTS });
         await open({ saveAsName: '' });
 
         expect(button('Continue')).toHaveAttribute('aria-disabled', 'true');
+    });
+});
+
+describe('Add Unused Items (walk F85)', () => {
+    it("opens over the save, adds what is ticked, and says how many on its button", async () => {
+        answer({ customer_groups: UNUSED_GROUPS });
+        const onSave = await open({ pack: PACK });
+
+        await press(button('Add Unused Items'));
+        expect(screen.getByRole('heading', { name: 'Add Unused Items' })).toBeInTheDocument();
+        expect(screen.getByText('Nothing in this demo uses these yet. Select any to include.')).toBeInTheDocument();
+        await press(screen.getByRole('checkbox', { name: /Live Demo/ }));
+        await press(button('Add'));
+
+        expect(screen.getByRole('heading', { name: 'Save Changes' })).toBeInTheDocument();
+        await press(button('Add Unused Items (1)'));
+        expect(screen.getByRole('checkbox', { name: /Live Demo/ })).toBeChecked();
+        await press(button('Add'));
+        await press(button('Save'));
+        expect(onSave).toHaveBeenCalledWith({ customer_groups: ['31'] });
+    });
+
+    it('puts the selections back as they were on Cancel, and returns to the save', async () => {
+        answer({ customer_groups: UNUSED_GROUPS });
+        const onSave = await open({ pack: PACK });
+
+        await press(button('Add Unused Items'));
+        await press(screen.getByRole('checkbox', { name: /Live Demo/ }));
+        await press(button('Cancel'));
+
+        expect(screen.getByRole('heading', { name: 'Save Changes' })).toBeInTheDocument();
+        expect(button('Add Unused Items')).toBeInTheDocument();
+        await press(button('Save'));
+        expect(onSave).toHaveBeenCalledWith({});
     });
 });
 
@@ -346,7 +399,7 @@ describe('Select All Data (2026-11-03)', () => {
 
     it('reads the kinds not opened yet, ticks every item of every kind, and hands them all to Save', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
-        const onSave = await open({ pack: PACK });
+        const onSave = await open();
         expect(everything()).not.toBeChecked();
 
         await press(everything());
@@ -357,13 +410,13 @@ describe('Select All Data (2026-11-03)', () => {
         expect(everything()).toBeChecked();
         expect(row('Products')).toHaveTextContent('2 selected');
         expect(row('Cart Rules')).toHaveTextContent('1 selected');
-        await press(button('Save'));
+        await press(button('Create'));
         expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'], cart_rules: ['7'] });
     });
 
     it('shows the dash when only some are ticked, and clears every kind when unticked', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
-        await open({ pack: PACK });
+        await open();
 
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
         expect(everything()).toHaveAttribute('aria-checked', 'mixed');
@@ -384,7 +437,7 @@ describe('Select All Data (2026-11-03)', () => {
             if (payload?.dataType === 'customers') return new Promise((resolve) => (answerCustomers = resolve));
             return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : NONE });
         });
-        await open({ pack: PACK });
+        await open();
 
         await press(screen.getByRole('checkbox', { name: /^Select All Data/ }));
 
@@ -402,7 +455,7 @@ describe('Select All Data (2026-11-03)', () => {
             if (payload?.dataType === 'customers') return Promise.resolve({ success: false, error: 'No answer.' });
             return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : NONE });
         });
-        await open({ pack: PACK });
+        await open();
 
         await press(everything());
         await settle();

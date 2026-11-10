@@ -27,7 +27,7 @@ import { GIFT_CARD_KIND, PRODUCT_KIND, PRODUCT_KINDS } from './productKinds';
 import { isNumeric, type ProductLookups, productLookups } from './productLookups';
 import { parseProductRows } from './productsKind';
 import { openStore, type StoreChangesDeps } from './storeAccess';
-import { knowingSkus, readProducts } from './storeCopies';
+import { knowingSkus, productsOf } from './storeCopies';
 import { andList } from '@/core/utils/andList';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import type { CommerceProduct } from '@/types/commerceWire';
@@ -226,12 +226,14 @@ async function primeAttributes(lk: ProductLookups, wanted: readonly PackProduct[
  *   the pack holds is checked
  * @param kept - SKUs (lowercased) a reinstall kept because the SC changed them in the Admin: left out,
  *   since their difference from the pack is the SC's own
+ * @param known - products already read as the store holds them now; only the rest are read
  */
 export async function verifyInstall(
     ctx: KindContext,
     items: Record<string, unknown>,
     record: MadeObjects | undefined,
     kept: ReadonlySet<string> = new Set(),
+    known: readonly CommerceProduct[] = [],
 ): Promise<InstallCheck> {
     const made = record
         ? new Set(
@@ -244,9 +246,10 @@ export async function verifyInstall(
     const wanted = ours.filter((p) => !kept.has(p.sku.toLowerCase()));
     const leftOut = ours.length - wanted.length;
     const began = Date.now();
-    const stored = await readProducts(
+    const stored = await productsOf(
         ctx,
         wanted.map((p) => p.sku),
+        known,
     );
     const read = Date.now();
     const bySku = new Map(stored.map((p) => [p.sku.toLowerCase(), p]));
@@ -279,9 +282,14 @@ export async function verifyInstall(
     ctx.log(`Install check: read ${stored.length} products in ${seconds(read - began)}, compared in ${seconds(Date.now() - read)}.`);
     const clean =
         missing.length + bare.length + configDiffs.length + values.length + prices.length === 0;
+    // Each product once, however many of its values differ: the window's "3 differ".
+    const differing = new Set([
+        ...missing, ...bare, ...[...configDiffs, ...values, ...prices].map((d) => d.sku),
+    ].map((sku) => sku.toLowerCase()));
     return {
         verdict: clean ? 'matches' : 'differs',
         checked: wanted.length,
+        productsDiffer: differing.size,
         ...(leftOut > 0 ? { leftOut } : {}),
         compared,
         missing: finding(missing.sort()),
@@ -344,7 +352,7 @@ export function findingsOf(check: InstallCheck): string {
     const counted = (count: number, one: string, many: string, rest: string) =>
         `${count.toLocaleString('en-US')} ${count === 1 ? one : many} ${rest}`;
     const rows: Array<[count: number, one: string, many: string, rest: string]> = [
-        [check.missing.count, 'product', 'products', 'missing from the store'],
+        [check.missing.count, 'product', 'products', 'missing from Commerce'],
         [check.configurablesWithoutOptions.count, 'configurable product', 'configurable products', 'with no options'],
         [check.configurablesDiffer.count, 'configurable product', 'configurable products', 'with other options or children'],
         [check.valuesDiffer.count, 'attribute value', 'attribute values', 'not as in the datapack'],
@@ -354,32 +362,27 @@ export function findingsOf(check: InstallCheck): string {
 }
 
 /**
- * What the window says on the products' row when the check found a difference (dialog design rules:
- * one short line). What to do is the window's Fix with AI: importing again over these products sends
- * only what the datapack changed, so a value that never landed reads as unchanged (owner, 2026-11-07).
- */
-export function checkRowNote(check: InstallCheck | undefined): string | undefined {
-    if (!check || check.verdict === 'matches') return undefined;
-    // Every finding starts with its count, so the line needs no capital.
-    return `${findingsOf(check)}.`;
-}
-
-/**
  * The check at the end of an install: the store against the rows just installed, for what the record
  * says the pack made, less what a reinstall kept because the SC changed it. A check that cannot run
  * never fails the install; the note says so instead.
+ *
+ * @param productsRead - the products the install's read-back read once its writes were done
+ *   (`InstallOutcome.productsRead`): only the rest are read. Between the two only the settings layer
+ *   runs (`runInstall`, `engine.ts`), which writes store settings, never a product. Read again,
+ *   Luma's 2,048 took 14.8 s of the check (2026-11-09).
  */
 export async function checkAfterInstall(
     ctx: KindContext,
     items: Record<string, unknown>,
     kept: ReadonlyArray<{ kind: string; key: string }>,
+    productsRead: readonly CommerceProduct[] = [],
 ): Promise<{ check?: InstallCheck; line?: string }> {
     if (!holdsProducts(items)) return {};
     const keptSkus = new Set(
         kept.filter((k) => [...PRODUCT_KINDS, PRODUCT_EXPORT_KIND].includes(k.kind)).map((k) => k.key.toLowerCase()),
     );
     try {
-        const check = await verifyInstall(ctx, items, ctx.recorder, keptSkus);
+        const check = await verifyInstall(ctx, items, ctx.recorder, keptSkus, productsRead);
         // Nothing the pack made to compare (an empty product list): nothing worth a line.
         return { check, ...(check.checked > 0 ? { line: checkLine(check) } : {}) };
     } catch (error) {

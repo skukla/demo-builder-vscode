@@ -457,7 +457,7 @@ describe('removeSampleData', () => {
         // still ran:false, but no longer telling anyone what is actually wrong.
         expect(result).toMatchObject({
             ran: false,
-            reason: 'This caller cannot remove sample data.',
+            reason: 'This caller cannot uninstall a datapack.',
         });
         expect(d.startImport).not.toHaveBeenCalled();
         expect(d.watch).not.toHaveBeenCalled();

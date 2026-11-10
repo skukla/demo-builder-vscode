@@ -15,13 +15,15 @@
 
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { writePackToStore } from '../services/datapackTransfer';
-import { heldLines } from '../services/demoBuilderEngine/saveOutcome';
+import { saveNote } from '../services/demoBuilderEngine/saveOutcome';
 import { saveStoreChanges } from '../services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '../services/demoBuilderEngine/storeAccess';
 import { type SaveInto, planSave, recordSave } from '../services/demoPack';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { ProjectStore, SaveOpened } from './storeChangesHandlers';
-import type { OperationOutcome } from '@/core/vscode/withOperationProgress';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import type { OperationOutcome, ReportStage } from '@/core/vscode/withOperationProgress';
+import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { SaveStoreChangesResult } from '@/types/webviewRequests';
@@ -79,7 +81,7 @@ export async function saveToPack(
     context: HandlerContext,
     opened: SaveOpened,
     into: SaveInto,
-    report: (stage: string, step?: string) => void,
+    report: ReportStage,
 ): Promise<HandlerResponse & OperationOutcome> {
     const library = await resolveDataInstallerAccess(context, 'library');
     if (!library.ok) return library.response;
@@ -98,9 +100,11 @@ export async function saveToPack(
         const saveAs = { id: plan.id, displayName: plan.displayName };
         const target = { saveAs, picks, ...(pack ? { pack } : {}), ...(source ? { source } : {}) };
         const result = await saveStoreChanges(opened.deps, target, (file) => writePackToStore(writer, file), report);
+        // Nothing changed (walk F89): nothing was written and the demo keeps its version, so say so.
+        if (result.unchanged) return unchangedAnswer(result);
         // The pack it was made from names the store its rows were actually read from.
         const recorded = planSave(opened.project, pack ? { ...pack, store: result.readFrom } : undefined, { name: plan.id.name, displayName: plan.displayName }, at);
-        await recordOnProject(context, { ...recorded, id: plan.id });
+        await recordOnProject(context, opened.project, { ...recorded, id: plan.id });
         const from = pack ? `the store's copy of ${pack.name}@${pack.version}` : 'what was picked from the store';
         context.logger.info(`${LOG_PREFIX} Saved ${from} as ${result.saved.name}@${result.saved.version} in the datapack library`);
         const data: SaveStoreChangesResult = {
@@ -114,19 +118,45 @@ export async function saveToPack(
             leftOut: result.leftOut,
             ...(result.settingsLayer ? { settingsLayer: result.settingsLayer } : {}),
         };
-        // The window lists what the pack holds, one data type per line with its count, and nothing
-        // the SC did not pick (owner, 2026-11-05). The agent keeps the whole sentence, in `data.message`.
-        return { success: true, details: [...heldLines(result.counts), ...result.details], data };
+        // A clean save ends on the small result, where it went and which pack the demo now uses
+        // (owner, 2026-11-09; no rows, review 2026-11-10). The agent keeps the whole sentence, in
+        // `data.message`.
+        const startedFrom = pack ? { name: pack.name, displayName: result.installedName } : undefined;
+        const note = saveNote({ name: plan.id.name, displayName: plan.displayName }, startedFrom, getProjectDisplayName(opened.project));
+        return { success: true, note, ...(result.details.length > 0 ? { details: result.details } : {}), data };
     } catch (error) {
-        return failure(context, error, 'The store changes could not be saved.');
+        return failure(context, error, 'Your changes could not be saved.');
     }
 }
 
-/** Record on the project that it now uses the new version. */
-async function recordOnProject(context: HandlerContext, save: Parameters<typeof recordSave>[1]): Promise<void> {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) return;
-    recordSave(project, save);
-    await context.stateManager.saveProject(project);
+/**
+ * A save that found nothing to save: "No Changes to Save" is the whole result (review, 2026-11-10),
+ * and the version the demo uses stays. The agent's answer keeps the sentence, in `data.message`.
+ */
+function unchangedAnswer(result: Awaited<ReturnType<typeof saveStoreChanges>>): HandlerResponse & OperationOutcome {
+    return {
+        success: true,
+        title: 'No Changes to Save',
+        data: { datapackName: result.saved.name, version: result.saved.version, unchanged: true, counts: result.counts, message: result.sentence },
+    };
+}
+
+/**
+ * Record on the project the save started from that it now uses the new version, as its install
+ * record already says (walk F95). A save can run in the background while the SC opens another
+ * project; it used to write to whichever project was open when it ended, naming the wrong pack
+ * there. The save's own project, still open, is saved as before; one no longer open is written
+ * without opening it (`saveProjectConfigOnly`), so the project the SC is in stays as it is.
+ */
+async function recordOnProject(context: HandlerContext, startedOn: Project, save: Parameters<typeof recordSave>[1]): Promise<void> {
+    const open = await context.stateManager.getCurrentProject();
+    if (open?.path === startedOn.path) {
+        recordSave(open, save);
+        await context.stateManager.saveProject(open);
+        return;
+    }
+    context.debugLogger.debug(`${LOG_PREFIX} recorded the save on ${startedOn.name}, the project it started from; ${open?.name ?? 'no project'} is open now`);
+    recordSave(startedOn, save);
+    await context.stateManager.saveProjectConfigOnly(startedOn);
 }
 

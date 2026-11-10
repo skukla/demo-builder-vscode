@@ -44,7 +44,7 @@ describe('resolveEngineTarget', () => {
 
         await expect(answer).rejects.toThrow(InstallTargetError);
         await expect(resolveEngineTarget(get, codes)).rejects.toThrow(
-            `The store has no store view ${codes.storeCode} on a website ${codes.websiteCode}.`,
+            `Commerce has no store view ${codes.storeCode} on a website ${codes.websiteCode}.`,
         );
     });
 });

@@ -143,7 +143,7 @@ function clearRefusal(payload: DemoDataRequest | undefined): string | undefined 
             `This removes everything in the stores ${named} that Demo Builder did not install and only they use, as listed: products, ` +
             'categories, customers, cart rules, companies, shared catalogs, customer groups, attribute sets and attributes. It sets ' +
             "those websites' settings to the default's value, cancels or refunds their orders and closes their returns (through the " +
-            'ERP integration where one serves the store, then refreshing its ERP from Commerce). It cannot be undone. Confirm to proceed.'
+            'ERP integration where one serves these stores, then refreshing its ERP from Commerce). It cannot be undone. Confirm to proceed.'
         );
     }
     return undefined;

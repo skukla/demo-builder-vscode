@@ -15,6 +15,7 @@
  * @module features/data-installer/services/buildDatapackEngine
  */
 
+import { type ReadWindowUse, throughReadWindow } from './commerceReadWindow';
 import type { DataInstallerClient } from './dataInstallerClient';
 import type { DatapackEngine } from './datapackEngine';
 import { readPackFromStore } from './datapackTransfer';
@@ -104,7 +105,8 @@ export function buildDatapackEngine(access: DatapackEngineAccess, log: (line: st
         log,
     });
     return demoBuilderEngine({
-        commerce: projectCommerce(access),
+        // The run reuses what a changes check just read: the save first and the uninstall's decision (F128).
+        commerce: projectCommerce(access, { use: 'reuse', log }),
         readPack: (pack, source) => readPackItems(access, pack, source),
         projectPath: access.project.path,
         log,
@@ -139,12 +141,16 @@ const STORE_WIDE = 'all';
  */
 export function projectCommerce(
     access: Pick<DatapackEngineAccess, 'project' | 'authManager' | 'secrets'>,
+    reads?: { use: ReadWindowUse; log?: (line: string) => void },
 ): DemoBuilderEngineDeps['commerce'] {
     const { authManager } = access;
-    return async () =>
-        authManager
-            ? commerceClientForProject(access.project, authManager, access.secrets, undefined, STORE_WIDE)
-            : { refusal: 'Adobe sign-in is required to write to this project\'s store.' };
+    return async () => {
+        if (!authManager) return { refusal: 'Adobe sign-in is required to write to this project\'s store.' };
+        const client = await commerceClientForProject(access.project, authManager, access.secrets, undefined, STORE_WIDE);
+        // The changes check and what follows it share one read of Commerce (`commerceReadWindow`).
+        if ('refusal' in client || !reads) return client;
+        return throughReadWindow(access.project.path, reads.use, client, reads.log);
+    };
 }
 
 /**

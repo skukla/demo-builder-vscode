@@ -126,23 +126,23 @@ describe('"localOnly"', () => {
     });
 });
 
-// The demo's own library pack (step 07): deleted only when the call asks, under any setting
-// but localOnly. deleteAll never ticks it, as the button never deletes it without a tick.
-describe('the demo\'s own pack', () => {
-    it.each(['ask', 'deleteAll'])('under %s, is deleted only when the call asks', (setting) => {
+// Uninstall Datapack (walk F96): only when the call asks, under any setting but localOnly.
+// deleteAll never ticks it: it writes to a store, and the button never removes it without a tick.
+describe("the datapack's data", () => {
+    it.each(['ask', 'deleteAll'])('under %s, is removed only when the call asks', (setting) => {
         behavior(setting);
 
-        expect(resolveCloudCleanup({ deletePack: true }).deletePack).toBe(true);
-        expect(resolveCloudCleanup({}).deletePack).toBeUndefined();
-        expect(resolveCloudCleanup({ deletePack: false }).deletePack).toBeUndefined();
+        expect(resolveCloudCleanup({ removeData: true }).removeData).toBe(true);
+        expect(resolveCloudCleanup({}).removeData).toBeUndefined();
+        expect(resolveCloudCleanup({ removeData: false }).removeData).toBeUndefined();
     });
 
     it('is refused under localOnly, saying why', () => {
         behavior('localOnly');
 
-        const choice = resolveCloudCleanup({ deletePack: true });
+        const choice = resolveCloudCleanup({ removeData: true });
 
-        expect(choice.deletePack).toBeUndefined();
+        expect(choice.removeData).toBeUndefined();
         expect(choice.refusedBySetting).toContain('localOnly');
     });
 });

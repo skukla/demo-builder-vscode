@@ -12,6 +12,7 @@ import { change, press, settle } from '../../../../helpers/reactSettle';
 import { mockOnMessage } from '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
 import { CATALOG, DatapackCatalogView, INVENTORY_COMPLETE, makeSummary, mockPost, mockRequest } from './DatapackCatalogView.testUtils';
+import { versionLabel } from '@/features/data-installer/packVersions';
 import type { DatapackSummary } from '@/features/data-installer/types';
 
 /** The SC's own library pack, in two versions; the demo uses the older. */
@@ -62,30 +63,43 @@ describe("the demo's datapack in the library", () => {
         await renderView();
 
         expect(within(card('acme-1a2b3c')).getByTestId('datapack-card-project-check')).toBeInTheDocument();
-        expect(card('acme-1a2b3c')).toHaveAccessibleName(`Acme Bodea, version ${OLDER.id.version}`);
+        // A save is named by when it was saved, never its id (walk F99).
+        expect(card('acme-1a2b3c')).toHaveAccessibleName(`Acme Bodea, Saved ${versionLabel(OLDER.id.version)}`);
         // CONTROL: a pack the demo does not use wears none.
         expect(within(card('wknd')).queryByTestId('datapack-card-project-check')).not.toBeInTheDocument();
         expect(screen.queryByRole('region', { name: "This Demo's Datapack" })).not.toBeInTheDocument();
     });
 
-    // Owner, 2026-11-07: the dot's words, on hover, in the version list's own word for a change.
-    it('marks a later save on the card: a newer version is in the list', async () => {
+    // Owner, 2026-11-09 (walk F99): a pack of saves is one thing; its later saves are Version History.
+    it('shows the save in use with no version picker and no newer dot, though a later save exists', async () => {
         const items = [{ ...OLDER, createdAt: '2026-11-01T09:00:00Z' }, { ...NEWER, createdAt: '2026-11-03T12:00:00Z' }];
         store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, items);
         await renderView();
 
-        expect(within(card('acme-1a2b3c')).getByRole('button', { name: 'Newer version available' })).toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).getByText(`Saved ${versionLabel(OLDER.id.version)}`)).toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).queryByRole('button', { name: /Version of/u })).not.toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).queryByRole('button', { name: /Newer|Updated/u })).not.toBeInTheDocument();
     });
 });
 
+/** When Demo Builder's engine installed the demo's pack: what a save builds on. */
+const AT = '2026-11-08T03:20:44.746Z';
+const OWN: Held = { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' };
+const TEAM = makeSummary('luma', 'eds-compatible', { displayName: 'Luma', store: 'library', mine: true, team: true });
+/** The open flyout: the header has its own Save Changes (owner, 2026-11-09). */
+const inFlyout = () => within(screen.getByRole('dialog', { name: / details$/ }));
+
+// Owner, 2026-11-09 (the save mockup, F83): Save Changes on the demo's pack, whoever owns it; into
+// it when it is the SC's, else into a new pack of theirs, saying why.
 describe('Save Changes, in the flyout', () => {
     it("leads the flyout of the demo's own pack, and saves into it with no name", async () => {
-        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
+        store(OWN, MINE, false, AT);
         await renderView();
         await press(card('acme-1a2b3c'));
 
-        await press(await screen.findByRole('button', { name: 'Save Changes' }));
-        expect(await screen.findByRole('heading', { name: 'Save Acme Bodea' })).toBeInTheDocument();
+        await press(await inFlyout().findByRole('button', { name: 'Save Changes' }));
+        expect(await screen.findByRole('heading', { name: 'Save Changes' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save As New' })).toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Save' }));
 
         expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
@@ -98,44 +112,56 @@ describe('Save Changes, in the flyout', () => {
         });
     });
 
-    it("is not offered on a pack that is not the SC's", async () => {
-        store({ name: 'bodea', version: 'main' });
+    it("is not offered when Demo Builder did not install the demo's pack: there is nothing to build on", async () => {
+        store(OWN);
         await renderView();
-        await press(card('bodea'));
+        await press(card('acme-1a2b3c'));
 
         // CONTROL: the flyout is open, with Import.
         expect(await screen.findByRole('button', { name: 'Import' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
+        expect(inFlyout().queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
     });
 
-    // Owner, 2026-11-08 (F80): every demo is made from a team pack, so not even its owner saves into it.
-    it('is not offered on a team pack, even to its owner', async () => {
-        const TEAM = makeSummary('luma', 'eds-compatible', { displayName: 'Luma', store: 'library', mine: true, team: true });
-        store({ name: 'luma', version: 'eds-compatible', store: 'library' }, [TEAM, ...CATALOG]);
+    // Owner, 2026-11-09: "Save Changes" on a team pack read as changing it; it is named for what it does.
+    it('is offered on a team pack as Save As New Datapack, and says the new pack is yours', async () => {
+        store({ name: 'luma', version: 'eds-compatible', store: 'library' }, [TEAM, ...CATALOG], false, AT);
         await renderView();
         await press(card('luma'));
 
-        // CONTROL: the flyout is open, with Import.
-        expect(await screen.findByRole('button', { name: 'Import' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
+        expect(inFlyout().queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
+        await press(await inFlyout().findByRole('button', { name: 'Save As New Datapack' }));
+
+        expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
+        expect(screen.getByText('Saves everything this demo uses as a new datapack of yours.')).toBeInTheDocument();
+        expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('');
+    });
+
+    it("is offered on another SC's pack, and saves to a new pack of yours", async () => {
+        store({ name: 'bodea', version: 'main' }, MINE, false, AT);
+        await renderView();
+        await press(card('bodea'));
+
+        await press(await inFlyout().findByRole('button', { name: 'Save As New Datapack' }));
+
+        expect(await screen.findByText('Saves everything this demo uses as a new datapack of yours.')).toBeInTheDocument();
     });
 
     // Owner, 2026-11-06: Copy to the Data Installer is off until our accounts can write to it.
     it('sits beside Import while the Data Installer is on, with no Copy to it', async () => {
-        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, MINE, true);
+        store(OWN, MINE, true, AT);
         await renderView();
         await press(card('acme-1a2b3c'));
 
-        expect(await screen.findByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
+        expect(await inFlyout().findByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
     });
 
     it('reads the catalog again when the save finishes, once, without waiting for Close', async () => {
-        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
+        store(OWN, MINE, false, AT);
         await renderView();
         await press(card('acme-1a2b3c'));
-        await press(await screen.findByRole('button', { name: 'Save Changes' }));
+        await press(await inFlyout().findByRole('button', { name: 'Save Changes' }));
         await press(await screen.findByRole('button', { name: 'Save' }));
         const before = catalogReads();
 
@@ -146,32 +172,41 @@ describe('Save Changes, in the flyout', () => {
     });
 });
 
-// Owner, 2026-11-08 (F79): the save under Create Datapack starts from the demo's own pack, so the
-// screen does too: it says so, and Create needs no pick.
-describe('Create Datapack, on a demo holding a pack Demo Builder installed', () => {
-    async function toPicks(): Promise<void> {
+// Owner, 2026-11-09 (the save mockup): the header is Create Datapack until the demo has a pack, then
+// the same Save Changes as the flyout's.
+describe('the header button', () => {
+    it("says Create Datapack, from nothing, while the demo has no pack Demo Builder installed", async () => {
+        store(OWN);
+        await renderView();
+
         await press(screen.getByRole('button', { name: 'Create Datapack' }));
+
+        expect(await screen.findByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
         await change(screen.getByRole('textbox', { name: /Datapack Name/ }), 'Acme Test');
         await press(screen.getByRole('button', { name: 'Continue' }));
-    }
-
-    it('starts from that pack: says so, and offers Create with nothing selected', async () => {
-        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, MINE, false, '2026-11-08T03:20:44.746Z');
-        await renderView();
-
-        await toPicks();
-
-        expect(await screen.findByText(/Includes what Acme Bodea put in Commerce/)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'false');
+        expect(await screen.findByText("Select what to include from this demo's Commerce instance.")).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
     });
 
-    it('starts from nothing when Demo Builder did not install it', async () => {
-        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
+    it('says Save Changes once it has, and saves into your own pack as the flyout does', async () => {
+        store(OWN, MINE, false, AT);
         await renderView();
 
-        await toPicks();
+        expect(screen.queryByRole('button', { name: 'Create Datapack' })).not.toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Save Changes' }));
 
-        expect(screen.queryByText(/Includes what/)).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
+        expect(await screen.findByText('Saves everything this demo uses as a new version of Acme Bodea.')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'false');
+    });
+
+    it('says Save As New Datapack on a team pack, and saves to a new pack of yours, as the flyout does', async () => {
+        store({ name: 'luma', version: 'eds-compatible', store: 'library' }, [TEAM, ...CATALOG], false, AT);
+        await renderView();
+
+        expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Save As New Datapack' }));
+
+        expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
+        expect(screen.getByText('Saves everything this demo uses as a new datapack of yours.')).toBeInTheDocument();
     });
 });

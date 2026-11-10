@@ -118,15 +118,17 @@ describe('confirmClearOtherData', () => {
     it('names the store, what it holds, what is only taken off, and that it cannot be undone', async () => {
         const { deps, context } = setUp();
         const plan = await beginOtherDataCheck(PROJECT, context, deps);
-        ask.mockResolvedValue({ title: 'Remove Those Too' });
+        ask.mockResolvedValue({ title: 'Clear Demo Data Too' });
 
         expect(await confirmClearOtherData(vscode, plan)).toBe(true);
         const [message, options, clear, keep] = ask.mock.calls[0];
-        expect(message).toMatch(/^This demo's store, JustRite Test Store \(justrite_test_store, website justrite_test_website\), also holds 5 products and 2 customers Demo Builder didn't install\./);
+        expect(message).toMatch(/^In Commerce, JustRite Test Store \(justrite_test_store, website justrite_test_website\) also holds 5 products and 2 customers Demo Builder didn't install\./);
         expect(message).toContain('1 product another website also sells will only be taken off this one.');
         expect(message).toMatch(/This can't be undone\.$/);
         expect(options).toEqual({ modal: true });
-        expect([clear.title, keep]).toEqual(['Remove Those Too', { title: 'Keep Them', isCloseAffordance: true }]);
+        expect(message).toContain('Clear demo data too, to leave it empty?');
+        expect(message).not.toMatch(/this demo's store/i);
+        expect([clear.title, keep]).toEqual(['Clear Demo Data Too', { title: 'Keep It', isCloseAffordance: true }]);
     });
 
     it('counts the cart rules it would clear, and says one another website also uses is only taken off (step 11)', async () => {
@@ -215,7 +217,7 @@ describe('clearProjectOtherData', () => {
 
         expect(others).toHaveBeenLastCalledWith(PROJECT, context);
         expect(store.sent).toStrictEqual([]);
-        expect(done).toEqual({ cleared: false, sentence: `The store was not cleared: ${CLAIMED}` });
+        expect(done).toEqual({ cleared: false, sentence: `Demo data was not cleared: ${CLAIMED}` });
     });
 
     it('leaves the note for what it could not finish, as the Data Installer does', async () => {
@@ -238,6 +240,6 @@ describe('clearProjectOtherData', () => {
 
         expect(store.sent).toStrictEqual([]);
         expect(done.cleared).toBe(false);
-        expect(done.sentence).toMatch(/reset stands: The store changed since the list was made/);
+        expect(done.sentence).toMatch(/the reset is done: Commerce changed since the list was made/);
     });
 });

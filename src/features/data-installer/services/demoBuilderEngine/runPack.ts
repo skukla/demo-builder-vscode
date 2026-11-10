@@ -36,6 +36,7 @@ import {
     readInstallRecord,
     removalOrder,
 } from './installRecord';
+import { jobClock } from './jobClock';
 import type { KindContext, SettingsDone, SkippedRow } from './kindContext';
 import { type RootPlacement, placeCategories, rootPlacement } from './packRoot';
 import { type PackRootStep, keptRootStep, settlePackRoot } from './packRootStep';
@@ -46,7 +47,8 @@ import { installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
 import { type RefusedRemoval, takeBackAll } from './removalRuns';
 import { type KeptContainer, type RemovalAccess, decideRemovals } from './removers';
-import { type KeptThing, type KindPlan, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat } from './repeatInstall';
+import { type KeptThing, type KindPlan, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat, rowsToCount } from './repeatInstall';
+import { startRowCount } from './rowCount';
 import { flatAssignments, installCatalogs, installAssignments as installCatalogAssignments, parseCatalogRows } from './sharedCatalogKinds';
 import { installSourceItems, parseSourceItems } from './sourceItemsKind';
 import {
@@ -60,6 +62,7 @@ import {
 import { STORE_CONFIG_KIND, installStoreConfig, packSettings, putBackSettings } from './storeConfigKind';
 import { packKindOf } from './storeCopies';
 import { UrlKeyClashError, placedClashes } from './urlKeyClashes';
+import type { CommerceProduct } from '@/types/commerceWire';
 import type { DatapackId } from '@/types/datapack';
 
 /** A pack's rows, by data kind, as its items hold them. */
@@ -208,6 +211,11 @@ export interface InstallOutcome {
      * still said products would take 20 minutes to appear).
      */
     productsWritten: boolean;
+    /**
+     * The products the read-back after the writes read (`recordFingerprints`), as the store holds them
+     * then: the install check reads only the rest (`checkAfterInstall`). Absent when it read none.
+     */
+    productsRead?: CommerceProduct[];
 }
 
 /** The comparison a re-import's form just made, when it still holds (`recentComparison.ts`). */
@@ -261,14 +269,16 @@ export async function installPack(
     for (const step of STEPS) {
         if (!(step.kind in items)) continue;
         onKind(step.kind);
-        await applyUpdates(ctx, plans, step.kind);
-        await step.install(ctx, items[step.kind]);
+        // Walk F125: "<done> of <total>" for the rows this run handles of the kind (`rowCount.ts`).
+        const counting = { ...ctx, count: startRowCount(ctx.progress, step.kind, rowsToCount(ctx, plans, step.kind, items[step.kind])) };
+        await applyUpdates(counting, plans, step.kind);
+        await step.install(counting, items[step.kind]);
         // The pack kept its own root: the one Admin step, checked and asked for before the rest goes in.
         if (step.kind === 'categories' && placement === 'own' && ctx.session.storeRoot) rootStep = await settlePackRoot(ctx, ctx.session.storeRoot, ctx.asker);
     }
     onKind(undefined);
     const { containers, tookOut, refused } = await applyRemovals(ctx, plans);
-    await recordFingerprints(ctx, items);
+    const productsRead = await recordFingerprints(ctx, items);
     const settings = ctx.session.settings;
     const keptSettings = (settings?.kept ?? []).map((key): KeptThing => ({ kind: STORE_CONFIG_KIND, key }));
     return {
@@ -278,6 +288,7 @@ export async function installPack(
         tookOut,
         notTakenOut: refused,
         productsWritten: writesProducts(plans),
+        ...(productsRead.length > 0 ? { productsRead } : {}),
         ...(settings ? { settings } : {}),
         ...(placement ? { rootPlacement: placement } : {}),
         ...(rootStep ? { rootStep } : {}),
@@ -331,21 +342,39 @@ export async function removePack(
     const record = await readInstallRecord(files, target.projectPath, target.pack);
     if (!record) return { removed: 0, noRecord: true, kept: [], refused: [] };
     const recorder = await openInstallRecord(files, target.projectPath, target.pack, () => record.startedAt);
+    const took = jobClock(target.log ?? (() => undefined), `Removal of ${target.pack.name}`);
     // Step 14 item 1: a create that landed unanswered is taken back too; one that never did costs nothing.
     await settlePending(commerce.get, recorder, () => undefined);
+    took('settled what an earlier run left half made');
     const created = recorder.created;
     // Settings first: they went in last. Each leaves the record once put back or kept.
     const settingObjects = created.filter((o) => o.kind === STORE_CONFIG_KIND);
     const settings = settingObjects.length > 0 ? await putBackSettings(commerce, settingObjects, (o) => recorder.drop(o)) : undefined;
     const { take, kept } = await decideRemovals(commerce.get, removalOrder({ ...record, created: [...created] }).filter((o) => o.kind !== STORE_CONFIG_KIND));
+    took(`decided what to take back: ${take.length} objects, ${kept.length} kept`);
     // In the record's order, with as few calls as Commerce allows (`removalRuns.ts`).
     let taken = 0;
-    // How far it has got, for the status (2026-11-06: a removal showed every kind "pending" to its end).
+    // Products deleted by the run in hand, counted as each call lands, before the run says them all.
+    let inRun = 0;
+    // How far it has got, for the status (2026-11-06: a removal showed every kind "pending" to its
+    // end): one bare count, as every other line reads (owner, 2026-11-10, walk F131).
+    let shown = -1;
+    const count = () => {
+        if (taken + inRun === shown) return;
+        shown = taken + inRun;
+        target.progress?.(`${shown.toLocaleString('en-US')} of ${take.length.toLocaleString('en-US')}`);
+    };
     const said = (objects: readonly CreatedObject[]) => {
         taken += objects.length;
-        target.progress?.(`took back ${taken.toLocaleString('en-US')} of ${take.length.toLocaleString('en-US')} objects`);
+        inRun = 0;
+        count();
     };
-    const refused = await takeBackAll({ ...commerce, log: target.log, progress: target.progress }, recorder, take, said);
+    const deleted = (n: number) => {
+        inRun += n;
+        count();
+    };
+    const refused = await takeBackAll({ ...commerce, log: target.log, deleted }, recorder, take, said);
+    took('took everything back');
     if (kept.length === 0 && refused.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
     const keptRoot = await keptRootStep(commerce.get, kept, record.rootStep?.storeRootId);
     const removed = taken + settingObjects.length;

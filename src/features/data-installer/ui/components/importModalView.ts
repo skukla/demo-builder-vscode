@@ -13,8 +13,11 @@
 import type { ImportScopes } from '../hooks/useImportScopes';
 import type { ModalView } from './ImportDatapackModalBody';
 import { type LastAction, type ResultContent, resultStatus } from './importResult';
+import { type ConfirmContent, removeLabel } from './removalConfirm';
 import type { ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
+import { saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/uninstallWords';
 
 /**
  * Which job to watch: the one the LAST action started.
@@ -109,20 +112,18 @@ export function isRemoving(a: { armed: boolean; lastAction: LastAction | null; v
 }
 
 /**
- * Which in-flight operation the one busy spinner is narrating. An import starting has no spinner of
- * its own: its rows show at once, Preparing Import spinning (the `starting` view).
+ * The wait the busy view shows, as the progress window's three rows (`WAIT_STAGES`, review
+ * 2026-11-10: "Starting removal" and "Checking with the service" were bare labels). An import
+ * starting has no wait of its own: its steps show at once (the `starting` view).
  *
  * @param savingStage - the stage of saving the SC's changes first, while a removal waits on it
  */
-export function busyMessage(resetting: boolean, savingStage?: string): string {
+export function busyMessage(resetting: boolean, savingStage?: string): ModalWait {
     if (savingStage) {
-        return savingStage;
+        return Object.values(OPERATION_STAGES).find((stage) => stage.label === savingStage) ?? { label: savingStage };
     }
-    if (resetting) {
-        // "removal", matching the button and the progress verb.
-        return 'Starting removal';
-    }
-    return 'Checking with the service';
+    // The stage the removal itself reports, so nothing changes when its job starts.
+    return resetting ? OPERATION_STAGES.removingDatapack : WAIT_STAGES.checkingImport;
 }
 
 /** The footer, one row per view. */
@@ -133,7 +134,6 @@ export function buildActions(a: {
     starting: boolean;
     resetting: boolean;
     validate: () => void;
-    armReset: () => void;
     disarmReset: () => void;
     confirmReset: () => void;
     startImport: () => void;
@@ -146,10 +146,12 @@ export function buildActions(a: {
     removeSavesAs?: boolean;
     /** The main button waits on a Save As name. */
     removeDisabled?: boolean;
-    /** A removal takes all the record lists, whatever is ticked, so the form's button says all. */
-    removesAll?: boolean;
-    /** Whether the form's removal may be pressed; as `canStart` when it does not say. */
-    canRemove?: boolean;
+    /** The confirm is an import's (walk F106): its buttons import, not remove. */
+    confirmsImport?: boolean;
+    /** The import ran to its end: the window closes, with nothing to go back to (walk F117). */
+    ranToEnd?: boolean;
+    /** Back would only close the window (one opened by Uninstall, with no question to return to). */
+    backCloses?: boolean;
     /** A result's main action (`ResultContent.action`), and what each one does. */
     resultAction?: 'retry' | 'fix';
     retry?: () => void;
@@ -159,6 +161,8 @@ export function buildActions(a: {
     variant: 'secondary' | 'accent' | 'negative' | 'quiet';
     onPress: () => void;
     isDisabled?: boolean;
+    /** At the footer's start, apart from the rest (walk F111): the button that loses the SC's changes. */
+    start?: true;
 }[] {
     if (a.view === 'watching' || a.view === 'starting') {
         // The way out is Run in Background, the dialog's own close (`closeLabel`): a Close beside it
@@ -169,21 +173,31 @@ export function buildActions(a: {
     if (a.view === 'confirm-reset') {
         // Cancel stands in for Close here (the frame hides Close): two buttons that both
         // backed out was one too many (dialog design rules).
+        // An import's confirm asks only about the SC's changes, so its buttons say Import (walk F106).
+        const verb = a.confirmsImport ? 'Import' : 'Uninstall';
         if (a.removeWithoutSaving) {
             // Changes to keep: saving is the likely intent, so it is the main button; losing them
             // is its own button rather than a box to untick (owner, 2026-11-03).
             return [
                 { label: 'Cancel', variant: 'secondary', onPress: a.disarmReset },
-                { label: 'Remove Without Saving', variant: 'negative', onPress: a.removeWithoutSaving },
-                { label: a.removeSavesAs ? 'Save As New and Remove' : 'Save and Remove', variant: 'accent', onPress: a.confirmReset, isDisabled: a.removeDisabled === true },
+                // At the start, as Don't Save stands apart in a Save dialog (owner, 2026-11-09, F111).
+                { label: withoutSavingLabel(verb), variant: a.confirmsImport ? 'secondary' : 'negative', onPress: a.removeWithoutSaving, start: true },
+                { label: saveFirstLabel(verb, a.removeSavesAs === true), variant: 'accent', onPress: a.confirmReset, isDisabled: a.removeDisabled === true },
             ];
         }
         return [
             { label: 'Cancel', variant: 'secondary', onPress: a.disarmReset },
-            { label: a.removeLabel ?? 'Remove', variant: 'negative', onPress: a.confirmReset },
+            a.confirmsImport
+                ? { label: 'Import Anyway', variant: 'accent', onPress: a.confirmReset }
+                : { label: a.removeLabel ?? 'Uninstall', variant: 'negative', onPress: a.confirmReset },
         ];
     }
     if (a.view === 'result') {
+        // A finished import ends on Close alone, as the save window and the Updates run do (walk
+        // F117); Back is for a stop or a dry run, where going back to the form is the next move.
+        // A window opened by Uninstall has no form behind it: its Back only closed, beside the Close
+        // that does the same (review, 2026-11-10), so it ends on Close alone.
+        if (a.ranToEnd || a.backCloses) return resultMain(a);
         return [{ label: 'Back', variant: 'secondary', onPress: a.goBack }, ...resultMain(a)];
     }
     // Nothing left to press but the way out: there is no instance to import to.
@@ -194,17 +208,10 @@ export function buildActions(a: {
     // its label and stops taking presses: one spinner per wait, and no "-ing" label (owner,
     // 2026-10-31).
     return [
-        // Arms only. Removing data always takes a second, explicit press.
-        //
-        // "Remove data…", not "Reset…": a project RESET restores the pack —
-        // deletes it and imports the same one again — so the same word meant
-        // opposite things one menu apart, and this modal's own confirm text
-        // ("cannot be undone") was true here and false there.
-        //
-        // "Remove all data" when Demo Builder's engine installed it: the removal takes what its
-        // record lists, so the button must not read as acting on the ticks above it.
-        { label: a.removesAll ? 'Remove All Data' : 'Remove Data', variant: 'quiet', onPress: a.armReset, isDisabled: !(a.canRemove ?? a.canStart) },
-        { label: 'Dry Run', variant: 'quiet', onPress: a.validate, isDisabled: !a.canStart },
+        // Remove Data is not here: it is the flyout's own action, opening this window straight on
+        // its confirm (owner, 2026-11-09, walk F118: pressing Import to remove data was strange).
+        // Outlined, as Close is: the house's secondary button, not plain text (walk F102).
+        { label: 'Dry Run', variant: 'secondary', onPress: a.validate, isDisabled: !a.canStart },
         {
             label: 'Import',
             variant: 'accent',
@@ -262,10 +269,25 @@ function formWidth(typeCount: number): Pick<ViewFrame, 'size' | 'wide'> {
     return { size: 'L', wide: true };
 }
 
-/** How many columns an import's rows take: the form's, in the box the form had (`formWidth`). */
-export function runColumns(typeCount: number): number {
-    if (typeCount <= 6) return 1;
-    return typeCount <= 12 ? 2 : 3;
+/**
+ * The narrowest editor two columns of data types fit in: a large dialog (640px) and the margin
+ * Spectrum keeps around it. Below it the dialog is held to the editor's width, and two columns of
+ * "Linking product options 12,345 of 12,345" no longer fit side by side.
+ */
+export const TWO_COLUMN_MIN_VIEWPORT = 720;
+
+/**
+ * How many columns the import's data types take, chosen once when the window opens (owner,
+ * 2026-11-10, walk F135): two for more than six data types, one for six or fewer, and one when the
+ * editor is too narrow for two. Each column is as wide as its longest line, so nothing wraps.
+ */
+export function runColumns(typeCount: number, viewportWidth: number): 1 | 2 {
+    return typeCount > 6 && viewportWidth >= TWO_COLUMN_MIN_VIEWPORT ? 2 : 1;
+}
+
+/** The run's width: the form's for two columns of data types, medium for one (walk F135). */
+function runWidth(typeCount: number, columns: 1 | 2): Pick<ViewFrame, 'size' | 'wide'> {
+    return columns === 2 ? formWidth(typeCount) : { size: 'M', wide: false };
 }
 
 /**
@@ -281,20 +303,39 @@ export function viewFrame(a: {
     removing: boolean;
     store: string;
     typeCount: number;
+    /** The data types' columns (`runColumns`): the run, and the check and question before it, take its width. */
+    columns: 1 | 2;
     result: ResultContent | null;
+    /** The confirm is an import's, replacing the demo's pack (walk F97): it asks about the SC's changes. */
+    replacing?: string;
+    /** The check for the SC's changes could not run: the confirm's title says so (review, 2026-11-10). */
+    checkFailed?: boolean;
 }): ViewFrame {
     const small = { size: 'S' as const, wide: false, hideClose: false };
+    // An import's confirm asks only whether to keep the SC's changes (walk F106). Every confirm is
+    // wide enough for its buttons on one line, the one that loses changes at the start (F104, F111),
+    // and the check before it is the same width, so nothing jumps when the question comes (F109).
+    const asked = a.replacing ? 'Save Your Changes First?' : `Uninstall ${a.displayName} from ${a.store}?`;
+    const question = a.checkFailed ? "Couldn't Check for Changes" : asked;
+    // An import's check and question take the run's own box, so the window keeps one width from the
+    // check to the end and the three buttons sit on one line, as the mockup had them (owner,
+    // 2026-11-09, walk F127: at medium, Save and Import fell to a second line and the box widened
+    // when the steps came). An uninstall's confirm stays medium: nothing runs in its box after.
+    const run = runWidth(a.typeCount, a.columns);
+    const confirmFrame = a.replacing ? run : { size: 'M' as const, wide: false };
+    // While it checks, the title names the work, not a question nothing has asked yet (walk F108).
+    const checking = a.replacing ? `Import ${a.displayName}` : `Uninstall ${a.displayName}`;
     // Amber: nothing failed, and the next move is the SC's.
     if (a.view === 'no-instance') return { ...small, title: 'This project has no Commerce instance', status: 'warning' };
     switch (a.view) {
-        // One title for the read and the confirm it leads to, so the wait does not retitle the dialog.
         case 'reading-changes':
-            return { ...small, title: `Remove from ${a.store}?`, status: 'warning' };
+            return { ...small, ...confirmFrame, title: checking };
         case 'confirm-reset':
-            return { ...small, title: `Remove from ${a.store}?`, status: 'warning', hideClose: true };
+            return { ...small, ...confirmFrame, title: question, status: 'warning', hideClose: true };
         case 'result':
-            // An import's ending stays on its rows, in the form's box.
-            if (a.result?.run) return { ...formWidth(a.typeCount), hideClose: false, title: a.result.title, status: resultStatus(a.result) };
+            // An import that ended with a problem stays on its steps, in the run's box; a clean one
+            // has no `run` and hands off to the small result (walk F134).
+            if (a.result?.run) return { ...run, hideClose: false, title: a.result.title, status: resultStatus(a.result) };
             return a.result
                 ? {
                       ...small,
@@ -305,14 +346,14 @@ export function viewFrame(a: {
                   }
                 : { ...small, title: `Import ${a.displayName}` };
         case 'starting':
-            return { ...formWidth(a.typeCount), hideClose: false, title: `Import ${a.displayName}` };
+            return { ...run, hideClose: false, title: `Import ${a.displayName}` };
         case 'watching':
             // An import's rows take the form's box; a removal still waits on its spinner.
             return a.removing
-                ? { ...small, title: `Remove ${a.displayName}`, holdSize: true }
-                : { ...formWidth(a.typeCount), hideClose: false, title: `Import ${a.displayName}` };
+                ? { ...small, title: `Uninstall ${a.displayName}`, holdSize: true }
+                : { ...run, hideClose: false, title: `Import ${a.displayName}` };
         case 'busy':
-            return { ...small, title: `${a.removing ? 'Remove' : 'Import'} ${a.displayName}` };
+            return { ...small, title: `${a.removing ? 'Uninstall' : 'Import'} ${a.displayName}` };
         default:
             return { ...formWidth(a.typeCount), hideClose: false, title: `Import ${a.displayName}` };
     }
@@ -323,10 +364,30 @@ export function viewFrame(a: {
  * to cover the first frame, before any request has been sent: a form drawn there set the box the
  * wait then kept (407px).
  */
-export function waitOf(view: ModalView, reading: boolean, message: string, comparing: ModalWait | false = false): ModalWait | false {
+export function waitOf(view: ModalView, reading: boolean, busy: ModalWait, comparing: ModalWait | false = false): ModalWait | false {
     // A pack the project has: the store compared with it before the form (`useImportChanges`).
     if (comparing) return comparing;
-    if (view === 'busy') return { label: message };
-    if (view === 'reading-changes') return WAIT_STAGES.readingChangesSinceImport;
+    if (view === 'busy') return busy;
+    // The same check before a removal or a replace, in the same words (walk F114).
+    if (view === 'reading-changes') return WAIT_STAGES.checkingForChanges;
     return view === 'form' && reading ? WAIT_STAGES.readingWebsites : false;
+}
+
+/**
+ * The confirm's buttons: one Remove, or, with changes to keep, Save and Remove beside Remove
+ * Without Saving, the save waiting on a Save As name when it needs one. The same for a removal and
+ * for an import replacing the demo's pack (walk F97).
+ */
+export function removalButtons(
+    removal: { content: ConfirmContent; canSave: boolean },
+    confirmRemoval: (save: boolean) => void,
+): Pick<Parameters<typeof buildActions>[0], 'confirmReset' | 'removeLabel' | 'removeWithoutSaving' | 'removeSavesAs' | 'removeDisabled'> {
+    const base = { confirmReset: () => confirmRemoval(true), removeLabel: removeLabel(removal.content) };
+    if (removal.content.kind !== 'changes') return base;
+    return {
+        ...base,
+        removeWithoutSaving: () => confirmRemoval(false),
+        removeSavesAs: removal.content.packName === undefined,
+        removeDisabled: !removal.canSave,
+    };
 }

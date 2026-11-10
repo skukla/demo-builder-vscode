@@ -33,14 +33,16 @@ import { updateCoupon } from './couponsKind';
 import { updateCustomer, updateCustomerGroup } from './customerKinds';
 import { fingerprintRow } from './fingerprint';
 import type { CreatedObject } from './installRecord';
-import { type KindContext, ownedKey, segment } from './kindContext';
+import { type KindContext, ownedId, ownedKey, segment } from './kindContext';
 import { keyOf } from './packForm';
 import { type ExportRow, PRODUCT_EXPORT_KIND, updateProductRows } from './productExportKind';
+import { PRODUCT_KINDS } from './productKinds';
 import { productLookups } from './productLookups';
 import { parseProductRows, toCommerceProduct } from './productsKind';
 import { tryRow } from './refusedRows';
 import { type RefusedRemoval, takeBackAll } from './removalRuns';
 import { type KeptContainer, decideRemovals } from './removers';
+import { counted } from './rowCount';
 import { READABLE_KINDS, packKindIn, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
 import { andList } from '@/core/utils/andList';
 import { type OwnedChange, decideOwnedChange } from '@/core/utils/ownedChange';
@@ -178,14 +180,46 @@ export async function applyUpdates(ctx: KindContext, plans: readonly KindPlan[],
     for (const plan of plans.filter((p) => p.packKind === packKind)) {
         const update = UPDATERS[plan.kind];
         for (const { object, outcome, row } of plan.objects) {
-            if (outcome !== 'update' || !update) continue;
-            // Step 14 item 3: an update Commerce refuses is skipped, named, and tried again next install.
-            const done = await tryRow(ctx, { kind: object.kind, key: object.key ?? object.id }, async () => (await update(ctx, object, row), true));
-            if (!done) continue;
-            await ctx.recorder.update({ kind: object.kind, id: object.id, fingerprint: undefined, wrote: packedFingerprint(plan.kind, row) });
-            ctx.log(`brought ${object.kind} ${object.key ?? object.id} up to the pack`);
+            if (outcome !== 'update') continue;
+            // Counted in the kind's rows (`rowsToCount`) whatever the update did; the install leaves it be.
+            if (update) await counted(ctx, plan.kind, object.key ?? [], () => updateOne(ctx, plan.kind, update, object, row));
+            else ctx.count?.settled(plan.kind, object.key);
         }
     }
+}
+
+/** Bring one object up to its row, and record that it was. */
+async function updateOne(ctx: KindContext, kind: string, update: Updater, object: CreatedObject, row: unknown): Promise<void> {
+    // Step 14 item 3: an update Commerce refuses is skipped, named, and tried again next install.
+    const done = await tryRow(ctx, { kind: object.kind, key: object.key ?? object.id }, async () => (await update(ctx, object, row), true));
+    if (!done) return;
+    await ctx.recorder.update({ kind: object.kind, id: object.id, fingerprint: undefined, wrote: packedFingerprint(kind, row) });
+    ctx.log(`brought ${object.kind} ${object.key ?? object.id} up to the pack`);
+}
+
+/** Pack kinds that say their own count (`bulkProducts.ts`, `sourceItemsKind.ts`), so none is started for them here. */
+const OWN_COUNT: ReadonlySet<string> = new Set([...PRODUCT_KINDS, PRODUCT_EXPORT_KIND, 'source_items']);
+
+/**
+ * The pack's rows of one kind this install will handle, by the pack's name for each, for the kind's
+ * count (`rowCount.ts`): a row nothing was made for yet, and one the plan brings up to the pack. A row
+ * this engine made, unchanged or kept as the SC left it, is not handled, so installing again with
+ * nothing to write counts nothing. An attribute the store had counts until an install has added one of
+ * the pack's options to it; one whose options the store already had all of counts on every install, as
+ * nothing records it. None for a kind that keeps no record by key: one that writes rows
+ * counts its own (`customersExportKind.ts`, `storeConfigKind.ts`).
+ */
+export function rowsToCount(ctx: KindContext, plans: readonly KindPlan[], packKind: string, records: unknown): string[] {
+    if (OWN_COUNT.has(packKind)) return [];
+    const updating = new Set(plans.filter((p) => p.kind === packKind).flatMap((p) => p.objects.filter((o) => o.outcome === 'update').map((o) => o.object.key)));
+    const recorded = new Set(ctx.recorder.created.map((o) => ownedKey(o.kind, o.key ?? o.id)));
+    const made = (kind: string, key: string): boolean => ownedId(ctx.session, kind, key) !== undefined || recorded.has(ownedKey(kind, key));
+    const rows = rowsByKey(packKind, records);
+    // The store's own attribute: an earlier install that added an option to it handled it (the store
+    // may have had the rest, which nothing records).
+    const optionsMade = (key: string): boolean =>
+        packKind === 'product_attributes' && [...rowsByKey('attribute_options', [rows.get(key)]).keys()].some((option) => made('attribute_options', option));
+    return [...rows.keys()].filter((key) => updating.has(key) || !(made(packKind, key) || optionsMade(key)));
 }
 
 /**

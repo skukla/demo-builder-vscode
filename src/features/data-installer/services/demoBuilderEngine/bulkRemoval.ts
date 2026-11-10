@@ -33,7 +33,15 @@ export const PRODUCTS_PER_IMPORT_DELETE = 200;
 export const SINGLE_DELETES_AT_ONCE = 5;
 
 /** Commerce, and where a removal says which way each batch went (Debug Logs). */
-export type BulkRemovalAccess = RemovalAccess & { log?: (line: string) => void; progress?: (line: string) => void };
+export type BulkRemovalAccess = RemovalAccess & {
+    log?: (line: string) => void;
+    progress?: (line: string) => void;
+    /**
+     * Told how many products each call deleted, for a caller that counts them into a count of its
+     * own; then `progress` is not told (an uninstall's one count, walk F131).
+     */
+    deleted?: (count: number) => void;
+};
 
 /** Take one product back on its own (`takeBack`); the record is written by the caller, once per group. */
 export type TakeBackOne = (object: CreatedObject) => Promise<void>;
@@ -63,8 +71,10 @@ export async function deleteByImport(
         }
         const still = await skusInStore(commerce.get, batch);
         const left = batch.filter((sku) => still.has(sku.toLowerCase()));
+        const before = gone.size;
         for (const sku of batch) if (!still.has(sku.toLowerCase())) gone.add(sku.toLowerCase());
-        commerce.progress?.(`deleted ${gone.size.toLocaleString('en-US')} of ${skus.length.toLocaleString('en-US')} products`);
+        if (commerce.deleted) commerce.deleted(gone.size - before);
+        else commerce.progress?.(`deleted ${gone.size.toLocaleString('en-US')} of ${skus.length.toLocaleString('en-US')} products`);
         commerce.log?.(
             `deleted ${batch.length - left.length} of ${batch.length} products in one import`,
         );

@@ -50,6 +50,12 @@ const LOG_PREFIX = '[Data Installer]';
 export interface DeleteLibraryDatapackPayload {
     datapackName?: string;
     version?: string;
+    /**
+     * Every version of the SC's own pack, not one (owner, 2026-11-09): the flyout's Delete Datapack.
+     * A pack of saves is one thing to the SC, its earlier saves its Version History, so removing it
+     * takes them all. `version` is then not needed.
+     */
+    everyVersion?: boolean;
     /** Must be true. Nothing is deleted by default. */
     confirm?: boolean;
 }
@@ -97,7 +103,7 @@ function sharedWarning(context: HandlerContext, id: DatapackId): Promise<string 
 function readRename(payload?: RenameLibraryDatapackPayload): { name: string; displayName: string } | HandlerResponse {
     const name = payload?.datapackName;
     const displayName = payload?.displayName?.trim();
-    if (!name || !displayName) return { success: false, error: 'Name the library datapack and the name to give it.' };
+    if (!name || !displayName) return { success: false, error: 'Name the datapack and the name to give it.' };
     if (payload?.confirm !== true) {
         return {
             success: false,
@@ -111,7 +117,7 @@ function readRename(payload?: RenameLibraryDatapackPayload): { name: string; dis
 /** Check the payload: a name, whether to share, and confirm. */
 function readShare(payload?: ShareLibraryDatapackPayload): { name: string; shared: boolean } | HandlerResponse {
     const name = payload?.datapackName;
-    if (!name || typeof payload?.shared !== 'boolean') return { success: false, error: 'Name the library datapack, and whether to share it.' };
+    if (!name || typeof payload?.shared !== 'boolean') return { success: false, error: 'Name the datapack, and whether to share it.' };
     if (payload.confirm !== true) {
         const why = payload.shared ? SHARE_CONSENT : 'Stopping sharing takes this pack out of everyone else\'s list.';
         return { success: false, error: `${why} Send confirm:true to proceed.`, code: ErrorCode.INVALID_OPERATION };
@@ -150,7 +156,42 @@ async function deleteLayerOf(
         return { settingsLayerDeleted: true };
     } catch (error) {
         context.debugLogger.debug(`${LOG_PREFIX} Could not delete the settings layer of ${id.name}@${id.version}: ${String(error)}`);
-        return { settingsLayerLeft: `${settingsLayerName(id.name)}@${id.version} may still be in the library: it could not be checked.` };
+        return { settingsLayerLeft: `${settingsLayerName(id.name)}@${id.version} may still be in My Datapacks: it could not be checked.` };
+    }
+}
+
+/** Delete every version of the SC's own pack, and each one's settings layer (`everyVersion`). */
+async function deleteEveryVersion(context: HandlerContext, payload: DeleteLibraryDatapackPayload): Promise<HandlerResponse> {
+    const name = payload.datapackName;
+    if (!name) return { success: false, error: 'Name the datapack to delete.' };
+    if (payload.confirm !== true) {
+        return {
+            success: false,
+            error: 'Deleting a library datapack and every version of it cannot be undone. Send confirm:true to proceed.',
+            code: ErrorCode.INVALID_OPERATION,
+        };
+    }
+    const access = await resolveDataInstallerAccess(context, 'library');
+    if (!access.ok) return access.response;
+    try {
+        const versions = await myVersions(access.client, name);
+        if (versions.length === 0) {
+            return { success: false, error: `My Datapacks has no datapack named ${name}.`, code: ErrorCode.INVALID_OPERATION };
+        }
+        const writer = writerFor(context, access, 'library');
+        const layersLeft: string[] = [];
+        for (const version of versions) {
+            await writer.deleteDatapack(version);
+            const layer = await deleteLayerOf(context, access, version);
+            if (layer.settingsLayerLeft) layersLeft.push(layer.settingsLayerLeft);
+        }
+        context.logger.info(`${LOG_PREFIX} Deleted ${name} (${versions.length} versions) from the datapack library`);
+        return {
+            success: true,
+            data: { datapackName: name, deleted: true, versions: versions.length, ...(layersLeft.length > 0 ? { settingsLayerLeft: layersLeft.join(' ') } : {}) },
+        };
+    } catch (error) {
+        return failure(context, error, 'The datapack could not be deleted.');
     }
 }
 
@@ -159,11 +200,12 @@ export const datapackLibraryHandlers = defineHandlers({
         context: HandlerContext,
         payload?: DeleteLibraryDatapackPayload,
     ): Promise<HandlerResponse> => {
+        if (payload?.everyVersion === true) return deleteEveryVersion(context, payload);
         const id = idOf(payload);
         if (!id) {
             return {
                 success: false,
-                error: 'Name the library datapack and its version to delete.',
+                error: 'Name the datapack and its version to delete.',
             };
         }
         const warning = await sharedWarning(context, id);
@@ -182,7 +224,7 @@ export const datapackLibraryHandlers = defineHandlers({
             if (result === 'not-found') {
                 return {
                     success: false,
-                    error: `The datapack library has no pack of yours named ${id.name}@${id.version}.`,
+                    error: `My Datapacks has no datapack named ${id.name}@${id.version}.`,
                     code: ErrorCode.INVALID_OPERATION,
                 };
             }
@@ -201,7 +243,7 @@ export const datapackLibraryHandlers = defineHandlers({
                 },
             };
         } catch (error) {
-            return failure(context, error, 'The library datapack could not be deleted.');
+            return failure(context, error, 'The datapack could not be deleted.');
         }
     },
 
@@ -218,7 +260,7 @@ export const datapackLibraryHandlers = defineHandlers({
             if (versions.length === 0) {
                 return {
                     success: false,
-                    error: `The datapack library has no pack of yours named ${input.name}.`,
+                    error: `My Datapacks has no datapack named ${input.name}.`,
                     code: ErrorCode.INVALID_OPERATION,
                 };
             }
@@ -228,7 +270,7 @@ export const datapackLibraryHandlers = defineHandlers({
             context.logger.info(`${LOG_PREFIX} Renamed ${input.name} (${versions.length} versions) in the datapack library`);
             return { success: true, data: { datapackName: input.name, displayName: input.displayName, versions: versions.length } };
         } catch (error) {
-            return failure(context, error, 'The library datapack could not be renamed.');
+            return failure(context, error, 'The datapack could not be renamed.');
         }
     },
 
@@ -243,7 +285,7 @@ export const datapackLibraryHandlers = defineHandlers({
         try {
             const versions = await myVersions(access.client, input.name);
             if (versions.length === 0) {
-                return { success: false, error: `The datapack library has no pack of yours named ${input.name}.`, code: ErrorCode.INVALID_OPERATION };
+                return { success: false, error: `My Datapacks has no datapack named ${input.name}.`, code: ErrorCode.INVALID_OPERATION };
             }
             const writer = writerFor(context, access, 'library');
             for (const version of versions) await writer.updateShared(version, input.shared);
@@ -252,7 +294,7 @@ export const datapackLibraryHandlers = defineHandlers({
             context.logger.info(`${LOG_PREFIX} ${input.shared ? 'Shared' : 'Stopped sharing'} ${input.name} (${versions.length} versions) in the datapack library`);
             return { success: true, data: { datapackName: input.name, shared: input.shared, versions: versions.length, ...(layers.length > 0 ? { settingsLayerVersions: layers.length } : {}) } };
         } catch (error) {
-            return failure(context, error, input.shared ? 'The library datapack could not be shared.' : 'The library datapack could not stop being shared.');
+            return failure(context, error, input.shared ? 'The datapack could not be shared.' : 'The datapack could not stop being shared.');
         }
     },
 
@@ -286,7 +328,7 @@ export const datapackLibraryHandlers = defineHandlers({
     ): Promise<HandlerResponse> => {
         const id = idOf(payload);
         if (!id) {
-            return { success: false, error: 'Name the library datapack and its version to copy.' };
+            return { success: false, error: 'Name the datapack and its version to copy.' };
         }
         if (payload?.confirmName !== id.name) {
             return {
@@ -324,7 +366,7 @@ export const datapackLibraryHandlers = defineHandlers({
                 },
             };
         } catch (error) {
-            return installerWriteRefusal(error) ?? failure(context, error, 'The library datapack could not be copied.');
+            return installerWriteRefusal(error) ?? failure(context, error, 'The datapack could not be copied.');
         }
     },
 });

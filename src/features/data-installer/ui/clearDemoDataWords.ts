@@ -132,7 +132,7 @@ export function previewLines(preview: WipePreview): PreviewLine[] {
         ...preview.left.map((l) => ({ label: 'Not Removed', value: stayValue(l) })),
     ];
     const made = Object.entries(installed).map(([kind, count]) => `${digits(count)} ${kind.replace(/_/gu, ' ')}`);
-    if (made.length > 0) lines.push({ label: 'Installed', value: `${made.join(', ')}, which removing its datapack takes` });
+    if (made.length > 0) lines.push({ label: 'Installed', value: `${made.join(', ')}. Uninstalling its datapack takes these out.` });
     return lines.filter((l) => l.value !== '');
 }
 

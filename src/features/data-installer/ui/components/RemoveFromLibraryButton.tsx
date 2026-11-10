@@ -25,7 +25,7 @@ export interface LibraryRemoval {
     start: () => void;
     removing: boolean;
     removed: boolean;
-    /** "Removed.", or why it could not be; nothing before it runs. */
+    /** "Deleted.", or why it could not be; nothing before it runs. */
     note: React.JSX.Element | null;
 }
 
@@ -33,13 +33,14 @@ export interface LibraryRemoval {
  * Remove one of the SC's own library packs, confirmed (the caller has asked when it needed to).
  *
  * @param onRemoved - called once the pack is gone. Must be stable — an effect depends on it.
+ * @param everyVersion - remove every version of the pack, not only `id`'s (a pack of saves)
  */
-export function useLibraryRemoval(id: DatapackId, onRemoved?: () => void): LibraryRemoval {
+export function useLibraryRemoval(id: DatapackId, onRemoved?: () => void, everyVersion = false): LibraryRemoval {
     const remove = useDataInstallerRequest<{ deleted?: boolean }>('delete-library-datapack');
     const run = remove.load;
     const start = useCallback((): void => {
-        run({ datapackName: id.name, version: id.version, confirm: true });
-    }, [run, id.name, id.version]);
+        run({ datapackName: id.name, ...(everyVersion ? { everyVersion: true } : { version: id.version }), confirm: true });
+    }, [run, id.name, id.version, everyVersion]);
 
     const removed = remove.value?.deleted === true;
     // Before the paint: the flyout goes from this wait to closing, or its reload, with nothing between.
@@ -48,8 +49,8 @@ export function useLibraryRemoval(id: DatapackId, onRemoved?: () => void): Libra
     }, [removed, onRemoved]);
 
     let note: React.JSX.Element | null = null;
-    if (removed) note = <p className="datapack-export-note">Removed.</p>;
-    else if (remove.failure) note = <p className="dialog-problem text-negative">It could not be removed: {remove.failure.message}</p>;
+    if (removed) note = <p className="datapack-export-note">Deleted.</p>;
+    else if (remove.failure) note = <p className="dialog-problem text-negative">It could not be deleted: {remove.failure.message}</p>;
     return { start, removing: remove.loading, removed, note };
 }
 
@@ -61,7 +62,7 @@ export interface RemoveFromLibraryButtonProps {
     label?: string;
 }
 
-export function RemoveFromLibraryButton({ id, onRemoved, label = 'Remove Datapack' }: RemoveFromLibraryButtonProps): React.JSX.Element {
+export function RemoveFromLibraryButton({ id, onRemoved, label = 'Delete Datapack' }: RemoveFromLibraryButtonProps): React.JSX.Element {
     const { start, removing, removed, note } = useLibraryRemoval(id, onRemoved);
     if (removed) return <>{note}</>;
     return (

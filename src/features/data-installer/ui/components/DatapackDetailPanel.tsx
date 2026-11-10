@@ -29,6 +29,7 @@
 import { ActionButton } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React, { useState } from 'react';
+import { versionLabel } from '../../packVersions';
 import { inPickOrder } from '../../pickableKinds';
 import type { DataItemInventory, DatapackDetail, PackDetailLayer } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
@@ -69,8 +70,10 @@ export interface DatapackDetailPanelProps {
      * Absent in the Datapack Library, which touches no store (owner, 2026-11-07).
      */
     onImport?: (id: DatapackId) => void;
-    /** Save Changes: given only for the demo's own pack when it is the SC's (`useHeldPack`). */
+    /** Save Changes: on the demo's pack, whoever owns it (`useHeldPack`). */
     onSaveChanges?: () => void;
+    /** It makes a new pack (a team or colleague's pack): the button reads Save As New Datapack. */
+    saveAsNew?: boolean;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
     /** The Data Installer's address is set and switched on: a library pack offers Copy to it. */
@@ -88,6 +91,12 @@ export interface DatapackDetailPanelProps {
     onSharingChanged?: () => void;
     /** The settings layer Import will apply after the pack's data (step 09). */
     settingsLayer?: PackDetailLayer;
+    /** The pack's saves, newest first, for Version History (walk F99). */
+    history?: readonly string[];
+    /** The save this demo uses. */
+    inUse?: string;
+    /** Remove Data, on the version whose data is in this demo's store (walk F118). */
+    onRemoveData?: () => void;
 }
 
 export function DatapackDetailPanel({
@@ -101,6 +110,7 @@ export function DatapackDetailPanel({
     onRetry,
     onImport,
     onSaveChanges,
+    saveAsNew,
     onRemoved,
     installerOn,
     setupStep,
@@ -108,6 +118,9 @@ export function DatapackDetailPanel({
     sharedInFile,
     onSharingChanged,
     settingsLayer,
+    history,
+    inUse,
+    onRemoveData,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selectedName ?? selected?.name ?? 'Datapack';
     // A read of the pack already on show (after Share, Stop Sharing or a rename) updates it in
@@ -132,7 +145,7 @@ export function DatapackDetailPanel({
                     <div className="db-drawer-head">
                         <div className="datapack-panel-title">
                             <DatapackPanelTitle title={title} detail={loading || failure || working ? null : detail} onRename={onRename} />
-                            <span className="datapack-panel-version">{selected.version}</span>
+                            <span className="datapack-panel-version">{versionLabel(selected.version)}</span>
                         </div>
                         <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
                             <Close size="S" />
@@ -146,12 +159,16 @@ export function DatapackDetailPanel({
                                 detail={detail}
                                 onImport={onImport}
                                 onSaveChanges={onSaveChanges}
+                                saveAsNew={saveAsNew}
                                 onRemoved={onRemoved}
                                 installerOn={installerOn}
                                 sharedInFile={sharedInFile}
                                 onSharingChanged={onSharingChanged}
                                 settingsLayer={settingsLayer}
                                 onWorking={setWorking}
+                                {...(history ? { history } : {})}
+                                {...(inUse ? { inUse } : {})}
+                                {...(onRemoveData ? { onRemoveData } : {})}
                             />
                         ) : null}
                     </div>
@@ -212,10 +229,10 @@ function renderPanelBody(args: {
         // its height is a fixed DimensionValue (no percentages — the same limit
         // IntegrationsScreen records), and this needs flex-fill of whatever space
         // the drawer body has. db-drawer-body is a flex column, so flex:1 centers.
-        // The house wait, as a waiting dialog's (`StageWait`).
+        // The house wait, its label alone (`StageWait` brief, walk F115): nothing else on the flyout is labelled.
         return (
             <div className="datapack-panel-loading">
-                <StageWait lines={WAIT_STAGES.readingPack} />
+                <StageWait lines={WAIT_STAGES.readingPack} brief />
             </div>
         );
     }

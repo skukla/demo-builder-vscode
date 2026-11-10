@@ -3,6 +3,9 @@
  * clickable while they are read, greyed with no click by a count of none, and left alone by a count
  * that failed or was not none. A kind's list, once answered, decides. The kind shown moves on from
  * one with nothing to select.
+ *
+ * A save from a pack has no kinds to tick (walk F85): its Add Unused Items lists the four kinds a demo may
+ * not use all of, and asks only for what it does not use.
  */
 
 import '../../../../../../helpers/webviewClientMock';
@@ -22,7 +25,7 @@ const COUNT = 'count-datapack-export-items';
 const LIST = 'list-datapack-export-items';
 const NONE_NOTE = 'None available';
 const PRODUCTS: StoreItemPage = { items: [{ id: 'VR-Rack', displayName: 'VR Rack', detail: 'VR-Rack', key: 'VR-Rack' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
-const ALL_IN_PACK: StoreItemPage = { items: [], totalCount: 3, excludedCount: 0, inPackCount: 3 };
+const NOTHING_LEFT: StoreItemPage = { items: [], totalCount: 3, excludedCount: 0, inPackCount: 0 };
 const PACK = { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', source: 'library' as const };
 
 function answer(counts: unknown, pages: Record<string, StoreItemPage> = {}) {
@@ -127,7 +130,7 @@ describe('the kind shown', () => {
     });
 
     it('moves on from a kind whose list left nothing to select', async () => {
-        answer(counted({ products: 3 }), { products: ALL_IN_PACK });
+        answer(counted({ products: 3 }), { products: NOTHING_LEFT });
         await open();
 
         expect(shown()).not.toBe(row('Products'));
@@ -184,19 +187,11 @@ describe('a count that failed', () => {
 });
 
 describe('a count and a list', () => {
-    it('says the datapack holds them all when that is why', async () => {
-        answer(counted({ products: 3 }), { products: ALL_IN_PACK });
+    it('says none are available when its list left nothing to select', async () => {
+        answer(counted({ products: 3 }), { products: NOTHING_LEFT });
         await open();
 
-        expect(row('Products')).toHaveTextContent('Included from the datapack');
-    });
-
-    // Owner, 2026-11-08 (F79): the row names the pack being saved.
-    it('names the pack being saved when it holds them all', async () => {
-        answer(counted({ products: 3 }), { products: ALL_IN_PACK });
-        await open({ pack: { id: { name: 'luma', version: 'eds-compatible' }, displayName: 'Luma', source: 'library' } });
-
-        expect(row('Products')).toHaveTextContent('Included from Luma');
+        expect(row('Products')).toHaveTextContent(NONE_NOTE);
     });
 
     it('says how many are selected on the row', async () => {
@@ -212,14 +207,30 @@ describe('a count and a list', () => {
     });
 });
 
-describe('what the count is asked of', () => {
-    it('names the pack being saved, as the list does', async () => {
+describe('a save from a pack (walk F85)', () => {
+    it('has no kinds to tick, and asks no counts', async () => {
         answer(counted({}));
         await open({ pack: PACK });
 
-        expect(callsOf(COUNT)[0][1]).toEqual({ datapackName: 'bodea', version: 'main', source: 'library' });
+        expect(rows()).toHaveLength(0);
+        expect(callsOf(COUNT)).toHaveLength(0);
     });
 
+    it('lists, under Add Unused Items, the four kinds a demo may not use all of, asking only for what it does not use', async () => {
+        answer(counted({}));
+        await open({ pack: PACK });
+
+        await press(screen.getByRole('button', { name: 'Add Unused Items' }));
+
+        expect(rows()).toHaveLength(4);
+        expect(row('Customer Groups')).toHaveAttribute('aria-current', 'true');
+        expect(callsOf(LIST)[0][1]).toStrictEqual({ dataType: 'customer_groups', datapackName: 'bodea', version: 'main', source: 'library', unused: true });
+        expect(screen.queryByRole('checkbox', { name: 'Select All Data' })).not.toBeInTheDocument();
+        expect(callsOf(COUNT)).toHaveLength(0);
+    });
+});
+
+describe('what the count is asked of', () => {
     it('names none when no pack is being saved', async () => {
         answer(counted({}));
         await open();

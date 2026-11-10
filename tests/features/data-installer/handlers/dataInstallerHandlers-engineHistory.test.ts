@@ -30,6 +30,7 @@ import {
     appendEngineActivity,
     nodeActivityFiles,
 } from '@/features/data-installer/services/engineActivityLog';
+import { PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
 import type { ActivityEntry, HistoryPage, InstalledDatapack, Page } from '@/features/data-installer/types';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -265,6 +266,20 @@ describe('get-datapack-activity from both engines', () => {
             { ...SERVICE_ACTIVITY.items[0], source: 'service' },
         ]);
         expect(data.total).toBe(42);
+    });
+
+    it('names each row by the display name Demo Builder has read for its pack, and leaves the rest by id', async () => {
+        await appendEngineActivity(nodeActivityFiles, dir, entry());
+        const ctx = context();
+        (ctx.context.globalState.get as jest.Mock).mockImplementation((key: string) =>
+            key === PACK_NAMES_KEY ? { [PACK.name]: 'Bodea' } : undefined,
+        );
+
+        const res = await dataInstallerHandlers['get-datapack-activity'](ctx, {});
+
+        const items = (res.data as HistoryPage<ActivityEntry>).items;
+        expect(items[0]).toMatchObject({ id: PACK, displayName: 'Bodea' });
+        expect(items[1]).not.toHaveProperty('displayName');
     });
 
     it('keeps a removal in the history after its install record is gone', async () => {

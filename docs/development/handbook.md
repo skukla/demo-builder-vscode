@@ -915,17 +915,17 @@ check says so and names the file.
 > Enforced by `tests/sop/ui-label-case.test.ts`, which reads every webview bundle with the compiler,
 > holds strings it cannot read to a pin, and proves itself on planted defects.
 
-> **Convention.** A window's header names the kind of thing and what happened to it, generically:
-> "Couldn't Create Datapack", "Projects Deleted", "Couldn't Read Projects", "Deleting Projects".
-> The specific thing (a pack's or a project's name, a count) goes in the details beneath it:
-> "Couldn't create Kukla Justrite: <the reason>", or a row per project. A header is a statement of
+> **Convention.** A window's header names the thing and what happened to it: "My Luma Imported",
+> "My Luma Uninstalled", "Couldn't Save My Luma". Only a window with no one name to give (several
+> projects, a file not yet read) names the kind: "Projects Deleted", "Couldn't Read Projects",
+> "Couldn't Open the File"; then each project is a row beneath it. A header is a statement of
 > what happened or what the window does, never the reason for it, and carries no comma. A button
 > may carry a count ("Delete 3 Projects"). **One exception:** what an AGENT is doing names its
 > target ("Agent Deleting the Acme project", `toolNarration.ts`): nobody pressed anything, so the
 > notification is the SC's only way to see what the agent is touching (owner, 2026-11-04).
 > *Why:* the owner, 2026-11-04: headers like "Some Projects Weren't Deleted" read as the reason for
-> the header rather than the header, and a name in the header makes each window's title different
-> for the same event.
+> the header rather than the header. On 2026-11-10 the owner settled the rest: a result names what
+> it is about ("My Luma Imported"), withdrawing the 2026-11-04 line that put the name in the body.
 > **Not enforced** yet: the batch window follows it; an audit of every other window header is
 > under way and will decide whether a check can tell a name from a kind.
 

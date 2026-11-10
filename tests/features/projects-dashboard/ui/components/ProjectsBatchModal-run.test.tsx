@@ -296,6 +296,35 @@ describe('ProjectsBatchModal: the run', () => {
         expect(mockPostMessage).not.toHaveBeenCalledWith('backgroundOperation', expect.anything());
     });
 
+    // Walk F134 (owner, 2026-11-10): every project through hands off to the small result, the
+    // title alone; a run with a problem stays on its rows.
+    it('hands a run where every project went through to the small result, the title alone', async () => {
+        const { user, onClosed } = await running();
+        for (const path of ['/p/a', '/p/b', '/p/c']) await push('projectsBatchRow', { path, state: 'done' });
+        await push('operationProgress', { id: ID, state: 'succeeded', tookMs: 125_000 });
+
+        const dialog = screen.getByRole('dialog', { name: 'Projects Deleted' });
+        expect(dialog).toHaveAttribute('data-size', 'S');
+        expect(dialog).not.toHaveAttribute('data-wide');
+        expect(dialog).toHaveAttribute('data-status', 'success');
+        expect(document.querySelector('.work-row')).toBeNull();
+        expect(screen.queryByText(/^Took /u)).toBeNull();
+        await user.click(screen.getByRole('button', { name: 'Close' }));
+        expect(onClosed).toHaveBeenCalledTimes(1);
+    });
+
+    it('CONTROL: a run where a project failed stays on its rows, at its full width', async () => {
+        await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'done' });
+        await push('projectsBatchRow', { path: '/p/b', state: 'failed', message: 'GitHub refused the delete.' });
+        await push('projectsBatchRow', { path: '/p/c', state: 'done' });
+        await push('operationProgress', { id: ID, state: 'succeeded', warning: '1 project not deleted.' });
+
+        const dialog = screen.getByRole('dialog', { name: "Couldn't Delete Projects" });
+        expect(dialog).toHaveAttribute('data-size', 'L');
+        expect(screen.getByText('GitHub refused the delete.')).toHaveClass('work-row-why');
+    });
+
     it('a run some projects did not finish ends on the warning', async () => {
         await running();
         await push('operationProgress', { id: ID, state: 'succeeded', warning: '1 project not deleted.' });

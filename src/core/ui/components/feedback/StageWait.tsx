@@ -51,9 +51,13 @@ export function StageRows({
     );
 }
 
-/** A dialog's or flyout's wait: the three rows, with the time since the wait appeared. */
-export function StageWait({ lines }: { lines: WaitLines }): React.ReactElement {
+/**
+ * A dialog's or flyout's wait: the three rows, with the time since the wait appeared. `brief` shows
+ * the spinner and the label alone, for a flyout, where nothing else carries a label and a wait is a
+ * second or two (owner, 2026-11-09, walk F115).
+ */
+export function StageWait({ lines, brief = false }: { lines: WaitLines; brief?: boolean }): React.ReactElement {
     const [startedAt] = useState(() => Date.now());
     const clock = useRunClock(startedAt);
-    return <StageRows lines={lines} clock={clock} />;
+    return brief ? <StageRows lines={{ label: lines.label }} /> : <StageRows lines={lines} clock={clock} />;
 }

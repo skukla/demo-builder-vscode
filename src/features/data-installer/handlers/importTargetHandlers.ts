@@ -19,6 +19,7 @@ import {
     groupStoreViewsByWebsite,
 } from '../services/importScopeDiscovery';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
+import { heldDisplayName } from './importReplacement';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -80,7 +81,9 @@ export const importTargetHandlers = defineHandlers({
         // When Demo Builder's engine installed the pack: so the demo's card can tell a team pack
         // updated in place since (owner, 2026-11-03, `.rptc/plans/datapack-save-as/`).
         const installedAt = await installedAtOf(project, datapack);
-        const held = { datapack, ...(installedAt ? { installedAt } : {}) };
+        // By the name the SC knows it, for the form's "Replaces …" when another pack is imported (walk F97).
+        const heldName = installedAt && datapack ? await heldDisplayName(context, datapack) : undefined;
+        const held = { datapack, ...(installedAt ? { installedAt } : {}), ...(heldName ? { heldName } : {}) };
         if (instance) {
             return {
                 success: true,

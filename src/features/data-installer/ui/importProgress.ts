@@ -67,8 +67,8 @@ export function summarizeProgress(
  * The step the job is, from the stage table: the same name creation and the
  * notification it hands over to show.
  *
- * "Removing", not "Resetting": the button that starts a removal says "Remove data",
- * and a project RESET restores the pack. The `reset` operation id is the wire, not
+ * "Uninstalling", not "Resetting": the button that starts it says "Uninstall", and a
+ * project RESET restores the pack. The `reset` operation id is the wire, not
  * the wording.
  */
 export function progressStep(operation: 'import' | 'reset' = 'import'): string {

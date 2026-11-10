@@ -133,7 +133,7 @@ describe('a job that ran to the end', () => {
         });
 
         expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
-        expect(status.rowNotes).toEqual({ categories: 'The store refused 1.' });
+        expect(status.rowNotes).toEqual({ categories: 'Commerce refused 1.' });
         expect(status.stoppedAt).toBeUndefined();
     });
 

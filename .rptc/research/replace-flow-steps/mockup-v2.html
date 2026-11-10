@@ -1,0 +1,99 @@
+<!doctype html>
+<!--
+  The import window, start to finish, as the owner approved it on 2026-11-10 (walk F126 to F135).
+  Supersedes mockup.html for the run's layout, the working row and the ending. Open in a browser.
+
+  Approved decisions this file draws:
+  - F126 the check's wait: "Checking for your changes" / "Since this demo's last save".
+  - F127 the check and the question take the run window's width; the three buttons on one line.
+  - F128 the save reuses the check's read, so its line is "Saving to My Datapacks".
+  - F129 every step shows from the first frame.
+  - F131 the uninstall line is a bare count: "Uninstalling Nov 9, 3:39 PM, 2,062 of 2,197".
+  - F132 bold step titles; smaller, muted status lines; smaller data types with small icons;
+    the same space between every step.
+  - F133 the working data type gets a second line, the word first and then the count:
+    "Installing 1,200 of 2,046" or "Linking product options 2,044 of 2,046". Install's own line is
+    "5 of 11 data types". Space for the second line is held for the whole install.
+  - F134 a clean finish hands off to the small Result layout: "My Luma Imported", then
+    "Your changes are saved in Version History." (only when a save ran) and
+    "New products can take 20 minutes to show in search." A finish with a problem stays on its
+    steps. The same ending rule covers the Updates run and the projects batch run (owner: "Do all three").
+  - F135 nothing wraps: columns at least as wide as their longest line; two columns at large for
+    more than six data types, one column at medium for six or fewer, one column in an editor too
+    narrow for two.
+-->
+<html><head><meta charset="utf-8"><title>Import window, approved 2026-11-10</title><style>
+body{margin:0;padding:24px;background:#111;font-family:system-ui,sans-serif;max-width:760px}
+.n{display:inline-flex;width:20px;height:20px;border-radius:50%;background:#333;color:#eee;font-size:11px;font-weight:700;align-items:center;justify-content:center;margin-right:8px;flex:none}
+.cap{display:flex;align-items:flex-start;font-size:13px;color:#eee;margin:6px 0 8px;line-height:1.4}
+.tag{font-size:11px;color:#999;border:1px solid #444;border-radius:10px;padding:1px 7px;margin-left:6px;white-space:nowrap}
+.dlg{background:#1e1e1e;color:#eee;border-radius:8px;padding:20px 24px;box-sizing:border-box;margin:0 0 26px;width:100%}
+.dlg.S{width:400px}
+.run{min-height:560px;display:flex;flex-direction:column}
+.title{font-size:18px;font-weight:700;padding-bottom:10px;border-bottom:2px solid #3a3a3a;display:flex;gap:8px;align-items:center}
+.ic{flex:none;border-radius:50%;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#1e1e1e}
+.ok{background:#2d9d78}.spin{border:2px solid #378ef0;border-right-color:transparent}.wait{border:1.5px solid #8a8a8a}.warn{background:#e68619}
+.title .ic{width:17px;height:17px;font-size:11px}
+.step{display:flex;gap:10px;padding:12px 0}.step+.step{border-top:1px solid #2e2e2e}
+.step>.ic{width:15px;height:15px;font-size:10px;margin-top:2px}
+.sl{font-size:14px;font-weight:700}.line{font-size:12px;color:#9a9a9a;margin-top:3px}.line.bad{color:#f29423}
+.sub{display:grid;grid-template-columns:1fr 1fr;gap:3px 24px;margin-top:10px;padding-bottom:17px}
+.t{display:flex;gap:8px;font-size:12px;color:#cfcfcf;align-items:flex-start;white-space:nowrap}
+.t .ic{width:11px;height:11px;font-size:7px;margin-top:2px}
+.t .doing{font-size:11px;color:#9a9a9a;margin-top:2px}
+.t.active{margin-bottom:-17px}
+.clock{font-size:12px;color:#9a9a9a;margin-top:auto;padding-top:10px}
+.btns{display:flex;gap:10px;margin-top:16px;align-items:center}.sp{flex:1}
+.b{border:2px solid #777;border-radius:16px;padding:5px 14px;font-weight:700;font-size:14px;white-space:nowrap;color:#eee}
+.b.cta{background:#378ef0;border-color:#378ef0;color:#fff}
+.waitbox{display:flex;flex-direction:column;align-items:center;gap:6px;padding:70px 0 60px}
+.sp1{width:22px;height:22px;border-radius:50%;border:3px solid #378ef0;border-top-color:transparent}
+.wl{font-weight:700;font-size:14px}.wd{color:#bbb;font-size:14px}.wt{color:#999;font-size:12px}
+.lead{font-size:14px;margin:14px 0 10px;line-height:1.45}
+.facts{display:grid;grid-template-columns:110px 1fr;gap:6px 14px;font-size:14px;margin-bottom:12px}.fl{color:#999}
+.cb{display:flex;gap:9px;font-size:14px;align-items:center}.box{width:13px;height:13px;border:1.5px solid #bbb;border-radius:2px}
+p{font-size:14px;line-height:1.45;margin:14px 0 0}
+</style></head><body>
+<script>
+const I={ok:'<span class="ic ok">✓</span>',spin:'<span class="ic spin"></span>',wait:'<span class="ic wait"></span>',warn:'<span class="ic warn">!</span>'};
+const L=['Attribute Sets','Product Attributes','Attribute Assign to Set','Categories','Customer Groups','Products'];
+const R=['Gift Cards','Stock Quantities','Customers','Cart Rules','Coupons'];
+const ORDER=[];for(let i=0;i<6;i++){ORDER.push(L[i]);if(R[i])ORDER.push(R[i]);}
+const INSTALL_ORDER=[...L,...R];
+function grid(doneCount,active){
+ return '<div class="sub">'+ORDER.map(l=>{const k=INSTALL_ORDER.indexOf(l);
+  if(active&&l===active.name) return `<div class="t active">${I.spin}<div>${l}<div class="doing">${active.doing}</div></div></div>`;
+  return `<div class="t">${k<doneCount?I.ok:I.wait}<div>${l}</div></div>`;}).join('')+'</div>';
+}
+const step=(s,l,line,sub='',bad)=>`<div class="step">${I[s]}<div style="flex:1"><div class="sl">${l}</div><div class="line${bad?' bad':''}">${line}</div>${sub}</div></div>`;
+function run(o){
+ return `<div class="dlg run"><div class="title">Import My Luma</div>`+
+ step(o.save[0],'Save Your Changes',o.save[1])+
+ step(o.un[0],'Uninstall the Previous Version',o.un[1])+
+ step(o.ins[0],'Install the Version from Nov 9, 1:56 PM',o.ins[1],grid(o.done,o.active))+
+ step(o.ver[0],'Verify the Import',o.ver[1])+
+ `<div class="clock">${o.clock}</div><div class="btns"><span class="sp"></span><span class="b">Run in Background</span></div></div>`;
+}
+const cap=(n,text,tags='')=>`<div class="cap"><span class="n">${n}</span><div>${text}${tags}</div></div>`;
+const tag=t=>`<span class="tag">${t}</span>`;
+let h='';
+h+=cap(1,'Import pressed on a version from Version History. The window opens at its full width and checks first.',tag('F126')+tag('F127'));
+h+=`<div class="dlg"><div class="title">Import My Luma</div><div class="waitbox"><span class="sp1"></span><div class="wl">Checking for your changes</div><div class="wd">Since this demo's last save</div><div class="wt">Usually about a minute · 12 seconds</div></div><div class="btns"><span class="sp"></span><span class="b">Cancel</span></div></div>`;
+h+=cap(2,'Only when something changed. Same width, so the buttons sit on one line and nothing jumps.',tag('F127'));
+h+=`<div class="dlg"><div class="title">${I.warn}Save Your Changes First?</div><div class="lead">You changed these since this demo's last save. Importing replaces them.</div><div class="facts"><div class="fl">Products</div><div>24-mb01</div></div><div class="cb"><span class="box"></span>Always Save Without Asking</div><div class="btns"><span class="b">Import Without Saving</span><span class="sp"></span><span class="b">Cancel</span><span class="b cta">Save and Import</span></div></div>`;
+h+=cap(3,'Save and Import. Every step shows from the first moment. The save uses what the check just read, so it only writes.',tag('F128')+tag('F129')+tag('F132'));
+h+=run({save:['spin','Saving to My Datapacks'],un:['wait','Waiting'],ins:['wait','Waiting'],ver:['wait','Waiting'],done:0,clock:'3 seconds'});
+h+=cap(4,'Uninstall. A bare count, like every other line.',tag('F131'));
+h+=run({save:['ok','Saved as Nov 9, 11:52 PM'],un:['spin','Uninstalling Nov 9, 3:39 PM, 2,062 of 2,197'],ins:['wait','Waiting'],ver:['wait','Waiting'],done:0,clock:'52 seconds'});
+h+=cap(5,'Install. The working row says what it is doing, the word first, then the count. Space for that line is held, so the window keeps its height.',tag('F133')+tag('F135'));
+h+=run({save:['ok','Saved as Nov 9, 11:52 PM'],un:['ok','Uninstalled Nov 9, 3:39 PM'],ins:['spin','5 of 11 data types'],ver:['wait','Waiting'],done:5,active:{name:'Products',doing:'Installing 1,200 of 2,046'},clock:'2 minutes, 10 seconds'});
+h+=cap(6,'The slow part of products. Same place, only the words change.',tag('F133'));
+h+=run({save:['ok','Saved as Nov 9, 11:52 PM'],un:['ok','Uninstalled Nov 9, 3:39 PM'],ins:['spin','5 of 11 data types'],ver:['wait','Waiting'],done:5,active:{name:'Products',doing:'Linking product options 2,044 of 2,046'},clock:'4 minutes, 55 seconds'});
+h+=cap(7,'Verify.');
+h+=run({save:['ok','Saved as Nov 9, 11:52 PM'],un:['ok','Uninstalled Nov 9, 3:39 PM'],ins:['ok','Installed'],ver:['spin','Checking the products against the datapack'],done:11,clock:'5 minutes, 50 seconds'});
+h+=cap(8,'A clean finish hands off to the small result.',tag('F134'));
+h+=`<div class="dlg S"><div class="title">${I.ok}My Luma Imported</div><p>Your changes are saved in Version History. New products can take 20 minutes to show in search.</p><div class="btns"><span class="sp"></span><span class="b">Close</span></div></div>`;
+h+=cap(9,'A finish with a problem stays on the steps, with the problem on the step it is about.',tag('F134'));
+h+=`<div class="dlg run"><div class="title">${I.warn}My Luma Imported</div>`+step('ok','Save Your Changes','Saved as Nov 9, 11:52 PM')+step('ok','Uninstall the Previous Version','Uninstalled Nov 9, 3:39 PM')+step('ok','Install the Version from Nov 9, 1:56 PM','Installed',grid(11))+step('warn','Verify the Import','Checked 2,048 products against the datapack: 3 differ','',true)+`<div class="clock">Took 6 minutes, 5 seconds</div><div class="btns"><span class="sp"></span><span class="b">Fix with AI</span><span class="b">Close</span></div></div>`;
+document.write(h);
+</script></body></html>

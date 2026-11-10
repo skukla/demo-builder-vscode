@@ -84,7 +84,7 @@ describe('DatapackActivityView — which loading treatment', () => {
         answerThenHang([{ items: [makeEntry()], total: 120 }]);
 
         render(<DatapackActivityView />);
-        fireEvent.click(await screen.findByRole('button', { name: /load 50 more/i }));
+        fireEvent.click(await screen.findByRole('button', { name: /Load 50 More/ }));
 
         // The whole point of the inline treatment: what is already on screen stays.
         expect(screen.getAllByTestId('activity-row')).toHaveLength(1);
@@ -154,7 +154,7 @@ describe('DatapackActivityView — a page that fails', () => {
         ]);
 
         render(<DatapackActivityView />);
-        fireEvent.click(await screen.findByRole('button', { name: /load 50 more/i }));
+        fireEvent.click(await screen.findByRole('button', { name: /Load 50 More/ }));
         await screen.findByText('Could Not Reach the Data Installer');
 
         fireEvent.click(screen.getByRole('button', { name: /retry/i }));

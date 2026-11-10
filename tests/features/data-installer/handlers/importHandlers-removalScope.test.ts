@@ -96,7 +96,7 @@ describe('reset-datapack on a pack Demo Builder installed', () => {
     it('refuses a store other than the recorded one, and removes nothing', async () => {
         const result = await importHandlers['reset-datapack'](makeImportHarness(projectOf()).context, { ...RESET, websiteCode: 'other' });
 
-        expect(result).toMatchObject({ success: false, error: 'racks@1.0.0 is installed on the website base. Choose that one to remove it.' });
+        expect(result).toMatchObject({ success: false, error: 'racks@1.0.0 is installed on the website base. Choose that one to uninstall it.' });
         expect(h.store.products.size).toBe(1);
         expect(mockedWatch).not.toHaveBeenCalled();
     });

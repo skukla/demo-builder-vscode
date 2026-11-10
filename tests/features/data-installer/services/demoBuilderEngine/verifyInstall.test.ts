@@ -9,7 +9,7 @@
  */
 
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { checkAfterInstall, checkLine, checkRowNote, holdsProductRows, verifyInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
+import { checkAfterInstall, checkLine, holdsProductRows, verifyInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
 import type { CommerceProduct } from '@/types/commerceWire';
 import { by, fakeContext, page } from './demoBuilderEngine.testUtils';
 
@@ -137,6 +137,8 @@ describe('verifyInstall', () => {
             { sku: 'MH01-32', attribute: 'size', pack: 'Size 32', store: 'Size 34' },
         ]);
         expect(check.pricesDiffer.examples).toEqual([{ sku: 'MH01-32', pack: 10, store: 12 }]);
+        // The window's "3 differ": MH01-32's value and price are one product, not two.
+        expect(check.productsDiffer).toBe(3);
     });
 
     it('names a configurable whose children are not all linked', async () => {
@@ -257,21 +259,6 @@ describe('checkLine', () => {
         expect(line).toBe(
             'Checked 2,048 products against the datapack: 80 configurable products with no options and 512 attribute values not as in the datapack.',
         );
-    });
-});
-
-// The products' row in the import window: what differs, one short line; Fix with AI is the what-to-do.
-describe('checkRowNote', () => {
-    const none = { count: 0, examples: [] };
-    const base = { checked: 2048, compared: { values: 1, prices: 1, configurables: 1 }, missing: none, configurablesWithoutOptions: none, configurablesDiffer: none, valuesDiffer: none, pricesDiffer: none };
-
-    it('says what differs, as a sentence', () => {
-        expect(checkRowNote({ ...base, verdict: 'differs', missing: { count: 3, examples: ['MH01'] } })).toBe('3 products missing from the store.');
-    });
-
-    it('CONTROL: says nothing when everything matches, or when there was no check', () => {
-        expect(checkRowNote({ ...base, verdict: 'matches' })).toBeUndefined();
-        expect(checkRowNote(undefined)).toBeUndefined();
     });
 });
 

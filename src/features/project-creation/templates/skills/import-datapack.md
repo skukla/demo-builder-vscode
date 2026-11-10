@@ -56,11 +56,31 @@ says by data type what installing again would update, add, remove, or keep becau
 in the Admin. Show the user what it would remove: removing things can blank product values with
 them, and it cannot be undone.
 
-If the pack has not changed since it was installed, the preview should show nothing to update,
-add or remove. If it shows any, stop and tell the user rather than installing: it means Demo
-Builder has lost track of what it made, not that the pack changed. Afterwards the note says what
-was taken out ("Took out 3 items the pack no longer has: …"), and `check.leftOut` counts products
-the check skipped because they were kept; `verify_datapack_install` checks every product.
+If the same version is installed again and its contents have not changed, the preview should
+show nothing to update, add or remove. If it shows any, stop and tell the user rather than
+installing: it means Demo Builder has lost track of what it made. That check is only for the same,
+unchanged version. A team pack updated in place since it was installed, or another version, is
+expected to change things: show the user the preview and go on. Afterwards the note says what was
+taken out ("Took out 3 items the pack no longer has: …"), and `check.leftOut` counts products the
+check skipped because they were kept; `verify_datapack_install` checks every product.
+
+## Importing another pack or version
+
+When the project uses a pack Demo Builder installed and you import **another pack, or another
+version of it**, `start_datapack_import` replaces it: the old pack's data is removed first, in the
+same job, the way `reset_datapack` removes it, then the new one installs. Tell the user that before
+you start.
+
+- Changes the user made to the old pack since it was installed are saved into their own pack first,
+  without asking. When the old pack is not theirs (a team pack, a colleague's), the call installs
+  nothing and answers `CHANGES_NEED_ANSWER` with the changes in a sentence. Ask the user, then call
+  again with `changes: "keep"` and `saveAs` (a new pack of theirs; ask them for the name) or
+  `changes: "drop"` (lost).
+- A removal that fails installs nothing: the status's `stoppedAt` is `replacing`, its `reason` says
+  why, and the project still names the old pack.
+- Once the old pack is gone the project names the new one, and `reset_datapack` removes the new one.
+
+Importing the same version again replaces nothing: it updates in place, as above.
 
 ## Trap 2 — never guess `commerceInstance`
 
@@ -141,7 +161,9 @@ install's order, so you do not have to reason about what to remove first.
 ## Saving the store into a pack
 
 `save_store_changes_to_pack` saves the project's store into the datapack library, as Save or
-Save As: the pack Demo Builder installed here, plus anything you pick in `selections`.
+Save As: everything the demo uses, with nothing to pick. That is the pack Demo Builder installed
+here as the store holds it now, and whatever of the demo's the pack does not hold yet (what someone
+added in the Admin), never another demo's on a shared instance.
 
 - **Save** (no `saveAs`): a NEW version of the pack the project uses, only when that pack is the
   user's own. When it is not (a team pack such as Bodea, or a colleague's), nothing is written and
@@ -154,16 +176,20 @@ pack named it saves only what is picked, which is how a store built by hand in t
 a pack (send `saveAs`). `start_datapack_export` is the same save: send `selections`, `saveAs`
 and `confirm`.
 
-- **Pick with `list_datapack_export_items`** (`dataType`: products, giftcards, categories,
-  cart_rules, customers, b2b_companies, customer_groups, b2b_shared_catalogs,
-  product_attributes, attribute_sets). It leaves off what the pack being saved already holds
-  (`inPackCount`), so what is left is what someone added by hand. Each item's `id` goes into
-  `selections` as `{kind: {field: [ids]}}`: products and gift cards by `sku`, cart rules by
-  `rule_id`, attributes by `attribute_code`, attribute sets by `attribute_set_id`, the rest by `id`.
+- **From a pack, pick only what the demo does not use yet**: a customer group, shared catalog,
+  attribute or attribute set made to use during the demo. `list_datapack_export_items` with
+  `unused: true` lists them (`dataType`: customer_groups, b2b_shared_catalogs, product_attributes,
+  attribute_sets). Ask the user which, if any; most saves need none.
+- **With no pack, pick everything** with `list_datapack_export_items` (`dataType`: products,
+  giftcards, categories, cart_rules, customers, b2b_companies, customer_groups,
+  b2b_shared_catalogs, product_attributes, attribute_sets).
+- Each item's `id` goes into `selections` as `{kind: {field: [ids]}}`: products and gift cards by
+  `sku`, cart rules by `rule_id`, attributes by `attribute_code`, attribute sets by
+  `attribute_set_id`, the rest by `id`.
 - **A pick brings what it needs**: a product its categories, set, attributes and quantities; a
   cart rule its typed-in coupons; a company its admin. You do not pick those separately.
-- **Read the answer's message to the user.** It says what the store has that the version left
-  out (`leftOut`) and any id kept because the store could not name it (`unnamed`). A version
+- **Read the answer's message to the user.** With no pack, it says what the store has that the
+  version left out (`leftOut`); always, any id kept because the store could not name it (`unnamed`). A version
   the install would refuse is not saved, and the message says which kind and why.
 - Undo is `delete_library_datapack` on the new version. Nothing in Commerce changes, and a
   picked thing is never removed when the pack is.

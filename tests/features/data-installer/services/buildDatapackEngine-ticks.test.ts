@@ -20,7 +20,7 @@ const ALL = Object.keys(ROWS);
 const LAYER = [settingRow(GRID, '24')];
 /** What an SC will wonder next when a job installed products (the engine's closing lines). */
 const AFTER_PRODUCTS =
-    "Products can take up to 20 minutes to appear in storefront search. This datapack doesn't include product images. Products show the images that are in AEM Assets.";
+    "New products can take 20 minutes to show in search. This datapack doesn't include product images. Products show the images that are in AEM Assets.";
 /** The check at the end of an install (2026-11-06): the one product installed, read back as the pack says. */
 const CHECKED_ONE = 'Checked 1 product against the datapack: all match.';
 

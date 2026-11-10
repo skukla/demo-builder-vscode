@@ -154,8 +154,17 @@ describe('the export door with Demo Builder engine', () => {
 
         const result = await exportHandlers['list-datapack-export-items'](makeImportHarness(project()).context, { dataType: 'products' });
 
-        expect(mockedList).toHaveBeenCalledWith(expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }), 'products', BODEA, 'library');
+        expect(mockedList).toHaveBeenCalledWith(expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }), 'products', BODEA, 'library', false);
         expect(result).toEqual({ success: true, data: page });
+    });
+
+    it("passes on Add Items's unused, so the list is what the demo does not use (walk F85)", async () => {
+        mockedRecord.mockResolvedValue(RECORD);
+        mockedList.mockResolvedValue({ items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 });
+
+        await exportHandlers['list-datapack-export-items'](makeImportHarness(project()).context, { dataType: 'customer_groups', unused: true });
+
+        expect(mockedList).toHaveBeenCalledWith(expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }), 'customer_groups', BODEA, 'library', true);
     });
 
     it('refuses a kind that cannot be listed for picking, naming those that can', async () => {
@@ -172,7 +181,7 @@ describe('a list that fails', () => {
 
         const result = await exportHandlers['list-datapack-export-items'](makeImportHarness(project()).context, { dataType: 'giftcards' });
 
-        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/^The store's gift cards could not be listed\./u) });
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/^Commerce's gift cards could not be listed\./u) });
     });
 });
 

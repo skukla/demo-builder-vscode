@@ -353,7 +353,14 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v59 (2026-11-06, the service's install engine deleted, DI-12): import-datapack and diagnose-demo
 // describe one engine, and import-datapack says how a pack is copied into the Data Installer.
 // Existing projects would keep telling agents to set an Engine setting that no longer exists.
-export const AI_CONTEXT_VERSION = 59;
+// v60 (2026-11-09, walk F85): import-datapack says a save from a pack takes everything the demo uses,
+// picking only what it does not use yet (`unused: true`). Existing projects would keep telling the
+// agent to pick what was added by hand, which the save now takes on its own.
+// v61 (2026-11-09, walk F97): import-datapack says importing another pack or version over the
+// project's removes that one first, asking about the user's changes, and no longer stops another
+// version or a team pack's in-place update as "lost track". Existing projects would keep treating
+// another version as a first install.
+export const AI_CONTEXT_VERSION = 61;
 
 /**
  * Component IDs for standardized component instance access

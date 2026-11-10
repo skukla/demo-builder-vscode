@@ -35,6 +35,7 @@ import { nameOrId } from './packForm';
 import { createOne } from './pendingCreates';
 import { type ProductLookups, productLookups } from './productLookups';
 import { tryRow } from './refusedRows';
+import { counted } from './rowCount';
 import { conditionsForPack, conditionsForStore, namesSegment } from './ruleConditions';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceRuleCondition, CommerceSalesRule } from '@/types/commerceSalesRule';
@@ -108,27 +109,28 @@ function websiteOf(ctx: KindContext): number {
 export async function installCartRules(ctx: KindContext, rows: CartRuleRows): Promise<void> {
     const websiteId = websiteOf(ctx);
     const lk = productLookups(ctx);
-    for (const { rule } of rows) {
-        if (ownedId(ctx.session, CART_RULE_KIND, rule.name) !== undefined || ctx.recorder.byKey(CART_RULE_KIND, rule.name)) continue;
-        if (await ruleByName(ctx.get, rule.name)) {
-            ctx.log(`left cart rule ${rule.name} as it is: the store already has it`);
-            continue;
-        }
-        if (namesSegment(rule.condition) || namesSegment(rule.action_condition)) {
-            ctx.log(`cart rule ${rule.name} names a customer segment by another store's id; it is sent as it is, and needs its segment chosen in the Admin`);
-        }
-        // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
-        const made = await tryRow(ctx, { kind: CART_RULE_KIND, key: rule.name }, async () => {
-            return createOne(ctx, { kind: CART_RULE_KIND, key: rule.name }, async () => {
-                const answer = (await ctx.send('POST', 'salesRules', { rule: await toCommerceRule(lk, rule, websiteId) })) as CommerceSalesRule | null;
-                const id = Number(answer?.rule_id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new cart rule ${rule.name}'s id.`);
-                return { kind: CART_RULE_KIND, id: String(id), key: rule.name };
-            });
-        });
-        if (!made) continue;
-        ctx.log(`created cart rule ${rule.name}`);
+    for (const { rule } of rows) await counted(ctx, CART_RULE_KIND, rule.name, () => installCartRule(ctx, lk, rule, websiteId));
+}
+
+async function installCartRule(ctx: KindContext, lk: ProductLookups, rule: PackRule, websiteId: number): Promise<void> {
+    if (ownedId(ctx.session, CART_RULE_KIND, rule.name) !== undefined || ctx.recorder.byKey(CART_RULE_KIND, rule.name)) return;
+    if (await ruleByName(ctx.get, rule.name)) {
+        ctx.log(`left cart rule ${rule.name} as it is: the store already has it`);
+        return;
     }
+    if (namesSegment(rule.condition) || namesSegment(rule.action_condition)) {
+        ctx.log(`cart rule ${rule.name} names a customer segment by another store's id; it is sent as it is, and needs its segment chosen in the Admin`);
+    }
+    // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.
+    const made = await tryRow(ctx, { kind: CART_RULE_KIND, key: rule.name }, async () => {
+        return createOne(ctx, { kind: CART_RULE_KIND, key: rule.name }, async () => {
+            const answer = (await ctx.send('POST', 'salesRules', { rule: await toCommerceRule(lk, rule, websiteId) })) as CommerceSalesRule | null;
+            const id = Number(answer?.rule_id);
+            if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new cart rule ${rule.name}'s id.`);
+            return { kind: CART_RULE_KIND, id: String(id), key: rule.name };
+        });
+    });
+    if (made) ctx.log(`created cart rule ${rule.name}`);
 }
 
 /** Bring a rule this engine made up to the pack's row, on the install target's website. */

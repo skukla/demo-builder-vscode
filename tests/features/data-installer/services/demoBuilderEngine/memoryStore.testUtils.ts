@@ -96,14 +96,20 @@ export function memoryStore(): MemoryStore {
         const onWebsite = (p: CommerceProduct) =>
             !website ||
             (p.extension_attributes?.website_ids ?? []).map(String).includes(website.value);
+        // An attribute asked for by `notnull` (what a demo's products use, `demoUses.ts`).
+        const valued = [...f.entries()].filter(([, filter]) => filter.condition === 'notnull');
+        const hasValues = (p: CommerceProduct) =>
+            valued.every(([code, filter]) => matches(filter, p.custom_attributes?.find((a) => a.attribute_code === code)?.value));
         return page(
             [...products.values()].filter(
                 (p) =>
                     matches(f.get('sku'), p.sku) &&
                     matches(f.get('entity_id'), p.id) &&
                     matches(f.get('attribute_set_id'), p.attribute_set_id) &&
+                    matches(f.get('type_id'), p.type_id) &&
                     inCategory(p) &&
-                    onWebsite(p)
+                    onWebsite(p) &&
+                    hasValues(p)
             )
         );
     };

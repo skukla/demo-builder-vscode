@@ -1,6 +1,6 @@
 /**
  * The removal confirm's decisions, without React: what it shows for what the read found, and what
- * each of its buttons sends (Save and Remove, Remove Without Saving), with the Save As name when
+ * each of its buttons sends (Save and Uninstall, Uninstall Without Saving), with the Save As name when
  * the demo's pack is not the SC's (`.rptc/plans/datapack-save-as/`).
  */
 
@@ -84,11 +84,11 @@ describe('removalAnswer', () => {
     const mine = confirmContent(CHANGED_MINE, null);
     const team = confirmContent(CHANGED_TEAM, null);
 
-    it("keeps into the SC's pack on Save and Remove", () => {
+    it("keeps into the SC's pack on Save and Uninstall", () => {
         expect(removalAnswer(mine, FRESH_CHOICE, true)).toEqual({ changes: 'keep' });
     });
 
-    it('drops on Remove Without Saving', () => {
+    it('drops on Uninstall Without Saving', () => {
         expect(removalAnswer(mine, { always: true }, false)).toEqual({ changes: 'drop' });
     });
 
@@ -109,17 +109,16 @@ describe('removalAnswer', () => {
         expect(removalAnswer({ kind: 'plain' }, FRESH_CHOICE, true)).toEqual({ changes: 'drop' });
     });
 
-    it('drops after a failed read: Remove Anyway is that choice', () => {
+    it('drops after a failed read: Uninstall Anyway is that choice', () => {
         expect(removalAnswer({ kind: 'read-failed', reason: 'x' }, FRESH_CHOICE, true)).toEqual({ changes: 'drop' });
     });
 });
 
 describe('removeLabel', () => {
     it('names what the main button does', () => {
-        expect(removeLabel({ kind: 'read-failed', reason: 'x' })).toBe('Remove Anyway');
-        expect(removeLabel({ kind: 'plain' })).toBe('Remove');
-        expect(removeLabel({ kind: 'changes', sentence: 's', packName: 'p' })).toBe('Save and Remove');
-        expect(removeLabel({ kind: 'changes', sentence: 's' })).toBe('Save As New and Remove');
+        expect(removeLabel({ kind: 'read-failed', reason: 'x' })).toBe('Uninstall Anyway');
+        expect(removeLabel({ kind: 'plain' })).toBe('Uninstall');
+        expect(removeLabel({ kind: 'changes', sentence: 's' })).toBe('Uninstall');
     });
 });
 
@@ -153,6 +152,6 @@ describe('recordedRemovalLines', () => {
     });
 
     it('says so when the record lists nothing', () => {
-        expect(recordedRemovalLines('Bodea', [], ['categories'], inWords)).toEqual(['Bodea has nothing left in the store to delete.']);
+        expect(recordedRemovalLines('Bodea', [], ['categories'], inWords)).toEqual(['Bodea has nothing left in Commerce to delete.']);
     });
 });

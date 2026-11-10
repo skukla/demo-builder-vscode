@@ -12,8 +12,11 @@
  * @module features/data-installer/services/demoBuilderEngine/askedKinds
  */
 
+import { dataTypeLabel } from '../../ui/dataTypeLabel';
 import { withDependencies } from '../../ui/importDependencies';
 import { STORE_CONFIG_KIND } from '../datapackCatalog';
+import type { ImportRequest } from '../importRequest';
+import { andList } from '@/core/utils/andList';
 
 type Rows = Record<string, unknown>;
 
@@ -33,4 +36,16 @@ export function kindsAddedFor(all: Rows, dataTypes: readonly string[]): string[]
 export function settingsAsked(all: Rows, dataTypes: readonly string[] | undefined): boolean {
     if (!dataTypes || dataTypes.includes(STORE_CONFIG_KIND)) return true;
     return Object.keys(all).every((kind) => dataTypes.includes(kind));
+}
+
+/** Why the pack cannot answer the request, when it lacks a kind the request asks for. */
+export function missingKinds(request: Pick<ImportRequest, 'dataTypes'>, items: Rows): string | undefined {
+    const missing = request.dataTypes.filter((kind) => !(kind in items));
+    return missing.length > 0 ? `The pack holds no ${missing.join(', ')}.` : undefined;
+}
+
+/** The note's line for what an install added because the kinds asked for need it; the form ticks these itself. */
+export function addedKindsLine(all: Rows, dataTypes: readonly string[]): string | undefined {
+    const added = kindsAddedFor(all, dataTypes);
+    return added.length > 0 ? `Also installed ${andList(added.map((kind) => dataTypeLabel(kind).toLowerCase()))}: the data types asked for need them.` : undefined;
 }

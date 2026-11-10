@@ -421,7 +421,7 @@ describe('installProducts', () => {
             {
                 kind: 'products',
                 key: VR_RACK.product.sku,
-                reason: 'The store has no customer group Platinum Buyer.',
+                reason: 'Commerce has no customer group Platinum Buyer.',
             },
         ]);
         expect(ctx.sent).toStrictEqual([]);

@@ -51,8 +51,8 @@ function withService(over: Record<string, unknown> = {}): void {
     });
 }
 
-async function openModal(onClose = jest.fn()) {
-    render(<LoadDatapackFileModal onClose={onClose} />);
+async function openModal(onClose = jest.fn(), offersInstaller?: boolean) {
+    render(<LoadDatapackFileModal onClose={onClose} offersInstaller={offersInstaller} />);
     await settle();
     return onClose;
 }
@@ -67,8 +67,33 @@ it('opens the picker first, then shows what is in the file before anything is wr
     await openModal();
 
     expect(mockRequest.mock.calls[0][0]).toBe('open-datapack-zip');
-    expect(screen.getByText(/Justrite B2B \(justrite, version v1\) holds:/)).toBeInTheDocument();
+    expect(screen.getByText('Justrite B2B, v1. It holds Categories, Customer Groups.')).toBeInTheDocument();
     expect(loadCall()).toBeUndefined();
+});
+
+it('names a saved version by when it was saved, never its id', async () => {
+    withService({ 'open-datapack-zip': { success: true, data: { ...OPENED, version: '20261109-141504' } } });
+
+    await openModal();
+
+    expect(screen.getByText(/^Justrite B2B, saved Nov 9, .+\. It holds/)).toBeInTheDocument();
+    expect(screen.queryByText(/20261109-141504/)).not.toBeInTheDocument();
+});
+
+it('titles the dialog as its button is labelled', async () => {
+    await openModal();
+
+    expect(screen.getByRole('heading', { name: 'Load from File' })).toBeInTheDocument();
+});
+
+it('offers no Data Installer destination while the Data Installer takes no writes from us', async () => {
+    await openModal();
+
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Data Installer/)).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Replace Existing Version/ })).toBeInTheDocument();
+    await press(screen.getByRole('button', { name: 'Load' }));
+    expect(loadCall()).toEqual({ path: OPENED.path, target: 'library', update: false });
 });
 
 it('closes without a dialog when the picker was dismissed', async () => {
@@ -87,8 +112,9 @@ it('loads into the library by default, private, without replacing anything', asy
     await settle();
 
     expect(loadCall()).toEqual({ path: OPENED.path, target: 'library', update: false });
-    const heading = screen.getByRole('heading', { name: /Loaded 2 of 2 data types into your datapacks/ });
+    const heading = screen.getByRole('heading', { name: 'Justrite B2B Loaded' });
     expect(heading.querySelector('.text-positive')).not.toBeNull();
+    expect(screen.getByText('Added to My Datapacks.')).toBeInTheDocument();
 });
 
 it('makes the outcome the title, and offers one way out rather than Close and Done', async () => {
@@ -97,7 +123,7 @@ it('makes the outcome the title, and offers one way out rather than Close and Do
     await press(screen.getByRole('button', { name: 'Load' }));
     await settle();
 
-    expect(screen.queryByRole('heading', { name: 'Load a Datapack File' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Load from File' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load' })).not.toBeInTheDocument();
     await press(screen.getByRole('button', { name: 'Close' }));
@@ -127,7 +153,7 @@ it('into the Data Installer: warns it is shared, and sends the pack name back as
             },
         },
     });
-    await openModal();
+    await openModal(jest.fn(), true);
 
     await press(screen.getByRole('radio', { name: /Data Installer/ }));
 
@@ -169,8 +195,9 @@ it('lists each refused type with its reason when only part of the file landed', 
     await press(screen.getByRole('button', { name: 'Load' }));
     await settle();
 
-    const heading = screen.getByRole('heading', { name: /Loaded 1 of 2 data types into your datapacks/ });
+    const heading = screen.getByRole('heading', { name: 'Justrite B2B Partly Loaded' });
     expect(heading.querySelector('.text-notice')).not.toBeNull();
+    expect(screen.getByText('Loaded 1 of 2 data types. Added to My Datapacks.')).toBeInTheDocument();
     expect(screen.getByText(/too large to send in one request/)).toBeInTheDocument();
 });
 
@@ -181,10 +208,10 @@ it('titles a load the service refused, with its reason in the body', async () =>
     await press(screen.getByRole('button', { name: 'Load' }));
     await settle();
 
-    const heading = screen.getByRole('heading', { name: /The file was not loaded/ });
+    const heading = screen.getByRole('heading', { name: "Couldn't Load Justrite B2B" });
     expect(heading.querySelector('.text-negative')).not.toBeNull();
     expect(screen.getByText('The library is not reachable.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Remove Datapack' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete Datapack' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
 });
 
@@ -198,7 +225,7 @@ it('explains a file that cannot be opened, in the handler words', async () => {
 
     await openModal();
 
-    const heading = screen.getByRole('heading', { name: /This file cannot be loaded/ });
+    const heading = screen.getByRole('heading', { name: "Couldn't Open the File" });
     expect(heading.querySelector('.text-negative')).not.toBeNull();
     expect(screen.getByText('This zip is not a Demo Builder datapack file.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load' })).not.toBeInTheDocument();
@@ -210,7 +237,7 @@ it('offers the undo after a load that created a library pack, and removes it on 
     await press(screen.getByRole('button', { name: 'Load' }));
     await settle();
 
-    await press(screen.getByRole('button', { name: 'Remove Datapack' }));
+    await press(screen.getByRole('button', { name: 'Delete Datapack' }));
     await settle();
 
     expect(mockRequest.mock.calls.find((c) => c[0] === 'delete-library-datapack')?.[1]).toEqual({
@@ -218,7 +245,7 @@ it('offers the undo after a load that created a library pack, and removes it on 
         version: 'v1',
         confirm: true,
     });
-    expect(screen.getByText('Removed.')).toBeInTheDocument();
+    expect(screen.getByText('Deleted.')).toBeInTheDocument();
 });
 
 it('does not offer the undo when the load updated a pack that was already there', async () => {
@@ -240,7 +267,7 @@ it('does not offer the undo when the load updated a pack that was already there'
     await settle();
 
     expect(
-        screen.queryByRole('button', { name: 'Remove Datapack' })
+        screen.queryByRole('button', { name: 'Delete Datapack' })
     ).not.toBeInTheDocument();
 });
 
@@ -257,7 +284,7 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
 
         await openModal();
 
-        expect(screen.getByText('It also carries store settings, which go into your datapacks: catalog/frontend/grid_per_page.')).toBeInTheDocument();
+        expect(screen.getByText('It also carries store settings, which go into My Datapacks: catalog/frontend/grid_per_page.')).toBeInTheDocument();
     });
 
     it('says nothing of the kind for a file with none', async () => {
@@ -272,9 +299,9 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
 
         await press(screen.getByRole('button', { name: 'Load' }));
 
-        expect(screen.getByText(/and its store settings into your datapacks/)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Remove Datapack' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Remove Its Store Settings' })).not.toBeInTheDocument();
+        expect(screen.getByText('Added to My Datapacks, with its store settings.')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Delete Datapack' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Delete Store Settings' })).not.toBeInTheDocument();
     });
 
     it('offers the layer its own undo at another version, or when the data went to the Data Installer', async () => {
@@ -282,9 +309,9 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
         await openModal();
 
         await press(screen.getByRole('button', { name: 'Load' }));
-        await press(screen.getByRole('button', { name: 'Remove Its Store Settings' }));
+        await press(screen.getByRole('button', { name: 'Delete Store Settings' }));
 
-        expect(screen.queryByRole('button', { name: 'Remove Datapack' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Delete Datapack' })).not.toBeInTheDocument();
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'justrite-settings', version: '3', confirm: true }, undefined);
     });
 
@@ -295,7 +322,7 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
         await press(screen.getByRole('button', { name: 'Load' }));
 
         expect(screen.getByText(/Store settings: The library already holds justrite-settings@3/)).toBeInTheDocument();
-        expect(screen.getByText('Loaded 2 of 2 data types into your datapacks')).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Remove Its Store Settings' })).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Justrite B2B Loaded' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Delete Store Settings' })).not.toBeInTheDocument();
     });
 });

@@ -22,7 +22,7 @@ import { handlePrepareProjectsBatch, handleRunProjectsBatch } from '@/features/p
 import { prepareDeleteBatch, runDeleteBatch, runResetBatch } from '@/features/projects-dashboard/services/projectsBatch';
 import type { BatchDeleteAnswer } from '@/types/projectsBatch';
 
-const ANSWER: BatchDeleteAnswer = { path: '/projects/a', deleteGitHubRepo: false, deleteDaLiveSite: false, deleteDatapack: false };
+const ANSWER: BatchDeleteAnswer = { path: '/projects/a', deleteGitHubRepo: false, deleteDaLiveSite: false, removeDatapackData: false };
 
 beforeEach(() => jest.clearAllMocks());
 

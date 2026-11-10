@@ -1,12 +1,13 @@
 /**
- * BatchDeleteQuestions — Delete Selected's one question (owner, 2026-11-04): what to take with
- * each project, as a table. A row per project, a column per online resource (its repository, its
- * DA.live site, its datapack); a cell has a box only where that project has the resource, and a
- * column no project has is not drawn. Each column's header is its Select All, over the rows that
+ * BatchDeleteQuestions — Delete Selected's question (owner, 2026-11-04): what to take with each
+ * project, as a table. A row per project, a column per thing it may take (its repository, its
+ * DA.live site, its datapack's data in Commerce, walk F96); a cell has a box only where that project
+ * has the thing, and a column no project has is not drawn. A pack whose changes could not be read
+ * has a note instead of a box, as Reset Selected's has. Each column's header is its Select All, over the rows that
  * have it: ticked, the dash when some are, empty.
  *
  * One sentence, for what goes whatever is ticked: the files on this machine, which no box shows
- * (owner, 2026-11-05). Each box names what it deletes (`skukla/bodea`, the pack's name), as the
+ * (owner, 2026-11-05), and, when a project has datapack data, that it stays unless removed. Each box names what it deletes (`skukla/bodea`, the pack's name), as the
  * single delete's boxes do, so the project's name stands alone under a Project header. The labels
  * never wrap; a window too narrow for the columns stacks each project's boxes under its name
  * instead (`projects-batch.css`), each box then carrying its own label.
@@ -16,17 +17,20 @@
 
 import { Checkbox } from '@adobe/react-spectrum';
 import React from 'react';
-import { columnState, DELETE_OPTION_KEYS, type DeleteOptionKey } from '../batchChoices';
+import { columnState, DELETE_OPTION_KEYS, offers, type DeleteOptionKey } from '../batchChoices';
 import type { BatchChoices } from '../hooks/useBatchChoices';
+import { UNCHECKED_NOTE } from './BatchResetQuestions';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
+import { UNINSTALL_DATAPACK } from '@/features/data-installer/uninstallWords';
+import { deleteSentence } from '@/features/projects-dashboard/deleteWords';
 import type { BatchDeleteRow } from '@/types/projectsBatch';
 
 /** A column's name, in its header and, stacked, beside each box. */
 export function optionLabel(key: DeleteOptionKey): string {
     if (key === 'repo') return 'Delete Repository';
     if (key === 'site') return 'Delete DA.live Site';
-    return 'Delete Datapack';
+    return UNINSTALL_DATAPACK;
 }
 
 interface Props {
@@ -37,6 +41,7 @@ interface Props {
 function OptionCell({ row, optionKey, choices }: { row: BatchDeleteRow; optionKey: DeleteOptionKey; choices: BatchChoices }) {
     const option = row[optionKey];
     if (!option) return <td />;
+    if (!offers(row, optionKey)) return <td><span className="dialog-problem text-notice">{UNCHECKED_NOTE}</span></td>;
     return (
         <td>
             <Checkbox
@@ -51,14 +56,15 @@ function OptionCell({ row, optionKey, choices }: { row: BatchDeleteRow; optionKe
     );
 }
 
-/** The table; the columns no project has are left out. */
+/** The table; the columns no project has are left out. A column whose every box is a note stays, its header box off. */
 export function BatchDeleteQuestions({ rows, choices }: Props): React.ReactElement {
-    const columns = DELETE_OPTION_KEYS.map((key) => ({ key, state: columnState(rows, choices.ticks, key) })).filter(
-        (column) => column.state.offered,
-    );
+    const columns = DELETE_OPTION_KEYS.filter((key) => rows.some((row) => row[key] !== undefined)).map((key) => ({
+        key,
+        state: columnState(rows, choices.ticks, key),
+    }));
     return (
         <div className="batch-confirm">
-            <LeadText>Project files are removed from this machine.</LeadText>
+            <LeadText>{deleteSentence(rows.some((row) => row.datapack !== undefined))}</LeadText>
             <div className="batch-delete scroll-fade scroll-fade--capped">
                 <table className="batch-delete-table batch-delete-spread">
                     <thead>
@@ -70,6 +76,7 @@ export function BatchDeleteQuestions({ rows, choices }: Props): React.ReactEleme
                                         label={optionLabel(key)}
                                         isSelected={state.all}
                                         isIndeterminate={state.some && !state.all}
+                                        isDisabled={!state.offered}
                                         onChange={() => choices.toggleColumn(rows, key)}
                                     />
                                 </th>

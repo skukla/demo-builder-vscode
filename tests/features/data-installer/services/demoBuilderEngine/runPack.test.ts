@@ -136,6 +136,18 @@ describe('removePack', () => {
         expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
     });
 
+    // Walk F131: a bare count, as every other line in the window reads; it said "took back 1 of 2 objects".
+    it('says how far it has got as a bare count', async () => {
+        const files = memoryFiles();
+        await recorded(files);
+        const ctx = await fakeContext();
+        const progress = jest.fn();
+
+        await removePack(ctx, files, { projectPath: PROJECT, pack: PACK, progress });
+
+        expect(progress.mock.calls.map(([line]) => line)).toEqual(['1 of 2', '2 of 2']);
+    });
+
     it('leaves what Commerce refuses in the store and the record on disk, so removing again tries it again', async () => {
         const files = memoryFiles();
         await recorded(files);

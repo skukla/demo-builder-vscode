@@ -53,7 +53,7 @@ describe('coupons install', () => {
 
         await installCoupons(ctx, parseCouponRows([FF2021]));
 
-        expect(ctx.session.skipped?.[0]).toMatchObject({ kind: 'coupons', key: 'FF2021', reason: expect.stringContaining('The store has no cart rule named Anaïs Clément - Friends and Family Promo, so the coupon FF2021') });
+        expect(ctx.session.skipped?.[0]).toMatchObject({ kind: 'coupons', key: 'FF2021', reason: expect.stringContaining('Commerce has no cart rule named Anaïs Clément - Friends and Family Promo, so the coupon FF2021') });
         expect(ctx.sent).toStrictEqual([]);
     });
 

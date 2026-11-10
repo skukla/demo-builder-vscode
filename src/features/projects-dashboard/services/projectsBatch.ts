@@ -5,7 +5,8 @@
  * Two halves, as the window has two screens:
  * - **prepare** reads what the questions need, for every project picked, and writes nothing: which
  *   online resources a delete may take (none another project still uses, counting the batch's own
- *   projects as going), and whether a reset's datapack has changes that need a name.
+ *   projects as going), and whether the datapack a reset or delete would remove has changes that
+ *   need a name.
  * - **run** takes the answers and works the projects: deletes one at a time (each is quick); resets
  *   side by side within an IMS organization, up to `RESETS_AT_ONCE` (owner, 2026-11-04: a reset
  *   takes about six minutes). The token reaches one org, so orgs run one after another, each costing
@@ -22,7 +23,7 @@
  */
 
 import * as vscode from 'vscode';
-import { deletablePackOf } from './demoPackDeletion';
+import { hasRemovableData } from './datapackDataRemoval';
 import { runProjectDelete } from './projectDeletionService';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { stageLine } from '@/core/utils/stageLine';
@@ -30,12 +31,14 @@ import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
+import type { SaveAsAnswer } from '@/features/eds/services/reset/edsResetSampleData';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type {
+    BatchDatapack,
     BatchDeleteAnswer,
     BatchDeleteRow,
     BatchResetAnswer,
@@ -58,8 +61,23 @@ async function loadAll(context: HandlerContext, paths: readonly string[]): Promi
 const cleanupBehavior = (): string => vscode.workspace.getConfiguration('demoBuilder').get<string>('cleanupBehavior', 'ask');
 
 /**
+ * The datapack whose data the batch could remove, and what would happen to the SC's changes in it.
+ * `held` is the project's datapack.
+ */
+async function datapackOf(context: HandlerContext, project: Project, held: NonNullable<Project['datapack']>): Promise<BatchDatapack> {
+    const changes = await readRemovalChangesOf(context, project);
+    const name = changes?.packName ?? (await libraryDisplayName(context, held)) ?? held.name;
+    // Unread is not "no changes": the pack stays rather than lose what nobody could see.
+    if (!changes) return { name, changes: 'unchecked' };
+    // Changes go into the SC's own pack with no question; else they need a name.
+    if (changes.count > 0) return { name, changes: changes.packName ? 'saves' : 'asks' };
+    return { name };
+}
+
+/**
  * A delete batch's table: per project, the options it has. `deleteAll` ticks the repository and the
- * site, never the datapack; `localOnly` offers none, as the single delete does.
+ * site, never Uninstall Datapack, which writes to a store; `localOnly` offers none, as the single
+ * delete does.
  */
 export async function prepareDeleteBatch(context: HandlerContext, paths: readonly string[]): Promise<BatchDeleteRow[]> {
     const behavior = cleanupBehavior();
@@ -73,8 +91,7 @@ export async function prepareDeleteBatch(context: HandlerContext, paths: readonl
             const tick = behavior === 'deleteAll';
             if (eds?.githubRepo && shared.repo.length === 0) row.repo = { name: eds.githubRepo, ticked: tick };
             if (eds?.daLiveOrg && eds.daLiveSite && shared.site.length === 0) row.site = { name: `${eds.daLiveOrg}/${eds.daLiveSite}`, ticked: tick };
-            const pack = await deletablePackOf(context, project, paths);
-            if (pack) row.datapack = { name: pack.displayName, ticked: false };
+            if (project.datapack && (await hasRemovableData(project))) row.datapack = await datapackOf(context, project, project.datapack);
             return row;
         }),
     );
@@ -104,13 +121,7 @@ export async function prepareResetBatch(context: HandlerContext, paths: readonly
         projects.map(async (project): Promise<BatchResetRow> => {
             const row: BatchResetRow = { path: project.path, name: getProjectDisplayName(project), ...summaryOf(project), ...orgOf(project) };
             if (!project.datapack || commerceBackendOf(project) === undefined) return row;
-            const changes = await readRemovalChangesOf(context, project);
-            const name = changes?.packName ?? (await libraryDisplayName(context, project.datapack)) ?? project.datapack.name;
-            row.datapack = { name };
-            // Unread is not "no changes": the pack stays rather than lose what nobody could see.
-            if (!changes) row.datapack.changes = 'unchecked';
-            // Changes go into the SC's own pack with no question; else they need a name.
-            else if (changes.count > 0) row.datapack.changes = changes.packName ? 'saves' : 'asks';
+            row.datapack = await datapackOf(context, project, project.datapack);
             return row;
         }),
     );
@@ -156,9 +167,10 @@ export async function runDeleteBatch(context: HandlerContext, answers: readonly 
         const ok = await runRow(answer.path, tell, report, async (rowReport) => {
             const project = await context.stateManager.loadProjectFromPath(answer.path, undefined, { persistAfterLoad: false });
             if (!project) return { error: 'This project is no longer on this computer.' };
-            const ownPack = answer.deleteDatapack ? await deletablePackOf(context, project, going) : undefined;
-            const cleanupOptions = { deleteGitHubRepo: answer.deleteGitHubRepo, deleteDaLiveSite: answer.deleteDaLiveSite, deleteDatapack: answer.deleteDatapack };
-            const ran = await runProjectDelete(context, project, { cleanupOptions, ownPack, cleanupResults: [] }, rowReport);
+            const cleanupOptions = { deleteGitHubRepo: answer.deleteGitHubRepo, deleteDaLiveSite: answer.deleteDaLiveSite, removeDatapackData: answer.removeDatapackData };
+            // Asked up front, in step 2, as a reset batch's are (`edsResetUI`).
+            const askName = (): Promise<SaveAsAnswer> => Promise.resolve(answer.changes);
+            const ran = await runProjectDelete(context, project, { cleanupOptions, askName, cleanupResults: [] }, rowReport);
             return ran.stopped ? { error: ran.stopped } : undefined;
         });
         if (!ok) failed++;

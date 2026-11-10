@@ -108,8 +108,8 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_project: {
         action: 'Delete this project',
         consequence:
-            "Removes the project from this machine, its GitHub repository and DA.live site if the agent asked or your cleanup setting deletes everything, and its own pack in the datapack library only if the agent asked (Delete Pack below). This can't be undone.",
-        target: ['name', 'deletePack'],
+            "Removes the project from this machine, its GitHub repository and DA.live site if the agent asked or your cleanup setting deletes everything, and its datapack's data from Commerce only if the agent asked (Uninstall Datapack below), your changes in it saved first. This can't be undone.",
+        target: ['name', 'removeData', 'changes', 'saveAs'],
         sessionGrant: false,
     },
     delete_github_repo: {
@@ -249,9 +249,9 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         sessionGrant: false,
     },
     reset_datapack: {
-        action: 'Remove sample data',
+        action: 'Uninstall a datapack',
         consequence:
-            "Deletes what this data pack put in the Commerce instance and puts back any store settings it changed. This can't be undone.",
+            "Deletes what this datapack put in Commerce and puts back any store settings it changed. This can't be undone.",
         target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
@@ -434,44 +434,44 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_import: {
         action: 'Import sample data',
         consequence:
-            'Writes the chosen data types and what they need into the live Commerce instance, then any store settings the pack or its settings layer holds when all of it is chosen, and installing again updates or removes what the pack made earlier of those types, keeping anything changed in the Admin. Takes several minutes and cannot be paused.',
-        target: ['datapackName', 'version'],
+            'Writes the chosen data types and what they need into the live Commerce instance, then any store settings the pack or its settings layer holds when all of it is chosen, and installing again updates or removes what the pack made earlier of those types, keeping anything changed in the Admin. Importing another datapack or version over the one this demo uses uninstalls that one first. Takes several minutes and cannot be paused.',
+        target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
     start_datapack_export: {
         action: 'Export sample data',
         consequence:
-            "Saves what was picked from this project's store into the datapack library: a new version of the project's pack when it is yours, else a new pack of yours by the name given. Nothing in Commerce changes, and nothing goes into the Data Installer's shared catalogue.",
+            "Saves what was picked from this project's Commerce instance into My Datapacks: a new version of the project's datapack when it is yours, else a new datapack of yours by the name given. Nothing in Commerce changes, and nothing goes into the Data Installer's shared catalog.",
         // The pack it writes (named only for an ACO pack). `confirmName` is the
         // proof-of-intent echo, not the target.
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
     copy_library_datapack_to_installer: {
-        action: 'Copy a library datapack into the Data Installer',
+        action: 'Copy a datapack into the Data Installer',
         consequence:
             "Adds this pack to the Data Installer's shared catalogue, so other teams can find and install it. They will see it, and the extension cannot remove it again.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
     save_store_changes_to_pack: {
-        action: "Save the store's changes to a datapack",
+        action: 'Save Commerce changes to a datapack',
         consequence:
-            "Saves this pack as the project's store now holds it, with anything picked from the store, into the datapack library: a new version of the project's pack when it is yours, else a new pack of yours by the name given; the pack installed is kept as it is, and nothing in Commerce changes.",
+            "Saves this datapack as the project's Commerce instance now holds it, with anything picked from Commerce, into My Datapacks: a new version of the project's datapack when it is yours, else a new datapack of yours by the name given. The datapack installed is kept as it is, and nothing in Commerce changes.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
     delete_library_datapack: {
-        action: 'Delete a library datapack',
+        action: 'Delete a datapack',
         consequence:
-            'Removes this pack and all its data from the datapack library. It cannot be brought back except by loading its file again.',
+            'Deletes this version of the datapack from My Datapacks. It cannot be brought back except by loading its file again.',
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
     rename_datapack: {
-        action: 'Rename a library datapack',
+        action: 'Rename a datapack',
         consequence:
-            'Changes the name everyone sees for every version of this pack in the datapack library; its data is untouched.',
+            'Changes the name everyone sees for every version of this datapack in My Datapacks; its data is untouched.',
         target: ['datapackName', 'displayName'],
         sessionGrant: false,
     },
@@ -482,15 +482,15 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         sessionGrant: false,
     },
     share_datapack: {
-        action: 'Share or stop sharing a library datapack',
+        action: 'Share or stop sharing a datapack',
         consequence: 'Shared, everyone using Demo Builder can see and install every version of this pack, under Community Datapacks; stopped, only you can.',
         target: ['datapackName', 'shared'],
         sessionGrant: false,
     },
     load_datapack_zip: {
-        action: 'Load a datapack file into a store',
+        action: 'Load a datapack file',
         consequence:
-            'Adds the pack in this file to the datapack library, or to the Data Installer catalogue other teams share. Store settings the file carries go into the datapack library.',
+            'Adds the datapack in this file to My Datapacks, or to the Data Installer catalog other teams share. Store settings the file carries go into My Datapacks.',
         target: ['path', 'target'],
         sessionGrant: false,
     },

@@ -345,7 +345,7 @@ describe('packageChecks', () => {
         expect(checks).toContainEqual({
             id: 'datapack',
             ok: false,
-            message: "The sample data this demo uses (acme) is one of your own datapacks, which colleagues can't read yet.",
+            message: "The sample data this demo uses (acme) is in My Datapacks, which colleagues can't read yet.",
         });
     });
 

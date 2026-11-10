@@ -168,7 +168,7 @@ describe('installStockSourceLinks', () => {
 
         await installStockSourceLinks(ctx, parseStockSourceLinks(LINKS_PACK));
 
-        expect(ctx.session.skipped?.map((r) => r.reason)).toContain('The store has no stock named Carvelo Inventory.');
+        expect(ctx.session.skipped?.map((r) => r.reason)).toContain('Commerce has no stock named Carvelo Inventory.');
         expect(ctx.sent).toStrictEqual([]);
     });
 });

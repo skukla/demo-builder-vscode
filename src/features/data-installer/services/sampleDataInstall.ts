@@ -227,7 +227,7 @@ async function runSampleDataJob(
         };
         const start = mode === 'remove' ? deps.startDelete : deps.startImport;
         if (!start) {
-            return { ran: false, reason: 'This caller cannot remove sample data.' };
+            return { ran: false, reason: 'This caller cannot uninstall a datapack.' };
         }
         const started = await start(request);
         const watched = await deps.watch({

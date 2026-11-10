@@ -51,7 +51,7 @@ const groupKey = (group: CommerceStoreGroup): string => String(group.id);
 
 function websiteByCode(structure: CommerceStoreStructure, code: string): CommerceWebsite {
     const site = structure.websites.find((candidate) => candidate.code === code);
-    if (!site) throw new WipeScopeError(`The store has no website ${code}.`);
+    if (!site) throw new WipeScopeError(`Commerce has no website ${code}.`);
     return site;
 }
 

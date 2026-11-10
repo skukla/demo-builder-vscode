@@ -41,17 +41,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack, PackDetailLayer, Page } from '../../types';
 import { CatalogCountRow } from '../components/CatalogCountRow';
-import type { PackBeingSaved } from '../components/create-flow/datapackFlowStages';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
 import { DatapackSourceNotice } from '../components/DatapackSourceNotice';
-import { ImportDatapackModal } from '../components/ImportDatapackModal';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useCatalogShow } from '../hooks/useCatalogShow';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useDatapackCatalog } from '../hooks/useDatapackCatalog';
 import { requestDatapackRename, useDetailFlyout } from '../hooks/useDetailFlyout';
-import { useHeldPack } from '../hooks/useHeldPack';
+import { type HeldPackInfo, useHeldPack } from '../hooks/useHeldPack';
+import { ImportWindowModal, useImportWindow } from '../hooks/useImportWindow';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
@@ -69,11 +68,22 @@ interface DatapackDetailResponse {
 
 const DATAPACKS_UNAVAILABLE = "Datapacks Aren't Available";
 
-/** What a new datapack starts from: the demo's own pack, when Demo Builder installed it (F79). */
-function startingPack(held: ProjectDatapack | undefined, installedAt: string | undefined, page: CatalogPage | null): PackBeingSaved | undefined {
-    if (!held || !installedAt) return undefined;
-    const id = { name: held.name, version: held.version };
-    return { id, displayName: nameOnCard(page, id) ?? held.name, source: held.store ?? 'library' };
+/**
+ * The demo's pack as the catalog lists it: what decides the header's Save Changes (whose it is) and
+ * names it. Its version when listed, else any version of it.
+ */
+function heldInCatalogOf(page: CatalogPage | null, held: ProjectDatapack | undefined): HeldPackInfo | undefined {
+    if (!held) return undefined;
+    const ofHeld = (page?.items ?? []).filter((item) => item.id.name === held.name && (item.store ?? 'installer') === (held.store ?? 'installer'));
+    const item = ofHeld.find((each) => each.id.version === held.version) ?? ofHeld[0];
+    if (!item) return undefined;
+    return { displayName: item.displayName, store: item.store, mine: item.mine, team: item.team };
+}
+
+/** The header's save, once the demo has a pack: into the SC's own, or as a new pack from another's. */
+function demoSaveOf(save: (() => void) | undefined, asNew: boolean): 'into' | 'as-new' | undefined {
+    if (!save) return undefined;
+    return asNew ? 'as-new' : 'into';
 }
 
 /**
@@ -95,7 +105,6 @@ function nameOnCard(page: CatalogPage | null, id: DatapackId | undefined): strin
 export function DatapackCatalogView({ library = false }: { library?: boolean } = {}): React.JSX.Element {
     const [query, setQuery] = useState('');
     const [versions, setVersions] = useState<Record<string, string>>({});
-    const [importing, setImporting] = useState<DatapackId | undefined>(undefined);
 
     // The one list: Demo Builder's datapack store, then the Data Installer's if it answers.
     // Set below, once the callbacks it needs exist: what a pack change also reads again (F66).
@@ -192,7 +201,8 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
     // Drawer it was a dialog nested in a drawer; `IntegrationsScreen` mounts its
     // flow modal beside the list and keeps its flyout view-only, and this follows
     // that. Closing the modal therefore leaves the flyout open behind it.
-    const openImport = useCallback((id: DatapackId): void => setImporting(id), []);
+    // Fixed when it opens: nothing the flyout does afterwards closes it (walk F113).
+    const importWindow = useImportWindow(detail.value, selectedStore);
     /**
      * Closing the import modal RE-READS which pack this project holds.
      *
@@ -206,13 +216,14 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
      * knowledge and the read is a cheap local lookup, so asking it to report back
      * would be a second thing to keep in step for no gain.
      */
+    const closeWindow = importWindow.close;
     const closeImport = useCallback((): void => {
-        setImporting(undefined);
+        closeWindow();
         loadProjectContext({});
         if (commerceInstance) {
             loadInstalled({ commerceInstance });
         }
-    }, [loadProjectContext, loadInstalled, commerceInstance]);
+    }, [closeWindow, loadProjectContext, loadInstalled, commerceInstance]);
 
     /**
      * The held pack's actions (`useHeldPack`): Save Changes in its flyout, Create Datapack in the
@@ -223,20 +234,26 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
         loadProjectContext({});
         refresh();
     }, [loadProjectContext, refresh]);
+    const installedAt = projectContext.value?.installedAt;
+    // The flyout waits for the project's first answer too: Save Changes hangs on it, and appeared on
+    // its own a moment after the other buttons (owner, 2026-11-09, walk F92).
+    const flyoutLoading = detail.loading || (projectContext.value === undefined && projectContext.failure === undefined);
+    const heldInCatalog = useMemo(() => heldInCatalogOf(value, held), [value, held]);
     const heldPack = useHeldPack({
         selected,
         held,
+        installedAt,
         detail: detail.value?.detail,
-        detailLoading: detail.loading,
+        heldInCatalog,
+        detailLoading: flyoutLoading,
         onSaved: afterSave,
     });
 
-    // The header's Create Datapack: Save As, the name first and empty.
+    // The header: Save Changes once the demo has a pack Demo Builder installed, the flyout's own
+    // save; Create Datapack, Save As from nothing, before (owner, 2026-11-09, F83).
     const offerSaveAs = heldPack.offerSaveAs;
-    // On a demo holding a pack Demo Builder installed, a new datapack starts from it, as the save
-    // underneath does (`packToSave`): the screen says so and Create needs no pick (F79).
-    const installedAt = projectContext.value?.installedAt;
-    const createDatapack = useCallback((): void => offerSaveAs('', startingPack(held, installedAt, value)), [offerSaveAs, held, installedAt, value]);
+    const createDatapack = useCallback((): void => offerSaveAs(''), [offerSaveAs]);
+    const headerSave = heldPack.saveDemoChanges;
 
     const retryDetail = useCallback((): void => {
         if (selected) {
@@ -327,7 +344,8 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                                 onShow={setShow}
                                 installerAnswered={installerAnswered}
                                 onCatalogChanged={refresh}
-                                onCreate={library ? undefined : createDatapack}
+                                onCreate={library ? undefined : (headerSave ?? createDatapack)}
+                                demoSave={demoSaveOf(headerSave, heldPack.saveDemoAsNew)}
                             />
                         }
                     />
@@ -353,12 +371,13 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                 selectedName={nameOnCard(value, selected)}
                 detail={detail.value?.detail ?? null}
                 inventory={detail.value?.inventory ?? null}
-                loading={detail.loading}
+                loading={flyoutLoading}
                 failure={detail.failure}
                 onClose={closeDetail}
                 onRetry={retryDetail}
-                onImport={library ? undefined : openImport}
+                onImport={library ? undefined : importWindow.open}
                 onSaveChanges={library ? undefined : heldPack.saveChanges}
+                saveAsNew={heldPack.saveChangesAsNew}
                 onRemoved={removedFromLibrary}
                 installerOn={value?.installerOn === true}
                 setupStep={heldPack.setupStepLine}
@@ -366,23 +385,30 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                 sharedInFile={detail.value?.sharedInFile}
                 onSharingChanged={sharingChanged}
                 settingsLayer={detail.value?.settingsLayer}
+                {...flyout.history}
+                {...removeDataProps({ library, held, installedAt, selected }, importWindow.openRemoval)}
             />
             {heldPack.windows}
 
             {/* Only what the service HOLDS is importable — the inventory, never
                 the pack's declared types. Mounted while `importing` is set, so
                 closing it leaves the flyout behind it open. */}
-            {importing && detail.value ? (
-                <ImportDatapackModal
-                    id={importing}
-                    displayName={detail.value.detail.displayName}
-                    availableTypes={detail.value.inventory.present}
-                    source={selectedStore}
-                    onClose={closeImport}
-                />
-            ) : null}
+            {importWindow.window ? <ImportWindowModal opened={importWindow.window} onClose={closeImport} /> : null}
         </>
     );
+}
+
+/**
+ * Remove Data, on the flyout of the version whose data Demo Builder installed in this demo's store
+ * (owner, 2026-11-09, walk F118). Not in the Datapack Library, which touches no store.
+ */
+function removeDataProps(
+    at: { library: boolean; held: ProjectDatapack | undefined; installedAt: string | undefined; selected: DatapackId | undefined },
+    open: () => void,
+): { onRemoveData?: () => void } {
+    const { library, held, installedAt, selected } = at;
+    const shown = held !== undefined && selected !== undefined && held.name === selected.name && held.version === selected.version;
+    return !library && installedAt !== undefined && shown ? { onRemoveData: open } : {};
 }
 
 /** What `get-datapack-import-target` reports about the open project. */

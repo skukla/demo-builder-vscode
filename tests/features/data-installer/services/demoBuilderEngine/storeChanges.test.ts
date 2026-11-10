@@ -17,7 +17,8 @@ import { configListPath } from '@/features/app-builder/services/storePreparation
 import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
 import { COUPON10, NO_COUPONS_PAGE, NO_RULES_PAGE, TEN_PERCENT_COUPON, WIPER_FLUID } from '../../../../helpers/commerceSalesRuleFixtures';
 import { NOW, PACK, PROJECT, page } from './demoBuilderEngine.testUtils';
-import { ITEMS, SAVE_AS, deps } from './storeChanges.testUtils';
+import { ITEMS, SAVE_AS, deps, nothingElse } from './storeChanges.testUtils';
+import type { OperationRow } from '@/types/webviewPayloads';
 
 describe('previewChanges', () => {
     it("counts a pack's store settings by what installing would do to each, writing nothing (step 09)", async () => {
@@ -97,7 +98,7 @@ describe('saveStoreChanges', () => {
         expect(written[0].items).toEqual([
             { dataType: 'categories', records: { categories: [{ category: expect.objectContaining({ name: 'Server Racks', path: 'Default Category' }) }] } },
         ]);
-        expect(result.sentence).toBe('Saved to the Acme Demo pack. Bodea is unchanged.');
+        expect(result.sentence).toBe('Saved as Acme Demo. Bodea is unchanged.');
     });
 
     it("says only where it saved when the pack installed is already the demo's own", async () => {
@@ -105,7 +106,7 @@ describe('saveStoreChanges', () => {
 
         const result = await saveStoreChanges(d, { pack: PACK, saveAs: { id: { name: PACK.name, version: 'next' }, displayName: 'Acme Demo' } }, write);
 
-        expect(result.sentence).toBe('Saved to the Acme Demo pack.');
+        expect(result.sentence).toBe('Saved a new version of Acme Demo.');
     });
 
     it('moves the install record onto the new version, so the store and it start out the same', async () => {
@@ -140,6 +141,10 @@ describe('saveStoreChanges', () => {
         await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write, (stage, step) => stages.push([stage, step]));
 
         expect(stages).toEqual([
+            // First what else the demo uses (walk F85), said at once (walk F90), before the data types are known;
+            // then again with the rows, once the pack's own data types are (walk F91).
+            ['Reading from Commerce', 'Finding what this demo uses'],
+            ['Reading from Commerce', 'Finding what this demo uses'],
             // This pack holds categories alone, so the line counts that (`capturePhases.test.ts`).
             ['Reading from Commerce', '0 of 1 data type: Categories'],
             ['Reading from Commerce', '0 of 1 data type: Categories'],
@@ -150,8 +155,26 @@ describe('saveStoreChanges', () => {
             ['Reading from Commerce', '1 of 1 data type'],
             ['Reading from Commerce', '1 of 1 data type'],
             ['Reading from Commerce', '1 of 1 data type'],
-            ['Saving to your datapacks', 'Categories'],
+            ['Saving to My Datapacks', 'Categories'],
+            ['Saving to My Datapacks', "Updating this demo's record"],
         ]);
+    });
+
+    // Walk F91: the save's window shows a row per data type; its own work goes on the row it leads to
+    // (review, 2026-11-10: no Preparing Save or Finishing Save rows).
+    it('sends the window a row per data type, the save\'s own steps on the first and last row', async () => {
+        const { d, write } = await deps();
+        const sent: OperationRow[][] = [];
+
+        await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write, (_stage, _step, _at, rows) => void (rows && sent.push(rows)));
+
+        const labels = (rows: OperationRow[]) => rows.map((row) => `${row.label}: ${row.status}`);
+        expect(sent[0]).toStrictEqual([
+            expect.objectContaining({ label: 'Categories', status: 'checking', line: 'Finding what this demo uses' }),
+        ]);
+        expect(sent.every((rows) => rows.every((row) => !/Preparing|Finishing/u.test(row.label)))).toBe(true);
+        expect(labels(sent.find((rows) => rows[0]?.status === 'checking' && !rows[0].line?.startsWith('Finding')) ?? [])).toStrictEqual(['Categories: checking']);
+        expect(sent.at(-1)?.at(-1)).toMatchObject({ label: 'Categories', status: 'checking', line: "Updating this demo's record" });
     });
 
     it("names what goes in when a save is into the demo's own pack, too", async () => {
@@ -160,7 +183,8 @@ describe('saveStoreChanges', () => {
 
         await saveStoreChanges(d, { pack: PACK, saveAs: { ...SAVE_AS, id: { name: PACK.name, version: '20261104-051753' } } }, write, (_stage, step) => steps.push(step));
 
-        expect(steps.at(-1)).toBe('Categories');
+        // The saving step names it; the record's move after it says only that (walk F91).
+        expect(steps.at(-2)).toBe('Categories');
     });
 });
 
@@ -180,6 +204,7 @@ describe('previewChanges and saveStoreChanges open the store where the pack was 
         [configListPath([LIST], 'default')]: { items: [{ path: LIST, value: '12', scope: 'default' }] },
         [configListPath([LIST], 'website', 'justrite_test_website')]: { items: [{ path: LIST, value: '15', scope: 'website' }] },
         [configListPath([LIST], 'website', 'base')]: { items: [{ path: LIST, value: '10', scope: 'website' }] },
+        ...nothingElse(2),
     };
     const SETTINGS_PACK = { store_config: [{ path: LIST, value: '15', scope: 'websites', scope_code: 'base' }] };
     const recordedList = { kind: 'store_config', id: `${LIST}@website`, key: `${LIST}@website`, previous: { path: LIST, scope: 'website', scopeCode: 'justrite_test_website', stored: '10', effective: '10', wrote: '15' } };

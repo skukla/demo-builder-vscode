@@ -22,7 +22,9 @@
  * once. One sentence under the title, only when a listed update reaches the live site (owner,
  * 2026-11-05). Built from the house pieces: `ui/Modal`, `CheckboxRow`, and the batch window's table
  * classes (`projects-batch.css`).
- * How a run ended is the title with its status icon.
+ * How a run ended is the title with its status icon. A run where every update applied with nothing
+ * to read hands off to the small result, "Updates Applied" and only what is left to know; a run
+ * with a problem, or a row with something to read, stays on its rows (owner, 2026-11-10, walk F134).
  *
  * @module features/projects-dashboard/ui/components/UpdatesModal
  */
@@ -31,7 +33,7 @@ import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import { APPLYING_TITLE, type RowStatuses, type UpdatesModalControls } from '../hooks/useUpdatesModal';
 import { groupsOf, updatesLiveSite, type RowGroup } from './updateGroups';
-import { UpdatesRunView } from './UpdatesRunView';
+import { UpdatesRunView, waitingLine } from './UpdatesRunView';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
@@ -126,6 +128,22 @@ function runHeadingOf(progress: OperationProgressPayload | null, rows: PendingUp
         : { title: 'Updates Applied', status: 'success' };
 }
 
+/**
+ * Whether the run ended cleanly: it succeeded and every row, its local copy steps included, is
+ * done with nothing to read under it. Only then does the window leave the rows (walk F134).
+ */
+export function endedClean(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): boolean {
+    if (progress?.state !== 'succeeded') return false;
+    const clean = (status: RowStatuses[string] | undefined): boolean => status?.state === 'done' && !status.message;
+    return rows.every((row) => clean(statuses[row.id])) && Object.values(statuses).every(clean);
+}
+
+/** The small result a clean run ends on: its title, and how many updates the SC left for later. */
+function cleanEnd(controls: UpdatesModalControls): Chrome & Heading & { body: React.ReactNode; size: 'S' } {
+    const body = controls.remaining > 0 ? <LeadText>{waitingLine(controls.remaining)}</LeadText> : null;
+    return { title: 'Updates Applied', status: 'success', body, size: 'S', ...runChrome(controls) };
+}
+
 /** The window's dismiss button and the buttons beside it. */
 interface Chrome {
     closeLabel?: string;
@@ -190,13 +208,14 @@ function askingOf(controls: UpdatesModalControls): OperationPrompt | undefined {
 }
 
 /** What the modal shows: its title, body, dismiss label and the buttons beside it. */
-function contentFor(controls: UpdatesModalControls): Chrome & Heading & { body: React.ReactNode } {
+function contentFor(controls: UpdatesModalControls): Chrome & Heading & { body: React.ReactNode; size?: 'S' } {
     const { view } = controls;
     const asking = askingOf(controls);
     if (view.phase === 'applying' && asking && questionTakesWindow(asking)) {
         const body = <OperationQuestion prompt={asking} onTyped={controls.onTyped} />;
         return { title: asking.title ?? APPLYING_TITLE, status: 'warning', body, ...runChrome(controls) };
     }
+    if (view.phase === 'applying' && endedClean(controls.progress, view.rows, controls.statuses)) return cleanEnd(controls);
     if (view.phase === 'applying') {
         const body = (
             <UpdatesRunView
@@ -234,7 +253,7 @@ export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): 
                 <Modal
                     title={content.title}
                     status={content.status}
-                    size="L"
+                    size={content.size ?? 'L'}
                     fitContent
                     onClose={dismiss}
                     closeLabel={content.closeLabel}

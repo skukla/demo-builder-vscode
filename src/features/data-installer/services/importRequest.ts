@@ -28,6 +28,11 @@ export interface ImportRequest {
      * datapack store. Either way Demo Builder's own copy is read first (`readPackItems`).
      */
     source?: DatapackStoreName;
+    /**
+     * The pack the demo uses, when this import replaces it (walk F97): Demo Builder's engine removes
+     * it by its install record first, and installs nothing when that removal fails.
+     */
+    replaces?: DatapackId;
 }
 
 /**

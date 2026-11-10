@@ -5,19 +5,22 @@
  *
  * Reading: the house wait, "Reading demo data" for a reset and "Reading projects" for a delete
  * (`WAIT_STAGES`).
- * The questions: `BatchDeleteQuestions` or `BatchResetQuestions`, Cancel and the button that
- * runs them. The run: `ProjectsBatchRunView`, closed into the background while it goes, its end
- * the title with its status icon, as the Updates run ends.
+ * The questions: `BatchDeleteQuestions` or `BatchResetQuestions`, then `BatchDatapackChanges`
+ * when a pack whose data goes needs a name for its changes, Cancel and the button that runs them. The run: `ProjectsBatchRunView`, closed into the background while it goes, its end
+ * the title with its status icon, as the Updates run ends. A run where every project went through
+ * hands off to the small result, the title alone; one with a problem stays on its rows (owner,
+ * 2026-11-10, walk F134).
  *
  * @module features/projects-dashboard/ui/components/ProjectsBatchModal
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import { changeRows, resetIsReady } from '../batchChoices';
+import { changeRows, changesAreAnswered, dataTicks, type PackRow, type RemoveTicks } from '../batchChoices';
+import type { BatchChoices } from '../hooks/useBatchChoices';
 import { runningTitle, type BatchView, type ProjectsBatchControls } from '../hooks/useProjectsBatch';
+import { BatchDatapackChanges } from './BatchDatapackChanges';
 import { BatchDeleteQuestions } from './BatchDeleteQuestions';
-import { BatchResetChanges } from './BatchResetChanges';
 import { BatchResetQuestions } from './BatchResetQuestions';
 import { ProjectsBatchRunView } from './ProjectsBatchRunView';
 import { promptButtons } from './UpdatesModal';
@@ -26,7 +29,7 @@ import type { WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
-import type { ProjectsBatchAction } from '@/types/projectsBatch';
+import type { PrepareProjectsBatchResponse, ProjectsBatchAction } from '@/types/projectsBatch';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 const NO_ACTIONS: ActionButton[] = [];
@@ -72,10 +75,25 @@ function endTitle(action: ProjectsBatchAction, progress: OperationProgressPayloa
     return deleting ? 'Projects Deleted' : 'Projects Reset';
 }
 
-/** Reset Selected on its second step, the packs' changes (owner, 2026-11-04). */
+/**
+ * Whether the run ended cleanly: it succeeded with no warning and every project is done with
+ * nothing to read under it. Only then does the window leave its rows for the small result (walk F134).
+ */
+export function endedClean(controls: ProjectsBatchControls): boolean {
+    const { view, progress, statuses } = controls;
+    if (view.phase !== 'running' || progress?.state !== 'succeeded' || progress.warning) return false;
+    return view.rows.every((row) => statuses[row.path]?.state === 'done' && !statuses[row.path]?.message);
+}
+
+/** Either batch on its second step, the packs' changes (owner, 2026-11-04; the delete's, walk F96). */
 function onChangesStep(controls: ProjectsBatchControls): boolean {
     const { view, choices } = controls;
-    return view.phase === 'asking' && view.questions.action === 'reset' && choices.step === 'changes';
+    return view.phase === 'asking' && choices.step === 'changes';
+}
+
+/** Whose pack's data goes: a delete's Uninstall Datapack boxes, a reset's Uninstall Datapack. */
+function removingOf(questions: PrepareProjectsBatchResponse, choices: BatchChoices): RemoveTicks {
+    return questions.action === 'delete' ? dataTicks(questions.rows, choices.ticks) : choices.removeTicks;
 }
 
 /** The window's header in every phase: the kind of thing, never a name; a confirm adds its count. */
@@ -127,31 +145,32 @@ function actionsOf(controls: ProjectsBatchControls): ActionButton[] {
     }
     if (view.phase !== 'asking') return NO_ACTIONS;
     const { questions } = view;
-    const label = runLabel(questions.action, questions.rows.length);
-    if (questions.action === 'delete') return [{ label, variant: 'negative', onPress: controls.run }];
+    const rows: readonly PackRow[] = questions.rows;
+    const removing = removingOf(questions, choices);
     // Step 1 Continues to the packs' changes when one needs an answer (owner, 2026-11-04).
-    const needsChanges = changeRows(questions.rows, choices.removeTicks).length > 0;
-    if (choices.step === 'projects' && needsChanges) {
+    if (choices.step === 'projects' && changeRows(rows, removing).length > 0) {
         return [{ label: 'Continue', variant: 'accent', onPress: () => choices.setStep('changes') }];
     }
-    const ready = resetIsReady(questions.rows, choices.removeTicks, choices.fields);
-    // Red, as Delete's: a reset replaces each project's code (owner, 2026-11-04).
-    const reset: ActionButton = { label, variant: 'negative', onPress: controls.run, isDisabled: !ready };
-    if (choices.step !== 'changes') return [reset];
-    return [{ label: 'Back', variant: 'secondary', onPress: () => choices.setStep('projects') }, reset];
+    const ready = changesAreAnswered(rows, removing, choices.fields);
+    // Red for both: a delete removes, a reset replaces each project's code (owner, 2026-11-04).
+    const label = runLabel(questions.action, questions.rows.length);
+    const runIt: ActionButton = { label, variant: 'negative', onPress: controls.run, isDisabled: !ready };
+    if (choices.step !== 'changes') return [runIt];
+    return [{ label: 'Back', variant: 'secondary', onPress: () => choices.setStep('projects') }, runIt];
 }
 
 function BodyOf({ controls }: { controls: ProjectsBatchControls }): React.ReactElement | null {
     const { view } = controls;
     if (view.phase === 'unread') return <p className="work-row-why">{view.error}</p>;
+    if (view.phase === 'asking' && onChangesStep(controls)) {
+        const removing = removingOf(view.questions, controls.choices);
+        return <BatchDatapackChanges rows={view.questions.rows} removing={removing} choices={controls.choices} />;
+    }
     if (view.phase === 'asking' && view.questions.action === 'delete') {
         return <BatchDeleteQuestions rows={view.questions.rows} choices={controls.choices} />;
     }
-    if (view.phase === 'asking' && onChangesStep(controls)) {
-        return <BatchResetChanges rows={view.questions.rows} choices={controls.choices} />;
-    }
     if (view.phase === 'asking') return <BatchResetQuestions rows={view.questions.rows} choices={controls.choices} />;
-    if (view.phase !== 'running') return null;
+    if (view.phase !== 'running' || endedClean(controls)) return null;
     const asking = askingOf(controls);
     if (asking && questionTakesWindow(asking)) {
         return <OperationQuestion prompt={asking} onTyped={controls.onTyped} />;
@@ -178,6 +197,7 @@ function waitOf(view: BatchView): WaitLines | false {
 export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchControls }): React.ReactElement {
     const { view } = controls;
     const asking = askingOf(controls);
+    const clean = endedClean(controls);
     // Cancel on a question answers it and keeps the window: the run goes on to the next project.
     const dismiss = asking ? () => controls.answer(undefined) : controls.close;
     return (
@@ -186,11 +206,12 @@ export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchContro
                 <Modal
                     title={titleOf(controls)}
                     status={statusOf(controls)}
-                    size="L"
+                    // A clean end is the small result, the title alone (walk F134).
+                    size={clean ? 'S' : 'L'}
                     // Delete's table holds up to three columns of names: extra-wide, the next
-                    // step, so a name stays on one line; the same width in every phase (owner,
-                    // 2026-11-05). Reset's one column fits large.
-                    wide={subjectOf(view).action === 'delete'}
+                    // step, so a name stays on one line; the same width in every other phase
+                    // (owner, 2026-11-05). Reset's one column fits large.
+                    wide={!clean && subjectOf(view).action === 'delete'}
                     fitContent
                     onClose={dismiss}
                     closeLabel={closeLabelOf(controls)}

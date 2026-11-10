@@ -14,6 +14,7 @@ import type { z } from 'zod';
 import type { CreatedObject, InstallRecorder } from './installRecord';
 import type { StoreRoot } from './packRoot';
 import type { RootStepAsker } from './packRootStep';
+import type { RowCount } from './rowCount';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -166,6 +167,8 @@ export interface KindContext {
     log: (line: string) => void;
     /** How far a long kind has got, in one line for the progress window ("450 of 2,046 products"); absent, unsaid. */
     progress?: (line: string) => void;
+    /** The kind in progress's count of its rows, said through `progress` (`rowCount.ts`); absent, uncounted. */
+    count?: RowCount;
     /** How an install asks the SC for the one Admin step a pack can leave (step 12); absent, it is left open. */
     asker?: RootStepAsker;
 }

@@ -3,12 +3,13 @@
  *
  * A plain project gets one modal. An EDS project is asked which of the things it
  * created online (the GitHub repository, the DA.live site) should go too, and a project
- * with its own library pack (step 07) whether the pack goes — in the screen's progress
- * modal when a screen started the delete, else a QuickPick with checkboxes. The
- * `demoBuilder.cleanupBehavior` setting decides what starts ticked (`deleteAll`: the
- * repository and the site), or narrows it to the plain modal (`localOnly`); the SC is always
- * shown the options and can change them (owner, 2026-11-04: `deleteAll` used to delete without
- * asking). Neither ticks a pack, because keeping a pack is reversible and deleting one is not.
+ * whose datapack Demo Builder installed whether that data goes from Commerce (walk F96,
+ * `datapackDataRemoval.ts`) — in the screen's progress modal when a screen started the delete,
+ * else a QuickPick with checkboxes. The `demoBuilder.cleanupBehavior` setting decides what
+ * starts ticked (`deleteAll`: the repository and the site), or narrows it to the plain modal
+ * (`localOnly`); the SC is always shown the options and can change them (owner, 2026-11-04:
+ * `deleteAll` used to delete without asking). Neither ticks the datapack's data: it writes to a
+ * store. The datapack itself is deleted only from the library (owner, 2026-11-09).
  *
  * Split from `projectDeletionService.ts` on 2026-10-09 (EDS-8). Nothing here
  * deletes anything: the answer is handed back, and the caller acts on it.
@@ -17,9 +18,11 @@
 import * as vscode from 'vscode';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { askForDetailsDuringOperation, withModalAsking } from '@/core/vscode/operationPrompt';
+import { UNINSTALL_DATAPACK } from '@/features/data-installer/uninstallWords';
 import type { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import type { SharedOnline } from '@/features/eds/services/storefront/sharedRepoProjects';
-import type { DeletablePack } from '@/features/projects-dashboard/services/demoPackDeletion';
+import { deleteSentence } from '@/features/projects-dashboard/deleteWords';
+import type { RemovableData } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import type { Project } from '@/types/base';
 
 /**
@@ -28,8 +31,8 @@ import type { Project } from '@/types/base';
 export interface CleanupOptions {
     deleteGitHubRepo: boolean;
     deleteDaLiveSite: boolean;
-    /** Also delete every version of the project's own library pack. Absent means keep it. */
-    deleteDatapack?: boolean;
+    /** Also remove its datapack's data from Commerce, its changes saved first. Absent means keep it. */
+    removeDatapackData?: boolean;
     /** The project being deleted: it does not count as "another project on the repository". */
     projectPath?: string;
 }
@@ -66,8 +69,13 @@ async function confirmLocalOnly(project: Project): Promise<CleanupOptions | null
 /** Nothing another project uses: what a caller that has not asked passes. */
 const NOTHING_SHARED: SharedOnline = { repo: [], site: [] };
 
+/** The data row's line: which pack, and that the SC's changes in it are kept. */
+export function dataDescription(data: RemovableData): string {
+    return `${data.displayName}, from this demo's Commerce instance. Your changes are saved first.`;
+}
+
 /** The things the SC may delete alongside the project. */
-type CleanupItemId = 'github' | 'daLive' | 'datapack';
+type CleanupItemId = 'github' | 'daLive' | 'datapackData';
 
 /**
  * One external resource the SC may delete alongside the project.
@@ -78,14 +86,14 @@ interface CleanupQuickPickItem extends vscode.QuickPickItem {
 
 /** The answer, from the rows the SC left ticked. */
 function answerFrom(ticked: (id: CleanupItemId) => boolean): CleanupOptions {
-    return { deleteGitHubRepo: ticked('github'), deleteDaLiveSite: ticked('daLive'), deleteDatapack: ticked('datapack') };
+    return { deleteGitHubRepo: ticked('github'), deleteDaLiveSite: ticked('daLive'), removeDatapackData: ticked('datapackData') };
 }
 
 /** Each option's label, the same in the modal and the QuickPick. */
 const LABELS: Record<CleanupItemId, string> = {
     github: 'Delete Repository',
     daLive: 'Delete DA.live Site',
-    datapack: 'Delete Datapack',
+    datapackData: UNINSTALL_DATAPACK,
 };
 
 /**
@@ -101,7 +109,7 @@ async function askCleanupInModal(
     // (owner, 2026-11-05).
     const asked = await askForDetailsDuringOperation({
         title: `Delete ${getProjectDisplayName(project)}?`,
-        message: 'Project files are removed from this machine.',
+        message: deleteSentence(items.some((item) => item.id === 'datapackData')),
         fields: items.map((item) => ({
             id: item.id,
             label: LABELS[item.id],
@@ -118,12 +126,12 @@ async function askCleanupInModal(
 
 /**
  * One row per thing the project has that can go with it: the repository, the DA.live site, then
- * the pack it uses when that can go too (`deletablePackOf`). The repository and the site start
- * ticked under `deleteAll`; the pack never does.
+ * its datapack's data when that can be removed (`removableDataOf`). The repository and the site
+ * start ticked under `deleteAll`; the data never does.
  */
 function cleanupItems(
     edsMetadata: ReturnType<typeof extractEdsMetadata>,
-    pack: DeletablePack | undefined,
+    data: RemovableData | undefined,
     tickOnline: boolean,
     shared: SharedOnline,
 ): CleanupQuickPickItem[] {
@@ -148,12 +156,11 @@ function cleanupItems(
             picked: tickOnline,
         });
     }
-    if (pack) {
+    if (data) {
         items.push({
-            id: 'datapack',
-            label: `$(package) ${LABELS.datapack}`,
-            description: pack.displayName,
-            detail: 'Every version of the datapack this demo uses',
+            id: 'datapackData',
+            label: `$(package) ${LABELS.datapackData}`,
+            description: dataDescription(data),
             picked: false,
         });
     }
@@ -175,7 +182,7 @@ export async function showCleanupConfirmation(
     project: Project,
     edsMetadata: ReturnType<typeof extractEdsMetadata>,
     modalId?: string,
-    pack?: DeletablePack,
+    data?: RemovableData,
     shared: SharedOnline = NOTHING_SHARED,
 ): Promise<CleanupOptions | null> {
     // Check cleanup behavior configuration setting
@@ -188,7 +195,7 @@ export async function showCleanupConfirmation(
     }
 
     // deleteAll ticks what the project put ONLINE; the SC still sees it and can untick it.
-    const items = cleanupItems(edsMetadata, pack, behavior === 'deleteAll', shared);
+    const items = cleanupItems(edsMetadata, data, behavior === 'deleteAll', shared);
 
     // If no external resources, skip the dialog and show standard confirmation
     if (items.length === 0) {

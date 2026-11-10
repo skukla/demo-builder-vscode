@@ -189,7 +189,7 @@ describe('no answer, and something changed', () => {
 
         expect(result).toMatchObject({ success: false, code: ErrorCode.CHANGES_NEED_ANSWER });
         expect(result.error).toContain('3 items changed since install: the category Critical Power, and 2 products.');
-        expect(result.error).toContain('Nothing was removed.');
+        expect(result.error).toContain('Nothing was uninstalled.');
         expect(result.error).toContain('changes:"keep"');
         expect(result.error).toContain('changes:"drop"');
         expect(result.data).toMatchObject({ changes: [{ kind: 'categories', count: 1 }, { kind: 'products', count: 2 }] });
@@ -350,7 +350,7 @@ describe('a read that fails', () => {
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('The pack cannot be read.');
-        expect(result.error).toContain('Nothing was removed.');
+        expect(result.error).toContain('Nothing was uninstalled.');
         expect(result.error).toContain('changes:"drop"');
         expect(mockedRun).not.toHaveBeenCalled();
     });
@@ -441,7 +441,7 @@ describe('the save\'s stages', () => {
         await importHandlers['reset-datapack'](context, { ...REQUEST, ...KEEP });
 
         const stages = (context.sendMessage as jest.Mock).mock.calls.filter(([type, payload]) => type === 'operationProgress' && payload.id === DATAPACK_OPERATION_ID).map(([, payload]) => payload.stage);
-        expect(stages).toEqual(['Saving to the library', 'Removing the sample data']);
+        expect(stages).toEqual(['Saving to the library', 'Uninstalling the datapack']);
     });
 
     it('do not fire for a removal with nothing to save', async () => {

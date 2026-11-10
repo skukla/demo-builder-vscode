@@ -89,7 +89,7 @@ export function installerEchoRefusal(name: string): string {
 }
 
 function storeLabel(store: DatapackStoreName): string {
-    return store === 'library' ? 'the datapack library' : 'the Data Installer';
+    return store === 'library' ? 'My Datapacks' : 'the Data Installer';
 }
 
 /**

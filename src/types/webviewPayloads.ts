@@ -423,6 +423,21 @@ export interface OperationChange {
  * or a `note` when there is something to know and nothing to do (prices still being
  * published).
  */
+/**
+ * One part of a run, as a row of the run's window: its name, where it stands, and the line under it
+ * or the problem in its place (the import's rows, walk F62; a save's, walk F91).
+ */
+export interface OperationRow {
+    kind: string;
+    label: string;
+    /** As `StepStatusIcon` draws it. */
+    status: 'pending' | 'checking' | 'success' | 'error' | 'warning';
+    /** Where it stands: "Waiting", "Reading", "2,046 Products", "Done", "Not run". */
+    line?: string;
+    /** What is wrong with it: red when it failed, orange when it went in with a problem. */
+    problem?: { text: string; failed: boolean };
+}
+
 export interface OperationProgressPayload {
     id: string;
     state: 'running' | 'succeeded' | 'failed';
@@ -436,6 +451,8 @@ export interface OperationProgressPayload {
     warning?: string;
     /** What a run that succeeded leaves the SC to know; shown as a plain success, not a warning. */
     note?: string;
+    /** A success's own title, in place of the operation's `successTitle` ("No Changes to Save"). */
+    title?: string;
     /**
      * What a run that succeeded left to know, one line each, listed under its result (an
      * EDS reset's page notes). A run that carries them waits to be read.
@@ -459,6 +476,11 @@ export interface OperationProgressPayload {
     startedAt?: number;
     /** How long the whole run took, in ms, on its last push (succeeded or failed). */
     tookMs?: number;
+    /**
+     * The run's parts, a row each, on every push and its last: the window draws them in place of
+     * its one spinner, and keeps them when the run ends (a save, walk F91).
+     */
+    rows?: OperationRow[];
 }
 
 /**

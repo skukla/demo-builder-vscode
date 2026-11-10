@@ -32,11 +32,9 @@ export interface StoreKindItemsProps {
     loading: boolean;
     picked: string[];
     onChange: (ids: string[]) => void;
-    /** The pack being saved, when there is one: the note names it. */
-    packName?: string;
 }
 
-export function StoreKindItems({ kind, page, failure, loading, picked, onChange, packName }: StoreKindItemsProps): React.ReactElement {
+export function StoreKindItems({ kind, page, failure, loading, picked, onChange }: StoreKindItemsProps): React.ReactElement {
     const [one, many] = KIND_NOUNS[kind];
     if (loading || (!page && !failure) || page?.items.length === 0) {
         return (
@@ -50,7 +48,6 @@ export function StoreKindItems({ kind, page, failure, loading, picked, onChange,
         <>
             <StoreItemChecklist items={page.items} nouns={[one, many]} picked={picked} onChange={onChange} />
             {INCLUDES[kind] ? <p className="datapack-export-note">{INCLUDES[kind]}</p> : null}
-            {page.inPackCount > 0 ? <p className="datapack-export-note">{page.inPackCount.toLocaleString('en-US')} more included from {packName ?? 'the datapack'}.</p> : null}
         </>
     );
 }

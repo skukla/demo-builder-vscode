@@ -1,11 +1,11 @@
 /**
  * BatchResetQuestions — Reset Selected's first step, Reset Projects (owner, 2026-11-04): what a reset
  * does, then Delete Selected's table with one column. A row per project, its repository under it
- * (a reset rewrites it), and a Remove Datapack box naming the pack only where it can go; the column
+ * (a reset rewrites it), and a Uninstall Datapack box naming the pack only where it can go; the column
  * header is its Select All, the name column's is Project (owner, 2026-11-05). A pack
  * whose changes could not be read has no box and says it is kept, on its own row: a batch never
  * discards changes nobody could see (option B). Step 2, the packs' changes, is
- * `BatchResetChanges`.
+ * `BatchDatapackChanges`, shared with Delete Selected since walk F96.
  *
  * The table is Delete Selected's (`batch-delete-table`), so the two windows draw a project and its
  * boxes one way, and it stacks the same in a narrow window.
@@ -19,12 +19,13 @@ import { removable, removeColumnState } from '../batchChoices';
 import type { BatchChoices } from '../hooks/useBatchChoices';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
+import { UNINSTALL_DATAPACK } from '@/features/data-installer/uninstallWords';
 import type { BatchResetRow } from '@/types/projectsBatch';
 
-const REMOVE = 'Remove Datapack';
 
 /** A pack whose changes could not be read: the status the house writes, not a sentence. */
-const UNCHECKED_NOTE = "Couldn't check for changes. Datapack kept.";
+/** A pack whose changes could not be read: the batch keeps its data (owner, 2026-11-04). */
+export const UNCHECKED_NOTE = "Couldn't check for changes. Datapack kept.";
 
 interface Props {
     rows: BatchResetRow[];
@@ -55,7 +56,7 @@ export function BatchResetQuestions({ rows, choices }: Props): React.ReactElemen
                                 <td className="batch-changes-head batch-project-head">Project</td>
                                 <th scope="col">
                                     <CheckboxRow
-                                        label={REMOVE}
+                                        label={UNINSTALL_DATAPACK}
                                         isSelected={column.all}
                                         isIndeterminate={column.some && !column.all}
                                         onChange={() => choices.toggleRemoveColumn(rows)}
@@ -72,11 +73,11 @@ export function BatchResetQuestions({ rows, choices }: Props): React.ReactElemen
                                     <td>
                                         {removable(row) && (
                                             <Checkbox
-                                                aria-label={`${REMOVE}, ${row.name}`}
+                                                aria-label={`${UNINSTALL_DATAPACK}, ${row.name}`}
                                                 isSelected={choices.removeTicks[row.path] === true}
                                                 onChange={() => choices.toggleRemove(row.path)}
                                             >
-                                                <span className="batch-delete-option-label">{REMOVE}</span>
+                                                <span className="batch-delete-option-label">{UNINSTALL_DATAPACK}</span>
                                                 <span className="batch-option-what">{row.datapack?.name}</span>
                                             </Checkbox>
                                         )}

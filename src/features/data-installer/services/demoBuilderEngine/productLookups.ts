@@ -140,7 +140,7 @@ function setLookups(ctx: KindContext): Pick<ProductLookups, 'setId' | 'setName'>
                 throw new MissingNameError(
                     'attribute_sets',
                     name,
-                    `The store has no attribute set named ${name}.`,
+                    `Commerce has no attribute set named ${name}.`,
                 );
             return id;
         }),
@@ -208,7 +208,7 @@ function categoryLookups(
                 throw new MissingNameError(
                     'categories',
                     urlKey,
-                    `The store has no category with the url key ${urlKey}.`,
+                    `Commerce has no category with the url key ${urlKey}.`,
                 );
             if (candidates.length > 1) noteAmbiguousKey(ctx.session, urlKey, candidates);
             return String(pick.id);
@@ -234,7 +234,7 @@ function attributeLookups(
             throw new MissingNameError(
                 'product_attributes',
                 code,
-                `The store has no attribute ${code}.`,
+                `Commerce has no attribute ${code}.`,
             );
         return found;
     });
@@ -295,7 +295,7 @@ function groupLookups(ctx: KindContext): Pick<ProductLookups, 'groupId' | 'group
             throw new MissingNameError(
                 'customer_groups',
                 code,
-                `The store has no customer group ${code}.`,
+                `Commerce has no customer group ${code}.`,
             );
         }),
         groupCode: cached(
@@ -317,7 +317,7 @@ function productIdLookups(ctx: KindContext): Pick<ProductLookups, 'productId' | 
                 `products/${encodeURIComponent(sku)}`,
             );
             if (found?.id === undefined)
-                throw new MissingNameError('products', sku, `The store has no product ${sku}.`);
+                throw new MissingNameError('products', sku, `Commerce has no product ${sku}.`);
             return found.id;
         }),
         productSku: cached(

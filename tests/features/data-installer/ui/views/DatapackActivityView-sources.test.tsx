@@ -38,7 +38,7 @@ describe('DatapackActivityView sources', () => {
         render(<DatapackActivityView />);
         const [row] = await screen.findAllByTestId('activity-row');
 
-        expect(row).toHaveTextContent('failed');
+        expect(row).toHaveTextContent('Failed');
         expect(row).toHaveTextContent('Commerce answered 500 for categories/40');
     });
 
@@ -48,7 +48,7 @@ describe('DatapackActivityView sources', () => {
         render(<DatapackActivityView />);
         const [row] = await screen.findAllByTestId('activity-row');
 
-        expect(row).not.toHaveTextContent('failed');
+        expect(row).not.toHaveTextContent(/failed/i);
         expect(row).toHaveTextContent('Kept the category Sale.');
     });
 

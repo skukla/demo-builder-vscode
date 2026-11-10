@@ -209,7 +209,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'Progress of the running or most recent datapack import/reset: its outcome (watching while it runs), ' +
+            'Progress of the running or most recent datapack import or uninstall: its outcome (watching while it runs), ' +
             "each data type's state, and while products go in or come out a count as detail (\"450 of 2,046 products\"). " +
             'With waitSeconds (up to 45) it answers when the job ends or the wait is up, showing progress as it goes: ' +
             'call it with waitSeconds 45 while outcome is watching, rather than polling quickly. A pack of 2,000 ' +
@@ -240,8 +240,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "each item's id is what selections names it by. Commerce's own (the Default set, its five groups, " +
             'the public catalog) is counted in excludedCount. Items the pack being saved already holds (the ' +
             "pack named, else the project's own when Demo Builder installed it) are left off, counted in " +
-            'inPackCount: what is left is what was added by hand. Send only dataType (and datapackName with ' +
-            'version for a pack named).',
+            'inPackCount: what is left is what was added by hand. A save from a pack takes everything the demo ' +
+            'uses on its own; unused: true lists what it does not use (customer groups, shared catalogs, product ' +
+            'attributes and attribute sets nothing of this demo uses), the only things worth naming in selections then. ' +
+            'Send only dataType (and datapackName with version for a pack named).',
         map: importHandlers,
         type: 'list-datapack-export-items',
         inputSchema: {
@@ -249,6 +251,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             version: z.string().optional().describe('That pack\'s version'),
             source: PACK_SOURCE,
             dataType: z.string().describe('The single data type to enumerate'),
+            unused: z.boolean().optional().describe('Only what this demo does not use, for a save from a pack (customer groups, shared catalogs, product attributes, attribute sets)'),
             limit: z
                 .number()
                 .optional()
@@ -329,13 +332,14 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'the pack the project uses, only when that pack is the user\'s own; when it is not (a team pack such as ' +
             'Bodea, or a colleague\'s), nothing is written and the answer has data.needsName: ' +
             'ask the user for a name, then call again with saveAs.displayName (Save As), which makes a NEW pack of ' +
-            'theirs. Either way the project then uses the new version. Things added by hand in the Admin go in too ' +
-            'when picked in selections (list_datapack_export_items lists them). No pack named: the project\'s when ' +
+            'theirs. Either way the project then uses the new version. Everything the demo uses goes in on its own, ' +
+            'what was added by hand in the Admin included; selections add what it does not use yet ' +
+            '(list_datapack_export_items with unused: true lists them). No pack named: the project\'s when ' +
             'Demo Builder installed it, else none, and the version holds only what is picked (a store Demo Builder ' +
             'did not fill; send saveAs). The pack installed is never changed, and nothing picked is ever removed with it; ' +
             'undo by deleting the new version with delete_library_datapack. Store settings a pack does not hold ' +
             'itself go to a settings layer beside the new version, not into it (settingsLayer). Answers the pack saved into and its new ' +
-            'version, unnamed (ids kept because the store could not name them) and leftOut (what the store has, of ' +
+            'version, unnamed (ids kept because the store could not name them) and, for a save of picks alone, leftOut (what the store has, of ' +
             'products, gift cards, categories, cart rules, customers and companies, that the version does not ' +
             'hold); its message says both. A version the install would refuse is not saved, and the message says ' +
             'why. Nothing in Commerce changes.',
@@ -429,30 +433,46 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "Every kind's rows are checked before any write. A row Commerce refuses is skipped and the rest " +
             'go in; the note names each skipped row and why, and every row that needed it. Every kind still ' +
             'reads success, so read the note. Sign-in, throttling, a Commerce error or no answer stop it; ' +
-            'running it again carries on and counts anything made without an answer as the pack\'s.',
+            'running it again carries on and counts anything made without an answer as the pack\'s. ' +
+            'Importing another pack or another version over the one the project uses (Demo Builder installed it) ' +
+            "replaces it: that pack is uninstalled first, in the same job, as reset_datapack uninstalls it, then this " +
+            'one installs; an uninstall that fails installs nothing (stoppedAt replacing) and the project keeps naming the ' +
+            "old pack, else it names the new one. Changes the user made since it was installed are saved into the user's " +
+            'own pack first; when the old pack is not theirs, this names the changes and installs nothing until changes ' +
+            'answers: keep saves them as a new pack named by saveAs, drop loses them. Ask the user. Importing the same ' +
+            'version again replaces nothing.',
         map: importHandlers,
         type: 'start-datapack-import',
         confirm: true,
-        inputSchema: { ...DATAPACK_ID, ...IMPORT_TARGET, ...WAIT_FOR_JOB },
+        inputSchema: {
+            ...DATAPACK_ID,
+            ...IMPORT_TARGET,
+            ...WAIT_FOR_JOB,
+            changes: z
+                .enum(['keep', 'drop'])
+                .optional()
+                .describe("Replacing the project's pack only: the user's changes to it since install, keep saves them first (into their own pack, or as saveAs), drop loses them"),
+            saveAs: SAVE_AS,
+        },
     },
     {
         tool: 'reset_datapack',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Remove a datapack's data from the Commerce instance so the project can be reused. " +
-            'Cannot be undone. Returns an activationId; with waitSeconds (up to 45) it waits for the removal to end, ' +
+            "Uninstall a datapack: take its data out of the Commerce instance so the project can be reused (the screen's Uninstall). " +
+            'Cannot be undone. Returns an activationId; with waitSeconds (up to 45) it waits for the uninstall to end, ' +
             'showing its progress, and carries the outcome as job; else follow with get_datapack_import_status. ' +
             'It takes everything the install record lists, whatever dataTypes names (it may be omitted). A category, set, company, shared catalog or customer group the pack made ' +
             "that holds things it did not make is kept (a kept company with its admin and its catalog), and " +
             "the outcome's note says which; store settings it set, its settings layer's included, are put back " +
-            "first, unless changed since, and the note names each by path. The project stops naming the pack only once a removal " +
-            'finishes having taken everything out; what Commerce will not take back stays, named in the note with its reason, and removing again tries it again. A pack Demo Builder has no install record of ' +
-            '(one the Data Installer service installed) is refused and nothing is removed by name; check_demo_data then ' +
+            "first, unless changed since, and the note names each by path. The project stops naming the pack only once an uninstall " +
+            'finishes having taken everything out; what Commerce will not take back stays, named in the note with its reason, and uninstalling again tries it again. A pack Demo Builder has no install record of ' +
+            '(one the Data Installer service installed) is refused and nothing is uninstalled by name; check_demo_data then ' +
             'clear_demo_data clears what that install left. If the user changed anything the pack made ' +
-            'since it was installed, this names the changes and removes nothing until changes answers: keep ' +
+            'since it was installed, this names the changes and uninstalls nothing until changes answers: keep ' +
             "saves them first, into the user's own pack or as a new one named by saveAs (the answer says which; " +
-            'if the save fails nothing is removed), drop loses them. When changes is omitted and the setting ' +
+            'if the save fails nothing is uninstalled), drop loses them. When changes is omitted and the setting ' +
             'demoBuilder.dataInstaller.changesOnRemoval is save, it saves without asking. Ask the user; ' +
             'preview_datapack_changes shows them beforehand (keep).',
         map: importHandlers,
@@ -466,7 +486,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             ...DATAPACK_ID,
             ...IMPORT_TARGET,
             ...WAIT_FOR_JOB,
-            dataTypes: z.array(z.string()).min(1).optional().describe('May be omitted: a removal takes everything the install record lists'),
+            dataTypes: z.array(z.string()).min(1).optional().describe('May be omitted: an uninstall takes everything the install record lists'),
             changes: z.enum(['keep', 'drop']).optional().describe("The user's changes since install: keep saves them first (into their own pack, or as saveAs), drop loses them"),
             saveAs: SAVE_AS,
         },
@@ -512,7 +532,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 ? undefined
                 : {
                       error:
-                          `start_datapack_export writes "${String(args.datapackName)}" into your datapack library. ` +
+                          `start_datapack_export writes "${String(args.datapackName)}" into My Datapacks. ` +
                           `To proceed, call again with confirmName:"${String(args.datapackName)}".`,
                   },
     },

@@ -9,26 +9,26 @@
 
 import type { SkippedRow } from './kindContext';
 
-/** What an SC will wonder next, measured on a live install: search took about 17 minutes (2026-11-03). */
+/**
+ * What an SC will wonder next, measured on a live install: search took about 17 minutes (2026-11-03).
+ * The first is also the import window's ending, word for word (`JobStanding.searchDelay`; owner,
+ * 2026-11-10, walk F134: plain and short).
+ */
 export const AFTER_PRODUCTS_LINES = [
-    'Products can take up to 20 minutes to appear in storefront search.',
+    'New products can take 20 minutes to show in search.',
     "This datapack doesn't include product images. Products show the images that are in AEM Assets.",
 ];
 
-/** The kind the check's products came from, for the row its finding goes on. */
-const CHECKED_KINDS = ['products', 'product_export', 'giftcards'];
-
 /**
- * A line for each data type with a problem that did not stop the install, for its row: the rows the
- * store refused, and on the products' row what the check found.
+ * A line for each data type with a problem that did not stop the install, for its row: the rows
+ * Commerce refused. What the check found is Verify's line alone, so it shows once (review,
+ * 2026-11-10: it was on the products' row as well).
  */
-export function rowNotesOf(skipped: readonly SkippedRow[] | undefined, checkNote: string | undefined, kinds: string[]): Record<string, string> {
+export function rowNotesOf(skipped: readonly SkippedRow[] | undefined): Record<string, string> {
     const refused = new Map<string, number>();
     for (const row of skipped ?? []) refused.set(row.kind, (refused.get(row.kind) ?? 0) + 1);
     const notes: Record<string, string> = {};
-    for (const [kind, n] of refused) notes[kind] = `The store refused ${n.toLocaleString('en-US')}.`;
-    const checkedKind = CHECKED_KINDS.find((kind) => kinds.includes(kind));
-    if (checkNote && checkedKind) notes[checkedKind] = [notes[checkedKind], checkNote].filter(Boolean).join(' ');
+    for (const [kind, n] of refused) notes[kind] = `Commerce refused ${n.toLocaleString('en-US')}.`;
     return notes;
 }
 

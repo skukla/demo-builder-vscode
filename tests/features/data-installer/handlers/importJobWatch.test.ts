@@ -584,7 +584,7 @@ describe('a start the service refuses', () => {
             confirm: true,
         });
 
-        expect(result.error).toBe('The reset could not be started.');
+        expect(result.error).toBe('The uninstall could not be started.');
     });
 });
 

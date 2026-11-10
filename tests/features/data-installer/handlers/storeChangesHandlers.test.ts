@@ -256,9 +256,10 @@ describe('save-store-changes-to-pack', () => {
         });
         expect(result).toEqual({
             success: true,
-            // The window lists what the pack holds, one line per data type (owner, 2026-11-05); the
-            // agent reads the whole sentence in `data.message`.
-            details: ['2 Products'],
+            // A clean save ends small, with no rows (review, 2026-11-10); the agent reads the whole
+            // sentence in `data.message`. The window says the demo now uses the new pack (owner,
+            // 2026-11-09).
+            note: 'Saved as My Bodea. acme now uses it.',
             data: {
                 datapackName: saveAs.id.name,
                 version: saveAs.id.version,
@@ -270,6 +271,25 @@ describe('save-store-changes-to-pack', () => {
                 leftOut: [],
             },
         });
+    });
+
+    // Walk F95: a save in the background ended on whichever project was open, naming the wrong pack there.
+    it('records the new pack on the project the save started from, leaving a project opened meanwhile alone', async () => {
+        const context = harness();
+        const other: Partial<Project> = { ...PROJECT, name: 'other-demo', path: '/nonexistent/projects/other', datapack: { name: 'citisignal', version: 'main' } };
+        mockedSave.mockImplementation(async (_deps, target) => {
+            (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(other);
+            return { ...SAVED, saved: target.saveAs.id };
+        });
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        const { saveAs } = mockedSave.mock.calls[0][1];
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        const written = (context.stateManager.saveProjectConfigOnly as jest.Mock).mock.calls[0][0] as Project;
+        expect(written.path).toBe(PROJECT.path);
+        expect(written.datapack).toMatchObject({ name: saveAs.id.name, version: saveAs.id.version });
+        expect(other.datapack).toEqual({ name: 'citisignal', version: 'main' });
     });
 
     it("saves into the project's pack when it is the SC's own, keeping the pack it was first made from", async () => {
@@ -288,6 +308,18 @@ describe('save-store-changes-to-pack', () => {
         expect(saved.datapack?.origin).toEqual({ name: 'bodea', version: 'main' });
     });
 
+    // Review, 2026-11-10: "No Changes to Save" is the whole result; the agent keeps the sentence.
+    it('ends a save with nothing changed on its title alone, the sentence for the agent only', async () => {
+        mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id, sentence: 'Nothing changed.', unchanged: true as const }));
+        const context = harness();
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        expect(result).toMatchObject({ success: true, title: 'No Changes to Save', data: { unchanged: true, message: 'Nothing changed.' } });
+        expect(result).not.toHaveProperty('note');
+        expect(result).not.toHaveProperty('rows');
+    });
+
     it('tells the screen\'s progress window each stage, and ends it on the one sentence', async () => {
         mockedSave.mockImplementation(async (_deps, _id, _write, report) => {
             report?.('Reading the store');
@@ -300,8 +332,25 @@ describe('save-store-changes-to-pack', () => {
         expect(context.sendMessage).toHaveBeenCalledWith('operationProgress', expect.objectContaining({ id: 'datapack-save', state: 'running', stage: 'Reading the store' }));
         expect(context.sendMessage).toHaveBeenCalledWith(
             'operationProgress',
-            expect.objectContaining({ id: 'datapack-save', state: 'succeeded', details: ['2 Products'] }),
+            expect.objectContaining({ id: 'datapack-save', state: 'succeeded' }),
         );
+        const end = jest.mocked(context.sendMessage).mock.calls.map((call) => call[1] as { state?: string; rows?: unknown }).find((m) => m.state === 'succeeded');
+        expect(end?.rows).toBeUndefined();
+    });
+
+    // Walk F91, live 2026-11-09: a wrapper around the reporter passed on only the stage and step,
+    // so the rows never left the extension and the window kept its one spinner.
+    it("hands the save's rows to its window while it runs", async () => {
+        const reading = [{ kind: 'products', label: 'Products', status: 'checking' as const, line: 'Reading' }];
+        mockedSave.mockImplementation(async (_deps, _id, _write, report) => {
+            report?.('Reading from Commerce', '0 of 1 data type', undefined, reading);
+            return SAVED;
+        });
+        const context = harness();
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true, progress: 'modal' });
+
+        expect(context.sendMessage).toHaveBeenCalledWith('operationProgress', expect.objectContaining({ id: 'datapack-save', state: 'running', rows: reading }));
     });
 
     it('answers what stopped it in the SC\'s words, and records nothing on the project', async () => {

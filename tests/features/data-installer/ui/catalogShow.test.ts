@@ -59,7 +59,7 @@ describe('showOptions', () => {
         expect(labels(true)).toEqual([
             'Recommended',
             'My Datapacks',
-            'Demo Builder Datapacks',
+            'Team Datapacks',
             'Data Installer Datapacks',
             'Community Datapacks',
             'All Datapacks',
@@ -70,7 +70,7 @@ describe('showOptions', () => {
         expect(labels(false)).toEqual([
             'Recommended',
             'My Datapacks',
-            'Demo Builder Datapacks',
+            'Team Datapacks',
             'Community Datapacks',
             'All Datapacks',
         ]);

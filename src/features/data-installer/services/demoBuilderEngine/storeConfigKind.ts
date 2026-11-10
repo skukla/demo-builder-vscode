@@ -36,6 +36,7 @@ import { type KindContext, type SettingsDone, parseRows } from './kindContext';
 import { certainlyNotMade } from './pendingCreates';
 import type { PendingObject } from './pendingRecord';
 import { skipRow } from './refusedRows';
+import { counted, startRowCount } from './rowCount';
 import { andList } from '@/core/utils/andList';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
 import { SETTING_PATH, configFix, readPrevious } from '@/features/app-builder/services/storePreparation/configFix';
@@ -280,12 +281,16 @@ export async function installStoreConfig(ctx: KindContext, records: unknown): Pr
     if (unknown.length > 0) throw new Error(`Demo Builder cannot read what ${andList(unknown)} holds now, so it could not put it back. Nothing of this kind was written.`);
     const done = (ctx.session.settings ??= NONE());
     done.kept.push(...plan.filter((p) => p.outcome === 'kept').map((p) => p.key));
-    const rejected = await writeSettings(ctx, plan.filter((p) => p.outcome === 'set' || p.outcome === 'update'), done);
+    const writing = plan.filter((p) => p.outcome === 'set' || p.outcome === 'update');
     const dropped = plan.flatMap((p) => (p.outcome === 'remove' && p.object ? [p.object] : []));
-    const back = await putBackSettings(ctx, dropped, (o) => ctx.recorder.drop(o));
+    // Settings keep no record by the pack's key, so this kind counts its own: each written or put back.
+    const droppedKeys = dropped.map((o) => o.key ?? o.id);
+    const counting = { count: startRowCount(ctx.progress, STORE_CONFIG_KIND, [...writing.map((p) => p.key), ...droppedKeys]) };
+    const rejected = await counted(counting, STORE_CONFIG_KIND, writing.map((p) => p.key), () => writeSettings(ctx, writing, done));
+    const back = await counted(counting, STORE_CONFIG_KIND, droppedKeys, () => putBackSettings(ctx, dropped, (o) => ctx.recorder.drop(o)));
     const putBack = settingsLine(back, 'Put back');
     if (putBack) done.notes.push(putBack);
-    skipRefused(ctx, plan.filter((p) => p.outcome === 'set' || p.outcome === 'update'), rejected);
+    skipRefused(ctx, writing, rejected);
 }
 
 /**

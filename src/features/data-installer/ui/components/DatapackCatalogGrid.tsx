@@ -104,8 +104,8 @@ export function DatapackCatalogGrid({
     );
 }
 
-/** The dot's words for the demo's own pack, when something newer is there (`newerLabel`). */
+/** The dot's words for the demo's own pack, when the version it installed changed since (`newerLabel`). */
 function newerOf(group: DatapackGroup, held: DatapackId | undefined, installedAt: string | undefined): string | undefined {
     const newer = newerVersionOf(group, held, installedAt);
-    return newer && held ? newerLabel(newer, held) : undefined;
+    return newer ? newerLabel(newer) : undefined;
 }

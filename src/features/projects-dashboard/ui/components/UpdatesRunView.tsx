@@ -57,8 +57,8 @@ interface RunViewProps {
     remaining: number;
 }
 
-/** "1 update still waiting", "2 updates still waiting". */
-function waitingLine(count: number): string {
+/** "1 update pending", "2 updates pending": the run's rows, and the small result a clean run ends on. */
+export function waitingLine(count: number): string {
     return count === 1 ? '1 update pending' : `${count} updates pending`;
 }
 

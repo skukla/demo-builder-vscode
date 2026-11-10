@@ -10,7 +10,7 @@
 import { installRecordPath, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { forgetPackReads } from '@/features/data-installer/services/packReadCache';
 import { listPickable, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
-import { PACK, PROJECT } from './demoBuilderEngine.testUtils';
+import { PACK, PROJECT, page } from './demoBuilderEngine.testUtils';
 import { RACKS, SAVE_AS, deps } from './storeChanges.testUtils';
 
 // Pack reads are kept between callers (walk F82): each test starts with none kept.
@@ -51,20 +51,20 @@ describe('a save of picks from a store Demo Builder did not fill', () => {
 
         const result = await saveStoreChanges(d, { saveAs: SAVE_AS, picks: { categories: ['42'] } }, write);
 
-        expect(result.sentence).toBe('Saved to the Acme Demo pack.');
+        expect(result.sentence).toBe('Saved as Acme Demo.');
     });
 
     it('refuses, writing nothing, when nothing is picked', async () => {
         const { d, written, write } = await deps(false);
 
-        await expect(saveStoreChanges(d, { saveAs: SAVE_AS, picks: {} }, write)).rejects.toThrow('Select at least one item from the store to save. Nothing was saved.');
+        await expect(saveStoreChanges(d, { saveAs: SAVE_AS, picks: {} }, write)).rejects.toThrow('Select at least one item from Commerce to save. Nothing was saved.');
         expect(written).toStrictEqual([]);
     });
 
     it('refuses, writing nothing, when the store holds none of what was picked', async () => {
         const { d, written, write } = await deps(false);
 
-        await expect(saveStoreChanges(d, { saveAs: SAVE_AS, picks: { categories: ['99'] } }, write)).rejects.toThrow('The store holds none of what was picked, so there is nothing to save.');
+        await expect(saveStoreChanges(d, { saveAs: SAVE_AS, picks: { categories: ['99'] } }, write)).rejects.toThrow('Commerce holds none of what was picked, so there is nothing to save.');
         expect(written).toStrictEqual([]);
     });
 });
@@ -81,13 +81,16 @@ describe('a save of a pack Demo Builder installed, with picks', () => {
         expect(moved?.created.map((o) => o.id)).toEqual(['41']);
     });
 
-    it('says what it left out of the store, because nothing picked it', async () => {
-        const { d, write } = await deps(true, { ...BY_HAND, ...TREE }, PACK_ROWS);
+    it('takes what the SC made in the demo with nothing picked, and leaves nothing out (walk F85)', async () => {
+        const { d, files, written, write } = await deps(true, { ...BY_HAND, ...TREE }, PACK_ROWS);
 
         const result = await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write);
 
-        expect(result.leftOut).toContainEqual({ kind: 'categories', count: 1, names: ['Cables'] });
-        expect(result.sentence).toMatch(/^Saved to the Acme Demo pack\. Bodea is unchanged\. Left out, because nothing selected them: 1 category \(Cables\)/u);
+        expect(categoriesIn(written[0].items.find((i) => i.dataType === 'categories')?.records)).toEqual(['Server Racks', 'Cables']);
+        expect(result.leftOut).toStrictEqual([]);
+        expect(result.sentence).toBe('Saved as Acme Demo. Bodea is unchanged.');
+        // Removing the new version must still leave the SC's own category: it is not the engine's.
+        expect((await readInstallRecord(files, PROJECT, SAVE_AS.id))?.created.map((o) => o.id)).toEqual(['41']);
     });
 });
 
@@ -107,5 +110,26 @@ describe('listPickable', () => {
 
         expect(page.items.map((i) => i.id)).toEqual(['41', '42']);
         expect(page.inPackCount).toBe(0);
+    });
+});
+
+describe('Add Items: what the demo does not use (walk F85)', () => {
+    it('lists the groups nothing of the demo uses, less what the pack holds, and says nothing of the pack', async () => {
+        const groups = {
+            [page('customerGroups/search')]: {
+                items: [
+                    { id: 1, code: 'General' },
+                    { id: 30, code: 'VIP' },
+                    { id: 31, code: 'Live Demo' },
+                ],
+                total_count: 3,
+            },
+        };
+        const { d } = await deps(true, groups, { ...PACK_ROWS, customer_groups: [{ customer_group: { code: 'VIP' } }] });
+
+        const listed = await listPickable(d, 'customer_groups', PACK, undefined, true);
+
+        expect(listed.items.map((i) => i.displayName)).toEqual(['Live Demo']);
+        expect(listed.inPackCount).toBe(0);
     });
 });

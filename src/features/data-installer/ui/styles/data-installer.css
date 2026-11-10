@@ -294,18 +294,38 @@
 }
 }
 
-/* The import's run (`ImportRunView`): its rows down each column in turn, as many columns as the
-   form had, and under them what the engine is doing, or how it ended. */
+/* The import's run (`ImportRunView`): its steps (work-row.css), the clock or how it ended under
+   them. A step's line stays on one line, so the window keeps its height (walk F116). Scoped to
+   the steps themselves (`.import-steps > .work-row`), so the data types under Install and the
+   other run windows keep their own look. */
 @layer theme {
-.import-run-columns {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
-    column-gap: 24px;
-}
-
 .import-run-foot {
     margin-top: 16px;
+}
+
+/* The same space between every step, Install's data types included (walk F132). */
+.import-steps > .work-row {
+    padding: 12px 0;
+}
+
+.import-steps > .work-row > .work-row-text {
+    flex: 1;
+}
+
+/* A step's title, bold (walk F132). */
+.import-steps > .work-row > .work-row-text > .checkbox-row-label {
+    font-weight: 700;
+}
+
+/* Its status line, smaller and muted. Never cut short: the lines are kept short instead. */
+.import-steps > .work-row > .work-row-text > .work-row-detail {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Install's data types, under its line. */
+.import-step-types {
+    margin-top: 8px;
 }
 }
 

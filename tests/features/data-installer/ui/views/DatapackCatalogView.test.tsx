@@ -119,7 +119,7 @@ describe('DatapackCatalogView', () => {
 
             fireEvent.change(showSelect(), { target: { value: 'team' } });
 
-            expect(await screen.findByText('No Demo Builder Datapacks')).toBeInTheDocument();
+            expect(await screen.findByText('No Team Datapacks')).toBeInTheDocument();
             expect(screen.getByText('Choose another view')).toBeInTheDocument();
         });
 
@@ -165,7 +165,7 @@ describe('DatapackCatalogView', () => {
 
             fireEvent.change(showSelect(), { target: { value: 'team' } });
 
-            await screen.findByText('No Demo Builder Datapacks');
+            await screen.findByText('No Team Datapacks');
             expect(screen.getByRole('searchbox', { name: 'Filter datapacks' })).toBeInTheDocument();
         });
 

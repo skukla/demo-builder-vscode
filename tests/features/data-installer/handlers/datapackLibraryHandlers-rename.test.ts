@@ -103,6 +103,6 @@ it('refuses a pack the SC owns no version of, writing nothing', async () => {
 
     const result = await rename(contextFor(null), { datapackName: 'acme-1a2b3c', displayName: 'Acme Q4', confirm: true });
 
-    expect(result).toMatchObject({ success: false, error: 'The datapack library has no pack of yours named acme-1a2b3c.' });
+    expect(result).toMatchObject({ success: false, error: 'My Datapacks has no datapack named acme-1a2b3c.' });
     expect(puts()).toStrictEqual([]);
 });

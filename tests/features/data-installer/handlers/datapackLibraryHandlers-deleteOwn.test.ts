@@ -95,3 +95,32 @@ describe("the pack's settings layer (datapack-engine step 09): a version takes i
         expect(result).toMatchObject({ success: true, data: { deleted: true, settingsLayerLeft: expect.stringContaining('bodea-settings') } });
     });
 });
+
+// Owner, 2026-11-09 (walk F99): a pack of saves is one thing to the SC, so Remove Datapack takes it whole.
+describe('every version (everyVersion)', () => {
+    const deletes = () =>
+        (global.fetch as jest.Mock).mock.calls
+            .filter(([, init]) => (init as RequestInit).method === 'DELETE')
+            .map(([url]) => new URL(String(url)).searchParams.toString());
+
+    it("deletes every version of the SC's own pack, and only theirs", async () => {
+        library.findDatapacks.mockImplementation(async ({ datapackName }: { datapackName: string }) =>
+            datapackName === OWN
+                ? { items: [row(OWN, '20261109-141504', true), row(OWN, '20261109-160124', true), row(OWN, '20261101-000000', false)], count: 3 }
+                : { items: [], count: 0 },
+        );
+
+        const result = await remove(contextFor(null), { datapackName: OWN, everyVersion: true, confirm: true });
+
+        expect(deletes()).toEqual([`datapack_name=${OWN}&version=20261109-141504`, `datapack_name=${OWN}&version=20261109-160124`]);
+        expect(result).toMatchObject({ success: true, data: { datapackName: OWN, deleted: true, versions: 2 } });
+    });
+
+    it('CONTROL: deletes nothing without confirm, or when the SC has no pack of that name', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [row(OWN, '20261109-141504', false)], count: 1 });
+
+        expect(await remove(contextFor(null), { datapackName: OWN, everyVersion: true })).toMatchObject({ success: false });
+        expect(await remove(contextFor(null), { datapackName: OWN, everyVersion: true, confirm: true })).toMatchObject({ success: false });
+        expect(deletes()).toStrictEqual([]);
+    });
+});

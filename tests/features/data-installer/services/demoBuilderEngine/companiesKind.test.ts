@@ -169,7 +169,7 @@ describe('installCompanies', () => {
         it('stops, naming it, at a region the country does not have, before the admin is made', async () => {
             const ctx = await store();
 
-            await expect(installCompanies(ctx, parseCompanyRows([withRegion({ region_code: 'ZZ' })]))).rejects.toThrow('The store has no region ZZ in US.');
+            await expect(installCompanies(ctx, parseCompanyRows([withRegion({ region_code: 'ZZ' })]))).rejects.toThrow('Commerce has no region ZZ in US.');
             expect(ctx.sent).toStrictEqual([]);
         });
     });

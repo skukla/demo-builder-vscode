@@ -137,7 +137,7 @@ describe('planWipe on one store of a website with two (bodea_store)', () => {
 
 describe('planWipe refusals', () => {
     it('names a website or store the store does not have', async () => {
-        await expect(planWipeFor(sandbox().get, [{ websiteCode: 'nope' }], { records: [] })).rejects.toThrow(new WipeScopeError('The store has no website nope.'));
+        await expect(planWipeFor(sandbox().get, [{ websiteCode: 'nope' }], { records: [] })).rejects.toThrow(new WipeScopeError('Commerce has no website nope.'));
         await expect(planWipeFor(sandbox().get, [{ websiteCode: 'bodea', storeCode: 'nope' }], { records: [] })).rejects.toThrow(new WipeScopeError('The website bodea has no store nope.'));
     });
 });

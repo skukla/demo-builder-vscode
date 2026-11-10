@@ -195,7 +195,7 @@ describe('a settings layer the install cannot use', () => {
         expect(sent).toEqual([CATEGORY_POST]);
         expect(status.perType.categories).toBe('success');
         expect(status.note).toContain(`${GRID}@default`);
-        expect(status.note).toContain("The pack's data is installed");
+        expect(status.note).toContain("The datapack's data is installed");
 
         const removal = await engine.startDelete(request());
         await finished(engine, removal.activationId);

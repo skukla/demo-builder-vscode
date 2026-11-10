@@ -2,14 +2,14 @@
  * Shared harness for the `delete_project` suite family: the module wall, the fake server
  * that keeps the tool's schema, and the context the tool is built with.
  *
- * Extracted when the second suite arrived (`deleteProjectTool-pack.test.ts`, step 07's
- * `deletePack`). This file owns the SUBJECT import, so the `jest.mock` calls above it hoist
+ * Extracted when the second suite arrived (`deleteProjectTool-data.test.ts`, walk F96's
+ * `removeData`, which replaced step 07's `deletePack`). This file owns the SUBJECT import, so the `jest.mock` calls above it hoist
  * above it (webview-test-authoring §3): a spec that imported `registerDeleteProjectTool`
  * itself could bind the real collaborators.
  *
  * The three walls: the local deletion core, the cloud step (the real resolver decides; only
  * the step that would touch the cloud is held back, so what it is HANDED can be read), and the
- * library delete of the project's own pack.
+ * removal of the project's datapack data from Commerce.
  */
 
 import * as vscode from 'vscode';
@@ -22,10 +22,10 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 jest.mock('@/features/projects-dashboard/services/projectFilesDeletion', () => ({
     deleteProjectFiles: jest.fn(),
 }));
-jest.mock('@/features/projects-dashboard/services/demoPackDeletion', () => ({
-    deleteProjectDemoPack: jest.fn(),
-    // Whether the project's pack may go with it: none unless a suite says so.
-    deletablePackOf: jest.fn().mockResolvedValue(undefined),
+jest.mock('@/features/projects-dashboard/services/datapackDataRemoval', () => ({
+    // Whether the project has datapack data to remove: none unless a suite says so.
+    hasRemovableData: jest.fn().mockResolvedValue(false),
+    removeDataBeforeDelete: jest.fn(),
 }));
 jest.mock('@/features/ai/server/agentProjectCleanup', () => ({
     ...jest.requireActual('@/features/ai/server/agentProjectCleanup'),

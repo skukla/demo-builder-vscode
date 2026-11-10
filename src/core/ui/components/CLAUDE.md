@@ -12,7 +12,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | The job | Use | Not |
 |---|---|---|
 | Full-block loading (empty view, waiting on a fetch) | `feedback/LoadingDisplay` (`size="L"`) | a bare `ProgressCircle` + label |
-| A dialog's or flyout's wait: what it is doing, on what, how long (the progress window's three rows) | `Modal`'s `waiting`, or `feedback/StageWait` in a flyout, with words from `WAIT_STAGES` (`core/utils/waitStages.ts`) | a wordless spinner, or a `LoadingDisplay` with words written on the spot |
+| A dialog's or flyout's wait: what it is doing, on what, how long (the progress window's three rows) | `Modal`'s `waiting`, or `feedback/StageWait` in a flyout (`brief`: the label alone, as the datapack flyout's waits), with words from `WAIT_STAGES` (`core/utils/waitStages.ts`) | a wordless spinner, or a `LoadingDisplay` with words written on the spot |
 | Loading ON TOP of existing content | `feedback/LoadingOverlay` | a conditional spinner |
 | Small inline busy indicator | `ui/Spinner` | `ProgressCircle` directly |
 | Long wait needing "still moving" copy | `LoadingDisplay` + `useElapsedStage` | a static message |
@@ -26,6 +26,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | How something stands, as an icon: warning, error, done, info | `feedback/StatusIcon` (the wizard's set, everywhere; `tests/sop/status-icons.test.ts`) | importing a Spectrum status icon and picking a colour |
 | One item's progress in a list of work (waiting, running, done, failed, warning) | `feedback/StepStatusIcon` (Prerequisites, the Updates modal's run) | a per-screen icon switch |
 | A row in a list of work: status icon, name, then where it stands on the line under it (detail, note or failure); a host gives every row that line so the list keeps one height | `feedback/WorkRow` (the Updates modal's run, the demo setup; a host bundle imports `work-row.css` and `checkbox-row.css` in its entry) | bare text with the state run into the note |
+| A run's parts as rows, down each column in turn (each a `WorkRow`): the import's window, and any run the progress modal shows as rows (`OperationProgressPayload.rows`, a datapack save) | `feedback/WorkRowColumns` (styled by `work-row.css`, `.work-row-columns`; `dense` for small rows nested under a step, the working row's second line, and room for it held in every column) | a per-run grid of rows |
 | Centering any of the above at a fixed height | `layout/CenteredFeedbackContainer` | ad-hoc flex + height |
 | "Add another" on a card grid — a dashed card as the grid's LAST cell, hidden while a filter is on, never counted | `ui/AddCard` (host passes its card class as `cardClassName`; its bundle imports `add-card.css`; pass `menu` — a Spectrum `Menu` — when adding is a choice, as Your Projects does) | a header "Add" button, or a per-grid dashed tile |
 | Card overflow (kebab) menu, or a labelled "More" menu beside a primary button (`label`) | `ui/CardActionsMenu` + `ui/menuIcons` | a bespoke `MenuTrigger` |

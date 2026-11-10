@@ -2,8 +2,10 @@
  * The flyout's actions (owner, 2026-10-30): Import is the one button on view, and everything else
  * is behind a "More" button (`CardActionsMenu` with a label, owner 2026-10-31: a bare ⋯ beside
  * Import read as unclear; icons from `renderMenuIcon`), where it was five buttons
- * on three rows. In the menu, in order: Save as file; Share or Stop sharing, on the SC's own
- * library pack; and Remove from library, the same pack only, in its own section at the bottom.
+ * on three rows. In the menu, in order: Save as file; Version History, on a pack of saves with more
+ * than one (walk F99: its earlier saves, one to restore); Share or Stop sharing, on the SC's own
+ * library pack; and Delete Datapack, the same pack only, in its own section at the bottom. A pack of
+ * saves is deleted whole.
  * The demo's own pack, when it is the SC's, leads with Save Changes, which writes what its store now
  * holds as a new version, with Import beside it (owner, 2026-11-04); a new pack is the header's
  * Create Datapack.
@@ -21,7 +23,7 @@
  * Data Installer pack alike. The Datapack Library touches no store (owner, 2026-11-07), so there
  * the menu's rows are the buttons, Save as File and Share, and More holds only what removes.
  * Copy to the Data Installer, which puts a library pack in the catalog other teams share, is not
- * shown (`COPY_TO_INSTALLER_SHOWN`): the Data Installer does not let our accounts write to it yet
+ * shown (`INSTALLER_WRITES_SHOWN`): the Data Installer does not let our accounts write to it yet
  * (owner, 2026-11-06), so it would fail every time. The copy itself is built and tested, and its
  * agent tool says why it is refused.
  *
@@ -30,12 +32,15 @@
 
 import { Button, Item, Section, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useLayoutEffect, useState } from 'react';
+import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
+import { isSavedVersion } from '../../packVersions';
 import { SHARE_CONSENT } from '../../shareWording';
 import type { DatapackDetail, PackDetailLayer } from '../../types';
 import { useLibrarySharing } from '../hooks/useLibrarySharing';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
 import { useSaveDatapackFile } from './SaveDatapackFileButton';
+import { VersionHistoryDialog } from './VersionHistoryDialog';
 import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { ConfirmActionDialog, type ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
@@ -43,18 +48,16 @@ import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId } from '@/types/datapack';
 
-/**
- * Whether a library pack offers Copy to the Data Installer. Off until the Data Installer lets our
- * accounts write to it (owner, 2026-11-06); turning it on is this one line.
- */
-const COPY_TO_INSTALLER_SHOWN = false;
+const NO_HISTORY: readonly string[] = [];
 
 export interface PackActionsProps {
     detail: DatapackDetail;
     /** Import: absent in the Datapack Library. */
     onImport?: (id: DatapackId) => void;
-    /** Save Changes: given only for the demo's own pack when it is the SC's. */
+    /** Save Changes: on the demo's pack, whoever owns it. */
     onSaveChanges?: () => void;
+    /** It makes a new pack of the SC's: the button reads Save As New Datapack (owner, 2026-11-09). */
+    saveAsNew?: boolean;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
     /** The Data Installer's address is set and switched on: a library pack offers Copy to it. */
@@ -67,6 +70,12 @@ export interface PackActionsProps {
     settingsLayer?: PackDetailLayer;
     /** Whether a menu row's work is running: the flyout hides its other content. Stable. */
     onWorking?: (working: boolean) => void;
+    /** The pack's saves, newest first: with more than one, More offers Version History (walk F99). */
+    history?: readonly string[];
+    /** The save this demo uses, for Version History's In Use. */
+    inUse?: string;
+    /** Remove Data: on the version whose data is in this demo's store, opening straight to its confirm (F118). */
+    onRemoveData?: () => void;
 }
 
 /** One menu row: its icon and label. */
@@ -77,19 +86,24 @@ interface Row {
 }
 
 /** The menu's upper section: what any pack offers, then what the SC's own library pack adds. */
-function packRows(detail: DatapackDetail): Row[] {
+function packRows(detail: DatapackDetail, withHistory: boolean): Row[] {
     const rows: Row[] = [{ key: 'save-file', label: 'Save as File', icon: 'saveFile' }];
+    if (withHistory) rows.push({ key: 'history', label: 'Version History', icon: 'history' });
     if (detail.store === 'library' && detail.mine) {
         rows.push({ key: 'share', label: detail.shared ? 'Stop Sharing' : 'Share', icon: 'share' });
     }
     return rows;
 }
 
-/** The menu's lower section: what removes something from the library. */
-function removeRows(ownPack: boolean, ownLayer: boolean): Row[] {
+/** The menu's lower section: what takes the demo's data out of its store, then what leaves the library. */
+function removeRows(ownPack: boolean, ownLayer: boolean, removesData: boolean): Row[] {
     return [
-        ...(ownPack ? [{ key: 'remove', label: 'Remove Datapack', icon: 'delete' }] : []),
-        ...(ownLayer ? [{ key: 'remove-settings', label: 'Remove Its Store Settings', icon: 'delete' }] : []),
+        // Uninstall, the pair of Install (owner, 2026-11-09, walk F120): "Remove Data" read as all data.
+        ...(removesData ? [{ key: 'remove-data', label: 'Uninstall', icon: 'delete' }] : []),
+        // Delete, not Remove (owner, 2026-11-09, walk F118): it leaves the library for good, where
+        // Uninstall takes a demo's data out of its store and an import puts it back.
+        ...(ownPack ? [{ key: 'remove', label: 'Delete Datapack', icon: 'delete' }] : []),
+        ...(ownLayer ? [{ key: 'remove-settings', label: 'Delete Store Settings', icon: 'delete' }] : []),
     ];
 }
 
@@ -114,17 +128,21 @@ function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: stri
     }
     if (asking === 'remove-settings') {
         return {
-            title: `Remove ${name}'s Store Settings?`,
-            actionLabel: 'Remove',
+            title: `Delete ${name}'s Store Settings?`,
+            actionLabel: 'Delete',
             actionVariant: 'negative',
-            children: "This removes the store settings saved with it, and it can't be undone.",
+            // The house form for a warning: a word in the main sentence (dialog design rules).
+            children: 'Permanently deletes the store settings saved with it.',
         };
     }
+    // A pack of saves goes whole, its Version History with it (owner, 2026-11-09).
+    const what = isSavedVersion(detail.id.version) ? 'it and its version history' : `version ${detail.id.version}`;
+    // "Permanently" is the warning, as a word in the sentence (dialog design rules; review 2026-11-10).
     return {
-        title: `Remove ${name}?`,
-        actionLabel: 'Remove',
+        title: `Delete ${name}?`,
+        actionLabel: 'Delete',
         actionVariant: 'negative',
-        children: [`This removes version ${detail.id.version}, and it can't be undone.`, sharedInFile],
+        children: [`Permanently deletes ${what}.`, sharedInFile],
     };
 }
 
@@ -137,25 +155,30 @@ function workLines(work: {
 }): WaitLines {
     if (work.saveFile.saving) return WAIT_STAGES.savingPackFile;
     if (work.sharing.working) return work.shared ? WAIT_STAGES.makingPackPrivate : WAIT_STAGES.sharingPack;
-    if (work.layerRemoval.removing) return WAIT_STAGES.removingPackSettings;
-    return WAIT_STAGES.removingPack;
+    if (work.layerRemoval.removing) return WAIT_STAGES.deletingPackSettings;
+    return WAIT_STAGES.deletingPack;
 }
 
 export function PackActions({
     detail,
     onImport,
     onSaveChanges,
+    saveAsNew = false,
     onRemoved,
     installerOn,
     sharedInFile,
     onSharingChanged,
     settingsLayer,
     onWorking,
+    history = NO_HISTORY,
+    inUse,
+    onRemoveData,
 }: PackActionsProps): React.JSX.Element {
     const library = detail.store === 'library';
     const [asking, setAsking] = useState<Asking>(null);
+    const [showHistory, setShowHistory] = useState(false);
     const saveFile = useSaveDatapackFile(detail.id, library ? 'library' : 'installer');
-    const removal = useLibraryRemoval(detail.id, onRemoved);
+    const removal = useLibraryRemoval(detail.id, onRemoved, isSavedVersion(detail.id.version));
     const layerRemoval = useLibraryRemoval(settingsLayer?.id ?? detail.id, onSharingChanged);
     const sharing = useLibrarySharing(detail.id, detail.shared, onSharingChanged);
     const doneAsking = useCallback((): void => setAsking(null), []);
@@ -172,6 +195,8 @@ export function PackActions({
 
     const onAction = (key: React.Key): void => {
         if (key === 'save-file') saveFile.start();
+        else if (key === 'history') setShowHistory(true);
+        else if (key === 'remove-data') onRemoveData?.();
         else if (key === 'share' || key === 'remove' || key === 'remove-settings') setAsking(key);
     };
     const confirm = (): void => {
@@ -188,16 +213,16 @@ export function PackActions({
             <Text>{row.label}</Text>
         </Item>
     );
-    const removing = removeRows(library && detail.mine === true, settingsLayer?.mine === true);
+    const removing = removeRows(library && detail.mine === true, settingsLayer?.mine === true, onRemoveData !== undefined);
     return (
         <>
             {working ? (
                 <div className="datapack-panel-loading">
-                    <StageWait lines={workLines({ saveFile, sharing, layerRemoval, shared: detail.shared })} />
+                    <StageWait brief lines={workLines({ saveFile, sharing, layerRemoval, shared: detail.shared })} />
                 </div>
             ) : null}
             {/* Kept mounted through a wait: a copy's own result would be lost with it. */}
-            {library && installerOn && COPY_TO_INSTALLER_SHOWN ? (
+            {library && installerOn && INSTALLER_WRITES_SHOWN ? (
                 <div hidden={working}>
                     <CopyToInstallerButton id={detail.id} />
                 </div>
@@ -207,15 +232,18 @@ export function PackActions({
                     {onImport ? (
                         <div className="db-drawer-actions">
                             {onSaveChanges ? (
-                                <Button variant="accent" onPress={onSaveChanges}>
-                                    Save Changes
+                                // Outlined, as Import is beside it (owner, 2026-11-09, walk F124): whether
+                                // anything changed is not known until a save reads the store, so it must
+                                // not look like something waits to be saved.
+                                <Button variant="secondary" onPress={onSaveChanges}>
+                                    {saveAsNew ? 'Save As New Datapack' : 'Save Changes'}
                                 </Button>
                             ) : null}
                             <Button variant={onSaveChanges ? 'secondary' : 'accent'} onPress={() => onImport(detail.id)}>
                                 Import
                             </Button>
                             <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
-                                <Section key="pack">{packRows(detail).map(renderRow)}</Section>
+                                <Section key="pack">{packRows(detail, history.length > 1).map(renderRow)}</Section>
                                 {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
                             </CardActionsMenu>
                         </div>
@@ -230,6 +258,18 @@ export function PackActions({
                     </PackActionNotes>
                 </>
             )}
+            {onImport ? (
+                <VersionHistoryDialog
+                    isOpen={showHistory}
+                    versions={history}
+                    {...(inUse ? { inUse } : {})}
+                    onRestore={(version) => {
+                        setShowHistory(false);
+                        onImport({ name: detail.id.name, version });
+                    }}
+                    onClose={() => setShowHistory(false)}
+                />
+            ) : null}
             <ConfirmActionDialog
                 isOpen={asking !== null}
                 {...confirmCopy(asking, detail, sharedInFile)}

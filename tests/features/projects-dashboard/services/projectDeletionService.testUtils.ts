@@ -188,16 +188,17 @@ export const mockSleep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));
 
 /**
- * Deleting the pack the project uses ("Also delete its pack"), and whether it may go with it
- * (`deletablePackOf`: the SC's own, and no other local project uses it). The real module reaches
- * the datapack library; every delete suite asserts only whether, and with what, they are called.
- * Offers no pack unless a suite says so.
+ * Uninstall Datapack (walk F96): whether the project has data Demo Builder installed in
+ * Commerce (`removableDataOf`), and removing it (`removeDataBeforeDelete`, undefined when it all
+ * came out, else why it did not). The real module reaches the store; its own suite is
+ * `datapackDataRemoval.test.ts`, and every delete suite asserts only whether, and with what, they
+ * are called. Offers no data unless a suite says so.
  */
-export const mockDeleteProjectDemoPack = jest.fn();
-export const mockDeletablePackOf = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/projects-dashboard/services/demoPackDeletion', () => ({
-    deleteProjectDemoPack: (...a: unknown[]) => mockDeleteProjectDemoPack(...a),
-    deletablePackOf: (...a: unknown[]) => mockDeletablePackOf(...a),
+export const mockRemovableDataOf = jest.fn().mockResolvedValue(undefined);
+export const mockRemoveDataBeforeDelete = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/projects-dashboard/services/datapackDataRemoval', () => ({
+    removableDataOf: (...a: unknown[]) => mockRemovableDataOf(...a),
+    removeDataBeforeDelete: (...a: unknown[]) => mockRemoveDataBeforeDelete(...a),
 }));
 
 // Below the mocks on purpose — see the note above about hoisting.

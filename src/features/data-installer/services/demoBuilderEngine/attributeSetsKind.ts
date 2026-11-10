@@ -21,6 +21,7 @@ import { z } from 'zod';
 import { ATTRIBUTE_CODE, deleteIfPresent, eachFewAtOnce, firstOfEach, type KindContext, MissingNameError, ownedId, segment } from './kindContext';
 import { createOne } from './pendingCreates';
 import { needsUnskipped, tryRow } from './refusedRows';
+import { counted } from './rowCount';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import { pickAttributeGroup, readSetGroups } from '@/features/app-builder/services/erpOwnerAttributeSets';
 import type { CommerceAttributeSetList, CommerceSend, CommerceSetAttribute } from '@/types/commerceWire';
@@ -71,14 +72,30 @@ function groupCode(name: string): string {
     return name.toLowerCase().replace(/[^a-z0-9]+/gu, '_');
 }
 
-/** Read every set the store has into the session, once per install. Products use it too. */
-export async function loadStoreSets(ctx: KindContext): Promise<void> {
-    if (ctx.session.setIds.size > 0) return;
-    const sets = await readAllPages<NonNullable<CommerceAttributeSetList['items']>[number]>(
-        ctx.get,
-        'products/attribute-sets/sets/list',
+/** The read of a session's sets in progress, so callers at once share it. */
+const setsLoading = new WeakMap<KindContext['session'], Promise<void>>();
+
+/**
+ * Read every set the store has into the session, once per install or save. Products use it too.
+ *
+ * Callers at once share the one read (walk F90): a save turns all of a pack's products into rows at
+ * once, and each asks its set's name, so a check of the filled map alone let each start its own read
+ * of the same list, 2,048 at once on Luma, and the rows took 88 s. A failed read is forgotten, so the
+ * next caller reads again.
+ */
+export function loadStoreSets(ctx: KindContext): Promise<void> {
+    if (ctx.session.setIds.size > 0) return Promise.resolve();
+    const inFlight = setsLoading.get(ctx.session);
+    if (inFlight) return inFlight;
+    const loading = readAllPages<NonNullable<CommerceAttributeSetList['items']>[number]>(ctx.get, 'products/attribute-sets/sets/list').then((sets) => {
+        for (const set of sets) ctx.session.setIds.set(set.attribute_set_name, set.attribute_set_id);
+    });
+    setsLoading.set(ctx.session, loading);
+    loading.then(
+        () => setsLoading.delete(ctx.session),
+        () => setsLoading.delete(ctx.session),
     );
-    for (const set of sets) ctx.session.setIds.set(set.attribute_set_name, set.attribute_set_id);
+    return loading;
 }
 
 /** The group a set's pack attributes go in: one named like the set, else the house pick. */
@@ -107,7 +124,9 @@ async function createOwnGroup(ctx: KindContext, name: string, setId: number): Pr
 export async function installAttributeSets(ctx: KindContext, rows: readonly AttributeSetRow[]): Promise<void> {
     await loadStoreSets(ctx);
     // Sets stand alone, so a few go at once: one after another, Luma's eight took eight seconds (2026-11-06).
-    await eachFewAtOnce(firstOfEach(rows, (row) => row.attributeSet.attribute_set_name), (row) => installAttributeSet(ctx, row));
+    await eachFewAtOnce(firstOfEach(rows, (row) => row.attributeSet.attribute_set_name), (row) =>
+        counted(ctx, ATTRIBUTE_SET_KIND, row.attributeSet.attribute_set_name, () => installAttributeSet(ctx, row)),
+    );
 }
 
 /** Use the set the store has by name, or make it with its own group, and record it. */
@@ -150,7 +169,7 @@ export async function installAssignments(ctx: KindContext, rows: readonly Assign
     // share them. A read that fails here is tried again by each row, which then reports it as its own.
     await Promise.all([...new Set(wanted.map((row) => row.attributeSetId))].map((name) => readSet(ctx, name, inSet).catch(() => undefined)));
     await eachFewAtOnce(wanted, (row) =>
-        tryRow(ctx, { kind: ASSIGNMENT_KIND, key: keyOf(row) }, () => assign(ctx, row, inSet)),
+        counted(ctx, ASSIGNMENT_KIND, keyOf(row), () => tryRow(ctx, { kind: ASSIGNMENT_KIND, key: keyOf(row) }, () => assign(ctx, row, inSet))),
     );
 }
 
@@ -167,7 +186,7 @@ async function readSet(ctx: KindContext, name: string, inSet: Map<number, Set<st
 async function assign(ctx: KindContext, row: AssignmentRow, inSet: Map<number, Set<string>>): Promise<void> {
     needsUnskipped(ctx.session, ATTRIBUTE_KIND_NAME, row.attributeCode);
     const setId = ctx.session.setIds.get(row.attributeSetId);
-    if (setId === undefined) throw new MissingNameError(ATTRIBUTE_SET_KIND, row.attributeSetId, `The store has no attribute set named ${row.attributeSetId}.`);
+    if (setId === undefined) throw new MissingNameError(ATTRIBUTE_SET_KIND, row.attributeSetId, `Commerce has no attribute set named ${row.attributeSetId}.`);
     await readSet(ctx, row.attributeSetId, inSet);
     if (inSet.get(setId)?.has(row.attributeCode)) return;
     const groupId = await groupInSet(ctx, row.attributeSetId, setId);

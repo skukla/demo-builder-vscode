@@ -14,8 +14,10 @@ import {
     parseProductExport,
     installProductExport,
     PRODUCTS_PER_IMPORT,
+    productsLine,
 } from '@/features/data-installer/services/demoBuilderEngine/productExportKind';
 import { fakeContext } from './demoBuilderEngine.testUtils';
+import { LINKING_OPTIONS } from '@/features/data-installer/types';
 
 type Row = Record<string, unknown> & { sku: string; product_type: string };
 
@@ -196,6 +198,29 @@ describe('installProductExport', () => {
 
         expect(imports.map((call) => call.items.length)).toEqual([100, 50]);
         expect(progressed).toEqual(['100 of 150 products', '150 of 150 products']);
+    });
+
+    // Owner, 2026-11-09, walk F122: the slow configurable part is named, so a slow count reads as work.
+    it('says it is linking product options while the configurable products go in', async () => {
+        const { ctx } = await store();
+        const progressed: string[] = [];
+        ctx.progress = (line) => void progressed.push(line);
+        const kids = [child('K0', { categories: undefined }), child('K1', { categories: undefined })];
+        const parents = [{ ...parent('P0', ['K0', 'K1']), categories: undefined }];
+
+        await installProductExport(ctx, parseProductExport(pack([...kids, ...parents])));
+
+        expect(progressed).toEqual([
+            '2 of 3 products',
+            `3 of 3 products${LINKING_OPTIONS}`,
+        ]);
+    });
+
+    it('counts the same way on both install routes, the configurable part named', () => {
+        expect(productsLine(1200, 2046, 'products', false)).toBe('1,200 of 2,046 products');
+        expect(productsLine(2000, 2046, 'products', true)).toBe(
+            `2,000 of 2,046 products${LINKING_OPTIONS}`
+        );
     });
 
     it(`sends parents ${PARENTS_PER_IMPORT} to a call, and keeps a product's store-view row in its product's call`, async () => {

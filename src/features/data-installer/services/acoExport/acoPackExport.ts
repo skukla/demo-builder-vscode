@@ -87,7 +87,7 @@ async function storeViewsAsked(
     const missing = asked.filter((code) => !known.includes(code));
     if (missing.length > 0)
         throw new AcoExportError(
-            `The store has no store view ${missing.join(', ')}. It has ${known.join(', ')}.`,
+            `Commerce has no store view ${missing.join(', ')}. It has ${known.join(', ')}.`,
         );
     return { codes: [...new Set(asked)].sort(), chosen: true };
 }
@@ -150,7 +150,7 @@ async function save(
     } catch (error) {
         if (!(error instanceof DatapackTransferError)) throw error;
         throw new AcoExportError(
-            `${request.id.name}@${request.id.version} is already in your datapack library. Choose another version, or delete that one first.`,
+            `${request.id.name}@${request.id.version} is already in My Datapacks. Choose another version, or delete that one first.`,
         );
     }
     for (const failed of written.failed) {
@@ -159,18 +159,18 @@ async function save(
             entry.outcome = {
                 ...entry.outcome,
                 success: false,
-                reason: `The library did not take it: ${failed.reason}`,
+                reason: `My Datapacks did not take it: ${failed.reason}`,
             };
     }
     return request.id;
 }
 
 function sentenceFor(outcome: Omit<AcoExportOutcome, 'sentence'>, id: DatapackId): string {
-    if (!outcome.saved) return 'The store had nothing to put in an ACO pack, so nothing was saved.';
+    if (!outcome.saved) return 'Commerce had nothing to put in an ACO pack, so nothing was saved.';
     const made = outcome.perType.filter((t) => t.success && t.exported > 0).length;
     const failed = outcome.perType.filter((t) => !t.success).length;
     const tail = failed > 0 ? ` ${failed} of the kinds could not be made; each says why.` : '';
-    return `Saved the ACO pack ${id.name}@${id.version} to your datapack library: ${made} kinds for ${outcome.storeViews.join(', ')}.${tail}`;
+    return `Saved the ACO pack ${id.name}@${id.version} to My Datapacks: ${made} kinds for ${outcome.storeViews.join(', ')}.${tail}`;
 }
 
 /**

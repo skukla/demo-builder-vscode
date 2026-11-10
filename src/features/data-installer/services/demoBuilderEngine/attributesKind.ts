@@ -21,6 +21,7 @@ import { ATTRIBUTE_CODE, deleteIfPresent, eachFewAtOnce, firstOfEach, type KindC
 import { certainlyNotMade, createOne } from './pendingCreates';
 import type { PendingObject } from './pendingRecord';
 import { tryRow } from './refusedRows';
+import { counted } from './rowCount';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const ATTRIBUTE_KIND = 'product_attributes';
@@ -78,7 +79,9 @@ export function parseAttributeRows(records: unknown): AttributeRow[] {
 /** Create what the store lacks, record it, and leave what it has alone. */
 export async function installAttributes(ctx: KindContext, rows: readonly AttributeRow[]): Promise<void> {
     // Attributes stand alone, so a few go at once; one attribute's options still go one by one.
-    await eachFewAtOnce(firstOfEach(rows, (row) => row.attribute.attribute_code), (row) => installAttribute(ctx, row));
+    await eachFewAtOnce(firstOfEach(rows, (row) => row.attribute.attribute_code), (row) =>
+        counted(ctx, ATTRIBUTE_KIND, row.attribute.attribute_code, () => installAttribute(ctx, row)),
+    );
 }
 
 async function installAttribute(ctx: KindContext, row: AttributeRow): Promise<void> {

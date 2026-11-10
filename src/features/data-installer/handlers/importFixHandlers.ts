@@ -47,11 +47,11 @@ export function fixImportPrompt(
     if (problems.length === 0) return undefined;
     const pack = `${record.datapackName}@${record.version}`;
     return [
-        `Importing the datapack ${pack} into the store of the Demo Builder project ${projectName ?? 'that is open'} ended with a problem.`,
+        `Importing the datapack ${pack} into the Commerce instance of the Demo Builder project ${projectName ?? 'that is open'} ended with a problem.`,
         ...problems.map((line) => `- ${line}`),
         '',
         "Find the cause with get_datapack_import_status (its skipped rows carry Commerce's reasons) and " +
-            'verify_datapack_install. Fix it where it lives: in the store with write_commerce_rest, or in ' +
+            'verify_datapack_install. Fix it where it lives: in Commerce with write_commerce_rest, or in ' +
             'the datapack (save_datapack_zip, correct the rows, load_datapack_zip). Then import the pack ' +
             'again with start_datapack_import: data types already in send nothing. Tell me what you ' +
             'found and what you changed.',

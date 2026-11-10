@@ -42,7 +42,7 @@ import { packRootOf } from './packRoot';
 import { GIFT_CARD_KIND } from './productKinds';
 import { type ProductLookups, type StoreCategory, productLookups } from './productLookups';
 import { captureSettings } from './storeConfigKind';
-import { knowingSkus, onceInventory, readBySku, readCopies, readProducts } from './storeCopies';
+import { knowingSkus, onceInventory, productsOf, readBySku, readCopies } from './storeCopies';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
 
 /** The set and the source every store has, which a pack never carries (export spec §1). */
@@ -59,6 +59,11 @@ export interface CaptureResult {
     counts: Record<string, number>;
     /** Each id kept because the store could not name it, as "category 57", once each (step 14). */
     unnamed: string[];
+    /**
+     * The lookups the capture read through, each answer kept: the record's rebase reads its
+     * categories, options and sets through them rather than ask the store again (`rebaseRecord`).
+     */
+    lookups: ProductLookups;
 }
 
 const idsOf = (created: readonly CreatedObject[], kind: string): string[] => created.filter((o) => o.kind === kind).map((o) => o.id);
@@ -261,12 +266,15 @@ export const CAPTURE_PHASES: readonly (readonly string[])[] = [
  * @param created - what the install record lists
  * @param installed - the installed version's own rows, by kind
  * @param onPhase - told as each of `CAPTURE_PHASES` starts, by its place in the list
+ * @param known - products already read whole (a save's read of the website, walk F90); only the
+ *   SKUs not among them are read
  */
 export async function capturePack(
     ctx: KindContext,
     created: readonly CreatedObject[],
     installed: Record<string, unknown> = {},
     onPhase: (at: number) => void = () => undefined,
+    known: readonly CommerceProduct[] = [],
 ): Promise<CaptureResult> {
     const unnamed = new Set<string>();
     const lk: ProductLookups = { ...productLookups(ctx), unnamed: (what, id) => void unnamed.add(`${what} ${id}`) };
@@ -274,13 +282,17 @@ export async function capturePack(
     const giftCards = new Set([...idsOf(created, GIFT_CARD_KIND), ...names.giftCards].map((sku) => sku.toLowerCase()));
     const skus = [...new Set([...idsOf(created, 'products'), ...names.skus, ...idsOf(created, GIFT_CARD_KIND), ...names.giftCards])];
     onPhase(0);
-    const products = uniqueBySku(await readProducts(ctx, skus)).sort((a, b) => typeRank(a) - typeRank(b));
+    const started = Date.now();
+    const products = uniqueBySku(await productsOf(ctx, skus, known)).sort((a, b) => typeRank(a) - typeRank(b));
+    // Its two halves timed apart (walk F87): reading the products, and turning each into its row.
+    ctx.log(`capture: read ${products.length} products in ${Date.now() - started} ms`);
     // A gift card's set, categories and quantities are captured with the products'; its row goes under `giftcards`.
     const isGiftCard = (p: CommerceProduct) => giftCards.has(p.sku.toLowerCase());
     // A configurable's children named from the products just read, not one request each (`knowingSkus`).
-    const known = knowingSkus(lk, products);
-    const productRows = await Promise.all(products.filter((p) => !isGiftCard(p)).map((p) => productPackForm(known, p)));
-    const giftCardRows = await Promise.all(products.filter(isGiftCard).map((p) => productPackForm(known, p)));
+    const named = knowingSkus(lk, products);
+    const productRows = await Promise.all(products.filter((p) => !isGiftCard(p)).map((p) => productPackForm(named, p)));
+    const giftCardRows = await Promise.all(products.filter(isGiftCard).map((p) => productPackForm(named, p)));
+    ctx.log(`capture: made their rows by ${Date.now() - started} ms`);
     onPhase(1);
     const categories = await captureCategories(lk, idsOf(created, 'categories'), products.flatMap(linkedCategories), ctx.session.rootCategory.id, packRootOf(installed.categories));
     onPhase(2);
@@ -325,6 +337,6 @@ export async function capturePack(
         ...settings,
     };
     const counts = Object.fromEntries(Object.entries(items).map(([kind, records]) => [kind, kind === 'categories' ? categories.count : countOf(records)]));
-    return { items, counts, unnamed: [...unnamed] };
+    return { items, counts, unnamed: [...unnamed], lookups: lk };
 }
 

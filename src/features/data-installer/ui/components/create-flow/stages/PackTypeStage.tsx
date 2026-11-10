@@ -27,7 +27,7 @@ export function PackTypeStage({ packType, onPick }: PackTypeStageProps): React.R
             />
             <ChoiceCard
                 name="ACO Datapack"
-                description="Export catalog data for Adobe Commerce Optimizer as one of your datapacks."
+                description="Export catalog data for Adobe Commerce Optimizer into My Datapacks."
                 selected={packType === 'aco'}
                 onSelect={() => onPick('aco')}
             />

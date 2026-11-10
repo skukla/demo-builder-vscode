@@ -98,7 +98,7 @@ export type Gesture = 'escape' | 'cancelButton' | 'accept' | 'acceptThenHide';
 /** What a test can read back off the dialog the code configured. */
 export interface ArmedQuickPick {
     /** The rows offered, in the order they were pushed. */
-    items: () => Array<{ id: string; picked?: boolean }>;
+    items: () => Array<{ id: string; picked?: boolean; description?: string }>;
     /** What was ticked at the moment `show()` was called — before the gesture. */
     selectedAtShow: () => Array<{ id: string }>;
     /** What the user left ticked when they pressed Enter. */
@@ -117,7 +117,7 @@ export interface ArmedQuickPick {
 export function armQuickPick(
     gesture: Gesture,
     /** Which resource rows the user leaves ticked when they press Enter. */
-    keep: Array<'github' | 'daLive' | 'datapack'> = ['github', 'daLive']
+    keep: Array<'github' | 'daLive' | 'datapackData'> = ['github', 'daLive']
 ): ArmedQuickPick {
     const handlers: Record<string, () => void> = {};
     let selectedAtShow: Array<{ id: string }> = [];
@@ -126,7 +126,7 @@ export function armQuickPick(
         placeholder: '',
         canSelectMany: false,
         ignoreFocusOut: false,
-        items: [] as Array<{ id: string; picked?: boolean }>,
+        items: [] as Array<{ id: string; picked?: boolean; description?: string }>,
         selectedItems: [] as Array<{ id: string }>,
         buttons: [] as unknown[],
         onDidTriggerButton: (h: () => void) => (handlers.button = h),
@@ -142,7 +142,7 @@ export function armQuickPick(
                 // Untick whatever `keep` leaves out — the production code reads
                 // `selectedItems`, so this IS the user's choice.
                 pick.selectedItems = pick.items.filter((i) =>
-                    keep.includes(i.id as 'github' | 'daLive' | 'datapack')
+                    keep.includes(i.id as 'github' | 'daLive' | 'datapackData')
                 );
                 handlers.accept?.();
                 // VS Code hides the dialog after an accept. A second settle here

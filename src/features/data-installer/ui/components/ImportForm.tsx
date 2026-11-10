@@ -18,6 +18,7 @@ import { dataTypeLabel } from '../dataTypeLabel';
 import type { TargetWebsite } from '../hooks/useImportScopes';
 import { blockedBy, missingDependencies } from '../importDependencies';
 import { SelectAllRow } from '@/core/ui/components/selection/SelectAllRow';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
 
 /**
  * Dependencies the selected types need that this datapack does not contain.
@@ -172,6 +173,7 @@ export function ImportForm({
     onStoreChange,
     changes,
     scopeLocked = false,
+    replaces,
 }: {
     availableTypes: string[];
     selected: string[];
@@ -187,9 +189,12 @@ export function ImportForm({
     changes?: { lines: Record<string, string> | null; failed: boolean };
     /** Where the pack is installed fixes the website and store view. */
     scopeLocked?: boolean;
+    /** What importing replaces, as a sentence, when the demo uses another pack or version (walk F97). */
+    replaces?: string;
 }): React.JSX.Element {
     return (
         <>
+            {replaces ? <LeadText>{replaces}</LeadText> : null}
             {/* No target block, no Change escape, and no standing warning line.
                 The project already fixes where data lands; changing that means
                 changing the project, which belongs on the dashboard rather than

@@ -143,7 +143,7 @@ describe('exportAcoPack: what it saves', () => {
     it('says what it saved, where, and for which store views', async () => {
         const { sentence } = await harness().run({ storeViews: ['default', 'fr'] });
         expect(sentence).toBe(
-            'Saved the ACO pack aco_acme@main to your datapack library: 5 kinds for default, fr.'
+            'Saved the ACO pack aco_acme@main to My Datapacks: 5 kinds for default, fr.'
         );
     });
 
@@ -213,7 +213,7 @@ describe('exportAcoPack: store views', () => {
     it('refuses a store view the store does not have, before saving anything', async () => {
         const h = harness();
         await expect(h.run({ storeViews: ['nl'] })).rejects.toThrow(
-            'The store has no store view nl. It has default, citisignal_us, fr.'
+            'Commerce has no store view nl. It has default, citisignal_us, fr.'
         );
         expect(h.write).not.toHaveBeenCalled();
     });
@@ -307,7 +307,7 @@ describe('exportAcoPack: what goes wrong', () => {
 
         expect(result.perType.find((t) => t.dataType === 'aco_products')).toMatchObject({
             success: false,
-            reason: 'The library did not take it: Data size exceeds 50MB limit',
+            reason: 'My Datapacks did not take it: Data size exceeds 50MB limit',
         });
     });
 
@@ -316,7 +316,7 @@ describe('exportAcoPack: what goes wrong', () => {
         h.write.mockRejectedValueOnce(new DatapackTransferError('exists'));
 
         await expect(h.run({ storeViews: ['default'] })).rejects.toThrow(
-            'aco_acme@main is already in your datapack library. Choose another version, or delete that one first.'
+            'aco_acme@main is already in My Datapacks. Choose another version, or delete that one first.'
         );
     });
 
@@ -332,7 +332,7 @@ describe('exportAcoPack: what goes wrong', () => {
         expect(h.write).not.toHaveBeenCalled();
         expect(result).toMatchObject({
             success: true,
-            sentence: 'The store had nothing to put in an ACO pack, so nothing was saved.',
+            sentence: 'Commerce had nothing to put in an ACO pack, so nothing was saved.',
         });
         expect(result).not.toHaveProperty('saved');
     });

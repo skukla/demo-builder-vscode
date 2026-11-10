@@ -34,5 +34,5 @@ export function isStartingImport(a: { start: boolean; reset: boolean; pickingUp:
 
 /** The notification a running job is handed to on close: what it is doing, and to which pack. */
 export function backgroundTitle(removing: boolean, displayName: string): string {
-    return `${removing ? 'Removing' : 'Importing'} ${displayName}`;
+    return `${removing ? 'Uninstalling' : 'Importing'} ${displayName}`;
 }

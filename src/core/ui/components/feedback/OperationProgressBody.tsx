@@ -15,12 +15,13 @@ import React from 'react';
 import { OperationQuestion } from '@/core/ui/components/feedback/OperationQuestion';
 import { StageRows } from '@/core/ui/components/feedback/StageWait';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
+import { WorkRowColumns } from '@/core/ui/components/feedback/WorkRowColumns';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { tookValue, useRunClock } from '@/core/ui/hooks/useRunClock';
 import { cn } from '@/core/ui/utils/classNames';
 import { stageLine } from '@/core/utils/stageLine';
-import type { OperationChange, OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationChange, OperationPrompt, OperationProgressPayload, OperationRow } from '@/types/webviewPayloads';
 
 export interface OperationProgressBodyProps {
     prompt?: OperationPrompt;
@@ -59,13 +60,12 @@ export function OperationProgressBody({
         return prompt.title ? <LeadText>{prompt.message}</LeadText> : null;
     }
     if (failed) {
-        return <EndView message={progress?.error} took={tookWorthSaying(progress)} />;
+        return <EndView message={progress?.error} rows={progress?.rows} took={tookWorthSaying(progress)} />;
     }
-    if (succeeded) {
-        return (
-            <EndView message={successMessage} outcome={progress} took={tookWorthSaying(progress)} />
-        );
-    }
+    if (succeeded) return <SuccessEnd message={successMessage} progress={progress} />;
+    // A run that sends its parts as rows shows them in place of the one spinner, the import's
+    // window's rows (walk F91: a save's minutes of reading said one line).
+    if (progress?.rows?.length) return <RunningRows rows={progress.rows} clock={total} />;
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text (ImportDatapackModal).
     // The room for all three lines is kept and what is there sits level in it, so the spinner does
@@ -88,6 +88,26 @@ export function OperationProgressBody({
     );
 }
 
+/** A run's rows while it goes, two columns as the import's window draws them, the clock under them. */
+function RunningRows({ rows, clock }: { rows: OperationRow[]; clock?: string }): React.ReactElement {
+    return (
+        <div className="dialog-stack" data-testid="operation-rows">
+            <WorkRowColumns rows={rows} columns={2} />
+            {clock ? <p className="dialog-note">{clock}</p> : null}
+        </div>
+    );
+}
+
+/**
+ * A success. A clean run shown as rows ends small: no rows, no "Took …". One with a warning keeps
+ * them (dialog design rules, the run paragraph; review, 2026-11-10, the save window).
+ */
+function SuccessEnd({ message, progress }: { message?: string; progress?: OperationProgressPayload | null }): React.ReactElement | null {
+    const endsSmall = Boolean(progress?.rows?.length) && !progress?.warning;
+    if (endsSmall) return <EndView message={message} outcome={progress} />;
+    return <EndView message={message} outcome={progress} rows={progress?.rows} took={tookWorthSaying(progress)} />;
+}
+
 /** How long the run took, when the extension timed it and it is long enough to say. */
 function tookWorthSaying(progress?: OperationProgressPayload | null): string | undefined {
     return progress?.tookMs === undefined ? undefined : tookValue(progress.tookMs);
@@ -99,17 +119,21 @@ function tookWorthSaying(progress?: OperationProgressPayload | null): string | u
  * title says everything. It was a status box repeating the title over the same lines, which read
  * as machine-made (dialog design rules, owner 2026-10-31).
  */
-function EndView({ message, outcome, took }: {
+function EndView({ message, outcome, rows, took }: {
     message?: string;
+    /** The run's rows as it ended, when it sent them: above its sentence, where they were. */
+    rows?: OperationRow[];
     /** A success's lines and changes; none on a failure, whose reason is the message. */
     outcome?: Pick<OperationProgressPayload, 'details' | 'changes'> | null;
     took?: string;
 }): React.ReactElement | null {
     const { details: lines, changes } = outcome ?? {};
     const hasChanges = Boolean(changes && changes.length > 0);
-    if (!message && !lines?.length && !hasChanges && took === undefined) return null;
+    const hasRows = Boolean(rows && rows.length > 0);
+    if (!message && !lines?.length && !hasChanges && !hasRows && took === undefined) return null;
     return (
         <div className="dialog-stack" data-testid="operation-end">
+            {rows && hasRows ? <WorkRowColumns rows={rows} columns={2} /> : null}
             {message ? <LeadText>{message}</LeadText> : null}
             {lines?.map((line) => (
                 <p key={line} className="dialog-line">

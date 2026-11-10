@@ -69,14 +69,15 @@ const hasRecord = async (project: Project, pack: DatapackId): Promise<boolean> =
 async function readChanges(context: HandlerContext, project: Project, pack: DatapackId, source: DatapackStoreName | undefined): Promise<DatapackRemovalChanges | { response: HandlerResponse }> {
     const alwaysSave = changesOnRemoval() === 'save';
     if (!(await hasRecord(project, pack))) return { count: 0, kinds: [], alwaysSave };
-    const store = await openProjectStore(context);
+    // The check reads Commerce itself and keeps it for the save and uninstall after it (walk F128).
+    const store = await openProjectStore(context, 'remember');
     if ('response' in store) return store;
     const answer = { alwaysSave, ...(await whereSaved(context, store)) };
     try {
         const changes = changesFromPreview(await previewChanges(store.deps, pack, installedIn(project, pack, source)));
         return { ...changes, ...(changes.count > 0 ? { sentence: changesSentence(changes.kinds) } : {}), ...answer };
     } catch (error) {
-        return { response: failure(context, error, 'The store could not be read.') };
+        return { response: failure(context, error, 'Commerce could not be read.') };
     }
 }
 
@@ -111,7 +112,7 @@ async function movedOn(project: Project, pack: DatapackId): Promise<HandlerRespo
     if (!(await hasRecord(project, held))) return undefined;
     return {
         success: false,
-        error: `What this pack put in the store was saved to ${held.name}@${held.version}, the datapack this demo now uses, so it is removed from there. Nothing was removed.`,
+        error: `What this pack put in Commerce was saved to ${held.name}@${held.version}, the datapack this demo now uses, so uninstall that one instead. Nothing was uninstalled.`,
         code: ErrorCode.INVALID_OPERATION,
     };
 }
@@ -149,7 +150,7 @@ function askFor(changes: DatapackRemovalChanges): HandlerResponse {
     return {
         success: false,
         error:
-            `${changes.sentence} Nothing was removed. Tell the user, then call again with changes:"keep" to save them first ` +
+            `${changes.sentence} Nothing was uninstalled. Tell the user, then call again with changes:"keep" to save them first ` +
             `(${changes.packName ? `into ${changes.packName}` : 'as a new datapack of theirs: also send saveAs with the name the user gives it'}), ` +
             'or changes:"drop" to lose them.',
         code: ErrorCode.CHANGES_NEED_ANSWER,
@@ -166,8 +167,8 @@ function couldNotCheck(response: HandlerResponse): HandlerResponse {
     return {
         ...response,
         error:
-            `Could not check what changed since this pack was installed: ${response.error ?? 'no reason given.'} Nothing was removed. ` +
-            'Call again with changes:"drop" to remove it anyway, losing any changes.',
+            `Could not check what changed since this pack was installed: ${response.error ?? 'no reason given.'} Nothing was uninstalled. ` +
+            'Call again with changes:"drop" to uninstall it anyway, losing any changes.',
     };
 }
 
@@ -254,7 +255,7 @@ export const removalChangesHandlers = defineHandlers({
         const input = readPayload(payload);
         if ('error' in input) return { success: false, error: input.error };
         const project = await context.stateManager.getCurrentProject();
-        if (!project) return { success: false, error: 'Open a project before removing a datapack.' };
+        if (!project) return { success: false, error: 'Open a project before uninstalling a datapack.' };
         const changes = await readChanges(context, project, input.pack, input.source);
         return 'response' in changes ? changes.response : { success: true, data: changes };
     },

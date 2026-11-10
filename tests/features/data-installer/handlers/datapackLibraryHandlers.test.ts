@@ -129,7 +129,7 @@ describe('delete-library-datapack', () => {
 
         expect(result).toMatchObject({
             success: false,
-            error: 'The datapack library has no pack of yours named theirs@v1.',
+            error: 'My Datapacks has no datapack named theirs@v1.',
         });
     });
 

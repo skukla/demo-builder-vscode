@@ -162,6 +162,11 @@ function failureButtons(failed: boolean, onRetry: () => void): ActionButton[] {
     ];
 }
 
+/** A success can name itself ("No Changes to Save", walk F89) where the operation's title would not fit. */
+function successTitleOf(progress: OperationProgressPayload | null | undefined, succeeded: boolean, fallback: string): string {
+    return (succeeded && progress?.title) || fallback;
+}
+
 /** The progress modal for one operation. */
 export function OperationProgressModal({
     operation,
@@ -251,7 +256,7 @@ export function OperationProgressModal({
     if (!operation) return <></>;
     const frame = progressFrame({
         title: operation.title,
-        successTitle: operation.successTitle,
+        successTitle: successTitleOf(progress, succeeded, operation.successTitle),
         failureTitle: operation.failureTitle,
         prompt,
         failed,

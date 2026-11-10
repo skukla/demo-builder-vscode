@@ -52,6 +52,8 @@ export interface ExportPayload {
     dataTypes?: string[];
     /** List call only: which type to enumerate. */
     dataType?: string;
+    /** List call only: Add Items's list, what the demo does not use (walk F85). */
+    unused?: boolean;
     /** `{<type>: {<idField>: [ids]}}`: what is picked of each kind. */
     selections?: Selections;
     /** The save must be confirmed, as `save-store-changes-to-pack`'s is. */

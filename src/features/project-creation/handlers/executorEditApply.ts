@@ -78,13 +78,11 @@ const ASK_THE_SC: EditQuestions = {
     removeIntegrations: (names) => confirmRemovalModal(names),
     leaveAdobeProject: confirmLeavingAdobeProject,
     resetStorefront: () => confirmStorefrontReset(),
-    removeOldDatapack: (project, canRemove) =>
-        confirmSampleDataRemoval(
-            project,
-            vscode,
-            canRemove,
-            'Keep Data adds the new pack alongside.',
-        ),
+    removeOldDatapack: (project, canRemove, memory) =>
+        confirmSampleDataRemoval(project, vscode, canRemove, {
+            ...(memory ? { memory } : {}),
+            closing: 'Keep Datapack adds the new pack alongside.',
+        }),
 };
 
 /**
@@ -141,7 +139,9 @@ async function applyInPlace(
         delta.removed,
         ask.leaveAdobeProject,
     );
-    const datapack = await planDatapackChange(project, changes, ask.removeOldDatapack);
+    const datapack = await planDatapackChange(project, changes, (held, canRemove) =>
+        ask.removeOldDatapack(held, canRemove, context.context.globalState),
+    );
     const packageChange = await planPackageChange(project, changes, ask.resetStorefront);
     if (delta.added.length + delta.removed.length > 0 || destination.moves) {
         const refused = await runGuards(context, project);

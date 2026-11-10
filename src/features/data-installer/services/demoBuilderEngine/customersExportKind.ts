@@ -19,6 +19,7 @@ import { type CustomerToMake, makeCustomersByImport } from './customerImport';
 import { type KindContext, ownedId } from './kindContext';
 import { isNumeric, productLookups } from './productLookups';
 import { tryRow } from './refusedRows';
+import { startRowCount } from './rowCount';
 
 export const CUSTOMERS_EXPORT_KIND = 'customers_export';
 
@@ -87,20 +88,24 @@ export async function installCustomersExport(
         );
     const lk = productLookups(ctx);
     const todo: CustomerToMake[] = [];
-    for (const [key, own] of byCustomer(rows)) {
-        if (
-            ownedId(ctx.session, CUSTOMER_KIND, key) !== undefined ||
-            ctx.recorder.byKey(CUSTOMER_KIND, key)
-        )
-            continue;
+    const notMade = [...byCustomer(rows)].filter(
+        ([key]) =>
+            ownedId(ctx.session, CUSTOMER_KIND, key) === undefined &&
+            !ctx.recorder.byKey(CUSTOMER_KIND, key),
+    );
+    // No record keyed by this kind's rows, so it counts its own: one per customer not made yet (`rowCount.ts`).
+    const counting = { ...ctx, count: startRowCount(ctx.progress, CUSTOMER_KIND, notMade.map(([key]) => key)) };
+    for (const [key, own] of notMade) {
         if (await customerByEmail(ctx.get, own[0].email, websiteId)) {
             ctx.log(`left customer ${key} as it is: the website already has it`);
+            counting.count.settled(CUSTOMER_KIND, key);
             continue;
         }
         const customer = await tryRow(ctx, { kind: CUSTOMER_KIND, key }, () =>
             forStore(ctx, own, (code) => lk.groupId(code)),
         );
         if (customer) todo.push(customer);
+        else counting.count.settled(CUSTOMER_KIND, key);
     }
-    await makeCustomersByImport(ctx, todo);
+    await makeCustomersByImport(counting, todo);
 }

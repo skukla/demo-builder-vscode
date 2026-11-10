@@ -6,7 +6,7 @@
  */
 
 jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({ runProjectDelete: jest.fn() }));
-jest.mock('@/features/projects-dashboard/services/demoPackDeletion', () => ({ deletablePackOf: jest.fn() }));
+jest.mock('@/features/projects-dashboard/services/datapackDataRemoval', () => ({ hasRemovableData: jest.fn() }));
 jest.mock('@/features/data-installer/handlers/removalChanges', () => ({ readRemovalChangesOf: jest.fn() }));
 jest.mock('@/features/eds/services/storefront/sharedRepoProjects', () => ({ sharedOnlineOf: jest.fn() }));
 // The library, for a pack's display name: unreachable unless a test says otherwise.
@@ -21,7 +21,7 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
-import { deletablePackOf } from '@/features/projects-dashboard/services/demoPackDeletion';
+import { hasRemovableData } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import { runProjectDelete } from '@/features/projects-dashboard/services/projectDeletionService';
 import {
     byOrganization,
@@ -34,7 +34,7 @@ import type { Project } from '@/types/base';
 import type { ProjectsBatchRowStatus } from '@/types/projectsBatch';
 
 const mockedShared = sharedOnlineOf as jest.MockedFunction<typeof sharedOnlineOf>;
-const mockedPack = deletablePackOf as jest.MockedFunction<typeof deletablePackOf>;
+const mockedHasData = hasRemovableData as jest.MockedFunction<typeof hasRemovableData>;
 const mockedChanges = readRemovalChangesOf as jest.MockedFunction<typeof readRemovalChangesOf>;
 const mockedDelete = runProjectDelete as jest.MockedFunction<typeof runProjectDelete>;
 
@@ -65,33 +65,55 @@ const setting = (value: string) => (vscode.workspace.getConfiguration as jest.Mo
 beforeEach(() => {
     jest.clearAllMocks();
     mockedShared.mockResolvedValue({ repo: [], site: [] });
-    mockedPack.mockResolvedValue(undefined);
+    mockedHasData.mockResolvedValue(false);
     setting('ask');
 });
 
+/** A storefront project whose datapack Demo Builder installed (the data a delete may remove). */
+const withData = (name: string): Project => ({
+    ...storefront(name),
+    datapack: { name: 'bodea', version: 'main', store: 'library' },
+    componentSelections: { backend: 'adobe-commerce-accs' },
+});
+
 describe('prepareDeleteBatch', () => {
-    it('offers each project the options it has, unticked under ask, and the pack when it may go', async () => {
+    it('offers each project the options it has, unticked under ask', async () => {
         const a = storefront('a');
-        mockedPack.mockResolvedValueOnce({ name: 'a-pack', displayName: 'A Pack' });
 
         const rows = await prepareDeleteBatch(contextWith(a), [a.path]);
 
         expect(rows).toStrictEqual([
-            { path: a.path, name: 'a', repo: { name: 'acme/a', ticked: false }, site: { name: 'acme/a', ticked: false }, datapack: { name: 'A Pack', ticked: false } },
+            { path: a.path, name: 'a', repo: { name: 'acme/a', ticked: false }, site: { name: 'acme/a', ticked: false } },
         ]);
-        // The batch's own projects are going: a pack only they use may go.
-        expect(mockedPack).toHaveBeenCalledWith(expect.anything(), a, [a.path]);
         expect(mockedShared).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ githubRepo: 'acme/a' }), [a.path]);
     });
 
-    it('ticks the repository and the site under deleteAll, never the pack', async () => {
+    // Uninstall Datapack (walk F96): offered where Demo Builder installed the pack, with what the
+    // reset batch reads about its changes, so step 2 can ask for a name.
+    it("offers the datapack's data where it can be removed, with whether its changes need a name", async () => {
+        const mine = withData('mine');
+        const theirs = withData('theirs');
+        const none = withData('none');
+        mockedHasData.mockImplementation(async (project) => project.name !== 'none');
+        mockedChanges.mockImplementation(async (_c, project) =>
+            project.name === 'mine' ? { count: 2, kinds: [], packName: 'My Bodea', alwaysSave: false } : { count: 1, kinds: [], alwaysSave: false },
+        );
+
+        const rows = await prepareDeleteBatch(contextWith(mine, theirs, none), [mine.path, theirs.path, none.path]);
+
+        expect(rows.map((row) => row.datapack)).toStrictEqual([{ name: 'My Bodea', changes: 'saves' }, { name: 'bodea', changes: 'asks' }, undefined]);
+        expect(mockedHasData).toHaveBeenCalledWith(mine);
+    });
+
+    it('ticks the repository and the site under deleteAll; the data has no box that starts ticked', async () => {
         setting('deleteAll');
-        const a = storefront('a');
-        mockedPack.mockResolvedValueOnce({ name: 'a-pack', displayName: 'A Pack' });
+        const a = withData('a');
+        mockedHasData.mockResolvedValue(true);
+        mockedChanges.mockResolvedValue({ count: 0, kinds: [], alwaysSave: false });
 
         const [row] = await prepareDeleteBatch(contextWith(a), [a.path]);
 
-        expect(row).toMatchObject({ repo: { ticked: true }, site: { ticked: true }, datapack: { ticked: false } });
+        expect(row).toStrictEqual({ path: a.path, name: 'a', repo: { name: 'acme/a', ticked: true }, site: { name: 'acme/a', ticked: true }, datapack: { name: 'bodea' } });
     });
 
     it('offers nothing under localOnly, and nothing another project still uses', async () => {
@@ -224,7 +246,7 @@ describe('runDeleteBatch', () => {
             .mockResolvedValueOnce({ stopped: 'Pages are still live.' })
             .mockRejectedValueOnce(new Error('disk full'));
         const told: ProjectsBatchRowStatus[] = [];
-        const answer = (p: Project) => ({ path: p.path, deleteGitHubRepo: true, deleteDaLiveSite: false, deleteDatapack: false });
+        const answer = (p: Project) => ({ path: p.path, deleteGitHubRepo: true, deleteDaLiveSite: false, removeDatapackData: false });
 
         const failed = await runDeleteBatch(contextWith(a, b, c), [answer(a), answer(b), answer(c)], (s) => told.push(s), jest.fn());
 
@@ -241,18 +263,24 @@ describe('runDeleteBatch', () => {
             { path: c.path, state: 'running' },
             { path: c.path, state: 'failed', message: 'disk full' },
         ]);
-        expect(mockedDelete.mock.calls[0][2]).toMatchObject({ cleanupOptions: { deleteGitHubRepo: true, deleteDaLiveSite: false, deleteDatapack: false } });
+        expect(mockedDelete.mock.calls[0][2]).toMatchObject({ cleanupOptions: { deleteGitHubRepo: true, deleteDaLiveSite: false, removeDatapackData: false } });
     });
 
-    it('takes the pack only when ticked, as the batch sees it', async () => {
-        const a = storefront('a');
+    // Step 2's answer goes in up front: the removal asks nothing in the window (walk F96).
+    it("removes the data when ticked, answering the changes question with step 2's answer", async () => {
+        const a = withData('a');
         mockedDelete.mockResolvedValue({});
-        mockedPack.mockResolvedValue({ name: 'a-pack', displayName: 'A Pack' });
 
-        await runDeleteBatch(contextWith(a), [{ path: a.path, deleteGitHubRepo: false, deleteDaLiveSite: false, deleteDatapack: true }], jest.fn(), jest.fn());
+        await runDeleteBatch(
+            contextWith(a),
+            [{ path: a.path, deleteGitHubRepo: false, deleteDaLiveSite: false, removeDatapackData: true, changes: { saveAs: 'My Copy' } }],
+            jest.fn(),
+            jest.fn(),
+        );
 
-        expect(mockedPack).toHaveBeenCalledWith(expect.anything(), a, [a.path]);
-        expect(mockedDelete.mock.calls[0][2]).toMatchObject({ ownPack: { name: 'a-pack' } });
+        const answered = mockedDelete.mock.calls[0][2];
+        expect(answered.cleanupOptions).toStrictEqual({ deleteGitHubRepo: false, deleteDaLiveSite: false, removeDatapackData: true });
+        await expect(answered.askName?.({ sentence: 'You changed 2 products.' })).resolves.toStrictEqual({ saveAs: 'My Copy' });
     });
 });
 

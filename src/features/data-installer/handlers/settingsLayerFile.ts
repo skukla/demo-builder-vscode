@@ -96,7 +96,7 @@ export async function loadFileLayer(context: HandlerContext, layer: PackSettings
         return { ...said, outcome: written.pack };
     } catch (error) {
         if (error instanceof DatapackTransferError) {
-            return { ...said, outcome: 'left', reason: `The library already holds ${said.datapackName}@${said.version}, so it was left as it is.` };
+            return { ...said, outcome: 'left', reason: `My Datapacks already holds ${said.datapackName}@${said.version}, so it was left as it is.` };
         }
         return { ...said, outcome: 'failed', reason: error instanceof Error ? error.message : String(error) };
     }

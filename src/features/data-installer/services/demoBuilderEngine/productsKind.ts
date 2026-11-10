@@ -24,7 +24,7 @@ import { BULK_WAIT, type BulkRun, type BulkWait, createProductsInBulk, productId
 import { amountsForStore, withoutAmounts } from './giftCardAmounts';
 import { deleteIfPresent, type KindContext, MissingNameError } from './kindContext';
 import { createOne } from './pendingCreates';
-import { type ExportRow, importProductRows } from './productExportKind';
+import { type ExportRow, importProductRows, productsLine } from './productExportKind';
 import { additionalAsCustom, importRowLookups, importRowOf } from './productImportRows';
 import { GIFT_CARD_KIND, PRODUCT_KIND, PRODUCT_KINDS } from './productKinds';
 import { isNumeric, type ProductLookups, productLookups } from './productLookups';
@@ -290,7 +290,7 @@ async function importWave(ctx: KindContext, run: BulkRun, rows: readonly ExportR
         parents,
         onDone: (count) => {
             run.done += count;
-            ctx.progress?.(`${run.done.toLocaleString('en-US')} of ${run.total.toLocaleString('en-US')} ${run.noun}`);
+            ctx.progress?.(productsLine(run.done, run.total, run.noun, parents));
         },
     });
     const known = (ctx.session.productIds ??= new Map());

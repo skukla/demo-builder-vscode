@@ -19,9 +19,11 @@ import {
     failed,
     idle,
     jobRecord,
+    PACK_NAME,
     sources,
     succeeded,
 } from './importResult.testUtils';
+import { importSteps } from '@/features/data-installer/importSteps';
 import { ErrorCode } from '@/types/errorCodes';
 
 describe('resolveResult — no action yet', () => {
@@ -80,8 +82,8 @@ describe('resolveResult — dry run', () => {
 
 describe('resolveResult — start and reset', () => {
     it.each([
-        ['start', "Couldn't Start the Import"],
-        ['reset', "Couldn't Start the Removal"],
+        ['start', `Couldn't Import ${PACK_NAME}`],
+        ['reset', `Couldn't Uninstall ${PACK_NAME}`],
     ])('%s reports its own wording for a request that never started', (action, title) => {
         const failure = failed<{ activationId: string }>('The service is unreachable');
         const result = resolveResult(
@@ -116,7 +118,7 @@ describe('resolveResult — start and reset', () => {
             sources({ record: jobRecord(), startedActivation: ACTIVATION })
         );
 
-        expect(result).toMatchObject({ variant: 'success', title: 'Datapack Imported' });
+        expect(result).toMatchObject({ variant: 'success', title: `${PACK_NAME} Imported` });
     });
 
     it('shows nothing while the record is still being watched', () => {
@@ -153,16 +155,42 @@ describe('resolveResult — a removal that was to save the changes first (step 0
 
         expect(resolveResult('reset', sources({ reset }))).toEqual({
             variant: 'error',
-            title: "Couldn't save changes. Nothing was removed.",
-            message: 'The library is not answering.',
+            title: "Couldn't Save Changes",
+            message: 'Nothing was uninstalled.',
+            details: ['The library is not answering.'],
             backToConfirm: true,
         });
+    });
+
+    // Review, 2026-11-10: the failure sits on Save Your Changes, which stays; it sat on Uninstall.
+    it('an import replacing the demo\'s pack whose save failed keeps Save Your Changes, red, and runs nothing after it', () => {
+        const start = { ...failed<{ activationId: string }>('The library is not answering.') };
+        start.failure = { message: 'The library is not answering.', code: ErrorCode.CHANGES_NOT_SAVED };
+
+        const result = resolveResult('start', sources({ start, replacing: { name: 'Version 1.1.0', dataTypes: ['products'] } }));
+
+        expect(result).toMatchObject({ variant: 'error', title: 'Import Stopped', lead: 'Nothing was uninstalled or installed.', backToConfirm: true });
+        expect(result?.run).toMatchObject({
+            replaces: 'Version 1.1.0',
+            stoppedAt: 'saving-changes',
+            perType: { products: 'error' },
+            reason: 'The library is not answering.',
+        });
+        const run = result?.run;
+        if (!run) throw new Error('no run');
+        const steps = importSteps({ ...run, installing: { name: 'My Luma', version: '1' } });
+        expect(steps.map((s) => [s.label, s.status, s.problem?.text ?? s.line])).toEqual([
+            ['Save Your Changes', 'error', 'The library is not answering.'],
+            ['Uninstall the Previous Datapack', 'pending', 'Not run'],
+            ['Install My Luma, 1', 'pending', 'Not run'],
+            ['Verify the Import', 'pending', 'Not run'],
+        ]);
     });
 
     it('CONTROL: any other failure to start is the plain one, back to the form', () => {
         const result = resolveResult('reset', sources({ reset: failed('The service said no.') }));
 
-        expect(result?.title).toBe("Couldn't Start the Removal");
+        expect(result?.title).toBe(`Couldn't Uninstall ${PACK_NAME}`);
         expect(result).not.toHaveProperty('backToConfirm');
     });
 

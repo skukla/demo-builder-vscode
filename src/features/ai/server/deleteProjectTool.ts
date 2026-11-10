@@ -13,9 +13,12 @@
  * repository and site too. Until 2026-10-19 a left-out argument was read as `false`
  * before the setting was consulted, so `deleteAll` never applied to an agent (AI-71).
  *
- * `deletePack` is the button's third box, "Delete Datapack" (datapack-engine step 07):
- * every version of the project's own library pack, after the local files. Off unless asked,
- * and no setting turns it on, because keeping a pack is reversible and deleting one is not.
+ * `removeData` is the button's third box, "Uninstall Datapack" (walk F96): the data the
+ * project's datapack put in Commerce, removed FIRST, the user's changes in it settled as
+ * reset_datapack settles them (saved into their own pack; else `changes` and `saveAs`, refused
+ * until answered). A removal that does not finish deletes nothing. Off unless asked, and no
+ * setting turns it on: it writes to a store. Deleting a datapack itself is the library's job
+ * (delete_library_datapack), never a project delete's.
  */
 
 import { z } from 'zod';
@@ -24,9 +27,10 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import type { AskSaveAsName, SaveAsAnswer } from '@/features/eds/services/reset/edsResetSampleData';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { type SharedOnline, sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
-import { deletablePackOf, deleteProjectDemoPack } from '@/features/projects-dashboard/services/demoPackDeletion';
+import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -47,7 +51,7 @@ export function registerDeleteProjectTool(
             needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Permanently delete a project: its local files, optionally (deletePack:true) every version of its own pack in the datapack library, which datapack.deleted reports, and optionally its GitHub repo and DA.live site (which also unpublishes the storefront and removes its product pages; productPages in the result says what happened to them; daLiveSite.publishSummary says whether the pages are gone, checked on the live host, or that it could not tell). When the pages are still live it stops: nothing else is deleted, the project is kept, and stopped says why. Irreversible. Requires confirm:true and confirmName="<project name>".',
+                `Permanently delete a project: its local files, optionally (removeData:true) its datapack's data in Commerce first, which datapackData reports (the user's changes in it are saved into their own pack; when the pack is not theirs it answers code CHANGES_NEED_ANSWER and deletes nothing until changes is keep with saveAs, or drop; a removal that does not finish deletes nothing), and optionally its GitHub repo and DA.live site (which also unpublishes the storefront and removes its product pages; productPages in the result says what happened to them; daLiveSite.publishSummary says whether the pages are gone, checked on the live host, or that it could not tell). When the pages are still live it stops: nothing else is deleted, the project is kept, and stopped says why. Irreversible. Requires confirm:true and confirmName="<project name>".`,
             inputSchema: {
                 name: z.string().describe('Name of the project to delete'),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
@@ -67,12 +71,20 @@ export function registerDeleteProjectTool(
                     .describe(
                         "Also delete the project's DA.live site and take its pages off the CDN (default: false, or true when the cleanupBehavior setting is deleteAll)",
                     ),
-                deletePack: z
+                removeData: z
                     .boolean()
                     .optional()
                     .describe(
-                        "Also delete every version of the project's own pack in the datapack library, after its files (default: false under every cleanupBehavior; refused under localOnly)",
+                        "Also remove the project's datapack data from its Commerce instance, before anything else (default: false under every cleanupBehavior; refused under localOnly)",
                     ),
+                changes: z
+                    .enum(['keep', 'drop'])
+                    .optional()
+                    .describe("With removeData, when the pack is not the user's: keep saves their changes as a new datapack named by saveAs, drop loses them"),
+                saveAs: z
+                    .object({ displayName: z.string().min(1).describe('The name the user gave the new datapack, e.g. My Bodea') })
+                    .optional()
+                    .describe('With changes:"keep": the new datapack of the user\'s that their changes are saved as'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,26 +119,28 @@ export function registerDeleteProjectTool(
             const asked = resolveCloudCleanup({
                 deleteGithubRepo: tickOf(args?.deleteGithubRepo),
                 deleteDaLiveSite: tickOf(args?.deleteDaLiveSite),
-                deletePack: tickOf(args?.deletePack),
+                removeData: tickOf(args?.removeData),
             });
             // What another project here still uses is never deleted with this one, as the button never offers it.
             const { choice, kept } = keepShared(asked, await sharedOnlineOf(ctx.stateManager, extractEdsMetadata(project), [project.path]));
+            // The data first, as the button removes it: a removal that does not finish keeps it all (walk F96).
+            const data = choice.removeData ? await removeDataFirst(ctx, project, args) : undefined;
+            if (data && 'stop' in data) return asText({ deleted: false, name, ...data.stop });
             const cloud = await cleanUpProjectCloud(ctx, project, choice);
             // Pages still live: the project is how a second try finds them (EDS-65).
             if (cloud.stopped) {
-                return asText({ deleted: false, name, ...cloud, error: cloud.stopped });
+                return asText({ deleted: false, name, ...data, ...cloud, error: cloud.stopped });
             }
 
             try {
                 // The button's own words for the step it runs (PL-59 slice 7).
                 reportPhase(OPERATION_STAGES.removingProjectFiles.label);
                 await deleteProjectFiles(ctx, project);
-                const datapack = choice.deletePack ? await deleteOwnPack(ctx, project) : undefined;
                 return asText({
                     deleted: true,
                     name,
+                    ...data,
                     ...cloud,
-                    ...(datapack ? { datapack } : {}),
                     ...(kept.length > 0 ? { kept } : {}),
                     ...(choice.refusedBySetting ? { note: choice.refusedBySetting } : {}),
                 });
@@ -157,20 +171,37 @@ function keepShared(choice: CloudCleanupChoice, shared: SharedOnline): { choice:
     return { choice: out, kept };
 }
 
-/** What deleting the project's own pack did, for the agent. */
-interface PackAnswer {
-    name?: string;
-    deleted: boolean;
-    error?: string;
+/** The call's answer about the user's changes, when the pack is not theirs; none until it gives one. */
+function changesAnswer(args: { changes?: unknown; saveAs?: { displayName?: unknown } } | undefined): SaveAsAnswer {
+    if (args?.changes === 'drop') return 'drop';
+    const name = args?.saveAs?.displayName;
+    return args?.changes === 'keep' && typeof name === 'string' && name.trim() ? { saveAs: name.trim() } : undefined;
 }
 
-/** The pack the project uses, deleted last, as the button deletes it. Never throws. */
-async function deleteOwnPack(ctx: HandlerContext, project: Project): Promise<PackAnswer> {
-    const pack = await deletablePackOf(ctx, project);
-    if (!pack) return { deleted: false, error: 'This project uses no datapack of yours that no other project here uses, so none was deleted.' };
-    reportPhase(OPERATION_STAGES.deletingOwnPack.label);
-    const result = await deleteProjectDemoPack(ctx, pack);
-    return { name: result.name, deleted: result.success && !result.skipped, ...(result.error ? { error: result.error } : {}) };
+/** What removing the data did: reported beside the delete, or why nothing was deleted. */
+type DataOutcome = { datapackData: { removed: boolean; note?: string } } | { stop: Record<string, unknown> };
+
+/** The project's datapack data, removed before anything else, as the button removes it. */
+async function removeDataFirst(ctx: HandlerContext, project: Project, args: Parameters<typeof changesAnswer>[0]): Promise<DataOutcome> {
+    if (!(await hasRemovableData(project))) {
+        return { datapackData: { removed: false, note: 'This project has no datapack data Demo Builder installed in a Commerce instance, so there was none to remove.' } };
+    }
+    let unanswered: string | undefined;
+    const askName: AskSaveAsName = (asked) => {
+        const answer = changesAnswer(args);
+        if (answer === undefined) unanswered = asked.sentence ?? "The user changed this datapack's data since it was installed.";
+        return Promise.resolve(answer);
+    };
+    const why = await removeDataBeforeDelete(ctx, project, (stage) => reportPhase(stage), askName);
+    if (unanswered !== undefined) {
+        return {
+            stop: {
+                code: 'CHANGES_NEED_ANSWER',
+                error: `${unanswered} Nothing was deleted. Tell the user, then call again with removeData:true and changes:"keep" with saveAs (the name the user gives the new datapack), or changes:"drop" to lose them.`,
+            },
+        };
+    }
+    return why ? { stop: { error: why } } : { datapackData: { removed: true } };
 }
 
 /** A checkbox argument: a boolean as given, anything else left for the setting to decide. */

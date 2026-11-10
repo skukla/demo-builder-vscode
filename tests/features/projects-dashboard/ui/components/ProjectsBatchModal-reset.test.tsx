@@ -40,9 +40,9 @@ describe('ProjectsBatchModal: Reset Selected', () => {
         await openOn('reset', RESET);
         await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
 
-        expect(screen.getByRole('checkbox', { name: 'Remove Datapack, A' })).toBeChecked();
-        expect(screen.getByRole('checkbox', { name: 'Remove Datapack, B' })).toBeChecked();
-        expect(screen.queryByRole('checkbox', { name: 'Remove Datapack, C' })).toBeNull();
+        expect(screen.getByRole('checkbox', { name: 'Uninstall Datapack, A' })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Uninstall Datapack, B' })).toBeChecked();
+        expect(screen.queryByRole('checkbox', { name: 'Uninstall Datapack, C' })).toBeNull();
         expect(screen.queryByRole('textbox')).toBeNull();
         expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute('data-variant', 'accent');
     });
@@ -90,20 +90,20 @@ describe('ProjectsBatchModal: Reset Selected', () => {
     it('goes Back to the projects with their boxes as they were', async () => {
         const { user } = await openOn('reset', RESET);
         await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
-        await user.click(screen.getByRole('checkbox', { name: 'Remove Datapack, B' }));
+        await user.click(screen.getByRole('checkbox', { name: 'Uninstall Datapack, B' }));
         await user.click(screen.getByRole('button', { name: 'Continue' }));
 
         await user.click(screen.getByRole('button', { name: 'Back' }));
 
         expect(screen.getByRole('dialog', { name: /^Reset \d+ Projects?\?$/ })).toBeInTheDocument();
-        expect(screen.getByRole('checkbox', { name: 'Remove Datapack, B' })).not.toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Uninstall Datapack, B' })).not.toBeChecked();
     });
 
     it('needs no step 2 once the pack that asks is kept, and keeps what is unticked', async () => {
         const { user } = await openOn('reset', RESET);
         await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
 
-        await user.click(screen.getByRole('checkbox', { name: 'Remove Datapack, A' }));
+        await user.click(screen.getByRole('checkbox', { name: 'Uninstall Datapack, A' }));
         await user.click(runButton());
 
         expect((runRequest() as { answers: Array<{ removeDatapack: boolean }> }).answers.map((a) => a.removeDatapack)).toEqual([
@@ -121,7 +121,7 @@ describe('ProjectsBatchModal: Reset Selected', () => {
         });
         await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
 
-        expect(screen.queryByRole('checkbox', { name: 'Remove Datapack, A' })).toBeNull();
+        expect(screen.queryByRole('checkbox', { name: 'Uninstall Datapack, A' })).toBeNull();
         expect(screen.getByText("Couldn't check for changes. Datapack kept.")).toHaveClass('dialog-problem', 'text-notice');
     });
 
@@ -157,7 +157,7 @@ describe('ProjectsBatchModal: Reset Selected', () => {
         expect(dialog).not.toHaveAttribute('data-wide');
         // The pack beside its box, the projects under a Project header (owner, 2026-11-05).
         expect(screen.getByText('Project')).toBeInTheDocument();
-        const cell = screen.getByRole('checkbox', { name: 'Remove Datapack, A' }).closest('td') as HTMLElement;
+        const cell = screen.getByRole('checkbox', { name: 'Uninstall Datapack, A' }).closest('td') as HTMLElement;
         expect(within(cell).getByText('Frescopa')).toBeInTheDocument();
         expect(
             screen.getByText('Each project returns to how it was set up. Code changes are lost.'),
@@ -194,7 +194,7 @@ describe('ProjectsBatchModal: Reset Selected', () => {
         });
         await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
 
-        expect(screen.queryByRole('checkbox', { name: /Remove Datapack/ })).toBeNull();
+        expect(screen.queryByRole('checkbox', { name: /Uninstall Datapack/ })).toBeNull();
         expect(runButton()).toBeEnabled();
     });
 });

@@ -29,7 +29,7 @@ import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import { withStepSink } from '@/core/utils/operationStepChannel';
 import { stageLine, stepUnder } from '@/core/utils/stageLine';
-import type { OperationChange, OperationOffer, OperationPosition, OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationChange, OperationOffer, OperationPosition, OperationProgressPayload, OperationRow } from '@/types/webviewPayloads';
 
 /** What an operation answers when it ends. */
 export interface OperationOutcome {
@@ -39,12 +39,16 @@ export interface OperationOutcome {
     warning?: string;
     /** What a run that succeeded leaves the SC to know, nothing to act on; said as a plain success. */
     note?: string;
+    /** A success's own title, when it is not the operation's usual one ("No Changes to Save", walk F89). */
+    title?: string;
     /** What a run that succeeded leaves to know, one line each; the modal's success view lists them. */
     details?: string[];
     /** The parts of a run that succeeded that changed something; the success view shows a row each. */
     changes?: OperationChange[];
     /** A next step its success view offers (AB-74). */
     offer?: OperationOffer;
+    /** Its parts' rows as it ended, either way, when it reported rows (`ReportStage`). */
+    rows?: OperationRow[];
 }
 
 export interface OperationProgressOptions {
@@ -66,7 +70,8 @@ export interface OperationProgressOptions {
  * @returns whatever `run` resolves to
  */
 /** Report a stage as it starts, with the step under it and a pair's position. */
-export type ReportStage = (stage: string, step?: string, position?: OperationPosition) => void;
+/** Report a stage as it starts, with the step under it, a pair's position, and the run's rows when it has them. */
+export type ReportStage = (stage: string, step?: string, position?: OperationPosition, rows?: OperationRow[]) => void;
 
 export async function withOperationProgress<T extends OperationOutcome>(
     options: OperationProgressOptions,
@@ -84,14 +89,17 @@ export async function withOperationProgress<T extends OperationOutcome>(
 
 /** The modal's last word: the reason on failure, a success's warning, note and changes when it has them. */
 function endOf(id: string, result: OperationOutcome): OperationProgressPayload {
+    const rows = result.rows?.length ? { rows: result.rows } : {};
     if (!result.success) {
-        return { id, state: 'failed', error: result.error ?? 'The operation did not finish.' };
+        return { id, state: 'failed', error: result.error ?? 'The operation did not finish.', ...rows };
     }
     return {
         id,
         state: 'succeeded',
+        ...rows,
         ...(result.warning ? { warning: result.warning } : {}),
         ...(result.note ? { note: result.note } : {}),
+        ...(result.title ? { title: result.title } : {}),
         ...(result.details?.length ? { details: result.details } : {}),
         ...(result.changes?.length ? { changes: result.changes } : {}),
         ...(result.offer ? { offer: result.offer } : {}),
@@ -105,6 +113,7 @@ async function runInModal<T extends OperationOutcome>(
 ): Promise<T> {
     let current: string | undefined;
     let position: OperationPosition | undefined;
+    let rows: OperationRow[] | undefined;
     const push = (stage: string, step?: string): void => {
         void pushOperationProgress({
             id,
@@ -114,11 +123,13 @@ async function runInModal<T extends OperationOutcome>(
             // Row 2 is never blank: a stage that names no step shows its own detail.
             step: stepUnder(stage, step) ?? detailFor(stage),
             expectation: expectationFor(stage),
+            ...(rows ? { rows } : {}),
         });
     };
-    const report: ReportStage = (stage, step, at) => {
+    const report: ReportStage = (stage, step, at, runRows) => {
         current = stage;
         position = at;
+        if (runRows) rows = runRows;
         push(stage, step);
     };
     // Something nested reports a plain line: the step under the stage in progress.

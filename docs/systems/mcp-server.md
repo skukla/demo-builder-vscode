@@ -561,14 +561,18 @@ one IMS refuses or cannot be asked about, the repository is kept (`kept: true` /
 `stopped` with the sentence to sign in to DA.live and delete again), and `delete_project`
 keeps the project too.
 
-**A project's datapack goes only when asked.** `delete_project` takes `deletePack`, the button's
-"Delete Datapack" box: every version of the pack the project uses, in the datapack library,
-deleted after the project's files, and only when that pack is the user's own and no other project on
-this machine uses it (`deletablePackOf`, 2026-11-03). It is off unless the call asks, `deleteAll`
-never turns it on (keeping a pack can be undone, deleting it cannot), and `localOnly` refuses it with
-a `note`. `datapack` in the answer names the pack and says whether every version went (`deleted`),
-and which did not (`error`); a project whose pack may not go answers `datapack.deleted: false` and
-deletes nothing from the library.
+**A project's datapack data comes out only when asked.** `delete_project` takes `removeData`, the
+button's "Uninstall Datapack" box (walk F96, 2026-11-09): the data the project's datapack put in
+its Commerce instance, removed FIRST, through the reset's own removal, so a removal that does not
+finish deletes nothing and `error` says why. The user's changes in it are settled as
+`reset_datapack` settles them: saved into their own pack without asking; when the pack is not
+theirs, the call answers `code: CHANGES_NEED_ANSWER` and deletes nothing until `changes` is `keep`
+with `saveAs`, or `drop`. It is off unless the call asks, `deleteAll` never turns it on (it writes to
+a store), and `localOnly` refuses it with a `note`. `datapackData.removed` in the answer says whether
+it went; a project with no datapack Demo Builder installed answers `removed: false` with a `note`.
+Deleting a datapack itself is the library's job (`delete_library_datapack`); a project delete never
+does it (the `deletePack` argument, which deleted every version of the project's pack, was removed
+the same day).
 
 `delete_page` deliberately uses the plain `confirm: true` gate instead — it removes
 one page from the current project's own storefront, not a whole repository or site.
@@ -785,6 +789,23 @@ with `CHANGES_NEED_ANSWER`. A pack the service installed has no record of change
 before. Both read the store with the project's own
 credential, behind the same org guard as the import. Plan:
 `.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
+
+### Importing another pack or version over the project's (walk F97, 2026-11-09)
+
+No new tool. When the project uses a pack Demo Builder's engine installed, `start_datapack_import`
+of **another pack, or another version**, replaces it in one job: the old pack is removed first, by its
+install record, through the same removal `reset_datapack` runs (`engineRemoval.ts`), then the new one
+installs. Before anything is removed the user's changes to the old pack are settled as
+a project reset settles them (`settleChangesBeforeRemoval`, in `importReplacement.ts`): with no
+answer they are saved into the user's own pack first; when the pack is not theirs the call answers
+`code: CHANGES_NEED_ANSWER` with the sentence, removing and installing nothing, until `changes` is
+`"keep"` with `saveAs` (a new pack of theirs) or `"drop"` (lost). A save moves the record onto the version it made, so that version is
+what is removed. The job record carries `replaces` (the pack replaced as the user knows it, "My Luma, Nov 9,
+11:01 AM" or "Luma, eds-compatible"), `replacing` (where removing it stands) and, when the changes
+were saved first, `savedAs` (where they went, "Nov 9, 1:56 PM"); a removal that fails installs
+nothing, ends with `stoppedAt: "replacing"` and its `reason`, and leaves the project naming the old
+pack. The project names the new pack once the old one is gone. Importing the same version again
+replaces nothing and updates in place, as before.
 
 ### What is installed and what happened, from both engines (datapack-engine step 14, 2026-10-30)
 

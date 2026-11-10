@@ -42,7 +42,8 @@ export const DEFAULT_SHOW: CatalogShow = 'recommended';
 const SHOW_OPTIONS: ReadonlyArray<{ key: CatalogShow; label: string }> = [
     { key: 'recommended', label: 'Recommended' },
     { key: 'yours', label: 'My Datapacks' },
-    { key: 'team', label: 'Demo Builder Datapacks' },
+    // Team, as its cards' tag says (owner, 2026-11-09, walk F86; was Demo Builder Datapacks).
+    { key: 'team', label: 'Team Datapacks' },
     { key: 'installer', label: 'Data Installer Datapacks' },
     { key: 'community', label: 'Community Datapacks' },
     { key: 'all', label: 'All Datapacks' },
@@ -61,7 +62,7 @@ export function showOptions(installerAnswered: boolean): ReadonlyArray<{ key: Ca
 /** What a Show choice with nothing in it says. Recommended and All mean the catalog is empty. */
 export const EMPTY_SHOW_TITLE: Partial<Record<CatalogShow, string>> = {
     yours: "You Don't Have Any Datapacks",
-    team: 'No Demo Builder Datapacks',
+    team: 'No Team Datapacks',
     installer: 'No Data Installer Datapacks',
     community: 'No Community Datapacks',
 };

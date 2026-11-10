@@ -103,11 +103,11 @@ beforeEach(() => {
     mockedConfirm.mockResolvedValue(true);
 });
 
-it('asks after "Remove Datapack", and clears after the pack is removed', async () => {
+it('asks after "Uninstall Datapack", and clears after the pack is removed', async () => {
     const order: string[] = [];
     mockedRemove.mockImplementation(async () => (order.push('remove pack'), { ran: true, outcome: 'success' }));
     mockedClear.mockImplementation(async () => (order.push('clear the rest'), { cleared: true, sentence: 'Removed 3 things.' }));
-    answer('Reset Project', 'Remove Datapack');
+    answer('Reset Project', 'Uninstall Datapack');
 
     await run();
 
@@ -117,7 +117,7 @@ it('asks after "Remove Datapack", and clears after the pack is removed', async (
 });
 
 it('never asks, and clears nothing, when the SC keeps the datapack', async () => {
-    answer('Reset Project', 'Keep Data');
+    answer('Reset Project', 'Keep Datapack');
 
     await run();
 
@@ -134,9 +134,9 @@ it('asks for a project that names no datapack', async () => {
     expect(mockedClear).toHaveBeenCalledTimes(1);
 });
 
-it('clears nothing when the SC answers Keep Them', async () => {
+it('clears nothing when the SC answers Keep It', async () => {
     mockedConfirm.mockResolvedValue(false);
-    answer('Reset Project', 'Remove Datapack');
+    answer('Reset Project', 'Uninstall Datapack');
 
     await run();
 

@@ -36,8 +36,9 @@ export function useClearDemoData(onClosed: () => void): ClearDemoData {
                 payload: { ...payload },
                 title: 'Clearing Demo Data',
                 subject: stores.map((s) => s.storeCode ?? s.websiteCode).join(', '),
-                failureTitle: "Couldn't Clear the Stores",
-                successTitle: 'Stores Cleared',
+                // Named by the button's thing, Demo Data: a list of store codes would put a comma in the title.
+                failureTitle: "Couldn't Clear Demo Data",
+                successTitle: 'Demo Data Cleared',
             });
         },
         [start],

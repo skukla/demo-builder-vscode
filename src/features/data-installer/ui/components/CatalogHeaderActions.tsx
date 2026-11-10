@@ -32,8 +32,17 @@ import type { WipeStoreChoice } from '@/types/demoDataWipe';
 export interface CatalogHeaderActionsProps {
     /** A file was loaded (or the load modal closed): the catalog may have changed. Stable. */
     onCatalogChanged: () => void;
-    /** Create Datapack: Save As with no name yet; absent in the Datapack Library. Stable. */
+    /**
+     * Create Datapack, or Save Changes once the demo has a pack (owner, 2026-11-09): the save of the
+     * demo's pack, as its flyout's button. Absent in the Datapack Library. Stable.
+     */
     onCreate?: () => void;
+    /**
+     * What `onCreate` does once the demo has a pack, in the flyout's own words: `into` saves into the
+     * SC's own pack (Save Changes), `as-new` makes a new pack from a team or colleague's pack (Save
+     * As New Datapack). Absent: Create Datapack, from nothing.
+     */
+    demoSave?: 'into' | 'as-new';
 }
 
 /** Which dialog the header has open. */
@@ -42,6 +51,7 @@ type Open = 'load' | 'clear' | null;
 export function CatalogHeaderActions({
     onCatalogChanged,
     onCreate,
+    demoSave,
 }: CatalogHeaderActionsProps): React.JSX.Element {
     const [open, setOpen] = useState<Open>(null);
     const { clear, progressWindow } = useClearDemoData(onCatalogChanged);
@@ -64,8 +74,10 @@ export function CatalogHeaderActions({
         <>
             {onCreate ? (
                 <ActionButton isQuiet onPress={onCreate}>
-                    {renderMenuIcon('add')}
-                    <Text>Create Datapack</Text>
+                    {renderMenuIcon(demoSave ? 'capture' : 'add')}
+                    {demoSave === 'into' ? <Text>Save Changes</Text> : null}
+                    {demoSave === 'as-new' ? <Text>Save As New Datapack</Text> : null}
+                    {demoSave ? null : <Text>Create Datapack</Text>}
                 </ActionButton>
             ) : null}
             <ActionButton isQuiet onPress={() => setOpen('load')}>

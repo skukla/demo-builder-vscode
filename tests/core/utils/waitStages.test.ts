@@ -4,7 +4,6 @@
  * the clock after it, and all three written.
  */
 
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { WAIT_STAGES, type WaitStage } from '@/core/utils/waitStages';
 
 const WAITS: readonly WaitStage[] = Object.values(WAIT_STAGES);
@@ -39,9 +38,13 @@ describe('WAIT_STAGES', () => {
         expect(WAITS.filter((wait) => /the store\b/i.test(`${wait.label} ${wait.detail}`))).toStrictEqual([]);
     });
 
-    it('words a wait doing the same work as a stage exactly as that stage does', () => {
-        // Reading what changed since the import is a save's read: same label, same expectation.
-        expect(WAIT_STAGES.readingChangesSinceImport.label).toBe(OPERATION_STAGES.readingStoreChanges.label);
-        expect(WAIT_STAGES.readingChangesSinceImport.expectation).toBe(OPERATION_STAGES.readingStoreChanges.expectation);
+    // Walk F114: the re-import's comparison, the replace's check and Remove Data's check are one read.
+    // F126: its line says since when, in the question's own words, not which pack.
+    it('names the changes check one way, since the last save', () => {
+        expect(WAIT_STAGES.checkingForChanges).toEqual({
+            label: 'Checking for your changes',
+            detail: "Since this demo's last save",
+            expectation: 'Usually about a minute',
+        });
     });
 });

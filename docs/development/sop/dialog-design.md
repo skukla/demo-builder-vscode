@@ -34,7 +34,7 @@ form, confirm, progress, result) shows one at a time.
 |---|---|---|
 | **Form** | Fields, then the actions | medium; large or extra-wide when a list needs columns |
 | **Confirm** | A question as the title, as few short sentences as it takes, Cancel and the action | small |
-| **Progress** | A spinner, what is happening, how far; a run through a list (updates, projects, a datapack's data types) shows a row per item instead (`WorkRow`) | small; a list keeps the box it found |
+| **Progress** | A spinner, what is happening, how far; a run through a list (updates, projects, a datapack's data types) shows a row per item instead (`WorkRow`) | small from start to finish; a run shown as rows keeps the box its rows need |
 | **Result** | The outcome as the title, then only what is left to know or do | small |
 | **Guide** | Steps with their state, one step open (the demo setup guide; a pack's setup step is a guide of one) | large |
 
@@ -66,23 +66,58 @@ colours. Neither borrows the other's layout.
 SC (including a dangerous confirm), red failed. No status boxes in the body. The one
 exception is a setup step's banner (`SetupStepHeader`): a Check needs one place to show
 its answer and its spinner (owner, 2026-11-02). A
-done result with nothing else to say is just its title. Where nothing follows from
-it, it closes itself (the progress window); a dialog whose result offers Back to its
-form (Import) stays until closed.
+done result with nothing else to say is just its title.
 
-**A run ends where it ran.** A window that shows a run as rows (the Updates run, the projects
-batch run, a datapack import) does not switch to a result view when the run ends. The title turns
-to the outcome with its icon, the rows stay with each one's final state, and a problem sits on the
-row it is about, one short line in orange or red. What is left to say about the whole run (one
-sentence, then "Took …") goes under the list, and the size does not change. Nothing waits for a
-second view (owner, 2026-11-07, generalising the Updates run's rule of 2026-10-21). Work that
-belongs to no one item (an import's preparing before the first data type, its finishing after the
-last) is a row of its own at each end, spinning with its current step as its line, never a grey
-line under the list; and the rows show from the first press, with no spinner screen in front of
-them (owner, 2026-11-07). A run that changes what is there already (importing a pack the project
-has) says what it would change before it is started, not mid-run: the window opens on its wait
-("Comparing with Commerce"), then the form shows each data type's change in counts under its name
-("12 updated, 2 removed", "No changes"), and Import runs straight away (owner, 2026-11-08).
+**A sentence gets a small box.** A Confirm and a Result are small (400px) in every window, and the
+progress window is small from its first frame to its result unless it shows rows. A window does not
+change size between a wait and its result. Text is one size whatever the box, so a sentence in a
+medium or large box is one thin line in an empty one (owner, 2026-11-10, from the inventory in
+`.rptc/research/modal-conventions-audit/`: the progress window was medium for all 31 operations and
+often ended on a title alone).
+
+**Nothing left to read closes itself; something to read stays.** A clean result that is its title
+alone closes itself after a glance (`TIMEOUTS.UI.RESULT_GLANCE`), in every window: the progress
+window and a run's own window alike. A result with a sentence, a note, a list, a next step or a
+problem stays until closed. Which component drew the run used to decide it: a four-minute mesh
+deploy vanished while "Projects Reset" stayed on its title (owner, 2026-11-10).
+
+**A clean run ends small; a run with a problem ends where it ran.** A window that shows a run as
+rows (the Updates run, the projects batch run, a datapack import, a datapack save) and finishes cleanly hands off
+to the small Result layout: the outcome as the title with its green icon, then only what is left
+to know ("My Luma Imported", then "Your changes are saved in Version History." when a save ran),
+or the title alone when nothing is. No rows, no "Took …". A run that finishes with any problem (a
+row or step with a warning or error, a stop) does not switch: the title turns to the outcome with
+its icon, the rows stay with each one's final state, and a problem sits on the row it is about,
+one short line in orange or red. What is left to say about the whole run (one sentence, then
+"Took …") goes under the list, and the size does not change. The rule was "a run ends where it
+ran" for every run (owner, 2026-11-07, generalising the Updates run's rule of 2026-10-21); since
+2026-11-10 that holds only for a run with a problem, because a clean finish's rows told the SC
+nothing the title did not (owner, walk F134: "Do all three"). A save that finds nothing changed
+ends on its title alone, "No Changes to Save". A run shown as rows has no rows of its own for work
+outside its items: a save says it on the row it leads to, the first while it finds what to read and
+the last while it writes (review, 2026-11-10). A run made of
+steps shows the steps, each named for what it does, in the order it runs, and only those that
+apply (an import: Save Your Changes, Uninstall the Previous Version, Install, Verify the Import; owner,
+2026-11-09): work that belongs to no one item is a line of the step it serves, never a grey line
+under the list or a row of its own, and a step's items (an import's data types) sit under it, one
+line each, the one in progress with a second line saying what it is doing, the word first and
+then the count ("Installing 1,200 of 2,046"; 2026-11-10). The rows show from the first press, with
+no spinner screen in front of them (owner, 2026-11-07), and the window keeps one height to the end:
+the clock's line is there from the first frame, room for the working item's second line is held
+the whole time, and no line wraps or is cut short, the window choosing its width when it opens so
+its columns fit their longest line (2026-11-09, 2026-11-10). A finished run ends on Close alone; Back is
+for a stop. The one exception is a clean Updates run that left updates unticked, which offers Back
+to Updates beside Close, since those updates are still waiting. A run that changes what is there already (importing a pack the project has) says what
+it would change before it is started, not mid-run: the window opens on its wait ("Checking for
+your changes", the one name for that check wherever it runs), then the form shows each data type's
+change in counts under its name ("12 updated, 2 removed", "No changes"), and Import runs straight
+away (owner, 2026-11-08).
+
+**A confirm that can lose the SC's changes** puts the button that loses them at the footer's start,
+apart from Cancel and the save button, as Don't Save stands in a Save dialog, and lists the changes
+one row per data type in the two-column `FactList` (owner, 2026-11-09). While the confirm's check
+runs, the title names the work ("Import My Luma"), not a question nothing has asked yet, at the
+confirm's own width so nothing jumps when it comes.
 
 **Capitals.** What names a thing is Title Case: the title, buttons, tabs, menu items and labels
 ("Run in Background", "Data Types"). What tells the SC something keeps normal capitals: a sentence,
@@ -106,12 +141,18 @@ first or below the last (owner, 2026-11-04). No box borders, no rule over the bu
 dangerous main action is solid red. Never two buttons that do the same thing.
 
 **Words:**
-- The title names the KIND of thing and what happened to it, generically ("Datapack Removed",
-  "Couldn't Create Datapack"); the specific one, by name or count, is in the body ("Removed ZZ Test
-  Root DB12."). A title is a statement, never the reason, and has no comma (owner, 2026-11-04;
-  the handbook's window-header convention). Until 2026-11-04 this line said the opposite, a title
-  naming the thing, and most of the extension's titles still do: see
-  `.rptc/research/window-headers/research.md`.
+- Titles take one form in every window (owner, 2026-11-10; the counts are the extension's own,
+  from the same inventory). A form says what it will do: "Install My Luma". While it runs, the
+  "-ing" form: "Installing My Luma" (32 of 38 runs already did). A window that is a form and then a
+  run changes its title when the run starts. Done: the thing, then what happened. Failed:
+  "Couldn't" and the verb ("Couldn't Install My Luma"), never "… Failed", "… Stopped" or "… Did
+  Not …".
+- A result's title NAMES the thing, then what happened to it ("My Luma Imported", "My Luma
+  Uninstalled", "Couldn't Save My Luma"), never a generic kind ("Datapack Removed"). Only when
+  there is no name to give does it name the kind ("Couldn't Open the File"). A title is a
+  statement, never the reason, and has no comma. Owner, 2026-11-10, settling the contradiction
+  between the 2026-11-04 rule (a generic title, the name in the body) and the approved clean
+  ending above; the generic rule is withdrawn.
 - The body never repeats the title.
 - Facts, not commentary. Digits for numbers, with separators (1,284).
 - A warning is a word in the main sentence ("Permanently removes…"), never a

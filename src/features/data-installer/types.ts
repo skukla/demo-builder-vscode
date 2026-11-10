@@ -113,6 +113,8 @@ export interface InstalledDatapack {
 /** One row of a request log: the service's own, or Demo Builder's engine's (`source`). */
 export interface ActivityEntry {
     id: DatapackId;
+    /** The name the SC knows the pack by, when Demo Builder has read it (`packNames.ts`). */
+    displayName?: string;
     dataTypes: string[];
     commerceInstance?: string;
     mode?: string;
@@ -226,6 +228,8 @@ export interface ImportProgressMessage {
     detail?: string;
     /** What the job is doing while no one data type is (`JobStanding.phase`). */
     phase?: string;
+    /** How removing the pack it replaces stands (`JobStanding.replacing`). */
+    replacing?: DataTypeStatus;
 }
 
 /**
@@ -236,11 +240,44 @@ export interface ImportProgressMessage {
 export const FINISHING_STOP = 'finishing';
 
 /**
+ * `JobStanding.stoppedAt` when an import replacing the demo's pack stopped while removing it (walk
+ * F97): nothing was installed, and the window's Removing row says why. No data type is named this.
+ */
+export const REPLACE_STOP = 'replacing';
+
+/**
+ * `JobStanding.stoppedAt` on the record the import window draws when saving the SC's changes before
+ * a replace failed: no job ran, and the Save Your Changes step says why. No data type is named this.
+ */
+export const SAVE_STOP = 'saving-changes';
+
+/**
+ * What Demo Builder's engine is doing while no one data type is (`JobStanding.phase`), as it says it
+ * to agents. The import window matches on these to put each on its step (`importSteps`), so the
+ * engine and the window read one definition (review, 2026-11-10: they matched by copied text).
+ */
+export const ENGINE_PHASES = {
+    reading: 'Reading the datapack',
+    comparing: 'Comparing Commerce with the datapack',
+    recording: 'Recording what was installed',
+    settings: 'Applying the store settings',
+    checking: 'Checking the products against the datapack',
+} as const;
+
+/**
+ * The tail on the products count while configurable products go in (owner, 2026-11-09, walk F122):
+ * one call at a time, each linking its options, so the count moves slowly and the window says why:
+ * the Products row's second line reads "Linking product options 2,044 of 2,046" (`doingLine` in
+ * `importSteps`, walk F133).
+ */
+export const LINKING_OPTIONS = ', linking product options';
+
+/**
  * Where Demo Builder's engine says a job stands beyond each data type's state: what the import
  * window draws, a row per data type (owner, 2026-11-07).
  */
 export interface JobStanding {
-    /** What the job is doing while no one data type is: "Comparing the store with the datapack". */
+    /** What the job is doing while no one data type is: "Comparing Commerce with the datapack". */
     phase?: string;
     /**
      * The data type that failed: the one in progress when the job stopped, or the store settings, which
@@ -255,6 +292,11 @@ export interface JobStanding {
     searchDelay?: string;
     /** A line for each data type with a problem that did not stop the job: what is wrong, what to do. */
     rowNotes?: Record<string, string>;
+    /**
+     * An import replacing the pack the demo uses (walk F97): how removing that pack first stands.
+     * Absent when the import replaces nothing.
+     */
+    replacing?: DataTypeStatus;
 }
 
 /**
@@ -292,6 +334,12 @@ export interface CheckFinding<T> {
 export interface InstallCheck {
     verdict: 'matches' | 'differs';
     checked: number;
+    /**
+     * How many products differ in any way, each counted once: the import window's Verify line,
+     * "Checked 2,048 products against the datapack: 3 differ". Absent on a check recorded before
+     * 2026-11-10, which the window words as "some differ".
+     */
+    productsDiffer?: number;
     /** Products the pack made that a reinstall kept as changed in the Admin, and the check left out. */
     leftOut?: number;
     /**
@@ -406,6 +454,15 @@ export interface ImportJobRecord extends JobStanding {
     /** The install check (`JobStatusSnapshot.check`). */
     check?: InstallCheck;
     processingTimeMs?: number;
+    /**
+     * The pack an import replaces, as the SC knows it: "My Luma, Nov 9, 11:01 AM" or "Luma,
+     * eds-compatible" (walk F97). Absent when it replaces nothing.
+     */
+    replaces?: string;
+    /** Where the SC's changes were saved before the import began: "Nov 9, 1:56 PM" (walk F105). */
+    savedAs?: string;
+    /** The pack replaced is another version of the same pack: that version, "Nov 9, 9:15 AM". */
+    replacesVersion?: string;
 }
 
 /** Why an async job produced nothing, as reported by the activation echo. */

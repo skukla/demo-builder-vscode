@@ -15,7 +15,7 @@
  * @module features/data-installer/ui/components/importResult
  */
 
-import { FINISHING_STOP, type ImportJobRecord, type KeptRootStep } from '../../types';
+import { FINISHING_STOP, type ImportJobRecord, type KeptRootStep, SAVE_STOP } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
@@ -59,10 +59,13 @@ export interface ResultContent {
     /** Back goes to the confirm it came from, not the form: saving failed and nothing was removed. */
     backToConfirm?: true;
     /**
-     * An import Demo Builder's engine ran: the window keeps its rows and draws the ending under them
-     * ("A run ends where it ran", owner 2026-11-07), from this record.
+     * An import Demo Builder's engine ran that ended with a problem or a stop: the window keeps its
+     * steps and draws the ending under them, from this record. A clean finish has none and shows as
+     * the small result (owner, 2026-11-10, walk F134).
      */
     run?: ImportJobRecord;
+    /** The import ran to its end, cleanly or not: the window closes, with nothing to go back to (walk F117). */
+    finished?: true;
     /** The ending under the rows: where the pack went and how long search takes. */
     lead?: string;
     /** The footer's main action: run the same import again, or hand the problem to the SC's AI. */
@@ -104,7 +107,7 @@ interface OperationWords {
 
 function wordsFor(operation: 'start' | 'reset' | undefined): OperationWords {
     return operation === 'reset'
-        ? { done: 'Removed', verbTitle: 'Remove', noun: 'removal', nounTitle: 'Removal' }
+        ? { done: 'Uninstalled', verbTitle: 'Uninstall', noun: 'uninstall', nounTitle: 'Uninstall' }
         : { done: 'Imported', verbTitle: 'Import', noun: 'import', nounTitle: 'Import' };
 }
 
@@ -120,8 +123,6 @@ export function resolveResult(
     sources: {
         /** The pack, by the name the SC knows it by, for the result's title. */
         name: string;
-        /** Where the import went, by name, for the sentence under its rows. */
-        store?: string;
         /** How many times Retry was pressed on this import. */
         retries?: number;
         dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>;
@@ -129,10 +130,11 @@ export function resolveResult(
         reset: DataInstallerRequest<{ activationId: string; savedNote?: string }>;
         record: ImportJobRecord | null;
         startedActivation: string | undefined;
+        /** The import replaces the demo's pack (walk F97): that pack's name, and the types asked for. */
+        replacing?: { name: string; dataTypes: string[] };
     },
 ): ResultContent | null {
     const { name, dryRun, start, reset, record, startedActivation } = sources;
-    const where = { store: sources.store, retries: sources.retries ?? 0 };
 
     switch (lastAction) {
         case 'dryRun':
@@ -141,11 +143,15 @@ export function resolveResult(
         case 'reset': {
             const request = lastAction === 'start' ? start : reset;
             const words = wordsFor(lastAction);
+            if (request.failure?.code === ErrorCode.CHANGES_NOT_SAVED && lastAction === 'start' && sources.replacing) {
+                return notSavedRun(request.failure.message, sources.replacing);
+            }
             if (request.failure?.code === ErrorCode.CHANGES_NOT_SAVED) {
-                return { variant: 'error', title: "Couldn't save changes. Nothing was removed.", message: request.failure.message, backToConfirm: true };
+                return { variant: 'error', title: "Couldn't Save Changes", message: 'Nothing was uninstalled.', details: [request.failure.message], backToConfirm: true };
             }
             if (request.failure) {
-                return { variant: 'error', title: `Couldn't Start the ${words.nounTitle}`, message: request.failure.message };
+                // Named, as every datapack result is (owner, 2026-11-10): "Couldn't Uninstall My Luma".
+                return { variant: 'error', title: `Couldn't ${words.verbTitle} ${name}`, message: request.failure.message };
             }
             // The terminal record for THIS session's job. A running record is
             // the watching view's business, not a result.
@@ -154,7 +160,7 @@ export function resolveResult(
                 record.outcome !== 'watching' &&
                 record.activationId === startedActivation
             ) {
-                if (record.operation !== 'reset' && ranOnRows(record)) return runResult(record, name, where);
+                if (record.operation !== 'reset' && ranOnRows(record)) return runResult(record, name, sources.retries ?? 0);
                 return withSavedNote(terminalResult(record, name), lastAction === 'reset' ? reset.value?.savedNote : undefined);
             }
             return null;
@@ -165,6 +171,29 @@ export function resolveResult(
 }
 
 /**
+ * An import replacing the demo's pack whose save of the SC's changes failed (walk F97): no job ran,
+ * so the steps are drawn from the request, Save Your Changes red with why and every step after it
+ * not run, in the same box (review, 2026-11-10). Back goes to the confirm, as a removal's does.
+ */
+function notSavedRun(reason: string, replacing: { name: string; dataTypes: string[] }): ResultContent {
+    const run: ImportJobRecord = {
+        // No job was started: nothing here names one.
+        activationId: '',
+        datapackName: '',
+        version: '',
+        commerceInstance: '',
+        startedAt: '',
+        outcome: 'error',
+        dataTypes: replacing.dataTypes,
+        perType: Object.fromEntries(replacing.dataTypes.map((kind) => [kind, 'error' as const])),
+        replaces: replacing.name,
+        stoppedAt: SAVE_STOP,
+        reason,
+    };
+    return { variant: 'error', title: 'Import Stopped', run, lead: 'Nothing was uninstalled or installed.', backToConfirm: true };
+}
+
+/**
  * Whether the import's ending goes on its rows: an import that finished or stopped part-way. One
  * that never started, was stopped watching, or could not be watched has no rows to keep.
  */
@@ -172,30 +201,48 @@ function ranOnRows(record: ImportJobRecord): boolean {
     return record.outcome === 'success' || record.outcome === 'partial' || record.outcome === 'error';
 }
 
+/** What a clean import's result says when the SC's changes were saved first (walk F134). */
+export const SAVED_LINE = 'Your changes are saved in Version History.';
+
 /**
- * An import's ending on its rows (owner, 2026-11-07). It ran to the end when nothing failed but the
- * store settings, which fail without stopping it, and the work after the data types did not stop: "Datapack Imported", amber when a row has a
- * problem, with Fix with AI. Otherwise "Import Stopped", with Retry while a retry can get past the
- * stop, else Fix with AI. The title names the kind of thing (dialog design rules, 2026-11-04).
+ * What is left to know after a clean import: where the SC's changes went, the engine's lines for the
+ * SC (what it kept of theirs, a step left in the Admin), then how long search takes. Without engine
+ * lines it is one sentence; with them, a line each (review, 2026-11-10).
  */
-function runResult(record: ImportJobRecord, name: string, where: { store?: string; retries: number }): ResultContent {
+function leftToKnow(record: ImportJobRecord): Pick<ResultContent, 'message' | 'details'> {
+    const scLines = record.scLines ?? [];
+    const lines = [record.savedAs ? SAVED_LINE : undefined, ...scLines, record.searchDelay].filter(
+        (line): line is string => Boolean(line),
+    );
+    if (lines.length === 0) return {};
+    return scLines.length > 0 ? { details: lines } : { message: lines.join(' ') };
+}
+
+/** Something on the steps the SC should see: a data type that failed, a row's note, a check that differs. */
+function hasProblem(record: ImportJobRecord, failed: string[]): boolean {
+    if (failed.length > 0 || Object.keys(record.rowNotes ?? {}).length > 0) return true;
+    return record.check !== undefined && record.check.verdict !== 'matches';
+}
+
+/**
+ * An import's ending (owner, 2026-11-10, walk F134). A clean finish hands off to the small result:
+ * "My Luma Imported", then only what is left to know (`leftToKnow`). Only a problem keeps the steps:
+ * the same title in amber, how long search takes and "Took …" under them, with Fix with AI. A run that stopped is "Import Stopped" on its steps, with Retry while a retry can get past
+ * the stop, else Fix with AI. It ran to the end when nothing failed but the store settings, which
+ * fail without stopping it, and the work after the data types did not stop.
+ */
+function runResult(record: ImportJobRecord, name: string, retries: number): ResultContent {
     const took = record.processingTimeMs !== undefined ? { tookMs: record.processingTimeMs } : {};
     const failed = Object.entries(record.perType).filter(([, state]) => state === 'error').map(([kind]) => kind);
     const ranToEnd = record.stoppedAt !== FINISHING_STOP && failed.every((kind) => kind === SETTINGS_KIND && record.stoppedAt === SETTINGS_KIND);
     if (!ranToEnd) {
-        const retry = record.retryable === true && where.retries < RETRIES_BEFORE_FIX;
+        const retry = record.retryable === true && retries < RETRIES_BEFORE_FIX;
         return { variant: 'error', title: 'Import Stopped', run: record, action: retry ? 'retry' : 'fix', ...took };
     }
-    const problems = failed.length > 0 || Object.keys(record.rowNotes ?? {}).length > 0;
-    const lead = [where.store ? `${name} is in ${where.store}.` : undefined, record.searchDelay].filter(Boolean).join(' ');
-    return {
-        variant: problems ? 'warning' : 'success',
-        title: 'Datapack Imported',
-        run: record,
-        ...(lead ? { lead } : {}),
-        ...(problems ? { action: 'fix' as const } : {}),
-        ...took,
-    };
+    const title = `${name} Imported`;
+    if (!hasProblem(record, failed)) return { variant: 'success', title, finished: true, ...leftToKnow(record) };
+    const lead = record.searchDelay ? { lead: record.searchDelay } : {};
+    return { variant: 'warning', title, run: record, finished: true, action: 'fix', ...lead, ...took };
 }
 
 /** Where the changes went: what a removal that saved them first has left to say, however it ended. */
@@ -230,12 +277,13 @@ function successResult(record: ImportJobRecord, name: string, words: OperationWo
     if (record.keptRoot) {
         return {
             variant: 'warning',
-            title: `Action Required to Remove ${name}`,
+            title: `Action Required to Uninstall ${name}`,
             message: `${record.keptRoot.store} still uses the datapack's root category, ${record.keptRoot.category}, so it stayed.`,
             keptRoot: record.keptRoot,
         };
     }
-    return { variant: 'success', title: `${words.done} ${name}`, ...(record.note ? { message: record.note } : {}) };
+    // The pack, then what happened to it, as "My Luma Imported" (review, 2026-11-10).
+    return { variant: 'success', title: `${name} ${words.done}`, ...(record.note ? { message: record.note } : {}) };
 }
 
 /**
@@ -250,7 +298,7 @@ function unfinishedResult(record: ImportJobRecord, name: string, words: Operatio
         case 'partial':
             return {
                 variant: 'warning',
-                title: `${words.done} ${name}, Except Some Data Types`,
+                title: `Some Data Types Not ${words.done}`,
                 details: [...kept, ...troubled, 'Running it again skips existing items.'],
             };
         case 'error':

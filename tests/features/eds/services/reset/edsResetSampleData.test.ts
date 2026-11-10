@@ -89,7 +89,7 @@ const RESET = 'Reset Project';
 // The datapack prompt uses MessageItem buttons (its Keep Data button replaces
 // the modal's automatic Cancel — user-reported ambiguity, 2026-08-23), so the
 // mock resolves the shape VS Code resolves: the item, not a string.
-const REMOVE = { title: 'Remove Datapack' };
+const REMOVE = { title: 'Uninstall Datapack' };
 
 const testPackages = [
     makeDemoPackage({
@@ -213,8 +213,9 @@ describe('resetEdsProjectWithUI — sample data', () => {
         await run(createProject({ name: 'bodea', version: 'main' }));
 
         const second = (vscode.window.showWarningMessage as jest.Mock).mock.calls[1];
-        expect(String(second[0])).toMatch(/bodea/);
-        expect(String(second[0])).toMatch(/datapack/i);
+        // A question, never the pack's id (review, 2026-11-10): "Uninstall My Luma Too?".
+        expect(String(second[0])).toMatch(/^Uninstall .+ Too\?$/u);
+        expect(String(second[0])).not.toMatch(/bodea@main/u);
     });
 
     /** Rule 2 — the important one. */

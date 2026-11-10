@@ -9,7 +9,7 @@
  * @module features/data-installer/services/demoBuilderEngine/saveOutcome
  */
 
-import { KIND_NOUNS, inPickOrder, type LeftOut } from '../../pickableKinds';
+import { KIND_NOUNS, type LeftOut } from '../../pickableKinds';
 import { dataTypeLabel } from '../../ui/dataTypeLabel';
 import type { DatapackId } from '@/types/datapack';
 
@@ -40,10 +40,29 @@ export function savingLine(kinds: readonly string[]): string {
     return kinds.length > NAMES_SHOWN ? `${kinds.length} data types` : kinds.map(dataTypeLabel).join(', ');
 }
 
-/** "Saved to the Acme Demo pack.", and that the pack it came from is unchanged when it is another. */
+/**
+ * "Saved a new version of Acme Test." into the same pack; "Saved as Acme Test. Luma is unchanged."
+ * as a new one (owner, 2026-11-09, the save mockup).
+ */
 export function savedSentence(saveAs: { id: DatapackId; displayName: string }, installed?: { id: DatapackId; displayName: string }): string {
-    const where = `Saved to the ${saveAs.displayName} pack.`;
-    return installed && saveAs.id.name !== installed.id.name ? `${where} ${installed.displayName} is unchanged.` : where;
+    if (installed && saveAs.id.name === installed.id.name) return `Saved a new version of ${saveAs.displayName}.`;
+    const where = `Saved as ${saveAs.displayName}.`;
+    return installed ? `${where} ${installed.displayName} is unchanged.` : where;
+}
+
+/**
+ * The save window's sentence (owner, 2026-11-09, F83 then F85): a new version names its pack; a new
+ * pack says where it went and that the demo now uses it.
+ *
+ * @param saved - the version written, as the SC knows it
+ * @param from - the pack the save started from, when it started from one
+ * @param projectName - the demo, by its display name
+ */
+export function saveNote(saved: { name: string; displayName: string }, from: { name: string } | undefined, projectName: string): string {
+    if (from && from.name === saved.name) return `Saved a new version of ${saved.displayName}.`;
+    if (!from) return `${projectName} now uses ${saved.displayName}.`;
+    // "Saved as" says where it went; the pack it came from is never written to (owner, 2026-11-09, F85).
+    return `Saved as ${saved.displayName}. ${projectName} now uses it.`;
 }
 
 /**
@@ -88,24 +107,6 @@ export function layerLine(layer: { datapackName: string; settings: number } | un
 
 /** The save's whole sentence: its parts that have something to say, in order. */
 export const saveSentence = (...parts: Array<string | undefined>): string => parts.filter(Boolean).join(' ');
-
-/** "Products" → "Product", "Categories" → "Category": a data type's name for one of it. */
-function oneOf(label: string): string {
-    if (label.endsWith('ies')) return `${label.slice(0, -3)}y`;
-    return label.endsWith('s') ? label.slice(0, -1) : label;
-}
-
-/**
- * What a saved pack holds, one line per data type with its count first, in the pick list's order
- * (owner, 2026-11-05: the counts are what an SC wants to know, and they are new to them).
- */
-export function heldLines(counts: Readonly<Record<string, number>>): string[] {
-    return inPickOrder(Object.keys(counts)).map((kind) => {
-        const count = counts[kind] ?? 0;
-        const label = dataTypeLabel(kind);
-        return `${count} ${count === 1 ? oneOf(label) : label}`;
-    });
-}
 
 /** The result window's lines, in the sentence's order; each only when it has something to say. */
 export function resultLines(

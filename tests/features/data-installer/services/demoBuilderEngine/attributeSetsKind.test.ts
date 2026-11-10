@@ -173,7 +173,7 @@ describe('installAssignments', () => {
 
         await installAssignments(ctx, parseAssignmentRows([{ ...ROW, attributeSetId: 'Nope' }]));
 
-        expect(ctx.session.skipped).toEqual([{ kind: 'attribute_assign_to_set', key: `Nope/${ROW.attributeCode}`, reason: 'The store has no attribute set named Nope.' }]);
+        expect(ctx.session.skipped).toEqual([{ kind: 'attribute_assign_to_set', key: `Nope/${ROW.attributeCode}`, reason: 'Commerce has no attribute set named Nope.' }]);
         expect(ctx.sent).toStrictEqual([]);
     });
 });

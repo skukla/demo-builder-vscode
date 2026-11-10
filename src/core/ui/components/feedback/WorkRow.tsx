@@ -31,19 +31,27 @@ export interface WorkRowProps {
     children?: React.ReactNode;
     /** How long it has taken, right after the name: nothing follows it there, so its ticking moves nothing. */
     time?: string;
+    /**
+     * Small and tight, for a list nested under a step, where the icon already says where each stands
+     * (the import's data types under Install, owner 2026-11-09). The detail is the working row's
+     * second line, small and quiet, "Installing 1,200 of 2,046" (owner, 2026-11-10, walk F133); a
+     * row without one is the name alone. Neither line wraps (F135).
+     */
+    dense?: boolean;
 }
 
 /** One row: icon and name, then the detail and what to read under it. */
-export function WorkRow({ status, label, detail, note, why, state, children, time }: WorkRowProps): React.ReactElement {
+export function WorkRow({ status, label, detail, note, why, state, children, time, dense = false }: WorkRowProps): React.ReactElement {
     return (
-        <div className="work-row" data-state={state}>
+        <div className={dense ? 'work-row work-row--dense' : 'work-row'} data-state={state}>
             <span className="work-row-icon">
                 <StepStatusIcon status={status} />
             </span>
             <div className="work-row-text">
                 <span className="checkbox-row-label">{label}</span>
                 {time && <span className="work-row-time">{time}</span>}
-                {detail && <div className="work-row-detail">{detail}</div>}
+                {detail && dense ? <div className="work-row-doing">{detail}</div> : null}
+                {detail && !dense ? <div className="work-row-detail">{detail}</div> : null}
                 {note && <div className={why ? 'work-row-why' : 'work-row-note'}>{note}</div>}
                 {children}
             </div>

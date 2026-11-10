@@ -34,8 +34,8 @@ import type { HandlerContext } from '@/types/handlers';
 export interface CloudCleanupRequest {
     deleteGithubRepo?: boolean;
     deleteDaLiveSite?: boolean;
-    /** Also delete the project's own library pack (step 07). */
-    deletePack?: boolean;
+    /** Also remove its datapack's data from Commerce first, the button's Uninstall Datapack (walk F96). */
+    removeData?: boolean;
 }
 
 /** What the two boxes end up at, and why, so a tool can answer honestly. */
@@ -44,9 +44,10 @@ export interface CloudCleanupChoice {
     deleteDaLiveSite: boolean;
     /**
      * Set only when the call asked for it and the setting allows it. `deleteAll` never
-     * ticks it: the button never deletes a pack without the SC ticking it either.
+     * ticks it: it writes to a store, and the button never removes the data without the SC
+     * ticking it either.
      */
-    deletePack?: true;
+    removeData?: true;
     /** Set when `cleanupBehavior` overrode what was asked for. */
     refusedBySetting?: string;
 }
@@ -112,7 +113,7 @@ export function resolveCloudCleanup(request: CloudCleanupRequest): CloudCleanupC
         .get<string>('cleanupBehavior', 'ask');
 
     if (behavior === 'localOnly') {
-        const asked = request.deleteGithubRepo || request.deleteDaLiveSite || request.deletePack;
+        const asked = request.deleteGithubRepo || request.deleteDaLiveSite || request.removeData;
         return {
             deleteGithubRepo: false,
             deleteDaLiveSite: false,
@@ -122,19 +123,19 @@ export function resolveCloudCleanup(request: CloudCleanupRequest): CloudCleanupC
         };
     }
 
-    const pack = request.deletePack === true ? { deletePack: true as const } : {};
+    const data = request.removeData === true ? { removeData: true as const } : {};
     if (behavior === 'deleteAll') {
         return {
             deleteGithubRepo: request.deleteGithubRepo ?? true,
             deleteDaLiveSite: request.deleteDaLiveSite ?? true,
-            ...pack,
+            ...data,
         };
     }
 
     return {
         deleteGithubRepo: request.deleteGithubRepo === true,
         deleteDaLiveSite: request.deleteDaLiveSite === true,
-        ...pack,
+        ...data,
     };
 }
 

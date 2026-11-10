@@ -469,7 +469,8 @@ describe('DatapackCard — as a choice', () => {
 });
 
 describe('DatapackCard — where the pack lives', () => {
-    it("tags no team pack, a colleague's pack Community, and Yours when the SC owns it", () => {
+    // Owner, 2026-11-09 (walk F86): a team pack says Team, as every other source says its own word.
+    it("tags a team pack Team, a colleague's pack Community, and Mine when the SC owns it", () => {
         const onOpen = jest.fn();
         const { unmount } = render(
             <DatapackCard
@@ -479,8 +480,7 @@ describe('DatapackCard — where the pack lives', () => {
                 onOpen={onOpen}
             />,
         );
-        expect(screen.queryByText('Community')).not.toBeInTheDocument();
-        expect(screen.queryByText('Library')).not.toBeInTheDocument();
+        expect(tagsShown()).toStrictEqual(['Team']);
         fireEvent.click(screen.getByTestId('datapack-card'));
         expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'main' }, 'library');
         unmount();
@@ -511,7 +511,7 @@ describe('DatapackCard — where the pack lives', () => {
 
     // A team pack is the library's, whoever uploaded it (owner, 2026-11-03): the SC who loaded the
     // team's packs saw "Mine" on all of them.
-    it('tags a team pack nothing even for the SC who uploaded it', () => {
+    it('tags a team pack Team, and not Mine, even for the SC who uploaded it', () => {
         render(
             <DatapackCard
                 group={makeGroup({ key: 'library:bodea', store: 'library', shared: true, team: true, mine: true })}
@@ -521,12 +521,15 @@ describe('DatapackCard — where the pack lives', () => {
             />,
         );
 
-        expect(screen.queryByText('Mine')).not.toBeInTheDocument();
-        expect(screen.queryByText('Community')).not.toBeInTheDocument();
-        // CONTROL: the card itself rendered.
-        expect(screen.getByTestId('datapack-card')).toBeInTheDocument();
+        expect(tagsShown()).toStrictEqual(['Team']);
     });
 });
+
+/** Every tag the card shows, in order: the whole list, so a tag added or lost is seen. */
+function tagsShown(): string[] {
+    const tags = document.querySelector('.datapack-card-tags');
+    return tags ? Array.from(tags.children, (tag) => tag.textContent ?? "") : [];
+}
 
 
 /** The SC's own library pack says Shared only when it is shared (owner, 2026-10-30); a private one shows nothing extra. */

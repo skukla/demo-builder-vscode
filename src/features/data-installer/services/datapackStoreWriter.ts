@@ -220,7 +220,7 @@ export class DatapackStoreWriter {
         const reason =
             response.status === 413
                 ? 'too large to send in one request'
-                : (said ?? `the store refused it (HTTP ${response.status})`);
+                : (said ?? `the library refused it (HTTP ${response.status})`);
         throw new DataInstallerApiError(`${what}${reason}`, response.status, route);
     }
 }

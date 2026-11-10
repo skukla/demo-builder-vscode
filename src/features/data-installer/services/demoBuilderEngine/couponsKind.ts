@@ -32,6 +32,7 @@ import { deleteIfPresent, eachCopy, type KindContext, MissingNameError, ownedId,
 import { createOne } from './pendingCreates';
 import { isNumeric } from './productLookups';
 import { tryRow } from './refusedRows';
+import { counted } from './rowCount';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceCoupon, CommerceSalesRule } from '@/types/commerceSalesRule';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -82,32 +83,34 @@ async function ruleIdOf(ctx: KindContext, coupon: PackCoupon): Promise<number | 
     const made = owned ?? ctx.recorder.byKey(CART_RULE_KIND, named)?.id;
     if (made !== undefined) return Number(made);
     const found = await ruleByName(ctx.get, named);
-    if (found?.rule_id === undefined) throw new MissingNameError(CART_RULE_KIND, named, `The store has no cart rule named ${named}, so the coupon ${coupon.code} has nothing to belong to.`);
+    if (found?.rule_id === undefined) throw new MissingNameError(CART_RULE_KIND, named, `Commerce has no cart rule named ${named}, so the coupon ${coupon.code} has nothing to belong to.`);
     return found.rule_id;
 }
 
 /** Make each code the store lacks, on its rule; record it by its code. */
 export async function installCoupons(ctx: KindContext, rows: CouponRows): Promise<void> {
-    for (const { coupon } of rows) {
-        if (ownedId(ctx.session, COUPON_KIND, coupon.code) !== undefined || ctx.recorder.byKey(COUPON_KIND, coupon.code)) continue;
-        if (await couponByCode(ctx.get, coupon.code)) {
-            ctx.log(`left coupon ${coupon.code} as it is: the store already has it`);
-            continue;
-        }
-        // Step 14 item 3: a code Commerce refuses, or whose rule was skipped, is skipped; the rest go on.
-        const made = await tryRow(ctx, { kind: COUPON_KIND, key: coupon.code }, async () => {
-            const ruleId = await ruleIdOf(ctx, coupon);
-            if (ruleId === null) return 'left out' as const;
-            return createOne(ctx, { kind: COUPON_KIND, key: coupon.code }, async () => {
-                const answer = (await ctx.send('POST', 'coupons', { coupon: { ...without(coupon), rule_id: ruleId } })) as CommerceCoupon | null;
-                const id = Number(answer?.coupon_id);
-                if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new coupon ${coupon.code}'s id.`);
-                return { kind: COUPON_KIND, id: String(id), key: coupon.code };
-            });
-        });
-        if (made === 'left out') ctx.log(`left coupon ${coupon.code} out: you deleted its cart rule ${String(coupon.rule_id)} since it was installed`);
-        else if (made) ctx.log(`created coupon ${coupon.code}`);
+    for (const { coupon } of rows) await counted(ctx, COUPON_KIND, coupon.code, () => installCoupon(ctx, coupon));
+}
+
+async function installCoupon(ctx: KindContext, coupon: PackCoupon): Promise<void> {
+    if (ownedId(ctx.session, COUPON_KIND, coupon.code) !== undefined || ctx.recorder.byKey(COUPON_KIND, coupon.code)) return;
+    if (await couponByCode(ctx.get, coupon.code)) {
+        ctx.log(`left coupon ${coupon.code} as it is: the store already has it`);
+        return;
     }
+    // Step 14 item 3: a code Commerce refuses, or whose rule was skipped, is skipped; the rest go on.
+    const made = await tryRow(ctx, { kind: COUPON_KIND, key: coupon.code }, async () => {
+        const ruleId = await ruleIdOf(ctx, coupon);
+        if (ruleId === null) return 'left out' as const;
+        return createOne(ctx, { kind: COUPON_KIND, key: coupon.code }, async () => {
+            const answer = (await ctx.send('POST', 'coupons', { coupon: { ...without(coupon), rule_id: ruleId } })) as CommerceCoupon | null;
+            const id = Number(answer?.coupon_id);
+            if (!Number.isInteger(id)) throw new Error(`Commerce did not return the new coupon ${coupon.code}'s id.`);
+            return { kind: COUPON_KIND, id: String(id), key: coupon.code };
+        });
+    });
+    if (made === 'left out') ctx.log(`left coupon ${coupon.code} out: you deleted its cart rule ${String(coupon.rule_id)} since it was installed`);
+    else if (made) ctx.log(`created coupon ${coupon.code}`);
 }
 
 /** Bring a code this engine made up to the pack's row. */

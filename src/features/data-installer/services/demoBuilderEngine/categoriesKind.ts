@@ -27,6 +27,7 @@ import { deleteIfPresent, eachFewAtOnce, firstOfEach, type KindContext, ownedId,
 import { keyOf } from './packForm';
 import { createOne } from './pendingCreates';
 import { skipRow, tryRow } from './refusedRows';
+import { counted } from './rowCount';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 export const CATEGORY_KIND = 'categories';
@@ -139,7 +140,8 @@ export async function installCategories(ctx: KindContext, pack: CategoryPack): P
     // Under a category skipped: skipped with it, by name.
     const skipped = new Set<string>();
     if (pack.root_category) {
-        const id = await placed(ctx, pack.root_category, TREE_ROOT_ID, '');
+        const root = pack.root_category;
+        const id = await counted(ctx, CATEGORY_KIND, asRow(root, '').key, () => placed(ctx, root, TREE_ROOT_ID, ''));
         if (id === 'skipped') skipped.add(pack.root_category.name);
         else if (id === undefined) {
             ctx.log(`left the pack's categories out: the SC deleted its root, ${pack.root_category.name}`);
@@ -155,7 +157,9 @@ export async function installCategories(ctx: KindContext, pack: CategoryPack): P
     const rootLabel = pack.root_category?.name ?? rows[0]?.category.path.split('/')[0] ?? '';
     const tree: Tree = { byPath: new Map([[rootLabel, ctx.session.rootCategory.id]]), skipped, deleted: new Set() };
     // A level's categories stand alone once the level above is made, so a few go at once.
-    for (const level of levels(rows)) await eachFewAtOnce(level, ({ category }) => placeInTree(ctx, category, tree));
+    for (const level of levels(rows)) {
+        await eachFewAtOnce(level, ({ category }) => counted(ctx, CATEGORY_KIND, asRow(category, category.path).key, () => placeInTree(ctx, category, tree)));
+    }
 }
 
 /** Where the tree has got to: ids by path, and the paths skipped or deleted with everything under them. */

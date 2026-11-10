@@ -1,7 +1,8 @@
 /**
- * Whether the demo's pack has something newer than what the demo installed (owner, 2026-11-03,
- * `.rptc/plans/datapack-save-as/`): a later version of the same pack, or the version installed
- * changed in the library since (team packs are updated in place as `main`).
+ * Whether the version the demo installed changed in the library since (owner, 2026-11-03,
+ * `.rptc/plans/datapack-save-as/`): team packs are updated in place as `main`. A later save is never
+ * "newer" (owner, 2026-11-09, walk F99): a pack's saves are one thing on its card, and the others are
+ * its Version History.
  */
 
 import type { DatapackGroup } from '@/features/data-installer/services/datapackCatalog';
@@ -34,11 +35,9 @@ const V1 = version('20261101-090000', { createdAt: '2026-11-01T09:00:00Z' });
 const V2 = version('20261103-120000', { createdAt: '2026-11-03T12:00:00Z' });
 
 describe('newerVersionOf', () => {
-    it('names a later version of the same pack', () => {
-        expect(newerVersionOf(group([V1, V2]), V1.id, '2026-11-01T10:00:00Z')).toEqual({ id: V2.id, at: '2026-11-03T12:00:00Z' });
-    });
-
-    it('says nothing when the demo is on the newest', () => {
+    // Owner, 2026-11-09 (walk F99): saves are Version History, not newer versions.
+    it('says nothing for a later save of the same pack', () => {
+        expect(newerVersionOf(group([V1, V2]), V1.id, '2026-11-01T10:00:00Z')).toBeUndefined();
         expect(newerVersionOf(group([V1, V2]), V2.id, '2026-11-03T13:00:00Z')).toBeUndefined();
     });
 
@@ -46,6 +45,13 @@ describe('newerVersionOf', () => {
         const main = version('main', { createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-11-02T00:00:00Z' });
 
         expect(newerVersionOf(group([main]), main.id, '2026-11-01T00:00:00Z')).toEqual({ id: main.id, at: '2026-11-02T00:00:00Z' });
+    });
+
+    // Owner, 2026-11-09 (walk F88): Save As New Datapack from Luma lit the dot on the pack it had just made.
+    it('says nothing for the saved version a save just moved the demo onto, though written after the install', () => {
+        const saved = version('20261109-133345', { createdAt: '2026-11-09T13:37:00Z', updatedAt: '2026-11-09T13:37:48Z' });
+
+        expect(newerVersionOf(group([saved]), saved.id, '2026-11-09T06:10:00Z')).toBeUndefined();
     });
 
     it('says nothing for a version unchanged since the install, or with no install time to compare', () => {
@@ -63,10 +69,10 @@ describe('newerVersionOf', () => {
         expect(newerVersionOf(group([edsCompatible, importForm]), edsCompatible.id, '2026-11-06T04:00:00Z')).toBeUndefined();
     });
 
-    it('names a later save even when the version installed is a named one', () => {
+    it('says nothing for a later save when the version installed is a named one, unchanged', () => {
         const main = version('main', { createdAt: '2026-10-01T00:00:00Z' });
 
-        expect(newerVersionOf(group([main, V2]), main.id, '2026-10-02T00:00:00Z')).toEqual({ id: V2.id, at: '2026-11-03T12:00:00Z' });
+        expect(newerVersionOf(group([main, V2]), main.id, '2026-10-02T00:00:00Z')).toBeUndefined();
     });
 
     it('says nothing with no pack, or a version the library no longer lists', () => {
@@ -91,9 +97,9 @@ describe('packLine', () => {
 });
 
 describe('newerLabel', () => {
-    it('says Updated and the day for the version installed, and that a newer one is there for a later save', () => {
-        expect(newerLabel({ id: V1.id, at: '2026-11-06T12:00:00Z' }, V1.id)).toBe('Updated Nov 6');
-        expect(newerLabel({ id: V2.id, at: '2026-11-03T12:00:00Z' }, V1.id)).toBe('Newer version available');
+    // Owner, 2026-11-09 (F88): what changed, and from when.
+    it('says when the version installed changed', () => {
+        expect(newerLabel({ id: V1.id, at: '2026-11-06T12:00:00Z' })).toBe('Updated on Nov 6');
     });
 });
 

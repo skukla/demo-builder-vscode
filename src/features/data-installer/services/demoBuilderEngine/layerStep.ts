@@ -142,5 +142,5 @@ export function layerTroubleLine(lookup: LayerLookup, stopped: string | undefine
     if (lookup.state === 'unasked') return layerNotAskedLine(lookup.pack.name, 'were not applied');
     if (stopped === undefined) return undefined;
     const whose = lookup.state === 'found' ? labelPack(lookup.layer.id) : 'the settings layer';
-    return `The store settings in ${whose} were not all applied. ${stopped} The pack's data is installed. Removing the pack takes it out, and puts back any setting that was applied.`;
+    return `The store settings in ${whose} were not all applied. ${stopped} The datapack's data is installed. Uninstalling the datapack takes it out, and puts back any setting that was applied.`;
 }

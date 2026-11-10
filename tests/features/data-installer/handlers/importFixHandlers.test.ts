@@ -33,13 +33,13 @@ const RECORD: ImportJobRecord = {
 describe('fixImportPrompt', () => {
     it('names the pack, the project, each row’s problem, and the tools that fix it', () => {
         const prompt = fixImportPrompt(
-            { ...RECORD, rowNotes: { products: 'The store refused 3.' } },
+            { ...RECORD, rowNotes: { products: 'Commerce refused 3.' } },
             'Justrite Demo'
         );
 
         expect(prompt).toContain('luma@eds-compatible');
         expect(prompt).toContain('Justrite Demo');
-        expect(prompt).toContain('- Products: The store refused 3.');
+        expect(prompt).toContain('- Products: Commerce refused 3.');
         for (const tool of [
             'get_datapack_import_status',
             'verify_datapack_install',
@@ -96,7 +96,7 @@ describe('fix-datapack-import-with-ai', () => {
 
     it('opens the SC’s AI in a new chat on the recorded problem', async () => {
         const result = await importFixWithAiHandlers['fix-datapack-import-with-ai'](
-            contextWith({ ...RECORD, rowNotes: { products: 'The store refused 3.' } })
+            contextWith({ ...RECORD, rowNotes: { products: 'Commerce refused 3.' } })
         );
 
         expect(result).toEqual({ success: true });
@@ -104,7 +104,7 @@ describe('fix-datapack-import-with-ai', () => {
             'demoBuilder.openInClaude',
             expect.objectContaining({
                 fresh: true,
-                prompt: expect.stringContaining('The store refused 3.'),
+                prompt: expect.stringContaining('Commerce refused 3.'),
             })
         );
     });

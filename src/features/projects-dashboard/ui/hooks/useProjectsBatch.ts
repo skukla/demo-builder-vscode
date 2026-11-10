@@ -104,7 +104,7 @@ function hasEnded(progress: OperationProgressPayload | null): boolean {
 /** The run's request, from the questions and what was chosen in them. */
 function requestOf(questions: PrepareProjectsBatchResponse, choices: BatchChoices): RunProjectsBatchRequest {
     return questions.action === 'delete'
-        ? { action: 'delete', answers: deleteAnswers(questions.rows, choices.ticks) }
+        ? { action: 'delete', answers: deleteAnswers(questions.rows, choices.ticks, choices.fields) }
         : { action: 'reset', answers: resetAnswers(questions.rows, choices.removeTicks, choices.fields) };
 }
 

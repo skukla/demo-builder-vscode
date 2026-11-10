@@ -106,12 +106,14 @@ async function installed() {
     const store = liveStore();
     const ctx = await fakeContext(store.reads, store.answer);
     const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
-    Object.assign(ctx, { recorder });
+    const seen: string[] = [];
+    // Each progress line under the kind it came from (walk F125).
+    const said: Record<string, string[]> = {};
+    Object.assign(ctx, { recorder, progress: (line: string) => void (said[seen.at(-1) ?? ''] ??= []).push(line) });
     ctx.session.websiteId = 3;
     ctx.session.storeId = 4;
-    const seen: string[] = [];
     await installPack(ctx, PACK_ITEMS, (kind) => kind && seen.push(kind));
-    return { ctx, files, store, seen };
+    return { ctx, files, store, seen, said };
 }
 
 describe('a customer and B2B pack', () => {
@@ -223,5 +225,24 @@ describe('a customer and B2B pack', () => {
 
         expect(outcome.kept).toEqual([{ kind: 'b2b_companies', key: 'Altura' }]);
         expect(ctx.sent).toEqual([{ method: 'PUT', path: 'customerGroups/31', body: { group: { id: 31, code: 'Platinum Buyer', tax_class_id: 5 } } }]);
+    });
+
+    it('counts each kind\'s rows from "0 of 1" to "1 of 1" as it installs (walk F125)', async () => {
+        const { said } = await installed();
+
+        const oneOfOne = ['0 of 1', '1 of 1'];
+        expect(said).toEqual(Object.fromEntries(Object.keys(PACK_ITEMS).map((kind) => [kind, oneOfOne])));
+    });
+
+    it('counts nothing on a second install that writes nothing, and only the row it brings up to a changed pack', async () => {
+        const { ctx } = await installed();
+        const lines: string[] = [];
+        ctx.progress = (line) => void lines.push(line);
+
+        await installPack(ctx, PACK_ITEMS);
+        expect(lines).toStrictEqual([]);
+
+        await installPack(ctx, { ...PACK_ITEMS, customer_groups: [{ customer_group: { code: 'Platinum Buyer', tax_class_id: 5 } }] });
+        expect(lines).toEqual(['0 of 1', '1 of 1']);
     });
 });

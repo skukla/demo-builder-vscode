@@ -202,11 +202,10 @@ export async function makeCustomersByImport(
 ): Promise<Map<string, number>> {
     const ids = new Map<string, number>();
     for (let start = 0; start < customers.length; start += CUSTOMERS_PER_IMPORT) {
-        for (const [key, id] of await importCall(
-            ctx,
-            customers.slice(start, start + CUSTOMERS_PER_IMPORT),
-        ))
-            ids.set(key, id);
+        const call = customers.slice(start, start + CUSTOMERS_PER_IMPORT);
+        for (const [key, id] of await importCall(ctx, call)) ids.set(key, id);
+        // Made or skipped, each is done with: the kind's count moves on (`rowCount.ts`).
+        for (const c of call) ctx.count?.settled(CUSTOMER_KIND, customerKey(c.email));
     }
     return ids;
 }

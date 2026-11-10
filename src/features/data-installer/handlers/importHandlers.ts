@@ -39,6 +39,7 @@ import { exportPackHandlers } from './exportPackHandlers';
 import { importFixWithAiHandlers } from './importFixHandlers';
 import { skippedPage, waitForJob, waitMsOf } from './importJobWait';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
+import { settleReplacement, withSavedNote } from './importReplacement';
 import { importTargetHandlers } from './importTargetHandlers';
 import { SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from './libraryReads';
 import { STARTING_REMOVAL_STAGE, type SavedFirst, removalChangesHandlers, removalStageReporter, settleChangesBeforeRemoval } from './removalChanges';
@@ -68,11 +69,14 @@ interface StartImportPayload {
     confirm?: boolean;
     /** Which store holds the pack: `installer` (absent) or `library` (DI-5). */
     source?: string;
-    /** Reset only: save the SC's changes first (into the demo's pack when it is theirs, else as `saveAs`), or lose them. */
+    /**
+     * A reset, or an import replacing the demo's pack (walk F97): save the SC's changes first (into
+     * the demo's pack when it is theirs, else as `saveAs`), or lose them.
+     */
     changes?: string;
-    /** Reset only, with `changes: "keep"`: the name of a new datapack to save them as, when the demo's pack is not the SC's. */
+    /** With `changes: "keep"`: the name of a new datapack to save them as, when the demo's pack is not the SC's. */
     saveAs?: { displayName?: unknown };
-    /** Reset only, and only ever the confirm's box: turn on "always save" once a save has worked. */
+    /** Only ever the confirm's box: turn on "always save" once a save has worked. */
     alwaysSave?: boolean;
     /** Agent: wait up to this many seconds (at most 45) for the job to end, saying its progress (`importJobWait.ts`). */
     waitSeconds?: number;
@@ -143,18 +147,27 @@ export const importHandlers = announcingChanges(defineHandlers({
         if ('response' in prepared) {
             return prepared.response;
         }
-        const { engine, request } = prepared;
+        const { engine } = prepared;
+        // Walk F97: over another pack or version the demo uses, that pack goes first, its changes settled.
+        const replacement = await settleReplacement(context, engine, prepared.request, payload);
+        if ('response' in replacement) {
+            return replacement.response;
+        }
+        const { request, replaces, saved, savedAs, replacesVersion } = replacement;
 
         // The sync twin is the only thing that will tell us this request is
         // malformed. A 202 from the async entry point would not.
         const started = await runAndWatch(context, engine, request, {
             operation: 'import',
-            validate: () => engine.validateImport(request),
+            validate: replacement.validate ?? (() => engine.validateImport(request)),
             begin: () => engine.startImport(request),
             rejected: 'The Data Installer rejected this import request.',
             failed: 'The import could not be started.',
+            ...(replaces ? { replaces } : {}),
+            ...(savedAs ? { savedAs } : {}),
+            ...(replacesVersion ? { replacesVersion } : {}),
         });
-        return afterWait(context, started, payload?.waitSeconds);
+        return withSavedNote(await afterWait(context, started, payload?.waitSeconds), saved, 'The import could not be started.');
     },
 
     /**
@@ -248,8 +261,8 @@ export const importHandlers = announcingChanges(defineHandlers({
             operation: 'reset',
             validate: () => engine.validateRemoval(request),
             begin: () => engine.startDelete(request),
-            rejected: 'The Data Installer rejected this reset request.',
-            failed: 'The reset could not be started.',
+            rejected: 'The Data Installer rejected this uninstall request.',
+            failed: 'The uninstall could not be started.',
         });
         return withSavedNote(await afterWait(context, started, payload?.waitSeconds), saved);
     },
@@ -311,17 +324,6 @@ function removalOfSaved(payload: StartImportPayload | undefined, saved: SavedFir
     return { ...payload, datapackName: saved.id.name, version: saved.id.version, source: 'library', dataTypes: saved.dataTypes };
 }
 
-/** What a removal answers carries where the changes went, whichever way the start went. */
-function withSavedNote(response: HandlerResponse, saved: SavedFirst | undefined): HandlerResponse {
-    if (!saved) {
-        return response;
-    }
-    if (!response.success) {
-        return { ...response, error: `${response.error ?? 'The removal could not be started.'} Your changes are safe: ${saved.note}` };
-    }
-    return { ...response, data: { ...(response.data as object), savedNote: saved.note, saved: saved.id } };
-}
-
 /**
  * Everything both write handlers need, or the response to return instead.
  *
@@ -354,7 +356,7 @@ async function prepareImport(
     }
     const dataTypes = write === 'remove' ? await typesToRemove(gate.project.path, pack, input.dataTypes) : input.dataTypes;
     if (dataTypes.length === 0) {
-        return { response: { success: false, error: 'Select at least one data type to remove.' } };
+        return { response: { success: false, error: 'Select at least one data type to uninstall.' } };
     }
     return {
         engine: engine.engine,

@@ -217,7 +217,7 @@ async function datapackNote(ctx: HandlerContext, pack: ProjectDatapack | undefin
     const check = await checkRecordedPack(packReadsFor(ctx), pack);
     if (check.verdict === 'fallback' || check.verdict === 'none') return { datapackNote: check.note };
     if (check.verdict === 'readable' && storeOf(pack) === 'library' && !check.mine && !check.shared) {
-        return { datapackNote: `Copies ${check.displayName} into your datapack library as a pack of yours, then installs it from there.` };
+        return { datapackNote: `Copies ${check.displayName} into My Datapacks, then installs it from there.` };
     }
     return {};
 }
@@ -315,7 +315,7 @@ export function registerCreateProjectFromFileTool(
                 "always yours, and the answer lists what is still needed. An Edge Delivery file also " +
                 'needs your own repoName, daLiveOrg and daLiveSite. The datapack is installed from the store the file ' +
                 "names; when it can't be read, the pack it was made from (or none) is installed instead, a colleague's " +
-                "own demo pack is first copied into your datapack library, and datapackNote says which. Requires confirm:true",
+                "own demo pack is first copied into My Datapacks, and datapackNote says which. Requires confirm:true",
             inputSchema: {
                 filePath: z.string().describe('Absolute path to the exported project file'),
                 ...NEW_PROJECT_FIELDS,

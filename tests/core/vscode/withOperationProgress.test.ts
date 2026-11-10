@@ -91,6 +91,22 @@ describe('started from a button on a screen (R1)', () => {
         });
     });
 
+    // Walk F89: a save that found nothing to save names its own success ("No Changes to Save").
+    it('carries a success title of the run’s own when it has one', async () => {
+        await withOperationProgress({ id: ID, title: 'Saving My Luma', inModal: true }, async () => ({
+            success: true,
+            title: 'No Changes to Save',
+            note: "Nothing changed since this demo's last save, so nothing was saved.",
+        }));
+
+        expect(modalPayloads().at(-1)).toEqual({
+            id: ID,
+            state: 'succeeded',
+            title: 'No Changes to Save',
+            note: "Nothing changed since this demo's last save, so nothing was saved.",
+        });
+    });
+
     // What a run changed reaches the result screen (live release test, 2026-10-22: "Store
     // prepared" named nothing it did). An empty list is not carried.
     it('ends the modal with the lines of what a run that succeeded changed', async () => {

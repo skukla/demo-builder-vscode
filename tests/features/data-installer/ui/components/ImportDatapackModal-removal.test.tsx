@@ -1,12 +1,16 @@
 /**
  * The removal confirm through the real modal (datapack-engine step 05): what the SC sees for what
- * the read found, what each button sends (Save and Remove, Remove Without Saving, with Save As's
+ * the read found, what each button sends (Save and Uninstall, Uninstall Without Saving, with Save As's
  * name when the demo's pack is not the SC's), and that a wait shows only its spinner.
+ *
+ * Remove Data opens the window straight on this confirm (`opensOn: 'remove'`, owner 2026-11-09,
+ * walk F118): it is no longer a button in the import form, and leaving the confirm closes the
+ * window rather than showing a form the SC never asked for.
  */
 
 import { act, fireEvent, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { mockRequest, press, renderModal, resetModalMocks, settle, awaitForm, defaultResponse, mockPostMessage } from './ImportDatapackModal.testUtils';
+import { mockRequest, press, renderModal, resetModalMocks, settle, defaultResponse, mockPostMessage } from './ImportDatapackModal.testUtils';
 import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
 import type { DatapackRemovalChanges } from '@/features/data-installer/removalChanges';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
@@ -21,13 +25,15 @@ const CHANGED: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENT
 const CHANGED_TEAM: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENTENCE, alwaysSave: false };
 const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], alwaysSave: false };
 const ALWAYS_BOX = 'Always Save Without Asking';
+const CHANGES_LEAD = "You changed these since this demo's last save. Uninstalling takes them out too.";
 const DELETES = 'Permanently deletes Bodea’s categories.';
 
-const removeData = () => screen.getByRole('button', { name: 'Remove Data' });
-const footerRemove = () => screen.getByRole('button', { name: /^(Remove( Anyway)?|Save and Remove|Save As New and Remove)$/ });
-const withoutSaving = () => screen.getByRole('button', { name: 'Remove Without Saving' });
+const footerRemove = () => screen.getByRole('button', { name: /^(Uninstall( Anyway)?|Save and Uninstall|Save As New and Uninstall)$/ });
+const withoutSaving = () => screen.getByRole('button', { name: 'Uninstall Without Saving' });
 const resetCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'reset-datapack');
 const readCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'get-datapack-removal-changes');
+/** The changes list as [data type, its line] pairs: the confirm's two-column FactList. */
+const changedRows = () => Array.from(document.querySelectorAll('.fact-list dt')).map((dt) => [dt.textContent, dt.nextElementSibling?.textContent]);
 
 /** The read answers this; `reset` answers the removal, by default accepting it. */
 function answers(read: HandlerResponse | (() => Promise<HandlerResponse>), reset: HandlerResponse = { success: true, data: { activationId: 'act-1' } }): void {
@@ -38,57 +44,83 @@ function answers(read: HandlerResponse | (() => Promise<HandlerResponse>), reset
     });
 }
 
-async function openConfirm(): Promise<void> {
-    renderModal({ availableTypes: ['categories'] });
-    await awaitForm();
-    await press(removeData());
+/** Remove Data's window: it arms the confirm on mount, the changes check first. */
+async function openConfirm(onClose: () => void = jest.fn()): Promise<void> {
+    renderModal({ availableTypes: ['categories'], opensOn: 'remove', onClose });
+    await settle();
     await settle();
 }
 
 beforeEach(() => resetModalMocks());
 
-describe('pressing Remove data', () => {
-    it('asks the store what changed, for the pack, and shows only a spinner and Cancel while it does', async () => {
+describe('opening on Remove Data', () => {
+    it('asks the store what changed, for the pack, on its own, and shows only the check and Cancel while it does', async () => {
         let answer: (value: HandlerResponse) => void = () => undefined;
         answers(() => new Promise((resolve) => (answer = resolve)));
-        renderModal({ availableTypes: ['categories'] });
-        await awaitForm();
-
-        await press(removeData());
+        renderModal({ availableTypes: ['categories'], opensOn: 'remove' });
+        await settle();
 
         expect(readCalls()[0][1]).toEqual({ datapackName: 'bodea', version: 'main' });
-        expect(screen.getByRole('heading', { name: 'Remove from inst?' })).toBeInTheDocument();
-        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        // While it checks, the title names the work, with no warning icon (walk F108).
+        expect(screen.getByRole('heading', { name: 'Uninstall Bodea' })).toBeInTheDocument();
+        expect(screen.getByText('Checking for your changes')).toBeInTheDocument();
+        expect(screen.getByText("Since this demo's last save")).toBeInTheDocument();
         expect(screen.queryByText(DELETES)).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Uninstall' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
 
         await act(async () => answer({ success: true, data: NOTHING }));
         await settle();
         expect(screen.getByText(DELETES)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Uninstall Bodea from inst?' })).toBeInTheDocument();
+    });
+
+    it('asks only once, however often it draws', async () => {
+        answers({ success: true, data: NOTHING });
+        await openConfirm();
+        await settle();
+
+        expect(readCalls()).toHaveLength(1);
     });
 
     it('names a library pack\'s store in the read', async () => {
         answers({ success: true, data: NOTHING });
-        renderModal({ availableTypes: ['categories'], source: 'library' });
-        await awaitForm();
-
-        await press(removeData());
+        renderModal({ availableTypes: ['categories'], source: 'library', opensOn: 'remove' });
+        await settle();
 
         expect(readCalls()[0][1]).toEqual({ datapackName: 'bodea', version: 'main', source: 'library' });
     });
 
-    it('Cancel during the read goes back to the form and nothing is sent', async () => {
+    it('never shows the import form or its buttons', async () => {
+        answers({ success: true, data: NOTHING });
+        await openConfirm();
+
+        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Dry Run' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
+    });
+
+    it('Cancel during the check closes the window and nothing is sent', async () => {
         answers(() => new Promise(() => undefined));
         const onClose = jest.fn();
-        renderModal({ availableTypes: ['categories'], onClose });
-        await awaitForm();
-        await press(removeData());
+        renderModal({ availableTypes: ['categories'], opensOn: 'remove', onClose });
+        await settle();
 
         await press(screen.getByRole('button', { name: 'Cancel' }));
 
-        expect(removeData()).toBeInTheDocument();
-        expect(onClose).not.toHaveBeenCalled();
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(resetCalls()).toHaveLength(0);
+    });
+
+    it('Cancel on the confirm closes the window and nothing is sent', async () => {
+        answers({ success: true, data: NOTHING });
+        const onClose = jest.fn();
+        await openConfirm(onClose);
+
+        await press(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(onClose).toHaveBeenCalledTimes(1);
         expect(resetCalls()).toHaveLength(0);
     });
 });
@@ -106,95 +138,34 @@ describe('a pack Demo Builder installed: its record decides what goes', () => {
         });
     }
 
-    const removeAll = () => screen.getByRole('button', { name: 'Remove All Data' });
-
-    it('asks for the pack and offers Remove all data with nothing ticked', async () => {
+    it('reads the pack\'s record, and names the kinds on it in the confirm', async () => {
         recorded(['categories', 'products']);
-        renderModal();
-        await awaitForm();
+        renderModal({ opensOn: 'remove' });
+        await settle();
+        await settle();
 
         expect(scopeCalls()[0][1]).toEqual({ datapackName: 'bodea', version: 'main' });
-        expect(removeAll()).not.toHaveAttribute('aria-disabled', 'true');
-        expect(screen.getByRole('button', { name: 'Import' })).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByText(RECORDED)).toBeInTheDocument();
     });
 
-    it('names the kinds on the record in the confirm, and sends the removal with nothing ticked', async () => {
+    // The window shows no ticks, so it sends every type (helper's review: a pack with no record sent
+    // none); with a record the handler takes what the record lists anyway.
+    it('sends every type, though the record decides what goes', async () => {
         recorded(['categories', 'products']);
-        renderModal();
-        await awaitForm();
-
-        await press(removeAll());
+        renderModal({ opensOn: 'remove' });
         await settle();
-        expect(screen.getByText(RECORDED)).toBeInTheDocument();
+        await settle();
 
         await press(footerRemove());
-        expect(resetCalls()[0][1]).toMatchObject({ datapackName: 'bodea', version: 'main', confirm: true, dataTypes: [] });
+        expect(resetCalls()[0][1]).toMatchObject({ datapackName: 'bodea', version: 'main', confirm: true, dataTypes: ['categories', 'products'] });
     });
 
-    it('says the ticks do not limit it when fewer are ticked than go', async () => {
-        recorded(['categories', 'products']);
-        renderModal();
-        await awaitForm();
-
-        await press(screen.getByRole('checkbox', { name: 'Categories' }));
-        await press(removeAll());
-        await settle();
-
-        expect(screen.getByText(RECORDED)).toBeInTheDocument();
-        expect(screen.getByText('Selected data types apply to Import only.')).toBeInTheDocument();
-    });
-
-    it('needs a tick and says Remove data when there is no record: the service removes what it is sent', async () => {
+    it('CONTROL: names the pack\'s own type when there is no record, as the service removes what it is sent', async () => {
         recorded(null);
-        renderModal();
-        await awaitForm();
+        await openConfirm();
 
-        expect(removeData()).toHaveAttribute('aria-disabled', 'true');
-        expect(screen.queryByRole('button', { name: 'Remove All Data' })).not.toBeInTheDocument();
-    });
-
-    it('needs a tick when the record lists nothing: a job still has to report on something', async () => {
-        recorded([]);
-        renderModal();
-        await awaitForm();
-
-        expect(removeData()).toHaveAttribute('aria-disabled', 'true');
-    });
-
-    it('falls back to the ticks when the record cannot be read', async () => {
-        mockRequest.mockImplementation(async (type: string) => (type === 'get-datapack-removal-scope' ? { success: false, error: 'The install record could not be read.' } : defaultResponse(type)));
-        renderModal();
-        await awaitForm();
-
-        expect(removeData()).toHaveAttribute('aria-disabled', 'true');
-    });
-
-    it('shows only the wait until the record has answered, so the button does not change under the pointer', async () => {
-        let answer: (value: HandlerResponse) => void = () => undefined;
-        mockRequest.mockImplementation(async (type: string) => (type === 'get-datapack-removal-scope' ? new Promise((resolve) => (answer = resolve)) : defaultResponse(type)));
-        renderModal();
-        await settle();
-
-        expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
-        expect(screen.getByRole('progressbar')).toBeInTheDocument();
-
-        await act(async () => answer({ success: true, data: { recordedKinds: ['categories'] } }));
-        await settle();
-        expect(removeAll()).not.toHaveAttribute('aria-disabled', 'true');
-    });
-
-    it('reads the record again when the form comes back after a cancelled confirm', async () => {
-        recorded(['categories']);
-        renderModal();
-        await awaitForm();
-        const before = scopeCalls().length;
-
-        await press(removeAll());
-        await settle();
-        await press(screen.getByRole('button', { name: 'Cancel' }));
-        await settle();
-
-        expect(scopeCalls()).toHaveLength(before + 1);
+        expect(screen.getByText(DELETES)).toBeInTheDocument();
+        expect(screen.queryByText(RECORDED)).not.toBeInTheDocument();
     });
 });
 
@@ -207,8 +178,8 @@ describe('nothing changed', () => {
         expect(screen.getByText(DELETES)).toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
         expect(screen.queryByText(/You changed/)).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Remove Without Saving' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Uninstall' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Uninstall Without Saving' })).not.toBeInTheDocument();
     });
 
     it('removes with nothing to keep', async () => {
@@ -224,18 +195,48 @@ describe('nothing changed', () => {
 describe('something changed, in a pack of the SC\'s', () => {
     beforeEach(() => answers({ success: true, data: CHANGED }));
 
-    it('keeps the question and the sentence, then offers saving first or not, as two buttons', async () => {
+    it('keeps the question, then lists what changed, a row per data type, and offers saving first or not', async () => {
         await openConfirm();
 
-        expect(screen.getByRole('heading', { name: 'Remove from inst?' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Uninstall Bodea from inst?' })).toBeInTheDocument();
         expect(screen.getByText(DELETES)).toBeInTheDocument();
-        expect(screen.getByText(SENTENCE)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Save and Remove' })).toBeEnabled();
-        expect(withoutSaving()).toBeInTheDocument();
+        expect(screen.getByText(CHANGES_LEAD)).toBeInTheDocument();
+        expect(changedRows()).toStrictEqual([
+            ['Categories', 'Critical Power'],
+            ['Products', 'A, B'],
+        ]);
+        expect(screen.queryByText(SENTENCE)).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save and Uninstall' })).toBeEnabled();
         expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).not.toBeChecked();
     });
 
-    it('Save and Remove keeps them', async () => {
+    // The button that loses the changes stands apart, at the footer's start (walk F111).
+    it('puts Uninstall Without Saving at the footer\'s start, apart from Cancel and the save', async () => {
+        await openConfirm();
+
+        expect(withoutSaving().closest('.modal-footer-start')).not.toBeNull();
+        expect(screen.getByRole('button', { name: 'Save and Uninstall' }).closest('.modal-footer-start')).toBeNull();
+        expect(screen.getByRole('button', { name: 'Cancel' }).closest('.modal-footer-start')).toBeNull();
+    });
+
+    it('names three of a type\'s changes, then how many more', async () => {
+        const many = [{ kind: 'products', count: 5, names: ['24-mb01', '24-mb02', '24-ug01', '24-ug02', '24-ug03'] }];
+        answers({ success: true, data: { ...CHANGED, count: 5, kinds: many } });
+        await openConfirm();
+
+        expect(changedRows()).toStrictEqual([['Products', '24-mb01, 24-mb02, 24-ug01 and 2 more']]);
+    });
+
+    it('CONTROL: with no data types on the answer, says the sentence instead of a list', async () => {
+        answers({ success: true, data: { ...CHANGED, kinds: [] } });
+        await openConfirm();
+
+        expect(screen.getByText(SENTENCE)).toBeInTheDocument();
+        expect(screen.queryByText(CHANGES_LEAD)).not.toBeInTheDocument();
+        expect(changedRows()).toHaveLength(0);
+    });
+
+    it('Save and Uninstall keeps them', async () => {
         await openConfirm();
 
         await press(footerRemove());
@@ -245,7 +246,7 @@ describe('something changed, in a pack of the SC\'s', () => {
         expect(resetCalls()[0][1]).not.toHaveProperty('saveAs');
     });
 
-    it('Remove Without Saving drops them', async () => {
+    it('Uninstall Without Saving drops them', async () => {
         await openConfirm();
 
         await press(withoutSaving());
@@ -253,7 +254,7 @@ describe('something changed, in a pack of the SC\'s', () => {
         expect(resetCalls()[0][1]).toMatchObject({ confirm: true, changes: 'drop' });
     });
 
-    it('with always ticked, Save and Remove also asks for the setting', async () => {
+    it('with always ticked, Save and Uninstall also asks for the setting', async () => {
         await openConfirm();
 
         await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
@@ -262,17 +263,15 @@ describe('something changed, in a pack of the SC\'s', () => {
         expect(resetCalls()[0][1]).toMatchObject({ changes: 'keep', alwaysSave: true });
     });
 
-    it('Cancel removes nothing, and the next press starts afresh', async () => {
-        await openConfirm();
+    it('Cancel removes nothing, and closes the window', async () => {
+        const onClose = jest.fn();
+        await openConfirm(onClose);
         await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
 
         await press(screen.getByRole('button', { name: 'Cancel' }));
-        expect(resetCalls()).toHaveLength(0);
 
-        await press(removeData());
-        await settle();
-        expect(readCalls()).toHaveLength(2);
-        expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).not.toBeChecked();
+        expect(resetCalls()).toHaveLength(0);
+        expect(onClose).toHaveBeenCalledTimes(1);
     });
 });
 
@@ -284,7 +283,7 @@ describe('something changed, in a pack that is not the SC\'s', () => {
 
         expect(screen.getByRole('textbox', { name: 'Save Changes As' })).toHaveValue('');
         expect(screen.queryByRole('checkbox', { name: ALWAYS_BOX })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Save As New and Remove' })).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByRole('button', { name: 'Save As New and Uninstall' })).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('keeps them as a new pack by the name given', async () => {
@@ -333,12 +332,14 @@ describe('a read that fails', () => {
     it('says so, and offers removing anyway', async () => {
         await openConfirm();
 
-        expect(screen.getByText(/Couldn.t check whether you changed anything in it since it was installed, so any changes would be lost\. The store could not be read\./)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Remove Anyway' })).toBeInTheDocument();
+        // Review, 2026-11-10: the title says it could not check; the body is the one consequence.
+        expect(screen.getByRole('heading', { name: "Couldn't Check for Changes" })).toBeInTheDocument();
+        expect(screen.getByText("Uninstalling removes anything you changed since this demo's last save.")).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Uninstall Anyway' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 
-    it('Remove Anyway removes, losing any changes', async () => {
+    it('Uninstall Anyway removes, losing any changes', async () => {
         await openConfirm();
 
         await press(footerRemove());
@@ -357,7 +358,7 @@ describe('a save that fails', () => {
         await press(footerRemove());
         await settle();
 
-        expect(screen.getByRole('heading', { name: "Couldn't save changes. Nothing was removed." })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: "Couldn't Save Changes" })).toBeInTheDocument();
         expect(screen.getByText(REASON)).toBeInTheDocument();
         expect(screen.getByRole('heading').querySelector('.text-negative')).not.toBeNull();
     });
@@ -370,20 +371,25 @@ describe('a save that fails', () => {
 
         await press(screen.getByRole('button', { name: 'Back' }));
 
-        expect(screen.getByText(SENTENCE)).toBeInTheDocument();
+        expect(screen.getByText(CHANGES_LEAD)).toBeInTheDocument();
         expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).toBeChecked();
         expect(readCalls()).toHaveLength(1);
     });
 
-    it('CONTROL: any other failure to start goes Back to the form', async () => {
+    // Uninstall's window has no form to go back to, so a Back would only close it beside the
+    // Close that already does (review, 2026-11-10): it ends on Close alone.
+    it('CONTROL: any other failure to start ends on Close alone, which closes the window', async () => {
         answers({ success: true, data: NOTHING }, { success: false, error: 'The service said no.' });
-        await openConfirm();
+        const onClose = jest.fn();
+        await openConfirm(onClose);
         await press(footerRemove());
         await settle();
 
-        expect(screen.getByRole('heading', { name: "Couldn't Start the Removal" })).toBeInTheDocument();
-        await press(screen.getByRole('button', { name: 'Back' }));
-        expect(removeData()).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: "Couldn't Uninstall Bodea" })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Close' }));
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
     });
 });
 
@@ -408,7 +414,7 @@ describe('while it saves first', () => {
 
         pushStage('Saving to the library');
 
-        expect(screen.getByRole('heading', { name: 'Remove Bodea' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Uninstall Bodea' })).toBeInTheDocument();
         expect(screen.getByText('Saving to the library')).toBeInTheDocument();
     });
 
@@ -421,21 +427,18 @@ describe('while it saves first', () => {
         });
 
         expect(screen.queryByText('Deploying the mesh')).not.toBeInTheDocument();
-        expect(screen.getByText('Starting removal')).toBeInTheDocument();
+        expect(screen.getByText('Uninstalling the datapack')).toBeInTheDocument();
     });
 
     it('closing hands it to a notification rather than stopping it', async () => {
         const onClose = jest.fn();
-        renderModal({ availableTypes: ['categories'], onClose });
-        await awaitForm();
-        await press(removeData());
-        await settle();
+        await openConfirm(onClose);
         await press(footerRemove());
         pushStage('Saving to the library');
 
         await press(screen.getByRole('button', { name: 'Run in Background' }));
 
-        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Removing Bodea' });
+        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Uninstalling Bodea' });
         expect(onClose).toHaveBeenCalled();
     });
 });
@@ -454,7 +457,7 @@ describe('after a removal that saved first', () => {
         await press(footerRemove());
         await settle();
 
-        expect(await screen.findByRole('heading', { name: 'Removed Bodea' })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Bodea Uninstalled' })).toBeInTheDocument();
         expect(screen.getByText('Saved to the Acme Demo pack. Bodea is unchanged.')).toBeInTheDocument();
     });
 });

@@ -6,12 +6,14 @@
  * anything. Only then does the SC choose where it goes and press Load. Dismissing
  * the picker closes the modal: there is nothing to show without a file.
  *
- * Two stores, and the choice is spelled out because they differ in who sees the
- * result: the datapack library keeps a loaded pack private to the SC until they
- * share it; the Data Installer's catalog is shared with other teams, so choosing it
- * is the confirmation (the handler also wants the pack's name back, which this
- * sends). Replacing an existing version is offered for the library only — the Data
- * Installer cannot tell whose pack is whose, and the handler refuses it there.
+ * A loaded pack goes into My Datapacks, private to the SC until they share it. The Data
+ * Installer is offered as a second destination only under `INSTALLER_WRITES_SHOWN`, the switch
+ * that hides Copy to the Data Installer, since our accounts cannot write there yet and loading
+ * into it would fail every time. When it is offered, the choice is spelled out because the two
+ * differ in who sees the result: the Data Installer's catalog is shared with other teams, so
+ * choosing it is the confirmation (the handler also wants the pack's name back, which this
+ * sends). Replacing an existing version is offered for My Datapacks only — the Data Installer
+ * cannot tell whose pack is whose, and the handler refuses it there.
  *
  * Loading writes a pack into a store; it installs nothing into Commerce. That is
  * still the catalog's Import.
@@ -25,6 +27,8 @@
 
 import { Checkbox, DialogContainer, Radio, RadioGroup } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
+import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
+import { isSavedVersion, packLine, versionLabel } from '../../packVersions';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { DatapackResultBody } from './DatapackResultBody';
@@ -73,10 +77,13 @@ function layerToUndo(outcome: LoadOutcome | null, packUndoable: boolean): Loaded
 export interface LoadDatapackFileModalProps {
     /** Closed, with or without a load. The caller refreshes what it shows. */
     onClose: () => void;
+    /** Whether the Data Installer is offered as a destination; off while our accounts cannot write there. */
+    offersInstaller?: boolean;
 }
 
 export function LoadDatapackFileModal({
     onClose,
+    offersInstaller = INSTALLER_WRITES_SHOWN,
 }: LoadDatapackFileModalProps): React.JSX.Element | null {
     const [target, setTarget] = useState<DatapackStoreName>('library');
     const [update, setUpdate] = useState(false);
@@ -115,7 +122,7 @@ export function LoadDatapackFileModal({
     return (
         <DialogContainer onDismiss={onClose}>
             <Modal
-                title={result?.title ?? 'Load a Datapack File'}
+                title={result?.title ?? 'Load from File'}
                 status={result ? resultStatus(result) : undefined}
                 size={result ? 'S' : 'M'}
                 fitContent
@@ -132,6 +139,7 @@ export function LoadDatapackFileModal({
                         <LoadForm
                             file={file}
                             choice={{ target, update, onTarget: setTarget, onUpdate: setUpdate }}
+                            offersInstaller={offersInstaller}
                         />
                     ) : null}
                     {result ? <DatapackResultBody result={result} /> : null}
@@ -139,7 +147,7 @@ export function LoadDatapackFileModal({
                         <RemoveFromLibraryButton id={{ name: outcome.datapackName, version: outcome.version }} />
                     ) : null}
                     {result && undoLayer ? (
-                        <RemoveFromLibraryButton id={{ name: undoLayer.datapackName, version: undoLayer.version }} label="Remove Its Store Settings" />
+                        <RemoveFromLibraryButton id={{ name: undoLayer.datapackName, version: undoLayer.version }} label="Delete Store Settings" />
                     ) : null}
                 </div>
             </Modal>
@@ -166,8 +174,9 @@ function loadResult(args: {
 }): ResultContent | null {
     const { openError, file, outcome, loadError } = args;
     if (openError || !file) {
-        return { variant: 'error', title: 'This file cannot be loaded', message: openError ?? 'No file was opened.' };
+        return { variant: 'error', title: "Couldn't Open the File", message: openError ?? 'No file was opened.' };
     }
+    const name = file.displayName ?? file.datapackName ?? 'Datapack';
     if (!outcome && !loadError) return null;
     const layer = outcome?.settingsLayer;
     const details = [
@@ -175,40 +184,65 @@ function loadResult(args: {
         ...(layer?.reason ? [`Store settings: ${layer.reason}`] : []),
     ];
     if (loadError) {
-        return { variant: 'error', title: 'The file was not loaded', message: loadError, details };
+        return { variant: 'error', title: `Couldn't Load ${name}`, message: loadError, details };
     }
     const stored = outcome?.stored.length ?? 0;
-    const count = `${stored} of ${stored + (outcome?.failed.length ?? 0)} data types`;
+    const failed = outcome?.failed.length ?? 0;
     const landed = layer?.outcome === 'created' || layer?.outcome === 'updated';
-    return { variant: details.length === 0 ? 'success' : 'warning', title: loadTitle(count, outcome?.target === 'installer', landed), details };
+    const where = loadedWhere(outcome?.target === 'installer', landed);
+    if (details.length === 0) return { variant: 'success', title: `${name} Loaded`, message: where };
+    // Partly: the count says how much, the details say what was refused and why.
+    const partly = failed > 0 ? `Loaded ${stored} of ${stored + failed} data types. ` : '';
+    return { variant: 'warning', title: `${name} ${failed > 0 ? 'Partly Loaded' : 'Loaded'}`, message: `${partly}${where}`, details };
 }
 
-/** Where the file's parts went: the settings stay with the SC's own datapacks wherever the data goes. */
-function loadTitle(count: string, intoInstaller: boolean, settingsLanded: boolean): string {
-    if (intoInstaller) return `Loaded ${count} into the Data Installer${settingsLanded ? ', and its store settings into your datapacks' : ''}`;
-    return `Loaded ${count}${settingsLanded ? ' and its store settings' : ''} into your datapacks`;
+/** Where the file's parts went: the settings stay in My Datapacks wherever the data goes. */
+function loadedWhere(intoInstaller: boolean, settingsLanded: boolean): string {
+    if (intoInstaller) return `Added to the Data Installer.${settingsLanded ? ' Its store settings are in My Datapacks.' : ''}`;
+    return `Added to My Datapacks${settingsLanded ? ', with its store settings' : ''}.`;
+}
+
+/** "My Luma, saved Nov 9, 9:15 AM" or "Luma, main": a save by its date, never its id. */
+function fileLine(file: OpenedFile): string {
+    const name = file.displayName ?? file.datapackName ?? '';
+    const version = file.version ?? '';
+    if (!version) return name;
+    return isSavedVersion(version) ? `${name}, saved ${versionLabel(version)}` : packLine(name, version);
 }
 
 /** What is in the file, and where it should go. */
-function LoadForm({ file, choice }: { file: OpenedFile; choice: TargetChoice }): React.JSX.Element {
+function LoadForm({ file, choice, offersInstaller }: { file: OpenedFile; choice: TargetChoice; offersInstaller: boolean }): React.JSX.Element {
     const types = (file.dataTypes ?? []).map(dataTypeLabel).join(', ');
     return (
         <>
             <p className="datapack-export-intro">
-                {file.displayName} ({file.datapackName}, version {file.version}) holds: {types}.
+                {fileLine(file)}. It holds {types}.
             </p>
             {file.settingsLayer ? (
                 <p className="datapack-export-note">
-                    It also carries store settings, which go into your datapacks: {file.settingsLayer.paths.join(', ')}.
+                    It also carries store settings, which go into My Datapacks: {file.settingsLayer.paths.join(', ')}.
                 </p>
             ) : null}
+            {offersInstaller ? <DestinationChoice name={file.datapackName} choice={choice} /> : (
+                <Checkbox isSelected={choice.update} onChange={choice.onUpdate}>
+                    Replace Existing Version
+                </Checkbox>
+            )}
+        </>
+    );
+}
+
+/** My Datapacks or the Data Installer, only while the Data Installer takes our writes. */
+function DestinationChoice({ name, choice }: { name?: string; choice: TargetChoice }): React.JSX.Element {
+    return (
+        <>
             <RadioGroup
                 label="Destination"
                 value={choice.target}
                 onChange={(value) => choice.onTarget(value as DatapackStoreName)}
             >
                 <Radio value="library">
-                    Your Datapacks (Private Until Shared)
+                    My Datapacks (Private Until Shared)
                 </Radio>
                 <Radio value="installer">Data Installer (Shared Catalog)</Radio>
             </RadioGroup>
@@ -218,7 +252,7 @@ function LoadForm({ file, choice }: { file: OpenedFile; choice: TargetChoice }):
                 </Checkbox>
             ) : (
                 <p className="datapack-export-note">
-                    Other teams will see {file.datapackName} in the shared catalog. If that name and
+                    Other teams will see {name} in the shared catalog. If that name and
                     version already exist there, nothing is changed.
                 </p>
             )}

@@ -9,7 +9,7 @@
 
 import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { packRowRefusals } from '@/features/data-installer/services/demoBuilderEngine/runPack';
-import { heldLines, resultLines, savingLine } from '@/features/data-installer/services/demoBuilderEngine/saveOutcome';
+import { resultLines, saveNote, savingLine } from '@/features/data-installer/services/demoBuilderEngine/saveOutcome';
 import { PACK } from './demoBuilderEngine.testUtils';
 import { SAVE_AS, deps } from './storeChanges.testUtils';
 
@@ -27,7 +27,7 @@ describe('a save names the ids it kept because it could not name them', () => {
         ]);
         expect(result.unnamed).toEqual(['category 88']);
         expect(result.sentence).toBe(
-            'Saved to the Acme Demo pack. Bodea is unchanged. 1 id could not be turned into a name and was kept as it is (category 88); on another store it may point at something else.',
+            'Saved as Acme Demo. Bodea is unchanged. 1 id could not be turned into a name and was kept as it is (category 88); on another store it may point at something else.',
         );
     });
 
@@ -37,7 +37,7 @@ describe('a save names the ids it kept because it could not name them', () => {
         const result = await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write);
 
         expect(result.unnamed).toStrictEqual([]);
-        expect(result.sentence).toBe('Saved to the Acme Demo pack. Bodea is unchanged.');
+        expect(result.sentence).toBe('Saved as Acme Demo. Bodea is unchanged.');
     });
 });
 
@@ -97,13 +97,19 @@ describe("the result window's lines", () => {
 });
 
 // Owner, 2026-11-05: the result lists what the pack holds, one data type per line, count first.
-describe('heldLines', () => {
-    it('counts each data type in the pick list order, one for one of it', () => {
-        expect(heldLines({ customer_groups: 4, products: 150, attribute_sets: 1, categories: 1 })).toEqual([
-            '150 Products',
-            '1 Category',
-            '4 Customer Groups',
-            '1 Attribute Set',
-        ]);
+describe('saveNote', () => {
+    const ACME = { name: 'acme-1a2b3c', displayName: 'Acme Test' };
+
+    it('a new version of your own pack names it, and nothing more', () => {
+        expect(saveNote(ACME, { name: 'acme-1a2b3c' }, 'Scratch 1028')).toBe('Saved a new version of Acme Test.');
+    });
+
+    // Owner, 2026-11-09 (F85): "Saved as" says where it went; the pack it came from needs no line.
+    it('a new pack from another says where it went and that the demo now uses it', () => {
+        expect(saveNote(ACME, { name: 'luma' }, 'Scratch 1028')).toBe('Saved as Acme Test. Scratch 1028 now uses it.');
+    });
+
+    it('a first pack, from nothing, says only that the demo now uses it', () => {
+        expect(saveNote(ACME, undefined, 'Scratch 1028')).toBe('Scratch 1028 now uses Acme Test.');
     });
 });

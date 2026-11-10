@@ -43,7 +43,7 @@ export async function resolveEngineTarget(get: CommerceGet, codes: TargetCodes):
     const scope = await storeScopeOf(get, codes.websiteCode, codes.storeCode);
     if (!scope || scope.storeId === undefined) {
         throw new InstallTargetError(
-            `The store has no store view ${codes.storeCode} on a website ${codes.websiteCode}. Choose them again in the Commerce step.`,
+            `Commerce has no store view ${codes.storeCode} on a website ${codes.websiteCode}. Choose them again in the Commerce step.`,
         );
     }
     return { ...codes, websiteId: scope.websiteId, storeId: scope.storeId, rootCategoryId: Number(scope.rootCategoryId) };

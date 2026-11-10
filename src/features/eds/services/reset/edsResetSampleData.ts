@@ -15,6 +15,8 @@ import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
+import { rememberedPackName, type NameMemory } from '@/features/data-installer/services/packNames';
+import { saveFirstLabel, UNINSTALL_DATAPACK, withoutSavingLabel } from '@/features/data-installer/uninstallWords';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
@@ -59,14 +61,19 @@ export function beginSampleDataRemovalCheck(project: Project): Promise<boolean> 
  * removal was measured at 470 seconds, so a modal that says "this is quick" by
  * omission would be lying.
  *
- * Reset asks it, and so does an Edit that changes the datapack (PL-75), each with
- * its own closing sentence saying what happens without the removal.
+ * Reset asks it, and so does an Edit that changes the datapack (PL-75), which adds what Keep
+ * Datapack does there. The question names the pack as the SC knows it, never its id, and the body
+ * holds only the sentences true for this pack (review, 2026-11-10: it showed
+ * "my-luma@20261109-141504" in one long sentence).
+ *
+ * @param words.memory - where the library's pack names are remembered (`packNames`)
+ * @param words.closing - a last sentence for this door
  */
 export async function confirmSampleDataRemoval(
     project: Project,
     vscode: typeof import('vscode'),
     canRemove: Promise<boolean> | undefined,
-    closing = 'Resetting the storefront does not require it.',
+    words: { memory?: NameMemory; closing?: string } = {},
 ): Promise<boolean> {
     // One condition, not a guard and then an await: `canRemove` is undefined
     // exactly when `datapack` is (the check above gates on the same field), so a
@@ -76,27 +83,29 @@ export async function confirmSampleDataRemoval(
         return false;
     }
 
-    const removeButton: import('vscode').MessageItem = { title: 'Remove Datapack' };
+    const removeButton: import('vscode').MessageItem = { title: UNINSTALL_DATAPACK };
     // `isCloseAffordance` REPLACES the modal's automatic "Cancel" button.
     // "Cancel" here read as "abort the whole reset" when it actually meant
     // "keep the data and continue" (user-reported 2026-08-23) — this question
     // is a yes/no about the datapack only, and its buttons now say so. Esc
-    // maps to Keep Data: dismissal takes the safe branch.
-    const keepButton: import('vscode').MessageItem = { title: 'Keep Data', isCloseAffordance: true };
+    // maps to Keep Datapack: dismissal takes the safe branch.
+    const keepButton: import('vscode').MessageItem = { title: 'Keep Datapack', isCloseAffordance: true };
     // "anything you added by hand stays": pack-scoped removal confirmed by the
     // Data Installer service owner 2026-08-22 — a removal takes only what the
     // pack imported, so the reassurance is a fact, not a guess (backlog item
     // 2026-08-17-what-does-a-datapack-removal-actually-delete, now archived).
     // Only a pack Demo Builder installed has a record of what changed, so only it can say the next part.
     const ours = await installedByDemoBuilder(project.path, { name: datapack.name, version: datapack.version });
-    const saved = ours ? 'Anything you changed in it is saved first. ' : '';
+    const name = words.memory ? rememberedPackName(words.memory, datapack.name) : undefined;
+    const detail = [
+        'Deletes what it installed in Commerce.',
+        ours ? 'Your changes are saved first.' : undefined,
+        'Can take several minutes.',
+        words.closing,
+    ].filter(Boolean).join(' ');
     const answer = await vscode.window.showWarningMessage(
-        `Also remove the datapack this project imported (${datapack.name}@${datapack.version})? ` +
-            'This deletes the data this pack imported from the Commerce instance — ' +
-            'anything you added by hand stays — and can take several minutes. ' +
-            saved +
-            closing,
-        { modal: true },
+        `Uninstall ${name ?? 'the Datapack'} Too?`,
+        { modal: true, detail },
         removeButton,
         keepButton,
     );
@@ -133,15 +142,17 @@ export type AskSaveAsName = (asked: { sentence?: string }) => Promise<SaveAsAnsw
  * The SC's changes, before the reset removes the pack: saved into the demo's pack when it is
  * theirs, else as a new pack under the name `askName` gets (Save As, owner 2026-11-03), else lost.
  * A save that fails removes nothing.
+ *
+ * @returns why the pack must stay, or undefined when it may go
  */
 async function settleBeforeReset(
     project: Project,
     context: HandlerContext,
     report: ReportStage,
     askName: AskSaveAsName | undefined,
-): Promise<boolean> {
+): Promise<string | undefined> {
     const datapack = project.datapack;
-    if (!datapack) return true;
+    if (!datapack) return undefined;
     const { contextForProject, settleChangesBeforeRemoval } = await import('@/features/data-installer/handlers/removalChanges');
     const forProject = contextForProject(context, project);
     const request = {
@@ -155,30 +166,39 @@ async function settleBeforeReset(
         const chosen = await askName(asked?.sentence ? { sentence: asked.sentence } : {});
         if (chosen === undefined) {
             context.logger.info('[EdsReset] Sample data kept: the changes in it were not answered.');
-            return false;
+            return asked?.sentence ? `${asked.sentence} They were not answered.` : 'The changes in it were not answered.';
         }
         const answer = chosen === 'drop' ? { answer: 'drop' as const } : { answer: 'keep' as const, saveAs: { displayName: chosen.saveAs } };
         settled = await settleChangesBeforeRemoval(forProject, { ...request, ...answer }, (stage) => report(stage));
     }
     if ('response' in settled) {
-        context.logger.error(`[EdsReset] Sample data was NOT removed: ${settled.response.error ?? 'no reason given'}`);
-        return false;
+        const reason = settled.response.error ?? 'Its changes could not be saved.';
+        context.logger.error(`[EdsReset] Sample data was NOT removed: ${reason}`);
+        return reason;
     }
-    return true;
+    return undefined;
 }
 
+/**
+ * Remove the project's datapack data, its changes settled first (`settleBeforeReset`), reporting
+ * rather than throwing. A reset ignores the answer; a project delete stops on it, since deleting the
+ * project would leave the data with no record (walk F96).
+ *
+ * @returns why the data was not all removed, or undefined when it was
+ */
 export async function removeProjectSampleData(
     project: Project,
     context: HandlerContext,
     report: ReportStage,
     askName?: AskSaveAsName,
-): Promise<void> {
+): Promise<string | undefined> {
     try {
         // The SC's changes first: this door's question was already asked, and keeping the work is
         // the likely intent. Reported, as everything here is: a save that fails removes nothing and
         // the reset stands.
         if (project.datapack) {
-            if (!(await settleBeforeReset(project, context, report, askName))) return;
+            const kept = await settleBeforeReset(project, context, report, askName);
+            if (kept) return kept;
         }
 
         report(OPERATION_STAGES.removingDatapack.label);
@@ -207,22 +227,25 @@ export async function removeProjectSampleData(
             context.logger.error(
                 `[EdsReset] Sample data was NOT removed: ${result.reason ?? 'no reason given'}`,
             );
-            return;
+            return result.reason ?? 'The datapack was not all uninstalled.';
         }
         if (!result.ran) {
             context.logger.warn(
                 `[EdsReset] Sample data was not removed: ${result.reason ?? 'no reason given'}`,
             );
+            return result.reason ?? 'The datapack was not uninstalled.';
         }
+        return undefined;
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);
+        return reason;
     }
 }
 
 /** The answers, in the Datapacks screen's removal words (`importModalView`). */
-const SAVE = 'Save As New and Remove';
-const DROP = 'Remove Without Saving';
+const SAVE = saveFirstLabel('Uninstall', true);
+const DROP = withoutSavingLabel('Uninstall');
 const NAME_LABEL = 'Save Changes As';
 const NAME_REQUIRED = 'Datapack name is required';
 

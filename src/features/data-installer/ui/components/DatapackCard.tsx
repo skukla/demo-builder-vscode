@@ -27,6 +27,7 @@
 
 import { ActionButton, Badge, Item, Picker, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
+import { isSavedVersion, versionLabel } from '../../packVersions';
 import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackSummary } from '../../types';
 import { packSource, type PackSource } from '../catalogShow';
@@ -73,8 +74,8 @@ export interface DatapackCardProps {
      */
     isInstalled?: boolean;
     /**
-     * What is newer in the demo's own pack, if anything (`newerLabel`): "Updated Nov 6" or "Newer
-     * version available". The card marks it with the house amber dot beside the version, the
+     * What changed in the demo's own pack since it was installed, if anything (`newerLabel`):
+     * "Updated on Nov 6". The card marks it with the house amber dot beside the version, the
      * dashboard's "due" mark, and says this on hover in Spectrum's tooltip, as the dashboard's dots
      * do (owner, 2026-11-07: a browser `title` never showed here); taking it is the SC's choice,
      * from the version picker (owner, 2026-11-04).
@@ -126,7 +127,7 @@ export function DatapackCard({
             role={choosing ? 'radio' : 'button'}
             {...(choosing ? { 'aria-checked': selected } : {})}
             tabIndex={0}
-            aria-label={`${group.displayName}, version ${selectedVersion}`}
+            aria-label={`${group.displayName}, ${shownAs(selectedVersion)}`}
             // `is-selected` is the accent border, and the project's pack earns it
             // for the same reason a chosen card does: it is the one that matters
             // in this grid. The two never conflict — a wizard card that is both
@@ -168,18 +169,7 @@ export function DatapackCard({
                     onClick={stopPropagation}
                     onKeyDown={stopPropagation}
                 >
-                    <Picker
-                        aria-label={`Version of ${group.displayName}`}
-                        selectedKey={selectedVersion}
-                        onSelectionChange={(key) => onVersionChange(String(key))}
-                    >
-                        {group.versions.map((candidate) => (
-                            <Item key={candidate.id.version} textValue={candidate.id.version}>
-                                <Text>{candidate.id.version}</Text>
-                                {versionChanged(candidate) ? <Text slot="description">{versionChanged(candidate)}</Text> : null}
-                            </Item>
-                        ))}
-                    </Picker>
+                    <VersionChoice group={group} selectedVersion={selectedVersion} onVersionChange={onVersionChange} />
                     {newer ? <NewerMark said={newer} /> : null}
                 </span>
                 {/* No count of data types (owner, 2026-11-05: the tile was crowded); the flyout
@@ -188,6 +178,38 @@ export function DatapackCard({
                 </div>
             </div>
         </div>
+    );
+}
+
+/** A version as the card names it: a save by when, "Saved Nov 9, 1:56 PM"; a named one as it is. */
+function shownAs(version: string): string {
+    return isSavedVersion(version) ? `Saved ${versionLabel(version)}` : version;
+}
+
+/**
+ * The versions to choose from: the named ones (`main`, `eds-compatible`), each a variant, and the
+ * pack's saves as one, the save on show (owner, 2026-11-09, walk F99): a pack of saves is one thing,
+ * and its earlier saves are its Version History, not versions to pick. A pack of nothing but saves
+ * has nothing to choose, so it says which save it is.
+ */
+function VersionChoice({ group, selectedVersion, onVersionChange }: Pick<DatapackCardProps, 'group' | 'selectedVersion' | 'onVersionChange'>): React.JSX.Element {
+    const named = group.versions.filter((candidate) => !isSavedVersion(candidate.id.version));
+    if (named.length === 0) return <span className="text-sm text-gray-700">{shownAs(selectedVersion)}</span>;
+    const save = isSavedVersion(selectedVersion) ? selectedVersion : group.versions.find((candidate) => isSavedVersion(candidate.id.version))?.id.version;
+    const choices = save ? [...named.map((candidate) => candidate.id.version), save] : named.map((candidate) => candidate.id.version);
+    const changed = (version: string): string | undefined => {
+        const summary = group.versions.find((candidate) => candidate.id.version === version);
+        return summary && !isSavedVersion(version) ? versionChanged(summary) : undefined;
+    };
+    return (
+        <Picker aria-label={`Version of ${group.displayName}`} selectedKey={selectedVersion} onSelectionChange={(key) => onVersionChange(String(key))}>
+            {choices.map((version) => (
+                <Item key={version} textValue={shownAs(version)}>
+                    <Text>{shownAs(version)}</Text>
+                    {changed(version) ? <Text slot="description">{changed(version)}</Text> : null}
+                </Item>
+            ))}
+        </Picker>
     );
 }
 
@@ -265,12 +287,14 @@ function initial(displayName: string): string {
 }
 
 /**
- * The words for where a pack comes from. A team pack says nothing: it is the normal case, and an SC
- * has no need to learn where it lives. Everything else says what makes it different.
+ * The words for where a pack comes from, one per source, each matching its Show choice. A team pack
+ * said nothing until 2026-11-09 (owner, walk F86): beside Mine, Data Installer and Community it read
+ * as unlabelled. It says Team: whose it is, as Mine and Community say, and a hint that it is shared
+ * to use, not to change (its save makes a new pack).
  */
-const CARD_TAG: Record<PackSource, string | undefined> = {
+const CARD_TAG: Record<PackSource, string> = {
     yours: 'Mine',
-    team: undefined,
+    team: 'Team',
     installer: 'Data Installer',
     community: 'Community',
 };
@@ -281,9 +305,7 @@ const CARD_TAG: Record<PackSource, string | undefined> = {
  */
 export function cardTags(group: DatapackGroup): string[] {
     const source = packSource(group);
-    const tags: string[] = [];
-    const where = CARD_TAG[source];
-    if (where) tags.push(where);
+    const tags = [CARD_TAG[source]];
     if (source === 'yours' && group.shared) tags.push('Community');
     return tags;
 }

@@ -23,7 +23,7 @@ once, as the store's. Nothing gates on the Data Installer any more: the wizard's
 Datapacks step and the dashboard tile always show, and the panel is titled
 **Datapacks**. That screen and the wizard's Datapacks step load every pack once, and their
 **Show** list filters what they hold (`ui/catalogShow.ts`, owner, 2026-11-05): **Recommended** (the default: your packs, the team's and the Data Installer's curated ones),
-**My Datapacks**, **Demo Builder Datapacks** (the team packs), **Data Installer Datapacks**,
+**My Datapacks**, **Team Datapacks**, **Data Installer Datapacks**,
 **Community Datapacks** and **All Datapacks**. Both surfaces read the list again when
 `dataInstaller.apiBaseUrl`, `dataInstaller.enabled` or `datapackStore.apiBaseUrl` changes
 (`affectsDatapackList`), with no Refresh. The Data Installer choice
@@ -111,13 +111,94 @@ which lists every object the install made. It never removes by name.
   An import installs the kinds asked for and what they need (`ui/importDependencies.ts`), and nothing
   else. A kind left out is left alone: not installed, not compared, not removed, not put back, and
   still on the record. The dry run and `preview_datapack_changes` decide it the same way. A removal
-  takes what the record lists, whatever is ticked, so with a record the form's button reads "Remove
-  all data" and needs nothing ticked (`get-datapack-removal-scope`), and the confirm names the kinds
-  on the record: "Permanently deletes what Bodea installed: categories and products. Puts back the
-  store settings it changed." It adds "The ticked boxes only choose what Import installs." when fewer
-  are ticked than go. A removal's check asks nothing of the pack, so a pack deleted from its store
+  takes what the record lists, whatever is ticked. **Uninstall** (named for the pair of Install, owner
+  2026-11-09, walk F120: "Remove Data" read as all data, "Remove Datapack" as deleting the pack; the
+  same word everywhere this action appears, Project Reset's and Reset Selected's **Uninstall
+  Datapack** and Delete Project's box included) is the flyout's own action, in its
+  More menu on the version whose data Demo Builder installed in this demo's store (owner, 2026-11-09,
+  walk F118: pressing Import first to remove data was strange): it opens the import window straight
+  on the removal's confirm (`opensOn: 'remove'`, `useRemovalWindow`), with no form and no comparison
+  only an import needs, and Cancel or Back closes the window. The import form no longer has it. The
+  confirm names the kinds on the record: "Permanently deletes what Bodea installed: categories and
+  products. Puts back the store settings it changed." A removal's check asks nothing of the pack, so a pack deleted from its store
   can still be removed (`validateRemoval`); it refuses only a store other than the one on the record.
   With no record the service removes the types it is sent, and the form and confirm stay as they were.
+- **Importing another pack or version over the project's replaces it** (walk F97, 2026-11-09,
+  `handlers/importReplacement.ts`). It used to run as a first install: products already in the store
+  were left alone, the project named the new pack, and the old data had nothing pointing at it. Now,
+  when Demo Builder installed the pack the project uses, the import form says what it replaces in
+  the SC's terms (walk F101, `replaceWords.ts`): "Replaces this demo's data with the version from
+  Nov 9, 9:15 AM." for another save of the same pack, "This demo uses Luma. Importing replaces its
+  data with My Luma's." for another pack. Every data type starts ticked (walk F103), and Import
+  first reads the SC's changes to that pack the way a removal does, under the import's own title,
+  waiting on "Checking for your changes" (walk F108, F114: the one name for that check, wherever it
+  runs). With changes the removal's confirm asks "Save Your Changes First?" at medium width (walk
+  F104, F106): "You changed these since this demo's last save. Importing replaces them.", then the
+  changes one row per data type ("Products: 24-mb01, 24-mb02, 24-ug01 and 2 more", walk F110), with
+  **Import Without Saving** at the footer's start and **Cancel** and **Save and Import** (or **Save
+  As New and Import**) at its end (walk F111); with none it starts at once. The start and the removal wait up to
+  `TIMEOUTS.DATAPACK_SAVE_THEN_WRITE` (10 minutes), since a save runs before they answer: the
+  webview's 30 s default gave up on a 1 min 28 s save and said "Couldn't Start the Import" over an
+  import that then ran (walk F105). **The run is steps** (owner, 2026-11-09, `importSteps.ts`,
+  `.rptc/research/replace-flow-steps/`), each named for what it does, in the order it runs, only those
+  that apply: **Save Your Changes** (its stage, then "Saved as Nov 9, 1:56 PM", the record's
+  `savedAs`), **Uninstall the Previous Version** (or Previous Datapack: "Reading the new version",
+  then "Uninstalling Nov 9, 9:15 AM, …", then "Uninstalled Nov 9, 9:15 AM", the record's `replacesVersion`),
+  **Install the Version from Nov 9, 1:56 PM** (or "Install My Luma"; its line a plain count, "5 of
+  11 data types"), its data types under it, small, with small icons, the one in progress with a
+  second line, the word first and then the count: "Installing 1,200 of 2,046", or "Linking product
+  options 2,044 of 2,046" while configurable products go in (walk F133, `doingLine`), and **Verify the Import** ("Recording what went in", "Checking the products against the
+  datapack", then "Checked 2,048 products against the datapack: all match"). The job removes the old
+  pack by its record, through the same removal a reset runs (`demoBuilderEngine/engineRemoval.ts`),
+  after the new pack is read and checked and before anything is installed. The window is fixed to
+  the import it opened for (`useImportWindow`, walk F113: it used to follow the flyout, and closed a
+  second into an import whose save moved the flyout), reads its own version's data types when the
+  flyout has not (`useVersionTypes`, F107), keeps one height to the end (F116, with room for the
+  working data type's second line held the whole time, F133), and ends on Close alone when the
+  import ran to its end (F117). Step titles are bold over a small muted line, with the same space
+  between every step (F132). No line wraps or is cut short: the window picks its width when it
+  opens, two columns of data types at large for more than six, one at medium for six or fewer or
+  in an editor too narrow for two (`runColumns`, F135), and the check and question before a replace
+  take that width (F127). **A clean finish hands off to the small result** (owner, 2026-11-10, walk
+  F134): "My Luma Imported", then "Your changes are saved in Version History." when a save ran and
+  "New products can take 20 minutes to show in search." when products went in, and nothing else.
+  A finish with a problem (a data type refused rows, the check found products that differ, the
+  store settings failed) stays on its steps under the same title in amber, with Fix with AI, the
+  sentence ("This demo now uses My Luma from Nov 9, 9:15 AM. Your changes are saved as Nov 9, 1:56
+  PM.") and "Took …" under them; a stop is "Import Stopped" on its steps. A save or removal that fails installs nothing, says why in red on its step, and leaves the
+  project naming the old pack; the project names the new pack once the old one is gone, so a reset
+  then removes the new one. Agents get the same through `start_datapack_import` (`changes`,
+  `saveAs`, `CHANGES_NEED_ANSWER`). Importing the same version again replaces nothing.
+- **What a removal keeps is decided several reads at a time** (2026-11-09, `removers.ts`,
+  `fewReadsAtOnce.ts`). Before anything is taken out, `decideRemovals` asks of each container the
+  record lists whether something not being removed sits in it (a category's products and child
+  categories, a set's products, a rule's coupons). Timed live on Luma: 134.8 s of a 3 min 5 s
+  removal, one container at a time. Now up to five containers are read at once, in the same order of
+  decisions where one depends on another (a category counts only child categories decided before
+  it; companies, shared catalogs and customer groups one after another), with exactly the reads it
+  made before. A Luma-sized test store: the same 153 reads in 33 rounds instead of 153.
+- **A save's record is built from what the save read** (`rebaseRecord`, `recordFingerprints.ts`). The
+  record moving onto the version a save made used to read every recorded object from the store again
+  (36 s on Luma), moments after the capture read the same store through the same converters. It now
+  hashes the captured rows (products, gift cards, attributes) and the capture's own lookups, and
+  reads only the small kinds a pack row cannot name by the store's id. `recordReuse.test.ts` proves
+  the two records equal for every recorded kind, with edits in the store.
+- **The save and the uninstall after a changes check reuse what the check read** (2026-11-10,
+  `services/commerceReadWindow.ts`). Importing over the demo's pack read Commerce three times on
+  Luma: the check (45 s), the save of the SC's changes (40 of its 48 s) and the uninstall's decision
+  of what to keep (34 s), with nothing written to Commerce in between. The check (both
+  `get-datapack-removal-changes` and `preview-datapack-changes`) now opens the project's Commerce
+  client to `remember`: it always reads Commerce itself and keeps each answer. The save (`openSave`)
+  and the engine's runs open it to `reuse`: a GET the check made is answered from what it read,
+  anything else reads Commerce. Any write through the project's client throws the kept reads away,
+  and they last `CACHE_TTL.MEDIUM`. The check never reuses, so an Admin edit is always seen by the
+  next check. Debug Logs say "reusing what the changes check read from Commerce N s ago".
+- **An uninstall counts in one bare count** ("2,062 of 2,197", walk F131): each run's objects, and
+  products as each Import API call deletes them (`bulkRemoval.ts` `deleted`).
+- **The check after an install reuses the read-back's products** (`verifyInstall.ts`). The read-back
+  that records what an install wrote reads the products it wrote; the check, ten seconds later,
+  reused to read all 2,048 again (14.8 s). A first install's check now reads no products. A
+  reinstall that wrote nothing still reads them, since its read-back read none.
 - **Anything the SC changed since the install is settled first** (step 05,
   `handlers/removalChanges.ts`). The confirm reads it (`get-datapack-removal-changes`, the
   preview's own read) and, when there is something to lose, says what and offers two buttons:
@@ -134,6 +215,15 @@ which lists every object the install made. It never removes by name.
   Without Saving**), and closing the question keeps the data (owner, 2026-11-04: an empty name used
   to lose the changes). `reset_datapack` names the changes and refuses until `changes` is `keep` or
   `drop`, unless the setting answers.
+- **A project delete removes the data only when asked** (owner, 2026-11-09, walk F96,
+  `projects-dashboard/services/datapackDataRemoval.ts`). Its question has **Uninstall Datapack**,
+  unticked, offered only when the project has a datapack Demo Builder installed and a Commerce
+  backend, and its sentence says the data stays in Commerce unless removed. Ticked, the data comes
+  out FIRST, through the reset's own removal and its changes question above; if it does not all
+  come out, the delete stops and the project is kept, since deleting it would leave the data with no
+  record. Delete Selected asks the same per project, with a second step for names, as Reset Selected
+  does; `delete_project` takes `removeData` with `changes` and `saveAs`. A project delete never
+  deletes a datapack: that is the library's Remove.
 - **A pack it has no record of** (one the service installed, or one installed from
   another project) is refused, and nothing is removed (owner, 2026-10-30, step 14
   item 20). The refusal points the SC at **Clear demo data** on the Data Installer
@@ -232,16 +322,40 @@ There is no automatic pack per demo. The demo's pack (`project.datapack`, the pa
 and resets to) is one of the library's cards, wearing the check wherever it lives, the SC's library
 included, and opening on the version the demo uses (`DatapackCatalogGrid`):
 
-- **Create Datapack**, in the catalog's header: the new pack's name, then what goes in it. It makes a
-  new pack of the SC's, whose library name is generated from the name typed (`packIdFor`: a slug and
-  a random suffix, so it can never land on a colleague's). The demo then uses it.
-- **Save Changes**, leading the flyout of the demo's pack, only when the pack is the SC's own (the
-  library lists it as `mine`): a new version of it.
-- **The newer-version dot**, the house amber dot beside the card's version picker, when the library
-  has a later version of the pack, or the version installed changed since (`updatedAt` after the
-  install record's `startedAt`; team packs are updated in place as `main`). Its label says from when;
-  the version picker takes it. It is deliberately not an update in the Updates window: a demo may
-  stay on an older version on purpose.
+- **Create Datapack**, in the catalog's header while the demo has no pack Demo Builder installed: the
+  new pack's name, then what goes in it. It makes a new pack of the SC's, whose library name is
+  generated from the name typed (`packIdFor`: a slug and a random suffix, so it can never land on a
+  colleague's). The demo then uses it.
+- **Save Changes** or **Save As New Datapack**, once the demo has a pack Demo Builder installed: in
+  the header, and leading the flyout of the demo's pack, the same button and dialog from either place
+  (owner, 2026-11-09, walk F83: an SC could not tell which door saved what). On the SC's own library
+  pack (`mine`, not `team`) it is Save Changes, a new version, with **Save As New** beside Save to
+  branch off into a second pack. On a team pack or a colleague's it is Save As New Datapack, named for
+  what it does ("Save Changes" read as changing the team pack): it makes a new pack of the SC's, and
+  each screen says what the save takes in one line ("Saves everything this demo uses as a new
+  datapack of yours.", walk F85: two lines were too busy). The words are in
+  `create-flow/saveWords.ts`; the save window ends on `saveNote` ("Saved as Acme Test. Scratch 1028
+  now uses it."), over one line per data type with its count. The server decides the same
+  (`saveIntoFor`): a team pack is never saved into, even by its owner.
+- **A pack of saves is one thing, with a Version History** (owner, 2026-11-09, walk F99). A save's
+  version is never shown as its id: everywhere it appears it reads as when it was saved, in the SC's
+  own time ("Nov 9, 9:15 AM", `versionLabel` in `packVersions.ts`). The card shows the save the demo
+  uses (or, for a pack no demo uses, the newest) as "Saved Nov 9, 1:56 PM", with no version picker;
+  named versions (`main`, `eds-compatible`) keep their picker, since each is a variant, and a pack
+  holding both lists its saves there as the one on show. The flyout's More menu offers **Version
+  History** on a pack with more than one save: its saves by date, the one in use marked In Use, and
+  **Restore Version**, which opens the flyout on the save chosen and its import, the replace above.
+  No save is deleted by restoring. **Delete Datapack** (renamed from Remove Datapack, owner
+  2026-11-09: it leaves the library for good, where Uninstall can be undone by importing) on a
+  pack of saves deletes it whole, every
+  version and each one's settings layer (`delete-library-datapack` with `everyVersion`). Save
+  Changes shows only on the version the demo uses (walk F100). The storage is unchanged: each save
+  is still its own version, so nothing was migrated.
+- **The updated dot**, the house amber dot beside the card's version picker, when the named version
+  installed changed in the library since (`updatedAt` after the install record's `startedAt`; team
+  packs are updated in place as `main`): "Updated on Nov 9". A later save never lights it: saves
+  are Version History, not newer versions. It is deliberately not an update in the Updates window: a
+  demo may stay on an older version on purpose.
 
 A finished save reads the catalog again at once (`useSaveStoreChanges`), so closing its window
 only closes it. A pinned section above the grid with Save and Save As beside the demo's card
@@ -251,9 +365,26 @@ library pack had never been given.
 
 A pack reaches the Data Installer's shared catalog only by Copy to the Data Installer, afterwards.
 
-Both doors walk the same screens (`create-flow/DatapackFlowDialog`): a card per kind (products, gift
-cards, categories, cart rules, customers, companies, customer groups, shared catalogs, attributes,
-attribute sets), and clicking one opens that kind's checklist. Each kind is listed when first opened,
+**A save from a pack has nothing to tick** (owner, 2026-11-09, walk F85). It takes everything the
+demo uses (`demoUses.ts`): the pack's data as the store holds it now, and whatever of the demo's the
+pack does not hold yet, which is what the SC added in the Admin. Products, gift cards, customers and
+cart rules are the demo's website's, categories sit under its root, and companies are its
+customers', so all of them are the demo's. Customer groups, shared catalogs, attribute sets and
+product attributes Commerce keeps for the whole instance, several demos' on a shared one, so each
+counts only when something of the demo uses it: a group its customers, cart rules or companies are
+in; a catalog for one of those groups; a set one of its products has; an attribute one of its products
+has a value for (read live on Scratch 1028: an attribute counted by its sets took three that no
+product had a value for). Save As New Datapack is the name screen and Save Changes one sentence, each
+with **Add Unused Items** at the footer's start: a list of only those four kinds, of what the demo does not
+use yet (`list-datapack-export-items` with `unused`), for something the SC made to use during the
+demo; Commerce cannot tell that from another demo's, so the SC chooses. Its Cancel puts the
+selections back and returns to the save; its count shows on the button ("Add Unused Items (1)"), and
+its one sentence says "Nothing in this demo uses these yet. Select any to include." Nothing of
+what the demo uses is left out, so the left-out list is a save from nothing's alone.
+
+**Create Datapack, from nothing,** walks the pick screens (`create-flow/DatapackFlowDialog`): a card
+per kind (products, gift cards, categories, cart rules, customers, companies, customer groups, shared
+catalogs, attributes, attribute sets), and clicking one opens that kind's checklist. Each kind is listed when first opened,
 from the project's store with its own credential (`list-datapack-export-items`, `storeItems.ts`),
 scoped to its website where Commerce scopes the thing, Commerce's own left out. The cards show at
 once, and a kind with none is greyed out without a click: `count-datapack-export-items` reads all ten
@@ -264,15 +395,23 @@ the whole store has none; a failed count says nothing. Any other card stays clic
 answers, and greys then if nothing was left to pick. **Select All Data**, at the head of the kinds,
 ticks every item of every kind that may have some, reading any kind not opened yet with a spinner
 beside it; a kind whose list does not answer says "Couldn't be read" on its row. Unticking it clears
-them all, and its box is dashed when some are ticked. The list leaves off what the pack holds already,
-so what is left is what the SC made by hand. The save (`packSave.ts`, `saveStore.ts`) writes the pack
-Demo Builder installed here when there is one, plus what was picked; with none, a store Demo Builder
-did not fill, what was picked alone. A pick brings what it needs (a
+them all, and its box is dashed when some are ticked. The save (`packSave.ts`, `saveStore.ts`)
+writes what was picked, from a store Demo Builder did not fill. A pick brings what it needs (a
 product its categories, set, attributes and quantities; a rule its coupons; a company its admin),
 and never joins the install record, so removing the pack leaves it.
 
+**The save's window shows the import's rows** (owner, 2026-11-09, walk F91): Preparing Save
+("Finding what this demo uses"), a row per data type the save holds, in the order capture reads them
+(`captureRows`, beside `captureLines`), and Finishing Save (the library write, then "Updating this
+demo's record"). Rows read together, products with gift cards, spin together; at the end each says
+what the version holds ("2,046 Products"). They reach the shared progress window as the message's
+`rows` (`OperationRow`), drawn by `WorkRowColumns`, the import window's own columns, and built by the
+import's row model (`runRows.ts`, `SAVE_RUN`). From a pack the website's products are read whole
+once, both to find what the demo uses and as capture's products, and the set list once for every
+product (walk F90).
+
 Before the version is stored it is checked by the install's own parsers (`packRowRefusals` in `runPack.ts`, the same check the install and the dry run run); one the
-install would refuse is not saved, and the save says which kind and why. The save's sentence also
+install would refuse is not saved, and the save says which kind and why. A save from nothing's sentence also
 says what it left out ("Left out, because nothing picked them: 3 products (...)") and any id it
 could not turn into a name and kept as it is. Custom option and bundle option and link ids are
 left out of a saved product, as the service's export leaves them out; a company with no region id

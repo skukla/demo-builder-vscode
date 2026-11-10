@@ -196,7 +196,7 @@ describe('demoBuilderEngine install', () => {
 describe('demoBuilderEngine and the website a pack was installed to', () => {
     const READS = { [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) };
     const ELSEWHERE = { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' };
-    const MOVED = `${PACK.name}@${PACK.version} is installed on the website justrite_test_website. Remove it first, or install it there.`;
+    const MOVED = `${PACK.name}@${PACK.version} is installed on the website justrite_test_website. Uninstall it first, or install it there.`;
 
     it('writes the website and store view it installs to on the record', async () => {
         const { engine, files } = await engineWith(READS, () => ({ id: 40 }));
@@ -278,8 +278,8 @@ describe('demoBuilderEngine removal', () => {
         const status = await settle(engine, activationId);
 
         expect((await engine.getJobFailureReason(activationId))?.error).toBe(
-            'Demo Builder did not install this pack in this project, so it has no record of what the pack made and removes ' +
-                'nothing by name. To clear what an earlier install left in the store, use Clear Demo Data on the Data Installer screen.',
+            'Demo Builder did not install this pack in this project, so it has no record of what the pack made and uninstalls ' +
+                'nothing by name. To clear what an earlier install left in Commerce, use Clear Demo Data on the Data Installer screen.',
         );
         expect(status.perType).toEqual({ attribute_sets: 'error', categories: 'error' });
         expect(ctx.sent).toStrictEqual([]);
@@ -311,7 +311,7 @@ describe('demoBuilderEngine reads', () => {
         [
             'a website the store does not have',
             request({ target: { websiteCode: 'acme', storeCode: 'default' } }),
-            { valid: false, reason: 'The store has no store view default on a website acme. Choose them again in the Commerce step.' },
+            { valid: false, reason: 'Commerce has no store view default on a website acme. Choose them again in the Commerce step.' },
         ],
         ['a kind it cannot install', request({ dataTypes: ['categories', 'aco_products'] }), { valid: false, reason: 'Demo Builder does not install aco_products yet.' }],
         // Live 2026-11-07: the preview counts attribute options apart, and an agent asked for them by name.

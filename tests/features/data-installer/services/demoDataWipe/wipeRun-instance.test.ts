@@ -208,7 +208,7 @@ describe('clearShown', () => {
         const shown = await planWipeFor(sandbox({ ...B2B, customers: [], instance: b2bInstance() }).get, TEST_STORE, { records: [] });
         const store = sandbox({ ...B2B, instance: b2bInstance() });
 
-        await expect(clearShown(store, shown, { records: [] })).rejects.toThrow('The store changed since the list was made');
+        await expect(clearShown(store, shown, { records: [] })).rejects.toThrow('Commerce changed since the list was made');
         expect(store.sent).toStrictEqual([]);
     });
 });

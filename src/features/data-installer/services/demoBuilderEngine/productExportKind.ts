@@ -23,6 +23,7 @@
  */
 
 import { z } from 'zod';
+import { LINKING_OPTIONS } from '../../types';
 import { skusInStore } from './bulkProducts';
 import { installCategories, parseCategoryPack } from './categoriesKind';
 import { importBody, importOneRow, importRefusal } from './importApi';
@@ -204,6 +205,15 @@ async function importCall(
 }
 
 /**
+ * The products count as the progress line says it, and while configurable products go in, the slow
+ * part named after it (walk F122). Both install routes say it here, so they say it the same way.
+ */
+export function productsLine(done: number, total: number, noun: string, parents: boolean): string {
+    const count = `${done.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} ${noun}`;
+    return parents ? `${count}${LINKING_OPTIONS}` : count;
+}
+
+/**
  * Install the rows: their categories first, then the products the pack may make, children before
  * parents, a hundred to an import call.
  */
@@ -223,13 +233,13 @@ export async function installProductExport(
     const todo = rows.filter((r) => !there.has(r.sku.toLowerCase()) && !ours(r));
     const total = new Set(todo.map((r) => r.sku)).size;
     let done = 0;
-    const onDone = (count: number) => {
+    const counted = (parents: boolean) => (count: number) => {
         done += count;
-        ctx.progress?.(`${done.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} products`);
+        ctx.progress?.(productsLine(done, total, 'products', parents));
     };
     // Children first, all of them, then the parents that link them.
-    await importProductRows(ctx, todo.filter((r) => !PARENT_TYPES.has(r.product_type)), { skipKind: PRODUCT_EXPORT_KIND, parents: false, onDone });
-    await importProductRows(ctx, todo.filter((r) => PARENT_TYPES.has(r.product_type)), { skipKind: PRODUCT_EXPORT_KIND, parents: true, onDone });
+    await importProductRows(ctx, todo.filter((r) => !PARENT_TYPES.has(r.product_type)), { skipKind: PRODUCT_EXPORT_KIND, parents: false, onDone: counted(false) });
+    await importProductRows(ctx, todo.filter((r) => PARENT_TYPES.has(r.product_type)), { skipKind: PRODUCT_EXPORT_KIND, parents: true, onDone: counted(true) });
 }
 
 /**
@@ -249,8 +259,13 @@ export async function importProductRows(
     await eachFewAtOnce(
         callsOf(rows, options.parents ? PARENTS_PER_IMPORT : PRODUCTS_PER_IMPORT),
         async (call) => {
+            // Each call's time, for Debug Logs (walk F122): what decides whether smaller calls, or
+            // counting mid-call, would move the products count more often.
+            const started = Date.now();
             await importCall(ctx, call, root, options.skipKind);
-            options.onDone?.(new Set(call.map((r) => r.sku)).size);
+            const count = new Set(call.map((r) => r.sku)).size;
+            ctx.log(`imported ${count} ${options.parents ? 'parent' : 'simple'} products in one call in ${((Date.now() - started) / 1000).toFixed(1)} s`);
+            options.onDone?.(count);
         },
         options.parents ? 1 : IMPORT_CALLS_AT_ONCE,
     );

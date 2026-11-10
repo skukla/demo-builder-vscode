@@ -22,18 +22,20 @@ export interface StoreItemsStageProps {
     onChange: (ids: string[]) => void;
     /** Stable. */
     onAnswered: (kind: PickableKind, page: StoreItemPage | null) => void;
+    /** Add Items: only what this demo does not use. */
+    unused?: boolean;
 }
 
-type KindReadArgs = Pick<StoreItemsStageProps, 'kind' | 'pack' | 'answered' | 'onAnswered'>;
+type KindReadArgs = Pick<StoreItemsStageProps, 'kind' | 'pack' | 'answered' | 'onAnswered' | 'unused'>;
 
-function useKindRead({ kind, pack, answered, onAnswered }: KindReadArgs) {
+function useKindRead({ kind, pack, answered, onAnswered, unused = false }: KindReadArgs) {
     const { load, value, failure, settled } = useDataInstallerRequest<StoreItemPage>('list-datapack-export-items');
     const needsRead = answered === undefined;
 
     useEffect(() => {
         if (!needsRead) return;
-        load({ dataType: kind, ...(pack ? { datapackName: pack.id.name, version: pack.id.version, source: pack.source } : {}) });
-    }, [needsRead, load, kind, pack]);
+        load({ dataType: kind, ...(pack ? { datapackName: pack.id.name, version: pack.id.version, source: pack.source } : {}), ...(unused ? { unused } : {}) });
+    }, [needsRead, load, kind, pack, unused]);
     useEffect(() => {
         if (settled) onAnswered(kind, value);
     }, [settled, value, kind, onAnswered]);
@@ -41,8 +43,8 @@ function useKindRead({ kind, pack, answered, onAnswered }: KindReadArgs) {
     return { value, failure, loading: needsRead && !settled };
 }
 
-export function StoreItemsStage({ kind, pack, answered, picked, onChange, onAnswered }: StoreItemsStageProps): React.ReactElement {
-    const { value, failure, loading } = useKindRead({ kind, pack, answered, onAnswered });
+export function StoreItemsStage({ kind, pack, answered, picked, onChange, onAnswered, unused }: StoreItemsStageProps): React.ReactElement {
+    const { value, failure, loading } = useKindRead({ kind, pack, answered, onAnswered, unused });
     return (
         <StoreKindItems
             kind={kind}
@@ -51,7 +53,6 @@ export function StoreItemsStage({ kind, pack, answered, picked, onChange, onAnsw
             loading={loading}
             picked={picked}
             onChange={onChange}
-            packName={pack?.displayName}
         />
     );
 }

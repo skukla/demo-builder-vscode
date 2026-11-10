@@ -66,8 +66,8 @@ it('stops sharing the same way', async () => {
 });
 
 it.each([
-    ['no name', { shared: true, confirm: true }, 'Name the library datapack, and whether to share it.'],
-    ['no shared', { datapackName: 'acme-1a2b3c', confirm: true }, 'Name the library datapack, and whether to share it.'],
+    ['no name', { shared: true, confirm: true }, 'Name the datapack, and whether to share it.'],
+    ['no shared', { datapackName: 'acme-1a2b3c', confirm: true }, 'Name the datapack, and whether to share it.'],
 ])('refuses, writing nothing, with %s', async (_label, payload, error) => {
     expect(await share(createMockHandlerContext(), payload)).toEqual({ success: false, error });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -89,7 +89,7 @@ it("refuses a pack the SC does not own, writing nothing", async () => {
 
     const result = await share(createMockHandlerContext(), { datapackName: 'acme-1a2b3c', shared: true, confirm: true });
 
-    expect(result).toMatchObject({ success: false, error: 'The datapack library has no pack of yours named acme-1a2b3c.' });
+    expect(result).toMatchObject({ success: false, error: 'My Datapacks has no datapack named acme-1a2b3c.' });
     expect(puts()).toStrictEqual([]);
 });
 

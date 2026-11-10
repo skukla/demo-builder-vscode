@@ -15,17 +15,10 @@ export const DATAPACK_STAGES = {
         detail: "From this demo's Commerce instance",
     },
     savingToLibrary: {
-        label: 'Saving to your datapacks',
+        label: 'Saving to My Datapacks',
         expectation: 'Usually a few seconds',
         // Shown when the save names nothing of its own; it says what is going in (`savingLine`).
         detail: 'Your data',
-    },
-    // "Delete Datapack" on a project delete (step 07): one library delete per version.
-    // FIRST ESTIMATE, NOT MEASURED.
-    deletingOwnPack: {
-        label: 'Deleting its datapack',
-        expectation: 'Usually a few seconds',
-        detail: "This demo's datapack",
     },
     // Clearing a demo's stores (step 10), in the order the clearing runs. FIRST ESTIMATES, NOT
     // MEASURED: the clearing has not yet run against a live store.

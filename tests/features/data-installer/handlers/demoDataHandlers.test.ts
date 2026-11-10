@@ -126,7 +126,7 @@ describe('check-demo-data', () => {
         const { choices } = checked((await handlers['check-demo-data'](context, { stores: [] })).data);
 
         expect(choices.map((w) => w.code)).toEqual(['base', 'justrite', 'bodea', 'justrite_test_website']);
-        expect(await handlers['check-demo-data'](context, { stores: [{ websiteCode: 'admin' }] })).toEqual({ success: false, error: 'The store has no website admin.' });
+        expect(await handlers['check-demo-data'](context, { stores: [{ websiteCode: 'admin' }] })).toEqual({ success: false, error: 'Commerce has no website admin.' });
     });
 
     it('asks the ERP integration serving the instance, found among every local project, which chosen websites it routes', async () => {
@@ -146,7 +146,7 @@ describe('check-demo-data', () => {
     it('names a website the store does not have', async () => {
         const { handlers, context } = setUp();
 
-        expect(await handlers['check-demo-data'](context, { stores: [{ websiteCode: 'nope' }] })).toEqual({ success: false, error: 'The store has no website nope.' });
+        expect(await handlers['check-demo-data'](context, { stores: [{ websiteCode: 'nope' }] })).toEqual({ success: false, error: 'Commerce has no website nope.' });
     });
 });
 
@@ -295,7 +295,7 @@ describe('clear-demo-data', () => {
         const res = await handlers['clear-demo-data'](context, { stores: TEST_STORE, token, confirm: true });
 
         expect(res.success).toBe(false);
-        expect(res.error).toMatch(/store changed since the list was made/);
+        expect(res.error).toMatch(/Commerce changed since the list was made/);
         expect((res.data as { preview: { remove: { customers: { count: number } } } }).preview.remove.customers.count).toBe(2);
         expect(store.sent).toStrictEqual([]);
     });

@@ -56,7 +56,7 @@ function projectReads(context: HandlerContext, project: Project): AcoCommerce {
     const { authManager } = context;
     return async (storeView) => {
         if (!authManager)
-            return { refusal: "Adobe sign-in is required to read this project's store." };
+            return { refusal: "Adobe sign-in is required to read this project's Commerce instance." };
         const client = await commerceClientForProject(
             project,
             authManager,

@@ -1,6 +1,7 @@
 /**
- * BatchResetChanges — Reset Selected's second step, Datapack Changes (owner, 2026-11-04), shown only
- * when a pack to be removed is not the SC's and has changes. A row per such pack, its project under
+ * BatchDatapackChanges — the second step of Reset Selected (owner, 2026-11-04) and of Delete
+ * Selected (walk F96), Datapack Changes, shown only when a pack whose data goes is not the SC's and
+ * has changes. A row per such pack, its project under
  * it; a new datapack's name, required and empty, or Discard Changes, whose header is its Select All.
  * Two rows may not save under one name. The SC's own packs keep their changes without asking.
  *
@@ -8,26 +9,27 @@
  * its label for screen readers only: in a table its label is the column's header and its hint sits
  * in the empty field, where `forms/FormField` puts both beside the field and has no room per row.
  *
- * @module features/projects-dashboard/ui/components/BatchResetChanges
+ * @module features/projects-dashboard/ui/components/BatchDatapackChanges
  */
 
 import { Checkbox, TextField } from '@adobe/react-spectrum';
 import React from 'react';
-import { changeRows, discardColumnState, duplicateNamePaths, fieldOf } from '../batchChoices';
+import { changeRows, discardColumnState, duplicateNamePaths, fieldOf, type PackRow, type RemoveTicks } from '../batchChoices';
 import type { BatchChoices } from '../hooks/useBatchChoices';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
-import type { BatchResetRow } from '@/types/projectsBatch';
 
 const DISCARD = 'Discard Changes';
 const DUPLICATE = 'Another datapack in this list has that name';
 
 interface Props {
-    rows: BatchResetRow[];
+    rows: readonly PackRow[];
+    /** Whose pack's data goes, by project path. */
+    removing: RemoveTicks;
     choices: BatchChoices;
 }
 
-function NameCell({ row, choices, duplicate }: { row: BatchResetRow; choices: BatchChoices; duplicate: boolean }) {
+function NameCell({ row, choices, duplicate }: { row: PackRow; choices: BatchChoices; duplicate: boolean }) {
     const field = fieldOf(choices.fields, row.path);
     if (field.drop) return <td><span className="work-row-detail">Changes discarded</span></td>;
     return (
@@ -47,9 +49,9 @@ function NameCell({ row, choices, duplicate }: { row: BatchResetRow; choices: Ba
 }
 
 /** The packs whose changes need an answer, each saved as a new pack or discarded. */
-export function BatchResetChanges({ rows, choices }: Props): React.ReactElement {
-    const asking = changeRows(rows, choices.removeTicks);
-    const duplicates = duplicateNamePaths(rows, choices.removeTicks, choices.fields);
+export function BatchDatapackChanges({ rows, removing, choices }: Props): React.ReactElement {
+    const asking = changeRows(rows, removing);
+    const duplicates = duplicateNamePaths(rows, removing, choices.fields);
     const column = discardColumnState(asking, choices.fields);
     return (
         <div className="batch-confirm">

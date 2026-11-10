@@ -24,6 +24,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { createMockProject } from '../../../helpers/projectFake';
 import { forgetPackReads } from '@/features/data-installer/services/packReadCache';
+import { forgetReadWindows } from '@/features/data-installer/services/commerceReadWindow';
 
 // Pack reads are kept between callers (`packReadCache`, walk F82): each test reads its own.
 beforeEach(() => forgetPackReads());
@@ -120,6 +121,32 @@ describe('projectCommerce', () => {
         await projectCommerce({ project, authManager, secrets: undefined })();
 
         expect(mockCommerceClientForProject).toHaveBeenCalledWith(project, authManager, undefined, undefined, 'all');
+    });
+});
+
+// Walk F128: a changes check keeps what it reads; the save and the run after it reuse it.
+describe('projectCommerce sharing one read of Commerce', () => {
+    beforeEach(() => forgetReadWindows());
+
+    it('answers a save from what the changes check just read, and a plain open reads Commerce', async () => {
+        const get = jest.fn(async (p: string) => ({ p }));
+        mockCommerceClientForProject.mockResolvedValue({ get, send: jest.fn() });
+        const project = createMockProject({ path: '/projects/frescopa' });
+        const authManager = {} as AuthenticationService;
+        const open = (reads?: Parameters<typeof projectCommerce>[1]) => projectCommerce({ project, authManager, secrets: undefined }, reads)();
+        const client = async (reads?: Parameters<typeof projectCommerce>[1]) => {
+            const opened = await open(reads);
+            if ('refusal' in opened) throw new Error(opened.refusal);
+            return opened;
+        };
+
+        await (await client({ use: 'remember' })).get('categories/12');
+        await (await client({ use: 'reuse' })).get('categories/12');
+        expect(get).toHaveBeenCalledTimes(1);
+
+        // CONTROL: opened without a window, as every other reader is, it reads Commerce.
+        await (await client()).get('categories/12');
+        expect(get).toHaveBeenCalledTimes(2);
     });
 });
 

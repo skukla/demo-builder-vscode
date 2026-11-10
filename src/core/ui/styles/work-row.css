@@ -97,4 +97,82 @@
         align-self: stretch;
         text-align: left;
     }
+
+    /* Small rows nested under a step (`WorkRow` dense, the import's data types under Install):
+       tighter, a small name and a small icon, and no hairline, since the step above has its own
+       (owner, 2026-11-10, walk F132). */
+    .work-row--dense {
+        padding: 2px 0;
+    }
+
+    .work-row--dense + .work-row--dense {
+        border-top: none;
+    }
+
+    .work-row--dense .work-row-icon {
+        width: 20px;
+        min-height: 18px;
+    }
+
+    /* The status icons drawn smaller. A transform, because Spectrum sizes its icons outside the
+       layers, where a width set here would lose. */
+    .work-row--dense .work-row-icon > * {
+        transform: scale(0.7);
+        transform-origin: left center;
+    }
+
+    .work-row--dense .work-row-text {
+        line-height: 18px;
+        white-space: nowrap;
+    }
+
+    .work-row--dense .checkbox-row-label {
+        font-size: 12px;
+    }
+
+    /* A dense row's note (orange or red) wraps, and adds nothing to its column's width: the name
+       and the second line set the width, the note fills it (walk F135 review, 2026-11-10). */
+    .work-row--dense .work-row-why,
+    .work-row--dense .work-row-note,
+    .work-row--dense .dialog-problem {
+        white-space: normal;
+        contain: inline-size;
+    }
+
+    /* The working row's second line: what it is doing and how far, "Installing 1,200 of 2,046"
+       (walk F133). Its height is the room every dense column holds below. */
+    .work-row-doing {
+        font-size: 11px;
+        line-height: 16px;
+        color: var(--spectrum-global-color-gray-600);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    /* A run's parts down each column in turn (`WorkRowColumns`): the import's window and a run
+       the progress modal shows as rows (walk F91). Moved from the import's own sheet. */
+    .work-row-columns {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        column-gap: 24px;
+        align-self: stretch;
+        text-align: left;
+    }
+
+    /* Dense columns are never narrower than their longest line, so nothing is cut short or wraps
+       (owner, 2026-11-10, walk F135); the window's width is chosen so they fit. */
+    .work-row-columns--dense {
+        grid-auto-columns: minmax(max-content, 1fr);
+    }
+
+    /* Room for the working row's second line, held in every column so the list keeps one height
+       whichever row is working (walk F133). The working row's own column has it in the row. */
+    .work-row-columns--dense > .work-row-column {
+        padding-bottom: 16px;
+    }
+
+    .work-row-columns--dense > .work-row-column--working {
+        padding-bottom: 0;
+    }
 }

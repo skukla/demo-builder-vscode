@@ -24,7 +24,6 @@ import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 export interface ImportChangesArgs {
     id: DatapackId;
-    displayName: string;
     source?: DatapackStoreName;
     /** The data types the form offers; a line is given for each. */
     types: readonly string[];
@@ -48,7 +47,7 @@ export interface ImportChanges {
 const OPTIONS = { timeout: TIMEOUTS.DATAPACK_IMPORT_COMPARE };
 
 export function useImportChanges(args: ImportChangesArgs): ImportChanges {
-    const { id, displayName, source, types, installed, active, used } = args;
+    const { id, source, types, installed, active, used } = args;
     const preview = useDataInstallerRequest<ChangePreview>('preview-datapack-changes', OPTIONS);
     const [asked, setAsked] = useState(false);
     const { load } = preview;
@@ -63,13 +62,8 @@ export function useImportChanges(args: ImportChangesArgs): ImportChanges {
     const comparing = asked && !preview.settled;
     if (used) return { wait: false, lines: null, failed: false };
     return {
-        wait: comparing && active ? comparingWait(displayName) : false,
+        wait: comparing && active ? WAIT_STAGES.checkingForChanges : false,
         lines: preview.value ? changeLines(preview.value.kinds, types) : null,
         failed: preview.failure !== null,
     };
-}
-
-/** The comparison's wait, naming the pack. */
-function comparingWait(displayName: string): ModalWait {
-    return { ...WAIT_STAGES.comparingWithCommerce, detail: `Each data type in ${displayName}` };
 }

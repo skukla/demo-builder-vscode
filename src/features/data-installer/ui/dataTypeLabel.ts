@@ -29,9 +29,15 @@ const ACRONYMS: Record<string, string> = {
     aco: 'ACO',
 };
 
-/** Codes whose words run together, so casing alone cannot name them. The code stays the value sent. */
+/**
+ * Codes casing alone cannot name: words that run together, or a Commerce name an SC would not
+ * recognise. The code stays the value sent. `source_items` is how many of each product sit in each
+ * warehouse: "Stock Quantities" (owner, 2026-11-09, walk F125), not "Sources" (the warehouses, a kind
+ * of their own) nor "Stocks" (groups of warehouses, also their own).
+ */
 const JOINED_CODES: Record<string, string> = {
     giftcards: 'Gift Cards',
+    source_items: 'Stock Quantities',
 };
 
 /**

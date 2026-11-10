@@ -112,7 +112,17 @@ it("says it is permanent in the opening sentence, not in a footnote under the li
     await tick(/Bodea Store/);
 
     expect(screen.queryByText(/can't be undone/)).not.toBeInTheDocument();
-    expect(screen.getByText('Never touched: what Demo Builder installed.')).toBeInTheDocument();
+});
+
+// The list says what goes and the lead says orders are closed: the "Never touched" footnote under
+// it changed nothing the SC knows or does (review, 2026-11-10). It stays in the agent's answer.
+it('draws no grey footnote of what is never touched under the list', async () => {
+    await openModal();
+
+    await tick(/Bodea Store/);
+
+    expect(screen.getByText('2 to remove, 1 taken off the chosen websites')).toBeInTheDocument();
+    expect(screen.queryByText(/Never touched/)).not.toBeInTheDocument();
 });
 
 it('puts no label over the list: the list says what it is', async () => {
@@ -227,7 +237,7 @@ it('writes large counts with separators, in the list and on the button', async (
         { label: 'Cart Rules', value: '3,000 to remove, with their coupons, 4,000 taken off the chosen websites' },
         { label: 'Orders', value: '5,000 to cancel, 6,000 to refund, 7,000 to leave open with a note, 8,000 returns to close' },
         { label: 'Not Removed', value: '9,000 products: x' },
-        { label: 'Installed', value: '1,500 products, which removing its datapack takes' },
+        { label: 'Installed', value: '1,500 products. Uninstalling its datapack takes these out.' },
     ]);
     await openModal();
     await tick(/Bodea Store/);

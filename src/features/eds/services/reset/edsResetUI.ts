@@ -114,7 +114,7 @@ export interface EdsResetWithUIOptions {
      * A reset of several projects at once (the projects list's Reset Selected, owner 2026-11-04):
      * the batch asked its questions before anything ran, so none is asked here, and it reports
      * through `withinEdit.report` into the batch's one window. `removeDatapack` is the batch's
-     * Remove Datapack; `changes` answers a pack that is not the SC's (a name, or `drop`).
+     * Uninstall Datapack; `changes` answers a pack that is not the SC's (a name, or `drop`).
      * Other store data is never cleared by a batch: a single reset shows what it would clear
      * before it asks, and a batch could not.
      */
@@ -240,13 +240,13 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     // Gated on the project's recorded pack rather than on asking the service what
     // is installed — that is a per-datapack lookup this dialog does not need, and
     // the removal itself reports when there was nothing there. It DOES now make
-    // one short credential call (see the function), which is bounded and silent
-    // on failure; the older "no network call in front of a modal" phrasing here
-    // overstated a rule that was really about not adding failure modes.
+    // one short credential call (see the function), bounded and silent on failure.
+    const memory = context.context.globalState;
     const removeData = answered
         ? answered.removeDatapack && (await canRemoveSampleData) === true
-        : !withinEdit && (await confirmSampleDataRemoval(project, vscode, canRemoveSampleData));
-    // Only after "Remove Datapack", or with no datapack: keeping the pack must not clear its data.
+        : !withinEdit &&
+          (await confirmSampleDataRemoval(project, vscode, canRemoveSampleData, { memory }));
+    // Only after "Uninstall Datapack", or with no datapack: keeping the pack must not clear its data.
     const otherPlan = removeData || !project.datapack ? await otherData : undefined;
     const clearOther = otherPlan !== undefined && (await confirmClearOtherData(vscode, otherPlan));
 

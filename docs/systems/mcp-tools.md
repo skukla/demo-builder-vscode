@@ -206,7 +206,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `clear_demo_data` | **confirm** | Clear the chosen stores of everything check_demo_data listed: deletes those products, categories, customers, cart rules |
 | `copy_library_datapack_to_installer` | **confirm** | Copy a datapack library pack into the Data Installer's catalog, so other teams can find and install |
 | `delete_library_datapack` | **confirm** | Delete one of your own packs from the datapack library — the undo of |
-| `get_datapack_import_status` | read | Progress of the running or most recent datapack import/reset: its outcome (watching while it runs), |
+| `get_datapack_import_status` | read | Progress of the running or most recent datapack import or uninstall: its outcome (watching while it runs), |
 | `get_datapack_import_target` | read | Which Commerce instance an import would land on, derived from the current project, |
 | `list_datapack_export_items` | read | What this Commerce instance holds for one data type, to choose from before exporting. |
 | `list_datapack_import_scopes` | read | The websites and store views an import can be scoped to on this project's instance. |
@@ -215,7 +215,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `open_datapack_zip` | read | Say what a datapack zip file holds — name, version, data types, and any settings layer by path — |
 | `preview_datapack_changes` | read | What installing a datapack again would change in this project\ |
 | `rename_datapack` | **confirm** | Rename one of your own datapack library packs: every version takes the new display |
-| `reset_datapack` | **confirm** | Remove a datapack's data from the Commerce instance so the project can be reused. |
+| `reset_datapack` | **confirm** | Uninstall a datapack: take its data out of the Commerce instance so the project can be reused (the screen's Uninstall). |
 | `save_datapack_zip` |  | Save a datapack from the Data Installer or the datapack library as a zip file in the |
 | `save_store_changes_to_pack` | **confirm** | Save the store\ |
 | `share_datapack` | **confirm** | Share one of your own datapack library packs with your team, or stop sharing it: every version. |
@@ -228,7 +228,7 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `delete_project` | **confirm** | Permanently delete a project: its local files, optionally (deletePack:true) every version of its own pack in the datapack library, which datapack.deleted reports, and optionally its GitHub repo and DA |
+| `delete_project` | **confirm** | Permanently delete a project: its local files, optionally (removeData:true) its datapack's data in Commerce first, which datapackData reports (the user's changes in it are saved into their own pack; w |
 
 ## `src/features/ai/server/demoPackageTools.ts`
 

@@ -1,15 +1,13 @@
 /**
  * DatapackActivityView tests — the service's own request log.
  *
- * Paged by "Load 50 more", NOT by a pagination component: the repo has none, one
+ * Paged by "Load 50 More", NOT by a pagination component: the repo has none, one
  * consumer does not justify inventing one, and the log is a feed — nobody asks
  * for page 7 of it. The button ACCUMULATES; a naive re-fetch that replaced the
  * list would lose everything above it.
  *
- * `scenario` is rendered verbatim and never narrowed to a union. The documented
- * enum (`SINGLE_DB`, `ENTIRE_DB`, …) does not match live data, which returns
- * `DATAPACK_ALL_ITEMS` and `DATAPACK_SPECIFIC_ITEMS` — so any mapping table would
- * silently blank the real values.
+ * A row speaks the screen's words (owner, 2026-11-10): the pack's display name, a save by its
+ * date, and the operation as its button names it. No ids, no wire words.
  *
  * Strict TDD: written BEFORE the view exists.
  */
@@ -69,7 +67,7 @@ describe('DatapackActivityView', () => {
         await waitFor(() => expect(screen.getAllByTestId('activity-row')).toHaveLength(2));
     });
 
-    it('shows the pack, mode, instance and scenario verbatim', async () => {
+    it('shows the pack, its named version and the operation, without the instance id or scenario', async () => {
         resolveWith([makeEntry()]);
 
         render(<DatapackActivityView />);
@@ -77,10 +75,46 @@ describe('DatapackActivityView', () => {
 
         expect(rows[0]).toHaveTextContent('bodea');
         expect(rows[0]).toHaveTextContent('main');
-        expect(rows[0]).toHaveTextContent('import');
-        expect(rows[0]).toHaveTextContent('aBcDeFgHiJkLmNoPqRsTu');
-        // Verbatim — the documented enum does not match what the service sends.
-        expect(rows[0]).toHaveTextContent('DATAPACK_SPECIFIC_ITEMS');
+        expect(rows[0]).toHaveTextContent('Import');
+        expect(rows[0]).not.toHaveTextContent('aBcDeFgHiJkLmNoPqRsTu');
+        expect(rows[0]).not.toHaveTextContent('DATAPACK_SPECIFIC_ITEMS');
+    });
+
+    it('names the pack by its display name and a save by when it was saved, never their ids', async () => {
+        resolveWith([makeEntry({ id: { name: 'my-luma-x1', version: '20261109-141504' }, displayName: 'My Luma' })]);
+
+        render(<DatapackActivityView />);
+        const [row] = await screen.findAllByTestId('activity-row');
+
+        expect(row).toHaveTextContent('My Luma');
+        expect(row).toHaveTextContent(/Nov 9, /);
+        expect(row).not.toHaveTextContent('my-luma-x1');
+        expect(row).not.toHaveTextContent('20261109-141504');
+    });
+
+    it.each([
+        ['import', 'Import'],
+        ['delete', 'Uninstall'],
+        ['export', 'Save'],
+        ['validate', 'Dry Run'],
+    ])('calls a %s run by the screen\'s word, %s', async (mode, word) => {
+        resolveWith([makeEntry({ mode })]);
+
+        render(<DatapackActivityView />);
+        const [row] = await screen.findAllByTestId('activity-row');
+
+        expect(row.querySelector('.datapack-row-mode')).toHaveTextContent(word);
+        expect(row).not.toHaveTextContent(new RegExp(`\\b${mode}\\b`));
+    });
+
+    it('offers the filter in the screen\'s words, still asking by the wire mode', async () => {
+        resolveWith([makeEntry()]);
+
+        render(<DatapackActivityView />);
+        await screen.findAllByTestId('activity-row');
+
+        const options = Array.from(screen.getByTestId('spectrum-picker-select').querySelectorAll('option')).map((o) => o.textContent);
+        expect(options).toEqual(['All Operations', 'Import', 'Save', 'Uninstall', 'Dry Run']);
     });
 
     describe('mode filter', () => {
@@ -139,7 +173,7 @@ describe('DatapackActivityView', () => {
             render(<DatapackActivityView />);
 
             expect(
-                await screen.findByRole('button', { name: /load 50 more/i })
+                await screen.findByRole('button', { name: /Load 50 More/ })
             ).toBeInTheDocument();
         });
 
@@ -149,14 +183,14 @@ describe('DatapackActivityView', () => {
             render(<DatapackActivityView />);
             await screen.findAllByTestId('activity-row');
 
-            expect(screen.queryByRole('button', { name: /load 50 more/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Load 50 More/ })).not.toBeInTheDocument();
         });
 
         it('asks for the next page by skip', async () => {
             resolveWith([makeEntry()], 120);
 
             render(<DatapackActivityView />);
-            fireEvent.click(await screen.findByRole('button', { name: /load 50 more/i }));
+            fireEvent.click(await screen.findByRole('button', { name: /Load 50 More/ }));
 
             await waitFor(() =>
                 expect(lastActivityRequest()).toEqual({
@@ -175,7 +209,7 @@ describe('DatapackActivityView', () => {
             ]);
 
             render(<DatapackActivityView />);
-            fireEvent.click(await screen.findByRole('button', { name: /load 50 more/i }));
+            fireEvent.click(await screen.findByRole('button', { name: /Load 50 More/ }));
 
             await waitFor(() => expect(screen.getAllByTestId('activity-row')).toHaveLength(2));
         });

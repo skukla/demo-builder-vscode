@@ -30,7 +30,7 @@ import type { SaveStoreChangesRequest } from '@/types/webviewRequests';
 export interface SaveStoreChanges {
     /** Save: open the pick screen for the demo's pack, which is the SC's. */
     offer: (pack: PackBeingSaved) => void;
-    /** Save As: open the name and pick screens; `pack` is what the store holds, when Demo Builder installed one. */
+    /** Save As: open the name screen; `pack` is what the store holds, when Demo Builder installed one. */
     offerSaveAs: (suggestedName: string, pack?: PackBeingSaved) => void;
     /** The pick screen and the progress window; mount once, beside the flyout. */
     windows: React.JSX.Element;
@@ -89,9 +89,11 @@ export function useSaveStoreChanges(onSaved: () => void): SaveStoreChanges {
                 name,
                 message: 'save-store-changes-to-pack',
                 payload: { ...requestOf(pack, picks, saveAsName) },
-                title: saveAsName ? `Creating ${name}` : `Saving ${name}`,
-                failureTitle: saveAsName ? `Couldn't Create ${name}` : `Couldn't Save ${name}`,
-                successTitle: saveAsName ? 'Datapack Created' : 'Datapack Saved',
+                // Created only from nothing; from a pack, its own or a team pack, it is Saved (owner, 2026-11-09).
+                title: pack ? `Saving ${name}` : `Creating ${name}`,
+                failureTitle: pack ? `Couldn't Save ${name}` : `Couldn't Create ${name}`,
+                // The result names the pack (owner, 2026-11-10): "My Luma Saved", never "Datapack Saved".
+                successTitle: pack ? `${name} Saved` : `${name} Created`,
             });
         },
         [start, offered],
@@ -99,7 +101,9 @@ export function useSaveStoreChanges(onSaved: () => void): SaveStoreChanges {
 
     const windows = (
         <>
-            {offered ? <SaveFromStoreModal pack={offered.pack} saveAsName={offered.saveAsName} onSave={save} onClose={closeOffer} /> : null}
+            {offered ? (
+                <SaveFromStoreModal pack={offered.pack} saveAsName={offered.saveAsName} onSave={save} onClose={closeOffer} />
+            ) : null}
             <OperationProgressModal operation={open} onRetry={retry} onClose={close} />
         </>
     );

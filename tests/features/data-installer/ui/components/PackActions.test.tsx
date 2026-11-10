@@ -1,7 +1,7 @@
 /**
  * The flyout's actions (owner, 2026-10-30): Import is the one button on view; everything else is
- * in the house kebab (`CardActionsMenu`): Save as file, Share or Stop sharing, and Remove from
- * library in its own section at the bottom. Share and Remove show only on the SC's own library pack,
+ * in the house kebab (`CardActionsMenu`): Save as file, Share or Stop sharing, and Delete Datapack
+ * in its own section at the bottom. Share and Delete show only on the SC's own library pack,
  * each asks in a dialog, the flyout waits while a row works, and a library pack offers Copy to the
  * Data Installer with the service's engine.
  *
@@ -20,6 +20,7 @@ import type { DatapackDetail } from '@/features/data-installer/types';
 import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
 import { PackActions } from '@/features/data-installer/ui/components/PackActions';
 import { SHARE_CONSENT } from '@/features/data-installer/shareWording';
+import { versionLabel } from '@/features/data-installer/packVersions';
 
 const mockRequest = webviewClient.request as jest.Mock;
 
@@ -103,7 +104,7 @@ it('leads with Save Changes when given it, Import beside it', async () => {
 describe('a library pack', () => {
     // Owner, 2026-11-06: Demo Builder installs a library pack where it is, so Import is always there.
     // Copy to the Data Installer is not shown even while it is on: our accounts cannot write to it yet,
-    // so it would fail every time (`COPY_TO_INSTALLER_SHOWN`).
+    // so it would fail every time (`INSTALLER_WRITES_SHOWN`).
     it('offers Import, and no Copy to the Data Installer even while it is on', async () => {
         const props = renderActions({ detail: LIBRARY, installerOn: true });
 
@@ -127,19 +128,19 @@ describe('a library pack', () => {
         expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
     });
 
-    it("offers neither Share nor Remove on a colleague's library pack", () => {
+    it("offers neither Share nor Delete on a colleague's library pack", () => {
         renderActions({ detail: LIBRARY });
         expect(menuLabels()).toEqual(['Save as File']);
     });
 
-    it('lists Share on a private pack of the SC, Stop sharing on a shared one, and Remove Datapack at the bottom', () => {
+    it('lists Share on a private pack of the SC, Stop sharing on a shared one, and Delete Datapack at the bottom', () => {
         renderActions({ detail: OWN });
-        expect(menuLabels()).toEqual(['Save as File', 'Share', 'Remove Datapack']);
+        expect(menuLabels()).toEqual(['Save as File', 'Share', 'Delete Datapack']);
     });
 
     it('lists Stop sharing on a shared pack of the SC', () => {
         renderActions({ detail: { ...OWN, shared: true } });
-        expect(menuLabels()).toEqual(['Save as File', 'Stop Sharing', 'Remove Datapack']);
+        expect(menuLabels()).toEqual(['Save as File', 'Stop Sharing', 'Delete Datapack']);
     });
 });
 
@@ -151,7 +152,7 @@ describe('in the Datapack Library', () => {
         expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
-        expect(menuLabels()).toEqual(['Remove Datapack']);
+        expect(menuLabels()).toEqual(['Delete Datapack']);
         await press(screen.getByRole('button', { name: 'Save as File' }));
         expect(mockRequest).toHaveBeenCalledWith('save-datapack-zip', { source: 'library', datapackName: 'bodea', version: 'main' }, undefined);
     });
@@ -214,17 +215,17 @@ describe('Share and Stop sharing ask in a dialog', () => {
     });
 });
 
-describe('Remove Datapack asks in a dialog, every time', () => {
+describe('Delete Datapack asks in a dialog, every time', () => {
     it('names the version, says it cannot be undone, and removes only when the dialog says so', async () => {
         const props = renderActions({ detail: OWN });
         mockRequest.mockResolvedValue({ success: true, data: { deleted: true } });
 
-        await press(row('Remove Datapack'));
-        expect(screen.getByRole('heading', { name: 'Remove Bodea?' })).toBeInTheDocument();
-        expect(screen.getByText("This removes version main, and it can't be undone.")).toBeInTheDocument();
+        await press(row('Delete Datapack'));
+        expect(screen.getByRole('heading', { name: 'Delete Bodea?' })).toBeInTheDocument();
+        expect(screen.getByText("Permanently deletes version main.")).toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalled();
 
-        await press(screen.getByRole('button', { name: 'Remove' }));
+        await press(screen.getByRole('button', { name: 'Delete' }));
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'bodea', version: 'main', confirm: true }, undefined);
         await settle();
         expect(props.onRemoved).toHaveBeenCalledTimes(1);
@@ -233,16 +234,16 @@ describe('Remove Datapack asks in a dialog, every time', () => {
     it('adds the warning for a pack shared in a project file', async () => {
         renderActions({ detail: OWN, sharedInFile: WARNING });
 
-        await press(row('Remove Datapack'));
+        await press(row('Delete Datapack'));
 
         expect(screen.getByText(WARNING)).toBeInTheDocument();
-        expect(screen.getByText("This removes version main, and it can't be undone.")).toBeInTheDocument();
+        expect(screen.getByText("Permanently deletes version main.")).toBeInTheDocument();
     });
 
     it('keeps the pack when cancelled', async () => {
         renderActions({ detail: OWN, sharedInFile: WARNING });
 
-        await press(row('Remove Datapack'));
+        await press(row('Delete Datapack'));
         await press(screen.getByRole('button', { name: 'Cancel' }));
 
         expect(mockRequest).not.toHaveBeenCalled();
@@ -253,10 +254,10 @@ describe('Remove Datapack asks in a dialog, every time', () => {
         mockRequest.mockResolvedValue({ success: false, error: 'Only the owner can delete this pack.' });
         renderActions({ detail: OWN });
 
-        await press(row('Remove Datapack'));
-        await press(screen.getByRole('button', { name: 'Remove' }));
+        await press(row('Delete Datapack'));
+        await press(screen.getByRole('button', { name: 'Delete' }));
 
-        expect(await screen.findByText('It could not be removed: Only the owner can delete this pack.')).toBeInTheDocument();
+        expect(await screen.findByText('It could not be deleted: Only the owner can delete this pack.')).toBeInTheDocument();
     });
 });
 
@@ -291,8 +292,8 @@ describe('while a menu row works, the flyout waits', () => {
         const props = renderActions({ detail: OWN });
         const finish = pendingRequest();
 
-        await press(row('Remove Datapack'));
-        await press(screen.getByRole('button', { name: 'Remove' }));
+        await press(row('Delete Datapack'));
+        await press(screen.getByRole('button', { name: 'Delete' }));
         expect(waiting()).toBeInTheDocument();
 
         finish({ success: true, data: { deleted: true } });
@@ -353,26 +354,123 @@ describe('a pack with a settings layer (datapack-engine step 09)', () => {
         mockRequest.mockResolvedValue({ success: true, data: { deleted: true } });
         renderActions({ settingsLayer: LAYER, onSharingChanged });
 
-        expect(menuLabels()).toEqual(['Save as File', 'Remove Its Store Settings']);
-        await press(row('Remove Its Store Settings'));
-        expect(screen.getByRole('heading', { name: "Remove Bodea's Store Settings?" })).toBeInTheDocument();
+        expect(menuLabels()).toEqual(['Save as File', 'Delete Store Settings']);
+        await press(row('Delete Store Settings'));
+        expect(screen.getByRole('heading', { name: "Delete Bodea's Store Settings?" })).toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalled();
-        await press(screen.getByRole('button', { name: 'Remove' }));
+        await press(screen.getByRole('button', { name: 'Delete' }));
 
         expect(mockRequest).toHaveBeenCalledWith('delete-library-datapack', { datapackName: 'bodea-settings', version: '2', confirm: true }, undefined);
-        expect(await screen.findByText('Removed.')).toBeInTheDocument();
+        expect(await screen.findByText('Deleted.')).toBeInTheDocument();
         expect(onSharingChanged).toHaveBeenCalled();
     });
 
     it("offers it beside the SC's own pack's Remove, after it", () => {
         renderActions({ detail: OWN, settingsLayer: LAYER });
 
-        expect(menuLabels().slice(-2)).toEqual(['Remove Datapack', 'Remove Its Store Settings']);
+        expect(menuLabels().slice(-2)).toEqual(['Delete Datapack', 'Delete Store Settings']);
     });
 
     it("does not offer a colleague's layer, which only its owner can remove", () => {
         renderActions({ settingsLayer: { ...LAYER, mine: false } });
 
         expect(menuLabels()).toEqual(['Save as File']);
+    });
+});
+
+// A pack of saves (owner, 2026-11-09, walk F99): its earlier saves are its Version History, under
+// More; Restore Version opens the import of the one chosen; Delete Datapack takes it whole.
+const NEWEST = '20261109-185605';
+const IN_USE = '20261109-160124';
+const OLDEST = '20261109-141504';
+const HISTORY = [NEWEST, IN_USE, OLDEST];
+
+const SAVES: DatapackDetail = {
+    id: { name: 'my-luma', version: IN_USE },
+    displayName: 'My Luma',
+    shared: false,
+    dataTypes: ['products'],
+    art: {},
+    store: 'library',
+    mine: true,
+};
+
+function renderSaves(over: Partial<React.ComponentProps<typeof PackActions>> = {}) {
+    const props = {
+        detail: SAVES,
+        onImport: jest.fn(),
+        onRemoved: jest.fn(),
+        installerOn: false,
+        history: HISTORY,
+        inUse: IN_USE,
+        ...over,
+    };
+    render(<PackActions {...props} />);
+    return props;
+}
+
+
+
+describe('Version History', () => {
+    it('is under More on a pack with more than one save', () => {
+        renderSaves();
+
+        expect(menuLabels()).toEqual([
+            'Save as File',
+            'Version History',
+            'Share',
+            'Delete Datapack',
+        ]);
+    });
+
+    it('lists the saves by when each was saved, marks the one in use, and restores the one chosen', async () => {
+        const props = renderSaves();
+
+        await press(screen.getByRole('menuitem', { name: 'Version History' }));
+
+        expect(screen.getByRole('heading', { name: 'Version History' })).toBeInTheDocument();
+        expect(
+            screen.getAllByRole('radio').map((radio) => radio.closest('label')?.textContent)
+        ).toEqual([versionLabel(NEWEST), `${versionLabel(IN_USE)} (in use)`, versionLabel(OLDEST)]);
+        expect(screen.queryByText(/20261109/u)).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Restore Version' })).toHaveAttribute('aria-disabled', 'true');
+
+        await press(screen.getByRole('radio', { name: versionLabel(OLDEST) }));
+        await press(screen.getByRole('button', { name: 'Restore Version' }));
+
+        expect(props.onImport).toHaveBeenCalledWith({ name: 'my-luma', version: OLDEST });
+        expect(screen.queryByRole('heading', { name: 'Version History' })).not.toBeInTheDocument();
+    });
+
+    it('CONTROL: restoring the save already in use is not offered', async () => {
+        renderSaves();
+        await press(screen.getByRole('menuitem', { name: 'Version History' }));
+
+        await press(screen.getByRole('radio', { name: /in use/u }));
+
+        expect(screen.getByRole('button', { name: 'Restore Version' })).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('CONTROL: a pack with one save, or a named version, has no Version History', () => {
+        renderSaves({ history: [IN_USE] });
+        expect(menuLabels()).not.toContain('Version History');
+    });
+});
+
+describe('Delete Datapack on a pack of saves', () => {
+    it('removes it whole, its version history with it, and says so', async () => {
+        renderSaves();
+
+        await press(screen.getByRole('menuitem', { name: 'Delete Datapack' }));
+        expect(
+            screen.getByText("Permanently deletes it and its version history.")
+        ).toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Delete' }));
+
+        expect(mockRequest).toHaveBeenCalledWith(
+            'delete-library-datapack',
+            { datapackName: 'my-luma', everyVersion: true, confirm: true },
+            undefined
+        );
     });
 });

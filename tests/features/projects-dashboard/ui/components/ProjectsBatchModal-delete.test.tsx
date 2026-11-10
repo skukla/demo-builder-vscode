@@ -2,6 +2,9 @@
  * Delete Selected's window: it reads the projects first, then asks with a table offering only the
  * boxes each project has, each column's header its Select All (all, some, none), and sends one
  * answer per project from what is ticked. A refusal from the read is said in the window.
+ *
+ * Uninstall Datapack (walk F96): unticked, beside the pack's name, a note instead of a box where
+ * the changes could not be read, and Reset Selected's step 2 for a ticked pack that is not the SC's.
  */
 
 import { act, screen, within } from '@testing-library/react';
@@ -77,7 +80,7 @@ describe('ProjectsBatchModal: Delete Selected', () => {
         expect(screen.queryByRole('checkbox', { name: 'Delete DA.live Site, B' })).toBeNull();
         const rowC = screen.getByText('C').closest('tr') as HTMLElement;
         expect(within(rowC).queryAllByRole('checkbox')).toHaveLength(0);
-        expect(screen.queryByText('Delete Datapack')).toBeNull();
+        expect(screen.queryByText('Uninstall Datapack')).toBeNull();
     });
 
     // What goes whatever is ticked, then each box beside what it deletes (owner, 2026-11-05).
@@ -138,9 +141,9 @@ describe('ProjectsBatchModal: Delete Selected', () => {
         expect(runRequest()).toEqual({
             action: 'delete',
             answers: [
-                { path: '/p/a', deleteGitHubRepo: true, deleteDaLiveSite: false, deleteDatapack: false },
-                { path: '/p/b', deleteGitHubRepo: true, deleteDaLiveSite: false, deleteDatapack: false },
-                { path: '/p/c', deleteGitHubRepo: false, deleteDaLiveSite: false, deleteDatapack: false },
+                { path: '/p/a', deleteGitHubRepo: true, deleteDaLiveSite: false, removeDatapackData: false },
+                { path: '/p/b', deleteGitHubRepo: true, deleteDaLiveSite: false, removeDatapackData: false },
+                { path: '/p/c', deleteGitHubRepo: false, deleteDaLiveSite: false, removeDatapackData: false },
             ],
             id: PROJECTS_BATCH_OPERATION_ID,
             progress: 'modal',
@@ -166,5 +169,70 @@ describe('ProjectsBatchModal: Delete Selected', () => {
         expect(dialog).toHaveAttribute('data-status', 'error');
         expect(within(dialog).getByText('Select at least one project.')).toBeInTheDocument();
         expect(within(dialog).queryByRole('button', { name: /Delete/ })).toBeNull();
+    });
+});
+
+const WITH_DATA: PrepareEnvelope = {
+    success: true,
+    data: {
+        action: 'delete',
+        rows: [
+            { path: '/p/a', name: asDisplayName('A'), datapack: { name: 'Frescopa', changes: 'asks' } },
+            { path: '/p/b', name: asDisplayName('B'), datapack: { name: 'My Bodea', changes: 'saves' } },
+            { path: '/p/c', name: asDisplayName('C'), datapack: { name: 'Unread', changes: 'unchecked' } },
+        ],
+    },
+};
+
+describe('ProjectsBatchModal: Delete Selected, Uninstall Datapack', () => {
+    it("offers each pack's data unticked, says it stays unless removed, and keeps one whose changes were not read", async () => {
+        await openOn('delete', WITH_DATA);
+        await screen.findByRole('dialog', { name: 'Delete 3 Projects?' });
+
+        expect(
+            screen.getByText("Project files are removed from this machine. Datapacks stay installed in Commerce unless you uninstall them."),
+        ).toBeInTheDocument();
+        expect(box('Uninstall Datapack, A')).not.toBeChecked();
+        expect(within(box('Uninstall Datapack, A').closest('td') as HTMLElement).getByText('Frescopa')).toBeInTheDocument();
+        const rowC = screen.getByText('C').closest('tr') as HTMLElement;
+        expect(within(rowC).queryAllByRole('checkbox')).toHaveLength(0);
+        expect(within(rowC).getByText("Couldn't check for changes. Datapack kept.")).toBeInTheDocument();
+    });
+
+    it("removes the SC's own pack's data with no second step", async () => {
+        const { user } = await openOn('delete', WITH_DATA);
+        await screen.findByRole('dialog', { name: 'Delete 3 Projects?' });
+        await user.click(box('Uninstall Datapack, B'));
+
+        await user.click(screen.getByRole('button', { name: 'Delete 3 Projects' }));
+
+        expect(runRequest()).toMatchObject({
+            answers: [
+                { path: '/p/a', removeDatapackData: false },
+                { path: '/p/b', removeDatapackData: true },
+                { path: '/p/c', removeDatapackData: false },
+            ],
+        });
+    });
+
+    it("Continues to Datapack Changes for a pack that is not the SC's, and sends the name given", async () => {
+        const { user } = await openOn('delete', WITH_DATA);
+        await screen.findByRole('dialog', { name: 'Delete 3 Projects?' });
+        await user.click(box('Uninstall Datapack, A'));
+
+        await user.click(screen.getByRole('button', { name: 'Continue' }));
+        expect(screen.getByRole('dialog', { name: 'Datapack Changes' })).toBeInTheDocument();
+        const run = screen.getByRole('button', { name: 'Delete 3 Projects' });
+        expect(run).toBeDisabled();
+        await user.type(screen.getByRole('textbox', { name: 'New datapack name, A' }), 'My Frescopa');
+        await user.click(run);
+
+        expect(runRequest()).toMatchObject({
+            answers: [
+                { path: '/p/a', removeDatapackData: true, changes: { saveAs: 'My Frescopa' } },
+                { path: '/p/b', removeDatapackData: false },
+                { path: '/p/c', removeDatapackData: false },
+            ],
+        });
     });
 });

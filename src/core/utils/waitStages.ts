@@ -16,7 +16,6 @@
  * @module core/utils/waitStages
  */
 
-import { DATAPACK_STAGES } from './datapackStages';
 import type { OperationStage } from './operationStages';
 
 /**
@@ -29,19 +28,21 @@ const FEW_SECONDS = 'Usually a few seconds';
 const FROM_COMMERCE = "From this demo's Commerce instance";
 
 export const WAIT_STAGES = {
-    // A re-import's comparison, before its form (EDS walk F56). Measured 2026-11-08: 58 seconds for
-    // Luma's 12 data types on a live store.
-    comparingWithCommerce: {
-        label: 'Comparing with Commerce',
+    // Comparing the store with the version the demo uses: before re-importing it (EDS walk F56),
+    // before importing another version over it, and before Remove Data. One read, so one name
+    // (owner, 2026-11-09, walk F114: it had three). Measured 2026-11-08: 58 seconds for Luma's 12
+    // data types on a live store. The detail says since when, in the words the question after it
+    // uses ("You changed these since this demo's last save"), as the mockup had it; "Each data type in
+    // My Luma" read unlike any other wait (owner, 2026-11-09, walk F126).
+    checkingForChanges: {
+        label: 'Checking for your changes',
         expectation: 'Usually about a minute',
-        detail: 'Each data type in the datapack',
+        detail: "Since this demo's last save",
     },
     readingWebsites: { label: 'Reading websites', expectation: FEW_SECONDS, detail: FROM_COMMERCE },
-    // Before Remove: the same read as a save's, of what changed since the import.
-    readingChangesSinceImport: {
-        ...DATAPACK_STAGES.readingStoreChanges,
-        detail: 'Changes since the import',
-    },
+    // A datapack import's Dry Run: the service checks the request and writes nothing (review,
+    // 2026-11-10: it waited on a bare "Checking with the service").
+    checkingImport: { label: 'Checking the import', expectation: FEW_SECONDS, detail: 'Nothing is written' },
     readingWhatToSelect: {
         label: 'Reading from Commerce',
         expectation: FEW_SECONDS,
@@ -115,13 +116,13 @@ export const WAIT_STAGES = {
     // Share and Stop Sharing: the label alone (owner, 2026-11-08). Each changes every version.
     sharingPack: { label: 'Sharing the datapack', expectation: FEW_SECONDS },
     makingPackPrivate: { label: 'Making it private', expectation: FEW_SECONDS },
-    removingPack: {
-        label: 'Removing the datapack',
+    deletingPack: {
+        label: 'Deleting the datapack',
         expectation: FEW_SECONDS,
-        detail: 'This version, from the library',
+        detail: 'From My Datapacks',
     },
-    removingPackSettings: {
-        label: 'Removing store settings',
+    deletingPackSettings: {
+        label: 'Deleting store settings',
         expectation: FEW_SECONDS,
         detail: 'Saved with this datapack',
     },

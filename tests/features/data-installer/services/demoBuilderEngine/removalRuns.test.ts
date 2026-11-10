@@ -118,6 +118,24 @@ describe('takeBackAll', () => {
 
         await expect(takeBackAll(ctx, recorder, take)).rejects.toThrow('Could not take back attribute_assign_to_set 155/size: Commerce answered 503');
     });
+
+    // Live, 2026-11-09: a run of products and gift cards logged "took back 2048 giftcards".
+    it('names every kind in each run with its count in Debug Logs', async () => {
+        const take: CreatedObject[] = [
+            { kind: 'products', id: 'A' },
+            { kind: 'products', id: 'B' },
+            { kind: 'giftcards', id: 'G' },
+            { kind: 'categories', id: '9' },
+            { kind: 'cart_rules', id: '3' },
+        ];
+        const recorder = await recorderWith(take);
+        const ctx = await fakeContext();
+
+        await takeBackAll(ctx, recorder, take);
+
+        const runs = ctx.logged.filter((line) => line.startsWith('took back')).map((line) => line.replace(/ in [\d.]+ s$/u, ''));
+        expect(runs).toEqual(['took back 2 products and 1 giftcards', 'took back 1 categories and 1 cart_rules']);
+    });
 });
 
 describe('refusedRemovalsLine', () => {
@@ -125,8 +143,8 @@ describe('refusedRemovalsLine', () => {
         const row = { kind: 'attribute_assign_to_set', key: 'Top/size', reason: 'Attribute size is locked.' };
 
         expect(refusedRemovalsLine([], 'Installing')).toBeUndefined();
-        expect(refusedRemovalsLine([row], 'Removing')).toBe(
-            'Left 1 item in the store that Commerce would not take out: attribute assign to set Top/size (Attribute size is locked). Removing the datapack again tries again.',
+        expect(refusedRemovalsLine([row], 'Uninstalling')).toBe(
+            'Commerce would not take out 1 item: attribute assign to set Top/size (Attribute size is locked). Uninstalling the datapack again tries again.',
         );
     });
 });

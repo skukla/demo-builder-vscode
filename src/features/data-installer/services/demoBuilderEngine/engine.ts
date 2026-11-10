@@ -19,14 +19,15 @@
  */
 
 import * as crypto from 'crypto';
-import { type DataTypeStatus, FINISHING_STOP, type ImportStart, type InstallCheck, type JobStatusSnapshot, type KeptRootStep, type ValidationResult } from '../../types';
-import { dataTypeLabel } from '../../ui/dataTypeLabel';
+import { type DataTypeStatus, ENGINE_PHASES, FINISHING_STOP, REPLACE_STOP, type ImportStart, type InstallCheck, type JobStatusSnapshot, type KeptRootStep, type ValidationResult } from '../../types';
 import type { DatapackEngine } from '../datapackEngine';
 import type { CredentialCheck, ImportRequest } from '../importRequest';
-import { askedRows, kindsAddedFor } from './askedKinds';
+import { addedKindsLine, askedRows, missingKinds } from './askedKinds';
+import { removeRecordedPack, removeReplacedPack } from './engineRemoval';
 import { AFTER_PRODUCTS_LINES, type NoteLine, noteOf, rowNotesOf } from './installNote';
 import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
 import { resolveEngineTarget, sessionFor } from './installTarget';
+import { timed } from './jobClock';
 import type { SkippedRow } from './kindContext';
 import { type FindLayer, type LayerLookup, applySettingsLayer, layerKept, layerProblems, layerTroubleLine, lookUpAskedLayer, settingsDoneLine, withLayerRows } from './layerStep';
 import { packRootOf, readStoreRoot, underStoreRootLine } from './packRoot';
@@ -37,10 +38,9 @@ import { isWorthRetrying, skippedLine } from './refusedRows';
 import { refusedRemovalsLine } from './removalRuns';
 import { containersLine } from './removers';
 import { keptLine, tookOutLine } from './repeatInstall';
-import { type PackItems, PackRowsError, installPack, packRowProblems, refusedKindsReason, removePack, unsupportedKinds } from './runPack';
-import { STORE_CONFIG_KIND, settingsLine, settingsWebsite } from './storeConfigKind';
-import { checkAfterInstall, checkRowNote } from './verifyInstall';
-import { andList } from '@/core/utils/andList';
+import { type PackItems, PackRowsError, installPack, packRowProblems, refusedKindsReason, unsupportedKinds } from './runPack';
+import { STORE_CONFIG_KIND, settingsWebsite } from './storeConfigKind';
+import { checkAfterInstall } from './verifyInstall';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -80,18 +80,9 @@ export interface JobEnd {
 }
 
 /** What the job is doing at its end; also `detail`, which notifications and agents read. */
-const CHECK_PHASE = 'Checking the products against the datapack';
+const CHECK_PHASE = ENGINE_PHASES.checking;
 
 const NO_TARGET = 'Choose the website and store view to install into first.';
-
-/**
- * A removal of a pack this engine has no record of (step 14 item 20, owner 2026-10-30): refused,
- * with nothing matched by name, and the SC pointed at "Clear demo data" (`demoDataWipe/wipePlan.ts`),
- * which clears what Demo Builder did not install. Agents reach it as `check_demo_data` and `clear_demo_data`.
- */
-const NO_RECORD =
-    'Demo Builder did not install this pack in this project, so it has no record of what the pack made and removes ' +
-    'nothing by name. To clear what an earlier install left in the store, use Clear Demo Data on the Data Installer screen.';
 
 interface Job {
     perType: Record<string, DataTypeStatus>;
@@ -125,6 +116,8 @@ interface Job {
     searchDelay?: string;
     /** A line for each data type with a problem that did not stop the install (`rowNotesOf`). */
     rowNotes?: Record<string, string>;
+    /** Removing the pack the import replaces (walk F97), before anything is installed. */
+    replacing?: DataTypeStatus;
     startedAt: number;
     finishedAt?: number;
 }
@@ -143,14 +136,23 @@ function endKind(job: Job, kind: string | undefined): void {
     stopClock(job, kind);
 }
 
+/** Where a job stopped: removing the pack it replaces, the finishing work, or the kind in progress. */
+function stopOf(job: Job): string | undefined {
+    if (job.replacing === 'error') return REPLACE_STOP;
+    if (job.finishing) return FINISHING_STOP;
+    return Object.keys(job.perType).find((kind) => job.perType[kind] === 'processing');
+}
+
 /**
  * Mark every kind not yet finished as failed: the covering set must end terminal. Once every kind's
  * rows are in, the one kept in progress is done, and the stop is the finishing work's.
  */
 function failRest(job: Job, error: unknown): void {
     job.reason = errorText(error);
-    job.phase = undefined;
-    const stoppedAt = job.finishing ? FINISHING_STOP : Object.keys(job.perType).find((kind) => job.perType[kind] === 'processing');
+    job.phase = job.detail = undefined;
+    // A removal of the pack it replaces that stopped: nothing was installed, and its row says why.
+    if (job.replacing === 'processing') job.replacing = 'error';
+    const stoppedAt = stopOf(job);
     if (stoppedAt) job.stoppedAt = stoppedAt;
     job.retryable = isWorthRetrying(error);
     for (const [kind, status] of Object.entries(job.perType)) {
@@ -170,7 +172,7 @@ async function access(deps: DemoBuilderEngineDeps): Promise<{ get: CommerceGet; 
  * a repeat install compares what it made where it made it, and one record spans one website. A
  * record made before the target was kept says it by the website its settings went to.
  */
-async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, target: TargetCodes, ask = 'Remove it first, or install it there.'): Promise<string | undefined> {
+async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, target: TargetCodes, ask = 'Uninstall it first, or install it there.'): Promise<string | undefined> {
     const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id);
     if (!record) return undefined;
     const website = record.target?.websiteCode ?? settingsWebsite(record.created);
@@ -181,18 +183,6 @@ async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, ta
     return `${request.id.name}@${request.id.version} is installed on ${where}. ${ask}`;
 }
 
-/** Why the pack cannot answer the request, when it lacks a kind the request asks for. */
-function missingKinds(request: ImportRequest, items: PackItems): string | undefined {
-    const missing = request.dataTypes.filter((kind) => !(kind in items));
-    return missing.length > 0 ? `The pack holds no ${missing.join(', ')}.` : undefined;
-}
-
-/** The note's line for what an install added because the kinds asked for need it; the form ticks these itself. */
-function addedKindsLine(all: PackItems, dataTypes: readonly string[]): string | undefined {
-    const added = kindsAddedFor(all, dataTypes);
-    return added.length > 0 ? `Also installed ${andList(added.map((kind) => dataTypeLabel(kind).toLowerCase()))}: the data types asked for need them.` : undefined;
-}
-
 /** Every reason the pack's and its layer's rows cannot be installed, before the first write. */
 function rowProblems(items: PackItems, lookup: LayerLookup, websiteCode: string): string[] {
     return [...packRowProblems(items, websiteCode), ...layerProblems(lookup, websiteCode)];
@@ -200,34 +190,37 @@ function rowProblems(items: PackItems, lookup: LayerLookup, websiteCode: string)
 
 /** Install: the target, the rows, then each kind in order, its status moving as it runs. */
 async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, job: Job): Promise<void> {
-    if (!request.target) throw new Error(NO_TARGET);
-    const conflict = await elsewhere(deps, request, request.target);
+    const wanted = request.target;
+    if (!wanted) throw new Error(NO_TARGET);
+    const conflict = await timed(deps.log, `Install of ${request.id.name}: checked other websites`, () => elsewhere(deps, request, wanted));
     if (conflict) throw new Error(conflict);
-    job.phase = 'Reading the datapack';
-    const all = await deps.readPack(request.id, request.source ?? 'installer');
+    job.phase = ENGINE_PHASES.reading;
+    const all = await timed(deps.log, `Install of ${request.id.name}: read the datapack`, () => deps.readPack(request.id, request.source ?? 'installer'));
     const items = askedRows(all, request.dataTypes);
     const lookup = await lookUpAskedLayer(deps.findLayer, request.id, all, request.dataTypes);
     const missing = missingKinds(request, withLayerRows(all, lookup));
     if (missing) throw new Error(missing);
-    const refused = layerProblems(lookup, request.target.websiteCode);
-    if (refused.length > 0) throw new PackRowsError(rowProblems(items, lookup, request.target.websiteCode));
+    const refused = layerProblems(lookup, wanted.websiteCode);
+    if (refused.length > 0) throw new PackRowsError(rowProblems(items, lookup, wanted.websiteCode));
     const commerce = await access(deps);
-    const target = await resolveEngineTarget(commerce.get, request.target);
+    // Walk F97: the pack this replaces goes first, once this one is known to install; a removal that fails installs nothing.
+    const replaced = request.replaces ? await removeReplacedPack(job, commerce, deps.files ?? nodeRecordFiles, { ...deps, pack: request.replaces }) : undefined;
+    const target = await resolveEngineTarget(commerce.get, wanted);
     const session = sessionFor(target);
     // Step 12: whether another store shows this store's root decides where a pack's own root goes.
-    if (packRootOf(items.categories)) session.storeRoot = await readStoreRoot(commerce.get, request.target);
+    if (packRootOf(items.categories)) session.storeRoot = await readStoreRoot(commerce.get, wanted);
     const now = deps.now ?? (() => new Date());
-    const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString(), request.target);
+    const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString(), wanted);
     let current: string | undefined;
     const progress = (line: string): void => void (job.detail = line);
     const ctx = { ...commerce, recorder, session, log: deps.log, asker: deps.asker, progress };
     // Reading what an earlier install made, before the first kind: the long wait of an install run again.
-    job.phase = 'Comparing the store with the datapack';
-    const earlier = reuseComparison(deps, request.id, request.target);
+    job.phase = ENGINE_PHASES.comparing;
+    const earlier = reuseComparison(deps, request.id, wanted);
     const outcome = await installPack(ctx, items, (kind) => {
         // Its rows are in, so the last kind's clock stops; it stays in progress to the end, while
         // the engine takes out what the pack dropped and reads back what it wrote.
-        job.phase = kind === undefined ? 'Recording what was installed' : undefined;
+        job.phase = kind === undefined ? ENGINE_PHASES.recording : undefined;
         if (kind === undefined) {
             job.finishing = true;
             return stopClock(job, current);
@@ -241,7 +234,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     job.detail = undefined;
     // The last kind stays in progress through the layer: the watcher ends when every kind asked for
     // has, and the note says what the layer did (step 09).
-    if (lookup.state === 'found') job.phase = 'Applying the store settings';
+    if (lookup.state === 'found') job.phase = ENGINE_PHASES.settings;
     const layerStopped = await applySettingsLayer(ctx, lookup);
     if (STORE_CONFIG_KIND in job.perType && lookup.state === 'found') job.perType[STORE_CONFIG_KIND] = layerStopped ? 'error' : 'success';
     if (layerStopped) {
@@ -251,10 +244,11 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     }
     // The last kind stays in progress through the check too, so whatever waits on the install waits for it.
     job.detail = job.phase = CHECK_PHASE;
-    const checked = await checkAfterInstall(ctx, items, outcome.kept);
+    const checked = await checkAfterInstall(ctx, items, outcome.kept, outcome.productsRead);
     job.detail = job.phase = undefined;
     job.check = checked.check;
     Object.assign(job, noteOf([
+        [replaced, true],
         [addedKindsLine(all, request.dataTypes), false],
         [skippedLine(session.skipped), false],
         [tookOutLine(outcome.tookOut), true],
@@ -270,14 +264,14 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         ...(outcome.productsWritten ? AFTER_PRODUCTS_LINES.map((line): NoteLine => [line, false]) : []),
     ]));
     if (outcome.productsWritten) job.searchDelay = AFTER_PRODUCTS_LINES[0];
-    const rowNotes = rowNotesOf(session.skipped, checkRowNote(checked.check), Object.keys(items));
+    const rowNotes = rowNotesOf(session.skipped);
     if (Object.keys(rowNotes).length > 0) job.rowNotes = rowNotes;
     job.skipped = session.skipped;
     endKind(job, current);
 }
 
 /** What the window draws from a job beyond its kinds' states: what it is doing, where it stopped, what to read. */
-function whereItStands(job: Job): Pick<JobStatusSnapshot, 'phase' | 'stoppedAt' | 'retryable' | 'scLines' | 'searchDelay' | 'rowNotes'> {
+function whereItStands(job: Job): Pick<JobStatusSnapshot, 'phase' | 'stoppedAt' | 'retryable' | 'scLines' | 'searchDelay' | 'rowNotes' | 'replacing'> {
     return {
         ...(job.rowNotes ? { rowNotes: job.rowNotes } : {}),
         ...(job.phase ? { phase: job.phase } : {}),
@@ -285,6 +279,7 @@ function whereItStands(job: Job): Pick<JobStatusSnapshot, 'phase' | 'stoppedAt' 
         ...(job.retryable ? { retryable: true } : {}),
         ...(job.scLines ? { scLines: job.scLines } : {}),
         ...(job.searchDelay ? { searchDelay: job.searchDelay } : {}),
+        ...(job.replacing ? { replacing: job.replacing } : {}),
     };
 }
 
@@ -347,7 +342,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
         async validateRemoval(request): Promise<ValidationResult> {
             try {
                 // The one thing a removal needs of the request: that the store it names is where the record says.
-                const conflict = request.target ? await elsewhere(deps, request, request.target, 'Choose that one to remove it.') : undefined;
+                const conflict = request.target ? await elsewhere(deps, request, request.target, 'Choose that one to uninstall it.') : undefined;
                 if (conflict) return { valid: false, reason: conflict };
                 await access(deps);
                 return { valid: true };
@@ -359,12 +354,10 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
         startDelete: async (request) =>
             start(deps, jobs, request, 'delete', async (job) => {
                 const progress = (line: string): void => void (job.detail = line);
-                const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress });
+                const result = await removeRecordedPack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress });
                 job.detail = undefined;
-                if (result.noRecord) throw new Error(NO_RECORD);
-                const lines = [containersLine(result.kept), refusedRemovalsLine(result.refused, 'Removing'), settingsLine(result.settings, 'Put back')];
-                job.note = lines.filter(Boolean).join(' ') || undefined;
-                if (result.kept.length > 0 || result.refused.length > 0) job.leftInStore = true;
+                job.note = result.note;
+                if (result.leftInStore) job.leftInStore = true;
                 if (result.keptRoot) job.keptRoot = result.keptRoot;
                 for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';
             }),

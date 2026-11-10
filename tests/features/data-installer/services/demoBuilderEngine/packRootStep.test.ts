@@ -192,7 +192,7 @@ describe('storeShowingRoot', () => {
         store.setRoot('justrite_test_store', 300);
         await expect(storeShowingRoot(ctx.get, '300')).resolves.toEqual({
             store: 'JustRite Test Store',
-            reason: 'the store JustRite Test Store shows it as its root category. In the Admin, Stores > All Stores > JustRite Test Store, set Root Category back to the one it had and Save Store, then remove the pack again',
+            reason: 'the store JustRite Test Store shows it as its root category. In the Admin, Stores > All Stores > JustRite Test Store, set Root Category back to the one it had and Save Store, then uninstall the pack again',
         });
     });
 });

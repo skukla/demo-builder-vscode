@@ -8,7 +8,7 @@
  * @module features/data-installer/ui/hooks/useTypeSelection
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { deselectType, selectType, type TypeSelection } from '../importDependencies';
 
 export interface TypeChoices {
@@ -18,13 +18,26 @@ export interface TypeChoices {
     toggleAll: () => void;
 }
 
-export function useTypeSelection(availableTypes: string[]): TypeChoices {
+/**
+ * @param availableTypes - the types the pack holds
+ * @param replacing - the import replaces the demo's pack: every type starts ticked (walk F103), since
+ *   the pack replaced goes whole and nothing else would put its place back. Known only once the
+ *   project's pack is read, so it ticks then, and only while the SC has ticked nothing.
+ */
+export function useTypeSelection(availableTypes: string[], replacing = false): TypeChoices {
     // A pack with one type has nothing to choose, so it starts ticked; a larger one is opt-in.
     const [selection, setSelection] = useState<TypeSelection>(() => ({
         selected: availableTypes.length === 1 ? availableTypes : [],
         auto: [],
     }));
     const selected = selection.selected as string[];
+
+    const ticked = useRef(false);
+    useEffect(() => {
+        if (!replacing || ticked.current || availableTypes.length === 0) return;
+        ticked.current = true;
+        setSelection((current) => (current.selected.length === 0 ? { selected: [...availableTypes], auto: [] } : current));
+    }, [replacing, availableTypes]);
 
     const toggle = useCallback(
         (type: string, isSelected: boolean): void => {

@@ -47,22 +47,35 @@ import { useImportRetry } from '../hooks/useImportRetry';
 import { useImportScopes, useLockedScope } from '../hooks/useImportScopes';
 import { useJobPickup } from '../hooks/useJobPickup';
 import { useRemovalConfirm, useRemovalScope } from '../hooks/useRemovalConfirm';
+import { backOnlyCloses, comparesFirst, readsRecord, ticksAll, useClosesAfterRemoval, useRemovalWindow } from '../hooks/useRemovalWindow';
+import { type HeldPack, replacesHeldPack, useReplacement } from '../hooks/useReplacement';
+import { useRunColumns } from '../hooks/useRunColumns';
 import { useTypeSelection } from '../hooks/useTypeSelection';
+import { useVersionTypes } from '../hooks/useVersionTypes';
 import { ImportDatapackModalBody, type BodyContext } from './ImportDatapackModalBody';
 import { backgroundTitle, isStartingImport, jobBusyMessage, libraryField } from './importModalJob';
-import { buildActions, closeLabel, isRemoving, resolveView, runColumns, targetName, viewFrame, waitOf, watchedActivation } from './importModalView';
+import { buildActions, closeLabel, isRemoving, removalButtons, resolveView, targetName, viewFrame, waitOf, watchedActivation } from './importModalView';
 import { resolveResult, type LastAction } from './importResult';
-import { removeLabel } from './removalConfirm';
+import type { RemovalAnswer } from './removalConfirm';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** How often to re-read the recorded job while one is in flight. */
 const STATUS_POLL_MS = 2000;
+/** A start or removal that saves the SC's changes first answers after the save (walk F105). */
+const SAVE_THEN_WRITE = { timeout: TIMEOUTS.DATAPACK_SAVE_THEN_WRITE };
 
-/** What the open project implies about where this import should go. */
-interface ImportTarget {
+/** Reading the version's own data types comes before any other wait (`useVersionTypes`). */
+function typesFirst(readingTypes: boolean, wait: ReturnType<typeof useImportChanges>['wait']): ReturnType<typeof useImportChanges>['wait'] {
+    return readingTypes ? WAIT_STAGES.readingPack : wait;
+}
+
+/** What the open project implies about where this import should go, and the pack it holds. */
+interface ImportTarget extends HeldPack {
     instance?: string;
     /** The open project's name — the only human-readable handle on this target. */
     projectName?: string;
@@ -77,21 +90,25 @@ interface ImportTarget {
 export interface ImportDatapackModalProps {
     id: DatapackId;
     displayName: string;
-    /** Types this datapack actually stores — from the detail inventory. */
-    availableTypes: string[];
+    /** Types this version stores, from the detail inventory; read here when absent (`useVersionTypes`). */
+    availableTypes?: string[];
     /** Which store holds the pack; a library pack is installed by Demo Builder's engine (DI-5). */
     source?: DatapackStoreName;
+    /** Opened by Remove Data: straight to the removal's confirm, and closed when it is done (walk F118). */
+    opensOn?: 'remove';
     onClose: () => void;
 }
 
 export function ImportDatapackModal({
     id,
     displayName,
-    availableTypes,
+    availableTypes: givenTypes,
     source,
+    opensOn,
     onClose,
 }: ImportDatapackModalProps): React.JSX.Element {
-    const { selected, allSelected, toggle, toggleAll } = useTypeSelection(availableTypes);
+    const { types: availableTypes, reading: readingTypes } = useVersionTypes(id, source, givenTypes);
+    const columns = useRunColumns(availableTypes.length);
     // The removal's confirm, and what the SC changed that it asks about (step 05).
     const removal = useRemovalConfirm();
     /** Which operation's outcome the result view shows. */
@@ -99,13 +116,15 @@ export function ImportDatapackModal({
     /** Back was pressed — the outcome was seen; show the form again. */
     const [dismissed, setDismissed] = useState(false);
 
-    const start = useDataInstallerRequest<{ activationId: string }>('start-datapack-import');
-    const reset = useDataInstallerRequest<{ activationId: string; savedNote?: string }>('reset-datapack');
+    // Either may save the SC's changes before it answers (walk F105): the wait covers the save.
+    const start = useDataInstallerRequest<{ activationId: string }>('start-datapack-import', SAVE_THEN_WRITE);
+    const reset = useDataInstallerRequest<{ activationId: string; savedNote?: string }>('reset-datapack', SAVE_THEN_WRITE);
     const dryRun = useDataInstallerRequest<{ valid: boolean; reason?: string }>(
         'validate-datapack-import',
     );
     const status = useDataInstallerRequest<ImportJobRecord | null>('get-datapack-import-status');
     const target = useDataInstallerRequest<ImportTarget>('get-datapack-import-target');
+    const { selected, allSelected, toggle, toggleAll } = useTypeSelection(availableTypes, ticksAll(replacesHeldPack(id, target.value), opensOn));
     // Owns the discovered scopes AND the user's choice within them — see the hook.
     // Seeded from what the PROJECT recorded, so the dialog opens on the scope the
     // project is configured for instead of on `base`.
@@ -115,18 +134,14 @@ export function ImportDatapackModal({
     useEffect(() => {
         loadStatus({});
     }, [loadStatus]);
-
     const loadTarget = target.load;
     useEffect(() => {
         loadTarget({});
     }, [loadTarget]);
 
-    // Simply derived. This used to be seeded into an editable field behind a
-    // "touched" guard, so an async answer could not clobber what the user had
-    // typed. The field is gone — the project decides the instance — so the guard,
-    // the state and the effect went with it.
+    // Simply derived: the project decides the instance, so the editable field, its "touched" guard,
+    // its state and its effect are gone.
     const commerceInstance = target.value?.instance ?? '';
-
     const record = status.value ?? null;
     const running = record?.outcome === 'watching';
 
@@ -139,17 +154,9 @@ export function ImportDatapackModal({
         return () => clearInterval(timer);
     }, [running, loadStatus]);
 
-    // Pick the job up as soon as one is accepted. A reset is the same kind of
-    // job — same activation id, same runner, same record.
-    //
-    // Keyed on the LAST ACTION, not `start ?? reset`: `useVSCodeRequest.execute`
-    // clears `error` before a request but NOT `data`, and nothing here calls its
-    // `reset()`. So a finished import leaves `start.value.activationId` set for
-    // the life of the modal, and `??` preferred it forever — an import followed
-    // by a reset watched the completed import, never re-read status, and
-    // discarded the reset's record at the `activationId` guard below. The modal
-    // fell back to the form, Start enabled, while the reset ran server-side.
-    // Reset-then-import worked, which is what made it a bug and not a design.
+    // Pick the job up as soon as one is accepted, keyed on the LAST ACTION, not `start ?? reset`:
+    // request data persists after settling, so `??` once watched a finished import forever while a
+    // later reset ran unseen and the form came back with Start enabled.
     const startedActivation = watchedActivation(
         lastAction,
         start.value?.activationId,
@@ -183,14 +190,17 @@ export function ImportDatapackModal({
         dryRun.load(requestBody());
     }, [act, dryRun, requestBody]);
 
-    const runImport = useCallback((): void => {
+    // An answer about the SC's changes rides along when the import replaces the demo's pack (walk F97).
+    const startWith = useCallback((answer?: RemovalAnswer): void => {
         act('start');
-        start.load(requestBody());
+        start.load({ ...requestBody(), ...answer });
     }, [act, start, requestBody]);
-    const { retries, startImport, retry, fixWithAi } = useImportRetry(runImport);
+    const replacement = useReplacement(id, displayName, target.value, removal, startWith);
+    const { retries, startImport, retry, fixWithAi } = useImportRetry(replacement.begin);
 
     const confirmRemoval = (save: boolean): void => {
         const answer = removal.press(save);
+        if (replacement.forImport) return replacement.answered(answer);
         act('reset');
         // `confirm` is added HERE and nowhere else. The handler refuses
         // without it, so the armed press is the only path that can remove data.
@@ -198,38 +208,35 @@ export function ImportDatapackModal({
     };
 
     /** The read names only the pack: what a removal would lose does not depend on the ticks. */
-    const armReset = (): void => {
-        removal.arm({ datapackName: id.name, version: id.version, ...libraryField(source) });
-    };
+    const armRemoval = removal.arm;
+    const armReset = useCallback((): void => {
+        armRemoval({ datapackName: id.name, version: id.version, ...libraryField(source) });
+    }, [armRemoval, id.name, id.version, source]);
+    // Remove Data opens here, straight to its confirm, and leaving it closes the window (F118).
+    const leave = useRemovalWindow(opensOn, armReset, replacement.disarm, () => close());
 
     const busy = dryRun.loading || start.loading || reset.loading || pickingUp;
     const result =
         !dismissed && !busy
             ? resolveResult(lastAction, {
                   name: displayName,
-                  store: targetName(scope, commerceInstance),
                   retries,
                   dryRun,
                   start,
                   reset,
                   record,
                   startedActivation,
+                  ...replacement.resultSource(selected),
               })
             : null;
     const goBack = (): void => {
-        if (result?.backToConfirm) removal.reopen();
+        if (backOnlyCloses(leave.closesOnBack, result)) return close();
+        if (result?.backToConfirm) replacement.reopen(lastAction === 'start');
         setDismissed(true);
     };
-    // `scopes.loading` is in here because the target is still resolving while it
-    // is true. Without it the user can tick types and press Start during the
-    // second or two the pickers show a spinner, and the import lands on the
-    // service default (`base`/`default`) instead of the target that was about to
-    // arrive — silently, since the request simply omits the pair.
-    //
-    // Safe to gate on: `useVSCodeRequest` clears `loading` in its catch as well
-    // as on success, so a discovery that FAILS re-enables Start rather than
-    // stranding it. That matters because targeting is optional — an import with
-    // no target is legitimate, and must stay possible when discovery cannot run.
+    // Not ready while the scopes load, or a Start pressed then lands on the service default
+    // (`base`) silently; a discovery that FAILS clears `loading` too, so an untargeted import stays
+    // possible.
     const ready = commerceInstance.length > 0 && !busy && !scope.loading;
     const canStart = ready && selected.length > 0;
     const view = resolveView({
@@ -241,9 +248,15 @@ export function ImportDatapackModal({
         result,
         noInstance: !commerceInstance && target.settled,
     });
-    const { recordedKinds, removesAll, settled: scopeSettled, installedAt } = useRemovalScope(id, view === 'form');
+    const { recordedKinds, removesAll, settled: scopeSettled, installedAt } = useRemovalScope(id, readsRecord(view, opensOn));
     useLockedScope(scope.lockTo, installedAt);
-    const changes = useImportChanges({ id, displayName, source, types: availableTypes, installed: removesAll, active: view === 'form', used: lastAction !== null });
+    // What the project holds moves with every import or removal: the form's "Replaces …" reads it again.
+    const showingForm = view === 'form';
+    useEffect(() => {
+        if (showingForm && lastAction !== null) loadTarget({});
+    }, [showingForm, lastAction, loadTarget]);
+    const changes = useImportChanges({ id, source, types: availableTypes, installed: removesAll, active: comparesFirst(view, opensOn), used: lastAction !== null });
+    useClosesAfterRemoval(opensOn, view, lastAction, onClose);
 
     const bodyContext: BodyContext = {
         displayName,
@@ -260,8 +273,10 @@ export function ImportDatapackModal({
         removal,
         toggle,
         toggleAll,
-        columns: runColumns(availableTypes.length),
+        installing: { name: displayName, version: id.version },
+        columns,
         changes,
+        replacement: { name: replacement.name, version: replacement.version, sentence: replacement.sentence, confirming: replacement.forImport, savingStage: replacement.savingStage },
     };
 
     // Closing a job that is still RUNNING hands it to a progress notification,
@@ -286,7 +301,29 @@ export function ImportDatapackModal({
         removing: isRemoving({ armed: removal.armed, lastAction, view, operation: record?.operation }),
         store: targetName(scope, commerceInstance),
         typeCount: availableTypes.length,
+        columns,
         result,
+        checkFailed: removal.content.kind === 'read-failed',
+        ...replacement.frame,
+    });
+
+    const footer = buildActions({
+        view,
+        canStart,
+        checking: dryRun.loading,
+        starting: start.loading,
+        resetting: reset.loading,
+        validate,
+        disarmReset: leave.disarm,
+        ...removalButtons(removal, confirmRemoval),
+        confirmsImport: replacement.forImport,
+        startImport,
+        goBack,
+        ranToEnd: result?.finished === true,
+        backCloses: backOnlyCloses(leave.closesOnBack, result),
+        resultAction: result?.action,
+        retry,
+        fixWithAi,
     });
 
     return (
@@ -298,49 +335,15 @@ export function ImportDatapackModal({
                 wide={frame.wide}
                 hideClose={frame.hideClose}
                 fitContent
-                waiting={waitOf(view, scope.loading || !target.settled || !scopeSettled, bodyContext.busyMessage, changes.wait)}
+                waiting={waitOf(view, scope.loading || !target.settled || !scopeSettled, bodyContext.busyMessage, typesFirst(readingTypes, changes.wait))}
                 holdSize={frame.holdSize === true}
-                onClose={view === 'reading-changes' ? removal.disarm : close}
+                onClose={view === 'reading-changes' ? leave.disarm : close}
                 closeLabel={closeLabel(view, savingFirst)}
-                actionButtons={buildActions({
-                    view,
-                    canStart,
-                    canRemove: ready && (removesAll || selected.length > 0),
-                    removesAll,
-                    checking: dryRun.loading,
-                    starting: start.loading,
-                    resetting: reset.loading,
-                    validate,
-                    armReset,
-                    disarmReset: removal.disarm,
-                    ...removalButtons(removal, confirmRemoval),
-                    startImport,
-                    goBack,
-                    resultAction: result?.action,
-                    retry,
-                    fixWithAi,
-                })}
+                startButtons={footer.filter((button) => button.start)}
+                actionButtons={footer.filter((button) => !button.start)}
             >
                 <ImportDatapackModalBody view={view} ctx={bodyContext} />
             </Modal>
         </DialogContainer>
     );
-}
-
-/**
- * The confirm's buttons: one Remove, or, with changes to keep, Save and Remove beside Remove
- * Without Saving, the save waiting on a Save As name when it needs one.
- */
-function removalButtons(
-    removal: Pick<ReturnType<typeof useRemovalConfirm>, 'content' | 'canSave'>,
-    confirmRemoval: (save: boolean) => void,
-): Pick<Parameters<typeof buildActions>[0], 'confirmReset' | 'removeLabel' | 'removeWithoutSaving' | 'removeSavesAs' | 'removeDisabled'> {
-    const base = { confirmReset: () => confirmRemoval(true), removeLabel: removeLabel(removal.content) };
-    if (removal.content.kind !== 'changes') return base;
-    return {
-        ...base,
-        removeWithoutSaving: () => confirmRemoval(false),
-        removeSavesAs: removal.content.packName === undefined,
-        removeDisabled: !removal.canSave,
-    };
 }

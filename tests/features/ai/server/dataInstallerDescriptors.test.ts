@@ -113,7 +113,7 @@ describe('start_datapack_export name echo', () => {
     it('names the library it writes into, never the shared catalog', () => {
         const out = preflight()({ datapackName: 'aco_acme', aco: true }) as { error: string };
 
-        expect(out).toEqual({ error: 'start_datapack_export writes "aco_acme" into your datapack library. To proceed, call again with confirmName:"aco_acme".' });
+        expect(out).toEqual({ error: 'start_datapack_export writes "aco_acme" into My Datapacks. To proceed, call again with confirmName:"aco_acme".' });
     });
 
     it('allows dispatch when the echo matches', () => {
@@ -261,8 +261,9 @@ describe('what each row accepts', () => {
         ].sort();
 
         expect(keys('validate_datapack_import')).toEqual(expected);
-        // The start may wait on the job it began, rather than an agent polling it (2026-11-05).
-        expect(keys('start_datapack_import')).toEqual([...expected, 'waitSeconds'].sort());
+        // The start may wait on the job it began, rather than an agent polling it (2026-11-05), and
+        // answers for the changes in the pack it replaces, as a reset does (walk F97).
+        expect(keys('start_datapack_import')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
         // Its one addition: the answer to the changes it names (step 05).
         // And Save As's name, for changes kept when the project's pack is not the user's; and the wait.
         expect(keys('reset_datapack')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
@@ -294,13 +295,13 @@ describe('what each row accepts', () => {
     it('says what reset_datapack does about changes, including what the setting does', () => {
         const { description } = row('reset_datapack')!;
 
-        expect(description).toContain('removes nothing until changes answers');
+        expect(description).toContain('uninstalls nothing until changes answers');
         expect(description).toContain('demoBuilder.dataInstaller.changesOnRemoval');
     });
 
-    it('gives the export item list a single data type to enumerate, and a limit', () => {
+    it('gives the export item list a single data type to enumerate, a limit, and Add Items\'s unused', () => {
         expect(keys('list_datapack_export_items')).toEqual(
-            ['dataType', 'datapackName', 'limit', 'source', 'version'].sort(),
+            ['dataType', 'datapackName', 'limit', 'source', 'unused', 'version'].sort(),
         );
     });
 

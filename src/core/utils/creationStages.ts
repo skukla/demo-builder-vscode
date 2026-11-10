@@ -78,7 +78,7 @@ export const CREATION_STAGES = {
         detail: 'Into your Commerce instance',
     },
     removingDatapack: {
-        label: 'Removing the sample data',
+        label: 'Uninstalling the datapack',
         expectation: 'Minutes; varies by pack',
         detail: 'From your Commerce instance',
     },

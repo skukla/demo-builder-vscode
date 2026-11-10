@@ -72,7 +72,7 @@ import type { WipePreview } from '@/types/demoDataWipe';
 /** The store would now clear something the SC was not shown: nothing was written. */
 export class WipeChangedError extends Error {
     constructor(readonly preview: WipePreview) {
-        super(`The store changed since the list was made, so nothing was cleared. Check what would be removed again (${preview.total} things now).`);
+        super(`Commerce changed since the list was made, so nothing was cleared. Check what would be removed again (${preview.total} things now).`);
         this.name = 'WipeChangedError';
     }
 }

@@ -249,7 +249,7 @@ describe('watchImportJob', () => {
 
         // The window's rows and its main action read these off the finished job.
         it('hands on where the job stopped, whether a retry can help, and what the SC reads', async () => {
-            const said = { stoppedAt: 'products', retryable: true, scLines: ['Kept 2 things.'], searchDelay: 'Soon.', rowNotes: { categories: 'The store refused 1.' } };
+            const said = { stoppedAt: 'products', retryable: true, scLines: ['Kept 2 things.'], searchDelay: 'Soon.', rowNotes: { categories: 'Commerce refused 1.' } };
             const { promise } = runWith([snap({ categories: 'success', products: 'error' }, said)]);
 
             expect(await promise).toMatchObject(said);

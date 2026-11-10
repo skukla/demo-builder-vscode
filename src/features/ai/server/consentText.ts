@@ -34,6 +34,8 @@ const CONSENT_KEY_LABELS: Record<string, string> = {
     projectName: 'Project',
     // reset_datapack: "keep" or "drop" alone would not say whose changes.
     changes: 'Your changes',
+    // delete_project: the button's box, Uninstall Datapack.
+    removeData: 'Uninstall Datapack',
 };
 
 /** `blockId` / `block_id` → "Block id". A label, not an identifier. */

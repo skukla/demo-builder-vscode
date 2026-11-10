@@ -13,7 +13,7 @@
  *
  * | Kind | Read | Confirmed from a real answer? |
  * |---|---|---|
- * | products, giftcards | `GET products`, `website_id` eq (`readWebsiteProducts`) | yes, the filter and `website_ids` (Assign products, 2026-10-19) |
+ * | products, giftcards | `GET products`, the count's filters (`website_id` eq, `type_id` neq or eq `giftcard`), fields `sku`, `name` | yes: the filters (Assign products, 2026-10-19; counts, 2026-11-02) and the gift cards' list (Scratch 1028, 2026-11-09) |
  * | categories | `GET categories/list`: `id`, `name`, `path` (`readCategoryTree`) | yes (`listCategoryLabels`) |
  * | customers | `GET customers/search`, `website_id` eq (`readWebsiteCustomers`) | the item yes; the filter **no**, so the website is checked here too |
  * | b2b_companies | `GET company`, every page; kept when a website customer's `company_attributes.company_id` names it | the company list **no**; `company_attributes` yes (2026-10-30) |
@@ -48,7 +48,7 @@
  */
 
 import { LEFT_OUT_KINDS, type LeftOut, type PickableKind, type StoreItem, type StoreKindCounts, type StorePicks, PICKABLE_KINDS } from '../../pickableKinds';
-import { readCategoryTree, readWebsiteCustomers, readWebsiteProducts, type WipeCategory } from '../demoDataWipe/wipeReads';
+import { readCategoryTree, readWebsiteCustomers, type WipeCategory } from '../demoDataWipe/wipeReads';
 import { CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
 import { PUBLIC_CATALOG_TYPE, readCatalogs } from './b2bReads';
 import { COMMERCE_GROUPS } from './captureB2b';
@@ -78,17 +78,39 @@ type Lister = (ctx: KindContext) => Promise<KindItems>;
 
 const kept = (items: StoreItem[], excluded = 0): KindItems => ({ items, excluded });
 
-function websiteOf(ctx: KindContext): number {
+/** The install target's website id; an install target with none cannot be listed. */
+export function websiteOf(ctx: KindContext): number {
     const id = ctx.session.websiteId;
     if (id === undefined) throw new Error('The install target names no website, so its items cannot be listed.');
     return id;
 }
 
+/** What a product's row shows; Commerce answers only these. */
+const PRODUCT_LIST_FIELDS = '&fields=total_count,items[sku,name]';
+
 const productItem = (p: CommerceProduct): StoreItem => ({ id: p.sku, displayName: p.name || p.sku, detail: p.sku, key: p.sku });
 
-async function products(ctx: KindContext, giftCards: boolean): Promise<KindItems> {
-    const all = await readWebsiteProducts(ctx.get, websiteOf(ctx));
-    return kept(all.filter((p) => (p.type_id === GIFT_CARD_TYPE) === giftCards).map(productItem));
+/** Some of a website's products as one kind's items: its gift cards, or the rest. */
+export function productKindItems(found: readonly CommerceProduct[], kind: 'products' | typeof GIFT_CARD_KIND): StoreItem[] {
+    return found.filter((p) => (p.type_id === GIFT_CARD_TYPE) === (kind === GIFT_CARD_KIND)).map(productItem);
+}
+
+/**
+ * Every product on the target's website, whole, as capture reads them (walk F90): a save from a pack
+ * takes them all, so one read finds what the demo uses and is the products capture turns into rows.
+ */
+export function readWebsiteProductsWhole(ctx: KindContext): Promise<CommerceProduct[]> {
+    return readAllPages<CommerceProduct>(ctx.get, 'products', criteriaOf([websiteFilter(ctx)]));
+}
+
+/**
+ * The website's products or its gift cards, Commerce choosing which by the count's filters. Both
+ * read every product of the website before (walk F84): Commerce took 17.7 s on Scratch 1028 to
+ * answer 2,048 products for Luma's 2 gift cards, and under a second asked for gift cards only.
+ */
+async function products(ctx: KindContext, kind: 'products' | typeof GIFT_CARD_KIND): Promise<KindItems> {
+    const found = await readAllPages<CommerceProduct>(ctx.get, 'products', `${criteriaOf(COUNTS[kind].filters?.(ctx) ?? [])}${PRODUCT_LIST_FIELDS}`);
+    return kept(found.map(productItem));
 }
 
 /** The categories under the target's root, each by its place under it, as a pack names it. */
@@ -166,8 +188,8 @@ async function sets(ctx: KindContext): Promise<KindItems> {
 }
 
 const LISTERS: Record<PickableKind, Lister> = {
-    products: (ctx) => products(ctx, false),
-    [GIFT_CARD_KIND]: (ctx) => products(ctx, true),
+    products: (ctx) => products(ctx, 'products'),
+    [GIFT_CARD_KIND]: (ctx) => products(ctx, GIFT_CARD_KIND),
     categories,
     [CART_RULE_KIND]: cartRules,
     [CUSTOMER_KIND]: customers,
@@ -188,7 +210,7 @@ export function listStoreItems(ctx: KindContext, kind: PickableKind): Promise<Ki
 }
 
 /** One filter of a count, as Commerce's search criteria name it. */
-type CountFilter = readonly [field: string, condition: 'eq' | 'neq' | 'like' | 'nin', value: string | number];
+export type CountFilter = readonly [field: string, condition: 'eq' | 'neq' | 'like' | 'nin' | 'notnull', value: string | number];
 
 /** One kind's count: the route its list reads, and the filters that make it the list's scope. */
 interface KindCount {
@@ -198,7 +220,7 @@ interface KindCount {
     absentIsNone?: boolean;
 }
 
-const websiteFilter = (ctx: KindContext): CountFilter => ['website_id', 'eq', websiteOf(ctx)];
+export const websiteFilter = (ctx: KindContext): CountFilter => ['website_id', 'eq', websiteOf(ctx)];
 
 const COUNTS: Record<PickableKind, KindCount> = {
     products: { path: 'products', filters: (ctx) => [websiteFilter(ctx), ['type_id', 'neq', GIFT_CARD_TYPE]] },
@@ -234,6 +256,14 @@ async function countOf(ctx: KindContext, { path, filters, absentIsNone }: KindCo
         if (absentIsNone && error instanceof CommerceReadError && error.status === 404) return 0;
         throw error;
     }
+}
+
+/**
+ * How many of `path` match every filter, read as its `total_count` without reading one (what a
+ * demo's products use, `demoUses.ts`).
+ */
+export function countMatching(ctx: KindContext, path: string, filters: readonly CountFilter[]): Promise<number> {
+    return countOf(ctx, { path, filters: () => [...filters] });
 }
 
 /**

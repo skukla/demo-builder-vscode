@@ -21,6 +21,7 @@ import { readProjectRecords, nodeRecordFiles } from '../services/demoBuilderEngi
 import { nodeActivityFiles, readEngineActivity } from '../services/engineActivityLog';
 import { type HistoryFilter, engineActivityRows, engineInstalledRows } from '../services/engineHistory';
 import { deriveImportInstance } from '../services/importInstance';
+import { rememberedPackName } from '../services/packNames';
 import type { ActivityEntry, DatapackEngineId, HistoryPage, InstalledDatapack, Page } from '../types';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -136,5 +137,16 @@ export async function activityFromBoth(
     const ours = await engineRows<ActivityEntry>(context, async (project, instance) =>
         engineActivityRows(await readEngineActivity(nodeActivityFiles, project.path), instance, payload),
     );
-    return mergeHistory(ours, payload, servicePage);
+    return withDisplayNames(context, await mergeHistory(ours, payload, servicePage));
+}
+
+/** Each row with the name the SC knows its pack by, where one has been read: the Activity tab never shows a library id. */
+function withDisplayNames(context: HandlerContext, response: HandlerResponse): HandlerResponse {
+    if (!response.success || !response.data) return response;
+    const page = response.data as HistoryPage<ActivityEntry>;
+    const items = page.items.map((item) => {
+        const displayName = rememberedPackName(context.context.globalState, item.id.name);
+        return displayName ? { ...item, displayName } : item;
+    });
+    return { ...response, data: { ...page, items } };
 }

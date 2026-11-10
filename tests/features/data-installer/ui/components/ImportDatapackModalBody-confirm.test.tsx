@@ -9,8 +9,22 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { type BodyContext, ImportDatapackModalBody, typesInSentence } from '@/features/data-installer/ui/components/ImportDatapackModalBody';
-import type { ImportJobRecord } from '@/features/data-installer/types';
+import type { ImportJobRecord, InstallCheck } from '@/features/data-installer/types';
 import type { ImportScopes } from '@/features/data-installer/ui/hooks/useImportScopes';
+
+const NONE_FOUND = { count: 0, examples: [] as string[] };
+
+/** The engine's install check, as the record carries it: nothing found wrong. */
+const CHECK: InstallCheck = {
+    verdict: 'matches',
+    checked: 2046,
+    compared: { values: 120, prices: 40, configurables: 6 },
+    missing: NONE_FOUND,
+    configurablesWithoutOptions: NONE_FOUND,
+    configurablesDiffer: { count: 0, examples: [] },
+    valuesDiffer: { count: 0, examples: [] },
+    pricesDiffer: { count: 0, examples: [] },
+};
 
 const SCOPE: ImportScopes = {
     websites: [
@@ -33,15 +47,17 @@ function ctx(over: Partial<BodyContext> = {}): BodyContext {
         availableTypes: ['categories'],
         selected: ['categories'],
         changes: { lines: null, failed: false },
+        replacement: { confirming: false },
         allSelected: true,
         record: null,
         result: null,
-        busyMessage: '',
+        busyMessage: { label: '' },
         scope: SCOPE,
         removal: { content: { kind: 'plain' }, choice: { always: false }, onToggleAlways: jest.fn(), onSaveAsName: jest.fn() },
         toggle: jest.fn(),
         toggleAll: jest.fn(),
-        columns: 1,
+        installing: { name: 'ZZ Test Root DB12', version: '1' },
+        columns: 2,
         ...over,
     };
 }
@@ -107,6 +123,16 @@ describe('typesInSentence', () => {
     });
 });
 
+/** A step's row: the closest work row to its line (a data type's row is its own, nested). */
+function stepRow(text: string): HTMLElement | null {
+    return screen.getByText(text).closest('.work-row');
+}
+
+/** The steps' names, in order: the top-level rows, not the data types nested under Install. */
+function stepNames(): (string | null)[] {
+    return Array.from(document.querySelectorAll('.import-steps > .work-row > .work-row-text > .checkbox-row-label')).map((el) => el.textContent);
+}
+
 describe('the running view', () => {
     const RECORD: ImportJobRecord = {
         activationId: 'a-1',
@@ -119,32 +145,92 @@ describe('the running view', () => {
         perType: {},
     };
 
-    // A row per data type from the first frame, in the order the engine installs (owner,
-    // 2026-11-07): it was a medium spinner and one line, silent for minutes.
-    it('draws an import as a row per data type, in install order, each waiting before the first poll', () => {
+    // Steps named for what they do (owner, 2026-11-09): a first install is Install and Verify, the
+    // data types under Install in the order the engine installs them.
+    it('draws a first install as Install and Verify, the data types under Install in install order', () => {
         render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: RECORD })} />);
 
-        const names = screen.getAllByText(/^(Preparing Import|Categories|Products|Finishing Import)$/).map((el) => el.textContent);
-        expect(names).toEqual(['Preparing Import', 'Categories', 'Products', 'Finishing Import']);
-        // The two types and Finishing Import; Preparing Import is under way.
-        expect(screen.getAllByText('Waiting')).toHaveLength(3);
+        expect(stepNames()).toStrictEqual(['Install ZZ Test Root DB12, 1', 'Verify the Import']);
+        const types = Array.from(document.querySelectorAll('.work-row--dense .checkbox-row-label')).map((el) => el.textContent);
+        expect(types).toStrictEqual(['Categories', 'Products']);
+        // Install is in hand from the first frame ("Starting"), Verify waits; a waiting data type says so by its icon alone.
+        expect(screen.getAllByText('Waiting')).toHaveLength(1);
+        expect(screen.getByText('Starting')).toBeInTheDocument();
+        expect(screen.queryByText('Preparing Import')).not.toBeInTheDocument();
+        expect(screen.queryByText('Finishing Import')).not.toBeInTheDocument();
     });
 
-    // The engine's work outside any one type was a grey line under the list (owner, 2026-11-07).
-    it('puts what the engine is doing before the first type on Preparing Import', () => {
-        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: { ...RECORD, phase: 'Comparing the store with the datapack' } })} />);
+    // Preparing Import is gone: reading and comparing are the first lines of the step they serve.
+    it('puts the comparison before the first type on Install, in the step’s words', () => {
+        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: { ...RECORD, phase: 'Comparing Commerce with the datapack' } })} />);
 
-        const line = screen.getByText('Comparing the store with the datapack');
-        expect(line.closest('.work-row')).toHaveTextContent('Preparing Import');
+        expect(stepRow('Reading from Commerce')).toHaveTextContent('Install ZZ Test Root DB12, 1');
     });
 
-    it('shows the rows while the import starts, before its job is recorded', () => {
+    // Only the type in progress has a second line, under its name, the word first (walk F133).
+    it('shows the type in progress with a second line, and Install how many are in', () => {
+        const record: ImportJobRecord = { ...RECORD, perType: { categories: 'success', products: 'processing' }, detail: '450 of 2,046 products' };
+        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record })} />);
+
+        const doing = screen.getByText('Installing 450 of 2,046');
+        expect(doing).toHaveClass('work-row-doing');
+        expect(doing.closest('.work-row')).toHaveClass('work-row--dense');
+        // The name line carries no count: the label is the name alone.
+        expect(doing.closest('.work-row')?.querySelector('.checkbox-row-label')).toHaveTextContent(/^Products$/u);
+        expect(screen.queryByText('Done')).not.toBeInTheDocument();
+        expect(stepRow('1 of 2 data types')).toHaveTextContent('Install ZZ Test Root DB12, 1');
+    });
+
+    it('says Linking product options on the Products row during the slow part, Install a plain count', () => {
+        const record: ImportJobRecord = { ...RECORD, perType: { categories: 'success', products: 'processing' }, detail: '2,044 of 2,046 products, linking product options' };
+        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record })} />);
+
+        expect(screen.getByText('Linking product options 2,044 of 2,046').closest('.work-row')).toHaveTextContent('Products');
+        expect(stepRow('1 of 2 data types')).toHaveTextContent('Install ZZ Test Root DB12, 1');
+    });
+
+    // The window never changes height on its own (walk F133): every column holds room for the
+    // second line, and the column with the working row has it in the row instead.
+    it('holds room for the second line in every column, the working row’s column filling it', () => {
+        const dataTypes = ['attribute_sets', 'categories', 'products', 'customers'];
+        const waiting: ImportJobRecord = { ...RECORD, dataTypes };
+        const { unmount } = render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: waiting })} />);
+        const heldBefore = Array.from(document.querySelectorAll('.work-row-column')).map((c) => c.className);
+        expect(heldBefore).toStrictEqual(['work-row-column', 'work-row-column']);
+        unmount();
+
+        const working: ImportJobRecord = { ...RECORD, dataTypes, perType: { attribute_sets: 'success', categories: 'success', products: 'processing' }, detail: '1,200 of 2,046 products' };
+        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record: working })} />);
+        const columns = Array.from(document.querySelectorAll('.work-row-column'));
+        expect(columns.map((c) => c.className)).toStrictEqual(['work-row-column', 'work-row-column work-row-column--working']);
+        expect(columns[1]).toHaveTextContent('Installing 1,200 of 2,046');
+        // Done and waiting rows have no second line.
+        expect(document.querySelectorAll('.work-row-doing')).toHaveLength(1);
+    });
+
+    it('draws the data types in one column when the window chose one', () => {
+        const record: ImportJobRecord = { ...RECORD, dataTypes: ['attribute_sets', 'categories', 'products', 'customers'] };
+        render(<ImportDatapackModalBody view="watching" ctx={ctx({ record, columns: 1 })} />);
+
+        expect(document.querySelectorAll('.work-row-column')).toHaveLength(1);
+    });
+
+    it('shows the steps while the import starts, before its job is recorded, and the clock’s line at once', () => {
         render(<ImportDatapackModalBody view="starting" ctx={ctx({ selected: ['products', 'categories'] })} />);
 
-        expect(screen.getByText('Preparing Import').closest('.work-row')).toHaveTextContent('Starting');
-        expect(screen.getAllByText('Waiting')).toHaveLength(3);
-        // One spinner, on its row: no spinner screen in front of the rows.
-        expect(screen.getByRole('progressbar').closest('.work-row')).toHaveTextContent('Preparing Import');
+        expect(stepNames()).toStrictEqual(['Install ZZ Test Root DB12, 1', 'Verify the Import']);
+        // The window keeps one height from the first frame (walk F116): the clock's line is there.
+        expect(document.querySelector('.import-run-foot .dialog-note')).toBeInTheDocument();
+    });
+
+    // An import over the demo's pack saves first, then removes, then installs (walk F97, F105).
+    it('starts a replace with its save spinning first, then Remove, Install and Verify waiting', () => {
+        const replacement = { name: 'Bodea, main', confirming: false, savingStage: 'Saving to the library' };
+        render(<ImportDatapackModalBody view="starting" ctx={ctx({ replacement })} />);
+
+        expect(stepNames()).toStrictEqual(['Save Your Changes', 'Uninstall the Previous Datapack', 'Install ZZ Test Root DB12, 1', 'Verify the Import']);
+        expect(screen.getByRole('progressbar').closest('.work-row')).toHaveTextContent('Save Your Changes');
+        expect(stepRow('Saving to the library')).toHaveTextContent('Save Your Changes');
     });
 
     it('CONTROL: a removal still waits on its spinner', () => {
@@ -155,7 +241,7 @@ describe('the running view', () => {
     });
 });
 
-describe('an import’s ending, on its rows', () => {
+describe('an import’s ending, on its steps', () => {
     const RUN: ImportJobRecord = {
         activationId: 'a-1',
         datapackName: 'luma',
@@ -168,35 +254,57 @@ describe('an import’s ending, on its rows', () => {
         stoppedAt: 'products',
         reason: 'Commerce did not respond.',
     };
+    const ALL_IN: ImportJobRecord = {
+        ...RUN,
+        outcome: 'success',
+        perType: { categories: 'success', products: 'success', source_items: 'success' },
+        stoppedAt: undefined,
+        reason: undefined,
+    };
 
-    it('keeps each row’s end: done, the reason in red on the one it stopped on, the rest not run', () => {
+    it('says where Install stopped, keeps the reason on the type, and leaves Verify not run', () => {
         const result = { variant: 'error' as const, title: 'Import Stopped', run: RUN, tookMs: 182_000 };
         render(<ImportDatapackModalBody view="result" ctx={ctx({ result })} />);
 
-        // Preparing Import and Categories; Source Items and Finishing Import did not run.
-        expect(screen.getAllByText('Done')).toHaveLength(2);
-        expect(screen.getByText('Commerce did not respond.')).toHaveClass('dialog-problem', 'text-negative');
-        expect(screen.getAllByText('Not run')).toHaveLength(2);
+        // The reason once, on the data type; Install's own line says only Stopped (review, 2026-11-10).
+        const stopped = screen.getByText('Stopped');
+        expect(stopped.closest('.work-row')).toHaveTextContent('Install ZZ Test Root DB12, 1');
+        expect(screen.getAllByText('Commerce did not respond.')).toHaveLength(1);
+        const reason = screen.getByText('Commerce did not respond.');
+        expect(reason).toHaveClass('dialog-problem', 'text-negative');
+        expect(reason.closest('.work-row')).toHaveClass('work-row--dense');
+        expect(reason.closest('.work-row')).toHaveTextContent('Products');
+        expect(stepRow('Not run')).toHaveTextContent('Verify the Import');
         expect(screen.getByText('Took 3 minutes, 2 seconds')).toBeInTheDocument();
     });
 
-    it('puts a problem that did not stop it on its row, orange, and the sentence under the list', () => {
-        const run = { ...RUN, outcome: 'success' as const, perType: { categories: 'success', products: 'success', source_items: 'success' } as ImportJobRecord['perType'], stoppedAt: undefined, reason: undefined, rowNotes: { products: 'The store refused 3.' }, scLines: ['Kept 2 things you had changed in the Admin.'] };
-        const result = { variant: 'warning' as const, title: 'Datapack Imported', run, lead: 'Luma is in Justrite Test Store.' };
+    it('puts a problem that did not stop it on its type, orange, and the sentence under the steps', () => {
+        const run: ImportJobRecord = { ...ALL_IN, rowNotes: { products: 'Commerce refused 3.' }, scLines: ['Kept 2 things you had changed in the Admin.'] };
+        const result = { variant: 'warning' as const, title: 'ZZ Test Root DB12 Imported', run, lead: 'Luma is in Justrite Test Store.' };
         render(<ImportDatapackModalBody view="result" ctx={ctx({ result })} />);
 
-        expect(screen.getByText('The store refused 3.')).toHaveClass('dialog-problem', 'text-notice');
+        expect(screen.getByText('Commerce refused 3.')).toHaveClass('dialog-problem', 'text-notice');
+        expect(stepRow('Installed')).toHaveTextContent('Install ZZ Test Root DB12, 1');
+        // No check on the record: Verify ends on Done.
+        expect(stepRow('Done')).toHaveTextContent('Verify the Import');
         expect(screen.getByText('Luma is in Justrite Test Store.')).toBeInTheDocument();
         expect(screen.getByText('Kept 2 things you had changed in the Admin.')).toBeInTheDocument();
     });
 
-    it('puts the reason on Preparing Import when it stopped before any data type', () => {
-        const run = { ...RUN, perType: { categories: 'error', products: 'error', source_items: 'error' } as ImportJobRecord['perType'], stoppedAt: undefined, reason: 'Choose the website and store view to install into first.' };
+    it('ends Verify on what the check found when the record has one', () => {
+        const run: ImportJobRecord = { ...ALL_IN, check: CHECK };
+        render(<ImportDatapackModalBody view="result" ctx={ctx({ result: { variant: 'warning', title: 'ZZ Test Root DB12 Imported', run } })} />);
+
+        expect(stepRow('Checked 2,046 products against the datapack: all match')).toHaveTextContent('Verify the Import');
+    });
+
+    it('puts the reason on Install when it stopped before any data type and nothing was replaced', () => {
+        const run: ImportJobRecord = { ...RUN, perType: { categories: 'error', products: 'error', source_items: 'error' }, stoppedAt: undefined, reason: 'Choose the website and store view to install into first.' };
         render(<ImportDatapackModalBody view="result" ctx={ctx({ result: { variant: 'error', title: 'Import Stopped', run } })} />);
 
         const reason = screen.getByText('Choose the website and store view to install into first.');
         expect(reason).toHaveClass('dialog-problem', 'text-negative');
-        expect(reason.closest('.work-row')).toHaveTextContent('Preparing Import');
-        expect(screen.getAllByText('Not run')).toHaveLength(4);
+        expect(reason.closest('.work-row')).toHaveTextContent('Install ZZ Test Root DB12, 1');
+        expect(stepRow('Not run')).toHaveTextContent('Verify the Import');
     });
 });

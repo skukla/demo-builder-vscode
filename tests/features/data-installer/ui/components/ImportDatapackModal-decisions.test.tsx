@@ -56,6 +56,7 @@ function withStatus(record: unknown): void {
 
 const runningRecord = (over: Record<string, unknown> = {}) => ({
     activationId: 'act-1',
+    version: 'main',
     dataTypes: ['categories', 'products'],
     outcome: 'watching',
     operation: 'import',
@@ -173,14 +174,17 @@ describe('ImportDatapackModal — decisions', () => {
             expect(screen.getByText('0 of 2 data types: Categories')).toBeInTheDocument();
         });
 
-        // An import runs on its rows (owner, 2026-11-07): each type where it stands.
-        it('draws a running import as its rows, the type in progress installing', async () => {
+        // An import runs on its steps (owner, 2026-11-09): the type in progress under Install.
+        it('draws a running import as its steps, the type in progress installing', async () => {
             withStatus(runningRecord({ perType: { categories: 'processing' } }));
             renderModal();
             await settle();
 
-            expect(await screen.findByText('Installing')).toBeInTheDocument();
-            expect(screen.getByText('Products').closest('.work-row')).toHaveTextContent('Waiting');
+            // The row in progress spins; with no count yet its second line is the word alone (walk F133).
+            const row = (await screen.findByText('Categories')).closest('.work-row');
+            expect(row).toHaveAttribute('data-state', 'checking');
+            expect(screen.getByText('Installing').closest('.work-row')).toBe(row);
+            expect(screen.getByText('0 of 2 data types').closest('.work-row')).toHaveTextContent('Install Bodea, main');
             expect(screen.queryByText(OPERATION_STAGES.installingDatapack.label)).not.toBeInTheDocument();
         });
 
@@ -204,7 +208,7 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await awaitForm();
 
-            expect(screen.queryByText('Checking with the service')).not.toBeInTheDocument();
+            expect(screen.queryByText('Checking the import')).not.toBeInTheDocument();
         });
 
         it('does not show the watch for a record whose job has already finished', async () => {
@@ -218,29 +222,32 @@ describe('ImportDatapackModal — decisions', () => {
         });
     });
 
+    // Remove Data opens the window on the confirm (`opensOn: 'remove'`, walk F118).
     describe('the removal confirmation', () => {
-        async function armReset(types: string[]): Promise<void> {
-            renderModal();
-            await awaitForm();
-            for (const type of types) {
-                await press(screen.getByRole('checkbox', { name: type }));
-            }
-            await press(screen.getByRole('button', { name: /^remove data/i }));
+        async function openRemoval(availableTypes: string[]): Promise<void> {
+            renderModal({ availableTypes, opensOn: 'remove' });
+            await settle();
+            await settle();
         }
 
         // The confirm's one sentence names what goes, the warning a word in it (dialog design
         // rules, owner 2026-10-31).
         it('names one type in its sentence', async () => {
-            await armReset(['Categories']);
+            await openRemoval(['categories']);
 
             expect(screen.getByText(/^Permanently deletes .+’s categories\.$/)).toBeInTheDocument();
         });
 
-        // Products brings the type it depends on, and both are named.
+        // A pack Demo Builder installed: what goes is what its record lists, every type named.
         it('names several types, joined as a sentence joins them', async () => {
-            await armReset(['Products']);
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'get-datapack-removal-scope'
+                    ? { success: true, data: { recordedKinds: ['attribute_sets', 'categories', 'products'] } }
+                    : defaultResponse(type),
+            );
+            await openRemoval(['attribute_sets', 'categories', 'products']);
 
-            expect(screen.getByText(/^Permanently deletes .+’s .+ and .+\.$/)).toBeInTheDocument();
+            expect(screen.getByText('Permanently deletes what Bodea installed: attribute sets, categories and products.')).toBeInTheDocument();
         });
     });
 
@@ -257,14 +264,12 @@ describe('ImportDatapackModal — decisions', () => {
 
         it('says a removal is starting, not an import', async () => {
             hang('reset-datapack');
-            renderModal();
-            await awaitForm();
-            await press(screen.getByRole('checkbox', { name: 'Select All' }));
-            await press(screen.getByRole('button', { name: /^remove data/i }));
+            renderModal({ availableTypes: ['categories'], opensOn: 'remove' });
+            await settle();
 
-            await press(screen.getByRole('button', { name: /^remove$/i }));
+            await press(await screen.findByRole('button', { name: /^uninstall$/i }));
 
-            expect(screen.getByText('Starting removal')).toBeInTheDocument();
+            expect(screen.getByText('Uninstalling the datapack')).toBeInTheDocument();
         });
     });
 
@@ -325,7 +330,7 @@ describe('ImportDatapackModal — decisions', () => {
             await press(await screen.findByRole('button', { name: 'Run in Background' }));
 
             expect(mockPostMessage.mock.calls).toStrictEqual([
-                ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Removing Bodea' }],
+                ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Uninstalling Bodea' }],
             ]);
         });
 

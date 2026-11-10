@@ -499,6 +499,49 @@ describe('UpdatesModal', () => {
             expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
 
+        // Walk F134 (owner, 2026-11-10): a run where every update applied with nothing to read hands
+        // off to the small result, with only what is left to know.
+        const allApplied = (remaining: number) => ({
+            ...running(
+                { extension: { id: 'extension', state: 'done' }, 'blockLibrary:0': { id: 'blockLibrary:0', state: 'done' } },
+                { state: 'succeeded' },
+            ),
+            remaining,
+        });
+
+        it('hands a clean run to the small result, its title alone when nothing is left', () => {
+            const { container } = render(<UpdatesModal controls={allApplied(0)} />);
+
+            const dialog = screen.getByRole('dialog', { name: 'Updates Applied' });
+            expect(dialog).toHaveAttribute('data-size', 'S');
+            expect(dialog).toHaveAttribute('data-status', 'success');
+            expect(container.querySelector('.updates-group-list')).toBeNull();
+            expect(screen.queryByText('Demo Builder extension')).toBeNull();
+            expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+        });
+
+        it('says on the small result how many updates the SC left, with Back to Updates', () => {
+            render(<UpdatesModal controls={allApplied(2)} />);
+
+            expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toHaveAttribute('data-size', 'S');
+            expect(screen.getByText('2 updates pending')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Back to Updates' })).toBeInTheDocument();
+        });
+
+        it('CONTROL: a run with a row that failed stays on its rows, large', () => {
+            const c = running(
+                {
+                    extension: { id: 'extension', state: 'done' },
+                    'blockLibrary:0': { id: 'blockLibrary:0', state: 'failed', message: 'Demo Builder Blocks: rate limited' },
+                },
+                { state: 'succeeded', warning: '1 update did not apply.' },
+            );
+            const { container } = render(<UpdatesModal controls={c} />);
+
+            expect(screen.getByRole('dialog', { name: "Some updates didn't apply" })).toHaveAttribute('data-size', 'L');
+            expect(container.querySelector('.updates-group-list')).not.toBeNull();
+        });
+
         // The button's spinner, not a "Checking for updates" label (owner, 2026-10-31).
         it('shows the button busy while the check runs, so it cannot be pressed again', () => {
             render(<UpdatesModal controls={{ ...ended(1), rechecking: true }} />);

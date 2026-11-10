@@ -15,17 +15,22 @@ import { FormField } from '@/core/ui/components/forms/FormField';
  * Save As's first screen: the new datapack's name, which the SC sees it called (the library's own
  * name for it is generated, `packIdFor`). Starts as the demo's pack's name with "Copy".
  */
-export function SaveAsNameStage({ name, onChange }: { name: string; onChange: (name: string) => void }): React.ReactElement {
+export function SaveAsNameStage({ name, onChange, intro }: { name: string; onChange: (name: string) => void; intro?: string }): React.ReactElement {
     return (
-        <FormField
-            fieldKey="saveAsName"
-            label="Datapack Name"
-            type="text"
-            value={name}
-            onChange={onChange}
-            required
-            placeholder="e.g. My Bodea"
-        />
+        <>
+            {/* What the save takes, and that it makes a new pack (`saveWords.SAVE_AS_INTRO`). */}
+            {intro ? <p className="datapack-export-intro">{intro}</p> : null}
+                <FormField
+                fieldKey="saveAsName"
+                label="Datapack Name"
+                type="text"
+                value={name}
+                onChange={onChange}
+                required
+                placeholder="e.g. My Bodea"
+            />
+    
+        </>
     );
 }
 

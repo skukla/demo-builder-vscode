@@ -71,17 +71,17 @@ function PreviewView({ answer, loading, hasTicks }: { answer: DemoDataCheck | nu
     if (!preview) return null;
     // What stays is still said when nothing goes: "holds nothing" would be false, and the SC should see why.
     if (preview.total === 0 && !leavesErpOrders(preview) && preview.left.length === 0) return <Text>{CLEAR_COPY.nothing}</Text>;
+    // What is never touched (`preview.never`) is not drawn: the list says what goes and the lead says
+    // orders are closed, so a footnote under it changed nothing the SC knows or does (review,
+    // 2026-11-10). It stays in the answer for an agent's check_demo_data.
     return (
-        <div className="dialog-stack">
-            <FactList>
-                {previewLines(preview).map((line, index) => (
-                    <Fact key={`${line.label}-${index}`} label={line.label}>
-                        {line.value}
-                    </Fact>
-                ))}
-            </FactList>
-            <p className="dialog-note">{preview.never}</p>
-        </div>
+        <FactList>
+            {previewLines(preview).map((line, index) => (
+                <Fact key={`${line.label}-${index}`} label={line.label}>
+                    {line.value}
+                </Fact>
+            ))}
+        </FactList>
     );
 }
 

@@ -61,8 +61,10 @@ describe('importing a pack the project has', () => {
         renderModal();
         await settle();
 
-        expect(screen.getByText('Comparing with Commerce')).toBeInTheDocument();
-        expect(screen.getByText('Each data type in Bodea')).toBeInTheDocument();
+        // The same check, in the same words, as before a removal or a replace (walk F114).
+        expect(screen.getByText('Checking for your changes')).toBeInTheDocument();
+        expect(screen.getByText("Since this demo's last save")).toBeInTheDocument();
+        expect(screen.getByText('Usually about a minute')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: /Categories/ })).toBeNull();
         expect(screen.queryByRole('button', { name: 'Import' })).toBeNull();
         expect(previewCalls()[0][1]).toEqual({ datapackName: 'bodea', version: 'main' });

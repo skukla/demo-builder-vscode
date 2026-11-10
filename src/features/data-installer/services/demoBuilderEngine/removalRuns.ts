@@ -28,6 +28,7 @@ import { commerceMessage, isRowRefusal } from './refusedRows';
 import { TakeBackRefused, takeBack } from './removers';
 import { removeAssignmentPairs } from './sharedCatalogKinds';
 import { LINK_KIND, removeStockSourceLinks } from './stockKinds';
+import { andList } from '@/core/utils/andList';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceSend } from '@/types/commerceWire';
 
@@ -123,6 +124,35 @@ export async function takeBackAll(
         after(along);
     };
     for (const run of removalRuns(take.filter((o) => !implied.covered.has(o)))) {
+        const started = Date.now();
+        await takeBackRun(commerce, recorder, run, refused, gone, after);
+        commerce.log?.(`took back ${kindsOfRun(run)} in ${((Date.now() - started) / 1000).toFixed(1)} s`);
+    }
+    for (const row of refused) commerce.log?.(`could not take back ${row.kind} ${row.key}: ${row.reason}`);
+    return refused;
+}
+
+/**
+ * Every kind in a run with its count, in the order first met: "2046 products and 2 giftcards". Named by
+ * its first object alone, a run of products and gift cards logged "took back 2048 giftcards" (live,
+ * 2026-11-09).
+ */
+export function kindsOfRun(run: readonly CreatedObject[]): string {
+    const counts = new Map<string, number>();
+    for (const object of run) counts.set(object.kind, (counts.get(object.kind) ?? 0) + 1);
+    return andList([...counts].map(([kind, count]) => `${count} ${kind}`));
+}
+
+/** One run of the removal: products in bulk, a kind in one call, or each object alone. */
+async function takeBackRun(
+    commerce: BulkRemovalAccess,
+    recorder: Pick<InstallRecorder, 'drop'>,
+    run: CreatedObject[],
+    refused: RefusedRemoval[],
+    gone: (objects: readonly CreatedObject[]) => Promise<void>,
+    after: (objects: readonly CreatedObject[]) => void,
+): Promise<void> {
+    {
         if (runOf(run[0]) === 'products') {
             await removeProductsInBulk(commerce, recorder, run, (object) => takeBack(commerce, object));
             after(run);
@@ -134,8 +164,6 @@ export async function takeBackAll(
             }
         }
     }
-    for (const row of refused) commerce.log?.(`could not take back ${row.kind} ${row.key}: ${row.reason}`);
-    return refused;
 }
 
 /** How many refused removals the line names; Debug Logs names each one. */
@@ -146,10 +174,10 @@ const NAMED_REFUSALS = 10;
  *
  * @param again - what tries it again: "Installing" the pack again, or "Removing" it again
  */
-export function refusedRemovalsLine(refused: readonly RefusedRemoval[], again: 'Installing' | 'Removing'): string | undefined {
+export function refusedRemovalsLine(refused: readonly RefusedRemoval[], again: 'Installing' | 'Uninstalling'): string | undefined {
     if (refused.length === 0) return undefined;
     const rows = refused.slice(0, NAMED_REFUSALS).map((row) => `${dataTypeLabel(row.kind).toLowerCase()} ${row.key} (${row.reason.replace(/\.$/u, '')})`);
     const count = refused.length === 1 ? '1 item' : `${refused.length.toLocaleString('en-US')} items`;
     const more = refused.length > NAMED_REFUSALS ? `; and ${refused.length - NAMED_REFUSALS} more, each named in Debug Logs` : '';
-    return `Left ${count} in the store that Commerce would not take out: ${rows.join('; ')}${more}. ${again} the datapack again tries again.`;
+    return `Commerce would not take out ${count}: ${rows.join('; ')}${more}. ${again} the datapack again tries again.`;
 }

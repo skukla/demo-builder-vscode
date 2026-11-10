@@ -2,11 +2,12 @@
  * What a FINISHED job says, by the dialog design rules (`docs/development/sop/dialog-design.md`):
  * the outcome is the dialog's TITLE and the body carries only what is left to know or do.
  *
- * An import ends on the rows it ran on (owner, 2026-11-07, "A run ends where it ran"): the title
- * names the kind of thing ("Datapack Imported", "Import Stopped"), the record goes with it for the
- * rows, and the footer's main action is Retry while a retry can get past the stop, else Fix with AI.
- * Before, a success was "Imported Luma" over the engine's whole note as one paragraph, which the
- * owner called "far too noisy".
+ * An import that finished cleanly hands off to the small result (owner, 2026-11-10, walk F134):
+ * "Frescopa Imported", then only where the SC's changes went and how long search takes. One that
+ * finished with a problem, or stopped, stays on the steps it ran on: the record goes with the result
+ * for the steps, and the footer's main action is Retry while a retry can get past the stop, else
+ * Fix with AI. Before, a success was "Imported Luma" over the engine's whole note as one paragraph,
+ * which the owner called "far too noisy".
  *
  * A removal keeps its own ending: it has no rows yet. It announces itself as a removal
  * ("Removed"), never an import. Records written before the `operation` field existed have none,
@@ -17,36 +18,87 @@ import type { DataTypeStatus, ImportJobRecord } from '@/features/data-installer/
 import {
     resolveResult,
     RETRIES_BEFORE_FIX,
+    SAVED_LINE,
 } from '@/features/data-installer/ui/components/importResult';
 import { jobRecord, PACK_NAME, recordOnlySources } from './importResult.testUtils';
 
-const STORE = 'Justrite Test Store';
-const SEARCH = 'Products can take up to 20 minutes to appear in storefront search.';
+const SEARCH = 'New products can take 20 minutes to show in search.';
 
 /** The outcome the result view produces for a finished job of this shape. */
 function outcomeOf(overrides: Partial<ImportJobRecord>, extra: { retries?: number } = {}) {
     const record = jobRecord(overrides);
     const action = record.operation === 'reset' ? 'reset' : 'start';
-    return resolveResult(action, { ...recordOnlySources(record), store: STORE, ...extra });
+    return resolveResult(action, { ...recordOnlySources(record), ...extra });
 }
 
 const done = (...kinds: string[]): Record<string, DataTypeStatus> =>
     Object.fromEntries(kinds.map((kind) => [kind, 'success' as DataTypeStatus]));
 
-describe('an import that ran to the end', () => {
-    it('is "Datapack Imported", with the record for its rows and the sentence under them', () => {
+describe('an import that finished cleanly (walk F134)', () => {
+    it('is the small result: the pack Imported, and how long search takes, nothing else', () => {
         const record = {
             outcome: 'success' as const,
             perType: done('categories', 'products'),
             searchDelay: SEARCH,
+            processingTimeMs: 72_000,
         };
 
+        // No `run` (so no steps), no lead, no "Took …".
         expect(outcomeOf(record)).toEqual({
             variant: 'success',
-            title: 'Datapack Imported',
-            run: jobRecord(record),
-            lead: `${PACK_NAME} is in ${STORE}. ${SEARCH}`,
+            title: `${PACK_NAME} Imported`,
+            finished: true,
+            message: SEARCH,
         });
+    });
+
+    // Review, 2026-11-10: only a problem keeps the steps. The engine's lines for the SC go in the small
+    // result's body, after the saved line and before the search line, a line each.
+    it('is the small result with the engine\'s lines in its body, between the saved and search lines', () => {
+        const result = outcomeOf({
+            outcome: 'success',
+            perType: done('categories', 'products'),
+            savedAs: 'Nov 9, 11:52 PM',
+            replaces: 'Frescopa',
+            searchDelay: SEARCH,
+            scLines: ['Kept 2 things you had changed in the Admin.'],
+        });
+
+        expect(result).toEqual({
+            variant: 'success',
+            title: `${PACK_NAME} Imported`,
+            finished: true,
+            details: [SAVED_LINE, 'Kept 2 things you had changed in the Admin.', SEARCH],
+        });
+    });
+
+    it('says where the SC’s changes went first, when they were saved', () => {
+        const result = outcomeOf({
+            outcome: 'success',
+            perType: done('products'),
+            replaces: 'Frescopa',
+            savedAs: 'Nov 9, 11:52 PM',
+            searchDelay: SEARCH,
+        });
+
+        expect(result?.message).toBe(
+            'Your changes are saved in Version History. New products can take 20 minutes to show in search.'
+        );
+        expect(SAVED_LINE).toBe('Your changes are saved in Version History.');
+    });
+
+    it('is the title alone when there is nothing left to know', () => {
+        expect(outcomeOf({ outcome: 'success', perType: done('categories') })).toEqual({
+            variant: 'success',
+            title: `${PACK_NAME} Imported`,
+            finished: true,
+        });
+    });
+
+    it('treats a record written before the operation field as an import', () => {
+        expect(outcomeOf({ outcome: 'success', perType: done('products') })?.title).toBe(
+            `${PACK_NAME} Imported`
+        );
     });
 
     it('CONTROL: offers no main action when nothing needs the SC', () => {
@@ -54,19 +106,60 @@ describe('an import that ran to the end', () => {
             outcomeOf({ outcome: 'success', perType: done('products') })?.action
         ).toBeUndefined();
     });
+});
 
-    it('is amber, with Fix with AI, when a row went in with a problem', () => {
-        const result = outcomeOf({
-            outcome: 'success',
-            perType: done('products'),
-            rowNotes: { products: 'The store refused 3.' },
-        });
+describe('an import that finished with a problem (walk F134)', () => {
+    it('stays on its steps, amber, the same title, with Fix with AI and the sentence under them', () => {
+        const record = {
+            outcome: 'success' as const,
+            perType: done('categories', 'products'),
+            rowNotes: { products: 'Commerce refused 3.' },
+            searchDelay: SEARCH,
+            processingTimeMs: 72_000,
+        };
 
-        expect(result).toMatchObject({
+        expect(outcomeOf(record)).toEqual({
             variant: 'warning',
-            title: 'Datapack Imported',
+            title: `${PACK_NAME} Imported`,
+            run: jobRecord(record),
+            finished: true,
             action: 'fix',
+            // Only the search sentence: no paragraph on where it went (review, 2026-11-10).
+            lead: SEARCH,
+            tookMs: 72_000,
         });
+    });
+
+    it('stays on its steps when the check found products that differ', () => {
+        const check = {
+            verdict: 'differs' as const,
+            checked: 2048,
+            compared: { values: 10, prices: 5, configurables: 1 },
+            missing: { count: 3, examples: ['24-mb01'] },
+            configurablesWithoutOptions: { count: 0, examples: [] },
+            configurablesDiffer: { count: 0, examples: [] },
+            valuesDiffer: { count: 0, examples: [] },
+            pricesDiffer: { count: 0, examples: [] },
+        };
+        const result = outcomeOf({ outcome: 'success', perType: done('products'), check });
+
+        expect(result).toMatchObject({ variant: 'warning', title: `${PACK_NAME} Imported`, action: 'fix' });
+        expect(result?.run).toBeDefined();
+    });
+
+    it('CONTROL: a check that matches is a clean finish', () => {
+        const check = {
+            verdict: 'matches' as const,
+            checked: 2048,
+            compared: { values: 10, prices: 5, configurables: 1 },
+            missing: { count: 0, examples: [] },
+            configurablesWithoutOptions: { count: 0, examples: [] },
+            configurablesDiffer: { count: 0, examples: [] },
+            valuesDiffer: { count: 0, examples: [] },
+            pricesDiffer: { count: 0, examples: [] },
+        };
+
+        expect(outcomeOf({ outcome: 'success', perType: done('products'), check })?.run).toBeUndefined();
     });
 
     it('still ran to the end when only the store settings failed, which fail without stopping it', () => {
@@ -79,19 +172,10 @@ describe('an import that ran to the end', () => {
 
         expect(result).toMatchObject({
             variant: 'warning',
-            title: 'Datapack Imported',
+            title: `${PACK_NAME} Imported`,
             action: 'fix',
+            finished: true,
         });
-    });
-
-    it('treats a record written before the operation field as an import', () => {
-        expect(outcomeOf({ outcome: 'success', perType: done('products') })?.title).toBe(
-            'Datapack Imported'
-        );
-    });
-
-    it('carries how long the job took, when it said', () => {
-        expect(outcomeOf({ outcome: 'success', processingTimeMs: 72_000 })?.tookMs).toBe(72_000);
     });
 });
 
@@ -147,7 +231,7 @@ describe('an import that stopped', () => {
 describe('a removal', () => {
     it('calls a reset a REMOVAL', () => {
         expect(outcomeOf({ outcome: 'success', operation: 'reset' })?.title).toBe(
-            `Removed ${PACK_NAME}`
+            `${PACK_NAME} Uninstalled`
         );
     });
 
@@ -160,7 +244,7 @@ describe('a removal', () => {
 
         expect(result).toEqual({
             variant: 'success',
-            title: `Removed ${PACK_NAME}`,
+            title: `${PACK_NAME} Uninstalled`,
             message: 'Kept the category Gear: it holds yours.',
         });
     });
@@ -182,7 +266,7 @@ describe('a removal', () => {
             })
         ).toEqual({
             variant: 'warning',
-            title: `Action Required to Remove ${PACK_NAME}`,
+            title: `Action Required to Uninstall ${PACK_NAME}`,
             message:
                 "Justrite Test Store still uses the datapack's root category, ZZ Root DB12, so it stayed.",
             keptRoot,
@@ -198,7 +282,7 @@ describe('a removal', () => {
 
         expect(result).toEqual({
             variant: 'warning',
-            title: `Removed ${PACK_NAME}, Except Some Data Types`,
+            title: `Some Data Types Not Uninstalled`,
             details: ['Products: error', 'Running it again skips existing items.'],
         });
     });
@@ -212,7 +296,7 @@ describe('a removal', () => {
 
         expect(result).toMatchObject({
             variant: 'error',
-            title: `Couldn't Remove ${PACK_NAME}`,
+            title: `Couldn't Uninstall ${PACK_NAME}`,
             message: 'Commerce rejected the token',
         });
     });
@@ -242,7 +326,7 @@ describe('a job with no rows to end on', () => {
 
     it('words a removal as a removal', () => {
         expect(outcomeOf({ outcome: 'never-registered', operation: 'reset' })?.title).toBe(
-            'Removal Did Not Start'
+            'Uninstall Did Not Start'
         );
     });
 });

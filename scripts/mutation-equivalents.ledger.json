@@ -7424,10 +7424,10 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 240,
+            "line": 247,
             "mutants": 1,
             "category": "branch",
-            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
+            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded. Re-anchored 2026-11-10 (246 -> 247): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
             "decision": "none \u2014 equivalent. The acceptThenHide test proves the ORDER is survived; it cannot prove the flag is what survives it.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -7437,10 +7437,10 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 241,
+            "line": 248,
             "mutants": 1,
             "category": "branch",
-            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
+            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded. Re-anchored 2026-11-10 (247 -> 248): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
             "decision": "none \u2014 equivalent.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -7755,10 +7755,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 284,
+            "line": 301,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (247 -> 248): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (251 -> 272): unchanged code; the progress push above it carries the engine's count. Re-anchored 2026-11-06 (272 -> 274): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (274 -> 275): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (281 -> 284): unchanged code; the pack-change announcement was added above it.",
+            "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (247 -> 248): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (251 -> 272): unchanged code; the progress push above it carries the engine's count. Re-anchored 2026-11-06 (272 -> 274): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (274 -> 275): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (281 -> 284): unchanged code; the pack-change announcement was added above it. Re-anchored 2026-11-09 (295 -> 298): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (298 -> 301): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it.",
             "decision": "none \u2014 log-only.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -7768,10 +7768,10 @@
             "anchors": [
                 "if (!project) {"
             ],
-            "line": 277,
+            "line": 294,
             "mutants": 2,
             "category": "branch",
-            "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (240 -> 241): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (244 -> 265): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (265 -> 267): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (267 -> 268): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (274 -> 277): unchanged code; the pack-change announcement was added above it.",
+            "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (240 -> 241): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (244 -> 265): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (265 -> 267): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (267 -> 268): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (274 -> 277): unchanged code; the pack-change announcement was added above it. Re-anchored 2026-11-09 (288 -> 291): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (291 -> 294): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it.",
             "decision": "none \u2014 equivalent. The guard is the intentional path and the catch is the backstop; a test cannot tell which one ran.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -9358,10 +9358,10 @@
             "anchors": [
                 "default:"
             ],
-            "line": 266,
+            "line": 314,
             "mutants": 1,
             "category": "branch",
-            "reason": "Unreachable through the only route into unfinishedResult. Its switch names six outcomes; the record type declares eight. The two it omits cannot arrive: terminalResult hands 'success' to successResult before this call, and resolveResult only reaches terminalResult when record.outcome !== 'watching'. So no ImportJobRecord a caller can build lands in the default arm, and no test can distinguish it from the arms above. Re-anchored 2026-10-31 (202 -> 181): describeOutcome and the per-outcome variant table became one switch, unfinishedResult, when results moved to the dialog design rules; the default arm and the argument are unchanged.",
+            "reason": "Unreachable through the only route into unfinishedResult. Its switch names six outcomes; the record type declares eight. The two it omits cannot arrive: terminalResult hands 'success' to successResult before this call, and resolveResult only reaches terminalResult when record.outcome !== 'watching'. So no ImportJobRecord a caller can build lands in the default arm, and no test can distinguish it from the arms above. Re-anchored 2026-10-31 (202 -> 181): describeOutcome and the per-outcome variant table became one switch, unfinishedResult, when results moved to the dialog design rules; the default arm and the argument are unchanged. Re-anchored 2026-11-09 (295 -> 307): unchanged code; the ending's sentence for a replace (walk F105) was added above it. Re-anchored 2026-11-10 (307 -> 329): unchanged code; the clean import's small result (walk F134) added `leftToKnow`, `hasProblem` and two lines above it. Re-anchored 2026-11-10 (329 -> 330): unchanged code; a run that has lines for the SC stays on its steps, one line above it. Re-anchored 2026-11-10 (330 -> 313): unchanged code; the clean import's result took the engine's lines into its body and the problem run's paragraph went (review fixes). Re-anchored 2026-11-10 (313 -> 314): unchanged code; a comment above the named failure title went in above it.",
             "decision": "none \u2014 the default keeps unfinishedResult total should the outcome union gain a member",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
@@ -9506,21 +9506,21 @@
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "The initial value cannot be observed because the only thing it gates is resolveResult, which returns null for a null lastAction \u2014 its switch has an arm for each of the four actions and a default that returns null. So before any action the result is null whether dismissed is true or false, and the first action calls act(), which sets dismissed false before the result is next read.",
+            "reason": "The initial value cannot be observed because the only thing it gates is resolveResult, which returns null for a null lastAction \u2014 its switch has an arm for each of the four actions and a default that returns null. So before any action the result is null whether dismissed is true or false, and the first action calls act(), which sets dismissed false before the result is next read. Re-anchored 2026-11-09 (101 -> 103): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (103 -> 115): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (115 -> 117): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it.",
             "decision": "none \u2014 starting undismissed is what 'the user has seen nothing yet' means",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05",
-            "line": 100
+            "line": 117
         },
         {
             "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
             "anchors": [
                 "}, [loadStatus]);"
             ],
-            "line": 117,
+            "line": 136,
             "mutants": 1,
             "category": "other",
-            "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
+            "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (118 -> 122): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (122 -> 134): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (134 -> 136): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it.",
             "decision": "none \u2014 naming the dependency is what keeps it true if load ever stops being stable",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -9530,10 +9530,10 @@
             "anchors": [
                 "}, [loadTarget]);"
             ],
-            "line": 122,
+            "line": 140,
             "mutants": 1,
             "category": "other",
-            "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
+            "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (123 -> 127): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (127 -> 139): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (139 -> 140): unchanged code; the data types' columns (walk F135) were added above it and a blank line removed.",
             "decision": "none \u2014 naming the dependency is what keeps it true if load ever stops being stable",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -9543,10 +9543,10 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 179,
+            "line": 186,
             "mutants": 1,
             "category": "other",
-            "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves.",
+            "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves. Re-anchored 2026-11-09 (180 -> 184): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (184 -> 188): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (188 -> 186): unchanged code; a comment above it was shortened and blank lines removed to keep the file at its size limit (walk F135).",
             "decision": "none \u2014 act closes over nothing that can change, so its dependency list is empty",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -10702,12 +10702,11 @@
             "module": "src/features/data-installer/ui/views/DatapackCatalogView.tsx",
             "anchors": [
                 "}, [loadProjectContext, library]);",
-                "[],",
-                "const openImport = useCallback((id: DatapackId): void => setImporting(id), []);"
+                "[],"
             ],
-            "mutants": 3,
+            "mutants": 2,
             "category": "other",
-            "reason": "Five dependency lists whose entries never change between renders. Two of them name a hook's `load`, which is a useCallback over `execute` from useVSCodeRequest and is stable for the component's lifetime \u2014 dropping it leaves the effect and the callback firing exactly as before (and if it were NOT stable the effect at line 104 would re-fire on every render, which it does not). The other three are empty and constant, and Stryker replaces them with a different constant array: React compares dependency lists element by element between renders, and two renders both produce the same one, so the memoisation is identical. Each planted individually: all 38 tests pass. The three dependency lists in this file that DO carry a changing value \u2014 refresh's includeCommunity, closeImport's commerceInstance, retryDetail's selected \u2014 are each killed by a test. Re-anchored 2026-11-07: the first list gained `library`, a prop fixed for the panel's life (the Datapack Library or a project's Datapacks), so it too never changes between renders. Re-anchored 2026-11-08: openDetail's `[loadDetail]` and closeDetail's `[]` moved into `useDetailFlyout` with the flyout's selection (walk F77), so three of the five remain here: one hook's `load` and two constant empty lists.",
+            "reason": "Five dependency lists whose entries never change between renders. Two of them name a hook's `load`, which is a useCallback over `execute` from useVSCodeRequest and is stable for the component's lifetime \u2014 dropping it leaves the effect and the callback firing exactly as before (and if it were NOT stable the effect at line 104 would re-fire on every render, which it does not). The other three are empty and constant, and Stryker replaces them with a different constant array: React compares dependency lists element by element between renders, and two renders both produce the same one, so the memoisation is identical. Each planted individually: all 38 tests pass. The three dependency lists in this file that DO carry a changing value \u2014 refresh's includeCommunity, closeImport's commerceInstance, retryDetail's selected \u2014 are each killed by a test. Re-anchored 2026-11-07: the first list gained `library`, a prop fixed for the panel's life (the Datapack Library or a project's Datapacks), so it too never changes between renders. Re-anchored 2026-11-08: openDetail's `[loadDetail]` and closeDetail's `[]` moved into `useDetailFlyout` with the flyout's selection (walk F77), so three of the five remain here: one hook's `load` and two constant empty lists. 2026-11-09 (walk F99): openImport's list is no longer empty or constant: it names the flyout's selection, since restoring another version opens the flyout on it first, so it left this entry (3 -> 2 mutants).",
             "decision": "none \u2014 every one of these lists is required and correct as written",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
@@ -10960,10 +10959,10 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 223,
+            "line": 230,
             "mutants": 1,
             "category": "branch",
-            "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
+            "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row. Re-anchored 2026-11-10 (229 -> 230): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
             "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
             "recorded": "2026-10-09",
             "source": "EDS-8 split of projectDeletionService"
@@ -10973,10 +10972,10 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 224,
+            "line": 231,
             "mutants": 1,
             "category": "branch",
-            "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
+            "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row. Re-anchored 2026-11-10 (230 -> 231): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
             "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
             "recorded": "2026-10-09",
             "source": "EDS-8 split of projectDeletionService"
@@ -10986,10 +10985,10 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 231,
+            "line": 238,
             "mutants": 1,
             "category": "branch",
-            "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
+            "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row. Re-anchored 2026-11-10 (237 -> 238): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
             "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
             "recorded": "2026-10-09",
             "source": "EDS-8 split of projectDeletionService"
@@ -10999,10 +10998,10 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 232,
+            "line": 239,
             "mutants": 1,
             "category": "branch",
-            "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
+            "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row. Re-anchored 2026-11-10 (238 -> 239): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
             "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
             "recorded": "2026-10-09",
             "source": "EDS-8 split of projectDeletionService"
@@ -12054,7 +12053,7 @@
         {
             "module": "src/features/data-installer/services/importJobRunner.ts",
             "anchors": [
-                "onProgress?.(perType, detail, phase);"
+                "onProgress?.(perType, detail, phase, replacing);"
             ],
             "mutants": 1,
             "category": "optionalChain",
@@ -12092,7 +12091,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 288,
+            "line": 293,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is `return undefined`, and an async function that falls off its end resolves to undefined too \u2014 so emptying the block produces the identical value on the identical path. The rejecting-echo case IS now driven (importJobRunner-interrupted.test.ts, 'still reports never-registered when the echo request fails'); it constrains the outcome, which is all there is to constrain here. Re-anchored 2026-10-31 (253 -> 256): unchanged code; the kept root step was added to what the engine said, above it. Re-anchored 2026-11-05 (256 -> 260): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (260 -> 266): unchanged code; what the engine said carries timings and skips above it. Re-anchored again 2026-11-06 (266 -> 269): unchanged code; the result carries the install check above it. Re-anchored 2026-11-07 (287 -> 288): unchanged code; a job that stopped after every type was in is never a success, above it.",
@@ -15128,7 +15127,7 @@
             "anchors": [
                 "deleteGithubRepo: tickOf(args?.deleteGithubRepo),"
             ],
-            "line": 108,
+            "line": 120,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green. Re-anchored 2026-10-19 (89 -> 94): the line now hands the value to tickOf (AI-71) instead of comparing it to true; the chain is the same read of args, behind the same name guard.",
@@ -15141,7 +15140,7 @@
             "anchors": [
                 "deleteDaLiveSite: tickOf(args?.deleteDaLiveSite),"
             ],
-            "line": 109,
+            "line": 121,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green. Re-anchored 2026-10-19 (90 -> 95): the line now hands the value to tickOf (AI-71) instead of comparing it to true; the chain is the same read of args, behind the same name guard.",

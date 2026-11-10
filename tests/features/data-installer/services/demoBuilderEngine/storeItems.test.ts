@@ -45,11 +45,25 @@ const SETS = [
 
 const page = <T,>(items: T[]) => ({ items, total_count: items.length });
 
-/** One equals filter's value, as `filterBy` writes it. */
-const filterValue = (path: string): number => Number(/filters\]\[0\]\[value\]=([^&]*)/u.exec(path)?.[1]);
+/** One filter group's field, value and condition, as `filterBy` and the counts write them. */
+function filterOf(path: string, group: number): { field?: string; value?: string; condition?: string } {
+    const read = (part: string) => new RegExp(`filterGroups\\]\\[${group}\\]\\[filters\\]\\[0\\]\\[${part}\\]=([^&]*)`, 'u').exec(path)?.[1];
+    return { field: read('field'), value: read('value'), condition: read('conditionType') };
+}
+
+/** The website's products, and of a type when the path asks, as Commerce filters them. */
+function productsFor(path: string) {
+    const website = Number(filterOf(path, 0).value);
+    const type = filterOf(path, 1);
+    return [...TEST_SITE_PRODUCTS, GIFT_CARD].filter(
+        (p) =>
+            (p.extension_attributes?.website_ids ?? []).map(Number).includes(website) &&
+            (type.field !== 'type_id' || (p.type_id === type.value) === (type.condition === 'eq')),
+    );
+}
 
 const LISTS: Array<[string, (path: string) => unknown]> = [
-    ['products?', (path) => page([...TEST_SITE_PRODUCTS, GIFT_CARD].filter((p) => p.extension_attributes?.website_ids?.map(Number).includes(filterValue(path))))],
+    ['products?', (path) => page(productsFor(path))],
     ['categories/list?', () => page(SANDBOX_CATEGORIES)],
     // Answers every customer, as if the filter were ignored: the list must take only the website's.
     ['customers/search?', () => page(TEST_SITE_CUSTOMERS)],
@@ -83,6 +97,22 @@ describe('listStoreItems', () => {
 
         expect(products.items.map((i) => i.id)).toEqual(TEST_SITE_PRODUCTS.map((p) => p.sku));
         expect(giftCards.items).toEqual([{ id: 'ZZ-GIFT', displayName: 'Gift card', detail: 'ZZ-GIFT', key: 'ZZ-GIFT' }]);
+    });
+
+    it('asks Commerce for the gift cards alone, not every product, and only the fields a row shows', async () => {
+        const ctx = await store();
+        const asked: string[] = [];
+        const answer = ctx.get;
+        ctx.get = (path) => {
+            asked.push(path);
+            return answer(path);
+        };
+
+        await listStoreItems(ctx, 'giftcards');
+
+        expect(asked).toHaveLength(1);
+        expect(filterOf(asked[0], 1)).toEqual({ field: 'type_id', value: 'giftcard', condition: 'eq' });
+        expect(asked[0]).toContain('&fields=total_count,items[sku,name]');
     });
 
     it("lists the categories under the target's root, each by its place under it, the root left out", async () => {

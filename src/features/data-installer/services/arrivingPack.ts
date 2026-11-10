@@ -50,11 +50,11 @@ async function copyIn(project: Project, check: Extract<RecordedPackCheck, { verd
         const reason = error instanceof Error ? error.message : String(error);
         return {
             changed: false,
-            note: `${check.displayName} could not be copied into your datapacks (${reason}), so it is installed from where it is.`,
+            note: `${check.displayName} could not be copied into My Datapacks (${reason}), so it is installed from where it is.`,
         };
     }
     recordSave(project, save);
-    return { changed: true, note: `Copied ${check.displayName} into your datapacks, and this demo uses your copy.` };
+    return { changed: true, note: `Copied ${check.displayName} into My Datapacks, and this demo uses your copy.` };
 }
 
 /**

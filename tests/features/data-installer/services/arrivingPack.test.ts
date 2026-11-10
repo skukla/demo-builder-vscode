@@ -44,7 +44,7 @@ describe('settleArrivingPack', () => {
             { id: { name: expect.stringMatching(/^priya-acme-[0-9a-f]{6}$/u), version: '20261029-183005' }, displayName: 'Priya Acme', origin: COLLEAGUES.origin },
         );
         expect(p.datapack).toEqual({ ...d.copy.mock.calls[0][1].id, store: 'library', origin: COLLEAGUES.origin });
-        expect(result).toEqual({ changed: true, note: 'Copied Priya Acme into your datapacks, and this demo uses your copy.' });
+        expect(result).toEqual({ changed: true, note: 'Copied Priya Acme into My Datapacks, and this demo uses your copy.' });
     });
 
     it('leaves the SC\'s own pack, a shared one, and a Data Installer one as recorded', async () => {
@@ -66,7 +66,7 @@ describe('settleArrivingPack', () => {
         const result = await settleArrivingPack(p, d);
 
         expect(p.datapack).toEqual(COLLEAGUES);
-        expect(result).toEqual({ changed: false, note: 'Priya Acme could not be copied into your datapacks (library refused), so it is installed from where it is.' });
+        expect(result).toEqual({ changed: false, note: 'Priya Acme could not be copied into My Datapacks (library refused), so it is installed from where it is.' });
     });
 
     it('records the store the check found a pack recorded with no store in', async () => {

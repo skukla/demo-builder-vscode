@@ -1,7 +1,7 @@
 /**
  * useBatchChoices — what the SC has chosen in the batch window's questions (owner, 2026-11-04):
- * Delete Selected's boxes, and Reset Selected's two steps: a Remove Datapack box per project, then
- * a new datapack's name or Discard Changes per pack that asks, and which step is showing. The rules
+ * Delete Selected's boxes and Reset Selected's Uninstall Datapack box per project, then, for either,
+ * a new datapack's name or Discard Changes per pack that asks (walk F96), and which step is showing. The rules
  * live in `batchChoices.ts`; this holds the state.
  *
  * @module features/projects-dashboard/ui/hooks/useBatchChoices
@@ -17,26 +17,27 @@ import {
     toggleRemoveColumn,
     type DeleteOptionKey,
     type DeleteTicks,
+    type PackRow,
     type RemoveTicks,
     type ResetFields,
 } from '../batchChoices';
 import type { BatchDeleteRow, BatchResetRow, PrepareProjectsBatchResponse } from '@/types/projectsBatch';
 
-/** Reset Selected's two steps: the projects and whose pack goes, then the packs' changes. */
+/** Either batch's two steps: the projects and whose pack's data goes, then the packs' changes. */
 export type ResetStep = 'projects' | 'changes';
 
 export interface BatchChoices {
     ticks: DeleteTicks;
     toggleTick: (path: string, key: DeleteOptionKey) => void;
     toggleColumn: (rows: readonly BatchDeleteRow[], key: DeleteOptionKey) => void;
-    /** Reset's Remove Datapack box per project, every removable one ticked to start. */
+    /** Reset's Uninstall Datapack box per project, every removable one ticked to start. */
     removeTicks: RemoveTicks;
     toggleRemove: (path: string) => void;
     toggleRemoveColumn: (rows: readonly BatchResetRow[]) => void;
     fields: ResetFields;
     setSaveAs: (path: string, name: string) => void;
     setDrop: (path: string, drop: boolean) => void;
-    toggleDiscardColumn: (rows: readonly BatchResetRow[]) => void;
+    toggleDiscardColumn: (rows: readonly PackRow[]) => void;
     step: ResetStep;
     setStep: (step: ResetStep) => void;
     /** Start over on the rows a prepare read. */
@@ -69,7 +70,7 @@ export function useBatchChoices(): BatchChoices {
         setRemoveTicks((previous) => toggleRemoveColumn(rows, previous));
     }, []);
 
-    const toggleWholeDiscardColumn = useCallback((rows: readonly BatchResetRow[]) => {
+    const toggleWholeDiscardColumn = useCallback((rows: readonly PackRow[]) => {
         setFields((previous) => toggleDiscardColumn(rows, previous));
     }, []);
 

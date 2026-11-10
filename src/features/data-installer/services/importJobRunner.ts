@@ -98,13 +98,16 @@ export interface ImportJobResult {
     scLines?: string[];
     searchDelay?: string;
     rowNotes?: Record<string, string>;
+    /** How removing the pack the import replaces ended (`JobStanding.replacing`). */
+    replacing?: DataTypeStatus;
 }
 
 /**
  * Told each poll: every data type's state, the engine's count for the one in progress ("450 of
- * 2,046 products"), and what it is doing while no one type is (`JobStanding.phase`).
+ * 2,046 products"), what it is doing while no one type is (`JobStanding.phase`), and how removing the
+ * pack it replaces stands (`JobStanding.replacing`).
  */
-export type ProgressListener = (perType: Record<string, DataTypeStatus>, detail?: string, phase?: string) => void;
+export type ProgressListener = (perType: Record<string, DataTypeStatus>, detail?: string, phase?: string, replacing?: DataTypeStatus) => void;
 
 /** The read-client methods this needs. Narrowed so tests need no client. */
 export interface JobStatusSource {
@@ -124,9 +127,10 @@ function report(
     perType: Record<string, DataTypeStatus>,
     detail: string | undefined,
     phase: string | undefined,
+    replacing?: DataTypeStatus,
 ): void {
     try {
-        onProgress?.(perType, detail, phase);
+        onProgress?.(perType, detail, phase, replacing);
     } catch {
         // Deliberately swallowed — see above.
     }
@@ -181,7 +185,7 @@ export async function watchImportJob(args: {
             return true;
         }
 
-        report(args.onProgress, latest.perType, latest.detail, latest.phase);
+        report(args.onProgress, latest.perType, latest.detail, latest.phase, latest.replacing);
         return isTerminal(latest, requestedTypes);
     };
 
@@ -236,6 +240,7 @@ function whatTheEngineSaid(latest: JobStatusSnapshot): Omit<ImportJobResult, 'ou
         ...(latest.scLines ? { scLines: latest.scLines } : {}),
         ...(latest.searchDelay ? { searchDelay: latest.searchDelay } : {}),
         ...(latest.rowNotes ? { rowNotes: latest.rowNotes } : {}),
+        ...(latest.replacing ? { replacing: latest.replacing } : {}),
         ...(latest.note ? { note: latest.note } : {}),
         ...(latest.check ? { check: latest.check } : {}),
         ...(latest.timings ? { timings: latest.timings } : {}),

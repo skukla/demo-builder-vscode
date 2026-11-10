@@ -308,6 +308,14 @@ export const TIMEOUTS = {
      */
     DATAPACK_IMPORT_COMPARE: 5 * 60 * 1000,
 
+    /**
+     * How long the Import window waits for a start or a removal that saves the SC's changes first
+     * (walk F105, 2026-11-09): 10 minutes. The save runs before the request answers and took 1 min 28 s
+     * for Luma on a live store (3 min 17 s before walk F90's fixes); the webview's default of 30 s gave
+     * up on it and said "Couldn't Start the Import" over an import that then ran.
+     */
+    DATAPACK_SAVE_THEN_WRITE: 10 * 60 * 1000,
+
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
 
