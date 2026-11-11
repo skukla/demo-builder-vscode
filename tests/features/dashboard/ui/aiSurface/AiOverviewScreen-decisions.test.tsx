@@ -78,7 +78,7 @@ describe('AiOverviewScreen — decisions', () => {
 
             const dialog = screen.getByRole('dialog');
             await act(async () => {
-                fireEvent.click(within(dialog).getByRole('button', { name: /^close$/i }));
+                fireEvent.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
             });
 
             expect(screen.queryByRole('heading', { name: /new prompt/i })).not.toBeInTheDocument();

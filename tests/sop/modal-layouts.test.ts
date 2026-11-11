@@ -43,25 +43,22 @@ const LEDGER: Readonly<Record<string, string>> = {
     'src/features/eds/ui/siteAccess/GiveAccessModal.tsx': 'moves in Phase 1b, eds site access: a Form',
     'src/features/eds/ui/siteAccess/SiteAccessScreen.tsx':
         'moves in Phase 1b, eds site access: a Confirm',
-    'src/features/dashboard/ui/aiSurface/components/PromptEditDialog.tsx':
-        'moves in Phase 1b, dashboard AI surface: a Form',
     'src/features/dashboard/ui/components/IntegrationSettingsModal.tsx':
-        'moves in Phase 1b, dashboard integrations: a Form',
+        'waits for a layout: a Form whose failure shows an error status and whose Cancel becomes Run in Background while it saves',
     'src/features/dashboard/ui/components/ManageApisModal.tsx':
-        'moves in Phase 1b, dashboard integrations: a Form',
+        'waits for a layout: a Form at L whose title, status and action change with each view, and FormDialog is M only',
     'src/features/dashboard/ui/components/AssignErpProductsModal.tsx':
-        'moves in Phase 1b, dashboard ERP: a Form then a Progress',
+        'waits for a layout: a Form at L wide for its product list, and FormDialog is M only',
     'src/features/dashboard/ui/components/ErpDowntimeDialog.tsx':
-        'moves in Phase 1b, dashboard ERP: a Form',
+        'waits for a layout: a Form at S that reports its own failure with an error status, and FormDialog has no status',
     'src/features/dashboard/ui/components/integrations/PrepareOnAddConfirm.tsx':
-        'moves in Phase 1b, dashboard integrations: a Confirm',
+        'waits for a layout: a Confirm at L that reads the store first, and ConfirmActionDialog is S with no wait',
     'src/features/dashboard/ui/components/integrations/SetupGuideModal.tsx':
-        'moves in Phase 1b, dashboard integrations: a Guide',
+        'waits for a layout: a Guide at L wide with a step list, start buttons and per step actions, and GuideDialog takes no actions',
     'src/features/dashboard/ui/components/AiCapabilitiesModal.tsx':
-        'moves in Phase 1b, dashboard AI surface: a Guide',
-    'src/features/dashboard/ui/components/AddErpDialog.tsx':
-        'moves in Phase 1b, dashboard ERP: a Form then a Progress',
-    'src/features/dashboard/ui/components/share/ShareModal.tsx': 'moves in Phase 1b, dashboard share: a Form',
+        'waits for a layout: a Guide at L with a Regenerate action, a wait and Run in Background, and GuideDialog takes no actions',
+    'src/features/dashboard/ui/components/share/ShareModal.tsx':
+        'waits for a layout: a Form at L with no submit, only Close, and FormDialog is M with a submit',
     'src/features/project-creation/ui/components/add-demo/AddDemoModal.tsx':
         'moves in Phase 1b, project creation: a Form',
     'src/features/project-creation/ui/components/add-demo/EditDemoPackageModal.tsx':

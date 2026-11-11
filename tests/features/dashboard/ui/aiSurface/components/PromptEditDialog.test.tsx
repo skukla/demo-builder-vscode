@@ -181,15 +181,12 @@ describe('PromptEditDialog', () => {
     });
 
     describe('cancel / close', () => {
-        it('clicking Close calls onClose without saving', () => {
+        it('clicking Cancel calls onClose without saving', () => {
             const onSave = jest.fn();
             const onClose = jest.fn();
             renderDialog({ mode: 'create', onSave, onClose });
-            // The Modal renders a "Close" button by default
-            const closeButtons = screen.getAllByRole('button', { name: /close/i });
-            // PromptEditDialog renders inside a Modal — the modal's footer Close
-            // is the one we want. There should only be one Close on screen here.
-            fireEvent.click(closeButtons[0]);
+            // The Form layout closes with Cancel, the one close on screen.
+            fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
             expect(onClose).toHaveBeenCalledTimes(1);
             expect(onSave).not.toHaveBeenCalled();
         });

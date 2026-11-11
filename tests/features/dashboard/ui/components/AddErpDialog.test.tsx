@@ -250,7 +250,7 @@ describe('AddErpDialog — before and without the store', () => {
         expect(screen.getByText('From Commerce')).toBeInTheDocument();
         expect(screen.queryByLabelText(/^ERP Name/)).toBeNull();
         expect(screen.queryByRole('button', { name: ADD_ERP_COPY.add })).toBeNull();
-        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 
     it('says "no websites" only when the store answered with none', async () => {

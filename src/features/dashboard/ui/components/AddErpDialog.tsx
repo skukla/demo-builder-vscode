@@ -19,17 +19,17 @@
  * (owner, 2026-10-09: the old dialog was cramped and spoke in riddles). The sections sit on
  * Spectrum's size-200 gap, as Assign products and Simulate downtime do (owner, 2026-10-18).
  *
- * The core Modal in a DialogContainer, the same host as {@link ConfirmActionDialog}, with
- * one accent action instead of a negative one: adding is not destructive.
+ * A Form (`FormDialog`): Cancel and one accent Add, since adding is not destructive.
  *
  * @module features/dashboard/ui/components/AddErpDialog
  */
 
-import { DialogContainer, Flex, Text, TextField } from '@adobe/react-spectrum';
+import { Flex, Text, TextField } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { ErpOwnershipPicker, ruleOf, type OwnershipChoice, type StoreReadState } from './ErpOwnershipPicker';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
-import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
+import { FormDialog } from '@/core/ui/components/ui/FormDialog';
+import type { ModalWait } from '@/core/ui/components/ui/Modal';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import { previewAsItStands, previewErpAdd, previewLines } from '@/features/app-builder/services/erpAddPreview';
@@ -86,17 +86,13 @@ const NOTHING = (): number => 0;
  * Host the prompt; present it while an integration is targeted.
  *
  * @param props - the integration, the taken names, and the two callbacks
- * @returns the dialog container
+ * @returns the dialog, or nothing while closed
  */
 export function AddErpDialog({ target, takenNames, onAdd, onClose, onAssign }: AddErpDialogProps): React.ReactElement {
     // Nothing mounted while closed, not an empty DialogContainer: the screen hosts this beside
     // its own dialogs, and an empty container still occupies the dialog slot (SetupGuideModal).
     if (target === undefined) return <></>;
-    return (
-        <DialogContainer onDismiss={onClose}>
-            <AddErpForm target={target} takenNames={takenNames} onAdd={onAdd} onClose={onClose} onAssign={onAssign} />
-        </DialogContainer>
-    );
+    return <AddErpForm target={target} takenNames={takenNames} onAdd={onAdd} onClose={onClose} onAssign={onAssign} />;
 }
 
 /**
@@ -201,13 +197,14 @@ function AddErpForm({ target, takenNames, onAdd, onClose, onAssign }: AddErpDial
         if (ready) onAdd(saved, rule);
     };
     return (
-        <Modal
+        <FormDialog
+            isOpen
             title={ADD_ERP_COPY.title}
-            size="M"
-            fitContent
             waiting={store.status === 'reading' ? READING : false}
             onClose={onClose}
-            actionButtons={[{ label: ADD_ERP_COPY.add, variant: 'accent', onPress: add, isDisabled: !ready }]}
+            submitLabel={ADD_ERP_COPY.add}
+            onSubmit={add}
+            submitDisabled={!ready}
         >
             {/* The body goes from a spinner to the preview, and the website list comes and
                 goes: the floor keeps the dialog from jumping. The section gap is the one
@@ -238,6 +235,6 @@ function AddErpForm({ target, takenNames, onAdd, onClose, onAssign }: AddErpDial
                 <AfterAdding store={store} options={options} added={added} onAssign={onAssign} />
             </Flex>
             </SteadyHeight>
-        </Modal>
+        </FormDialog>
     );
 }

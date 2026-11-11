@@ -213,14 +213,14 @@ describe('IntegrationsGrid — the ERP dialogs close', () => {
         expect(screen.queryByRole('dialog', { name: 'Reset Nordwind?' })).not.toBeInTheDocument();
     });
 
-    it('closes the Add Another ERP prompt on Close', async () => {
+    it('closes the Add Another ERP prompt on Cancel', async () => {
         const user = setupUser();
         renderCards([integrationCard(), systemCard()]);
         const panel = await openPanel(user, 'ERP integration', 'Deployed');
         await user.click(within(panel).getByRole('button', { name: /^add another erp$/i }));
 
         const dialog = screen.getByRole('dialog', { name: 'Add Another ERP' });
-        await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
+        await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
         expect(screen.queryByRole('dialog', { name: 'Add Another ERP' })).not.toBeInTheDocument();
     });

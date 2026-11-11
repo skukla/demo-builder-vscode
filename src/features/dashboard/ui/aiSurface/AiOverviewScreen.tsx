@@ -15,7 +15,7 @@
  * still holds: each surface does one thing.
  */
 
-import { Button, DialogContainer, Flex } from '@adobe/react-spectrum';
+import { Button, Flex } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import { PromptEditDialog } from './components/PromptEditDialog';
 import { PromptGrid } from './components/PromptGrid';
@@ -209,14 +209,12 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
 
             {/* User prompt create/edit dialog */}
             {editDialogOpen && (
-                <DialogContainer onDismiss={handleCloseEditDialog}>
-                    <PromptEditDialog
-                        mode={editTarget ? 'edit' : 'create'}
-                        initialPrompt={editTarget ?? undefined}
-                        onSave={handleSavePrompt}
-                        onClose={handleCloseEditDialog}
-                    />
-                </DialogContainer>
+                <PromptEditDialog
+                    mode={editTarget ? 'edit' : 'create'}
+                    initialPrompt={editTarget ?? undefined}
+                    onSave={handleSavePrompt}
+                    onClose={handleCloseEditDialog}
+                />
             )}
         </>
     );

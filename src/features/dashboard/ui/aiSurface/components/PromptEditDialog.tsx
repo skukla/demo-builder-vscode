@@ -1,21 +1,20 @@
 /**
  * PromptEditDialog
  *
- * Modal wrapper around a small form (title TextField + prompt TextArea).
+ * A Form (`FormDialog`) around a small form (title TextField + prompt TextArea).
  * Used in two modes:
  *   - 'create' — fields empty, Save generates a new id via crypto.randomUUID()
  *   - 'edit'   — fields prefilled from initialPrompt, Save preserves the id
  *
- * Save is disabled when either field is empty (trimmed). Cancel/Close fires
+ * Save is disabled when either field is empty (trimmed). Cancel fires
  * onClose without persisting.
  *
- * Composition: the shared `Modal` wrapper + Spectrum TextField/TextArea — no
- * new UI primitives.
+ * The form hosts its own DialogContainer, so the screen renders it without one.
  */
 
-import { Flex, TextArea, TextField } from '@adobe/react-spectrum';
+import { TextArea, TextField } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { FormDialog } from '@/core/ui/components/ui/FormDialog';
 import type { AiPrompt } from '@/types/base';
 
 export interface PromptEditDialogProps {
@@ -69,34 +68,27 @@ export function PromptEditDialog({
     const modalTitle = mode === 'edit' ? 'Edit Prompt' : 'New Prompt';
 
     return (
-        <Modal
+        <FormDialog
+            isOpen
             title={modalTitle}
-            size="M"
             onClose={onClose}
-            actionButtons={[
-                {
-                    label: 'Save',
-                    variant: 'accent',
-                    onPress: handleSave,
-                    isDisabled: !isValid,
-                },
-            ]}
+            submitLabel="Save"
+            onSubmit={handleSave}
+            submitDisabled={!isValid}
         >
-            <Flex direction="column" gap="size-200">
-                <TextField
-                    label="Title"
-                    value={title}
-                    onChange={setTitle}
-                    width="100%"
-                    autoFocus={mode === 'create'}
-                />
-                <TextArea
-                    label="Prompt"
-                    value={promptBody}
-                    onChange={setPromptBody}
-                    width="100%"
-                />
-            </Flex>
-        </Modal>
+            <TextField
+                label="Title"
+                value={title}
+                onChange={setTitle}
+                width="100%"
+                autoFocus={mode === 'create'}
+            />
+            <TextArea
+                label="Prompt"
+                value={promptBody}
+                onChange={setPromptBody}
+                width="100%"
+            />
+        </FormDialog>
     );
 }
