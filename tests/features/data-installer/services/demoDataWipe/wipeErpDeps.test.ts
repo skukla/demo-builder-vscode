@@ -84,13 +84,13 @@ describe('findWipeErp', () => {
         expect(findWipeErp(signedIn(), SCRATCH, [undeployed])).toBeUndefined();
     });
 
-    it('holds the orders, asking nothing, without a sign-in', async () => {
+    it('holds the ERP step, asking nothing, without a sign-in', async () => {
         const fetchImpl = answering();
         globalThis.fetch = fetchImpl;
 
         const route = await findWipeErp(signedIn(false), SCRATCH, [JUSTRITE])?.route(['justrite_test_website']);
 
-        expect(route?.held).toBe('it could not be asked (Adobe sign-in required), so a wipe cannot close them');
+        expect(route?.held).toBe('it could not be asked (Adobe sign-in required)');
         expect(fetchImpl).not.toHaveBeenCalled();
     });
 });

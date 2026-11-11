@@ -340,9 +340,9 @@ it('says the stores could not be read when the first check is refused', async ()
     expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
 });
 
-it('lists the orders an ERP integration closes as their own line', async () => {
-    const line = '2 orders are handled by the ERP integration (JustRite): they will be closed there, removed from its ERP, and the ERP refreshed.';
-    const erp = { integration: 'JustRite', websites: ['bodea'], orders: named(['000000801', '000000802']), line };
+it('lists the ERP step as its own line', async () => {
+    const line = 'The ERP integration (JustRite) serves these stores: its ERP is brought in line with Commerce after the clearing.';
+    const erp = { integration: 'JustRite', websites: ['bodea'], line };
     withStore((stores) => (stores.length ? { choices: CHOICES, preview: { ...PREVIEW, erp } } : { choices: CHOICES }));
     await openModal();
 
@@ -351,14 +351,23 @@ it('lists the orders an ERP integration closes as their own line', async () => {
     expect(screen.getByText(line)).toBeInTheDocument();
 });
 
-it('says why an ERP integration leaves its orders open, even with nothing else to clear', async () => {
-    const line = '1 order handled by the ERP integration (JustRite) is left open: it must be updated first.';
-    const erp = { integration: 'JustRite', websites: ['bodea'], orders: named(['000000801']), held: 'it must be updated first', line };
-    withStore((stores) => (stores.length ? { choices: CHOICES, preview: { ...PREVIEW, total: 0, erp } } : { choices: CHOICES }));
+it('says why the ERP will not be brought in line, as its own line', async () => {
+    const line = 'The ERP integration (JustRite) serves these stores, but it must be updated first. Its ERP will not be brought in line.';
+    const erp = { integration: 'JustRite', websites: ['bodea'], held: 'it must be updated first', line };
+    withStore((stores) => (stores.length ? { choices: CHOICES, preview: { ...PREVIEW, erp } } : { choices: CHOICES }));
     await openModal();
 
     await tick(/Bodea Store/);
 
     expect(screen.getByText(line)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Clear' })).toHaveAttribute('aria-disabled', 'true');
+});
+
+it('says the stores hold nothing when an ERP step is held and nothing else goes: no order waits on it', async () => {
+    const erp = { integration: 'JustRite', websites: ['bodea'], held: 'it must be updated first', line: 'held' };
+    withStore((stores) => (stores.length ? { choices: CHOICES, preview: { ...PREVIEW, total: 0, left: [], installed: {}, erp } } : { choices: CHOICES }));
+    await openModal();
+
+    await tick(/Bodea Store/);
+
+    expect(screen.getByText('Nothing to clear in these stores.')).toBeInTheDocument();
 });

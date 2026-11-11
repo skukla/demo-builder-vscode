@@ -139,8 +139,8 @@ describe('check-demo-data', () => {
 
         expect(find).toHaveBeenCalledWith(context, PROJECT, [JUSTRITE_ELSEWHERE]);
         expect(client.resolvedSettings).toHaveBeenCalledWith(['justrite_test_website']);
-        expect(preview?.erp?.line).toBe('1 order is handled by the ERP integration (JustRite): it will be closed there, removed from its ERP, and the ERP refreshed.');
-        expect(preview?.orders.cancel.count).toBe(0);
+        expect(preview?.erp?.line).toBe('The ERP integration (JustRite) serves these stores: its ERP is brought in line with Commerce after the clearing.');
+        expect(preview?.orders.cancel.count).toBe(1);
     });
 
     it('names a website the store does not have', async () => {
@@ -275,7 +275,7 @@ describe('clear-demo-data', () => {
         expect(store.sent).toStrictEqual([]);
     });
 
-    it('has the ERP integration close its stores and refreshes its ERP, in the one clearing', async () => {
+    it('closes the orders itself, then has the ERP integration bring its ERP in line, in the one clearing', async () => {
         const { erp, client, refill } = fakeErp();
         const store = sandbox({ orders: [RESET_RULE_CASES[0].order] });
         const { handlers, context, token } = await shown(setUp({ erp: () => erp }, store));
@@ -285,7 +285,9 @@ describe('clear-demo-data', () => {
         expect(res.success).toBe(true);
         expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
         expect(refill).toHaveBeenCalledTimes(1);
-        expect(res.note).toContain("closed through the ERP integration (JustRite), and removed from Justrite ERP. JustRite's ERP was refreshed from Commerce.");
+        expect(store.sent.map((w) => w.path)).toContain('orders/701/cancel');
+        expect(res.note).toContain(' Canceled 1 order.');
+        expect(res.note).toContain(" JustRite's ERP was brought in line with Commerce. The stores' orders were removed from Justrite ERP.");
     });
 
     it('writes nothing and offers the new list when the store would now clear more', async () => {

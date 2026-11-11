@@ -276,6 +276,18 @@ Measured live the same day: on this instance JustRite's ERP integration (project
 own cancel or refund would be passed on to it by the integration's order handlers (it stays silent
 only for orders it marked closed itself, `lib/order-parts.js markClosedByReset`).
 
+> **Changed 2026-11-11** (erp-order-close step 5, owner: Commerce is the source system): points 2
+> to 4 below are as built then. The wipe now closes EVERY order of the chosen stores itself, ERP-routed
+> ones included, by the one reset rule; the integration recognises the reset note and sends nothing
+> on. AFTER every Commerce write, the integration is asked to bring its ERP in line
+> (`erp/close-orders` for the routed stores: with every order already closed it only forgets them and
+> has its ERPs remove them), then the refill. Held (must be updated, could not be asked): the orders
+> are closed anyway and the ERP step is skipped. A held, failed or partial ERP step is an ERP problem
+> (`outcome.erp.broughtInLine` false, `problem` why), never orders that failed to close; the
+> integration's counts are not merged. Plan line: "The ERP integration (JustRite) serves these
+> stores: its ERP is brought in line with Commerce after the clearing." Stage "Updating the ERP"
+> runs after the clearing. The live test below still describes the old flow.
+
 **What a wipe now does**, at every door (both tools, the Data Installer's "Clear demo data",
 reset's second question):
 

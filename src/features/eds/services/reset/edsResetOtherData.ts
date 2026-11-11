@@ -22,9 +22,10 @@
  * Debug Logs carries the one line naming the other project. What any project's install records list
  * on the store's website is left too.
  *
- * **An ERP integration serving the instance closes its websites' orders** (`findWipeErp`, from any
- * local project, "One action, ERP included", owner 2026-10-30), and its ERP is filled again after:
- * the question says so in the list's own line.
+ * **An ERP integration serving the instance has its ERP brought in line after the clearing**
+ * (`findWipeErp`, from any local project, "One action, ERP included", owner 2026-10-30), then filled
+ * again; the clearing closes the orders itself (erp-order-close step 5). The question says so in the
+ * list's own line; an ERP that was not brought in line is logged as a warning.
  *
  * @module features/eds/services/reset/edsResetOtherData
  */
@@ -191,7 +192,8 @@ export async function clearProjectOtherData(
         if ('refusal' in read.claims) return notCleared(context, read.claims.refusal);
         const outcome = await clearShown(commerce, plan, { ...read.claims, erp: read.erp }, (stage, step) => report(stage, step));
         await rememberWipeUnfinished(deps.files, project.path, outcome.unfinished);
-        const log = outcome.failed.length > 0 ? context.logger.warn : context.logger.info;
+        const problem = outcome.failed.length > 0 || outcome.erp?.broughtInLine === false;
+        const log = problem ? context.logger.warn : context.logger.info;
         log.call(context.logger, `${LOG_PREFIX} ${outcome.sentence}`);
         return { cleared: true, sentence: outcome.sentence };
     } catch (error) {

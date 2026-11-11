@@ -20,8 +20,9 @@
  * company, catalog, group, attribute set or attribute a record of any website lists.
  *
  * Both find the ERP integration serving the instance, from any local project (`findWipeErp`): the
- * orders of chosen stores whose website it sends to an ERP are closed by it, not here, and its ERP
- * is filled again from Commerce after the clearing ("One action, ERP included", owner 2026-10-30).
+ * clearing closes every order itself, and when the integration sends some chosen stores' orders to
+ * an ERP, its ERP is brought in line and filled again from Commerce after the clearing ("One action,
+ * ERP included", owner 2026-10-30; Commerce is the source system, 2026-11-11).
  *
  * Both open the project's own signed Commerce access (`projectCommerce`, Store: `all`), after the
  * sign-in is checked against the org that owns the store (`orgGuard`, adobe-org-context).

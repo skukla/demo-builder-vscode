@@ -24,9 +24,10 @@
  * and the rest carry on, so the SC is told exactly what could not be done, and a second clearing picks
  * up what is left (`WipeOutcome.unfinished`).
  *
- * When an ERP integration routes some chosen stores' websites (`wipeErp.ts`), it closes every
- * order of those stores first (the wipe closes none of them itself) and takes them out of its ERPs,
- * and the ERP is filled again from Commerce last; its counts are merged into the wipe's.
+ * Every order of the chosen stores is the wipe's own, ERP-routed ones included (Commerce is the
+ * source system, owner 2026-11-11, erp-order-close step 5). When an ERP integration routes some
+ * chosen websites (`wipeErp.ts`), its ERP is brought in line AFTER every write above, then filled
+ * again from Commerce. Its order counts are never merged: a failure there is an ERP problem.
  *
  * | Write | Route | Confirmed from a real answer? |
  * |---|---|---|
@@ -59,7 +60,7 @@ import type { RemovalAccess } from '../demoBuilderEngine/removers';
 import { removeEmptySet } from './wipeAttributes';
 import { deleteRule, takeRuleOff } from './wipeCartRules';
 import { removeEmptyGroup } from './wipeCatalogs';
-import { type ErpClosed, type ErpRefreshed, closeErpOrders, erpSentence, refreshErp } from './wipeErp';
+import { type ErpClosed, type ErpRefreshed, closeErpOrders, erpProblemOf, erpSentence, refreshErp } from './wipeErp';
 import { type OrderOutcome, closeOrder } from './wipeOrderRun';
 import { type WipeInputs, type WipePlan, planWipeFor, withinPlan } from './wipePlan';
 import { putBackSettings } from './wipeSettings';
@@ -138,8 +139,8 @@ export interface WipeOutcome {
     left: WipePreview['left'];
     /** What no read would find again, for the next clearing of these stores to look at (`wipeUnfinished.ts`). */
     unfinished?: WipeUnfinished;
-    /** The ERP part, when an ERP integration routed some chosen stores' websites. */
-    erp?: { integration: string; orderNumbers: string[]; removedFrom: string[]; refreshed: boolean; said?: string };
+    /** The ERP step, when an integration routed some chosen websites: never counted in `orders` or `failed`. */
+    erp?: { integration: string; broughtInLine: boolean; problem?: string; removedFrom: string[]; refreshed: boolean; said?: string };
 }
 
 /** How a step's writes tie to each other. */
@@ -369,23 +370,21 @@ function unfinishedOf(plan: WipePlan, notDone: ReadonlySet<string>): WipeUnfinis
     return groups.length + sets.length + attributes.length > 0 ? { scopeKey: plan.scopeKey, groups, sets, attributes } : undefined;
 }
 
-/** The wipe's outcome with the integration's close merged in, and the sentence said again. */
+/** The wipe's outcome with the ERP step added, and the sentence said again: its counts untouched. */
 function withErp(outcome: WipeOutcome, plan: WipePlan, closed: ErpClosed | undefined, refreshed: ErpRefreshed | undefined): WipeOutcome {
     if (!plan.erp) return outcome;
-    const orders = { ...outcome.orders };
-    for (const key of Object.keys(orders) as Array<keyof OrderCounts>) orders[key] += closed?.counts[key] ?? 0;
-    const failed = closed?.failed ? [closed.failed, ...outcome.failed] : outcome.failed;
-    const sentence = `${sentenceOf(plan.preview, outcome.removed, orders, failed)}${erpSentence(plan.erp, closed, refreshed)}${leftSentence(outcome.left)}`;
+    const sentence = `${sentenceOf(plan.preview, outcome.removed, outcome.orders, outcome.failed)}${erpSentence(plan.erp, closed, refreshed)}${leftSentence(outcome.left)}`;
+    const problem = erpProblemOf(plan.erp, closed, refreshed);
     const said = refreshed?.said ? { said: refreshed.said } : {};
-    const touched = { orderNumbers: closed?.orderNumbers ?? [], removedFrom: closed?.removedFrom ?? [] };
-    const erp = { integration: plan.erp.route.name, ...touched, refreshed: refreshed?.refreshed ?? false, ...said };
-    return { ...outcome, orders, failed, sentence, erp };
+    const line = { integration: plan.erp.route.name, broughtInLine: !problem, ...(problem ? { problem } : {}) };
+    const erp = { ...line, removedFrom: closed?.removedFrom ?? [], refreshed: refreshed?.refreshed ?? false, ...said };
+    return { ...outcome, sentence, erp };
 }
 
 /**
  * Clear the stores as shown: make the plan again, refuse when it takes anything the shown plan did
- * not, then carry it out: the ERP integration's close first, the wipe's own writes, then the ERP
- * filled again from Commerce.
+ * not, then carry it out: the wipe's own writes, orders included; then, when an ERP integration
+ * routes some of the stores, its ERP brought in line and filled again from Commerce.
  *
  * @throws WipeChangedError, writing nothing, when the store would now clear something not shown
  */
@@ -393,7 +392,7 @@ export async function clearShown(commerce: RemovalAccess, shown: WipePlan, input
     const { erp } = inputs;
     const now = await planWipeFor(commerce.get, shown.choices, inputs);
     if (!withinPlan(shown, now)) throw new WipeChangedError(now.preview);
-    const closed = await closeErpOrders(erp, now.erp, report);
     const outcome = await runWipe(commerce, now, report);
+    const closed = await closeErpOrders(erp, now.erp, report);
     return withErp(outcome, now, closed, await refreshErp(erp, now.erp, report));
 }
