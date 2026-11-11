@@ -23,7 +23,6 @@ const SRC = path.join(__dirname, '..', '..', 'src');
 const LEDGER: Record<string, string> = {
     'features/data-installer/ui/components/ClearDemoDataModal.tsx':
         'A re-check after a tick shows its spinner where the answer lands (owner, 2026-10-31). The first read uses `waiting`.',
-    'features/eds/ui/siteAccess/SiteAccessScreen.tsx': "The screen's own wait, not one inside its dialog.",
 };
 
 function sources(dir: string): string[] {

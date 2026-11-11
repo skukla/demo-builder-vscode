@@ -17,12 +17,12 @@
  *
  * Shared pieces: `PageLayout` + `PageHeader`, `InlineNotice` (via
  * `SiteAccessNoticeView`), `LoadingDisplay` above the list while something runs
- * (the list stays on screen), `EmptyState`, `AddCard`, `CardActionsMenu`, `Modal`.
+ * (the list stays on screen), `EmptyState`, `AddCard`, `CardActionsMenu`, `ConfirmActionDialog`.
  *
  * @module features/eds/ui/siteAccess/SiteAccessScreen
  */
 
-import { Button, DialogContainer, Flex, Text, TextField, View } from '@adobe/react-spectrum';
+import { Button, Flex, Text, TextField, View } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState } from 'react';
 import { accessRowsOf, grantChoicesOf, type AccessRemoval } from './accessRows';
 import { GiveAccessModal, type Grant } from './GiveAccessModal';
@@ -34,7 +34,7 @@ import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoadi
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
 import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import type { SiteAccessInitialData, SiteAccessNotice, SiteAccessView } from '@/types/webviewPayloads';
 
@@ -176,23 +176,18 @@ export function SiteAccessScreen({ projectName, hasStorefront }: SiteAccessScree
                 onGive={(grant) => void give(grant)}
                 onClose={() => setGiving(false)}
             />
-            <DialogContainer type="modal" onDismiss={() => setPending(null)}>
-                {pending && (
-                    <Modal
-                        title={`${pending.removal.label}?`}
-                        status="warning"
-                        size="S"
-                        onClose={() => setPending(null)}
-                        closeLabel="Cancel"
-                        actionButtons={[{ label: 'Remove', variant: 'negative', onPress: confirmRemoval }]}
-                    >
-                        <Text>
-                            {pending.email} will no longer {pending.removal.consequence}. You can give it back at any
-                            time.
-                        </Text>
-                    </Modal>
-                )}
-            </DialogContainer>
+            <ConfirmActionDialog
+                isOpen={pending !== null}
+                title={pending ? `${pending.removal.label}?` : ''}
+                actionLabel="Remove"
+                actionVariant="negative"
+                onConfirm={confirmRemoval}
+                onClose={() => setPending(null)}
+            >
+                {pending
+                    ? `${pending.email} will no longer ${pending.removal.consequence}. You can give it back at any time.`
+                    : null}
+            </ConfirmActionDialog>
         </PageLayout>
     );
 }

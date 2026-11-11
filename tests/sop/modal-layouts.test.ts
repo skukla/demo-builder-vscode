@@ -40,9 +40,6 @@ const LEDGER: Readonly<Record<string, string>> = {
         'waits for a layout: a Form at L for its store rows and preview, and FormDialog is M only',
     'src/features/data-installer/ui/components/create-flow/DatapackFlowDialog.tsx':
         'waits for a layout: a staged Form with Back, a start button and two commits at L or wide',
-    'src/features/eds/ui/siteAccess/GiveAccessModal.tsx': 'moves in Phase 1b, eds site access: a Form',
-    'src/features/eds/ui/siteAccess/SiteAccessScreen.tsx':
-        'moves in Phase 1b, eds site access: a Confirm',
     'src/features/dashboard/ui/components/IntegrationSettingsModal.tsx':
         'waits for a layout: a Form whose failure shows an error status and whose Cancel becomes Run in Background while it saves',
     'src/features/dashboard/ui/components/ManageApisModal.tsx':

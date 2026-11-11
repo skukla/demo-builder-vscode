@@ -3,16 +3,16 @@
  * change is offered (`GrantChoices`); reading the content is ticked to start,
  * since sharing is the common reason to be here.
  *
- * Hosts its own `DialogContainer` (the modal-hosting SOP). The form is a child
- * that mounts only while open, so each opening starts empty.
+ * The Form layout hosts its own `DialogContainer` (the modal-hosting SOP). The
+ * fields go back to their starting values each time it opens.
  *
  * @module features/eds/ui/siteAccess/GiveAccessModal
  */
 
-import { Checkbox, DialogContainer, Flex, TextField } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import { Checkbox, TextField } from '@adobe/react-spectrum';
+import React, { useEffect, useState } from 'react';
 import type { GrantChoices } from './accessRows';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { FormDialog } from '@/core/ui/components/ui/FormDialog';
 
 /** What the SC chose to give. */
 export interface Grant {
@@ -28,49 +28,38 @@ export interface GiveAccessModalProps {
     onClose: () => void;
 }
 
-function GiveAccessForm({ choices, onGive, onClose }: Omit<GiveAccessModalProps, 'isOpen'>): React.ReactElement {
+export function GiveAccessModal({ isOpen, choices, onGive, onClose }: GiveAccessModalProps): React.ReactElement {
     const [email, setEmail] = useState('');
     const [read, setRead] = useState(choices.read);
     const [admin, setAdmin] = useState(!choices.read && choices.admin);
+    useEffect(() => {
+        if (!isOpen) return;
+        setEmail('');
+        setRead(choices.read);
+        setAdmin(!choices.read && choices.admin);
+    }, [isOpen, choices.read, choices.admin]);
     const trimmed = email.trim();
     const canGive = trimmed !== '' && (read || admin);
     return (
-        <Modal
+        <FormDialog
+            isOpen={isOpen}
             title="Give Access"
-            size="S"
-            fitContent
+            submitLabel="Give Access"
+            onSubmit={() => onGive({ email: trimmed, admin, read })}
+            submitDisabled={!canGive}
             onClose={onClose}
-            closeLabel="Cancel"
-            actionButtons={[
-                {
-                    label: 'Give Access',
-                    variant: 'accent',
-                    isDisabled: !canGive,
-                    onPress: () => onGive({ email: trimmed, admin, read }),
-                },
-            ]}
         >
-            <Flex direction="column" gap="size-150">
-                <TextField label="Email" type="email" value={email} onChange={setEmail} width="100%" autoFocus />
-                {choices.read && (
-                    <Checkbox isSelected={read} onChange={setRead}>
-                        Read the Content in DA.live
-                    </Checkbox>
-                )}
-                {choices.admin && (
-                    <Checkbox isSelected={admin} onChange={setAdmin}>
-                        Change the Storefront&apos;s Settings (Configuration Admin)
-                    </Checkbox>
-                )}
-            </Flex>
-        </Modal>
-    );
-}
-
-export function GiveAccessModal({ isOpen, ...form }: GiveAccessModalProps): React.ReactElement {
-    return (
-        <DialogContainer type="modal" onDismiss={form.onClose}>
-            {isOpen && <GiveAccessForm {...form} />}
-        </DialogContainer>
+            <TextField label="Email" type="email" value={email} onChange={setEmail} width="100%" autoFocus />
+            {choices.read && (
+                <Checkbox isSelected={read} onChange={setRead}>
+                    Read the Content in DA.live
+                </Checkbox>
+            )}
+            {choices.admin && (
+                <Checkbox isSelected={admin} onChange={setAdmin}>
+                    Change the Storefront&apos;s Settings (Configuration Admin)
+                </Checkbox>
+            )}
+        </FormDialog>
     );
 }
