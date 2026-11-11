@@ -973,6 +973,40 @@ check says so and names the file.
 > nothing (owner, 2026-11-08).
 > Enforced by `tests/sop/modal-waits.test.ts`.
 
+> **Convention.** Every window is one of five layouts, and each layout is one component: Form
+> (`FormDialog`), Confirm (`ConfirmActionDialog`), Progress (`ProgressDialog`), Result
+> (`ResultDialog`) and Guide (`GuideDialog`), all in `core/ui/components/ui/`. The component owns the
+> width, the spacing, the kinds of text, the button order and how the window ends; a caller passes
+> words and actions, and has no prop for a size, a margin or a class. Confirm and Result are small,
+> and so is Progress unless it shows rows; Cancel stands beside a button that commits and Close
+> everywhere else; the button that loses the SC's changes is outline, the dangerous one red.
+> *Why:* the owner, 2026-11-10: the inventory in `.rptc/research/modal-conventions-audit/` found the
+> rules written down and drawn differently in nearly every window, because each window assembled
+> `Modal` on the spot. A rule a component owns cannot drift window by window.
+> Enforced by `tests/sop/modal-layouts.test.ts`: a file that renders `Modal` itself fails, except
+> the five layouts and the windows its ledger lists, each still to move, and the ledger may only
+> shrink.
+
+> **Convention.** Text in a window is set by the shared stylesheet, never by the window: a lead
+> (`LeadText`, `.lead-text`) and a line (`.dialog-line`) stop at about 60 characters (`max-width:
+> 60ch`), a lead over a body of sentences alone is 16px while lists, forms and rows stay 14px, and a
+> button takes Spectrum's weight (`.modal-button` sets none of its own).
+> *Why:* the owner, 2026-11-10: a sentence across a large window read as one thin line, a lead was
+> the same size as the rows under it, and a house bold made every button shout. Each had been fixed
+> in one window at a time.
+> Enforced by `tests/sop/modal-layouts.test.ts`, which fails a feature stylesheet that sets
+> `max-width`, `font-size` or `font-weight` on `.lead-text`, `.dialog-line` or `.modal-button`, and
+> checks the shared rules are there in `core/ui/styles/modal.css`.
+
+> **Convention.** A clean result that is its title alone closes itself after a glance
+> (`TIMEOUTS.UI.RESULT_GLANCE`), in every window; a result with anything to read (a line, a note, a
+> list, a next step, an action, a problem) stays until the SC closes it. One hook decides it,
+> `useCloseWhenClean`, and every layout that ends calls it.
+> *Why:* the owner, 2026-11-10: which component drew the run used to decide it, so a four-minute
+> mesh deploy vanished while "Projects Reset" stayed on its title.
+> Enforced by `tests/core/ui/hooks/useCloseWhenClean.test.ts`, the hook's contract; the Result
+> and Progress layouts' tests show a line or an action keeping the window open.
+
 > **Convention.** A CSS class used in a bundle is styled by that bundle.
 > *Why:* a stylesheet only reaches bundles whose entry imports it, so a class can be styled
 > on one surface and silently bare on the next, with no error anywhere.
@@ -1953,11 +1987,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 68 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 69 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 139 conventions. 136 of them are enforced; 3 are not.**
+**This handbook states 142 conventions. 139 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

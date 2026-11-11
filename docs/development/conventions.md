@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **139** conventions, **136** enforced
+- **142** conventions, **139** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -123,6 +123,9 @@ it means the rule rests on somebody noticing.
 | A datapack has one set of words, and every screen takes them from `features/data-installer/datapackWords.ts`: it is **installed** and **uninstalled**, never imported or removed; the trial run is **Dry Run**; the settings it carries are its **Store Configuration**; and the thing is a "datapack", never a "pack" on its own. A sentence on screen carries no long dash and no raw setting key (`demoBuilder.…`). |  |  | `datapack-words.test.ts` |
 | A window's header names the thing and what happened to it: "My Luma Installed", "My Luma Uninstalled", "Couldn't Save My Luma". Only a window with no one name to give (several projects, a file not yet read) names the kind: "Projects Deleted", "Couldn't Read Projects", "Couldn't Open the File"; then each project is a row beneath it. A header is a statement of what happened or what the window does, never the reason for it, and carries no comma. A button may carry a count ("Delete 3 Projects"). **One exception:** what an AGENT is doing names its target ("Agent Deleting the Acme project", `toolNarration.ts`): nobody pressed anything, so the notification is the SC's only way to see what the agent is touching (owner, 2026-11-04). |  |  | **—** |
 | A dialog that is waiting shows nothing else: the title, the wait centred both ways in the space between the rule and the buttons, and the way out. The wait says what it is doing in the progress window's three rows (`StageWait`, words from `WAIT_STAGES`), and `Modal`'s `waiting` prop does it. A flyout waits the same way (owner, 2026-11-08). |  |  | `modal-waits.test.ts` |
+| Every window is one of five layouts, and each layout is one component: Form (`FormDialog`), Confirm (`ConfirmActionDialog`), Progress (`ProgressDialog`), Result (`ResultDialog`) and Guide (`GuideDialog`), all in `core/ui/components/ui/`. The component owns the width, the spacing, the kinds of text, the button order and how the window ends; a caller passes words and actions, and has no prop for a size, a margin or a class. Confirm and Result are small, and so is Progress unless it shows rows; Cancel stands beside a button that commits and Close everywhere else; the button that loses the SC's changes is outline, the dangerous one red. |  |  | `modal-layouts.test.ts` |
+| Text in a window is set by the shared stylesheet, never by the window: a lead (`LeadText`, `.lead-text`) and a line (`.dialog-line`) stop at about 60 characters (`max-width: 60ch`), a lead over a body of sentences alone is 16px while lists, forms and rows stay 14px, and a button takes Spectrum's weight (`.modal-button` sets none of its own). |  |  | `modal-layouts.test.ts` |
+| A clean result that is its title alone closes itself after a glance (`TIMEOUTS.UI.RESULT_GLANCE`), in every window; a result with anything to read (a line, a note, a list, a next step, an action, a problem) stays until the SC closes it. One hook decides it, `useCloseWhenClean`, and every layout that ends calls it. |  |  | `useCloseWhenClean.test.ts` |
 | A CSS class used in a bundle is styled by that bundle. |  |  | `stylesheet-bundles.test.ts` |
 | Before writing a new UI component, check whether the shared vocabulary already has it. |  |  | `30-reuse-first.rule` |
 | Before adding a file to a curated directory, read what is already in it. |  |  | `31-registry-dir.rule` |

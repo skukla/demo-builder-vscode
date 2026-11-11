@@ -43,13 +43,13 @@ the ones that replace them, and `tests/sop/datapack-words.test.ts` catches the m
 Every dialog is built from five. A dialog that walks through several (Install goes
 form, confirm, progress, result) shows one at a time.
 
-| Layout | Holds | Usual width |
-|---|---|---|
-| **Form** | Fields, then the actions | medium; large or extra-wide when a list needs columns |
-| **Confirm** | A question as the title, as few short sentences as it takes, Cancel and the action | small |
-| **Progress** | A spinner, what is happening, how far; a run through a list (updates, projects, a datapack's data types) shows a row per item instead (`WorkRow`) | small from start to finish; a run shown as rows keeps the box its rows need |
-| **Result** | The outcome as the title, then only what is left to know or do | small |
-| **Guide** | Steps with their state, one step open (the demo setup guide; a pack's setup step is a guide of one) | large |
+| Layout | Component | Holds | Usual width |
+|---|---|---|---|
+| **Form** | `FormDialog` | Fields, then the actions | medium; large or extra-wide when a list needs columns |
+| **Confirm** | `ConfirmActionDialog` | A question as the title, as few short sentences as it takes, Cancel and the action | small (400); the run's width when a run follows in the same window |
+| **Progress** | `ProgressDialog` | A spinner, what is happening, how far; a run through a list (updates, projects, a datapack's data types) shows a row per item instead (`WorkRow`) | small from start to finish; a run shown as rows keeps the box its rows need |
+| **Result** | `ResultDialog` | The outcome as the title, then only what is left to know or do | small |
+| **Guide** | `GuideDialog` | Steps with their state, one step open (the demo setup guide; a pack's setup step is a guide of one) | large |
 
 ## Rules
 
@@ -58,7 +58,7 @@ will show, only the title, the wait and the way out (Close or Cancel) appear: no
 buttons. The wait is the progress window's rows, medium and centred (`StageWait`): what it is
 doing ("Reading demo data"), a second line only when it tells the SC something the first does not
 ("From Commerce"), and how long it usually takes with the time so far ("Usually a few seconds · 4
-seconds"). Most waits need no second line: "Checking for your changes" says it all. Its words come from `WAIT_STAGES`
+seconds"). A second line is never required: "Checking for your changes" says it all. Its words come from `WAIT_STAGES`
 (`core/utils/waitStages.ts`), held to the stage table's rules: a label of 25 characters at most, a
 detail of 40, an expectation of 25, and the stage table's words for the same work ("Reading from
 Commerce", never "Reading the store"). Work the SC started reports its own stages in the same rows.
@@ -82,18 +82,17 @@ exception is a setup step's banner (`SetupStepHeader`): a Check needs one place 
 its answer and its spinner (owner, 2026-11-02). A
 done result with nothing else to say is just its title.
 
-**A sentence gets a small box.** A Confirm and a Result are small (400px) in every window, and the
-progress window is small from its first frame to its result unless it shows rows. A window does not
-change size between a wait and its result. Text is one size whatever the box, so a sentence in a
-medium or large box is one thin line in an empty one (owner, 2026-11-10, from the inventory in
-`.rptc/research/modal-conventions-audit/`: the progress window was medium for all 31 operations and
-often ended on a title alone).
+**A sentence gets a small box.** The sizes belong to the layout components (the handbook's "one
+component per layout" convention), so a window cannot pick its own. For example, Clear Demo Data's
+confirm and its result are both small, and the progress window stays small from its first frame to
+a result that is its title alone; only a run shown as rows takes the box its rows need. Before the
+rule the progress window was medium for all 31 operations and often ended on a title alone
+(`.rptc/research/modal-conventions-audit/`).
 
-**Nothing left to read closes itself; something to read stays.** A clean result that is its title
-alone closes itself after a glance (`TIMEOUTS.UI.RESULT_GLANCE`), in every window: the progress
-window and a run's own window alike. A result with a sentence, a note, a list, a next step or a
-problem stays until closed. Which component drew the run used to decide it: a four-minute mesh
-deploy vanished while "Projects Reset" stayed on its title (owner, 2026-11-10).
+**Nothing left to read closes itself; something to read stays.** The rule is the handbook's "a
+clean result closes itself" convention, kept by `useCloseWhenClean`. For example, "Projects Reset"
+with nothing under it closes after a glance, as a four-minute mesh deploy already did, while "My
+Luma Installed" followed by "Your changes are saved in Version History." stays until closed.
 
 **A clean run ends small; a run with a problem ends where it ran.** A window that shows a run as
 rows (the Updates run, the projects batch run, a datapack import, a datapack save) and finishes cleanly hands off
@@ -224,7 +223,12 @@ step.
 
 ## Where it is built
 
+The five layouts, `core/ui/components/ui/` `FormDialog`, `ConfirmActionDialog`, `ProgressDialog`,
+`ResultDialog` and `GuideDialog`, each built on `Modal` and the only files that render it
+(`tests/sop/modal-layouts.test.ts`; its ledger lists the windows still to move).
+`core/ui/hooks/useCloseWhenClean.ts` (a clean result closing itself).
 `core/ui/components/ui/Modal.tsx` (the title's status icon, the width steps and
 their easing, the button styles), `core/ui/components/ui/useDialogViewChange.ts` (a
 change of view), `core/ui/components/ui/DialogOutcome.tsx` (a state or a wait deep in a dialog's
-body reporting to its title and footer), `core/ui/styles/modal.css` (pinning, text kinds, spacing).
+body reporting to its title and footer), `core/ui/styles/modal.css` (pinning, text kinds, spacing,
+the 60-character line, the 16px lead, and Spectrum's button weight).

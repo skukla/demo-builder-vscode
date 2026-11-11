@@ -253,6 +253,23 @@
     overflow-wrap: anywhere;
 }
 
+/* A line of reading stops at about 60 characters, in every window: a sentence across a whole
+   large box is one thin line in an empty one (owner, 2026-11-10). Here and not in
+   modal-text.css, because this file reaches every bundle that draws a window and that one does
+   not; unlayered, so it wins over the layered `.lead-text` there. A feature stylesheet never
+   sets max-width, font-size or font-weight on these classes (`tests/sop/modal-layouts.test.ts`). */
+.lead-text,
+.dialog-line {
+    max-width: 60ch;
+}
+
+/* A window whose body is only sentences leads at 16px, so the sentence reads ahead of the
+   buttons; lists, forms and rows stay at 14px. Drawn by `LeadText sentences`, which a layout
+   component sets from what it holds, never the caller. */
+.lead-text-sentences {
+    font-size: 16px;
+}
+
 /* A run's question (`feedback/OperationQuestion`): two groups 24 apart, the text then the fields
    (the dialog rules' gap between groups). Flat 16px gaps between every line read as noise (owner,
    2026-11-04). */
@@ -325,7 +342,9 @@
     padding: 0 14px;
     border-radius: 16px;
     font-size: 14px;
-    font-weight: 700;
+    /* Spectrum's own button weight, read from its token rather than chosen here (owner,
+       2026-11-10): the larger lead, not a lighter button, puts the sentence ahead. */
+    font-weight: var(--spectrum-global-font-weight-bold);
     cursor: pointer;
     transition: background-color var(--spectrum-global-animation-duration-100) ease, border-color var(--spectrum-global-animation-duration-100) ease;
     border: 2px solid transparent;

@@ -33,13 +33,13 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { OperationProgressBody, progressFrame } from '@/core/ui/components/feedback/OperationProgressBody';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
+import { useCloseWhenClean } from '@/core/ui/hooks/useCloseWhenClean';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { OperationOffer, OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 /** A success that says something beyond its title (a warning, a note, what it changed) waits to be read. */
@@ -232,11 +232,7 @@ export function OperationProgressModal({
     const note = succeeded ? progress?.note : undefined;
     // So does a list of what the run changed (2026-10-22): it is the result, to be read.
     const held = holdsResult(progress);
-    useEffect(() => {
-        if (!succeeded || offering || held) return undefined;
-        const timer = setTimeout(onClose, TIMEOUTS.UI.RESULT_GLANCE);
-        return () => clearTimeout(timer);
-    }, [succeeded, offering, held, onClose]);
+    useCloseWhenClean(succeeded && !offering && !held, onClose);
 
     const close = useCallback((): void => {
         if (prompt) {

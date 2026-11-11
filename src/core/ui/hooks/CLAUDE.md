@@ -30,6 +30,7 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | `useActivateOnKey` | Enter/Space for a div-role button — the contract every click-to-open tile needs |
 | `useArrowKeyNavigation` | Arrow-key list/grid navigation. **No callers today**; kept as a primitive |
 | `useEnterExit` | Animate items in and out of a list (see below) |
+| `useCloseWhenClean` | Close a window after a glance once its result is clean and its title alone; the one way a result closes itself |
 | **Utility** | |
 | `useDebouncedValue` | Debounce any value |
 | `useDebouncedLoading` | Show loading only past a delay, so a fast op does not flash |
