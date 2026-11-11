@@ -11,6 +11,7 @@
  * - Closing: orders and returns
  * - Restoring: Commerce put back to how the datapack's latest save left it
  * - Replacing: one datapack uninstalled, another installed
+ * - Refreshing: fetched again, nothing lost (a cache)
  *
  * "Clear" names an action (Clear Demo Data) and never a step: each "Clearing …" step was one of
  * the verbs above. "Taking … off" and "Unlisting" said the same things in vaguer words. Commerce's
@@ -35,6 +36,7 @@ const DESTRUCTIVE_VERBS = [
     'Closing',
     'Restoring',
     'Replacing',
+    'Refreshing',
 ] as const;
 
 /** First words that said one of the verbs above in other words. */

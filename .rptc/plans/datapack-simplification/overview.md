@@ -141,6 +141,7 @@ One verb per action, the host system's own word for it:
 | Close | Orders and returns | Closing orders |
 | Restore | Commerce put back to how the datapack's latest save left it | Restoring My Luma |
 | Replace | One datapack uninstalled, another installed (all or nothing) | Replace My Luma with Bodea? |
+| Refresh | Fetched again, nothing lost (owner, 2026-11-10: a cache, which no other verb fits) | Refreshing the cache |
 
 **Clear** is an action name, not a step verb (owner, 2026-11-10): it names buttons and titles
 only (Clear Demo Data, Clear Commerce Instance); their steps use the verbs above. "Clearing …" as
@@ -155,7 +156,10 @@ a step label still fails.
   Commerce; each "Clearing …" gets its real verb).
 - Labels stand alone, no second line. The fixed 25-character cap becomes: title + label fit the
   background notification (about 62 characters), checked per operation; the longest label is
-  screenshot-checked in the 400px window.
+  screenshot-checked in the 400px window. Built 6a379c000. Owner, 2026-11-10: a wait label keeps
+  its 25-character cap (it is one line in the 400px window, not the notification); a project
+  name is never shortened in a title, because the notification wraps and the SC expands it, so
+  the 62 check (on a typical name) keeps the collapsed line whole for most projects.
 - Handbook convention + SOP enforcer: a destructive label's first word comes from the list; "Taking",
   "Clearing", "Unlisting" fail; "Removing" without "from" fails. Registered in `toolingRegistry.ts`.
 

@@ -558,7 +558,8 @@ meant.
 > **Undeploying** (off App Builder Runtime), **Unpublishing** (off the live site),
 > **Restoring default configuration** (Commerce configuration back to its Default value),
 > **Closing** (orders and returns), **Restoring** (Commerce back to how a datapack's latest
-> save left it) and **Replacing** (one datapack uninstalled, another installed). "Clear" is
+> save left it), **Replacing** (one datapack uninstalled, another installed) and
+> **Refreshing** (fetched again, nothing lost: a cache). "Clear" is
 > only an action's name (Clear Demo Data); as a step, "Clearing …" says nothing, nor do
 > "Taking …" and "Unlisting …". Commerce's nouns are its own: "cart price rules",
 > "configuration", "websites", never "cart rules", "config" or "site settings". A step stands
