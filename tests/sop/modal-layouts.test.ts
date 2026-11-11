@@ -63,9 +63,9 @@ const LEDGER: Readonly<Record<string, string>> = {
     'src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx':
         'waits for a layout: a staged Form at L with Back, a status per stage and a confirm in its own window',
     'src/features/projects-dashboard/ui/components/ProjectsBatchModal.tsx':
-        'moves in Phase 1b, projects dashboard: a Form then a Progress',
+        'waits for a layout: one window through a two step Confirm with Back, a run with questions and a result, at L or wide',
     'src/features/projects-dashboard/ui/components/UpdatesModal.tsx':
-        'moves in Phase 1b, projects dashboard: a Form then a Progress',
+        'waits for a layout: one window through a Form at L, a run with questions that hide Close, and a result with Back to Updates',
 };
 
 /** Feature stylesheets that set a layout's text or weight today, with why. Shrink only. */
