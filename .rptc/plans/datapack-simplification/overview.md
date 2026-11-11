@@ -104,6 +104,15 @@ intended change.
 **First, the five layout components and their enforcer** (see "The convention system"): the
 spacing, hierarchy, size and button rules stop being things a window can get wrong.
 
+**A window never changes height once it is on screen** (owner, 2026-11-11, after clicking through
+the real-bundle prototype in `mockups/flow/`). A window with several steps opens at the height of
+its tallest step and keeps it for every step; its buttons stay pinned at the bottom and only the
+middle scrolls. A window whose content grows (a preview appearing in Clear Demo Data) reserves
+that space from the start. This replaces `SteadyHeight`'s fit-and-ease (2026-10-31), which still
+moved the window, and `modal-steady-height.test.ts` changes to match. A NEW window, such as the
+small result after an install, may be its own size (owner, same day): the rule is about one
+window not moving.
+
 Then the datapack audit's fixes, each to the standard, by moving each window onto its layout
 component:
 
