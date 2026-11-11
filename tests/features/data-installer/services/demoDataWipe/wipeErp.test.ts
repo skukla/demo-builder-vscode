@@ -61,7 +61,7 @@ describe('the plan, with the ERP integration serving the store', () => {
         const plan = await planWipeFor(twoOrders().get, TEST_STORE, { records: [], erp: erp });
 
         expect(plan.orders).toStrictEqual([]);
-        expect(plan.returnIds).toStrictEqual([]);
+        expect(plan.preview.orders.returns).toEqual({ count: 0, names: [] });
         expect(plan.preview.erp).toEqual({
             integration: 'JustRite',
             websites: ['justrite_test_website'],
@@ -148,8 +148,8 @@ describe('clearing, with the ERP integration serving the store', () => {
         expect(at).toEqual({ close: 0, refill: store.sent.length });
         expect(store.sent.length).toBeGreaterThan(0);
         expect(writesOf(store.sent).filter((w) => w.path.startsWith('orders/'))).toEqual([
-            { method: 'POST', path: 'orders/600/cancel' },
             { method: 'POST', path: 'orders/600/comments' },
+            { method: 'POST', path: 'orders/600/cancel' },
         ]);
     });
 

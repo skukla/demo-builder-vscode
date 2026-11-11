@@ -7,7 +7,8 @@
  * the shown one did not (`withinPlan`): what is gone or closed since (the pack's removal ran in
  * between) is fine, anything new is refused.
  *
- * **The order of writes:** returns, orders (the one reset rule, `wipeOrders.ts` / `wipeOrderRun.ts`);
+ * **The order of writes:** orders, each with its note first and its returns closed inside its own
+ * work (the one reset rule, `wipeOrders.ts` / `wipeOrderRun.ts`);
  * companies, then customers, a company's admin included (Commerce refuses an admin's delete while the
  * company stands, live 2026-10-30); products (deleted, or only taken off the chosen websites); cart
  * rules (the same two ways, step 11); shared catalogs each with its customer group, then groups with
@@ -29,7 +30,7 @@
  *
  * | Write | Route | Confirmed from a real answer? |
  * |---|---|---|
- * | close a return, close off an order | see `wipeOrderRun.ts` | see there |
+ * | close off an order and its returns | see `wipeOrderRun.ts` | see there |
  * | delete a customer | `DELETE customers/{id}` | the route, yes (step 08's removal, live 2026-10-30) |
  * | delete a product | `DELETE products/{sku}` | the route, yes (the engine's removal) |
  * | take a product off a website | `DELETE products/{sku}/websites/{websiteId}` | **no**: Adobe's REST reference lists it; never called from here |
@@ -59,7 +60,7 @@ import { removeEmptySet } from './wipeAttributes';
 import { deleteRule, takeRuleOff } from './wipeCartRules';
 import { removeEmptyGroup } from './wipeCatalogs';
 import { type ErpClosed, type ErpRefreshed, closeErpOrders, erpSentence, refreshErp } from './wipeErp';
-import { type OrderOutcome, closeOrder, closeReturn } from './wipeOrderRun';
+import { type OrderOutcome, closeOrder } from './wipeOrderRun';
 import { type WipeInputs, type WipePlan, planWipeFor, withinPlan } from './wipePlan';
 import { putBackSettings } from './wipeSettings';
 import { stepLine } from './wipeStepLine';
@@ -106,7 +107,7 @@ export interface OrderCounts {
     failed: number;
 }
 
-type StepKey = Exclude<keyof WipeCounts, 'settings'> | 'returns' | 'orders';
+type StepKey = Exclude<keyof WipeCounts, 'settings'> | 'orders';
 
 /** One write of a step: named as the outcome names it, and what it needs to have gone through first. */
 interface WipeWrite {
@@ -205,12 +206,11 @@ function attributeSteps(commerce: RemovalAccess, plan: WipePlan): Pick<Record<St
     };
 }
 
-/** In the order they run (the module comment's). */
-function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string): Record<StepKey, WipeStep> {
+/** In the order they run (the module comment's); `onReturnClosed` is told as each order's return reads Closed. */
+function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string, onReturnClosed: () => void): Record<StepKey, WipeStep> {
     const { send } = commerce;
     return {
-        returns: { failed: 'close 1 of the returns', stage: DATAPACK_STAGES.closingReturns.label, writes: each(plan.returnIds, self, (id) => closeReturn(commerce, id)) },
-        orders: { failed: 'close 1 of the orders', stage: DATAPACK_STAGES.closingOrders.label, writes: each(plan.orders, (o) => o.number, (o) => closeOrder(commerce, o, day)) },
+        orders: { failed: 'close 1 of the orders', stage: DATAPACK_STAGES.closingOrders.label, writes: each(plan.orders, (o) => o.number, (o) => closeOrder(commerce, o, day, onReturnClosed)) },
         companies: companiesStep(commerce, plan),
         customers: customersStep(commerce, plan),
         products: {
@@ -302,8 +302,7 @@ const HELD_BACK = 'held back, since what it needs gone first could not be remove
 
 /** Count one write that went through. */
 function count(key: StepKey, result: OrderOutcome | void, removed: WipeCounts, orders: OrderCounts): void {
-    if (key === 'returns') orders.returnsClosed += 1;
-    else if (key === 'orders') orders[result || 'commented'] += 1;
+    if (key === 'orders') orders[result || 'commented'] += 1;
     else removed[key] += 1;
 }
 
@@ -318,11 +317,12 @@ export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (
     const orders: OrderCounts = { cancelled: 0, refunded: 0, commented: 0, alreadyClosed: plan.alreadyClosed, returnsClosed: 0, failed: 0 };
     const failed: WipeOutcome['failed'] = [];
     const notDone = new Set<string>();
-    for (const [key, step] of Object.entries(stepsOf(commerce, plan, day)) as Array<[StepKey, WipeStep]>) {
+    const returnClosed = (): number => (orders.returnsClosed += 1);
+    for (const [key, step] of Object.entries(stepsOf(commerce, plan, day, returnClosed)) as Array<[StepKey, WipeStep]>) {
         const done = (n: number): void => report(step.stage, stepLine(key, n, step.writes.length));
         if (step.writes.length > 0) done(0);
         const refused = await runStep(key, step, { removed, orders, notDone }, done);
-        if (key === 'orders' || key === 'returns') orders.failed += refused.length;
+        if (key === 'orders') orders.failed += refused.length;
         if (refused.length > 0) failed.push({ what: step.failed, count: refused.length, first: refused[0] });
     }
     await runSettings(commerce, plan, report, removed, failed);

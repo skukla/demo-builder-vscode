@@ -221,22 +221,35 @@ reads first; stop if `check_demo_data` lists anything the test did not make.
 ## One reset rule (shared with the ERP reset)
 
 The same rule closes orders in the demo-data wipe here and in the ERP integration's reset
-(`commerce-erp-integration`, branch feature/one-reset-rule, 0a10b95). In plain words:
+(`commerce-erp-integration`, branch feature/one-reset-rule, 0a10b95). **Changed 2026-11-11**
+(`.rptc/plans/erp-order-close/overview.md`): every order a Clear touches ends Canceled or Closed.
+This side has the new rule (step 1 of that plan); the integration's copy still has the old one
+until its step 2. In plain words, as it is now here:
 
+- **The note comes first.** Every order the run touches is noted before anything else is written
+  to it, its returns included, because the integration skips the events of an order whose history
+  carries "by the demo reset on". The words are decided from the plan; when Commerce's answer then
+  differs, one correcting note is added.
 - **An order with nothing invoiced and nothing shipped, in a state Commerce can cancel, is
-  canceled**, then noted "Canceled by the demo reset on <day>."
-- **Any other order that is not already Canceled or Closed has what is invoiced refunded with an
-  offline credit memo** (every invoiced line and the invoiced shipping). The order is read back:
-  Closed, it is noted "Refunded and closed by the demo reset on <day>."; still open (partly
-  invoiced), "Refunded the invoiced items by the demo reset on <day>." Both count as refunded.
-- **An order Commerce can neither cancel nor refund is left open with a note and counted**: one
-  shipped but never invoiced (nothing shipped is canceled), or one in payment review (Commerce
-  refuses a credit memo there). A refused cancel ends the same way.
-- **Its returns are set Closed**: the return's header as read, status "closed", no items (Commerce
-  refuses an approved item sent back, even unchanged), then read back.
-- **Run it twice and nothing new happens**: an order whose history already carries "by the demo
-  reset on" was handled before and is left, counted as already closed.
-- An order On Hold is released first, since Commerce cancels and refunds nothing on hold.
+  canceled**, noted "Canceled by the demo reset on <day>." A refused cancel gets a second note,
+  "Left open by the demo reset on <day>: …", and is counted as left open.
+- **Any other order that is not already Canceled or Closed, and not in payment review, is invoiced
+  in full (what is not yet invoiced), then everything invoiced is refunded with an offline credit
+  memo**, so Commerce closes it. Noted "Refunded and closed by the demo reset on <day>."; when it
+  does not read Closed afterwards, a second note, "Refunded the invoiced items by the demo reset on
+  <day>." Both count as refunded. This replaces "shipped but never invoiced: left open" and "partly
+  invoiced: refunded, not closed".
+- **An order in payment review is left open with a note and counted** (Commerce refuses an invoice
+  and a credit memo there). So is one with nothing to cancel, invoice or refund.
+- **Its returns are set Closed** inside the order's own work, after its note: the return's header
+  as read, status "closed", no items (Commerce refuses an approved item sent back, even unchanged),
+  then read back. A return Commerce keeps open stops that order; the next run finishes it.
+- **Run it twice and nothing new happens; a stopped run is finished**: an order that is Canceled or
+  Closed, or whose history carries the left-open note, is left, counted as already closed. One
+  carrying another reset note but not closed (a run stopped after its note) is closed again,
+  without a second leading note.
+- An order On Hold is released after its note and before the cancel or invoice, since Commerce
+  cancels and refunds nothing on hold.
 
 The counts carry the ERP reset's names: `cancelled`, `refunded`, `commented` (left open with a
 note), `alreadyClosed`, `returnsClosed`, `failed`. One wording differs on purpose: the note on an
