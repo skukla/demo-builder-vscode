@@ -60,13 +60,11 @@ const LEDGER: Readonly<Record<string, string>> = {
     'src/features/dashboard/ui/components/share/ShareModal.tsx':
         'waits for a layout: a Form at L with no submit, only Close, and FormDialog is M with a submit',
     'src/features/project-creation/ui/components/add-demo/AddDemoModal.tsx':
-        'moves in Phase 1b, project creation: a Form',
+        'waits for a layout: a staged Form at L with Back, a start button and an answer with a status, and FormDialog is M with none',
     'src/features/project-creation/ui/components/add-demo/EditDemoPackageModal.tsx':
-        'moves in Phase 1b, project creation: a Form',
-    'src/features/project-creation/ui/components/integration-flow/PairedSystemNameDialog.tsx':
-        'moves in Phase 1b, project creation: a Form',
+        'waits for a layout: a Form whose failure shows an error status and title, and FormDialog has no status',
     'src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx':
-        'moves in Phase 1b, project creation: the add integration flow',
+        'waits for a layout: a staged Form at L with Back, a status per stage and a confirm in its own window',
     'src/features/projects-dashboard/ui/components/ProjectsBatchModal.tsx':
         'moves in Phase 1b, projects dashboard: a Form then a Progress',
     'src/features/projects-dashboard/ui/components/UpdatesModal.tsx':

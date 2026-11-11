@@ -11,11 +11,11 @@
  * @module features/project-creation/ui/components/integration-flow/PairedSystemNameDialog
  */
 
-import { DialogContainer, TextField } from '@adobe/react-spectrum';
+import { TextField } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import type { IntegrationRow } from './integrationRows';
 import { NAME_IS_FIXED } from './stages/CatalogStage';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { FormDialog } from '@/core/ui/components/ui/FormDialog';
 import {
     MAX_ERP_NAME,
     erpNameProblem,
@@ -78,31 +78,28 @@ export function PairedSystemNameDialog({ target, onClose, onSave }: PairedSystem
     };
 
     return (
-        <DialogContainer onDismiss={onClose}>
-            {target && (
-                <Modal
-                    title={`${target.integrationName} Settings`}
-                    size="S"
-                    fitContent
-                    onClose={onClose}
-                    actionButtons={[{ label: 'Save', variant: 'accent', onPress: save, isDisabled: !ready }]}
-                >
-                    <TextField
-                        label={`${target.systemWord} Name`}
-                        value={name}
-                        onChange={setName}
-                        maxLength={MAX_ERP_NAME}
-                        autoFocus
-                        width="100%"
-                        validationState={problem ? 'invalid' : undefined}
-                        errorMessage={problem}
-                        description={NAME_IS_FIXED}
-                        onKeyDown={(event) => {
-                            if (event.key === 'Enter') save();
-                        }}
-                    />
-                </Modal>
-            )}
-        </DialogContainer>
+        <FormDialog
+            isOpen={Boolean(target)}
+            title={target ? `${target.integrationName} Settings` : ''}
+            submitLabel="Save"
+            onSubmit={save}
+            submitDisabled={!ready}
+            onClose={onClose}
+        >
+            <TextField
+                label={`${target?.systemWord ?? ''} Name`}
+                value={name}
+                onChange={setName}
+                maxLength={MAX_ERP_NAME}
+                autoFocus
+                width="100%"
+                validationState={problem ? 'invalid' : undefined}
+                errorMessage={problem}
+                description={NAME_IS_FIXED}
+                onKeyDown={(event) => {
+                    if (event.key === 'Enter') save();
+                }}
+            />
+        </FormDialog>
     );
 }
