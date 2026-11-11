@@ -31,17 +31,15 @@ const LAYOUTS = [
 /** Files that render `Modal` directly today, each with the change that moves it. Shrink only. */
 const LEDGER: Readonly<Record<string, string>> = {
     'src/features/data-installer/ui/components/PackSetupStepDialog.tsx':
-        'moves in Phase 1b, data-installer: a Form',
-    'src/features/data-installer/ui/components/VersionHistoryDialog.tsx':
-        'moves in Phase 1b, data-installer: a Form',
+        'waits for a layout: a Guide of one step with Open Admin and Check, and GuideDialog takes no actions',
     'src/features/data-installer/ui/components/LoadDatapackFileModal.tsx':
-        'moves in Phase 1b, data-installer: a Form then a Progress',
+        'waits for a layout: its result holds two Delete buttons with their own wait and note, and ResultDialog takes one action',
     'src/features/data-installer/ui/components/ImportDatapackModal.tsx':
-        'moves in Phase 1b, data-installer: a Form then a Progress',
+        'waits for a layout: one window through form, check, run and result at M, L or wide with start buttons',
     'src/features/data-installer/ui/components/ClearDemoDataModal.tsx':
-        'moves in Phase 1b, data-installer: a Form then a Progress',
+        'waits for a layout: a Form at L for its store rows and preview, and FormDialog is M only',
     'src/features/data-installer/ui/components/create-flow/DatapackFlowDialog.tsx':
-        'moves in Phase 1b, data-installer: the create flow',
+        'waits for a layout: a staged Form with Back, a start button and two commits at L or wide',
     'src/features/eds/ui/siteAccess/GiveAccessModal.tsx': 'moves in Phase 1b, eds site access: a Form',
     'src/features/eds/ui/siteAccess/SiteAccessScreen.tsx':
         'moves in Phase 1b, eds site access: a Confirm',

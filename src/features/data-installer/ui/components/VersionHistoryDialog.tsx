@@ -4,18 +4,16 @@
  * A pack of saves is one thing on its card; its earlier saves live here, so a bad save can be undone
  * without a version picker on every card. Restoring deletes no save.
  *
- * The house `Modal` in a `DialogContainer`, as `ConfirmActionDialog` is. That dialog was considered
- * and does not fit: it is a warning (the amber icon, every child a line of text), and this is a
- * choice, with nothing to warn about until the import's own window says what it replaces.
+ * A Form (`FormDialog`): a choice, with nothing to warn about until the import's own window says
+ * what it replaces.
  *
  * @module features/data-installer/ui/components/VersionHistoryDialog
  */
 
-import { DialogContainer, Radio, RadioGroup } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import { Radio, RadioGroup } from '@adobe/react-spectrum';
+import React, { useEffect, useState } from 'react';
 import { versionLabel } from '../../packVersions';
-import { LeadText } from '@/core/ui/components/ui/LeadText';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { FormDialog } from '@/core/ui/components/ui/FormDialog';
 
 export interface VersionHistoryDialogProps {
     isOpen: boolean;
@@ -35,58 +33,32 @@ export function VersionHistoryDialog({
     onRestore,
     onClose,
 }: VersionHistoryDialogProps): React.ReactElement {
-    return (
-        <DialogContainer onDismiss={onClose}>
-            {isOpen && (
-                <HistoryBody
-                    versions={versions}
-                    inUse={inUse}
-                    onRestore={onRestore}
-                    onClose={onClose}
-                />
-            )}
-        </DialogContainer>
-    );
-}
-
-/** Its own component so the choice starts afresh each time the dialog opens. */
-function HistoryBody({
-    versions,
-    inUse,
-    onRestore,
-    onClose,
-}: Omit<VersionHistoryDialogProps, 'isOpen'>): React.ReactElement {
     const [chosen, setChosen] = useState<string | undefined>(undefined);
+    // The choice starts afresh each time the dialog opens.
+    useEffect(() => {
+        if (isOpen) setChosen(undefined);
+    }, [isOpen]);
     const restorable = chosen !== undefined && chosen !== inUse;
     return (
-        <Modal
+        <FormDialog
+            isOpen={isOpen}
             title="Version History"
-            size="S"
-            fitContent
+            lead={<>This demo&rsquo;s data goes back to the version you choose.</>}
+            submitLabel="Restore Version"
+            onSubmit={() => chosen && onRestore(chosen)}
+            submitDisabled={!restorable}
             onClose={onClose}
-            closeLabel="Cancel"
-            actionButtons={[
-                {
-                    label: 'Restore Version',
-                    variant: 'accent',
-                    onPress: () => chosen && onRestore(chosen),
-                    isDisabled: !restorable,
-                },
-            ]}
         >
-            <div className="dialog-stack">
-                <LeadText>This demo&rsquo;s data goes back to the version you choose.</LeadText>
-                <RadioGroup aria-label="Versions" value={chosen ?? null} onChange={setChosen}>
-                    {versions.map((version) => (
-                        <Radio key={version} value={version}>
-                            {versionLabel(version)}
-                            {version === inUse ? (
-                                <span className="text-sm text-gray-700"> (in use)</span>
-                            ) : null}
-                        </Radio>
-                    ))}
-                </RadioGroup>
-            </div>
-        </Modal>
+            <RadioGroup aria-label="Versions" value={chosen ?? null} onChange={setChosen}>
+                {versions.map((version) => (
+                    <Radio key={version} value={version}>
+                        {versionLabel(version)}
+                        {version === inUse ? (
+                            <span className="text-sm text-gray-700"> (in use)</span>
+                        ) : null}
+                    </Radio>
+                ))}
+            </RadioGroup>
+        </FormDialog>
     );
 }
