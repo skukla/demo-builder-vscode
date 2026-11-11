@@ -30,8 +30,6 @@ const LAYOUTS = [
 
 /** Files that render `Modal` directly today, each with the change that moves it. Shrink only. */
 const LEDGER: Readonly<Record<string, string>> = {
-    'src/core/ui/components/feedback/OperationProgressModal.tsx':
-        'moves in Phase 1b, core: becomes the Progress layout for streamed operations',
     'src/features/data-installer/ui/components/PackSetupStepDialog.tsx':
         'moves in Phase 1b, data-installer: a Form',
     'src/features/data-installer/ui/components/VersionHistoryDialog.tsx':

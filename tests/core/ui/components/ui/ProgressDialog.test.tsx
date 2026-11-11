@@ -127,4 +127,62 @@ describe('ProgressDialog', () => {
         });
         expect(onClose).not.toHaveBeenCalled();
     });
+
+    describe('a streamed run (its own view)', () => {
+        const stream = <p data-testid="stream">Publishing pages</p>;
+
+        it('draws the run its own way in a medium window, holding its size while it works', () => {
+            renderProgress({ stream, closeLabel: 'Run in Background' });
+
+            expect(screen.getByTestId('stream')).toBeInTheDocument();
+            expect(document.querySelector('.dialog-stack')).toBeNull();
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'M');
+            expect(buttonNames()).toEqual(['Run in Background']);
+        });
+
+        it('offers its answers after Cancel while it asks, the main one last', () => {
+            const onPress = jest.fn();
+            renderProgress({
+                stream,
+                title: 'Sign In Again?',
+                status: 'warning',
+                closeLabel: 'Cancel',
+                actions: [
+                    { label: 'Skip', variant: 'secondary', onPress: jest.fn() },
+                    { label: 'Sign In', variant: 'accent', onPress },
+                ],
+            });
+
+            expect(buttonNames()).toEqual(['Cancel', 'Skip', 'Sign In']);
+            fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
+            expect(onPress).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps a medium window for its result', () => {
+            renderProgress({ stream, title: 'Pages Published', status: 'success', holds: true });
+
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'M');
+        });
+
+        it('closes itself a glance after it ended clean with nothing to read', () => {
+            const { onClose } = renderProgress({ stream, title: 'Pages Published', status: 'success' });
+
+            act(() => {
+                jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            });
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it.each<[string, Partial<ProgressDialogProps>]>([
+            ['with a result to read', { holds: true }],
+            ['with a next step offered', { actions: [{ label: 'Open', variant: 'accent', onPress: jest.fn() }] }],
+        ])('CONTROL: a clean end stays open %s', (_name, props) => {
+            const { onClose } = renderProgress({ stream, title: 'Pages Published', status: 'success', ...props });
+
+            act(() => {
+                jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
+            });
+            expect(onClose).not.toHaveBeenCalled();
+        });
+    });
 });

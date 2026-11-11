@@ -71,12 +71,15 @@ function withoutImports(source: string): string {
         .join('\n');
 }
 
-/** Every component that renders a Modal and switches between views inside it. */
+/** Every component that renders a dialog and switches between views inside it. */
+// A layout component (Phase 1b) renders the Modal for its caller, so the caller is still the
+// dialog whose body switches views: it counts as rendering one.
+const RENDERS_DIALOG = /<(Modal|FormDialog|ConfirmActionDialog|ProgressDialog|ResultDialog|GuideDialog)[\s>]/;
 function modalsWithViews(): Modal[] {
     const found: Modal[] = [];
     for (const file of COMPONENTS) {
         const source = readFileSync(join(ROOT, file), 'utf8');
-        if (!source.includes('<Modal')) continue;
+        if (!RENDERS_DIALOG.test(source)) continue;
         const near = localImports(file, source);
         const nearby = near.map((path) => withoutImports(readFileSync(join(ROOT, path), 'utf8')));
         // The view switch can live one file along too, in the modal's OWN body

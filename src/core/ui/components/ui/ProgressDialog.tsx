@@ -33,7 +33,30 @@ export interface ProgressDialogProps {
     children?: React.ReactNode;
     /** Retry, Fix with AI: the one thing an ended run can offer beside Close. */
     action?: ResultAction;
+    /**
+     * A streamed run's own view: its stages, the question it is paused on, how it ended
+     * (`OperationProgressBody`). It stands in for the wait, the rows and the lines, and can show
+     * rows at any point, so the window takes a list's size from the start.
+     */
+    stream?: React.ReactNode;
+    /** The buttons a streamed run offers beside dismissing it (answers, Retry), main last. */
+    actions?: ProgressAction[];
+    /**
+     * What dismissing says: Close by default; Run in Background while a streamed run works (it
+     * carries on in a notification, and the window holds its size while it does); Cancel while
+     * it asks (dismissing is the answer).
+     */
+    closeLabel?: 'Close' | 'Run in Background' | 'Cancel';
+    /** A clean end that still has something to read (a warning, a note, what it changed). */
+    holds?: boolean;
     onClose: () => void;
+}
+
+/** A button a streamed run offers: an answer, Retry, Open Debug Logs. */
+export interface ProgressAction {
+    label: string;
+    onPress: () => void;
+    variant: 'accent' | 'negative' | 'secondary';
 }
 
 /**
@@ -51,26 +74,36 @@ export function ProgressDialog({
     status,
     children,
     action,
+    stream,
+    actions = [],
+    closeLabel = 'Close',
+    holds = false,
     onClose,
 }: ProgressDialogProps): React.ReactElement {
     const lines = React.Children.toArray(children);
+    const streamed = stream !== undefined;
     const ended = Boolean(status) && !waiting;
-    const titleAlone = lines.length === 0 && !action;
+    const titleAlone = lines.length === 0 && !action && actions.length === 0 && !holds;
     useCloseWhenClean(isOpen && ended && titleAlone && status === 'success', onClose);
-
+    const listed = Boolean(rows) || streamed;
+    let footer: ProgressAction[] | undefined;
+    if (streamed) footer = actions;
+    else if (ended) footer = resultActionButtons(action);
     return (
         <DialogContainer onDismiss={onClose}>
             {isOpen && (
                 <Modal
                     title={title}
                     status={ended ? status : undefined}
-                    size={rows ? 'M' : 'S'}
+                    size={listed ? 'M' : 'S'}
                     fitContent
-                    holdSize={Boolean(rows) && !ended}
-                    waiting={rows ? false : waiting}
+                    holdSize={streamed ? closeLabel === 'Run in Background' : listed && !ended}
+                    waiting={listed ? false : waiting}
                     onClose={onClose}
-                    actionButtons={ended ? resultActionButtons(action) : undefined}
+                    closeLabel={closeLabel}
+                    actionButtons={footer}
                 >
+                    {streamed ? stream : (
                     <div className="dialog-stack">
                         {rows && (
                             <ul className="work-row-list">
@@ -87,6 +120,7 @@ export function ProgressDialog({
                             </div>
                         )}
                     </div>
+                    )}
                 </Modal>
             )}
         </DialogContainer>

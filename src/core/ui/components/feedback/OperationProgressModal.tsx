@@ -32,12 +32,10 @@
  * @module core/ui/components/feedback/OperationProgressModal
  */
 
-import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useRef } from 'react';
 import { OperationProgressBody, progressFrame } from '@/core/ui/components/feedback/OperationProgressBody';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
-import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
-import { useCloseWhenClean } from '@/core/ui/hooks/useCloseWhenClean';
+import { ProgressDialog, type ProgressAction } from '@/core/ui/components/ui/ProgressDialog';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OperationOffer, OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
@@ -107,7 +105,7 @@ const CANCEL = 'Cancel';
  * left to answer it — so dismissing it IS the answer, and it says Cancel. An
  * operation that has ENDED, either way, has nothing left to narrate.
  */
-function closeLabelFor(ended: boolean, asking: boolean): string {
+function closeLabelFor(ended: boolean, asking: boolean): 'Close' | 'Run in Background' | 'Cancel' {
     if (asking) return CANCEL;
     return ended ? 'Close' : 'Run in Background';
 }
@@ -118,9 +116,9 @@ function closeLabelFor(ended: boolean, asking: boolean): string {
  * already says Cancel and answers the same way, as nothing chosen (two Cancels side by side,
  * 2026-10-23).
  */
-function answerButtons(prompt: OperationPrompt, answer: (chosen: string) => void): ActionButton[] {
+function answerButtons(prompt: OperationPrompt, answer: (chosen: string) => void): ProgressAction[] {
     const main = prompt.destructive ? 'negative' : 'accent';
-    const buttons = prompt.actions.filter((label) => label !== CANCEL).map((label, index): ActionButton => ({
+    const buttons = prompt.actions.filter((label) => label !== CANCEL).map((label, index): ProgressAction => ({
         label,
         variant: index === 0 ? main : 'secondary',
         onPress: () => answer(label),
@@ -129,7 +127,7 @@ function answerButtons(prompt: OperationPrompt, answer: (chosen: string) => void
 }
 
 /** A success's next step, as its one button: the modal closes, then the step starts. */
-function nextStepButtons(next: ProgressModalNextStep | undefined, onClose: () => void): ActionButton[] {
+function nextStepButtons(next: ProgressModalNextStep | undefined, onClose: () => void): ProgressAction[] {
     if (!next) return [];
     return [{ label: next.action, variant: 'accent', onPress: () => { onClose(); next.onPress(); } }];
 }
@@ -150,7 +148,7 @@ function isRunning(prompt: OperationProgressPayload['prompt'], failed: boolean, 
 }
 
 /** What a failure offers: the detail it wrote to the logs, and another go. */
-function failureButtons(failed: boolean, onRetry: () => void): ActionButton[] {
+function failureButtons(failed: boolean, onRetry: () => void): ProgressAction[] {
     if (!failed) return [];
     return [
         {
@@ -232,7 +230,6 @@ export function OperationProgressModal({
     const note = succeeded ? progress?.note : undefined;
     // So does a list of what the run changed (2026-10-22): it is the result, to be read.
     const held = holdsResult(progress);
-    useCloseWhenClean(succeeded && !offering && !held, onClose);
 
     const close = useCallback((): void => {
         if (prompt) {
@@ -261,40 +258,40 @@ export function OperationProgressModal({
     });
 
     return (
-        <DialogContainer onDismiss={close}>
-            <Modal
-                fitContent
-                title={frame.title}
-                status={frame.status}
-                size="M"
-                onClose={close}
-                closeLabel={closeLabelFor(failed || succeeded, Boolean(prompt))}
-                holdSize={running}
-                actionButtons={
-                    prompt
-                        ? answerButtons(prompt, answer)
-                        : [...failureButtons(failed, onRetry), ...nextStepButtons(offering, onClose)]
-                }
-            >
-                {/* While it runs the body draws the subject, around which it levels the spinner. */}
-                {operation.subject && !running && <div className="modal-progress-subject">{operation.subject}</div>}
-                {/* Fits each state (dialog design rules, 2026-10-31). It was one fixed height for
-                    every state, which left a one-line result in a box sized for a three-line
-                    failure. */}
-                <SteadyHeight>
-                    <OperationProgressBody
-                        prompt={prompt}
-                        failed={failed}
-                        succeeded={succeeded}
-                        successMessage={
-                            [warning, note, offering?.message].filter(Boolean).join(' ') || undefined
-                        }
-                        progress={progress}
-                        onTyped={onTyped}
-                        subject={operation.subject}
-                    />
-                </SteadyHeight>
-            </Modal>
-        </DialogContainer>
+        <ProgressDialog
+            isOpen
+            title={frame.title}
+            status={frame.status}
+            closeLabel={closeLabelFor(failed || succeeded, Boolean(prompt))}
+            holds={held}
+            onClose={close}
+            actions={
+                prompt
+                    ? answerButtons(prompt, answer)
+                    : [...failureButtons(failed, onRetry), ...nextStepButtons(offering, onClose)]
+            }
+            stream={
+                <>
+                    {/* While it runs the body draws the subject, around which it levels the spinner. */}
+                    {operation.subject && !running && <div className="modal-progress-subject">{operation.subject}</div>}
+                    {/* Fits each state (dialog design rules, 2026-10-31). It was one fixed height for
+                        every state, which left a one-line result in a box sized for a three-line
+                        failure. */}
+                    <SteadyHeight>
+                        <OperationProgressBody
+                            prompt={prompt}
+                            failed={failed}
+                            succeeded={succeeded}
+                            successMessage={
+                                [warning, note, offering?.message].filter(Boolean).join(' ') || undefined
+                            }
+                            progress={progress}
+                            onTyped={onTyped}
+                            subject={operation.subject}
+                        />
+                    </SteadyHeight>
+                </>
+            }
+        />
     );
 }

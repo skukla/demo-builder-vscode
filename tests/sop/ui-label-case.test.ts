@@ -34,9 +34,25 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * extension at run time. 71 -> 69 on 2026-11-08, with the waits' rework (`WAIT_STAGES`) and the
  * import pause taken out: two fewer strings the scan cannot read. 69 -> 70 on 2026-11-09: Version
  * History's radio choices are each a save's date ("Nov 9, 1:56 PM", `versionLabel`), which no
- * Title Case rule applies to (walk F99).
+ * Title Case rule applies to (walk F99). 70 -> 68 on 2026-11-10 (Phase 1b): a layout's forwarding of
+ * its caller's words is no longer counted (`forwardedByALayout`); ConfirmActionDialog's two were.
  */
-const DYNAMIC_PIN = 70;
+const DYNAMIC_PIN = 68;
+
+/**
+ * The five dialog layouts hand their caller's words on to Modal (`title={title}`). Those words are
+ * read where the caller writes them (`ProgressDialog.title`, `FormDialog.submitLabel`, ...), so the
+ * layout's own forwarding is not one more string the scan cannot read. A literal inside a layout
+ * is still checked like any other.
+ */
+const LAYOUT_FILES: ReadonlySet<string> = new Set(
+    ['ConfirmActionDialog', 'FormDialog', 'ProgressDialog', 'ResultDialog', 'GuideDialog'].map(
+        (name) => `src/core/ui/components/ui/${name}.tsx`
+    )
+);
+
+const forwardedByALayout = (site: LabelSite): boolean =>
+    site.text === undefined && LAYOUT_FILES.has(site.file);
 
 /** A positive control: well below this, the scan has stopped finding the sites. */
 const MINIMUM_SITES = 300;
@@ -118,7 +134,7 @@ describe('Title Case for what names a thing', () => {
     });
 
     it('holds the unreadable names to their pin, so one more cannot slip in unchecked', () => {
-        expect(sites.filter((site) => site.text === undefined)).toHaveLength(DYNAMIC_PIN);
+        expect(sites.filter((site) => site.text === undefined && !forwardedByALayout(site))).toHaveLength(DYNAMIC_PIN);
     });
 
     it('carries no ledger row for a string that has gone', () => {
