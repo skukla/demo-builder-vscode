@@ -84,6 +84,13 @@ Title Case, no middle dots, button order). This file holds what the journey revi
     "I understand" box can't be skipped. J2-3: "should only go back to the summary and let the
     summary be the chief action door."
 
+## Result Titles
+
+21. **A result title puts the thing first:** "Bodea Installed", "My Luma Restored", "Projects
+    Reset". Verb first only when it says where something went: "Saved to My Luma", "Saved as Luma
+    Holiday". A background notification uses the result title's exact words ("My Luma
+    Uninstalled"). Owner, 2026-11-12: "Agreed."
+
 ## Before the owner sees a window
 
 - Read every line of it against rules 1 to 7 and strike what fails, before showing it.

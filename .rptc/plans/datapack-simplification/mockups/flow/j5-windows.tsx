@@ -32,12 +32,12 @@ type Phase = 'check' | 'question' | 'save-first' | 'run' | 'uninstalled';
 /** How long the success notification shows before it goes by itself (J5-3). */
 const NOTIFICATION_SHOWN_MS = 5000;
 
-/** The run's words: the -ing title, the in-window results, and the notifications' (Phase 4: "Installed My Luma"). */
+/** The run's words: the -ing title, the in-window results; a notification uses the result's own words (rule 21). */
 const wordsOf = (pack: PackName) => ({
     running: `Uninstalling ${pack}`,
     done: `${pack} Uninstalled`,
     failed: `Couldn't Uninstall ${pack}`,
-    notified: `Uninstalled ${pack}`,
+    notified: `${pack} Uninstalled`,
 });
 
 /** The job's state: the phase, the run, and whether it was sent to the background. */

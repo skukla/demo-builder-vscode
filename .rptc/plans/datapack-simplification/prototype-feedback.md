@@ -119,6 +119,7 @@ Step ids use a hyphen (J1-1) so they never collide with the scenario ids above (
 | J5-2 | Drawn as steps, like Install. Right? | **Pass** | "J5 is good." | 2026-11-12 |
 | J5-3 | Closes on its own, in the result's own words. Right? | **Pass** | "J5 is good." | 2026-11-12 |
 | J5-4 | A notification that stays, with one button. Right? | **Pass** | "J5 is good." | 2026-11-12 |
+| J5-3 | Closes on its own, in the result's own words. Right? | **Change**: Rule 21: result titles put the thing first, verb first only for where something went; notifications use the title's words (My Luma Uninstalled). | "Agreed" | 2026-11-12 |
 
 ## J6: A Failed Install
 
@@ -202,3 +203,4 @@ What the reviews leave for the build phase, by step. `log-verdict.mjs --build` a
 - **J8-1**: Replace becomes Switch everywhere: flyout button Switch to <pack> when another is installed, Switch to <pack>?, Switch, Switch Without Saving / Save and Switch, Switching to <pack>; verb table row renamed.
 - **J8-3**: Datapack More menu: Share / Stop Sharing / Delete (bare verbs); titles Share My Luma?, Delete My Luma?.
 - **J8-3**: Header save button with no datapack reads Create (window title Create Datapack).
+- **J5-3**: Background notifications use the result title's words: "My Luma Uninstalled", "My Luma Installed".

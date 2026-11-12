@@ -561,9 +561,18 @@ export const DECISIONS: Record<string, StepDecisions> = {
                 "verdict": "Pass",
                 "words": "\"J5 is good.\"",
                 "date": "2026-11-12"
+            },
+            {
+                "topic": "",
+                "asked": "Closes on its own, in the result's own words. Right?",
+                "verdict": "Change: Rule 21: result titles put the thing first, verb first only for where something went; notifications use the title's words (My Luma Uninstalled).",
+                "words": "\"Agreed\"",
+                "date": "2026-11-12"
             }
         ],
-        "build": []
+        "build": [
+            "Background notifications use the result title's words: \"My Luma Uninstalled\", \"My Luma Installed\"."
+        ]
     },
     "J5-4": {
         "verdicts": [
