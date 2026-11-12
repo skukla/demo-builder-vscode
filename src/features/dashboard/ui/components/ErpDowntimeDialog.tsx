@@ -5,17 +5,18 @@
  * offers to end it now instead. A demo control, not an ERP setting: it left the ERP's own
  * Settings screen (owner, 2026-10-02).
  *
- * The core `Modal`, with its wait while the ERP is read and a Spectrum `NumberField` for the
- * minutes. A read or a control that did not go through is the title's outcome, in red, with the
- * ERP's words under it. Hosts its own DialogContainer, the house rule for a modal
- * (tests/sop/modal-hosting.test.ts).
+ * The Form layout (`FormDialog`, Phase 1b), with its wait while the ERP is read and a Spectrum
+ * `NumberField` for the minutes. A read or a control that did not go through is the title's
+ * outcome, in red, with the ERP's words on the failure line, whose room is kept from the start.
  *
  * @module features/dashboard/ui/components/ErpDowntimeDialog
  */
 
-import { DialogContainer, NumberField } from '@adobe/react-spectrum';
+import { NumberField } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
-import { Modal, type ActionButton, type ModalWait } from '@/core/ui/components/ui/Modal';
+import { FormDialog } from '@/core/ui/components/ui/FormDialog';
+import type { ModalWait } from '@/core/ui/components/ui/Modal';
+import { ResultDialog } from '@/core/ui/components/ui/ResultDialog';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import {
     useErpDemoControls,
@@ -36,20 +37,16 @@ function isWindowLength(minutes: number): boolean {
 }
 
 /**
- * Host the downtime modal while it is open on an ERP.
+ * Host the downtime form while it is open on an ERP.
  *
  * @param props - the ERP it is open on (or none) and the close callback
- * @returns the dialog container
+ * @returns the form, closed when no ERP is chosen
  */
 export function ErpDowntimeDialog({ target, onClose }: {
     target: ErpDemoControlTarget | null;
     onClose: () => void;
-}): React.ReactElement {
-    return (
-        <DialogContainer onDismiss={onClose}>
-            {target && <DowntimeModal target={target} onClose={onClose} />}
-        </DialogContainer>
-    );
+}): React.ReactElement | null {
+    return target ? <DowntimeForm target={target} onClose={onClose} /> : null;
 }
 
 /** The title: the question it is open on, or what did not go through. */
@@ -60,63 +57,50 @@ function titleOf(name: string, state: ErpDemoState | null, error: string | null)
 }
 
 /** How long, and start; or, while the ERP is down, end it. Mounted per opening. */
-function DowntimeModal({ target, onClose }: {
+function DowntimeForm({ target, onClose }: {
     target: ErpDemoControlTarget;
     onClose: () => void;
 }): React.ReactElement {
     const { state, error, busy, run } = useErpDemoControls(target);
     const [minutes, setMinutes] = useState<number>(ERP_DOWNTIME_MINUTES.default);
     const running = state?.maintenance ?? null;
+    const lead = running
+        ? running.message
+        : `${target.name} answers every call as down for maintenance until the time is up, so orders wait and go through once it is back.`;
 
-    const action: ActionButton = running
-        ? {
-            label: 'End Downtime',
-            variant: 'accent',
-            onPress: () => {
-                void run('endErpDowntime', {});
-            },
-            isDisabled: busy,
-        }
-        : {
-            label: 'Start Downtime',
-            variant: 'accent',
-            onPress: () => {
-                void run('startErpDowntime', { minutes });
-            },
-            isDisabled: busy || !state || !isWindowLength(minutes),
-        };
-
+    // A read that failed has nothing to fill in: the result, with the ERP's words and Close (rule 17).
+    if (!state && error) {
+        return (
+            <ResultDialog isOpen title={titleOf(target.name, state, error)} status="error" onClose={onClose}>
+                {error}
+            </ResultDialog>
+        );
+    }
     return (
-        <Modal
+        <FormDialog
+            isOpen
             title={titleOf(target.name, state, error)}
-            status={error ? 'error' : undefined}
-            size="S"
-            fitContent
-            onClose={onClose}
-            actionButtons={state ? [action] : []}
+            {...(state ? { lead } : {})}
+            submitLabel={running ? 'End Downtime' : 'Start Downtime'}
+            onSubmit={() => {
+                void (running ? run('endErpDowntime', {}) : run('startErpDowntime', { minutes }));
+            }}
+            submitDisabled={busy || !state || (!running && !isWindowLength(minutes))}
+            failure={error}
             waiting={!state && busy ? READING : false}
+            onClose={onClose}
         >
-            <div className="dialog-stack">
-                {error && <p className="dialog-line">{error}</p>}
-                {running && <p className="dialog-line">{running.message}</p>}
-                {state && !running && (
-                    <>
-                        <p className="dialog-line">
-                            {target.name} answers every call as down for maintenance until the time
-                            is up, so orders wait and go through once it is back.
-                        </p>
-                        <NumberField
-                            label="Minutes"
-                            value={minutes}
-                            onChange={setMinutes}
-                            minValue={MIN}
-                            maxValue={MAX}
-                            step={1}
-                            width="size-1600"
-                        />
-                    </>
-                )}
-            </div>
-        </Modal>
+            {state && !running ? (
+                <NumberField
+                    label="Minutes"
+                    value={minutes}
+                    onChange={setMinutes}
+                    minValue={MIN}
+                    maxValue={MAX}
+                    step={1}
+                    width="size-1600"
+                />
+            ) : null}
+        </FormDialog>
     );
 }

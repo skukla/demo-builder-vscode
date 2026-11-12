@@ -225,14 +225,15 @@ describe('IntegrationsGrid — the ERP dialogs close', () => {
         expect(screen.queryByRole('dialog', { name: 'Add Another ERP' })).not.toBeInTheDocument();
     });
 
-    it('closes the simulated-downtime modal on Close', async () => {
+    // A form says Cancel beside its commit (Phase 1b: the downtime window is on the Form layout).
+    it('closes the simulated-downtime modal on Cancel', async () => {
         const user = setupUser();
         renderCards([integrationCard(), systemCard()]);
         const panel = await openPanel(user, 'Nordwind', 'Deployed');
         await user.click(within(panel).getByRole('button', { name: 'Simulate Downtime' }));
 
         const dialog = await screen.findByRole('dialog', { name: 'Nordwind: Simulate Downtime' });
-        await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
+        await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
         expect(
             screen.queryByRole('dialog', { name: 'Nordwind: Simulate Downtime' })

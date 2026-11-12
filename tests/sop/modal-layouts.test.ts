@@ -40,8 +40,6 @@ const LEDGER: Readonly<Record<string, string>> = {
         'waits for a layout: a Form at L whose title, status and action change with each view, and FormDialog is M only',
     'src/features/dashboard/ui/components/AssignErpProductsModal.tsx':
         'waits for a layout: a Form at L wide for its product list, and FormDialog is M only',
-    'src/features/dashboard/ui/components/ErpDowntimeDialog.tsx':
-        'waits for a layout: a Form at S that reports its own failure with an error status, and FormDialog has no status',
     'src/features/dashboard/ui/components/integrations/SetupGuideModal.tsx':
         'waits for a layout: a Guide at L wide with a step list, start buttons and per step actions, and GuideDialog takes no actions',
     'src/features/dashboard/ui/components/AiCapabilitiesModal.tsx':
