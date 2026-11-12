@@ -179,6 +179,6 @@ export const undoLastSaveHandlers = defineHandlers({
             ).response;
         }
         const ready = plan;
-        return startDatapackImport(context, ready.install, { afterSuccess: () => deleteNewest(context, ready) });
+        return startDatapackImport(context, ready.install, { purpose: 'undo', afterSuccess: () => deleteNewest(context, ready) });
     },
 });

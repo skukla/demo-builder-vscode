@@ -191,6 +191,7 @@ export const importHandlers = announcingChanges(defineHandlers({
 
         const started = await runAndWatch(context, engine, request, {
             operation: 'reset',
+            purpose: 'uninstall',
             validate: () => engine.validateRemoval(request),
             begin: () => engine.startDelete(request),
             rejected: 'The Data Installer rejected this uninstall request.',

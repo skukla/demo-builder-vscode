@@ -223,3 +223,26 @@ describe('which pack the project names once the job runs', () => {
         expect(project.datapack).toEqual({ name: 'bodea', version: '20261101-120000', store: 'library' });
     });
 });
+
+// Step 03, S2: what the job is for is on its record, set where it starts, for the window and agents.
+describe('what the job record says it is for', () => {
+    async function purposeAfterStart(project: Partial<Project>): Promise<unknown> {
+        happyEngine();
+        const { context } = makeImportHarness(project);
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        const status = await importHandlers['get-datapack-import-status'](context, {});
+        return (status.data as { purpose?: unknown }).purpose;
+    }
+
+    it('is a switch over another datapack', async () => {
+        expect(await purposeAfterStart({ ...PAAS_PROJECT, datapack: { name: 'luma', version: 'main', store: 'installer' } })).toBe('switch');
+    });
+
+    it('is an install over another version of the same datapack', async () => {
+        expect(await purposeAfterStart(projectUsing('20261101-120000'))).toBe('install');
+    });
+
+    it('is an install over nothing', async () => {
+        expect(await purposeAfterStart(projectUsing('main'))).toBe('install');
+    });
+});

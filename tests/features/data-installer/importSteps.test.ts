@@ -1,6 +1,6 @@
 /**
  * An import's run as steps (owner, 2026-11-09, `.rptc/research/replace-flow-steps/`): Save Your
- * Changes, Uninstall the Previous Version, Install, Verify Installation, only those that apply, in the
+ * Changes, Uninstall <the datapack replaced>, Install, Verify Installation, only those that apply, in the
  * order they run. The data types are Install's own rows; the engine's work outside any one type is
  * a line on the step it serves, where Preparing Import and Finishing Import used to be rows.
  */
@@ -42,7 +42,6 @@ const SAVED = '20261109-135600';
 const SAME_PACK: Partial<StepSource> = {
     installing: { name: 'Luma', version: SAVED },
     replaces: 'Luma',
-    replacesVersion: 'Nov 1, 12:00 PM',
 };
 
 const labels = (steps: ImportStep[]): string[] => steps.map((step) => step.label);
@@ -81,7 +80,7 @@ describe('which steps show', () => {
 
         expect(labels(steps)).toStrictEqual([
             'Save Your Changes',
-            'Uninstall the Previous Version',
+            'Uninstall Luma',
             'Install Luma',
             'Verify Installation',
         ]);
@@ -120,7 +119,8 @@ describe('what Install and Remove are named', () => {
     it('names another save of the same pack by the datapack, never by when it was saved', () => {
         const steps = importSteps(source(SAME_PACK));
 
-        expect(remove(steps).label).toBe('Uninstall the Previous Version');
+        // Step 03, S2: the row names the datapack it uninstalls, "Uninstall <name>".
+        expect(remove(steps).label).toBe('Uninstall Luma');
         expect(install(steps).label).toBe('Install Luma');
         expect(install(steps).label).not.toContain(versionLabel(SAVED));
     });
@@ -128,7 +128,7 @@ describe('what Install and Remove are named', () => {
     it('names another pack by its name, and its version when it is not a save', () => {
         const steps = importSteps(source({ replaces: 'Bodea, main' }));
 
-        expect(remove(steps).label).toBe('Uninstall the Previous Datapack');
+        expect(remove(steps).label).toBe('Uninstall Bodea, main');
         expect(install(steps).label).toBe('Install Luma, main');
     });
 
@@ -180,7 +180,7 @@ describe('Uninstall’s lines', () => {
         );
 
         // The datapack's name, never when the save was made (Phase 2, owner 2026-11-12).
-        expect(remove(steps)).toMatchObject({ status: 'success', line: 'Uninstalled Luma' });
+        expect(remove(steps)).toMatchObject({ status: 'success', line: 'Uninstalled' });
         expect(install(steps)).toMatchObject({ status: 'checking', line: 'Reading from Commerce' });
     });
 

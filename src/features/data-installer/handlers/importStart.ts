@@ -7,6 +7,7 @@
  * @module features/data-installer/handlers/importStart
  */
 
+import { jobPurpose } from '../datapackWords';
 import { buildDatapackEngine, installedByDemoBuilder } from '../services/buildDatapackEngine';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
@@ -70,8 +71,11 @@ export async function afterWait(context: HandlerContext, response: HandlerRespon
 export interface StartOptions {
     /** Work for once the job ends in success (`runAndWatch`): Undo Last Save's delete. */
     afterSuccess?: () => Promise<void>;
-    /** Restore (`restoreDatapack.ts`): the pack installed is replaced even by its own version. */
-    restore?: boolean;
+    /**
+     * What the job is for when the start alone cannot say: Restore (`restoreDatapack.ts`), whose pack
+     * installed is replaced even by its own version, or Undo Last Save. Else install or switch.
+     */
+    purpose?: 'restore' | 'undo';
 }
 
 /**
@@ -90,7 +94,7 @@ export async function startDatapackImport(
     }
     const { engine } = prepared;
     // Walk F97: over another pack or version the demo uses, that pack goes first, its changes settled.
-    const replacement = await settleReplacement(context, engine, prepared.request, payload, { restore: options.restore === true });
+    const replacement = await settleReplacement(context, engine, prepared.request, payload, { restore: options.purpose === 'restore' });
     if ('response' in replacement) {
         return replacement.response;
     }
@@ -100,6 +104,7 @@ export async function startDatapackImport(
     // malformed. A 202 from the async entry point would not.
     const started = await runAndWatch(context, engine, request, {
         operation: 'import',
+        purpose: options.purpose ?? jobPurpose({ replaces, replacesVersion }),
         validate: replacement.validate ?? (() => engine.validateImport(request)),
         begin: () => engine.startImport(request),
         rejected: 'The Data Installer rejected this install request.',

@@ -188,10 +188,11 @@ describe('an import that stopped', () => {
         reason: 'Commerce did not respond to V1/products: timed out',
     };
 
-    it('is "Install Stopped", red, with Retry when a retry can get past it', () => {
+    // Step 03, S2: a stop is the job's failed title, "Couldn't Install <name>" (it was "Install Stopped").
+    it('is "Couldn\'t Install", red, with Retry when a retry can get past it', () => {
         expect(outcomeOf({ ...stopped, retryable: true })).toMatchObject({
             variant: 'error',
-            title: 'Install Stopped',
+            title: `Couldn't Install ${PACK_NAME}`,
             action: 'retry',
         });
     });
@@ -209,7 +210,7 @@ describe('an import that stopped', () => {
         expect(outcomeOf({ ...stopped, retryable: false })?.action).toBe('fix');
     });
 
-    it('is "Install Stopped" when every data type went in and the work after them stopped', () => {
+    it('is "Couldn\'t Install" when every data type went in and the work after them stopped', () => {
         const result = outcomeOf({
             outcome: 'partial',
             perType: done('categories', 'products'),
@@ -218,11 +219,36 @@ describe('an import that stopped', () => {
             retryable: true,
         });
 
-        expect(result).toMatchObject({ variant: 'error', title: 'Install Stopped', action: 'retry' });
+        expect(result).toMatchObject({ variant: 'error', title: `Couldn't Install ${PACK_NAME}`, action: 'retry' });
     });
 
     it('says nothing under its rows but how long it took: the rows say where it stopped', () => {
         expect(outcomeOf({ ...stopped, retryable: true })?.lead).toBeUndefined();
+    });
+});
+
+// Step 03, S2: the ending is worded for what the job was for (`jobWords`), read off its record.
+describe('an ending worded for what the job was for', () => {
+    const clean = { outcome: 'success' as const, perType: done('products') };
+    const stop = { outcome: 'partial' as const, perType: { products: 'error' } as Record<string, DataTypeStatus>, stoppedAt: 'products' };
+
+    it('ends a restore as "Restored", or "Couldn\'t Restore"', () => {
+        expect(outcomeOf({ ...clean, purpose: 'restore' })?.title).toBe(`${PACK_NAME} Restored`);
+        expect(outcomeOf({ ...stop, purpose: 'restore' })?.title).toBe(`Couldn't Restore ${PACK_NAME}`);
+    });
+
+    it('ends an undo as "Last Save Undone", or "Couldn\'t Undo Last Save"', () => {
+        expect(outcomeOf({ ...clean, purpose: 'undo' })?.title).toBe('Last Save Undone');
+        expect(outcomeOf({ ...stop, purpose: 'undo' })?.title).toBe("Couldn't Undo Last Save");
+    });
+
+    it('ends a switch as an install does', () => {
+        expect(outcomeOf({ ...clean, purpose: 'switch' })?.title).toBe(`${PACK_NAME} Installed`);
+        expect(outcomeOf({ ...stop, purpose: 'switch' })?.title).toBe(`Couldn't Install ${PACK_NAME}`);
+    });
+
+    it('words a record with no purpose by what it replaces: another datapack is a switch', () => {
+        expect(outcomeOf({ ...stop, replaces: 'Luma, eds-compatible' })?.title).toBe(`Couldn't Install ${PACK_NAME}`);
     });
 });
 

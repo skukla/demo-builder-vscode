@@ -52,8 +52,11 @@ export interface Replacement {
     reopen: (forImport: boolean) => void;
     /** What the result needs to draw a failed save on the rows: the Removing row's name, the types asked for. */
     resultSource: (dataTypes: string[]) => { replacing?: { name: string; dataTypes: string[] } };
-    /** What the dialog's frame needs: the pack the confirm up is about, when it is the import's. */
-    frame: { replacing?: string };
+    /**
+     * What the dialog's frame needs: the pack the confirm up is about, when it is the import's, and
+     * what the start is, a switch over another datapack or an install (step 03, S2).
+     */
+    frame: { replacing?: string; starts: 'install' | 'switch' };
 }
 
 /** Whether importing `importing` replaces the pack the project holds (walk F97). */
@@ -152,6 +155,6 @@ export function useReplacement(
             [reopen],
         ),
         resultSource: (dataTypes) => (name ? { replacing: { name, dataTypes } } : {}),
-        frame: stage !== 'idle' && name ? { replacing: name } : {},
+        frame: { ...(stage !== 'idle' && name ? { replacing: name } : {}), starts: replaces && replaces.name !== importing.name ? 'switch' : 'install' },
     };
 }

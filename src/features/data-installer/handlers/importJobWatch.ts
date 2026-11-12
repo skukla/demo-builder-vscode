@@ -18,7 +18,7 @@ import { announceDatapacksChanged } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { watchImportJob } from '../services/importJobRunner';
 import type { ImportRequest } from '../services/importRequest';
-import { type DataTypeStatus, IMPORT_PROGRESS_MESSAGE, type ImportJobRecord, type ValidationResult } from '../types';
+import { type DataTypeStatus, IMPORT_PROGRESS_MESSAGE, type ImportJobRecord, type JobPurpose, type ValidationResult } from '../types';
 import { progressLabel, progressStep, summarizeProgress } from '../ui/importProgress';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
@@ -215,6 +215,8 @@ export async function runAndWatch(
     request: ImportRequest,
     spec: {
         operation: ImportJobRecord['operation'];
+        /** What the job is for, as its record carries it to the window and to agents. */
+        purpose: JobPurpose;
         begin: () => Promise<{ activationId: string }>;
         /** What is checked before it begins: an import's rows, a removal's record. */
         validate: () => Promise<ValidationResult>;
@@ -247,6 +249,7 @@ export async function runAndWatch(
             activationId: started.activationId,
             datapackName: request.id.name,
             operation: spec.operation,
+            purpose: spec.purpose,
             version: request.id.version,
             commerceInstance: request.commerceInstance,
             dataTypes: request.dataTypes,

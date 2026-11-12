@@ -333,6 +333,17 @@ describe('reset-datapack', () => {
         resetImportHandlerMocks();
     });
 
+    // Step 03, S2: the record says what the job is for, for the window and agents.
+    it('records the job as an uninstall', async () => {
+        happyEngine();
+        const { context } = makeImportHarness();
+
+        await importHandlers['reset-datapack'](context, CONFIRMED);
+
+        const status = await importHandlers['get-datapack-import-status'](context, {});
+        expect(status.data).toMatchObject({ operation: 'reset', purpose: 'uninstall' });
+    });
+
     it('removes the data rather than importing it', async () => {
         const { startDelete, startImport } = happyEngine();
         const { context } = makeImportHarness();

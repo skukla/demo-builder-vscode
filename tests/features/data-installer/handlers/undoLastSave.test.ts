@@ -195,6 +195,18 @@ describe('the job', () => {
         });
     });
 
+    // Step 03, S2: the job's record says it is an undo, for the window and agents.
+    it('records the job as an undo', async () => {
+        happyEngine();
+        grantLibrary(THREE_SAVES);
+        const { context } = makeImportHarness(projectOn());
+
+        await importHandlers['undo-last-save'](context, { datapackName: NAME, confirm: true });
+
+        const status = await importHandlers['get-datapack-import-status'](context, {});
+        expect(status.data).toMatchObject({ purpose: 'undo' });
+    });
+
     it('deletes the newest save, with its store configuration, once the job succeeds', async () => {
         happyEngine();
         const { access } = grantLibrary(THREE_SAVES);

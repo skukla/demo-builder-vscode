@@ -807,6 +807,11 @@ nothing, ends with `stoppedAt: "replacing"` and its `reason`, and leaves the pro
 pack. The project names the new pack once the old one is gone. Importing the same version again
 replaces nothing and updates in place, as before.
 
+Every job record also carries `purpose`, what the job is for, set where it starts (datapack
+simplification step 03): `install`, `switch` (an install over another pack), `uninstall`,
+`restore` or `undo` (Undo Last Save). A record written before the field existed has none; read it
+as `uninstall` for a reset, `switch` when `replaces` is set without `replacesVersion`, else `install`.
+
 ### What is installed and what happened, from both engines (datapack-engine step 14, 2026-10-30)
 
 `list_installed_datapacks` and `get_datapack_activity` used to read only the Data Installer

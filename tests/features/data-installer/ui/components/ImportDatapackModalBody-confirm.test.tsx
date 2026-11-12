@@ -228,7 +228,7 @@ describe('the running view', () => {
         const replacement = { name: 'Bodea, main', confirming: false, savingStage: 'Saving to the library' };
         render(<ImportDatapackModalBody view="starting" ctx={ctx({ replacement })} />);
 
-        expect(stepNames()).toStrictEqual(['Save Your Changes', 'Uninstall the Previous Datapack', 'Install ZZ Test Root DB12, 1', 'Verify Installation']);
+        expect(stepNames()).toStrictEqual(['Save Your Changes', 'Uninstall Bodea, main', 'Install ZZ Test Root DB12, 1', 'Verify Installation']);
         expect(screen.getByRole('progressbar').closest('.work-row')).toHaveTextContent('Save Your Changes');
         expect(stepRow('Saving to the library')).toHaveTextContent('Save Your Changes');
     });

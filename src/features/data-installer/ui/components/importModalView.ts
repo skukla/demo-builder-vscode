@@ -10,14 +10,13 @@
  * @module features/data-installer/ui/components/importModalView
  */
 
-import type { ImportScopes } from '../hooks/useImportScopes';
 import type { ModalView } from './ImportDatapackModalBody';
 import { type LastAction, type ResultContent, resultStatus } from './importResult';
 import { type ConfirmContent, removeLabel } from './removalConfirm';
 import type { ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
-import { DRY_RUN, INSTALL, UNINSTALL, installTitle, saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
+import { DRY_RUN, INSTALL, UNINSTALL, installTitle, jobPurpose, jobWords, saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
 
 /**
  * Which job to watch: the one the LAST action started.
@@ -237,14 +236,6 @@ function resultMain(a: { resultAction?: 'retry' | 'fix'; retry?: () => void; fix
     return [];
 }
 
-/** The chosen target by name, "Justrite Test Store US (Justrite Test)", or the instance when unnamed. */
-export function targetName(scope: ImportScopes, commerceInstance: string): string {
-    const website = scope.websites.find((w) => w.code === scope.websiteCode);
-    const store = website?.storeViews.find((v) => v.code === scope.storeCode);
-    if (website && store) return `${store.name} (${website.name})`;
-    return website?.name ?? commerceInstance;
-}
-
 /** The dialog around the view: its title, the title's status, its width, and whether Close shows. */
 export interface ViewFrame {
     title: string;
@@ -278,22 +269,6 @@ function formWidth(typeCount: number): Pick<ViewFrame, 'size' | 'wide'> {
     return { size: 'L', wide: true };
 }
 
-/**
- * The narrowest editor two columns of data types fit in: a large dialog (640px) and the margin
- * Spectrum keeps around it. Below it the dialog is held to the editor's width, and two columns of
- * "Linking product options 12,345 of 12,345" no longer fit side by side.
- */
-export const TWO_COLUMN_MIN_VIEWPORT = 720;
-
-/**
- * How many columns the import's data types take, chosen once when the window opens (owner,
- * 2026-11-10, walk F135): two for more than six data types, one for six or fewer, and one when the
- * editor is too narrow for two. Each column is as wide as its longest line, so nothing wraps.
- */
-export function runColumns(typeCount: number, viewportWidth: number): 1 | 2 {
-    return typeCount > 6 && viewportWidth >= TWO_COLUMN_MIN_VIEWPORT ? 2 : 1;
-}
-
 /** The run's width: the form's for two columns of data types, medium for one (walk F135). */
 function runWidth(typeCount: number, columns: 1 | 2): Pick<ViewFrame, 'size' | 'wide'> {
     return columns === 2 ? formWidth(typeCount) : { size: 'M', wide: false };
@@ -319,6 +294,10 @@ export function viewFrame(a: {
     replacing?: string;
     /** The check for the SC's changes could not run: the confirm's title says so (review, 2026-11-10). */
     checkFailed?: boolean;
+    /** The job's record: a running job is titled by what it is for, wherever it was started. */
+    record?: Parameters<typeof jobPurpose>[0] | null;
+    /** What a start is before its record: a switch over another datapack, else an install. */
+    starts?: 'install' | 'switch';
 }): ViewFrame {
     const small = { size: 'S' as const, wide: false, hideClose: false };
     // An import's confirm asks only whether to keep the SC's changes (walk F106). Every confirm is
@@ -334,6 +313,7 @@ export function viewFrame(a: {
     const confirmFrame = a.replacing ? run : { size: 'M' as const, wide: false };
     // While it checks, the title names the work, not a question nothing has asked yet (walk F108).
     const checking = a.replacing ? installTitle(a.displayName, false) : `${UNINSTALL} ${a.displayName}`;
+    const running = runningTitle(a);
     // Amber: nothing failed, and the next move is the SC's.
     if (a.view === 'no-instance') return { ...small, title: 'No Commerce Instance', status: 'warning' };
     switch (a.view) {
@@ -355,17 +335,25 @@ export function viewFrame(a: {
                   }
                 : { ...small, title: installTitle(a.displayName, false) };
         case 'starting':
-            return { ...run, hideClose: false, title: installTitle(a.displayName, true) };
+            return { ...run, hideClose: false, title: running };
         case 'watching':
             // An import's rows take the form's box; a removal still waits on its spinner.
-            return a.removing
-                ? { ...small, title: `${UNINSTALL} ${a.displayName}`, holdSize: true }
-                : { ...run, hideClose: false, title: installTitle(a.displayName, true) };
+            return a.removing ? { ...small, title: running, holdSize: true } : { ...run, hideClose: false, title: running };
         case 'busy':
-            return { ...small, title: a.removing ? `${UNINSTALL} ${a.displayName}` : installTitle(a.displayName, true) };
+            return { ...small, title: a.removing ? running : installTitle(a.displayName, true) };
         default:
             return { ...formWidth(a.typeCount), hideClose: false, title: installTitle(a.displayName, false) };
     }
+}
+
+/**
+ * A running job's title, by what it is for (`jobWords`, step 03): a removal's, the record's once the
+ * job runs (a restore or undo started elsewhere reads as itself), else what the start is.
+ */
+function runningTitle(a: Pick<Parameters<typeof viewFrame>[0], 'view' | 'displayName' | 'removing' | 'record' | 'starts'>): string {
+    if (a.removing) return jobWords('uninstall', a.displayName).running;
+    if (a.view === 'watching' && a.record) return jobWords(jobPurpose(a.record), a.displayName).running;
+    return jobWords(a.starts ?? 'install', a.displayName).running;
 }
 
 /**

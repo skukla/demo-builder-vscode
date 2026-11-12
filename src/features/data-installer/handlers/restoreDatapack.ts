@@ -177,7 +177,7 @@ export const restoreDatapackHandlers = defineHandlers({
                 data: { asks: true, displayName },
             };
         }
-        const started = await startDatapackImport(context, plan.install, { restore: true });
+        const started = await startDatapackImport(context, plan.install, { purpose: 'restore' });
         return started.success
             ? { ...started, data: { ...(started.data as object), target } }
             : started;

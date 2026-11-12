@@ -209,7 +209,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'Progress of the running or most recent datapack install or uninstall: its outcome (watching while it runs), ' +
+            'Progress of the running or most recent datapack install or uninstall: its purpose (install, switch, ' +
+            'uninstall, restore or undo), its outcome (watching while it runs), ' +
             "each data type's state, and while products go in or come out a count as detail (\"450 of 2,046 products\"). " +
             'With waitSeconds (up to 45) it answers when the job ends or the wait is up, showing progress as it goes: ' +
             'call it with waitSeconds 45 while outcome is watching, rather than polling quickly. A pack of 2,000 ' +

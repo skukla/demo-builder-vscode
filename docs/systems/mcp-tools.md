@@ -206,7 +206,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `clear_demo_data` | **confirm** | Clear the chosen stores of everything check_demo_data listed: deletes those products, categories, customers, cart rules |
 | `copy_library_datapack_to_installer` | **confirm** | Copy a datapack library pack into the Data Installer's catalog, so other teams can find and install |
 | `delete_library_datapack` | **confirm** | Delete one of your own packs from the datapack library — the undo of |
-| `get_datapack_import_status` | read | Progress of the running or most recent datapack install or uninstall: its outcome (watching while it runs), |
+| `get_datapack_import_status` | read | Progress of the running or most recent datapack install or uninstall: its purpose (install, switch, |
 | `get_datapack_import_target` | read | Which Commerce instance an install would land on, derived from the current project, |
 | `list_datapack_export_items` | read | What this Commerce instance holds for one data type, to choose from before exporting. |
 | `list_datapack_import_scopes` | read | The websites and store views an install can be scoped to on this project's instance. |

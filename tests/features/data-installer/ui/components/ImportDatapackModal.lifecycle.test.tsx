@@ -281,7 +281,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
             await waitFor(() => expect(statusCalls).toBe(2));
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
-            expect(screen.getByRole('heading', { name: 'Uninstall Bodea' })).toBeInTheDocument();
+            // Step 03, S2: the running title is the job's (`jobWords`).
+            expect(screen.getByRole('heading', { name: 'Uninstalling Bodea' })).toBeInTheDocument();
             expect(screen.getByText('Uninstalling the datapack')).toBeInTheDocument();
 
             answerStatus({
@@ -566,7 +567,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
             finished('partial', { categories: 'success', products: 'error' }, { stoppedAt: 'products', reason: 'Commerce did not respond.' });
             await startAJob();
 
-            expect(await screen.findByRole('heading', { name: 'Install Stopped' })).toBeInTheDocument();
+            // Step 03, S2: a stop is the failed title (it was "Install Stopped").
+            expect(await screen.findByRole('heading', { name: "Couldn't Install Bodea" })).toBeInTheDocument();
             expect(screen.getByText('Stopped').closest('.work-row')).toHaveTextContent('Install Bodea, main');
             expect(screen.getByText('Commerce did not respond.').closest('.work-row')).toHaveTextContent('Products');
             expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();

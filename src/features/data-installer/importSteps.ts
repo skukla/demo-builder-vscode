@@ -1,7 +1,7 @@
 /**
  * An import's run as steps, each named for what it does, in the order it runs (owner, 2026-11-09,
- * `.rptc/research/replace-flow-steps/`): Save Your Changes, Uninstall the Previous Version, Install,
- * Verify the Import. Only the steps that apply show: a first install is Install and Verify. The
+ * `.rptc/research/replace-flow-steps/`): Save Your Changes, Uninstall <the datapack replaced>,
+ * Install, Verify the Import. Only the steps that apply show: a first install is Install and Verify. The
  * data types are Install's own rows, under it. It was a row per data type between Preparing Import
  * and Finishing Import, with saving and removing as rows beside the data types, which read as the
  * same work twice and named nothing the SC recognised (walk F112, F113).
@@ -16,6 +16,7 @@
  * @module features/data-installer/importSteps
  */
 
+import { UNINSTALL } from './datapackWords';
 import { packLine } from './packVersions';
 import { REPLACING, SAVING, FINISHING, runRows, type RunSource } from './runRows';
 import { STORE_CONFIG_KIND } from './services/datapackCatalog';
@@ -37,8 +38,6 @@ export interface StepSource extends RunSource, Pick<JobStanding, 'replacing'> {
     savedAs?: string;
     /** The pack installed, as the SC knows it, and its version: "Install My Luma", "Install Luma, main". */
     installing: { name: string; version: string };
-    /** The pack replaced is another version of the same pack: its version, "Nov 9, 9:15 AM". */
-    replacesVersion?: string;
     /** The install check, once the job ended: Verify's last line. */
     check?: InstallCheck;
 }
@@ -78,19 +77,15 @@ function saveStep(source: StepSource): ImportStep[] {
     return [];
 }
 
-/** Remove the Previous Version (or Datapack): only when the import replaces the demo's pack. */
+/** Uninstall <the datapack replaced>: only when the import replaces the demo's pack (step 03, S2). */
 function removeStep(source: StepSource): ImportStep[] {
     if (!source.replaces) return [];
     // The datapack's name, never when a save was made (Phase 2, owner 2026-11-12).
     const what = source.replaces;
-    const row = {
-        kind: REPLACING,
-        label: source.replacesVersion
-            ? 'Uninstall the Previous Version'
-            : 'Uninstall the Previous Datapack',
-    };
+    const row = { kind: REPLACING, label: `${UNINSTALL} ${what}` };
     const state = source.replacing ?? 'pending';
-    if (state === 'success') return [{ ...row, status: 'success', line: `Uninstalled ${what}` }];
+    // The row names the datapack; its line says only where it stands (rule 3: a fact once).
+    if (state === 'success') return [{ ...row, status: 'success', line: 'Uninstalled' }];
     if (source.stoppedAt === REPLACE_STOP || state === 'error')
         return [{ ...row, ...failed(source.reason) }];
     if (state === 'processing')

@@ -169,7 +169,8 @@ describe('resolveResult — a removal that was to save the changes first (step 0
 
         const result = resolveResult('start', sources({ start, replacing: { name: 'Version 1.1.0', dataTypes: ['products'] } }));
 
-        expect(result).toMatchObject({ variant: 'error', title: 'Install Stopped', lead: 'Nothing was uninstalled or installed.', backToConfirm: true });
+        // Step 03, S2: a stop is the failed title, "Couldn't Install <name>".
+        expect(result).toMatchObject({ variant: 'error', title: `Couldn't Install ${PACK_NAME}`, lead: 'Nothing was uninstalled or installed.', backToConfirm: true });
         expect(result?.run).toMatchObject({
             replaces: 'Version 1.1.0',
             stoppedAt: 'saving-changes',
@@ -181,7 +182,7 @@ describe('resolveResult — a removal that was to save the changes first (step 0
         const steps = importSteps({ ...run, installing: { name: 'My Luma', version: '1' } });
         expect(steps.map((s) => [s.label, s.status, s.problem?.text ?? s.line])).toEqual([
             ['Save Your Changes', 'error', 'The library is not answering.'],
-            ['Uninstall the Previous Datapack', 'pending', 'Not run'],
+            ['Uninstall Version 1.1.0', 'pending', 'Not run'],
             ['Install My Luma, 1', 'pending', 'Not run'],
             ['Verify Installation', 'pending', 'Not run'],
         ]);

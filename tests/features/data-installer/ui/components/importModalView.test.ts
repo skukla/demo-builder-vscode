@@ -32,14 +32,13 @@ import {
     closeLabel,
     isRemoving,
     resolveView,
-    runColumns,
-    targetName,
-    TWO_COLUMN_MIN_VIEWPORT,
     isPickingUp,
     viewFrame,
     waitOf,
     watchedActivation,
 } from '@/features/data-installer/ui/components/importModalView';
+import type { JobPurpose } from '@/features/data-installer/types';
+import { runColumns, targetName, TWO_COLUMN_MIN_VIEWPORT } from '@/features/data-installer/ui/components/importModalJob';
 import type { ImportScopes } from '@/features/data-installer/ui/hooks/useImportScopes';
 import type { LastAction, ResultContent } from '@/features/data-installer/ui/components/importResult';
 
@@ -454,7 +453,7 @@ describe('viewFrame', () => {
     });
 
     it('CONTROL: a removal still waits small, on its spinner', () => {
-        expect(viewFrame({ ...base, view: 'watching', removing: true, typeCount: 8 })).toMatchObject({ size: 'S', title: 'Uninstall Frescopa' });
+        expect(viewFrame({ ...base, view: 'watching', removing: true, typeCount: 8 })).toMatchObject({ size: 'S', title: 'Uninstalling Frescopa' });
     });
 
     it('CONTROL: any other result stays small', () => {
@@ -473,8 +472,28 @@ describe('viewFrame', () => {
         });
     });
 
+    // Step 03, S2: a running job's title is `jobWords`' running title (it was "Uninstall Frescopa").
     it('titles a running removal as a removal, small', () => {
-        expect(viewFrame({ ...base, view: 'watching', removing: true })).toMatchObject({ title: 'Uninstall Frescopa', size: 'S' });
+        expect(viewFrame({ ...base, view: 'watching', removing: true })).toMatchObject({ title: 'Uninstalling Frescopa', size: 'S' });
+        expect(viewFrame({ ...base, view: 'busy', removing: true })).toMatchObject({ title: 'Uninstalling Frescopa', size: 'S' });
+    });
+
+    // Step 03, S2: the running title is what the job is for, from its record once it runs.
+    it('titles a switch starting as a switch', () => {
+        expect(viewFrame({ ...base, view: 'starting', starts: 'switch' })).toMatchObject({ title: 'Switching to Frescopa' });
+        expect(viewFrame({ ...base, view: 'starting', starts: 'install' })).toMatchObject({ title: 'Installing Frescopa' });
+    });
+
+    it('titles a running job by its record: a restore or undo started elsewhere, or a switch', () => {
+        const record = (purpose: JobPurpose) => ({ operation: 'import' as const, purpose });
+        expect(viewFrame({ ...base, view: 'watching', record: record('restore') })).toMatchObject({ title: 'Restoring Frescopa' });
+        expect(viewFrame({ ...base, view: 'watching', record: record('undo') })).toMatchObject({ title: 'Restoring Frescopa' });
+        // An older record carries no purpose: another datapack replaced is a switch.
+        expect(viewFrame({ ...base, view: 'watching', record: { operation: 'import', replaces: 'Luma' } })).toMatchObject({ title: 'Switching to Frescopa' });
+    });
+
+    it('CONTROL: a finished record does not title a new start', () => {
+        expect(viewFrame({ ...base, view: 'starting', record: { operation: 'import', purpose: 'restore' } })).toMatchObject({ title: 'Installing Frescopa' });
     });
 
     it.each([

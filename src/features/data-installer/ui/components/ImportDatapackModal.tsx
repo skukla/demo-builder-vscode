@@ -53,8 +53,8 @@ import { useRunColumns } from '../hooks/useRunColumns';
 import { useTypeSelection } from '../hooks/useTypeSelection';
 import { useVersionTypes } from '../hooks/useVersionTypes';
 import { ImportDatapackModalBody, type BodyContext } from './ImportDatapackModalBody';
-import { backgroundTitle, isStartingImport, jobBusyMessage, libraryField } from './importModalJob';
-import { buildActions, closeLabel, isRemoving, removalButtons, resolveView, targetName, viewFrame, waitOf, watchedActivation } from './importModalView';
+import { backgroundTitle, isStartingImport, jobBusyMessage, libraryField, targetName } from './importModalJob';
+import { buildActions, closeLabel, isRemoving, removalButtons, resolveView, viewFrame, waitOf, watchedActivation } from './importModalView';
 import { checkPassed, resolveResult, type LastAction } from './importResult';
 import type { RemovalAnswer } from './removalConfirm';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -139,8 +139,7 @@ export function ImportDatapackModal({
         loadTarget({});
     }, [loadTarget]);
 
-    // Simply derived: the project decides the instance, so the editable field, its "touched" guard,
-    // its state and its effect are gone.
+    // Simply derived: the project decides the instance, and nothing here edits it.
     const commerceInstance = target.value?.instance ?? '';
     const record = status.value ?? null;
     const running = record?.outcome === 'watching';
@@ -275,7 +274,7 @@ export function ImportDatapackModal({
         installing: { name: displayName, version: id.version },
         columns,
         changes,
-        replacement: { name: replacement.name, version: replacement.version, sentence: replacement.sentence, confirming: replacement.forImport, savingStage: replacement.savingStage },
+        replacement: { name: replacement.name, sentence: replacement.sentence, confirming: replacement.forImport, savingStage: replacement.savingStage },
     };
 
     // Closing a job that is still RUNNING hands it to a progress notification,
@@ -302,6 +301,7 @@ export function ImportDatapackModal({
         typeCount: availableTypes.length,
         columns,
         result,
+        record,
         checkFailed: removal.content.kind === 'read-failed',
         ...replacement.frame,
     });

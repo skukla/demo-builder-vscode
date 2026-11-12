@@ -414,7 +414,8 @@ describe('while it saves first', () => {
 
         pushStage('Saving to the library');
 
-        expect(screen.getByRole('heading', { name: 'Uninstall Bodea' })).toBeInTheDocument();
+        // Step 03, S2: the running title is the job's (`jobWords`).
+        expect(screen.getByRole('heading', { name: 'Uninstalling Bodea' })).toBeInTheDocument();
         expect(screen.getByText('Saving to the library')).toBeInTheDocument();
     });
 

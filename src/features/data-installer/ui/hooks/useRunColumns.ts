@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react';
-import { runColumns } from '../components/importModalView';
+import { runColumns } from '../components/importModalJob';
 
 export function useRunColumns(typeCount: number): 1 | 2 {
     const [viewportWidth] = useState(() => window.innerWidth);

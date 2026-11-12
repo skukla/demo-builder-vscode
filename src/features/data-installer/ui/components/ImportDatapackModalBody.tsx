@@ -108,8 +108,6 @@ export interface BodyContext {
 export interface ReplacementView {
     /** The pack replaced, as the SC knows it; absent when the import replaces nothing. */
     name?: string;
-    /** The pack replaced is another version of the same pack: that version, "Nov 9, 9:15 AM". */
-    version?: string;
     /** The form's sentence. */
     sentence?: string;
     /** The confirm up is the import's. */
@@ -190,7 +188,6 @@ function StartingRun({ ctx, startedAt }: { ctx: BodyContext; startedAt: number }
         running: true,
         installing: ctx.installing,
         ...(replacement.name ? { replaces: replacement.name } : {}),
-        ...(replacement.version ? { replacesVersion: replacement.version } : {}),
         ...(replacement.name && replacement.savingStage ? { savingStage: replacement.savingStage } : {}),
     });
     return <ImportRunView steps={steps} columns={ctx.columns} running={{ startedAt }} />;
@@ -221,13 +218,12 @@ function ImportWatch({ record, ctx, startedAt }: { record: ImportJobRecord; ctx:
 }
 
 /** What the steps take from a job replacing the demo's pack (walk F97): the removal, and the save before it. */
-function replacingOf(record: ImportJobRecord, replacing: ImportJobRecord['replacing']): Pick<StepSource, 'replaces' | 'replacing' | 'savedAs' | 'replacesVersion'> {
+function replacingOf(record: ImportJobRecord, replacing: ImportJobRecord['replacing']): Pick<StepSource, 'replaces' | 'replacing' | 'savedAs'> {
     if (!record.replaces) return {};
     return {
         replaces: record.replaces,
         ...(replacing ? { replacing } : {}),
         ...(record.savedAs ? { savedAs: record.savedAs } : {}),
-        ...(record.replacesVersion ? { replacesVersion: record.replacesVersion } : {}),
     };
 }
 

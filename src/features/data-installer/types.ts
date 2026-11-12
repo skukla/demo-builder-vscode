@@ -405,6 +405,13 @@ export interface ImportStart {
 }
 
 /**
+ * What a datapack job is for, as the SC started it: the words its window and its notification use
+ * (`jobWords` in `datapackWords.ts`). A switch installs over another datapack; restore and undo
+ * install a save over the one installed.
+ */
+export type JobPurpose = 'install' | 'switch' | 'uninstall' | 'restore' | 'undo';
+
+/**
  * One import, as recorded on the extension host.
  *
  * Survives the panel closing — the watch is detached, so this is where its
@@ -421,6 +428,11 @@ export interface ImportJobRecord extends JobStanding {
      * announced a completed reset as "Import finished", live.
      */
     operation?: 'import' | 'reset';
+    /**
+     * What the job is for, set where it starts. Optional because older and transient records have
+     * none: `jobPurpose` derives it from `operation` and `replaces`.
+     */
+    purpose?: JobPurpose;
     /** Whatever the user typed. Opaque. */
     commerceInstance: string;
     dataTypes: string[];

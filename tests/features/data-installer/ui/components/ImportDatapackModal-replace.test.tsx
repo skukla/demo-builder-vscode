@@ -208,6 +208,31 @@ describe('importing another version over the one the demo uses', () => {
     });
 });
 
+// Step 03, S2: the running title says what the start is (`jobWords`), before its record answers.
+describe('the title while the install starts', () => {
+    /** The start stays out, so the window holds its starting view. */
+    async function startingOver(held: typeof OLD): Promise<void> {
+        holding(held, NOTHING);
+        const answer = mockRequest.getMockImplementation();
+        mockRequest.mockImplementation(async (type: string) =>
+            type === 'start-datapack-import' ? new Promise(() => undefined) : answer?.(type),
+        );
+        await pressImport();
+    }
+
+    it('is "Switching to" over another datapack', async () => {
+        await startingOver({ ...OLD, name: 'luma' });
+
+        expect(screen.getByRole('heading', { name: 'Switching to Bodea' })).toBeInTheDocument();
+    });
+
+    it('CONTROL: is "Installing" over another version of the same datapack', async () => {
+        await startingOver(OLD);
+
+        expect(screen.getByRole('heading', { name: 'Installing Bodea' })).toBeInTheDocument();
+    });
+});
+
 describe('importing the version the demo already uses', () => {
     it('CONTROL: says nothing of replacing, reads no changes, and starts at once', async () => {
         holding({ ...OLD, version: 'main' }, CHANGED_TEAM);

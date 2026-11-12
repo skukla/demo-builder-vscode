@@ -34,6 +34,7 @@ async function start(context: HandlerContext, afterSuccess: () => Promise<void>)
     const { engine } = happyEngine();
     const response = await runAndWatch(context, engine, REQUEST, {
         operation: 'import',
+        purpose: 'undo',
         validate: async () => ({ valid: true }),
         begin: async () => ({ activationId: 'act-1' }),
         rejected: 'rejected',

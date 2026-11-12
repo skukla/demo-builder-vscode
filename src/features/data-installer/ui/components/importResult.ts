@@ -20,6 +20,7 @@ import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
+import { jobPurpose, jobWords } from '@/features/data-installer/datapackWords';
 import { ErrorCode } from '@/types/errorCodes';
 
 /**
@@ -150,7 +151,7 @@ export function resolveResult(
             const request = lastAction === 'start' ? start : reset;
             const words = wordsFor(lastAction);
             if (request.failure?.code === ErrorCode.CHANGES_NOT_SAVED && lastAction === 'start' && sources.replacing) {
-                return notSavedRun(request.failure.message, sources.replacing);
+                return notSavedRun(request.failure.message, name, sources.replacing);
             }
             if (request.failure?.code === ErrorCode.CHANGES_NOT_SAVED) {
                 return { variant: 'error', title: "Couldn't Save Changes", message: 'Nothing was uninstalled.', details: [request.failure.message], backToConfirm: true };
@@ -181,7 +182,7 @@ export function resolveResult(
  * so the steps are drawn from the request, Save Your Changes red with why and every step after it
  * not run, in the same box (review, 2026-11-10). Back goes to the confirm, as a removal's does.
  */
-function notSavedRun(reason: string, replacing: { name: string; dataTypes: string[] }): ResultContent {
+function notSavedRun(reason: string, name: string, replacing: { name: string; dataTypes: string[] }): ResultContent {
     const run: ImportJobRecord = {
         // No job was started: nothing here names one.
         activationId: '',
@@ -196,7 +197,8 @@ function notSavedRun(reason: string, replacing: { name: string; dataTypes: strin
         stoppedAt: SAVE_STOP,
         reason,
     };
-    return { variant: 'error', title: 'Install Stopped', run, lead: 'Nothing was uninstalled or installed.', backToConfirm: true };
+    // A switch and an install fail in the same words (`jobWords`).
+    return { variant: 'error', title: jobWords('install', name).failed, run, lead: 'Nothing was uninstalled or installed.', backToConfirm: true };
 }
 
 /**
@@ -239,19 +241,21 @@ function endingOf(record: ImportJobRecord, ranToEnd: boolean): RunEnding {
 /**
  * An import's ending (owner, 2026-11-10, walk F134). A clean finish hands off to the small result:
  * "My Luma Installed", then only what is left to know (`leftToKnow`). Only a problem keeps the steps:
- * the same title in amber, how long search takes and "Took …" under them, with Fix with AI. A run that stopped is "Install Stopped" on its steps, with Retry while a retry can get past
- * the stop, else Fix with AI. It ran to the end when nothing failed but the store configuration, which
+ * the same title in amber, how long search takes and "Took …" under them, with Fix with AI. A run that
+ * stopped is its failed title, "Couldn't Install My Luma", on its steps, with Retry while a retry can
+ * get past the stop, else Fix with AI. Every title is the job's (`jobWords`), by what it was for. It ran to the end when nothing failed but the store configuration, which
  * fail without stopping it, and the work after the data types did not stop.
  */
 function runResult(record: ImportJobRecord, name: string, retries: number): ResultContent {
     const took = record.processingTimeMs !== undefined ? { tookMs: record.processingTimeMs } : {};
     const failed = Object.entries(record.perType).filter(([, state]) => state === 'error').map(([kind]) => kind);
     const ranToEnd = record.stoppedAt !== FINISHING_STOP && failed.every((kind) => kind === SETTINGS_KIND && record.stoppedAt === SETTINGS_KIND);
+    const words = jobWords(jobPurpose(record), name);
     if (!ranToEnd) {
         const retry = record.retryable === true && retries < RETRIES_BEFORE_FIX;
-        return { variant: 'error', title: 'Install Stopped', run: record, action: retry ? 'retry' : 'fix', ...took };
+        return { variant: 'error', title: words.failed, run: record, action: retry ? 'retry' : 'fix', ...took };
     }
-    const title = `${name} ${wordsFor('start').done}`;
+    const title = words.done;
     if (endsSmall(endingOf(record, ranToEnd))) return { variant: 'success', title, finished: true, ...leftToKnow(record) };
     const lead = record.searchDelay ? { lead: record.searchDelay } : {};
     return { variant: 'warning', title, run: record, finished: true, action: 'fix', ...lead, ...took };

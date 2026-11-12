@@ -294,6 +294,17 @@ describe('only a newer save', () => {
             })
         );
     });
+
+    // Step 03, S2: the job's record says it is a restore, for the window and agents.
+    it('records the job as a restore', async () => {
+        happyEngine();
+        const { context } = makeImportHarness(projectOn());
+
+        await restore(context, { datapackName: NAME });
+
+        const status = await importHandlers['get-datapack-import-status'](context, {});
+        expect(status.data).toMatchObject({ purpose: 'restore' });
+    });
 });
 
 describe('a same-version restore is a real replace', () => {
