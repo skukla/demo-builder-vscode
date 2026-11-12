@@ -53,7 +53,7 @@ import { useRunColumns } from '../hooks/useRunColumns';
 import { useTypeSelection } from '../hooks/useTypeSelection';
 import { useVersionTypes } from '../hooks/useVersionTypes';
 import { ImportDatapackModalBody, type BodyContext } from './ImportDatapackModalBody';
-import { backgroundTitle, isStartingImport, jobBusyMessage, libraryField, targetName } from './importModalJob';
+import { backgroundTitle, isStartingImport, jobBusyMessage, libraryField, STATUS_POLL_MS, targetName } from './importModalJob';
 import { buildActions, closeLabel, isRemoving, removalButtons, resolveView, viewFrame, waitOf, watchedActivation } from './importModalView';
 import { checkPassed, resolveResult, type LastAction } from './importResult';
 import type { RemovalAnswer } from './removalConfirm';
@@ -64,8 +64,6 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
-/** How often to re-read the recorded job while one is in flight. */
-const STATUS_POLL_MS = 2000;
 /** A start or removal that saves the SC's changes first answers after the save (walk F105). */
 const SAVE_THEN_WRITE = { timeout: TIMEOUTS.DATAPACK_SAVE_THEN_WRITE };
 

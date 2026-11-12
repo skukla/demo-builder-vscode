@@ -202,7 +202,7 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
     // flow modal beside the list and keeps its flyout view-only, and this follows
     // that. Closing the modal therefore leaves the flyout open behind it.
     // Fixed when it opens: nothing the flyout does afterwards closes it (walk F113).
-    const importWindow = useImportWindow(detail.value, selectedStore);
+    const importWindow = useImportWindow(detail.value, selectedStore, held !== undefined);
     /**
      * Closing the import modal RE-READS which pack this project holds.
      *

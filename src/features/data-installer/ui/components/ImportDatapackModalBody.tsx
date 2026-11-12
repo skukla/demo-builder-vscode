@@ -10,7 +10,6 @@
  */
 
 import React, { useState } from 'react';
-import { importSteps, type StepSource } from '../../importSteps';
 import type { ImportJobRecord } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useImportProgress } from '../hooks/useImportProgress';
@@ -21,6 +20,7 @@ import { DatapackResultBody } from './DatapackResultBody';
 import { ImportForm } from './ImportForm';
 import type { ResultContent } from './importResult';
 import { ImportRunView } from './ImportRunView';
+import { endedSteps, liveSteps, startingSteps } from './job/runSteps';
 import { recordedRemovalLines } from './removalConfirm';
 import { RemovalConfirmBody } from './RemovalConfirmBody';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
@@ -182,11 +182,7 @@ function usePressedAt(starting: boolean): number | undefined {
  */
 function StartingRun({ ctx, startedAt }: { ctx: BodyContext; startedAt: number }): React.JSX.Element {
     const { replacement } = ctx;
-    const steps = importSteps({
-        perType: {},
-        dataTypes: ctx.selected,
-        running: true,
-        installing: ctx.installing,
+    const steps = startingSteps(ctx.selected, ctx.installing, {
         ...(replacement.name ? { replaces: replacement.name } : {}),
         ...(replacement.name && replacement.savingStage ? { savingStage: replacement.savingStage } : {}),
     });
@@ -205,26 +201,7 @@ function Watch({ record, ctx, pressedAt }: { record: ImportJobRecord; ctx: BodyC
  */
 function ImportWatch({ record, ctx, startedAt }: { record: ImportJobRecord; ctx: BodyContext; startedAt: number }): React.JSX.Element {
     const live = useImportProgress(record.activationId);
-    const steps = importSteps({
-        perType: live?.perType ?? record.perType,
-        dataTypes: record.dataTypes,
-        detail: live ? live.detail : record.detail,
-        phase: live ? live.phase : record.phase,
-        running: true,
-        installing: { name: ctx.displayName, version: record.version },
-        ...replacingOf(record, live ? live.replacing : record.replacing),
-    });
-    return <ImportRunView steps={steps} columns={ctx.columns} running={{ startedAt }} />;
-}
-
-/** What the steps take from a job replacing the demo's pack (walk F97): the removal, and the save before it. */
-function replacingOf(record: ImportJobRecord, replacing: ImportJobRecord['replacing']): Pick<StepSource, 'replaces' | 'replacing' | 'savedAs'> {
-    if (!record.replaces) return {};
-    return {
-        replaces: record.replaces,
-        ...(replacing ? { replacing } : {}),
-        ...(record.savedAs ? { savedAs: record.savedAs } : {}),
-    };
+    return <ImportRunView steps={liveSteps(record, live, ctx.displayName)} columns={ctx.columns} running={{ startedAt }} />;
 }
 
 /**
@@ -233,16 +210,7 @@ function replacingOf(record: ImportJobRecord, replacing: ImportJobRecord['replac
  * the small result instead (walk F134).
  */
 function ImportEnd({ result, run, ctx }: { result: ResultContent; run: ImportJobRecord; ctx: BodyContext }): React.JSX.Element {
-    const steps = importSteps({
-        perType: run.perType,
-        dataTypes: run.dataTypes,
-        stoppedAt: run.stoppedAt,
-        rowNotes: run.rowNotes,
-        reason: run.reason,
-        installing: { name: ctx.displayName, version: run.version },
-        ...(run.check ? { check: run.check } : {}),
-        ...replacingOf(run, run.replacing),
-    });
+    const steps = endedSteps(run, ctx.displayName);
     return (
         <ImportRunView
             steps={steps}

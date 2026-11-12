@@ -56,7 +56,7 @@ import type { DatapackId } from '@/types/datapack';
 export interface PackActionsProps {
     detail: DatapackDetail;
     /** Import: absent in the Datapack Library. */
-    onImport?: (id: DatapackId) => void;
+    onImport?: (id: DatapackId, opensOn?: 'run') => void;
     /** Save Changes: on the demo's pack, whoever owns it. */
     onSaveChanges?: () => void;
     /** It makes a new pack of the SC's: the button reads Save As New Datapack (owner, 2026-11-09). */
@@ -197,8 +197,10 @@ export function PackActions({
     const removal = useLibraryRemoval(detail.id, onRemoved, isSavedVersion(detail.id.version));
     const layerRemoval = useLibraryRemoval(settingsLayer?.id ?? detail.id, onSharingChanged);
     const sharing = useLibrarySharing(detail.id, detail.shared, onSharingChanged);
-    const undo = useUndoLastSave(detail.id.name, undoTo, onImport);
-    const restore = useRestoreDatapack(detail.id.name, detail.displayName, onImport);
+    // Undo and Restore open the window once their job is accepted, straight on its run.
+    const openRun = useCallback((id: DatapackId): void => onImport?.(id, 'run'), [onImport]);
+    const undo = useUndoLastSave(detail.id.name, undoTo, openRun);
+    const restore = useRestoreDatapack(detail.id.name, detail.displayName, openRun);
     const doneAsking = useCallback((): void => setAsking(null), []);
     const { open, close } = dialogOf(restore, asking, doneAsking);
     // Still waiting once the pack is gone, as the flyout closes: its rows must not flash back.

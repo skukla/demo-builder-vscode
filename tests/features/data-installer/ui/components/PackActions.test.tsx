@@ -443,7 +443,8 @@ describe('Undo Last Save', () => {
 
         const call = mockRequest.mock.calls.find(([type]) => type === 'undo-last-save');
         expect(call?.[1]).toEqual({ datapackName: 'my-luma', confirm: true });
-        expect(props.onImport).toHaveBeenCalledWith({ name: 'my-luma', version: PREVIOUS });
+        // Straight on the run: the job is already started (step 03, S4).
+        expect(props.onImport).toHaveBeenCalledWith({ name: 'my-luma', version: PREVIOUS }, 'run');
     });
 
     it('says why when the undo is refused, and opens no run', async () => {

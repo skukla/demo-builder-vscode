@@ -9506,21 +9506,21 @@
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "The initial value cannot be observed because the only thing it gates is resolveResult, which returns null for a null lastAction \u2014 its switch has an arm for each of the four actions and a default that returns null. So before any action the result is null whether dismissed is true or false, and the first action calls act(), which sets dismissed false before the result is next read. Re-anchored 2026-11-09 (101 -> 103): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (103 -> 115): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (115 -> 117): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it.",
+            "reason": "The initial value cannot be observed because the only thing it gates is resolveResult, which returns null for a null lastAction \u2014 its switch has an arm for each of the four actions and a default that returns null. So before any action the result is null whether dismissed is true or false, and the first action calls act(), which sets dismissed false before the result is next read. Re-anchored 2026-11-09 (101 -> 103): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (103 -> 115): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (115 -> 117): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it. Re-anchored 2026-11-12 (117 -> 115): unchanged code; the status poll's interval moved to `importModalJob.ts` (`STATUS_POLL_MS`, step 03 S4), shared with the new job window, which took two lines out above it.",
             "decision": "none \u2014 starting undismissed is what 'the user has seen nothing yet' means",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05",
-            "line": 117
+            "line": 115
         },
         {
             "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
             "anchors": [
                 "}, [loadStatus]);"
             ],
-            "line": 136,
+            "line": 134,
             "mutants": 1,
             "category": "other",
-            "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (118 -> 122): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (122 -> 134): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (134 -> 136): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it.",
+            "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (118 -> 122): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (122 -> 134): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (134 -> 136): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it. Re-anchored 2026-11-12 (136 -> 134): unchanged code; the status poll's interval moved to `importModalJob.ts` (`STATUS_POLL_MS`, step 03 S4), shared with the new job window, which took two lines out above it.",
             "decision": "none \u2014 naming the dependency is what keeps it true if load ever stops being stable",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -9530,10 +9530,10 @@
             "anchors": [
                 "}, [loadTarget]);"
             ],
-            "line": 140,
+            "line": 138,
             "mutants": 1,
             "category": "other",
-            "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (123 -> 127): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (127 -> 139): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (139 -> 140): unchanged code; the data types' columns (walk F135) were added above it and a blank line removed.",
+            "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (123 -> 127): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (127 -> 139): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (139 -> 140): unchanged code; the data types' columns (walk F135) were added above it and a blank line removed. Re-anchored 2026-11-12 (140 -> 138): unchanged code; the status poll's interval moved to `importModalJob.ts` (`STATUS_POLL_MS`, step 03 S4), shared with the new job window, which took two lines out above it.",
             "decision": "none \u2014 naming the dependency is what keeps it true if load ever stops being stable",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -9543,10 +9543,10 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 185,
+            "line": 183,
             "mutants": 1,
             "category": "other",
-            "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves. Re-anchored 2026-11-09 (180 -> 184): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (184 -> 188): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (188 -> 186): unchanged code; a comment above it was shortened and blank lines removed to keep the file at its size limit (walk F135). Re-anchored 2026-11-12 (186 -> 185): unchanged code; a two-line comment above it became one (step 03, S2).",
+            "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves. Re-anchored 2026-11-09 (180 -> 184): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (184 -> 188): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (188 -> 186): unchanged code; a comment above it was shortened and blank lines removed to keep the file at its size limit (walk F135). Re-anchored 2026-11-12 (186 -> 185): unchanged code; a two-line comment above it became one (step 03, S2). Re-anchored 2026-11-12 (185 -> 183): unchanged code; the status poll's interval moved to `importModalJob.ts` (`STATUS_POLL_MS`, step 03 S4), shared with the new job window, which took two lines out above it.",
             "decision": "none \u2014 act closes over nothing that can change, so its dependency list is empty",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"

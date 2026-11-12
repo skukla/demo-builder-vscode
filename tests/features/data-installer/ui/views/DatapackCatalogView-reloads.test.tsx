@@ -82,7 +82,8 @@ describe('closing the import modal re-reads what this project holds', () => {
         const targetsBefore = countOf('get-datapack-import-target');
         const installedBefore = countOf('list-installed-datapacks');
 
-        await press(screen.getByRole('button', { name: /^close$/i }));
+        // A first install's summary commits, so its way out is Cancel (step 03, S4).
+        await press(screen.getByRole('button', { name: /^cancel$/i }));
 
         expect(countOf('get-datapack-import-target')).toBeGreaterThan(targetsBefore);
         expect(countOf('list-installed-datapacks')).toBeGreaterThan(installedBefore);

@@ -25,6 +25,7 @@
 import { announcingChanges } from '../services/datapackChanges';
 import type { ImportJobRecord } from '../types';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
+import { datapackRecordsHandlers } from './datapackRecordsHandlers';
 import { datapackZipHandlers } from './datapackZipHandlers';
 import { demoDataHandlers } from './demoDataHandlers';
 import { exportHandlers } from './exportHandlers';
@@ -87,6 +88,8 @@ export const importHandlers = announcingChanges(defineHandlers({
     ...datapackLibraryHandlers,
     // What installing again would change, and saving the store's copy as a new version (step 05).
     ...storeChangesHandlers,
+    // The records an install puts in Commerce, for the install window's Review Records (step 03, S4).
+    ...datapackRecordsHandlers,
     // What a removal would lose, for its confirm (step 05).
     ...removalChangesHandlers,
     // What a website holds that Demo Builder did not install, and clearing it (step 10).

@@ -381,21 +381,23 @@ describe('DatapackCatalogView', () => {
             ).toBeInTheDocument();
         });
 
-        // The types on offer are what the service HOLDS, from the detail
-        // inventory — never what the pack declares.
-        it('offers only the data types the service stores', async () => {
+        // The types installed are what the service HOLDS, from the detail
+        // inventory — never what the pack declares. A first install sends the
+        // whole pack (step 03, S4): there are no checkboxes to offer them on.
+        it('installs only the data types the service stores', async () => {
             await openImport();
-            await screen.findByText('Install', { selector: '.modal-button' });
+            await press(await screen.findByText('Install', { selector: '.modal-button' }));
 
-            expect(screen.getByRole('checkbox', { name: 'Products' })).toBeInTheDocument();
-            expect(screen.queryByRole('checkbox', { name: 'Gift Cards' })).not.toBeInTheDocument();
+            const start = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
+            expect(start?.[1]).toMatchObject({ dataTypes: ['products'] });
         });
 
         it('closes without closing the flyout behind it', async () => {
             await openImport();
             await screen.findByText('Install', { selector: '.modal-button' });
 
-            await press(screen.getByRole('button', { name: /^close$/i }));
+            // A first install's summary commits, so its way out is Cancel (step 03, S4).
+            await press(screen.getByRole('button', { name: /^cancel$/i }));
 
             expect(screen.queryByText('Commerce instance')).not.toBeInTheDocument();
             // The flyout is still open — the modal was a sibling, not a child.

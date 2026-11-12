@@ -206,7 +206,8 @@ describe('the project’s recorded sample data', () => {
         const before = mockRequest.mock.calls.filter(
             (c) => c[0] === 'get-datapack-import-target'
         ).length;
-        await press(screen.getByRole('button', { name: /^close$/i }));
+        // A first install's summary commits, so its way out is Cancel (step 03, S4).
+        await press(screen.getByRole('button', { name: /^cancel$/i }));
 
         await waitFor(() =>
             expect(

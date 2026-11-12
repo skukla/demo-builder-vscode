@@ -71,7 +71,7 @@ export interface DatapackDetailPanelProps {
      *
      * Absent in the Datapack Library, which touches no store (owner, 2026-11-07).
      */
-    onImport?: (id: DatapackId) => void;
+    onImport?: (id: DatapackId, opensOn?: 'run') => void;
     /** Save Changes: on the demo's pack, whoever owns it (`useHeldPack`). */
     onSaveChanges?: () => void;
     /** It makes a new pack (a team or colleague's pack): the button reads Save As New Datapack. */

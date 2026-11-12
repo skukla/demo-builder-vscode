@@ -712,3 +712,56 @@
     padding: 0 18px 16px;
 }
 }
+
+/* A datapack job's summary, the type table (TypeTable, step 03 S4; prototype-conventions rule 8):
+   one row per data type, its name in a fixed column so the counts line up (rule 11), a rule
+   between rows. Only this bundle renders it. */
+@layer theme {
+.type-table {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.type-row {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.type-name {
+    font-weight: 600;
+}
+
+.type-cell {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+}
+
+/* Review Records (TypeRail, step 03 S4; rule 19): the picks layout read-only, one height whatever
+   type is shown, the left column scrolling inside itself past what it holds. Only this bundle. */
+@layer theme {
+.type-rail {
+    height: 400px;
+}
+
+.type-rail .datapack-picks-rail {
+    overflow-y: auto;
+}
+
+.type-record-head {
+    padding: 5px 0;
+    font-weight: 600;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.type-record {
+    padding: 5px 0;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+}

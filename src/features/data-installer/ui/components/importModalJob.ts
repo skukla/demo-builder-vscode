@@ -13,6 +13,9 @@ import { busyMessage } from './importModalView';
 import type { LastAction } from './importResult';
 import type { DatapackStoreName } from '@/types/datapack';
 
+/** How often an import window re-reads the recorded job while one is in flight. */
+export const STATUS_POLL_MS = 2000;
+
 /** Only a library pack names its store; the handler reads absent as the Data Installer. */
 export function libraryField(source: DatapackStoreName | undefined): { source?: 'library' } {
     return source === 'library' ? { source } : {};

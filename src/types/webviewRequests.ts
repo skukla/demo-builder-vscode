@@ -991,3 +991,20 @@ export interface SaveStoreChangesResult {
     /** The settings layer written beside the new version (step 09), when the pack's settings are a layer's. */
     settingsLayer?: { datapackName: string; version: string; settings: number };
 }
+
+/**
+ * `get-datapack-records` (datapack simplification step 03, S4): the records an install of the pack
+ * puts in Commerce, for the install window's Review Records. Webview-only.
+ */
+export interface DatapackRecordsRequest {
+    datapackName: string;
+    version: string;
+    /** Which store holds the pack; the Data Installer when absent. */
+    source?: 'installer' | 'library';
+}
+
+/** What `get-datapack-records` answers on success. */
+export interface DatapackRecordsResult {
+    /** Each data type's records by the name the pack gives them (`keyOf`), in the pack's order. */
+    records: Record<string, string[]>;
+}
