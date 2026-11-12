@@ -2,7 +2,8 @@
  * EditDemoPackageModal — rename an added demo package's card and change its
  * description (owner, 2026-09-14), from the card's Edit.
  *
- * The same two fields Add a demo package asks for, in the core Modal, and one
+ * The same two fields Add a demo package asks for, on the Form layout (`FormDialog`, Phase 1b:
+ * its failure line is kept from the start, so a refusal moves nothing), and one
  * host call on Save: `edit-added-demo`. Below them, where the card reads from,
  * in a plain read-only field (owner, 2026-09-15): a different repository has to be read again
  * for its kind, codes and pages, which is what Add a demo package does, so the
@@ -14,10 +15,10 @@
  * @module features/project-creation/ui/components/add-demo/EditDemoPackageModal
  */
 
-import { DialogContainer, TextArea, TextField } from '@adobe/react-spectrum';
+import { TextArea, TextField } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
 import { COPY } from './addDemoFlow';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { FormDialog } from '@/core/ui/components/ui/FormDialog';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AddedDemo } from '@/types/projectFile';
 import type { EditAddedDemoRequest, EditAddedDemoResult } from '@/types/webviewRequests';
@@ -74,46 +75,36 @@ function Journey({ demo, onClose, onSaved }: EditDemoPackageModalProps & { demo:
     };
 
     return (
-        <Modal
+        <FormDialog
+            isOpen
             title={error ? EDIT_COPY.failed : EDIT_COPY.title}
-            status={error ? 'error' : undefined}
-            size="M"
-            fitContent
+            submitLabel={EDIT_COPY.save}
+            onSubmit={() => void save()}
+            submitDisabled={!name.trim()}
+            submitPending={saving}
+            failure={error ?? null}
             onClose={onClose}
-            closeLabel="Cancel"
-            actionButtons={[
-                {
-                    label: EDIT_COPY.save,
-                    variant: 'accent',
-                    onPress: () => void save(),
-                    isDisabled: !name.trim(),
-                    isPending: saving,
-                },
-            ]}
         >
-            <div className="add-demo-stage">
-                <TextField label={COPY.nameLabel} value={name} onChange={setName} isRequired width="100%" />
-                <TextArea label={COPY.descriptionLabel} value={description} onChange={setDescription} width="100%" />
-                <TextField
-                    label={EDIT_COPY.repository}
-                    value={`https://github.com/${demo.source.owner}/${demo.source.repo}`}
-                    isReadOnly
-                    description={EDIT_COPY.repositoryWhy}
-                    width="100%"
-                />
-                {error ? <p className="add-demo-error text-negative" data-testid="edit-demo-error">{error}</p> : null}
-            </div>
-        </Modal>
+            <TextField label={COPY.nameLabel} value={name} onChange={setName} isRequired width="100%" />
+            <TextArea label={COPY.descriptionLabel} value={description} onChange={setDescription} width="100%" />
+            <TextField
+                label={EDIT_COPY.repository}
+                value={`https://github.com/${demo.source.owner}/${demo.source.repo}`}
+                isReadOnly
+                description={EDIT_COPY.repositoryWhy}
+                width="100%"
+            />
+        </FormDialog>
     );
 }
 
 /**
- * The dialog host: mounts the journey only while a demo is being edited, so
- * each opening starts from that demo's saved words.
+ * Mounts the form only while a demo is being edited, so each opening starts from that demo's
+ * saved words.
  *
  * @param props - the demo, and the close and saved callbacks
- * @returns the dialog container
+ * @returns the form, or nothing while no demo is being edited
  */
-export function EditDemoPackageModal({ demo, ...rest }: EditDemoPackageModalProps): React.ReactElement {
-    return <DialogContainer onDismiss={rest.onClose}>{demo ? <Journey demo={demo} {...rest} /> : null}</DialogContainer>;
+export function EditDemoPackageModal({ demo, ...rest }: EditDemoPackageModalProps): React.ReactElement | null {
+    return demo ? <Journey demo={demo} {...rest} /> : null;
 }

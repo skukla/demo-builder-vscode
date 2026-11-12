@@ -48,8 +48,6 @@ const LEDGER: Readonly<Record<string, string>> = {
         'waits for a layout: a Form at L with no submit, only Close, and FormDialog is M with a submit',
     'src/features/project-creation/ui/components/add-demo/AddDemoModal.tsx':
         'waits for a layout: a staged Form at L with Back, a start button and an answer with a status, and FormDialog is M with none',
-    'src/features/project-creation/ui/components/add-demo/EditDemoPackageModal.tsx':
-        'waits for a layout: a Form whose failure shows an error status and title, and FormDialog has no status',
     'src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx':
         'waits for a layout: a staged Form at L with Back, a status per stage and a confirm in its own window',
     'src/features/projects-dashboard/ui/components/ProjectsBatchModal.tsx':

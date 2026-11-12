@@ -22,13 +22,6 @@
         color: var(--spectrum-global-color-gray-700);
     }
 
-    /* Why a save failed, under the form. No colour of its own: `.text-negative` sets it. */
-    .add-demo-error {
-        margin: 0;
-        font-size: 12px;
-        line-height: 1.4;
-    }
-
     .add-demo-b2b {
         display: flex;
         flex-direction: column;

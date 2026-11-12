@@ -5,7 +5,6 @@
 
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
-import { ruleFor } from '../../../../../helpers/cssRules';
 import { settle } from '../../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 
@@ -64,7 +63,9 @@ describe('EditDemoPackageModal', () => {
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('titles a failure with its red icon, and says why in a note under the form, not a box', async () => {
+    // Phase 1b: on the Form layout the reason is the house failure line above the fields, plain,
+    // and the title carries the red (dialog design rules), where it was a red note under them.
+    it('titles a failure with its red icon, and says why on the failure line, not a box', async () => {
         mockRequest.mockResolvedValueOnce({ success: false, error: 'The settings could not be saved.' });
         const { onClose } = renderModal();
 
@@ -72,17 +73,12 @@ describe('EditDemoPackageModal', () => {
 
         const title = screen.getByRole('heading', { name: "Couldn't Save the Changes" });
         expect(title.innerHTML).toContain('text-negative');
-        const note = screen.getByTestId('edit-demo-error');
+        const note = screen.getByRole('alert');
         expect(note).toHaveTextContent('The settings could not be saved.');
-        expect(note).toHaveClass('add-demo-error', 'text-negative');
+        expect(note).toHaveClass('dialog-line');
         expect(document.querySelector('.inline-notice')).toBeNull();
         expect(screen.getByLabelText('Demo Name', { selector: 'input' })).toHaveValue(DEMO.name);
         expect(onClose).not.toHaveBeenCalled();
-    });
-
-    // A class with a colour of its own beat `.text-negative` in the browser, and the note drew grey.
-    it('leaves the note its colour from .text-negative alone', () => {
-        expect(ruleFor('.add-demo-error')).not.toMatch(/(^|[;{\s])color:/);
     });
 
     it('does not repeat the title when a failure gives no reason', async () => {
@@ -91,7 +87,7 @@ describe('EditDemoPackageModal', () => {
 
         await pressSave();
 
-        expect(screen.getByTestId('edit-demo-error')).toHaveTextContent(/^Try again\.$/);
+        expect(screen.getByRole('alert')).toHaveTextContent(/^Try again\.$/);
     });
 
     it('goes back to the plain title on the next try', async () => {
@@ -104,7 +100,7 @@ describe('EditDemoPackageModal', () => {
         await pressSave();
 
         expect(screen.getByRole('heading', { name: 'Edit Demo Package' }).innerHTML).not.toContain('text-negative');
-        expect(screen.queryByTestId('edit-demo-error')).not.toBeInTheDocument();
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
         await act(async () => {
             release({ success: false, error: 'done' });
