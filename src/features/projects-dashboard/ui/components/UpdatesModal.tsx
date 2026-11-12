@@ -38,8 +38,9 @@ import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/fee
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
+import { endsSmall, type EndingRow } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { PendingUpdateRow } from '@/types/pendingUpdates';
+import type { PendingUpdateRow, UpdateRowState } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 const LIST_TITLE = 'Updates Available';
@@ -129,13 +130,23 @@ function runHeadingOf(progress: OperationProgressPayload | null, rows: PendingUp
 }
 
 /**
- * Whether the run ended cleanly: it succeeded and every row, its local copy steps included, is
- * done with nothing to read under it. Only then does the window leave the rows (walk F134).
+ * A run row's status as the shared ending rule reads it: anything short of done (failed, skipped,
+ * still going, never told) is a problem, and what it says once done is a note. The projects batch
+ * run's rows have the same states, so it reads them through this too.
+ */
+export function endingRowOf(status: { state: UpdateRowState; message?: string } | undefined): EndingRow {
+    return { problem: status?.state !== 'done', ...(status?.message ? { note: status.message } : {}) };
+}
+
+/**
+ * Whether the run ended cleanly, by the shared rule (`endsSmall`): it succeeded with no warning and
+ * every row, its local copy steps included, is done with nothing to read under it. Only then does
+ * the window leave the rows (walk F134).
  */
 export function endedClean(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): boolean {
-    if (progress?.state !== 'succeeded') return false;
-    const clean = (status: RowStatuses[string] | undefined): boolean => status?.state === 'done' && !status.message;
-    return rows.every((row) => clean(statuses[row.id])) && Object.values(statuses).every(clean);
+    const all = [...rows.map((row) => statuses[row.id]), ...Object.values(statuses)];
+    const succeeded = progress?.state === 'succeeded';
+    return endsSmall({ succeeded, warning: progress?.warning, rows: all.map(endingRowOf) });
 }
 
 /** The small result a clean run ends on: its title, and how many updates the SC left for later. */

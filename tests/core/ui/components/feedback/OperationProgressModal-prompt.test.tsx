@@ -374,6 +374,23 @@ describe('the end of a run', () => {
         expect(onClose).not.toHaveBeenCalled();
     });
 
+    // Plan step-03 S1: a row with a problem keeps the window open, warning or not.
+    it('waits to be read when a row ended with a problem and the run sent no warning', async () => {
+        progress = {
+            id: OPERATION.id,
+            state: 'succeeded',
+            rows: [{ kind: 'products', label: 'Products', status: 'warning', problem: { text: '3 products had no price', failed: false } }],
+        };
+        const { onClose } = renderModal();
+
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
+        });
+
+        expect(screen.getByText('3 products had no price')).toBeInTheDocument();
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
     // Neither ending has anything left to narrate, so neither offers the background.
     it('offers Close rather than Run in Background once it has ended', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };

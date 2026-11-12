@@ -32,15 +32,19 @@
  */
 
 import React, { useCallback, useRef } from 'react';
-import { OperationProgressBody, progressFrame } from '@/core/ui/components/feedback/OperationProgressBody';
+import { keepsRows, OperationProgressBody, progressFrame } from '@/core/ui/components/feedback/OperationProgressBody';
 import { ProgressDialog, type ProgressAction } from '@/core/ui/components/ui/ProgressDialog';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OperationOffer, OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
-/** A success that says something beyond its title (a warning, a note, what it changed) waits to be read. */
+/**
+ * A success that says something beyond its title (a warning, a note, what it changed, rows it keeps
+ * because one has a problem) waits to be read.
+ */
 function holdsResult(progress: OperationProgressPayload | null | undefined): boolean {
-    return Boolean(progress?.warning || progress?.note || progress?.details?.length || progress?.changes?.length);
+    const says = Boolean(progress?.warning || progress?.note || progress?.details?.length || progress?.changes?.length);
+    return says || keepsRows(progress);
 }
 
 /** The operation a progress modal shows: which one, and what it is called. */

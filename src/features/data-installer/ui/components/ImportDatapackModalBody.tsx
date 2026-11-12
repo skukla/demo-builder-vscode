@@ -27,7 +27,6 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ModalWait } from '@/core/ui/components/ui/Modal';
-import { tookValue } from '@/core/ui/hooks/useRunClock';
 
 /**
  * The project names no Commerce instance; the outcome is the dialog's title (`viewFrame`).
@@ -248,7 +247,6 @@ function ImportEnd({ result, run, ctx }: { result: ResultContent; run: ImportJob
         ...(run.check ? { check: run.check } : {}),
         ...replacingOf(run, run.replacing),
     });
-    const took = result.tookMs === undefined ? undefined : tookValue(result.tookMs);
     return (
         <ImportRunView
             steps={steps}
@@ -256,7 +254,7 @@ function ImportEnd({ result, run, ctx }: { result: ResultContent; run: ImportJob
             end={{
                 ...(result.lead ? { lead: result.lead } : {}),
                 lines: run.scLines ?? [],
-                ...(took ? { took } : {}),
+                ...(result.tookMs === undefined ? {} : { tookMs: result.tookMs }),
             }}
         />
     );

@@ -19,6 +19,7 @@ import { FINISHING_STOP, type ImportJobRecord, type KeptRootStep, SAVE_STOP } fr
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
+import { endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
 import { ErrorCode } from '@/types/errorCodes';
 
 /**
@@ -221,10 +222,18 @@ function leftToKnow(record: ImportJobRecord): Pick<ResultContent, 'message' | 'd
     return scLines.length > 0 ? { details: lines } : { message: lines.join(' ') };
 }
 
-/** Something on the steps the SC should see: a data type that failed, a row's note, a check that differs. */
-function hasProblem(record: ImportJobRecord, failed: string[]): boolean {
-    if (failed.length > 0 || Object.keys(record.rowNotes ?? {}).length > 0) return true;
-    return record.check !== undefined && record.check.verdict !== 'matches';
+/**
+ * The import as the shared ending rule reads it: a data type that failed is a row's problem, a row's
+ * note is a note, and a check that differs is the run's warning.
+ */
+function endingOf(record: ImportJobRecord, ranToEnd: boolean): RunEnding {
+    const failed = Object.values(record.perType).map((state) => ({ problem: state === 'error' }));
+    const notes = Object.values(record.rowNotes ?? {}).map((note) => ({ note }));
+    return {
+        succeeded: ranToEnd,
+        warning: record.check !== undefined && record.check.verdict !== 'matches',
+        rows: [...failed, ...notes],
+    };
 }
 
 /**
@@ -243,7 +252,7 @@ function runResult(record: ImportJobRecord, name: string, retries: number): Resu
         return { variant: 'error', title: 'Install Stopped', run: record, action: retry ? 'retry' : 'fix', ...took };
     }
     const title = `${name} ${wordsFor('start').done}`;
-    if (!hasProblem(record, failed)) return { variant: 'success', title, finished: true, ...leftToKnow(record) };
+    if (endsSmall(endingOf(record, ranToEnd))) return { variant: 'success', title, finished: true, ...leftToKnow(record) };
     const lead = record.searchDelay ? { lead: record.searchDelay } : {};
     return { variant: 'warning', title, run: record, finished: true, action: 'fix', ...lead, ...took };
 }

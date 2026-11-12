@@ -11,8 +11,9 @@
 import React from 'react';
 import type { BatchRowStatuses, BatchRowTimings, BatchRunRow } from '../hooks/useProjectsBatch';
 import { ICON_OF, RunQuestion } from './UpdatesRunView';
+import { RunFoot } from '@/core/ui/components/feedback/RunFoot';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
-import { spanValue, tookValue, useRunClock } from '@/core/ui/hooks/useRunClock';
+import { spanValue, useRunClock } from '@/core/ui/hooks/useRunClock';
 import type { UpdateRowState } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
@@ -112,7 +113,6 @@ export function ProjectsBatchRunView({ rows, order, statuses, timings, progress,
     const runningCount = shown.filter((row) => statuses[row.path]?.state === 'running').length;
     const underRow = runningCount === 1;
     const failure = failureLine(progress, rows, statuses);
-    const took = ended && progress?.tookMs !== undefined ? tookValue(progress.tookMs) : undefined;
     return (
         <div className="projects-batch-run">
             {failure && <p className="work-row-why">{failure}</p>}
@@ -132,7 +132,7 @@ export function ProjectsBatchRunView({ rows, order, statuses, timings, progress,
                 ),
             )}
             {/* How long the run took, as the single window ends a long one (over a minute). */}
-            {took && <p className="dialog-note projects-batch-took">Took {took}</p>}
+            {ended ? <RunFoot tookMs={progress?.tookMs} className="projects-batch-took" /> : null}
         </div>
     );
 }

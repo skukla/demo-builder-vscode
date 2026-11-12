@@ -23,10 +23,11 @@ import { BatchDatapackChanges } from './BatchDatapackChanges';
 import { BatchDeleteQuestions } from './BatchDeleteQuestions';
 import { BatchResetQuestions } from './BatchResetQuestions';
 import { ProjectsBatchRunView } from './ProjectsBatchRunView';
-import { promptButtons } from './UpdatesModal';
+import { endingRowOf, promptButtons } from './UpdatesModal';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import type { WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
+import { endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { PrepareProjectsBatchResponse, ProjectsBatchAction } from '@/types/projectsBatch';
@@ -76,13 +77,15 @@ function endTitle(action: ProjectsBatchAction, progress: OperationProgressPayloa
 }
 
 /**
- * Whether the run ended cleanly: it succeeded with no warning and every project is done with
- * nothing to read under it. Only then does the window leave its rows for the small result (walk F134).
+ * Whether the run ended cleanly, by the shared rule (`endsSmall`): it succeeded with no warning and
+ * every project is done with nothing to read under it. Only then does the window leave its rows for
+ * the small result (walk F134).
  */
-export function endedClean(controls: ProjectsBatchControls): boolean {
+export function endedClean(controls: Pick<ProjectsBatchControls, 'view' | 'progress' | 'statuses'>): boolean {
     const { view, progress, statuses } = controls;
-    if (view.phase !== 'running' || progress?.state !== 'succeeded' || progress.warning) return false;
-    return view.rows.every((row) => statuses[row.path]?.state === 'done' && !statuses[row.path]?.message);
+    if (view.phase !== 'running') return false;
+    const rows = view.rows.map((row) => endingRowOf(statuses[row.path]));
+    return endsSmall({ succeeded: progress?.state === 'succeeded', warning: progress?.warning, rows });
 }
 
 /** Either batch on its second step, the packs' changes (owner, 2026-11-04; the delete's, walk F96). */

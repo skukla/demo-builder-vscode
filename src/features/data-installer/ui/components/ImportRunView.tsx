@@ -18,10 +18,9 @@
 
 import React from 'react';
 import type { ImportStep } from '../../importSteps';
+import { RunFoot } from '@/core/ui/components/feedback/RunFoot';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { WorkRowColumns } from '@/core/ui/components/feedback/WorkRowColumns';
-import { LeadText } from '@/core/ui/components/ui/LeadText';
-import { useRunClock } from '@/core/ui/hooks/useRunClock';
 
 /** What goes under the steps once the import has ended. */
 export interface RunEnd {
@@ -29,7 +28,8 @@ export interface RunEnd {
     lead?: string;
     /** What changed in the store and what is left to do (`JobStanding.scLines`). */
     lines: string[];
-    took?: string;
+    /** How long it took, as the job reported it; `RunFoot` says it only for a long run. */
+    tookMs?: number;
 }
 
 export interface ImportRunViewProps {
@@ -39,30 +39,6 @@ export interface ImportRunViewProps {
     /** While it runs: when it started. */
     running?: { startedAt: number };
     end?: RunEnd;
-}
-
-/** The clock, under the steps while it runs; its line is there from the first frame (F116). */
-function RunningFoot({ startedAt }: { startedAt: number }): React.ReactElement {
-    const clock = useRunClock(startedAt);
-    return (
-        <div className="import-run-foot">
-            <p className="dialog-note">{clock || ' '}</p>
-        </div>
-    );
-}
-
-function EndFoot({ end }: { end: RunEnd }): React.ReactElement {
-    return (
-        <div className="import-run-foot dialog-stack">
-            {end.lead ? <LeadText>{end.lead}</LeadText> : null}
-            {end.lines.map((line) => (
-                <p key={line} className="dialog-line">
-                    {line}
-                </p>
-            ))}
-            {end.took ? <p className="dialog-note">Took {end.took}</p> : null}
-        </div>
-    );
 }
 
 /** One step: its row, its problem under it, and Install's data types. */
@@ -92,8 +68,9 @@ export function ImportRunView({ steps, columns, running, end }: ImportRunViewPro
             {steps.map((step) => (
                 <Step key={step.kind} step={step} columns={columns} />
             ))}
-            {running ? <RunningFoot startedAt={running.startedAt} /> : null}
-            {end ? <EndFoot end={end} /> : null}
+            {/* The clock's line is there from the first frame (F116). */}
+            {running ? <RunFoot running={running} className="import-run-foot" /> : null}
+            {end ? <RunFoot lead={end.lead} lines={end.lines} tookMs={end.tookMs} className="import-run-foot" /> : null}
         </div>
     );
 }

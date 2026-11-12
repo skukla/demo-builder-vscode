@@ -90,6 +90,19 @@ describe('OperationProgressBody, a run with rows', () => {
         expect(screen.getByText('Products')).toBeInTheDocument();
     });
 
+    // Plan step-03 S1: the save's rule looked only at `warning`, so a row's problem with no
+    // warning ended small and hid the problem.
+    it('keeps the rows of a run that ends with a problem on one row and no warning', () => {
+        const ended: OperationRow[] = [
+            { kind: 'categories', label: 'Categories', status: 'success', line: 'Done' },
+            { kind: 'products', label: 'Products', status: 'warning', problem: { text: '3 products had no price', failed: false } },
+        ];
+        render(<OperationProgressBody failed={false} succeeded onTyped={jest.fn()} successMessage="Saved a new version of My Luma." progress={{ id: 'x', state: 'succeeded', rows: ended, tookMs: 240_000 }} />);
+
+        expect(screen.getByText('Products')).toBeInTheDocument();
+        expect(screen.getByText('Took 4 minutes')).toBeInTheDocument();
+    });
+
     it('CONTROL: a run with no rows keeps its one spinner and its line', () => {
         renderRunning({ progress: { id: 'x', state: 'running', stage: 'Reading from Commerce', step: '0 of 1 data type' } });
 

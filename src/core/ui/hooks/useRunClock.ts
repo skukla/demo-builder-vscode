@@ -48,9 +48,9 @@ export function useRunClock(startedAt: number | undefined): string | undefined {
 export const TOOK_WORTH_SAYING_MS = 60_000;
 
 /**
- * How long a run took, as the value of a labelled "Took" row ("3 minutes, 12 seconds"), or
- * undefined for a run under {@link TOOK_WORTH_SAYING_MS}: the result screens show it as a row
- * (owner, 2026-10-31).
+ * How long a run took, as the words after "Took" ("3 minutes, 12 seconds"), or undefined for a run
+ * under {@link TOOK_WORTH_SAYING_MS}. `RunFoot` makes the one call and shows it as the last line of
+ * the run's body, "Took 3 minutes, 12 seconds" in the quiet note (owner, 2026-11-10).
  *
  * @param tookMs - how long the run took, as the extension measured it
  * @returns the value, or undefined when the run was short
