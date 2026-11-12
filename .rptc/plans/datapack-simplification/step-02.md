@@ -17,24 +17,24 @@ Save and no "Restore My Luma".
 3. **Deleting the save in use no longer strands the project.** `delete-library-datapack` (one
    version or every version) repoints `project.datapack` and the install record to the newest
    remaining save, or refuses when none remains.
-4. **Keep two saves.** After each successful save: keep the newest save and the one before it;
+4. **Keep two saves.** Done, `4e8bb0678`. After each successful save: keep the newest save and the one before it;
    delete older dated saves with their store configuration. Never a named version (`main`), never a
    `name@version` another local project names or a project file shared (`sharedInFiles`). A failed
    trim never fails the save.
-5. **Undo Last Save.** More menu row, shown only with a save to go back to. "Undo Last Save?"
+5. **Undo Last Save.** Done, `da0fe7f4c` (engine and agent tool), `2872053b8` (screen). More menu row, shown only with a save to go back to. "Undo Last Save?"
    (Cancel / Undo, blue). One job: uninstall the newest save, install the one before it
    (`changes: 'drop'`, so no save question), and only after both succeed delete the newest save.
    Same steps window ("Restoring My Luma"; ends "Last Save Undone"). A new MCP tool with descriptor,
    narration and consent copy.
-6. **Restore My Luma.** The flyout's main button on the datapack the demo uses. A forced
+6. **Restore My Luma.** Done, `3aeac5650`. The flyout's main button on the datapack the demo uses. A forced
    same-version replace (today a same-version import updates in place and keeps Admin edits). Asks
    "Restore My Luma?" (Cancel / Restore) only with unsaved edits; a newer save alone runs straight
    after the check; nothing to change ends "My Luma Is Up to Date"; done "My Luma Restored".
-7. **Version History and dates go.** Delete `VersionHistoryDialog.tsx`, `versionHistory.ts` and their
+7. **Version History and dates go.** Done, `2872053b8`. Delete `VersionHistoryDialog.tsx`, `versionHistory.ts` and their
    wiring; "Install the Version from …" becomes "Install My Luma"; `SAVED_LINE` and "Saved a new
    version" become the result title "Saved to My Luma"; "it and its version history" goes from
    Delete.
-8. **Agents.** `save_store_changes_to_pack`, `start_datapack_import`, `delete_library_datapack`
+8. **Agents.** Done, `eb13bdd2e`, `3aeac5650`. `save_store_changes_to_pack`, `start_datapack_import`, `delete_library_datapack`
    text, the generated `import-datapack` skill and `docs/systems/mcp-server.md` say: saves replace,
    one undo is kept, Undo Last Save is its own tool. `AI_CONTEXT_VERSION` is bumped once after the
    last phase, not here.
@@ -48,3 +48,10 @@ oldest is trimmed), Undo Last Save, Restore, reinstall with nothing sent, uninst
   leaves the project on the newest save.
 - Saves on other machines can't be seen; a colleague's project file naming a trimmed save falls
   back to that datapack's newest save (slice 2), not to the origin.
+
+## Status (2026-11-12, unattended loop)
+
+All eight slices are built and gated (full gate after slice 6: 2,397 suites, 38,523 tests; dead-code,
+circular-dependency and duplication scans clean). Still owed: the live cycle above, with the owner's
+go; the run window's own titles for Undo ("Restoring My Luma", "Last Save Undone") and Restore ("My
+Luma Restored"), which belong to the run window's rebuild in Phases 3 to 5.
