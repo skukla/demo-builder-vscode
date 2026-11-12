@@ -27,7 +27,8 @@ Live notes; rewritten as the final report at the loop's close.
   restore_datapack. Also fixed: undo_last_save ignored its waitSeconds. Full gate green (2,397
   suites, 38,523 tests); closing scans clean.
 - **Phase 2 code complete.** Live cycle owed (walkthrough queue).
-- Phase 3 to 5: a mapping pass is writing the install window's rebuild plan (step-03.md).
+- Phase 3 to 5: the install window's rebuild plan is written (step-03.md, 8 slices). Building the
+  slices that need no product answer first (S1, S4's groundwork); Q1 to Q8 are parked below.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -43,5 +44,10 @@ Live notes; rewritten as the final report at the loop's close.
   (cb22d910a).
 
 ## Walkthrough queue (for the owner)
+- Eight product questions from the install window's plan (step-03.md section 4), each with a
+  recommendation: Q1 Save As name in a one-row save question; Q2 agents installing a subset; Q3 a
+  clean install's leftover lines; Q4 how a background success ends in VS Code; Q5 failed titles for
+  Restore and Undo; Q6 Restore's check in a window; Q7 the store name leaving the Uninstall title;
+  Q8 installing a pack Commerce already matches.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
