@@ -42,15 +42,55 @@ beforeEach(() => {
     global.fetch = jest.fn(async () => ({ ok: true, status: 200, text: async () => '{"success":true}' })) as unknown as typeof fetch;
 });
 
-it('deletes the version, and leaves the project as it was, even the one that uses it', async () => {
-    library.findDatapacks.mockResolvedValue({ items: [], count: 0 });
-    const context = contextFor(projectUsing());
+// Phase 2, step-02 slice 3: deleting the save a project uses stranded it (its datapack and its
+// install record named a save that no longer existed). It is refused, saying which project uses it.
+describe('the save a project on this machine uses is never deleted', () => {
+    const deletes = () => (global.fetch as jest.Mock).mock.calls.filter(([, init]) => (init as RequestInit).method === 'DELETE');
 
-    const result = await remove(context, { datapackName: OWN, version: '20261029-183005', confirm: true });
+    it('refuses the save the open project uses, naming it, and deletes nothing', async () => {
+        const context = contextFor(projectUsing());
 
-    expect(result).toMatchObject({ success: true, data: { deleted: true } });
-    expect(result.data).not.toHaveProperty('ownPackCleared');
-    expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        const result = await remove(context, { datapackName: OWN, version: '20261029-183005', confirm: true });
+
+        expect(result).toMatchObject({ success: false });
+        expect(result.error).toContain('scratch-1028 uses this save');
+        expect(deletes()).toHaveLength(0);
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('refuses the save another local project uses', async () => {
+        const context = contextFor(null);
+        (context.stateManager.getAllProjects as jest.Mock).mockResolvedValue([{ path: '/p/other', name: 'other' }]);
+        (context.stateManager.loadProjectFromPath as jest.Mock).mockResolvedValue(
+            createMockProject({ name: 'other-demo', path: '/p/other', datapack: { name: OWN, version: '20261029-183005', store: 'library' } }),
+        );
+
+        const result = await remove(context, { datapackName: OWN, version: '20261029-183005', confirm: true });
+
+        expect(result.error).toContain('other-demo uses this save');
+        expect(deletes()).toHaveLength(0);
+    });
+
+    it('deletes an earlier save no project uses, and leaves the project as it was', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [], count: 0 });
+        const context = contextFor(projectUsing());
+
+        const result = await remove(context, { datapackName: OWN, version: '20261028-090000', confirm: true });
+
+        expect(result).toMatchObject({ success: true, data: { deleted: true } });
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('refuses deleting every version of a datapack a project uses', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [row(OWN, '20261029-183005', true)], count: 1 });
+        const context = contextFor(projectUsing());
+
+        const result = await remove(context, { datapackName: OWN, everyVersion: true, confirm: true });
+
+        expect(result).toMatchObject({ success: false });
+        expect(result.error).toContain('scratch-1028 uses this datapack');
+        expect(deletes()).toHaveLength(0);
+    });
 });
 
 describe("the pack's settings layer (datapack-engine step 09): a version takes its layer of the same version with it", () => {

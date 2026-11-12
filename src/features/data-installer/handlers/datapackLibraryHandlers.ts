@@ -39,6 +39,7 @@ import { myLayerVersions } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import { SHARE_CONSENT } from '../shareWording';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { inUseRefusal, projectsUsing } from './datapackInUse';
 import { failure, installerEchoRefusal, installerWriteRefusal } from './datapackZipHandlers';
 import { packReadsFor } from './recordedPackHandlers';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -171,6 +172,9 @@ async function deleteEveryVersion(context: HandlerContext, payload: DeleteLibrar
             code: ErrorCode.INVALID_OPERATION,
         };
     }
+    // A datapack a project uses is never deleted: that project would be stranded (Phase 2).
+    const users = await projectsUsing(context, name);
+    if (users.length > 0) return { success: false, error: inUseRefusal(users, 'datapack'), code: ErrorCode.INVALID_OPERATION };
     const access = await resolveDataInstallerAccess(context, 'library');
     if (!access.ok) return access.response;
     try {
@@ -217,6 +221,9 @@ export const datapackLibraryHandlers = defineHandlers({
                 ...(warning ? { data: { sharedInFile: warning } } : {}),
             };
         }
+        // The save a project uses is never deleted: that project would be stranded (Phase 2).
+        const users = await projectsUsing(context, id.name, id.version);
+        if (users.length > 0) return { success: false, error: inUseRefusal(users, 'save'), code: ErrorCode.INVALID_OPERATION };
         const access = await resolveDataInstallerAccess(context, 'library');
         if (!access.ok) return access.response;
         try {
