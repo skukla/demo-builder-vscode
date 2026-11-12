@@ -30,6 +30,11 @@ Live notes; rewritten as the final report at the loop's close.
 - Left for the run window's rebuild (Phases 3 to 5): the Undo run titled "Restoring My Luma" and
   ending "Last Save Undone"; the same-pack replace step still reads "Uninstall the Previous Version".
 
+## Retracted / corrected
+- Before the loop I told the owner step-02.md recorded why slice 3 refuses rather than repoints. It
+  did not: a hook blocked that command before it ran, and only the file was committed. Recorded now
+  (cb22d910a).
+
 ## Walkthrough queue (for the owner)
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
