@@ -33,6 +33,10 @@ Live notes; rewritten as the final report at the loop's close.
   batch and the shared progress window, and one RunFoot under every run's rows. Fixed two real bugs:
   a save with a problem on one row and no warning ended small and hid it; an Updates run with a
   warning but clean rows ended small. Full gate green (2,399 suites, 38,558 tests).
+- Phases 3 to 5, S2: every datapack job records its purpose, and the run window's titles come from one
+  table: "Switching to Bodea", "Restoring My Luma" ending "My Luma Restored" (Restore) or "Last Save
+  Undone" (Undo), "Couldn't Install Bodea" in place of "Install Stopped". Full gate green (2,400
+  suites, 38,583 tests).
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
