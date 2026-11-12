@@ -328,18 +328,19 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Save the store\'s copy of the datapack this project uses into the datapack library, with the categories, ' +
-            'set, attributes and quantities its products need: Save or Save As. Without saveAs (Save) it is a NEW version of ' +
-            'the pack the project uses, only when that pack is the user\'s own; when it is not (a team pack such as ' +
+            'set, attributes and quantities its products need: Save or Save As. Without saveAs (Save) it is the NEW latest save of ' +
+            'the pack the project uses, only when that pack is the user\'s own (the save before it is kept for undo_last_save; ' +
+            'older saves are deleted); when it is not (a team pack such as ' +
             'Bodea, or a colleague\'s), nothing is written and the answer has data.needsName: ' +
             'ask the user for a name, then call again with saveAs.displayName (Save As), which makes a NEW pack of ' +
-            'theirs. Either way the project then uses the new version. Everything the demo uses goes in on its own, ' +
+            'theirs. Either way the project then uses the new save. Everything the demo uses goes in on its own, ' +
             'what was added by hand in the Admin included; selections add what it does not use yet ' +
             '(list_datapack_export_items with unused: true lists them). No pack named: the project\'s when ' +
             'Demo Builder installed it, else none, and the version holds only what is picked (a store Demo Builder ' +
             'did not fill; send saveAs). The pack installed is never changed, and nothing picked is ever removed with it; ' +
-            'undo by deleting the new version with delete_library_datapack. Store configuration a pack does not hold ' +
-            'itself go to a settings layer beside the new version, not into it (settingsLayer). Answers the pack saved into and its new ' +
-            'version, unnamed (ids kept because the store could not name them) and, for a save of picks alone, leftOut (what the store has, of ' +
+            'undo_last_save goes back to the save before it. Store configuration a pack does not hold ' +
+            'itself go to a settings layer beside the new save, not into it (settingsLayer). Answers the pack saved into and its new ' +
+            'save, unnamed (ids kept because the store could not name them) and, for a save of picks alone, leftOut (what the store has, of ' +
             'products, gift cards, categories, cart rules, customers and companies, that the version does not ' +
             'hold); its message says both. A version the install would refuse is not saved, and the message says ' +
             'why. Nothing in Commerce changes.',

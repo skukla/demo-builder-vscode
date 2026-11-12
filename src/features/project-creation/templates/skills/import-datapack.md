@@ -165,13 +165,13 @@ Save As: everything the demo uses, with nothing to pick. That is the pack Demo B
 here as the store holds it now, and whatever of the demo's the pack does not hold yet (what someone
 added in the Admin), never another demo's on a shared instance.
 
-- **Save** (no `saveAs`): a NEW version of the pack the project uses, only when that pack is the
-  user's own. When it is not (a team pack such as Bodea, or a colleague's), nothing is written and
+- **Save** (no `saveAs`): the NEW latest save of the pack the project uses, only when that pack is
+  the user's own. The save before it is kept, for `undo_last_save`; older saves are deleted. When it is not (a team pack such as Bodea, or a colleague's), nothing is written and
   the answer carries `data.needsName`.
 - **Save As** (`saveAs: { displayName }`): a NEW pack of the user's, under the name they give.
   Ask the user for the name; do not make one up.
 
-Either way the project then uses the new version: it installs from it and resets to it. With no
+Either way the project then uses the new save: it installs from it and resets to it. With no
 pack named it saves only what is picked, which is how a store built by hand in the Admin becomes
 a pack (send `saveAs`). `start_datapack_export` is the same save: send `selections`, `saveAs`
 and `confirm`.
@@ -191,7 +191,8 @@ and `confirm`.
 - **Read the answer's message to the user.** With no pack, it says what the store has that the
   version left out (`leftOut`); always, any id kept because the store could not name it (`unnamed`). A version
   the install would refuse is not saved, and the message says which kind and why.
-- Undo is `delete_library_datapack` on the new version. Nothing in Commerce changes, and a
+- Undo is `undo_last_save`: Commerce goes back to the save before, and the newest save is deleted
+  once that install succeeds. It asks the user first, since anything changed since is lost. A
   picked thing is never removed when the pack is.
 
 ## ACO packs

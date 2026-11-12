@@ -743,13 +743,13 @@ answers only the job's id, so that line arrives with the outcome, not with the s
 `preview_datapack_changes` (a read) says beforehand what an install would do: counts per data kind
 and at most three names per count, never rows. `save_store_changes_to_pack` (confirm-gated) saves
 the store's copy of the pack into the datapack library, Save or Save As (2026-11-03): without
-`saveAs` a new version of the pack the project uses, only when it is the user's own; otherwise it
+`saveAs` the new latest save of the pack the project uses, only when it is the user's own (the save
+before it is kept for `undo_last_save` and older saves are deleted, Phase 2); otherwise it
 writes nothing and answers `data.needsName`, and `saveAs: {displayName}`
 makes a new pack of the user's under that name. Either way it saves what the install record lists and
 the installed version's own products, attributes and sets, read from the store, leaves the pack
-installed as it was, moves the project onto the new version (recording the store and the pack it was
-made from), and changes nothing in Commerce; it is undone by `delete_library_datapack` on the new
-version. There is no automatic pack per demo.
+installed as it was, moves the project onto the new save (recording the store and the pack it was
+made from), and changes nothing in Commerce; `undo_last_save` goes back to the save before it. There is no automatic pack per demo.
 Step 14 (2026-10-30): it takes `selections` too (`{kind: {field: [ids]}}`, the service's export
 shape; kinds and fields in `src/features/data-installer/pickableKinds.ts`), so what the SC added by
 hand in the Admin goes in when picked, and it never joins the install record, so removing the pack

@@ -441,7 +441,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_export: {
         action: 'Export sample data',
         consequence:
-            "Saves what was picked from this project's Commerce instance into My Datapacks: a new version of the project's datapack when it is yours, else a new datapack of yours by the name given. Nothing in Commerce changes, and nothing goes into the Data Installer's shared catalog.",
+            "Saves what was picked from this project's Commerce instance into My Datapacks: a new save of the project's datapack when it is yours (the save before it is kept; older ones are deleted), else a new datapack of yours by the name given. Nothing in Commerce changes, and nothing goes into the Data Installer's shared catalog.",
         // The pack it writes (named only for an ACO pack). `confirmName` is the
         // proof-of-intent echo, not the target.
         target: ['datapackName', 'version'],
@@ -457,7 +457,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     save_store_changes_to_pack: {
         action: 'Save Commerce changes to a datapack',
         consequence:
-            "Saves this datapack as the project's Commerce instance now holds it, with anything picked from Commerce, into My Datapacks: a new version of the project's datapack when it is yours, else a new datapack of yours by the name given. The datapack installed is kept as it is, and nothing in Commerce changes.",
+            "Saves this datapack as the project's Commerce instance now holds it, with anything picked from Commerce, into My Datapacks: a new save of the project's datapack when it is yours (the save before it is kept; older ones are deleted), else a new datapack of yours by the name given. The datapack installed is kept as it is, and nothing in Commerce changes.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
