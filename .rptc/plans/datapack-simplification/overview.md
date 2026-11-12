@@ -633,16 +633,29 @@ beta.153**; the cut waits for Phase 8.
 
 ## Order and why
 
-| Phase | Depends on | Why here |
-|---|---|---|
-| 0 | owner's go | Nothing new should stack on 300 unverified files |
-| 1 | 0 | Every later phase would otherwise write words twice |
-| 1b | 1 | Brings every window to the standard once, after the words are settled and before screens are rebuilt |
-| 2 | 1 | Deletes a dialog that Phases 4, 5 and 7 would otherwise polish |
-| 3 | 1 | The one rule-breaking gap; small once the words are settled |
-| 4 | 2, 3 | Uninstall's steps reuse the question Phase 3 settles |
-| 5, 6, 7 | 1 to 4 | Screen work, each behind its own mockup |
-| 8 | all | Checks the agent can do what the screen now does |
+**Order changed 2026-11-12 (owner), after the journey walks.** Phases 0 and 1 are done, and Phase
+1b is done as far as the layouts, the progress window and most features' windows (through
+`3d13db1b9`). The datapack phases come next, in order, and **Phase 1b's last part, the 13 windows
+still in `tests/sop/modal-layouts.test.ts`'s ledger, comes after Phase 8**. Why: every walk
+decision (`decisions.md`) is about the datapack phases and is freshest now; Phases 2 to 4 change the
+engine and each ends on a live cycle that needs the owner, so problems surface early; and the
+install and Clear windows are rebuilt in Phases 3 to 7, so moving them onto the layouts first would
+be thrown away. The 13 left are not datapack windows (Manage APIs, Assign ERP Products, ERP
+Downtime, the setup guide, AI Capabilities, Share and others) and are mostly a mechanical move; a
+window no layout fits goes to the owner as a question. Nothing ships before every phase is done,
+so no SC sees the gap.
+
+| Order | Phase | Depends on | Why here |
+|---|---|---|---|
+| done | 0 | owner's go | Nothing new should stack on 300 unverified files |
+| done | 1 | 0 | Every later phase would otherwise write words twice |
+| done in part | 1b | 1 | The layouts and most windows; the rest moves to the end |
+| 1 | 2 | 1 | Deletes a dialog that Phases 4, 5 and 7 would otherwise polish |
+| 2 | 3 | 1 | The one rule-breaking gap; small once the words are settled |
+| 3 | 4 | 2, 3 | Uninstall's steps reuse the question Phase 3 settles |
+| 4 | 5, 6, 7, 7b | 1 to 4 | Screen work, each against the walked prototype (`decisions.md`) |
+| 5 | 8 | all | Checks the agent can do what the screen now does |
+| 6 | 1b, the rest | 1b's layouts | The 13 non-datapack windows; the ledger ends empty |
 
 ## Not in this plan
 
