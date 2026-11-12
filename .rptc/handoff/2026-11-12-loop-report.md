@@ -44,6 +44,12 @@ Live notes; rewritten as the final report at the loop's close.
   rules (batched at the end), a look on screen, and the live cycle.
   Notes for later slices: two functions (the job hook, the window picker) run past the 50-line
   guideline; categories in Review Records are a flat list until the tree list moves to core (Phase 6).
+- Phase 4, S5: 09e4978eb. A Dry Run that finds a problem offers Fix with AI; the prompt is built from
+  what the extension recorded about the Dry Run (fix the datapack, check again, report, never install
+  without asking). Full gate green (2,405 suites, 38,663 tests).
+- Phases 3 and 5, S6 (Switch and the save question): with a test-first builder now. Built to Q1's
+  recommendation (an editable "My Bodea" name only when the datapack is not the SC's own), which
+  follows the owner's J7-2 decision; the always-save setting is kept, only the box and its writer go.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
