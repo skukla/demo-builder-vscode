@@ -37,6 +37,13 @@ Live notes; rewritten as the final report at the loop's close.
   table: "Switching to Bodea", "Restoring My Luma" ending "My Luma Restored" (Restore) or "Last Save
   Undone" (Undo), "Couldn't Install Bodea" in place of "Install Stopped". Full gate green (2,400
   suites, 38,583 tests).
+- Phases 3 to 5, S4: a first install now opens the new window, one window per step: the check, the
+  type table with Review Records (Back only), Dry Run in its own small window, the run, the small
+  result. No checkboxes or pickers. A switch, a reinstall and Uninstall stay on the old window until
+  S6 and S7. Full gate green (2,404 suites, 38,647 tests). Owed: the visual check of its new style
+  rules (batched at the end), a look on screen, and the live cycle.
+  Notes for later slices: two functions (the job hook, the window picker) run past the 50-line
+  guideline; categories in Review Records are a flat list until the tree list moves to core (Phase 6).
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
