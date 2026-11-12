@@ -46,6 +46,8 @@ export interface SaveInto {
     name?: string;
     /** What the SC sees it called. */
     displayName: string;
+    /** Save into a shared pack: the new save is shared too, so colleagues keep it (Phase 2). */
+    shared?: boolean;
 }
 
 function randomSuffix(): string {

@@ -229,7 +229,8 @@ describe('save-store-changes-to-pack', () => {
         const file: DatapackFile = { id: SAVED.saved, displayName: 'Bodea', items: [] };
         await write(file);
         expect(MockedWriter).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: LIBRARY, orgCode: 'ORG@AdobeOrg' }));
-        expect(mockedWrite).toHaveBeenCalledWith(MockedWriter.mock.instances[0], file);
+        // No `update`: the save is always a new version. `shared` follows the pack (Phase 2).
+        expect(mockedWrite).toHaveBeenCalledWith(MockedWriter.mock.instances[0], file, { shared: false });
     });
 
     it('passes on which store holds the installed version, when the caller names one', async () => {
@@ -306,6 +307,42 @@ describe('save-store-changes-to-pack', () => {
         expect(mockedSave.mock.calls[0][1].saveAs).toEqual({ id: { name: 'my-bodea-1a2b3c', version: expect.stringMatching(VERSION) }, displayName: 'My Bodea' });
         const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
         expect(saved.datapack?.origin).toEqual({ name: 'bodea', version: 'main' });
+    });
+
+    const FILE_WRITTEN: DatapackFile = { id: { name: 'x', version: '1' }, displayName: 'X', items: [] };
+
+    // Phase 2, step-02 slice 1: trimming old saves would otherwise delete the only shared versions,
+    // and colleagues would lose the pack. A save into a shared pack is created shared.
+    it.each([
+        [true, 'a shared pack stays shared'],
+        [false, 'a private pack stays private'],
+    ])('creates the new save shared=%s when it saves into the SC\'s own pack (%s)', async (shared) => {
+        const own = { name: 'my-bodea-1a2b3c', version: '20261028-090000', store: 'library' as const };
+        const { context } = makeImportHarness({ ...PROJECT, datapack: own });
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({
+            items: [{ id: { name: own.name, version: own.version }, displayName: 'My Bodea', shared, dataTypes: [], art: {}, mine: true }],
+            count: 1,
+        });
+        mockedSave.mockImplementation(async (_deps, target, write) => {
+            await write(FILE_WRITTEN);
+            return { ...SAVED, saved: target.saveAs.id, readFrom: 'library' };
+        });
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+        expect(mockedWrite).toHaveBeenCalledWith(expect.anything(), FILE_WRITTEN, { shared });
+    });
+
+    it('creates a Save As pack private, whatever the pack it started from', async () => {
+        mockedSave.mockImplementation(async (_deps, target, write) => {
+            await write(FILE_WRITTEN);
+            return { ...SAVED, saved: target.saveAs.id };
+        });
+        const context = harness();
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        expect(mockedWrite).toHaveBeenCalledWith(expect.anything(), FILE_WRITTEN, { shared: false });
     });
 
     // Review, 2026-11-10: "No Changes to Save" is the whole result; the agent keeps the sentence.

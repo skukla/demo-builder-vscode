@@ -45,6 +45,8 @@ export interface NewDatapack {
     id: DatapackId;
     displayName: string;
     description?: string;
+    /** Shared with colleagues: a save into a shared pack stays shared (Phase 2). Private unless set. */
+    shared?: boolean;
 }
 
 /** The store's own sentence, when it gave one. */
@@ -69,7 +71,7 @@ export class DatapackStoreWriter {
     }
 
     /**
-     * Create the pack's catalog entry, private to the caller.
+     * Create the pack's catalog entry: private to the caller unless `shared` is set.
      *
      * @returns `created`, or `exists` when the store already holds that name and version
      * @throws DataInstallerApiError for any other refusal
@@ -80,7 +82,7 @@ export class DatapackStoreWriter {
             version: pack.id.version,
             display_name: pack.displayName,
             ...(pack.description ? { description: pack.description } : {}),
-            shared: false,
+            shared: pack.shared === true,
         });
         if (response.status === 409) return 'exists';
         await this.check(response, 'create-datapack');

@@ -104,7 +104,8 @@ export interface PackWriteOutcome {
 /**
  * Write a pack into a store.
  *
- * An existing pack with the same name and version is refused unless `update` is set;
+ * An existing pack with the same name and version is refused unless `update` is set; `shared`
+ * creates it shared, as a save into a shared pack must be (Phase 2);
  * then the types this file carries replace the stored ones and the rest are left as
  * they are. Each type is its own request: one the store refuses is reported by name, and the
  * others still land.
@@ -115,7 +116,7 @@ export interface PackWriteOutcome {
 export async function writePackToStore(
     writer: Pick<DatapackStoreWriter, 'createDatapack' | 'addDataItem'> & Partial<Pick<DatapackStoreWriter, 'oversized'>>,
     pack: DatapackFile,
-    opts: { update?: boolean } = {},
+    opts: { update?: boolean; shared?: boolean } = {},
 ): Promise<PackWriteOutcome> {
     // Before anything is written: a type the store cannot take would leave half a pack behind.
     const tooLarge = writer.oversized?.(pack.items) ?? [];
@@ -129,6 +130,7 @@ export async function writePackToStore(
         id: pack.id,
         displayName: pack.displayName,
         ...(pack.description ? { description: pack.description } : {}),
+        ...(opts.shared ? { shared: true } : {}),
     });
     if (created === 'exists' && !opts.update) {
         throw new DatapackTransferError(

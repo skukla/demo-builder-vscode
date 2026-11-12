@@ -131,6 +131,17 @@ describe('writePackToStore', () => {
         expect(writer.addDataItem).not.toHaveBeenCalled();
     });
 
+    // Phase 2, step-02 slice 1: a save of a shared pack is written shared.
+    it('creates the pack shared when asked, and private otherwise', async () => {
+        const shared = writer();
+        await writePackToStore(shared, PACK, { shared: true });
+        expect(shared.createDatapack).toHaveBeenCalledWith(expect.objectContaining({ shared: true }));
+
+        const plain = writer();
+        await writePackToStore(plain, PACK);
+        expect(plain.createDatapack.mock.calls[0][0]).not.toHaveProperty('shared');
+    });
+
     it('creates the pack, then adds every type with its rows', async () => {
         const w = writer();
 

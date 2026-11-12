@@ -66,7 +66,9 @@ export async function saveIntoFor(
                 const page = await library.client.findDatapacks({ datapackName: held.name });
                 // A team pack is never saved into, even by its owner: every demo is made from it (F80).
                 const mine = page.items.find((item) => item.id.name === held.name && item.mine === true && item.team !== true);
-                if (mine) return { name: held.name, displayName: mine.displayName };
+                // Sharing is a property of the pack, any version (`datapackCatalog`): the save keeps it.
+                const shared = page.items.some((item) => item.id.name === held.name && item.shared === true);
+                if (mine) return { name: held.name, displayName: mine.displayName, shared };
             } catch (error) {
                 // Not known to be the SC's, so never written: Save As is the safe answer.
                 context.debugLogger.debug(`${LOG_PREFIX} Could not tell whose ${held.name} is: ${error instanceof Error ? error.message : String(error)}`);
@@ -99,7 +101,7 @@ export async function saveToPack(
         const plan = planSave(opened.project, pack, into, at);
         const saveAs = { id: plan.id, displayName: plan.displayName };
         const target = { saveAs, picks, ...(pack ? { pack } : {}), ...(source ? { source } : {}) };
-        const result = await saveStoreChanges(opened.deps, target, (file) => writePackToStore(writer, file), report);
+        const result = await saveStoreChanges(opened.deps, target, (file) => writePackToStore(writer, file, { shared: into.shared === true }), report);
         // Nothing changed (walk F89): nothing was written and the demo keeps its version, so say so.
         if (result.unchanged) return unchangedAnswer(result);
         // The pack it was made from names the store its rows were actually read from.

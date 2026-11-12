@@ -64,6 +64,14 @@ describe('createDatapack', () => {
         });
     });
 
+    it('creates it shared when the pack it saves into is shared (Phase 2, step-02 slice 1)', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(201, { success: true }));
+
+        await writer(fetchImpl).createDatapack({ id: { name: 'justrite', version: '20261112-090000' }, displayName: 'Justrite B2B', shared: true });
+
+        expect(sent(fetchImpl).body).toMatchObject({ shared: true });
+    });
+
     it('answers exists on the store 409, rather than throwing', async () => {
         const fetchImpl = jest
             .fn()
