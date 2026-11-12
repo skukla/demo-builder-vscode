@@ -21,6 +21,7 @@ import { StoreChangesError } from '../services/demoBuilderEngine/storeAccess';
 import { type SaveInto, planSave, recordSave } from '../services/demoPack';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { ProjectStore, SaveOpened } from './storeChangesHandlers';
+import { trimOldSaves } from './trimSaves';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { OperationOutcome, ReportStage } from '@/core/vscode/withOperationProgress';
 import type { Project } from '@/types/base';
@@ -107,6 +108,8 @@ export async function saveToPack(
         // The pack it was made from names the store its rows were actually read from.
         const recorded = planSave(opened.project, pack ? { ...pack, store: result.readFrom } : undefined, { name: plan.id.name, displayName: plan.displayName }, at);
         await recordOnProject(context, opened.project, { ...recorded, id: plan.id });
+        // A save into the SC's own datapack keeps two saves; a Save As made a new one (Phase 2).
+        if (into.name) await trimOldSaves(context, library, plan.id);
         const from = pack ? `the store's copy of ${pack.name}@${pack.version}` : 'what was picked from the store';
         context.logger.info(`${LOG_PREFIX} Saved ${from} as ${result.saved.name}@${result.saved.version} in the datapack library`);
         const data: SaveStoreChangesResult = {

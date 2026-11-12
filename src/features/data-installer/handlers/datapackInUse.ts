@@ -28,15 +28,24 @@ export async function projectsUsing(
     name: string,
     version?: string,
 ): Promise<string[]> {
+    return (await projectsWith(context, name))
+        .filter((project) => version === undefined || project.datapack?.version === version)
+        .map((project) => getProjectDisplayName(project));
+}
+
+/** The saves of a datapack that projects on this machine use: never trimmed. */
+export async function savesInUse(context: HandlerContext, name: string): Promise<Set<string>> {
+    const used = (await projectsWith(context, name)).flatMap((project) =>
+        project.datapack ? [project.datapack.version] : [],
+    );
+    return new Set(used);
+}
+
+/** The open project and every other local one that uses a datapack, any save of it. */
+async function projectsWith(context: HandlerContext, name: string): Promise<Project[]> {
     const open = await context.stateManager.getCurrentProject();
     const others = await loadOtherProjects(context, open?.path).catch((): Project[] => []);
-    return [open, ...others]
-        .filter(
-            (project): project is Project =>
-                project?.datapack?.name === name &&
-                (version === undefined || project.datapack.version === version),
-        )
-        .map((project) => getProjectDisplayName(project));
+    return [open, ...others].filter((project): project is Project => project?.datapack?.name === name);
 }
 
 /** The refusal a delete gives when projects use what it would delete. */

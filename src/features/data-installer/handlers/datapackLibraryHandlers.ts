@@ -161,6 +161,21 @@ async function deleteLayerOf(
     }
 }
 
+/**
+ * Delete one version of the SC's own pack and its settings layer of the same version, as a save
+ * wrote them together: trimming old saves after a save (Phase 2) deletes this way.
+ */
+export async function deleteVersionWithLayer(
+    context: HandlerContext,
+    access: Parameters<typeof deleteLayerOf>[1],
+    id: DatapackId,
+): Promise<'deleted' | 'not-found'> {
+    const result = await writerFor(context, access, 'library').deleteDatapack(id);
+    if (result === 'not-found') return result;
+    await deleteLayerOf(context, access, id);
+    return 'deleted';
+}
+
 /** Delete every version of the SC's own pack, and each one's settings layer (`everyVersion`). */
 async function deleteEveryVersion(context: HandlerContext, payload: DeleteLibraryDatapackPayload): Promise<HandlerResponse> {
     const name = payload.datapackName;

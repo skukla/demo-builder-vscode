@@ -345,6 +345,62 @@ describe('save-store-changes-to-pack', () => {
         expect(mockedWrite).toHaveBeenCalledWith(expect.anything(), FILE_WRITTEN, { shared: false });
     });
 
+    // Phase 2, step-02 slice 4: a save keeps the newest two saves and deletes older ones, never one
+    // a project uses; a trim that fails never fails the save.
+    describe('keeping two saves', () => {
+        const OWN = 'my-bodea-1a2b3c';
+        const mineRow = (version: string) => ({ id: { name: OWN, version }, displayName: 'My Bodea', shared: false, dataTypes: [], art: {}, mine: true });
+        const deleted = () => MockedWriter.mock.instances.flatMap((w) => jest.mocked(w.deleteDatapack).mock.calls.map(([id]) => id.version));
+
+        function saveInto(versions: string[], usedElsewhere?: string) {
+            const own = { name: OWN, version: versions[0], store: 'library' as const };
+            const { context } = makeImportHarness({ ...PROJECT, datapack: own });
+            if (usedElsewhere) {
+                (context.stateManager.getAllProjects as jest.Mock).mockResolvedValue([{ path: '/p/other', name: 'other' }]);
+                (context.stateManager.loadProjectFromPath as jest.Mock).mockResolvedValue({ ...PROJECT, path: '/p/other', name: 'other', datapack: { name: OWN, version: usedElsewhere, store: 'library' } });
+            }
+            jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({ items: versions.map(mineRow), count: versions.length });
+            mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id, readFrom: 'library' }));
+            return { context, own };
+        }
+
+        it('deletes every save older than the new one and the one before it', async () => {
+            const { context, own } = saveInto(['20261110-091500', '20261108-140200', '20261105-103000']);
+            MockedWriter.prototype.deleteDatapack.mockResolvedValue('deleted');
+
+            const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+            expect(result).toMatchObject({ success: true });
+            expect(deleted().sort()).toEqual(['20261105-103000', '20261108-140200']);
+        });
+
+        it('keeps an old save another project on this machine uses', async () => {
+            const { context, own } = saveInto(['20261110-091500', '20261108-140200', '20261105-103000'], '20261105-103000');
+            MockedWriter.prototype.deleteDatapack.mockResolvedValue('deleted');
+
+            await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+            expect(deleted()).toEqual(['20261108-140200']);
+        });
+
+        it('still answers saved when the old saves cannot be deleted', async () => {
+            const { context, own } = saveInto(['20261110-091500', '20261108-140200', '20261105-103000']);
+            MockedWriter.prototype.deleteDatapack.mockRejectedValue(new Error('library down'));
+
+            const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+            expect(result).toMatchObject({ success: true });
+        });
+
+        it('CONTROL: a Save As deletes nothing', async () => {
+            mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id }));
+
+            await storeChangesHandlers['save-store-changes-to-pack'](harness(), { ...ID, saveAs: SAVE_AS, confirm: true });
+
+            expect(deleted()).toStrictEqual([]);
+        });
+    });
+
     // Review, 2026-11-10: "No Changes to Save" is the whole result; the agent keeps the sentence.
     it('ends a save with nothing changed on its title alone, the sentence for the agent only', async () => {
         mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id, sentence: 'Nothing changed.', unchanged: true as const }));
