@@ -27,6 +27,13 @@ Live notes; rewritten as the final report at the loop's close.
   restore_datapack. Also fixed: undo_last_save ignored its waitSeconds. Full gate green (2,397
   suites, 38,523 tests); closing scans clean.
 - **Phase 2 code complete.** Live cycle owed (walkthrough queue).
+- Phase 3 to 5: a mapping pass is writing the install window's rebuild plan (step-03.md).
+- Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
+  onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
+  commit, as every form; a read failure is a result window with Close. An unused style rule removed.
+  Stopped there: the other nine change size or layout, and nothing here can show how they look (the
+  visual check's sample screens never open these dialogs). They stay last, before the owner's
+  screenshot pass, as the plan orders.
 - Left for the run window's rebuild (Phases 3 to 5): the Undo run titled "Restoring My Luma" and
   ending "Last Save Undone"; the same-pack replace step still reads "Uninstall the Previous Version".
 
