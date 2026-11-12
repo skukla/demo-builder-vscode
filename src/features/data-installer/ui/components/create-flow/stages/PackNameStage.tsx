@@ -13,7 +13,7 @@ import { FormField } from '@/core/ui/components/forms/FormField';
 
 /**
  * Save As's first screen: the new datapack's name, which the SC sees it called (the library's own
- * name for it is generated, `packIdFor`). Starts as the demo's pack's name with "Copy".
+ * name for it is generated, `packIdFor`). Starts empty, as Create Datapack's does.
  */
 export function SaveAsNameStage({ name, onChange, intro }: { name: string; onChange: (name: string) => void; intro?: string }): React.ReactElement {
     return (

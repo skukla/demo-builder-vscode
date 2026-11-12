@@ -36,6 +36,7 @@ import type { TargetWebsite } from '../../../../../src/features/data-installer/u
 import type { DemoDataCheck, WipeChoiceWebsite, WipePreview } from '../../../../../src/types/demoDataWipe';
 import type { DataInstallerInitialData, OperationProgressPayload } from '../../../../../src/types/webviewPayloads';
 import type { ProjectDisplayName } from '../../../../../src/core/utils/projectDisplayName';
+import type { SetupChecklistItem } from '../../../../../src/types/appBuilderComponents';
 
 /** DatapackCatalogView.tsx `DatapackDetailResponse`. */
 interface DatapackDetailResponse {
@@ -581,4 +582,63 @@ export function resetFrames(opts: { activationId: string; pack: DatapackSummary;
     cur = { ...done, perType: { ...cur.perType, ...(prev ? { [prev]: 'success' as const } : {}) }, outcome: 'success', processingTimeMs: 96_000 };
     frames.push(cur);
     return frames.map(frameOf);
+}
+
+// ---- The pack's one Admin step (packRootStep.ts's packRootGuideStep + packRootCheck.ts's rootStepItem,
+// with the same words, written out because those modules read the install record from disk).
+
+const ROOT_STORE = 'Bodea B2B Store';
+const ROOT_NAME = 'Bodea';
+
+/** Bodea's root step as the flyout reads it: open and never checked, or after a Check. */
+export function rootSetupStep(datapackName: string, version: string, checked?: 'failed' | 'passed'): DatapackSetupStep {
+    const step: SetupChecklistItem = {
+        id: 'pack-root-category',
+        label: 'Root category',
+        title: `Show ${ROOT_NAME}'s Categories on the Storefront`,
+        why: `The store ${ROOT_STORE} shares its root category with another store, so ${ROOT_NAME}'s categories are a root of their own, and a store shows only its root's categories. No API can change a store's root.`,
+        where: `Stores > All Stores > ${ROOT_STORE}`,
+        path: ['Stores', 'All Stores', ROOT_STORE],
+        enter: [`Root Category: ${ROOT_NAME}`],
+        then: 'Save Store.',
+        state: checked === 'passed' ? 'done' : 'open',
+        checkable: true,
+        checkState: checked ?? 'unchecked',
+        ...(checked ? { lastCheck: checked } : {}),
+        ...(checked === 'failed' ? { note: `${ROOT_STORE} still uses the root category Default Category, not ${ROOT_NAME}.` } : {}),
+        ...(checked === 'passed' ? { note: `${ROOT_STORE} now shows the categories under ${ROOT_NAME}.` } : {}),
+    };
+    return { datapackName, version, step };
+}
+
+// ---- Add from File (LoadDatapackFileModal): what open-datapack-zip and load-datapack-zip answer.
+
+/** What `open-datapack-zip` says about the file the SC picked. */
+export const OPENED_FILE = {
+    path: '/Users/sc/Downloads/my-bodea-20261108-170211.datapack.zip',
+    datapackName: 'my-bodea-q4',
+    version: '20261108-170211',
+    displayName: 'My Bodea Q4',
+    dataTypes: B2B_TYPES,
+    settingsLayer: { paths: ['catalog/price/scope', 'btob/website_configuration/company_active', 'btob/website_configuration/sharedcatalog_active'] },
+};
+
+/** What `load-datapack-zip` did: everything stored, or two types refused. */
+export function loadOutcome(partly: boolean) {
+    const refused = partly
+        ? [
+              { dataType: 'b2b_shared_catalogs', reason: 'The library refused the item: it is larger than 4 MB.' },
+              { dataType: 'cart_rules', reason: 'The library did not answer in 30 seconds.' },
+          ]
+        : [];
+    const refusedTypes = refused.map((r) => r.dataType);
+    return {
+        datapackName: OPENED_FILE.datapackName,
+        version: OPENED_FILE.version,
+        target: 'library' as const,
+        pack: 'created' as const,
+        stored: B2B_TYPES.filter((t) => !refusedTypes.includes(t)),
+        failed: refused,
+        settingsLayer: { datapackName: `${OPENED_FILE.datapackName}-settings`, version: OPENED_FILE.version, outcome: 'created' as const },
+    };
 }

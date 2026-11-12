@@ -1,0 +1,289 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Datapack Journeys: Prototype</title>
+<!--
+  The journeys' windows, built from the REAL house components: J1 Clear (j1-windows.tsx), J2 Install
+  (j2-windows.tsx), J3 Save, Create, Undo (j3-windows.tsx), J4 Restore (j4-windows.tsx), J5 Uninstall (j5-windows.tsx), J6 a failed install (j6-screen.tsx), J7 Reset and Delete (the product's batch window, j7-screen.tsx), J8 the Datapacks screen (j8-screen.tsx), on the screen stand-in in Screen.tsx. Build: node build-j1.js.
+-->
+<link rel="icon" href="data:,">
+<style>
+  /* Theme variables from VS Code's dark_modern.json, as the baseline harness carries them. */
+  :root {
+    --vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    --vscode-font-size: 13px;
+  }
+  body.vscode-dark {
+    --vscode-foreground: #cccccc;
+    --vscode-editor-background: #1f1f1f; --vscode-descriptionForeground: #9d9d9d;
+    --vscode-badge-background: #616161; --vscode-badge-foreground: #f8f8f8;
+    --vscode-button-background: #0078d4; --vscode-button-foreground: #ffffff;
+    --vscode-panel-border: #2b2b2b; --vscode-focusBorder: #0078d4;
+    --vscode-errorForeground: #f85149; --vscode-textLink-foreground: #4daafc;
+    --vscode-input-background: #313131; --vscode-input-foreground: #cccccc;
+    --vscode-sideBar-background: #181818; --vscode-list-hoverBackground: #2a2d2e;
+  }
+  body.vscode-light {
+    --vscode-foreground: #3b3b3b;
+    --vscode-editor-background: #ffffff; --vscode-descriptionForeground: #3b3b3b;
+    --vscode-badge-background: #cccccc; --vscode-badge-foreground: #3b3b3b;
+    --vscode-button-background: #005fb8; --vscode-button-foreground: #ffffff;
+    --vscode-panel-border: #e5e5e5; --vscode-focusBorder: #005fb8;
+    --vscode-errorForeground: #f85149; --vscode-textLink-foreground: #005fb8;
+    --vscode-input-background: #ffffff; --vscode-input-foreground: #3b3b3b;
+    --vscode-sideBar-background: #f8f8f8; --vscode-list-hoverBackground: #f2f2f2;
+  }
+  body { margin:0; background:var(--vscode-editor-background); color:var(--vscode-foreground);
+         font-family:var(--vscode-font-family); font-size:var(--vscode-font-size); }
+
+  /* The prototype's own control: deliberately unlike the product (dashed, monospace, amber). */
+  #proto-pill { position:fixed; right:12px; bottom:12px; z-index:2147483647;
+    font:12px/1.4 ui-monospace, Menlo, monospace; color:#f5c451; background:rgba(20,20,20,.92);
+    border:1.5px dashed #f5c451; border-radius:14px; padding:6px 10px; max-width:260px;
+    box-shadow:0 2px 10px rgba(0,0,0,.5); }
+  #proto-pill button { font:inherit; color:inherit; background:transparent; border:1px dashed #f5c451;
+    border-radius:8px; padding:2px 8px; cursor:pointer; }
+  #proto-pill .head { display:flex; gap:8px; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; }
+  #proto-pill .body { margin-top:6px; display:flex; flex-direction:column; gap:6px; }
+  #proto-pill label { display:flex; flex-direction:column; gap:2px; color:#e8d9a8; }
+  #proto-pill select { font:inherit; background:#222; color:#f5c451; border:1px dashed #f5c451; border-radius:6px; padding:2px 4px; }
+  #proto-pill.collapsed .body { display:none; }
+
+  #proto-pill { max-width:300px; }
+  #proto-pill .read { color:#e8d9a8; white-space:pre-wrap; border-top:1px dashed #f5c451; padding-top:6px; }
+  #proto-pill .read b { color:#f5c451; font-weight:normal; }
+  .j1-screen { padding:64px 32px 24px; }
+  .j1-screen h1 { font-size:20px; margin:0 0 4px; }
+  .j1-screen p { color:var(--vscode-descriptionForeground); margin:0 0 16px; }
+  /* PROPOSED: what happens to each type of data. Type column, then what happens, examples, kept. */
+  .type-table { display:flex; flex-direction:column; border-top:1px solid var(--vscode-panel-border); }
+  .type-row { display:grid; grid-template-columns:140px minmax(0, 1fr); gap:12px; padding:4px 0;
+              border-bottom:1px solid var(--vscode-panel-border); }
+  .type-name { font-weight:600; }
+  /* A type table with column headings (J7's save question): the headings drawn as the batch table's
+     (`batch-changes-head`: 12px, grey, one rule under), so no rule above them and none doubled. */
+  .type-table-headed { border-top:none; }
+  .type-head-row { border-bottom:none; padding-bottom:0; }
+  .type-cell { min-width:0; }
+  .type-line { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .type-examples { color:var(--vscode-descriptionForeground); margin-left:8px; }
+  /* The step switcher in the prototype panel. */
+  #proto-pill { max-width:340px; }
+  .step-guide { display:flex; flex-direction:column; gap:6px; border-bottom:1px dashed #f5c451; padding-bottom:8px; }
+  .step-do { color:#e8d9a8; }
+  .step-q { color:#fff3c4; font-weight:bold; }
+  .step-nav { display:flex; gap:6px; justify-content:space-between; }
+  .step-nav button:disabled { opacity:.4; cursor:default; }
+  /* The decisions made at the step on screen (DecisionsPanel), left of the window. */
+  .decisions { position:fixed; left:12px; top:150px; width:320px; max-height:calc(100vh - 170px); display:flex; flex-direction:column;
+    z-index:2147483646; font:12px/1.45 ui-monospace, Menlo, monospace; color:#e8d9a8; background:rgba(20,20,20,.94);
+    border:1.5px dashed #f5c451; border-radius:14px; padding:8px 10px; box-shadow:0 2px 10px rgba(0,0,0,.5); }
+  .decisions--hidden { max-height:none; }
+  .decisions-head { display:flex; justify-content:space-between; gap:8px; color:#f5c451; font-weight:bold; }
+  .decisions-head button { font:inherit; color:#f5c451; background:none; border:1px dashed #f5c451; border-radius:8px; padding:0 8px; cursor:pointer; }
+  .decisions-body { overflow:auto; margin-top:8px; display:flex; flex-direction:column; gap:10px; }
+  .decision { border-top:1px dashed #6b5a2a; padding-top:8px; }
+  .decision-topic { color:#f5c451; text-transform:none; }
+  .decision-verdict { color:#fff3c4; }
+  .decision-words { color:#bfae7c; font-style:italic; margin-top:2px; }
+  .decisions-sub { color:#f5c451; margin-top:4px; }
+  .decisions-build { margin:0; padding-left:16px; color:#ffd08a; }
+  .decisions-list { margin:0; padding-left:16px; color:#fff3c4; display:flex; flex-direction:column; gap:6px; }
+  .decisions-toggle { font:inherit; color:#f5c451; background:none; border:1px dashed #f5c451; border-radius:8px; padding:2px 8px; cursor:pointer; align-self:flex-start; }
+  .decisions-none { color:#9c8c5c; margin:0; }
+  /* The guided tour (Tour.tsx): a ring around where to look, a callout beside it. Prototype style. */
+  .journey-bar { position:fixed; top:8px; left:50%; transform:translateX(-50%); z-index:2147483646; display:flex; align-items:center; gap:10px; white-space:nowrap;
+    font:13px ui-monospace, Menlo, monospace; color:#e8d9a8; background:rgba(20,20,20,.97); border:1.5px dashed #f5c451; border-radius:14px; padding:5px 10px;
+    box-shadow:0 2px 10px rgba(0,0,0,.5); max-width:calc(100vw - 16px); flex-wrap:nowrap; }
+  .journey-tabs, .journey-steps { display:flex; gap:4px; flex-wrap:nowrap; }
+  .journey-tab, .journey-step { font:inherit; color:#f5c451; background:none; border:1px dashed #6b5a2a; border-radius:8px; padding:3px 8px; cursor:pointer; }
+  .journey-tab:disabled { color:#5c5240; border-color:#3a3325; cursor:default; }
+  .journey-tab--on, .journey-step--on { color:#1f1f1f; background:#f5c451; border-color:#f5c451; }
+  .journey-name { color:#fff3c4; font-weight:bold; }
+  .journey-bar .tour-start { padding:4px 12px; box-shadow:none; }
+  .tour-start { font:13px ui-monospace, Menlo, monospace;
+    color:#1f1f1f; background:#f5c451; border:0; border-radius:16px; padding:8px 18px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.5); }
+  .tour-ring { position:fixed; z-index:2147483645; border:2px dashed #f5c451; border-radius:10px; pointer-events:none;
+    box-shadow:0 0 0 4px rgba(245,196,81,.18); }
+  .tour-callout { position:fixed; z-index:2147483647; font:13px/1.45 ui-monospace, Menlo, monospace; color:#e8d9a8; background:rgba(20,20,20,.97);
+    border:1.5px dashed #f5c451; border-radius:14px; padding:10px 12px; box-shadow:0 4px 18px rgba(0,0,0,.6); display:flex; flex-direction:column; gap:8px; }
+  .tour-count { color:#9c8c5c; font-size:11px; }
+  .tour-say { color:#fff3c4; font-weight:bold; font-size:14px; }
+  .tour-sub { color:#f5c451; font-size:11px; }
+  .tour-decided { margin:0; padding-left:16px; display:flex; flex-direction:column; gap:4px; }
+  .tour-actions { display:flex; justify-content:space-between; }
+  .tour-actions button { font:inherit; font-size:12px; color:#f5c451; background:none; border:1px dashed #f5c451; border-radius:8px; padding:2px 10px; cursor:pointer; }
+  .tour-wait { position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:2147483647; font:12px ui-monospace, Menlo, monospace;
+    color:#e8d9a8; background:rgba(20,20,20,.94); border:1.5px dashed #f5c451; border-radius:12px; padding:6px 12px; }
+  .step-check { width:100%; }
+  .step-results { display:flex; flex-direction:column; gap:2px; max-height:160px; overflow:auto; }
+  .step-result { color:#9fe0a0; }
+  .step-result--bad { color:#ff8a80; font-weight:bold; }
+  /* The spot check's read-only records. */
+  .type-rail { height:400px; }
+  .type-record { padding:5px 0; border-bottom:1px solid var(--vscode-panel-border); }
+  /* The left column scrolls inside itself past what it holds (11 types fit). */
+  .type-rail .datapack-picks-rail { overflow-y:auto; }
+  /* PROPOSED TreeList: each category indented under its parent; parents kept for a match, muted. */
+  .tree-list-row { display:flex; align-items:center; gap:6px; padding-top:5px; padding-bottom:5px; border-bottom:1px solid var(--vscode-panel-border); }
+  .tree-list-row--context { color:var(--vscode-descriptionForeground); }
+  .tree-list-elbow { width:10px; height:10px; margin-left:4px; border-left:1px solid var(--vscode-descriptionForeground); border-bottom:1px solid var(--vscode-descriptionForeground); transform:translateY(-4px); flex:none; }
+  /* The column header, one row the same height on both tabs. */
+  .type-record-head { padding:5px 0; font-weight:600; border-bottom:1px solid var(--spectrum-global-color-gray-300); }
+  /* PROPOSED for modal.css (with a visual baseline, in the build phase): the title sat on the text
+     baseline, so a status icon appearing at the end of a run added 3px under it (measured 23 to 26px). */
+  .modal-title { vertical-align:top; }
+  /* PROPOSED for data-installer.css (with a visual baseline, in the build phase): ViewSwitcher's marker. */
+  .view-switcher-marker { display:inline-flex; align-items:center; margin-left:6px; }
+  /* The kept dot sits in a fixed slot after the count on every row; its words are the hover text. */
+  .type-rail-kept { display:inline-flex; align-items:center; justify-content:center; width:8px; margin-left:8px; cursor:help; }
+  /* J2: the cards stand-in sits under the header, two cards wide, right of the decisions panel. */
+  .j2-cards { max-width:560px; margin:16px 0 0 340px; padding:0; }
+  .j2-cards .datapack-card-body .spectrum-ActionButton, .j2-cards .datapack-card-body button { align-self:flex-start; margin-top:8px; }
+  /* J6: the dashboard stand-in sits right of the decisions panel, as the cards do. */
+  .j6-dashboard { margin:16px 0 0 340px; }
+  /* J8: the header's actions on one line, Clear set apart by its divider. */
+  .j8-header { display:flex; align-items:center; gap:8px; }
+  /* J8: cards at the product grid's width (three columns, about 266px inside: Clarity 2.5), so the
+     tag's place on the date's line reads as it will in the product. */
+  .j8-cards .j2-cards { max-width:640px; }
+  /* The panel steps left of an open flyout, so it never covers the flyout's action bar. */
+  body:has(.db-drawer.open) #proto-pill { right:404px; }
+  /* The flyout's prototype note: which inert actions a later journey builds. Prototype style. */
+  .proto-note { margin:0 18px; padding:4px 8px; font:11px ui-monospace, Menlo, monospace; color:#e8d9a8;
+    border:1px dashed #f5c451; border-radius:8px; }
+  /* PROPOSED for work-row.css (with a visual baseline, in the build phase): a dense row's note fills
+     its COLUMN, not its own name's width. The note adds no width (contain: inline-size, walk F135),
+     and the row's text box was only as wide as the name, so "Commerce didn't answer in time" under
+     Products wrapped one word to a line. */
+  .work-row--dense .work-row-text { flex:1 1 auto; min-width:0; }
+  /* PROTOTYPE STAND-IN for a VS Code notification (the one-time tip, J2-3): prototype style, never product. */
+  .vscode-standin { position:fixed; right:370px; bottom:12px; z-index:2147483647; width:340px; font:12px/1.45 ui-monospace, Menlo, monospace;
+    color:#e8d9a8; background:rgba(20,20,20,.96); border:1.5px dashed #f5c451; border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+  .vscode-standin-tag { color:#9c8c5c; font-size:11px; }
+  .vscode-standin-actions { display:flex; justify-content:flex-end; }
+  .vscode-standin-actions button { font:inherit; color:#f5c451; background:none; border:1px dashed #f5c451; border-radius:8px; padding:2px 10px; cursor:pointer; }
+</style></head><body class="vscode-dark">
+<div id="root"></div>
+
+<div id="proto-pill" data-react-aria-top-layer="true">
+  <div class="head" id="proto-head"><span>Prototype</span><span id="proto-caret">Hide</span></div>
+  <div class="body">
+    <div id="j1-steps"></div>
+    <label>Data types (spot check)
+      <select id="j1-types"><option value="data">This data's own</option><option value="all">All 11 Clear knows</option><option value="overflow">15 (more than fit)</option></select>
+    </label>
+    <label>Demo data read takes
+      <select id="j1-read"><option value="200">0.2s (no wait shown)</option><option value="900">0.9s</option><option value="3000">3s</option><option value="6000">6s</option></select>
+    </label>
+    <label>A check takes (Next; Checking for your changes; Dry Run)
+      <select id="j1-check"><option value="400">0.4s</option><option value="1200">1.2s</option><option value="3000">3s</option><option value="6000">6s</option></select>
+    </label>
+    <label>Run pace (each step of a run)
+      <select id="j1-pace"><option value="250">Real speed</option><option value="1000">Slow (1s a step)</option><option value="2000">Slower (2s a step)</option></select></label>
+    <label>Demo uses (J2, J3)
+      <select id="j2-demo"><option value="none">No datapack</option><option value="My Luma">My Luma</option><option value="Bodea">Bodea</option></select>
+    </label>
+    <label>Commerce holds (J2-3, J5-1, J7)
+      <select id="j2-commerce"><option value="clean">No unsaved changes</option><option value="unsaved">Unsaved changes</option></select>
+    </label>
+    <label>Install ends (J2-2)
+      <select id="j2-ending"><option value="clean">Clean</option><option value="warning">With a warning</option><option value="stopped">Stopped</option></select>
+    </label>
+    <label>Dry Run result (J2-4)
+      <select id="j2-dry"><option value="passed">Passed</option><option value="problem">Found a problem</option><option value="failed">Failed</option></select>
+    </label>
+    <label>Save (J3-1)
+      <select id="j3-save"><option value="save">Save Changes to My Luma</option><option value="as-new">Save As New, from My Luma</option><option value="as-new-other">Save As New, from Bodea (not yours)</option></select>
+    </label>
+    <label>Commerce (J4)
+      <select id="j4-commerce"><option value="edits">Unsaved edits</option><option value="newer">Newer save</option><option value="matches">Matches last save</option></select>
+    </label>
+    <label>Uninstall ends (J5)
+      <select id="j5-ends"><option value="succeeds">Succeeds</option><option value="fails">Fails</option></select>
+    </label>
+    <label>Datapacks screen (J8)
+      <select id="j8-screen"><option value="project">A project's Datapacks</option><option value="library">Datapack Library</option></select>
+    </label>
+    <label>Retry ends (J6)
+      <select id="j6-retry"><option value="fails">Stops again</option><option value="succeeds">Works</option></select>
+    </label>
+    <div class="read" id="j1-read-out">Open the window to measure it.</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const KEY = 'proto-j1';
+  const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+  const pill = document.getElementById('proto-pill');
+  const ty = document.getElementById('j1-types'), r = document.getElementById('j1-read'), c = document.getElementById('j1-check'), pa = document.getElementById('j1-pace');
+  const de = document.getElementById('j2-demo'), co = document.getElementById('j2-commerce'), en = document.getElementById('j2-ending'), dr = document.getElementById('j2-dry');
+  const sv = document.getElementById('j3-save'), rc = document.getElementById('j4-commerce'), ue = document.getElementById('j5-ends');
+  const rt = document.getElementById('j6-retry'), j8 = document.getElementById('j8-screen');
+  ty.value = saved.ty || 'data'; r.value = saved.r2 || '3000'; c.value = saved.c2 || '3000'; pa.value = saved.pa || '1000';
+  de.value = saved.de || 'none'; co.value = saved.co || 'clean'; en.value = saved.en || 'clean'; dr.value = saved.dr || 'passed'; sv.value = saved.sv || 'save'; rc.value = ['edits', 'newer', 'matches'].includes(saved.rc) ? saved.rc : 'edits'; ue.value = saved.ue || 'succeeds'; rt.value = saved.rt || 'fails'; j8.value = saved.j8 || 'project';
+  // A value saved by an older build that no option has any more falls back to the first option.
+  [ty, r, c, pa, de, co, en, dr, sv, rc, ue, rt, j8].forEach((sel) => { if (sel.selectedIndex < 0) sel.selectedIndex = 0; });
+  if (saved.collapsed) pill.classList.add('collapsed');
+  const caret = () => { document.getElementById('proto-caret').textContent = pill.classList.contains('collapsed') ? 'Show' : 'Hide'; };
+  caret();
+  const save = () => localStorage.setItem(KEY, JSON.stringify({ ty: ty.value, r2: r.value, c2: c.value, pa: pa.value, de: de.value, co: co.value, en: en.value, dr: dr.value, sv: sv.value, rc: rc.value, ue: ue.value, rt: rt.value, j8: j8.value, collapsed: pill.classList.contains('collapsed') }));
+  ty.onchange = r.onchange = c.onchange = pa.onchange = de.onchange = co.onchange = en.onchange = dr.onchange = sv.onchange = rc.onchange = ue.onchange = rt.onchange = j8.onchange = save;
+  document.getElementById('proto-head').onclick = () => { pill.classList.toggle('collapsed'); caret(); save(); };
+
+  // The measurement: every 50ms while a window is open. A height counts from the first frame the
+  // window is visible; "empty" is the room between the last thing drawn and the buttons.
+  const out = document.getElementById('j1-read-out');
+  let timer = null, m = null, seen = [];
+  const lowestDrawn = (box) => {
+    let low = 0;
+    for (const el of box.querySelectorAll('.modal-body *')) {
+      if (el.closest('.modal-steps-ghost') || el.children.length) continue;
+      const b = el.getBoundingClientRect();
+      if (b.height && b.bottom > low) low = b.bottom;
+    }
+    return low;
+  };
+  const sample = () => {
+    const box = document.querySelector('.modal-dialog');
+    if (!box || box !== m.box) return;
+    if (box.classList.contains('is-measuring')) return;
+    const h = Math.round(box.getBoundingClientRect().height);
+    if (m.first === null) m.first = h;
+    if (h !== m.last) { if (m.last !== null) m.changes.push(m.last + '→' + h); m.last = h; }
+    const foot = box.querySelector('.modal-footer-actions, [class*="ButtonGroup"]');
+    const low = lowestDrawn(box);
+    if (foot && low) m.empty = Math.max(0, Math.round(foot.getBoundingClientRect().top - low));
+    const scroller = box.querySelector('.modal-body');
+    m.scrolls = scroller && scroller.scrollHeight > scroller.clientHeight + 1;
+    window.__J1_LAST__ = m;
+    out.innerHTML = '<b>' + m.label + '</b>\nOpened at: ' + m.first + 'px\nNow: ' + m.last + 'px\nHeight changed: '
+      + (m.changes.length ? 'YES ' + m.changes.join(', ') : 'no') + '\nEmpty above buttons: ' + m.empty + 'px\nContent scrolls: ' + (m.scrolls ? 'yes' : 'no');
+  };
+  window.__J1__ = {
+    spread: () => ty.value, readMs: () => Number(r.value), checkMs: () => Number(c.value), paceMs: () => Number(pa.value),
+    demo: () => de.value, commerce: () => co.value, ending: () => en.value, dryRun: () => dr.value, saveVariant: () => sv.value, restore: () => rc.value, uninstallEnds: () => ue.value, retryEnds: () => rt.value, j8Screen: () => j8.value,
+    // One measurement per window: a window opened again is a new element, so it starts afresh. The
+    // windows it replaced are kept (`__J1_SEEN__`) so the self-check judges every window of a step.
+    trace: (box, label) => {
+      if (!box || (m && m.box === box)) return;
+      clearInterval(timer);
+      if (m && m.first !== null) seen.push(m);
+      m = { box, label, first: null, last: null, changes: [], empty: 0, scrolls: false };
+      window.__J1_SEEN__ = seen;
+      timer = setInterval(sample, 50);
+    },
+    reset: () => {
+      clearInterval(timer);
+      m = null; seen = [];
+      window.__J1_SEEN__ = seen; window.__J1_LAST__ = undefined;
+    },
+  };
+  window.__ERRORS__ = [];
+  window.addEventListener('error', (e) => window.__ERRORS__.push(String(e.message || e)));
+})();
+</script>
+<script>
+// The window talks to nothing here: its data is timed in j1-windows.tsx.
+window.acquireVsCodeApi = () => ({ postMessage() {}, getState() { return undefined; }, setState() {} });
+</script>
+<script src="./j1-bundle.js"></script>
+</body></html>

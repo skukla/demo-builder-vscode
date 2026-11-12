@@ -74,6 +74,18 @@
         <option value="fails">Fails</option>
       </select>
     </label>
+    <label>Add from File
+      <select id="proto-load">
+        <option value="partly">Partly Loaded</option>
+        <option value="loads">Loads</option>
+      </select>
+    </label>
+    <label>Pack Setup Step
+      <select id="proto-setup">
+        <option value="open">Open on Bodea</option>
+        <option value="none">None</option>
+      </select>
+    </label>
     <button id="proto-restart" type="button">Restart</button>
   </div>
 </div>
@@ -86,17 +98,23 @@
     const pill = document.getElementById('proto-pill');
     const install = document.getElementById('proto-install');
     const clear = document.getElementById('proto-clear');
+    const load = document.getElementById('proto-load');
+    const setup = document.getElementById('proto-setup');
     install.value = saved.install || 'succeeds';
     clear.value = saved.clear || 'succeeds';
+    load.value = saved.load || 'partly';
+    setup.value = saved.setup || 'open';
     if (saved.collapsed) pill.classList.add('collapsed');
     const caret = () => { document.getElementById('proto-caret').textContent = pill.classList.contains('collapsed') ? 'Show' : 'Hide'; };
     caret();
-    const save = () => localStorage.setItem(KEY, JSON.stringify({ install: install.value, clear: clear.value, collapsed: pill.classList.contains('collapsed') }));
+    const save = () => localStorage.setItem(KEY, JSON.stringify({ install: install.value, clear: clear.value, load: load.value, setup: setup.value, collapsed: pill.classList.contains('collapsed') }));
     install.onchange = save;
     clear.onchange = save;
+    load.onchange = save;
+    setup.onchange = save;
     document.getElementById('proto-head').onclick = () => { pill.classList.toggle('collapsed'); caret(); save(); };
     document.getElementById('proto-restart').onclick = () => location.reload();
-    window.__OUTCOME__ = () => ({ install: install.value, clear: clear.value });
+    window.__OUTCOME__ = () => ({ install: install.value, clear: clear.value, load: load.value, setup: setup.value });
   })();
 
   // ---- What went wrong on the page, for whoever drives it.

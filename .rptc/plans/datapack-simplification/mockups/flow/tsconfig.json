@@ -6,5 +6,5 @@
         "baseUrl": "../../../../..",
         "paths": { "@/*": ["src/*"] }
     },
-    "include": ["scenarioData.ts", "../../../../../src/types/*.d.ts"]
+    "include": ["scenarioData.ts", "scenarioIntegrations.ts", "scenarioClear.ts", "reviewSteps.ts", "TreeList.tsx", "ClearRunWindow.tsx", "selfCheck.ts", "reviewDecisions.ts", "DecisionsPanel.tsx", "j1Tour.ts", "Tour.tsx", "j1-windows.tsx", "TypeSummary.tsx", "scenarioInstall.ts", "j2-parts.tsx", "j2-windows.tsx", "j2-flyout.tsx", "j2-screen.tsx", "j2Tour.ts", "scenarioSave.ts", "j3-parts.tsx", "j3-windows.tsx", "j3-screen.tsx", "j3Tour.ts", "j4-windows.tsx", "j4-screen.tsx", "j4Tour.ts", "scenarioUninstall.ts", "j5-windows.tsx", "j5-screen.tsx", "j5Tour.ts", "scenarioFailed.ts", "j6-windows.tsx", "j6-screen.tsx", "j6Tour.ts", "scenarioReset.ts", "j7-batch.ts", "j7-screen.tsx", "j7Tour.ts", "j8-flyout.tsx", "j8-windows.tsx", "j8-screen.tsx", "j8Tour.ts", "StepGuide.tsx", "JourneyBar.tsx", "Screen.tsx", "../../../../../src/types/*.d.ts"]
 }

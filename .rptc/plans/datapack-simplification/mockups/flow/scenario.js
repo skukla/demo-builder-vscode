@@ -16,6 +16,9 @@
  *   Uninstall: get-datapack-removal-changes -> reset-datapack {confirm:true} -> the same watch.
  *   Clear Demo Data: check-demo-data {stores: []} for the choices, then per tick for the preview
  *     -> 'clear-demo-data' (a plain message) -> 'operationProgress' pushes -> its last one.
+ *   Add from File: open-datapack-zip (the picker) -> load-datapack-zip -> delete-library-datapack per line.
+ *   Pack setup step: get-datapack-setup-step with the flyout; check-datapack-setup-step per Check
+ *     (the first Check finds it not done, the next finds it done).
  */
 (() => {
     const D = window.SCENARIO_DATA;
@@ -29,10 +32,19 @@
         record: null,
         lastPreview: null,
         jobSeq: 0,
+        /** What the last Check of the pack's Admin step found: the first Check fails, the next passes. */
+        rootChecked: undefined,
     };
 
     const packOf = (name, version) => D.PACKS.find((p) => p.id.name === name && (!version || p.id.version === version));
     const outcome = () => window.__OUTCOME__();
+
+    /** The pack's Admin step, only on the pack the project holds and only when the pill shows it. */
+    function setupStep(p, checked) {
+        const held = state.target.datapack;
+        const mine = held && held.name === p.datapackName && held.version === p.version;
+        return mine && outcome().setup === 'open' ? D.rootSetupStep(p.datapackName, p.version, checked) : D.NO_SETUP_STEP(p.datapackName, p.version);
+    }
 
     /** Play a job's frames: store each record as the host would, and push its progress. */
     function playJob(frames, onEnd) {
@@ -128,8 +140,16 @@
                 const held = state.target.datapack;
                 return pack ? ok(D.changesFor(pack, !!held && held.name === pack.id.name && held.version === pack.id.version)) : ok(null);
             },
-            'get-datapack-setup-step': (p) => ok(D.NO_SETUP_STEP(p.datapackName, p.version)),
-            'check-datapack-setup-step': (p) => ok(D.NO_SETUP_STEP(p.datapackName, p.version)),
+            // The pack's one Admin step, on the pack the project holds, when the pill asks for it.
+            'get-datapack-setup-step': (p) => ok(setupStep(p, state.rootChecked)),
+            'check-datapack-setup-step': (p) => {
+                if (outcome().setup === 'open') state.rootChecked = state.rootChecked === 'failed' ? 'passed' : 'failed';
+                return ok(setupStep(p, state.rootChecked));
+            },
+            // Add from File: the picker answers with a file, the load with what it stored.
+            'open-datapack-zip': () => ok(D.OPENED_FILE),
+            'load-datapack-zip': () => ok(D.loadOutcome(outcome().load === 'partly')),
+            'delete-library-datapack': () => ok({ deleted: true }),
             'get-datapack-removal-changes': () => ok(D.NO_CHANGES),
             'get-datapack-removal-scope': (p) => {
                 const held = state.target.datapack;
@@ -159,6 +179,10 @@
             'get-datapack-removal-changes': 800,
             'get-datapack-removal-scope': 500,
             'check-demo-data': 1000,
+            'check-datapack-setup-step': 1500,
+            'open-datapack-zip': 900,
+            'load-datapack-zip': 1800,
+            'delete-library-datapack': 900,
             'get-datapack-import-status': 150,
         }[type] || 300),
         onPlain: (type, payload) => {
