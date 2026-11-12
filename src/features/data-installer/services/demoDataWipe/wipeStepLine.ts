@@ -18,7 +18,6 @@ const NOUNS = {
     customerGroups: ['customer group', 'customer groups'],
     attributeSets: ['attribute set', 'attribute sets'],
     attributes: ['attribute', 'attributes'],
-    returns: ['return', 'returns'],
     orders: ['order', 'orders'],
 } as const;
 

@@ -22,14 +22,7 @@ export const DATAPACK_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'In Commerce',
     },
-    // An ERP integration serves some chosen stores ("One action, ERP included"): it closes their
-    // orders first, and its ERP is filled again from Commerce last.
-    closingErpOrders: { label: 'Closing orders in the ERP', expectation: 'Usually a minute or two' },
-    closingReturns: {
-        label: 'Closing returns',
-        expectation: 'A few seconds each',
-        detail: 'In the selected stores',
-    },
+    // Each order's returns are closed inside its own work, after its note (`wipeOrderRun.closeOrder`).
     closingOrders: { label: 'Closing orders', expectation: 'A few seconds each' },
     // What the clearing does, in Commerce's own verbs, one per action (Flow 2.20, owner
     // 2026-11-10): Delete is gone from Commerce; Remove ... from websites still exists, no longer on
@@ -51,6 +44,10 @@ export const DATAPACK_STAGES = {
     removingAttributeSets: { label: 'Deleting attribute sets', expectation: 'Usually a second each' },
     removingAttributes: { label: 'Deleting attributes', expectation: 'Usually a second each' },
     resettingSettings: { label: 'Restoring default configuration', expectation: 'Usually under a minute' },
+    // An ERP integration serves some chosen stores ("One action, ERP included"): after the clearing
+    // closed their orders in Commerce, it brings its ERP in line (erp-order-close step 5: drops its
+    // records of them and has each ERP remove its sales orders), then its ERP is filled again.
+    updatingErp: { label: 'Updating the ERP', expectation: 'Usually a minute or two' },
     refreshingErp: {
         label: 'Refreshing the ERP',
         expectation: 'Usually a few minutes',

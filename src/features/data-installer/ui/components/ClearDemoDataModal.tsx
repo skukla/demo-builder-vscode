@@ -27,7 +27,7 @@ import { Modal } from '@/core/ui/components/ui/Modal';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
-import type { DemoDataCheck, WipePreview, WipeStoreChoice } from '@/types/demoDataWipe';
+import type { DemoDataCheck, WipeStoreChoice } from '@/types/demoDataWipe';
 
 /** Every string the modal shows that is not the extension's own. */
 export const CLEAR_COPY = {
@@ -49,9 +49,6 @@ export interface ClearDemoDataModalProps {
 /** Ticks before the SC chooses any. Module-level: a stable reference for the check's effect. */
 const NONE: ReadonlySet<string> = new Set();
 
-/** Orders an ERP integration leaves open still need saying, nothing else to clear or not: the SC acts on that line. */
-const leavesErpOrders = (preview: WipePreview): boolean => preview.erp?.held !== undefined && preview.erp.orders.count > 0;
-
 /** What stopped the list, where the list would land: a problem note, small and in its colour. */
 function ProblemLine({ failed, children }: { failed?: boolean; children: React.ReactNode }) {
     return <p className={failed ? 'dialog-problem text-negative' : 'dialog-problem text-notice'}>{children}</p>;
@@ -70,7 +67,7 @@ function PreviewView({ answer, loading, hasTicks }: { answer: DemoDataCheck | nu
     const preview = answer.preview;
     if (!preview) return null;
     // What stays is still said when nothing goes: "holds nothing" would be false, and the SC should see why.
-    if (preview.total === 0 && !leavesErpOrders(preview) && preview.left.length === 0) return <Text>{CLEAR_COPY.nothing}</Text>;
+    if (preview.total === 0 && preview.left.length === 0) return <Text>{CLEAR_COPY.nothing}</Text>;
     // What is never touched (`preview.never`) is not drawn: the list says what goes and the lead says
     // orders are closed, so a footnote under it changed nothing the SC knows or does (review,
     // 2026-11-10). It stays in the answer for an agent's check_demo_data.

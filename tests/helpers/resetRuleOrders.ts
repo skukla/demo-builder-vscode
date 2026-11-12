@@ -4,14 +4,20 @@
  * The case names are the owner's, word for word, so the two repositories' suites can be compared
  * line by line: the first five, then the two added the same day to both (ERP side 0a10b95).
  *
- * The rule, in plain words, is in `.rptc/plans/datapack-engine/step-10-wipe.md` ("One reset rule").
+ * The last two changed 2026-11-11 (owner, `.rptc/plans/erp-order-close/overview.md` step 1): an order
+ * Commerce cannot cancel is invoiced in full, then refunded in full, so Commerce closes it. **The
+ * integration's copy still says "→ noted" and "→ refunded, not closed"; it must be changed to these
+ * names and outcomes in that plan's step 2**, until then the two copies differ in those two cases.
+ *
+ * The rule, in plain words, is in `.rptc/plans/datapack-engine/step-10-wipe.md` ("One reset rule"),
+ * as changed by `.rptc/plans/erp-order-close/overview.md`.
  * Typed to the real wire shapes; none of these bodies is captured from a live store.
  */
 
 import type { CommerceOrder, CommerceReturn } from '@/types/commerceWire';
 
 /** What the rule does to the order. */
-export type ResetRuleOutcome = 'canceled' | 'refunded' | 'noted' | 'untouched';
+export type ResetRuleOutcome = 'canceled' | 'refunded' | 'untouched';
 
 export interface ResetRuleCase {
     name: string;
@@ -20,8 +26,8 @@ export interface ResetRuleCase {
     expected: ResetRuleOutcome;
     /** The return the rule closes, by id. */
     closesReturn?: number;
-    /** A refund that leaves something open (partly invoiced): Commerce does not close the order. */
-    staysOpen?: boolean;
+    /** Something not yet invoiced: the rule invoices it all before refunding everything invoiced. */
+    invoices?: true;
 }
 
 /** The store view every example was placed in: the test website's (`commerceWipeFixtures.ts`). */
@@ -112,13 +118,14 @@ export const RESET_RULE_CASES: ResetRuleCase[] = [
         expected: 'untouched',
     },
     {
-        name: 'shipped, not invoiced → noted',
+        name: 'shipped, not invoiced → invoiced, refunded, closed',
         order: { entity_id: 706, increment_id: '000000706', state: 'processing', status: 'processing', store_id: RESET_RULE_VIEW, items: [line(76, 2, 0, 2)] },
         returns: [],
-        expected: 'noted',
+        expected: 'refunded',
+        invoices: true,
     },
     {
-        name: 'partly invoiced → refunded, not closed',
+        name: 'partly invoiced → invoiced, refunded, closed',
         order: {
             entity_id: 707,
             increment_id: '000000707',
@@ -131,6 +138,6 @@ export const RESET_RULE_CASES: ResetRuleCase[] = [
         },
         returns: [],
         expected: 'refunded',
-        staysOpen: true,
+        invoices: true,
     },
 ];

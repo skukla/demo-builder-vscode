@@ -11,7 +11,9 @@
  * - `STORE_CLOSE`: what `POST erp/close-orders` answers, in the shape the integration's own box test
  *   pins (`test/box/close-store-orders.test.js`, 1f6de21): `touched[].orderId` is the order NUMBER,
  *   `erpRemoved` keyed by the ERP's list id (`justrite`, as JustRite's manifest lists its ERP). The
- *   counts are for the test store's two orders; no deployment has answered it yet.
+ *   counts are for the test store's two orders AFTER the wipe closed them in Commerce (erp-order-close
+ *   step 5): both already closed, so it writes nothing to their state and only forgets them
+ *   (`src/lib/close-orders.js` `closeOne`, `plan === "done"`). No deployment has answered it yet.
  */
 
 import type { ResolvedErpSettings } from '@/features/app-builder/services/erpFill';
@@ -39,13 +41,13 @@ export const STATUS_BY_STORE: ErpIntegrationStatus = { ...STATUS, closesOrdersBy
 /** One from before it: closes orders only on a whole reset. */
 export const STATUS_BEFORE: ErpIntegrationStatus = STATUS;
 
-/** The close of the test store's two orders: one canceled, one refunded with its return closed. */
+/** The integration's close of the test store's two orders, both already closed by the wipe. */
 export const STORE_CLOSE: ErpStoreCloseReport = {
     scope: { stores: ['justrite_test_store'], websites: [], storeViewIds: [6] },
-    closed: { cancelled: 1, refunded: 1, commented: 0, alreadyClosed: 0, returnsClosed: 1, partsRemoved: 2, failed: [] },
+    closed: { cancelled: 0, refunded: 0, commented: 0, alreadyClosed: 2, returnsClosed: 0, partsRemoved: 2, failed: [] },
     touched: [
-        { orderId: '000000701', outcome: 'cancelled' },
-        { orderId: '000000704', outcome: 'refunded' },
+        { orderId: '000000701', outcome: 'alreadyClosed' },
+        { orderId: '000000704', outcome: 'alreadyClosed' },
     ],
     orders: { cleared: 2, failed: [] },
     holds: { released: 0, failed: [] },

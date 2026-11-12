@@ -49,11 +49,16 @@ function filterOf(path: string): [string, number[]] {
 const idIn = (path: string): string => path.split('/')[1].split('?')[0];
 
 /**
- * What Commerce does with the writes a wipe's orders make, as far as a later read sees it: a refund
- * credits its lines and closes the order once nothing is left to invoice or refund; a cancel cancels
- * it; a note joins its history; a return's save sets its status.
+ * What Commerce does with the writes a wipe's orders make, as far as a later read sees it: an invoice
+ * with no items invoices every line not yet invoiced (shipping is not modelled: no fixture has an
+ * amount to invoice); a refund credits its lines and closes the order once nothing is left to invoice
+ * or refund; a cancel cancels it; a note joins its history; a return's save sets its status.
  */
 function apply(data: SandboxState, path: string, body: unknown): void {
+    if (/^order\/\d+\/invoice$/u.test(path)) {
+        const order = data.orders.find((o) => String(o.entity_id) === path.split('/')[1]);
+        for (const line of order?.items ?? []) line.qty_invoiced = Number(line.qty_ordered ?? 0) - Number(line.qty_canceled ?? 0);
+    }
     if (/^order\/\d+\/refund$/u.test(path)) {
         const order = data.orders.find((o) => String(o.entity_id) === path.split('/')[1]);
         const items = (body as { items: Array<{ order_item_id: number; qty: number }> }).items;
@@ -213,7 +218,7 @@ function reader(data: SandboxState) {
 /**
  * @param refuse - the writes Commerce refuses, by path
  * @param answer - what a write answers, by path, done instead of Commerce's own (default: the write
- *   takes effect, and answers `true`, a refund its credit memo id)
+ *   takes effect, and answers `true`, an invoice its invoice id, a refund its credit memo id)
  */
 export function sandbox(state: Partial<SandboxState> = {}, refuse: (path: string) => boolean = () => false, answer?: (path: string, body: unknown) => unknown) {
     // Copied deep: a refund or a return's close changes what a later read sees, never the fixture.
@@ -239,6 +244,7 @@ export function sandbox(state: Partial<SandboxState> = {}, refuse: (path: string
         apply(data, path, body);
         const instanceAnswer = applyInstance(data, method, path, body);
         if (instanceAnswer !== undefined) return instanceAnswer;
+        if (path.includes('/invoice')) return 8001;
         return path.includes('/refund') ? 9001 : true;
     };
     // A delete-mode product import runs as one DELETE per row through `send` (`bulkQueue.testUtils.ts`).

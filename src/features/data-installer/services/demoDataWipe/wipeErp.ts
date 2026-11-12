@@ -1,42 +1,42 @@
 /**
  * The ERP part of a wipe ("One action, ERP included", owner 2026-10-30: "You wanna wipe. That
- * should wipe. I shouldn't have to wipe things in two separate systems"). When an ERP integration
- * serves the instance (from ANY local project: it installs into the whole instance, AB-78) and sends
- * the orders of some chosen stores' websites to an ERP, the wipe does not close those orders itself:
- * its own cancel or refund would be passed on to the ERP by the integration's order handlers, which
- * stay silent only for orders the integration marked closed first (`commerce-erp-integration`
- * `lib/reset-closed.js`). So:
+ * should wipe. I shouldn't have to wipe things in two separate systems"). Commerce is the source
+ * system (owner, 2026-11-11, erp-order-close step 5): the wipe closes EVERY demo order of the chosen
+ * stores itself, by the one reset rule (`wipeOrders.ts`), including orders on websites an ERP
+ * integration sends to an ERP. The integration recognises those closes by the reset note Commerce
+ * keeps first in each order's history, so it passes nothing on to an ERP. When an ERP integration
+ * serves the instance (from ANY local project: it installs into the whole instance, AB-78) and routes
+ * some chosen stores' websites, the ERP is brought in line AFTERWARDS, as its own step:
  *
- * 1. **Before the clearing, the integration closes EVERY order of those stores** (not only the ones
- *    an ERP holds: one it never got would be sent as new by the first save to it), by the same one
- *    reset rule, and each ERP that held one removes its documents for them
- *    (`ErpIntegrationClient.closeOrders`, `erp/close-orders`). The wipe runs no order rule of its own
- *    there. Only when the deployment says it can (`erp/status` `closesOrdersByStore`); one that
- *    cannot, or cannot be asked, is never called, those orders are left open, and the list says why.
- * 2. **After it, the ERP is filled again from Commerce** (`fillEveryErp`, what the ERP reset runs
- *    after its wipe). The close already took the stores' orders out of the ERP; a fill adds and
- *    updates, so it is safe.
- * 3. Orders on websites it does not route stay the wipe's own (`wipeOrders.ts`), as before.
+ * 1. **After the clearing, the integration is asked to close the routed stores' orders**
+ *    (`ErpIntegrationClient.closeOrders`, `erp/close-orders`). Every order is already Canceled or
+ *    Closed, so it writes nothing to their state: it drops its own parts records, clears each order's
+ *    ERP number, and asks each ERP that held one to remove its sales orders for them (`erpRemoved`).
+ *    Only when the deployment says it can (`erp/status` `closesOrdersByStore`).
+ * 2. **Then the ERP is filled again from Commerce** (`fillEveryErp`, what the ERP reset runs after
+ *    its wipe). A fill adds and updates, so it is safe.
+ * 3. **Held** (the deployment must be updated, or could not be asked): the orders are still closed,
+ *    the ERP step is skipped, and the outcome says the ERP was not brought in line and why. Never a
+ *    reason to leave an order open. A failing close or refill is reported the same way, as an ERP
+ *    problem: never counted as orders that failed to close.
  *
  * | Read or call | Endpoint and field | Confirmed? |
  * |---|---|---|
  * | which websites send orders | `GET erp/settings?websites=`, `websites.<code>.orders_send` (else `default.orders_send`) | the route and field yes (the integration's `order-sync.js` `readyToSend`; JustRite answered `true` for every website, 2026-10-30) |
  * | whether it closes by store | `GET erp/status`, `closesOrdersByStore` | from the integration's code (`actions/erp/status`, a2556c2); not yet from a deployment |
- * | the close | `POST erp/close-orders` `{ run, stores }` (store group codes), `GET erp/close-orders?run=`; answer `ErpStoreCloseReport` | from the integration's code and box test (`test/box/close-store-orders.test.js`, 1f6de21); not yet from a deployment |
+ * | bringing the ERP in line | `POST erp/close-orders` `{ run, stores }` (store group codes), `GET erp/close-orders?run=`; answer `ErpStoreCloseReport` | from the integration's code and box test (`test/box/close-store-orders.test.js`, 1f6de21); that an order already closed gets no state write: its `src/lib/close-orders.js` `closeOne` (`plan === "done"`), branch `one-reset-rule`; not yet from a deployment |
  *
  * Pure but for the calls the handed-in `WipeErpLink` makes; `wipeErpDeps.ts` builds the link.
  *
  * @module features/data-installer/services/demoDataWipe/wipeErp
  */
 
-import { orderStepOf } from './wipeOrders';
 import type { WipeScope } from './wipeScope';
 import { andList } from '@/core/utils/andList';
 import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
 import type { ResolvedErpSettings } from '@/features/app-builder/services/erpFill';
 import type { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
-import type { CommerceOrder } from '@/types/commerceWire';
 import type { WipeErpPart } from '@/types/demoDataWipe';
 import type { ErpOrdersRemoved, ErpStoreCloseReport } from '@/types/erpIntegration';
 
@@ -56,7 +56,7 @@ export interface WipeErpLink {
     refill: (onProgress: (step: string) => void) => Promise<{ failed?: string; warning?: string }>;
 }
 
-/** Which chosen websites it routes, and why their orders are left this time, if they are. */
+/** Which chosen websites it routes, and why its ERP is not brought in line this time, if it is not. */
 export interface WipeErpRoute {
     name: string;
     websites: string[];
@@ -68,41 +68,40 @@ export interface WipeErp {
     name: string;
     /** Of these website codes, the ones whose orders go to an ERP; undefined when none do. */
     route: (websiteCodes: readonly string[]) => Promise<WipeErpRoute | undefined>;
-    /** Close every order of those stores (store group codes), and nothing else. */
+    /** Bring its ERP in line for those stores (store group codes): `erp/close-orders`. */
     close: (stores: readonly string[], onProgress: (step: string) => void) => Promise<ErpStoreCloseReport>;
     refill: WipeErpLink['refill'];
     erpNames: Record<string, string>;
 }
 
-/** The ERP part of a plan: the stores the integration is asked to close, and their open orders. */
+/** The ERP part of a plan: the route, and the routed stores its ERP is brought in line for. */
 export interface WipeErpPlan {
     route: WipeErpRoute;
     /** The chosen stores on the routed websites, by store (group) code. */
     stores: string[];
-    orders: Array<{ id: string; number: string }>;
 }
 
-/** What the integration's close did, in the wipe's counts. */
+/** What asking the integration to bring its ERP in line did. */
 export interface ErpClosed {
-    counts: { cancelled: number; refunded: number; commented: number; alreadyClosed: number; returnsClosed: number; failed: number };
-    /** Every order it touched, by number. */
-    orderNumbers: string[];
     /** The ERPs that removed the orders' documents, by name. */
     removedFrom: string[];
     /** The ERPs that did not, each with why, in words. */
     notRemoved: string[];
-    failed?: { what: string; count: number; first: string };
+    /** Why the ERP was not brought in line, in words; absent when it was. */
+    problem?: string;
 }
 
 /** Whether a website's settings send its orders to an ERP (`orders_send`, a boolean; "true" read the same). */
 const sendsOrders = (settings: ResolvedErpSettings['default'] | undefined): boolean =>
     settings?.orders_send === true || settings?.orders_send === 'true';
 
-const unasked = (reason: string): string => `it could not be asked (${reason.replace(/\.$/u, '')}), so a wipe cannot close them`;
+const trimmed = (text: string): string => text.replace(/\.$/u, '');
+
+const unasked = (reason: string): string => `it could not be asked (${trimmed(reason)})`;
 
 function updateFirst(link: WipeErpLink): string {
     return (
-        'it must be updated before a wipe can close them: open the project ' +
+        'it must be updated first. Open the project ' +
         `${link.project.name} and update ${link.integrationId} (Update on its card, or update_integration), then check again`
     );
 }
@@ -116,8 +115,8 @@ export function routeFrom(link: WipeErpLink, codes: readonly string[], settings:
 }
 
 /**
- * The integration as the wipe uses it. An integration that cannot be asked holds every chosen
- * website's orders: the wipe never closes an order an ERP may hold.
+ * The integration as the wipe uses it. One that cannot be asked holds the ERP step for every chosen
+ * website: the orders are closed all the same.
  */
 export function wipeErpOf(link: WipeErpLink): WipeErp {
     const name = link.project.displayName;
@@ -147,68 +146,40 @@ export function wipeErpOf(link: WipeErpLink): WipeErp {
 /** Every website a scope's stores are on, each once. */
 export const websiteCodesOf = (scope: WipeScope): string[] => [...new Set(scope.stores.map((s) => s.website.code))];
 
-/** The chosen stores' orders: those on websites the integration routes, and the wipe's own. */
-export function splitByErp(scope: WipeScope, route: WipeErpRoute | undefined, orders: readonly CommerceOrder[]): { own: CommerceOrder[]; erp: CommerceOrder[] } {
-    const routed = new Set(scope.stores.filter((s) => route?.websites.includes(s.website.code)).flatMap((s) => s.views.map((v) => v.id)));
-    return { own: orders.filter((o) => !routed.has(Number(o.store_id))), erp: orders.filter((o) => routed.has(Number(o.store_id))) };
+/** The ERP part of a plan: the chosen stores on the routed websites. */
+export function erpPlanOf(scope: WipeScope, route: WipeErpRoute): WipeErpPlan {
+    return { route, stores: scope.stores.filter((s) => route.websites.includes(s.website.code)).map((s) => s.code) };
 }
 
-/**
- * The ERP part of a plan, from the routed websites' orders. Orders closed before are counted as the
- * wipe's own when they are left (`held`); else the integration's answer counts them.
- */
-export function erpPlanOf(scope: WipeScope, route: WipeErpRoute, orders: readonly CommerceOrder[]): { plan: WipeErpPlan; alreadyClosed: number } {
-    const open = orders.filter((o) => orderStepOf(o) !== 'done');
-    const stores = scope.stores.filter((s) => route.websites.includes(s.website.code)).map((s) => s.code);
-    return {
-        plan: { route, stores, orders: open.map((o) => ({ id: String(o.entity_id), number: o.increment_id ?? String(o.entity_id) })) },
-        alreadyClosed: route.held ? orders.length - open.length : 0,
-    };
-}
-
-/** The order ids the integration will be asked to close: none when it is held. */
-export const erpCloseIds = (plan: WipeErpPlan | undefined): string[] => (plan && !plan.route.held ? plan.orders.map((o) => o.id) : []);
-
-const ordersWord = (count: number): string => `${count} ${count === 1 ? 'order' : 'orders'}`;
+/** The store codes the integration will be asked about: none when it is held. */
+export const erpStoresAsked = (plan: WipeErpPlan | undefined): string[] => (plan && !plan.route.held ? plan.stores : []);
 
 /** The list's one line for the ERP part. */
-function lineOf({ route, orders }: WipeErpPlan): string {
-    const who = `the ERP integration (${route.name})`;
-    const count = orders.length;
-    const one = count === 1;
-    if (route.held && count > 0) return `${ordersWord(count)} handled by ${who} ${one ? 'is' : 'are'} left open: ${route.held}.`;
-    if (route.held) return `The ERP integration (${route.name}) serves these stores, but ${route.held}. It has no open orders here.`;
-    if (count === 0) return `The ERP integration (${route.name}) serves these stores: its ERP is refreshed from Commerce after the clearing.`;
-    return `${ordersWord(count)} ${one ? 'is' : 'are'} handled by ${who}: ${one ? 'it' : 'they'} will be closed there, removed from its ERP, and the ERP refreshed.`;
+function lineOf({ route }: WipeErpPlan): string {
+    const who = `The ERP integration (${route.name}) serves these stores`;
+    if (route.held) return `${who}, but ${route.held}. Its ERP will not be brought in line.`;
+    return `${who}: its ERP is brought in line with Commerce after the clearing.`;
 }
 
 /** The ERP part as the SC and the agent see it. */
-export function erpPartOf(plan: WipeErpPlan, named: (names: string[]) => WipeErpPart['orders']): WipeErpPart {
+export function erpPartOf(plan: WipeErpPlan): WipeErpPart {
     return {
         integration: plan.route.name,
         websites: plan.route.websites,
-        orders: named(plan.orders.map((o) => o.number)),
         ...(plan.route.held ? { held: plan.route.held } : {}),
         line: lineOf(plan),
     };
 }
 
-function failedClose(plan: WipeErpPlan, what: string, reason: string): ErpClosed {
-    const count = plan.orders.length;
-    const counts = { cancelled: 0, refunded: 0, commented: 0, alreadyClosed: 0, returnsClosed: 0, failed: count };
-    return { counts, orderNumbers: [], removedFrom: [], notRemoved: [], failed: { what, count, first: reason } };
-}
-
 /** One ERP's answer to the removal, in words: removed, or why not. */
 function removalOf(name: string, answer: ErpOrdersRemoved): { removed: boolean } | { not: string } {
     if (answer === 'unsupported') return { not: `${name} keeps its copies of them: it must be updated to remove orders` };
-    if ('failed' in answer) return { not: `${name} could not remove them (${answer.failed.replace(/\.$/u, '')})` };
+    if ('failed' in answer) return { not: `${name} could not remove them (${trimmed(answer.failed)})` };
     return { removed: Number(answer.removed.salesOrders ?? 0) > 0 };
 }
 
-/** The integration's answer in the wipe's counts and words. */
-function closedOf(report: ErpStoreCloseReport, names: Record<string, string>, what: string): ErpClosed {
-    const { closed } = report;
+/** The integration's answer in words. Its order counts are not read: the wipe closed the orders. */
+function closedOf(report: ErpStoreCloseReport, names: Record<string, string>): ErpClosed {
     const removedFrom: string[] = [];
     const notRemoved: string[] = [];
     for (const [id, answer] of Object.entries(report.erpRemoved ?? {})) {
@@ -216,32 +187,25 @@ function closedOf(report: ErpStoreCloseReport, names: Record<string, string>, wh
         if ('not' in said) notRemoved.push(said.not);
         else if (said.removed) removedFrom.push(names[id] ?? id);
     }
-    const { failed, partsRemoved: _parts, ...counts } = closed;
+    const { failed } = report.closed;
     const [first] = failed;
-    return {
-        counts: { ...counts, failed: failed.length },
-        orderNumbers: (report.touched ?? []).map((t) => t.orderId),
-        removedFrom,
-        notRemoved,
-        ...(first ? { failed: { what, count: failed.length, first: first.error } } : {}),
-    };
+    const problem = first ? `it could not finish ${failed.length} of the orders (${trimmed(first.error)})` : undefined;
+    return { removedFrom, notRemoved, ...(problem ? { problem } : {}) };
 }
 
 /**
- * Ask the integration to close every order of the routed stores, whenever it serves them (an order
- * closed before is its to forget and take out of the ERP too). Never throws: a close that fails is
- * counted and named, and the rest of the clearing carries on.
+ * Ask the integration to bring its ERP in line for the routed stores, after the wipe closed their
+ * orders. Never throws: a call that fails is an ERP problem, in words.
  */
 export async function closeErpOrders(erp: WipeErp | undefined, plan: WipeErpPlan | undefined, report: (stage: string, step?: string) => void): Promise<ErpClosed | undefined> {
     if (!erp || !plan || plan.route.held) return undefined;
-    const stage = DATAPACK_STAGES.closingErpOrders.label;
+    const stage = DATAPACK_STAGES.updatingErp.label;
     report(stage);
-    const what = `close 1 of the orders through the ERP integration (${plan.route.name})`;
     try {
         const answer = await erp.close(plan.stores, (step) => report(stage, step));
-        return answer?.closed ? closedOf(answer, erp.erpNames, what) : failedClose(plan, what, 'it answered without closing them');
+        return answer?.closed ? closedOf(answer, erp.erpNames) : { removedFrom: [], notRemoved: [], problem: 'it answered without bringing it in line' };
     } catch (error) {
-        return failedClose(plan, what, errorText(error));
+        return { removedFrom: [], notRemoved: [], problem: `it could not be asked to (${trimmed(errorText(error))})` };
     }
 }
 
@@ -264,24 +228,29 @@ export async function refreshErp(erp: WipeErp | undefined, plan: WipeErpPlan | u
     }
 }
 
-/** " 2 of the orders were closed through the ERP integration (JustRite), and removed from Justrite ERP.", or what of it there was. */
-function closedSentence(name: string, closed: ErpClosed | undefined): string {
+/** Why the ERP was not brought in line, in words; absent when it was. */
+export function erpProblemOf(plan: WipeErpPlan, closed: ErpClosed | undefined, refreshed: ErpRefreshed | undefined): string | undefined {
+    if (plan.route.held) return plan.route.held;
+    const why = [
+        closed?.problem ?? '',
+        refreshed && !refreshed.refreshed ? `it was not filled again from Commerce (${trimmed(refreshed.said ?? '')})` : '',
+    ].filter(Boolean);
+    return why.length > 0 ? andList(why) : undefined;
+}
+
+/** " The stores' orders were removed from Justrite ERP. Accuform ERP could not remove them (...).", or nothing. */
+function removalSentence(closed: ErpClosed | undefined): string {
     if (!closed) return '';
-    const count = closed.counts.cancelled + closed.counts.refunded + closed.counts.commented;
-    const from = closed.removedFrom.length > 0 ? andList(closed.removedFrom) : '';
-    const not = closed.notRemoved.map((line) => ` ${line.charAt(0).toUpperCase()}${line.slice(1)}.`).join('');
-    if (count === 0) return `${from ? ` The stores' orders were removed from ${from}.` : ''}${not}`;
-    const which = count === 1 ? '1 of the orders was' : `${count} of the orders were`;
-    return ` ${which} closed through the ERP integration (${name})${from ? `, and removed from ${from}` : ''}.${not}`;
+    const from = closed.removedFrom.length > 0 ? ` The stores' orders were removed from ${andList(closed.removedFrom)}.` : '';
+    return `${from}${closed.notRemoved.map((line) => ` ${line.charAt(0).toUpperCase()}${line.slice(1)}.`).join('')}`;
 }
 
 /** The outcome's words for the ERP part, or nothing. */
 export function erpSentence(plan: WipeErpPlan | undefined, closed: ErpClosed | undefined, refreshed: ErpRefreshed | undefined): string {
     if (!plan) return '';
-    const { name, held } = plan.route;
-    if (held) return plan.orders.length > 0 ? ` Left ${ordersWord(plan.orders.length)} the ERP integration (${name}) handles open: ${held}.` : '';
-    const through = closedSentence(name, closed);
-    if (!refreshed) return through;
-    if (!refreshed.refreshed) return `${through} ${name}'s ERP was not refreshed from Commerce: ${(refreshed.said ?? '').replace(/\.$/u, '')}.`;
-    return `${through} ${name}'s ERP was refreshed from Commerce.${refreshed.said ? ` ${refreshed.said}` : ''}`;
+    const { name } = plan.route;
+    const problem = erpProblemOf(plan, closed, refreshed);
+    const verdict = problem ? ` ${name}'s ERP was not brought in line with Commerce: ${problem}.` : ` ${name}'s ERP was brought in line with Commerce.`;
+    const warning = refreshed?.refreshed && refreshed.said ? ` ${refreshed.said}` : '';
+    return `${verdict}${removalSentence(closed)}${warning}`;
 }

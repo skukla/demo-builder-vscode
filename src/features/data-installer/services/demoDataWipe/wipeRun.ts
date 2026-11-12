@@ -7,7 +7,8 @@
  * the shown one did not (`withinPlan`): what is gone or closed since (the pack's removal ran in
  * between) is fine, anything new is refused.
  *
- * **The order of writes:** returns, orders (the one reset rule, `wipeOrders.ts` / `wipeOrderRun.ts`);
+ * **The order of writes:** orders, each with its note first and its returns closed inside its own
+ * work (the one reset rule, `wipeOrders.ts` / `wipeOrderRun.ts`);
  * companies, then customers, a company's admin included (Commerce refuses an admin's delete while the
  * company stands, live 2026-10-30); products (deleted, or only taken off the chosen websites); cart
  * rules (the same two ways, step 11); shared catalogs each with its customer group, then groups with
@@ -23,13 +24,14 @@
  * and the rest carry on, so the SC is told exactly what could not be done, and a second clearing picks
  * up what is left (`WipeOutcome.unfinished`).
  *
- * When an ERP integration routes some chosen stores' websites (`wipeErp.ts`), it closes every
- * order of those stores first (the wipe closes none of them itself) and takes them out of its ERPs,
- * and the ERP is filled again from Commerce last; its counts are merged into the wipe's.
+ * Every order of the chosen stores is the wipe's own, ERP-routed ones included (Commerce is the
+ * source system, owner 2026-11-11, erp-order-close step 5). When an ERP integration routes some
+ * chosen websites (`wipeErp.ts`), its ERP is brought in line AFTER every write above, then filled
+ * again from Commerce. Its order counts are never merged: a failure there is an ERP problem.
  *
  * | Write | Route | Confirmed from a real answer? |
  * |---|---|---|
- * | close a return, close off an order | see `wipeOrderRun.ts` | see there |
+ * | close off an order and its returns | see `wipeOrderRun.ts` | see there |
  * | delete a customer | `DELETE customers/{id}` | the route, yes (step 08's removal, live 2026-10-30) |
  * | delete a product | `DELETE products/{sku}` | the route, yes (the engine's removal) |
  * | take a product off a website | `DELETE products/{sku}/websites/{websiteId}` | **no**: Adobe's REST reference lists it; never called from here |
@@ -58,8 +60,8 @@ import type { RemovalAccess } from '../demoBuilderEngine/removers';
 import { removeEmptySet } from './wipeAttributes';
 import { deleteRule, takeRuleOff } from './wipeCartRules';
 import { removeEmptyGroup } from './wipeCatalogs';
-import { type ErpClosed, type ErpRefreshed, closeErpOrders, erpSentence, refreshErp } from './wipeErp';
-import { type OrderOutcome, closeOrder, closeReturn } from './wipeOrderRun';
+import { type ErpClosed, type ErpRefreshed, closeErpOrders, erpProblemOf, erpSentence, refreshErp } from './wipeErp';
+import { type OrderOutcome, closeOrder } from './wipeOrderRun';
 import { type WipeInputs, type WipePlan, planWipeFor, withinPlan } from './wipePlan';
 import { putBackSettings } from './wipeSettings';
 import { stepLine } from './wipeStepLine';
@@ -106,7 +108,7 @@ export interface OrderCounts {
     failed: number;
 }
 
-type StepKey = Exclude<keyof WipeCounts, 'settings'> | 'returns' | 'orders';
+type StepKey = Exclude<keyof WipeCounts, 'settings'> | 'orders';
 
 /** One write of a step: named as the outcome names it, and what it needs to have gone through first. */
 interface WipeWrite {
@@ -137,8 +139,8 @@ export interface WipeOutcome {
     left: WipePreview['left'];
     /** What no read would find again, for the next clearing of these stores to look at (`wipeUnfinished.ts`). */
     unfinished?: WipeUnfinished;
-    /** The ERP part, when an ERP integration routed some chosen stores' websites. */
-    erp?: { integration: string; orderNumbers: string[]; removedFrom: string[]; refreshed: boolean; said?: string };
+    /** The ERP step, when an integration routed some chosen websites: never counted in `orders` or `failed`. */
+    erp?: { integration: string; broughtInLine: boolean; problem?: string; removedFrom: string[]; refreshed: boolean; said?: string };
 }
 
 /** How a step's writes tie to each other. */
@@ -205,12 +207,11 @@ function attributeSteps(commerce: RemovalAccess, plan: WipePlan): Pick<Record<St
     };
 }
 
-/** In the order they run (the module comment's). */
-function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string): Record<StepKey, WipeStep> {
+/** In the order they run (the module comment's); `onReturnClosed` is told as each order's return reads Closed. */
+function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string, onReturnClosed: () => void): Record<StepKey, WipeStep> {
     const { send } = commerce;
     return {
-        returns: { failed: 'close 1 of the returns', stage: DATAPACK_STAGES.closingReturns.label, writes: each(plan.returnIds, self, (id) => closeReturn(commerce, id)) },
-        orders: { failed: 'close 1 of the orders', stage: DATAPACK_STAGES.closingOrders.label, writes: each(plan.orders, (o) => o.number, (o) => closeOrder(commerce, o, day)) },
+        orders: { failed: 'close 1 of the orders', stage: DATAPACK_STAGES.closingOrders.label, writes: each(plan.orders, (o) => o.number, (o) => closeOrder(commerce, o, day, onReturnClosed)) },
         companies: companiesStep(commerce, plan),
         customers: customersStep(commerce, plan),
         products: {
@@ -302,8 +303,7 @@ const HELD_BACK = 'held back, since what it needs gone first could not be remove
 
 /** Count one write that went through. */
 function count(key: StepKey, result: OrderOutcome | void, removed: WipeCounts, orders: OrderCounts): void {
-    if (key === 'returns') orders.returnsClosed += 1;
-    else if (key === 'orders') orders[result || 'commented'] += 1;
+    if (key === 'orders') orders[result || 'commented'] += 1;
     else removed[key] += 1;
 }
 
@@ -318,11 +318,12 @@ export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (
     const orders: OrderCounts = { cancelled: 0, refunded: 0, commented: 0, alreadyClosed: plan.alreadyClosed, returnsClosed: 0, failed: 0 };
     const failed: WipeOutcome['failed'] = [];
     const notDone = new Set<string>();
-    for (const [key, step] of Object.entries(stepsOf(commerce, plan, day)) as Array<[StepKey, WipeStep]>) {
+    const returnClosed = (): number => (orders.returnsClosed += 1);
+    for (const [key, step] of Object.entries(stepsOf(commerce, plan, day, returnClosed)) as Array<[StepKey, WipeStep]>) {
         const done = (n: number): void => report(step.stage, stepLine(key, n, step.writes.length));
         if (step.writes.length > 0) done(0);
         const refused = await runStep(key, step, { removed, orders, notDone }, done);
-        if (key === 'orders' || key === 'returns') orders.failed += refused.length;
+        if (key === 'orders') orders.failed += refused.length;
         if (refused.length > 0) failed.push({ what: step.failed, count: refused.length, first: refused[0] });
     }
     await runSettings(commerce, plan, report, removed, failed);
@@ -369,23 +370,21 @@ function unfinishedOf(plan: WipePlan, notDone: ReadonlySet<string>): WipeUnfinis
     return groups.length + sets.length + attributes.length > 0 ? { scopeKey: plan.scopeKey, groups, sets, attributes } : undefined;
 }
 
-/** The wipe's outcome with the integration's close merged in, and the sentence said again. */
+/** The wipe's outcome with the ERP step added, and the sentence said again: its counts untouched. */
 function withErp(outcome: WipeOutcome, plan: WipePlan, closed: ErpClosed | undefined, refreshed: ErpRefreshed | undefined): WipeOutcome {
     if (!plan.erp) return outcome;
-    const orders = { ...outcome.orders };
-    for (const key of Object.keys(orders) as Array<keyof OrderCounts>) orders[key] += closed?.counts[key] ?? 0;
-    const failed = closed?.failed ? [closed.failed, ...outcome.failed] : outcome.failed;
-    const sentence = `${sentenceOf(plan.preview, outcome.removed, orders, failed)}${erpSentence(plan.erp, closed, refreshed)}${leftSentence(outcome.left)}`;
+    const sentence = `${sentenceOf(plan.preview, outcome.removed, outcome.orders, outcome.failed)}${erpSentence(plan.erp, closed, refreshed)}${leftSentence(outcome.left)}`;
+    const problem = erpProblemOf(plan.erp, closed, refreshed);
     const said = refreshed?.said ? { said: refreshed.said } : {};
-    const touched = { orderNumbers: closed?.orderNumbers ?? [], removedFrom: closed?.removedFrom ?? [] };
-    const erp = { integration: plan.erp.route.name, ...touched, refreshed: refreshed?.refreshed ?? false, ...said };
-    return { ...outcome, orders, failed, sentence, erp };
+    const line = { integration: plan.erp.route.name, broughtInLine: !problem, ...(problem ? { problem } : {}) };
+    const erp = { ...line, removedFrom: closed?.removedFrom ?? [], refreshed: refreshed?.refreshed ?? false, ...said };
+    return { ...outcome, sentence, erp };
 }
 
 /**
  * Clear the stores as shown: make the plan again, refuse when it takes anything the shown plan did
- * not, then carry it out: the ERP integration's close first, the wipe's own writes, then the ERP
- * filled again from Commerce.
+ * not, then carry it out: the wipe's own writes, orders included; then, when an ERP integration
+ * routes some of the stores, its ERP brought in line and filled again from Commerce.
  *
  * @throws WipeChangedError, writing nothing, when the store would now clear something not shown
  */
@@ -393,7 +392,7 @@ export async function clearShown(commerce: RemovalAccess, shown: WipePlan, input
     const { erp } = inputs;
     const now = await planWipeFor(commerce.get, shown.choices, inputs);
     if (!withinPlan(shown, now)) throw new WipeChangedError(now.preview);
-    const closed = await closeErpOrders(erp, now.erp, report);
     const outcome = await runWipe(commerce, now, report);
+    const closed = await closeErpOrders(erp, now.erp, report);
     return withErp(outcome, now, closed, await refreshErp(erp, now.erp, report));
 }

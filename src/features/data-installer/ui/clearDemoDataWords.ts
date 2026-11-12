@@ -127,7 +127,7 @@ export function previewLines(preview: WipePreview): PreviewLine[] {
         { label: 'Attributes', value: countOf(remove.attributes.count, 'to remove') },
         { label: 'Website Settings', value: settingsValue(preview.settings.count) },
         { label: 'Orders', value: ordersValue(orders) },
-        // The orders an ERP integration closes, or why it leaves them: its own one line.
+        // Whether an ERP integration's ERP is brought in line after the clearing, or why not: its own one line.
         { label: 'ERP', value: preview.erp?.line ?? '' },
         ...preview.left.map((l) => ({ label: 'Not Removed', value: stayValue(l) })),
     ];

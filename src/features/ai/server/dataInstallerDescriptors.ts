@@ -373,8 +373,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "(a root category a store not chosen shares, a product whose demo can't be told, a company with a customer elsewhere, a catalog, group or attribute something that stays uses, a cart rule on a website a " +
             'store not chosen also sells on), and a token clear_demo_data needs. ' +
             'When an ERP integration on this instance (in any local project) sends a chosen store\'s orders to an ERP, those orders ' +
-            'are in data.preview.erp instead (its line says so): that integration closes them and its ERP is refreshed from Commerce ' +
-            'after; when it must be updated first or cannot be asked, data.preview.erp.held says why and they are left open. ' +
+            'are still closed by the clearing, and data.preview.erp says its ERP is brought in line with Commerce after (its line says so); ' +
+            'when it must be updated first or cannot be asked, data.preview.erp.held says why its ERP will not be brought in line. ' +
             "Also counts what Demo Builder installed (removed by reset_datapack, never by the clearing). Writes nothing. Defaults to the " +
             "project's own store; stores: [] answers the choices alone. When a chosen store is another project's, answers data.refused " +
             'instead of a preview: tell the user that sentence; it names the project to clear it from.',
@@ -390,8 +390,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'Clear the chosen stores of everything check_demo_data listed: deletes those products, categories, customers, cart rules ' +
             "(their coupons with them), companies, shared catalogs (their customer groups with them), customer groups, attribute sets and attributes, sets those wholly chosen websites' settings to the default value, " +
             'takes the shared products and cart rules off the chosen websites, cancels or refunds their orders (closing them, never deleting) and closes their ' +
-            "returns; orders an ERP integration handles are closed by it first, and its ERP is refreshed from Commerce last, in the " +
-            "same call (the note merges its counts). Cannot be undone. Show the user check_demo_data's list and ask first. Needs the stores named exactly as checked " +
+            "returns, those an ERP integration sends to an ERP included; then that integration's ERP is brought in line with Commerce and " +
+            "filled again, in the same call. When that step fails or is held, data.erp.broughtInLine is false and data.erp.problem says why; " +
+            "the orders stay closed. Cannot be undone. Show the user check_demo_data's list and ask first. Needs the stores named exactly as checked " +
             'and the token from that check; if the store would now clear anything the list did not hold, nothing is written and the ' +
             'new list comes back. Refused when another project on this machine records a chosen store as its own. ' +
             "Never touches what any project's install records list, anything a store not chosen also uses, Commerce's own customer groups and attributes, " +

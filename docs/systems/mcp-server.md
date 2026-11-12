@@ -981,15 +981,19 @@ list on the chosen websites is left, as this project's is.
 serving the instance, from any local project (`findWipeErp`: the deployed ERP integration of a
 project on the same Commerce instance, as the one-per-instance add refusal matches it). Orders of
 chosen stores whose website it sends to an ERP (`GET erp/settings?websites=`, `orders_send`) are
-not the wipe's own: `data.preview.erp` counts and names them, with one line ("2 orders are handled
-by the ERP integration (JustRite): they will be closed there, removed from its ERP, and the ERP
-refreshed."), and `clear_demo_data` has the integration close EVERY order of those stores first
-(`POST erp/close-orders` with their store codes, followed by its run id; each ERP that held one
-removes its documents for them), runs no order rule of its own there, does its other writes, then
-fills the integration's ERPs from Commerce again (`fillEveryErp`). The note merges the
-integration's counts with its own and names the ERPs the orders were removed from. A deployment whose `erp/status` lacks `closesOrdersByStore`, or one that cannot be
-asked, is never called: `data.preview.erp.held` says why (with the update to run) and those orders
-are left open. The store list never offers Commerce's own Admin website (`admin`, id 0).
+still the wipe's own: Commerce is the source system (owner, 2026-11-11), so `clear_demo_data`
+closes them by the one reset rule like any other. `data.preview.erp` carries one line ("The ERP
+integration (JustRite) serves these stores: its ERP is brought in line with Commerce after the
+clearing."). After every Commerce write, the clearing asks the integration to bring its ERP in line
+(`POST erp/close-orders` with the routed store codes, followed by its run id: with every order
+already closed it writes nothing to their state, forgets them, and each ERP that held one removes
+its sales orders for them), then fills the integration's ERPs from Commerce again (`fillEveryErp`).
+The integration's order counts are never merged into the wipe's. A deployment whose `erp/status`
+lacks `closesOrdersByStore`, or one that cannot be asked, is never called: `data.preview.erp.held`
+says why (with the update to run), and the orders are closed all the same. A held, failed or
+partial ERP step is an ERP problem: the answer's `data.erp.broughtInLine` is false,
+`data.erp.problem` says why, and the note says the ERP was not brought in line. The store list
+never offers Commerce's own Admin website (`admin`, id 0).
 
 ### Waiting on a datapack job instead of polling it (owner, 2026-11-05)
 

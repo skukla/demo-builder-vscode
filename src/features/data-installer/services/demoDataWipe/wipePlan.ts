@@ -12,8 +12,8 @@
  * | products | `wipeProducts.ts`: deleted when tied to the chosen stores on every website they are on; taken off the chosen websites when also sold elsewhere | can't tell which demo they belong to; in a store not chosen; variants; fields not answered |
  * | categories | under a root every store using it is chosen, deepest first | under a root a store not chosen also shows (`justrite_test_store` and JustRite's share 119): all left. One holding a category Demo Builder installed: left |
  * | customers | `wipeCustomers.ts`: of a wholly chosen website, or made in a chosen store with no order elsewhere | made in or ordering from a store not chosen; store not said; in a B2B company |
- * | orders | `wipeOrders.ts`, the one reset rule shared with the ERP reset: placed in a chosen store's views and not invoiced or shipped, cancelled; any other, refunded with an offline credit memo; noted; open returns closed. Never deleted | already Canceled or Closed, or noted by a reset before; neither cancellable nor refundable |
- * | orders an ERP integration handles | `wipeErp.ts`: on a website whose orders an ERP integration sends to an ERP, closed by that integration, not here; its ERP refreshed after | the integration must be updated first, or could not be asked: left open, the line says why |
+ * | orders | `wipeOrders.ts`, the one reset rule shared with the ERP reset: placed in a chosen store's views, those on a website an ERP integration sends to an ERP included (Commerce is the source system, erp-order-close step 5); noted first; each one's open returns closed; not invoiced or shipped, cancelled; any other, invoiced in full and refunded with an offline credit memo, so Commerce closes it. Never deleted | already Canceled or Closed, or left open by a reset before; in payment review (left open, noted) |
+ * | the ERP, when an ERP integration routes some chosen websites | `wipeErp.ts`: brought in line after the clearing (the integration forgets the stores' orders and its ERPs remove them), then filled again from Commerce. Nothing here is counted in `total` | the integration must be updated first, or could not be asked: the ERP is not brought in line, the line says why; the orders are closed all the same |
  * | cart rules (step 11) | `wipeCartRules.ts`: on wholly chosen websites only, deleted with their coupons; also on a website not chosen, taken off the chosen ones | on a website only partly chosen; holding a coupon Demo Builder installed |
  * | companies, and the customers in them | `wipeCompanies.ts`: every customer in the company, its admin included, on a wholly chosen website, with no order in a store not chosen | a customer elsewhere, or with an order elsewhere; an install record lists it or a customer in it; who is in it not read |
  * | shared catalogs and customer groups, one unit | `wipeCatalogs.ts`: everyone in the group going, no cart rule that stays naming it | a customer, company or rule that stays uses it (it would move those customers to General); an install record lists it. Commerce's own groups and the public catalog: never |
@@ -42,9 +42,9 @@ import { type CategoryDecision, categoryOrder, decideCategories } from './wipeCa
 import type { WipeRespects } from './wipeClaims';
 import { type CompanyDecision, companiesLeft, decideCompanies } from './wipeCompanies';
 import { type CustomerDecision, decideCustomers } from './wipeCustomers';
-import { type WipeErp, type WipeErpPlan, type WipeErpRoute, erpCloseIds, erpPartOf, erpPlanOf, splitByErp, websiteCodesOf } from './wipeErp';
+import { type WipeErp, type WipeErpPlan, type WipeErpRoute, erpPartOf, erpPlanOf, erpStoresAsked, websiteCodesOf } from './wipeErp';
 import { leftRow, rowsWithAny } from './wipeLeft';
-import { type OrderStep, openReturns, orderStepOf } from './wipeOrders';
+import { type OrderReturn, type OrderStep, openReturns, orderStepOf } from './wipeOrders';
 import { type ProductDecision, decideProducts } from './wipeProducts';
 import { type WipeCategory, readCategoryTree, readOrderReturns, readViewOrders, readWebsiteProducts, readWipeStructure } from './wipeReads';
 import { type Recorded, type RecordedOnInstance, installedCounts, recordedIds, recordedOnInstance } from './wipeRecorded';
@@ -87,11 +87,11 @@ export interface WipePlan {
     ruleIds: string[];
     /** Cart rules also on websites not chosen: each kept on these websites only. */
     ruleTakeOff: Array<{ id: string; websiteIds: number[] }>;
+    /** Each order the wipe closes itself, with its open returns. */
     orders: OrderStep[];
-    /** Orders in the chosen stores already Canceled or Closed, or handled by a reset before. */
+    /** Orders in the chosen stores already Canceled or Closed, or left open by a reset before. */
     alreadyClosed: number;
-    returnIds: string[];
-    /** Orders an ERP integration handles, when one routes some chosen stores' websites: not in `orders`. */
+    /** The ERP step, when an ERP integration routes some chosen stores' websites: their orders are in `orders`. */
     erp?: WipeErpPlan;
 }
 
@@ -155,30 +155,30 @@ interface Decided {
     settings: SettingsDecision;
     orders: OrderStep[];
     alreadyClosed: number;
-    returns: Array<{ id: string; number: string }>;
     erp?: WipeErpPlan;
 }
 
-/** Each order's step; one closed or handled before is only counted. */
-function decideOrders(orders: readonly CommerceOrder[]): Pick<Decided, 'orders' | 'alreadyClosed'> {
-    const steps = orders.map(orderStepOf);
-    return { orders: steps.filter((s): s is OrderStep => s !== 'done'), alreadyClosed: steps.filter((s) => s === 'done').length };
+/**
+ * Each order's step, with its open returns: those are closed inside the order's work, after its note.
+ * One finished before is only counted, and its returns are not read: a return is written to only
+ * after its order's note.
+ */
+async function decideOrders(get: CommerceGet, orders: readonly CommerceOrder[]): Promise<Pick<Decided, 'orders' | 'alreadyClosed'>> {
+    const steps = orders.map(orderStepOf).filter((s): s is OrderStep => s !== 'done');
+    const returns = openReturns(await readOrderReturns(get, steps.map((s) => Number(s.id))));
+    const returnsOf = (id: string): OrderReturn[] =>
+        returns.filter((r) => String(r.order_id) === id).map((r) => ({ id: String(r.entity_id), number: r.increment_id ?? String(r.entity_id) }));
+    return { orders: steps.map((s) => ({ ...s, returns: returnsOf(s.id) })), alreadyClosed: orders.length - steps.length };
 }
 
-/** The orders the wipe closes itself, and the ERP part: what an ERP integration's websites hold. */
-async function decideAllOrders(get: CommerceGet, scope: WipeScope, route: WipeErpRoute | undefined): Promise<Pick<Decided, 'orders' | 'alreadyClosed' | 'returns' | 'erp'>> {
-    const split = splitByErp(scope, route, await readViewOrders(get, [...scope.viewIds]));
-    // Returns of the ERP's orders are the integration's to close, with their orders.
-    const returns = openReturns(await readOrderReturns(get, split.own.map((o) => Number(o.entity_id))));
-    const own = decideOrders(split.own);
-    const erp = route ? erpPlanOf(scope, route, split.erp) : undefined;
-    return {
-        orders: own.orders,
-        alreadyClosed: own.alreadyClosed + (erp?.alreadyClosed ?? 0),
-        returns: returns.map((r) => ({ id: String(r.entity_id), number: r.increment_id ?? String(r.entity_id) })),
-        ...(erp ? { erp: erp.plan } : {}),
-    };
+/** Every order of the chosen stores' views, the wipe's own; and the ERP step, when an integration routes some of them. */
+async function decideAllOrders(get: CommerceGet, scope: WipeScope, route: WipeErpRoute | undefined): Promise<Pick<Decided, 'orders' | 'alreadyClosed' | 'erp'>> {
+    const own = await decideOrders(get, await readViewOrders(get, [...scope.viewIds]));
+    return { ...own, ...(route ? { erp: erpPlanOf(scope, route) } : {}) };
 }
+
+/** Every return the plan's orders close, by id and number. */
+const returnsOf = (orders: readonly OrderStep[]): OrderReturn[] => orders.flatMap((o) => o.returns);
 
 /** What deciding is handed: the records, read as ids by kind, and the rest of what a plan respects. */
 interface Respecting {
@@ -253,8 +253,7 @@ function previewOf(scope: WipeScope, decided: Decided, plan: Omit<WipePlan, 'pre
         plan.ruleIds.length +
         plan.ruleTakeOff.length +
         orders.length +
-        plan.returnIds.length +
-        erpCloseIds(plan.erp).length;
+        returnsOf(orders).length;
     return {
         stores: scope.stores.map((s) => ({ websiteCode: s.website.code, websiteName: s.website.name, storeCode: s.code, storeName: s.name })),
         remove: {
@@ -275,9 +274,9 @@ function previewOf(scope: WipeScope, decided: Decided, plan: Omit<WipePlan, 'pre
             cancel: named(orders.filter((o) => o.action === 'cancel').map((o) => o.number)),
             refund: named(orders.filter((o) => o.action === 'refund').map((o) => o.number)),
             leftOpen: named(orders.filter((o) => o.action === 'note').map((o) => o.number)),
-            returns: named(decided.returns.map((r) => r.number)),
+            returns: named(returnsOf(orders).map((r) => r.number)),
         },
-        ...(plan.erp ? { erp: erpPartOf(plan.erp, named) } : {}),
+        ...(plan.erp ? { erp: erpPartOf(plan.erp) } : {}),
         left: leftOf(decided),
         installed: installedCounts(records),
         total,
@@ -318,7 +317,6 @@ export async function planWipe(get: CommerceGet, structure: CommerceStoreStructu
         ruleTakeOff: decided.cartRules.takeOff.map((t) => ({ id: String(t.rule.rule_id), websiteIds: t.websiteIds })),
         orders: decided.orders,
         alreadyClosed: decided.alreadyClosed,
-        returnIds: decided.returns.map((r) => r.id),
         ...(decided.erp ? { erp: decided.erp } : {}),
     };
     return { choices: choicesOfScope(scope), scopeKey: scope.key, preview: previewOf(scope, decided, ids, records), ...ids };
@@ -353,15 +351,17 @@ const WRITES: Array<(plan: WipePlan) => readonly string[]> = [
     (p) => p.ruleTakeOff.map((t) => `${t.id}@${t.websiteIds.join(',')}`),
     (p) => orderIds(p, (o) => o.action === 'cancel'),
     (p) => orderIds(p, (o) => o.action === 'refund'),
+    (p) => orderIds(p, (o) => o.invoice),
     (p) => orderIds(p, (o) => o.unhold),
-    (p) => p.returnIds,
-    (p) => erpCloseIds(p.erp),
+    (p) => returnsOf(p.orders).map((r) => r.id),
+    (p) => erpStoresAsked(p.erp),
 ];
 
 /**
  * Whether a plan made now takes nothing the plan the SC saw did not: the same stores, and every id
- * it would delete, take off, clear, set back, cancel, refund, release or close (itself, or through
- * the ERP integration) was in the one shown. Things gone or closed since are fine.
+ * it would delete, take off, clear, set back, cancel, invoice, refund, release or close was in the
+ * one shown, and the ERP integration is asked about no store the list said it would not be (it was
+ * held then). Things gone or closed since are fine.
  */
 export function withinPlan(shown: WipePlan, now: WipePlan): boolean {
     return now.scopeKey === shown.scopeKey && WRITES.every((ids) => ids(now).every((id) => ids(shown).includes(id)));

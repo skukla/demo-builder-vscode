@@ -21,6 +21,7 @@ import { HIERARCHY_28_DB08 } from '../../../../helpers/commerceB2bFixtures';
 import { ADMIN_64, BUYER_65, CATALOG_20, COMPANY_28, GROUP_25, WIPER_1, attributeInstance, b2bInstance, settingsInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { fakeErp } from '../../../data-installer/services/demoDataWipe/wipeErp.testUtils';
 import { RESET_RULE_CASES } from '../../../../helpers/resetRuleOrders';
+import { STATUS_BEFORE } from '../../../../helpers/erpWipeFixtures';
 
 /** A project whose own store is the test website's, so the reset's question is about it. */
 const PROJECT = createMockProject({
@@ -147,7 +148,7 @@ describe('confirmClearOtherData', () => {
         expect(message).toContain('1 cart rule another website also uses will only be taken off this one.');
     });
 
-    it("says which orders the ERP integration closes, in the list's own line", async () => {
+    it("says the ERP integration's ERP is brought in line, in the list's own line", async () => {
         const erp = jest.fn().mockReturnValue(fakeErp().erp);
         const { deps, context } = setUp(sandbox({ orders: [RESET_RULE_CASES[0].order] }), { erp, others: async () => [CLAIMANT_ELSEWHERE] });
         ask.mockResolvedValue(undefined);
@@ -155,7 +156,7 @@ describe('confirmClearOtherData', () => {
         await confirmClearOtherData(vscode, await beginOtherDataCheck(PROJECT, context, deps));
 
         expect(erp).toHaveBeenCalledWith(context, PROJECT, [CLAIMANT_ELSEWHERE]);
-        expect(ask.mock.calls[0][0]).toContain(' 1 order is handled by the ERP integration (JustRite): it will be closed there, removed from its ERP, and the ERP refreshed.');
+        expect(ask.mock.calls[0][0]).toContain(' The ERP integration (JustRite) serves these stores: its ERP is brought in line with Commerce after the clearing.');
     });
 
     it('keeps everything on Esc', async () => {
@@ -177,7 +178,7 @@ describe('confirmClearOtherData', () => {
 const CLAIMANT_ELSEWHERE = createMockProject({ name: 'justrite', path: '/nonexistent/projects/justrite', componentConfigs: {} });
 
 describe('clearProjectOtherData', () => {
-    it('has the ERP integration close its stores, and refreshes its ERP', async () => {
+    it('closes the orders itself, then has the ERP integration bring its ERP in line', async () => {
         const { erp, client, refill } = fakeErp();
         const { deps, context } = setUp(sandbox({ orders: [RESET_RULE_CASES[0].order] }), { erp: () => erp });
         const plan = await beginOtherDataCheck(PROJECT, context, deps);
@@ -186,7 +187,21 @@ describe('clearProjectOtherData', () => {
 
         expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
         expect(refill).toHaveBeenCalledTimes(1);
-        expect(done.sentence).toContain("JustRite's ERP was refreshed from Commerce.");
+        expect(done.sentence).toContain(' Canceled 1 order.');
+        expect(done.sentence).toContain(" JustRite's ERP was brought in line with Commerce.");
+    });
+
+    it('still closes the orders when the ERP integration must be updated, and logs the ERP problem as a warning', async () => {
+        const { erp, client } = fakeErp({ status: STATUS_BEFORE });
+        const { deps, context, store } = setUp(sandbox({ orders: [RESET_RULE_CASES[0].order] }), { erp: () => erp });
+        const plan = await beginOtherDataCheck(PROJECT, context, deps);
+
+        const done = await clearProjectOtherData(PROJECT, context, jest.fn(), plan!, deps);
+
+        expect(client.closeOrders).not.toHaveBeenCalled();
+        expect(store.sent.map((w) => w.path)).toContain('orders/701/cancel');
+        expect(done.sentence).toContain(" JustRite's ERP was not brought in line with Commerce: it must be updated first. Open the project");
+        expect(context.logger.warn).toHaveBeenCalledTimes(1);
     });
 
     it('clears what was shown and logs what it did', async () => {
