@@ -7,16 +7,18 @@ Save and no "Restore My Luma".
 
 ## Order (each slice ends on a green gate; safety fixes land before anything deletes)
 
-1. **A save of a shared datapack stays shared.** `createDatapack` hard-codes `shared: false`
+1. **A save of a shared datapack stays shared.** Done, `c4a7a6ca7`. `createDatapack` hard-codes `shared: false`
    (`services/datapackStoreWriter.ts:83`); `saveToPack` passes the held version's `shared` instead,
    to the pack and its store configuration. Without this, trimming deletes the only shared versions.
-2. **A project naming a save that is gone uses the same datapack's newest save.**
-   `recordedPack.ts` `fallbackFor` tries the same pack's newest save before the origin pack;
-   `sampleDataInstall.ts` (reset and build), the EDS reset and the replace path get the same fallback.
+2. **A project naming a save that is gone uses the same datapack's newest save.** Done, `0294c163e`.
+   `recordedPack.ts` tries the same pack's newest save before the origin pack. Reset and the replace
+   path remove by the install record and were left as they are; installs go through this check.
    Existing projects keep working (CLAUDE.md property 3).
-3. **Deleting the save in use no longer strands the project.** `delete-library-datapack` (one
-   version or every version) repoints `project.datapack` and the install record to the newest
-   remaining save, or refuses when none remains.
+3. **Deleting the save in use no longer strands the project.** Done, `a2b0a0076`.
+   `delete-library-datapack` (one version or every version) refuses a save or datapack that a project
+   on this machine uses, naming the project. Built as a refusal rather than a repoint (2026-11-12):
+   the install record describes the deleted save's data, so moving the project onto another save
+   would misdescribe Commerce.
 4. **Keep two saves.** Done, `4e8bb0678`. After each successful save: keep the newest save and the one before it;
    delete older dated saves with their store configuration. Never a named version (`main`), never a
    `name@version` another local project names or a project file shared (`sharedInFiles`). A failed
