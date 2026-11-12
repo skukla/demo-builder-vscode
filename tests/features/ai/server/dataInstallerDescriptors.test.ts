@@ -21,9 +21,10 @@ import type { HandlerResponse } from '@/types/handlers';
 
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
 
-// Twenty-one since build_datapack_from_export (2026-11-05); twenty since mark_team_datapack (beta.153); nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
+// Twenty-three since undo_last_save (Phase 2, 2026-11-12; twenty-two since verify_datapack_install, the count
+// in this test's name had stayed at twenty-one); twenty-one since build_datapack_from_export (2026-11-05); twenty since mark_team_datapack (beta.153); nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
 // check_demo_data and clear_demo_data (sixteen since step 07 added rename_datapack, fifteen since step 05).
-it('registers the twenty-one tools, and only those', () => {
+it('registers the twenty-three tools, and only those', () => {
     expect(DATA_INSTALLER_DESCRIPTORS.map((d) => d.tool).sort()).toEqual([
         'build_datapack_from_export',
         'check_demo_data',
@@ -45,6 +46,7 @@ it('registers the twenty-one tools, and only those', () => {
         'share_datapack',
         'start_datapack_export',
         'start_datapack_import',
+        'undo_last_save',
         'validate_datapack_import',
         'verify_datapack_install',
     ]);
@@ -61,7 +63,7 @@ it('every row dispatches to a handler that actually exists', () => {
 
 describe('gates', () => {
     // Saving a file into the project is not gated: it changes no store and no instance.
-    it('gates exactly the eleven writes that reach a store or an instance', () => {
+    it('gates exactly the twelve writes that reach a store or an instance', () => {
         const gated = DATA_INSTALLER_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
             'clear_demo_data',
@@ -75,6 +77,7 @@ describe('gates', () => {
             'share_datapack',
             'start_datapack_export',
             'start_datapack_import',
+            'undo_last_save',
         ]);
     });
 
@@ -208,7 +211,7 @@ describe('what each row declares', () => {
 
     // readOnly is what the write-gating machinery reads. The dry run is a read;
     // the three that touch a live instance or the shared catalog are not.
-    it('exposes eight reads and thirteen writes', () => {
+    it('exposes nine reads and fourteen writes', () => {
         const byFlag = (readOnly: boolean) =>
             DATA_INSTALLER_DESCRIPTORS.filter((d) => d.readOnly === readOnly)
                 .map((d) => d.tool)
@@ -239,6 +242,7 @@ describe('what each row declares', () => {
             'share_datapack',
             'start_datapack_export',
             'start_datapack_import',
+            'undo_last_save',
         ]);
     });
 });

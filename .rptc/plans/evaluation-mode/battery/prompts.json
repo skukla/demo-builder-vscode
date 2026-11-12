@@ -1534,5 +1534,14 @@
         ],
         "cwd": "project",
         "why": "Owner, beta.153: team packs are in the default list and every other shared pack is behind Include Community. Judges that the agent finds the pack (find_datapacks mine), asks the user, and calls mark_team_datapack with team:true rather than share_datapack, which only shares it. Writes to the store, so the battery stops at the consent."
+    },
+    {
+        "id": "undo-last-save",
+        "prompt": "Undo my last save of My Luma and put the store back how it was before.",
+        "expect": [
+            "undo_last_save"
+        ],
+        "cwd": "project",
+        "why": "Phase 2 slice 5: judges that the agent calls undo_last_save, not reset_datapack or delete_library_datapack, and asks the user first. Writes to the store, so the battery stops at the consent."
     }
 ]

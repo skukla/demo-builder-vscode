@@ -94,6 +94,8 @@ describe('the ceiling table tracks the tool surface', () => {
         // at most ten skipped rows (`skippedLine`), so that stays bounded too.
         'start_datapack_import',
         'reset_datapack',
+        // Undo Last Save starts the same import (`startDatapackImport`), so it answers the same.
+        'undo_last_save',
         'start_datapack_export',
         // A target reference and a status record. Both fixed-shape; the record's note
         // names at most ten skipped rows (`skippedLine`, 2026-11-05).

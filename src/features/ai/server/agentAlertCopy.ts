@@ -461,6 +461,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
+    undo_last_save: {
+        action: 'Undo the last save of a datapack',
+        consequence:
+            "Puts the live Commerce store back to the datapack's save before the last one and deletes the last save from My Datapacks. Changes made in the Admin since are lost.",
+        target: ['datapackName'],
+        sessionGrant: false,
+    },
     delete_library_datapack: {
         action: 'Delete a datapack',
         consequence:

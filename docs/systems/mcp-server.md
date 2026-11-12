@@ -1098,6 +1098,22 @@ the store's owner-only `update-datapack-metadata` (`team`). A team pack is in ev
 list with no tag; any other shared pack is Community, listed only with `includeCommunity`. It
 answers `{datapackName, team, versions}`.
 
+### Undo Last Save (Phase 2, 2026-11-12)
+
+`undo_last_save` (confirm-gated; the consent names the pack) takes the project's datapack back to
+the save before its newest. It works only on the pack the open project uses, when that pack is one
+of the SC's own in the library (not a team pack), the project is on its newest save, Demo Builder's
+engine installed it, and there is an earlier save; otherwise it refuses and nothing changes ("There
+is no earlier save to go back to."). Without `confirm` it answers what it would do. It is one job,
+started the way `start_datapack_import` starts one (`startDatapackImport`, `importStart.ts`): the
+newest save is uninstalled by its install record and the save before it installed, onto the
+website and store view the install record names, with the SC's unsaved changes dropped and never
+saved. Only once that job ends in success is the newest save deleted from the library with its
+settings layer (`runAndWatch`'s `afterSuccess`, then `deleteVersionWithLayer`); a job that fails or
+stops deletes nothing and the project keeps naming the newest save. A save another local project
+still names is kept. It answers as `start_datapack_import` does: `{activationId}`, and `job` with
+`waitSeconds`.
+
 ### Renaming a library pack, and a pack shared in a file (datapack-engine step 07, 2026-10-29)
 
 `rename_datapack` (confirm-gated) gives every version of one of the SC's own library packs a new

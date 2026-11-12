@@ -132,7 +132,7 @@ export const PAYLOAD = {
  * The engine the handlers build answers with these methods. A removal is checked as an install is
  * unless the test hands in `validateRemoval`.
  */
-export function stubEngine(methods: Partial<DatapackEngine>): void {
+export function stubEngine(methods: Partial<DatapackEngine>): DatapackEngine {
     const engine = {
         getJobStatus: jest.fn(),
         getJobFailureReason: jest.fn(),
@@ -140,6 +140,7 @@ export function stubEngine(methods: Partial<DatapackEngine>): void {
         validateRemoval: methods.validateRemoval ?? methods.validateImport,
     } as DatapackEngine;
     mockedBuildEngine.mockReturnValue(engine);
+    return engine;
 }
 
 /** An engine whose validate passes and whose start is accepted. */
@@ -148,8 +149,8 @@ export function happyEngine() {
     const startImport = jest.fn().mockResolvedValue({ activationId: 'act-1' });
     const startDelete = jest.fn().mockResolvedValue({ activationId: 'act-9' });
     const checkCredentials = jest.fn().mockResolvedValue({ usable: true });
-    stubEngine({ validateImport, startImport, startDelete, checkCredentials });
-    return { validateImport, startImport, startDelete, checkCredentials };
+    const engine = stubEngine({ validateImport, startImport, startDelete, checkCredentials });
+    return { validateImport, startImport, startDelete, checkCredentials, engine };
 }
 
 /**

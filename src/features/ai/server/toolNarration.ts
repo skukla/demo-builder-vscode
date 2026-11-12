@@ -261,6 +261,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     start_datapack_import: 'Importing the sample data',
     start_datapack_export: 'Capturing the sample data',
     reset_datapack: 'Removing the sample data',
+    undo_last_save: "Undoing a datapack's last save",
     // "Clear the chosen stores of everything check_demo_data listed".
     clear_demo_data: "Clearing the demo's store data",
     save_datapack_zip: 'Saving the datapack as a file',
@@ -369,6 +370,7 @@ const NAMED_NARRATION: Readonly<Record<string, NamedForm>> = {
     clear_demo_data: clearingStores,
     start_datapack_import: naming(['datapackName'], (name) => `Importing ${name}`),
     start_datapack_export: naming(['datapackName'], (name) => `Exporting ${name}`),
+    undo_last_save: naming(['datapackName'], (name) => `Undoing the last save of ${name}`),
     delete_library_datapack: naming(['datapackName'], (name) => `Deleting ${name}`),
     rename_datapack: naming(['datapackName'], (name) => `Renaming the ${name} pack`),
     mark_team_datapack: naming(['datapackName'], (name) => `Changing whether ${name} is a team pack`),

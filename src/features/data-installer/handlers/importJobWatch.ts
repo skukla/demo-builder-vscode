@@ -79,6 +79,7 @@ async function watchAndRecord(
     engine: DatapackEngine,
     resetOf: string | undefined,
     replacement?: ImportRequest,
+    afterSuccess?: () => Promise<void>,
 ): Promise<void> {
     // Each poll is also written to the record, so an agent reading the status sees it while it
     // runs (owner, 2026-11-05). Writes go in order, and the outcome waits for the last of them.
@@ -158,6 +159,7 @@ async function watchAndRecord(
         if (resetOf !== undefined && result.outcome === 'success' && !result.leftInStore) {
             await clearDatapackOnProject(context, resetOf, { name: record.datapackName, version: record.version });
         }
+        if (afterSuccess && result.outcome === 'success') await runAfterSuccess(context, afterSuccess);
         // What the store holds, and which pack the project names, may have moved: every open screen reads again.
         announceDatapacksChanged();
     } catch (error) {
@@ -167,6 +169,15 @@ async function watchAndRecord(
         );
         await progressWritten;
         await stopWatching(transient, record, reason);
+    }
+}
+
+/** A succeeded job's follow-on work: its failure is logged, and the job stays a success. */
+async function runAfterSuccess(context: HandlerContext, afterSuccess: () => Promise<void>): Promise<void> {
+    try {
+        await afterSuccess();
+    } catch (error) {
+        context.debugLogger.debug(`[Data Installer] The work after the job could not be done: ${errorText(error)}`);
     }
 }
 
@@ -217,6 +228,12 @@ export async function runAndWatch(
         savedAs?: string;
         /** The pack replaced is another version of the same pack: that version, as the SC reads it. */
         replacesVersion?: string;
+        /**
+         * Work for once the job has ENDED in success, after its record is written (Undo Last Save
+         * deletes the newest save then). Never run for a job that did not succeed; a failure inside
+         * it is logged and leaves the job's outcome as it is.
+         */
+        afterSuccess?: () => Promise<void>;
     },
 ): Promise<HandlerResponse> {
     try {
@@ -248,7 +265,7 @@ export async function runAndWatch(
         // An import replacing the demo's pack is recorded once that pack is gone (`namedOnceReplaced`).
         if (spec.operation !== 'reset' && !request.replaces) await recordDatapackOnProject(context, request);
 
-        void watchAndRecord(context, transient, record, engine, resetOf, request.replaces ? request : undefined);
+        void watchAndRecord(context, transient, record, engine, resetOf, request.replaces ? request : undefined, spec.afterSuccess);
 
         return { success: true, data: { activationId: started.activationId } };
     } catch (error) {

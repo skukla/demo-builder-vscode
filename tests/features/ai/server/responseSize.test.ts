@@ -351,6 +351,8 @@ describe('rows with no output safety net are classified', () => {
         'validate_datapack_import',
         'start_datapack_import',
         'reset_datapack',
+        // Undo Last Save starts the same import through `startDatapackImport`: `{activationId}` too.
+        'undo_last_save',
         // Same category, listed separately because it is the one that does NOT
         // go through `runAndWatch`: the export is synchronous (the service gives
         // no activation id to watch) and returns per-type outcomes inline.

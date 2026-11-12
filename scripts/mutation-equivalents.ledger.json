@@ -7691,61 +7691,61 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "module": "src/features/data-installer/handlers/importStart.ts",
             "anchors": [
                 "const commerceInstance = payload?.commerceInstance;"
             ],
             "mutants": 1,
             "category": "optionalChain",
-            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards.",
+            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards. Moved with readInput and readTarget to importStart.ts (2026-11-12): unchanged code; the import's start became shared with Undo Last Save.",
             "decision": "none \u2014 equivalent.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "module": "src/features/data-installer/handlers/importStart.ts",
             "anchors": [
                 "const dataTypes = payload?.dataTypes ?? [];"
             ],
             "mutants": 2,
             "category": "optionalChain",
-            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards. The '?? []' arm is equally unreachable: the empty-array default and an absent payload both land on the 'select at least one data type' refusal, which IS tested.",
+            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards. The '?? []' arm is equally unreachable: the empty-array default and an absent payload both land on the 'select at least one data type' refusal, which IS tested. Moved with readInput and readTarget to importStart.ts (2026-11-12): unchanged code; the import's start became shared with Undo Last Save.",
             "decision": "none \u2014 equivalent.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "module": "src/features/data-installer/handlers/importStart.ts",
             "anchors": [
                 "const websiteCode = payload?.websiteCode;"
             ],
             "mutants": 1,
             "category": "optionalChain",
-            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards.",
+            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards. Moved with readInput and readTarget to importStart.ts (2026-11-12): unchanged code; the import's start became shared with Undo Last Save.",
             "decision": "none \u2014 equivalent.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "module": "src/features/data-installer/handlers/importStart.ts",
             "anchors": [
                 "const storeCode = payload?.storeCode;"
             ],
             "mutants": 1,
             "category": "optionalChain",
-            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards.",
+            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards. Moved with readInput and readTarget to importStart.ts (2026-11-12): unchanged code; the import's start became shared with Undo Last Save.",
             "decision": "none \u2014 equivalent.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "module": "src/features/data-installer/handlers/importStart.ts",
             "anchors": [
                 "return { target: undefined };"
             ],
             "mutants": 1,
             "category": "other",
-            "reason": "Emptying this object leaves 'target' absent rather than explicitly undefined, and its only reader takes 'target.target' \u2014 which is undefined either way. The caller then writes 'target: input.target ?? resolveInstallTarget(project)', so both spellings fall through to the project scope identically.",
+            "reason": "Emptying this object leaves 'target' absent rather than explicitly undefined, and its only reader takes 'target.target' \u2014 which is undefined either way. The caller then writes 'target: input.target ?? resolveInstallTarget(project)', so both spellings fall through to the project scope identically. Moved with readInput and readTarget to importStart.ts (2026-11-12): unchanged code; the import's start became shared with Undo Last Save.",
             "decision": "none \u2014 equivalent.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -7755,10 +7755,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 301,
+            "line": 318,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (247 -> 248): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (251 -> 272): unchanged code; the progress push above it carries the engine's count. Re-anchored 2026-11-06 (272 -> 274): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (274 -> 275): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (281 -> 284): unchanged code; the pack-change announcement was added above it. Re-anchored 2026-11-09 (295 -> 298): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (298 -> 301): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it.",
+            "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (247 -> 248): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (251 -> 272): unchanged code; the progress push above it carries the engine's count. Re-anchored 2026-11-06 (272 -> 274): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (274 -> 275): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (281 -> 284): unchanged code; the pack-change announcement was added above it. Re-anchored 2026-11-09 (295 -> 298): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (298 -> 301): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-12 (301 -> 318): unchanged code; runAndWatch's afterSuccess was added above it.",
             "decision": "none \u2014 log-only.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -7768,10 +7768,10 @@
             "anchors": [
                 "if (!project) {"
             ],
-            "line": 294,
+            "line": 311,
             "mutants": 2,
             "category": "branch",
-            "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (240 -> 241): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (244 -> 265): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (265 -> 267): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (267 -> 268): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (274 -> 277): unchanged code; the pack-change announcement was added above it. Re-anchored 2026-11-09 (288 -> 291): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (291 -> 294): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it.",
+            "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (240 -> 241): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (244 -> 265): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (265 -> 267): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (267 -> 268): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (274 -> 277): unchanged code; the pack-change announcement was added above it. Re-anchored 2026-11-09 (288 -> 291): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (291 -> 294): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-12 (294 -> 311): unchanged code; runAndWatch's afterSuccess was added above it.",
             "decision": "none \u2014 equivalent. The guard is the intentional path and the catch is the backstop; a test cannot tell which one ran.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"

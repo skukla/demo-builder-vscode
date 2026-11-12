@@ -493,6 +493,28 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'undo_last_save',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Undo the last save of the project's own datapack: Commerce goes back to the save before it. The datapack must " +
+            "be the one this project uses and one of the user's own in My Datapacks (not a team pack), with an earlier save " +
+            'to go back to; otherwise this refuses and nothing changes. One job, as start_datapack_import replacing a pack: ' +
+            'the last save is uninstalled and the one before it installed, onto the website and store view the pack is ' +
+            'installed to. Changes made in the Admin since are lost, never saved. Only once the job succeeds is the last ' +
+            'save deleted from My Datapacks, with its store configuration; a job that fails deletes nothing and the project ' +
+            'keeps the last save. Returns an activationId; with waitSeconds (up to 45) it waits for the job to end and ' +
+            'carries the outcome as job; else follow with get_datapack_import_status. Ask the user first.',
+        map: importHandlers,
+        type: 'undo-last-save',
+        // Gated twice, as reset_datapack is: the row, then the handler's own check.
+        confirm: true,
+        inputSchema: {
+            datapackName: z.string().describe("The project's datapack, by its name from find_datapacks (one of yours)"),
+            ...WAIT_FOR_JOB,
+        },
+    },
+    {
         tool: 'start_datapack_export',
         needsAuth: ['adobe'],
         readOnly: false,
