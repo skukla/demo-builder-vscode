@@ -1,7 +1,6 @@
 /**
  * What a datapack's version says about it (walk F99): a save is shown by when it was saved, in the
- * SC's own time, never as its id; a named version as it is; and a pack's saves, newest first, are its
- * Version History.
+ * SC's own time, never as its id; a named version as it is; and a pack's saves, newest first.
  */
 
 import {

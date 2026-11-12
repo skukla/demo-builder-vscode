@@ -433,7 +433,7 @@ describe('viewFrame', () => {
 
     // Walk F134: a clean finish carries no `run`, so it hands off to the small result.
     it('hands a clean import finish to the small result, with its green icon', () => {
-        const clean: ResultContent = { variant: 'success', title: 'Frescopa Installed', finished: true, message: 'Your changes are saved in Version History.' };
+        const clean: ResultContent = { variant: 'success', title: 'Frescopa Installed', finished: true, message: 'New products can take 20 minutes to show in search.' };
 
         expect(viewFrame({ ...base, view: 'result', typeCount: 8, columns: 2, result: clean })).toEqual({
             title: 'Frescopa Installed',

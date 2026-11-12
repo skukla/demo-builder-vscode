@@ -70,7 +70,7 @@ describe("the demo's datapack in the library", () => {
         expect(screen.queryByRole('region', { name: "This Demo's Datapack" })).not.toBeInTheDocument();
     });
 
-    // Owner, 2026-11-09 (walk F99): a pack of saves is one thing; its later saves are Version History.
+    // Owner, 2026-11-09 (walk F99): a pack of saves is one thing; a later save is not a newer version.
     it('shows the save in use with no version picker and no newer dot, though a later save exists', async () => {
         const items = [{ ...OLDER, createdAt: '2026-11-01T09:00:00Z' }, { ...NEWER, createdAt: '2026-11-03T12:00:00Z' }];
         store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, items);
@@ -169,6 +169,20 @@ describe('Save Changes, in the flyout', () => {
         await push({ id: 'datapack-save', state: 'succeeded' });
 
         await waitFor(() => expect(catalogReads()).toBe(before + 1));
+    });
+
+    // J3-1 (owner, 2026-11-12: "3-1 is good"): a save into the SC's own datapack ends on where it went.
+    it('ends on "Saved to" the datapack, thing named, no version', async () => {
+        store(OWN, MINE, false, AT);
+        await renderView();
+        await press(card('acme-1a2b3c'));
+        await press(await inFlyout().findByRole('button', { name: 'Save Changes' }));
+        await press(await screen.findByRole('button', { name: 'Save' }));
+
+        await push({ id: 'datapack-save', state: 'succeeded' });
+
+        expect(await screen.findByRole('heading', { name: /Saved to Acme Bodea$/u })).toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: /Acme Bodea Saved/u })).not.toBeInTheDocument();
     });
 });
 

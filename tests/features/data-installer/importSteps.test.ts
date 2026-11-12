@@ -37,7 +37,7 @@ const source = (over: Partial<StepSource> = {}): StepSource => ({
     ...over,
 });
 
-/** The demo's pack is an earlier save of the same pack: restoring from Version History. */
+/** The demo's pack is another save of the same pack: Undo Last Save, or installing the pack again. */
 const SAVED = '20261109-135600';
 const SAME_PACK: Partial<StepSource> = {
     installing: { name: 'Luma', version: SAVED },
@@ -76,20 +76,20 @@ describe('which steps show', () => {
 
     it('draws a replace that saved first as all four, in the order they run', () => {
         const steps = importSteps(
-            source({ ...SAME_PACK, savedAs: 'Nov 9, 1:56 PM', replacing: 'pending' })
+            source({ ...SAME_PACK, savedAs: 'My Luma', replacing: 'pending' })
         );
 
         expect(labels(steps)).toStrictEqual([
             'Save Your Changes',
             'Uninstall the Previous Version',
-            `Install the Version from ${versionLabel(SAVED)}`,
+            'Install Luma',
             'Verify Installation',
         ]);
         expect(steps[0]).toStrictEqual({
             kind: 'saving-changes',
             label: 'Save Your Changes',
             status: 'success',
-            line: 'Saved as Nov 9, 1:56 PM',
+            line: 'Saved to My Luma',
         });
     });
 
@@ -116,11 +116,13 @@ describe('which steps show', () => {
 });
 
 describe('what Install and Remove are named', () => {
-    it('names another version of the same pack by when it was saved', () => {
+    // Phase 2 (owner, 2026-11-12): the SC never manages versions, so a save is named by its datapack.
+    it('names another save of the same pack by the datapack, never by when it was saved', () => {
         const steps = importSteps(source(SAME_PACK));
 
         expect(remove(steps).label).toBe('Uninstall the Previous Version');
-        expect(install(steps).label).toBe(`Install the Version from ${versionLabel(SAVED)}`);
+        expect(install(steps).label).toBe('Install Luma');
+        expect(install(steps).label).not.toContain(versionLabel(SAVED));
     });
 
     it('names another pack by its name, and its version when it is not a save', () => {
@@ -177,7 +179,8 @@ describe('Uninstall’s lines', () => {
             })
         );
 
-        expect(remove(steps)).toMatchObject({ status: 'success', line: 'Uninstalled Nov 1, 12:00 PM' });
+        // The datapack's name, never when the save was made (Phase 2, owner 2026-11-12).
+        expect(remove(steps)).toMatchObject({ status: 'success', line: 'Uninstalled Luma' });
         expect(install(steps)).toMatchObject({ status: 'checking', line: 'Reading from Commerce' });
     });
 

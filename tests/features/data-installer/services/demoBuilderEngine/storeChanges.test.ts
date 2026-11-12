@@ -106,7 +106,7 @@ describe('saveStoreChanges', () => {
 
         const result = await saveStoreChanges(d, { pack: PACK, saveAs: { id: { name: PACK.name, version: 'next' }, displayName: 'Acme Demo' } }, write);
 
-        expect(result.sentence).toBe('Saved a new version of Acme Demo.');
+        expect(result.sentence).toBe('Saved to Acme Demo.');
     });
 
     it('moves the install record onto the new version, so the store and it start out the same', async () => {

@@ -132,7 +132,7 @@ export function useReplacement(
     }, [replaces, arm]);
 
     const { disarm, reopen } = removal;
-    const name = replaces ? replacedName(replaces, importing, heldName) : undefined;
+    const name = replaces ? replacedName(replaces, heldName) : undefined;
     return {
         ...(replaces && name ? { name, sentence: replacesSentence(replaces, importing, { held: heldName, importing: importingName }) } : {}),
         ...(replaces && replaces.name === importing.name ? { version: versionLabel(replaces.version) } : {}),

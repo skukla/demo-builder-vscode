@@ -206,17 +206,15 @@ function ranOnRows(record: ImportJobRecord): boolean {
     return record.outcome === 'success' || record.outcome === 'partial' || record.outcome === 'error';
 }
 
-/** What a clean import's result says when the SC's changes were saved first (walk F134). */
-export const SAVED_LINE = 'Your changes are saved in Version History.';
-
 /**
- * What is left to know after a clean import: where the SC's changes went, the engine's lines for the
- * SC (what it kept of theirs, a step left in the Admin), then how long search takes. Without engine
- * lines it is one sentence; with them, a line each (review, 2026-11-10).
+ * What is left to know after a clean import: the engine's lines for the SC (what it kept of theirs, a
+ * step left in the Admin), then how long search takes. Without engine lines it is one sentence; with
+ * them, a line each (review, 2026-11-10). A save made first is not repeated: its own step said
+ * where the changes went (Phase 2, owner 2026-11-12; rule 3, say a fact once).
  */
 function leftToKnow(record: ImportJobRecord): Pick<ResultContent, 'message' | 'details'> {
     const scLines = record.scLines ?? [];
-    const lines = [record.savedAs ? SAVED_LINE : undefined, ...scLines, record.searchDelay].filter(
+    const lines = [...scLines, record.searchDelay].filter(
         (line): line is string => Boolean(line),
     );
     if (lines.length === 0) return {};

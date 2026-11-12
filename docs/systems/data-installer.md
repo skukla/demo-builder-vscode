@@ -127,8 +127,8 @@ which lists every object the install made. It never removes by name.
   `handlers/importReplacement.ts`). It used to run as a first install: products already in the store
   were left alone, the project named the new pack, and the old data had nothing pointing at it. Now,
   when Demo Builder installed the pack the project uses, the install form says what it replaces in
-  the SC's terms (walk F101, `replaceWords.ts`): "Replaces this demo's data with the version from
-  Nov 9, 9:15 AM." for another save of the same pack, "Replaces this demo's datapack, Luma." for
+  the SC's terms (walk F101, `replaceWords.ts`): "Replaces this demo's data with another save of
+  My Luma." for another save of the same pack (no date: the SC never manages versions, Phase 2), "Replaces this demo's datapack, Luma." for
   another pack. Every data type starts ticked (walk F103), and Install
   first reads the SC's changes to that pack the way a removal does, under the install's own title,
   waiting on "Checking for your changes" (walk F108, F114: the one name for that check, wherever it
@@ -160,8 +160,9 @@ which lists every object the install made. It never removes by name.
   opens, two columns of data types at large for more than six, one at medium for six or fewer or
   in an editor too narrow for two (`runColumns`, F135), and the check and question before a replace
   take that width (F127). **A clean finish hands off to the small result** (owner, 2026-11-10, walk
-  F134): "My Luma Installed", then "Your changes are saved in Version History." when a save ran and
-  "New products can take 20 minutes to show in search." when products went in, and nothing else.
+  F134): "My Luma Installed", then "New products can take 20 minutes to show in search." when
+  products went in, and nothing else. A save that ran first is not repeated there: its own step said
+  where the changes went (Phase 2).
   A finish with a problem (a data type refused rows, the check found products that differ, the
   store configuration failed) stays on its steps under the same title in amber, with Fix with AI, the
   sentence ("This demo now uses My Luma from Nov 9, 9:15 AM. Your changes are saved as Nov 9, 1:56
@@ -334,18 +335,21 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   what it does ("Save Changes" read as changing the team pack): it makes a new pack of the SC's, and
   each screen says what the save takes in one line ("Saves everything this demo uses as a new
   datapack of yours.", walk F85: two lines were too busy). The words are in
-  `create-flow/saveWords.ts`; the save window ends on `saveNote` ("Saved as Acme Test. Scratch 1028
-  now uses it."), over one line per data type with its count. The server decides the same
+  `create-flow/saveWords.ts`; a save into the SC's own pack ends on its title, "Saved to My Luma"
+  (J3-1, owner 2026-11-12), and a new pack on `saveNote` ("Saved as Acme Test. Scratch 1028 now
+  uses it."), over one line per data type with its count. The server decides the same
   (`saveIntoFor`): a team pack is never saved into, even by its owner.
-- **A pack of saves is one thing, with a Version History** (owner, 2026-11-09, walk F99). A save's
+- **A pack of saves is one thing** (owner, 2026-11-09, walk F99; Phase 2, 2026-11-12). A save's
   version is never shown as its id: everywhere it appears it reads as when it was saved, in the SC's
   own time ("Nov 9, 9:15 AM", `versionLabel` in `packVersions.ts`). The card shows the save the demo
   uses (or, for a pack no demo uses, the newest) as "Saved Nov 9, 1:56 PM", with no version picker;
   named versions (`main`, `eds-compatible`) keep their picker, since each is a variant, and a pack
-  holding both lists its saves there as the one on show. The flyout's More menu offers **Version
-  History** on a pack with more than one save: its saves by date, the one in use marked In Use, and
-  **Restore Version**, which opens the flyout on the save chosen and its import, the replace above.
-  No save is deleted by restoring. **Delete Datapack** (renamed from Remove Datapack, owner
+  holding both lists its saves there as the one on show. A save keeps the pack's two newest saves.
+  Version History was removed (Phase 2): the flyout's More menu offers **Undo Last Save** instead,
+  only on the datapack the demo uses, when it is the SC's own with an earlier save and the demo is
+  on the newest. It asks "Undo Last Save?" (Cancel, and Undo in blue), sends `undo-last-save`, and
+  opens the import window on the earlier save, which picks the running job up; the job uninstalls
+  the newest save, installs the one before it, and then deletes the newest. **Delete Datapack** (renamed from Remove Datapack, owner
   2026-11-09: it leaves the library for good, where Uninstall can be undone by importing) on a
   pack of saves deletes it whole, every
   version and each one's settings layer (`delete-library-datapack` with `everyVersion`). Save
@@ -353,8 +357,8 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   is still its own version, so nothing was migrated.
 - **The updated dot**, the house amber dot beside the card's version picker, when the named version
   installed changed in the library since (`updatedAt` after the install record's `startedAt`; team
-  packs are updated in place as `main`): "Updated on Nov 9". A later save never lights it: saves
-  are Version History, not newer versions. It is deliberately not an update in the Updates window: a
+  packs are updated in place as `main`): "Updated on Nov 9". A later save never lights it: a later
+  save is not a newer version. It is deliberately not an update in the Updates window: a
   demo may stay on an older version on purpose.
 
 A finished save reads the catalog again at once (`useSaveStoreChanges`), so closing its window

@@ -53,8 +53,7 @@ export interface DeleteLibraryDatapackPayload {
     version?: string;
     /**
      * Every version of the SC's own pack, not one (owner, 2026-11-09): the flyout's Delete Datapack.
-     * A pack of saves is one thing to the SC, its earlier saves its Version History, so removing it
-     * takes them all. `version` is then not needed.
+     * A pack of saves is one thing to the SC, so removing it takes every save. `version` is then not needed.
      */
     everyVersion?: boolean;
     /** Must be true. Nothing is deleted by default. */

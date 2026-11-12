@@ -1,8 +1,8 @@
 /**
  * A save that would change nothing writes nothing (owner, 2026-11-09, walk F89 and F124). Save Changes
  * cannot know whether anything changed until it has read the store, so a press right after a clean
- * install used to write a new version identical to the one installed: a useless entry in the pack's
- * Version History. Now, once the save has read the store, it compares what it read with the version
+ * install used to write a new version identical to the one installed: a useless save, which would
+ * now also push the save worth undoing out of the two a pack keeps. Now, once the save has read the store, it compares what it read with the version
  * the demo uses, row by row in the same pack form and the same hash every comparison uses
  * (`packedFingerprint`), and when every data type holds the same rows it stops there.
  *

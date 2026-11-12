@@ -20,7 +20,6 @@ import type { DatapackDetail } from '@/features/data-installer/types';
 import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
 import { PackActions } from '@/features/data-installer/ui/components/PackActions';
 import { SHARE_CONSENT } from '@/features/data-installer/shareWording';
-import { versionLabel } from '@/features/data-installer/packVersions';
 
 const mockRequest = webviewClient.request as jest.Mock;
 
@@ -378,15 +377,13 @@ describe('a pack with a settings layer (datapack-engine step 09)', () => {
     });
 });
 
-// A pack of saves (owner, 2026-11-09, walk F99): its earlier saves are its Version History, under
-// More; Restore Version opens the import of the one chosen; Delete Datapack takes it whole.
+// A pack of saves: one thing on its card. The datapack keeps its two newest saves, and Undo Last Save
+// goes back to the one before the newest (Phase 2, owner 2026-11-12); Delete Datapack takes it whole.
 const NEWEST = '20261109-185605';
-const IN_USE = '20261109-160124';
-const OLDEST = '20261109-141504';
-const HISTORY = [NEWEST, IN_USE, OLDEST];
+const PREVIOUS = '20261109-160124';
 
 const SAVES: DatapackDetail = {
-    id: { name: 'my-luma', version: IN_USE },
+    id: { name: 'my-luma', version: NEWEST },
     displayName: 'My Luma',
     shared: false,
     dataTypes: ['products'],
@@ -401,70 +398,82 @@ function renderSaves(over: Partial<React.ComponentProps<typeof PackActions>> = {
         onImport: jest.fn(),
         onRemoved: jest.fn(),
         installerOn: false,
-        history: HISTORY,
-        inUse: IN_USE,
+        undoTo: PREVIOUS,
         ...over,
     };
     render(<PackActions {...props} />);
     return props;
 }
 
+const UNDO_BODY = 'Commerce goes back to My Luma as it was before your last save. Anything you changed since is lost.';
 
-
-describe('Version History', () => {
-    it('is under More on a pack with more than one save', () => {
+describe('Undo Last Save', () => {
+    it('is under More, after Save as File, when there is a save to go back to', () => {
         renderSaves();
 
-        expect(menuLabels()).toEqual([
-            'Save as File',
-            'Version History',
-            'Share',
-            'Delete Datapack',
-        ]);
+        expect(menuLabels()).toEqual(['Save as File', 'Undo Last Save', 'Share', 'Delete Datapack']);
     });
 
-    it('lists the saves by when each was saved, marks the one in use, and restores the one chosen', async () => {
+    it('CONTROL: is not offered without a save to go back to', () => {
+        renderSaves({ undoTo: undefined });
+
+        expect(menuLabels()).not.toContain('Undo Last Save');
+    });
+
+    it('asks first, in blue, and sends nothing until Undo', async () => {
+        renderSaves();
+
+        await press(row('Undo Last Save'));
+
+        expect(screen.getByRole('heading', { name: 'Undo Last Save?' })).toBeInTheDocument();
+        expect(screen.getByText(UNDO_BODY)).toBeInTheDocument();
+        // Rule 20: red is for deleting and removing only; Undo is the standard blue.
+        expect(screen.getByRole('button', { name: 'Undo' })).toHaveClass('modal-button-primary');
+        expect(screen.getByRole('button', { name: 'Undo' })).not.toHaveClass('modal-button-negative');
+        expect(mockRequest.mock.calls.some(([type]) => type === 'undo-last-save')).toBe(false);
+    });
+
+    it('on Undo, starts the undo and opens the run on the save it goes back to', async () => {
+        mockRequest.mockResolvedValue({ success: true, data: { activationId: 'act-1' } });
         const props = renderSaves();
 
-        await press(screen.getByRole('menuitem', { name: 'Version History' }));
+        await press(row('Undo Last Save'));
+        await press(screen.getByRole('button', { name: 'Undo' }));
+        await settle();
 
-        expect(screen.getByRole('heading', { name: 'Version History' })).toBeInTheDocument();
-        expect(
-            screen.getAllByRole('radio').map((radio) => radio.closest('label')?.textContent)
-        ).toEqual([versionLabel(NEWEST), `${versionLabel(IN_USE)} (in use)`, versionLabel(OLDEST)]);
-        expect(screen.queryByText(/20261109/u)).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Restore Version' })).toHaveAttribute('aria-disabled', 'true');
-
-        await press(screen.getByRole('radio', { name: versionLabel(OLDEST) }));
-        await press(screen.getByRole('button', { name: 'Restore Version' }));
-
-        expect(props.onImport).toHaveBeenCalledWith({ name: 'my-luma', version: OLDEST });
-        expect(screen.queryByRole('heading', { name: 'Version History' })).not.toBeInTheDocument();
+        const call = mockRequest.mock.calls.find(([type]) => type === 'undo-last-save');
+        expect(call?.[1]).toEqual({ datapackName: 'my-luma', confirm: true });
+        expect(props.onImport).toHaveBeenCalledWith({ name: 'my-luma', version: PREVIOUS });
     });
 
-    it('CONTROL: restoring the save already in use is not offered', async () => {
+    it('says why when the undo is refused, and opens no run', async () => {
+        mockRequest.mockResolvedValue({ success: false, error: 'There is no earlier save to go back to.' });
+        const props = renderSaves();
+
+        await press(row('Undo Last Save'));
+        await press(screen.getByRole('button', { name: 'Undo' }));
+        await settle();
+
+        expect(screen.getByText(/There is no earlier save to go back to\./u)).toBeInTheDocument();
+        expect(props.onImport).not.toHaveBeenCalled();
+    });
+
+    it('CONTROL: Cancel sends nothing', async () => {
         renderSaves();
-        await press(screen.getByRole('menuitem', { name: 'Version History' }));
 
-        await press(screen.getByRole('radio', { name: /in use/u }));
+        await press(row('Undo Last Save'));
+        await press(screen.getByRole('button', { name: 'Cancel' }));
 
-        expect(screen.getByRole('button', { name: 'Restore Version' })).toHaveAttribute('aria-disabled', 'true');
-    });
-
-    it('CONTROL: a pack with one save, or a named version, has no Version History', () => {
-        renderSaves({ history: [IN_USE] });
-        expect(menuLabels()).not.toContain('Version History');
+        expect(mockRequest.mock.calls.some(([type]) => type === 'undo-last-save')).toBe(false);
     });
 });
 
 describe('Delete Datapack on a pack of saves', () => {
-    it('removes it whole, its version history with it, and says so', async () => {
+    it('removes it whole, and says so', async () => {
         renderSaves();
 
         await press(screen.getByRole('menuitem', { name: 'Delete Datapack' }));
-        expect(
-            screen.getByText("Permanently deletes it and its version history.")
-        ).toBeInTheDocument();
+        expect(screen.getByText('Permanently deletes it.')).toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Delete' }));
 
         expect(mockRequest).toHaveBeenCalledWith(

@@ -38,6 +38,23 @@ import type { GitHubUser } from './webviewPayloads';
 import type { LeftOut, Selections } from '@/features/data-installer/pickableKinds';
 
 /**
+ * `undo-last-save` — go back to the save before the newest of the project's own datapack (Phase 2,
+ * owner 2026-11-12). Sent by the Datapacks flyout's Undo Last Save once its dialog is confirmed, and
+ * by the agent tool. Nothing changes in Commerce unless `confirm` is true.
+ */
+export interface UndoLastSaveRequest {
+    /** The project's datapack, by its library name. */
+    datapackName?: string;
+    /** Must be true. Nothing changes in Commerce by default. */
+    confirm?: boolean;
+}
+
+/** `undo-last-save`'s `data` once the job is accepted, as `start-datapack-import` answers. */
+export interface UndoLastSaveResult {
+    activationId: string;
+}
+
+/**
  * `check-store-view-products` — does a guest see any products in the store view
  * the SC just picked? (EDS-46) Sent by the store pickers on the wizard's Business
  * Structure step and on Configure, once all three codes are chosen.

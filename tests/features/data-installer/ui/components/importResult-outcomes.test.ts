@@ -18,7 +18,6 @@ import type { DataTypeStatus, ImportJobRecord } from '@/features/data-installer/
 import {
     resolveResult,
     RETRIES_BEFORE_FIX,
-    SAVED_LINE,
 } from '@/features/data-installer/ui/components/importResult';
 import { jobRecord, PACK_NAME, recordOnlySources } from './importResult.testUtils';
 
@@ -53,8 +52,8 @@ describe('an import that finished cleanly (walk F134)', () => {
     });
 
     // Review, 2026-11-10: only a problem keeps the steps. The engine's lines for the SC go in the small
-    // result's body, after the saved line and before the search line, a line each.
-    it('is the small result with the engine\'s lines in its body, between the saved and search lines', () => {
+    // result's body, before the search line, a line each.
+    it('is the small result with the engine\'s lines in its body, before the search line', () => {
         const result = outcomeOf({
             outcome: 'success',
             perType: done('categories', 'products'),
@@ -68,11 +67,13 @@ describe('an import that finished cleanly (walk F134)', () => {
             variant: 'success',
             title: `${PACK_NAME} Installed`,
             finished: true,
-            details: [SAVED_LINE, 'Kept 2 things you had changed in the Admin.', SEARCH],
+            details: ['Kept 2 things you had changed in the Admin.', SEARCH],
         });
     });
 
-    it('says where the SC’s changes went first, when they were saved', () => {
+    // Phase 2 (owner, 2026-11-12): the save's own result title says where the changes went ("Saved to
+    // My Luma", rule 17), so the install's result does not say it again (rule 3).
+    it('says nothing more about a save made first: the save said it', () => {
         const result = outcomeOf({
             outcome: 'success',
             perType: done('products'),
@@ -81,10 +82,7 @@ describe('an import that finished cleanly (walk F134)', () => {
             searchDelay: SEARCH,
         });
 
-        expect(result?.message).toBe(
-            'Your changes are saved in Version History. New products can take 20 minutes to show in search.'
-        );
-        expect(SAVED_LINE).toBe('Your changes are saved in Version History.');
+        expect(result?.message).toBe(SEARCH);
     });
 
     it('is the title alone when there is nothing left to know', () => {

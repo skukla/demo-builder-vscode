@@ -53,6 +53,12 @@ function requestOf(pack: PackBeingSaved | undefined, picks: StorePicks, saveAsNa
     };
 }
 
+/** How a save ends: into the pack, "Saved to My Luma"; as a new pack from one, "My Bodea Saved". */
+function savedTitle(name: string, fromPack: boolean, asNew: boolean): string {
+    if (!fromPack) return `${name} Created`;
+    return asNew ? `${name} Saved` : `Saved to ${name}`;
+}
+
 /**
  * @param onSaved - called once per save, when it finishes, to read the catalog again. Must be stable.
  */
@@ -92,8 +98,9 @@ export function useSaveStoreChanges(onSaved: () => void): SaveStoreChanges {
                 // Created only from nothing; from a pack, its own or a team pack, it is Saved (owner, 2026-11-09).
                 title: pack ? `Saving ${name}` : `Creating ${name}`,
                 failureTitle: pack ? `Couldn't Save ${name}` : `Couldn't Create ${name}`,
-                // The result names the pack (owner, 2026-11-10): "My Luma Saved", never "Datapack Saved".
-                successTitle: pack ? `${name} Saved` : `${name} Created`,
+                // The result names the pack (owner, 2026-11-10), never "Datapack Saved". A save into the
+                // pack says where it went, "Saved to My Luma" (J3-1, owner 2026-11-12; rule 21).
+                successTitle: savedTitle(name, pack !== undefined, saveAsName !== undefined),
             });
         },
         [start, offered],

@@ -41,25 +41,27 @@ export function savingLine(kinds: readonly string[]): string {
 }
 
 /**
- * "Saved a new version of Acme Test." into the same pack; "Saved as Acme Test. Luma is unchanged."
- * as a new one (owner, 2026-11-09, the save mockup).
+ * "Saved to Acme Test." into the same pack (J3-1, owner 2026-11-12: the SC never manages versions);
+ * "Saved as Acme Test. Luma is unchanged." as a new one (owner, 2026-11-09, the save mockup).
  */
 export function savedSentence(saveAs: { id: DatapackId; displayName: string }, installed?: { id: DatapackId; displayName: string }): string {
-    if (installed && saveAs.id.name === installed.id.name) return `Saved a new version of ${saveAs.displayName}.`;
+    if (installed && saveAs.id.name === installed.id.name) return `Saved to ${saveAs.displayName}.`;
     const where = `Saved as ${saveAs.displayName}.`;
     return installed ? `${where} ${installed.displayName} is unchanged.` : where;
 }
 
 /**
- * The save window's sentence (owner, 2026-11-09, F83 then F85): a new version names its pack; a new
- * pack says where it went and that the demo now uses it.
+ * The save window's sentence (owner, 2026-11-09, F83 then F85): a new pack says where it went and
+ * that the demo now uses it. A save into the pack it started from has none: its title, "Saved to My
+ * Luma", says where it went (J3-1, owner 2026-11-12; rule 3, say a fact once).
  *
  * @param saved - the version written, as the SC knows it
  * @param from - the pack the save started from, when it started from one
  * @param projectName - the demo, by its display name
+ * @returns the sentence, or nothing for a save into the pack it started from
  */
-export function saveNote(saved: { name: string; displayName: string }, from: { name: string } | undefined, projectName: string): string {
-    if (from && from.name === saved.name) return `Saved a new version of ${saved.displayName}.`;
+export function saveNote(saved: { name: string; displayName: string }, from: { name: string } | undefined, projectName: string): string | undefined {
+    if (from && from.name === saved.name) return undefined;
     if (!from) return `${projectName} now uses ${saved.displayName}.`;
     // "Saved as" says where it went; the pack it came from is never written to (owner, 2026-11-09, F85).
     return `Saved as ${saved.displayName}. ${projectName} now uses it.`;

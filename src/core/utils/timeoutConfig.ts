@@ -316,6 +316,13 @@ export const TIMEOUTS = {
      */
     DATAPACK_SAVE_THEN_WRITE: 10 * 60 * 1000,
 
+    /**
+     * How long Undo Last Save waits for its job to be accepted (Phase 2, 2026-11-12): 2 minutes. The
+     * handler reads the datapack's saves, the install record and the earlier save's data types, and
+     * checks the import, before it answers; nothing is saved first. A first estimate, not measured.
+     */
+    DATAPACK_UNDO_START: 2 * 60 * 1000,
+
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
 

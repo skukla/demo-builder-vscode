@@ -309,6 +309,23 @@ describe('save-store-changes-to-pack', () => {
         expect(saved.datapack?.origin).toEqual({ name: 'bodea', version: 'main' });
     });
 
+    // J3-1 (owner, 2026-11-12): a save into the SC's own pack ends on "Saved to My Bodea", wherever its
+    // window shows (an agent's save opens it too), with no line repeating it and no version named.
+    it("ends a save into the SC's own pack on where it went, with no line under it", async () => {
+        const own = { name: 'my-bodea-1a2b3c', version: '20261028-090000', store: 'library' as const };
+        const { context } = makeImportHarness({ ...PROJECT, datapack: own });
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({
+            items: [{ id: { name: own.name, version: own.version }, displayName: 'My Bodea', shared: false, dataTypes: [], art: {}, mine: true }],
+            count: 1,
+        });
+        mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id, readFrom: 'library' }));
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+        expect(result).toMatchObject({ success: true, title: 'Saved to My Bodea' });
+        expect(result).not.toHaveProperty('note');
+    });
+
     const FILE_WRITTEN: DatapackFile = { id: { name: 'x', version: '1' }, displayName: 'X', items: [] };
 
     // Phase 2, step-02 slice 1: trimming old saves would otherwise delete the only shared versions,

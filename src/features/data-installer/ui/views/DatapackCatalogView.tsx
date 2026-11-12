@@ -385,7 +385,7 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                 sharedInFile={detail.value?.sharedInFile}
                 onSharingChanged={sharingChanged}
                 settingsLayer={detail.value?.settingsLayer}
-                {...flyout.history}
+                {...(flyout.undoTo ? { undoTo: flyout.undoTo } : {})}
                 {...removeDataProps({ library, held, installedAt, selected }, importWindow.openRemoval)}
             />
             {heldPack.windows}

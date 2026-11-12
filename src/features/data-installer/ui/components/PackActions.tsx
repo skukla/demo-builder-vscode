@@ -2,8 +2,9 @@
  * The flyout's actions (owner, 2026-10-30): Import is the one button on view, and everything else
  * is behind a "More" button (`CardActionsMenu` with a label, owner 2026-10-31: a bare ⋯ beside
  * Import read as unclear; icons from `renderMenuIcon`), where it was five buttons
- * on three rows. In the menu, in order: Save as file; Version History, on a pack of saves with more
- * than one (walk F99: its earlier saves, one to restore); Share or Stop sharing, on the SC's own
+ * on three rows. In the menu, in order: Save as file; Undo Last Save, on the datapack the demo uses
+ * when there is a save to go back to (Phase 2, owner 2026-11-12: the datapack keeps its two newest
+ * saves, and the undo goes back to the one before the newest); Share or Stop sharing, on the SC's own
  * library pack; and Delete Datapack, the same pack only, in its own section at the bottom. A pack of
  * saves is deleted whole.
  * The demo's own pack, when it is the SC's, leads with Save Changes, which writes what its store now
@@ -12,8 +13,8 @@
  * A pack whose settings layer is the SC's own also offers "Delete Store Configuration" there, since a
  * layer has no card of its own to remove it from (datapack-engine step 09).
  *
- * **Share, Stop sharing and both removes ask in a dialog** (`ConfirmActionDialog`, owner,
- * 2026-11-05). Remove used to ask only when the pack was shared in a project file, though it cannot
+ * **Undo Last Save, Share, Stop sharing and both removes ask in a dialog** (`ConfirmActionDialog`,
+ * owner, 2026-11-05). Remove used to ask only when the pack was shared in a project file, though it cannot
  * be undone either way. **While a menu row's work runs, the flyout waits**: its title and the medium
  * spinner its load shows, nothing else (dialog design rules), since the menu has closed and has no
  * button to spin. What each one says afterwards (where the file went, why it could not) shows under
@@ -38,18 +39,16 @@ import { isSavedVersion } from '../../packVersions';
 import { SHARE_CONSENT } from '../../shareWording';
 import type { DatapackDetail, PackDetailLayer } from '../../types';
 import { useLibrarySharing } from '../hooks/useLibrarySharing';
+import { useUndoLastSave } from '../hooks/useUndoLastSave';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
 import { useSaveDatapackFile } from './SaveDatapackFileButton';
-import { VersionHistoryDialog } from './VersionHistoryDialog';
 import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { ConfirmActionDialog, type ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId } from '@/types/datapack';
-
-const NO_HISTORY: readonly string[] = [];
 
 export interface PackActionsProps {
     detail: DatapackDetail;
@@ -71,10 +70,8 @@ export interface PackActionsProps {
     settingsLayer?: PackDetailLayer;
     /** Whether a menu row's work is running: the flyout hides its other content. Stable. */
     onWorking?: (working: boolean) => void;
-    /** The pack's saves, newest first: with more than one, More offers Version History (walk F99). */
-    history?: readonly string[];
-    /** The save this demo uses, for Version History's In Use. */
-    inUse?: string;
+    /** The save Undo Last Save goes back to: More offers it only when there is one (`useDetailFlyout`). */
+    undoTo?: string;
     /** Remove Data: on the version whose data is in this demo's store, opening straight to its confirm (F118). */
     onRemoveData?: () => void;
 }
@@ -87,9 +84,9 @@ interface Row {
 }
 
 /** The menu's upper section: what any pack offers, then what the SC's own library pack adds. */
-function packRows(detail: DatapackDetail, withHistory: boolean): Row[] {
+function packRows(detail: DatapackDetail, undoable: boolean): Row[] {
     const rows: Row[] = [{ key: 'save-file', label: 'Save as File', icon: 'saveFile' }];
-    if (withHistory) rows.push({ key: 'history', label: 'Version History', icon: 'history' });
+    if (undoable) rows.push({ key: 'undo', label: 'Undo Last Save', icon: 'reset' });
     if (detail.store === 'library' && detail.mine) {
         rows.push({ key: 'share', label: detail.shared ? 'Stop Sharing' : 'Share', icon: 'share' });
     }
@@ -109,13 +106,22 @@ function removeRows(ownPack: boolean, ownLayer: boolean, removesData: boolean): 
 }
 
 /** The dialog open over the flyout, if any. */
-type Asking = 'share' | 'remove' | 'remove-settings' | null;
+type Asking = 'undo' | 'share' | 'remove' | 'remove-settings' | null;
 
 type ConfirmCopy = Pick<ConfirmActionDialogProps, 'title' | 'actionLabel' | 'actionVariant' | 'children'>;
 
 /** What a dialog asks. The title of a closed one is never drawn. */
 function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: string): ConfirmCopy {
     const name = detail.displayName;
+    if (asking === 'undo') {
+        // Blue: red is for deleting and removing only (rule 20; owner, 2026-11-12: "Too strong.").
+        return {
+            title: 'Undo Last Save?',
+            actionLabel: 'Undo',
+            actionVariant: 'accent',
+            children: `Commerce goes back to ${name} as it was before your last save. Anything you changed since is lost.`,
+        };
+    }
     if (asking === 'share' && !detail.shared) {
         return { title: `Share ${name}?`, actionLabel: 'Share', actionVariant: 'accent', children: SHARE_CONSENT };
     }
@@ -136,8 +142,8 @@ function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: stri
             children: 'Permanently deletes the store configuration saved with it.',
         };
     }
-    // A pack of saves goes whole, its Version History with it (owner, 2026-11-09).
-    const what = isSavedVersion(detail.id.version) ? 'it and its version history' : `version ${detail.id.version}`;
+    // A pack of saves goes whole, every save with it (owner, 2026-11-09).
+    const what = isSavedVersion(detail.id.version) ? 'it' : `version ${detail.id.version}`;
     // "Permanently" is the warning, as a word in the sentence (dialog design rules; review 2026-11-10).
     return {
         title: `Delete ${name}?`,
@@ -150,11 +156,13 @@ function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: stri
 /** What the flyout says while a menu row's work runs; a removal when it is none of the others. */
 function workLines(work: {
     saveFile: { saving: boolean };
+    undo: { working: boolean };
     sharing: { working: boolean };
     layerRemoval: { removing: boolean };
     shared?: boolean;
 }): WaitLines {
     if (work.saveFile.saving) return WAIT_STAGES.savingPackFile;
+    if (work.undo.working) return WAIT_STAGES.startingUndo;
     if (work.sharing.working) return work.shared ? WAIT_STAGES.makingPackPrivate : WAIT_STAGES.sharingPack;
     if (work.layerRemoval.removing) return WAIT_STAGES.deletingPackSettings;
     return WAIT_STAGES.deletingPack;
@@ -171,21 +179,20 @@ export function PackActions({
     onSharingChanged,
     settingsLayer,
     onWorking,
-    history = NO_HISTORY,
-    inUse,
+    undoTo,
     onRemoveData,
 }: PackActionsProps): React.JSX.Element {
     const library = detail.store === 'library';
     const [asking, setAsking] = useState<Asking>(null);
-    const [showHistory, setShowHistory] = useState(false);
     const saveFile = useSaveDatapackFile(detail.id, library ? 'library' : 'installer');
     const removal = useLibraryRemoval(detail.id, onRemoved, isSavedVersion(detail.id.version));
     const layerRemoval = useLibraryRemoval(settingsLayer?.id ?? detail.id, onSharingChanged);
     const sharing = useLibrarySharing(detail.id, detail.shared, onSharingChanged);
+    const undo = useUndoLastSave(detail.id.name, undoTo, onImport);
     const doneAsking = useCallback((): void => setAsking(null), []);
     // Still waiting once the pack is gone, as the flyout closes: its rows must not flash back.
     const working =
-        saveFile.saving || sharing.working || removal.removing || removal.removed || layerRemoval.removing;
+        saveFile.saving || undo.working || sharing.working || removal.removing || removal.removed || layerRemoval.removing;
 
     // Before the paint, or the flyout's rows would show for a frame beside the spinner. The cleanup is
     // for a flyout closed during the wait, which unmounts this with the work still running.
@@ -196,13 +203,13 @@ export function PackActions({
 
     const onAction = (key: React.Key): void => {
         if (key === 'save-file') saveFile.start();
-        else if (key === 'history') setShowHistory(true);
         else if (key === 'remove-data') onRemoveData?.();
-        else if (key === 'share' || key === 'remove' || key === 'remove-settings') setAsking(key);
+        else if (key === 'undo' || key === 'share' || key === 'remove' || key === 'remove-settings') setAsking(key);
     };
     const confirm = (): void => {
         setAsking(null);
-        if (asking === 'share') sharing.start();
+        if (asking === 'undo') undo.start();
+        else if (asking === 'share') sharing.start();
         else if (asking === 'remove') removal.start();
         else if (asking === 'remove-settings') layerRemoval.start();
     };
@@ -219,7 +226,7 @@ export function PackActions({
         <>
             {working ? (
                 <div className="datapack-panel-loading">
-                    <StageWait brief lines={workLines({ saveFile, sharing, layerRemoval, shared: detail.shared })} />
+                    <StageWait brief lines={workLines({ saveFile, undo, sharing, layerRemoval, shared: detail.shared })} />
                 </div>
             ) : null}
             {/* Kept mounted through a wait: a copy's own result would be lost with it. */}
@@ -244,7 +251,7 @@ export function PackActions({
                                 {INSTALL}
                             </Button>
                             <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
-                                <Section key="pack">{packRows(detail, history.length > 1).map(renderRow)}</Section>
+                                <Section key="pack">{packRows(detail, undoTo !== undefined).map(renderRow)}</Section>
                                 {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
                             </CardActionsMenu>
                         </div>
@@ -253,24 +260,13 @@ export function PackActions({
                     )}
                     <PackActionNotes>
                         {saveFile.note}
+                        {undo.note}
                         {sharing.note}
                         {removal.note}
                         {layerRemoval.note}
                     </PackActionNotes>
                 </>
             )}
-            {onImport ? (
-                <VersionHistoryDialog
-                    isOpen={showHistory}
-                    versions={history}
-                    {...(inUse ? { inUse } : {})}
-                    onRestore={(version) => {
-                        setShowHistory(false);
-                        onImport({ name: detail.id.name, version });
-                    }}
-                    onClose={() => setShowHistory(false)}
-                />
-            ) : null}
             <ConfirmActionDialog
                 isOpen={asking !== null}
                 {...confirmCopy(asking, detail, sharedInFile)}

@@ -100,8 +100,10 @@ describe("the result window's lines", () => {
 describe('saveNote', () => {
     const ACME = { name: 'acme-1a2b3c', displayName: 'Acme Test' };
 
-    it('a new version of your own pack names it, and nothing more', () => {
-        expect(saveNote(ACME, { name: 'acme-1a2b3c' }, 'Scratch 1028')).toBe('Saved a new version of Acme Test.');
+    // J3-1 (owner, 2026-11-12): a save into your own pack ends on its title, "Saved to Acme Test";
+    // a body line would say it again (rule 3), and the SC never manages versions (Phase 2).
+    it('a save into your own pack has no line: its title says where it went', () => {
+        expect(saveNote(ACME, { name: 'acme-1a2b3c' }, 'Scratch 1028')).toBeUndefined();
     });
 
     // Owner, 2026-11-09 (F85): "Saved as" says where it went; the pack it came from needs no line.

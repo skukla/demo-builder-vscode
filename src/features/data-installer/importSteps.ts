@@ -16,7 +16,7 @@
  * @module features/data-installer/importSteps
  */
 
-import { packLine, versionLabel } from './packVersions';
+import { packLine } from './packVersions';
 import { REPLACING, SAVING, FINISHING, runRows, type RunSource } from './runRows';
 import { STORE_CONFIG_KIND } from './services/datapackCatalog';
 import { ENGINE_PHASES, FINISHING_STOP, type InstallCheck, type JobStanding, LINKING_OPTIONS, REPLACE_STOP, SAVE_STOP } from './types';
@@ -35,7 +35,7 @@ export interface StepSource extends RunSource, Pick<JobStanding, 'replacing'> {
     savingStage?: string;
     /** Where the SC's changes were saved before the job began: "Nov 9, 1:56 PM" (walk F105). */
     savedAs?: string;
-    /** The pack installed, as the SC knows it, and its version: "Install the Version from …". */
+    /** The pack installed, as the SC knows it, and its version: "Install My Luma", "Install Luma, main". */
     installing: { name: string; version: string };
     /** The pack replaced is another version of the same pack: its version, "Nov 9, 9:15 AM". */
     replacesVersion?: string;
@@ -72,7 +72,7 @@ const failed = (reason: string | undefined): Pick<OperationRow, 'status' | 'prob
 function saveStep(source: StepSource): ImportStep[] {
     const row = { kind: SAVING, label: 'Save Your Changes' };
     if (source.stoppedAt === SAVE_STOP) return [{ ...row, ...failed(source.reason) }];
-    if (source.savedAs) return [{ ...row, status: 'success', line: `Saved as ${source.savedAs}` }];
+    if (source.savedAs) return [{ ...row, status: 'success', line: `Saved to ${source.savedAs}` }];
     if (source.savingStage && source.replaces)
         return [{ ...row, status: 'checking', line: source.savingStage }];
     return [];
@@ -81,7 +81,8 @@ function saveStep(source: StepSource): ImportStep[] {
 /** Remove the Previous Version (or Datapack): only when the import replaces the demo's pack. */
 function removeStep(source: StepSource): ImportStep[] {
     if (!source.replaces) return [];
-    const what = source.replacesVersion ?? source.replaces;
+    // The datapack's name, never when a save was made (Phase 2, owner 2026-11-12).
+    const what = source.replaces;
     const row = {
         kind: REPLACING,
         label: source.replacesVersion
@@ -138,9 +139,8 @@ function phaseWords(phase: string | undefined): string {
 
 /** Install: its data types under it, and where they have got as its line. */
 function installStep(source: StepSource, types: OperationRow[]): ImportStep {
-    const label = source.replacesVersion
-        ? `Install the Version from ${versionLabel(source.installing.version)}`
-        : `Install ${packLine(source.installing.name, source.installing.version)}`;
+    // A save is named by its datapack, never by when it was saved (Phase 2, owner 2026-11-12).
+    const label = `Install ${packLine(source.installing.name, source.installing.version)}`;
     const row = { kind: 'install', label, types };
     // The reason is the data type's own red line, under this step: said once (review, 2026-11-10).
     if (types.some((t) => t.status === 'error' && t.kind !== STORE_CONFIG_KIND))

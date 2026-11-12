@@ -136,20 +136,24 @@ export async function settleReplacement(
     );
     if ('response' in settled) return { response: nothingInstalled(settled.response) };
     const replaced = settled.saved?.id ?? { name: held.name, version: held.version };
+    const heldName = await heldDisplayName(context, held);
     return {
         request: { ...request, replaces: replaced },
-        replaces: replacedName(held, request.id, await heldDisplayName(context, held)),
+        replaces: replacedName(held, heldName),
         ...(held.name === request.id.name ? { replacesVersion: versionLabel(held.version) } : {}),
-        ...(settled.saved ? { saved: settled.saved, savedAs: savedLabel(settled.saved, held, payload) } : {}),
+        ...(settled.saved ? { saved: settled.saved, savedAs: savedLabel(settled.saved, held, heldName, payload) } : {}),
         validate: async () => verdict,
     };
 }
 
-/** Where the SC's changes went: a new version of the demo's pack, by when; a new pack, by its name. */
-function savedLabel(saved: SavedFirst, held: DatapackId, payload: ReplaceAnswerPayload | undefined): string {
+/**
+ * Where the SC's changes went, by the datapack's name, never a date (D3, Phase 2): the demo's own
+ * pack by the name it shows; a new pack by the name it was given.
+ */
+function savedLabel(saved: SavedFirst, held: DatapackId, heldName: string, payload: ReplaceAnswerPayload | undefined): string {
     const named = payload?.saveAs?.displayName;
     if (saved.id.name !== held.name && typeof named === 'string' && named.trim() !== '') return named.trim();
-    return versionLabel(saved.id.version);
+    return heldName;
 }
 
 /** What a start or a removal answers carries where the changes went, whichever way the start went. */

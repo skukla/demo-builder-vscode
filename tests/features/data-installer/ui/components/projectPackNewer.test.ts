@@ -1,8 +1,7 @@
 /**
  * Whether the version the demo installed changed in the library since (owner, 2026-11-03,
  * `.rptc/plans/datapack-save-as/`): team packs are updated in place as `main`. A later save is never
- * "newer" (owner, 2026-11-09, walk F99): a pack's saves are one thing on its card, and the others are
- * its Version History.
+ * "newer" (owner, 2026-11-09, walk F99): a pack's saves are one thing on its card.
  */
 
 import type { DatapackGroup } from '@/features/data-installer/services/datapackCatalog';
@@ -35,7 +34,7 @@ const V1 = version('20261101-090000', { createdAt: '2026-11-01T09:00:00Z' });
 const V2 = version('20261103-120000', { createdAt: '2026-11-03T12:00:00Z' });
 
 describe('newerVersionOf', () => {
-    // Owner, 2026-11-09 (walk F99): saves are Version History, not newer versions.
+    // Owner, 2026-11-09 (walk F99): a later save is not a newer version.
     it('says nothing for a later save of the same pack', () => {
         expect(newerVersionOf(group([V1, V2]), V1.id, '2026-11-01T10:00:00Z')).toBeUndefined();
         expect(newerVersionOf(group([V1, V2]), V2.id, '2026-11-03T13:00:00Z')).toBeUndefined();

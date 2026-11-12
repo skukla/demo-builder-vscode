@@ -9,7 +9,7 @@
  *
  * A save is written once and never changes, and a pack's saves are one thing on the card, not
  * versions beside each other (owner, 2026-11-09, walk F99): the card shows the save in use, and the
- * others are its Version History. So a later save is never "newer": the dot only says that a named
+ * SC never manages the others (Phase 2). So a later save is never "newer": the dot only says that a named
  * version changed since this demo installed it.
  *
  * Passive by design: the demo's card marks it, and taking it is the SC's choice. It never counts

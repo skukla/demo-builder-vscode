@@ -11,12 +11,16 @@
  * Each read says why that version, and the extension writes it to Debug Logs, so the next
  * question of this kind has an answer there.
  *
+ * It also says whether the open pack offers Undo Last Save (Phase 2, owner 2026-11-12), and to which
+ * save: the datapack keeps two saves (`saveTrim.ts`), and the undo goes back to the one before the
+ * newest. The `undo-last-save` handler checks the same things again before it runs.
+ *
  * @module features/data-installer/ui/hooks/useDetailFlyout
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { savesOf } from '../../packVersions';
 import type { DatapackGroup } from '../../services/datapackCatalog';
-import { versionHistoryOf } from '../versionHistory';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
@@ -52,8 +56,8 @@ export function useDetailFlyout(a: {
     selectedStore: DatapackStoreName;
     open: (id: DatapackId, store: DatapackStoreName) => void;
     close: () => void;
-    /** The open pack's saves and the one in use, for its Version History (walk F99). */
-    history: ReturnType<typeof versionHistoryOf>;
+    /** The save Undo Last Save goes back to, when the open pack offers it. */
+    undoTo: string | undefined;
 } {
     const { load, held, versions, groups } = a;
     const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
@@ -88,8 +92,28 @@ export function useDetailFlyout(a: {
         show({ name: held.name, version: held.version }, heldStore, OPEN_WHY.demo);
     }, [selected, selectedStore, held, versions, groups, show]);
 
-    const history = useMemo(() => versionHistoryOf(groups, selected, selectedStore, held), [groups, selected, selectedStore, held]);
-    return { selected, selectedStore, open, close, history };
+    const undoTo = useMemo(() => undoTarget(groups, selected, selectedStore, held), [groups, selected, selectedStore, held]);
+    return { selected, selectedStore, open, close, undoTo };
+}
+
+/**
+ * The save Undo Last Save goes back to: offered only on the datapack the demo uses, shown on the
+ * save it uses, when that is the SC's own library pack (not a team pack) with an earlier save and the
+ * demo is on the newest one.
+ */
+function undoTarget(
+    groups: readonly DatapackGroup[],
+    selected: DatapackId | undefined,
+    store: DatapackStoreName,
+    held: ProjectDatapack | undefined,
+): string | undefined {
+    if (!selected || !held || held.store !== 'library' || store !== 'library') return undefined;
+    if (selected.name !== held.name || selected.version !== held.version) return undefined;
+    const group = groups.find((each) => each.name === held.name && each.store === 'library');
+    if (!group || group.team) return undefined;
+    const mine = group.versions.filter((version) => version.mine === true).map((version) => version.id.version);
+    const [newest, previous] = savesOf(mine);
+    return newest === held.version ? previous : undefined;
 }
 
 /**

@@ -543,9 +543,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
             expect(await screen.findByRole('heading', { name: 'Bodea Installed' })).toBeInTheDocument();
             expect(screen.queryByTestId('import-run')).not.toBeInTheDocument();
-            expect(
-                screen.getByText('Your changes are saved in Version History. New products can take 20 minutes to show in search.'),
-            ).toBeInTheDocument();
+            expect(screen.getByText('New products can take 20 minutes to show in search.')).toBeInTheDocument();
+            // The save said where the changes went (Phase 2): this result does not say it again.
+            expect(screen.queryByText(/Version History/u)).not.toBeInTheDocument();
             expect(screen.queryByText(/^Took /u)).not.toBeInTheDocument();
         });
 

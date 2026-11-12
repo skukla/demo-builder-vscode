@@ -128,7 +128,9 @@ export async function saveToPack(
         // `data.message`.
         const startedFrom = pack ? { name: pack.name, displayName: result.installedName } : undefined;
         const note = saveNote({ name: plan.id.name, displayName: plan.displayName }, startedFrom, getProjectDisplayName(opened.project));
-        return { success: true, note, ...(result.details.length > 0 ? { details: result.details } : {}), data };
+        // Into the pack it started from, the title says where it went (J3-1, owner 2026-11-12).
+        const ending = note ? { note } : { title: `Saved to ${plan.displayName}` };
+        return { success: true, ...ending, ...(result.details.length > 0 ? { details: result.details } : {}), data };
     } catch (error) {
         return failure(context, error, 'Your changes could not be saved.');
     }

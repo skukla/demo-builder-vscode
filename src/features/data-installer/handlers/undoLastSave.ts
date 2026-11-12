@@ -29,15 +29,12 @@ import type { Project } from '@/types/base';
 import type { DatapackId } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
+import type { UndoLastSaveRequest } from '@/types/webviewRequests';
 
 const LOG_PREFIX = '[Data Installer]';
 
 /** The `undo-last-save` message: the project's datapack, by its library name, and the consent. */
-export interface UndoLastSavePayload {
-    datapackName?: string;
-    /** Must be true. Nothing changes in Commerce by default. */
-    confirm?: boolean;
-}
+type UndoLastSavePayload = UndoLastSaveRequest;
 
 /** What an undo installs, and what it deletes once that succeeds. */
 interface UndoPlan {

@@ -189,7 +189,7 @@ function shownAs(version: string): string {
 /**
  * The versions to choose from: the named ones (`main`, `eds-compatible`), each a variant, and the
  * pack's saves as one, the save on show (owner, 2026-11-09, walk F99): a pack of saves is one thing,
- * and its earlier saves are its Version History, not versions to pick. A pack of nothing but saves
+ * and its earlier save is what Undo Last Save goes back to, not a version to pick. A pack of nothing but saves
  * has nothing to choose, so it says which save it is.
  */
 function VersionChoice({ group, selectedVersion, onVersionChange }: Pick<DatapackCardProps, 'group' | 'selectedVersion' | 'onVersionChange'>): React.JSX.Element {

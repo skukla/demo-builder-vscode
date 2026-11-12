@@ -93,10 +93,8 @@ export interface DatapackDetailPanelProps {
     onSharingChanged?: () => void;
     /** The settings layer Import will apply after the pack's data (step 09). */
     settingsLayer?: PackDetailLayer;
-    /** The pack's saves, newest first, for Version History (walk F99). */
-    history?: readonly string[];
-    /** The save this demo uses. */
-    inUse?: string;
+    /** The save Undo Last Save goes back to, when the open pack offers it (`useDetailFlyout`). */
+    undoTo?: string;
     /** Remove Data, on the version whose data is in this demo's store (walk F118). */
     onRemoveData?: () => void;
 }
@@ -120,8 +118,7 @@ export function DatapackDetailPanel({
     sharedInFile,
     onSharingChanged,
     settingsLayer,
-    history,
-    inUse,
+    undoTo,
     onRemoveData,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selectedName ?? selected?.name ?? 'Datapack';
@@ -168,8 +165,7 @@ export function DatapackDetailPanel({
                                 onSharingChanged={onSharingChanged}
                                 settingsLayer={settingsLayer}
                                 onWorking={setWorking}
-                                {...(history ? { history } : {})}
-                                {...(inUse ? { inUse } : {})}
+                                {...(undoTo ? { undoTo } : {})}
                                 {...(onRemoveData ? { onRemoveData } : {})}
                             />
                         ) : null}

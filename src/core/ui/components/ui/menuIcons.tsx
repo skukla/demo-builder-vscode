@@ -26,7 +26,6 @@ import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Globe from '@spectrum-icons/workflow/Globe';
-import History from '@spectrum-icons/workflow/History';
 import Key from '@spectrum-icons/workflow/Key';
 import MagicWand from '@spectrum-icons/workflow/MagicWand';
 import More from '@spectrum-icons/workflow/More';
@@ -52,6 +51,7 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     edit: <Edit size="S" />,
     copy: <Copy size="S" />,
     duplicate: <Duplicate size="S" />,
+    /** Go back or go again: a reset, a retry, Undo Last Assignment, Undo Last Save. */
     reset: <Revert size="S" />,
     republish: <Globe size="S" />,
     export: <Export size="S" />,
@@ -84,8 +84,6 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     share: <Share size="S" />,
     /** Pick several at once (the projects list's Select Projects). */
     selectSeveral: <SelectionChecked size="S" />,
-    /** A datapack's earlier saves, to restore one (the Datapacks flyout's Version History). */
-    history: <History size="S" />,
 };
 
 /**

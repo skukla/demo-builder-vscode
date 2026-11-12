@@ -107,9 +107,12 @@ describe('importing another version over the one the project uses', () => {
 
         expect(startImport).toHaveBeenCalledWith(expect.objectContaining({ replaces: saved.id }));
         expect(response.data).toMatchObject({ savedNote: 'Saved to Bodea.', saved: saved.id });
-        // Walk F105: the job's Your Changes row says where they went, by when, never by the id.
+        // Walk F105, then D3 (Phase 2): the Your Changes row says where they went, by the datapack's
+        // name, never by a date or the id.
         const status = await importHandlers['get-datapack-import-status'](context, {});
-        expect(status.data).toMatchObject({ savedAs: versionLabel(saved.id.version) });
+        const job = status.data as { savedAs?: string; replaces?: string };
+        expect(job.savedAs).toBe(job.replaces);
+        expect(job.savedAs).not.toBe(versionLabel(saved.id.version));
     });
 });
 

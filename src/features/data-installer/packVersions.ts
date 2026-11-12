@@ -7,8 +7,9 @@
  *
  * A dated version is never shown as its id (owner, 2026-11-09, walk F99): "20261109-141504" reads
  * as a code, so it is shown as when it was saved, "Nov 9, 9:15 AM", in the SC's own time. Nor is it
- * offered as a version to pick: a pack of saves is one thing, the save on show, and its earlier saves
- * are its Version History.
+ * offered as a version to pick: a pack of saves is one thing, the save on show. It keeps its two
+ * newest saves, and Undo Last Save goes back to the one before the newest (Phase 2, owner
+ * 2026-11-12); the SC never manages versions.
  *
  * @module features/data-installer/packVersions
  */
@@ -51,7 +52,7 @@ export function versionLabel(version: string): string {
     return at ? SAVED_LABEL.format(at) : version;
 }
 
-/** A pack's saves among its versions, newest first: its Version History. A save's id sorts by when. */
+/** A pack's saves among its versions, newest first. A save's id sorts by when. */
 export function savesOf(versions: readonly string[]): string[] {
     return versions.filter(isSavedVersion).sort().reverse();
 }
