@@ -637,6 +637,20 @@ const PROGRAM_INSTRUMENTS: readonly Instrument[] = [
  * Same shape as every other ledger here: it may shrink, and each row says why.
  */
 export const NON_INSTRUMENT_SCRIPTS: Readonly<Record<string, string>> = {
+    '.rptc/plans/datapack-simplification/mockups/flow/scenario.js':
+        "the click-through prototype's scripted fake host for the Data Installer bundle; a mockup the owner clicks, not a check",
+    '.rptc/plans/datapack-simplification/mockups/flow/scenario-integrations.js':
+        "the click-through prototype's scripted fake host for the integrations bundle; a mockup the owner clicks, not a check",
+    '.rptc/plans/datapack-simplification/mockups/flow/build-j1.js':
+        "bundles the click-through prototype for the owner to open; a build step for a mockup, not a check",
+    '.rptc/plans/datapack-simplification/mockups/flow/gen-decisions.mjs':
+        "regenerates the prototype's decisions panel from prototype-feedback.md; a mockup's data step, not a check",
+    '.rptc/plans/datapack-simplification/mockups/flow/gen-journeys.mjs':
+        "regenerates journeys.md from the prototype's review steps (its --check only compares two plan files); not a check of the product",
+    '.rptc/plans/datapack-simplification/mockups/flow/log-verdict.mjs':
+        "writes one owner verdict into prototype-feedback.md during a walk; a record-keeping step, not a check",
+    '.rptc/plans/datapack-simplification/mockups/flow/steps-loader.mjs':
+        "loads the prototype's review steps for the two generators above; a helper, not a check",
     '.rptc/plans/datapack-store/step02-roundtrip.sh':
         "one-shot proof of the datapack store's step 02: a live round trip against a deployed scratch namespace",
     '.rptc/research/probe-config.mjs':

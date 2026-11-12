@@ -40,13 +40,13 @@ const LEDGER: Readonly<Record<string, Reason>> = {
 const DYNAMIC_PIN = 68;
 
 /**
- * The five dialog layouts hand their caller's words on to Modal (`title={title}`). Those words are
+ * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are
  * read where the caller writes them (`ProgressDialog.title`, `FormDialog.submitLabel`, ...), so the
  * layout's own forwarding is not one more string the scan cannot read. A literal inside a layout
  * is still checked like any other.
  */
 const LAYOUT_FILES: ReadonlySet<string> = new Set(
-    ['ConfirmActionDialog', 'FormDialog', 'ProgressDialog', 'ResultDialog', 'GuideDialog'].map(
+    ['ConfirmActionDialog', 'FormDialog', 'ProgressDialog', 'ResultDialog', 'GuideDialog', 'StepsDialog'].map(
         (name) => `src/core/ui/components/ui/${name}.tsx`
     )
 );

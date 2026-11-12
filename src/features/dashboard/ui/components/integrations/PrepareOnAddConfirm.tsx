@@ -9,17 +9,19 @@
  * Shown in the Add Integration flow's own window, in place of the flow, once its Add is pressed
  * (owner, 2026-10-31, the multi-dialog audit: it was a second dialog the flow closed for). The
  * Integrations screen builds it (`PrepareOnAddConfirm`) and hands it to the flow as its
- * `confirmation`. Built on the house `Modal`, with its `waiting` while the store is read, and the
- * step rows (`PreparationStepRow`). The question goes in the title, amber, as every confirm's does
- * (dialog design rules); an add refused before anything ran is the title's outcome, in red. The
- * flow's own size, L and fitted to its content, so the window keeps its proportions.
+ * `confirmation`. Built on the Steps layout's window (`StepsWindow`, in the flow's own
+ * container), waiting while the store is read, with the step rows (`PreparationStepRow`). The
+ * question goes in the title, amber, as every confirm's does (dialog design rules); an add refused
+ * before anything ran is the title's outcome, in red. The flow's own size, L, at one height from
+ * the read to the question (owner, 2026-11-11: a window never changes height once on screen).
  *
  * @module features/dashboard/ui/components/integrations/PrepareOnAddConfirm
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PreparationStepRow } from './PreparationStepRow';
-import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
+import type { ModalWait } from '@/core/ui/components/ui/Modal';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import { postAdd } from '@/features/dashboard/ui/integrationsSurface/liveAddBuilder';
@@ -129,32 +131,34 @@ function PreparationBody({ preparation }: { preparation: AddPreparationPreview }
     );
 }
 
-/** The confirm itself, read when it opens: a full `Modal`, for the flow's window to show. */
+/**
+ * The confirm itself, read when it opens. It reads first, then asks; the box is held once the
+ * answer is in (`ready`), at the size of the question it actually shows, as the J5 Uninstall
+ * question does (rule 12: a window opens at the size of what it shows, never a ten-row reserve).
+ */
 export function PrepareOnAddConfirm({ target, onConfirm, onClose }: PrepareOnAddConfirmProps & { target: PrepareOnAddTarget }): React.ReactElement {
     const { preparation, error } = useAddPreview(target.payload);
-    if (error) {
-        return (
-            <Modal title={PREPARE_ON_ADD_COPY.refusedTitle(target.name)} status="error" size="L" fitContent onClose={onClose}>
-                <p className="dialog-line" data-testid="prepare-store-refused">{error}</p>
-            </Modal>
-        );
-    }
     return (
-        <Modal
-            title={PREPARE_ON_ADD_COPY.title(target.name)}
-            status="warning"
-            size="L"
-            fitContent
-            waiting={preparation ? false : READING}
+        <StepsWindow
+            title={error ? PREPARE_ON_ADD_COPY.refusedTitle(target.name) : PREPARE_ON_ADD_COPY.title(target.name)}
+            status={error ? 'error' : 'warning'}
+            waiting={preparation || error ? false : READING}
+            ready={Boolean(preparation || error)}
             onClose={onClose}
-            closeLabel="Cancel"
-            actionButtons={[{ label: PREPARE_ON_ADD_COPY.action, variant: 'accent', onPress: () => onConfirm(target) }]}
+            closeLabel={error ? 'Close' : 'Cancel'}
+            actionButtons={
+                error ? [] : [{ label: PREPARE_ON_ADD_COPY.action, variant: 'accent', onPress: () => onConfirm(target) }]
+            }
         >
-            <div className="dialog-stack">
-                <p className="dialog-line">{PREPARE_ON_ADD_COPY.intro(target.name)}</p>
-                {preparation && <PreparationBody preparation={preparation} />}
-            </div>
-        </Modal>
+            {error ? (
+                <p className="dialog-line" data-testid="prepare-store-refused">{error}</p>
+            ) : (
+                <div className="dialog-stack">
+                    <p className="dialog-line">{PREPARE_ON_ADD_COPY.intro(target.name)}</p>
+                    {preparation && <PreparationBody preparation={preparation} />}
+                </div>
+            )}
+        </StepsWindow>
     );
 }
 
@@ -162,7 +166,7 @@ export function PrepareOnAddConfirm({ target, onConfirm, onClose }: PrepareOnAdd
  * The confirm for the flow's window, or nothing while no add waits on one.
  *
  * @param props - the waiting add, and the confirm and close callbacks
- * @returns the confirm `Modal`, or undefined
+ * @returns the confirm window, or undefined
  */
 export function prepareOnAddConfirmation(props: PrepareOnAddConfirmProps): React.ReactElement | undefined {
     return props.target ? <PrepareOnAddConfirm {...props} target={props.target} /> : undefined;

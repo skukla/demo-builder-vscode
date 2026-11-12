@@ -25,17 +25,17 @@
  * @module features/data-installer/ui/components/LoadDatapackFileModal
  */
 
-import { Checkbox, DialogContainer, Radio, RadioGroup } from '@adobe/react-spectrum';
+import { Checkbox, Radio, RadioGroup } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import { configurationSettingsCount } from '../../datapackWords';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion, packLine, versionLabel } from '../../packVersions';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
-import { DatapackResultBody } from './DatapackResultBody';
 import { type ResultContent, resultStatus } from './importResult';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { FormDialog } from '@/core/ui/components/ui/FormDialog';
+import { ResultDialog, type ResultRow } from '@/core/ui/components/ui/ResultDialog';
 import type { DatapackStoreName } from '@/types/datapack';
 
 /** What `open-datapack-zip` says about a file. */
@@ -119,40 +119,40 @@ export function LoadDatapackFileModal({
     // Only an exact undo is offered: a pack this load CREATED in the library.
     const undoable = !loading.failure && outcome?.target === 'library' && outcome.pack === 'created';
     const undoLayer = layerToUndo(outcome, undoable);
+    const undoPack = undoable ? packCreated(file, outcome) : undefined;
+
+    if (result) {
+        return (
+            <ResultDialog
+                isOpen
+                title={result.title}
+                status={resultStatus(result) ?? 'warning'}
+                rows={resultRows(outcome, undoPack, undoLayer)}
+                onClose={onClose}
+            >
+                {result.message}
+            </ResultDialog>
+        );
+    }
 
     return (
-        <DialogContainer onDismiss={onClose}>
-            <Modal
-                title={result?.title ?? 'Add from File'}
-                status={result ? resultStatus(result) : undefined}
-                size={result ? 'S' : 'M'}
-                fitContent
-                onClose={onClose}
-                closeLabel="Close"
-                actionButtons={
-                    file && !result
-                        ? [{ label: 'Load', variant: 'accent', onPress: load, isPending: loading.loading }]
-                        : []
-                }
-            >
-                <div className="datapack-export-body">
-                    {file && !result ? (
-                        <LoadForm
-                            file={file}
-                            choice={{ target, update, onTarget: setTarget, onUpdate: setUpdate }}
-                            offersInstaller={offersInstaller}
-                        />
-                    ) : null}
-                    {result ? <DatapackResultBody result={result} /> : null}
-                    {result && undoable ? (
-                        <RemoveFromLibraryButton id={{ name: outcome.datapackName, version: outcome.version }} />
-                    ) : null}
-                    {result && undoLayer ? (
-                        <RemoveFromLibraryButton id={{ name: undoLayer.datapackName, version: undoLayer.version }} label="Delete Store Configuration" />
-                    ) : null}
-                </div>
-            </Modal>
-        </DialogContainer>
+        <FormDialog
+            isOpen
+            title="Add from File"
+            submitLabel="Load"
+            onSubmit={load}
+            submitDisabled={!file}
+            submitPending={loading.loading}
+            onClose={onClose}
+        >
+            {file ? (
+                <LoadForm
+                    file={file}
+                    choice={{ target, update, onTarget: setTarget, onUpdate: setUpdate }}
+                    offersInstaller={offersInstaller}
+                />
+            ) : null}
+        </FormDialog>
     );
 }
 
@@ -195,6 +195,37 @@ function loadResult(args: {
     // Partly: the count says how much, the details say what was refused and why.
     const partly = failed > 0 ? `Loaded ${stored} of ${stored + failed} data types. ` : '';
     return { variant: 'warning', title: `${name} ${failed > 0 ? 'Partly Loaded' : 'Loaded'}`, message: `${partly}${where}`, details };
+}
+
+/** The pack this load created, by the name the SC knows it by. */
+function packCreated(file: { displayName?: string } | null, outcome: { datapackName: string }): { name: string } {
+    return { name: file?.displayName ?? outcome.datapackName };
+}
+
+/**
+ * The result's lines, each with what can be done about it (layout variant 6): a type the store
+ * refused, with its reason under it, and what this load created, with its own Delete.
+ */
+function resultRows(outcome: LoadOutcome | null, createdPack?: { name: string }, createdLayer?: LoadedLayer): ResultRow[] {
+    const rows: ResultRow[] = (outcome?.failed ?? []).map((f) => ({ label: dataTypeLabel(f.dataType), status: 'warning', note: f.reason }));
+    const layer = outcome?.settingsLayer;
+    if (layer?.reason) rows.push({ label: 'Store Configuration', status: 'warning', note: layer.reason });
+    if (outcome && createdPack) {
+        rows.push({
+            // The SC never sees a version (D3): the datapack by its name alone.
+            label: createdPack.name,
+            status: 'success',
+            action: <RemoveFromLibraryButton id={{ name: outcome.datapackName, version: outcome.version }} />,
+        });
+    }
+    if (createdLayer) {
+        rows.push({
+            label: 'Store Configuration',
+            status: 'success',
+            action: <RemoveFromLibraryButton id={{ name: createdLayer.datapackName, version: createdLayer.version }} label="Delete Store Configuration" />,
+        });
+    }
+    return rows;
 }
 
 /** Where the file's parts went: the settings stay in My Datapacks wherever the data goes. */

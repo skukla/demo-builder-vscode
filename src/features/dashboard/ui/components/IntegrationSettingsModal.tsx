@@ -8,18 +8,18 @@
  * redeploy" posts only what changed; the extension stores it and redeploys what
  * uses it, because a setting reaches an app only through its deploy. Pressing it
  * IS the confirmation, so the button says both verbs, and nothing above the fields
- * says it again. A save that did not go through is the title's outcome, in red.
- *
- * Hosting mirrors {@link ManageApisModal}: an always-mounted DialogContainer with
- * the Modal rendered only while open; the grid owns one instance.
+ * says it again. A save that did not go through is the title's outcome, in red,
+ * with its reason above the fields and what was typed still in them: the Form
+ * layout's failure mode ({@link FormDialog}), held at one height throughout.
+ * The grid owns one instance.
  *
  * @module features/dashboard/ui/components/IntegrationSettingsModal
  */
 
-import { DialogContainer, Text, TextField, View } from '@adobe/react-spectrum';
+import { Text, TextField } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { SecretFieldRow } from './integrations/SecretFieldRow';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { FormDialog } from '@/core/ui/components/ui/FormDialog';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { ComponentSettings, ComponentSettingField } from '@/types/appBuilderComponents';
 import type { SaveIntegrationSettingsResult } from '@/types/webviewRequests';
@@ -98,7 +98,7 @@ function SettingsFields({ id, settings, values, onText, onSecret }: {
                 }
                 const blank = blankRequired(field, values);
                 return (
-                    <View key={field.name} marginBottom="size-200">
+                    <div key={field.name}>
                         <TextField
                             label={field.label}
                             value={values[field.name] ?? ''}
@@ -108,15 +108,15 @@ function SettingsFields({ id, settings, values, onText, onSecret }: {
                             errorMessage={blank ? `${field.label} cannot be empty.` : undefined}
                             onChange={(next) => onText(field.name, next)}
                         />
-                    </View>
+                    </div>
                 );
             })}
             {settings.connected.map((row) => (
-                <View key={row.name} marginBottom="size-200">
+                <div key={row.name}>
                     <Text>
                         {row.label}: {row.value ?? `set when ${row.from} is deployed`} (from {row.from})
                     </Text>
-                </View>
+                </div>
             ))}
         </>
     );
@@ -168,39 +168,29 @@ export function IntegrationSettingsModal({
     };
 
     return (
-        <DialogContainer onDismiss={onClose}>
+        <FormDialog
+            isOpen={!!target}
+            title={target ? titleOf(target.name, failure) : ''}
+            submitLabel="Save and Redeploy"
+            onSubmit={() => {
+                void handleSave();
+            }}
+            submitDisabled={!isDirty || hasBlank}
+            submitPending={isSaving}
+            // The redeploy carries on after the window closes, with its progress on the card.
+            background
+            failure={failure ? failure.reason : null}
+            onClose={onClose}
+        >
             {target && (
-                <Modal
-                    title={titleOf(target.name, failure)}
-                    status={failure ? 'error' : undefined}
-                    size="M"
-                    onClose={onClose}
-                    // The redeploy carries on after the window closes, with its progress on the card.
-                    closeLabel={isSaving ? 'Run in Background' : 'Cancel'}
-                    actionButtons={[{
-                        label: 'Save and Redeploy',
-                        variant: 'accent',
-                        onPress: () => {
-                            void handleSave();
-                        },
-                        isDisabled: !isDirty || hasBlank,
-                        isPending: isSaving,
-                    }]}
-                >
-                    {failure && (
-                        <View marginBottom="size-200">
-                            <Text>{failure.reason}</Text>
-                        </View>
-                    )}
-                    <SettingsFields
-                        id={target.id}
-                        settings={target.settings}
-                        values={values}
-                        onText={(name, value) => setValues((prev) => ({ ...prev, [name]: value }))}
-                        onSecret={(name, value) => setSecrets((prev) => ({ ...prev, [name]: value }))}
-                    />
-                </Modal>
+                <SettingsFields
+                    id={target.id}
+                    settings={target.settings}
+                    values={values}
+                    onText={(name, value) => setValues((prev) => ({ ...prev, [name]: value }))}
+                    onSecret={(name, value) => setSecrets((prev) => ({ ...prev, [name]: value }))}
+                />
             )}
-        </DialogContainer>
+        </FormDialog>
     );
 }

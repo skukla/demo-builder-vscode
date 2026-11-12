@@ -98,6 +98,17 @@ export interface ModalProps {
      * keeps the box it found, as `waiting` does.
      */
     holdSize?: boolean;
+    /**
+     * The window keeps the height it opened at for every step (owner, 2026-11-11): the body fills
+     * it and scrolls, and the buttons stay at the bottom. Set by `StepsDialog` once
+     * `useFixedHeight` holds the box.
+     */
+    lockHeight?: boolean;
+    /**
+     * The window is measuring its tallest step before it is seen (`StepsDialog`): drawn, so it can
+     * be measured, but hidden, so the SC never sees a height it will not keep.
+     */
+    measuring?: boolean;
     children: ReactNode;
 }
 
@@ -195,6 +206,35 @@ function SizedLabel({ label, sizeLabels }: { label: string; sizeLabels?: string[
     );
 }
 
+/**
+ * One dialog button, drawn as the footer draws it: for a button that belongs to a row in the body
+ * (a guide step's Open Admin and Check), so it looks and waits like the footer's.
+ *
+ * @param props - the button
+ * @returns the button
+ */
+export function DialogButton({ button }: { button: ActionButton }): React.JSX.Element {
+    return renderButton(button, 0);
+}
+
+/** The button row: Close or Cancel on the left, the actions on the right (Spectrum). A wait shows no actions. */
+type FooterProps = Required<Pick<ModalProps, 'startButtons' | 'actionButtons' | 'hideClose'>> & {
+    waiting: boolean;
+    close: React.JSX.Element;
+};
+
+function ModalFooter({ waiting, startButtons, actionButtons, hideClose, close }: FooterProps): React.JSX.Element {
+    return (
+        <div className="modal-footer-actions">
+            {!waiting && startButtons.length > 0 && (
+                <div className="modal-footer-start">{startButtons.map(renderButton)}</div>
+            )}
+            {!hideClose && close}
+            {(waiting ? [] : actionButtons).map(renderButton)}
+        </div>
+    );
+}
+
 /** One footer button, keyed by its place in its group. */
 function renderButton(button: ActionButton, index: number): React.JSX.Element {
     return (
@@ -226,6 +266,8 @@ export function Modal({
     wide = false,
     waiting = false,
     holdSize = false,
+    lockHeight = false,
+    measuring = false,
     children,
 }: ModalProps) {
     // Map custom sizes to Dialog-compatible sizes
@@ -250,6 +292,8 @@ export function Modal({
                 fitContent && 'modal-fit-content',
                 wide && 'modal-wide',
                 holding && 'is-holding',
+                lockHeight && 'is-locked',
+                measuring && 'is-measuring',
             )}
         >
             <Heading>
@@ -279,18 +323,17 @@ export function Modal({
                         )}
                     </SteadyHeight>
                 </div>
-                <div className="modal-footer-actions">
-                    {!waiting && startButtons.length > 0 && (
-                        <div className="modal-footer-start">{startButtons.map(renderButton)}</div>
-                    )}
-                    {/* Close/Cancel on left, primary actions on right (per Spectrum design guidelines) */}
-                    {!hideClose && (
+                <ModalFooter
+                    waiting={Boolean(waiting)}
+                    startButtons={startButtons}
+                    actionButtons={actionButtons}
+                    hideClose={hideClose}
+                    close={
                         <FocusableButton variant={closeVariant} onPress={onClose}>
                             {closeLabel}
                         </FocusableButton>
-                    )}
-                    {(waiting ? [] : actionButtons).map(renderButton)}
-                </div>
+                    }
+                />
             </Content>
         </Dialog>
     );

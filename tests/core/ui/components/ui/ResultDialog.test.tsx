@@ -97,4 +97,30 @@ describe('ResultDialog', () => {
         jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         expect(onClose).not.toHaveBeenCalled();
     });
+
+    describe('a result with an action per line (layout variant 6)', () => {
+        it('draws a row per line with its own action under it', () => {
+            renderResult({
+                status: 'warning',
+                title: 'Luma Partly Loaded',
+                rows: [
+                    { label: 'Customers', status: 'warning', note: 'Too large to send.' },
+                    { label: 'Luma, main', status: 'success', action: <button type="button">Delete Datapack</button> },
+                ],
+            });
+
+            const rows = Array.from(document.querySelectorAll('.dialog-row-action'));
+            expect(rows.map((row) => row.querySelector('.work-row') !== null)).toEqual([true, true]);
+            expect(rows[0]).toHaveTextContent('Too large to send.');
+            expect(rows[1].querySelector('button')).toHaveTextContent('Delete Datapack');
+            expect(buttonNames()).toEqual(['Delete Datapack', 'Close']);
+        });
+
+        it('stays open when it is a clean result with a line to act on', () => {
+            const { onClose } = renderResult({ rows: [{ label: 'Luma, main', status: 'success', action: <span>Delete</span> }] });
+
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
+            expect(onClose).not.toHaveBeenCalled();
+        });
+    });
 });

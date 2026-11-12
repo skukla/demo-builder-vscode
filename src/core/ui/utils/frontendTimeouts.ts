@@ -23,6 +23,19 @@ export const FRONTEND_TIMEOUTS = {
     DIALOG_BODY_FADE: 130,
 
     /**
+     * How long a window with steps may stay unseen while what its steps hold is read (`StepsDialog`):
+     * it opens at its tallest step once that is known, or after this at the height it has then. A
+     * read slower than this is a fault, not a slow store: the read's own failure ends it sooner.
+     */
+    DIALOG_MEASURE_LIMIT: 30000,
+
+    /**
+     * How long a window with steps stays unseen before a spinner shows where it will open, so a
+     * quick read shows nothing at all and a slow one shows that something is happening.
+     */
+    DIALOG_PENDING_DELAY: 250,
+
+    /**
      * Delay for UI state updates to settle before DOM operations.
      * Matches TIMEOUTS.UI.UPDATE_DELAY from backend (100ms).
      */

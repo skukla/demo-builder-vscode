@@ -64,4 +64,53 @@ describe('GuideDialog', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Close' }));
         expect(onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('draws a step\'s own buttons beside its row, main last, each calling its own handler', () => {
+        const onOpen = jest.fn();
+        const onCheck = jest.fn();
+        renderGuide({
+            steps: [
+                { status: 'success', label: 'Turn It On' },
+                {
+                    status: 'pending',
+                    label: 'Set a Limit',
+                    actions: [
+                        { label: 'Open Admin', variant: 'secondary', onPress: onOpen },
+                        { label: 'Check', variant: 'accent', onPress: onCheck },
+                    ],
+                },
+            ],
+        });
+
+        const steps = Array.from(document.querySelectorAll('.work-row-list > li'));
+        expect(steps[0].querySelector('.guide-step-actions')).toBeNull();
+        const buttons = Array.from(steps[1].querySelectorAll('.guide-step-actions [role="button"]'));
+        expect(buttons.map((button) => button.textContent)).toEqual(['Open Admin', 'Check']);
+        fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+        expect(onCheck).toHaveBeenCalledTimes(1);
+        expect(onOpen).not.toHaveBeenCalled();
+    });
+
+    it('puts the window\'s one action beside Close, after it', () => {
+        const onApply = jest.fn();
+        renderGuide({ action: { label: 'Apply All', variant: 'accent', onPress: onApply } });
+
+        const footer = Array.from(document.querySelectorAll('.modal-footer-actions [role="button"]'));
+        expect(footer.map((button) => button.textContent)).toEqual(['Close', 'Apply All']);
+        fireEvent.click(screen.getByRole('button', { name: 'Apply All' }));
+        expect(onApply).toHaveBeenCalledTimes(1);
+    });
+
+    it('draws a step whole when it is more than a row, its label unshown', () => {
+        renderGuide({ steps: [{ label: 'pack-root', drawn: <p>Root Category: ZZ Root</p> }] });
+
+        expect(screen.getByText('Root Category: ZZ Root')).toBeInTheDocument();
+        expect(screen.queryByText('pack-root')).toBeNull();
+    });
+
+    it('holds the height it opens at', () => {
+        renderGuide();
+
+        expect(document.querySelector('.modal-dialog')).toHaveClass('is-locked');
+    });
 });

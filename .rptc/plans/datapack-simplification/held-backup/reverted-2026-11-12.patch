@@ -1,0 +1,672 @@
+diff --git a/scripts/mutation-equivalents.ledger.json b/scripts/mutation-equivalents.ledger.json
+index a0cfd8923..62802150a 100644
+--- a/scripts/mutation-equivalents.ledger.json
++++ b/scripts/mutation-equivalents.ledger.json
+@@ -9506,21 +9506,21 @@
+             ],
+             "mutants": 1,
+             "category": "branch",
+-            "reason": "The initial value cannot be observed because the only thing it gates is resolveResult, which returns null for a null lastAction \u2014 its switch has an arm for each of the four actions and a default that returns null. So before any action the result is null whether dismissed is true or false, and the first action calls act(), which sets dismissed false before the result is next read. Re-anchored 2026-11-09 (101 -> 103): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (103 -> 115): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (115 -> 117): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it.",
++            "reason": "The initial value cannot be observed because the only thing it gates is resolveResult, which returns null for a null lastAction \u2014 its switch has an arm for each of the four actions and a default that returns null. So before any action the result is null whether dismissed is true or false, and the first action calls act(), which sets dismissed false before the result is next read. Re-anchored 2026-11-09 (101 -> 103): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (103 -> 115): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (115 -> 117): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it. Re-anchored 2026-11-11 (117 -> 119): unchanged code; the window moved onto the Steps layout. Re-anchored 2026-11-11 (119 -> 116): unchanged code; the window it renders moved to ImportDatapackWindow.tsx.",
+             "decision": "none \u2014 starting undismissed is what 'the user has seen nothing yet' means",
+             "recorded": "2026-09-06",
+             "source": "PL-22 MUT-03, 2026-09-05",
+-            "line": 117
++            "line": 116
+         },
+         {
+             "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+             "anchors": [
+                 "}, [loadStatus]);"
+             ],
+-            "line": 136,
++            "line": 135,
+             "mutants": 1,
+             "category": "other",
+-            "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (118 -> 122): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (122 -> 134): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (134 -> 136): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it.",
++            "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (118 -> 122): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (122 -> 134): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (134 -> 136): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it. Re-anchored 2026-11-11 (136 -> 138): unchanged code; the window moved onto the Steps layout. Re-anchored 2026-11-11 (138 -> 135): unchanged code; the window it renders moved to ImportDatapackWindow.tsx.",
+             "decision": "none \u2014 naming the dependency is what keeps it true if load ever stops being stable",
+             "recorded": "2026-09-06",
+             "source": "PL-22 MUT-03, 2026-09-05"
+@@ -9530,10 +9530,10 @@
+             "anchors": [
+                 "}, [loadTarget]);"
+             ],
+-            "line": 140,
++            "line": 139,
+             "mutants": 1,
+             "category": "other",
+-            "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (123 -> 127): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (127 -> 139): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (139 -> 140): unchanged code; the data types' columns (walk F135) were added above it and a blank line removed.",
++            "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (123 -> 127): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (127 -> 139): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (139 -> 140): unchanged code; the data types' columns (walk F135) were added above it and a blank line removed. Re-anchored 2026-11-11 (140 -> 142): unchanged code; the window moved onto the Steps layout. Re-anchored 2026-11-11 (142 -> 139): unchanged code; the window it renders moved to ImportDatapackWindow.tsx.",
+             "decision": "none \u2014 naming the dependency is what keeps it true if load ever stops being stable",
+             "recorded": "2026-09-06",
+             "source": "PL-22 MUT-03, 2026-09-05"
+@@ -9543,10 +9543,10 @@
+             "anchors": [
+                 "}, []);"
+             ],
+-            "line": 186,
++            "line": 185,
+             "mutants": 1,
+             "category": "other",
+-            "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves. Re-anchored 2026-11-09 (180 -> 184): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (184 -> 188): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (188 -> 186): unchanged code; a comment above it was shortened and blank lines removed to keep the file at its size limit (walk F135).",
++            "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves. Re-anchored 2026-11-09 (180 -> 184): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (184 -> 188): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (188 -> 186): unchanged code; a comment above it was shortened and blank lines removed to keep the file at its size limit (walk F135). Re-anchored 2026-11-11 (186 -> 188): unchanged code; the window moved onto the Steps layout. Re-anchored 2026-11-11 (188 -> 185): unchanged code; the window it renders moved to ImportDatapackWindow.tsx.",
+             "decision": "none \u2014 act closes over nothing that can change, so its dependency list is empty",
+             "recorded": "2026-09-06",
+             "source": "PL-22 MUT-03, 2026-09-05"
+diff --git a/src/features/data-installer/services/demoDataWipe/wipeOrders.ts b/src/features/data-installer/services/demoDataWipe/wipeOrders.ts
+index a943f9c56..560dd1549 100644
+--- a/src/features/data-installer/services/demoDataWipe/wipeOrders.ts
++++ b/src/features/data-installer/services/demoDataWipe/wipeOrders.ts
+@@ -29,6 +29,13 @@
+  * The note is `POST orders/{id}/comments` with `statusHistory[comment, is_customer_notified 0,
+  * is_visible_on_front 0]`, as the integration's `orders.comment` (`src/lib/commerce.js`).
+  *
++ * Changing (owner, 2026-11-11; the prototype's J1-3b): a shipped or partly invoiced order is
++ * invoiced first, then refunded in full, so every demo order ends Canceled or Closed except one in
++ * payment review; and Clear closes every order here, never handing them to the ERP integration
++ * (`wipeErp.ts`), which is brought in line afterwards from Commerce. Both copies of the rule
++ * change together; the integration's side is in its `docs/order-close-ownership.md`
++ * (`commerce-erp-integration`, branch feature/one-reset-rule).
++ *
+  * @module features/data-installer/services/demoDataWipe/wipeOrders
+  */
+ 
+diff --git a/src/features/data-installer/ui/components/ClearDemoDataModal.tsx b/src/features/data-installer/ui/components/ClearDemoDataModal.tsx
+index 801ed7b0d..d775bdf89 100644
+--- a/src/features/data-installer/ui/components/ClearDemoDataModal.tsx
++++ b/src/features/data-installer/ui/components/ClearDemoDataModal.tsx
+@@ -6,8 +6,8 @@
+  * progress window. Nothing is cleared until that button, and the opening sentence says it is
+  * permanent.
+  *
+- * Built from the house pieces: `ui/Modal` in a `DialogContainer` (as `AssignErpProductsModal` and
+- * `LoadDatapackFileModal`), `LeadText` and `SectionLabel` for its text, `FactList` for the list
++ * Built from the house pieces: the Steps layout (`ui/StepsDialog`), sized to this store's list and a
++ * preview under it and unseen until the stores are read, `LeadText` and `SectionLabel` for its text, `FactList` for the list
+  * (one labelled line a kind, as the setup guide lists its facts), and the Modal's own wait while the
+  * choices are read. Whatever a check could not do is a line where the list would land; if the
+  * choices could not be read at all, that is the dialog's title. The VS Code reset modal (`edsResetOtherData.ts`) asks the same question for the project's
+@@ -16,18 +16,18 @@
+  * @module features/data-installer/ui/components/ClearDemoDataModal
+  */
+ 
+-import { DialogContainer, Text } from '@adobe/react-spectrum';
++import { Text } from '@adobe/react-spectrum';
+ import React, { useState } from 'react';
+ import { choicesOfTicks, clearLabel, previewLines } from '../clearDemoDataWords';
+ import { useDemoDataCheck } from '../hooks/useDemoDataCheck';
+ import { StorePickList } from './StorePickList';
+ import { Fact, FactList } from '@/core/ui/components/ui/FactList';
+ import { LeadText } from '@/core/ui/components/ui/LeadText';
+-import { Modal } from '@/core/ui/components/ui/Modal';
+ import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
+ import { Spinner } from '@/core/ui/components/ui/Spinner';
++import { StepsDialog } from '@/core/ui/components/ui/StepsDialog';
+ import { WAIT_STAGES } from '@/core/utils/waitStages';
+-import type { DemoDataCheck, WipePreview, WipeStoreChoice } from '@/types/demoDataWipe';
++import type { DemoDataCheck, WipeChoiceWebsite, WipeNamed, WipePreview, WipeStoreChoice } from '@/types/demoDataWipe';
+ 
+ /** Every string the modal shows that is not the extension's own. */
+ export const CLEAR_COPY = {
+@@ -96,11 +96,14 @@ function ClearForm({ onClose, onClear }: ClearDemoDataModalProps) {
+     };
+     const failed = check.failure !== null && !check.ready;
+     return (
+-        <Modal
++        <StepsDialog
++            isOpen
+             title={failed ? CLEAR_COPY.readFailed : CLEAR_COPY.title}
+             status={failed ? 'error' : undefined}
+-            size={failed ? 'S' : 'L'}
+-            fitContent
++            // Sized to this store's own list and a preview under it, so it is never a box of empty
++            // room; unseen until the stores are read, so it opens at the height it keeps (owner, 2026-11-11).
++            reserve={<ReservedBody choices={check.choices} />}
++            ready={check.ready || failed}
+             waiting={!failed && !check.ready ? WAIT_STAGES.readingDemoData : false}
+             onClose={onClose}
+             actionButtons={failed ? [] : [{ label: total > 0 ? clearLabel(total) : 'Clear', variant: 'negative', onPress: clear, isDisabled: total === 0 }]}
+@@ -120,7 +123,54 @@ function ClearForm({ onClose, onClear }: ClearDemoDataModalProps) {
+                     )}
+                 </div>
+             )}
+-        </Modal>
++        </StepsDialog>
++    );
++}
++
++const named = (count: number): WipeNamed => ({ count, names: [] });
++
++/** A plan with the kinds a demo's stores usually hold, so the preview's room is kept from the start. */
++const RESERVED_PREVIEW: WipePreview = {
++    stores: [],
++    remove: {
++        products: named(1),
++        categories: named(1),
++        customers: named(1),
++        cartRules: named(1),
++        companies: named(1),
++        catalogs: named(0),
++        customerGroups: named(1),
++        attributeSets: named(0),
++        attributes: named(1),
++    },
++    settings: named(1),
++    takenOff: named(0),
++    rulesTakenOff: named(0),
++    orders: { cancel: named(1), refund: named(0), leftOpen: named(0), returns: named(0) },
++    left: [{ kind: 'categories', count: 1, names: [], why: 'a store not chosen shares it' }],
++    installed: { products: 1 },
++    total: 9,
++    token: '',
++    never: '',
++};
++
++/** The tallest the form gets: this store's own list and a plan's usual lines, drawn hidden. */
++function ReservedBody({ choices }: { choices: WipeChoiceWebsite[] }) {
++    return (
++        <div className="clear-demo-body">
++            <LeadText>{CLEAR_COPY.lead}</LeadText>
++            <div>
++                <SectionLabel>{CLEAR_COPY.stores}</SectionLabel>
++                <StorePickList choices={choices} ticks={NONE} onChange={() => undefined} isDisabled />
++            </div>
++            <FactList>
++                {previewLines(RESERVED_PREVIEW).map((line) => (
++                    <Fact key={line.label} label={line.label}>
++                        {line.value}
++                    </Fact>
++                ))}
++            </FactList>
++        </div>
+     );
+ }
+ 
+@@ -130,9 +180,5 @@ function ClearForm({ onClose, onClear }: ClearDemoDataModalProps) {
+  * @param props - the close and clear callbacks
+  */
+ export function ClearDemoDataModal(props: ClearDemoDataModalProps): React.ReactElement {
+-    return (
+-        <DialogContainer onDismiss={props.onClose}>
+-            <ClearForm {...props} />
+-        </DialogContainer>
+-    );
++    return <ClearForm {...props} />;
+ }
+diff --git a/src/features/data-installer/ui/components/ImportDatapackModal.tsx b/src/features/data-installer/ui/components/ImportDatapackModal.tsx
+index 94113eb7d..c6f6666d0 100644
+--- a/src/features/data-installer/ui/components/ImportDatapackModal.tsx
++++ b/src/features/data-installer/ui/components/ImportDatapackModal.tsx
+@@ -27,7 +27,7 @@
+  * a TERMINAL record from a previous session is history and never greets a
+  * fresh modal.
+  *
+- * **The `DialogContainer` is load-bearing, not decoration.** `core/ui/Modal`
++ * **The `DialogContainer` (in `ImportDatapackWindow`) is load-bearing, not decoration.** `core/ui/Modal`
+  * is a Spectrum `Dialog` with no overlay of its own, and a bare `Dialog`
+  * renders NOTHING — the modal shipped without one and never rendered once.
+  *
+@@ -38,7 +38,6 @@
+  * @module features/data-installer/ui/components/ImportDatapackModal
+  */
+ 
+-import { DialogContainer } from '@adobe/react-spectrum';
+ import React, { useCallback, useEffect, useState } from 'react';
+ import type { ImportJobRecord } from '../../types';
+ import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+@@ -52,12 +51,12 @@ import { type HeldPack, replacesHeldPack, useReplacement } from '../hooks/useRep
+ import { useRunColumns } from '../hooks/useRunColumns';
+ import { useTypeSelection } from '../hooks/useTypeSelection';
+ import { useVersionTypes } from '../hooks/useVersionTypes';
+-import { ImportDatapackModalBody, type BodyContext } from './ImportDatapackModalBody';
++import { ImportDatapackModalBody, importReserve, type BodyContext } from './ImportDatapackModalBody';
++import { ImportDatapackWindow, windowResult } from './ImportDatapackWindow';
+ import { backgroundTitle, isStartingImport, jobBusyMessage, libraryField } from './importModalJob';
+ import { buildActions, closeLabel, isRemoving, removalButtons, resolveView, targetName, viewFrame, waitOf, watchedActivation } from './importModalView';
+ import { checkPassed, resolveResult, type LastAction } from './importResult';
+ import type { RemovalAnswer } from './removalConfirm';
+-import { Modal } from '@/core/ui/components/ui/Modal';
+ import { webviewClient } from '@/core/ui/utils/WebviewClient';
+ import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+@@ -326,24 +325,21 @@ export function ImportDatapackModal({
+         fixWithAi,
+     });
+ 
++    const waiting = waitOf(view, scope.loading || !target.settled || !scopeSettled, bodyContext.busyMessage, typesFirst(readingTypes, changes.wait));
++
+     return (
+-        <DialogContainer type="modal" onDismiss={close}>
+-            <Modal
+-                title={frame.title}
+-                status={frame.status}
+-                size={frame.size}
+-                wide={frame.wide}
+-                hideClose={frame.hideClose}
+-                fitContent
+-                waiting={waitOf(view, scope.loading || !target.settled || !scopeSettled, bodyContext.busyMessage, typesFirst(readingTypes, changes.wait))}
+-                holdSize={frame.holdSize === true}
+-                onClose={view === 'reading-changes' ? leave.disarm : close}
+-                closeLabel={closeLabel(view, savingFirst)}
+-                startButtons={footer.filter((button) => button.start)}
+-                actionButtons={footer.filter((button) => !button.start)}
+-            >
+-                <ImportDatapackModalBody view={view} ctx={bodyContext} />
+-            </Modal>
+-        </DialogContainer>
++        <ImportDatapackWindow
++            frame={frame}
++            {...windowResult(view === 'result', result, leave.closesOnBack)}
++            waiting={waiting}
++            reserve={importReserve({ view, ctx: bodyContext, formBehind: !leave.closesOnBack })}
++            footer={footer}
++            closeLabel={closeLabel(view, savingFirst)}
++            onDismiss={close}
++            onClose={view === 'reading-changes' ? leave.disarm : close}
++        >
++            <ImportDatapackModalBody view={view} ctx={bodyContext} />
++        </ImportDatapackWindow>
+     );
+ }
++
+diff --git a/src/features/data-installer/ui/components/ImportDatapackModalBody.tsx b/src/features/data-installer/ui/components/ImportDatapackModalBody.tsx
+index 8b49f1b97..aa488ef15 100644
+--- a/src/features/data-installer/ui/components/ImportDatapackModalBody.tsx
++++ b/src/features/data-installer/ui/components/ImportDatapackModalBody.tsx
+@@ -17,14 +17,12 @@ import { useImportProgress } from '../hooks/useImportProgress';
+ import type { ImportScopes } from '../hooks/useImportScopes';
+ import type { RemovalConfirmView } from '../hooks/useRemovalConfirm';
+ import { hasMeasurableProgress, progressLabel, progressStep, summarizeProgress } from '../importProgress';
+-import { DatapackResultBody } from './DatapackResultBody';
+ import { ImportForm } from './ImportForm';
+ import type { ResultContent } from './importResult';
+-import { ImportRunView } from './ImportRunView';
++import { ImportRunView, type RunEnd } from './ImportRunView';
+ import { recordedRemovalLines } from './removalConfirm';
+ import { RemovalConfirmBody } from './RemovalConfirmBody';
+ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+-import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
+ import { LeadText } from '@/core/ui/components/ui/LeadText';
+ import type { ModalWait } from '@/core/ui/components/ui/Modal';
+ import { tookValue } from '@/core/ui/hooks/useRunClock';
+@@ -130,8 +128,6 @@ export interface ReplacementView {
+ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: BodyContext }): React.JSX.Element {
+     const pressedAt = usePressedAt(view === 'starting');
+     return (
+-        // Each view takes its own height, at once (dialog design rules).
+-        <SteadyHeight>
+             <div className="datapack-import-body">
+                     {view === 'confirm-reset' ? <ResetConfirm ctx={ctx} /> : null}
+ 
+@@ -140,7 +136,6 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
+ 
+ 
+                     {view === 'result' && ctx.result?.run ? <ImportEnd result={ctx.result} run={ctx.result.run} ctx={ctx} /> : null}
+-                    {view === 'result' && ctx.result && !ctx.result.run ? <DatapackResultBody result={ctx.result} /> : null}
+ 
+                     {view === 'no-instance' ? <NoInstanceNotice /> : null}
+ 
+@@ -162,10 +157,56 @@ export function ImportDatapackModalBody({ view, ctx }: { view: ModalView; ctx: B
+                         />
+                     ) : null}
+         </div>
+-        </SteadyHeight>
+     );
+ }
+ 
++/** A run's end as tall as one usually is: its sentence, three lines and how long it took;
++ * the three lines differ because the end keys its lines by their text. */
++const END_ROOM: RunEnd = { lead: '\u00a0', lines: ['\u00a0', '\u00a0\u00a0', '\u00a0\u00a0\u00a0'], took: '\u00a0' };
++
++/**
++ * The views this window may show after the one on screen, for `StepsWindow`'s reserve: the window
++ * opens at the tallest and keeps it (owner, 2026-11-11). An install reserves its form, for Back, and
++ * its run with every type the pack holds and an end under them. A window opened by Uninstall
++ * (`formBehind` false) has neither ahead of it, only its spinner and its own small result.
++ */
++export function importReserve({ view, ctx, formBehind }: { view: ModalView; ctx: BodyContext; formBehind: boolean }): React.JSX.Element[] {
++    if (!formBehind) return [];
++    const onRun = view === 'starting' || view === 'watching' || view === 'result';
++    const reserve: React.JSX.Element[] = [];
++    if (view !== 'form') {
++        reserve.push(
++            <ImportForm
++                key="form"
++                availableTypes={ctx.availableTypes}
++                selected={ctx.selected}
++                allSelected={ctx.allSelected}
++                onToggle={ctx.toggle}
++                onToggleAll={ctx.toggleAll}
++                websites={ctx.scope.websites}
++                websiteCode={ctx.scope.websiteCode}
++                storeCode={ctx.scope.storeCode}
++                onWebsiteChange={ctx.scope.chooseWebsite}
++                onStoreChange={ctx.scope.chooseStore}
++                scopeLocked={ctx.scope.locked}
++                changes={ctx.changes}
++                {...(ctx.replacement.sentence ? { replaces: ctx.replacement.sentence } : {})}
++            />,
++        );
++    }
++    if (!onRun) {
++        const steps = importSteps({
++            perType: {},
++            dataTypes: ctx.availableTypes,
++            running: true,
++            installing: ctx.installing,
++            ...(ctx.replacement.name ? { replaces: ctx.replacement.name } : {}),
++        });
++        reserve.push(<ImportRunView key="run" steps={steps} columns={ctx.columns} end={END_ROOM} />);
++    }
++    return reserve;
++}
++
+ /**
+  * When Import was pressed, for one clock from the press to the end (review, 2026-11-10: a save-first
+  * import's clock started again when its job did). Taken each time the window enters its starting
+diff --git a/src/features/data-installer/ui/components/importModalView.ts b/src/features/data-installer/ui/components/importModalView.ts
+index bd8a5ab60..88abc379b 100644
+--- a/src/features/data-installer/ui/components/importModalView.ts
++++ b/src/features/data-installer/ui/components/importModalView.ts
+@@ -245,15 +245,16 @@ export function targetName(scope: ImportScopes, commerceInstance: string): strin
+     return website?.name ?? commerceInstance;
+ }
+ 
+-/** The dialog around the view: its title, the title's status, its width, and whether Close shows. */
++/**
++ * The window around the view: its title, the title's status, whether it is extra-wide, and whether
++ * Close shows. Its size and height are the layout's (`StepsWindow`, `ResultWindow`): one window
++ * keeps one height from its form to its end (owner, 2026-11-11).
++ */
+ export interface ViewFrame {
+     title: string;
+     status?: ModalStatus;
+-    size: 'S' | 'M' | 'L';
+     wide: boolean;
+     hideClose: boolean;
+-    /** A wait with its own buttons keeps its box (`Modal.holdSize`): a removal's spinner. */
+-    holdSize?: true;
+ }
+ 
+ /**
+@@ -267,15 +268,12 @@ export function closeLabel(view: ModalView, handsOver = false): string {
+ }
+ 
+ /**
+- * The form's width, from how many data types it lists: one column at medium, two at large, three
+- * extra-wide (`.datapack-type-grid` takes columns of at least 260px). Decided by the pack, so it is
+- * fixed for the dialog's life; the dialog was extra-wide for every pack until 2026-10-31, which
+- * left a one-type pack's form floating in a 980px box.
++ * Whether the form is extra-wide, from how many data types it lists: three columns of them need it
++ * (`.datapack-type-grid` takes columns of at least 260px); up to twelve fit the large window
++ * `StepsWindow` always is. Decided by the pack, so it is fixed for the window's life.
+  */
+-function formWidth(typeCount: number): Pick<ViewFrame, 'size' | 'wide'> {
+-    if (typeCount <= 6) return { size: 'M', wide: false };
+-    if (typeCount <= 12) return { size: 'L', wide: false };
+-    return { size: 'L', wide: true };
++function formWidth(typeCount: number): Pick<ViewFrame, 'wide'> {
++    return { wide: typeCount > 12 };
+ }
+ 
+ /**
+@@ -294,15 +292,15 @@ export function runColumns(typeCount: number, viewportWidth: number): 1 | 2 {
+     return typeCount > 6 && viewportWidth >= TWO_COLUMN_MIN_VIEWPORT ? 2 : 1;
+ }
+ 
+-/** The run's width: the form's for two columns of data types, medium for one (walk F135). */
+-function runWidth(typeCount: number, columns: 1 | 2): Pick<ViewFrame, 'size' | 'wide'> {
+-    return columns === 2 ? formWidth(typeCount) : { size: 'M', wide: false };
++/** The run's width: the form's for two columns of data types, never extra-wide for one (walk F135). */
++function runWidth(typeCount: number, columns: 1 | 2): Pick<ViewFrame, 'wide'> {
++    return columns === 2 ? formWidth(typeCount) : { wide: false };
+ }
+ 
+ /**
+  * Each view's frame, by the dialog design rules (`docs/development/sop/dialog-design.md`): the
+- * form takes the width its types need; the confirm, the wait and the result are small, and the
+- * dialog eases between widths. The confirm asks its question as the title, naming the store, so
++ * form takes the width its types need, and everything up to the end keeps it; a clean end is a new,
++ * small window (`ResultWindow`). The confirm asks its question as the title, naming the store, so
+  * a removal aimed at the wrong store is hard to miss (owner, 2026-10-31: one nearly went to the
+  * real website). A result's title is the outcome, with its status icon.
+  */
+@@ -320,7 +318,7 @@ export function viewFrame(a: {
+     /** The check for the SC's changes could not run: the confirm's title says so (review, 2026-11-10). */
+     checkFailed?: boolean;
+ }): ViewFrame {
+-    const small = { size: 'S' as const, wide: false, hideClose: false };
++    const small = { wide: false, hideClose: false };
+     // An import's confirm asks only whether to keep the SC's changes (walk F106). Every confirm is
+     // wide enough for its buttons on one line, the one that loses changes at the start (F104, F111),
+     // and the check before it is the same width, so nothing jumps when the question comes (F109).
+@@ -331,7 +329,7 @@ export function viewFrame(a: {
+     // 2026-11-09, walk F127: at medium, Save and Import fell to a second line and the box widened
+     // when the steps came). An uninstall's confirm stays medium: nothing runs in its box after.
+     const run = runWidth(a.typeCount, a.columns);
+-    const confirmFrame = a.replacing ? run : { size: 'M' as const, wide: false };
++    const confirmFrame = a.replacing ? run : { wide: false };
+     // While it checks, the title names the work, not a question nothing has asked yet (walk F108).
+     const checking = a.replacing ? installTitle(a.displayName, false) : `${UNINSTALL} ${a.displayName}`;
+     // Amber: nothing failed, and the next move is the SC's.
+@@ -346,20 +344,14 @@ export function viewFrame(a: {
+             // has no `run` and hands off to the small result (walk F134).
+             if (a.result?.run) return { ...run, hideClose: false, title: a.result.title, status: resultStatus(a.result) };
+             return a.result
+-                ? {
+-                      ...small,
+-                      // The Admin path reads as one line at medium, not as several steps.
+-                      size: a.result.keptRoot ? ('M' as const) : small.size,
+-                      title: a.result.title,
+-                      status: resultStatus(a.result),
+-                  }
++                ? { ...small, title: a.result.title, status: resultStatus(a.result) }
+                 : { ...small, title: installTitle(a.displayName, false) };
+         case 'starting':
+             return { ...run, hideClose: false, title: installTitle(a.displayName, true) };
+         case 'watching':
+             // An import's rows take the form's box; a removal still waits on its spinner.
+             return a.removing
+-                ? { ...small, title: `${UNINSTALL} ${a.displayName}`, holdSize: true }
++                ? { ...small, title: `${UNINSTALL} ${a.displayName}` }
+                 : { ...run, hideClose: false, title: installTitle(a.displayName, true) };
+         case 'busy':
+             return { ...small, title: a.removing ? `${UNINSTALL} ${a.displayName}` : installTitle(a.displayName, true) };
+diff --git a/tests/features/data-installer/ui/components/ImportDatapackModal.lifecycle.test.tsx b/tests/features/data-installer/ui/components/ImportDatapackModal.lifecycle.test.tsx
+index d5f482567..0325a6401 100644
+--- a/tests/features/data-installer/ui/components/ImportDatapackModal.lifecycle.test.tsx
++++ b/tests/features/data-installer/ui/components/ImportDatapackModal.lifecycle.test.tsx
+@@ -426,9 +426,11 @@ describe('ImportDatapackModal — job lifecycle', () => {
+             renderModal();
+ 
+             // The row in progress spins; with no count yet its second line is the word alone (walk F133).
+-            const row = (await screen.findByText('Products')).closest('.work-row');
++            // Found by its word: the window's hidden reserve also draws a pending Products row until
++            // its height is held.
++            const row = (await screen.findByText('Installing')).closest('.work-row');
+             expect(row).toHaveAttribute('data-state', 'checking');
+-            expect(screen.getByText('Installing').closest('.work-row')).toBe(row);
++            expect(row).toHaveTextContent('Products');
+             expect(screen.getByText('1 of 2 data types').closest('.work-row')).toHaveTextContent('Install Bodea, main');
+         });
+ 
+diff --git a/tests/features/data-installer/ui/components/importModalView.test.ts b/tests/features/data-installer/ui/components/importModalView.test.ts
+index cd520b995..27153ce6b 100644
+--- a/tests/features/data-installer/ui/components/importModalView.test.ts
++++ b/tests/features/data-installer/ui/components/importModalView.test.ts
+@@ -160,7 +160,7 @@ describe('an import starting', () => {
+ 
+     it('takes the running import’s frame, footer and way out', () => {
+         const frame = viewFrame({ view: 'starting', displayName: 'Frescopa', removing: false, store: '', typeCount: 8, columns: 2, result: null });
+-        expect(frame).toMatchObject({ size: 'L', wide: false, title: 'Installing Frescopa' });
++        expect(frame).toMatchObject({ wide: false, title: 'Installing Frescopa' });
+         expect(rows(actionArgs({ view: 'starting' }))).toStrictEqual([]);
+         expect(closeLabel('starting')).toBe('Run in Background');
+         expect(waitOf('starting', false, { label: '' })).toBe(false);
+@@ -348,24 +348,22 @@ describe('viewFrame', () => {
+ 
+     // Walk F106: an import's confirm asks about the SC's changes, not about removing; F104: wide
+     // enough for its three buttons.
+-    it('asks an import\'s confirm whether to save the SC\'s changes, at medium width', () => {
++    it('asks an import\'s confirm whether to save the SC\'s changes', () => {
+         const confirm = viewFrame({ ...base, view: 'confirm-reset', replacing: 'My Luma, Nov 1, 12:00 PM' });
+-        expect(confirm).toMatchObject({ title: 'Save Your Changes First?', size: 'M' });
++        expect(confirm).toMatchObject({ title: 'Save Your Changes First?' });
+         // CONTROL: a removal's confirm names the store, at the same width (F104, F111).
+-        expect(viewFrame({ ...base, view: 'confirm-reset' })).toMatchObject({ title: 'Uninstall Frescopa from Justrite Test Store US (Justrite Test)?', size: 'M' });
++        expect(viewFrame({ ...base, view: 'confirm-reset' })).toMatchObject({ title: 'Uninstall Frescopa from Justrite Test Store US (Justrite Test)?' });
+     });
+ 
+     // Walk F108: while it checks, the title names the work, not a question nothing has asked yet.
+     it('titles the check by the work, with no warning icon, at the confirm\'s width', () => {
+         expect(viewFrame({ ...base, view: 'reading-changes', replacing: 'Luma, eds-compatible' })).toStrictEqual({
+             title: 'Install Frescopa',
+-            size: 'M',
+             wide: false,
+             hideClose: false,
+         });
+         expect(viewFrame({ ...base, view: 'reading-changes' })).toStrictEqual({
+             title: 'Uninstall Frescopa',
+-            size: 'M',
+             wide: false,
+             hideClose: false,
+         });
+@@ -377,11 +375,11 @@ describe('viewFrame', () => {
+         const eleven = { ...base, typeCount: 11, columns: 2 as const, replacing: 'My Luma, Nov 9, 3:39 PM' };
+         const run = viewFrame({ ...eleven, view: 'watching' });
+ 
+-        expect(run).toMatchObject({ size: 'L', wide: false });
+-        expect(viewFrame({ ...eleven, view: 'reading-changes' })).toMatchObject({ size: run.size, wide: run.wide });
+-        expect(viewFrame({ ...eleven, view: 'confirm-reset' })).toMatchObject({ size: run.size, wide: run.wide });
++        expect(run).toMatchObject({ wide: false });
++        expect(viewFrame({ ...eleven, view: 'reading-changes' })).toMatchObject({ wide: run.wide });
++        expect(viewFrame({ ...eleven, view: 'confirm-reset' })).toMatchObject({ wide: run.wide });
+         // CONTROL: an uninstall's confirm of the same pack stays medium.
+-        expect(viewFrame({ ...base, typeCount: 11, view: 'confirm-reset' })).toMatchObject({ size: 'M' });
++        expect(viewFrame({ ...base, typeCount: 11, view: 'confirm-reset' })).toMatchObject({ wide: false });
+     });
+ 
+     it('labels an import\'s confirm buttons Import, losing the changes as an outlined button', () => {
+@@ -396,27 +394,26 @@ describe('viewFrame', () => {
+     });
+ 
+     it.each([
+-        [1, 'M', false],
+-        [6, 'M', false],
+-        [7, 'L', false],
+-        [12, 'L', false],
+-        [13, 'L', true],
+-    ])('gives a form of %i types the %s width (extra-wide: %s)', (typeCount, size, wide) => {
+-        expect(viewFrame({ ...base, view: 'form', typeCount })).toMatchObject({ size, wide, title: 'Install Frescopa', hideClose: false });
++        [1, false],
++        [6, false],
++        [7, false],
++        [12, false],
++        [13, true],
++    ])('gives a form of %i types the large window (extra-wide: %s)', (typeCount, wide) => {
++        expect(viewFrame({ ...base, view: 'form', typeCount })).toMatchObject({ wide, title: 'Install Frescopa', hideClose: false });
+     });
+ 
+-    it('gives the removal that kept a root the medium width, so its Admin path reads as one line', () => {
++    it('gives the removal that kept a root its amber outcome (`ResultWindow` widens it for the Admin path)', () => {
+         const keptRoot = { store: 'Justrite Test Store', category: 'ZZ Root DB12', restore: 'Justrite Catalog' };
+         const result = { variant: 'warning' as const, title: 'One step left to remove Frescopa', keptRoot };
+ 
+-        expect(viewFrame({ ...base, view: 'result', result })).toMatchObject({ size: 'M', status: 'warning' });
++        expect(viewFrame({ ...base, view: 'result', result })).toMatchObject({ status: 'warning' });
+     });
+ 
+-    it('titles a project with no instance by its outcome, amber, at the small width', () => {
++    it('titles a project with no instance by its outcome, amber', () => {
+         expect(viewFrame({ ...base, view: 'no-instance' })).toMatchObject({
+             title: 'No Commerce Instance',
+             status: 'warning',
+-            size: 'S',
+             wide: false,
+             hideClose: false,
+         });
+@@ -427,8 +424,8 @@ describe('viewFrame', () => {
+     it('keeps the form’s width while an import runs, and for an ending with a problem on its steps', () => {
+         const run = { variant: 'warning' as const, title: 'Frescopa Installed', run: {} as ResultContent['run'] };
+ 
+-        expect(viewFrame({ ...base, view: 'watching', typeCount: 8, columns: 2 })).toMatchObject({ size: 'L', wide: false, title: 'Installing Frescopa' });
+-        expect(viewFrame({ ...base, view: 'result', typeCount: 8, columns: 2, result: run })).toMatchObject({ size: 'L', status: 'warning', title: 'Frescopa Installed' });
++        expect(viewFrame({ ...base, view: 'watching', typeCount: 8, columns: 2 })).toMatchObject({ wide: false, title: 'Installing Frescopa' });
++        expect(viewFrame({ ...base, view: 'result', typeCount: 8, columns: 2, result: run })).toMatchObject({ status: 'warning', title: 'Frescopa Installed' });
+     });
+ 
+     // Walk F134: a clean finish carries no `run`, so it hands off to the small result.
+@@ -438,43 +435,41 @@ describe('viewFrame', () => {
+         expect(viewFrame({ ...base, view: 'result', typeCount: 8, columns: 2, result: clean })).toEqual({
+             title: 'Frescopa Installed',
+             status: 'success',
+-            size: 'S',
+             wide: false,
+             hideClose: false,
+         });
+     });
+ 
+     // Walk F135: one column at medium for six or fewer data types, or in an editor too narrow for two.
+-    it('runs one column of data types at medium, and two at the form’s width', () => {
+-        expect(viewFrame({ ...base, view: 'watching', typeCount: 6, columns: 1 })).toMatchObject({ size: 'M', wide: false });
+-        expect(viewFrame({ ...base, view: 'watching', typeCount: 11, columns: 1 })).toMatchObject({ size: 'M', wide: false });
+-        expect(viewFrame({ ...base, view: 'watching', typeCount: 11, columns: 2 })).toMatchObject({ size: 'L', wide: false });
++    it('never makes one column of data types extra-wide', () => {
++        expect(viewFrame({ ...base, view: 'watching', typeCount: 6, columns: 1 })).toMatchObject({ wide: false });
++        expect(viewFrame({ ...base, view: 'watching', typeCount: 11, columns: 1 })).toMatchObject({ wide: false });
++        expect(viewFrame({ ...base, view: 'watching', typeCount: 11, columns: 2 })).toMatchObject({ wide: false });
+         // The check before a replace takes the run's width whichever it is (F127).
+-        expect(viewFrame({ ...base, view: 'reading-changes', typeCount: 11, columns: 1, replacing: 'My Luma' })).toMatchObject({ size: 'M' });
++        expect(viewFrame({ ...base, view: 'reading-changes', typeCount: 11, columns: 1, replacing: 'My Luma' })).toMatchObject({ wide: false });
+     });
+ 
+-    it('CONTROL: a removal still waits small, on its spinner', () => {
+-        expect(viewFrame({ ...base, view: 'watching', removing: true, typeCount: 8 })).toMatchObject({ size: 'S', title: 'Uninstall Frescopa' });
++    it('CONTROL: a removal still waits on its spinner, never extra-wide', () => {
++        expect(viewFrame({ ...base, view: 'watching', removing: true, typeCount: 8 })).toMatchObject({ title: 'Uninstall Frescopa' });
+     });
+ 
+-    it('CONTROL: any other result stays small', () => {
++    it('CONTROL: any other result is never extra-wide', () => {
+         const result = { variant: 'success' as const, title: 'Frescopa Uninstalled' };
+ 
+-        expect(viewFrame({ ...base, view: 'result', result })).toMatchObject({ size: 'S' });
++        expect(viewFrame({ ...base, view: 'result', result })).toMatchObject({ wide: false });
+     });
+ 
+     it('asks the removal as the title, naming the store, amber, with Close hidden for Cancel', () => {
+         expect(viewFrame({ ...base, view: 'confirm-reset' })).toEqual({
+             title: 'Uninstall Frescopa from Justrite Test Store US (Justrite Test)?',
+             status: 'warning',
+-            size: 'M',
+             wide: false,
+             hideClose: true,
+         });
+     });
+ 
+-    it('titles a running removal as a removal, small', () => {
+-        expect(viewFrame({ ...base, view: 'watching', removing: true })).toMatchObject({ title: 'Uninstall Frescopa', size: 'S' });
++    it('titles a running removal as a removal', () => {
++        expect(viewFrame({ ...base, view: 'watching', removing: true })).toMatchObject({ title: 'Uninstall Frescopa' });
+     });
+ 
+     it.each([
+@@ -484,7 +479,7 @@ describe('viewFrame', () => {
+         ['info', undefined],
+     ] as const)('takes a %s result’s title and gives it the %s icon', (variant, status) => {
+         const result: ResultContent = { variant, title: 'Frescopa Uninstalled' };
+-        expect(viewFrame({ ...base, view: 'result', result })).toEqual({ title: 'Frescopa Uninstalled', status, size: 'S', wide: false, hideClose: false });
++        expect(viewFrame({ ...base, view: 'result', result })).toEqual({ title: 'Frescopa Uninstalled', status, wide: false, hideClose: false });
+     });
+ });
+ 
+@@ -518,7 +513,7 @@ describe('the removal confirm (step 05)', () => {
+         const reading = viewFrame({ ...FRAME, view: 'reading-changes' });
+         const confirm = viewFrame({ ...FRAME, view: 'confirm-reset' });
+ 
+-        expect(reading.size).toBe(confirm.size);
++        expect(reading.wide).toBe(confirm.wide);
+         expect(reading.hideClose).toBe(false);
+         expect(confirm.hideClose).toBe(true);
+     });

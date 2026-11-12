@@ -1,8 +1,9 @@
 /**
- * SOP: every window is one of five layouts, and each layout is one component (owner, 2026-11-10,
- * Phase 1b of `.rptc/plans/datapack-simplification/overview.md`). Form, Confirm, Progress, Result
- * and Guide each own their width, spacing, text classes, button order and how they end; a caller
- * passes words and actions. So only those five components (and `Modal` itself) render `Modal`.
+ * SOP: every window is one of six layouts, and each layout is one component (owner, 2026-11-10,
+ * Phase 1b of `.rptc/plans/datapack-simplification/overview.md`). Form, Confirm, Progress, Result,
+ * Guide and Steps each own their width, spacing, text classes, button order and how they end; a
+ * caller passes words and actions. So only those six components (and `Modal` itself) render
+ * `Modal`. Steps (2026-11-11) is the window that goes Form, Running, Result at one fixed height.
  *
  * Every file that renders `Modal` directly today is in the ledger, each with the feature whose
  * migration moves it. The ledger only shrinks: a file not in it fails, and a row for a file that no
@@ -19,37 +20,28 @@ import { workingTreeFiles } from './architectureScan';
 
 const ROOT = join(__dirname, '..', '..');
 
-/** The five layout components: the only files that may render `Modal`. */
+/** The six layout components: the only files that may render `Modal`. */
 const LAYOUTS = [
     'src/core/ui/components/ui/FormDialog.tsx',
     'src/core/ui/components/ui/ConfirmActionDialog.tsx',
     'src/core/ui/components/ui/ProgressDialog.tsx',
     'src/core/ui/components/ui/ResultDialog.tsx',
     'src/core/ui/components/ui/GuideDialog.tsx',
+    'src/core/ui/components/ui/StepsDialog.tsx',
 ];
 
 /** Files that render `Modal` directly today, each with the change that moves it. Shrink only. */
 const LEDGER: Readonly<Record<string, string>> = {
-    'src/features/data-installer/ui/components/PackSetupStepDialog.tsx':
-        'waits for a layout: a Guide of one step with Open Admin and Check, and GuideDialog takes no actions',
-    'src/features/data-installer/ui/components/LoadDatapackFileModal.tsx':
-        'waits for a layout: its result holds two Delete buttons with their own wait and note, and ResultDialog takes one action',
     'src/features/data-installer/ui/components/ImportDatapackModal.tsx':
-        'waits for a layout: one window through form, check, run and result at M, L or wide with start buttons',
+        'waits for a layout: rebuilt as one window per phase in the build (decisions.md, J2), not moved onto Steps',
     'src/features/data-installer/ui/components/ClearDemoDataModal.tsx':
-        'waits for a layout: a Form at L for its store rows and preview, and FormDialog is M only',
-    'src/features/data-installer/ui/components/create-flow/DatapackFlowDialog.tsx':
-        'waits for a layout: a staged Form with Back, a start button and two commits at L or wide',
-    'src/features/dashboard/ui/components/IntegrationSettingsModal.tsx':
-        'waits for a layout: a Form whose failure shows an error status and whose Cancel becomes Run in Background while it saves',
+        'waits for a layout: rebuilt to J1 (type table, Review Records, Removed and Kept tabs) in the build',
     'src/features/dashboard/ui/components/ManageApisModal.tsx':
         'waits for a layout: a Form at L whose title, status and action change with each view, and FormDialog is M only',
     'src/features/dashboard/ui/components/AssignErpProductsModal.tsx':
         'waits for a layout: a Form at L wide for its product list, and FormDialog is M only',
     'src/features/dashboard/ui/components/ErpDowntimeDialog.tsx':
         'waits for a layout: a Form at S that reports its own failure with an error status, and FormDialog has no status',
-    'src/features/dashboard/ui/components/integrations/PrepareOnAddConfirm.tsx':
-        'waits for a layout: a Confirm at L that reads the store first, and ConfirmActionDialog is S with no wait',
     'src/features/dashboard/ui/components/integrations/SetupGuideModal.tsx':
         'waits for a layout: a Guide at L wide with a step list, start buttons and per step actions, and GuideDialog takes no actions',
     'src/features/dashboard/ui/components/AiCapabilitiesModal.tsx':
@@ -99,7 +91,7 @@ export function ownedTextRules(css: string): string[] {
 
 const read = (file: string): string => readFileSync(join(ROOT, file), 'utf8');
 
-describe('one component per layout: only the five layouts render Modal', () => {
+describe('one component per layout: only the six layouts render Modal', () => {
     const tsx = workingTreeFiles('src').filter((file) => file.endsWith('.tsx'));
     const direct = tsx.filter((file) => rendersModal(read(file)));
 
@@ -108,7 +100,7 @@ describe('one component per layout: only the five layouts render Modal', () => {
         expect(direct.length).toBeGreaterThan(LAYOUTS.length);
     });
 
-    it('a file outside the five layouts that renders Modal is in the ledger', () => {
+    it('a file outside the six layouts that renders Modal is in the ledger', () => {
         const offenders = direct.filter((file) => !LAYOUTS.includes(file) && !(file in LEDGER));
 
         expect(offenders).toStrictEqual([]);

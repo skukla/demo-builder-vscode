@@ -2,6 +2,8 @@
     "_what": "Modals whose body switches on something but does NOT need a floor under it, each with the reason. Enforced by modal-steady-height.test.ts. A modal that genuinely changes what it shows belongs in SteadyHeight (or one of the other two holders), not here — this list is for bodies the scan reads as multi-view and that are not.",
 
     "noViewsOfItsOwn": {
+        "src/core/ui/components/ui/ResultDialog.tsx": "The result layout shows one state: its `status ===` reads are the success auto-close and each line's own icon, not a switch between views. A result is a new window of its own size (owner, 2026-11-11), so there is nothing to hold.",
+        "src/features/data-installer/ui/components/PackSetupStepDialog.tsx": "Its `state ===` reads are each checklist step's own done or open, which picks that line's note and actions. The guide is one view, rendered by GuideDialog.",
         "src/features/dashboard/ui/aiSurface/components/PromptEditDialog.tsx": "Its two modes change the TITLE and which field takes focus. The body is one form either way, so there is no second height to jump to.",
         "src/features/projects-dashboard/ui/components/UpdatesModal.tsx": "The list of updates and the run that follows it are one view each, both .updates-group-list, as tall as their rows up to a cap, and a question the run is paused on is asked inside that list, under the row it is about. Height fits the content and a change of view takes its size at once (dialog design rules, owner 2026-11-02), so there is no floor to hold. Checking and up to date are the notification's, not this window's (PL-80, owner 2026-10-20)."
     }

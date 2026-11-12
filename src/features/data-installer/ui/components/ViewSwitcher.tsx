@@ -21,7 +21,7 @@
  * @module features/data-installer/ui/components/ViewSwitcher
  */
 
-import { ActionButton } from '@adobe/react-spectrum';
+import { ActionButton, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
@@ -31,6 +31,16 @@ export interface SwitchableView {
     id: string;
     /** Button label. */
     label: string;
+    /**
+     * Drawn in its place but not choosable: a view that has nothing in it this time, kept so every
+     * screen using the switch has one layout (the Clear spot check's Kept view, 2026-11-11).
+     */
+    isDisabled?: boolean;
+    /**
+     * Drawn after the label, inside the button: a status dot tying the view to the same dot beside
+     * the item it belongs to (the Clear spot check's Kept view, 2026-11-11).
+     */
+    marker?: React.ReactNode;
 }
 
 export interface ViewSwitcherProps {
@@ -57,6 +67,7 @@ export function ViewSwitcher({
                 <ActionButton
                     key={view.id}
                     isQuiet
+                    isDisabled={view.isDisabled}
                     aria-pressed={view.id === activeId}
                     UNSAFE_className={cn(
                         'view-switcher-button',
@@ -64,7 +75,16 @@ export function ViewSwitcher({
                     )}
                     onPress={() => onSelect(view.id)}
                 >
-                    {view.label}
+                    {view.marker ? (
+                        // One child: Spectrum's button lays out a `Text` slot apart from other
+                        // children, which put the marker before the label.
+                        <Text>
+                            {view.label}
+                            <span className="view-switcher-marker">{view.marker}</span>
+                        </Text>
+                    ) : (
+                        view.label
+                    )}
                 </ActionButton>
             ))}
         </div>

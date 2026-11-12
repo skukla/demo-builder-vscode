@@ -70,6 +70,13 @@
     color: var(--spectrum-global-color-gray-900);
     border-bottom-color: var(--spectrum-global-color-blue-500);
 }
+
+/* A tab's marker after its label: the same notice dot a row carries (owner, 2026-11-11, J1-3b). */
+.view-switcher-marker {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+}
 }
 
 /* ===========================================

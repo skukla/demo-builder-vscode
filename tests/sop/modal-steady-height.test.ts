@@ -7,11 +7,15 @@
  * SC watched it work.
  *
  * A modal is at risk when its body renders DIFFERENT views — a form, a spinner, a
- * result. Two things manage the change, and one of them has to be there:
+ * result. These manage the change, and one of them has to be there:
  *
  *   `SteadyHeight`               fits each state and eases between them (the dialog
  *                                design rules, 2026-10-31)
  *   `CenteredFeedbackContainer`  a height the caller names
+ *   `StepsDialog`/`StepsWindow`  opens at its tallest step and keeps that height: a
+ *                                window never changes height once on screen (owner,
+ *                                2026-11-11), which replaces the fit-and-ease
+ *   `ProgressDialog` with `stream`  keeps the height its run opens at to the end
  *
  * What this cannot see: whether the floor is the RIGHT height. That is a judgement,
  * and the ledger is where a modal that legitimately has none says so.
@@ -36,7 +40,15 @@ const BRANCH = /(view === |phase === |state === |stage === |step === |mode === |
  * first version did, so deleting the floor and leaving the import passed the check.
  */
 // `waiting=` counts because the shared Modal holds its own SteadyHeight around the wait.
-const HOLDS = [/<SteadyHeight[\s>]/, /<CenteredFeedbackContainer[\s>]/, /\bwaiting=\{/];
+// The Steps layout holds one fixed height for every step it shows (owner, 2026-11-11).
+// A streamed ProgressDialog keeps the height it opens at for every state, the same rule.
+const HOLDS = [
+    /<SteadyHeight[\s>]/,
+    /<CenteredFeedbackContainer[\s>]/,
+    /\bwaiting=\{/,
+    /<(StepsDialog|StepsWindow)[\s>]/,
+    /<ProgressDialog[\s>][\s\S]*?\bstream=\{/,
+];
 
 const COMPONENTS = workingTreeFiles('src')
     .filter((f) => f.endsWith('.tsx'));
@@ -74,7 +86,7 @@ function withoutImports(source: string): string {
 /** Every component that renders a dialog and switches between views inside it. */
 // A layout component (Phase 1b) renders the Modal for its caller, so the caller is still the
 // dialog whose body switches views: it counts as rendering one.
-const RENDERS_DIALOG = /<(Modal|FormDialog|ConfirmActionDialog|ProgressDialog|ResultDialog|GuideDialog)[\s>]/;
+const RENDERS_DIALOG = /<(Modal|FormDialog|ConfirmActionDialog|ProgressDialog|ResultDialog|GuideDialog|StepsDialog|StepsWindow|ResultWindow)[\s>]/;
 function modalsWithViews(): Modal[] {
     const found: Modal[] = [];
     for (const file of COMPONENTS) {

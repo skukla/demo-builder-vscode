@@ -12,11 +12,10 @@
  * next step, which wait to be read. A failure
  * stays: the reason, Retry, and the Debug Logs where the full detail went.
  *
- * Its body fits each state and eases between them (`layout/SteadyHeight`), and its title is
- * the outcome or the question once there is one (`progressFrame`), by the dialog design
- * rules (owner, 2026-10-31). It was one fixed height so it never changed size (owner,
- * 2026-09-19); a fitted height that eases, under a dialog pinned near the top, keeps it
- * from jumping without the dead space.
+ * Its window keeps the height it opens at for every state (`ProgressDialog`; owner, 2026-11-11),
+ * and its title is the outcome or the question once there is one (`progressFrame`), by the
+ * dialog design rules (owner, 2026-10-31). Its body fitted each state and eased between them
+ * until then, which still moved the window as a run ended.
  *
  * It also carries a QUESTION the work is paused on — an expired sign-in, a missing
  * prerequisite, a merge needing a decision — because a notification asking that
@@ -34,7 +33,6 @@
 
 import React, { useCallback, useRef } from 'react';
 import { OperationProgressBody, progressFrame } from '@/core/ui/components/feedback/OperationProgressBody';
-import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { ProgressDialog, type ProgressAction } from '@/core/ui/components/ui/ProgressDialog';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -274,22 +272,20 @@ export function OperationProgressModal({
                 <>
                     {/* While it runs the body draws the subject, around which it levels the spinner. */}
                     {operation.subject && !running && <div className="modal-progress-subject">{operation.subject}</div>}
-                    {/* Fits each state (dialog design rules, 2026-10-31). It was one fixed height for
-                        every state, which left a one-line result in a box sized for a three-line
-                        failure. */}
-                    <SteadyHeight>
-                        <OperationProgressBody
-                            prompt={prompt}
-                            failed={failed}
-                            succeeded={succeeded}
-                            successMessage={
-                                [warning, note, offering?.message].filter(Boolean).join(' ') || undefined
-                            }
-                            progress={progress}
-                            onTyped={onTyped}
-                            subject={operation.subject}
-                        />
-                    </SteadyHeight>
+                    {/* The window keeps the height it opened at for every state (owner,
+                        2026-11-11; `ProgressDialog`): a shorter result sits in the same box, a
+                        longer one scrolls. */}
+                    <OperationProgressBody
+                        prompt={prompt}
+                        failed={failed}
+                        succeeded={succeeded}
+                        successMessage={
+                            [warning, note, offering?.message].filter(Boolean).join(' ') || undefined
+                        }
+                        progress={progress}
+                        onTyped={onTyped}
+                        subject={operation.subject}
+                    />
                 </>
             }
         />

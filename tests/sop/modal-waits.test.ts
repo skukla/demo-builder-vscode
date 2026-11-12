@@ -35,11 +35,18 @@ function sources(dir: string): string[] {
 
 const relative = (file: string) => path.relative(SRC, file).split(path.sep).join('/');
 
+/**
+ * A dialog: `Modal`, or the Steps layout that renders one in its place (its waits come from
+ * Modal's `waiting` too). The other layouts are left out because a screen that hosts one usually
+ * has a wait of its own outside it (Site Access's list).
+ */
+const RENDERS_DIALOG = /<(Modal|StepsDialog|StepsWindow)\b/;
+
 function offenders(): string[] {
     return sources(SRC)
         .filter((file) => {
             const text = fs.readFileSync(file, 'utf8');
-            return /<Modal\b/.test(text) && /<(LoadingDisplay|ProgressCircle|Spinner)\b/.test(text);
+            return RENDERS_DIALOG.test(text) && /<(LoadingDisplay|ProgressCircle|Spinner)\b/.test(text);
         })
         .map(relative)
         .sort();

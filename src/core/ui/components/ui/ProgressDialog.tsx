@@ -17,6 +17,7 @@ import React from 'react';
 import { WorkRow, type WorkRowProps } from '@/core/ui/components/feedback/WorkRow';
 import { Modal, type ModalStatus, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { resultActionButtons, type ResultAction } from '@/core/ui/components/ui/ResultDialog';
+import { useFixedHeight } from '@/core/ui/components/ui/useFixedHeight';
 import { useCloseWhenClean } from '@/core/ui/hooks/useCloseWhenClean';
 
 export interface ProgressDialogProps {
@@ -92,11 +93,11 @@ export function ProgressDialog({
     return (
         <DialogContainer onDismiss={onClose}>
             {isOpen && (
-                <Modal
+                <ProgressWindow
                     title={title}
                     status={ended ? status : undefined}
                     size={listed ? 'M' : 'S'}
-                    fitContent
+                    streamed={streamed}
                     holdSize={streamed ? closeLabel === 'Run in Background' : listed && !ended}
                     waiting={listed ? false : waiting}
                     onClose={onClose}
@@ -121,8 +122,35 @@ export function ProgressDialog({
                         )}
                     </div>
                     )}
-                </Modal>
+                </ProgressWindow>
             )}
         </DialogContainer>
+    );
+}
+
+interface ProgressWindowProps {
+    title: string;
+    status?: ModalStatus;
+    size: 'S' | 'M';
+    streamed: boolean;
+    holdSize: boolean;
+    waiting: ModalWait | false;
+    onClose: () => void;
+    closeLabel: string;
+    actionButtons?: ProgressAction[];
+    children: React.ReactNode;
+}
+
+/**
+ * The window. A streamed run keeps the height it opens at to the end (owner, 2026-11-11): the
+ * result that replaces the run is read in the same box, scrolling if it is longer, and the buttons
+ * stay where they were. It was fitted to each state until then, so the box shrank as the run ended.
+ */
+function ProgressWindow({ streamed, holdSize, children, ...modal }: ProgressWindowProps): React.ReactElement {
+    const { ref, locked } = useFixedHeight(streamed);
+    return (
+        <Modal {...modal} fitContent lockHeight={locked} measuring={streamed && !locked} holdSize={holdSize && !locked}>
+            {streamed ? <div ref={ref}>{children}</div> : children}
+        </Modal>
     );
 }

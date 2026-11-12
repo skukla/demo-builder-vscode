@@ -5,11 +5,15 @@
  * click."). One question per screen; Close, Back and the main button in the footer. State is in
  * `useCreateDatapackFlow`, and which screens each pack walks in `datapackFlowStages`.
  *
- * A dialog's size never animates, so every form screen has the one width, and a result takes the
- * small one with its outcome as the title. The first read of a list the screen is made of is
- * `Modal`'s wait, the store's counts and first kind's list included, so the two columns appear
- * together. A later kind's items read inside their own pane, with the kinds and the buttons still
- * on, since a slow read must not cost what is already selected.
+ * Each window is sized to what it shows and keeps that height (owner, 2026-11-11): the questions
+ * share one window at the height of the first, and the pick screens, which are wider and much
+ * taller, are a window of their own, held at the picks' height from the first frame. A name field
+ * is never padded to the height of a two-column list. A result is a new, small window with its
+ * outcome as the title. The first
+ * read of a list the screen is made of is the window's wait, the store's counts and first kind's
+ * list included, so the two columns appear together. A later kind's items read inside their own
+ * pane, with the kinds and the buttons still on, since a slow read must not cost what is already
+ * selected.
  *
  * From a pack (walk F85, owner, 2026-11-09) the footer is Add Unused Items at its start, then Cancel,
  * Save As New on the SC's own pack, and Save; its own footer is Cancel and Add, back to the save.
@@ -21,16 +25,18 @@ import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import type { StorePicks } from '../../../pickableKinds';
 import { ExportDatapackResult } from '../ExportDatapackResult';
-import { type ResultContent, resultStatus } from '../importResult';
+import { resultStatus } from '../importResult';
 import type { PackBeingSaved } from './datapackFlowStages';
-import { SAVE_AS_INTRO, saveIntro } from './saveWords';
+import { PICKS_INTRO, SAVE_AS_INTRO, saveIntro } from './saveWords';
 import { AcoKindsStage } from './stages/AcoKindsStage';
 import { AcoViewsStage } from './stages/AcoViewsStage';
 import { PackNameStage, SaveAsNameStage } from './stages/PackNameStage';
 import { PackTypeStage } from './stages/PackTypeStage';
 import { StorePicksStage } from './stages/StorePicksStage';
 import { type CreateDatapackFlow, useCreateDatapackFlow } from './useCreateDatapackFlow';
-import { type ActionButton, Modal, type ModalProps, type ModalWait } from '@/core/ui/components/ui/Modal';
+import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
+import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 
 export interface DatapackFlowDialogProps {
@@ -52,17 +58,35 @@ function waitLines(stage: string): ModalWait {
     return stage === 'aco-views' ? WAIT_STAGES.readingCatalogViews : WAIT_STAGES.readingWhatToSelect;
 }
 
-function frameOf(result: ResultContent | null, title: string, stage: string): Pick<ModalProps, 'size' | 'title' | 'status' | 'wide'> {
-    if (result) return { size: 'S', title: result.title, status: resultStatus(result) };
-    if (stage === 'add-items') return { size: 'L', title: 'Add Unused Items', wide: true };
-    // The pick step is the extra-wide step (owner, 2026-11-05): a product's name fits on one line.
-    return { size: 'L', title, wide: stage === 'store-picks' };
+/** The screens that are a window of their own: the picks, wide and much taller than a question. */
+function isPicks(stage: string): boolean {
+    return stage === 'store-picks' || stage === 'add-items';
 }
 
-type Footer = Pick<ModalProps, 'actionButtons' | 'startButtons' | 'hideClose'>;
+function frameOf(title: string, stage: string): { title: string; wide: boolean } {
+    if (stage === 'add-items') return { title: 'Add Unused Items', wide: true };
+    // The pick step is the extra-wide step (owner, 2026-11-05): a product's name fits on one line.
+    return { title, wide: stage === 'store-picks' };
+}
+
+interface Footer {
+    actionButtons: ActionButton[];
+    startButtons?: ActionButton[];
+    hideClose?: boolean;
+}
+
+/**
+ * The pick window's room, held from its first frame (the wait included): its intro and its two
+ * columns, which take one height whatever is read (`.datapack-picks`).
+ */
+const PICKS_ROOM = (
+    <div className="datapack-export-body">
+        <p className="datapack-export-intro">{PICKS_INTRO}</p>
+        <div className="datapack-picks" />
+    </div>
+);
 
 function footerOf(flow: CreateDatapackFlow): Footer {
-    if (flow.answers.result) return { actionButtons: [{ label: 'Back', variant: 'secondary', onPress: flow.answers.dismissResult }] };
     const main: ActionButton = { label: flow.main.label, variant: 'accent', onPress: flow.main.onPress, isDisabled: flow.main.isDisabled, isPending: flow.main.isPending };
     // Its Cancel returns to the save, so the dialog's own, which closes it, is left out.
     if (flow.stage === 'add-items') return { hideClose: true, actionButtons: [{ label: 'Cancel', variant: 'secondary', onPress: flow.addItems.cancel }, main] };
@@ -95,26 +119,34 @@ export function DatapackFlowDialog({ title, startsAtPicks, pack, saveAsName, can
     const flow = useCreateDatapackFlow({ startsAtPicks, pack, saveAsName, canSaveAsNew, onSave });
     const { result, savable } = flow.answers;
     return (
-        <>
         <DialogContainer onDismiss={onClose}>
-            <Modal
-                // Save As New from the SC's own pack: the dialog now makes a new pack, and says so.
-                {...frameOf(result, pack && flow.savesAs ? 'Save As New Datapack' : title, flow.stage)}
-                fitContent
-                onClose={onClose}
-                closeLabel={result ? 'Close' : 'Cancel'}
-                waiting={flow.waiting ? waitLines(flow.stage) : false}
-                {...footerOf(flow)}
-            >
-                <div className="datapack-export-body">
-                    {result ? (
+            {result ? (
+                <ResultWindow
+                    title={result.title}
+                    status={resultStatus(result)}
+                    onClose={onClose}
+                    actionButtons={[{ label: 'Back', variant: 'secondary', onPress: flow.answers.dismissResult }]}
+                >
+                    <div className="datapack-export-body">
                         <ExportDatapackResult result={result} savable={savable} source="library" />
-                    ) : (
+                    </div>
+                </ResultWindow>
+            ) : (
+                <StepsWindow
+                    key={isPicks(flow.stage) ? 'picks' : 'questions'}
+                    // Save As New from the SC's own pack: the dialog now makes a new pack, and says so.
+                    {...frameOf(pack && flow.savesAs ? 'Save As New Datapack' : title, flow.stage)}
+                    reserve={isPicks(flow.stage) ? PICKS_ROOM : undefined}
+                    onClose={onClose}
+                    closeLabel="Cancel"
+                    waiting={flow.waiting ? waitLines(flow.stage) : false}
+                    {...footerOf(flow)}
+                >
+                    <div className="datapack-export-body">
                         <StageBody flow={flow} pack={pack} />
-                    )}
-                </div>
-            </Modal>
+                    </div>
+                </StepsWindow>
+            )}
         </DialogContainer>
-        </>
     );
 }

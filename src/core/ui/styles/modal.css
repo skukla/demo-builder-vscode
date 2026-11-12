@@ -198,6 +198,75 @@
     align-items: center;
 }
 
+/* A window never changes height once on screen (owner, 2026-11-11; `StepsDialog`, `useFixedHeight`).
+   The box keeps the height it opened at; the body fills it and scrolls, so the buttons stay at the
+   bottom. Beats `.modal-fit-content`'s `flex: 0 1 auto` on specificity. The two wrappers Modal puts
+   round its children (SteadyHeight's column and its inner div) grow with it, so a wait can sit
+   level in the middle of the space. */
+.modal-dialog.is-locked .modal-content,
+.modal-dialog.is-locked .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.modal-dialog.is-locked .modal-body,
+.modal-dialog.is-locked .modal-body > *,
+.modal-dialog.is-locked .modal-body > * > * {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-dialog.is-locked .modal-body > *,
+.modal-dialog.is-locked .modal-body > * > * {
+    flex: 1 0 auto;
+}
+
+/* Every step in one grid cell: the one shown, and until the height is held, the others hidden
+   beside it, so the tallest sets the box from the first frame. */
+.modal-steps {
+    display: grid;
+    flex: 1 0 auto;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.modal-steps > * {
+    grid-area: 1 / 1;
+    min-width: 0;
+}
+
+.modal-steps-ghost {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.modal-steps > .modal-wait {
+    align-self: center;
+}
+
+/* Measured before it is seen, so the first height the SC sees is the one it keeps. The box is
+   Spectrum's panel round the dialog, which paints the background, so it is hidden too: hiding the
+   dialog alone left an empty box on screen that grew when the content arrived (owner, 2026-11-11). */
+.modal-dialog.is-measuring,
+[class*="spectrum-Modal"]:has(> .modal-dialog.is-measuring) {
+    visibility: hidden;
+}
+
+/* What shows while the window is unseen: a spinner near the top of where it will open. Taken out
+   of the grid, so it sets no height; shown through the hidden box. */
+.modal-dialog.is-measuring {
+    position: relative;
+}
+
+.modal-steps-pending {
+    position: absolute;
+    top: 96px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    visibility: visible;
+}
+
 /* The progress window's wait: room for its large spinner and all three lines, measured in Chromium
    (2026-11-02), so a line arriving does not move the box. The spinner and its words sit in the
    middle row, level between the rule and the buttons whatever else is there. */
@@ -233,6 +302,19 @@
     gap: 8px;
 }
 
+/* A result's line with its own action (`ResultDialog rows`): the row, then its button under the name,
+   in line with the text rather than the icon. */
+.dialog-row-action {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.dialog-row-action > :not(.work-row) {
+    margin: 0 0 0 28px;
+}
+
 /* A dialog body's parts, 16px apart, each without margins of its own. */
 .dialog-stack {
     display: flex;
@@ -242,6 +324,40 @@
 
 .dialog-stack > * {
     margin: 0;
+}
+
+/* A guide step: its row (or the step drawn whole), then its own buttons beside it, small and in
+   the footer's order (`GuideDialog`). The rows keep the rule between them that a bare
+   `work-row-list` draws. */
+.guide-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.work-row-list > .guide-step + .guide-step {
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+/* A step drawn whole is a block, not a row: its buttons sit under it, where its facts end. */
+.guide-step--drawn {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.guide-step--drawn > .guide-step-body {
+    width: 100%;
+}
+
+.guide-step-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.guide-step-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
 }
 
 /* A line of body text that is not the lead (a result's troubled types). */

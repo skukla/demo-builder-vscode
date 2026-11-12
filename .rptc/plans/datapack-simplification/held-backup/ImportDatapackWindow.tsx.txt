@@ -1,0 +1,94 @@
+/**
+ * The window `ImportDatapackModal` shows: one Steps window from the form to the run's end, at one
+ * height, or a small window of its own for an end that leaves nothing to go back to (walk F134). An
+ * end that offers Back (a Dry Run, a stop) is a step of the same window, so it keeps its height
+ * (owner, 2026-11-11).
+ *
+ * @module features/data-installer/ui/components/ImportDatapackWindow
+ */
+
+import { DialogContainer } from '@adobe/react-spectrum';
+import React from 'react';
+import { backOnlyCloses } from '../hooks/useRemovalWindow';
+import { DatapackResultBody } from './DatapackResultBody';
+import type { ViewFrame } from './importModalView';
+import type { ResultContent } from './importResult';
+import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
+import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
+
+export interface ImportDatapackWindowProps {
+    frame: ViewFrame;
+    /** The run's end, when the window is on it. */
+    result: ResultContent | null;
+    /** The end leaves nothing to go back to: it is a window of its own (`buildActions`, no Back). */
+    ends: boolean;
+    waiting: ModalWait | false;
+    /** The steps it may show next, so the tallest sets the height (`importReserve`). */
+    reserve: React.ReactNode;
+    /** The whole footer; a button marked `start` goes at the start of the row. */
+    footer: Array<ActionButton & { start?: boolean }>;
+    closeLabel: string;
+    /** Dismissing: the container's own, and the Close button's, which may only step back. */
+    onDismiss: () => void;
+    onClose: () => void;
+    /** The step shown. */
+    children: React.ReactNode;
+}
+
+export function ImportDatapackWindow({ frame, result, ends, waiting, reserve, footer, closeLabel, onDismiss, onClose, children }: ImportDatapackWindowProps): React.JSX.Element {
+    const startButtons = footer.filter((button) => button.start);
+    const actionButtons = footer.filter((button) => !button.start);
+    return (
+        <DialogContainer type="modal" onDismiss={onDismiss}>
+            {result && !result.run && ends ? (
+                <ResultWindow
+                    title={frame.title}
+                    status={frame.status}
+                    holdsAdminPath={result.keptRoot !== undefined}
+                    onClose={onDismiss}
+                    startButtons={startButtons}
+                    actionButtons={actionButtons}
+                >
+                    <DatapackResultBody result={result} />
+                </ResultWindow>
+            ) : (
+                <StepsWindow
+                    title={frame.title}
+                    status={frame.status}
+                    wide={frame.wide}
+                    hideClose={frame.hideClose}
+                    waiting={waiting}
+                    ready={waiting === false}
+                    reserve={reserve}
+                    onClose={onClose}
+                    closeLabel={closeLabel}
+                    startButtons={startButtons}
+                    actionButtons={actionButtons}
+                >
+                    {result && !result.run ? <DatapackResultBody result={result} /> : children}
+                </StepsWindow>
+            )}
+        </DialogContainer>
+    );
+}
+
+/**
+ * The outcome the window shows, and whether it ends the window (`ends`): a finished run, or a Back
+ * that only closes it.
+ *
+ * @param onResult - the window is on the run's end
+ * @param result - the run's end
+ * @param closesOnBack - Back closes the window rather than returning to its form
+ * @returns the `result` and `ends` props
+ */
+export function windowResult(
+    onResult: boolean,
+    result: (ResultContent & { finished?: boolean; backToConfirm?: true }) | null,
+    closesOnBack: boolean,
+): { result: ResultContent | null; ends: boolean } {
+    return {
+        result: onResult ? result : null,
+        ends: result?.finished === true || backOnlyCloses(closesOnBack, result),
+    };
+}

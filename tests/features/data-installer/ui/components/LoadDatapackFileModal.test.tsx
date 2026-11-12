@@ -321,7 +321,9 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
 
         await press(screen.getByRole('button', { name: 'Load' }));
 
-        expect(screen.getByText(/Store Configuration: The library already holds justrite-settings@3/)).toBeInTheDocument();
+        // A line of its own now (layout variant 6): the part, then the reason under it.
+        expect(screen.getByText('Store Configuration')).toBeInTheDocument();
+        expect(screen.getByText(/The library already holds justrite-settings@3/)).toBeInTheDocument();
         expect(screen.getByRole('heading', { name: 'Justrite B2B Loaded' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Delete Store Configuration' })).not.toBeInTheDocument();
     });

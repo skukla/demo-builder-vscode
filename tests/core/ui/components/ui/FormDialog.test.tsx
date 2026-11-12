@@ -108,4 +108,40 @@ describe('FormDialog', () => {
         expect(screen.queryByRole('textbox')).toBeNull();
         expect(buttonNames()).toEqual(['Cancel']);
     });
+
+    it('holds its height once on screen', () => {
+        renderForm();
+
+        expect(screen.getByRole('dialog')).toHaveClass('is-locked');
+    });
+
+    it('draws a failure above the fields under a red title, keeping what was typed', () => {
+        renderForm({ failure: 'Commerce refused the value.', title: "Couldn't Save Settings" });
+
+        const line = screen.getByRole('alert');
+        expect(line).toHaveTextContent('Commerce refused the value.');
+        expect(line).not.toHaveClass('text-negative');
+        expect(document.querySelector('.dialog-stack')?.firstElementChild).toBe(line);
+        expect(screen.getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+    });
+
+    it('CONTROL: draws no failure while it has not failed', () => {
+        renderForm({ failure: null });
+
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(document.querySelector('.modal-status-icon')).toBeNull();
+    });
+
+    it('offers Run in Background while a commit that carries on is pending', () => {
+        renderForm({ background: true, submitPending: true });
+
+        expect(buttonNames()).toEqual(['Run in Background', 'Install']);
+    });
+
+    it('CONTROL: keeps Cancel while it is not pending', () => {
+        renderForm({ background: true });
+
+        expect(buttonNames()).toEqual(['Cancel', 'Install']);
+    });
 });
