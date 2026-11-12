@@ -26,6 +26,12 @@ export const UNINSTALL = 'Uninstall';
 /** The button that asks whether an install would go through, writing nothing (D6). */
 export const DRY_RUN = 'Dry Run';
 
+/** The button that opens the SC's AI on a problem: an install's, or a Dry Run's (step 03, S5). */
+export const FIX_WITH_AI = 'Fix with AI';
+
+/** Fix with AI's hover text, the same wherever the button is. */
+export const FIX_WITH_AI_HINT = 'Opens your AI assistant on this problem';
+
 /** The one name for a datapack's settings, everywhere on screen (Clarity 1.8). */
 export const STORE_CONFIGURATION = 'Store Configuration';
 

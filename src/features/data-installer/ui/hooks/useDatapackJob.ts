@@ -67,6 +67,8 @@ export interface DatapackJob {
     install: () => void;
     retry: () => void;
     fixWithAi: () => void;
+    /** Fix with AI on a Dry Run that found a problem. */
+    fixDryRun: () => void;
 }
 
 const COMPARE = { timeout: TIMEOUTS.DATAPACK_IMPORT_COMPARE };
@@ -206,5 +208,6 @@ export function useDatapackJob(args: DatapackJobArgs): DatapackJob {
         install: runs.startImport,
         retry: runs.retry,
         fixWithAi: runs.fixWithAi,
+        fixDryRun: runs.fixDryRunWithAi,
     };
 }

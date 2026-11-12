@@ -265,26 +265,48 @@ describe('Dry Run', () => {
         expect(sends('start-datapack-import')).toBe(1);
     });
 
-    it('answers Found a Problem with the reason, and Back alone', async () => {
-        answer({
-            validate: {
-                success: true,
-                data: {
-                    valid: false,
-                    reason: "Bodea's products name an attribute set Commerce doesn't have.",
-                },
+    const PROBLEM = {
+        validate: {
+            success: true,
+            data: {
+                valid: false,
+                reason: "Bodea's products name an attribute set Commerce doesn't have.",
             },
-        });
+        },
+    };
+
+    // Step 03, S5: the install's ending buttons, Close, Back and Fix with AI (accent, last).
+    it('answers Found a Problem with the reason, Close, Back and Fix with AI last', async () => {
+        answer(PROBLEM);
         await openOnSummary();
 
         await press(button('Dry Run'));
 
         expect(await heading('Dry Run Found a Problem')).toBeInTheDocument();
         expect(screen.getByText(/attribute set Commerce doesn't have/)).toBeInTheDocument();
+        const names = screen.getAllByRole('button').map((b) => b.textContent);
+        expect(names.slice(-3)).toEqual(['Close', 'Back', 'Fix with AI']);
+        // The Modal's footer button: accent is its primary class, the hint its hover text.
+        expect(button('Fix with AI')).toHaveClass('modal-button-primary');
+        expect(button('Fix with AI')).toHaveAttribute(
+            'title',
+            'Opens your AI assistant on this problem'
+        );
         expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
         await press(button('Back'));
         expect(await heading('Install Bodea')).toBeInTheDocument();
+    });
+
+    it('asks the extension for the dry run’s Fix with AI, sending nothing of the window', async () => {
+        answer(PROBLEM);
+        await openOnSummary();
+        await press(button('Dry Run'));
+        await heading('Dry Run Found a Problem');
+
+        await press(button('Fix with AI'));
+
+        expect(sent('fix-datapack-import-with-ai')).toEqual({ from: 'dry-run' });
     });
 
     it('answers Failed with Back and Retry, and Retry runs it again', async () => {

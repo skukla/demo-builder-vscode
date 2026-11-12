@@ -9,6 +9,10 @@
  * The prompt is built from the job the extension recorded, never from the window: what the agent
  * is told is what happened.
  *
+ * Dry Run Found a Problem has the same button (step 03, S5): the request says `from: 'dry-run'`,
+ * and the prompt is built from the dry run's recorded answer (`recordDryRun`), the datapack, its
+ * version and the reason, the same reason `validate_datapack_import` answers an agent with.
+ *
  * @module features/data-installer/handlers/importFixHandlers
  */
 
@@ -58,19 +62,80 @@ export function fixImportPrompt(
     ].join('\n');
 }
 
+/** Where the last dry run's answer is recorded. One per extension host; a later dry run replaces it. */
+export const DRY_RUN_KEY = 'dataInstaller.import.dryRun';
+
+/** A dry run's answer, as the extension recorded it. */
+export interface DryRunRecord {
+    datapackName: string;
+    version: string;
+    valid: boolean;
+    reason?: string;
+}
+
+/** Records a dry run's answer, or clears it (null) when the check could not run. */
+export async function recordDryRun(
+    context: HandlerContext,
+    answer: DryRunRecord | null,
+): Promise<void> {
+    await new TransientStateManager(context.context).set(DRY_RUN_KEY, answer);
+}
+
+/**
+ * The prompt for a dry run that found a problem, or undefined when it found none. It never asks
+ * for an install: the SC decides that once the dry run passes.
+ *
+ * @param projectName - the open project, which every datapack tool acts on
+ */
+export function fixDryRunPrompt(
+    record: DryRunRecord,
+    projectName: string | undefined,
+): string | undefined {
+    if (record.valid || !record.reason) return undefined;
+    const pack = `${record.datapackName}@${record.version}`;
+    return [
+        `A Dry Run of installing the datapack ${pack} into the Commerce instance of the Demo Builder project ${projectName ?? 'that is open'} found a problem.`,
+        `- ${record.reason}`,
+        '',
+        'Fix the datapack: save_datapack_zip, correct the rows, load_datapack_zip. Then run ' +
+            'validate_datapack_import again. Tell me what you found, what you changed, and what ' +
+            'the Dry Run says now. Do not install the datapack until I ask you to.',
+    ].join('\n');
+}
+
+/** The prompt the request asks for: the dry run's, or the last install's. */
+async function promptFor(
+    context: HandlerContext,
+    fromDryRun: boolean,
+): Promise<{ prompt?: string; pack?: string; refusal: string }> {
+    const state = new TransientStateManager(context.context);
+    const project = await context.stateManager.getCurrentProject();
+    if (fromDryRun) {
+        const dry = await state.get<DryRunRecord | null>(DRY_RUN_KEY, null);
+        return {
+            prompt: dry ? fixDryRunPrompt(dry, project?.name) : undefined,
+            pack: `${dry?.datapackName}@${dry?.version}`,
+            refusal: 'The last Dry Run found no problem to fix.',
+        };
+    }
+    const record = await state.get<ImportJobRecord | null>(JOB_KEY, null);
+    return {
+        prompt: record ? fixImportPrompt(record, project?.name) : undefined,
+        pack: `${record?.datapackName}@${record?.version}`,
+        refusal: 'The last install has no problem to fix.',
+    };
+}
+
 export const importFixWithAiHandlers = defineHandlers({
-    'fix-datapack-import-with-ai': async (context: HandlerContext): Promise<HandlerResponse> => {
-        const record = await new TransientStateManager(context.context).get<ImportJobRecord | null>(
-            JOB_KEY,
-            null,
-        );
-        const project = await context.stateManager.getCurrentProject();
-        const prompt = record ? fixImportPrompt(record, project?.name) : undefined;
-        if (!prompt) return { success: false, error: 'The last install has no problem to fix.' };
+    // Only `from` is read from the request: everything the prompt says comes from a record.
+    'fix-datapack-import-with-ai': async (
+        context: HandlerContext,
+        payload?: { from?: unknown },
+    ): Promise<HandlerResponse> => {
+        const { prompt, pack, refusal } = await promptFor(context, payload?.from === 'dry-run');
+        if (!prompt) return { success: false, error: refusal };
         await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt, fresh: true });
-        context.logger.info(
-            `[Data Installer] Opened Fix with AI on ${record?.datapackName}@${record?.version}`,
-        );
+        context.logger.info(`[Data Installer] Opened Fix with AI on ${pack}`);
         return { success: true };
     },
 });

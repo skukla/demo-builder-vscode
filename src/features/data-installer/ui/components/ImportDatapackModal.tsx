@@ -193,7 +193,7 @@ export function ImportDatapackModal({
         start.load({ ...requestBody(), ...answer });
     }, [act, start, requestBody]);
     const replacement = useReplacement(id, displayName, target.value, removal, startWith);
-    const { retries, startImport, retry, fixWithAi } = useImportRetry(replacement.begin);
+    const { retries, startImport, retry, fixWithAi, fixDryRunWithAi } = useImportRetry(replacement.begin);
 
     const confirmRemoval = (save: boolean): void => {
         const answer = removal.press(save);
@@ -321,7 +321,8 @@ export function ImportDatapackModal({
         checkPassed: checkPassed(lastAction, dryRun.value),
         resultAction: result?.action,
         retry,
-        fixWithAi,
+        // A Dry Run's problem is fixed from the recorded dry run, not the last install (step 03, S5).
+        fixWithAi: lastAction === 'dryRun' ? fixDryRunWithAi : fixWithAi,
     });
 
     return (

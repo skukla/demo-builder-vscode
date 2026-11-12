@@ -23,14 +23,16 @@
  */
 
 import { announcingChanges } from '../services/datapackChanges';
-import type { ImportJobRecord } from '../types';
+import type { DatapackEngine } from '../services/datapackEngine';
+import type { ImportRequest } from '../services/importRequest';
+import type { ImportJobRecord, ValidationResult } from '../types';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
 import { datapackRecordsHandlers } from './datapackRecordsHandlers';
 import { datapackZipHandlers } from './datapackZipHandlers';
 import { demoDataHandlers } from './demoDataHandlers';
 import { exportHandlers } from './exportHandlers';
 import { exportPackHandlers } from './exportPackHandlers';
-import { importFixWithAiHandlers } from './importFixHandlers';
+import { importFixWithAiHandlers, recordDryRun } from './importFixHandlers';
 import { skippedPage, waitForJob, waitMsOf } from './importJobWait';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { withSavedNote } from './importReplacement';
@@ -122,28 +124,17 @@ export const importHandlers = announcingChanges(defineHandlers({
     ): Promise<HandlerResponse> => {
         const prepared = await prepareImport(context, payload);
         if ('response' in prepared) {
+            await recordDryRun(context, null);
             return prepared.response;
         }
         try {
-            // Access first. If the service cannot sign in to the instance, whether
-            // the request is well-formed is not the answer anyone needs — and
-            // `get-websites-and-stores` answers it without going near
-            // process-datapack, so it cannot start work by accident.
-            const access = await prepared.engine.checkCredentials(prepared.request);
-            if (!access.usable) {
-                return {
-                    success: true,
-                    data: {
-                        valid: false,
-                        reason: access.reason ?? 'The Data Installer could not sign in to that Commerce instance.',
-                    },
-                };
-            }
-            return {
-                success: true,
-                data: await prepared.engine.validateImport(prepared.request),
-            };
+            const verdict = await dryRunVerdict(prepared.engine, prepared.request);
+            // Step 03, S5: recorded, so Fix with AI is built from this answer and not the window's.
+            const { name: datapackName, version } = prepared.request.id;
+            await recordDryRun(context, { datapackName, version, ...verdict });
+            return { success: true, data: verdict };
         } catch (error) {
+            await recordDryRun(context, null);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'The request could not be validated.',
@@ -214,6 +205,22 @@ export const importHandlers = announcingChanges(defineHandlers({
         return { success: true, data: record ? skippedPage(record, payload?.skippedFrom) : record };
     },
 }), CHANGES_PACKS);
+
+/**
+ * Access first. If the service cannot sign in to the instance, whether the request is well-formed
+ * is not the answer anyone needs, and `get-websites-and-stores` answers it without going near
+ * process-datapack, so it cannot start work by accident.
+ */
+async function dryRunVerdict(engine: DatapackEngine, request: ImportRequest): Promise<ValidationResult> {
+    const access = await engine.checkCredentials(request);
+    if (!access.usable) {
+        return {
+            valid: false,
+            reason: access.reason ?? 'The Data Installer could not sign in to that Commerce instance.',
+        };
+    }
+    return engine.validateImport(request);
+}
 
 /**
  * The SC's changes, before anything is removed (step 05), once the request itself is known to be

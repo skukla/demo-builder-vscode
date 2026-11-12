@@ -319,6 +319,26 @@ describe('ImportDatapackModal', () => {
 
             expect(await screen.findByText(/Must provide one of/)).toBeInTheDocument();
         });
+
+        // Step 03, S5: this window still serves a switch and a reinstall, both with a Dry Run, so
+        // its problem gets the same Fix with AI, asking for the recorded dry run, not the install.
+        it('offers Fix with AI on a refusal, asking the extension for the dry run’s', async () => {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'validate-datapack-import'
+                    ? { success: true, data: { valid: false, reason: 'Catalog is locked' } }
+                    : defaultResponse(type)
+            );
+            renderModal();
+            await awaitForm();
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(validateButton());
+
+            await press(await screen.findByRole('button', { name: 'Fix with AI' }));
+
+            expect(mockRequest).toHaveBeenCalledWith('fix-datapack-import-with-ai', {
+                from: 'dry-run',
+            });
+        });
     });
 
     // Reset is how a project gets REUSED: it removes this datapack's data from the

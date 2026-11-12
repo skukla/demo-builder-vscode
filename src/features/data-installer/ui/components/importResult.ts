@@ -276,7 +276,7 @@ function dryRunResult(dryRun: DataInstallerRequest<{ valid: boolean; reason?: st
     if (!dryRun.value) return null;
     return dryRun.value.valid
         ? { variant: 'success', title: 'Dry Run Passed', message: `${name} can be installed here. Nothing was written.` }
-        : { variant: 'warning', title: 'Dry Run Found a Problem', message: dryRun.value.reason };
+        : { variant: 'warning', title: 'Dry Run Found a Problem', message: dryRun.value.reason, action: 'fix' };
 }
 
 /** A finished job, worded for ITS operation: a removal must not say "Installed". */

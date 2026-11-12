@@ -17,7 +17,7 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import { installTitle, jobPurpose, jobWords } from '../../../datapackWords';
+import { FIX_WITH_AI, FIX_WITH_AI_HINT, installTitle, jobPurpose, jobWords } from '../../../datapackWords';
 import { useDatapackJob, type DatapackJob } from '../../hooks/useDatapackJob';
 import { useRunColumns } from '../../hooks/useRunColumns';
 import { useVersionTypes } from '../../hooks/useVersionTypes';
@@ -58,12 +58,7 @@ function endButtons(job: DatapackJob, result: ResultContent): ActionButton[] {
         return [{ label: 'Retry', variant: 'accent', onPress: job.retry }];
     if (result.action === 'fix')
         return [
-            {
-                label: 'Fix with AI',
-                variant: 'accent',
-                onPress: job.fixWithAi,
-                hint: 'Opens your AI assistant on this problem',
-            },
+            { label: FIX_WITH_AI, variant: 'accent', onPress: job.fixWithAi, hint: FIX_WITH_AI_HINT },
         ];
     return [];
 }
@@ -161,6 +156,7 @@ export function DatapackJobWindow({
                     onBack={job.back}
                     onInstall={job.install}
                     onRetry={job.dryRun}
+                    onFix={job.fixDryRun}
                     onClose={close}
                 />
             );

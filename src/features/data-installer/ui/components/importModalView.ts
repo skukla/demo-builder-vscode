@@ -16,7 +16,7 @@ import { type ConfirmContent, removeLabel } from './removalConfirm';
 import type { ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
-import { DRY_RUN, INSTALL, UNINSTALL, installTitle, jobPurpose, jobWords, saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
+import { DRY_RUN, FIX_WITH_AI, FIX_WITH_AI_HINT, INSTALL, UNINSTALL, installTitle, jobPurpose, jobWords, saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
 
 /**
  * Which job to watch: the one the LAST action started.
@@ -231,7 +231,7 @@ export function buildActions(a: {
 function resultMain(a: { resultAction?: 'retry' | 'fix'; retry?: () => void; fixWithAi?: () => void }): ReturnType<typeof buildActions> {
     if (a.resultAction === 'retry' && a.retry) return [{ label: 'Retry', variant: 'accent', onPress: a.retry }];
     if (a.resultAction === 'fix' && a.fixWithAi) {
-        return [{ label: 'Fix with AI', variant: 'accent', onPress: a.fixWithAi, hint: 'Opens your AI assistant on this problem' }];
+        return [{ label: FIX_WITH_AI, variant: 'accent', onPress: a.fixWithAi, hint: FIX_WITH_AI_HINT }];
     }
     return [];
 }

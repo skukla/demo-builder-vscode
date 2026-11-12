@@ -312,6 +312,16 @@ describe('what each row accepts', () => {
         expect(description).toContain('demoBuilder.dataInstaller.changesOnRemoval');
     });
 
+    // Step 03, S5: the refusal's reason is the one Dry Run's Fix with AI names, and the tool says
+    // the same fix, so an agent reaches it without the button.
+    it('tells an agent how to fix what a refused dry run names, and not to install unasked', () => {
+        const { description } = row('validate_datapack_import')!;
+
+        expect(description).toContain('save_datapack_zip, correct the rows, load_datapack_zip');
+        expect(description).toContain('run this again');
+        expect(description).toContain('install only when the user asks');
+    });
+
     it('gives the export item list a single data type to enumerate, a limit, and Add Items\'s unused', () => {
         expect(keys('list_datapack_export_items')).toEqual(
             ['dataType', 'datapackName', 'limit', 'source', 'unused', 'version'].sort(),

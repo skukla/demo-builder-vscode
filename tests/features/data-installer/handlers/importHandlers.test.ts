@@ -30,6 +30,7 @@ import {
     resetImportHandlerMocks,
     setupSettings,
 } from './importHandlers.testUtils';
+import { JOB_KEY } from '@/features/data-installer/handlers/importJobWatch';
 
 describe('start-datapack-import', () => {
     beforeEach(() => {
@@ -269,13 +270,15 @@ describe('validate-datapack-import', () => {
         expect(result.data).toEqual({ valid: true });
     });
 
+    // It records its own answer (step 03, S5, `importHandlers-dryRunFix.test.ts`), never a job.
     it('never records a job — nothing ran', async () => {
         happyEngine();
         const { context, stores } = makeImportHarness();
 
         await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
-        expect(stores.globalState.update).not.toHaveBeenCalled();
+        expect(stores.globalState.update).not.toHaveBeenCalledWith(JOB_KEY, expect.anything());
+        expect(stores.globalState.update).toHaveBeenCalledTimes(1);
     });
 
     it('never starts a watch', async () => {

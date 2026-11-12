@@ -272,7 +272,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'Dry run: try an install with the same guard, same credentials, same request body as the real thing, ' +
             'without writing. Run this before start_datapack_import. A refusal comes back as ' +
             "valid:false with a reason, not as an error. It also reads the pack's rows and names each kind " +
-            'whose rows Commerce could not take.',
+            'whose rows Commerce could not take. To fix what a reason names in the pack: ' +
+            'save_datapack_zip, correct the rows, load_datapack_zip, then run this again; ' +
+            'install only when the user asks.',
         map: importHandlers,
         type: 'validate-datapack-import',
         inputSchema: { ...DATAPACK_ID, ...IMPORT_TARGET },

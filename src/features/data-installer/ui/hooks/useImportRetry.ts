@@ -3,7 +3,8 @@
  * on a stop a retry can get past, and Fix with AI on a problem it cannot. Retry runs the same import
  * again (what is already in sends nothing, so it carries on from where it stopped) and counts its
  * presses, so the window can offer Fix with AI once retrying has not helped (`RETRIES_BEFORE_FIX`).
- * Fix with AI asks the extension to open the SC's AI on the recorded problem (`importFixHandlers.ts`).
+ * Fix with AI asks the extension to open the SC's AI on the recorded problem (`importFixHandlers.ts`);
+ * a Dry Run's asks for the recorded dry run instead (step 03, S5), sending nothing of the window.
  *
  * Split out of `ImportDatapackModal`, which keeps the state the requests share.
  *
@@ -19,6 +20,7 @@ export interface ImportRuns {
     startImport: () => void;
     retry: () => void;
     fixWithAi: () => void;
+    fixDryRunWithAi: () => void;
 }
 
 /**
@@ -37,5 +39,8 @@ export function useImportRetry(runImport: () => void): ImportRuns {
     const fixWithAi = useCallback((): void => {
         void webviewClient.request('fix-datapack-import-with-ai', {});
     }, []);
-    return { retries, startImport, retry, fixWithAi };
+    const fixDryRunWithAi = useCallback((): void => {
+        void webviewClient.request('fix-datapack-import-with-ai', { from: 'dry-run' });
+    }, []);
+    return { retries, startImport, retry, fixWithAi, fixDryRunWithAi };
 }

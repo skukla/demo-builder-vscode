@@ -56,6 +56,8 @@ describe('resolveResult — dry run', () => {
             variant: 'warning',
             title: 'Dry Run Found a Problem',
             message: 'Catalog is locked',
+            // Step 03, S5: its main button is Fix with AI, as an install's problem is.
+            action: 'fix',
         });
     });
 
