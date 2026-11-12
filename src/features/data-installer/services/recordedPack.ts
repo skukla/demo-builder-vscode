@@ -5,7 +5,8 @@
  * A project file or a copy names a pack by reference. By the time someone creates a project
  * from it, the pack may have gone (its owner deleted it) or never have been readable to them
  * (a library pack only its owner can read). Project creation does not stop: it carries on with
- * the pack the recorded one was made from, or that pack's newest version, or no sample data,
+ * the same datapack's newest save (Phase 2: only two saves are kept), else the pack the recorded
+ * one was made from, or that pack's newest version, or no sample data,
  * and says which. The Datapacks step shows the same sentence before creation, from the same
  * answer.
  *
@@ -101,6 +102,14 @@ async function locate(reads: PackReads, recorded: ProjectDatapack): Promise<{ pa
     return found ? { pack: recorded, found } : null;
 }
 
+/** The same datapack's newest save in the library, readable to the caller, or none. */
+async function newestSave(reads: PackReads, recorded: ProjectDatapack): Promise<RecordedPackCheck | undefined> {
+    const inLibrary: DatapackLocation = { name: recorded.name, version: recorded.version, store: 'library' };
+    const latest = await newest(reads, inLibrary).catch(() => undefined);
+    if (!latest) return undefined;
+    return { verdict: 'readable', pack: located(latest, 'library'), displayName: latest.displayName, mine: latest.mine === true, shared: latest.shared };
+}
+
 /** The pack it was made from, its newest version, or nothing: what a fallback can install. */
 async function fallbackFor(reads: PackReads, recorded: ProjectDatapack, unreadable: string): Promise<RecordedPackCheck> {
     const origin = recorded.origin;
@@ -149,6 +158,10 @@ export async function checkRecordedPack(reads: PackReads, recorded: ProjectDatap
                 shared: located.found.shared,
             };
         }
+        // A datapack is always its latest save (D3) and only two are kept (Phase 2), so a save that
+        // has gone is the same datapack's newest save: the changes are in it.
+        const latest = await newestSave(reads, recorded);
+        if (latest) return latest;
         const unreadable = `The ${recorded.name} datapack this project uses can't be read: its owner has deleted it or not shared it.`;
         return await fallbackFor(reads, recorded, unreadable);
     } catch {

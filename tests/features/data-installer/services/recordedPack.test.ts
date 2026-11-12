@@ -123,6 +123,25 @@ describe('checkRecordedPack', () => {
         });
     });
 
+    // Phase 2, step-02 slice 2: a datapack is always its latest save (D3), and only two saves are
+    // kept, so a project naming a save that has gone uses the same datapack's newest save: the
+    // changes are in it, and nothing needs saying.
+    it("uses the same datapack's newest save when the save it names has gone", async () => {
+        const r = reads([
+            { id: { name: ACME.name, version: '20261110-091500' }, store: 'library', over: { updatedAt: '2026-11-10T09:15:00Z', mine: true, shared: true } },
+            { id: { name: ACME.name, version: '20261105-103000' }, store: 'library', over: { updatedAt: '2026-11-05T10:30:00Z', mine: true, shared: true } },
+            { id: { name: 'bodea', version: '1.0.0' }, store: 'installer' },
+        ]);
+
+        await expect(checkRecordedPack(r, ACME)).resolves.toEqual({
+            verdict: 'readable',
+            pack: { name: ACME.name, version: '20261110-091500', store: 'library' },
+            displayName: 'Acme Demo',
+            mine: true,
+            shared: true,
+        });
+    });
+
     it('falls back to the datapack it was made from, saying the changes are not included', async () => {
         const r = reads([{ id: { name: 'bodea', version: '1.0.0' }, store: 'installer' }]);
 
