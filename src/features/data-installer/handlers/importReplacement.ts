@@ -11,7 +11,9 @@
  * nothing installed. A save moves the record onto the version it made, so that version
  * is what the import removes.
  *
- * Importing the same version again replaces nothing: it updates in place, as before.
+ * Importing the same version again replaces nothing: it updates in place, as before. Restore is the
+ * one exception (`restoreDatapack.ts`, owner 2026-11-12): it puts Commerce back to what the version
+ * installs, so it uninstalls and installs even its own version (`restore`).
  *
  * @module features/data-installer/handlers/importReplacement
  */
@@ -77,16 +79,20 @@ export async function heldDisplayName(
     }
 }
 
-/** The pack the open project uses, when importing `importing` replaces it. */
+/**
+ * The pack the open project uses, when importing `importing` replaces it: another pack or version,
+ * or, for a restore, any pack Demo Builder installed (it has a record to remove it by).
+ */
 async function heldToReplace(
     context: HandlerContext,
     importing: DatapackId,
+    restore: boolean,
 ): Promise<NonNullable<Project['datapack']> | undefined> {
     const project = await context.stateManager.getCurrentProject();
     const held = project?.datapack;
     if (!project?.path || !held) return undefined;
     const hasRecord = (await readInstallRecord(nodeRecordFiles, project.path, held)) !== undefined;
-    return replacesHeld(held, importing, hasRecord) ? held : undefined;
+    return (restore && hasRecord) || replacesHeld(held, importing, hasRecord) ? held : undefined;
 }
 
 /** A refusal from settling the changes, worded for an import: nothing was installed either. */
@@ -104,6 +110,7 @@ function nothingInstalled(response: HandlerResponse): HandlerResponse {
  * The import is checked before anything is saved: a save must never land for an import that was
  * always going to be refused.
  *
+ * @param how.restore - Restore only: replace the pack installed even with its own version
  * @returns the import to start (naming the pack to remove first), or the response to answer instead,
  *   in which case nothing was removed or installed
  */
@@ -112,8 +119,9 @@ export async function settleReplacement(
     engine: DatapackEngine,
     request: ImportRequest,
     payload: ReplaceAnswerPayload | undefined,
+    how: { restore?: boolean } = {},
 ): Promise<Replacement | { response: HandlerResponse }> {
-    const held = await heldToReplace(context, request.id);
+    const held = await heldToReplace(context, request.id, how.restore === true);
     if (!held) return { request };
     const answer = payload?.changes;
     if (answer !== undefined && answer !== 'keep' && answer !== 'drop') {

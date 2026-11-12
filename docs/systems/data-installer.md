@@ -355,6 +355,18 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   version and each one's settings layer (`delete-library-datapack` with `everyVersion`). Save
   Changes shows only on the version the demo uses (walk F100). The storage is unchanged: each save
   is still its own version, so nothing was migrated.
+- **Restore** (Phase 3/5, owner 2026-11-12, J4-2 to J4-4). On the version whose data Demo Builder
+  installed in the demo's store, the flyout's main button reads "Restore My Luma" in place of
+  Install. It sends `restore-datapack` without `confirm`, the flyout waiting on "Checking for your
+  changes": the check compares Commerce with the version installed (`previewChanges`) and writes
+  nothing. Up to date (the target is the version installed and nothing differs): the small result
+  "My Luma Is Up to Date", nothing started. Unsaved edits: "Restore My Luma?" ("Commerce goes back to
+  My Luma as you last saved it. Anything you changed since is lost.", Cancel and Restore in blue),
+  then sent confirmed. Anything else (a newer save, the amber dot) starts at once. The target is the
+  SC's own pack's newest save, else the version installed. A start is one job through
+  `startDatapackImport` that uninstalls the pack by its install record and installs the target,
+  changes dropped, never saved, and opens the import window on it; a same-version restore is a
+  real replace (`restore`), where an ordinary import of the same version updates in place.
 - **The updated dot**, the house amber dot beside the card's version picker, when the named version
   installed changed in the library since (`updatedAt` after the install record's `startedAt`; team
   packs are updated in place as `main`): "Updated on Nov 9". A later save never lights it: a later

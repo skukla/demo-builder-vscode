@@ -164,6 +164,18 @@ describe('importing what replaces nothing', () => {
         expect(context.stateManager.saveProject).toHaveBeenCalled();
     });
 
+    // Only Restore replaces a pack by its own version (`restoreDatapack.ts`): the flag is an option
+    // of the start, never read from a payload, so a message cannot ask for it.
+    it('CONTROL: a payload saying restore does not make the same version a replace', async () => {
+        const { startImport } = happyEngine();
+        const { context } = makeImportHarness(projectUsing('main'));
+
+        await importHandlers['start-datapack-import'](context, { ...PAYLOAD, restore: true } as typeof PAYLOAD);
+
+        expect(settle).not.toHaveBeenCalled();
+        expect(startImport.mock.calls[0][0]).not.toHaveProperty('replaces');
+    });
+
     it('CONTROL: a pack Demo Builder did not install is not removed first', async () => {
         const { startImport } = happyEngine();
         jest.mocked(readInstallRecord).mockResolvedValue(undefined);

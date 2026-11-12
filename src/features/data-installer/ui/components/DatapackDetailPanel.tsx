@@ -97,6 +97,8 @@ export interface DatapackDetailPanelProps {
     undoTo?: string;
     /** Remove Data, on the version whose data is in this demo's store (walk F118). */
     onRemoveData?: () => void;
+    /** That same version: its main button is Restore, not Install (Phase 5, J4-2). */
+    restores?: boolean;
 }
 
 export function DatapackDetailPanel({
@@ -120,6 +122,7 @@ export function DatapackDetailPanel({
     settingsLayer,
     undoTo,
     onRemoveData,
+    restores = false,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selectedName ?? selected?.name ?? 'Datapack';
     // A read of the pack already on show (after Share, Stop Sharing or a rename) updates it in
@@ -167,6 +170,7 @@ export function DatapackDetailPanel({
                                 onWorking={setWorking}
                                 {...(undoTo ? { undoTo } : {})}
                                 {...(onRemoveData ? { onRemoveData } : {})}
+                                restores={restores}
                             />
                         ) : null}
                     </div>

@@ -516,6 +516,32 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'restore_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Restore the project's datapack: put Commerce back to the datapack as the user last saved it, losing what " +
+            "was changed in the Admin since (the screen's Restore). The datapack must be the one this project uses, installed " +
+            "by Demo Builder; otherwise this refuses and nothing changes. When it is one of the user's own in My Datapacks, " +
+            'it restores its newest save; otherwise (a team pack, a Data Installer pack) the version installed. It checks ' +
+            'Commerce first, writing nothing: when Commerce already matches, it answers data.upToDate and starts nothing. ' +
+            'Otherwise it is one job: what is installed is uninstalled by its install record and the datapack installed ' +
+            'again, onto the website and store view it is installed to, even when it is the same version (unlike ' +
+            'start_datapack_import, which keeps Admin edits then). Changes are lost, never saved: to keep them, ' +
+            'save_store_changes_to_pack first. Returns an activationId and target (the version restored); with waitSeconds ' +
+            '(up to 45) it waits for the job to end and carries the outcome as job; else follow with ' +
+            'get_datapack_import_status. Ask the user first.',
+        map: importHandlers,
+        type: 'restore-datapack',
+        // Gated twice, as reset_datapack is: the row, then the handler, which asks only when the
+        // user has edits in Commerce. The row's flag satisfies it, so an agent always asks the user.
+        confirm: true,
+        inputSchema: {
+            datapackName: z.string().describe("The project's datapack, by its name from get_datapack_import_target"),
+            ...WAIT_FOR_JOB,
+        },
+    },
+    {
         tool: 'start_datapack_export',
         needsAuth: ['adobe'],
         readOnly: false,

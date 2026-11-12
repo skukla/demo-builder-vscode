@@ -33,8 +33,8 @@ import type { UndoLastSaveRequest } from '@/types/webviewRequests';
 
 const LOG_PREFIX = '[Data Installer]';
 
-/** The `undo-last-save` message: the project's datapack, by its library name, and the consent. */
-type UndoLastSavePayload = UndoLastSaveRequest;
+/** The `undo-last-save` message: the project's datapack, by its library name, the consent, and the agent's wait. */
+type UndoLastSavePayload = UndoLastSaveRequest & { waitSeconds?: number };
 
 /** What an undo installs, and what it deletes once that succeeds. */
 interface UndoPlan {
@@ -130,6 +130,8 @@ async function planUndo(
             ...installed,
             // An undo never asks "Save Your Changes First?" and never saves into the pack.
             changes: 'drop',
+            // The agent tool's wait (`WAIT_FOR_JOB`): the start waits on the job it begins.
+            ...(payload?.waitSeconds !== undefined ? { waitSeconds: payload.waitSeconds } : {}),
         },
     };
 }
@@ -177,6 +179,6 @@ export const undoLastSaveHandlers = defineHandlers({
             ).response;
         }
         const ready = plan;
-        return startDatapackImport(context, ready.install, () => deleteNewest(context, ready));
+        return startDatapackImport(context, ready.install, { afterSuccess: () => deleteNewest(context, ready) });
     },
 });

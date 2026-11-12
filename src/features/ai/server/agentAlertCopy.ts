@@ -468,6 +468,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName'],
         sessionGrant: false,
     },
+    restore_datapack: {
+        action: 'Restore a datapack',
+        consequence:
+            'Puts the live Commerce store back to the datapack as it was last saved. Changes made in the Admin since are lost.',
+        target: ['datapackName'],
+        sessionGrant: false,
+    },
     delete_library_datapack: {
         action: 'Delete a datapack',
         consequence:

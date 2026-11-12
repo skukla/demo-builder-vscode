@@ -20,6 +20,8 @@
  * button to spin. What each one says afterwards (where the file went, why it could not) shows under
  * the actions.
  *
+ * The demo's installed version's main button is **Restore <name>** (J4-2, `useRestoreDatapack`).
+ *
  * Every pack offers Import in a project's Datapacks: Demo Builder installs a library pack and a
  * Data Installer pack alike. The Datapack Library touches no store (owner, 2026-11-07), so there
  * the menu's rows are the buttons, Save as File and Share, and More holds only what removes.
@@ -39,6 +41,7 @@ import { isSavedVersion } from '../../packVersions';
 import { SHARE_CONSENT } from '../../shareWording';
 import type { DatapackDetail, PackDetailLayer } from '../../types';
 import { useLibrarySharing } from '../hooks/useLibrarySharing';
+import { restoreQuestion, useRestoreDatapack } from '../hooks/useRestoreDatapack';
 import { useUndoLastSave } from '../hooks/useUndoLastSave';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
@@ -74,6 +77,8 @@ export interface PackActionsProps {
     undoTo?: string;
     /** Remove Data: on the version whose data is in this demo's store, opening straight to its confirm (F118). */
     onRemoveData?: () => void;
+    /** That same version: the main button is Restore, in place of Install (J4-2). */
+    restores?: boolean;
 }
 
 /** One menu row: its icon and label. */
@@ -105,8 +110,8 @@ function removeRows(ownPack: boolean, ownLayer: boolean, removesData: boolean): 
     ];
 }
 
-/** The dialog open over the flyout, if any. */
-type Asking = 'undo' | 'share' | 'remove' | 'remove-settings' | null;
+/** The dialog open over the flyout, if any. Restore's is opened by its check, not a menu row. */
+type Asking = 'undo' | 'restore' | 'share' | 'remove' | 'remove-settings' | null;
 
 type ConfirmCopy = Pick<ConfirmActionDialogProps, 'title' | 'actionLabel' | 'actionVariant' | 'children'>;
 
@@ -122,6 +127,7 @@ function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: stri
             children: `Commerce goes back to ${name} as it was before your last save. Anything you changed since is lost.`,
         };
     }
+    if (asking === 'restore') return restoreQuestion(name);
     if (asking === 'share' && !detail.shared) {
         return { title: `Share ${name}?`, actionLabel: 'Share', actionVariant: 'accent', children: SHARE_CONSENT };
     }
@@ -157,12 +163,14 @@ function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: stri
 function workLines(work: {
     saveFile: { saving: boolean };
     undo: { working: boolean };
+    restore: { working: boolean };
     sharing: { working: boolean };
     layerRemoval: { removing: boolean };
     shared?: boolean;
 }): WaitLines {
     if (work.saveFile.saving) return WAIT_STAGES.savingPackFile;
     if (work.undo.working) return WAIT_STAGES.startingUndo;
+    if (work.restore.working) return WAIT_STAGES.checkingForChanges;
     if (work.sharing.working) return work.shared ? WAIT_STAGES.makingPackPrivate : WAIT_STAGES.sharingPack;
     if (work.layerRemoval.removing) return WAIT_STAGES.deletingPackSettings;
     return WAIT_STAGES.deletingPack;
@@ -181,6 +189,7 @@ export function PackActions({
     onWorking,
     undoTo,
     onRemoveData,
+    restores = false,
 }: PackActionsProps): React.JSX.Element {
     const library = detail.store === 'library';
     const [asking, setAsking] = useState<Asking>(null);
@@ -189,10 +198,12 @@ export function PackActions({
     const layerRemoval = useLibraryRemoval(settingsLayer?.id ?? detail.id, onSharingChanged);
     const sharing = useLibrarySharing(detail.id, detail.shared, onSharingChanged);
     const undo = useUndoLastSave(detail.id.name, undoTo, onImport);
+    const restore = useRestoreDatapack(detail.id.name, detail.displayName, onImport);
     const doneAsking = useCallback((): void => setAsking(null), []);
+    const { open, close } = dialogOf(restore, asking, doneAsking);
     // Still waiting once the pack is gone, as the flyout closes: its rows must not flash back.
     const working =
-        saveFile.saving || undo.working || sharing.working || removal.removing || removal.removed || layerRemoval.removing;
+        saveFile.saving || undo.working || restore.working || sharing.working || removal.removing || removal.removed || layerRemoval.removing;
 
     // Before the paint, or the flyout's rows would show for a frame beside the spinner. The cleanup is
     // for a flyout closed during the wait, which unmounts this with the work still running.
@@ -208,7 +219,8 @@ export function PackActions({
     };
     const confirm = (): void => {
         setAsking(null);
-        if (asking === 'undo') undo.start();
+        if (open === 'restore') restore.confirm();
+        else if (asking === 'undo') undo.start();
         else if (asking === 'share') sharing.start();
         else if (asking === 'remove') removal.start();
         else if (asking === 'remove-settings') layerRemoval.start();
@@ -226,7 +238,7 @@ export function PackActions({
         <>
             {working ? (
                 <div className="datapack-panel-loading">
-                    <StageWait brief lines={workLines({ saveFile, undo, sharing, layerRemoval, shared: detail.shared })} />
+                    <StageWait brief lines={workLines({ saveFile, undo, restore, sharing, layerRemoval, shared: detail.shared })} />
                 </div>
             ) : null}
             {/* Kept mounted through a wait: a copy's own result would be lost with it. */}
@@ -247,9 +259,12 @@ export function PackActions({
                                     {saveAsNew ? 'Save As New Datapack' : 'Save Changes'}
                                 </Button>
                             ) : null}
-                            <Button variant={onSaveChanges ? 'secondary' : 'accent'} onPress={() => onImport(detail.id)}>
-                                {INSTALL}
-                            </Button>
+                            <MainButton
+                                detail={detail}
+                                outlined={onSaveChanges !== undefined}
+                                onPress={restores ? restore.check : () => onImport(detail.id)}
+                                restores={restores}
+                            />
                             <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
                                 <Section key="pack">{packRows(detail, undoTo !== undefined).map(renderRow)}</Section>
                                 {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
@@ -261,6 +276,7 @@ export function PackActions({
                     <PackActionNotes>
                         {saveFile.note}
                         {undo.note}
+                        {restore.note}
                         {sharing.note}
                         {removal.note}
                         {layerRemoval.note}
@@ -268,13 +284,25 @@ export function PackActions({
                 </>
             )}
             <ConfirmActionDialog
-                isOpen={asking !== null}
-                {...confirmCopy(asking, detail, sharedInFile)}
+                isOpen={open !== null}
+                {...confirmCopy(open, detail, sharedInFile)}
                 onConfirm={confirm}
-                onClose={doneAsking}
+                onClose={close}
             />
+            {restore.result}
         </>
     );
+}
+
+/** The dialog open over the flyout: Restore's question when its check asks, else a menu row's. */
+function dialogOf(restore: { asking: boolean; dismiss: () => void }, asking: Asking, done: () => void): { open: Asking; close: () => void } {
+    return restore.asking ? { open: 'restore', close: restore.dismiss } : { open: asking, close: done };
+}
+
+/** The main button: Restore on the demo's installed version (J4-2), else Install. */
+function MainButton(p: { detail: DatapackDetail; outlined: boolean; restores: boolean; onPress: () => void }): React.JSX.Element {
+    const label = p.restores ? `Restore ${p.detail.displayName}` : INSTALL;
+    return <Button variant={p.outlined ? 'secondary' : 'accent'} onPress={p.onPress}>{label}</Button>;
 }
 
 /** The Datapack Library's actions: the menu's upper rows as buttons, and More only for what removes. */

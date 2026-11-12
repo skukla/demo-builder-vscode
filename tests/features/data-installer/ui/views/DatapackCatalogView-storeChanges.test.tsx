@@ -153,7 +153,8 @@ describe('Save Changes, in the flyout', () => {
         await press(card('acme-1a2b3c'));
 
         expect(await inFlyout().findByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Install' })).toBeInTheDocument();
+        // The demo's installed pack: its main button is Restore, in place of Install (Phase 5, J4-2).
+        expect(screen.getByRole('button', { name: 'Restore Acme Bodea' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
     });
 

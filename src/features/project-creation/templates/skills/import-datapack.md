@@ -64,6 +64,14 @@ expected to change things: show the user the preview and go on. Afterwards the n
 taken out ("Took out 3 items the pack no longer has: …"), and `check.leftOut` counts products the
 check skipped because they were kept; `verify_datapack_install` checks every product.
 
+## Putting the store back: restore_datapack
+
+To throw away what the user changed in Commerce and put the datapack back as it was last saved,
+use `restore_datapack`, not `start_datapack_import` (installing the same version again updates in
+place and keeps Admin edits). It checks first: when nothing has changed it answers up to date and
+does nothing; otherwise it uninstalls the datapack and installs its latest save in one job. It asks
+the user first, since anything changed since the last save is lost.
+
 ## Installing another pack or version
 
 When the project uses a pack Demo Builder installed and you install **another pack, or another

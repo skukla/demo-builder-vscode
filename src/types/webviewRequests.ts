@@ -18,7 +18,7 @@ import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure, StoreViewCodes, StoreViewProducts } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
-import type { ProjectDatapack } from './datapack';
+import type { DatapackId, ProjectDatapack } from './datapack';
 import type { DaLiveContentSource } from './demoPackages';
 import type { ErpProductSelection } from './erpAssign';
 import type { ErpOwnsRule } from './erpOwnership';
@@ -53,6 +53,29 @@ export interface UndoLastSaveRequest {
 export interface UndoLastSaveResult {
     activationId: string;
 }
+
+/**
+ * `restore-datapack` — put Commerce back to the datapack the project uses as its latest save,
+ * losing the SC's Commerce edits made since (Phase 3/5, owner 2026-11-12, J4-3). Sent by the
+ * Datapacks flyout's Restore button, first without `confirm` (the check), and by the agent tool.
+ * Without `confirm` it starts only when nothing of the SC's would be lost.
+ */
+export interface RestoreDatapackRequest {
+    /** The project's datapack, by its name. */
+    datapackName?: string;
+    /** Needed only when the SC has unsaved edits in Commerce. */
+    confirm?: boolean;
+}
+
+/**
+ * `restore-datapack`'s `data`: up to date (nothing started); or the job accepted, as
+ * `start-datapack-import` answers, with the version it restores. A check that found unsaved edits
+ * and had no `confirm` answers `success: false`, `code: CHANGES_NEED_ANSWER`, with
+ * `{ asks: true, displayName }`.
+ */
+export type RestoreDatapackResult =
+    | { upToDate: true; displayName: string }
+    | { activationId: string; target: DatapackId };
 
 /**
  * `check-store-view-products` — does a guest see any products in the store view

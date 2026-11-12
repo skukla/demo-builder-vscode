@@ -21,10 +21,10 @@ import type { HandlerResponse } from '@/types/handlers';
 
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
 
-// Twenty-three since undo_last_save (Phase 2, 2026-11-12; twenty-two since verify_datapack_install, the count
+// Twenty-four since restore_datapack (Phase 3/5, 2026-11-12); twenty-three since undo_last_save (Phase 2, 2026-11-12; twenty-two since verify_datapack_install, the count
 // in this test's name had stayed at twenty-one); twenty-one since build_datapack_from_export (2026-11-05); twenty since mark_team_datapack (beta.153); nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
 // check_demo_data and clear_demo_data (sixteen since step 07 added rename_datapack, fifteen since step 05).
-it('registers the twenty-three tools, and only those', () => {
+it('registers the twenty-four tools, and only those', () => {
     expect(DATA_INSTALLER_DESCRIPTORS.map((d) => d.tool).sort()).toEqual([
         'build_datapack_from_export',
         'check_demo_data',
@@ -41,6 +41,7 @@ it('registers the twenty-three tools, and only those', () => {
         'preview_datapack_changes',
         'rename_datapack',
         'reset_datapack',
+        'restore_datapack',
         'save_datapack_zip',
         'save_store_changes_to_pack',
         'share_datapack',
@@ -63,7 +64,7 @@ it('every row dispatches to a handler that actually exists', () => {
 
 describe('gates', () => {
     // Saving a file into the project is not gated: it changes no store and no instance.
-    it('gates exactly the twelve writes that reach a store or an instance', () => {
+    it('gates exactly the thirteen writes that reach a store or an instance', () => {
         const gated = DATA_INSTALLER_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
             'clear_demo_data',
@@ -73,6 +74,7 @@ describe('gates', () => {
             'mark_team_datapack',
             'rename_datapack',
             'reset_datapack',
+            'restore_datapack',
             'save_store_changes_to_pack',
             'share_datapack',
             'start_datapack_export',
@@ -211,7 +213,7 @@ describe('what each row declares', () => {
 
     // readOnly is what the write-gating machinery reads. The dry run is a read;
     // the three that touch a live instance or the shared catalog are not.
-    it('exposes nine reads and fourteen writes', () => {
+    it('exposes nine reads and fifteen writes', () => {
         const byFlag = (readOnly: boolean) =>
             DATA_INSTALLER_DESCRIPTORS.filter((d) => d.readOnly === readOnly)
                 .map((d) => d.tool)
@@ -237,6 +239,7 @@ describe('what each row declares', () => {
             'mark_team_datapack',
             'rename_datapack',
             'reset_datapack',
+            'restore_datapack',
             'save_datapack_zip',
             'save_store_changes_to_pack',
             'share_datapack',
@@ -271,6 +274,12 @@ describe('what each row accepts', () => {
         // Its one addition: the answer to the changes it names (step 05).
         // And Save As's name, for changes kept when the project's pack is not the user's; and the wait.
         expect(keys('reset_datapack')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
+    });
+
+    // Restore picks its own version and target from the project and drops the changes itself, so an
+    // agent names only the pack (and may wait); the row's gate supplies confirm.
+    it('gives restore_datapack the pack and the wait, nothing that could choose a version or save', () => {
+        expect(keys('restore_datapack')).toEqual(['datapackName', 'waitSeconds']);
     });
 
     it('lets reset_datapack answer keep or drop, and gives an agent no way to turn on "always"', () => {

@@ -386,7 +386,7 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                 onSharingChanged={sharingChanged}
                 settingsLayer={detail.value?.settingsLayer}
                 {...(flyout.undoTo ? { undoTo: flyout.undoTo } : {})}
-                {...removeDataProps({ library, held, installedAt, selected }, importWindow.openRemoval)}
+                {...installedPackProps({ library, held, installedAt, selected }, importWindow.openRemoval)}
             />
             {heldPack.windows}
 
@@ -399,16 +399,17 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
 }
 
 /**
- * Remove Data, on the flyout of the version whose data Demo Builder installed in this demo's store
- * (owner, 2026-11-09, walk F118). Not in the Datapack Library, which touches no store.
+ * On the flyout of the version whose data Demo Builder installed in this demo's store: Remove Data
+ * (owner, 2026-11-09, walk F118), and Restore in place of Install (Phase 5, J4-2), which needs that
+ * install's record to take it out. Not in the Datapack Library, which touches no store.
  */
-function removeDataProps(
+function installedPackProps(
     at: { library: boolean; held: ProjectDatapack | undefined; installedAt: string | undefined; selected: DatapackId | undefined },
     open: () => void,
-): { onRemoveData?: () => void } {
+): { onRemoveData?: () => void; restores?: true } {
     const { library, held, installedAt, selected } = at;
     const shown = held !== undefined && selected !== undefined && held.name === selected.name && held.version === selected.version;
-    return !library && installedAt !== undefined && shown ? { onRemoveData: open } : {};
+    return !library && installedAt !== undefined && shown ? { onRemoveData: open, restores: true } : {};
 }
 
 /** What `get-datapack-import-target` reports about the open project. */

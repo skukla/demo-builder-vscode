@@ -66,24 +66,31 @@ export async function afterWait(context: HandlerContext, response: HandlerRespon
     return { ...response, data: { ...(response.data as object), job } };
 }
 
+/** What a caller other than `start-datapack-import` adds to a start; never read from a payload. */
+export interface StartOptions {
+    /** Work for once the job ends in success (`runAndWatch`): Undo Last Save's delete. */
+    afterSuccess?: () => Promise<void>;
+    /** Restore (`restoreDatapack.ts`): the pack installed is replaced even by its own version. */
+    restore?: boolean;
+}
+
 /**
  * Start an import: prepared, settled against the pack it replaces (walk F97), validated, begun and
- * watched. `start-datapack-import` and Undo Last Save both start through here.
- *
- * @param afterSuccess - work for once the job ends in success (`runAndWatch`)
+ * watched. `start-datapack-import`, Undo Last Save and Restore all start through here.
  */
 export async function startDatapackImport(
     context: HandlerContext,
     payload: StartImportPayload | undefined,
-    afterSuccess?: () => Promise<void>,
+    options: StartOptions = {},
 ): Promise<HandlerResponse> {
+    const { afterSuccess } = options;
     const prepared = await prepareImport(context, payload);
     if ('response' in prepared) {
         return prepared.response;
     }
     const { engine } = prepared;
     // Walk F97: over another pack or version the demo uses, that pack goes first, its changes settled.
-    const replacement = await settleReplacement(context, engine, prepared.request, payload);
+    const replacement = await settleReplacement(context, engine, prepared.request, payload, { restore: options.restore === true });
     if ('response' in replacement) {
         return replacement.response;
     }

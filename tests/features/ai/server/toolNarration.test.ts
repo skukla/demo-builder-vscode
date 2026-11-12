@@ -203,6 +203,7 @@ describe('every named form says what it acts on, from the argument that names it
         ['start_datapack_import', { datapackName: 'Bodea B2B' }, 'Importing Bodea B2B'],
         ['start_datapack_export', { datapackName: 'Bodea B2B' }, 'Exporting Bodea B2B'],
         ['undo_last_save', { datapackName: 'my-luma-1a2b3c' }, 'Undoing the last save of my-luma-1a2b3c'],
+        ['restore_datapack', { datapackName: 'my-luma-1a2b3c' }, 'Restoring my-luma-1a2b3c'],
         ['remove_block_from_library', { blockId: 'hero-banner' }, 'Removing the hero-banner block'],
         ['set_site_admin', { email: 'fake-user@example.com' }, "Changing fake-user@example.com's access"],
         // Named as the ERP will be: the add makes the name end in "ERP" (pairNames).

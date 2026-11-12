@@ -1114,6 +1114,25 @@ stops deletes nothing and the project keeps naming the newest save. A save anoth
 still names is kept. It answers as `start_datapack_import` does: `{activationId}`, and `job` with
 `waitSeconds`.
 
+### Restore (Phase 3/5, 2026-11-12)
+
+`restore_datapack` (confirm-gated; the consent names the pack) puts Commerce back to the datapack
+the project uses as its latest save, losing what was changed in the Admin since. The target is the
+pack's newest save when it is one of the SC's own library packs (which may be newer than the save
+installed), and otherwise the version installed (a team pack, a colleague's, a Data Installer pack,
+a named version). It refuses, changing nothing, when the pack named is not the project's, when Demo
+Builder has no install record of it, or when the project names no Commerce instance. It checks
+first, writing nothing, with the preview's own read (`previewChanges`): when the target is the
+version installed and Commerce matches it, it answers `{upToDate, displayName}` and starts nothing.
+Otherwise it is one job, started as `start_datapack_import` starts one (`startDatapackImport`,
+`restoreDatapack.ts`): the pack installed is uninstalled by its install record and the target
+installed onto the website and store view that record names, with changes dropped and never saved.
+A same-version restore is a real replace (the start's `restore` option), unlike a same-version
+`start_datapack_import`, which updates in place and keeps Admin edits. From the screen, the handler
+asks only when the SC has edits in Commerce (`CHANGES_NEED_ANSWER`, `{asks, displayName}`); the
+row's gate means an agent always sends `confirm`. It answers `{activationId, target}`, and `job`
+with `waitSeconds`.
+
 ### Renaming a library pack, and a pack shared in a file (datapack-engine step 07, 2026-10-29)
 
 `rename_datapack` (confirm-gated) gives every version of one of the SC's own library packs a new

@@ -323,6 +323,13 @@ export const TIMEOUTS = {
      */
     DATAPACK_UNDO_START: 2 * 60 * 1000,
 
+    /**
+     * How long Restore waits for its check, and its job to be accepted (Phase 3/5, 2026-11-12): 5
+     * minutes, as `DATAPACK_IMPORT_COMPARE`. The check is that same comparison of the store with the
+     * pack installed (58 s for Luma on a live store), then the start; nothing is saved first.
+     */
+    DATAPACK_RESTORE_START: 5 * 60 * 1000,
+
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
 

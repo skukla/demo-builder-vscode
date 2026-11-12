@@ -230,6 +230,17 @@ describe('the job', () => {
         expect(mockDelete).not.toHaveBeenCalled();
     });
 
+    // The agent tool offers waitSeconds (WAIT_FOR_JOB), so the handler must hand it to the start.
+    it('with waitSeconds, waits for the job and carries it in the answer', async () => {
+        happyEngine();
+        grantLibrary(THREE_SAVES);
+        const { context } = makeImportHarness(projectOn());
+
+        const response = await importHandlers['undo-last-save'](context, { datapackName: NAME, confirm: true, waitSeconds: 1 });
+
+        expect(response.data).toHaveProperty('job');
+    });
+
     it('deletes nothing while the job is still running', async () => {
         happyEngine();
         grantLibrary(THREE_SAVES);

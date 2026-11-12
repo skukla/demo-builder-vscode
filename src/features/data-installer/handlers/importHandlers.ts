@@ -36,6 +36,7 @@ import { withSavedNote } from './importReplacement';
 import { type StartImportPayload, afterWait, prepareImport, readInput, startDatapackImport } from './importStart';
 import { importTargetHandlers } from './importTargetHandlers';
 import { STARTING_REMOVAL_STAGE, type SavedFirst, removalChangesHandlers, removalStageReporter, settleChangesBeforeRemoval } from './removalChanges';
+import { restoreDatapackHandlers } from './restoreDatapack';
 import { storeChangesHandlers } from './storeChangesHandlers';
 import { undoLastSaveHandlers } from './undoLastSave';
 import { TransientStateManager } from '@/core/state/transientStateManager';
@@ -64,6 +65,7 @@ const CHANGES_PACKS = [
     'start-datapack-import',
     'reset-datapack',
     'undo-last-save',
+    'restore-datapack',
 ] as const;
 
 export const importHandlers = announcingChanges(defineHandlers({
@@ -93,6 +95,8 @@ export const importHandlers = announcingChanges(defineHandlers({
     ...importFixWithAiHandlers,
     // Undo Last Save: the save before the newest, installed over it through the import path (Phase 2).
     ...undoLastSaveHandlers,
+    // Restore: the demo's datapack, at its latest save, over what Commerce holds now (Phase 3/5).
+    ...restoreDatapackHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,

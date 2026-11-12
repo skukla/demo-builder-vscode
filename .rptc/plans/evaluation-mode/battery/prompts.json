@@ -1543,5 +1543,14 @@
         ],
         "cwd": "project",
         "why": "Phase 2 slice 5: judges that the agent calls undo_last_save, not reset_datapack or delete_library_datapack, and asks the user first. Writes to the store, so the battery stops at the consent."
+    },
+    {
+        "id": "restore-datapack",
+        "prompt": "Put My Luma back how I last saved it; throw away what I changed in the Admin.",
+        "expect": [
+            "restore_datapack"
+        ],
+        "cwd": "project",
+        "why": "Phase 3/5 Restore (owner 2026-11-12, J4-3): judges that the agent calls restore_datapack, not reset_datapack or start_datapack_import, and asks the user first. Writes to the store, so the battery stops at the consent."
     }
 ]
