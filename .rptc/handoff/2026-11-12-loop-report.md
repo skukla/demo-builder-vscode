@@ -29,6 +29,10 @@ Live notes; rewritten as the final report at the loop's close.
 - **Phase 2 code complete.** Live cycle owed (walkthrough queue).
 - Phase 3 to 5: the install window's rebuild plan is written (step-03.md, 8 slices). Building the
   slices that need no product answer first (S1, S4's groundwork); Q1 to Q8 are parked below.
+- Phase 4, S1: one rule for when a run ends small, shared by the install, Updates, the projects
+  batch and the shared progress window, and one RunFoot under every run's rows. Fixed two real bugs:
+  a save with a problem on one row and no warning ended small and hid it; an Updates run with a
+  warning but clean rows ended small. Full gate green (2,399 suites, 38,558 tests).
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -47,7 +51,11 @@ Live notes; rewritten as the final report at the loop's close.
 - Eight product questions from the install window's plan (step-03.md section 4), each with a
   recommendation: Q1 Save As name in a one-row save question; Q2 agents installing a subset; Q3 a
   clean install's leftover lines; Q4 how a background success ends in VS Code; Q5 failed titles for
-  Restore and Undo; Q6 Restore's check in a window; Q7 the store name leaving the Uninstall title;
+  Restore and Undo (built as "Couldn't Restore My Luma" and "Couldn't Undo Last Save", the house
+  "Couldn't …" rule; change if wanted); Q6 Restore's check in a window; Q7 the store name leaving the Uninstall title;
   Q8 installing a pack Commerce already matches.
+- Q9 (from S1): a run with a problem on one row and no overall warning now stays open, but its title
+  is still green. Should a problem row alone turn the title amber? Recommend yes: the title says how
+  it ended, and a problem is not a clean success.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
