@@ -74,6 +74,12 @@ Live notes; rewritten as the final report at the loop's close.
 - Phases 5, 7 and 7b: the screen plan is written (step-04.md: three behaviour-preserving splits, then
   ten slices). It found Delete Store Configuration, Add Unused Items and the flyout's Install over
   another datapack still in the product, and a failed creation install recorded nowhere.
+- Step-04 R1 to R3: c3f663f24. Behaviour-preserving splits (the catalog view under its size cap, the
+  flyout's menu words in their own module, a core step list for the save run). Full gate green (2,403
+  suites, 38,474 tests).
+- Found by R1 (an old defect): the flyout was meant to wait for the project's first answer (walk
+  F92) but never did, a null-versus-undefined check. Being fixed now, with the header's save button
+  (S1), which is built to P4-Q4's recommendation where a datapack has no install record.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
