@@ -436,6 +436,8 @@ export interface OperationRow {
     line?: string;
     /** What is wrong with it: red when it failed, orange when it went in with a problem. */
     problem?: { text: string; failed: boolean };
+    /** Rows nested under it, small (`StepRows`): the data types under the import's Install step. */
+    types?: OperationRow[];
 }
 
 export interface OperationProgressPayload {

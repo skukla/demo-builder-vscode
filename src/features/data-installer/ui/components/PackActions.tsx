@@ -36,19 +36,18 @@
 
 import { Button, Item, Section, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useLayoutEffect, useState } from 'react';
-import { INSTALL, RESTORE } from '../../datapackWords';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion } from '../../packVersions';
-import { SHARE_CONSENT } from '../../shareWording';
 import type { DatapackDetail, PackDetailLayer } from '../../types';
 import { useLibrarySharing } from '../hooks/useLibrarySharing';
 import { useUndoLastSave } from '../hooks/useUndoLastSave';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
+import { type Asking, confirmCopy, mainButtonLabel, type PackMenuRow, packRows, removeRows } from './packMenu';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
 import { useSaveDatapackFile } from './SaveDatapackFileButton';
 import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
-import { ConfirmActionDialog, type ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId } from '@/types/datapack';
@@ -79,83 +78,6 @@ export interface PackActionsProps {
     onRemoveData?: () => void;
     /** That same version: the main button is Restore, in place of Install (J4-2). */
     restores?: boolean;
-}
-
-/** One menu row: its icon and label. */
-interface Row {
-    key: string;
-    label: string;
-    icon: string;
-}
-
-/** The menu's upper section: what any pack offers, then what the SC's own library pack adds. */
-function packRows(detail: DatapackDetail, undoable: boolean): Row[] {
-    const rows: Row[] = [{ key: 'save-file', label: 'Save as File', icon: 'saveFile' }];
-    if (undoable) rows.push({ key: 'undo', label: 'Undo Last Save', icon: 'reset' });
-    if (detail.store === 'library' && detail.mine) {
-        rows.push({ key: 'share', label: detail.shared ? 'Stop Sharing' : 'Share', icon: 'share' });
-    }
-    return rows;
-}
-
-/** The menu's lower section: what takes the demo's data out of its store, then what leaves the library. */
-function removeRows(ownPack: boolean, ownLayer: boolean, removesData: boolean): Row[] {
-    return [
-        // Uninstall, the pair of Install (owner, 2026-11-09, walk F120): "Remove Data" read as all data.
-        ...(removesData ? [{ key: 'remove-data', label: 'Uninstall', icon: 'delete' }] : []),
-        // Delete, not Remove (owner, 2026-11-09, walk F118): it leaves the library for good, where
-        // Uninstall takes a demo's data out of its store and an import puts it back.
-        ...(ownPack ? [{ key: 'remove', label: 'Delete Datapack', icon: 'delete' }] : []),
-        ...(ownLayer ? [{ key: 'remove-settings', label: 'Delete Store Configuration', icon: 'delete' }] : []),
-    ];
-}
-
-/** The dialog open over the flyout, if any. */
-type Asking = 'undo' | 'share' | 'remove' | 'remove-settings' | null;
-
-type ConfirmCopy = Pick<ConfirmActionDialogProps, 'title' | 'actionLabel' | 'actionVariant' | 'children'>;
-
-/** What a dialog asks. The title of a closed one is never drawn. */
-function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: string): ConfirmCopy {
-    const name = detail.displayName;
-    if (asking === 'undo') {
-        // Blue: red is for deleting and removing only (rule 20; owner, 2026-11-12: "Too strong.").
-        return {
-            title: 'Undo Last Save?',
-            actionLabel: 'Undo',
-            actionVariant: 'accent',
-            children: `Commerce goes back to ${name} as it was before your last save. Anything you changed since is lost.`,
-        };
-    }
-    if (asking === 'share' && !detail.shared) {
-        return { title: `Share ${name}?`, actionLabel: 'Share', actionVariant: 'accent', children: SHARE_CONSENT };
-    }
-    if (asking === 'share') {
-        return {
-            title: `Stop Sharing ${name}?`,
-            actionLabel: 'Stop Sharing',
-            actionVariant: 'accent',
-            children: 'Other people can no longer see or install it.',
-        };
-    }
-    if (asking === 'remove-settings') {
-        return {
-            title: `Delete ${name}'s Store Configuration?`,
-            actionLabel: 'Delete',
-            actionVariant: 'negative',
-            // The house form for a warning: a word in the main sentence (dialog design rules).
-            children: 'Permanently deletes the store configuration saved with it.',
-        };
-    }
-    // A pack of saves goes whole, every save with it (owner, 2026-11-09).
-    const what = isSavedVersion(detail.id.version) ? 'it' : `version ${detail.id.version}`;
-    // "Permanently" is the warning, as a word in the sentence (dialog design rules; review 2026-11-10).
-    return {
-        title: `Delete ${name}?`,
-        actionLabel: 'Delete',
-        actionVariant: 'negative',
-        children: [`Permanently deletes ${what}.`, sharedInFile],
-    };
 }
 
 /** What the flyout says while a menu row's work runs; a removal when it is none of the others. */
@@ -223,7 +145,7 @@ export function PackActions({
     };
 
     // An inferred return type keeps the row assignable to Spectrum's Item collection type.
-    const renderRow = (row: Row) => (
+    const renderRow = (row: PackMenuRow) => (
         <Item key={row.key} textValue={row.label}>
             {renderMenuIcon(row.icon)}
             <Text>{row.label}</Text>
@@ -290,9 +212,9 @@ export function PackActions({
     );
 }
 
-/** The main button: Restore on the demo's installed version (J4-2), else Install. */
+/** The main button: its label is `mainButtonLabel`'s. */
 function MainButton(p: { detail: DatapackDetail; outlined: boolean; restores: boolean; onPress: () => void }): React.JSX.Element {
-    const label = p.restores ? `${RESTORE} ${p.detail.displayName}` : INSTALL;
+    const label = mainButtonLabel(p.detail, p.restores);
     return <Button variant={p.outlined ? 'secondary' : 'accent'} onPress={p.onPress}>{label}</Button>;
 }
 
@@ -304,9 +226,9 @@ function LibraryActions({
     renderRow,
 }: {
     detail: DatapackDetail;
-    removing: Row[];
+    removing: PackMenuRow[];
     onAction: (key: React.Key) => void;
-    renderRow: (row: Row) => React.JSX.Element;
+    renderRow: (row: PackMenuRow) => React.JSX.Element;
 }): React.JSX.Element {
     const sharable = detail.store === 'library' && detail.mine === true;
     return (

@@ -23,10 +23,8 @@ import { STORE_CONFIG_KIND } from './services/datapackCatalog';
 import { ENGINE_PHASES, FINISHING_STOP, type InstallCheck, type JobStanding, LINKING_OPTIONS, REPLACE_STOP, SAVE_STOP } from './types';
 import type { OperationRow } from '@/types/webviewPayloads';
 
-/** One step: a row, and Install's data types under it. */
-export interface ImportStep extends OperationRow {
-    types?: OperationRow[];
-}
+/** One step: a row, and Install's data types under it (`OperationRow.types`). */
+export type ImportStep = OperationRow;
 
 /** What the steps are drawn from: the rows' source, and what names the steps. */
 export interface StepSource extends RunSource, Pick<JobStanding, 'replacing'> {
