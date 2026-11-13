@@ -133,13 +133,29 @@ describe('Restore, in the flyout of the datapack the demo uses', () => {
         expect(inFlyout().queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
     });
 
-    it('CONTROL: another datapack keeps Install', async () => {
+    // Decisions J8-1 (owner, 2026-11-12; step-04 S5): over the recorded datapack, another one's
+    // button says it switches, and opens the window's switch ("Switch to <Name>?").
+    it('another datapack reads "Switch to <Name>", and opens the switch', async () => {
         store(STARTED);
         await openFlyout(CATALOG[0].id.name);
 
-        expect(await inFlyout().findByRole('button', { name: 'Install' })).toBeInTheDocument();
+        // The catalog's fixture names it by its id, "bodea".
+        await press(await inFlyout().findByRole('button', { name: 'Switch to bodea' }));
+        await settle();
+
+        expect(inFlyout().queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
         expect(inFlyout().queryByRole('button', { name: /^Restore/u })).not.toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: /^Switch to bodea/u })).toBeInTheDocument();
     });
+
+    it('CONTROL: another datapack keeps Install when the held one has no install record', async () => {
+        store(STARTED, STARTED, null);
+        await openFlyout(CATALOG[0].id.name);
+
+        expect(await inFlyout().findByRole('button', { name: 'Install' })).toBeInTheDocument();
+        expect(inFlyout().queryByRole('button', { name: /^Switch to/u })).not.toBeInTheDocument();
+    });
+
 
     it('CONTROL: keeps Install when Demo Builder did not install it, so there is nothing to take out', async () => {
         store(STARTED, STARTED, null);

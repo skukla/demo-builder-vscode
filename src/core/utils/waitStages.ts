@@ -78,7 +78,6 @@ export const WAIT_STAGES = {
     sharingPack: { label: 'Sharing the datapack', expectation: FEW_SECONDS },
     makingPackPrivate: { label: 'Making it private', expectation: FEW_SECONDS },
     deletingPack: { label: 'Deleting the datapack', expectation: FEW_SECONDS },
-    deletingPackSettings: { label: 'Deleting configuration', expectation: FEW_SECONDS },
     // Undo Last Save, until its run is accepted and its window takes over (Phase 2).
     startingUndo: { label: 'Starting the undo', expectation: FEW_SECONDS },
 } as const satisfies Record<string, WaitStage>;

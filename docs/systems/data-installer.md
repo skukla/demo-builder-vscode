@@ -335,8 +335,8 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   generated from the name typed (`packIdFor`: a slug and a random suffix, so it can never land on a
   colleague's). The demo then uses it.
 - **Save Changes** or **Save As New Datapack**, once the demo has a pack Demo Builder installed: in
-  the header, and leading the flyout of the demo's pack, the same button and dialog from either place
-  (owner, 2026-11-09, walk F83: an SC could not tell which door saved what). On the SC's own library
+  the header only (step-04 S5 removed the flyout's copy; owner, 2026-11-09, walk F83: an SC could not
+  tell which door saved what). On the SC's own library
   pack (`mine`, not `team`) it is Save Changes, a new version; the header's Save ▾ also offers
   **Save As New** to branch off into a second pack. On a team pack or a colleague's it is Save As New
   Datapack, named for what it does ("Save Changes" read as changing the team pack): it makes a new
@@ -363,12 +363,17 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   only on the datapack the demo uses, when it is the SC's own with an earlier save and the demo is
   on the newest. It asks "Undo Last Save?" (Cancel, and Undo in blue), sends `undo-last-save`, and
   opens the import window on the earlier save, which picks the running job up; the job uninstalls
-  the newest save, installs the one before it, and then deletes the newest. **Delete Datapack** (renamed from Remove Datapack, owner
-  2026-11-09: it leaves the library for good, where Uninstall can be undone by importing) on a
-  pack of saves deletes it whole, every
-  version and each one's settings layer (`delete-library-datapack` with `everyVersion`). Save
-  Changes shows only on the version the demo uses (walk F100). The storage is unchanged: each save
-  is still its own version, so nothing was migrated.
+  the newest save, installs the one before it, and then deletes the newest. **Delete** (renamed from Remove Datapack, owner
+  2026-11-09: it leaves the library for good, where Uninstall can be undone by installing; a bare
+  verb since J8-3) on a pack of saves deletes it whole, every version and each one's settings layer
+  (`delete-library-datapack` with `everyVersion`); on a named version, that version and its layer.
+  It asks "Delete My Luma?", "Permanently deletes it.", naming no version, with a red Delete. It is
+  offered on the SC's own library datapack and never on a Demo Builder datapack, its owner's
+  included; agents can still delete one (`delete_library_datapack`). The storage is unchanged: each
+  save is still its own version, so nothing was migrated.
+- **Switch to** (J8-1, owner 2026-11-12; step-04 S5). Over a datapack the demo holds and Demo Builder
+  installed, another datapack's main button reads "Switch to Bodea", exactly when the job window
+  opens on a switch (`windowRoute`); another version of the held datapack keeps Install.
 - **Restore** (Phase 3/5, owner 2026-11-12, J4-2 to J4-4). On the version whose data Demo Builder
   installed in the demo's store, the flyout's main button reads "Restore My Luma" in place of
   Install. It sends `restore-datapack` without `confirm`, the flyout waiting on "Checking for your
@@ -529,7 +534,8 @@ path and value behind Show) before Install is pressed (`StoreConfigurationRow`).
 **The catalog offers no card for a layer while its pack is listed** (`withoutLayerCards`, the Data
 Installer screen and the wizard's Datapacks step). That would strand one an SC could otherwise not
 remove, so it keeps its card when no pack of its name is listed or when it was installed on its own;
-and the pack's flyout offers Delete Store Configuration on a layer that is yours. `find_datapacks`
+and Delete takes a pack's layer with it (the flyout's Delete Store Configuration was removed,
+step-04 S5). `find_datapacks`
 still lists every row: an agent can tell a layer by its name and `get_datapack`'s `settingsLayer`.
 
 **Saving.** "Save store changes" never writes a layer's settings into the new version, which would
@@ -558,8 +564,8 @@ AND name, so a library pack never folds into a Data Installer pack of the same n
 A library card is tagged "Library", or "Mine" when the SC owns it — the library says
 so itself (`mine`), because only it knows the caller's verified email.
 
-A library pack's flyout offers Install, with Save as file and, when it is yours, Share or Stop
-sharing and Remove from library in its menu (`PackActions`). Demo Builder installs it straight
+A library pack's flyout offers Install, with Save as File and, when it is yours, Share or Stop
+Sharing and Delete in its More menu (`PackActions`); in the Datapack Library the bar is More alone. Demo Builder installs it straight
 from the library; agents pass `source: "library"` to `validate_datapack_import`,
 `start_datapack_import` and `reset_datapack`. While the Data Installer is on (its address set and
 `dataInstaller.enabled`, the catalog's `installerOn`), the flyout also offers Copy to the Data
@@ -621,7 +627,7 @@ A zip whose files sit under one root folder reads the same.
 | | Panel | Agent tool |
 |---|---|---|
 | Save a pack from either store | "Save as file" in a pack's flyout menu, and after an export | `save_datapack_zip`; `dataTypes` saves only the types named (to leave out one the store cannot send) |
-| Remove your own library pack | "Remove from library" in its flyout menu | `delete_library_datapack` |
+| Remove your own library pack | "Delete" in its flyout menu (not on a Demo Builder datapack) | `delete_library_datapack` |
 | Install a library pack | "Install" in its flyout | `start_datapack_import` with `source: "library"` |
 | Put a library pack in the Data Installer's catalog (needs write access, which our accounts lack today) | Not on screen until then | `copy_library_datapack_to_installer` |
 | See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |

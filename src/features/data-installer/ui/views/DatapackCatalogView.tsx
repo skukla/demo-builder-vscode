@@ -151,16 +151,17 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
     }, [closeWindow, reloadHolding]);
 
     /**
-     * The held pack's actions (`useHeldPack`): Save Changes in its flyout, the header's save button,
-     * and its one Admin step (step 12). A finished save reads the catalog and the project
+     * The held pack's actions (`useHeldPack`): the header's save button and its one Admin step
+     * (step 12). A finished save reads the catalog and the project
      * again, since the library now holds a new version and the demo uses it.
      */
     const afterSave = useCallback((): void => {
         reloadProject();
         refresh();
     }, [reloadProject, refresh]);
-    // The flyout waits for the project's first answer too: Save Changes hangs on it, and appeared on
-    // its own a moment after the other buttons (owner, 2026-11-09, walk F92). The detail is held
+    // The flyout waits for the project's first answer too: its main button and Uninstall hang on it,
+    // and the flyout's save appeared on its own a moment after the other buttons (owner, 2026-11-09,
+    // walk F92). The detail is held
     // back too: the panel shows a detail already on show whatever `loading` says.
     const flyoutLoading = detail.loading || !projectAnswered;
     const flyoutDetail = projectAnswered ? (detail.value?.detail ?? null) : null;
@@ -168,7 +169,6 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
     const heldPack = useHeldPack({
         selected,
         held,
-        installedAt,
         detail: detail.value?.detail,
         heldInCatalog,
         detailLoading: flyoutLoading,
@@ -303,8 +303,6 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                 onClose={closeDetail}
                 onRetry={retryDetail}
                 onImport={library ? undefined : importWindow.open}
-                onSaveChanges={library ? undefined : heldPack.saveChanges}
-                saveAsNew={heldPack.saveChangesAsNew}
                 onRemoved={removedFromLibrary}
                 installerOn={value?.installerOn === true}
                 setupStep={heldPack.setupStepLine}

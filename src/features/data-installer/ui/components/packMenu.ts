@@ -6,7 +6,6 @@
  */
 
 import { INSTALL, RESTORE } from '../../datapackWords';
-import { isSavedVersion } from '../../packVersions';
 import { SHARE_CONSENT } from '../../shareWording';
 import type { DatapackDetail } from '../../types';
 import type { ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
@@ -28,20 +27,30 @@ export function packRows(detail: DatapackDetail, undoable: boolean): PackMenuRow
     return rows;
 }
 
-/** The menu's lower section: what takes the demo's data out of its store, then what leaves the library. */
-export function removeRows(ownPack: boolean, ownLayer: boolean, removesData: boolean): PackMenuRow[] {
+/**
+ * Whether the flyout offers Delete: on the SC's own library datapack, never on a Demo Builder one,
+ * its owner's included (overview Phase 7). Agents can still delete one (P4-Q8).
+ */
+export function deletable(detail: DatapackDetail): boolean {
+    return detail.store === 'library' && detail.mine === true && detail.team !== true;
+}
+
+/**
+ * The menu's lower section: what takes the demo's data out of its store, then what leaves the
+ * library. Bare verbs (J8-3, owner 2026-11-12): the datapack is the menu's subject.
+ */
+export function removeRows(removesData: boolean, deletes: boolean): PackMenuRow[] {
     return [
         // Uninstall, the pair of Install (owner, 2026-11-09, walk F120): "Remove Data" read as all data.
         ...(removesData ? [{ key: 'remove-data', label: 'Uninstall', icon: 'delete' }] : []),
         // Delete, not Remove (owner, 2026-11-09, walk F118): it leaves the library for good, where
-        // Uninstall takes a demo's data out of its store and an import puts it back.
-        ...(ownPack ? [{ key: 'remove', label: 'Delete Datapack', icon: 'delete' }] : []),
-        ...(ownLayer ? [{ key: 'remove-settings', label: 'Delete Store Configuration', icon: 'delete' }] : []),
+        // Uninstall takes a demo's data out of its store and an install puts it back.
+        ...(deletes ? [{ key: 'remove', label: 'Delete', icon: 'delete' }] : []),
     ];
 }
 
 /** The dialog open over the flyout, if any. */
-export type Asking = 'undo' | 'share' | 'remove' | 'remove-settings' | null;
+export type Asking = 'undo' | 'share' | 'remove' | null;
 
 export type ConfirmCopy = Pick<ConfirmActionDialogProps, 'title' | 'actionLabel' | 'actionVariant' | 'children'>;
 
@@ -68,27 +77,21 @@ export function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile
             children: 'Other people can no longer see or install it.',
         };
     }
-    if (asking === 'remove-settings') {
-        return {
-            title: `Delete ${name}'s Store Configuration?`,
-            actionLabel: 'Delete',
-            actionVariant: 'negative',
-            // The house form for a warning: a word in the main sentence (dialog design rules).
-            children: 'Permanently deletes the store configuration saved with it.',
-        };
-    }
-    // A pack of saves goes whole, every save with it (owner, 2026-11-09).
-    const what = isSavedVersion(detail.id.version) ? 'it' : `version ${detail.id.version}`;
     // "Permanently" is the warning, as a word in the sentence (dialog design rules; review 2026-11-10).
+    // The SC never sees a version (overview Phase 7). Red: deleting is what red is for (rule 20).
     return {
         title: `Delete ${name}?`,
         actionLabel: 'Delete',
         actionVariant: 'negative',
-        children: [`Permanently deletes ${what}.`, sharedInFile],
+        children: ['Permanently deletes it.', sharedInFile],
     };
 }
 
-/** The main button's label: Restore on the demo's installed version (J4-2), else Install. */
-export function mainButtonLabel(detail: DatapackDetail, restores: boolean): string {
-    return restores ? `${RESTORE} ${detail.displayName}` : INSTALL;
+/**
+ * The main button's label: Restore on the demo's installed version (J4-2), Switch to over another
+ * recorded datapack (J8-1, owner 2026-11-12), else Install.
+ */
+export function mainButtonLabel(detail: DatapackDetail, restores: boolean, switches = false): string {
+    if (restores) return `${RESTORE} ${detail.displayName}`;
+    return switches ? `Switch to ${detail.displayName}` : INSTALL;
 }

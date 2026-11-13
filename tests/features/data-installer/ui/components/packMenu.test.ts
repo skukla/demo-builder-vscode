@@ -8,6 +8,7 @@
 import type { DatapackDetail } from '@/features/data-installer/types';
 import {
     confirmCopy,
+    deletable,
     mainButtonLabel,
     packRows,
     removeRows,
@@ -55,20 +56,30 @@ describe('packRows', () => {
 
 describe('removeRows', () => {
     it('is empty when nothing can be removed', () => {
-        expect(removeRows(false, false, false)).toStrictEqual([]);
+        expect(removeRows(false, false)).toStrictEqual([]);
     });
 
-    it('lists Uninstall, then Delete Datapack, then Delete Store Configuration', () => {
-        expect(removeRows(true, true, true).map((row) => row.key)).toEqual([
-            'remove-data',
-            'remove',
-            'remove-settings',
-        ]);
-        expect(labels(removeRows(true, true, true))).toEqual([
-            'Uninstall',
-            'Delete Datapack',
-            'Delete Store Configuration',
-        ]);
+    // Bare verbs (decisions Phase 7, J8-3): the datapack is the menu's subject. Delete Store
+    // Configuration is removed from the flyout (overview Phase 7).
+    it('lists Uninstall, then Delete, and nothing else', () => {
+        expect(removeRows(true, true).map((row) => row.key)).toEqual(['remove-data', 'remove']);
+        expect(labels(removeRows(true, true))).toEqual(['Uninstall', 'Delete']);
+    });
+});
+
+describe('deletable', () => {
+    it("is the SC's own library datapack", () => {
+        expect(deletable(makeDetail({ store: 'library', mine: true }))).toBe(true);
+    });
+
+    // Overview Phase 7: no one deletes a Demo Builder datapack from the flyout, its owner included.
+    it("is never a Demo Builder datapack, even its owner's", () => {
+        expect(deletable(makeDetail({ store: 'library', mine: true, team: true }))).toBe(false);
+    });
+
+    it("is never a colleague's datapack or a Data Installer one", () => {
+        expect(deletable(makeDetail({ store: 'library', mine: false }))).toBe(false);
+        expect(deletable(makeDetail({ mine: true }))).toBe(false);
     });
 });
 
@@ -94,18 +105,14 @@ describe('confirmCopy', () => {
         });
     });
 
-    it('asks the store configuration delete in red', () => {
-        expect(confirmCopy('remove-settings', makeDetail())).toMatchObject({
-            title: "Delete Bodea's Store Configuration?",
+    // Overview Phase 7: the SC never sees a version, so the Delete line names none.
+    it('deletes in red, saying "Permanently deletes it." with no version, plus the shared warning', () => {
+        expect(confirmCopy('remove', makeDetail(), 'shared warning')).toEqual({
+            title: 'Delete Bodea?',
+            actionLabel: 'Delete',
             actionVariant: 'negative',
+            children: ['Permanently deletes it.', 'shared warning'],
         });
-    });
-
-    it('deletes a named version by name, and a pack of saves whole', () => {
-        expect(confirmCopy('remove', makeDetail(), 'shared warning').children).toEqual([
-            'Permanently deletes version main.',
-            'shared warning',
-        ]);
         const saves = makeDetail({ id: { name: 'my-luma', version: '20261109-185605' } });
         expect(confirmCopy('remove', saves).children).toEqual([
             'Permanently deletes it.',
@@ -118,5 +125,10 @@ describe('mainButtonLabel', () => {
     it('reads Install, or Restore with the name on the installed version', () => {
         expect(mainButtonLabel(makeDetail(), false)).toBe('Install');
         expect(mainButtonLabel(makeDetail(), true)).toBe('Restore Bodea');
+    });
+
+    // Decisions J8-1 (owner, 2026-11-12): over another recorded datapack the button says it switches.
+    it('reads Switch to with the name over another recorded datapack', () => {
+        expect(mainButtonLabel(makeDetail(), false, true)).toBe('Switch to Bodea');
     });
 });

@@ -72,10 +72,6 @@ export interface DatapackDetailPanelProps {
      * Absent in the Datapack Library, which touches no store (owner, 2026-11-07).
      */
     onImport?: (id: DatapackId, opensOn?: 'run' | 'restore') => void;
-    /** Save Changes: on the demo's pack, whoever owns it (`useHeldPack`). */
-    onSaveChanges?: () => void;
-    /** It makes a new pack (a team or colleague's pack): the button reads Save As New Datapack. */
-    saveAsNew?: boolean;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
     /** The Data Installer's address is set and switched on: a library pack offers Copy to it. */
@@ -99,6 +95,8 @@ export interface DatapackDetailPanelProps {
     onRemoveData?: () => void;
     /** That same version: its main button is Restore, not Install (Phase 5, J4-2). */
     restores?: boolean;
+    /** Another datapack the demo holds, which Demo Builder installed: its main button is Switch to (J8-1). */
+    switches?: boolean;
 }
 
 export function DatapackDetailPanel({
@@ -111,8 +109,6 @@ export function DatapackDetailPanel({
     onClose,
     onRetry,
     onImport,
-    onSaveChanges,
-    saveAsNew,
     onRemoved,
     installerOn,
     setupStep,
@@ -123,6 +119,7 @@ export function DatapackDetailPanel({
     undoTo,
     onRemoveData,
     restores = false,
+    switches = false,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selectedName ?? selected?.name ?? 'Datapack';
     // A read of the pack already on show (after Share, Stop Sharing or a rename) updates it in
@@ -160,17 +157,15 @@ export function DatapackDetailPanel({
                             <PackActions
                                 detail={detail}
                                 onImport={onImport}
-                                onSaveChanges={onSaveChanges}
-                                saveAsNew={saveAsNew}
                                 onRemoved={onRemoved}
                                 installerOn={installerOn}
                                 sharedInFile={sharedInFile}
                                 onSharingChanged={onSharingChanged}
-                                settingsLayer={settingsLayer}
                                 onWorking={setWorking}
                                 {...(undoTo ? { undoTo } : {})}
                                 {...(onRemoveData ? { onRemoveData } : {})}
                                 restores={restores}
+                                switches={switches}
                             />
                         ) : null}
                     </div>
