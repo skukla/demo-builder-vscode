@@ -30,7 +30,7 @@ import { BatchDeleteQuestions } from './BatchDeleteQuestions';
 import { BatchResetQuestions } from './BatchResetQuestions';
 import { BatchSaveTable } from './BatchSaveTable';
 import { ProjectsBatchRunView } from './ProjectsBatchRunView';
-import { endingRowOf, promptButtons } from './UpdatesModal';
+import { endingRowOf, promptButtons } from './runWindowParts';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { SaveFirstWindow } from '@/core/ui/components/feedback/SaveFirstWindow';
 import type { WaitLines } from '@/core/ui/components/feedback/StageWait';

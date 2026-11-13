@@ -10,7 +10,7 @@
 
 import React from 'react';
 import type { BatchRowStatuses, BatchRowTimings, BatchRunRow } from '../hooks/useProjectsBatch';
-import { ICON_OF, RunQuestion } from './UpdatesRunView';
+import { ICON_OF, RunQuestion } from './runWindowParts';
 import { RunFoot } from '@/core/ui/components/feedback/RunFoot';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { spanValue, useRunClock } from '@/core/ui/hooks/useRunClock';

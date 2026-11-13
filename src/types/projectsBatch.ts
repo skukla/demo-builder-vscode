@@ -123,3 +123,19 @@ export interface ProjectsBatchRowStatus {
     /** Running: the step it is on. Failed or skipped: why. */
     message?: string;
 }
+
+/**
+ * The project dashboard's Delete opens the projects list on its one-row Delete window (step-05 S4,
+ * owner 2026-11-13, P5-Q2). A list not open yet takes the instruction once it has mounted
+ * (`takeDeleteRequest`); one already open is pushed `openDeleteWindow`.
+ */
+export interface OpenDeleteWindowPayload {
+    /** The project to open the Delete window on, by its folder. */
+    projectPath: string;
+}
+
+/** `takeDeleteRequest`: the project to open the Delete window on now, or null; used up either way. */
+export interface TakeDeleteRequestResponse {
+    success: true;
+    data: { projectPath: string | null };
+}

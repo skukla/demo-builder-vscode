@@ -11,8 +11,8 @@
  * sample-data step in `edsResetSampleData`, the result notifications in
  * `edsResetNotifications` (EDS-8, 2026-10-08).
  *
- * Both dashboard and projects-dashboard handlers use resetEdsProjectWithUI()
- * as the single entry point for resetting EDS projects with UI.
+ * Callers: the projects batch run (`projectsBatchHandlers.ts`, answered, every screen's Reset)
+ * and Edit (`executorEditPackage.ts`); since step-05 S4 nothing calls the dialog path.
  *
  * @module features/eds/services/reset/edsResetUI
  */

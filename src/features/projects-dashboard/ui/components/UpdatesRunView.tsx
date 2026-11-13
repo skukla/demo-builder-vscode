@@ -24,21 +24,12 @@
 
 import React from 'react';
 import type { RowStatuses } from '../hooks/useUpdatesModal';
+import { ICON_OF, RunQuestion } from './runWindowParts';
 import { groupsOf, type RowGroup } from './updateGroups';
-import { OperationPromptForm } from '@/core/ui/components/feedback/OperationPromptForm';
 import { StepStatusIcon, type StepStatus } from '@/core/ui/components/feedback/StepStatusIcon';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { localCopyRowId, type PendingUpdateRow, type UpdateRowState, type UpdateRowStatus } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
-
-/** A row's state as its icon; the projects batch run draws its rows with it too. */
-export const ICON_OF: Record<UpdateRowState, StepStatus> = {
-    waiting: 'pending',
-    running: 'checking',
-    done: 'success',
-    failed: 'error',
-    skipped: 'warning',
-};
 
 /** One icon for a project: the worst that happened, else whether it is still going. */
 export function groupStatusOf(states: UpdateRowState[]): StepStatus {
@@ -72,16 +63,6 @@ interface Live {
     step?: string;
     question?: OperationPrompt;
     onTyped: (values: Record<string, string>) => void;
-}
-
-/** A question in the list: its sentence, and any fields it needs typed. Its answers are the buttons. */
-export function RunQuestion({ prompt, onTyped }: { prompt: OperationPrompt; onTyped: Live['onTyped'] }) {
-    return (
-        <div className="updates-run-question" role="group" aria-label="Question">
-            <p className="updates-run-question-text">{prompt.message}</p>
-            {prompt.fields?.length ? <OperationPromptForm fields={prompt.fields} onChange={onTyped} /> : null}
-        </div>
-    );
 }
 
 /** One step in a panel: its icon, its name and line, why it ended as it did, and a question it asks. */

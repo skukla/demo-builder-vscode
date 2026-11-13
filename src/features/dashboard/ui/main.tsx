@@ -69,6 +69,11 @@ import '@/features/project-creation/ui/styles/build-summary.css';
 import '@/features/project-creation/ui/styles/choice-cards.css';
 // A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
 import '@/core/ui/styles/scroll-fade.css';
+// Reset's window: the projects list's batch window, on this project (step-05 S4). Its questions,
+// save table and run (projects-batch.css), and the question a run asks in its list, the Updates
+// run's (updates-modal.css). ADR-017 §6: a sheet reaches only the bundles whose entry imports it.
+import '@/features/projects-dashboard/ui/styles/projects-batch.css';
+import '@/features/projects-dashboard/ui/styles/updates-modal.css';
 
 // Get root element
 const container = document.getElementById('root');

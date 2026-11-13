@@ -9,6 +9,7 @@
 
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 
 describe('dashboardHandlers', () => {
     describe('handler registration', () => {
@@ -81,18 +82,18 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'switchOrg')).toBe(true);
         });
 
-        it('should include project management handlers', () => {
-            // Given: dashboardHandlers object
-            // When: Checking for project management message types
-            // Then: Project management handlers present
-            expect(hasHandler(dashboardHandlers, 'deleteProject')).toBe(true);
+        // step-05 S4 (owner, 2026-11-13, P5-Q2): Reset opens the projects list's batch window here,
+        // so the map answers its two requests with the list's own handlers, not a fork of them;
+        // Delete hands over to the list. The one-project dialogs' messages are gone.
+        it("answers Reset's batch window with the projects list's own handlers", () => {
+            expect(dashboardHandlers.prepareProjectsBatch).toBe(projectsListHandlers.prepareProjectsBatch);
+            expect(dashboardHandlers.runProjectsBatch).toBe(projectsListHandlers.runProjectsBatch);
         });
 
-        it('should include project reset handler', () => {
-            // Given: dashboardHandlers object
-            // When: Checking for project reset message type
-            // Then: Project reset handler present
-            expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
+        it("hands Delete over to the projects list, and no longer answers the dialogs' messages", () => {
+            expect(hasHandler(dashboardHandlers, 'deleteFromProjectsList')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'deleteProject')).toBe(false);
+            expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(false);
         });
 
         it('should include the More-menu action handlers', () => {
@@ -133,7 +134,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 94 handlers', () => {
+        it('should have exactly 96 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
@@ -313,7 +314,11 @@ describe('dashboardHandlers', () => {
             // get_storefront_report tool carry what it said.
             // get-datapack-line (94 → 95, 2026-11-07): the Datapacks card names the demo's pack,
             // telling it apart from the sidebar's Datapack Library.
-            expect(types).toHaveLength(95);
+            // resetProject + deleteProject out, prepareProjectsBatch + runProjectsBatch +
+            // deleteFromProjectsList in (95 → 96, step-05 S4, 2026-11-13): Reset opens the projects
+            // list's batch window here; Delete opens the list on its one-row Delete window. The
+            // table's "1 delete" and "1 reset" rows above are those two retired messages.
+            expect(types).toHaveLength(96);
         });
 
         it('should have handlers as functions', () => {

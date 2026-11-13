@@ -1,26 +1,19 @@
 /**
  * Dashboard Project Management Handlers
  *
- * Project-level CRUD from the dashboard: edit, delete, reset, rename, and the
- * two settings exports (save-dialog UI variant + the headless path-based twin
- * behind the export_project_settings MCP tool). Extracted from
+ * Project-level actions from the dashboard: edit, rename, and the headless
+ * settings export behind the export_project_settings MCP tool. Reset and delete
+ * left for the projects list's batch window (step-05 S4: `prepareProjectsBatch`,
+ * `runProjectsBatch`, `deleteFromProjectsList`). Extracted from
  * `dashboardHandlers.ts` for the 500-line handler cap; the parent re-exports
  * everything here so import sites are unchanged.
  */
 
 import * as vscode from 'vscode';
 import { handleRequestStatus } from './statusHandlers';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
-import {
-    narrateOutcomeToModal,
-    progressSurfaceOf,
-} from '@/core/vscode/operationProgress';
 import { privatePackNote } from '@/features/data-installer/handlers/privatePackPrompt';
-import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
-import { isEdsProject } from '@/types/typeGuards';
 
 /**
  * Handle 'editProject' message - Open the wizard in edit mode for the current project
@@ -58,105 +51,6 @@ export const handleEditProject: MessageHandler = async (context) => {
 
     return { success: true };
 };
-
-/**
- * Handle 'deleteProject' message - Delete current project
- *
- * Uses projectDeletionService for unified delete experience including EDS cleanup.
- * Panel disposal is handled by projectDeletionService when deletion succeeds.
- */
-export const handleDeleteProject: MessageHandler<DeleteFromDashboardPayload> =
-    narrateOutcomeToModal(
-        async (context, payload) => {
-            const project = await context.stateManager.getCurrentProject();
-            if (!project) {
-                return { success: false, error: 'No project found to delete' };
-            }
-
-            return deleteProject(context, project, undefined, {
-                progress: progressSurfaceOf(payload),
-                operationId: payload?.id ?? deleteOperationId(project.name),
-            });
-        },
-        (payload) => payload?.id ?? '',
-    );
-
-/** What the dashboard sends when its kebab starts a delete. */
-export interface DeleteFromDashboardPayload {
-    /** The id its progress modal follows (PL-59). */
-    id?: string;
-    progress?: 'modal';
-}
-
-/** What the dashboard sends when its kebab starts a reset. */
-export interface ResetProjectPayload {
-    /** The id its progress modal follows (PL-59). */
-    id?: string;
-    progress?: 'modal';
-}
-
-/**
- * Handle 'resetProject' message - Reset project to initial state
- *
- * From a screen that hosts the progress modal it narrates there (PL-59 R1): the
- * whole body is wrapped so the modal is recorded before the first confirmation
- * dialog rather than after it.
- *
- * Dispatches to the appropriate reset service based on project type:
- * - EDS projects: resetEdsProjectWithUI (template-based reset)
- * - Headless projects: resetProjectWithUI (component re-clone)
- */
-export const handleResetProject: MessageHandler<ResetProjectPayload> = narrateOutcomeToModal(
-    async (context, payload) => {
-    const project = await context.stateManager.getCurrentProject();
-
-    if (!project) {
-        context.logger.error('[Dashboard] resetProject: No current project');
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    const progress = progressSurfaceOf(payload);
-    const operationId = payload?.id ?? resetOperationId(project.name);
-
-    if (isEdsProject(project)) {
-        const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
-        return resetEdsProjectWithUI({
-            meshDeps: {
-                commandManager: ServiceLocator.getCommandExecutor(),
-                authManager: ServiceLocator.getAuthenticationService(),
-            },
-            project,
-            context,
-            logPrefix: '[Dashboard]',
-            // Same reset as the projects list performs. These three defaulted to
-            // false here until 2026-09-02, so the same project reset from the
-            // dashboard kept its block library configuration, skipped the CDN
-            // check, and hid "Show Logs" on failure — while the projects list
-            // did all three. A reset that leaves configuration behind has not
-            // returned the project to zero.
-            includeBlockLibrary: true,
-            verifyCdn: true,
-            showLogsOnError: true,
-            progress,
-            operationId,
-        });
-    }
-
-    const { resetProjectWithUI } = await import(
-        '@/features/lifecycle/services/projectResetService'
-    );
-    return resetProjectWithUI({
-        commandManager: ServiceLocator.getCommandExecutor(),
-        authManager: ServiceLocator.getAuthenticationService(),
-        project,
-        context,
-        logPrefix: '[Dashboard]',
-        progress,
-        operationId,
-    });
-    },
-    (payload) => payload?.id ?? '',
-);
 
 /**
  * Handle 'renameProject' message - Rename the current project

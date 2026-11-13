@@ -18,6 +18,7 @@ import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardOperations } from './hooks/useDashboardOperations';
+import { useDashboardResetDelete } from './hooks/useDashboardResetDelete';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { useHandoverDialogs } from './hooks/useHandoverDialogs';
 import { useInlineRename } from './hooks/useInlineRename';
@@ -162,15 +163,19 @@ export function ProjectDashboardScreen({
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
 
-    // The five actions measured in minutes, and the modal they narrate into.
+    // The three storefront actions measured in minutes, and the modal they narrate into.
     const {
         controls: operations,
-        handleResetProject,
-        handleDeleteProject,
         handleSyncStorefront,
         handleRefreshBlockLibrary,
         handleRepublishContent,
     } = useDashboardOperations(displayName);
+    // Reset: the batch window here, on this project (step-05 S4). The latest status names the
+    // folder, which a rename moves. Delete: the projects list's window on it.
+    const { batch, handleResetProject, handleDeleteProject } = useDashboardResetDelete(
+        displayName,
+        projectStatus?.path ?? project?.path,
+    );
 
     // Build subtitle from package/stack (e.g., "CitiSignal, Headless + PaaS")
     const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(', ') || undefined;
@@ -295,6 +300,7 @@ export function ProjectDashboardScreen({
                 onCloseChangeSource={() => setChangeSourceOpen(false)}
                 handover={handover}
                 operations={operations}
+                batch={batch}
                 capabilitiesOpen={showCapabilities}
                 onCloseCapabilities={() => setShowCapabilities(false)}
                 ai={dashboardStatus}

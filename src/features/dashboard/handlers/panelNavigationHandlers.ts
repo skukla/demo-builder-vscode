@@ -1,15 +1,18 @@
 /**
  * Dashboard Panel Navigation Handlers
  *
- * Handlers that swap the visible webview surface (Configure, projects list,
- * integrations, back to the dashboard) — each disposing the sibling panel inside
- * a webview transition before dispatching the target command. Extracted from
+ * Handlers that swap the visible webview surface (Configure, the projects list, plain
+ * or on one project's Delete window, integrations, back to the dashboard) — each
+ * disposing the sibling panel inside a webview transition before dispatching the
+ * target command. Extracted from
  * `dashboardHandlers.ts` for the 500-line handler cap; the parent re-exports
  * everything here so import sites are unchanged.
  */
 
+import * as vscode from 'vscode';
 import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import { executeCommandForWorkingProject } from '@/core/handlers/projectCommandHelper';
+import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
 
 /**
@@ -43,6 +46,30 @@ export const handleNavigateBack: MessageHandler = async (context) => {
             success: false,
             error: 'Failed to navigate back to projects list',
         };
+    }
+};
+
+/**
+ * Handle 'deleteFromProjectsList' — the dashboard's Delete (step-05 S4, owner 2026-11-13, P5-Q2).
+ *
+ * Opens the projects list on its one-row Delete window for this screen's project: the dashboard
+ * closes when its project is deleted, so the window cannot live here. Like navigateBack it clears
+ * the current project and lands on the list; the list command holds the webview transition while
+ * it closes the dashboard, so the auto-reopen does not open the list a second time. Nothing is
+ * deleted here: the window asks, and only its red button runs. Cancelled, the SC stays on the list.
+ */
+export const handleDeleteFromProjectsList: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found to delete', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+    try {
+        await context.stateManager.clearProject();
+        await vscode.commands.executeCommand('demoBuilder.showProjectsList', { deleteProject: project.path });
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to open the projects list to delete a project', error as Error);
+        return { success: false, error: 'Failed to open the projects list' };
     }
 };
 

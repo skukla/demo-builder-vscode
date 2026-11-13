@@ -1,7 +1,7 @@
 /**
  * DashboardDialogs — everything the project dashboard can open ON TOP of
  * itself: Change source, Share Demo, the long-operation
- * progress modal, and the AI capability catalog.
+ * progress modal, the Reset batch window, and the AI capability catalog.
  *
  * Split out of `ProjectDashboardScreen` (EDS-8, 2026-10-09): the screen decides
  * what the dashboard SHOWS; this decides which dialog is mounted over it. The
@@ -22,6 +22,8 @@ import { OperationProgressModal } from '@/core/ui/components/feedback/OperationP
 import type { OperationRunnerControls } from '@/core/ui/hooks/useOperationRunner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AddDemoModal } from '@/features/project-creation/ui/components/add-demo/AddDemoModal';
+import { ProjectsBatchModal } from '@/features/projects-dashboard/ui/components/ProjectsBatchModal';
+import type { ProjectsBatchControls } from '@/features/projects-dashboard/ui/hooks/useProjectsBatch';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { AddedDemo } from '@/types/projectFile';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
@@ -57,6 +59,8 @@ export interface DashboardDialogsProps {
     handover: HandoverDialogs;
     /** The long-operation runner whose modal narrates reset, delete, sync and republish. */
     operations: OperationRunnerControls;
+    /** Reset's window: the projects list's batch window on this project (step-05 S4). */
+    batch: ProjectsBatchControls;
     capabilitiesOpen: boolean;
     onCloseCapabilities: () => void;
     ai: AiCapabilityState;
@@ -78,6 +82,7 @@ export function DashboardDialogs({
     onCloseChangeSource,
     handover,
     operations,
+    batch,
     capabilitiesOpen,
     onCloseCapabilities,
     ai,
@@ -107,6 +112,8 @@ export function DashboardDialogs({
                 onRetry={operations.retry}
                 onClose={operations.close}
             />
+
+            {batch.view.phase !== 'closed' && <ProjectsBatchModal controls={batch} />}
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a

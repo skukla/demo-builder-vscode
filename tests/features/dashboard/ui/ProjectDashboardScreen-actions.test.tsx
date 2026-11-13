@@ -6,6 +6,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
+import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
     // The real dialog renders the core Modal, whose Spectrum pieces this suite's
@@ -16,6 +17,12 @@ jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
             <button onClick={onClose}>Close</button>
         </div>
     ),
+}));
+
+jest.mock('@/features/projects-dashboard/ui/components/ProjectsBatchModal', () => ({
+    // The batch window renders the core Modal, which this suite's partial Spectrum mock does not
+    // carry; its words on this screen are pinned by useDashboardResetDelete.test.tsx, real.
+    ProjectsBatchModal: () => <div role="dialog" aria-label="Batch window" />,
 }));
 
 describe('ProjectDashboardScreen - Action Buttons', () => {
@@ -152,19 +159,17 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('openBrowser');
         });
 
-        // A REQUEST: the delete narrates into this screen's progress modal, and
-        // its answer is how the screen learns a cancelled run is over (PL-59).
-        it('starts the delete as an operation this screen can follow', async () => {
+        // Delete opens the projects list on its one-row Delete window (owner, 2026-11-13, P5-Q2):
+        // the dashboard closes when its project is deleted, so the window cannot live here.
+        it('hands Delete over to the projects list, and asks nothing here', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
-            const deleteButton = screen.getByText('Delete');
-            await user.click(deleteButton);
+            await user.click(screen.getByText('Delete'));
 
-            expect(ctx.mockRequest).toHaveBeenCalledWith('deleteProject', {
-                id: expect.stringContaining('delete:'),
-                progress: 'modal',
-            });
+            expect(ctx.mockPostMessage).toHaveBeenCalledWith('deleteFromProjectsList');
+            expect(ctx.mockRequest).not.toHaveBeenCalledWith('deleteProject', expect.anything());
+            expect(screen.queryByRole('dialog', { name: 'Batch window' })).toBeNull();
         });
 
         it('should send editProject message when Edit clicked', async () => {
@@ -185,18 +190,36 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).not.toHaveBeenCalledWith('exportProject');
         });
 
-        // A REQUEST, not a push: the reset narrates into this screen's progress
-        // modal, and its answer is how the screen learns a run that never
-        // reported is over — the SC said no at the confirmation (PL-59).
-        it('starts the reset as an operation this screen can follow', async () => {
+        // Reset opens the batch window here, on this project as its one row (owner, 2026-11-13,
+        // P5-Q2). Its path is the one the latest status names: a rename moves the folder.
+        it("opens the batch window on this project's current folder", async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderDashboard();
+            renderDashboard({ project: { name: asDisplayName('Test Project'), path: '/test/old-path' } });
+            ctx.triggerMessage('statusUpdate', {
+                name: 'Renamed Project',
+                path: '/test/renamed-project',
+                status: 'stopped',
+            });
 
             await user.click(screen.getByText('Reset'));
 
-            expect(ctx.mockRequest).toHaveBeenCalledWith('resetProject', {
-                id: expect.stringContaining('reset:'),
-                progress: 'modal',
+            expect(ctx.mockRequest).toHaveBeenCalledWith('prepareProjectsBatch', {
+                action: 'reset',
+                projectPaths: ['/test/renamed-project'],
+            });
+            expect(ctx.mockRequest).not.toHaveBeenCalledWith('resetProject', expect.anything());
+            expect(screen.getByRole('dialog', { name: 'Batch window' })).toBeInTheDocument();
+        });
+
+        it('before any status, opens it on the folder the dashboard was opened on', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            renderDashboard({ project: { name: asDisplayName('Test Project'), path: '/test/path' } });
+
+            await user.click(screen.getByText('Reset'));
+
+            expect(ctx.mockRequest).toHaveBeenCalledWith('prepareProjectsBatch', {
+                action: 'reset',
+                projectPaths: ['/test/path'],
             });
         });
     });

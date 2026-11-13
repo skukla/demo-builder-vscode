@@ -12,6 +12,10 @@
  * part that matters: it takes at least `TIMEOUTS.UI.MIN_LOADING`, and every load
  * replaces the screen, so a screen loaded twice loses the Updates window the first
  * load opened.
+ *
+ * The project dashboard's Delete rides the same mechanism (step-05 S4, owner 2026-11-13,
+ * P5-Q2): it opens the projects list holding an instruction to open the one-row Delete window
+ * on that project, taken once by the page that loads, or pushed to a list already open.
  */
 
 import * as os from 'os';
@@ -32,6 +36,9 @@ import { ProjectDashboardWebviewCommand, screenAfterClose } from '@/features/das
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { presentedRows } from '@/features/updates/handlers/updatesModalHandlers';
 import { handleTakeUpdatesRequest } from '@/features/updates/handlers/updatesModalRequest';
+import { handleDeleteFromProjectsList } from '@/features/dashboard/handlers/panelNavigationHandlers';
+import { handleTakeDeleteRequest } from '@/features/projects-dashboard/handlers/deleteWindowRequest';
+import type { OpenDeleteWindowPayload } from '@/types/projectsBatch';
 import { findAllUpdates, type FoundUpdates } from '@/features/updates/services/allUpdates';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 
@@ -70,10 +77,12 @@ interface Screen {
     updatesWindow: PendingUpdateRow[] | null;
     /** The page loaded and has not had its `init` yet, so the app has not rendered. */
     waitingForInit: boolean;
+    /** The project whose Delete window the list opened, if any. */
+    deleteWindow: string | null;
 }
 
 /** A screen before any page has loaded. */
-const NO_SCREEN = (): Screen => ({ loads: 0, updatesWindow: null, waitingForInit: false });
+const NO_SCREEN = (): Screen => ({ loads: 0, updatesWindow: null, waitingForInit: false, deleteWindow: null });
 
 let screen: Screen;
 /** How long a page load takes; MIN_LOADING unless a test models a slower machine. */
@@ -110,13 +119,16 @@ function fakeChannel(): unknown {
         onStreaming: jest.fn(),
         request: jest.fn(),
         dispose: jest.fn(),
-        sendMessage: jest.fn(async (type: string, payload?: { rows?: PendingUpdateRow[] }) => {
+        sendMessage: jest.fn(async (type: string, payload?: { rows?: PendingUpdateRow[] } & Partial<OpenDeleteWindowPayload>) => {
             if (type === 'showUpdates' && payload?.rows?.length) screen.updatesWindow = payload.rows;
-            // WebviewApp renders the app on its first `init`; the app then asks once.
+            if (type === 'openDeleteWindow' && payload?.projectPath) screen.deleteWindow = payload.projectPath;
+            // WebviewApp renders the app on its first `init`; the app then asks once for each.
             if (type === 'init' && screen.waitingForInit) {
                 screen.waitingForInit = false;
                 const answer = await handleTakeUpdatesRequest(createMockHandlerContext());
                 screen.updatesWindow = answer.data?.rows ?? null;
+                const held = await handleTakeDeleteRequest(createMockHandlerContext());
+                screen.deleteWindow = held.data?.projectPath ?? null;
             }
         }),
     };
@@ -140,7 +152,7 @@ function wireVsCode(): void {
     // replaces whatever the last one showed and waits for its `init`.
     (setLoadingState as jest.Mock).mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, loadMs));
-        screen = { loads: screen.loads + 1, updatesWindow: null, waitingForInit: true };
+        screen = { loads: screen.loads + 1, updatesWindow: null, waitingForInit: true, deleteWindow: null };
     });
     // The disposal callback extension.ts installs (activate, `setDisposalCallback`).
     BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
@@ -325,5 +337,82 @@ describe('Review on the update notification', () => {
             expect(screen.loads).toBe(1);
             expect(screen.updatesWindow).toEqual(presentedRows());
         });
+    });
+});
+
+/**
+ * The dashboard's Delete (step-05 S4): the projects list opens on the one-row Delete window for
+ * the dashboard's project, inside the list command's webview transition, so closing the dashboard
+ * does not open the list a second time.
+ */
+describe("the project dashboard's Delete", () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        commandsById.clear();
+        screen = NO_SCREEN();
+        loadMs = TIMEOUTS.UI.MIN_LOADING;
+        BaseWebviewCommand.disposeAllActivePanels();
+        BaseWebviewCommand.endWebviewTransition();
+        wireVsCode();
+    });
+
+    afterEach(() => {
+        BaseWebviewCommand.disposeAllActivePanels();
+        BaseWebviewCommand.endWebviewTransition();
+        jest.useRealTimers();
+    });
+
+    /** Press Delete on the dashboard; resolves once the hand-over has finished. */
+    async function pressDelete(stateManager: Deps[1]): Promise<unknown> {
+        const run = handleDeleteFromProjectsList(createMockHandlerContext({ stateManager }));
+        await settle();
+        return run;
+    }
+
+    it("opens the list once, on the Delete window for the dashboard's project", async () => {
+        const deps = activate();
+        await openPanelOf(new ProjectDashboardWebviewCommand(...deps));
+
+        const result = await pressDelete(deps[1]);
+
+        expect(result).toEqual({ success: true });
+        expect(screen.loads).toBe(1);
+        expect(screen.deleteWindow).toBe(OPEN_PROJECT.path);
+        expect(BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard')).toBeUndefined();
+        expect(BaseWebviewCommand.isWebviewTransitionInProgress()).toBe(false);
+    });
+
+    it('the instruction is used once: the next list opened shows no Delete window', async () => {
+        const deps = activate();
+        await openPanelOf(new ProjectDashboardWebviewCommand(...deps));
+        await pressDelete(deps[1]);
+
+        const again = await handleTakeDeleteRequest(createMockHandlerContext());
+
+        expect(again.data?.projectPath).toBeNull();
+    });
+
+    it('pushes the instruction to a list already open, without reloading it', async () => {
+        const deps = activate();
+        const opening = clickSidebar();
+        await settle();
+        await opening;
+        screen = NO_SCREEN();
+
+        await pressDelete(deps[1]);
+
+        expect(screen.loads).toBe(0);
+        expect(screen.deleteWindow).toBe(OPEN_PROJECT.path);
+    });
+
+    it('with no project, opens nothing and says so', async () => {
+        const deps = activate();
+        jest.mocked(deps[1].getCurrentProject).mockResolvedValue(undefined);
+
+        const result = await pressDelete(deps[1]);
+
+        expect(result).toEqual(expect.objectContaining({ success: false }));
+        expect(screen.loads).toBe(0);
+        expect(screen.deleteWindow).toBeNull();
     });
 });

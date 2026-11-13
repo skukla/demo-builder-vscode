@@ -21,7 +21,7 @@ import { useBatchChoices, type BatchChoices } from './useBatchChoices';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { PROJECTS_BATCH_OPERATION_ID } from '@/core/utils/operationIds';
-import { getProjectDisplayName, type ProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { getProjectDisplayName, type ProjectDisplayName, type ProjectNameParts } from '@/core/utils/projectDisplayName';
 import type { Project } from '@/types/base';
 import type {
     PrepareProjectsBatchResponse,
@@ -54,6 +54,12 @@ interface PrepareEnvelope {
     error?: string;
 }
 
+/**
+ * A project as the window starts on it: its path, and the parts its name is read from. A card
+ * hands its whole project; the project dashboard hands the path and the name it shows (step-05 S4).
+ */
+export type BatchProject = Pick<Project, 'path'> & ProjectNameParts;
+
 /** Each running project's status, by path. */
 export type BatchRowStatuses = Readonly<Record<string, ProjectsBatchRowStatus>>;
 
@@ -64,7 +70,7 @@ export interface ProjectsBatchControls {
     view: BatchView;
     choices: BatchChoices;
     /** Reset Selected or Delete Selected, on the projects picked. */
-    start: (action: ProjectsBatchAction, projects: Project[]) => void;
+    start: (action: ProjectsBatchAction, projects: readonly BatchProject[]) => void;
     /** Run the answers the questions hold, with the save question's when it was asked. */
     run: (answer?: SaveAnswer) => void;
     close: () => void;
@@ -158,7 +164,7 @@ export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchCon
     /** Which prepare is current: an answer to an earlier one, closed since, is dropped. */
     const reading = useRef(0);
 
-    const start = useCallback((action: ProjectsBatchAction, projects: Project[]) => {
+    const start = useCallback((action: ProjectsBatchAction, projects: readonly BatchProject[]) => {
         if (projects.length === 0) return;
         const ticket = reading.current + 1;
         reading.current = ticket;

@@ -93,6 +93,21 @@ describe('useUpdatesModal', () => {
         expect(result.current.view).toEqual({ phase: 'closed' });
     });
 
+    // Found beside step-05 S4: reading `data.rows` through an answer with no data threw.
+    it('stays closed, and throws nothing, when the answer carries no data', async () => {
+        const unhandled = jest.fn();
+        process.on('unhandledRejection', unhandled);
+        mockRequest.mockImplementation(async (type: string) => (type === 'takeUpdatesRequest' ? null : undefined));
+
+        const { result } = setup();
+        await waitFor(() => expect(mockRequest).toHaveBeenCalledWith('takeUpdatesRequest'));
+        await act(async () => { await Promise.resolve(); });
+        process.off('unhandledRejection', unhandled);
+
+        expect(result.current.view).toEqual({ phase: 'closed' });
+        expect(unhandled).not.toHaveBeenCalled();
+    });
+
     // A panel just created cannot be pushed to; it asks once it has mounted.
     it('opens on the rows a new screen takes once mounted, ticked as the check said', async () => {
         answers({ success: true, data: { rows: ROWS } });

@@ -17,11 +17,13 @@ import { onWorkChanged } from '@/core/state/projectWorkRunning';
 import { readViewModeSetting, VIEW_MODE_SETTING } from '@/core/state/viewModePreference';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { requestDeleteWindow } from '@/features/projects-dashboard/handlers/deleteWindowRequest';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import { loadProjectsForList } from '@/features/projects-dashboard/services/loadProjectsForList';
 import { presentedRows } from '@/features/updates/handlers/updatesModalHandlers';
 import { requestUpdatesModal } from '@/features/updates/handlers/updatesModalRequest';
 import type { ShowUpdatesPayload } from '@/types/pendingUpdates';
+import type { OpenDeleteWindowPayload } from '@/types/projectsBatch';
 import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -167,9 +169,10 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
      *
      * @param options - `showUpdates` opens the Updates modal on it with the rows Check for
      *   Updates presented (PL-80): pushed to a panel already open, held for one still
-     *   loading until its screen asks
+     *   loading until its screen asks. `deleteProject` opens the one-row Delete window on the
+     *   project at that path, the same way (the project dashboard's Delete, step-05 S4)
      */
-    public async execute(options?: { showUpdates?: boolean }): Promise<void> {
+    public async execute(options?: { showUpdates?: boolean; deleteProject?: string }): Promise<void> {
         // Set context to show webview sidebar instead of tree view
         await vscode.commands.executeCommand('setContext', 'demoBuilder.showingProjectsList', true);
 
@@ -185,6 +188,7 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
             // The screen asks for a held request once its `init` arrives, and sending
             // `init` is the load's last step, so a request held mid-load still reaches it.
             if (options?.showUpdates) requestUpdatesModal();
+            if (options?.deleteProject) requestDeleteWindow(options.deleteProject);
             this.loading ??= this.loadPage().finally(() => {
                 this.loading = undefined;
             });
@@ -198,6 +202,10 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
         await this.refreshConfig();
         if (options?.showUpdates) {
             await this.sendMessage('showUpdates', { rows: presentedRows() } satisfies ShowUpdatesPayload);
+        }
+        if (options?.deleteProject) {
+            const payload: OpenDeleteWindowPayload = { projectPath: options.deleteProject };
+            await this.sendMessage('openDeleteWindow', payload);
         }
     }
 

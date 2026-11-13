@@ -13,9 +13,9 @@
  *                                  wiring) + reAuthenticate/switchOrg
  *   - openUrlHandlers.ts           open-in-browser handlers + getProjectUrls
  *   - panelNavigationHandlers.ts   webview surface swaps (configure,
- *                                  navigateBack, openIntegrations,
- *                                  showProjectDashboard)
- *   - projectManagementHandlers.ts edit/delete/reset/rename/export
+ *                                  navigateBack, deleteFromProjectsList,
+ *                                  openIntegrations, showProjectDashboard)
+ *   - projectManagementHandlers.ts edit/rename/export
  *   - edsContentHandlers.ts        syncStorefront/refreshBlockLibrary/
  *                                  republishContent
  */
@@ -46,14 +46,13 @@ import {
 } from './openUrlHandlers';
 import {
     handleConfigure,
+    handleDeleteFromProjectsList,
     handleNavigateBack,
     handleOpenIntegrations,
     handleShowProjectDashboard,
 } from './panelNavigationHandlers';
 import {
     handleEditProject,
-    handleDeleteProject,
-    handleResetProject,
     handleRenameProject,
     handleExportProjectSettings,
 } from './projectManagementHandlers';
@@ -142,6 +141,10 @@ import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
 import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
 import { handleCheckErpIntegrationHolder } from '@/features/project-creation/handlers/erpIntegrationHolderHandler';
 import {
+    handlePrepareProjectsBatch,
+    handleRunProjectsBatch,
+} from '@/features/projects-dashboard/handlers/projectsBatchHandlers';
+import {
     MessageHandler,
     defineHandlers,
     type HandlerContext,
@@ -163,14 +166,13 @@ export {
 } from './openUrlHandlers';
 export {
     handleConfigure,
+    handleDeleteFromProjectsList,
     handleNavigateBack,
     handleOpenIntegrations,
     handleShowProjectDashboard,
 } from './panelNavigationHandlers';
 export {
     handleEditProject,
-    handleDeleteProject,
-    handleResetProject,
     handleRenameProject,
     handleExportProjectSettings,
 } from './projectManagementHandlers';
@@ -454,17 +456,18 @@ export const dashboardHandlers = defineHandlers({
     reAuthenticate: handleReAuthenticate,
     switchOrg: handleSwitchOrg,
 
-    // Project management handlers
-    deleteProject: handleDeleteProject,
+    // Project management handlers. Reset opens the projects list's batch window here, on this
+    // project, answered by the list's own handlers (step-05 S4); Delete opens the list on its
+    // one-row Delete window, since the dashboard closes when its project is deleted.
+    prepareProjectsBatch: handlePrepareProjectsBatch,
+    runProjectsBatch: handleRunProjectsBatch,
+    deleteFromProjectsList: handleDeleteFromProjectsList,
     editProject: handleEditProject,
     renameProject: handleRenameProject,
     exportProjectSettings: handleExportProjectSettings,
 
     // EDS content republish (re-push DA.live content to CDN)
     republishContent: handleRepublishContent,
-
-    // Project reset handler
-    resetProject: handleResetProject,
 
     // Adobe deploy destination (project-scoped — one target for every integration)
     setProjectDestination: handleSetProjectDestination,

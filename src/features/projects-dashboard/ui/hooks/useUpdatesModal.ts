@@ -115,8 +115,9 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
         [openOn],
     );
     useEffect(() => {
-        webviewClient.request<TakeUpdatesRequestResponse>('takeUpdatesRequest').then(
-            (response) => openOn(response.data.rows),
+        // An answer with no data opens nothing (as the Delete hand-off, step-05 S4), never a throw.
+        webviewClient.request<TakeUpdatesRequestResponse | null | undefined>('takeUpdatesRequest').then(
+            (response) => openOn(response?.data?.rows),
             () => undefined,
         );
     }, [openOn]);

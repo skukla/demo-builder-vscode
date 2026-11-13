@@ -32,15 +32,16 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import { APPLYING_TITLE, type RowStatuses, type UpdatesModalControls } from '../hooks/useUpdatesModal';
+import { endingRowOf, promptButtons } from './runWindowParts';
 import { groupsOf, updatesLiveSite, type RowGroup } from './updateGroups';
 import { UpdatesRunView, waitingLine } from './UpdatesRunView';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
-import { endsSmall, type EndingRow } from '@/core/ui/utils/runEnding';
+import { endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { PendingUpdateRow, UpdateRowState } from '@/types/pendingUpdates';
+import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 const LIST_TITLE = 'Updates Available';
@@ -130,15 +131,6 @@ function runHeadingOf(progress: OperationProgressPayload | null, rows: PendingUp
 }
 
 /**
- * A run row's status as the shared ending rule reads it: anything short of done (failed, skipped,
- * still going, never told) is a problem, and what it says once done is a note. The projects batch
- * run's rows have the same states, so it reads them through this too.
- */
-export function endingRowOf(status: { state: UpdateRowState; message?: string } | undefined): EndingRow {
-    return { problem: status?.state !== 'done', ...(status?.message ? { note: status.message } : {}) };
-}
-
-/**
  * Whether the run ended cleanly, by the shared rule (`endsSmall`): it succeeded with no warning and
  * every row, its local copy steps included, is done with nothing to read under it. Only then does
  * the window leave the rows (walk F134).
@@ -189,20 +181,6 @@ function runChrome(controls: UpdatesModalControls): Chrome {
         onPress: () => webviewClient.postMessage('openDebugLogs', {}),
     };
     return { closeLabel: 'Close', actions: [logs] };
-}
-
-/**
- * A run's question, answered by the window's buttons: the prompt's answers, its main one last as
- * a dialog's main button goes (a prompt names it first). The projects batch window asks with it too.
- */
-export function promptButtons(prompt: OperationPrompt, answer: (chosen?: string) => void): ActionButton[] {
-    const main = prompt.destructive ? 'negative' : 'accent';
-    const actions = prompt.actions.map((label, index): ActionButton => ({
-        label,
-        variant: index === 0 ? main : 'secondary',
-        onPress: () => answer(label),
-    }));
-    return [...actions.slice(1), ...actions.slice(0, 1)];
 }
 
 /** "Back to updates" beside Close, when rows the SC left unticked are still waiting. */

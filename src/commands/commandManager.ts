@@ -71,8 +71,8 @@ export class CommandManager {
             try {
                 ProjectDashboardWebviewCommand.disposeActivePanel();
                 ConfigureProjectWebviewCommand.disposeActivePanel();
-                // Check for Updates opens it with the Updates modal (PL-80).
-                await projectsList.execute({ showUpdates: isRecord(options) && options.showUpdates === true });
+                // Check for Updates opens it with the Updates modal (PL-80), Delete with its window.
+                await projectsList.execute(projectsListOptionsOf(options));
             } finally {
                 if (ownsTransition) BaseWebviewCommand.endWebviewTransition();
             }
@@ -673,4 +673,16 @@ export class CommandManager {
         this.commands.forEach((disposable) => disposable.dispose());
         this.commands.clear();
     }
+}
+
+/**
+ * What `demoBuilder.showProjectsList` was asked to open on the list: the Updates modal (Check
+ * for Updates, PL-80), or the Delete window on one project (the project dashboard's Delete,
+ * step-05 S4). Anything else is ignored.
+ */
+function projectsListOptionsOf(options: unknown): { showUpdates: boolean; deleteProject?: string } {
+    if (!isRecord(options)) return { showUpdates: false };
+    const deleteProject =
+        typeof options.deleteProject === 'string' && options.deleteProject ? options.deleteProject : undefined;
+    return { showUpdates: options.showUpdates === true, ...(deleteProject ? { deleteProject } : {}) };
 }

@@ -12,11 +12,18 @@ jest.mock('@/features/projects-dashboard/services/projectsBatch', () => ({
     runResetBatch: jest.fn(),
     saveNamesOf: jest.fn(),
 }));
+jest.mock('@/features/eds/services/reset/edsResetUI', () => ({ resetEdsProjectWithUI: jest.fn() }));
+jest.mock('@/core/di/serviceLocator', () => ({
+    ServiceLocator: { getCommandExecutor: jest.fn(), getAuthenticationService: jest.fn() },
+}));
 jest.mock('@/core/vscode/withOperationProgress', () => ({
     withOperationProgress: jest.fn(async (_options: unknown, work: (report: jest.Mock) => Promise<unknown>) => work(jest.fn())),
 }));
 
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
+import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
+import type { RunReset } from '@/features/projects-dashboard/services/projectsBatch';
 import { PROJECTS_BATCH_OPERATION_ID } from '@/core/utils/operationIds';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { handlePrepareProjectsBatch, handleRunProjectsBatch } from '@/features/projects-dashboard/handlers/projectsBatchHandlers';
@@ -110,5 +117,39 @@ describe('runProjectsBatch', () => {
         await handleRunProjectsBatch(context, { action: 'delete', answers: [ANSWER] });
 
         expect((runDeleteBatch as jest.Mock).mock.calls[0][0].stateManager).not.toBe(context.stateManager);
+    });
+});
+
+/**
+ * The reset each project gets, the list's and, since step-05 S4, the project dashboard's: one
+ * reset whichever door. Ported from the dashboard's own reset handler suite, which pinned the same
+ * whole-object call because these flags default to false, and the dashboard once did a lighter
+ * reset than the list for two years (EDS-12, fixed 2026-09-02).
+ */
+describe("runProjectsBatch's reset of a storefront project", () => {
+    it('includes the block library and the CDN check, inside the window, with the answers given', async () => {
+        let runReset: RunReset | undefined;
+        (runResetBatch as jest.Mock).mockImplementation(async (_ctx, _answers, run: { runReset: RunReset }) => {
+            runReset = run.runReset;
+            return 0;
+        });
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({ success: true });
+        await handleRunProjectsBatch(createMockHandlerContext(), { action: 'reset', answers: [{ path: '/projects/a', removeDatapack: true }] });
+        const project = createMockProject({ path: '/projects/a', selectedStack: 'eds-paas' });
+        const context = createMockHandlerContext();
+        const report = jest.fn();
+
+        await runReset?.(context, project, { path: '/projects/a', removeDatapack: true, changes: 'drop' }, report);
+
+        expect(resetEdsProjectWithUI).toHaveBeenCalledWith({
+            meshDeps: { commandManager: undefined, authManager: undefined },
+            project,
+            context,
+            logPrefix: '[ProjectsBatch]',
+            includeBlockLibrary: true,
+            verifyCdn: true,
+            withinEdit: { report },
+            answered: { removeDatapack: true, changes: 'drop' },
+        });
     });
 });
