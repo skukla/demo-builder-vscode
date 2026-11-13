@@ -96,7 +96,15 @@ Live notes; rewritten as the final report at the loop's close.
   type ticked whole is read when Next needs it (a spinner on Next; can take seconds on a big store).
   The spinner on Select All Data and its shared code and styles are gone (nothing else drew them).
   Full gate green (2,407 suites, 38,534 tests).
-- Step-04 S4 (the save run as two steps): with a builder.
+- Step-04 S4: f86881bac. A save's window shows "Export from Commerce" with its data types under it
+  ("2 of 5 data types"), then "Save My Luma" as its own row. Found on the way: a failed save used to
+  drop every row and show only the sentence; it now ends on the row it stopped on, a failed write on
+  the save row. Agents see no change. The steps' styles (bold titles, spacing) moved to the shared
+  row stylesheet, so the save's steps in the shared progress window look like the install window's.
+  Style check: no element moved on any of the nine screens (the sample screens draw no run steps, so
+  how the save's steps look is for the owner's screenshot pass). Full gate green (2,407 suites,
+  38,548 tests). Live save owed.
+- Step-04 S5 (the flyout bar and More menu): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -138,5 +146,9 @@ Live notes; rewritten as the final report at the loop's close.
   what the extension and agent tools accept; recommend not for beta.153. (b) A wholly ticked type shows
   "N selected", not the prototype's "48"; recommend keeping it. (c) The search still matches hidden
   details (SKU, email); recommend keeping it, since SCs search by SKU.
+- From S4: words chosen where nothing decided them: the failed rows say "Stopped" and "Not run";
+  the save row's spinning line keeps the engine's words ("Saving to My Datapacks", "Finishing the
+  save"); a failure after the reads but before the write ("nothing to save", "the install would
+  refuse it") lands on the save row. Recommend keeping all three.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
