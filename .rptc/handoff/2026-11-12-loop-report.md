@@ -218,7 +218,11 @@ Live notes; rewritten as the final report at the loop's close.
   uses kept, categories left alone when products or cart rules are unread, access-refused reads
   offering Open Commerce Admin, and the agent's consent naming the websites. Nothing is deleted that
   was not before. Full gate green (2,410 suites, 38,621 tests). Live Clear owed after C3.
-- Step-06 C2b (Clear's window: summary, Review Records with Removed and Kept tabs): with a builder.
+- Step-06 C2b: 07861c7d6. The Clear window as walked: "Clear Bodea Demo Data?", the type table,
+  Review Records with Removed and Kept tabs (the notice dot on kept counts, categories as a tree),
+  red "Clear N Items"; failed reads with the agreed offers. The install window's shared pieces are
+  unchanged (its tests unedited); style check: nothing moved. Full gate green (2,411 suites, 38,648).
+- Step-06 C3 (the datapack uninstalled first, then the clear, one run window): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -318,5 +322,9 @@ Live notes; rewritten as the final report at the loop's close.
   recommend amber).
 - From C1: the category filter matches a category's own name (typing "gear" shows Gear, not every
   row under it), as the walked prototype does; the old list matched the full path. Recommend keeping it.
+- From C2b: fix buttons sit in the footer beside Clear, one at a time (slow, then refused, then
+  strange); refused and strange types get no problem line (the row says it); returns get a "Closed"
+  tab like orders; a check that fails before it knows the project is titled "Clear Demo Data".
+  Recommend keeping all four.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
