@@ -366,8 +366,8 @@ describe('resetEdsProjectWithUI — answered by a batch', () => {
         expect(result.success).toBe(true);
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(withOperationProgress).not.toHaveBeenCalled();
-        const askName = (removeProjectSampleData as jest.Mock).mock.calls[0][3] as () => Promise<unknown>;
-        await expect(askName()).resolves.toStrictEqual({ saveAs: 'My Bodea' });
+        // Given, not asked: it goes with the first read, so it reaches the SC's own pack too (step-05 S1).
+        expect((removeProjectSampleData as jest.Mock).mock.calls[0][3]).toStrictEqual({ given: { saveAs: 'My Bodea' } });
     });
 
     it('keeps the datapack when the batch said not to remove it', async () => {

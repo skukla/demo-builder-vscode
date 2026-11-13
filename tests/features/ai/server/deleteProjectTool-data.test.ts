@@ -18,7 +18,7 @@ import {
 } from './deleteProjectTool.testUtils';
 import { z } from 'zod';
 import { cleanUpProjectCloud } from '@/features/ai/server/agentProjectCleanup';
-import type { AskSaveAsName } from '@/features/eds/services/reset/edsResetSampleData';
+import type { SaveAsAnswer, SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
 import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 import type { HandlerContext } from '@/types/handlers';
@@ -41,10 +41,17 @@ function register() {
     return { server, ctx: () => ctx };
 }
 
+/** The question asked, as the real removal asks it; the agent's delete always asks, never gives. */
+async function askedWith(askName: SaveAsAnswering | undefined): Promise<SaveAsAnswer> {
+    if (askName === undefined) return undefined;
+    if (typeof askName !== 'function') throw new Error('The agent\'s delete gave an answer up front; it asks.');
+    return askName({ sentence: SENTENCE });
+}
+
 /** The removal asks about changes in a pack that is not the user's, as the real one does. */
 function removalAsks() {
-    mockedRemove.mockImplementation(async (_ctx, _project, _report, askName?: AskSaveAsName) => {
-        const answer = await askName?.({ sentence: SENTENCE });
+    mockedRemove.mockImplementation(async (_ctx, _project, _report, askName?: SaveAsAnswering) => {
+        const answer = await askedWith(askName);
         return answer === undefined ? `Its datapack's data was not removed, so the project was kept: ${SENTENCE} They were not answered.` : undefined;
     });
 }
@@ -122,7 +129,7 @@ describe("delete_project and the datapack's data", () => {
     ])('answers the changes question with %j, then deletes', async (given, expected) => {
         removalAsks();
         let handed: unknown;
-        mockedRemove.mockImplementation(async (_c, _p, _r, askName?: AskSaveAsName) => void (handed = await askName?.({ sentence: SENTENCE })));
+        mockedRemove.mockImplementation(async (_c, _p, _r, askName?: SaveAsAnswering) => void (handed = await askedWith(askName)));
 
         const answer = await register().server.call({ ...CONFIRMED, removeData: true, ...given });
 

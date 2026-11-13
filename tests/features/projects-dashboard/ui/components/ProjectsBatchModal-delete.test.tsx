@@ -4,7 +4,8 @@
  * answer per project from what is ticked. A refusal from the read is said in the window.
  *
  * Uninstall Datapack (walk F96): unticked, beside the pack's name, a note instead of a box where
- * the changes could not be read, and Reset Selected's step 2 for a ticked pack that is not the SC's.
+ * the changes could not be read, and Reset Selected's "Save Your Changes First?" for a ticked pack
+ * with changes, its verb Delete (step-05 S1, J7-3).
  */
 
 import { act, screen, within } from '@testing-library/react';
@@ -16,19 +17,17 @@ import {
     runRequest,
     type PrepareEnvelope,
 } from './ProjectsBatchModal.testUtils';
+import { deleteQuestions } from '../../../../helpers/projectsBatchFixtures';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
+import type { BatchDeleteRow, BatchSaveNames } from '@/types/projectsBatch';
 
-const DELETE: PrepareEnvelope = {
-    success: true,
-    data: {
-        action: 'delete',
-        rows: [
-            { path: '/p/a', name: asDisplayName('A'), repo: { name: asDisplayName('me/a'), ticked: true }, site: { name: asDisplayName('org/a'), ticked: true } },
-            { path: '/p/b', name: asDisplayName('B'), repo: { name: asDisplayName('me/b'), ticked: false } },
-            { path: '/p/c', name: asDisplayName('C') },
-        ],
-    },
-};
+const prepared = (rows: BatchDeleteRow[], save: Partial<BatchSaveNames> = {}): PrepareEnvelope => ({ success: true, data: deleteQuestions(rows, save) });
+
+const DELETE = prepared([
+    { path: '/p/a', name: asDisplayName('A'), repo: { name: 'me/a', ticked: true }, site: { name: 'org/a', ticked: true } },
+    { path: '/p/b', name: asDisplayName('B'), repo: { name: 'me/b', ticked: false } },
+    { path: '/p/c', name: asDisplayName('C') },
+]);
 
 const box = (name: string) => screen.getByRole('checkbox', { name });
 
@@ -99,10 +98,7 @@ describe('ProjectsBatchModal: Delete Selected', () => {
     });
 
     it('asks for one project, in the same words', async () => {
-        const one: PrepareEnvelope = {
-            success: true,
-            data: { action: 'delete', rows: [{ path: '/p/a', name: asDisplayName('A'), repo: { name: 'me/a', ticked: false } }] },
-        };
+        const one = prepared([{ path: '/p/a', name: asDisplayName('A'), repo: { name: 'me/a', ticked: false } }]);
         await openOn('delete', one);
 
         expect(await screen.findByRole('dialog', { name: 'Delete 1 Project?' })).toBeInTheDocument();
@@ -172,17 +168,13 @@ describe('ProjectsBatchModal: Delete Selected', () => {
     });
 });
 
-const WITH_DATA: PrepareEnvelope = {
-    success: true,
-    data: {
-        action: 'delete',
-        rows: [
-            { path: '/p/a', name: asDisplayName('A'), datapack: { name: 'Frescopa', changes: 'asks' } },
-            { path: '/p/b', name: asDisplayName('B'), datapack: { name: 'My Bodea', changes: 'saves' } },
-            { path: '/p/c', name: asDisplayName('C'), datapack: { name: 'Unread', changes: 'unchecked' } },
-        ],
-    },
-};
+const DATA_ROWS: BatchDeleteRow[] = [
+    { path: '/p/a', name: asDisplayName('A'), datapack: { name: 'Frescopa', changes: 'asks' } },
+    { path: '/p/b', name: asDisplayName('B'), datapack: { name: 'My Bodea', changes: 'saves' } },
+    { path: '/p/c', name: asDisplayName('C'), datapack: { name: 'Unread', changes: 'unchecked' } },
+];
+
+const WITH_DATA = prepared(DATA_ROWS, { ownNames: ['My Bodea'] });
 
 describe('ProjectsBatchModal: Delete Selected, Uninstall Datapack', () => {
     it("offers each pack's data unticked, says it stays unless removed, and keeps one whose changes were not read", async () => {
@@ -199,12 +191,17 @@ describe('ProjectsBatchModal: Delete Selected, Uninstall Datapack', () => {
         expect(within(rowC).getByText("Couldn't check for changes. Datapack kept.")).toBeInTheDocument();
     });
 
-    it("removes the SC's own pack's data with no second step", async () => {
+    it("asks before removing the SC's own pack's data, and Save and Delete saves into it, sending nothing", async () => {
         const { user } = await openOn('delete', WITH_DATA);
         await screen.findByRole('dialog', { name: 'Delete 3 Projects?' });
         await user.click(box('Uninstall Datapack, B'));
 
         await user.click(screen.getByRole('button', { name: 'Delete 3 Projects' }));
+        expect(screen.getByRole('dialog', { name: 'Save Your Changes First?' })).toBeInTheDocument();
+        expect(screen.getByRole('textbox', { name: 'Save As, B' })).toHaveValue('My Bodea');
+        const window = screen.getByRole('dialog', { name: 'Save Your Changes First?' });
+        expect(within(window).getAllByRole('button').map((b) => b.textContent)).toStrictEqual(['Delete Without Saving', 'Cancel', 'Save and Delete']);
+        await user.click(screen.getByRole('button', { name: 'Save and Delete' }));
 
         expect(runRequest()).toMatchObject({
             answers: [
@@ -213,26 +210,61 @@ describe('ProjectsBatchModal: Delete Selected, Uninstall Datapack', () => {
                 { path: '/p/c', removeDatapackData: false },
             ],
         });
+        expect((runRequest() as { answers: object[] }).answers[1]).not.toHaveProperty('changes');
     });
 
-    it("Continues to Datapack Changes for a pack that is not the SC's, and sends the name given", async () => {
+    it("removes the SC's own pack's data with no question when the setting saves it", async () => {
+        const { user } = await openOn('delete', prepared(DATA_ROWS, { ownNames: ['My Bodea'], alwaysSave: true }));
+        await screen.findByRole('dialog', { name: 'Delete 3 Projects?' });
+        await user.click(box('Uninstall Datapack, B'));
+
+        await user.click(screen.getByRole('button', { name: 'Delete 3 Projects' }));
+
+        expect(screen.queryByRole('dialog', { name: 'Save Your Changes First?' })).toBeNull();
+        expect((runRequest() as { answers: object[] }).answers[1]).toStrictEqual({
+            path: '/p/b',
+            deleteGitHubRepo: false,
+            deleteDaLiveSite: false,
+            removeDatapackData: true,
+        });
+    });
+
+    it("saves a pack that is not the SC's under the name given, or drops it with Delete Without Saving", async () => {
         const { user } = await openOn('delete', WITH_DATA);
         await screen.findByRole('dialog', { name: 'Delete 3 Projects?' });
         await user.click(box('Uninstall Datapack, A'));
+        await user.click(screen.getByRole('button', { name: 'Delete 3 Projects' }));
 
-        await user.click(screen.getByRole('button', { name: 'Continue' }));
-        expect(screen.getByRole('dialog', { name: 'Datapack Changes' })).toBeInTheDocument();
-        const run = screen.getByRole('button', { name: 'Delete 3 Projects' });
-        expect(run).toBeDisabled();
-        await user.type(screen.getByRole('textbox', { name: 'New datapack name, A' }), 'My Frescopa');
-        await user.click(run);
+        const field = screen.getByRole('textbox', { name: 'Save As, A' });
+        expect(field).toHaveValue('My Frescopa');
+        await user.clear(field);
+        await user.type(field, 'Frescopa Copy');
+        await user.click(screen.getByRole('button', { name: 'Save and Delete' }));
 
         expect(runRequest()).toMatchObject({
             answers: [
-                { path: '/p/a', removeDatapackData: true, changes: { saveAs: 'My Frescopa' } },
+                { path: '/p/a', removeDatapackData: true, changes: { saveAs: 'Frescopa Copy' } },
                 { path: '/p/b', removeDatapackData: false },
                 { path: '/p/c', removeDatapackData: false },
             ],
         });
+    });
+
+    it("Delete Without Saving sends 'drop' for every pack whose data goes", async () => {
+        const { user } = await openOn('delete', WITH_DATA);
+        await screen.findByRole('dialog', { name: 'Delete 3 Projects?' });
+        await user.click(box('Uninstall Datapack'));
+        await user.click(screen.getByRole('button', { name: 'Delete 3 Projects' }));
+
+        await user.click(screen.getByRole('button', { name: 'Delete Without Saving' }));
+
+        expect(runRequest()).toMatchObject({
+            answers: [
+                { path: '/p/a', removeDatapackData: true, changes: 'drop' },
+                { path: '/p/b', removeDatapackData: true, changes: 'drop' },
+                { path: '/p/c', removeDatapackData: false },
+            ],
+        });
+        expect((runRequest() as { answers: object[] }).answers[2]).not.toHaveProperty('changes');
     });
 });

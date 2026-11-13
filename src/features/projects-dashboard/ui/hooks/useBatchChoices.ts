@@ -1,8 +1,8 @@
 /**
  * useBatchChoices — what the SC has chosen in the batch window's questions (owner, 2026-11-04):
  * Delete Selected's boxes and Reset Selected's Uninstall Datapack box per project, then, for either,
- * a new datapack's name or Discard Changes per pack that asks (walk F96), and which step is showing. The rules
- * live in `batchChoices.ts`; this holds the state.
+ * whether "Save Your Changes First?" is showing and the names typed in it (step-05 S1, J7-2). The
+ * rules live in `batchChoices.ts`; this holds the state.
  *
  * @module features/projects-dashboard/ui/hooks/useBatchChoices
  */
@@ -13,18 +13,13 @@ import {
     initialRemoveTicks,
     toggleColumn,
     toggleDeleteTick,
-    toggleDiscardColumn,
     toggleRemoveColumn,
     type DeleteOptionKey,
     type DeleteTicks,
-    type PackRow,
     type RemoveTicks,
-    type ResetFields,
+    type SaveNames,
 } from '../batchChoices';
 import type { BatchDeleteRow, BatchResetRow, PrepareProjectsBatchResponse } from '@/types/projectsBatch';
-
-/** Either batch's two steps: the projects and whose pack's data goes, then the packs' changes. */
-export type ResetStep = 'projects' | 'changes';
 
 export interface BatchChoices {
     ticks: DeleteTicks;
@@ -34,32 +29,32 @@ export interface BatchChoices {
     removeTicks: RemoveTicks;
     toggleRemove: (path: string) => void;
     toggleRemoveColumn: (rows: readonly BatchResetRow[]) => void;
-    fields: ResetFields;
-    setSaveAs: (path: string, name: string) => void;
-    setDrop: (path: string, drop: boolean) => void;
-    toggleDiscardColumn: (rows: readonly PackRow[]) => void;
-    step: ResetStep;
-    setStep: (step: ResetStep) => void;
+    /** "Save Your Changes First?" is showing, over the questions it follows. */
+    saving: boolean;
+    askToSave: () => void;
+    /** The names typed in the save question, by project path; a row not typed in keeps its start. */
+    typedNames: SaveNames;
+    setName: (path: string, name: string) => void;
     /** Start over on the rows a prepare read. */
     begin: (response: PrepareProjectsBatchResponse) => void;
 }
 
 const NO_TICKS: DeleteTicks = {};
 const NO_REMOVE: RemoveTicks = {};
-const NO_FIELDS: ResetFields = {};
+const NO_NAMES: SaveNames = {};
 
 /** The questions' state. */
 export function useBatchChoices(): BatchChoices {
     const [ticks, setTicks] = useState<DeleteTicks>(NO_TICKS);
     const [removeTicks, setRemoveTicks] = useState<RemoveTicks>(NO_REMOVE);
-    const [fields, setFields] = useState<ResetFields>(NO_FIELDS);
-    const [step, setStep] = useState<ResetStep>('projects');
+    const [saving, setSaving] = useState(false);
+    const [typedNames, setTypedNames] = useState<SaveNames>(NO_NAMES);
 
     const begin = useCallback((response: PrepareProjectsBatchResponse) => {
         setTicks(response.action === 'delete' ? initialDeleteTicks(response.rows) : NO_TICKS);
         setRemoveTicks(response.action === 'reset' ? initialRemoveTicks(response.rows) : NO_REMOVE);
-        setFields(NO_FIELDS);
-        setStep('projects');
+        setSaving(false);
+        setTypedNames(NO_NAMES);
     }, []);
 
     const toggleRemove = useCallback((path: string) => {
@@ -70,10 +65,6 @@ export function useBatchChoices(): BatchChoices {
         setRemoveTicks((previous) => toggleRemoveColumn(rows, previous));
     }, []);
 
-    const toggleWholeDiscardColumn = useCallback((rows: readonly PackRow[]) => {
-        setFields((previous) => toggleDiscardColumn(rows, previous));
-    }, []);
-
     const toggleTick = useCallback((path: string, key: DeleteOptionKey) => {
         setTicks((previous) => toggleDeleteTick(previous, path, key));
     }, []);
@@ -82,12 +73,10 @@ export function useBatchChoices(): BatchChoices {
         setTicks((previous) => toggleColumn(rows, previous, key));
     }, []);
 
-    const setSaveAs = useCallback((path: string, name: string) => {
-        setFields((previous) => ({ ...previous, [path]: { drop: previous[path]?.drop ?? false, saveAs: name } }));
-    }, []);
+    const askToSave = useCallback(() => setSaving(true), []);
 
-    const setDrop = useCallback((path: string, drop: boolean) => {
-        setFields((previous) => ({ ...previous, [path]: { saveAs: previous[path]?.saveAs ?? '', drop } }));
+    const setName = useCallback((path: string, name: string) => {
+        setTypedNames((previous) => ({ ...previous, [path]: name }));
     }, []);
 
     return useMemo(
@@ -98,14 +87,12 @@ export function useBatchChoices(): BatchChoices {
             removeTicks,
             toggleRemove,
             toggleRemoveColumn: toggleWholeRemoveColumn,
-            fields,
-            setSaveAs,
-            setDrop,
-            toggleDiscardColumn: toggleWholeDiscardColumn,
-            step,
-            setStep,
+            saving,
+            askToSave,
+            typedNames,
+            setName,
             begin,
         }),
-        [ticks, toggleTick, toggleWholeColumn, removeTicks, toggleRemove, toggleWholeRemoveColumn, fields, setSaveAs, setDrop, toggleWholeDiscardColumn, step, begin],
+        [ticks, toggleTick, toggleWholeColumn, removeTicks, toggleRemove, toggleWholeRemoveColumn, saving, askToSave, typedNames, setName, begin],
     );
 }

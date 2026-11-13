@@ -15,18 +15,16 @@ import {
     type PrepareEnvelope,
 } from './ProjectsBatchModal.testUtils';
 import type { OperationPrompt } from '@/types/webviewPayloads';
+import { deleteQuestions, resetQuestions } from '../../../../helpers/projectsBatchFixtures';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 const DELETE: PrepareEnvelope = {
     success: true,
-    data: {
-        action: 'delete',
-        rows: [
+    data: deleteQuestions([
             { path: '/p/a', name: asDisplayName('A') },
             { path: '/p/b', name: asDisplayName('B') },
             { path: '/p/c', name: asDisplayName('C') },
-        ],
-    },
+        ]),
 };
 
 const ID = PROJECTS_BATCH_OPERATION_ID;
@@ -103,14 +101,11 @@ describe('ProjectsBatchModal: the run', () => {
     it('heads each org of a reset only when there is more than one', async () => {
         const reset: PrepareEnvelope = {
             success: true,
-            data: {
-                action: 'reset',
-                rows: [
+            data: resetQuestions([
                     { path: '/p/a', name: asDisplayName('A'), org: 'Demo Org' },
                     { path: '/p/c', name: asDisplayName('C'), org: 'Demo Org' },
                     { path: '/p/b', name: asDisplayName('B'), org: 'Sandbox' },
-                ],
-            },
+                ]),
         };
         const opened = await openOn('reset', reset);
         await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
@@ -126,7 +121,7 @@ describe('ProjectsBatchModal: the run', () => {
     it('draws no org heading for one known org beside a project that records none', async () => {
         const reset: PrepareEnvelope = {
             success: true,
-            data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A') }, { path: '/p/b', name: asDisplayName('B'), org: 'Demo Org' }] },
+            data: resetQuestions([{ path: '/p/a', name: asDisplayName('A') }, { path: '/p/b', name: asDisplayName('B'), org: 'Demo Org' }]),
         };
         const opened = await openOn('reset', reset);
         await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
@@ -139,10 +134,7 @@ describe('ProjectsBatchModal: the run', () => {
     it('heads an unrecorded org as unknown when there are two known orgs', async () => {
         const reset: PrepareEnvelope = {
             success: true,
-            data: {
-                action: 'reset',
-                rows: [{ path: '/p/a', name: asDisplayName('A'), org: 'Demo Org' }, { path: '/p/b', name: asDisplayName('B') }, { path: '/p/c', name: asDisplayName('C'), org: 'Sandbox' }],
-            },
+            data: resetQuestions([{ path: '/p/a', name: asDisplayName('A'), org: 'Demo Org' }, { path: '/p/b', name: asDisplayName('B') }, { path: '/p/c', name: asDisplayName('C'), org: 'Sandbox' }]),
         };
         const opened = await openOn('reset', reset);
         await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
@@ -156,7 +148,7 @@ describe('ProjectsBatchModal: the run', () => {
     it('draws no org heading when every project is in one org', async () => {
         const reset: PrepareEnvelope = {
             success: true,
-            data: { action: 'reset', rows: [{ path: '/p/a', name: asDisplayName('A'), org: 'Demo Org' }, { path: '/p/b', name: asDisplayName('B'), org: 'Demo Org' }] },
+            data: resetQuestions([{ path: '/p/a', name: asDisplayName('A'), org: 'Demo Org' }, { path: '/p/b', name: asDisplayName('B'), org: 'Demo Org' }]),
         };
         const opened = await openOn('reset', reset);
         await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });

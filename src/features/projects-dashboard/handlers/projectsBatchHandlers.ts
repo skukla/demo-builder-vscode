@@ -10,7 +10,7 @@
  * @module features/projects-dashboard/handlers/projectsBatchHandlers
  */
 
-import { prepareDeleteBatch, prepareResetBatch, runDeleteBatch, runResetBatch, type RunReset, type TellRow } from '../services/projectsBatch';
+import { prepareDeleteBatch, prepareResetBatch, runDeleteBatch, runResetBatch, saveNamesOf, type RunReset, type TellRow } from '../services/projectsBatch';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { PROJECTS_BATCH_OPERATION_ID } from '@/core/utils/operationIds';
@@ -33,10 +33,13 @@ const isPathList = (value: unknown): value is string[] =>
 export const handlePrepareProjectsBatch: MessageHandler<PrepareProjectsBatchRequest> = async (context, payload) => {
     if (!isAction(payload?.action)) return { success: false, error: 'Say whether to reset or delete.' };
     if (!isPathList(payload.projectPaths)) return { success: false, error: NO_PROJECTS };
-    const data: PrepareProjectsBatchResponse =
-        payload.action === 'delete'
-            ? { action: 'delete', rows: await prepareDeleteBatch(context, payload.projectPaths) }
-            : { action: 'reset', rows: await prepareResetBatch(context, payload.projectPaths) };
+    if (payload.action === 'delete') {
+        const rows = await prepareDeleteBatch(context, payload.projectPaths);
+        const data: PrepareProjectsBatchResponse = { action: 'delete', rows, ...(await saveNamesOf(context, rows)) };
+        return { success: true, data };
+    }
+    const rows = await prepareResetBatch(context, payload.projectPaths);
+    const data: PrepareProjectsBatchResponse = { action: 'reset', rows, ...(await saveNamesOf(context, rows)) };
     return { success: true, data };
 };
 

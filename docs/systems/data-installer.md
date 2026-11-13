@@ -229,8 +229,13 @@ which lists every object the install made. It never removes by name.
   backend, and its sentence says the data stays in Commerce unless removed. Ticked, the data comes
   out FIRST, through the reset's own removal and its changes question above; if it does not all
   come out, the delete stops and the project is kept, since deleting it would leave the data with no
-  record. Delete Selected asks the same per project, with a second step for names, as Reset Selected
-  does; `delete_project` takes `removeData` with `changes` and `saveAs`. A project delete never
+  record. Delete Selected asks the same per project, as Reset Selected does: when a pack whose data
+  goes has changes, the red button runs into **Save Your Changes First?** (step-05 S1, J7-2), a row
+  per datapack under **Datapack** and **Save As**, each a filled-in name (the SC's own starts with
+  its own name and saves into it; someone else's starts "My Bodea"), then **Reset/Delete Without
+  Saving**, **Cancel** or **Save and Reset/Delete**. The SC's own is left out when
+  `changesOnRemoval` saves it; a pack whose changes could not be read keeps its data and is not
+  asked about. `delete_project` takes `removeData` with `changes` and `saveAs`. A project delete never
   deletes a datapack: that is the library's Remove.
 - **A pack it has no record of** (one the service installed, or one installed from
   another project) is refused, and nothing is removed (owner, 2026-10-30, step 14

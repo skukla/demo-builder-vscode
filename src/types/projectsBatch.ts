@@ -48,8 +48,8 @@ export interface BatchDatapack {
     /** The pack's name as the SC knows it. */
     name: string;
     /**
-     * The changes since the install: `saves` when they go into the SC's own pack with no question,
-     * `asks` when the pack is not theirs and they need a new pack's name or to be discarded, and
+     * The changes since the install: `saves` when the pack is the SC's own, so a save goes into it
+     * (asked unless `alwaysSave`); `asks` when it is not theirs, so a save makes a new pack; and
      * `unchecked` when they could not be read, so the batch keeps the pack (owner, 2026-11-04: a
      * batch never discards changes nobody could see). Absent with no changes.
      */
@@ -71,9 +71,23 @@ export interface BatchResetRow {
     datapack?: BatchDatapack;
 }
 
+/**
+ * What "Save Your Changes First?" needs, beside the rows (step-05 S1, J7-2): the names a new
+ * datapack may not take, and whether the SC's own packs are saved into without asking.
+ */
+export interface BatchSaveNames {
+    /** The SC's own datapacks' names in the library (`packSave.ts`); none when it cannot be asked. */
+    ownNames: string[];
+    /**
+     * `demoBuilder.dataInstaller.changesOnRemoval` is `save`: a pack whose changes are `saves` goes
+     * into the SC's own pack with no question, so the save question leaves it out (P5-Q6).
+     */
+    alwaysSave: boolean;
+}
+
 export type PrepareProjectsBatchResponse =
-    | { action: 'delete'; rows: BatchDeleteRow[] }
-    | { action: 'reset'; rows: BatchResetRow[] };
+    | ({ action: 'delete'; rows: BatchDeleteRow[] } & BatchSaveNames)
+    | ({ action: 'reset'; rows: BatchResetRow[] } & BatchSaveNames);
 
 /** What the SC chose for one project of a delete batch. */
 export interface BatchDeleteAnswer {
@@ -82,7 +96,10 @@ export interface BatchDeleteAnswer {
     deleteDaLiveSite: boolean;
     /** Uninstall Datapack: the pack's data comes out of Commerce before the files go. */
     removeDatapackData: boolean;
-    /** When the pack is not theirs and has changes: a name to save them as, or `drop`. */
+    /**
+     * The save question's answer for a pack with changes: a new pack's name, or `drop`. Absent: a
+     * pack of the SC's own is saved into, one that is not theirs keeps its data.
+     */
     changes?: { saveAs: string } | 'drop';
 }
 
@@ -90,7 +107,7 @@ export interface BatchDeleteAnswer {
 export interface BatchResetAnswer {
     path: string;
     removeDatapack: boolean;
-    /** When the pack is not theirs and has changes: a name to save them as, or `drop`. */
+    /** As a delete's (`BatchDeleteAnswer.changes`). */
     changes?: { saveAs: string } | 'drop';
 }
 

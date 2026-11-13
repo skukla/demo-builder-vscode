@@ -1,6 +1,6 @@
 /**
  * Shared setup for the batch window's suites: the house Modal reduced to its title, wait, body and
- * buttons, a harness that drives the REAL `useProjectsBatch` into the REAL window, and the
+ * buttons (the footer's start ones first, as "Save Your Changes First?" draws its losing choice), a harness that drives the REAL `useProjectsBatch` into the REAL window, and the
  * extension's answers and pushes, typed to the contract (`@/types/projectsBatch`).
  */
 
@@ -21,6 +21,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         status,
         size,
         actionButtons = [],
+        startButtons = [],
         onClose,
         closeLabel,
         hideClose,
@@ -32,6 +33,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         status?: string;
         size?: string;
         actionButtons?: ActionButton[];
+        startButtons?: ActionButton[];
         onClose: () => void;
         closeLabel?: string;
         hideClose?: boolean;
@@ -42,7 +44,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         <div role="dialog" aria-label={title} data-status={status} data-size={size} data-wide={wide ? 'true' : undefined}>
             {waiting ? <p>{waiting.label}</p> : children}
             {!hideClose && <button onClick={onClose}>{closeLabel ?? 'Close'}</button>}
-            {(waiting ? [] : actionButtons).map((b) => (
+            {(waiting ? [] : [...startButtons, ...actionButtons]).map((b) => (
                 <button key={b.label} onClick={b.onPress} disabled={b.isDisabled} data-variant={b.variant}>
                     {b.label}
                 </button>

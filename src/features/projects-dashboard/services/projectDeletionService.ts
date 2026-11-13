@@ -20,7 +20,7 @@ import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { deleteOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { type ReportStage, withOperationProgress } from '@/core/vscode/withOperationProgress';
-import { type AskSaveAsName, askSaveAsNameWith } from '@/features/eds/services/reset/edsResetSampleData';
+import { askSaveAsNameWith, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
 import {
     extractEdsMetadata,
     formatCleanupResults,
@@ -67,10 +67,10 @@ async function askBeforeDelete(
 export interface AnsweredDelete {
     cleanupOptions: CleanupOptions;
     /**
-     * How a pack that is not the SC's, with changes, is answered when its data goes: asked in the
-     * window (a single delete), or given up front (a batch, an agent).
+     * How a pack with changes is answered when its data goes: asked when it comes up (a single
+     * delete, an agent), or given up front (a batch's save question, `GivenSaveAs`).
      */
-    askName?: AskSaveAsName;
+    askName?: SaveAsAnswering;
     /** Where each cleanup step's result is added. */
     cleanupResults: CleanupResultItem[];
     services?: DeletionServices;

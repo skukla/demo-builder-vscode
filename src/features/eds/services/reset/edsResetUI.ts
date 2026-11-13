@@ -352,7 +352,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 // the reset still stands.
                 if (removeData) {
                     // A batch answered the changes already; asking here would stop it mid-run.
-                    const askName = answered ? () => Promise.resolve(answered.changes) : askSaveAsNameWith(vscode);
+                    const askName = answered ? { given: answered.changes } : askSaveAsNameWith(vscode);
                     await removeProjectSampleData(project, context, report, askName);
                 }
                 // After the pack's removal, so what it took is gone from the list, never added to it.

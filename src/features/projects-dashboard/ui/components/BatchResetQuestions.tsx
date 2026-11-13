@@ -4,8 +4,8 @@
  * (a reset rewrites it), and a Uninstall Datapack box naming the pack only where it can go; the column
  * header is its Select All, the name column's is Project (owner, 2026-11-05). A pack
  * whose changes could not be read has no box and says it is kept, on its own row: a batch never
- * discards changes nobody could see (option B). Step 2, the packs' changes, is
- * `BatchDatapackChanges`, shared with Delete Selected since walk F96.
+ * discards changes nobody could see (option B). The packs' changes are asked after the red button,
+ * in "Save Your Changes First?" (`BatchSaveTable`), shared with Delete Selected (step-05 S1).
  *
  * The table is Delete Selected's (`batch-delete-table`), so the two windows draw a project and its
  * boxes one way, and it stacks the same in a narrow window.

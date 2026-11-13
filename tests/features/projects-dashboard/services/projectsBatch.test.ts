@@ -9,6 +9,7 @@ jest.mock('@/features/projects-dashboard/services/projectDeletionService', () =>
 jest.mock('@/features/projects-dashboard/services/datapackDataRemoval', () => ({ hasRemovableData: jest.fn() }));
 jest.mock('@/features/data-installer/handlers/removalChanges', () => ({ readRemovalChangesOf: jest.fn() }));
 jest.mock('@/features/eds/services/storefront/sharedRepoProjects', () => ({ sharedOnlineOf: jest.fn() }));
+jest.mock('@/features/data-installer/handlers/packSave', () => ({ ownNames: jest.fn() }));
 // The library, for a pack's display name: unreachable unless a test says otherwise.
 jest.mock('@/features/data-installer/handlers/libraryWriter', () => ({
     openLibraryWriter: jest.fn(async () => ({ ok: false, reason: 'not in this test' })),
@@ -19,6 +20,7 @@ import * as vscode from 'vscode';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
+import { ownNames } from '@/features/data-installer/handlers/packSave';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { hasRemovableData } from '@/features/projects-dashboard/services/datapackDataRemoval';
@@ -29,6 +31,7 @@ import {
     prepareResetBatch,
     runDeleteBatch,
     runResetBatch,
+    saveNamesOf,
 } from '@/features/projects-dashboard/services/projectsBatch';
 import type { Project } from '@/types/base';
 import type { ProjectsBatchRowStatus } from '@/types/projectsBatch';
@@ -89,7 +92,7 @@ describe('prepareDeleteBatch', () => {
     });
 
     // Uninstall Datapack (walk F96): offered where Demo Builder installed the pack, with what the
-    // reset batch reads about its changes, so step 2 can ask for a name.
+    // reset batch reads about its changes, so the save question can ask for a name.
     it("offers the datapack's data where it can be removed, with whether its changes need a name", async () => {
         const mine = withData('mine');
         const theirs = withData('theirs');
@@ -171,7 +174,7 @@ describe('prepareResetBatch', () => {
         expect(row.datapack).toStrictEqual({ name: 'bodea', changes: 'unchecked' });
     });
 
-    // Step 2 names each pack, so it is the name the Datapacks screen shows, not its id (F17).
+    // The save question names each pack, so it is the name the Datapacks screen shows, not its id (F17).
     it("names a library pack by its display name", async () => {
         const team = withPack('team');
         mockedChanges.mockResolvedValue({ count: 1, kinds: [], alwaysSave: false });
@@ -233,6 +236,34 @@ describe('prepareResetBatch', () => {
     });
 });
 
+// What "Save Your Changes First?" needs (step-05 S1, J7-2): the names a new datapack may not take,
+// and whether the setting saves into the SC's own without asking (P5-Q6).
+describe('saveNamesOf', () => {
+    const mockedOwnNames = ownNames as jest.MockedFunction<typeof ownNames>;
+
+    it("reads the SC's datapacks' names when a pack has changes, and the setting", async () => {
+        mockedOwnNames.mockResolvedValue(['My Luma', 'My Bodea']);
+        setting('save');
+        const context = createMockHandlerContext();
+
+        const names = await saveNamesOf(context, [{ datapack: { name: 'Bodea', changes: 'asks' } }]);
+
+        expect(mockedOwnNames).toHaveBeenCalledWith(context);
+        expect(names).toStrictEqual({ ownNames: ['My Luma', 'My Bodea'], alwaysSave: true });
+    });
+
+    it('asks the library nothing when no pack has changes a save could take', async () => {
+        const names = await saveNamesOf(createMockHandlerContext(), [
+            { datapack: { name: 'Bodea' } },
+            { datapack: { name: 'Unread', changes: 'unchecked' } },
+            {},
+        ]);
+
+        expect(mockedOwnNames).not.toHaveBeenCalled();
+        expect(names).toStrictEqual({ ownNames: [], alwaysSave: false });
+    });
+});
+
 describe('runDeleteBatch', () => {
     it('tells every row waiting, then runs each in turn, and a failure does not stop the rest', async () => {
         const a = storefront('a');
@@ -266,8 +297,8 @@ describe('runDeleteBatch', () => {
         expect(mockedDelete.mock.calls[0][2]).toMatchObject({ cleanupOptions: { deleteGitHubRepo: true, deleteDaLiveSite: false, removeDatapackData: false } });
     });
 
-    // Step 2's answer goes in up front: the removal asks nothing in the window (walk F96).
-    it("removes the data when ticked, answering the changes question with step 2's answer", async () => {
+    // The save question's answer goes in up front: the removal asks nothing in the window (walk F96).
+    it("removes the data when ticked, answering the changes question with the save question's answer", async () => {
         const a = withData('a');
         mockedDelete.mockResolvedValue({});
 
@@ -280,7 +311,8 @@ describe('runDeleteBatch', () => {
 
         const answered = mockedDelete.mock.calls[0][2];
         expect(answered.cleanupOptions).toStrictEqual({ deleteGitHubRepo: false, deleteDaLiveSite: false, removeDatapackData: true });
-        await expect(answered.askName?.({ sentence: 'You changed 2 products.' })).resolves.toStrictEqual({ saveAs: 'My Copy' });
+        // Given, not asked: it goes with the first read, so it reaches the SC's own pack too (step-05 S1).
+        expect(answered.askName).toStrictEqual({ given: { saveAs: 'My Copy' } });
     });
 });
 

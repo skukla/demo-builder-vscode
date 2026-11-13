@@ -90,6 +90,52 @@ describe("removeProjectSampleData, when the demo's pack is not the SC's (Save As
     });
 });
 
+/**
+ * A batch's answer is given before anything runs (step-05 S1, J7-2). It goes with the FIRST read:
+ * asked only when a name is needed, a "drop" or a new name for the SC's own pack would never be
+ * asked for, and the run would save into their pack whatever they pressed.
+ */
+describe('removeProjectSampleData, answered up front by a batch', () => {
+    const base = { pack: { name: 'bodea', version: 'main' }, source: 'library', unanswered: 'keep' };
+    const context = () => createMockHandlerContext({ logger: createMockLogger() });
+
+    it("sends 'drop' with the first read, then removes", async () => {
+        await expect(removeProjectSampleData(project(), context(), jest.fn(), { given: 'drop' })).resolves.toBeUndefined();
+
+        expect(mockedSettle).toHaveBeenCalledTimes(1);
+        expect(mockedSettle.mock.calls[0][1]).toStrictEqual({ ...base, answer: 'drop' });
+        expect(mockedRemove).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends a new name with the first read, as a save into a new datapack', async () => {
+        await removeProjectSampleData(project(), context(), jest.fn(), { given: { saveAs: 'My Copy' } });
+
+        expect(mockedSettle).toHaveBeenCalledTimes(1);
+        expect(mockedSettle.mock.calls[0][1]).toStrictEqual({ ...base, answer: 'keep', saveAs: { displayName: 'My Copy' } });
+    });
+
+    it('removes nothing when that name is refused, and says why, asking nothing again', async () => {
+        mockedSettle.mockResolvedValueOnce({ response: { success: false, error: 'You already have a datapack named My Copy.', code: ErrorCode.CHANGES_NEED_ANSWER } });
+
+        const why = await removeProjectSampleData(project(), context(), jest.fn(), { given: { saveAs: 'My Copy' } });
+
+        expect(why).toBe('You already have a datapack named My Copy.');
+        expect(mockedSettle).toHaveBeenCalledTimes(1);
+        expect(mockedRemove).not.toHaveBeenCalled();
+    });
+
+    it("with no answer given, reads as today: the SC's own pack is saved into, another keeps its data", async () => {
+        const sentence = 'You changed 2 things since it was installed.';
+        mockedSettle.mockResolvedValueOnce({ response: { success: false, error: 'Name it.', code: ErrorCode.CHANGES_NEED_ANSWER, data: { sentence } } });
+
+        const why = await removeProjectSampleData(project(), context(), jest.fn(), { given: undefined });
+
+        expect(mockedSettle.mock.calls[0][1]).toStrictEqual(base);
+        expect(why).toBe(`${sentence} They were not answered.`);
+        expect(mockedRemove).not.toHaveBeenCalled();
+    });
+});
+
 describe('removeProjectSampleData', () => {
     it('settles the changes first, with no answer needed, then removes', async () => {
         const order: string[] = [];

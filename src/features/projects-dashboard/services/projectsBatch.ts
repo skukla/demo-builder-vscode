@@ -29,9 +29,10 @@ import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { stageLine } from '@/core/utils/stageLine';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
+import { ownNames } from '@/features/data-installer/handlers/packSave';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
-import type { SaveAsAnswer } from '@/features/eds/services/reset/edsResetSampleData';
+import { changesOnRemoval } from '@/features/data-installer/services/dataInstallerConfig';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -43,6 +44,7 @@ import type {
     BatchDeleteRow,
     BatchResetAnswer,
     BatchResetRow,
+    BatchSaveNames,
     ProjectsBatchRowStatus,
 } from '@/types/projectsBatch';
 
@@ -128,6 +130,16 @@ export async function prepareResetBatch(context: HandlerContext, paths: readonly
 }
 
 /**
+ * What "Save Your Changes First?" needs (step-05 S1, J7-2): the SC's datapacks' names, which a new
+ * one may not take, read only when a pack has changes a save could take, and whether the setting
+ * saves into their own without asking (P5-Q6).
+ */
+export async function saveNamesOf(context: HandlerContext, rows: readonly { datapack?: BatchDatapack }[]): Promise<BatchSaveNames> {
+    const changed = rows.some((row) => row.datapack?.changes === 'saves' || row.datapack?.changes === 'asks');
+    return { ownNames: changed ? await ownNames(context) : [], alwaysSave: changesOnRemoval() === 'save' };
+}
+
+/**
  * One project of a run: what it does, told into its row and to the window's own line (which a
  * notification shows when the window is closed), never thrown out of the batch.
  */
@@ -168,9 +180,8 @@ export async function runDeleteBatch(context: HandlerContext, answers: readonly 
             const project = await context.stateManager.loadProjectFromPath(answer.path, undefined, { persistAfterLoad: false });
             if (!project) return { error: 'This project is no longer on this computer.' };
             const cleanupOptions = { deleteGitHubRepo: answer.deleteGitHubRepo, deleteDaLiveSite: answer.deleteDaLiveSite, removeDatapackData: answer.removeDatapackData };
-            // Asked up front, in step 2, as a reset batch's are (`edsResetUI`).
-            const askName = (): Promise<SaveAsAnswer> => Promise.resolve(answer.changes);
-            const ran = await runProjectDelete(context, project, { cleanupOptions, askName, cleanupResults: [] }, rowReport);
+            // Given up front, by the save question, as a reset batch's are (`edsResetUI`).
+            const ran = await runProjectDelete(context, project, { cleanupOptions, askName: { given: answer.changes }, cleanupResults: [] }, rowReport);
             return ran.stopped ? { error: ran.stopped } : undefined;
         });
         if (!ok) failed++;

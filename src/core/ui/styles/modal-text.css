@@ -13,7 +13,7 @@
  *
  * .clear-demo-body — a window's body as groups 24 apart, the lead first (the dialog design rules'
  * gap between groups): "Save Your Changes First?" (`feedback/SaveFirstWindow`, rendered by
- * dataInstaller now and by projectsList and dashboard next), and the Data Installer's Clear Demo
+ * dataInstaller and projectsList now, and by dashboard next), and the Data Installer's Clear Demo
  * Data and job summary windows. Moved unchanged, in the same layer, from the data-installer
  * feature's data-installer.css (step-05, R2), because the frame moved to core and the projects
  * screens' bundles never imported that sheet. The name is kept: the datapack mockups still name it.

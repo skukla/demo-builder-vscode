@@ -55,11 +55,12 @@ function needsName(): HandlerResponse {
 
 /**
  * The names of the SC's own datapacks in the library, as the Datapacks screen counts them
- * (`ownedOf`): a new one may not take one (J3-1). None when the library
+ * (`ownedOf`): a new one may not take one (J3-1). The projects list's save question reads it too
+ * (`projectsBatch.ts`). None when the library
  * cannot be asked: the library's own name is generated (`packIdFor`), so a repeated display name
  * overwrites nothing.
  */
-async function ownNames(context: HandlerContext): Promise<string[]> {
+export async function ownNames(context: HandlerContext): Promise<string[]> {
     const library = await resolveDataInstallerAccess(context, 'library');
     if (!library.ok) return [];
     try {

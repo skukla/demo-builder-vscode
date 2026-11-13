@@ -1,20 +1,23 @@
 /**
  * What the batch window's questions hold, and the answers built from them (owner, 2026-11-04):
  * Delete Selected's boxes, one per project per thing it may take (its repository, its DA.live site,
- * its datapack's data), and Reset Selected's Uninstall Datapack box per project. Both then ask, on a
- * second step, a new name or Discard Changes for each pack whose data goes that is not the SC's and
- * has changes (walk F96 gave the delete that step). Pure, so the screen and its tests share one
- * reading.
+ * its datapack's data), and Reset Selected's Uninstall Datapack box per project. When a pack whose
+ * data goes has changes, the red button runs into "Save Your Changes First?" (step-05 S1, decisions
+ * J7-2): a row per such pack, each a filled-in name. The SC's own starts with its own name and saves
+ * into it; another name, or someone else's pack, saves a new datapack, starting "My Bodea" or
+ * "My Bodea 2" when taken. Pure, so the screen and its tests share one reading.
  *
  * @module features/projects-dashboard/ui/batchChoices
  */
 
+import { freeName, nameProblem } from '@/features/data-installer/saveAsName';
 import type {
     BatchDatapack,
     BatchDeleteAnswer,
     BatchDeleteRow,
     BatchResetAnswer,
     BatchResetRow,
+    PrepareProjectsBatchResponse,
 } from '@/types/projectsBatch';
 
 /** A project of either batch, as the datapack questions read it. */
@@ -35,13 +38,14 @@ export interface ColumnState {
     some: boolean;
 }
 
-/** A project's own answers to a reset that removes its pack with changes the SC must decide. */
-export interface ResetField {
-    saveAs: string;
-    drop: boolean;
-}
+/** The save question's answer for one pack: a new datapack's name, or its changes lost. */
+export type BatchChanges = NonNullable<BatchResetAnswer['changes']>;
 
-export type ResetFields = Readonly<Record<string, ResetField>>;
+/** The save question's answers, by project path; a pack saved into itself has none. */
+export type ChangesByPath = Readonly<Record<string, BatchChanges>>;
+
+/** The names in the save question's fields, by project path. */
+export type SaveNames = Readonly<Record<string, string>>;
 
 /** Every box where the prepare said it starts. */
 export function initialDeleteTicks(rows: readonly BatchDeleteRow[]): DeleteTicks {
@@ -96,7 +100,7 @@ export function toggleColumn(rows: readonly BatchDeleteRow[], ticks: DeleteTicks
 /** Whose datapack's data goes, by project path: a box only where the pack can go. */
 export type RemoveTicks = Readonly<Record<string, boolean>>;
 
-/** A delete's Uninstall Datapack boxes, as step 2 reads them. */
+/** A delete's Uninstall Datapack boxes, as the save question reads them. */
 export function dataTicks(rows: readonly BatchDeleteRow[], ticks: DeleteTicks): RemoveTicks {
     return Object.fromEntries(rows.map((row) => [row.path, offers(row, 'datapack') && ticks[row.path]?.datapack === true]));
 }
@@ -123,75 +127,126 @@ export function toggleRemoveColumn(rows: readonly BatchResetRow[], ticks: Remove
     return { ...ticks, ...Object.fromEntries(rows.filter(removable).map((row) => [row.path, on])) };
 }
 
-/** Step 2's rows: each removed pack that is not the SC's and has changes. */
-export function changeRows<Row extends PackRow>(rows: readonly Row[], ticks: RemoveTicks): Row[] {
-    return rows.filter((row) => removes(row, ticks) && row.datapack?.changes === 'asks');
+const sameName = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/** The SC's own pack: a save goes into it (`saves`), where someone else's makes a new one (`asks`). */
+const isOwn = (row: PackRow): boolean => row.datapack?.changes === 'saves';
+
+/**
+ * The save question's rows: each pack whose data goes with changes, the SC's own included, except
+ * theirs when the setting saves it without asking (P5-Q6, Switch's `mustAsk`). A pack whose changes
+ * could not be read has no box, so its data stays and nothing is asked (P5-Q5 open).
+ */
+export function saveRows<Row extends PackRow>(rows: readonly Row[], ticks: RemoveTicks, alwaysSave: boolean): Row[] {
+    return rows.filter((row) => removes(row, ticks) && (row.datapack?.changes === 'asks' || (isOwn(row) && !alwaysSave)));
 }
 
-const NO_FIELD: ResetField = { saveAs: '', drop: false };
-
-/** What step 2 holds for one project's pack: the new pack's name, or that its changes go. */
-export function fieldOf(fields: ResetFields, path: string): ResetField {
-    return fields[path] ?? NO_FIELD;
-}
-
-/** The step 2 rows whose new name another row above already uses, ignoring case and spaces. */
-export function duplicateNamePaths(rows: readonly PackRow[], ticks: RemoveTicks, fields: ResetFields): Set<string> {
-    const seen = new Set<string>();
-    const dupes = new Set<string>();
-    for (const row of changeRows(rows, ticks)) {
-        const field = fieldOf(fields, row.path);
-        const name = field.saveAs.trim().toLowerCase();
-        if (field.drop || !name) continue;
-        if (seen.has(name)) dupes.add(row.path);
-        seen.add(name);
+/**
+ * Each row's name: what was typed, else where it starts. The SC's own starts with its own name;
+ * someone else's with "My <Pack>", counting on past their datapacks and the rows above.
+ */
+export function namesOf(rows: readonly PackRow[], ownNames: readonly string[], typed: SaveNames): Record<string, string> {
+    const names: Record<string, string> = {};
+    for (const row of rows) {
+        const pack = row.datapack?.name ?? '';
+        names[row.path] = typed[row.path] ?? (isOwn(row) ? pack : freeName(pack, [...ownNames, ...Object.values(names)]));
     }
-    return dupes;
+    return names;
 }
 
-/** The Discard Changes column's header box, over step 2's rows. */
-export function discardColumnState(rows: readonly PackRow[], fields: ResetFields): ColumnState {
-    const dropped = rows.filter((row) => fieldOf(fields, row.path).drop).length;
-    return { offered: rows.length > 0, all: rows.length > 0 && dropped === rows.length, some: dropped > 0 };
+/** A row saving into the SC's own pack under its own name (the run saves into it, `changesOf`). */
+function savesIntoOwn(row: PackRow, names: SaveNames): boolean {
+    return isOwn(row) && sameName(names[row.path] ?? '', row.datapack?.name ?? '');
 }
 
-/** The header discards every row's changes when not all are, else none; typed names are kept. */
-export function toggleDiscardColumn(rows: readonly PackRow[], fields: ResetFields): ResetFields {
-    const drop = !discardColumnState(rows, fields).all;
-    return { ...fields, ...Object.fromEntries(rows.map((row) => [row.path, { ...fieldOf(fields, row.path), drop }])) };
+/**
+ * The names a row may not take: the SC's datapacks, less its own pack (it saves into it), and the
+ * other rows'. Two projects saving into the same own pack under its own name do not clash: each
+ * saves into it, one after the other (review of step-05 S1).
+ */
+function takenFor(row: PackRow, rows: readonly PackRow[], names: SaveNames, ownNames: readonly string[]): string[] {
+    const own = isOwn(row) ? (row.datapack?.name ?? '') : undefined;
+    const sharesOwn = (other: PackRow): boolean =>
+        own !== undefined && savesIntoOwn(row, names) && savesIntoOwn(other, names) && sameName(other.datapack?.name ?? '', own);
+    return [
+        ...ownNames.filter((name) => own === undefined || !sameName(name, own)),
+        ...rows.filter((other) => other.path !== row.path && !sharesOwn(other)).map((other) => names[other.path] ?? ''),
+    ];
 }
 
-/** A batch may run once every pack that asks has a unique name, or has its changes discarded. */
-export function changesAreAnswered(rows: readonly PackRow[], ticks: RemoveTicks, fields: ResetFields): boolean {
-    const dupes = duplicateNamePaths(rows, ticks, fields);
-    return changeRows(rows, ticks).every((row) => {
-        const field = fieldOf(fields, row.path);
-        return field.drop || (field.saveAs.trim().length > 0 && !dupes.has(row.path));
-    });
+/** Why each row's name cannot be used, by project path; a row whose name can is absent. */
+export function nameProblems(rows: readonly PackRow[], names: SaveNames, ownNames: readonly string[]): Record<string, string> {
+    const problems: Record<string, string> = {};
+    for (const row of rows) {
+        const problem = nameProblem(names[row.path] ?? '', takenFor(row, rows, names, ownNames));
+        if (problem) problems[row.path] = problem;
+    }
+    return problems;
 }
 
-/** Step 2's answer for a pack whose data goes: a name to save its changes as, or `drop`; none when it does not ask. */
-function changesAnswer(row: PackRow, fields: ResetFields): Pick<BatchResetAnswer, 'changes'> {
-    if (row.datapack?.changes !== 'asks') return {};
-    const field = fieldOf(fields, row.path);
-    return { changes: field.drop ? 'drop' : { saveAs: field.saveAs.trim() } };
+/**
+ * The save question answered. Saved: the SC's own pack under its own name sends nothing (the run
+ * saves into it), any other name a new datapack's, trimmed; never the own name as `saveAs`, which
+ * the save refuses as taken. Without saving: every row's changes go.
+ */
+export function changesOf(rows: readonly PackRow[], names: SaveNames, answer: 'save' | 'drop'): ChangesByPath {
+    const changes: Record<string, BatchChanges> = {};
+    for (const row of rows) {
+        const name = (names[row.path] ?? '').trim();
+        if (answer === 'drop') changes[row.path] = 'drop';
+        else if (!(isOwn(row) && sameName(name, row.datapack?.name ?? ''))) changes[row.path] = { saveAs: name };
+    }
+    return changes;
+}
+
+/** Whose pack's data goes, by project path: a delete's Uninstall Datapack boxes, a reset's. */
+export function removingOf(questions: PrepareProjectsBatchResponse, ticks: DeleteTicks, removeTicks: RemoveTicks): RemoveTicks {
+    return questions.action === 'delete' ? dataTicks(questions.rows, ticks) : removeTicks;
+}
+
+/** The save question over the questions as answered: its rows, each row's name, and why a name is refused. */
+export interface SaveQuestion {
+    rows: PackRow[];
+    names: SaveNames;
+    problems: Readonly<Record<string, string>>;
+}
+
+/** What the SC has chosen that the save question reads. */
+export interface SaveChosen {
+    ticks: DeleteTicks;
+    removeTicks: RemoveTicks;
+    typedNames: SaveNames;
+}
+
+/** The save question for these questions and choices; no rows when nothing needs asking. */
+export function saveQuestionOf(questions: PrepareProjectsBatchResponse, chosen: SaveChosen): SaveQuestion {
+    const removing = removingOf(questions, chosen.ticks, chosen.removeTicks);
+    const rows: PackRow[] = saveRows<PackRow>(questions.rows, removing, questions.alwaysSave);
+    const names = namesOf(rows, questions.ownNames, chosen.typedNames);
+    return { rows, names, problems: nameProblems(rows, names, questions.ownNames) };
+}
+
+/** A pack whose data goes carries the save question's answer, when it has one. */
+function changesAnswer(path: string, changes: ChangesByPath): Pick<BatchResetAnswer, 'changes'> {
+    const answer = changes[path];
+    return answer ? { changes: answer } : {};
 }
 
 /** One answer per project: keep the pack, remove it, or remove it after saving or dropping its changes. */
-export function resetAnswers(rows: readonly BatchResetRow[], ticks: RemoveTicks, fields: ResetFields): BatchResetAnswer[] {
+export function resetAnswers(rows: readonly BatchResetRow[], ticks: RemoveTicks, changes: ChangesByPath): BatchResetAnswer[] {
     return rows.map((row) =>
-        removes(row, ticks) ? { path: row.path, removeDatapack: true, ...changesAnswer(row, fields) } : { path: row.path, removeDatapack: false },
+        removes(row, ticks) ? { path: row.path, removeDatapack: true, ...changesAnswer(row.path, changes) } : { path: row.path, removeDatapack: false },
     );
 }
 
-/** The delete's answers, one per project in the order shown, step 2's with each pack whose data goes. */
-export function deleteAnswers(rows: readonly BatchDeleteRow[], ticks: DeleteTicks, fields: ResetFields): BatchDeleteAnswer[] {
+/** The delete's answers, one per project in the order shown, the save question's with each pack whose data goes. */
+export function deleteAnswers(rows: readonly BatchDeleteRow[], ticks: DeleteTicks, changes: ChangesByPath): BatchDeleteAnswer[] {
     const removing = dataTicks(rows, ticks);
     return rows.map((row) => ({
         path: row.path,
         deleteGitHubRepo: row.repo !== undefined && ticks[row.path]?.repo === true,
         deleteDaLiveSite: row.site !== undefined && ticks[row.path]?.site === true,
         removeDatapackData: removes(row, removing),
-        ...(removes(row, removing) ? changesAnswer(row, fields) : {}),
+        ...(removes(row, removing) ? changesAnswer(row.path, changes) : {}),
     }));
 }

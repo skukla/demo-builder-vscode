@@ -18,7 +18,7 @@ import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
-import { type AskSaveAsName, removeProjectSampleData } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleData, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -51,7 +51,7 @@ export async function removableDataOf(context: HandlerContext, project: Project)
  *   given up front (a batch, an agent)
  * @returns why the data was not all removed, so the delete stops; undefined when it was
  */
-export async function removeDataBeforeDelete(context: HandlerContext, project: Project, report: ReportStage, askName?: AskSaveAsName): Promise<string | undefined> {
+export async function removeDataBeforeDelete(context: HandlerContext, project: Project, report: ReportStage, askName?: SaveAsAnswering): Promise<string | undefined> {
     const why = await removeProjectSampleData(project, context, report, askName);
     return why ? `Its datapack was not uninstalled, so the project was kept: ${why}` : undefined;
 }

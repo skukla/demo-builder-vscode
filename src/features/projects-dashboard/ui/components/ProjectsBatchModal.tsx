@@ -5,8 +5,12 @@
  *
  * Reading: the house wait, "Reading demo data" for a reset and "Reading projects" for a delete
  * (`WAIT_STAGES`).
- * The questions: `BatchDeleteQuestions` or `BatchResetQuestions`, then `BatchDatapackChanges`
- * when a pack whose data goes needs a name for its changes, Cancel and the button that runs them. The run: `ProjectsBatchRunView`, closed into the background while it goes, its end
+ * The questions: `BatchDeleteQuestions` or `BatchResetQuestions`, Cancel and the red button. When a
+ * pack whose data goes has changes, the red button runs into "Save Your Changes First?" in the same
+ * container (step-05 S1, decisions J7-2): the shared `SaveFirstWindow` over `BatchSaveTable`, Reset
+ * or Delete Without Saving, Cancel (which closes everything), and Save and Reset or Save and Delete.
+ * Only those two, or the red button when nothing is asked, start the run.
+ * The run: `ProjectsBatchRunView`, closed into the background while it goes, its end
  * the title with its status icon, as the Updates run ends. A run where every project went through
  * hands off to the small result, the title alone; one with a problem stays on its rows (owner,
  * 2026-11-10, walk F134).
@@ -16,21 +20,21 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import { changeRows, changesAreAnswered, dataTicks, type PackRow, type RemoveTicks } from '../batchChoices';
-import type { BatchChoices } from '../hooks/useBatchChoices';
+import { saveQuestionOf, type SaveQuestion } from '../batchChoices';
 import { runningTitle, type BatchView, type ProjectsBatchControls } from '../hooks/useProjectsBatch';
-import { BatchDatapackChanges } from './BatchDatapackChanges';
 import { BatchDeleteQuestions } from './BatchDeleteQuestions';
 import { BatchResetQuestions } from './BatchResetQuestions';
+import { BatchSaveTable } from './BatchSaveTable';
 import { ProjectsBatchRunView } from './ProjectsBatchRunView';
 import { endingRowOf, promptButtons } from './UpdatesModal';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
+import { SaveFirstWindow } from '@/core/ui/components/feedback/SaveFirstWindow';
 import type { WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
 import { endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
-import type { PrepareProjectsBatchResponse, ProjectsBatchAction } from '@/types/projectsBatch';
+import type { ProjectsBatchAction } from '@/types/projectsBatch';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 const NO_ACTIONS: ActionButton[] = [];
@@ -88,15 +92,10 @@ export function endedClean(controls: Pick<ProjectsBatchControls, 'view' | 'progr
     return endsSmall({ succeeded: progress?.state === 'succeeded', warning: progress?.warning, rows });
 }
 
-/** Either batch on its second step, the packs' changes (owner, 2026-11-04; the delete's, walk F96). */
-function onChangesStep(controls: ProjectsBatchControls): boolean {
+/** The save question over the questions as answered; absent outside them. */
+function saveQuestionOfView(controls: ProjectsBatchControls): SaveQuestion | undefined {
     const { view, choices } = controls;
-    return view.phase === 'asking' && choices.step === 'changes';
-}
-
-/** Whose pack's data goes: a delete's Uninstall Datapack boxes, a reset's Uninstall Datapack. */
-function removingOf(questions: PrepareProjectsBatchResponse, choices: BatchChoices): RemoveTicks {
-    return questions.action === 'delete' ? dataTicks(questions.rows, choices.ticks) : choices.removeTicks;
+    return view.phase === 'asking' ? saveQuestionOf(view.questions, choices) : undefined;
 }
 
 /** The window's header in every phase: the kind of thing, never a name; a confirm adds its count. */
@@ -105,11 +104,8 @@ function titleOf(controls: ProjectsBatchControls): string {
     if (view.phase === 'closed') return '';
     if (view.phase === 'unread') return "Couldn't Read Projects";
     const { action, count } = subjectOf(view);
-    if (view.phase !== 'running') {
-        if (onChangesStep(controls)) return 'Datapack Changes';
-        // A confirm asks, its count the button's (owner, 2026-11-05).
-        return `${runLabel(action, count)}?`;
-    }
+    // A confirm asks, its count the button's (owner, 2026-11-05).
+    if (view.phase !== 'running') return `${runLabel(action, count)}?`;
     if (progress?.state === 'succeeded' || progress?.state === 'failed') return endTitle(action, progress);
     return askingOf(controls)?.title ?? runningTitle(action);
 }
@@ -148,27 +144,16 @@ function actionsOf(controls: ProjectsBatchControls): ActionButton[] {
     }
     if (view.phase !== 'asking') return NO_ACTIONS;
     const { questions } = view;
-    const rows: readonly PackRow[] = questions.rows;
-    const removing = removingOf(questions, choices);
-    // Step 1 Continues to the packs' changes when one needs an answer (owner, 2026-11-04).
-    if (choices.step === 'projects' && changeRows(rows, removing).length > 0) {
-        return [{ label: 'Continue', variant: 'accent', onPress: () => choices.setStep('changes') }];
-    }
-    const ready = changesAreAnswered(rows, removing, choices.fields);
+    // With changes to answer, the save question asks before anything runs (J7-2).
+    const asks = (saveQuestionOfView(controls)?.rows.length ?? 0) > 0;
     // Red for both: a delete removes, a reset replaces each project's code (owner, 2026-11-04).
     const label = runLabel(questions.action, questions.rows.length);
-    const runIt: ActionButton = { label, variant: 'negative', onPress: controls.run, isDisabled: !ready };
-    if (choices.step !== 'changes') return [runIt];
-    return [{ label: 'Back', variant: 'secondary', onPress: () => choices.setStep('projects') }, runIt];
+    return [{ label, variant: 'negative', onPress: () => (asks ? choices.askToSave() : controls.run()) }];
 }
 
 function BodyOf({ controls }: { controls: ProjectsBatchControls }): React.ReactElement | null {
     const { view } = controls;
     if (view.phase === 'unread') return <p className="work-row-why">{view.error}</p>;
-    if (view.phase === 'asking' && onChangesStep(controls)) {
-        const removing = removingOf(view.questions, controls.choices);
-        return <BatchDatapackChanges rows={view.questions.rows} removing={removing} choices={controls.choices} />;
-    }
     if (view.phase === 'asking' && view.questions.action === 'delete') {
         return <BatchDeleteQuestions rows={view.questions.rows} choices={controls.choices} />;
     }
@@ -196,13 +181,38 @@ function waitOf(view: BatchView): WaitLines | false {
     return view.action === 'reset' ? WAIT_STAGES.readingProjectsDemoData : WAIT_STAGES.readingProjects;
 }
 
+/** "Save Your Changes First?", in the window's own container; the verb is the batch's. */
+function SaveFirstOf({ controls, action, question }: { controls: ProjectsBatchControls; action: ProjectsBatchAction; question: SaveQuestion }): React.ReactElement {
+    const verb = action === 'delete' ? 'Delete' : 'Reset';
+    return (
+        <SaveFirstWindow
+            withoutSavingLabel={`${verb} Without Saving`}
+            saveLabel={`Save and ${verb}`}
+            saveDisabled={Object.keys(question.problems).length > 0}
+            onAnswer={(saves) => controls.run(saves ? 'save' : 'drop')}
+            onClose={controls.close}
+        >
+            <BatchSaveTable question={question} onName={controls.choices.setName} />
+        </SaveFirstWindow>
+    );
+}
+
 /** The batch window; nothing while closed. */
 export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchControls }): React.ReactElement {
     const { view } = controls;
     const asking = askingOf(controls);
     const clean = endedClean(controls);
+    const saving = view.phase === 'asking' && controls.choices.saving ? saveQuestionOf(view.questions, controls.choices) : undefined;
     // Cancel on a question answers it and keeps the window: the run goes on to the next project.
     const dismiss = asking ? () => controls.answer(undefined) : controls.close;
+    if (view.phase === 'asking' && saving) {
+        // Cancel, or Escape, closes everything (J7-2).
+        return (
+            <DialogContainer onDismiss={controls.close}>
+                <SaveFirstOf controls={controls} action={view.questions.action} question={saving} />
+            </DialogContainer>
+        );
+    }
     return (
         <DialogContainer onDismiss={dismiss}>
             {view.phase !== 'closed' && (
@@ -218,8 +228,7 @@ export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchContro
                     fitContent
                     onClose={dismiss}
                     closeLabel={closeLabelOf(controls)}
-                    // Step 2's way back is Back; Escape still closes the window.
-                    hideClose={asking ? !cancels(asking) : onChangesStep(controls)}
+                    hideClose={asking ? !cancels(asking) : false}
                     actionButtons={actionsOf(controls)}
                     waiting={waitOf(view)}
                 >

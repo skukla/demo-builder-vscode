@@ -10,6 +10,7 @@ jest.mock('@/features/projects-dashboard/services/projectsBatch', () => ({
     prepareResetBatch: jest.fn(),
     runDeleteBatch: jest.fn(),
     runResetBatch: jest.fn(),
+    saveNamesOf: jest.fn(),
 }));
 jest.mock('@/core/vscode/withOperationProgress', () => ({
     withOperationProgress: jest.fn(async (_options: unknown, work: (report: jest.Mock) => Promise<unknown>) => work(jest.fn())),
@@ -19,12 +20,15 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { PROJECTS_BATCH_OPERATION_ID } from '@/core/utils/operationIds';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { handlePrepareProjectsBatch, handleRunProjectsBatch } from '@/features/projects-dashboard/handlers/projectsBatchHandlers';
-import { prepareDeleteBatch, runDeleteBatch, runResetBatch } from '@/features/projects-dashboard/services/projectsBatch';
+import { prepareDeleteBatch, prepareResetBatch, runDeleteBatch, runResetBatch, saveNamesOf } from '@/features/projects-dashboard/services/projectsBatch';
 import type { BatchDeleteAnswer } from '@/types/projectsBatch';
 
 const ANSWER: BatchDeleteAnswer = { path: '/projects/a', deleteGitHubRepo: false, deleteDaLiveSite: false, removeDatapackData: false };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+    jest.clearAllMocks();
+    (saveNamesOf as jest.Mock).mockResolvedValue({ ownNames: [], alwaysSave: false });
+});
 
 describe('prepareProjectsBatch', () => {
     it('answers the rows for the projects picked', async () => {
@@ -32,7 +36,20 @@ describe('prepareProjectsBatch', () => {
 
         const result = await handlePrepareProjectsBatch(createMockHandlerContext(), { action: 'delete', projectPaths: ['/projects/a'] });
 
-        expect(result).toStrictEqual({ success: true, data: { action: 'delete', rows: [{ path: '/projects/a', name: 'a' }] } });
+        expect(result).toStrictEqual({ success: true, data: { action: 'delete', rows: [{ path: '/projects/a', name: 'a' }], ownNames: [], alwaysSave: false } });
+    });
+
+    // The save question names a new datapack: it may not take one of the SC's (step-05 S1, J7-2).
+    it("adds the SC's datapacks' names and the save setting, read for the rows it answers", async () => {
+        const rows = [{ path: '/projects/a', name: 'a', datapack: { name: 'Bodea', changes: 'asks' } }];
+        (prepareResetBatch as jest.Mock).mockResolvedValue(rows);
+        (saveNamesOf as jest.Mock).mockResolvedValue({ ownNames: ['My Luma'], alwaysSave: true });
+        const context = createMockHandlerContext();
+
+        const result = await handlePrepareProjectsBatch(context, { action: 'reset', projectPaths: ['/projects/a'] });
+
+        expect(saveNamesOf).toHaveBeenCalledWith(context, rows);
+        expect(result).toStrictEqual({ success: true, data: { action: 'reset', rows, ownNames: ['My Luma'], alwaysSave: true } });
     });
 
     it('refuses a batch with no projects, reading nothing', async () => {

@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { deleteAnswers, resetAnswers } from '../batchChoices';
+import { changesOf, deleteAnswers, resetAnswers, saveQuestionOf } from '../batchChoices';
 import { useBatchChoices, type BatchChoices } from './useBatchChoices';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -64,8 +64,8 @@ export interface ProjectsBatchControls {
     choices: BatchChoices;
     /** Reset Selected or Delete Selected, on the projects picked. */
     start: (action: ProjectsBatchAction, projects: Project[]) => void;
-    /** Run the answers the questions hold. */
-    run: () => void;
+    /** Run the answers the questions hold, with the save question's when it was asked. */
+    run: (answer?: SaveAnswer) => void;
     close: () => void;
     /** While running: the rows in the order the extension tells them. */
     order: string[];
@@ -101,11 +101,19 @@ function hasEnded(progress: OperationProgressPayload | null): boolean {
     return progress?.state === 'succeeded' || progress?.state === 'failed';
 }
 
-/** The run's request, from the questions and what was chosen in them. */
-function requestOf(questions: PrepareProjectsBatchResponse, choices: BatchChoices): RunProjectsBatchRequest {
+/**
+ * The save question's answer: save as named, or lose every row's changes. Absent when it was not
+ * asked, so no pack carries an answer: the SC's own is saved into and another keeps its data.
+ */
+export type SaveAnswer = 'save' | 'drop';
+
+/** The run's request, from the questions, what was chosen in them, and the save question's answer. */
+function requestOf(questions: PrepareProjectsBatchResponse, choices: BatchChoices, answer: SaveAnswer | undefined): RunProjectsBatchRequest {
+    const save = saveQuestionOf(questions, choices);
+    const changes = answer ? changesOf(save.rows, save.names, answer) : {};
     return questions.action === 'delete'
-        ? { action: 'delete', answers: deleteAnswers(questions.rows, choices.ticks, choices.fields) }
-        : { action: 'reset', answers: resetAnswers(questions.rows, choices.removeTicks, choices.fields) };
+        ? { action: 'delete', answers: deleteAnswers(questions.rows, choices.ticks, changes) }
+        : { action: 'reset', answers: resetAnswers(questions.rows, choices.removeTicks, changes) };
 }
 
 /** The run's header, and the notification's a run closed mid-way goes on in: the kind, never a count. */
@@ -172,7 +180,7 @@ export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchCon
         webviewClient.request<PrepareEnvelope>('prepareProjectsBatch', payload).then(settle, () => settle(undefined));
     }, [begin]);
 
-    const run = useCallback(() => {
+    const run = useCallback((answer?: SaveAnswer) => {
         if (view.phase !== 'asking') return;
         const { questions } = view;
         const rows = questions.rows.map((row): BatchRunRow => ({
@@ -183,7 +191,7 @@ export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchCon
         clear();
         setRuns((previous) => previous + 1);
         setView({ phase: 'running', action: questions.action, rows });
-        const request = requestOf(questions, choices);
+        const request = requestOf(questions, choices, answer);
         void webviewClient
             .request('runProjectsBatch', { ...request, id: PROJECTS_BATCH_OPERATION_ID, progress: 'modal' })
             .catch(() => undefined);

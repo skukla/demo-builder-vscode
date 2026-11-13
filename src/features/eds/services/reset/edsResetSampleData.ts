@@ -141,6 +141,30 @@ export type SaveAsAnswer = { saveAs: string } | 'drop' | undefined;
 export type AskSaveAsName = (asked: { sentence?: string }) => Promise<SaveAsAnswer>;
 
 /**
+ * The answer given before anything runs: a batch's save question (step-05 S1, J7-2). It goes with
+ * the first read, so a `drop` or a new name reaches the SC's own pack too, which `AskSaveAsName`
+ * is never asked about (their pack is saved into without a question). Absent: as no answer.
+ */
+export interface GivenSaveAs {
+    given: SaveAsAnswer;
+}
+
+/** How a removal's changes question is answered: asked when it comes up, or given up front. */
+export type SaveAsAnswering = AskSaveAsName | GivenSaveAs;
+
+/** The given answer as the removal's request carries it. */
+function requestOfGiven(given: SaveAsAnswer): { answer?: 'drop' | 'keep'; saveAs?: { displayName: string } } {
+    if (given === undefined) return {};
+    return given === 'drop' ? { answer: 'drop' } : { answer: 'keep', saveAs: { displayName: given.saveAs } };
+}
+
+/** The answering as a question to ask: a given answer is that answer, already chosen. */
+function askerOf(answering: SaveAsAnswering | undefined): AskSaveAsName | undefined {
+    if (answering === undefined || typeof answering === 'function') return answering;
+    return () => Promise.resolve(answering.given);
+}
+
+/**
  * The SC's changes, before the reset removes the pack: saved into the demo's pack when it is
  * theirs, else as a new pack under the name `askName` gets (Save As, owner 2026-11-03), else lost.
  * A save that fails removes nothing.
@@ -151,7 +175,7 @@ async function settleBeforeReset(
     project: Project,
     context: HandlerContext,
     report: ReportStage,
-    askName: AskSaveAsName | undefined,
+    answering: SaveAsAnswering | undefined,
 ): Promise<string | undefined> {
     const datapack = project.datapack;
     if (!datapack) return undefined;
@@ -162,7 +186,10 @@ async function settleBeforeReset(
         ...(datapack.store ? { source: datapack.store } : {}),
         unanswered: 'keep' as const,
     };
-    let settled = await settleChangesBeforeRemoval(forProject, request, (stage) => report(stage));
+    const given = answering !== undefined && typeof answering !== 'function' ? requestOfGiven(answering.given) : {};
+    let settled = await settleChangesBeforeRemoval(forProject, { ...request, ...given }, (stage) => report(stage));
+    // A given answer was already sent; only an unanswered read asks.
+    const askName = given.answer === undefined ? askerOf(answering) : undefined;
     if ('response' in settled && settled.response.code === ErrorCode.CHANGES_NEED_ANSWER && askName) {
         const asked = settled.response.data as { sentence?: string } | undefined;
         const chosen = await askName(asked?.sentence ? { sentence: asked.sentence } : {});
@@ -193,7 +220,7 @@ export async function removeProjectSampleData(
     project: Project,
     context: HandlerContext,
     report: ReportStage,
-    askName?: AskSaveAsName,
+    askName?: SaveAsAnswering,
 ): Promise<string | undefined> {
     try {
         // The SC's changes first: this door's question was already asked, and keeping the work is

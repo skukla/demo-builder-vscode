@@ -163,7 +163,7 @@
         }
     }
 
-    /* Each confirm, Delete Selected's and Reset Selected's two steps (owner, 2026-11-04), and the
+    /* Each confirm, Delete Selected's and Reset Selected's (owner, 2026-11-04), and the
        Updates list (F50): the sentence, then the table, 24 apart, the dialog rules' gap between
        groups. */
     .batch-confirm {
@@ -207,7 +207,8 @@
         margin: 0;
     }
 
-    /* Step 2's column names over the pack and its new name, as the label style a field carries. */
+    /* A batch table's column names (Project; the save question's Datapack and Save As), as the
+       label style a field carries (J7-2). */
     .batch-changes-head {
         padding-bottom: 4px;
         border-bottom: 1px solid var(--spectrum-global-color-gray-300);
@@ -215,7 +216,8 @@
         color: var(--spectrum-global-color-gray-700);
     }
 
-    /* Step 2: the pack keeps a third of the row, the new name takes what the box leaves. */
+    /* The save question (`BatchSaveTable`): the pack keeps a third of the row, its Save As name
+       the rest. */
     .batch-changes-table tbody th {
         width: 36%;
     }
