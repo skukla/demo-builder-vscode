@@ -8,7 +8,7 @@
 import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ServiceDefinition } from './components';
-import type { ProjectDatapack } from './datapack';
+import type { DatapackInstallFailure, ProjectDatapack } from './datapack';
 import type { ErpAssignmentRecord, ErpOwnerSetsRecord } from './erpAssign';
 import type { AddedDemo } from './projectFile';
 import type { CommerceConfigChangeRecord, StorePreparationRecord } from './storePreparation';
@@ -126,6 +126,12 @@ export interface Project {
      * holding the SC's things, leaves it). `configure_project` records it without installing.
      */
     datapack?: ProjectDatapack;
+    /**
+     * The creation-time install of `datapack` that did not end in success, until a later install
+     * of it succeeds or the project stops naming it (`installFailure.ts`). Absent on every project
+     * predating it, which shows nothing. Never exported in a project file.
+     */
+    datapackInstallFailure?: DatapackInstallFailure;
     /** The Commerce Admin interface chosen on Configure. Absent: the setting's. */
     commerceAdminExperience?: CommerceAdminExperience;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */

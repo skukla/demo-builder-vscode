@@ -55,6 +55,24 @@ export interface DatapackReference {
 export type ProjectDatapack = DatapackReference & { version: string };
 
 /**
+ * A creation-time install of the project's datapack that did not end in success (step-04 S7).
+ *
+ * Kept on the PROJECT, never on `ProjectDatapack`, which travels in project files: a failure
+ * belongs to this store, not to a copy. Rules in `features/data-installer/services/installFailure.ts`.
+ */
+export interface DatapackInstallFailure extends DatapackId {
+    /** Why the run did not succeed, in the run's own words. */
+    reason: string;
+    /** When the latest failed run ended, ISO. */
+    at: string;
+    /** Installs of the same datapack tried since, all failed. */
+    retries: number;
+}
+
+/** What `get-datapack-import-target` says about a failed install of the project's datapack. */
+export type DatapackInstallFailed = Pick<DatapackInstallFailure, 'reason' | 'retries'>;
+
+/**
  * The reference as a project can record it, or none.
  *
  * A project records a name AND a version, so a reference naming no version records

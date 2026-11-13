@@ -24,6 +24,7 @@
 
 import { randomBytes } from 'crypto';
 import type { DataInstallerClient } from './dataInstallerClient';
+import { dropStaleFailure } from './installFailure';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackLocation } from '@/types/datapack';
 
@@ -110,6 +111,8 @@ export function planSave(project: Project, installed: DatapackLocation | undefin
 /** Record a save on the project: the new version is the pack it installs from and resets to. */
 export function recordSave(project: Project, save: DemoPackSave): void {
     project.datapack = { ...save.id, store: 'library', ...(save.origin ? { origin: save.origin } : {}) };
+    // The save is what the store holds now: a failed install of the pack it replaced goes (step-04 S7).
+    dropStaleFailure(project);
 }
 
 /**

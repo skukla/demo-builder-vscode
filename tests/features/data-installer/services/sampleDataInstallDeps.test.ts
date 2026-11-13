@@ -151,6 +151,16 @@ describe('buildSampleDataDeps — watch', () => {
 
         expect(watchImportJob.mock.calls[0][0].operation).toBe('reset');
     });
+
+    // The run's reason is what a failed creation install records (step-04 S7).
+    it('hands back the reason the job ended without success', async () => {
+        watchImportJob.mockResolvedValue({ outcome: 'partial', perType: { products: 'error' }, reason: 'Products refused.' });
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
+
+        const watched = await deps.watch({ activationId: 'act-1', requestedTypes: [] });
+
+        expect(watched).toStrictEqual({ outcome: 'partial', perType: { products: 'error' }, reason: 'Products refused.' });
+    });
 });
 
 /**

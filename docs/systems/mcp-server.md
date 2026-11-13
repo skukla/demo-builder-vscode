@@ -769,6 +769,11 @@ Installer service's own engine and export, and the Engine setting that chose the
 deleted on 2026-11-06 with the setting (DI-12): the service had ignored the Commerce credentials a
 caller sends since 2026-10-27. A pack reaches its shared catalog by `copy_library_datapack_to_installer`,
 and a pack only it holds is installed by Demo Builder.
+A creation install that does not end in success, a partly installed one included, is recorded on
+the project (step-04 S7, `installFailure.ts`), and `get_datapack_import_target` answers
+`installFailed: {reason, retries}` while the project names that datapack. A later
+`start_datapack_import` of it clears the record on success and adds one to `retries` on failure;
+the project naming another datapack, or none, drops it. A project file never carries it.
 A project's datapack records the store that holds it (`installer` or `library`): creation, a copy
 and a project file install from that store, `configure_project` takes it as `datapack.store`, and
 `create_project_from_file` answers `datapackNote` when the pack named can't be read (the pack it

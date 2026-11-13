@@ -8,6 +8,7 @@
  */
 
 import {
+    getDatapackStatusDisplay,
     getStatusDisplay,
     getStorefrontStatusDisplay,
     isUpdatePending,
@@ -193,5 +194,21 @@ describe('getStorefrontStatusDisplay', () => {
         // is the point of putting this table in this module.
         expect(severityToColor(getStorefrontStatusDisplay('stale').severity)).toBe('yellow');
         expect(severityToDot(getStorefrontStatusDisplay('published').severity)).toBe('success');
+    });
+});
+
+/**
+ * The DATAPACK vocabulary (step-04 S7): the words S8's card, flyout and dashboard dot use for a
+ * project's datapack. Owner J6-1 and J6-4, 2026-11-12: "Install failed", the error dot.
+ */
+describe('getDatapackStatusDisplay', () => {
+    it('words a failed install as "Install failed", an error', () => {
+        expect(getDatapackStatusDisplay('install-failed')).toStrictEqual({ label: 'Install failed', severity: 'error' });
+        expect(severityToDot(getDatapackStatusDisplay('install-failed')!.severity)).toBe('error');
+    });
+
+    it('has nothing to say for a state it does not know, or none', () => {
+        expect(getDatapackStatusDisplay('error')).toBeNull();
+        expect(getDatapackStatusDisplay(undefined)).toBeNull();
     });
 });

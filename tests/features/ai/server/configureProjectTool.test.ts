@@ -21,6 +21,7 @@ import {
 } from './configureProjectTool.testUtils';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
+import { DATAPACK_INSTALL_FAILURE, FAILED_PACK } from '../../../helpers/datapackInstallFailureFixtures';
 
 
 /**
@@ -218,6 +219,17 @@ describe('configure_project — the result', () => {
     it('drops a field out of stillUnset once it is set', async () => {
         const out = await serve()({ datapack: { name: 'citisignal', version: '1.0' } });
         expect(out.stillUnset).not.toContain('datapack');
+    });
+
+    // Step-04 S7: recording another datapack leaves the old one's failed install behind.
+    it('saves the project without a failed install of the pack it replaces', async () => {
+        const project = { ...freshProject(), datapack: FAILED_PACK, datapackInstallFailure: DATAPACK_INSTALL_FAILURE };
+        getCurrentProject.mockResolvedValue(project);
+
+        await serve()({ datapack: { name: 'citisignal', version: '1.0' } });
+
+        expect(saveProject).toHaveBeenCalledWith(expect.objectContaining({ datapack: { name: 'citisignal', version: '1.0' } }));
+        expect(saveProject.mock.calls[0][0]).not.toHaveProperty('datapackInstallFailure', DATAPACK_INSTALL_FAILURE);
     });
 
 });

@@ -11,6 +11,8 @@
 import type { ProgressTracker } from './shared';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
+import { creationFailureReason, recordCreationInstall } from '@/features/data-installer/services/installFailure';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -79,6 +81,7 @@ export async function executeSampleDataPhase(
             96,
             describeSampleDataResult(chosen.name, result),
         );
+        await recordOutcome(context, project, creationFailureReason(result));
     } catch (error) {
         // Belt and braces: installSampleData already swallows its own failures,
         // so reaching here means the wiring broke rather than the import. Still
@@ -90,6 +93,24 @@ export async function executeSampleDataPhase(
             96,
             `Datapack could not be installed \u2014 ${reason}`,
         );
+        await recordOutcome(context, project, reason);
+    }
+}
+
+/**
+ * Put the outcome on the project (step-04 S7, `installFailure.ts`): a run that did not succeed is
+ * recorded, so the card says "Install failed" rather than wearing the installed check; a success
+ * clears an earlier failure of the same datapack. Saved here, because an Edit's install saves
+ * nothing after it. Never throws.
+ */
+async function recordOutcome(context: HandlerContext, project: Project, reason: string | undefined): Promise<void> {
+    if (!project.datapack) return;
+    try {
+        if (recordCreationInstall(project, project.datapack, reason, new Date())) {
+            await context.stateManager.saveProject(project);
+        }
+    } catch (error) {
+        context.logger.warn(`[Sample Data] The install's outcome could not be recorded: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 

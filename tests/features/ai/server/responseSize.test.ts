@@ -340,7 +340,7 @@ describe('rows with no output safety net are classified', () => {
         'install_prerequisite',
         // Group 8. All category 2, each verified by READING the handler rather
         // than inferred from the name: `get-datapack-import-target` returns
-        // `{instance, projectName, datapack}`, `list-datapack-import-scopes`
+        // `{instance, projectName, datapack, installFailed?}`, `list-datapack-import-scopes`
         // returns `{websites}`, `get-datapack-import-status` returns the persisted
         // job record, `validate-datapack-import` returns the verdict, and the two
         // `runAndWatch` writes return `{activationId}`. They appear here only

@@ -24,6 +24,7 @@ import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
+import { DATAPACK_INSTALL_FAILURE, FAILED_PACK } from '../../../helpers/datapackInstallFailureFixtures';
 
 const PROJECT_PATH = '/home/user/.demo-builder/projects/demo';
 
@@ -263,6 +264,15 @@ describe('buildInitialProject — the fields the wire config decides', () => {
         const project = buildInitialProject(config(), PROJECT_PATH, existing);
 
         expect(project.datapack).toEqual(kept);
+    });
+
+    // Step-04 S7: an Edit keeps a failed install while the project names the same datapack.
+    it('keeps a failed install of the datapack the Edit keeps', () => {
+        const existing = createMockProject({ datapack: FAILED_PACK, datapackInstallFailure: DATAPACK_INSTALL_FAILURE });
+
+        const project = buildInitialProject(config(), PROJECT_PATH, existing);
+
+        expect(project.datapackInstallFailure).toStrictEqual(DATAPACK_INSTALL_FAILURE);
     });
 
     it('takes the added demo from the config on a project that has none', () => {

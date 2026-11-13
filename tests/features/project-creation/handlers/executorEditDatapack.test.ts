@@ -121,6 +121,20 @@ describe('applyDatapackChange', () => {
         expect(executeCatalogMenuPhase).not.toHaveBeenCalled();
     });
 
+    // Step-04 S7: an Edit to no datapack saves the project without the old one's failed install.
+    it('saves the project without a failed install of the pack it no longer names', async () => {
+        const failure = { ...OLD, reason: 'Products refused.', at: '2026-11-12T10:00:00.000Z', retries: 0 };
+        const { context, project, progress, stateManager } = setup({ datapackInstallFailure: failure });
+        let saved: Project['datapackInstallFailure'] | 'not saved' = 'not saved';
+        stateManager.saveProject.mockImplementationOnce(async (p: Project) => {
+            saved = p.datapackInstallFailure;
+        });
+
+        await applyDatapackChange(context, project, { projectName: 'justrite' }, { changes: true, removeOld: false }, progress);
+
+        expect(saved).toBeUndefined();
+    });
+
     it('keeps the old data when the SC chose Keep Data', async () => {
         const { context, project, progress } = setup();
 

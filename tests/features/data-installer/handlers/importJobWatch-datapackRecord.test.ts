@@ -189,6 +189,89 @@ describe('a reset that finishes clears it', () => {
     });
 });
 
+/**
+ * Step-04 S7: a failed creation install stays on the project until a later install of that
+ * datapack succeeds (cleared) or fails (retries bumped), or the project stops naming it. Asserted
+ * on what each SAVE carried, since the project object is mutated in place.
+ */
+describe('a failed creation install, after later installs', () => {
+    const FAILURE = { name: 'bodea', version: 'main', reason: 'Products refused.', at: '2026-11-12T10:00:00.000Z', retries: 0 };
+    const failedProject = (): Partial<Project> => ({
+        ...PAAS_PROJECT(),
+        datapack: { name: 'bodea', version: 'main', store: 'installer' },
+        datapackInstallFailure: { ...FAILURE },
+    });
+    /** A save mock that keeps what each save carried. */
+    function savesOf(): { saveProject: jest.Mock; saved: Array<Project['datapackInstallFailure']> } {
+        const saved: Array<Project['datapackInstallFailure']> = [];
+        const saveProject = jest.fn(async (p: Project) => {
+            saved.push(p.datapackInstallFailure && { ...p.datapackInstallFailure });
+        });
+        return { saveProject, saved };
+    }
+    const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
+    it('clears it when an install of that datapack succeeds', async () => {
+        happyEngine();
+        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
+        const { saveProject, saved } = savesOf();
+        const { context } = makeImportHarness(failedProject(), saveProject);
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await settle();
+
+        expect(saved.at(-1)).toBeUndefined();
+    });
+
+    it('bumps the retries, with the run\'s reason, when an install of it fails again', async () => {
+        happyEngine();
+        mockedWatch.mockResolvedValue({ outcome: 'error', perType: {}, reason: 'Still refused.' });
+        const { saveProject, saved } = savesOf();
+        const { context } = makeImportHarness(failedProject(), saveProject);
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await settle();
+
+        expect(saved.at(-1)).toStrictEqual({ ...FAILURE, reason: 'Still refused.', at: expect.any(String), retries: 1 });
+    });
+
+    it('drops it when another datapack is installed in its place', async () => {
+        happyEngine();
+        mockedWatch.mockResolvedValue({ outcome: 'error', perType: {}, reason: 'Refused.' });
+        const { saveProject, saved } = savesOf();
+        const { context } = makeImportHarness(failedProject(), saveProject);
+
+        await importHandlers['start-datapack-import'](context, { ...PAYLOAD, datapackName: 'frescopa' });
+        await settle();
+
+        expect(saved).toStrictEqual([undefined]);
+    });
+
+    it('drops it when an uninstall of the datapack finishes', async () => {
+        happyEngine();
+        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
+        const { saveProject, saved } = savesOf();
+        const { context } = makeImportHarness(failedProject(), saveProject);
+
+        await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
+        await settle();
+
+        expect(saved).toStrictEqual([undefined]);
+    });
+
+    it('CONTROL: a failed install with no record starts none', async () => {
+        happyEngine();
+        mockedWatch.mockResolvedValue({ outcome: 'error', perType: {}, reason: 'Refused.' });
+        const { saveProject, saved } = savesOf();
+        const { context } = makeImportHarness(PAAS_PROJECT(), saveProject);
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await settle();
+
+        expect(saved).toStrictEqual([undefined]);
+    });
+});
+
 // F66 (owner, 2026-11-07): every open Datapacks screen reads its list again.
 describe('every open Datapacks screen hears of it', () => {
     it('when an import is accepted, and again when its job ends', async () => {

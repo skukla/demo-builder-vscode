@@ -1,6 +1,4 @@
 /**
- * ProjectFileLoader
- *
  * Loads project data from the filesystem by reading the .demo-builder.json manifest
  * and discovering components in the components/ directory.
  */
@@ -95,6 +93,7 @@ export interface ProjectManifest {
     selectedPackage?: string;
     demo?: Project['demo'];
     datapack?: Project['datapack'];
+    datapackInstallFailure?: Project['datapackInstallFailure'];
     commerceAdminExperience?: Project['commerceAdminExperience'];
     selectedStack?: string;
     selectedAddons?: string[];
@@ -198,6 +197,7 @@ export class ProjectFileLoader {
                 selectedPackage: normalizePackageId(manifest.selectedPackage),
                 demo: manifest.demo,
                 datapack: manifest.datapack,
+                datapackInstallFailure: manifest.datapackInstallFailure,
                 commerceAdminExperience: manifest.commerceAdminExperience,
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,

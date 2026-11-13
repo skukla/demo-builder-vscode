@@ -12,6 +12,7 @@
 
 import {
     extractSettingsFromProject,
+    copySeedFromProject,
     createExportSettings,
     getSuggestedFilename,
 } from '@/features/projects-dashboard/services/settingsSerializer';
@@ -21,6 +22,7 @@ import { readProjectFile } from '@/core/state/projectFileReader';
 import { PROJECT_FILE_VERSION } from '@/types/projectFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
+import { DATAPACK_INSTALL_FAILURE, FAILED_PACK } from '../../../helpers/datapackInstallFailureFixtures';
 
 /** Read written text back through the one reader; a refusal fails the test with its reason. */
 function readBack(json: string) {
@@ -327,6 +329,23 @@ describe('settingsSerializer', () => {
             expect(file.commerceStoreStructure).toStrictEqual(full.commerceStoreStructure);
             expect(file.datapack).toStrictEqual(full.datapack);
             expect(file.aiPrompts).toStrictEqual(full.aiPrompts);
+        });
+
+        // A failed install belongs to this project's store, not to a copy or an import of it
+        // (step-04 S7): the file, Copy's seed and Edit's seed all leave it behind.
+        it('never carries a failed install, in the file, a copy or an edit', () => {
+            const failed = createMockProject({ datapack: FAILED_PACK, datapackInstallFailure: DATAPACK_INSTALL_FAILURE });
+
+            const file = createExportSettings(failed, '1.2.3');
+            const copied = copySeedFromProject(failed);
+            const edited = extractSettingsFromProject(failed);
+
+            expect(file.datapack).toStrictEqual(FAILED_PACK);
+            expect(JSON.stringify(file)).not.toContain('datapackInstallFailure');
+            expect(JSON.stringify(file)).not.toContain(DATAPACK_INSTALL_FAILURE.reason);
+            expect(copied.ok && JSON.stringify(copied.file)).not.toContain(DATAPACK_INSTALL_FAILURE.reason);
+            expect(copied.ok).toBe(true);
+            expect(JSON.stringify(edited)).not.toContain(DATAPACK_INSTALL_FAILURE.reason);
         });
 
         it('writes the Adobe org and workspace NAMES, which version 1 read and never wrote', () => {

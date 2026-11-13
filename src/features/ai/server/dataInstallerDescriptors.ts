@@ -190,7 +190,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Which Commerce instance an install would land on, derived from the current project, ' +
             'plus the datapack the project was created to hold and the website/store-view scope ' +
-            'it recorded. Answers; does not decide.',
+            'it recorded. installFailed (reason, retries) when the install of that datapack at creation ' +
+            'did not succeed: install it again with start_datapack_import. Answers; does not decide.',
         map: importHandlers,
         type: 'get-datapack-import-target',
     },

@@ -363,6 +363,71 @@ describe('executeSampleDataPhase', () => {
         });
     });
 
+    /**
+     * Step-04 S7: a creation install that did not end in success is recorded on the project, so
+     * the card can say "Install failed" instead of wearing the installed check. Asserted on the
+     * project the build SAVES, which is the only place the record reaches anyone.
+     */
+    describe('the failed install, recorded on the project', () => {
+        const recorded = (context: ReturnType<typeof makeContext>) =>
+            jest.mocked(context.stateManager.saveProject).mock.calls.map(([saved]) => saved.datapackInstallFailure);
+
+        it('records a run that never started, with its reason', async () => {
+            mockedInstall.mockResolvedValue({ ran: false, reason: 'the service refused' });
+            const context = makeContext();
+
+            await executeSampleDataPhase(context, makeProject(), jest.fn());
+
+            expect(recorded(context)).toStrictEqual([
+                { name: 'bodea', version: 'main', reason: 'the service refused', at: expect.any(String), retries: 0 },
+            ]);
+        });
+
+        // P4-Q11: partly installed counts as failed, with the run's reason.
+        it('records a partly installed run, with the run\'s reason', async () => {
+            mockedInstall.mockResolvedValue({ ran: true, outcome: 'partial', perType: {}, reason: 'Products refused.' });
+            const context = makeContext();
+
+            await executeSampleDataPhase(context, makeProject(), jest.fn());
+
+            expect(recorded(context)).toStrictEqual([
+                { name: 'bodea', version: 'main', reason: 'Products refused.', at: expect.any(String), retries: 0 },
+            ]);
+        });
+
+        it('records a run whose wiring blew up, with the error', async () => {
+            mockedInstall.mockRejectedValue(new Error('unexpected'));
+            const context = makeContext();
+
+            await executeSampleDataPhase(context, makeProject(), jest.fn());
+
+            expect(recorded(context)).toStrictEqual([
+                { name: 'bodea', version: 'main', reason: 'unexpected', at: expect.any(String), retries: 0 },
+            ]);
+        });
+
+        it('records nothing for a skipped run or a success', async () => {
+            const context = makeContext();
+            mockedInstall.mockResolvedValueOnce({ ran: false, skipped: true, reason: 'nothing stored' });
+
+            await executeSampleDataPhase(context, makeProject(), jest.fn());
+            await executeSampleDataPhase(context, makeProject(), jest.fn());
+
+            expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        });
+
+        // An Edit re-running the install over a failed one.
+        it('clears an earlier failure of the same datapack once it installs', async () => {
+            const context = makeContext();
+            const project = makeProject();
+            project.datapackInstallFailure = { name: 'bodea', version: 'main', reason: 'earlier', at: '2026-11-12T10:00:00.000Z', retries: 0 };
+
+            await executeSampleDataPhase(context, project, jest.fn());
+
+            expect(recorded(context)).toStrictEqual([undefined]);
+        });
+    });
+
     /** A project with no pack must cost the build nothing at all. */
     it('stays silent for a project that chose no sample data', async () => {
         const progress = jest.fn();

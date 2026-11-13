@@ -195,6 +195,10 @@
           "$ref": "#/definitions/ProjectDatapack",
           "description": "The datapack this demo's store holds, and the store that holds the pack.\n\nChosen on the wizard's Datapacks step and installed by creation itself (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data Installer screen and by a save (Save and Save As, `demoPack.ts`), and cleared by a reset once it finishes having taken out everything the pack put there (a reset that stops, or keeps containers holding the SC's things, leaves it). `configure_project` records it without installing."
         },
+        "datapackInstallFailure": {
+          "$ref": "#/definitions/DatapackInstallFailure",
+          "description": "The creation-time install of `datapack` that did not end in success, until a later install of it succeeds or the project stops naming it (`installFailure.ts`). Absent on every project predating it, which shows nothing. Never exported in a project file."
+        },
         "commerceAdminExperience": {
           "$ref": "#/definitions/CommerceAdminExperience",
           "description": "The Commerce Admin interface chosen on Configure. Absent: the setting's."
@@ -1695,6 +1699,37 @@
         "version"
       ],
       "description": "The pack a project holds: a reference whose version is known."
+    },
+    "DatapackInstallFailure": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the run did not succeed, in the run's own words."
+        },
+        "at": {
+          "type": "string",
+          "description": "When the latest failed run ended, ISO."
+        },
+        "retries": {
+          "type": "number",
+          "description": "Installs of the same datapack tried since, all failed."
+        }
+      },
+      "required": [
+        "at",
+        "name",
+        "reason",
+        "retries",
+        "version"
+      ],
+      "description": "A creation-time install of the project's datapack that did not end in success (step-04 S7).\n\nKept on the PROJECT, never on `ProjectDatapack`, which travels in project files: a failure belongs to this store, not to a copy. Rules in `features/data-installer/services/installFailure.ts`."
     },
     "CommerceAdminExperience": {
       "type": "string",

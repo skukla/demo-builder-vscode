@@ -17,6 +17,7 @@
  */
 
 import type { Project } from '@/types/base';
+import { DATAPACK_INSTALL_FAILURE } from '../../helpers/datapackInstallFailureFixtures';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import {
     ProjectConfigWriter,
@@ -60,6 +61,7 @@ const FIELDS: { [K in keyof Required<Project>]: Decision<Project[K]> } = {
             origin: { name: 'bodea', version: '1.0.0', store: 'installer' },
         },
     },
+    datapackInstallFailure: { roundTrips: DATAPACK_INSTALL_FAILURE },
     commerceAdminExperience: { roundTrips: 'classic' },
     selectedStack: { roundTrips: 'eds-accs' },
     selectedAddons: { roundTrips: ['adobe-commerce-aco'] },

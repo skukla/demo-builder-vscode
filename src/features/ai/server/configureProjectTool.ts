@@ -60,6 +60,7 @@ import {
 import componentsConfig from '@/features/components/config/components.json';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { stageSettingsChange } from '@/features/dashboard/services/projectSettingsChange';
+import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
 import { isStoreScopeChange } from '@/features/eds/services/storefront/storeScopeChange';
 import type { MeshChanges } from '@/features/mesh/services/types';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
@@ -135,6 +136,8 @@ function recordChoices(project: Project, input: Record<string, unknown>): Applie
     const applied: Applied = {};
     if (input.datapack) {
         project.datapack = input.datapack as Project['datapack'];
+        // A failed install of the pack it replaces no longer applies (step-04 S7).
+        dropStaleFailure(project);
         applied.datapack = project.datapack;
     }
     if (input.addons) {

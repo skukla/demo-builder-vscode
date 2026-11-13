@@ -15,6 +15,7 @@
 import * as vscode from 'vscode';
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import type { ProgressTracker } from './shared';
+import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
 import type { NameMemory } from '@/features/data-installer/services/packNames';
 import {
     beginSampleDataRemovalCheck,
@@ -93,6 +94,8 @@ export async function applyDatapackChange(
         await removeProjectSampleData(project, context, (stage, step) => progressTracker(stage, 90, step ?? ''), askSaveAsNameWith(vscode));
     }
     project.datapack = config.datapack;
+    // A failed install of the old pack no longer applies (step-04 S7).
+    dropStaleFailure(project);
     await context.stateManager.saveProject(project);
     if (!project.datapack) return;
     await executeSampleDataPhase(context, project, progressTracker);

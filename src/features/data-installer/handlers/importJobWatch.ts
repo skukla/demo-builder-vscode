@@ -16,8 +16,9 @@
 
 import { announceDatapacksChanged } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
-import { watchImportJob } from '../services/importJobRunner';
+import { type ImportJobResult, watchImportJob } from '../services/importJobRunner';
 import type { ImportRequest } from '../services/importRequest';
+import { dropStaleFailure, recordInstallEnd } from '../services/installFailure';
 import { type DataTypeStatus, IMPORT_PROGRESS_MESSAGE, type ImportJobRecord, type JobPurpose, type ValidationResult } from '../types';
 import { progressLabel, progressStep, summarizeProgress } from '../ui/importProgress';
 import { PollingService } from '@/core/shell/pollingService';
@@ -31,6 +32,9 @@ import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /** Where the in-flight/last import is recorded. One per extension host. */
 export const JOB_KEY = 'dataInstaller.import.current';
+
+/** Said for a job that ended without success and without saying why. */
+const JOB_DID_NOT_FINISH = 'The job did not finish.';
 
 /**
  * What a datapack job shows on the SHARED progress channel, the notification the
@@ -77,7 +81,8 @@ async function watchAndRecord(
     transient: TransientStateManager,
     record: ImportJobRecord,
     engine: DatapackEngine,
-    resetOf: string | undefined,
+    /** The project the job started from: a reset clears its pack, an install settles its failure. */
+    projectPath: string,
     replacement?: ImportRequest,
     afterSuccess?: () => Promise<void>,
 ): Promise<void> {
@@ -133,7 +138,7 @@ async function watchAndRecord(
                 : {
                       id: DATAPACK_OPERATION_ID,
                       state: 'failed',
-                      error: result.reason ?? 'The job did not finish.',
+                      error: result.reason ?? JOB_DID_NOT_FINISH,
                   },
         );
         await transient.set(JOB_KEY, {
@@ -156,9 +161,7 @@ async function watchAndRecord(
                 ? { processingTimeMs: result.processingTimeMs }
                 : {}),
         });
-        if (resetOf !== undefined && result.outcome === 'success' && !result.leftInStore) {
-            await clearDatapackOnProject(context, resetOf, { name: record.datapackName, version: record.version });
-        }
+        await settleProjectAfterJob(context, record, result, projectPath);
         if (afterSuccess && result.outcome === 'success') await runAfterSuccess(context, afterSuccess);
         // What the store holds, and which pack the project names, may have moved: every open screen reads again.
         announceDatapacksChanged();
@@ -264,11 +267,11 @@ export async function runAndWatch(
         await transient.set(JOB_KEY, record);
 
         // An import is recorded at once; a reset is cleared only when it finishes (see below).
-        const resetOf = spec.operation === 'reset' ? await projectPathNow(context) : undefined;
+        const startedIn = await projectPathNow(context);
         // An import replacing the demo's pack is recorded once that pack is gone (`namedOnceReplaced`).
         if (spec.operation !== 'reset' && !request.replaces) await recordDatapackOnProject(context, request);
 
-        void watchAndRecord(context, transient, record, engine, resetOf, request.replaces ? request : undefined, spec.afterSuccess);
+        void watchAndRecord(context, transient, record, engine, startedIn, request.replaces ? request : undefined, spec.afterSuccess);
 
         return { success: true, data: { activationId: started.activationId } };
     } catch (error) {
@@ -316,6 +319,8 @@ async function recordDatapackOnProject(context: HandlerContext, request: ImportR
         }
         // The store travels with the pack, so a copy or an exported file installs from it too.
         project.datapack = { name: request.id.name, version: request.id.version, store: request.source ?? 'installer' };
+        // Another pack in its place: a failed install of the old one no longer applies (step-04 S7).
+        dropStaleFailure(project);
         await context.stateManager.saveProject(project);
         context.debugLogger.debug(`[Data Installer] project datapack recorded as ${request.id.name}@${request.id.version}`);
     } catch (error) {
@@ -368,10 +373,43 @@ async function clearDatapackOnProject(context: HandlerContext, projectPath: stri
             return;
         }
         project.datapack = undefined;
+        dropStaleFailure(project);
         await context.stateManager.saveProject(project);
         context.debugLogger.debug('[Data Installer] project datapack cleared');
     } catch (error) {
         context.debugLogger.debug(`[Data Installer] could not clear the datapack on the project: ${errorText(error)}`);
+    }
+}
+
+/**
+ * What a job that ENDED changes on the project it started from: a reset that took everything clears
+ * the pack it names; an install settles a failed install's record of that pack (step-04 S7).
+ */
+async function settleProjectAfterJob(
+    context: HandlerContext,
+    record: ImportJobRecord,
+    result: Pick<ImportJobResult, 'outcome' | 'reason' | 'leftInStore'>,
+    projectPath: string,
+): Promise<void> {
+    const pack = { name: record.datapackName, version: record.version };
+    if (record.operation === 'reset') {
+        if (result.outcome === 'success' && !result.leftInStore) await clearDatapackOnProject(context, projectPath, pack);
+        return;
+    }
+    const failed = result.outcome === 'success' ? undefined : (result.reason ?? JOB_DID_NOT_FINISH);
+    await settleInstallFailure(context, projectPath, pack, failed);
+}
+
+/**
+ * An install that ENDED: a success of the datapack a failed creation install named clears that
+ * failure, another failure of it bumps its retries (`installFailure.ts`). Never fatal: the job has
+ * ended either way.
+ */
+async function settleInstallFailure(context: HandlerContext, projectPath: string, pack: DatapackId, failed: string | undefined): Promise<void> {
+    try {
+        await recordInstallEnd(context.stateManager, projectPath, pack, failed, new Date());
+    } catch (error) {
+        context.debugLogger.debug(`[Data Installer] could not record the install's end on the project: ${errorText(error)}`);
     }
 }
 

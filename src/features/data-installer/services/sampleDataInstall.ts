@@ -137,7 +137,7 @@ export interface SampleDataDeps {
          */
         operation?: 'import' | 'reset';
         onProgress?: (perType: Record<string, DataTypeStatus>) => void;
-    }) => Promise<{ outcome: string; perType: Record<string, DataTypeStatus> }>;
+    }) => Promise<{ outcome: string; perType: Record<string, DataTypeStatus>; reason?: string }>;
     /** Live per-type progress, for the build's progress line. */
     onProgress?: (perType: Record<string, DataTypeStatus>) => void;
 }
@@ -241,7 +241,9 @@ async function runSampleDataJob(
             ...(deps.onProgress ? { onProgress: deps.onProgress } : {}),
         });
 
-        return { ran: true, outcome: watched.outcome, perType: watched.perType };
+        // The run's reason travels too: a failed creation install records it (step-04 S7).
+        const reason = watched.reason ? { reason: watched.reason } : {};
+        return { ran: true, outcome: watched.outcome, perType: watched.perType, ...reason };
     } catch (error) {
         // Swallowed on purpose — see the module docstring. A build must not fail
         // over optional content, least of all after the instance is already

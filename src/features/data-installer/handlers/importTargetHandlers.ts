@@ -18,6 +18,7 @@ import {
     buildScopeDiscoveryParams,
     groupStoreViewsByWebsite,
 } from '../services/importScopeDiscovery';
+import { installFailedOf } from '../services/installFailure';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
 import { heldDisplayName } from './importReplacement';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
@@ -83,7 +84,15 @@ export const importTargetHandlers = defineHandlers({
         const installedAt = await installedAtOf(project, datapack);
         // By the name the SC knows it, for the form's "Replaces …" when another pack is imported (walk F97).
         const heldName = installedAt && datapack ? await heldDisplayName(context, datapack) : undefined;
-        const held = { datapack, ...(installedAt ? { installedAt } : {}), ...(heldName ? { heldName } : {}) };
+        // A creation install of that datapack that did not succeed (step-04 S7): the card and flyout
+        // say "Install failed" and offer Retry, and an agent reads the same.
+        const installFailed = installFailedOf(project);
+        const held = {
+            datapack,
+            ...(installedAt ? { installedAt } : {}),
+            ...(heldName ? { heldName } : {}),
+            ...(installFailed ? { installFailed } : {}),
+        };
         if (instance) {
             return {
                 success: true,

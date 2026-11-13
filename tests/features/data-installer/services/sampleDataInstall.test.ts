@@ -265,6 +265,17 @@ describe('installSampleData', () => {
         expect(result).toMatchObject({ ran: true, outcome: 'partial' });
     });
 
+    // The run's reason is what a failed creation install records (step-04 S7, P4-Q11).
+    it('carries the run\'s reason with a partial import', async () => {
+        const d = deps({
+            watch: jest.fn().mockResolvedValue({ outcome: 'partial', perType: { products: 'error' }, reason: 'Products refused.' }),
+        });
+
+        const result = await installSampleData(project(), d);
+
+        expect(result).toStrictEqual({ ran: true, outcome: 'partial', perType: { products: 'error' }, reason: 'Products refused.' });
+    });
+
     describe('the cases where it does nothing at all', () => {
         it('skips a project that chose no pack', async () => {
             const d = deps();

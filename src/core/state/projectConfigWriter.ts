@@ -13,6 +13,16 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getComponentIds } from '@/types/typeGuards';
 
+/** The datapack the project names, and a failed creation install of it (step-04 S7). */
+function addDatapackFields(manifest: Record<string, unknown>, project: Project): void {
+    if (project.datapack !== undefined) {
+        manifest.datapack = project.datapack;
+    }
+    if (project.datapackInstallFailure !== undefined) {
+        manifest.datapackInstallFailure = project.datapackInstallFailure;
+    }
+}
+
 /**
  * Copy the project's OPTIONAL fields onto the manifest, omitting each when it
  * has nothing to say.
@@ -23,9 +33,7 @@ import { getComponentIds } from '@/types/typeGuards';
  * charging one more branch to a function already near the complexity limit.
  */
 function addOptionalManifestFields(manifest: Record<string, unknown>, project: Project): void {
-    if (project.datapack !== undefined) {
-        manifest.datapack = project.datapack;
-    }
+    addDatapackFields(manifest, project);
     if (project.commerceAdminExperience) {
         manifest.commerceAdminExperience = project.commerceAdminExperience;
     }

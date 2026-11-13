@@ -14,6 +14,7 @@ import {
 import type { Project } from '@/types/base';
 import type { DatapackSummary } from '@/features/data-installer/types';
 import { createMockProject } from '../../../helpers/projectFake';
+import { DATAPACK_INSTALL_FAILURE, FAILED_PACK } from '../../../helpers/datapackInstallFailureFixtures';
 
 const AT = new Date('2026-10-29T18:30:05Z');
 const BODEA = { name: 'bodea', version: 'main', store: 'installer' as const };
@@ -88,6 +89,15 @@ describe('recordSave', () => {
         recordSave(recorded, { id: { name: 'hand-built-abc123', version: '2' }, displayName: 'Hand Built' });
 
         expect(recorded.datapack).toEqual({ name: 'hand-built-abc123', version: '2', store: 'library' });
+    });
+
+    // Step-04 S7: the save is what the store now holds, so the failed install it replaced goes.
+    it('drops a failed install of the pack it replaces', () => {
+        const recorded = project({ datapack: FAILED_PACK, datapackInstallFailure: DATAPACK_INSTALL_FAILURE });
+
+        recordSave(recorded, { id: { name: 'my-bodea-abc123', version: '20261029-183005' }, displayName: 'My Bodea', origin: FAILED_PACK });
+
+        expect(recorded.datapackInstallFailure).toBeUndefined();
     });
 });
 

@@ -157,6 +157,32 @@ export function getStorefrontStatusDisplay(status: string | undefined): StatusDi
 }
 
 // ==========================================================
+// Datapack vocabulary — a THIRD table, deliberately
+// ==========================================================
+
+/**
+ * What a project's datapack can be showing beyond its name. Not the deployable table's "Deploy
+ * failed": a datapack is installed, not deployed (step-04 J6-1 and J6-4, owner 2026-11-12). The
+ * state comes from `installFailed` on `get-datapack-import-target`.
+ */
+export type DatapackDisplayStatus = 'install-failed';
+
+const DATAPACK_DISPLAY: Record<DatapackDisplayStatus, StatusDisplayEntry> = {
+    'install-failed': { label: 'Install failed', severity: 'error' },
+};
+
+/**
+ * Label + severity for a datapack status, or null when there is nothing to show.
+ *
+ * @param status - a datapack display status, or undefined
+ */
+export function getDatapackStatusDisplay(status: string | undefined): StatusDisplayEntry | null {
+    return status && status in DATAPACK_DISPLAY
+        ? DATAPACK_DISPLAY[status as DatapackDisplayStatus]
+        : null;
+}
+
+// ==========================================================
 // Severity adapters — one per consuming component
 // ==========================================================
 
