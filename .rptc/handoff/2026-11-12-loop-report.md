@@ -91,7 +91,12 @@ Live notes; rewritten as the final report at the loop's close.
   taken Save As name. Fixed on the way: a store-less datapack was treated as a library one in two
   places. Full gate green (2,407 suites, 38,521 tests). Note: until AI_CONTEXT_VERSION is bumped after
   Phase 8, existing projects' agent skill still describes the removed inputs (the tools refuse them).
-- Step-04 S3 (Create as two windows, everything ticked; "My Luma Created" per P4-Q1): with a builder.
+- Step-04 S3: 2a368ad9c. Create is two windows: a wide picker with everything ticked (Cancel, Next),
+  then the name (Back, Cancel, Create), ending "My Luma Created". The save only takes item lists, so a
+  type ticked whole is read when Next needs it (a spinner on Next; can take seconds on a big store).
+  The spinner on Select All Data and its shared code and styles are gone (nothing else drew them).
+  Full gate green (2,407 suites, 38,534 tests).
+- Step-04 S4 (the save run as two steps): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -129,5 +134,9 @@ Live notes; rewritten as the final report at the loop's close.
 - Q9 (from S1): a run with a problem on one row and no overall warning now stays open, but its title
   is still green. Should a problem row alone turn the title amber? Recommend yes: the title says how
   it ended, and a problem is not a clean success.
+- From S3: (a) should the save accept "this whole type" so Create needs no read on Next? That changes
+  what the extension and agent tools accept; recommend not for beta.153. (b) A wholly ticked type shows
+  "N selected", not the prototype's "48"; recommend keeping it. (c) The search still matches hidden
+  details (SKU, email); recommend keeping it, since SCs search by SKU.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
