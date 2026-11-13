@@ -34,10 +34,10 @@ import {
 } from './edsResetPreflight';
 import {
     beginSampleDataRemovalCheck,
-    removeProjectSampleData,
-    type SaveAsAnswer,
+    removeProjectSampleDataOutcome,
 } from './edsResetSampleData';
 import { executeEdsReset } from './edsResetService';
+import { FailedAfterDatapack, type AnsweredDatapack } from './resetDatapackStep';
 import { whileRunning } from '@/core/state/projectWorkRunning';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { resetStageLabel } from '@/core/utils/resetStages';
@@ -100,9 +100,11 @@ export interface EdsResetWithUIOptions {
      * the batch asked its questions before anything ran, so none is asked here, and it reports
      * through `withinEdit.report` into the batch's one window. `removeDatapack` is the batch's
      * Uninstall Datapack; `changes` answers a pack that is not the SC's (a name, or `drop`).
-     * Absent (an Edit), no data is removed: the Edit's datapack step owns the data.
+     * Absent (an Edit), no data is removed: the Edit's datapack step owns the data. A removal that
+     * ran comes back as the result's `datapackRemoval`, or on the `FailedAfterDatapack` a reset
+     * that throws after it throws, for the batch row to say what became of the store.
      */
-    answered?: { removeDatapack: boolean; changes?: SaveAsAnswer };
+    answered?: AnsweredDatapack;
     /**
      * GitHub repository reads, for the added-demo source check. Injectable for
      * tests; defaults to the cached services built from the context's secrets.
@@ -289,18 +291,25 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
             // Never allowed to fail the reset: the storefront reset is what
             // was asked for, and a data step that refuses is reported while
             // the reset still stands.
-            if (removeData) {
-                // A batch answered the changes already; asking here would stop it mid-run.
-                await removeProjectSampleData(project, context, report, { given: answered?.changes });
-            }
+            // A batch answered the changes already; asking here would stop it mid-run.
+            const datapackRemoval = removeData
+                ? await removeProjectSampleDataOutcome(project, context, report, { given: answered?.changes })
+                : undefined;
 
             // The reset's steps are a fixed list, so the count is known up
             // front and rides the stage as "(4 of 12)" — the one shape a count
             // is allowed to take (PL-59 wording rules).
-            return await executeEdsReset(resetParams, context, tokenProvider, options.meshDeps, (p) => {
+            const steps = executeEdsReset(resetParams, context, tokenProvider, options.meshDeps, (p) => {
                 const stage = resetStageLabel(p.step);
                 report(stage ?? p.message, stage ? p.message : undefined, { index: p.step, total: p.totalSteps });
             });
+            if (!datapackRemoval) return await steps;
+            // The store was touched: whatever the reset does next, the row says what became of it.
+            try {
+                return { ...(await steps), datapackRemoval };
+            } catch (error) {
+                throw new FailedAfterDatapack(error, datapackRemoval);
+            }
         } finally {
             project.status = originalStatus;
             await context.stateManager.saveProject(project);

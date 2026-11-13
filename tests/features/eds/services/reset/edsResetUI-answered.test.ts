@@ -36,13 +36,14 @@ jest.mock('@/core/utils/sleep');
 // The datapack's removal is its own suite's (sampleDataRemovalChanges); here only what it is handed.
 jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
     ...jest.requireActual('@/features/eds/services/reset/edsResetSampleData'),
-    removeProjectSampleData: jest.fn(),
+    removeProjectSampleDataOutcome: jest.fn(async () => ({})),
 }));
 const mockReport = jest.fn();
 
 import { runningWork } from '@/core/state/projectWorkRunning';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import { removeProjectSampleData } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -236,7 +237,41 @@ describe('resetEdsProjectWithUI — answered by a batch', () => {
         expect(result.success).toBe(true);
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         // Given, not asked: it goes with the first read, so it reaches the SC's own pack too (step-05 S1).
-        expect((removeProjectSampleData as jest.Mock).mock.calls[0][3]).toStrictEqual({ given: { saveAs: 'My Bodea' } });
+        expect((removeProjectSampleDataOutcome as jest.Mock).mock.calls[0][3]).toStrictEqual({ given: { saveAs: 'My Bodea' } });
+    });
+
+    it("carries why the datapack stayed into the reset's result, for the batch row", async () => {
+        mockedReset.mockResolvedValue({ success: true, filesReset: 3 });
+        (removeProjectSampleDataOutcome as jest.Mock).mockResolvedValue({ kept: 'Its changes could not be saved.' });
+
+        const result = await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project: withPack(),
+            context: createContext(),
+            withinEdit: { report: jest.fn() },
+            answered: { removeDatapack: true, changes: { saveAs: 'My Bodea' } },
+        });
+
+        expect(result).toStrictEqual({ success: true, filesReset: 3, datapackRemoval: { kept: 'Its changes could not be saved.' } });
+    });
+
+    it('still says what the datapack step did when the reset throws after it', async () => {
+        mockedReset.mockRejectedValue(new Error('pipeline died'));
+        (removeProjectSampleDataOutcome as jest.Mock).mockResolvedValue({});
+
+        const thrown = await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project: withPack(),
+            context: createContext(),
+            withinEdit: { report: jest.fn() },
+            answered: { removeDatapack: true, changes: 'drop' },
+        }).catch((e: unknown) => e);
+
+        // The same failure in the same words, carrying what the datapack step did.
+        expect(thrown).toBeInstanceOf(FailedAfterDatapack);
+        expect(thrown).toMatchObject({ message: 'pipeline died', removal: {} });
     });
 
     it('keeps the datapack when the batch said not to remove it', async () => {
@@ -251,7 +286,7 @@ describe('resetEdsProjectWithUI — answered by a batch', () => {
             answered: { removeDatapack: false },
         });
 
-        expect(removeProjectSampleData).not.toHaveBeenCalled();
+        expect(removeProjectSampleDataOutcome).not.toHaveBeenCalled();
         expect(mockedReset).toHaveBeenCalledTimes(1);
     });
 });

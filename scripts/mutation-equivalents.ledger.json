@@ -14164,7 +14164,7 @@
             "source": "PL-69 sitting 9, 2026-10-09"
         },
         {
-            "module": "src/features/lifecycle/services/projectResetService.ts",
+            "module": "src/features/lifecycle/services/projectResetComponents.ts",
             "anchors": [
                 "if (comp.type === 'dependency') {"
             ],

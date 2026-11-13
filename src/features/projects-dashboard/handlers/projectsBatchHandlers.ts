@@ -43,14 +43,21 @@ export const handlePrepareProjectsBatch: MessageHandler<PrepareProjectsBatchRequ
     return { success: true, data };
 };
 
-/** Each project's reset, answered: the storefront reset for an EDS project, else the component one. */
+/**
+ * Each project's reset, answered: the storefront reset for an EDS project, else the component one.
+ * Both take the batch's Uninstall Datapack and the save question's answer (step-05 S6), and a reset
+ * that finished hands back what it finished around, in the agent tool's words (`resetCaveats`).
+ */
 const runReset: RunReset = async (context, project, answer, report) => {
     const commandManager = ServiceLocator.getCommandExecutor();
     const authManager = ServiceLocator.getAuthenticationService();
+    const answered = { removeDatapack: answer.removeDatapack, ...(answer.changes ? { changes: answer.changes } : {}) };
     const { isEdsProject } = await import('@/types/typeGuards');
     if (isEdsProject(project)) {
         const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
-        return resetEdsProjectWithUI({
+        const { resetCaveats } = await import('@/features/eds/services/reset/edsResetParams');
+        const { datapackStepLine } = await import('@/features/eds/services/reset/resetDatapackStep');
+        const result = await resetEdsProjectWithUI({
             meshDeps: { commandManager, authManager },
             project,
             context,
@@ -58,11 +65,18 @@ const runReset: RunReset = async (context, project, answer, report) => {
             includeBlockLibrary: true,
             verifyCdn: true,
             withinEdit: { report },
-            answered: { removeDatapack: answer.removeDatapack, ...(answer.changes ? { changes: answer.changes } : {}) },
+            answered,
         });
+        if (!result.success) {
+            // What the datapack step did to the store, said beside the failure (review, 2026-11-13).
+            const removal = result.datapackRemoval ? { warnings: [datapackStepLine(result.datapackRemoval)] } : {};
+            return { success: false, ...(result.error ? { error: result.error } : {}), ...removal };
+        }
+        const warnings = resetCaveats(result);
+        return { success: true, ...(warnings.length > 0 ? { warnings } : {}) };
     }
     const { runProjectResetAnswered } = await import('@/features/lifecycle/services/projectResetService');
-    return runProjectResetAnswered({ commandManager, authManager, project, context, logPrefix: '[ProjectsBatch]' }, report);
+    return runProjectResetAnswered({ commandManager, authManager, project, context, logPrefix: '[ProjectsBatch]' }, report, answered);
 };
 
 /** Push one row; a window closed mid-run cannot be told, which is never the run's problem. */

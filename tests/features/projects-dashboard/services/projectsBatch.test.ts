@@ -33,6 +33,7 @@ import {
     runResetBatch,
     saveNamesOf,
 } from '@/features/projects-dashboard/services/projectsBatch';
+import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import type { Project } from '@/types/base';
 import type { ProjectsBatchRowStatus } from '@/types/projectsBatch';
 
@@ -339,6 +340,56 @@ describe('runResetBatch', () => {
         await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: false }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
 
         expect(told.at(-1)).toStrictEqual({ path: one.path, state: 'failed', message: 'Sign in to DA.live.' });
+    });
+
+    // Before step-05 S2/S4 the one-project reset showed these in a modal; the batch read only
+    // success and error, so a reset that finished around something said nothing (2026-11-13).
+    it('ends a reset that finished around something done, with what it finished around', async () => {
+        const one = storefront('one');
+        const told: ProjectsBatchRowStatus[] = [];
+        const warnings = ['The code could not be published.', 'Its datapack was not uninstalled: Its changes could not be saved.'];
+        const runReset = jest.fn().mockResolvedValue({ success: true, warnings });
+
+        const failed = await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: true }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
+
+        expect(failed).toBe(0);
+        expect(told.at(-1)).toStrictEqual({ path: one.path, state: 'done', warnings });
+    });
+
+    it('ends a failed reset with its reason, and what became of the datapack under it', async () => {
+        const one = storefront('one');
+        const told: ProjectsBatchRowStatus[] = [];
+        const runReset = jest.fn().mockResolvedValue({ success: false, error: 'git clone failed', warnings: ['Its datapack was uninstalled.'] });
+
+        const failed = await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: true }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
+
+        expect(failed).toBe(1);
+        expect(told.at(-1)).toStrictEqual({ path: one.path, state: 'failed', message: 'git clone failed', warnings: ['Its datapack was uninstalled.'] });
+    });
+
+    it('ends a reset that threw after its datapack step failed, with what the step did under it', async () => {
+        const one = storefront('one');
+        const told: ProjectsBatchRowStatus[] = [];
+        const runReset = jest.fn().mockRejectedValue(new FailedAfterDatapack(new Error('git clone failed'), { kept: 'Categories could not be removed.', partly: true }));
+
+        await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: true }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
+
+        expect(told.at(-1)).toStrictEqual({
+            path: one.path,
+            state: 'failed',
+            message: 'git clone failed',
+            warnings: ['Part of its datapack was uninstalled: Categories could not be removed.'],
+        });
+    });
+
+    it('ends a clean reset done with nothing under it', async () => {
+        const one = storefront('one');
+        const told: ProjectsBatchRowStatus[] = [];
+        const runReset = jest.fn().mockResolvedValue({ success: true, warnings: [] });
+
+        await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: false }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
+
+        expect(told.at(-1)).toStrictEqual({ path: one.path, state: 'done' });
     });
 });
 

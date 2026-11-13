@@ -6,7 +6,7 @@
  * own work, and their apps keep running in Adobe either way.
  */
 
-import { buildComponentList } from '@/features/lifecycle/services/projectResetService';
+import { buildComponentList } from '@/features/lifecycle/services/projectResetComponents';
 import type { Stack } from '@/types/stacks';
 import { createMockProject } from '../../../helpers/projectFake';
 

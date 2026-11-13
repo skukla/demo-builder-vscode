@@ -319,6 +319,49 @@ describe('ProjectsBatchModal: the run', () => {
         expect(screen.getByText('GitHub refused the delete.')).toHaveClass('work-row-why');
     });
 
+    // A reset that finished around something (the code not published, a datapack that stayed) said
+    // nothing on its row until 2026-11-13: each line is an orange note, and the run keeps its rows.
+    it("a reset that finished around something keeps its rows, each warning an orange note under it", async () => {
+        const reset: PrepareEnvelope = {
+            success: true,
+            data: resetQuestions([
+                { path: '/p/a', name: asDisplayName('A') },
+                { path: '/p/b', name: asDisplayName('B') },
+            ]),
+        };
+        const opened = await openOn('reset', reset);
+        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+        await opened.user.click(screen.getByRole('button', { name: 'Reset 2 Projects' }));
+        await push('operationProgress', { id: ID, state: 'running' });
+        const warnings = ['The code could not be published.', 'Its datapack was not uninstalled: Its changes could not be saved.'];
+        await push('projectsBatchRow', { path: '/p/a', state: 'done', warnings });
+        await push('projectsBatchRow', { path: '/p/b', state: 'done' });
+        await push('operationProgress', { id: ID, state: 'succeeded' });
+
+        const dialog = screen.getByRole('dialog', { name: 'Projects Reset' });
+        expect(dialog).toHaveAttribute('data-size', 'L');
+        for (const line of warnings) expect(screen.getByText(line)).toHaveClass('dialog-problem', 'text-notice');
+        expect(rows()).toEqual([
+            ['A', 'done'],
+            ['B', 'done'],
+        ]);
+    });
+
+    it('a failed row says why in red and what became of the datapack in orange; a repeated line shows twice', async () => {
+        await running();
+        await push('projectsBatchRow', {
+            path: '/p/a',
+            state: 'failed',
+            message: 'git clone failed',
+            warnings: ['Its datapack was uninstalled.', 'Its datapack was uninstalled.'],
+        });
+
+        expect(screen.getByText('git clone failed')).toHaveClass('work-row-why');
+        const notes = screen.getAllByText('Its datapack was uninstalled.');
+        expect(notes).toHaveLength(2);
+        for (const note of notes) expect(note).toHaveClass('dialog-problem', 'text-notice');
+    });
+
     it('a run some projects did not finish ends on the warning', async () => {
         await running();
         await push('operationProgress', { id: ID, state: 'succeeded', warning: '1 project not deleted.' });

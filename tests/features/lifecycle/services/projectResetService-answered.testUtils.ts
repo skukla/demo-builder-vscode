@@ -96,7 +96,7 @@ import {
     createResetProject,
 } from './projectResetService.testUtils';
 
-export { executeProjectReset };
+export { executeProjectReset, runProjectResetAnswered };
 export {
     FRONTEND_DEF,
     MESH_DEF,

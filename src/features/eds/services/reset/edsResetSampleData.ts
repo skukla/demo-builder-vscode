@@ -9,6 +9,7 @@
  * @module features/eds/services/reset/edsResetSampleData
  */
 
+import type { DatapackRemoval } from './resetDatapackStep';
 import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
@@ -222,13 +223,33 @@ export async function removeProjectSampleData(
     report: ReportStage,
     askName?: SaveAsAnswering,
 ): Promise<string | undefined> {
+    return (await removeProjectSampleDataOutcome(project, context, report, askName)).kept;
+}
+
+/** Whether any data type came out of the store before a removal stopped. */
+function anyRemoved(perType: Record<string, string> | undefined): boolean {
+    return Object.values(perType ?? {}).some((status) => status === 'success');
+}
+
+/**
+ * The same removal, saying also whether part of the data came out before it stopped, for a reset
+ * row to say what happened to the store (review, 2026-11-13).
+ *
+ * @returns why the data was not all removed and whether some was, or `{}` when it all was
+ */
+export async function removeProjectSampleDataOutcome(
+    project: Project,
+    context: HandlerContext,
+    report: ReportStage,
+    askName?: SaveAsAnswering,
+): Promise<DatapackRemoval> {
     try {
         // The SC's changes first: this door's question was already asked, and keeping the work is
         // the likely intent. Reported, as everything here is: a save that fails removes nothing and
         // the reset stands.
         if (project.datapack) {
             const kept = await settleBeforeReset(project, context, report, askName);
-            if (kept) return kept;
+            if (kept) return { kept };
         }
 
         report(OPERATION_STAGES.removingDatapack.label);
@@ -257,21 +278,22 @@ export async function removeProjectSampleData(
             context.logger.error(
                 `[EdsReset] Sample data was NOT removed: ${result.reason ?? 'no reason given'}`,
             );
-            return result.reason ?? 'The datapack was not all uninstalled.';
+            const kept = result.reason ?? 'The datapack was not all uninstalled.';
+            return anyRemoved(result.perType) ? { kept, partly: true } : { kept };
         }
         if (!result.ran) {
             context.logger.warn(
                 `[EdsReset] Sample data was not removed: ${result.reason ?? 'no reason given'}`,
             );
-            return result.reason ?? 'The datapack was not uninstalled.';
+            return { kept: result.reason ?? 'The datapack was not uninstalled.' };
         }
         // Part left in the store on purpose: the record still describes what Commerce holds.
         if (!result.leftInStore) await forgetRemovedPack(project, context);
-        return undefined;
+        return {};
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);
-        return reason;
+        return { kept: reason };
     }
 }
 

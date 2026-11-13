@@ -122,6 +122,12 @@ export interface ProjectsBatchRowStatus {
     state: UpdateRowState;
     /** Running: the step it is on. Failed or skipped: why. */
     message?: string;
+    /**
+     * Done: what a reset finished around (the code not published, pages left undone, the mesh not
+     * redeployed, a datapack that did not all come out). Failed: what its datapack step did to the
+     * store first. In the reset's own words, each an orange note.
+     */
+    warnings?: string[];
 }
 
 /**

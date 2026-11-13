@@ -11,6 +11,7 @@
  */
 
 import type { LeftoverPagesResult } from '../storefront/leftoverPages';
+import { datapackStepLine, type DatapackRemoval } from './resetDatapackStep';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import type { Project } from '@/types/base';
@@ -158,8 +159,35 @@ export interface EdsResetResult extends HandlerResponse {
      * palette. Absent when it had nothing to say.
      */
     pipelineWarnings?: string[];
+    /**
+     * What the datapack step did, when a batch asked to uninstall the datapack: why it did not all
+     * come out and whether part did (`DatapackRemoval`). Absent when there was no such step.
+     */
+    datapackRemoval?: DatapackRemoval;
     /** Additional error details */
     errorDetails?: Record<string, unknown>;
+}
+
+/**
+ * A reset that finished, and what it finished around, in the words the SC reads, in this order:
+ * that the code could not be published (the site serves nothing until it is), a step the reset
+ * finished around (the site configuration not written, the mesh not redeployed: a success that
+ * carries an `error`), a page step that left something undone, what the content pipeline could not
+ * do (EDS-55), and a datapack a batch asked to uninstall that did not all come out. The agent's `caveats` and a
+ * batch row's warnings both read it (step-05, 2026-11-13: the batch had dropped them).
+ *
+ * @returns the lines, none when the reset did all it set out to
+ */
+export function resetCaveats(
+    result: Pick<EdsResetResult, 'codeNotPublished' | 'error' | 'pageWarnings' | 'pipelineWarnings' | 'datapackRemoval'>,
+): string[] {
+    return [
+        ...(result.codeNotPublished ? [result.codeNotPublished] : []),
+        ...(result.error ? [result.error] : []),
+        ...(result.pageWarnings ?? []),
+        ...(result.pipelineWarnings ?? []),
+        ...(result.datapackRemoval?.kept ? [datapackStepLine(result.datapackRemoval)] : []),
+    ];
 }
 
 /**

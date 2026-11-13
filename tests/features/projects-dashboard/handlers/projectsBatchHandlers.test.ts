@@ -13,6 +13,7 @@ jest.mock('@/features/projects-dashboard/services/projectsBatch', () => ({
     saveNamesOf: jest.fn(),
 }));
 jest.mock('@/features/eds/services/reset/edsResetUI', () => ({ resetEdsProjectWithUI: jest.fn() }));
+jest.mock('@/features/lifecycle/services/projectResetService', () => ({ runProjectResetAnswered: jest.fn() }));
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getCommandExecutor: jest.fn(), getAuthenticationService: jest.fn() },
 }));
@@ -23,6 +24,7 @@ jest.mock('@/core/vscode/withOperationProgress', () => ({
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
+import { runProjectResetAnswered } from '@/features/lifecycle/services/projectResetService';
 import type { RunReset } from '@/features/projects-dashboard/services/projectsBatch';
 import { PROJECTS_BATCH_OPERATION_ID } from '@/core/utils/operationIds';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
@@ -151,5 +153,96 @@ describe("runProjectsBatch's reset of a storefront project", () => {
             withinEdit: { report },
             answered: { removeDatapack: true, changes: 'drop' },
         });
+    });
+});
+
+/** The reset the run wires into the batch, caught from `runResetBatch`'s third argument. */
+async function wiredRunReset(): Promise<RunReset> {
+    let runReset: RunReset | undefined;
+    (runResetBatch as jest.Mock).mockImplementation(async (_ctx, _answers, run: { runReset: RunReset }) => {
+        runReset = run.runReset;
+        return 0;
+    });
+    await handleRunProjectsBatch(createMockHandlerContext(), { action: 'reset', answers: [{ path: '/projects/a', removeDatapack: false }] });
+    if (!runReset) throw new Error('the run wired no reset');
+    return runReset;
+}
+
+// A storefront reset that finished around something said nothing on its row (2026-11-13): the
+// agent tool's caveats, the same lines, now reach the row as its warnings.
+describe("runProjectsBatch's storefront reset, finished around something", () => {
+    it("hands the row the reset's caveats as warnings, in the order the SC reads them", async () => {
+        const runReset = await wiredRunReset();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({
+            success: true,
+            codeNotPublished: 'The code could not be published.',
+            error: 'The site configuration was not written.',
+            pageWarnings: ['2 pages could not be published.'],
+            pipelineWarnings: ['The block palette is empty.'],
+            datapackRemoval: { kept: 'Its changes could not be saved.' },
+        });
+
+        const result = await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'eds-paas' }), { path: '/p', removeDatapack: true }, jest.fn());
+
+        expect(result).toStrictEqual({
+            success: true,
+            warnings: [
+                'The code could not be published.',
+                'The site configuration was not written.',
+                '2 pages could not be published.',
+                'The block palette is empty.',
+                'Its datapack was not uninstalled: Its changes could not be saved.',
+            ],
+        });
+    });
+
+    it('hands a clean reset no warnings, and a failed one its reason', async () => {
+        const runReset = await wiredRunReset();
+        const project = createMockProject({ selectedStack: 'eds-paas' });
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValueOnce({ success: true, filesReset: 3 });
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValueOnce({ success: false, error: 'Sign in to DA.live.' });
+
+        await expect(runReset(createMockHandlerContext(), project, { path: '/p', removeDatapack: false }, jest.fn())).resolves.toStrictEqual({ success: true });
+        await expect(runReset(createMockHandlerContext(), project, { path: '/p', removeDatapack: false }, jest.fn())).resolves.toStrictEqual({ success: false, error: 'Sign in to DA.live.' });
+    });
+
+    it('says what became of the datapack on a reset that failed after uninstalling it', async () => {
+        const runReset = await wiredRunReset();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({ success: false, error: 'pipeline died', datapackRemoval: {} });
+
+        const result = await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'eds-paas' }), { path: '/p', removeDatapack: true }, jest.fn());
+
+        expect(result).toStrictEqual({ success: false, error: 'pipeline died', warnings: ['Its datapack was uninstalled.'] });
+    });
+});
+
+// A headless reset ignored Uninstall Datapack (step-05 S6, owner 2026-11-13, P5-Q3: "Uninstall it").
+describe("runProjectsBatch's reset of a headless project", () => {
+    it("hands the component reset the batch's Uninstall Datapack and the save question's answer", async () => {
+        const runReset = await wiredRunReset();
+        const outcome = { success: true, warnings: ['Its datapack was not uninstalled: Its changes could not be saved.'] };
+        (runProjectResetAnswered as jest.Mock).mockResolvedValue(outcome);
+        const project = createMockProject({ path: '/projects/h', selectedStack: 'headless-paas' });
+        const context = createMockHandlerContext();
+        const report = jest.fn();
+
+        const result = await runReset(context, project, { path: '/projects/h', removeDatapack: true, changes: { saveAs: 'My Bodea' } }, report);
+
+        expect(resetEdsProjectWithUI).not.toHaveBeenCalled();
+        expect(runProjectResetAnswered).toHaveBeenCalledWith(
+            { commandManager: undefined, authManager: undefined, project, context, logPrefix: '[ProjectsBatch]' },
+            report,
+            { removeDatapack: true, changes: { saveAs: 'My Bodea' } },
+        );
+        expect(result).toBe(outcome);
+    });
+
+    it('sends no answer about changes when the batch gave none', async () => {
+        const runReset = await wiredRunReset();
+        (runProjectResetAnswered as jest.Mock).mockResolvedValue({ success: true });
+
+        await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'headless-paas' }), { path: '/p', removeDatapack: false }, jest.fn());
+
+        expect((runProjectResetAnswered as jest.Mock).mock.calls[0][2]).toStrictEqual({ removeDatapack: false });
     });
 });

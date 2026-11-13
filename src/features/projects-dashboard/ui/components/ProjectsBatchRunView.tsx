@@ -2,7 +2,8 @@
  * ProjectsBatchRunView — the batch window while its projects are reset or deleted (owner,
  * 2026-11-04): one row per project, drawn as the Updates run draws its rows (`WorkRow`, its icons
  * from `UpdatesRunView`), in the order the extension runs them. The running row says the step it
- * is on; a row that failed says why under its name; a question the run is paused on is asked under
+ * is on; a row that failed says why under its name; what a reset finished around, or what a failed
+ * one did to the store, is said in orange under it; a question the run is paused on is asked under
  * the running row, or above the list before any row runs.
  *
  * @module features/projects-dashboard/ui/components/ProjectsBatchRunView
@@ -63,9 +64,14 @@ function RunRow({ row, statuses, timing, asking, onTyped }: RowProps) {
     // An ended row says what it has to: under Finished, or in place of it when it failed or was
     // left alone.
     const note = state === 'waiting' || state === 'running' ? undefined : status?.message;
+    // What a reset finished around, or what a failed one did to the store: each line an orange
+    // note, as a run row with a problem that did not fail is drawn (`StepRows`). A done row with
+    // any turns amber; a failed one stays red.
+    const warnings = state === 'done' || state === 'failed' ? (status?.warnings ?? []) : [];
+    const amber = question || (state === 'done' && warnings.length > 0);
     return (
         <WorkRow
-            status={question ? 'warning' : ICON_OF[state]}
+            status={amber ? 'warning' : ICON_OF[state]}
             label={row.name}
             detail={detail}
             note={note}
@@ -73,6 +79,9 @@ function RunRow({ row, statuses, timing, asking, onTyped }: RowProps) {
             state={state}
             time={state === 'running' ? clock : spanValue(timing?.startedAt, timing?.endedAt)}
         >
+            {warnings.map((line, index) => (
+                <p key={`${index}:${line}`} className="dialog-problem text-notice">{line}</p>
+            ))}
             {question && <RunQuestion prompt={question} onTyped={onTyped} />}
         </WorkRow>
     );

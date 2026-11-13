@@ -27,33 +27,22 @@ import {
     resolveByomOverlayConfig,
 } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
-import { extractResetParams, type EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
+import { extractResetParams, resetCaveats, type EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
 
-/** Silent Adobe IMS auth pre-flight. */
 /**
- * The reset's caveats for the agent, in the order the SC reads them: first that the code
- * could not be published (the site serves nothing until it is), then a step the reset
- * finished around (the site configuration not written, the mesh not redeployed: a success
- * that carries an `error`), then a page step that left something undone, then what the
- * content pipeline could not do (EDS-55). No key when there are none. The second and
- * third were dropped on a success until 2026-10-23.
+ * The reset's caveats for the agent, in the words and order the SC reads them (`resetCaveats`, which
+ * a batch row's warnings read too). No key when there are none.
  */
-function caveatsOf(
-    result: Pick<EdsResetResult, 'codeNotPublished' | 'error' | 'pageWarnings' | 'pipelineWarnings'>,
-): { caveats?: string[] } {
-    const caveats = [
-        ...(result.codeNotPublished ? [result.codeNotPublished] : []),
-        ...(result.error ? [result.error] : []),
-        ...(result.pageWarnings ?? []),
-        ...(result.pipelineWarnings ?? []),
-    ];
+function caveatsOf(result: EdsResetResult): { caveats?: string[] } {
+    const caveats = resetCaveats(result);
     return caveats.length > 0 ? { caveats } : {};
 }
 
+/** Silent Adobe IMS auth pre-flight. */
 export async function adobeAuthed(): Promise<boolean> {
     try {
         return (await ServiceLocator.getAuthenticationService().getTokenManager().inspectToken())

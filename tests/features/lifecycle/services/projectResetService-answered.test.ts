@@ -494,13 +494,15 @@ describe('the answered reset — the ending', () => {
         expect(withProgress).not.toHaveBeenCalled();
     });
 
-    it('returns the mesh leg’s early result when the redeploy failed', async () => {
+    // A success's `error` is something the reset finished around: the batch row shows it as a
+    // warning (2026-11-13; the batch read only success and error, so it said nothing).
+    it('returns the mesh leg’s early result as a warning for the row when the redeploy failed', async () => {
         mockGetMeshComponentInstance.mockReturnValue({ path: '/projects/demo/components/mesh' });
         mockDeployMeshCreateOrUpdate.mockResolvedValue({ success: false, error: 'aio exploded' });
 
         await expect(run()).resolves.toEqual({
             success: true,
-            error: 'Reset completed but mesh redeployment failed: aio exploded',
+            warnings: ['Reset completed but mesh redeployment failed: aio exploded'],
         });
         // No success notice on top of the warning the mesh leg already showed.
         expect(withProgress).not.toHaveBeenCalled();

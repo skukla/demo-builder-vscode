@@ -26,6 +26,7 @@ import {
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
 import { confirmSampleDataRemoval } from '@/features/eds/services/reset/edsResetSampleData';
+import { resetCaveats } from '@/features/eds/services/reset/edsResetParams';
 import type { SampleDataProgress } from '@/features/data-installer/services/sampleDataInstallDeps';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -204,6 +205,25 @@ describe('the removal report', () => {
         expect(context.logger[level as 'error' | 'warn']).toHaveBeenCalledWith(
             expect.stringContaining('no reason given'),
         );
+    });
+
+    // Review, 2026-11-13: a removal that stopped partway read "Its datapack was not uninstalled: The
+    // datapack was not all uninstalled." on the row. A type that came out makes it a partial removal.
+    it('tells the row part of the datapack came out when a type was removed before it stopped', async () => {
+        mockedRemove.mockResolvedValue({ ran: true, outcome: 'partial', perType: { products: 'success', categories: 'error' } });
+
+        const result = await run();
+
+        expect(result.datapackRemoval).toStrictEqual({ kept: 'The datapack was not all uninstalled.', partly: true });
+        expect(resetCaveats(result)).toStrictEqual(['Part of its datapack was uninstalled: The datapack was not all uninstalled.']);
+    });
+
+    it('CONTROL: tells the row none of it came out when no type was removed', async () => {
+        mockedRemove.mockResolvedValue({ ran: true, outcome: 'error', perType: { products: 'error' }, reason: 'Products could not be removed.' });
+
+        const result = await run();
+
+        expect(resetCaveats(result)).toStrictEqual(['Its datapack was not uninstalled: Products could not be removed.']);
     });
 
     it('is a WARNING that the reset stands when the removal throws', async () => {

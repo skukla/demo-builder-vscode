@@ -33,6 +33,7 @@ import { ownNames } from '@/features/data-installer/handlers/packSave';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { changesOnRemoval } from '@/features/data-installer/services/dataInstallerConfig';
+import { datapackStepLine, FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -51,8 +52,19 @@ import type {
 /** Tells the window where one project's row has got to. */
 export type TellRow = (status: ProjectsBatchRowStatus) => void;
 
-/** Runs one project's reset, answered, reporting into the batch (wired by the handler). */
-export type RunReset = (context: HandlerContext, project: Project, answer: BatchResetAnswer, report: ReportStage) => Promise<{ success: boolean; error?: string }>;
+/**
+ * Runs one project's reset, answered, reporting into the batch (wired by the handler). `warnings`:
+ * what a reset that finished could not do, in its own words, for the row.
+ */
+export type RunReset = (
+    context: HandlerContext,
+    project: Project,
+    answer: BatchResetAnswer,
+    report: ReportStage,
+) => Promise<{ success: boolean; error?: string; warnings?: string[] }>;
+
+/** What one project's work came to: why it failed, and what it finished around or did to the store. */
+type RowOutcome = { error?: string; warnings?: string[] } | undefined;
 
 /** Each project picked, loaded, in the order picked; a path that no longer loads is left out. */
 async function loadAll(context: HandlerContext, paths: readonly string[]): Promise<Project[]> {
@@ -143,7 +155,7 @@ export async function saveNamesOf(context: HandlerContext, rows: readonly { data
  * One project of a run: what it does, told into its row and to the window's own line (which a
  * notification shows when the window is closed), never thrown out of the batch.
  */
-async function runRow(path: string, tell: TellRow, outer: ReportStage, work: (report: ReportStage) => Promise<{ error?: string } | undefined>): Promise<boolean> {
+async function runRow(path: string, tell: TellRow, outer: ReportStage, work: (report: ReportStage) => Promise<RowOutcome>): Promise<boolean> {
     tell({ path, state: 'running' });
     try {
         const outcome = await work((stage, step, position) => {
@@ -151,14 +163,20 @@ async function runRow(path: string, tell: TellRow, outer: ReportStage, work: (re
             tell({ path, state: 'running', message: stageLine(stage, position) });
             outer(stage, step, position);
         });
+        // Under the row, orange: what a reset finished around, or what a failed one did to the store
+        // first (the reset's own words, 2026-11-13).
+        const warnings = outcome?.warnings ?? [];
+        const under = warnings.length > 0 ? { warnings } : {};
         if (outcome?.error) {
-            tell({ path, state: 'failed', message: outcome.error });
+            tell({ path, state: 'failed', message: outcome.error, ...under });
             return false;
         }
-        tell({ path, state: 'done' });
+        tell({ path, state: 'done', ...under });
         return true;
     } catch (error) {
-        tell({ path, state: 'failed', message: error instanceof Error ? error.message : String(error) });
+        // A reset that threw after its datapack step says what that step did to the store, too.
+        const under = error instanceof FailedAfterDatapack ? { warnings: [datapackStepLine(error.removal)] } : {};
+        tell({ path, state: 'failed', message: error instanceof Error ? error.message : String(error), ...under });
         return false;
     }
 }
@@ -275,7 +293,7 @@ export async function runResetBatch(
             const project = projects.get(answer.path);
             if (!project) return { error: 'This project is no longer on this computer.' };
             const result = await runReset(context, project, answer, rowReport);
-            return result.success ? undefined : { error: result.error ?? 'The reset did not finish.' };
+            return result.success ? { warnings: result.warnings } : { error: result.error ?? 'The reset did not finish.', warnings: result.warnings };
         });
     // One org at a time, the token reaching one; within it, side by side (owner, 2026-11-04).
     let failed = 0;

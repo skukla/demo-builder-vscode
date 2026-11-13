@@ -46,11 +46,13 @@ export function RunQuestion({
 
 /**
  * A run row's status as the shared ending rule reads it: anything short of done (failed, skipped,
- * still going, never told) is a problem, and what it says once done is a note. The projects batch
- * run's rows have the same states, so it reads them through this too.
+ * still going, never told) is a problem, and so is a done row with warnings (a batch reset that
+ * finished around something); what it says once done is a note. The projects batch run's rows
+ * have the same states, so it reads them through this too.
  */
-export function endingRowOf(status: { state: UpdateRowState; message?: string } | undefined): EndingRow {
-    return { problem: status?.state !== 'done', ...(status?.message ? { note: status.message } : {}) };
+export function endingRowOf(status: { state: UpdateRowState; message?: string; warnings?: readonly string[] } | undefined): EndingRow {
+    const warned = Boolean(status?.warnings?.length);
+    return { problem: status?.state !== 'done' || warned, ...(status?.message ? { note: status.message } : {}) };
 }
 
 /**
