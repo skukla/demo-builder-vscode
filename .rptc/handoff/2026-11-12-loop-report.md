@@ -141,7 +141,16 @@ Live notes; rewritten as the final report at the loop's close.
   declared request shape nobody used turned out to be the Review Records request, whose two senders
   passed an untyped object; both now use it (a misspelt field is rejected). Full gate green
   (2,410 suites, 38,653 tests). Phases 5, 7 and 7b are built.
-- Phase 6 (reset, delete and Clear): planning pass next.
+- Phase 6 plan: b1a767f1b (step-05.md). Found: the one-project reset and delete still use VS Code
+  dialogs; reset still offers Clear (removed 11-12); a batch reset offers Uninstall Datapack and then
+  ignores it; a VS Code dialog can appear mid-batch for an added demo whose content site is
+  unreachable. Clear gets its own planning pass (P5-Q9). decisions.md corrected: the order rule's
+  live test passed on 11-11.
+- Step-05 R1: a6df67dad. A reset, batch reset, delete or Edit that uninstalls the datapack now stops
+  naming it when everything came out of Commerce (the Datapacks screen Uninstall's rule); it keeps
+  the name when part was left, the removal failed or was skipped. Only the project record changes.
+  Full gate green (2,410 suites, 38,668 tests). Live reset owed.
+- Step-05 R2 (the save question's window moves to shared code): next.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -216,5 +225,14 @@ Live notes; rewritten as the final report at the loop's close.
   recommend keeping what it shows and you choosing a label. (b) P4-Q9, the wizard cards listing
   what a datapack holds: type names cost no extra read, but you called that line crowded on 11-05;
   record counts would need one read per card. Recommend leaving the cards as they are.
+- Phase 6 questions P5-Q1 to P5-Q9 are in step-05.md, each with a recommendation. The ones that
+  change what happens to real data: P5-Q3 (a batch reset with Uninstall Datapack ticked should
+  uninstall it; today it ignores the box), P5-Q4 (give the reset agent tool the same uninstall
+  choice the window has), P5-Q5 (a datapack whose changes could not be read gets a row; "Without
+  Saving" would then lose them).
+- From R1: (a) a delete whose datapack removal succeeds but leaves part in Commerce still deletes
+  the project, leaving that data with nothing naming it (cannot be undone). Recommend the delete
+  stops and says so. (b) An Edit whose old-datapack removal fails still records the new datapack, so
+  the old one is in Commerce with nothing naming it (old behaviour). Recommend the Edit stops there.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
