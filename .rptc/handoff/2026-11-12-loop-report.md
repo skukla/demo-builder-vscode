@@ -250,7 +250,14 @@ Live notes; rewritten as the final report at the loop's close.
   Commerce Instance); two Command Palette entries open the current project's Datapacks with that
   window open, refusing without a project or a Commerce backend. Full gate green (2,422 suites,
   38,794 tests).
-- Step-06 C6 (the agent tools for Clear Commerce Instance): with a builder.
+- Step-06 C6: 62ef1ad06. Agents can now do everything both Clear windows do: check_demo_data takes a
+  website choice, and the new clear_commerce_instance clears the chosen websites (needs the instance
+  check's token and "I understand"; its consent names the websites, the projects uninstalled first,
+  those that keep their datapack and those that lose their demo data). The agent test set's clear
+  prompt was out of date (stores, "didn't install"); rewritten, and a prompt added for the new tool.
+  Found: the agent-reach scan cannot see the Clear handlers (it only reads one way of registering
+  them); recommended as its own fix. Full gate green (2,423 suites, 38,812 tests).
+- Step-06 C7 (the J1-3d leftovers): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -357,5 +364,9 @@ Live notes; rewritten as the final report at the loop's close.
 - From C5: the "I understand every project on these websites loses its data" checkbox keeps sentence
   capitals (it is a sentence); menu items are not checked by the Title Case scan anywhere (a gap in
   the scan). Recommend keeping the sentence.
+- From C6: (a) every agent window's title starts "Agent ·" with a middle dot (the existing shared
+  prefix, not new), against your no-middle-dot rule; change it everywhere? Recommend "Agent:".
+  (b) Fix the agent-reach scan so it sees handlers built inside a function (it will then list other
+  such actions as new rows to sort)? Recommend yes, as its own change after the release work.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
