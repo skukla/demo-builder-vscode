@@ -231,9 +231,14 @@ Reset and delete:
 - Clear Commerce Instance asks about other projects' unsaved datapack changes with the batch save
   question (the Datapack / Save As table with editable names) (P6-Q4, owner 2026-11-13: "We have a
   saved data pack flow already ... Why not use this?").
-- A failed read is split by kind, each kind with its own offer (P6-Q3, owner 2026-11-13: "We should
-  split by kind, but then think through what we offer the user for each kind"); the per-kind
-  proposal is with the owner.
+- A failed read is split by kind, built only from pieces that exist (P6-Q3, owner 2026-11-13: "We
+  should split by kind"; then "Is this a one off approach ... I'm just trying to prevent one off
+  designs."; then "Yes, reuse only"): the kind from `classifyTransience` (core/errors); the whole
+  check failing (offline, signed out) uses the Datapacks failure screen (`dataInstallerFailure.tsx`,
+  its title naming Commerce; signed out is Sign In, never Retry); a slow type waits for Retry, then
+  Fix with AI (`RETRIES_BEFORE_FIX`), and Clear waits with it, no override; a type Commerce refuses
+  or answers strangely is marked "Couldn't be read" (as Create's picker does), left alone, with Open
+  Commerce Admin (refused) or Fix with AI (strange answer), and Clear runs for the rest.
 - The order rule gets the shared table of order states, in beta.153: one table here, tested here;
   the ERP integration's copy checked by a fingerprint that fails its build when they differ (P6-Q1,
   owner 2026-11-13: "We've learned that nothing will stay identical by hand."; "Yes, in beta.153").
