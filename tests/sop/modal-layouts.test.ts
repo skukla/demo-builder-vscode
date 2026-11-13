@@ -49,7 +49,7 @@ const LEDGER: Readonly<Record<string, string>> = {
     'src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx':
         'waits for a layout: a staged Form at L with Back, a status per stage and a confirm in its own window',
     'src/features/projects-dashboard/ui/components/ProjectsBatchModal.tsx':
-        'waits for a layout: one window through a two step Confirm with Back, a run with questions and a result, at L or wide',
+        'waits for a layout: a Confirm read in a Steps window, then a run with questions and a result on Modal, at L or wide (the save question is the core SaveFirstWindow)',
     'src/features/projects-dashboard/ui/components/UpdatesModal.tsx':
         'waits for a layout: one window through a Form at L, a run with questions that hide Close, and a result with Back to Updates',
 };

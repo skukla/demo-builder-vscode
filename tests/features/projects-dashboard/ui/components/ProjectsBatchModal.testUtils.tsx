@@ -1,5 +1,6 @@
 /**
- * Shared setup for the batch window's suites: the house Modal reduced to its title, wait, body and
+ * Shared setup for the batch window's suites: the house Modal reduced to its title, wait, body,
+ * whether it is unseen while measuring or holding its height (the Steps layout's), and
  * buttons (the footer's start ones first, as "Save Your Changes First?" draws its losing choice), a harness that drives the REAL `useProjectsBatch` into the REAL window, and the
  * extension's answers and pushes, typed to the contract (`@/types/projectsBatch`).
  */
@@ -27,6 +28,8 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         hideClose,
         waiting,
         wide,
+        measuring,
+        lockHeight,
         children,
     }: {
         title: string;
@@ -39,9 +42,20 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         hideClose?: boolean;
         waiting?: ModalWait | false;
         wide?: boolean;
+        measuring?: boolean;
+        lockHeight?: boolean;
         children: React.ReactNode;
     }) => (
-        <div role="dialog" aria-label={title} data-status={status} data-size={size} data-wide={wide ? 'true' : undefined}>
+        <div
+            role="dialog"
+            aria-label={title}
+            data-status={status}
+            data-size={size}
+            data-wide={wide ? 'true' : undefined}
+            // The Steps layout's hold: unseen while it measures, its height kept once seen.
+            data-measuring={measuring ? 'true' : undefined}
+            data-locked={lockHeight ? 'true' : undefined}
+        >
             {waiting ? <p>{waiting.label}</p> : children}
             {!hideClose && <button onClick={onClose}>{closeLabel ?? 'Close'}</button>}
             {(waiting ? [] : [...startButtons, ...actionButtons]).map((b) => (

@@ -3,8 +3,11 @@
  * list (owner, 2026-11-04), built as the Updates window is: the house `ui/Modal` in a
  * `DialogContainer`, the controls handed in (`useProjectsBatch`).
  *
- * Reading: the house wait, "Reading demo data" for a reset and "Reading projects" for a delete
- * (`WAIT_STAGES`).
+ * Reading and the questions are one Steps window (`StepsWindow`, step-05 S3): while the read is out
+ * it is unseen and only its wait shows, where it will open, "Reading demo data" for a reset and
+ * "Reading projects" for a delete (`WAIT_STAGES`). It is first seen once the read answers, at the
+ * questions' height, and keeps it (rule 14: it opened at the wait's height and grew, decisions
+ * Open). The run and a failed read are windows of their own.
  * The questions: `BatchDeleteQuestions` or `BatchResetQuestions`, Cancel and the red button. When a
  * pack whose data goes has changes, the red button runs into "Save Your Changes First?" in the same
  * container (step-05 S1, decisions J7-2): the shared `SaveFirstWindow` over `BatchSaveTable`, Reset
@@ -32,6 +35,7 @@ import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/fee
 import { SaveFirstWindow } from '@/core/ui/components/feedback/SaveFirstWindow';
 import type { WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
@@ -185,6 +189,30 @@ function SaveFirstOf({ controls, action, question }: { controls: ProjectsBatchCo
     );
 }
 
+/**
+ * The read and the questions, in the Steps window: unseen until the read answers (`ready`), so it
+ * opens at the questions' height and never grows.
+ */
+function QuestionsWindow({ controls, view }: { controls: ProjectsBatchControls; view: Extract<BatchView, { phase: 'reading' | 'asking' }> }): React.ReactElement {
+    const status = statusOf(controls);
+    return (
+        <StepsWindow
+            title={titleOf(controls)}
+            {...(status ? { status } : {})}
+            ready={view.phase === 'asking'}
+            waiting={waitOf(view)}
+            // Delete's table holds up to three columns of names: extra-wide, so a name stays on
+            // one line, as the run that follows is (owner, 2026-11-05). Reset's one column fits large.
+            wide={subjectOf(view).action === 'delete'}
+            closeLabel={closeLabelOf(controls)}
+            actionButtons={actionsOf(controls)}
+            onClose={controls.close}
+        >
+            <BodyOf controls={controls} />
+        </StepsWindow>
+    );
+}
+
 /** The batch window; nothing while closed. */
 export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchControls }): React.ReactElement {
     const { view } = controls;
@@ -201,24 +229,30 @@ export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchContro
             </DialogContainer>
         );
     }
+    if (view.phase === 'reading' || view.phase === 'asking') {
+        return (
+            <DialogContainer onDismiss={controls.close}>
+                <QuestionsWindow key="questions" controls={controls} view={view} />
+            </DialogContainer>
+        );
+    }
     return (
         <DialogContainer onDismiss={dismiss}>
             {view.phase !== 'closed' && (
                 <Modal
+                    key="run"
                     title={titleOf(controls)}
                     status={statusOf(controls)}
                     // A clean end is the small result, the title alone (walk F134).
                     size={clean ? 'S' : 'L'}
-                    // Delete's table holds up to three columns of names: extra-wide, the next
-                    // step, so a name stays on one line; the same width in every other phase
-                    // (owner, 2026-11-05). Reset's one column fits large.
+                    // Delete's rows hold the same names as its questions: extra-wide (owner,
+                    // 2026-11-05).
                     wide={!clean && subjectOf(view).action === 'delete'}
                     fitContent
                     onClose={dismiss}
                     closeLabel={closeLabelOf(controls)}
                     hideClose={asking ? !cancels(asking) : false}
                     actionButtons={actionsOf(controls)}
-                    waiting={waitOf(view)}
                 >
                     <BodyOf controls={controls} />
                 </Modal>
