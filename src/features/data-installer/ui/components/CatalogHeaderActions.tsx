@@ -32,6 +32,7 @@ import { LoadDatapackFileModal } from './LoadDatapackFileModal';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
+import type { DatapackId } from '@/types/datapack';
 import type { WipeStoreChoice } from '@/types/demoDataWipe';
 
 /** The save button's state, and the flow each of its choices opens. Handlers stable. */
@@ -50,6 +51,8 @@ export interface CatalogHeaderActionsProps {
     onCatalogChanged: () => void;
     /** A project's Datapacks: the save button, and Install from File and Clear. Absent in the Datapack Library. */
     save?: HeaderSaveActions;
+    /** The SC's own datapacks in My Datapacks: the file load asks to replace only one of these. */
+    mySaves?: readonly DatapackId[];
 }
 
 /** The save button, as its state says (`headerSave`). */
@@ -83,7 +86,7 @@ function SaveButton({ save }: { save: HeaderSaveActions }): React.JSX.Element | 
 /** Which dialog the header has open. */
 type Open = 'load' | 'clear' | null;
 
-export function CatalogHeaderActions({ onCatalogChanged, save }: CatalogHeaderActionsProps): React.JSX.Element {
+export function CatalogHeaderActions({ onCatalogChanged, save, mySaves }: CatalogHeaderActionsProps): React.JSX.Element {
     const [open, setOpen] = useState<Open>(null);
     const { clear, progressWindow } = useClearDemoData(onCatalogChanged);
 
@@ -117,7 +120,7 @@ export function CatalogHeaderActions({ onCatalogChanged, save }: CatalogHeaderAc
                     </ActionButton>
                 </>
             ) : null}
-            {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} /> : null}
+            {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} mySaves={mySaves} /> : null}
             {open === 'clear' ? <ClearDemoDataModal onClose={close} onClear={startClear} /> : null}
             {progressWindow}
         </>

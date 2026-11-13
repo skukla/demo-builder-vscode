@@ -5,7 +5,9 @@
 import { inPickOrder } from '@/features/data-installer/pickableKinds';
 import type { DatapackGroup } from '@/features/data-installer/services/datapackCatalog';
 import {
+    elsewhereWords,
     inShow,
+    matchesElsewhere,
     inShowOrder,
     packSource,
     showOptions,
@@ -123,5 +125,45 @@ describe('inPickOrder', () => {
             'source_items',
             'store_config',
         ]);
+    });
+});
+
+// Clarity 1.13 (step-04 S10): a colleague told "find it under Community Datapacks" types its name
+// on Recommended and must be told where it is, not that nothing matches.
+describe('matchesElsewhere', () => {
+    it('names the one Show choice that holds every match', () => {
+        expect(matchesElsewhere([TEAM], 'yours')).toEqual({ show: 'team', count: 1 });
+    });
+
+    it('names All Datapacks when the matches sit under different choices', () => {
+        expect(matchesElsewhere([COLLEAGUE, SCRATCH], 'recommended')).toEqual({ show: 'all', count: 2 });
+    });
+
+    it('files the SC\'s own shared pack under My Datapacks, the first choice that holds it', () => {
+        const shared = group('Shared pack', { mine: true, shared: true });
+
+        expect(matchesElsewhere([shared], 'team')).toEqual({ show: 'yours', count: 1 });
+    });
+
+    it('says nothing when there are no matches anywhere', () => {
+        expect(matchesElsewhere([], 'yours')).toBeUndefined();
+    });
+
+    it('says nothing on All Datapacks, which has nowhere else to point', () => {
+        expect(matchesElsewhere([TEAM], 'all')).toBeUndefined();
+    });
+});
+
+describe('elsewhereWords', () => {
+    it('says where the matches are, by the Show names', () => {
+        expect(elsewhereWords('recommended', { show: 'all', count: 2 })).toBe(
+            'No matches in Recommended. 2 in All Datapacks.',
+        );
+    });
+
+    it('names a single source choice', () => {
+        expect(elsewhereWords('yours', { show: 'team', count: 1 })).toBe(
+            'No matches in My Datapacks. 1 in Demo Builder Datapacks.',
+        );
     });
 });

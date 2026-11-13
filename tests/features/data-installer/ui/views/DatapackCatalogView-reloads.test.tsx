@@ -28,6 +28,7 @@ import {
     resolveCatalogThenDetail,
     CATALOG,
     INVENTORY_WITH_GAP,
+    makeSummary,
     showSelect,
 } from './DatapackCatalogView.testUtils';
 
@@ -284,5 +285,40 @@ describe('a response carrying no page at all', () => {
 
         expect(await screen.findByText('No Datapacks Yet')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: /community/i })).not.toBeInTheDocument();
+    });
+});
+
+// Clarity 1.15 (step-04 S10): the file load asks about replacing only a version the SC's own
+// datapacks already hold, which the screen reads from the catalog it has.
+describe('the file load and My Datapacks', () => {
+    const OPENED = { path: '/Users/sc/acme.zip', datapackName: 'acme', version: '20261109-141504', displayName: 'Acme', dataTypes: ['products'] };
+    const answer = (items: ReturnType<typeof makeSummary>[]) =>
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'open-datapack-zip') return { success: true, data: OPENED };
+            return { success: true, data: { items, count: items.length, total: items.length } };
+        });
+
+    it('offers Replace Existing for a version the SC already has', async () => {
+        answer([makeSummary('acme', '20261109-141504', { store: 'library', mine: true, shared: false })]);
+        render(<DatapackCatalogView library />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+
+        await press(screen.getByRole('button', { name: 'Add from File' }));
+        await settle();
+
+        expect(screen.getByRole('button', { name: 'Replace Existing' })).toBeInTheDocument();
+    });
+
+    it("offers Load when the same version is someone else's, not the SC's", async () => {
+        answer([makeSummary('acme', '20261109-141504', { store: 'library', mine: false, team: true })]);
+        render(<DatapackCatalogView library />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+
+        await press(screen.getByRole('button', { name: 'Add from File' }));
+        await settle();
+
+        expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
     });
 });

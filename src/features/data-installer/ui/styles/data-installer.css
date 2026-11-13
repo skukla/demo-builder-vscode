@@ -111,8 +111,8 @@
 /* ===========================================
    Detail flyout
    =========================================== */
-/* Head/body chrome and the key/value rows come from utilities.css
-   (`db-drawer-*`, `integration-panel-row*`) — global, so they reach this bundle.
+/* Head/body chrome comes from drawer.css (`db-drawer-*`) and the key/value rows from
+   integration-cards.css (`integration-panel-row*`); this bundle's entry imports both.
    Only what is specific to a datapack lives here. */
 @layer theme {
 .datapack-panel-title {
@@ -238,12 +238,6 @@
 }
 
 @layer theme {
-.datapack-row-instance {
-    font-family: var(--vscode-editor-font-family, monospace);
-}
-}
-
-@layer theme {
 .datapack-row-mode {
     font-size: 11px;
     text-transform: uppercase;
@@ -316,49 +310,6 @@
 }
 }
 
-
-
-
-
-
-
-/* The derived target, shown instead of an input. Leads with the project name —
-   the only part a person can confirm — and keeps the instance id visible but
-   subordinate, because the id is what actually decides where data lands. */
-@layer theme {
-.datapack-import-target {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-}
-
-@layer theme {
-.datapack-import-target-name {
-    font-size: 14px;
-    font-weight: 600;
-}
-}
-
-@layer theme {
-.datapack-import-target-id {
-    /* Monospace, matching `.datapack-row-instance`: an instance id is checked
-       character by character against the console, which proportional type makes
-       harder for exactly the strings that matter (l/1, O/0). */
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-700);
-    overflow-wrap: anywhere;
-}
-}
-
-@layer theme {
-.datapack-import-target-warning {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-600);
-}
-}
-
 /* Export modal. Reuses the import modal's type grid — the two forms ask the
    same question about data types and a second grid would drift from the first. */
 /* No min-width: one on this body pushed the intro text past the dialog's right
@@ -368,14 +319,6 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-}
-}
-
-@layer theme {
-.datapack-export-intro {
-    margin: 0;
-    line-height: 1.5;
-    color: var(--spectrum-global-color-gray-700);
 }
 }
 

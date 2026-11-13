@@ -141,7 +141,7 @@ describe('the summary', () => {
         await open();
 
         expect(rows()).toStrictEqual(['Categories41', 'Products2,046, 4 changed']);
-        expect(document.querySelector('.lead-text, .datapack-export-intro')).toBeNull();
+        expect(document.querySelector('.lead-text')).toBeNull();
         expect(screen.queryByRole('checkbox')).toBeNull();
     });
 

@@ -12,6 +12,7 @@ import { press, settle } from '../../../../helpers/reactSettle';
 // Below the mock import on purpose — see webview-test-authoring §3.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { LoadDatapackFileModal } from '@/features/data-installer/ui/components/LoadDatapackFileModal';
+import type { DatapackId } from '@/types/datapack';
 
 const mockRequest = webviewClient.request as jest.Mock;
 
@@ -51,8 +52,8 @@ function withService(over: Record<string, unknown> = {}): void {
     });
 }
 
-async function openModal(onClose = jest.fn(), offersInstaller?: boolean) {
-    render(<LoadDatapackFileModal onClose={onClose} offersInstaller={offersInstaller} />);
+async function openModal(onClose = jest.fn(), offersInstaller?: boolean, mySaves?: DatapackId[]) {
+    render(<LoadDatapackFileModal onClose={onClose} offersInstaller={offersInstaller} mySaves={mySaves} />);
     await settle();
     return onClose;
 }
@@ -91,9 +92,18 @@ it('offers no Data Installer destination while the Data Installer takes no write
 
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     expect(screen.queryByText(/Data Installer/)).not.toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: /Replace Existing Version/ })).toBeInTheDocument();
     await press(screen.getByRole('button', { name: 'Load' }));
     expect(loadCall()).toEqual({ path: OPENED.path, target: 'library', update: false });
+});
+
+// Clarity 2.9 (step-04 S10): the house text classes, as every other datapack dialog uses.
+it('draws its opening line as the house lead, and the settings line as the house note', async () => {
+    withService({ 'open-datapack-zip': { success: true, data: { ...OPENED, settingsLayer: { paths: ['a/b/c'] } } } });
+
+    await openModal();
+
+    expect(screen.getByText(/^Justrite B2B, v1\. It holds/)).toHaveClass('lead-text');
+    expect(screen.getByText(/^Its store configuration/)).toHaveClass('dialog-note');
 });
 
 it('closes without a dialog when the picker was dismissed', async () => {
@@ -130,13 +140,27 @@ it('makes the outcome the title, and offers one way out rather than Close and Do
     expect(onClose).toHaveBeenCalledTimes(1);
 });
 
-it('sends update only when the SC ticks replace, for the library', async () => {
-    await openModal();
+// Clarity 1.15 (step-04 S10): asked only when My Datapacks already holds this version.
+describe('the replace question', () => {
+    it('is not asked about a version My Datapacks does not hold', async () => {
+        await openModal(jest.fn(), undefined, [{ name: 'justrite', version: 'v0' }]);
 
-    await press(screen.getByRole('checkbox', { name: /Replace Existing Version/ }));
-    await press(screen.getByRole('button', { name: 'Load' }));
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+        expect(screen.queryByText(/already in My Datapacks/)).not.toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Load' }));
+        expect(loadCall()).toMatchObject({ target: 'library', update: false });
+    });
 
-    expect(loadCall()).toMatchObject({ target: 'library', update: true });
+    it('says so when My Datapacks holds it, and the button replaces it', async () => {
+        await openModal(jest.fn(), undefined, [{ name: 'justrite', version: 'v1' }]);
+
+        expect(screen.getByText("Justrite B2B, v1. It holds Categories, Customer Groups. It's already in My Datapacks.")).toBeInTheDocument();
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Load' })).not.toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Replace Existing' }));
+
+        expect(loadCall()).toEqual({ path: OPENED.path, target: 'library', update: true });
+    });
 });
 
 it('into the Data Installer: warns it is shared, and sends the pack name back as confirmation', async () => {

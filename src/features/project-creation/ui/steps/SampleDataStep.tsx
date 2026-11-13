@@ -44,9 +44,10 @@ import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredF
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
 import { pickDefaultVersion, type DatapackGroup } from '@/features/data-installer/services/datapackCatalog';
-import { EMPTY_SHOW_TITLE } from '@/features/data-installer/ui/catalogShow';
+import { EMPTY_SHOW_TITLE, type CatalogShow, type ShowElsewhere } from '@/features/data-installer/ui/catalogShow';
 import { CatalogShowPicker } from '@/features/data-installer/ui/components/CatalogShowPicker';
 import { DatapackCard } from '@/features/data-installer/ui/components/DatapackCard';
+import { ShowElsewhereNote } from '@/features/data-installer/ui/components/ShowElsewhereNote';
 import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataInstallerFailure';
 import { useCatalogShow } from '@/features/data-installer/ui/hooks/useCatalogShow';
 import { useDatapackCatalog } from '@/features/data-installer/ui/hooks/useDatapackCatalog';
@@ -72,7 +73,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
     const chosen = state.datapack;
     // A settings layer is applied with its pack, never chosen as a demo (datapack-engine step 09).
     const arrivedNames = useMemo(() => new Set(arrived ? [arrived.name] : []), [arrived]);
-    const { show, setShow, installerAnswered, groups, shown, filtered: visible } = useCatalogShow({
+    const { show, setShow, installerAnswered, groups, shown, filtered: visible, elsewhere } = useCatalogShow({
         page: value,
         installedPacks: arrivedNames,
         held: chosen,
@@ -234,11 +235,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                         />
                     ))}
                     </div>
-                    {query && visible.length === 0 ? (
-                        <p className="sample-data-note">
-                            No datapacks match “{query}”.
-                        </p>
-                    ) : null}
+                    {visible.length === 0 ? <NoMatchNote query={query} show={show} elsewhere={elsewhere} onShow={setShow} /> : null}
                     {groups.length > 0 && shown.length === 0 && EMPTY_SHOW_TITLE[show] ? (
                         <p className="sample-data-note">{EMPTY_SHOW_TITLE[show]}. Try All Datapacks.</p>
                     ) : null}
@@ -249,6 +246,27 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
             )}
         </div>
     );
+}
+
+/**
+ * What the filter says when no card is left: where its matches are, under another Show choice
+ * (Clarity 1.13), or that nothing matches at all. Nothing with no query.
+ */
+function NoMatchNote({ query, show, elsewhere, onShow }: {
+    query: string;
+    show: CatalogShow;
+    elsewhere: ShowElsewhere | undefined;
+    onShow: (show: CatalogShow) => void;
+}): React.JSX.Element | null {
+    if (elsewhere) {
+        return (
+            <div className="sample-data-note">
+                <ShowElsewhereNote show={show} elsewhere={elsewhere} onShow={onShow} />
+            </div>
+        );
+    }
+    if (!query) return null;
+    return <p className="sample-data-note">No datapacks match “{query}”.</p>;
 }
 
 /**

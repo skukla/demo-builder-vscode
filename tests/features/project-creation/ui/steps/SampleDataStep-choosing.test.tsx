@@ -283,6 +283,23 @@ describe('SampleDataStep — the None card', () => {
 });
 
 describe('SampleDataStep — the no-match note', () => {
+    // Clarity 1.13 (step-04 S10): the pack is there, under another Show choice.
+    it('says when the matches sit under another Show choice, and goes there on press', async () => {
+        const colleague = { id: { name: 'colleague', version: 'main' }, displayName: 'Colleague Pack', dataTypes: [], art: {}, store: 'library' as const };
+        setMockState(envelope({ ...CATALOG, items: [...CATALOG.items, colleague] }));
+        renderStep();
+        await screen.findAllByTestId('datapack-card');
+
+        fireEvent.change(screen.getByRole('searchbox', { name: /filter datapacks/i }), { target: { value: 'colleague' } });
+
+        expect(screen.getByText('No matches in Recommended. 1 in Community Datapacks.')).toBeInTheDocument();
+        expect(screen.queryByText(/No datapacks match/i)).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Show Community Datapacks' }));
+
+        expect(await screen.findByText('Colleague Pack')).toBeInTheDocument();
+        expect(showSelect().value).toBe('community');
+    });
+
     it('is absent when the grid has cards to show', async () => {
         renderStep();
 

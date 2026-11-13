@@ -16,8 +16,9 @@
 import React from 'react';
 import { restoreIsNewer } from '../../packVersions';
 import { type DatapackGroup, isHeld, pickDefaultVersion } from '../../services/datapackCatalog';
-import { EMPTY_SHOW_TITLE, type CatalogShow } from '../catalogShow';
+import { EMPTY_SHOW_TITLE, type CatalogShow, type ShowElsewhere } from '../catalogShow';
 import { DatapackCard } from './DatapackCard';
+import { ShowElsewhereNote } from './ShowElsewhereNote';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
@@ -40,6 +41,10 @@ export interface DatapackCatalogGridProps {
     filtered: DatapackGroup[];
     /** Which Show choice they came from. */
     show: CatalogShow;
+    /** The filter matches nothing here but something under another choice (Clarity 1.13). */
+    elsewhere?: ShowElsewhere;
+    /** Switch the Show list, from that note. */
+    onShow: (show: CatalogShow) => void;
     query: string;
     versions: Record<string, string>;
     pickVersion: (name: string, version: string) => void;
@@ -62,6 +67,8 @@ export function DatapackCatalogGrid({
     groups,
     filtered,
     show,
+    elsewhere,
+    onShow,
     query,
     versions,
     pickVersion,
@@ -84,6 +91,14 @@ export function DatapackCatalogGrid({
                           : "Add one from a file, or save this demo's."
                 }
             />
+        );
+    }
+
+    if (filtered.length === 0 && elsewhere) {
+        return (
+            <div className="datapack-catalog-empty">
+                <ShowElsewhereNote show={show} elsewhere={elsewhere} onShow={onShow} />
+            </div>
         );
     }
 

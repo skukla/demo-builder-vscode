@@ -41,7 +41,7 @@ describe('the form', () => {
         expect(field()).toHaveValue('');
         expect(button('Cancel')).toBeInTheDocument();
         expect(button('Save')).toBeInTheDocument();
-        expect(document.querySelector('.lead-text, .datapack-export-intro')).toBeNull();
+        expect(document.querySelector('.lead-text')).toBeNull();
     });
 
     it('starts with the name it is given', async () => {

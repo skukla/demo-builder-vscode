@@ -12,8 +12,9 @@
  * into it would fail every time. When it is offered, the choice is spelled out because the two
  * differ in who sees the result: the Data Installer's catalog is shared with other teams, so
  * choosing it is the confirmation (the handler also wants the pack's name back, which this
- * sends). Replacing an existing version is offered for My Datapacks only — the Data Installer
- * cannot tell whose pack is whose, and the handler refuses it there.
+ * sends). Replacing is asked only when My Datapacks already holds the file's version (Clarity 1.15,
+ * step-04 S10): the sentence says so and the button reads Replace Existing. Only into My Datapacks:
+ * the Data Installer cannot tell whose pack is whose, and the handler refuses it there.
  *
  * Loading writes a pack into a store; it installs nothing into Commerce. That is
  * still the catalog's Import.
@@ -25,7 +26,7 @@
  * @module features/data-installer/ui/components/LoadDatapackFileModal
  */
 
-import { Checkbox, Radio, RadioGroup } from '@adobe/react-spectrum';
+import { Radio, RadioGroup } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import { configurationSettingsCount } from '../../datapackWords';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
@@ -35,8 +36,9 @@ import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { type ResultContent, resultStatus } from './importResult';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { FormDialog } from '@/core/ui/components/ui/FormDialog';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { ResultDialog, type ResultRow } from '@/core/ui/components/ui/ResultDialog';
-import type { DatapackStoreName } from '@/types/datapack';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** What `open-datapack-zip` says about a file. */
 interface OpenedFile {
@@ -80,14 +82,23 @@ export interface LoadDatapackFileModalProps {
     onClose: () => void;
     /** Whether the Data Installer is offered as a destination; off while our accounts cannot write there. */
     offersInstaller?: boolean;
+    /** The SC's own datapacks in My Datapacks, by id: replacing is asked only about one of these. */
+    mySaves?: readonly DatapackId[];
+}
+
+const NO_SAVES: readonly DatapackId[] = [];
+
+/** Whether My Datapacks already holds the file's version. */
+function alreadyHeld(file: OpenedFile | null, mySaves: readonly DatapackId[]): boolean {
+    return file !== null && mySaves.some((id) => id.name === file.datapackName && id.version === file.version);
 }
 
 export function LoadDatapackFileModal({
     onClose,
     offersInstaller = INSTALLER_WRITES_SHOWN,
+    mySaves = NO_SAVES,
 }: LoadDatapackFileModalProps): React.JSX.Element | null {
     const [target, setTarget] = useState<DatapackStoreName>('library');
-    const [update, setUpdate] = useState(false);
     const opened = useDataInstallerRequest<OpenedFile>('open-datapack-zip');
     const loading = useDataInstallerRequest<LoadOutcome>('load-datapack-zip');
 
@@ -102,16 +113,17 @@ export function LoadDatapackFileModal({
     }, [opened.value, onClose]);
 
     const file = opened.value?.path ? opened.value : null;
+    const replaces = target === 'library' && alreadyHeld(file, mySaves);
     const runLoad = loading.load;
     const load = useCallback((): void => {
         if (!file) return;
         runLoad({
             path: file.path,
             target,
-            update: target === 'library' && update,
+            update: replaces,
             ...(target === 'installer' ? { confirmName: file.datapackName } : {}),
         });
-    }, [runLoad, file, target, update]);
+    }, [runLoad, file, target, replaces]);
 
     if (!opened.settled || opened.value?.cancelled) return null;
     const outcome = loading.value;
@@ -139,7 +151,7 @@ export function LoadDatapackFileModal({
         <FormDialog
             isOpen
             title="Add from File"
-            submitLabel="Load"
+            submitLabel={replaces ? 'Replace Existing' : 'Load'}
             onSubmit={load}
             submitDisabled={!file}
             submitPending={loading.loading}
@@ -148,7 +160,7 @@ export function LoadDatapackFileModal({
             {file ? (
                 <LoadForm
                     file={file}
-                    choice={{ target, update, onTarget: setTarget, onUpdate: setUpdate }}
+                    choice={{ target, replaces, onTarget: setTarget }}
                     offersInstaller={offersInstaller}
                 />
             ) : null}
@@ -158,9 +170,9 @@ export function LoadDatapackFileModal({
 
 interface TargetChoice {
     target: DatapackStoreName;
-    update: boolean;
+    /** My Datapacks already holds this version, and the load replaces it. */
+    replaces: boolean;
     onTarget: (target: DatapackStoreName) => void;
-    onUpdate: (update: boolean) => void;
 }
 
 /**
@@ -247,19 +259,15 @@ function LoadForm({ file, choice, offersInstaller }: { file: OpenedFile; choice:
     const types = (file.dataTypes ?? []).map(dataTypeLabel).join(', ');
     return (
         <>
-            <p className="datapack-export-intro">
-                {fileLine(file)}. It holds {types}.
-            </p>
+            <LeadText>
+                {fileLine(file)}. It holds {types}.{choice.replaces ? " It's already in My Datapacks." : ''}
+            </LeadText>
             {file.settingsLayer ? (
-                <p className="datapack-export-note">
+                <p className="dialog-note">
                     Its store configuration ({configurationSettingsCount(file.settingsLayer.paths.length).toLowerCase()}) goes into My Datapacks.
                 </p>
             ) : null}
-            {offersInstaller ? <DestinationChoice name={file.datapackName} choice={choice} /> : (
-                <Checkbox isSelected={choice.update} onChange={choice.onUpdate}>
-                    Replace Existing Version
-                </Checkbox>
-            )}
+            {offersInstaller ? <DestinationChoice name={file.datapackName} choice={choice} /> : null}
         </>
     );
 }
@@ -278,16 +286,12 @@ function DestinationChoice({ name, choice }: { name?: string; choice: TargetChoi
                 </Radio>
                 <Radio value="installer">Data Installer (Shared Catalog)</Radio>
             </RadioGroup>
-            {choice.target === 'library' ? (
-                <Checkbox isSelected={choice.update} onChange={choice.onUpdate}>
-                    Replace Existing Version
-                </Checkbox>
-            ) : (
-                <p className="datapack-export-note">
+            {choice.target === 'installer' ? (
+                <p className="dialog-note">
                     Other teams will see {name} in the shared catalog. If that name and
                     version already exist there, nothing is changed.
                 </p>
-            )}
+            ) : null}
         </>
     );
 }

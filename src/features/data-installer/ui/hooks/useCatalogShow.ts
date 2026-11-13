@@ -9,7 +9,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { groupDatapacks, isHeld, withoutLayerCards, type DatapackGroup } from '../../services/datapackCatalog';
 import type { CatalogPage } from '../../types';
-import { DEFAULT_SHOW, inShow, inShowOrder, type CatalogShow } from '../catalogShow';
+import { DEFAULT_SHOW, inShow, inShowOrder, matchesElsewhere, type CatalogShow, type ShowElsewhere } from '../catalogShow';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import type { DatapackId, ProjectDatapack } from '@/types/datapack';
 
@@ -40,6 +40,8 @@ export interface CatalogShowState {
     shown: DatapackGroup[];
     /** Those the filter box leaves too. */
     filtered: DatapackGroup[];
+    /** The filter matches nothing here but something under another choice: where (Clarity 1.13). */
+    elsewhere: ShowElsewhere | undefined;
     /**
      * Take a version of the SC's own pack off at once, as its removal closes the flyout, rather than
      * when the list next comes back seconds later (owner, 2026-11-05). The next list replaces it.
@@ -86,5 +88,9 @@ export function useCatalogShow({ page, installedPacks, held, query, heldFirst }:
         () => shown.filter((group) => matchesSearchFields(group, SEARCH_FIELDS, query)),
         [shown, query],
     );
-    return { show, setShow, installerAnswered, groups, shown, filtered, hideRemoved };
+    const elsewhere = useMemo(() => {
+        if (!query || filtered.length > 0) return undefined;
+        return matchesElsewhere(groups.filter((group) => matchesSearchFields(group, SEARCH_FIELDS, query)), show);
+    }, [groups, filtered, query, show]);
+    return { show, setShow, installerAnswered, groups, shown, filtered, elsewhere, hideRemoved };
 }

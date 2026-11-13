@@ -83,6 +83,11 @@ function nameOnCard(page: CatalogPage | null, id: DatapackId | undefined): strin
     return (rows.find((row) => same(row) && row.id.version === id.version) ?? rows.find(same))?.displayName;
 }
 
+/** The SC's own datapacks in My Datapacks, by id. */
+function mySavesIn(page: CatalogPage | null): DatapackId[] {
+    return (page?.items ?? []).filter((row) => row.store === 'library' && row.mine === true).map((row) => row.id);
+}
+
 /**
  * @param library - the Datapack Library (owner, 2026-11-07): no project is read, no card wears the
  *   project's check, and nothing that acts on a store is offered (Import, the header's save button,
@@ -98,13 +103,16 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
     const { refresh, loading, value, failure, settled, noticePage, dismissNoAccess } = useDatapackCatalog(onPacksChanged);
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
     const { held, installedAt, failed, installedPacks, projectAnswered, reloadProject, reloadHolding } = useProjectHolding(library);
-    const { show, setShow, installerAnswered, shown, filtered, hideRemoved } = useCatalogShow({
+    const { show, setShow, installerAnswered, shown, filtered, elsewhere, hideRemoved } = useCatalogShow({
         page: value,
         installedPacks,
         held,
         query,
         heldFirst: true,
     });
+
+    // The file load asks about replacing only a version the SC's own datapacks hold (Clarity 1.15).
+    const mySaves = useMemo(() => mySavesIn(value), [value]);
 
     const pickVersion = useCallback(
         (name: string, version: string): void =>
@@ -273,6 +281,7 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                                 installerAnswered={installerAnswered}
                                 onCatalogChanged={refresh}
                                 save={save}
+                                mySaves={mySaves}
                             />
                         }
                     />
@@ -283,6 +292,8 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                     groups={shown}
                     filtered={filtered}
                     show={show}
+                    elsewhere={elsewhere}
+                    onShow={setShow}
                     query={query}
                     versions={versions}
                     pickVersion={pickVersion}

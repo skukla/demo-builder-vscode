@@ -45,3 +45,25 @@ describe('useCatalogShow hideRemoved', () => {
         expect(names(result.current.shown)).toEqual(['acme']);
     });
 });
+
+// Clarity 1.13 (step-04 S10): the filter says when its matches sit under another Show choice.
+describe('useCatalogShow elsewhere', () => {
+    const colleague: DatapackSummary = { ...pack('bodea', '1'), mine: false };
+
+    it('says where a query that matches nothing here does match', () => {
+        const page = pageOf(pack('acme', '1'), colleague);
+        const { result } = renderHook(() => useCatalogShow({ page, installedPacks: NONE, held: undefined, query: 'bodea', heldFirst: true }));
+
+        expect(result.current.filtered).toStrictEqual([]);
+        expect(result.current.elsewhere).toEqual({ show: 'community', count: 1 });
+    });
+
+    it('says nothing while the query matches here, or with no query', () => {
+        const page = pageOf(pack('acme', '1'), colleague);
+        const matching = renderHook(() => useCatalogShow({ page, installedPacks: NONE, held: undefined, query: 'acme', heldFirst: true }));
+        const empty = renderHook(() => useCatalogShow({ page, installedPacks: NONE, held: undefined, query: '', heldFirst: true }));
+
+        expect(matching.result.current.elsewhere).toBeUndefined();
+        expect(empty.result.current.elsewhere).toBeUndefined();
+    });
+});

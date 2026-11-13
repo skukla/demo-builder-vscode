@@ -234,6 +234,27 @@ describe('DatapackCatalogView', () => {
             expect(screen.queryAllByTestId('datapack-card')).toHaveLength(0);
             expect(screen.getByText(/no datapacks match/i)).toBeInTheDocument();
         });
+
+        // Clarity 1.13 (step-04 S10): the pack is there, under another Show choice.
+        it('says when the matches sit under another Show choice, and goes there on press', async () => {
+            resolveWith([
+                makeSummary('mine', 'main', { store: 'library', mine: true }),
+                makeSummary('colleague', 'main', { store: 'library' }),
+            ]);
+            render(<DatapackCatalogView />);
+            await settle();
+            await screen.findAllByTestId('datapack-card');
+
+            await change(screen.getByRole('searchbox'), 'colleague');
+
+            expect(screen.queryAllByTestId('datapack-card')).toHaveLength(0);
+            expect(screen.getByText('No matches in Recommended. 1 in Community Datapacks.')).toBeInTheDocument();
+            expect(screen.queryByText(/no datapacks match/i)).not.toBeInTheDocument();
+            await press(screen.getByRole('button', { name: 'Show Community Datapacks' }));
+
+            expect(screen.getAllByTestId('datapack-card')).toHaveLength(1);
+            expect(showSelect().value).toBe('community');
+        });
     });
 
     describe('detail flyout', () => {
