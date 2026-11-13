@@ -117,7 +117,13 @@ Live notes; rewritten as the final report at the loop's close.
   card). Measured in the real stylesheet: on the narrowest card (240px) the date and a tag do not fit
   one line; the tag now stays on the date's line and the date wraps (before, the tag dropped below);
   at 300px all fits. Full gate green on the committed code (2,407 suites, 38,558 tests).
-- Step-04 S7 (the failed install, extension side): next.
+- Step-04 S7: 4084adc9e. A datapack install that fails during project creation (or an Edit) is now
+  recorded on the project: which datapack, why, when, and how many retries. A partly installed run
+  counts as failed (P4-Q11 as recommended). A later success clears it; a later failure adds a retry;
+  anything that makes the project name another datapack or none clears it. Agents see the same
+  failure and reason when they ask where a datapack would install. Shared project files never carry
+  it (pinned by a test). Old projects show nothing. Full gate green (2,408 suites, 38,606 tests).
+- Step-04 S8 (the failed install on screen): next.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -174,5 +180,11 @@ Live notes; rewritten as the final report at the loop's close.
   "main" updated in place no longer shows a dot (the dot now means a newer save); want that signal
   back with its own words? (c) the agent tool mark_team_datapack still says "team datapack"
   (Phase 8 will align agent words).
+- From S7: (a) a creation install that was SKIPPED (no website or store recorded, no Commerce
+  instance) is not recorded as failed, so the card still shows the installed check. Recommend: show
+  it as not installed rather than failed (Retry would only skip again). (b) Found, old: a project
+  reset that uninstalls the datapack never clears which datapack the project names (only the
+  Datapacks screen's Uninstall does), so after a reset the card still shows the check. Recommend the
+  reset clears it, as Uninstall does; built with Phase 6 (reset and Clear) unless you say otherwise.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
